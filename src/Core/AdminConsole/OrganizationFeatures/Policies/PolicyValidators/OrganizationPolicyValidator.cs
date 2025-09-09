@@ -1,6 +1,4 @@
-﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
+﻿using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 
@@ -13,10 +11,6 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 /// </summary>
 public abstract class OrganizationPolicyValidator(IPolicyRepository policyRepository, IEnumerable<IPolicyRequirementFactory<IPolicyRequirement>> factories)
 {
-    public abstract PolicyType Type { get; }
-
-    public abstract IEnumerable<PolicyType> RequiredPolicies { get; }
-
     protected async Task<IEnumerable<T>> GetUserPolicyRequirementsByOrganizationIdAsync<T>(Guid organizationId, PolicyType policyType) where T : IPolicyRequirement
     {
         var factory = factories.OfType<IPolicyRequirementFactory<T>>().SingleOrDefault();
@@ -41,14 +35,4 @@ public abstract class OrganizationPolicyValidator(IPolicyRepository policyReposi
 
         return requirements;
     }
-
-    public abstract Task OnSaveSideEffectsAsync(
-        PolicyUpdate policyUpdate,
-        Policy? currentPolicy
-    );
-
-    public abstract Task<string> ValidateAsync(
-        PolicyUpdate policyUpdate,
-        Policy? currentPolicy
-    );
 }

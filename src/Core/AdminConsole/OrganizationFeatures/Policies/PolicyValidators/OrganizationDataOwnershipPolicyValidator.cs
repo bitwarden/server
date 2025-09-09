@@ -1,6 +1,5 @@
 ﻿
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
@@ -20,12 +19,6 @@ public class OrganizationDataOwnershipPolicyValidator(
     IFeatureService featureService)
     : OrganizationPolicyValidator(policyRepository, factories), IPostSavePolicySideEffect
 {
-    public override PolicyType Type => PolicyType.OrganizationDataOwnership;
-
-    public override IEnumerable<PolicyType> RequiredPolicies => [];
-
-    public override Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult("");
-
     public async Task ExecuteSideEffectsAsync(
         SavePolicyModel policyRequest,
         Policy postUpdatedPolicy,
@@ -55,9 +48,6 @@ public class OrganizationDataOwnershipPolicyValidator(
             await UpsertDefaultCollectionsForUsersAsync(policyRequest.PolicyUpdate, metadata.DefaultUserCollectionName);
         }
     }
-
-    public override Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult(0);
-
 
     private async Task UpsertDefaultCollectionsForUsersAsync(PolicyUpdate policyUpdate, string defaultCollectionName)
     {

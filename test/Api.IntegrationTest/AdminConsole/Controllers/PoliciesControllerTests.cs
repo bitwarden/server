@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Text.Json;
 using Bit.Api.AdminConsole.Models.Request;
+using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Core.AdminConsole.Entities;
@@ -9,6 +10,8 @@ using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
+using Bit.Core.Repositories;
+using Bit.Test.Common.Helpers;
 using NSubstitute;
 using Xunit;
 
@@ -41,7 +44,7 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         _ownerEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
         await _factory.LoginWithNewAccount(_ownerEmail);
 
-        (_organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseAnnually2023,
+        (_organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseAnnually,
             ownerEmail: _ownerEmail, passwordManagerSeats: 10, paymentMethod: PaymentMethodType.Card);
 
         await _loginHelper.LoginAsync(_ownerEmail);
@@ -58,6 +61,8 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     {
         // Arrange
         const PolicyType policyType = PolicyType.OrganizationDataOwnership;
+
+        const string defaultCollectionName = "Test Default Collection";
         var request = new SavePolicyRequest
         {
             Policy = new PolicyRequestModel
@@ -67,9 +72,15 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
             },
             Metadata = new Dictionary<string, object>
             {
-                { "defaultUserCollectionName", "Test Default Collection" }
+                { "defaultUserCollectionName", defaultCollectionName }
             }
         };
+
+        var (_, admin) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
+            _organization.Id, OrganizationUserType.Admin);
+
+        var (_, user) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
+            _organization.Id, OrganizationUserType.User);
 
         // Act
         var response = await _client.PutAsync($"/organizations/{_organization.Id}/policies/{policyType}/vnext",
@@ -79,24 +90,48 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         await AssertResponse();
 
         await AssertPolicy();
+
+        await AssertDefaultCollectionCreatedOnlyForUserTypeAsync();
         return;
+
+        async Task AssertDefaultCollectionCreatedOnlyForUserTypeAsync()
+        {
+            var collectionRepository = _factory.GetService<ICollectionRepository>();
+            await AssertUserExpectations(collectionRepository);
+            await AssertAdminExpectations(collectionRepository);
+        }
+
+        async Task AssertUserExpectations(ICollectionRepository collectionRepository)
+        {
+            var collections = await collectionRepository.GetManyByUserIdAsync(user.UserId!.Value);
+            var defaultCollection = collections.FirstOrDefault(c => c.Name == defaultCollectionName);
+            Assert.NotNull(defaultCollection);
+            Assert.Equal(_organization.Id, defaultCollection.OrganizationId);
+        }
+
+        async Task AssertAdminExpectations(ICollectionRepository collectionRepository)
+        {
+            var collections = await collectionRepository.GetManyByUserIdAsync(admin.UserId!.Value);
+            var defaultCollection = collections.FirstOrDefault(c => c.Name == defaultCollectionName);
+            Assert.Null(defaultCollection);
+        }
 
         async Task AssertResponse()
         {
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            var responseContent = await response.Content.ReadAsStringAsync();
+            var content = await response.Content.ReadFromJsonAsync<PolicyResponseModel>();
 
-            var result = JsonSerializer.Deserialize<JsonElement>(responseContent);
-            Assert.True(result.GetProperty("enabled").GetBoolean());
-            Assert.Equal((int)policyType, result.GetProperty("type").GetInt32());
+            Assert.True(content.Enabled);
+            Assert.Equal(policyType, content.Type);
+            Assert.Equal(_organization.Id, content.OrganizationId);
         }
 
         async Task AssertPolicy()
         {
             var policyRepository = _factory.GetService<IPolicyRepository>();
             var policy = await policyRepository.GetByOrganizationIdTypeAsync(_organization.Id, policyType);
-            Assert.NotNull(policy);
 
+            Assert.NotNull(policy);
             Assert.True(policy.Enabled);
             Assert.Equal(policyType, policy.Type);
             Assert.Null(policy.Data);
@@ -141,33 +176,38 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         async Task AssertPolicyDataForMasterPasswordPolicy()
         {
             var policyRepository = _factory.GetService<IPolicyRepository>();
-
             var policy = await policyRepository.GetByOrganizationIdTypeAsync(_organization.Id, policyType);
-            Assert.NotNull(policy);
 
-            Assert.True(policy.Enabled);
-            Assert.Equal(policyType, policy.Type);
-            Assert.Equal(_organization.Id, policy.OrganizationId);
-
-            Assert.NotNull(policy.Data);
-            var data = policy.GetDataModel<MasterPasswordPolicyData>();
-            Assert.Equal(request.Policy.Data["minComplexity"], data.MinComplexity);
-            Assert.Equal(request.Policy.Data["minLength"], data.MinLength);
-            Assert.Equal(request.Policy.Data["requireUpper"], data.RequireUpper);
-            Assert.Equal(request.Policy.Data["requireLower"], data.RequireLower);
-            Assert.Equal(request.Policy.Data["requireNumbers"], data.RequireNumbers);
-            Assert.Equal(request.Policy.Data["requireSpecial"], data.RequireSpecial);
-            Assert.Equal(request.Policy.Data["enforceOnLogin"], data.EnforceOnLogin);
+            AssertPolicy(policy);
+            AssertMasterPasswordPolicyData(policy);
         }
 
         async Task AssertResponse()
         {
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            var responseContent = await response.Content.ReadAsStringAsync();
+            var content = await response.Content.ReadFromJsonAsync<PolicyResponseModel>();
 
-            var result = JsonSerializer.Deserialize<JsonElement>(responseContent);
-            Assert.True(result.GetProperty("enabled").GetBoolean());
-            Assert.Equal((int)policyType, result.GetProperty("type").GetInt32());
+            Assert.True(content.Enabled);
+            Assert.Equal(policyType, content.Type);
+            Assert.Equal(_organization.Id, content.OrganizationId);
+        }
+
+        void AssertPolicy(Policy policy)
+        {
+            Assert.NotNull(policy);
+            Assert.True(policy.Enabled);
+            Assert.Equal(policyType, policy.Type);
+            Assert.Equal(_organization.Id, policy.OrganizationId);
+            Assert.NotNull(policy.Data);
+        }
+
+        void AssertMasterPasswordPolicyData(Policy policy)
+        {
+            var resultData = policy.GetDataModel<MasterPasswordPolicyData>();
+
+            var json = JsonSerializer.Serialize(request.Policy.Data);
+            var expectedData = JsonSerializer.Deserialize<MasterPasswordPolicyData>(json);
+            AssertHelper.AssertPropertyEqual(resultData, expectedData);
         }
     }
 

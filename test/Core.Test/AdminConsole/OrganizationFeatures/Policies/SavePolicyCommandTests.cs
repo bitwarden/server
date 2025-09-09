@@ -317,14 +317,9 @@ public class SavePolicyCommandTests
             .ExecuteSideEffectsAsync(savePolicyModel, result, currentPolicy);
     }
 
-    private static IEnumerable<PolicyType> SampleUnsupportedTestCases()
-    {
-        yield return PolicyType.SingleOrg;
-        yield return PolicyType.TwoFactorAuthentication;
-    }
-
     [Theory]
-    [BitMemberAutoData(nameof(SampleUnsupportedTestCases))]
+    [BitAutoData(PolicyType.SingleOrg)]
+    [BitAutoData(PolicyType.TwoFactorAuthentication)]
     public async Task VNextSaveAsync_NonOrganizationDataOwnershipPolicy_DoesNotExecutePostSaveSideEffects(
          PolicyType policyType,
          Policy currentPolicy,

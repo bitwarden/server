@@ -22,7 +22,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
 
     [Theory, BitAutoData]
     public async Task ExecuteSideEffectsAsync_FeatureFlagDisabled_DoesNothing(
-        [PolicyUpdate(PolicyType.OrganizationDataOwnership)] PolicyUpdate policyUpdate,
+        [PolicyUpdate(PolicyType.OrganizationDataOwnership, false)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.OrganizationDataOwnership, false)] Policy postUpdatedPolicy,
         [Policy(PolicyType.OrganizationDataOwnership, false)] Policy previousPolicyState,
         SutProvider<OrganizationDataOwnershipPolicyValidator> sutProvider)
@@ -213,33 +213,6 @@ public class OrganizationDataOwnershipPolicyValidatorTests
                 _defaultUserCollectionName);
     }
 
-    [Theory, BitAutoData]
-    public async Task ExecuteSideEffectsAsync_WhenMetadataIsNull_DoesNothing(
-        [PolicyUpdate(PolicyType.OrganizationDataOwnership)] PolicyUpdate policyUpdate,
-        [Policy(PolicyType.OrganizationDataOwnership, true)] Policy postUpdatedPolicy,
-        [Policy(PolicyType.OrganizationDataOwnership, false)] Policy previousPolicyState,
-        SutProvider<OrganizationDataOwnershipPolicyValidator> sutProvider)
-    {
-        // Arrange
-        postUpdatedPolicy.OrganizationId = policyUpdate.OrganizationId;
-        previousPolicyState.OrganizationId = policyUpdate.OrganizationId;
-        policyUpdate.Enabled = true;
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.CreateDefaultLocation)
-            .Returns(true);
-
-        var policyRequest = new SavePolicyModel(policyUpdate, null, new EmptyMetadataModel());
-
-        // Act
-        await sutProvider.Sut.ExecuteSideEffectsAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
-
-        // Assert
-        await sutProvider.GetDependency<ICollectionRepository>()
-            .DidNotReceive()
-            .UpsertDefaultCollectionsAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<string>());
-    }
-
     private static IEnumerable<object?[]> WhenDefaultCollectionsDoesNotExistTestCases()
     {
         yield return [new OrganizationModelOwnershipPolicyModel(null)];
@@ -247,10 +220,9 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         yield return [new OrganizationModelOwnershipPolicyModel("   ")];
         yield return [new EmptyMetadataModel()];
     }
-
     [Theory]
     [BitMemberAutoData(nameof(WhenDefaultCollectionsDoesNotExistTestCases))]
-    public async Task ExecuteSideEffectsAsync_WhenDefaultCollectionsDoesNotExist_DoesNothing(
+    public async Task ExecuteSideEffectsAsync_WhenDefaultCollectionNameIsInvalid_DoesNothing(
         IPolicyMetadataModel metadata,
         [PolicyUpdate(PolicyType.OrganizationDataOwnership)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.OrganizationDataOwnership, true)] Policy postUpdatedPolicy,
