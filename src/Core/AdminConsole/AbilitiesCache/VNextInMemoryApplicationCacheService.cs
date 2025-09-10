@@ -47,8 +47,9 @@ public class VNextInMemoryApplicationCacheService(
         await InitProviderAbilitiesAsync();
         _providerAbilities.AddOrUpdate(
             provider.Id,
-            _ => new ProviderAbility(provider),
-            (_, _) => new ProviderAbility(provider));
+            static (_, provider) => new ProviderAbility(provider),
+            static (_, _, provider) => new ProviderAbility(provider),
+            provider);
     }
 
     public virtual async Task UpsertOrganizationAbilityAsync(Organization organization)
