@@ -120,7 +120,7 @@ public class StripeController : Controller
 
         return deliveryContainer.ApiVersion switch
         {
-            "2025-07-30.basil" => HandleVersionWith(_billingSettings.StripeWebhookSecret20250730Basil),
+            "2025-08-27.basil" => HandleVersionWith(_billingSettings.StripeWebhookSecret20250827Basil),
             _ => HandleDefault(deliveryContainer.ApiVersion)
         };
 
