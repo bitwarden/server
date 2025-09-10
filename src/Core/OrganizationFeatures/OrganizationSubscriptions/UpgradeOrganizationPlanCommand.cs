@@ -265,7 +265,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         organization.UseApi = newPlan.HasApi;
         organization.UseSso = newPlan.HasSso;
         organization.UseOrganizationDomains = newPlan.HasOrganizationDomains;
-        organization.UseKeyConnector = newPlan.HasKeyConnector;
+        organization.UseKeyConnector = newPlan.HasKeyConnector ? organization.UseKeyConnector : false;
         organization.UseScim = newPlan.HasScim;
         organization.UseResetPassword = newPlan.HasResetPassword;
         organization.SelfHost = newPlan.HasSelfHost;

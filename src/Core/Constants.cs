@@ -128,6 +128,7 @@ public static class FeatureFlagKeys
     public const string CreateDefaultLocation = "pm-19467-create-default-location";
     public const string DirectoryConnectorPreventUserRemoval = "pm-24592-directory-connector-prevent-user-removal";
     public const string CipherRepositoryBulkResourceCreation = "pm-24951-cipher-repository-bulk-resource-creation-service";
+    public const string CollectionVaultRefactor = "pm-25030-resolve-ts-upgrade-errors";
 
     /* Auth Team */
     public const string TwoFactorExtensionDataPersistence = "pm-9115-two-factor-extension-data-persistence";
@@ -198,7 +199,6 @@ public static class FeatureFlagKeys
     public const string SendAccess = "pm-19394-send-access-control";
 
     /* Platform Team */
-    public const string PersistPopupView = "persist-popup-view";
     public const string IpcChannelFramework = "ipc-channel-framework";
     public const string PushNotificationsWhenLocked = "pm-19388-push-notifications-when-locked";
     public const string PushNotificationsWhenInactive = "pm-25130-receive-push-notifications-for-inactive-users";

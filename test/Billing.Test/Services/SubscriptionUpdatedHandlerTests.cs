@@ -11,7 +11,6 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models.StaticStore.Plans;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
-using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
@@ -33,7 +32,6 @@ public class SubscriptionUpdatedHandlerTests
     private readonly IStripeFacade _stripeFacade;
     private readonly IOrganizationSponsorshipRenewCommand _organizationSponsorshipRenewCommand;
     private readonly IUserService _userService;
-    private readonly IPushNotificationService _pushNotificationService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationEnableCommand _organizationEnableCommand;
     private readonly IOrganizationDisableCommand _organizationDisableCommand;
@@ -42,6 +40,7 @@ public class SubscriptionUpdatedHandlerTests
     private readonly IProviderRepository _providerRepository;
     private readonly IProviderService _providerService;
     private readonly IScheduler _scheduler;
+    private readonly IPushNotificationAdapter _pushNotificationAdapter;
     private readonly SubscriptionUpdatedHandler _sut;
 
     public SubscriptionUpdatedHandlerTests()
@@ -53,7 +52,6 @@ public class SubscriptionUpdatedHandlerTests
         _organizationSponsorshipRenewCommand = Substitute.For<IOrganizationSponsorshipRenewCommand>();
         _userService = Substitute.For<IUserService>();
         _providerService = Substitute.For<IProviderService>();
-        _pushNotificationService = Substitute.For<IPushNotificationService>();
         _organizationRepository = Substitute.For<IOrganizationRepository>();
         var schedulerFactory = Substitute.For<ISchedulerFactory>();
         _organizationEnableCommand = Substitute.For<IOrganizationEnableCommand>();
@@ -64,6 +62,7 @@ public class SubscriptionUpdatedHandlerTests
         _providerService = Substitute.For<IProviderService>();
         var logger = Substitute.For<ILogger<SubscriptionUpdatedHandler>>();
         _scheduler = Substitute.For<IScheduler>();
+        _pushNotificationAdapter = Substitute.For<IPushNotificationAdapter>();
 
         schedulerFactory.GetScheduler().Returns(_scheduler);
 
@@ -74,7 +73,6 @@ public class SubscriptionUpdatedHandlerTests
             _stripeFacade,
             _organizationSponsorshipRenewCommand,
             _userService,
-            _pushNotificationService,
             _organizationRepository,
             schedulerFactory,
             _organizationEnableCommand,
@@ -83,7 +81,8 @@ public class SubscriptionUpdatedHandlerTests
             _featureService,
             _providerRepository,
             _providerService,
-            logger);
+            logger,
+            _pushNotificationAdapter);
     }
 
     [Fact]
@@ -599,8 +598,8 @@ public class SubscriptionUpdatedHandlerTests
             .EnableAsync(organizationId);
         await _organizationService.Received(1)
             .UpdateExpirationDateAsync(organizationId, currentPeriodEnd);
-        await _pushNotificationService.Received(1)
-            .PushSyncOrganizationStatusAsync(organization);
+        await _pushNotificationAdapter.Received(1)
+            .NotifyEnabledChangedAsync(organization);
     }
 
     [Fact]

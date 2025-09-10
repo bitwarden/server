@@ -627,10 +627,10 @@ public class ProviderBillingService(
             {
                 case PaymentMethodType.BankAccount:
                     {
-                        var setupIntentId = await setupIntentCache.Get(provider.Id);
+                        var setupIntentId = await setupIntentCache.GetSetupIntentIdForSubscriber(provider.Id);
                         await stripeAdapter.SetupIntentCancel(setupIntentId,
                             new SetupIntentCancelOptions { CancellationReason = "abandoned" });
-                        await setupIntentCache.Remove(provider.Id);
+                        await setupIntentCache.RemoveSetupIntentForSubscriber(provider.Id);
                         break;
                     }
                 case PaymentMethodType.PayPal when !string.IsNullOrEmpty(braintreeCustomerId):
@@ -680,7 +680,7 @@ public class ProviderBillingService(
             });
         }
 
-        var setupIntentId = await setupIntentCache.Get(provider.Id);
+        var setupIntentId = await setupIntentCache.GetSetupIntentIdForSubscriber(provider.Id);
 
         var setupIntent = !string.IsNullOrEmpty(setupIntentId)
             ? await stripeAdapter.SetupIntentGet(setupIntentId, new SetupIntentGetOptions

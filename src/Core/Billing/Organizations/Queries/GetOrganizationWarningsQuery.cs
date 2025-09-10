@@ -291,7 +291,7 @@ public class GetOrganizationWarningsQuery(
     private async Task<bool> HasUnverifiedBankAccountAsync(
         Organization organization)
     {
-        var setupIntentId = await setupIntentCache.Get(organization.Id);
+        var setupIntentId = await setupIntentCache.GetSetupIntentIdForSubscriber(organization.Id);
 
         if (string.IsNullOrEmpty(setupIntentId))
         {

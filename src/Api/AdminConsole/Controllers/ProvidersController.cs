@@ -53,7 +53,6 @@ public class ProvidersController : Controller
     }
 
     [HttpPut("{id:guid}")]
-    [HttpPost("{id:guid}")]
     public async Task<ProviderResponseModel> Put(Guid id, [FromBody] ProviderUpdateRequestModel model)
     {
         if (!_currentContext.ProviderProviderAdmin(id))
@@ -69,6 +68,13 @@ public class ProvidersController : Controller
 
         await _providerService.UpdateAsync(model.ToProvider(provider, _globalSettings));
         return new ProviderResponseModel(provider);
+    }
+
+    [HttpPost("{id:guid}")]
+    [Obsolete("This endpoint is deprecated. Use PUT method instead")]
+    public async Task<ProviderResponseModel> PostPut(Guid id, [FromBody] ProviderUpdateRequestModel model)
+    {
+        return await Put(id, model);
     }
 
     [HttpPost("{id:guid}/setup")]
@@ -120,7 +126,6 @@ public class ProvidersController : Controller
     }
 
     [HttpDelete("{id}")]
-    [HttpPost("{id}/delete")]
     public async Task Delete(Guid id)
     {
         if (!_currentContext.ProviderProviderAdmin(id))
@@ -141,5 +146,12 @@ public class ProvidersController : Controller
         }
 
         await _providerService.DeleteAsync(provider);
+    }
+
+    [HttpPost("{id}/delete")]
+    [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
+    public async Task PostDelete(Guid id)
+    {
+        await Delete(id);
     }
 }
