@@ -74,7 +74,10 @@ public class UpdatePaymentMethodCommandTests
                 },
             NextAction = new SetupIntentNextAction
             {
-                VerifyWithMicrodeposits = new SetupIntentNextActionVerifyWithMicrodeposits()
+                VerifyWithMicrodeposits = new SetupIntentNextActionVerifyWithMicrodeposits
+                {
+                    HostedVerificationUrl = "https://example.com"
+                }
             },
             Status = "requires_action"
         };
@@ -95,7 +98,7 @@ public class UpdatePaymentMethodCommandTests
         var maskedBankAccount = maskedPaymentMethod.AsT0;
         Assert.Equal("Chase", maskedBankAccount.BankName);
         Assert.Equal("9999", maskedBankAccount.Last4);
-        Assert.False(maskedBankAccount.Verified);
+        Assert.Equal("https://example.com", maskedBankAccount.HostedVerificationUrl);
 
         await _setupIntentCache.Received(1).Set(organization.Id, setupIntent.Id);
     }
@@ -133,7 +136,10 @@ public class UpdatePaymentMethodCommandTests
                 },
             NextAction = new SetupIntentNextAction
             {
-                VerifyWithMicrodeposits = new SetupIntentNextActionVerifyWithMicrodeposits()
+                VerifyWithMicrodeposits = new SetupIntentNextActionVerifyWithMicrodeposits
+                {
+                    HostedVerificationUrl = "https://example.com"
+                }
             },
             Status = "requires_action"
         };
@@ -154,7 +160,7 @@ public class UpdatePaymentMethodCommandTests
         var maskedBankAccount = maskedPaymentMethod.AsT0;
         Assert.Equal("Chase", maskedBankAccount.BankName);
         Assert.Equal("9999", maskedBankAccount.Last4);
-        Assert.False(maskedBankAccount.Verified);
+        Assert.Equal("https://example.com", maskedBankAccount.HostedVerificationUrl);
 
         await _subscriberService.Received(1).CreateStripeCustomer(organization);
 
@@ -199,7 +205,10 @@ public class UpdatePaymentMethodCommandTests
                 },
             NextAction = new SetupIntentNextAction
             {
-                VerifyWithMicrodeposits = new SetupIntentNextActionVerifyWithMicrodeposits()
+                VerifyWithMicrodeposits = new SetupIntentNextActionVerifyWithMicrodeposits
+                {
+                    HostedVerificationUrl = "https://example.com"
+                }
             },
             Status = "requires_action"
         };
@@ -220,7 +229,7 @@ public class UpdatePaymentMethodCommandTests
         var maskedBankAccount = maskedPaymentMethod.AsT0;
         Assert.Equal("Chase", maskedBankAccount.BankName);
         Assert.Equal("9999", maskedBankAccount.Last4);
-        Assert.False(maskedBankAccount.Verified);
+        Assert.Equal("https://example.com", maskedBankAccount.HostedVerificationUrl);
 
         await _setupIntentCache.Received(1).Set(organization.Id, setupIntent.Id);
         await _stripeAdapter.Received(1).CustomerUpdateAsync(customer.Id, Arg.Is<CustomerUpdateOptions>(options =>

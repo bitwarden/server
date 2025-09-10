@@ -37,6 +37,7 @@ SELECT
     PO.[ProviderId],
     P.[Name] ProviderName,
     P.[Type] ProviderType,
+    SS.[Enabled] SsoEnabled,
     SS.[Data] SsoConfig,
     OS.[FriendlyName] FamilySponsorshipFriendlyName,
     OS.[LastSyncDate] FamilySponsorshipLastSyncDate,

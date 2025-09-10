@@ -26,4 +26,5 @@ public interface ILicensingService
         SubscriptionInfo subscriptionInfo);
 
     Task<string?> CreateUserTokenAsync(User user, SubscriptionInfo subscriptionInfo);
+    Task WriteUserLicenseAsync(User user, UserLicense license);
 }

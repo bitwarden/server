@@ -1,6 +1,7 @@
-﻿using Bit.Core.Auth.Repositories;
-using Bit.Core.IdentityServer;
+﻿using Bit.Core.Auth.IdentityServer;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Settings;
+using Bit.Core.Tools.Models.Data;
 using Bit.Core.Utilities;
 using Bit.Identity.IdentityServer;
 using Bit.Identity.IdentityServer.ClientProviders;
@@ -26,7 +27,8 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IDeviceValidator, DeviceValidator>();
         services.AddTransient<ITwoFactorAuthenticationValidator, TwoFactorAuthenticationValidator>();
         services.AddTransient<ILoginApprovingClientTypes, LoginApprovingClientTypes>();
-        services.AddTransient<ISendPasswordRequestValidator, SendPasswordRequestValidator>();
+        services.AddTransient<ISendAuthenticationMethodValidator<ResourcePassword>, SendPasswordRequestValidator>();
+        services.AddTransient<ISendAuthenticationMethodValidator<EmailOtp>, SendEmailOtpRequestValidator>();
 
         var issuerUri = new Uri(globalSettings.BaseServiceUri.InternalIdentity);
         var identityServerBuilder = services

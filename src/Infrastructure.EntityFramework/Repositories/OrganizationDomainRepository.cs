@@ -152,7 +152,7 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
         var dbContext = GetDatabaseContext(scope);
 
         var expiredDomains = await dbContext.OrganizationDomains
-            .Where(x => x.LastCheckedDate < DateTime.UtcNow.AddDays(-expirationPeriod))
+            .Where(x => x.LastCheckedDate < DateTime.UtcNow.AddDays(-expirationPeriod) && x.VerifiedDate == null)
             .ToListAsync();
         dbContext.OrganizationDomains.RemoveRange(expiredDomains);
         return await dbContext.SaveChangesAsync() > 0;
