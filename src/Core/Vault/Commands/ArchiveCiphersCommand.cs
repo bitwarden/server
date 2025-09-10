@@ -20,7 +20,7 @@ public class ArchiveCiphersCommand : IArchiveCiphersCommand
         _pushService = pushService;
     }
 
-    public async Task<ICollection<CipherOrganizationDetails>> ArchiveManyAsync(IEnumerable<Guid> cipherIds,
+    public async Task<ICollection<CipherDetails>> ArchiveManyAsync(IEnumerable<Guid> cipherIds,
         Guid archivingUserId)
     {
         var cipherIdEnumerable = cipherIds as Guid[] ?? cipherIds.ToArray();
@@ -30,9 +30,14 @@ public class ArchiveCiphersCommand : IArchiveCiphersCommand
         var cipherIdsSet = new HashSet<Guid>(cipherIdEnumerable);
 
         var ciphers = await _cipherRepository.GetManyByUserIdAsync(archivingUserId);
+
+        if (ciphers == null || ciphers.Count == 0)
+        {
+            return [];
+        }
+
         var archivingCiphers = ciphers
-            .Where(c => cipherIdsSet.Contains(c.Id) && c.Edit && !c.OrganizationId.HasValue)
-            .Select(c => (CipherOrganizationDetails)c)
+            .Where(c => cipherIdsSet.Contains(c.Id) && c is { Edit: true, OrganizationId: null, ArchivedDate: null })
             .ToList();
 
         var revisionDate = await _cipherRepository.ArchiveAsync(archivingCiphers.Select(c => c.Id), archivingUserId);

@@ -10,5 +10,5 @@ public interface IArchiveCiphersCommand
     /// <param name="cipherIds">Cipher ID to archive.</param>
     /// <param name="archivingUserId">User ID to check against the Ciphers that are trying to be archived.</param>
     /// <returns></returns>
-    public Task<ICollection<CipherOrganizationDetails>> ArchiveManyAsync(IEnumerable<Guid> cipherIds, Guid archivingUserId);
+    public Task<ICollection<CipherDetails>> ArchiveManyAsync(IEnumerable<Guid> cipherIds, Guid archivingUserId);
 }

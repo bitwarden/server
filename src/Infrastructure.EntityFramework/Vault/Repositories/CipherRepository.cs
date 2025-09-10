@@ -231,7 +231,6 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
     public async Task DeleteAsync(IEnumerable<Guid> ids, Guid userId)
     {
         await ToggleDeleteCipherStatesAsync(ids, userId, CipherStateAction.HardDelete);
-        await ToggleDeleteCipherStatesAsync(ids, userId, CipherStateAction.HardDelete);
     }
 
     public async Task DeleteAttachmentAsync(Guid cipherId, string attachmentId)

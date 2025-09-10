@@ -861,6 +861,11 @@ public class CiphersController : Controller
 
         var archivedCipherOrganizationDetails = await _archiveCiphersCommand.ArchiveManyAsync([id], userId);
 
+        if (archivedCipherOrganizationDetails.Count == 0)
+        {
+            throw new BadRequestException("Cipher was not archived. Ensure the provided ID is correct and you have permission to archive it.");
+        }
+
         return new CipherMiniResponseModel(archivedCipherOrganizationDetails.First(), _globalSettings, archivedCipherOrganizationDetails.First().OrganizationUseTotp);
     }
 
@@ -878,6 +883,11 @@ public class CiphersController : Controller
         var cipherIdsToArchive = new HashSet<Guid>(model.Ids);
 
         var archivedCiphers = await _archiveCiphersCommand.ArchiveManyAsync(cipherIdsToArchive, userId);
+
+        if (archivedCiphers.Count == 0)
+        {
+            throw new BadRequestException("No ciphers were archived. Ensure the provided IDs are correct and you have permission to archive them.");
+        }
 
         var responses = archivedCiphers.Select(c => new CipherMiniResponseModel(c, _globalSettings, c.OrganizationUseTotp));
 
@@ -1025,6 +1035,11 @@ public class CiphersController : Controller
 
         var unarchivedCipherDetails = await _unarchiveCiphersCommand.UnarchiveManyAsync([id], userId);
 
+        if (unarchivedCipherDetails.Count == 0)
+        {
+            throw new BadRequestException("Cipher was not unarchived. Ensure the provided ID is correct and you have permission to archive it.");
+        }
+
         return new CipherMiniResponseModel(unarchivedCipherDetails.First(), _globalSettings, unarchivedCipherDetails.First().OrganizationUseTotp);
     }
 
@@ -1034,7 +1049,7 @@ public class CiphersController : Controller
     {
         if (!_globalSettings.SelfHosted && model.Ids.Count() > 500)
         {
-            throw new BadRequestException("You can only archive up to 500 items at a time.");
+            throw new BadRequestException("You can only unarchive up to 500 items at a time.");
         }
 
         var userId = _userService.GetProperUserId(User).Value;
@@ -1042,6 +1057,11 @@ public class CiphersController : Controller
         var cipherIdsToUnarchive = new HashSet<Guid>(model.Ids);
 
         var unarchivedCipherOrganizationDetails = await _unarchiveCiphersCommand.UnarchiveManyAsync(cipherIdsToUnarchive, userId);
+
+        if (unarchivedCipherOrganizationDetails.Count == 0)
+        {
+            throw new BadRequestException("Ciphers were not unarchived. Ensure the provided ID is correct and you have permission to archive it.");
+        }
 
         var responses = unarchivedCipherOrganizationDetails.Select(c => new CipherMiniResponseModel(c, _globalSettings, c.OrganizationUseTotp));
 

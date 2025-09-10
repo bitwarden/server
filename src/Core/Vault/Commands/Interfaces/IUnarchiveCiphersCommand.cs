@@ -10,5 +10,5 @@ public interface IUnarchiveCiphersCommand
     /// <param name="cipherIds">Cipher ID to unarchive.</param>
     /// <param name="unarchivingUserId">User ID to check against the Ciphers that are trying to be unarchived.</param>
     /// <returns></returns>
-    public Task<ICollection<CipherOrganizationDetails>> UnarchiveManyAsync(IEnumerable<Guid> cipherIds, Guid unarchivingUserId);
+    public Task<ICollection<CipherDetails>> UnarchiveManyAsync(IEnumerable<Guid> cipherIds, Guid unarchivingUserId);
 }
