@@ -1,5 +1,5 @@
-﻿using Bit.Core.Enums;
-using Bit.Core.IdentityServer;
+﻿using Bit.Core.Auth.IdentityServer;
+using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Sends;
 using Bit.Core.Services;
 using Bit.Core.Tools.Models.Data;

@@ -345,7 +345,7 @@ public class SubscriberService(
             return PaymentMethod.Empty;
         }
 
-        var accountCredit = customer.Balance * -1 / 100;
+        var accountCredit = customer.Balance * -1 / 100M;
 
         var paymentMethod = await GetPaymentSourceAsync(subscriber.Id, customer);
 
@@ -858,7 +858,7 @@ public class SubscriberService(
         ISubscriber subscriber,
         string descriptorCode)
     {
-        var setupIntentId = await setupIntentCache.Get(subscriber.Id);
+        var setupIntentId = await setupIntentCache.GetSetupIntentIdForSubscriber(subscriber.Id);
 
         if (string.IsNullOrEmpty(setupIntentId))
         {
@@ -986,7 +986,7 @@ public class SubscriberService(
          * attachedPaymentMethodDTO being null represents a case where we could be looking for the SetupIntent for an unverified "us_bank_account".
          * We store the ID of this SetupIntent in the cache when we originally update the payment method.
          */
-        var setupIntentId = await setupIntentCache.Get(subscriberId);
+        var setupIntentId = await setupIntentCache.GetSetupIntentIdForSubscriber(subscriberId);
 
         if (string.IsNullOrEmpty(setupIntentId))
         {

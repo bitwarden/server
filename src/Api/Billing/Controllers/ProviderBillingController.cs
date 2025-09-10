@@ -3,7 +3,6 @@
 
 using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
-using Bit.Commercial.Core.Billing.Providers.Services;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Models;

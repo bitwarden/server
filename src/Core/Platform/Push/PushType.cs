@@ -4,16 +4,16 @@
 namespace Bit.Core.Enums;
 
 /// <summary>
-/// 
+///
 /// </summary>
 /// <remarks>
 /// <para>
-/// When adding a new enum member you must annotate it with a <see cref="NotificationInfoAttribute"/> 
+/// When adding a new enum member you must annotate it with a <see cref="NotificationInfoAttribute"/>
 /// this is enforced with a unit test. It is preferred that you do NOT add new usings for the type referenced
 /// in <see cref="NotificationInfoAttribute"/>.
 /// </para>
 /// <para>
-/// You may and are 
+/// You may and are
 /// </para>
 /// </remarks>
 public enum PushType : byte
@@ -90,4 +90,10 @@ public enum PushType : byte
 
     [NotificationInfo("@bitwarden/team-vault-dev", typeof(Models.UserPushNotification))]
     RefreshSecurityTasks = 22,
+
+    [NotificationInfo("@bitwarden/team-billing-dev", typeof(Models.ProviderBankAccountVerifiedPushNotification))]
+    OrganizationBankAccountVerified = 23,
+
+    [NotificationInfo("@bitwarden/team-billing-dev", typeof(Models.ProviderBankAccountVerifiedPushNotification))]
+    ProviderBankAccountVerified = 24
 }
