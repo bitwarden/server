@@ -1,6 +1,5 @@
 ﻿#nullable enable
 
-using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace Bit.Core.AdminConsole.Utilities;
@@ -20,15 +19,14 @@ public static partial class IntegrationTemplateProcessor
         return TokenRegex().Replace(template, match =>
         {
             var propertyName = match.Groups[1].Value;
-            if (propertyName == "EventMessage")
+            var property = type.GetProperty(propertyName);
+
+            if (property == null)
             {
-                return JsonSerializer.Serialize(values);
+                return match.Value;  // Return unknown keys as keys - i.e. #Key#
             }
-            else
-            {
-                var property = type.GetProperty(propertyName);
-                return property?.GetValue(values)?.ToString() ?? match.Value;
-            }
+
+            return property?.GetValue(values)?.ToString() ?? "";
         });
     }
 

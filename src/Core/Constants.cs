@@ -10,6 +10,11 @@ public static class Constants
     public const int BypassFiltersEventId = 12482444;
     public const int FailedSecretVerificationDelay = 2000;
 
+    /// <summary>
+    /// Self-hosted max storage limit in GB (10 TB).
+    /// </summary>
+    public const short SelfHostedMaxStorageGb = 10240;
+
     // File size limits - give 1 MB extra for cushion.
     // Note: if request size limits are changed, 'client_max_body_size'
     // in nginx/proxy.conf may also need to be updated accordingly.
@@ -165,6 +170,7 @@ public static class FeatureFlagKeys
     public const string PM21881_ManagePaymentDetailsOutsideCheckout = "pm-21881-manage-payment-details-outside-checkout";
     public const string PM21821_ProviderPortalTakeover = "pm-21821-provider-portal-takeover";
     public const string PM22415_TaxIDWarnings = "pm-22415-tax-id-warnings";
+    public const string PM23385_UseNewPremiumFlow = "pm-23385-use-new-premium-flow";
 
     /* Key Management Team */
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
@@ -198,7 +204,6 @@ public static class FeatureFlagKeys
     public const string SendAccess = "pm-19394-send-access-control";
 
     /* Platform Team */
-    public const string PersistPopupView = "persist-popup-view";
     public const string IpcChannelFramework = "ipc-channel-framework";
     public const string PushNotificationsWhenLocked = "pm-19388-push-notifications-when-locked";
     public const string PushNotificationsWhenInactive = "pm-25130-receive-push-notifications-for-inactive-users";
