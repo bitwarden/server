@@ -204,7 +204,7 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
             {
                 case TokenizablePaymentMethodType.BankAccount:
                     {
-                        await setupIntentCache.Remove(user.Id);
+                        await setupIntentCache.RemoveSetupIntentForSubscriber(user.Id);
                         break;
                     }
                 case TokenizablePaymentMethodType.PayPal when !string.IsNullOrEmpty(braintreeCustomerId):
