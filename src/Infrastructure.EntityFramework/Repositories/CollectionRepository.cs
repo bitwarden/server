@@ -875,14 +875,6 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
             });
         }
 
-        // Offload some work from SQL Server by pre-sorting before insert.
-        // This lets us use the SqlBulkCopy.ColumnOrderHints to improve performance.
-        collections = collections.OrderBy(c => c.Id).ToList();
-        collectionUsers = collectionUsers
-            .OrderBy(cu => cu.CollectionId)
-            .ThenBy(cu => cu.OrganizationUserId)
-            .ToList();
-
         return (collectionUsers, collections);
     }
 }
