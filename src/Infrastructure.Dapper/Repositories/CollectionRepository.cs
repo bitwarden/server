@@ -6,6 +6,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Bit.Infrastructure.Dapper.AdminConsole.Helpers;
 using Dapper;
 using Microsoft.Data.SqlClient;
@@ -394,7 +395,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
 
         foreach (var orgUserId in missingDefaultCollectionUserIds)
         {
-            var collectionId = Guid.NewGuid();
+            var collectionId = CoreHelpers.GenerateComb();
 
             collections.Add(new Collection
             {
