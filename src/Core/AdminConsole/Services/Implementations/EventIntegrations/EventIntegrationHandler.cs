@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using System.Text.Json;
+﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.Enums;

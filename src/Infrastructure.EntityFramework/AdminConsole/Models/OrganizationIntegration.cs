@@ -1,13 +1,10 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using AutoMapper;
+﻿using AutoMapper;
 
 namespace Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 
 public class OrganizationIntegration : Core.AdminConsole.Entities.OrganizationIntegration
 {
-    public virtual Organization Organization { get; set; }
+    public virtual required Organization Organization { get; set; }
 }
 
 public class OrganizationIntegrationMapperProfile : Profile
