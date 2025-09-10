@@ -90,7 +90,7 @@ public class PoliciesController : Controller
     }
 
     [HttpGet("")]
-    public async Task<ListResponseModel<PolicyResponseModel>> Get(string orgId)
+    public async Task<ListResponseModel<PolicyResponseModel>> GetAll(string orgId)
     {
         var orgIdGuid = new Guid(orgId);
         if (!await _currentContext.ManagePolicies(orgIdGuid))
