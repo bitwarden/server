@@ -6,6 +6,7 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Entities;
 using Bit.Core.Billing.Providers.Repositories;
@@ -270,7 +271,6 @@ public class ProviderBillingControllerTests
         var subscription = new Subscription
         {
             CollectionMethod = StripeConstants.CollectionMethod.ChargeAutomatically,
-            CurrentPeriodEnd = new DateTime(now.Year, now.Month, daysInThisMonth),
             Customer = new Customer
             {
                 Address = new Address
@@ -291,15 +291,17 @@ public class ProviderBillingControllerTests
                 Data = [
                     new SubscriptionItem
                     {
+                        CurrentPeriodEnd = new DateTime(now.Year, now.Month, daysInThisMonth),
                         Price = new Price { Id = ProviderPriceAdapter.MSP.Active.Enterprise }
                     },
                     new SubscriptionItem
                     {
+                        CurrentPeriodEnd = new DateTime(now.Year, now.Month, daysInThisMonth),
                         Price = new Price { Id = ProviderPriceAdapter.MSP.Active.Teams }
                     }
                 ]
             },
-            Status = "unpaid",
+            Status = "unpaid"
         };
 
         stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId, Arg.Is<SubscriptionGetOptions>(
@@ -365,7 +367,7 @@ public class ProviderBillingControllerTests
         var response = ((Ok<ProviderSubscriptionResponse>)result).Value;
 
         Assert.Equal(subscription.Status, response.Status);
-        Assert.Equal(subscription.CurrentPeriodEnd, response.CurrentPeriodEndDate);
+        Assert.Equal(subscription.GetCurrentPeriodEnd(), response.CurrentPeriodEndDate);
         Assert.Equal(subscription.Customer!.Discount!.Coupon!.PercentOff, response.DiscountPercentage);
         Assert.Equal(subscription.CollectionMethod, response.CollectionMethod);
 
