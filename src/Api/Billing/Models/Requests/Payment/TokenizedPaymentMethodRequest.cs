@@ -1,6 +1,6 @@
 ﻿#nullable enable
 using System.ComponentModel.DataAnnotations;
-using Bit.Api.Utilities;
+using Bit.Api.Billing.Attributes;
 using Bit.Core.Billing.Payment.Models;
 
 namespace Bit.Api.Billing.Models.Requests.Payment;
@@ -8,8 +8,7 @@ namespace Bit.Api.Billing.Models.Requests.Payment;
 public class TokenizedPaymentMethodRequest
 {
     [Required]
-    [StringMatches("bankAccount", "card", "payPal",
-        ErrorMessage = "Payment method type must be one of: bankAccount, card, payPal")]
+    [PaymentMethodTypeValidation]
     public required string Type { get; set; }
 
     [Required]
@@ -21,14 +20,7 @@ public class TokenizedPaymentMethodRequest
     {
         var paymentMethod = new TokenizedPaymentMethod
         {
-            Type = Type switch
-            {
-                "bankAccount" => TokenizablePaymentMethodType.BankAccount,
-                "card" => TokenizablePaymentMethodType.Card,
-                "payPal" => TokenizablePaymentMethodType.PayPal,
-                _ => throw new InvalidOperationException(
-                    $"Invalid value for {nameof(TokenizedPaymentMethod)}.{nameof(TokenizedPaymentMethod.Type)}")
-            },
+            Type = TokenizablePaymentMethodTypeExtensions.From(Type),
             Token = Token
         };
 
