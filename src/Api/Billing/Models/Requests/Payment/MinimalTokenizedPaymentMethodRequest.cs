@@ -5,7 +5,7 @@ using Bit.Core.Billing.Payment.Models;
 
 namespace Bit.Api.Billing.Models.Requests.Payment;
 
-public class TokenizedPaymentMethodRequest
+public class MinimalTokenizedPaymentMethodRequest
 {
     [Required]
     [PaymentMethodTypeValidation]
@@ -14,18 +14,12 @@ public class TokenizedPaymentMethodRequest
     [Required]
     public required string Token { get; set; }
 
-    public MinimalBillingAddressRequest? BillingAddress { get; set; }
-
-    public (TokenizedPaymentMethod, BillingAddress?) ToDomain()
+    public TokenizedPaymentMethod ToDomain()
     {
-        var paymentMethod = new TokenizedPaymentMethod
+        return new TokenizedPaymentMethod
         {
             Type = TokenizablePaymentMethodTypeExtensions.From(Type),
             Token = Token
         };
-
-        var billingAddress = BillingAddress?.ToDomain();
-
-        return (paymentMethod, billingAddress);
     }
 }

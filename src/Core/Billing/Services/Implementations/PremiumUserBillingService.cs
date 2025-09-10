@@ -304,7 +304,7 @@ public class PremiumUserBillingService(
         {
             new ()
             {
-                Price = "premium-annually",
+                Price = StripeConstants.Prices.PremiumAnnually,
                 Quantity = 1
             }
         };
