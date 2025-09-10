@@ -6,15 +6,6 @@ BEGIN
     END
 GO
 
-IF NOT EXISTS (SELECT *
-               FROM sys.indexes
-               WHERE name = 'IX_Cipher_ArchivedDate')
-    BEGIN
-        CREATE NONCLUSTERED INDEX [IX_Cipher_ArchivedDate]
-            ON [dbo].[Cipher] ([ArchivedDate] ASC);
-    END
-GO
-
 -- Recreate CipherView
 CREATE OR ALTER VIEW [dbo].[CipherView]
 AS
