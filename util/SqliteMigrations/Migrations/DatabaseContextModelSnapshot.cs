@@ -9,7 +9,6 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Bit.SqliteMigrations.Migrations
 {
-
     [DbContext(typeof(DatabaseContext))]
     partial class DatabaseContextModelSnapshot : ModelSnapshot
     {
@@ -1270,6 +1269,9 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("DomainName")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("GrantedServiceAccountId")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid?>("GroupId")

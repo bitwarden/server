@@ -1287,6 +1287,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<string>("DomainName")
                         .HasColumnType("text");
 
+                    b.Property<Guid?>("GrantedServiceAccountId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("GroupId")
                         .HasColumnType("uuid");
 
