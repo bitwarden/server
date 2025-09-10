@@ -1001,6 +1001,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ApplicationData")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("ContentEncryptionKey")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -1008,14 +1011,17 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime>("Date")
-                        .HasColumnType("TEXT");
-
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ReportData")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("RevisionDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SummaryData")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
