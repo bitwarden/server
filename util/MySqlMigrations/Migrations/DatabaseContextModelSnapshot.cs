@@ -1276,9 +1276,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<string>("DomainName")
                         .HasColumnType("longtext");
 
-                    b.Property<Guid?>("GrantedServiceAccountId")
-                        .HasColumnType("char(36)");
-
                     b.Property<Guid?>("GroupId")
                         .HasColumnType("char(36)");
 
