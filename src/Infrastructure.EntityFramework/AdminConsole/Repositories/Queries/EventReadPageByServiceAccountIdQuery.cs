@@ -32,13 +32,12 @@ public class EventReadPageByServiceAccountQuery : IQuery<Event>
 
     public IQueryable<Event> Run(DatabaseContext dbContext)
     {
-        var emptyGuid = Guid.Empty;
         var q = from e in dbContext.Events
                 where e.Date >= _startDate &&
                     (_beforeDate == null || e.Date < _beforeDate.Value) &&
                     (
-                        (_serviceAccount.OrganizationId == emptyGuid && !e.OrganizationId.HasValue) ||
-                        (_serviceAccount.OrganizationId != emptyGuid && e.OrganizationId == _serviceAccount.OrganizationId)
+                        (_serviceAccount.OrganizationId == Guid.Empty && !e.OrganizationId.HasValue) ||
+                        (_serviceAccount.OrganizationId != Guid.Empty && e.OrganizationId == _serviceAccount.OrganizationId)
                     ) &&
                     e.GrantedServiceAccountId == _serviceAccount.Id
                 orderby e.Date descending
