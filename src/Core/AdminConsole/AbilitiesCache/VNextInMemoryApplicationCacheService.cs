@@ -58,8 +58,9 @@ public class VNextInMemoryApplicationCacheService(
 
         _orgAbilities.AddOrUpdate(
             organization.Id,
-            _ => new OrganizationAbility(organization),
-            (_, _) => new OrganizationAbility(organization));
+            static (_, organization) => new OrganizationAbility(organization),
+            static (_, _, organization) => new OrganizationAbility(organization),
+            organization);
     }
 
     public virtual Task DeleteOrganizationAbilityAsync(Guid organizationId)
