@@ -129,7 +129,7 @@ public static class FeatureFlagKeys
     public const string DirectoryConnectorPreventUserRemoval = "pm-24592-directory-connector-prevent-user-removal";
     public const string CipherRepositoryBulkResourceCreation = "pm-24951-cipher-repository-bulk-resource-creation-service";
     public const string CollectionVaultRefactor = "pm-25030-resolve-ts-upgrade-errors";
-    public const string InviteEmailImprovements = "pm-24773-invite-email-improvements";
+    public const string InviteEmailImprovements = "pm-25644-update-join-organization-subject-line";
 
     /* Auth Team */
     public const string TwoFactorExtensionDataPersistence = "pm-9115-two-factor-extension-data-persistence";
