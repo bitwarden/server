@@ -31,6 +31,7 @@ public class OrganizationUserInvitedViewModel : BaseTitleContactUsMailModel
                     : CoreHelpers.SanitizeForEmail(orgInvitesInfo.OrganizationName, false),
             TitleThird = orgInvitesInfo.IsFreeOrg ? string.Empty : " on Bitwarden and start securing your passwords!",
             OrganizationName = CoreHelpers.SanitizeForEmail(orgInvitesInfo.OrganizationName, false) + orgUser.Status,
+            UserId = orgUser.UserId.ToString(),
             Email = WebUtility.UrlEncode(orgUser.Email),
             OrganizationId = orgUser.OrganizationId.ToString(),
             OrganizationUserId = orgUser.Id.ToString(),
@@ -48,6 +49,7 @@ public class OrganizationUserInvitedViewModel : BaseTitleContactUsMailModel
         };
     }
 
+    public string UserId { get; set; }
     public string OrganizationName { get; set; }
     public string OrganizationId { get; set; }
     public string OrganizationUserId { get; set; }
@@ -68,6 +70,7 @@ public class OrganizationUserInvitedViewModel : BaseTitleContactUsMailModel
             var baseUrl = $"{WebVaultUrl}/accept-organization";
             var queryParams = new List<string>
             {
+                $"userId={UserId}",
                 $"organizationId={OrganizationId}",
                 $"organizationUserId={OrganizationUserId}",
                 $"email={Email}",
