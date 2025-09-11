@@ -36,7 +36,8 @@ public class BillingSettings
         public virtual string OrgFieldName { get; set; }
 
         public virtual bool RemoveNewlinesInReplies { get; set; } = false;
-        public virtual string AutoReplyFooter { get; set; } = string.Empty;
+        public virtual string AutoReplyGreeting { get; set; } = string.Empty;
+        public virtual string AutoReplySalutation { get; set; } = string.Empty;
     }
 
     public class OnyxSettings
