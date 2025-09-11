@@ -34,6 +34,9 @@
               },
               {
                 "Name": "events-hec-subscription"
+              },
+              {
+                "Name": "events-datadog-subscription"
               }
             ]
           },
@@ -77,6 +80,20 @@
                       "FilterType": "Correlation",
                       "CorrelationFilter": {
                         "Label": "hec"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "Name": "integration-datadog-subscription",
+                "Rules": [
+                  {
+                    "Name": "datadog-integration-filter",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "datadog"
                       }
                     }
                   }
