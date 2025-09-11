@@ -19,7 +19,12 @@ on:
       api-env-url:
         type: string
         description: "Override API base URL"
+        description: "URL of the API environment"
         default: "https://api.qa.bitwarden.pw"
+      identity-env-url:
+        type: string
+        description: "URL of the Identity environment"
+        default: "https://identity.qa.bitwarden.pw"
       identity-env-url:
         type: string
         description: "Override Identity base URL"
