@@ -22,7 +22,7 @@ BEGIN
       AND [ArchivedDate] IS NOT NULL
       AND [Id] IN (SELECT * FROM @Ids)
 
-    DECLARE @UtcNow DATETIME2(7) = GETUTCDATE();
+    DECLARE @UtcNow DATETIME2(7) = SYSUTCDATETIME();
     UPDATE
         [dbo].[Cipher]
     SET
