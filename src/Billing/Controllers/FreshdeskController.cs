@@ -11,6 +11,7 @@ using Bit.Billing.Models;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Markdig;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 
@@ -184,6 +185,52 @@ public class FreshdeskController : Controller
         return Ok();
     }
 
+    [HttpPost("webhook-onyx-ai-reply")]
+    public async Task<IActionResult> PostWebhookOnyxAiReply([FromQuery, Required] string key,
+        [FromBody, Required] FreshdeskOnyxAiWebhookModel model)
+    {
+        // NOTE:
+        // at this time, this endpoint is a duplicate of `webhook-onyx-ai`
+        // eventually, we will merge both endpoints into one webhook for Freshdesk
+
+        // ensure that the key is from Freshdesk
+        if (!IsValidRequestFromFreshdesk(key))
+        {
+            return new BadRequestResult();
+        }
+
+        // if there is no description, then we don't send anything to onyx
+        if (string.IsNullOrEmpty(model.TicketDescriptionText.Trim()))
+        {
+            return Ok();
+        }
+
+        // create the onyx `answer-with-citation` request
+        var onyxRequestModel = new OnyxAnswerWithCitationRequestModel(model.TicketDescriptionText, _billingSettings.Onyx.PersonaId);
+        var onyxRequest = new HttpRequestMessage(HttpMethod.Post,
+                            string.Format("{0}/query/answer-with-citation", _billingSettings.Onyx.BaseUrl))
+        {
+            Content = JsonContent.Create(onyxRequestModel, mediaType: new MediaTypeHeaderValue("application/json")),
+        };
+        var (_, onyxJsonResponse) = await CallOnyxApi<OnyxAnswerWithCitationResponseModel>(onyxRequest);
+
+        // the CallOnyxApi will return a null if we have an error response
+        if (onyxJsonResponse?.Answer == null || !string.IsNullOrEmpty(onyxJsonResponse?.ErrorMsg))
+        {
+            _logger.LogWarning("Error getting answer from Onyx AI. Freshdesk model: {model}\r\n Onyx query {query}\r\nresponse: {response}. ",
+                    JsonSerializer.Serialize(model),
+                    JsonSerializer.Serialize(onyxRequestModel),
+                    JsonSerializer.Serialize(onyxJsonResponse));
+
+            return Ok(); // return ok so we don't retry
+        }
+
+        // add the reply to the ticket
+        await AddReplyToTicketAsync(onyxJsonResponse.Answer, model.TicketId);
+
+        return Ok();
+    }
+
     private bool IsValidRequestFromFreshdesk(string key)
     {
         if (string.IsNullOrWhiteSpace(key)
@@ -235,6 +282,43 @@ public class FreshdeskController : Controller
         {
             _logger.LogError("Error adding note to Freshdesk ticket. Ticket Id: {0}. Status: {1}",
                             ticketId, addNoteResponse.ToString());
+        }
+    }
+
+    private async Task AddReplyToTicketAsync(string note, string ticketId)
+    {
+        // if there is no content, then we don't need to add a note
+        if (string.IsNullOrWhiteSpace(note))
+        {
+            return;
+        }
+
+        // convert note from markdown to html
+        var pipeline = new MarkdownPipelineBuilder().UseAdvancedExtensions().Build();
+        note = Markdig.Markdown.ToHtml(note, pipeline);
+
+        // clear out any new lines that Freshdesk doesn't like
+        if (_billingSettings.FreshDesk.RemoveNewlinesInReplies)
+        {
+            note = note.Replace(Environment.NewLine, string.Empty);
+        }
+
+        var replyBody = new FreshdeskReplyRequestModel
+        {
+            Body = $"{note}{_billingSettings.FreshDesk.AutoReplyFooter}",
+        };
+
+        var replyRequest = new HttpRequestMessage(HttpMethod.Post,
+                    string.Format("https://bitwarden.freshdesk.com/api/v2/tickets/{0}/reply", ticketId))
+        {
+            Content = JsonContent.Create(replyBody),
+        };
+
+        var addReplyResponse = await CallFreshdeskApiAsync(replyRequest);
+        if (addReplyResponse.StatusCode != System.Net.HttpStatusCode.Created)
+        {
+            _logger.LogError("Error adding reply to Freshdesk ticket. Ticket Id: {0}. Status: {1}",
+                            ticketId, addReplyResponse.ToString());
         }
     }
 
