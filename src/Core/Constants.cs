@@ -135,6 +135,7 @@ public static class FeatureFlagKeys
     public const string PM23845_VNextApplicationCache = "pm-24957-refactor-memory-application-cache";
     public const string CipherRepositoryBulkResourceCreation = "pm-24951-cipher-repository-bulk-resource-creation-service";
     public const string CollectionVaultRefactor = "pm-25030-resolve-ts-upgrade-errors";
+    public const string DeleteClaimedUserAccountRefactor = "pm-25094-refactor-delete-managed-organization-user-command";
 
     /* Auth Team */
     public const string TwoFactorExtensionDataPersistence = "pm-9115-two-factor-extension-data-persistence";
