@@ -687,7 +687,14 @@ public static class ServiceCollectionExtensions
         {
             options.ServerDomain = new Uri(globalSettings.BaseServiceUri.Vault).Host;
             options.ServerName = "Bitwarden";
-            options.Origins = new HashSet<string> { globalSettings.BaseServiceUri.Vault, };
+
+            IEnumerable<string> allowedOrigins = [globalSettings.BaseServiceUri.Vault];
+            if (globalSettings.Fido2.Origins != null && globalSettings.Fido2.Origins.Any())
+            {
+                allowedOrigins = allowedOrigins.Union(globalSettings.Fido2.Origins);
+            }
+
+            options.Origins = new HashSet<string>(allowedOrigins);
             options.TimestampDriftTolerance = 300000;
         });
     }
