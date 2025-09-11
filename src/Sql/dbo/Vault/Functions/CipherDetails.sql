@@ -31,4 +31,3 @@ SELECT
     C.[ArchivedDate]
 FROM
     [dbo].[Cipher] C
-
