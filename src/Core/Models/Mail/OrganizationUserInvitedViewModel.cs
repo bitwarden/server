@@ -68,7 +68,7 @@ public class OrganizationUserInvitedViewModel : BaseTitleContactUsMailModel
                     ? string.Empty
                     : CoreHelpers.SanitizeForEmail(orgInvitesInfo.OrganizationName, false),
             TitleThird = orgInvitesInfo.IsFreeOrg ? string.Empty : " on Bitwarden and start securing your passwords!",
-            OrganizationName = CoreHelpers.SanitizeForEmail(orgInvitesInfo.OrganizationName, false) + orgUser.Status,
+            OrganizationName = CoreHelpers.SanitizeForEmail(orgInvitesInfo.OrganizationName, false),
             Email = WebUtility.UrlEncode(orgUser.Email),
             OrganizationId = orgUser.OrganizationId.ToString(),
             OrganizationUserId = orgUser.Id.ToString(),
@@ -83,7 +83,8 @@ public class OrganizationUserInvitedViewModel : BaseTitleContactUsMailModel
             OrgSsoEnabled = orgInvitesInfo.OrgSsoEnabled,
             OrgSsoLoginRequiredPolicyEnabled = orgInvitesInfo.OrgSsoLoginRequiredPolicyEnabled,
             OrgUserHasExistingUser = userHasExistingUser,
-            JoinOrganizationButtonText = userHasExistingUser ? "Accept invitation" : "Finish account setup"
+            JoinOrganizationButtonText = userHasExistingUser || orgInvitesInfo.IsFreeOrg ? "Accept invitation" : "Finish account setup",
+            IsFreeOrg = orgInvitesInfo.IsFreeOrg
         };
     }
 
@@ -100,6 +101,7 @@ public class OrganizationUserInvitedViewModel : BaseTitleContactUsMailModel
     public bool OrgSsoLoginRequiredPolicyEnabled { get; set; }
     public bool OrgUserHasExistingUser { get; set; }
     public string JoinOrganizationButtonText { get; set; } = "Join Organization";
+    public bool IsFreeOrg { get; set; }
 
     public string Url
     {

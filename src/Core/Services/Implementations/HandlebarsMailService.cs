@@ -369,13 +369,19 @@ public class HandlebarsMailService : IMailService
 
         MailQueueMessage CreateMessage(string email, OrganizationUserInvitedViewModel model)
         {
-            var subject = $"Join {orgInvitesInfo.OrganizationName}";
+            var subject = $"Join {model.OrganizationName}";
 
             if (orgInvitesInfo.IsSubjectFeatureEnabled)
             {
-                subject = model.OrgUserHasExistingUser
-                    ? $"{model.OrganizationName} invited you to their Bitwarden organization."
-                    : $"{model.OrganizationName} set up a Bitwarden account for you.";
+                ArgumentNullException.ThrowIfNull(model);
+
+                subject = model! switch
+                {
+                    { IsFreeOrg: true, OrgUserHasExistingUser: true } => "You have been invited to a Bitwarden Organization",
+                    { IsFreeOrg: true, OrgUserHasExistingUser: false } => "You have been invited to Bitwarden Password Manager",
+                    { IsFreeOrg: false, OrgUserHasExistingUser: true } => $"{model.OrganizationName} invited you to their Bitwarden organization",
+                    { IsFreeOrg: false, OrgUserHasExistingUser: false } => $"{model.OrganizationName} set up a Bitwarden account for you"
+                };
             }
 
             var message = CreateDefaultMessage(subject, email);
