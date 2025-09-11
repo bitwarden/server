@@ -135,12 +135,18 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
             await _organizationUserRepository.GetByOrganizationAsync(_ssoConfig.OrganizationId, _user.Id);
 
         // SSO users, Organizations, and Providers with Manage Account Recovery (reset password) permission,
-        // as well as all Owners and Admins, must set a master password.
+        // as well as all Owners and Admins, must set a Master Password.
         var hasManageResetPasswordPermission =
+            // We need to interrogate the organizationUser from the repository to solve for an invited status.
+            // The claims won't exist at that time, so currentContext as it is written today won't accommodate for that.
+            // This is the edge case.
+            // TODO: PM-25668 proposes some refactor of the Organization acceptance processes to unify requirement for
+            // Organization acceptance; once it is implemented, we should be able to remove this Organization User check.
             organizationUser?.GetPermissions() is { ManageResetPassword: true } ||
             organizationUser?.Type is OrganizationUserType.Admin or OrganizationUserType.Owner ||
-            // The Organization User alone isn't enough to verify for Provider User case;
-            // // check the current context for permissions granted through this relationship.
+            // For Organization User in Accepted/Confirmed status, claims will be available. CurrentContext will also
+            // offer Provider User information for that case. As MSP, Provider Users will require certain permissions like
+            // ManageResetPassword to perform their role effectively.
             await _currentContext.ManageResetPassword(_ssoConfig!.OrganizationId);
 
         // They can only be approved by an admin if they have enrolled in reset password
