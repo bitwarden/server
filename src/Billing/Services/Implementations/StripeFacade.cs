@@ -16,6 +16,7 @@ public class StripeFacade : IStripeFacade
     private readonly PaymentMethodService _paymentMethodService = new();
     private readonly SubscriptionService _subscriptionService = new();
     private readonly DiscountService _discountService = new();
+    private readonly SetupIntentService _setupIntentService = new();
     private readonly TestClockService _testClockService = new();
 
     public async Task<Charge> GetCharge(
@@ -52,6 +53,13 @@ public class StripeFacade : IStripeFacade
         RequestOptions requestOptions = null,
         CancellationToken cancellationToken = default) =>
         await _invoiceService.GetAsync(invoiceId, invoiceGetOptions, requestOptions, cancellationToken);
+
+    public async Task<SetupIntent> GetSetupIntent(
+        string setupIntentId,
+        SetupIntentGetOptions setupIntentGetOptions = null,
+        RequestOptions requestOptions = null,
+        CancellationToken cancellationToken = default) =>
+        await _setupIntentService.GetAsync(setupIntentId, setupIntentGetOptions, requestOptions, cancellationToken);
 
     public async Task<StripeList<Invoice>> ListInvoices(
         InvoiceListOptions options = null,

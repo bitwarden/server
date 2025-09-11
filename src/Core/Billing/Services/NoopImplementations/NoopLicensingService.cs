@@ -73,4 +73,9 @@ public class NoopLicensingService : ILicensingService
     {
         return Task.FromResult<string?>(null);
     }
+
+    public Task WriteUserLicenseAsync(User user, UserLicense license)
+    {
+        return Task.CompletedTask;
+    }
 }
