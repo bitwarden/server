@@ -140,7 +140,6 @@ public class OrganizationConnectionsController : Controller
     }
 
     [HttpDelete("{organizationConnectionId}")]
-    [HttpPost("{organizationConnectionId}/delete")]
     public async Task DeleteConnection(Guid organizationConnectionId)
     {
         var connection = await _organizationConnectionRepository.GetByIdAsync(organizationConnectionId);
@@ -156,6 +155,13 @@ public class OrganizationConnectionsController : Controller
         }
 
         await _deleteOrganizationConnectionCommand.DeleteAsync(connection);
+    }
+
+    [HttpPost("{organizationConnectionId}/delete")]
+    [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
+    public async Task PostDeleteConnection(Guid organizationConnectionId)
+    {
+        await DeleteConnection(organizationConnectionId);
     }
 
     private async Task<ICollection<OrganizationConnection>> GetConnectionsAsync(Guid organizationId, OrganizationConnectionType type) =>

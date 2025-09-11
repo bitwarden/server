@@ -399,20 +399,6 @@ public interface IPushNotificationService
             ExcludeCurrentContext = true,
         });
 
-    Task PushSyncOrganizationStatusAsync(Organization organization)
-        => PushAsync(new PushNotification<OrganizationStatusPushNotification>
-        {
-            Type = PushType.SyncOrganizationStatusChanged,
-            Target = NotificationTarget.Organization,
-            TargetId = organization.Id,
-            Payload = new OrganizationStatusPushNotification
-            {
-                OrganizationId = organization.Id,
-                Enabled = organization.Enabled,
-            },
-            ExcludeCurrentContext = false,
-        });
-
     Task PushSyncOrganizationCollectionManagementSettingsAsync(Organization organization)
         => PushAsync(new PushNotification<OrganizationCollectionManagementPushNotification>
         {

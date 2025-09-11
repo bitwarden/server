@@ -8,9 +8,9 @@ namespace Bit.Api.AdminConsole.Models.Request.Organizations;
 
 public class OrganizationIntegrationRequestModel : IValidatableObject
 {
-    public string? Configuration { get; set; }
+    public string? Configuration { get; init; }
 
-    public IntegrationType Type { get; set; }
+    public IntegrationType Type { get; init; }
 
     public OrganizationIntegration ToOrganizationIntegration(Guid organizationId)
     {
@@ -33,62 +33,55 @@ public class OrganizationIntegrationRequestModel : IValidatableObject
         switch (Type)
         {
             case IntegrationType.CloudBillingSync or IntegrationType.Scim:
-                yield return new ValidationResult($"{nameof(Type)} integrations are not yet supported.", new[] { nameof(Type) });
+                yield return new ValidationResult($"{nameof(Type)} integrations are not yet supported.", [nameof(Type)]);
                 break;
             case IntegrationType.Slack:
-                yield return new ValidationResult($"{nameof(Type)} integrations cannot be created directly.", new[] { nameof(Type) });
+                yield return new ValidationResult($"{nameof(Type)} integrations cannot be created directly.", [nameof(Type)]);
                 break;
             case IntegrationType.Webhook:
-                if (string.IsNullOrWhiteSpace(Configuration))
-                {
-                    break;
-                }
-                if (!IsIntegrationValid<WebhookIntegration>())
-                {
-                    yield return new ValidationResult(
-                        "Webhook integrations must include valid configuration.",
-                        new[] { nameof(Configuration) });
-                }
+                foreach (var r in ValidateConfiguration<WebhookIntegration>(allowNullOrEmpty: true))
+                    yield return r;
                 break;
             case IntegrationType.Hec:
-                if (!IsIntegrationValid<HecIntegration>())
-                {
-                    yield return new ValidationResult(
-                        "HEC integrations must include valid configuration.",
-                        new[] { nameof(Configuration) });
-                }
+                foreach (var r in ValidateConfiguration<HecIntegration>(allowNullOrEmpty: false))
+                    yield return r;
                 break;
             case IntegrationType.Datadog:
-                if (!IsIntegrationValid<DatadogIntegration>())
-                {
-                    yield return new ValidationResult(
-                        "Datadog integrations must include valid configuration.",
-                        new[] { nameof(Configuration) });
-                }
+                foreach (var r in ValidateConfiguration<DatadogIntegration>(allowNullOrEmpty: false))
+                    yield return r;
                 break;
             default:
                 yield return new ValidationResult(
                     $"Integration type '{Type}' is not recognized.",
-                    new[] { nameof(Type) });
+                    [nameof(Type)]);
                 break;
         }
     }
 
-    private bool IsIntegrationValid<T>()
+    private List<ValidationResult> ValidateConfiguration<T>(bool allowNullOrEmpty)
     {
+        var results = new List<ValidationResult>();
+
         if (string.IsNullOrWhiteSpace(Configuration))
         {
-            return false;
+            if (!allowNullOrEmpty)
+                results.Add(InvalidConfig<T>());
+            return results;
         }
 
         try
         {
-            var config = JsonSerializer.Deserialize<T>(Configuration);
-            return config is not null;
+            if (JsonSerializer.Deserialize<T>(Configuration) is null)
+                results.Add(InvalidConfig<T>());
         }
         catch
         {
-            return false;
+            results.Add(InvalidConfig<T>());
         }
+
+        return results;
     }
+
+    private static ValidationResult InvalidConfig<T>() =>
+        new(errorMessage: $"Must include valid {typeof(T).Name} configuration.", memberNames: [nameof(Configuration)]);
 }
