@@ -194,7 +194,7 @@ public class FreshdeskController : Controller
         // eventually, we will merge both endpoints into one webhook for Freshdesk
 
         // ensure that the key is from Freshdesk
-        if (!IsValidRequestFromFreshdesk(key))
+        if (!IsValidRequestFromFreshdesk(key) || !ModelState.IsValid)
         {
             return new BadRequestResult();
         }
@@ -305,7 +305,7 @@ public class FreshdeskController : Controller
 
         var replyBody = new FreshdeskReplyRequestModel
         {
-            Body = $"{note}{_billingSettings.FreshDesk.AutoReplyFooter}",
+            Body = $"{_billingSettings.FreshDesk.AutoReplyGreeting}{note}{_billingSettings.FreshDesk.AutoReplySalutation}",
         };
 
         var replyRequest = new HttpRequestMessage(HttpMethod.Post,
