@@ -22,7 +22,9 @@ on:
         required: false
         type: string
 
-permissions: {}
+permissions:
+  pull-requests: write
+  contents: write
 
 jobs:
   setup:
@@ -231,5 +233,10 @@ jobs:
   move_edd_db_scripts:
     name: Move EDD database scripts
     needs: cut_branch
+    permissions:
+      actions: read
+      contents: write
+      id-token: write
+      pull-requests: write
     uses: ./.github/workflows/_move_edd_db_scripts.yml
     secrets: inherit
