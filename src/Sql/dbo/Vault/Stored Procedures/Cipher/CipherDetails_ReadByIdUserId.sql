@@ -5,7 +5,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    SELECT
+SELECT
         [Id],
         [UserId],
         [OrganizationId],

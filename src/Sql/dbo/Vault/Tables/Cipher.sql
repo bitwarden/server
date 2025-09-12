@@ -36,5 +36,4 @@ CREATE NONCLUSTERED INDEX [IX_Cipher_DeletedDate]
     ON [dbo].[Cipher]([DeletedDate] ASC);
 
 
-
 GO
