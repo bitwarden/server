@@ -99,7 +99,7 @@ services:
       - idp
 
   rabbitmq:
-    image: rabbitmq:4.1.0-management
+    image: rabbitmq:4.1.3-management
     container_name: rabbitmq
     ports:
       - "5672:5672"
