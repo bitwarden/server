@@ -351,21 +351,43 @@ public class HandlebarsMailService : IMailService
 
     public async Task SendOrganizationInviteEmailsAsync(OrganizationInvitesInfo orgInvitesInfo)
     {
-        MailQueueMessage CreateMessage(string email, object model)
-        {
-            var message = CreateDefaultMessage($"Join {orgInvitesInfo.OrganizationName}", email);
-            return new MailQueueMessage(message, "OrganizationUserInvited", model);
-        }
-
         var messageModels = orgInvitesInfo.OrgUserTokenPairs.Select(orgUserTokenPair =>
         {
             Debug.Assert(orgUserTokenPair.OrgUser.Email is not null);
-            var orgUserInviteViewModel = OrganizationUserInvitedViewModel.CreateFromInviteInfo(
-                orgInvitesInfo, orgUserTokenPair.OrgUser, orgUserTokenPair.Token, _globalSettings);
+
+            var orgUserInviteViewModel = orgInvitesInfo.IsSubjectFeatureEnabled
+                ? OrganizationUserInvitedViewModel.CreateFromInviteInfo_v2(
+                    orgInvitesInfo, orgUserTokenPair.OrgUser, orgUserTokenPair.Token, _globalSettings)
+                : OrganizationUserInvitedViewModel.CreateFromInviteInfo(orgInvitesInfo, orgUserTokenPair.OrgUser,
+                    orgUserTokenPair.Token, _globalSettings);
+
             return CreateMessage(orgUserTokenPair.OrgUser.Email, orgUserInviteViewModel);
         });
 
         await EnqueueMailAsync(messageModels);
+        return;
+
+        MailQueueMessage CreateMessage(string email, OrganizationUserInvitedViewModel model)
+        {
+            var subject = $"Join {model.OrganizationName}";
+
+            if (orgInvitesInfo.IsSubjectFeatureEnabled)
+            {
+                ArgumentNullException.ThrowIfNull(model);
+
+                subject = model! switch
+                {
+                    { IsFreeOrg: true, OrgUserHasExistingUser: true } => "You have been invited to a Bitwarden Organization",
+                    { IsFreeOrg: true, OrgUserHasExistingUser: false } => "You have been invited to Bitwarden Password Manager",
+                    { IsFreeOrg: false, OrgUserHasExistingUser: true } => $"{model.OrganizationName} invited you to their Bitwarden organization",
+                    { IsFreeOrg: false, OrgUserHasExistingUser: false } => $"{model.OrganizationName} set up a Bitwarden account for you"
+                };
+            }
+
+            var message = CreateDefaultMessage(subject, email);
+
+            return new MailQueueMessage(message, "OrganizationUserInvited", model);
+        }
     }
 
     public async Task SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(string organizationName, string email)

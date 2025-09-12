@@ -20,6 +20,7 @@ using Bit.Core.Settings;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Authorization.Permissions;
+using Bit.Core.Vault.Commands.Interfaces;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Queries;
@@ -48,6 +49,8 @@ public class CiphersController : Controller
     private readonly IOrganizationCiphersQuery _organizationCiphersQuery;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly ICollectionRepository _collectionRepository;
+    private readonly IArchiveCiphersCommand _archiveCiphersCommand;
+    private readonly IUnarchiveCiphersCommand _unarchiveCiphersCommand;
     private readonly IFeatureService _featureService;
 
     public CiphersController(
@@ -63,6 +66,8 @@ public class CiphersController : Controller
         IOrganizationCiphersQuery organizationCiphersQuery,
         IApplicationCacheService applicationCacheService,
         ICollectionRepository collectionRepository,
+        IArchiveCiphersCommand archiveCiphersCommand,
+        IUnarchiveCiphersCommand unarchiveCiphersCommand,
         IFeatureService featureService)
     {
         _cipherRepository = cipherRepository;
@@ -77,6 +82,8 @@ public class CiphersController : Controller
         _organizationCiphersQuery = organizationCiphersQuery;
         _applicationCacheService = applicationCacheService;
         _collectionRepository = collectionRepository;
+        _archiveCiphersCommand = archiveCiphersCommand;
+        _unarchiveCiphersCommand = unarchiveCiphersCommand;
         _featureService = featureService;
     }
 
@@ -894,6 +901,47 @@ public class CiphersController : Controller
         }
     }
 
+    [HttpPut("{id}/archive")]
+    [RequireFeature(FeatureFlagKeys.ArchiveVaultItems)]
+    public async Task<CipherMiniResponseModel> PutArchive(Guid id)
+    {
+        var userId = _userService.GetProperUserId(User).Value;
+
+        var archivedCipherOrganizationDetails = await _archiveCiphersCommand.ArchiveManyAsync([id], userId);
+
+        if (archivedCipherOrganizationDetails.Count == 0)
+        {
+            throw new BadRequestException("Cipher was not archived. Ensure the provided ID is correct and you have permission to archive it.");
+        }
+
+        return new CipherMiniResponseModel(archivedCipherOrganizationDetails.First(), _globalSettings, archivedCipherOrganizationDetails.First().OrganizationUseTotp);
+    }
+
+    [HttpPut("archive")]
+    [RequireFeature(FeatureFlagKeys.ArchiveVaultItems)]
+    public async Task<ListResponseModel<CipherMiniResponseModel>> PutArchiveMany([FromBody] CipherBulkArchiveRequestModel model)
+    {
+        if (!_globalSettings.SelfHosted && model.Ids.Count() > 500)
+        {
+            throw new BadRequestException("You can only archive up to 500 items at a time.");
+        }
+
+        var userId = _userService.GetProperUserId(User).Value;
+
+        var cipherIdsToArchive = new HashSet<Guid>(model.Ids);
+
+        var archivedCiphers = await _archiveCiphersCommand.ArchiveManyAsync(cipherIdsToArchive, userId);
+
+        if (archivedCiphers.Count == 0)
+        {
+            throw new BadRequestException("No ciphers were archived. Ensure the provided IDs are correct and you have permission to archive them.");
+        }
+
+        var responses = archivedCiphers.Select(c => new CipherMiniResponseModel(c, _globalSettings, c.OrganizationUseTotp));
+
+        return new ListResponseModel<CipherMiniResponseModel>(responses);
+    }
+
     [HttpDelete("{id}")]
     public async Task Delete(Guid id)
     {
@@ -1049,6 +1097,47 @@ public class CiphersController : Controller
 
         var userId = _userService.GetProperUserId(User).Value;
         await _cipherService.SoftDeleteManyAsync(cipherIds, userId, new Guid(model.OrganizationId), true);
+    }
+
+    [HttpPut("{id}/unarchive")]
+    [RequireFeature(FeatureFlagKeys.ArchiveVaultItems)]
+    public async Task<CipherMiniResponseModel> PutUnarchive(Guid id)
+    {
+        var userId = _userService.GetProperUserId(User).Value;
+
+        var unarchivedCipherDetails = await _unarchiveCiphersCommand.UnarchiveManyAsync([id], userId);
+
+        if (unarchivedCipherDetails.Count == 0)
+        {
+            throw new BadRequestException("Cipher was not unarchived. Ensure the provided ID is correct and you have permission to archive it.");
+        }
+
+        return new CipherMiniResponseModel(unarchivedCipherDetails.First(), _globalSettings, unarchivedCipherDetails.First().OrganizationUseTotp);
+    }
+
+    [HttpPut("unarchive")]
+    [RequireFeature(FeatureFlagKeys.ArchiveVaultItems)]
+    public async Task<ListResponseModel<CipherMiniResponseModel>> PutUnarchiveMany([FromBody] CipherBulkUnarchiveRequestModel model)
+    {
+        if (!_globalSettings.SelfHosted && model.Ids.Count() > 500)
+        {
+            throw new BadRequestException("You can only unarchive up to 500 items at a time.");
+        }
+
+        var userId = _userService.GetProperUserId(User).Value;
+
+        var cipherIdsToUnarchive = new HashSet<Guid>(model.Ids);
+
+        var unarchivedCipherOrganizationDetails = await _unarchiveCiphersCommand.UnarchiveManyAsync(cipherIdsToUnarchive, userId);
+
+        if (unarchivedCipherOrganizationDetails.Count == 0)
+        {
+            throw new BadRequestException("Ciphers were not unarchived. Ensure the provided ID is correct and you have permission to archive it.");
+        }
+
+        var responses = unarchivedCipherOrganizationDetails.Select(c => new CipherMiniResponseModel(c, _globalSettings, c.OrganizationUseTotp));
+
+        return new ListResponseModel<CipherMiniResponseModel>(responses);
     }
 
     [HttpPut("{id}/restore")]
