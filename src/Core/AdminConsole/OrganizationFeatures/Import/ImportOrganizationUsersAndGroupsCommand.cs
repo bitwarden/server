@@ -22,7 +22,6 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
     private readonly IGroupRepository _groupRepository;
     private readonly IEventService _eventService;
     private readonly IOrganizationService _organizationService;
-    private readonly IFeatureService _featureService;
 
     private readonly EventSystemUser _EventSystemUser = EventSystemUser.PublicApi;
 
@@ -31,8 +30,7 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
             IPaymentService paymentService,
             IGroupRepository groupRepository,
             IEventService eventService,
-            IOrganizationService organizationService,
-            IFeatureService featureService)
+            IOrganizationService organizationService)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -40,7 +38,6 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
         _groupRepository = groupRepository;
         _eventService = eventService;
         _organizationService = organizationService;
-        _featureService = featureService;
     }
 
     /// <summary>
@@ -238,8 +235,7 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
                 importUserData.ExistingExternalUsersIdDict.ContainsKey(u.ExternalId))
             .ToList();
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.DirectoryConnectorPreventUserRemoval) &&
-            usersToDelete.Any(u => !u.HasMasterPassword))
+        if (usersToDelete.Any(u => !u.HasMasterPassword))
         {
             // Removing users without an MP will put their account in an unrecoverable state.
             // We allow this during normal syncs for offboarding, but overwriteExisting risks bricking every user in
