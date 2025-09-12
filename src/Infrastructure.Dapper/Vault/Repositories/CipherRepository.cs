@@ -240,11 +240,24 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
+    public async Task<DateTime> ArchiveAsync(IEnumerable<Guid> ids, Guid userId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.ExecuteScalarAsync<DateTime>(
+                $"[{Schema}].[Cipher_Archive]",
+                new { Ids = ids.ToGuidIdArrayTVP(), UserId = userId },
+                commandType: CommandType.StoredProcedure);
+
+            return results;
+        }
+    }
+
     public async Task DeleteAttachmentAsync(Guid cipherId, string attachmentId)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
-            var results = await connection.ExecuteAsync(
+            await connection.ExecuteAsync(
                 $"[{Schema}].[Cipher_DeleteAttachment]",
                 new { Id = cipherId, AttachmentId = attachmentId },
                 commandType: CommandType.StoredProcedure);
@@ -827,6 +840,19 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
                 $"[{Schema}].[Cipher_SoftDelete]",
                 new { Ids = ids.ToGuidIdArrayTVP(), UserId = userId },
                 commandType: CommandType.StoredProcedure);
+        }
+    }
+
+    public async Task<DateTime> UnarchiveAsync(IEnumerable<Guid> ids, Guid userId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.ExecuteScalarAsync<DateTime>(
+                $"[{Schema}].[Cipher_Unarchive]",
+                new { Ids = ids.ToGuidIdArrayTVP(), UserId = userId },
+                commandType: CommandType.StoredProcedure);
+
+            return results;
         }
     }
 
