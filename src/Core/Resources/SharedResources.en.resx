@@ -389,7 +389,7 @@
     <value>If SAML Binding Type is set to artifact, identity provider resolution service URL is required.</value>
   </data>
   <data name="IdpSingleSignOnServiceUrlValidationError" xml:space="preserve">
-    <value>If Identity Provider Entity ID is not a URL, single sign on service URL is required.</value>
+    <value>Single sign on service URL is required.</value>
   </data>
   <data name="InvalidSchemeConfigurationError" xml:space="preserve">
     <value>The configured authentication scheme is not valid: "{0}"</value>

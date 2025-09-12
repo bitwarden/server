@@ -121,7 +121,7 @@ public class SsoConfigurationDataRequest : IValidatableObject
                     new[] { nameof(IdpEntityId) });
             }
 
-            if (!Uri.IsWellFormedUriString(IdpEntityId, UriKind.Absolute) && string.IsNullOrWhiteSpace(IdpSingleSignOnServiceUrl))
+            if (string.IsNullOrWhiteSpace(IdpSingleSignOnServiceUrl))
             {
                 yield return new ValidationResult(i18nService.GetLocalizedHtmlString("IdpSingleSignOnServiceUrlValidationError"),
                     new[] { nameof(IdpSingleSignOnServiceUrl) });
