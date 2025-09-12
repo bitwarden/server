@@ -119,8 +119,6 @@ public class OrganizationLicenseClaimsFactory : ILicenseClaimsFactory<Organizati
                 expirationWithoutGracePeriod.Value.ToString(CultureInfo.InvariantCulture)));
         }
 
-        claims.Add(new Claim(nameof(OrganizationLicenseConstants.UseAdminSponsoredFamilies), entity.UseAdminSponsoredFamilies.ToString()));
-
         return Task.FromResult(claims);
     }
 }
