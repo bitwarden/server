@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Cipher_DeleteByOrganizationId]
+CREATE OR ALTER PROCEDURE [dbo].[Cipher_DeleteByOrganizationId]
     @OrganizationId AS UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -55,3 +55,4 @@ BEGIN
     EXEC [dbo].[Organization_UpdateStorage] @OrganizationId
     EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrganizationId
 END
+GO

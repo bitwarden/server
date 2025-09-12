@@ -285,11 +285,17 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
                                     join c in dbContext.Collections
                                         on cc.CollectionId equals c.Id
                                     where c.OrganizationId == organizationId
+                                          && c.Type != CollectionType.DefaultUserCollection
                                     select cc;
             dbContext.RemoveRange(collectionCiphers);
 
             var ciphers = from c in dbContext.Ciphers
                           where c.OrganizationId == organizationId
+                                && !dbContext.CollectionCiphers.Any(cc =>
+                                    dbContext.Collections.Any(col =>
+                                        col.Id == cc.CollectionId
+                                        && cc.CipherId == c.Id
+                                        && col.Type == CollectionType.DefaultUserCollection))
                           select c;
             dbContext.RemoveRange(ciphers);
 
