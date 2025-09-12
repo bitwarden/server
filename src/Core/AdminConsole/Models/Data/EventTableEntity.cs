@@ -37,6 +37,7 @@ public class AzureEvent : ITableEntity
     public Guid? SecretId { get; set; }
     public Guid? ProjectId { get; set; }
     public Guid? ServiceAccountId { get; set; }
+    public Guid? GrantedServiceAccountId { get; set; }
 
     public EventTableEntity ToEventTableEntity()
     {
@@ -68,6 +69,7 @@ public class AzureEvent : ITableEntity
             SecretId = SecretId,
             ServiceAccountId = ServiceAccountId,
             ProjectId = ProjectId,
+            GrantedServiceAccountId = GrantedServiceAccountId
         };
     }
 }
@@ -99,6 +101,7 @@ public class EventTableEntity : IEvent
         SecretId = e.SecretId;
         ProjectId = e.ProjectId;
         ServiceAccountId = e.ServiceAccountId;
+        GrantedServiceAccountId = e.GrantedServiceAccountId;
     }
 
     public string PartitionKey { get; set; }
@@ -127,6 +130,7 @@ public class EventTableEntity : IEvent
     public Guid? SecretId { get; set; }
     public Guid? ProjectId { get; set; }
     public Guid? ServiceAccountId { get; set; }
+    public Guid? GrantedServiceAccountId { get; set; }
 
     public AzureEvent ToAzureEvent()
     {
@@ -157,7 +161,8 @@ public class EventTableEntity : IEvent
             DomainName = DomainName,
             SecretId = SecretId,
             ProjectId = ProjectId,
-            ServiceAccountId = ServiceAccountId
+            ServiceAccountId = ServiceAccountId,
+            GrantedServiceAccountId = GrantedServiceAccountId
         };
     }
 
@@ -229,6 +234,15 @@ public class EventTableEntity : IEvent
             {
                 PartitionKey = pKey,
                 RowKey = $"ProjectId={e.ProjectId}__Date={dateKey}__Uniquifier={uniquifier}"
+            });
+        }
+
+        if (e.GrantedServiceAccountId.HasValue)
+        {
+            entities.Add(new EventTableEntity(e)
+            {
+                PartitionKey = pKey,
+                RowKey = $"GrantedServiceAccountId={e.GrantedServiceAccountId}__Date={dateKey}__Uniquifier={uniquifier}"
             });
         }
 
