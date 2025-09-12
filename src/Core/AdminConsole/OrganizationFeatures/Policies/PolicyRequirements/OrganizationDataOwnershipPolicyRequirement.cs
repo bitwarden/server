@@ -67,6 +67,11 @@ public class OrganizationDataOwnershipPolicyRequirement : IPolicyRequirement
         var noCollectionNeeded = new DefaultCollectionRequest(Guid.Empty, false);
         return noCollectionNeeded;
     }
+
+    public bool RequiresDefaultCollectionOnConfirm(Guid organizationId)
+    {
+        return _policyDetails.Any(p => p.OrganizationId == organizationId);
+    }
 }
 
 public record DefaultCollectionRequest(Guid OrganizationUserId, bool ShouldCreateDefaultCollection)

@@ -10,8 +10,21 @@ public static class BulkResourceCreationService
     private const string _defaultErrorMessage = "Must have at least one record for bulk creation.";
     public static async Task CreateCollectionsUsersAsync(SqlConnection connection, SqlTransaction transaction, IEnumerable<CollectionUser> collectionUsers, string errorMessage = _defaultErrorMessage)
     {
+        // Offload some work from SQL Server by pre-sorting before insert.
+        // This lets us use the SqlBulkCopy.ColumnOrderHints to improve performance.
+        collectionUsers = collectionUsers
+            .OrderBy(cu => cu.CollectionId)
+            .ThenBy(cu => cu.OrganizationUserId)
+            .ToList();
+
         using var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction);
         bulkCopy.DestinationTableName = "[dbo].[CollectionUser]";
+        bulkCopy.BatchSize = 500;
+        bulkCopy.BulkCopyTimeout = 120;
+        bulkCopy.EnableStreaming = true;
+        bulkCopy.ColumnOrderHints.Add("CollectionId", SortOrder.Ascending);
+        bulkCopy.ColumnOrderHints.Add("OrganizationUserId", SortOrder.Ascending);
+
         var dataTable = BuildCollectionsUsersTable(bulkCopy, collectionUsers, errorMessage);
         await bulkCopy.WriteToServerAsync(dataTable);
     }
@@ -98,8 +111,17 @@ public static class BulkResourceCreationService
 
     public static async Task CreateCollectionsAsync(SqlConnection connection, SqlTransaction transaction, IEnumerable<Collection> collections, string errorMessage = _defaultErrorMessage)
     {
+        // Offload some work from SQL Server by pre-sorting before insert.
+        // This lets us use the SqlBulkCopy.ColumnOrderHints to improve performance.
+        collections = collections.OrderBy(c => c.Id).ToList();
+
         using var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction);
         bulkCopy.DestinationTableName = "[dbo].[Collection]";
+        bulkCopy.BatchSize = 500;
+        bulkCopy.BulkCopyTimeout = 120;
+        bulkCopy.EnableStreaming = true;
+        bulkCopy.ColumnOrderHints.Add("Id", SortOrder.Ascending);
+
         var dataTable = BuildCollectionsTable(bulkCopy, collections, errorMessage);
         await bulkCopy.WriteToServerAsync(dataTable);
     }

@@ -6,6 +6,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Bit.Infrastructure.Dapper.AdminConsole.Helpers;
 using Dapper;
 using Microsoft.Data.SqlClient;
@@ -326,9 +327,10 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         }
     }
 
-    public async Task UpsertDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> affectedOrgUserIds, string defaultCollectionName)
+    public async Task UpsertDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName)
     {
-        if (!affectedOrgUserIds.Any())
+        organizationUserIds = organizationUserIds.ToList();
+        if (!organizationUserIds.Any())
         {
             return;
         }
@@ -340,7 +342,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         {
             var orgUserIdWithDefaultCollection = await GetOrgUserIdsWithDefaultCollectionAsync(connection, transaction, organizationId);
 
-            var missingDefaultCollectionUserIds = affectedOrgUserIds.Except(orgUserIdWithDefaultCollection);
+            var missingDefaultCollectionUserIds = organizationUserIds.Except(orgUserIdWithDefaultCollection);
 
             var (collectionUsers, collections) = BuildDefaultCollectionForUsers(organizationId, missingDefaultCollectionUserIds, defaultCollectionName);
 
@@ -393,7 +395,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
 
         foreach (var orgUserId in missingDefaultCollectionUserIds)
         {
-            var collectionId = Guid.NewGuid();
+            var collectionId = CoreHelpers.GenerateComb();
 
             collections.Add(new Collection
             {
