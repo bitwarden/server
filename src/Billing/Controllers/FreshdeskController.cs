@@ -294,18 +294,28 @@ public class FreshdeskController : Controller
         }
 
         // convert note from markdown to html
-        var pipeline = new MarkdownPipelineBuilder().UseAdvancedExtensions().Build();
-        note = Markdig.Markdown.ToHtml(note, pipeline);
+        var htmlNote = note;
+        try
+        {
+            var pipeline = new MarkdownPipelineBuilder().UseAdvancedExtensions().Build();
+            htmlNote = Markdig.Markdown.ToHtml(note, pipeline);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error converting markdown to HTML for Freshdesk reply. Ticket Id: {0}. Note: {1}",
+                            ticketId, note);
+            htmlNote = note; // fallback to the original note
+        }
 
         // clear out any new lines that Freshdesk doesn't like
         if (_billingSettings.FreshDesk.RemoveNewlinesInReplies)
         {
-            note = note.Replace(Environment.NewLine, string.Empty);
+            htmlNote = htmlNote.Replace(Environment.NewLine, string.Empty);
         }
 
         var replyBody = new FreshdeskReplyRequestModel
         {
-            Body = $"{_billingSettings.FreshDesk.AutoReplyGreeting}{note}{_billingSettings.FreshDesk.AutoReplySalutation}",
+            Body = $"{_billingSettings.FreshDesk.AutoReplyGreeting}{htmlNote}{_billingSettings.FreshDesk.AutoReplySalutation}",
         };
 
         var replyRequest = new HttpRequestMessage(HttpMethod.Post,
