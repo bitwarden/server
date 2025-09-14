@@ -89,57 +89,6 @@ public interface IPolicyValidationEvent : IPolicyUpdateEvent
     public Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy);
 }
 
-public class NoOpPolicyHandler :
-    IPolicyValidationEvent,
-    IEnforceDependentPoliciesEvent,
-    IOnPolicyPreSaveEvent,
-    IOnPolicyPostSaveEvent
-{
-    private readonly PolicyType _policyType;
-
-    // Jimmy Since it requires a policy type, not sure if this is the right move.
-
-    // Jimmy another issue with noops
-    // return (T)(object)new NoOpPolicyHandler(policyType);
-    public NoOpPolicyHandler(PolicyType policyType)
-    {
-        _policyType = policyType;
-    }
-
-    /// <summary>
-    /// The PolicyType that this definition relates to.
-    /// </summary>
-    public PolicyType Type => _policyType;
-
-    /// <summary>
-    /// No validation is performed - always returns success.
-    /// </summary>
-    public Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
-    {
-        return Task.FromResult(string.Empty);
-    }
-
-    /// <summary>
-    /// No policy dependencies are required.
-    /// </summary>
-    public IEnumerable<PolicyType> RequiredPolicies => Enumerable.Empty<PolicyType>();
-
-    /// <summary>
-    /// No pre-save side effects are performed.
-    /// </summary>
-    public Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
-    {
-        return Task.CompletedTask;
-    }
-
-    /// <summary>
-    /// No post-save side effects are performed.
-    /// </summary>
-    public Task PostSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
-    {
-        return Task.CompletedTask;
-    }
-}
 
 
 public class PolicyEventOrchestrator2(
