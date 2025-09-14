@@ -8,16 +8,17 @@ using Bit.Core.Auth.Repositories;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 
-public class RequireSsoPolicyValidator : IPolicyValidator
+public class RequireSsoOnPolicyEventEventEnsureEventValidator : IEnforceDependentPoliciesEvent, IOnPolicyPostSaveEvent, IPolicyValidationEvent
 {
     private readonly ISsoConfigRepository _ssoConfigRepository;
 
-    public RequireSsoPolicyValidator(ISsoConfigRepository ssoConfigRepository)
+    public RequireSsoOnPolicyEventEventEnsureEventValidator(ISsoConfigRepository ssoConfigRepository)
     {
         _ssoConfigRepository = ssoConfigRepository;
     }
 
     public PolicyType Type => PolicyType.RequireSso;
+
     public IEnumerable<PolicyType> RequiredPolicies => [PolicyType.SingleOrg];
 
     public async Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
@@ -34,5 +35,5 @@ public class RequireSsoPolicyValidator : IPolicyValidator
         return "";
     }
 
-    public Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult(0);
+    public Task PostSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult(0);
 }

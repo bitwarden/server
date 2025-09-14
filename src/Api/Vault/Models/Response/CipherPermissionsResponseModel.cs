@@ -19,6 +19,7 @@ public record CipherPermissionsResponseModel
         IDictionary<Guid, OrganizationAbility> organizationAbilities)
     {
         OrganizationAbility organizationAbility = null;
+        // Jimmy Error
         if (cipherDetails.OrganizationId.HasValue && !organizationAbilities.TryGetValue(cipherDetails.OrganizationId.Value, out organizationAbility))
         {
             throw new Exception("OrganizationAbility not found for organization cipher.");

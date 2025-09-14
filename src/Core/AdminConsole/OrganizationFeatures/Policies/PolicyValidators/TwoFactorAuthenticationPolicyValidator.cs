@@ -16,7 +16,7 @@ using Bit.Core.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 
-public class TwoFactorAuthenticationPolicyValidator : IPolicyValidator
+public class TwoFactorAuthenticationPolicyValidator : IPolicyValidator, IOnPolicyPreSaveEvent
 {
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IMailService _mailService;

@@ -24,10 +24,16 @@ public static class PolicyServiceCollectionExtensions
     {
         services.AddScoped<IPolicyValidator, TwoFactorAuthenticationPolicyValidator>();
         services.AddScoped<IPolicyValidator, SingleOrgPolicyValidator>();
-        services.AddScoped<IPolicyValidator, RequireSsoPolicyValidator>();
+
         services.AddScoped<IPolicyValidator, ResetPasswordPolicyValidator>();
-        services.AddScoped<IPolicyValidator, MaximumVaultTimeoutPolicyValidator>();
+
         services.AddScoped<IPolicyValidator, FreeFamiliesForEnterprisePolicyValidator>();
+
+        services.AddScoped<IEnforceDependentPoliciesEvent, RequireSsoOnPolicyEventEventEnsureEventValidator>();
+        services.AddScoped<IPolicyValidationEvent, RequireSsoOnPolicyEventEventEnsureEventValidator>();
+        services.AddScoped<IOnPolicyPostSaveEvent, RequireSsoOnPolicyEventEventEnsureEventValidator>();
+
+        services.AddScoped<IEnforceDependentPoliciesEvent, MaximumVaultTimeoutPolicyEventEventValidator>();
     }
 
     private static void AddPolicySideEffects(this IServiceCollection services)
