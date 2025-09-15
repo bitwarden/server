@@ -92,6 +92,9 @@ public class Startup
             await next();
         });
 
+        app.UseCors(policy => policy.SetIsOriginAllowed(o => CoreHelpers.IsCorsOriginAllowed(o, globalSettings))
+            .AllowAnyMethod().AllowAnyHeader().AllowCredentials());
+
         app.UseRouting();
         app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());
     }

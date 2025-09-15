@@ -4,6 +4,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using AutoMapper;
+using Bit.Core.Enums;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Enums;
@@ -167,6 +168,16 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
+    /// <inheritdoc cref="CreateAsync(Guid, IEnumerable{Cipher}, IEnumerable{Folder})"/>
+    /// <remarks>
+    /// EF does not use the bulk resource creation service, so we need to use the regular create method.
+    /// </remarks>
+    public async Task CreateAsync_vNext(Guid userId, IEnumerable<Core.Vault.Entities.Cipher> ciphers,
+        IEnumerable<Core.Vault.Entities.Folder> folders)
+    {
+        await CreateAsync(userId, ciphers, folders);
+    }
+
     public async Task CreateAsync(IEnumerable<Core.Vault.Entities.Cipher> ciphers,
         IEnumerable<Core.Entities.Collection> collections,
         IEnumerable<Core.Entities.CollectionCipher> collectionCiphers,
@@ -205,9 +216,21 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
+    /// <inheritdoc cref="CreateAsync(IEnumerable{Cipher}, IEnumerable{Collection}, IEnumerable{CollectionCipher}, IEnumerable{CollectionUser})"/>
+    /// <remarks>
+    /// EF does not use the bulk resource creation service, so we need to use the regular create method.
+    /// </remarks>
+    public async Task CreateAsync_vNext(IEnumerable<Core.Vault.Entities.Cipher> ciphers,
+        IEnumerable<Core.Entities.Collection> collections,
+        IEnumerable<Core.Entities.CollectionCipher> collectionCiphers,
+        IEnumerable<Core.Entities.CollectionUser> collectionUsers)
+    {
+        await CreateAsync(ciphers, collections, collectionCiphers, collectionUsers);
+    }
+
     public async Task DeleteAsync(IEnumerable<Guid> ids, Guid userId)
     {
-        await ToggleCipherStates(ids, userId, CipherStateAction.HardDelete);
+        await ToggleDeleteCipherStatesAsync(ids, userId, CipherStateAction.HardDelete);
     }
 
     public async Task DeleteAttachmentAsync(Guid cipherId, string attachmentId)
@@ -485,7 +508,8 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
                                         ViewPassword = true,
                                         Manage = true,
                                         OrganizationUseTotp = false,
-                                        Key = c.Key
+                                        Key = c.Key,
+                                        ArchivedDate = c.ArchivedDate,
                                     };
             }
 
@@ -728,9 +752,14 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
+    public async Task<DateTime> UnarchiveAsync(IEnumerable<Guid> ids, Guid userId)
+    {
+        return await ToggleArchiveCipherStatesAsync(ids, userId, CipherStateAction.Unarchive);
+    }
+
     public async Task<DateTime> RestoreAsync(IEnumerable<Guid> ids, Guid userId)
     {
-        return await ToggleCipherStates(ids, userId, CipherStateAction.Restore);
+        return await ToggleDeleteCipherStatesAsync(ids, userId, CipherStateAction.Restore);
     }
 
     public async Task<DateTime> RestoreByIdsOrganizationIdAsync(IEnumerable<Guid> ids, Guid organizationId)
@@ -758,20 +787,25 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
-    public async Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId)
+    public async Task<DateTime> ArchiveAsync(IEnumerable<Guid> ids, Guid userId)
     {
-        await ToggleCipherStates(ids, userId, CipherStateAction.SoftDelete);
+        return await ToggleArchiveCipherStatesAsync(ids, userId, CipherStateAction.Archive);
     }
 
-    private async Task<DateTime> ToggleCipherStates(IEnumerable<Guid> ids, Guid userId, CipherStateAction action)
+    public async Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId)
     {
-        static bool FilterDeletedDate(CipherStateAction action, CipherDetails ucd)
+        await ToggleDeleteCipherStatesAsync(ids, userId, CipherStateAction.SoftDelete);
+    }
+
+    private async Task<DateTime> ToggleArchiveCipherStatesAsync(IEnumerable<Guid> ids, Guid userId, CipherStateAction action)
+    {
+        static bool FilterArchivedDate(CipherStateAction action, CipherDetails ucd)
         {
             return action switch
             {
-                CipherStateAction.Restore => ucd.DeletedDate != null,
-                CipherStateAction.SoftDelete => ucd.DeletedDate == null,
-                _ => true,
+                CipherStateAction.Unarchive => ucd.ArchivedDate != null,
+                CipherStateAction.Archive => ucd.ArchivedDate == null,
+                _ => true
             };
         }
 
@@ -779,8 +813,49 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         {
             var dbContext = GetDatabaseContext(scope);
             var userCipherDetailsQuery = new UserCipherDetailsQuery(userId);
-            var cipherEntitiesToCheck = await (dbContext.Ciphers.Where(c => ids.Contains(c.Id))).ToListAsync();
-            var query = from ucd in await (userCipherDetailsQuery.Run(dbContext)).ToListAsync()
+            var cipherEntitiesToCheck = await dbContext.Ciphers.Where(c => ids.Contains(c.Id)).ToListAsync();
+            var query = from ucd in await userCipherDetailsQuery.Run(dbContext).ToListAsync()
+                        join c in cipherEntitiesToCheck
+                            on ucd.Id equals c.Id
+                        where ucd.Edit && FilterArchivedDate(action, ucd)
+                        select c;
+
+            var utcNow = DateTime.UtcNow;
+            var cipherIdsToModify = query.Select(c => c.Id);
+            var cipherEntitiesToModify = dbContext.Ciphers.Where(x => cipherIdsToModify.Contains(x.Id));
+
+            await cipherEntitiesToModify.ForEachAsync(cipher =>
+            {
+                dbContext.Attach(cipher);
+                cipher.ArchivedDate = action == CipherStateAction.Unarchive ? null : utcNow;
+                cipher.RevisionDate = utcNow;
+            });
+
+            await dbContext.UserBumpAccountRevisionDateAsync(userId);
+            await dbContext.SaveChangesAsync();
+
+            return utcNow;
+        }
+    }
+
+    private async Task<DateTime> ToggleDeleteCipherStatesAsync(IEnumerable<Guid> ids, Guid userId, CipherStateAction action)
+    {
+        static bool FilterDeletedDate(CipherStateAction action, CipherDetails ucd)
+        {
+            return action switch
+            {
+                CipherStateAction.Restore => ucd.DeletedDate != null,
+                CipherStateAction.SoftDelete => ucd.DeletedDate == null,
+                _ => true
+            };
+        }
+
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var userCipherDetailsQuery = new UserCipherDetailsQuery(userId);
+            var cipherEntitiesToCheck = await dbContext.Ciphers.Where(c => ids.Contains(c.Id)).ToListAsync();
+            var query = from ucd in await userCipherDetailsQuery.Run(dbContext).ToListAsync()
                         join c in cipherEntitiesToCheck
                             on ucd.Id equals c.Id
                         where ucd.Edit && FilterDeletedDate(action, ucd)
@@ -818,6 +893,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
             }
             await dbContext.UserBumpAccountRevisionDateAsync(userId);
             await dbContext.SaveChangesAsync();
+
             return utcNow;
         }
     }
@@ -907,6 +983,15 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
+    /// <inheritdoc cref="UpdateCiphersAsync(Guid, IEnumerable{Cipher})"/>
+    /// <remarks>
+    /// EF does not use the bulk resource creation service, so we need to use the regular update method.
+    /// </remarks>
+    public async Task UpdateCiphersAsync_vNext(Guid userId, IEnumerable<Core.Vault.Entities.Cipher> ciphers)
+    {
+        await UpdateCiphersAsync(userId, ciphers);
+    }
+
     public async Task UpdatePartialAsync(Guid id, Guid userId, Guid? folderId, bool favorite)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -968,6 +1053,65 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
 
             await dbContext.SaveChangesAsync();
         };
+    }
+
+    public async Task<IEnumerable<CipherOrganizationDetailsWithCollections>>
+        GetManyCipherOrganizationDetailsExcludingDefaultCollectionsAsync(Guid organizationId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var defaultTypeInt = (int)CollectionType.DefaultUserCollection;
+
+        //  filter out any cipher that belongs *only* to default collections
+        //    i.e. keep ciphers with no collections, or with ≥1 non-default collection
+        var query = from c in dbContext.Ciphers.AsNoTracking()
+                    where c.UserId == null
+                       && c.OrganizationId == organizationId
+                       && c.Organization.Enabled
+                       && (
+                            c.CollectionCiphers.Count() == 0
+                            || c.CollectionCiphers.Any(cc => (int)cc.Collection.Type != defaultTypeInt)
+                          )
+                    select new CipherOrganizationDetailsWithCollections(
+                        new CipherOrganizationDetails
+                        {
+                            Id = c.Id,
+                            UserId = c.UserId,
+                            OrganizationId = c.OrganizationId,
+                            Type = c.Type,
+                            Data = c.Data,
+                            Favorites = c.Favorites,
+                            Folders = c.Folders,
+                            Attachments = c.Attachments,
+                            CreationDate = c.CreationDate,
+                            RevisionDate = c.RevisionDate,
+                            DeletedDate = c.DeletedDate,
+                            Reprompt = c.Reprompt,
+                            Key = c.Key,
+                            OrganizationUseTotp = c.Organization.UseTotp
+                        },
+                        new Dictionary<Guid, IGrouping<Guid, Bit.Core.Entities.CollectionCipher>>()
+                    )
+                    {
+                        CollectionIds = c.CollectionCiphers
+                            .Where(cc => (int)cc.Collection.Type != defaultTypeInt)
+                            .Select(cc => cc.CollectionId)
+                            .ToArray()
+                    };
+
+        var result = await query.ToListAsync();
+        return result;
+    }
+
+    /// <inheritdoc cref="UpdateForKeyRotation(Guid, IEnumerable{Cipher})"/>
+    /// <remarks>
+    /// EF does not use the bulk resource creation service, so we need to use the regular update method.
+    /// </remarks>
+    public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation_vNext(
+        Guid userId, IEnumerable<Core.Vault.Entities.Cipher> ciphers)
+    {
+        return UpdateForKeyRotation(userId, ciphers);
     }
 
     public async Task UpsertAsync(CipherDetails cipher)
