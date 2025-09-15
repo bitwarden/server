@@ -197,6 +197,8 @@ public static class FeatureFlagKeys
     public const string EnablePMPreloginSettings = "enable-pm-prelogin-settings";
     public const string AppIntents = "app-intents";
     public const string SendAccess = "pm-19394-send-access-control";
+    public const string CxpImportMobile = "cxp-import-mobile";
+    public const string CxpExportMobile = "cxp-export-mobile";
 
     /* Platform Team */
     public const string PersistPopupView = "persist-popup-view";
