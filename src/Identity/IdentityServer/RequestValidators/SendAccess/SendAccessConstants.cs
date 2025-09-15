@@ -39,7 +39,7 @@ public static class SendAccessConstants
         /// <summary>
         /// The sendId is valid and the request is well formed. Not returned in any response.
         /// </summary>
-        public const string ValidSendGuid = "valid_send_guid";
+        public const string ValidGuid = "valid_guid";
         /// <summary>
         /// The sendId is missing from the request.
         /// </summary>
