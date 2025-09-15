@@ -183,6 +183,8 @@ public class SavePolicyCommand : ISavePolicyCommand
 
         var upsertedPolicy = await UpsertPolicyAsync(policyUpdateRequest);
 
+        await _eventService.LogPolicyEventAsync(upsertedPolicy, EventType.Policy_Updated);
+
         await ExecutePostUpsertSideEffectAsync(policyModel, upsertedPolicy, currentPolicy);
 
         return upsertedPolicy;
@@ -217,7 +219,7 @@ public class SavePolicyCommand : ISavePolicyCommand
         policy.RevisionDate = _timeProvider.GetUtcNow().UtcDateTime;
 
         await _policyRepository.UpsertAsync(policy);
-        await _eventService.LogPolicyEventAsync(policy, EventType.Policy_Updated);
+
         return policy;
     }
 
