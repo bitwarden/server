@@ -46,7 +46,6 @@ public class CipherRequestModel
     public CipherSecureNoteModel SecureNote { get; set; }
     public CipherSSHKeyModel SSHKey { get; set; }
     public DateTime? LastKnownRevisionDate { get; set; } = null;
-    public DateTime? ArchivedDate { get; set; }
 
     public CipherDetails ToCipherDetails(Guid userId, bool allowOrgIdSet = true)
     {
@@ -100,7 +99,6 @@ public class CipherRequestModel
 
         existingCipher.Reprompt = Reprompt;
         existingCipher.Key = Key;
-        existingCipher.ArchivedDate = ArchivedDate;
 
         var hasAttachments2 = (Attachments2?.Count ?? 0) > 0;
         var hasAttachments = (Attachments?.Count ?? 0) > 0;
