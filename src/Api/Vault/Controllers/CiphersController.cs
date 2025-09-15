@@ -118,7 +118,6 @@ public class CiphersController : Controller
         return new CipherMiniDetailsResponseModel(cipher, _globalSettings, collectionCiphersGroupDict, cipher.OrganizationUseTotp);
     }
 
-    [HttpGet("{id}/full-details")]
     [HttpGet("{id}/details")]
     public async Task<CipherDetailsResponseModel> GetDetails(Guid id)
     {
@@ -134,8 +133,15 @@ public class CiphersController : Controller
         return new CipherDetailsResponseModel(cipher, user, organizationAbilities, _globalSettings, collectionCiphers);
     }
 
+    [HttpGet("{id}/full-details")]
+    [Obsolete("This endpoint is deprecated. Use GET details method instead.")]
+    public async Task<CipherDetailsResponseModel> GetFullDetails(Guid id)
+    {
+        return await GetDetails(id);
+    }
+
     [HttpGet("")]
-    public async Task<ListResponseModel<CipherDetailsResponseModel>> Get()
+    public async Task<ListResponseModel<CipherDetailsResponseModel>> GetAll()
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         var hasOrgs = _currentContext.Organizations.Count != 0;
@@ -242,7 +248,6 @@ public class CiphersController : Controller
     }
 
     [HttpPut("{id}")]
-    [HttpPost("{id}")]
     public async Task<CipherResponseModel> Put(Guid id, [FromBody] CipherRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
@@ -283,8 +288,14 @@ public class CiphersController : Controller
         return response;
     }
 
+    [HttpPost("{id}")]
+    [Obsolete("This endpoint is deprecated. Use PUT method instead.")]
+    public async Task<CipherResponseModel> PostPut(Guid id, [FromBody] CipherRequestModel model)
+    {
+        return await Put(id, model);
+    }
+
     [HttpPut("{id}/admin")]
-    [HttpPost("{id}/admin")]
     public async Task<CipherMiniResponseModel> PutAdmin(Guid id, [FromBody] CipherRequestModel model)
     {
         var userId = _userService.GetProperUserId(User).Value;
@@ -315,6 +326,13 @@ public class CiphersController : Controller
 
         var response = new CipherMiniResponseModel(cipherClone, _globalSettings, cipher.OrganizationUseTotp);
         return response;
+    }
+
+    [HttpPost("{id}/admin")]
+    [Obsolete("This endpoint is deprecated. Use PUT method instead.")]
+    public async Task<CipherMiniResponseModel> PostPutAdmin(Guid id, [FromBody] CipherRequestModel model)
+    {
+        return await PutAdmin(id, model);
     }
 
     [HttpGet("organization-details")]
@@ -691,7 +709,6 @@ public class CiphersController : Controller
     }
 
     [HttpPut("{id}/partial")]
-    [HttpPost("{id}/partial")]
     public async Task<CipherResponseModel> PutPartial(Guid id, [FromBody] CipherPartialRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
@@ -707,8 +724,14 @@ public class CiphersController : Controller
         return response;
     }
 
+    [HttpPost("{id}/partial")]
+    [Obsolete("This endpoint is deprecated. Use PUT method instead.")]
+    public async Task<CipherResponseModel> PostPartial(Guid id, [FromBody] CipherPartialRequestModel model)
+    {
+        return await PutPartial(id, model);
+    }
+
     [HttpPut("{id}/share")]
-    [HttpPost("{id}/share")]
     public async Task<CipherResponseModel> PutShare(Guid id, [FromBody] CipherShareRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
@@ -744,8 +767,14 @@ public class CiphersController : Controller
         return response;
     }
 
+    [HttpPost("{id}/share")]
+    [Obsolete("This endpoint is deprecated. Use PUT method instead.")]
+    public async Task<CipherResponseModel> PostShare(Guid id, [FromBody] CipherShareRequestModel model)
+    {
+        return await PutShare(id, model);
+    }
+
     [HttpPut("{id}/collections")]
-    [HttpPost("{id}/collections")]
     public async Task<CipherDetailsResponseModel> PutCollections(Guid id, [FromBody] CipherCollectionsRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
@@ -770,8 +799,14 @@ public class CiphersController : Controller
             collectionCiphers);
     }
 
+    [HttpPost("{id}/collections")]
+    [Obsolete("This endpoint is deprecated. Use PUT method instead.")]
+    public async Task<CipherDetailsResponseModel> PostCollections(Guid id, [FromBody] CipherCollectionsRequestModel model)
+    {
+        return await PutCollections(id, model);
+    }
+
     [HttpPut("{id}/collections_v2")]
-    [HttpPost("{id}/collections_v2")]
     public async Task<OptionalCipherDetailsResponseModel> PutCollections_vNext(Guid id, [FromBody] CipherCollectionsRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
@@ -804,8 +839,14 @@ public class CiphersController : Controller
         return response;
     }
 
+    [HttpPost("{id}/collections_v2")]
+    [Obsolete("This endpoint is deprecated. Use PUT method instead.")]
+    public async Task<OptionalCipherDetailsResponseModel> PostCollections_vNext(Guid id, [FromBody] CipherCollectionsRequestModel model)
+    {
+        return await PutCollections_vNext(id, model);
+    }
+
     [HttpPut("{id}/collections-admin")]
-    [HttpPost("{id}/collections-admin")]
     public async Task<CipherMiniDetailsResponseModel> PutCollectionsAdmin(string id, [FromBody] CipherCollectionsRequestModel model)
     {
         var userId = _userService.GetProperUserId(User).Value;
@@ -832,6 +873,13 @@ public class CiphersController : Controller
         var collectionCiphersGroupDict = collectionCiphers.GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
 
         return new CipherMiniDetailsResponseModel(cipher, _globalSettings, collectionCiphersGroupDict, cipher.OrganizationUseTotp);
+    }
+
+    [HttpPost("{id}/collections-admin")]
+    [Obsolete("This endpoint is deprecated. Use PUT method instead.")]
+    public async Task<CipherMiniDetailsResponseModel> PostCollectionsAdmin(string id, [FromBody] CipherCollectionsRequestModel model)
+    {
+        return await PutCollectionsAdmin(id, model);
     }
 
     [HttpPost("bulk-collections")]
@@ -895,7 +943,6 @@ public class CiphersController : Controller
     }
 
     [HttpDelete("{id}")]
-    [HttpPost("{id}/delete")]
     public async Task Delete(Guid id)
     {
         var userId = _userService.GetProperUserId(User).Value;
@@ -908,8 +955,14 @@ public class CiphersController : Controller
         await _cipherService.DeleteAsync(cipher, userId);
     }
 
+    [HttpPost("{id}/delete")]
+    [Obsolete("This endpoint is deprecated. Use DELETE method instead.")]
+    public async Task PostDelete(Guid id)
+    {
+        await Delete(id);
+    }
+
     [HttpDelete("{id}/admin")]
-    [HttpPost("{id}/delete-admin")]
     public async Task DeleteAdmin(Guid id)
     {
         var userId = _userService.GetProperUserId(User).Value;
@@ -923,8 +976,14 @@ public class CiphersController : Controller
         await _cipherService.DeleteAsync(cipher, userId, true);
     }
 
+    [HttpPost("{id}/delete-admin")]
+    [Obsolete("This endpoint is deprecated. Use DELETE method instead.")]
+    public async Task PostDeleteAdmin(Guid id)
+    {
+        await DeleteAdmin(id);
+    }
+
     [HttpDelete("")]
-    [HttpPost("delete")]
     public async Task DeleteMany([FromBody] CipherBulkDeleteRequestModel model)
     {
         if (!_globalSettings.SelfHosted && model.Ids.Count() > 500)
@@ -937,8 +996,14 @@ public class CiphersController : Controller
         await _cipherService.DeleteManyAsync(model.Ids.Select(i => new Guid(i)), userId);
     }
 
+    [HttpPost("delete")]
+    [Obsolete("This endpoint is deprecated. Use DELETE method instead.")]
+    public async Task PostDeleteMany([FromBody] CipherBulkDeleteRequestModel model)
+    {
+        await DeleteMany(model);
+    }
+
     [HttpDelete("admin")]
-    [HttpPost("delete-admin")]
     public async Task DeleteManyAdmin([FromBody] CipherBulkDeleteRequestModel model)
     {
         if (!_globalSettings.SelfHosted && model.Ids.Count() > 500)
@@ -962,6 +1027,13 @@ public class CiphersController : Controller
 
         var userId = _userService.GetProperUserId(User).Value;
         await _cipherService.DeleteManyAsync(cipherIds, userId, new Guid(model.OrganizationId), true);
+    }
+
+    [HttpPost("delete-admin")]
+    [Obsolete("This endpoint is deprecated. Use DELETE method instead.")]
+    public async Task PostDeleteManyAdmin([FromBody] CipherBulkDeleteRequestModel model)
+    {
+        await DeleteManyAdmin(model);
     }
 
     [HttpPut("{id}/delete")]
@@ -1145,7 +1217,6 @@ public class CiphersController : Controller
     }
 
     [HttpPut("move")]
-    [HttpPost("move")]
     public async Task MoveMany([FromBody] CipherBulkMoveRequestModel model)
     {
         if (!_globalSettings.SelfHosted && model.Ids.Count() > 500)
@@ -1158,8 +1229,14 @@ public class CiphersController : Controller
             string.IsNullOrWhiteSpace(model.FolderId) ? (Guid?)null : new Guid(model.FolderId), userId);
     }
 
+    [HttpPost("move")]
+    [Obsolete("This endpoint is deprecated. Use PUT method instead.")]
+    public async Task PostMoveMany([FromBody] CipherBulkMoveRequestModel model)
+    {
+        await MoveMany(model);
+    }
+
     [HttpPut("share")]
-    [HttpPost("share")]
     public async Task<ListResponseModel<CipherMiniResponseModel>> PutShareMany([FromBody] CipherBulkShareRequestModel model)
     {
         var organizationId = new Guid(model.Ciphers.First().OrganizationId);
@@ -1205,6 +1282,13 @@ public class CiphersController : Controller
 
         var response = updated.Select(c => new CipherMiniResponseModel(c, _globalSettings, c.OrganizationUseTotp));
         return new ListResponseModel<CipherMiniResponseModel>(response);
+    }
+
+    [HttpPost("share")]
+    [Obsolete("This endpoint is deprecated. Use PUT method instead.")]
+    public async Task<ListResponseModel<CipherMiniResponseModel>> PostShareMany([FromBody] CipherBulkShareRequestModel model)
+    {
+        return await PutShareMany(model);
     }
 
     [HttpPost("purge")]
@@ -1325,7 +1409,7 @@ public class CiphersController : Controller
     [Obsolete("Deprecated Attachments API", false)]
     [RequestSizeLimit(Constants.FileSize101mb)]
     [DisableFormValueModelBinding]
-    public async Task<CipherResponseModel> PostAttachment(Guid id)
+    public async Task<CipherResponseModel> PostAttachmentV1(Guid id)
     {
         ValidateAttachment();
 
@@ -1419,7 +1503,6 @@ public class CiphersController : Controller
     }
 
     [HttpDelete("{id}/attachment/{attachmentId}")]
-    [HttpPost("{id}/attachment/{attachmentId}/delete")]
     public async Task<DeleteAttachmentResponseData> DeleteAttachment(Guid id, string attachmentId)
     {
         var userId = _userService.GetProperUserId(User).Value;
@@ -1432,8 +1515,14 @@ public class CiphersController : Controller
         return await _cipherService.DeleteAttachmentAsync(cipher, attachmentId, userId, false);
     }
 
+    [HttpPost("{id}/attachment/{attachmentId}/delete")]
+    [Obsolete("This endpoint is deprecated. Use DELETE method instead.")]
+    public async Task<DeleteAttachmentResponseData> PostDeleteAttachment(Guid id, string attachmentId)
+    {
+        return await DeleteAttachment(id, attachmentId);
+    }
+
     [HttpDelete("{id}/attachment/{attachmentId}/admin")]
-    [HttpPost("{id}/attachment/{attachmentId}/delete-admin")]
     public async Task<DeleteAttachmentResponseData> DeleteAttachmentAdmin(Guid id, string attachmentId)
     {
         var userId = _userService.GetProperUserId(User).Value;
@@ -1445,6 +1534,13 @@ public class CiphersController : Controller
         }
 
         return await _cipherService.DeleteAttachmentAsync(cipher, attachmentId, userId, true);
+    }
+
+    [HttpPost("{id}/attachment/{attachmentId}/delete-admin")]
+    [Obsolete("This endpoint is deprecated. Use DELETE method instead.")]
+    public async Task<DeleteAttachmentResponseData> PostDeleteAttachmentAdmin(Guid id, string attachmentId)
+    {
+        return await DeleteAttachmentAdmin(id, attachmentId);
     }
 
     [AllowAnonymous]
