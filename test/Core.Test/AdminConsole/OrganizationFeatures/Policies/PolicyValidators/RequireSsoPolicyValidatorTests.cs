@@ -15,13 +15,13 @@ using NSubstitute;
 using Xunit;
 
 [SutProviderCustomize]
-public class RequireSsoOnPolicyEventEventEnsureEventValidatorTests
+public class RequireSsoPolicyHandlerTests
 {
     [Theory, BitAutoData]
     public async Task ValidateAsync_DisablingPolicy_KeyConnectorEnabled_ValidationError(
         [PolicyUpdate(PolicyType.SingleOrg, false)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.SingleOrg)] Policy policy,
-        SutProvider<RequireSsoOnPolicyEventEventEnsureEventValidator> sutProvider)
+        SutProvider<RequireSsoPolicyHandler> sutProvider)
     {
         policy.OrganizationId = policyUpdate.OrganizationId;
 
@@ -40,7 +40,7 @@ public class RequireSsoOnPolicyEventEventEnsureEventValidatorTests
     public async Task ValidateAsync_DisablingPolicy_TdeEnabled_ValidationError(
         [PolicyUpdate(PolicyType.SingleOrg, false)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.SingleOrg)] Policy policy,
-        SutProvider<RequireSsoOnPolicyEventEventEnsureEventValidator> sutProvider)
+        SutProvider<RequireSsoPolicyHandler> sutProvider)
     {
         policy.OrganizationId = policyUpdate.OrganizationId;
 
@@ -59,7 +59,7 @@ public class RequireSsoOnPolicyEventEventEnsureEventValidatorTests
     public async Task ValidateAsync_DisablingPolicy_DecryptionOptionsNotEnabled_Success(
         [PolicyUpdate(PolicyType.ResetPassword, false)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.ResetPassword)] Policy policy,
-        SutProvider<RequireSsoOnPolicyEventEventEnsureEventValidator> sutProvider)
+        SutProvider<RequireSsoPolicyHandler> sutProvider)
     {
         policy.OrganizationId = policyUpdate.OrganizationId;
 

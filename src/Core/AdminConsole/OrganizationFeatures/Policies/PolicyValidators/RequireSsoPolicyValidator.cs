@@ -8,11 +8,11 @@ using Bit.Core.Auth.Repositories;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 
-public class RequireSsoOnPolicyEventEventEnsureEventValidator : IEnforceDependentPoliciesEvent, IPolicyValidationEvent
+public class RequireSsoPolicyHandler : IEnforceDependentPoliciesEvent, IPolicyValidationEvent
 {
     private readonly ISsoConfigRepository _ssoConfigRepository;
 
-    public RequireSsoOnPolicyEventEventEnsureEventValidator(ISsoConfigRepository ssoConfigRepository)
+    public RequireSsoPolicyHandler(ISsoConfigRepository ssoConfigRepository)
     {
         _ssoConfigRepository = ssoConfigRepository;
     }

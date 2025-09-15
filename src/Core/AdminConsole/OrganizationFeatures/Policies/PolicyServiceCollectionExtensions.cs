@@ -27,10 +27,10 @@ public static class PolicyServiceCollectionExtensions
         services.AddScoped<IPolicyValidator, ResetPasswordPolicyValidator>();
         services.AddScoped<IPolicyValidator, FreeFamiliesForEnterprisePolicyValidator>();
 
-        services.AddScoped<IEnforceDependentPoliciesEvent, RequireSsoOnPolicyEventEventEnsureEventValidator>();
+        services.AddScoped<IEnforceDependentPoliciesEvent, RequireSsoPolicyHandler>();
         services.AddScoped<IEnforceDependentPoliciesEvent, MaximumVaultTimeoutPolicyEventEventValidator>();
 
-        services.AddScoped<IPolicyValidationEvent, RequireSsoOnPolicyEventEventEnsureEventValidator>();
+        services.AddScoped<IPolicyValidationEvent, RequireSsoPolicyHandler>();
         services.AddScoped<IOnPolicyPreSaveEvent, TwoFactorAuthenticationPolicyHandler>();
     }
 
