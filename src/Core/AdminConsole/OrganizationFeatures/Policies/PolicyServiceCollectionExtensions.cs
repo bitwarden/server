@@ -36,7 +36,7 @@ public static class PolicyServiceCollectionExtensions
 
     private static void AddPolicySideEffects(this IServiceCollection services)
     {
-        services.AddScoped<IPostSavePolicySideEffect, OrganizationDataOwnershipPolicyValidator>();
+        services.AddScoped<IPostSavePolicySideEffect, OrganizationDataOwnershipPolicyHandler>();
     }
 
     private static void AddPolicyRequirements(this IServiceCollection services)

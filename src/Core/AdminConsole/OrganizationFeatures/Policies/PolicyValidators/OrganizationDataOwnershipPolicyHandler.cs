@@ -1,5 +1,6 @@
 ﻿
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
@@ -12,14 +13,23 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 /// Please do not extend or expand this validator. We're currently in the process of refactoring our policy validator pattern.
 /// This is a stop-gap solution for post-policy-save side effects, but it is not the long-term solution.
 /// </summary>
-public class OrganizationDataOwnershipPolicyValidator(
+public class OrganizationDataOwnershipPolicyHandler(
     IPolicyRepository policyRepository,
     ICollectionRepository collectionRepository,
     IEnumerable<IPolicyRequirementFactory<IPolicyRequirement>> factories,
     IFeatureService featureService)
-    : OrganizationPolicyValidator(policyRepository, factories), IPostSavePolicySideEffect
+    : OrganizationPolicyHandler(policyRepository, factories), IPostSavePolicySideEffect, IOnPolicyPostSaveEvent
 {
+    [Obsolete("Use ExecuteSideEffectsAsync instead", true)]
     public async Task ExecuteSideEffectsAsync(
+        SavePolicyModel policyRequest,
+        Policy postUpdatedPolicy,
+        Policy? previousPolicyState)
+    {
+       await ExecutePostUpsertSideEffectAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
+    }
+
+    public async Task ExecutePostUpsertSideEffectAsync(
         SavePolicyModel policyRequest,
         Policy postUpdatedPolicy,
         Policy? previousPolicyState)
@@ -68,5 +78,7 @@ public class OrganizationDataOwnershipPolicyValidator(
             userOrgIds,
             defaultCollectionName);
     }
+
+    public PolicyType Type => PolicyType.OrganizationDataOwnership;
 
 }
