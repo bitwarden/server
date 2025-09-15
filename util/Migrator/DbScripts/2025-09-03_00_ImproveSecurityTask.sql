@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[SecurityTask_ReadByUserIdStatus]
+CREATE OR ALTER PROCEDURE [dbo].[SecurityTask_ReadByUserIdStatus]
     @UserId [UNIQUEIDENTIFIER],
     @Status [TINYINT] = NULL
 AS
@@ -84,4 +84,18 @@ BEGIN
     ORDER BY
         [ST].[CreationDate] DESC
     OPTION (RECOMPILE);
+END
+GO
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.indexes
+    WHERE object_id = OBJECT_ID('dbo.OrganizationUser')
+        AND name = 'IX_OrganizationUser_UserId_Status_Filtered'
+)
+BEGIN
+CREATE NONCLUSTERED INDEX [IX_OrganizationUser_UserId_Status_Filtered]
+    ON [dbo].[OrganizationUser] ([UserId])
+    INCLUDE ([Id], [OrganizationId])
+    WHERE [Status] = 2; -- Confirmed
 END
