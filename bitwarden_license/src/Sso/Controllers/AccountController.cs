@@ -108,36 +108,28 @@ public class AccountController : Controller
             // Validate domain_hint provided
             if (string.IsNullOrWhiteSpace(domainHint))
             {
-                return InvalidJson("NoOrganizationIdentifierProvidedError");
+                return InvalidJson("SsoInvalidIdentifierError");
             }
 
             // Validate organization exists from domain_hint
             var organization = await _organizationRepository.GetByIdentifierAsync(domainHint);
-            if (organization == null)
+            if (organization is not { UseSso: true })
             {
-                return InvalidJson("OrganizationNotFoundByIdentifierError");
-            }
-            if (!organization.UseSso)
-            {
-                return InvalidJson("SsoNotAllowedForOrganizationError");
+                return InvalidJson("SsoInvalidIdentifierError");
             }
 
             // Validate SsoConfig exists and is Enabled
             var ssoConfig = await _ssoConfigRepository.GetByIdentifierAsync(domainHint);
-            if (ssoConfig == null)
+            if (ssoConfig is not { Enabled: true })
             {
-                return InvalidJson("SsoConfigurationNotFoundForOrganizationError");
-            }
-            if (!ssoConfig.Enabled)
-            {
-                return InvalidJson("SsoNotEnabledForOrganizationError");
+                return InvalidJson("SsoInvalidIdentifierError");
             }
 
             // Validate Authentication Scheme exists and is loaded (cache)
             var scheme = await _schemeProvider.GetSchemeAsync(organization.Id.ToString());
-            if (scheme == null || !(scheme is IDynamicAuthenticationScheme dynamicScheme))
+            if (scheme is not IDynamicAuthenticationScheme dynamicScheme)
             {
-                return InvalidJson("NoSchemeOrHandlerForSsoConfigurationFoundError");
+                return InvalidJson("SsoInvalidIdentifierError");
             }
 
             // Run scheme validation
@@ -147,13 +139,8 @@ public class AccountController : Controller
             }
             catch (Exception ex)
             {
-                var translatedException = _i18nService.GetLocalizedHtmlString(ex.Message);
-                var errorKey = "InvalidSchemeConfigurationError";
-                if (!translatedException.ResourceNotFound)
-                {
-                    errorKey = ex.Message;
-                }
-                return InvalidJson(errorKey, translatedException.ResourceNotFound ? ex : null);
+                _logger.LogError(ex, "An error occurred while validating SSO dynamic scheme.");
+                return InvalidJson("SsoInvalidIdentifierError");
             }
 
             var tokenable = new SsoTokenable(organization, _globalSettings.Sso.SsoTokenLifetimeInSeconds);
@@ -163,7 +150,8 @@ public class AccountController : Controller
         }
         catch (Exception ex)
         {
-            return InvalidJson("PreValidationError", ex);
+            _logger.LogError(ex, "An error occurred during SSO prevalidation.");
+            return InvalidJson("SsoInvalidIdentifierError");
         }
     }
 
@@ -352,7 +340,7 @@ public class AccountController : Controller
     }
 
     /// <summary>
-    /// Attempts to map the external identity to a Bitwarden user, through the SsoUser table, which holds the `externalId`. 
+    /// Attempts to map the external identity to a Bitwarden user, through the SsoUser table, which holds the `externalId`.
     /// The claims on the external identity are used to determine an `externalId`, and that is used to find the appropriate `SsoUser` and `User` records.
     /// </summary>
     private async Task<(User user, string provider, string providerUserId, IEnumerable<Claim> claims, SsoConfigurationData config)>
@@ -485,7 +473,7 @@ public class AccountController : Controller
                 allowedStatuses: [OrganizationUserStatusType.Accepted, OrganizationUserStatusType.Confirmed]);
 
 
-            // Since we're in the auto-provisioning logic, this means that the user exists, but they have not 
+            // Since we're in the auto-provisioning logic, this means that the user exists, but they have not
             // authenticated with the org's SSO provider before now (otherwise we wouldn't be auto-provisioning them).
             // We've verified that the user is Accepted or Confnirmed, so we can create an SsoUser link and proceed
             // with authentication.
