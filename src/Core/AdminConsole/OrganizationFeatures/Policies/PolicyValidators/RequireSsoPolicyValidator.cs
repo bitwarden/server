@@ -8,7 +8,7 @@ using Bit.Core.Auth.Repositories;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 
-public class RequireSsoOnPolicyEventEventEnsureEventValidator : IEnforceDependentPoliciesEvent, IOnPolicyPostSaveEvent, IPolicyValidationEvent
+public class RequireSsoOnPolicyEventEventEnsureEventValidator : IEnforceDependentPoliciesEvent, IPolicyValidationEvent
 {
     private readonly ISsoConfigRepository _ssoConfigRepository;
 
@@ -34,6 +34,4 @@ public class RequireSsoOnPolicyEventEventEnsureEventValidator : IEnforceDependen
 
         return "";
     }
-
-    public Task PostSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult(0);
 }

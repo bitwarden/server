@@ -16,7 +16,7 @@ using Bit.Core.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 
-public class TwoFactorAuthenticationPolicyValidator : IPolicyValidator, IOnPolicyPreSaveEvent
+public class TwoFactorAuthenticationPolicyHandler : IOnPolicyPreSaveEvent
 {
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IMailService _mailService;
@@ -28,9 +28,8 @@ public class TwoFactorAuthenticationPolicyValidator : IPolicyValidator, IOnPolic
     public const string NonCompliantMembersWillLoseAccessMessage = "Policy could not be enabled. Non-compliant members will lose access to their accounts. Identify members without two-step login from the policies column in the members page.";
 
     public PolicyType Type => PolicyType.TwoFactorAuthentication;
-    public IEnumerable<PolicyType> RequiredPolicies => [];
 
-    public TwoFactorAuthenticationPolicyValidator(
+    public TwoFactorAuthenticationPolicyHandler(
         IOrganizationUserRepository organizationUserRepository,
         IMailService mailService,
         IOrganizationRepository organizationRepository,
@@ -46,7 +45,7 @@ public class TwoFactorAuthenticationPolicyValidator : IPolicyValidator, IOnPolic
         _revokeNonCompliantOrganizationUserCommand = revokeNonCompliantOrganizationUserCommand;
     }
 
-    public async Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
+    public async Task ExecutePreUpsertSideEffectAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
     {
         if (currentPolicy is not { Enabled: true } && policyUpdate is { Enabled: true })
         {
@@ -115,5 +114,4 @@ public class TwoFactorAuthenticationPolicyValidator : IPolicyValidator, IOnPolic
                 !x.HasMasterPassword && !organizationUsersTwoFactorEnabled.FirstOrDefault(u => u.user.Id == x.Id)
                     .isTwoFactorEnabled);
 
-    public Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult("");
 }

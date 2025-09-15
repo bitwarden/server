@@ -20,14 +20,14 @@ using Xunit;
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 
 [SutProviderCustomize]
-public class TwoFactorAuthenticationPolicyValidatorTests
+public class TwoFactorAuthenticationPolicyHandlerTests
 {
     [Theory, BitAutoData]
     public async Task OnSaveSideEffectsAsync_GivenNonCompliantUsersWithoutMasterPassword_Throws(
         Organization organization,
         [PolicyUpdate(PolicyType.TwoFactorAuthentication)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.TwoFactorAuthentication, false)] Policy policy,
-        SutProvider<TwoFactorAuthenticationPolicyValidator> sutProvider)
+        SutProvider<TwoFactorAuthenticationPolicyHandler> sutProvider)
     {
         policy.OrganizationId = organization.Id = policyUpdate.OrganizationId;
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
@@ -54,9 +54,9 @@ public class TwoFactorAuthenticationPolicyValidatorTests
                 (orgUserDetailUserWithout2Fa, false),
             });
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.OnSaveSideEffectsAsync(policyUpdate, policy));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.ExecutePreUpsertSideEffectAsync(policyUpdate, policy));
 
-        Assert.Equal(TwoFactorAuthenticationPolicyValidator.NonCompliantMembersWillLoseAccessMessage, exception.Message);
+        Assert.Equal(TwoFactorAuthenticationPolicyHandler.NonCompliantMembersWillLoseAccessMessage, exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -64,7 +64,7 @@ public class TwoFactorAuthenticationPolicyValidatorTests
         Organization organization,
         [PolicyUpdate(PolicyType.TwoFactorAuthentication)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.TwoFactorAuthentication, false)] Policy policy,
-        SutProvider<TwoFactorAuthenticationPolicyValidator> sutProvider)
+        SutProvider<TwoFactorAuthenticationPolicyHandler> sutProvider)
     {
         // Arrange
         policy.OrganizationId = policyUpdate.OrganizationId;
@@ -111,7 +111,7 @@ public class TwoFactorAuthenticationPolicyValidatorTests
             .Returns(new CommandResult());
 
         // Act
-        await sutProvider.Sut.OnSaveSideEffectsAsync(policyUpdate, policy);
+        await sutProvider.Sut.ExecutePreUpsertSideEffectAsync(policyUpdate, policy);
 
         // Assert
         await sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()

@@ -6,6 +6,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 
+#nullable enable
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
 
 public class SavePolicyCommand : ISavePolicyCommand
@@ -16,19 +17,22 @@ public class SavePolicyCommand : ISavePolicyCommand
     private readonly IReadOnlyDictionary<PolicyType, IPolicyValidator> _policyValidators;
     private readonly TimeProvider _timeProvider;
     private readonly IPostSavePolicySideEffect _postSavePolicySideEffect;
+    private readonly IPolicyEventHandlerFactory _policyEventHandlerFactory;
 
     public SavePolicyCommand(IApplicationCacheService applicationCacheService,
         IEventService eventService,
         IPolicyRepository policyRepository,
         IEnumerable<IPolicyValidator> policyValidators,
         TimeProvider timeProvider,
-        IPostSavePolicySideEffect postSavePolicySideEffect)
+        IPostSavePolicySideEffect postSavePolicySideEffect,
+        IPolicyEventHandlerFactory policyEventHandlerFactory)
     {
         _applicationCacheService = applicationCacheService;
         _eventService = eventService;
         _policyRepository = policyRepository;
         _timeProvider = timeProvider;
         _postSavePolicySideEffect = postSavePolicySideEffect;
+        _policyEventHandlerFactory = policyEventHandlerFactory;
 
         var policyValidatorsDict = new Dictionary<PolicyType, IPolicyValidator>();
         foreach (var policyValidator in policyValidators)
@@ -62,13 +66,14 @@ public class SavePolicyCommand : ISavePolicyCommand
             await RunValidatorAsync(validator, policyUpdate);
         }
 
-        var policy = await _policyRepository.GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, policyUpdate.Type)
-                     ?? new Policy
-                     {
-                         OrganizationId = policyUpdate.OrganizationId,
-                         Type = policyUpdate.Type,
-                         CreationDate = _timeProvider.GetUtcNow().UtcDateTime
-                     };
+        var policy =
+            await _policyRepository.GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, policyUpdate.Type)
+            ?? new Policy
+            {
+                OrganizationId = policyUpdate.OrganizationId,
+                Type = policyUpdate.Type,
+                CreationDate = _timeProvider.GetUtcNow().UtcDateTime
+            };
 
         policy.Enabled = policyUpdate.Enabled;
         policy.Data = policyUpdate.Data;
@@ -91,13 +96,16 @@ public class SavePolicyCommand : ISavePolicyCommand
         return policy;
     }
 
-    private async Task ExecutePostPolicySaveSideEffectsForSupportedPoliciesAsync(SavePolicyModel policyRequest, Policy postUpdatedPolicy, Policy? previousPolicyState)
+    private async Task ExecutePostPolicySaveSideEffectsForSupportedPoliciesAsync(SavePolicyModel policyRequest,
+        Policy postUpdatedPolicy, Policy? previousPolicyState)
     {
         if (postUpdatedPolicy.Type == PolicyType.OrganizationDataOwnership)
         {
-            await _postSavePolicySideEffect.ExecuteSideEffectsAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
+            await _postSavePolicySideEffect.ExecuteSideEffectsAsync(policyRequest, postUpdatedPolicy,
+                previousPolicyState);
         }
     }
+
 
     private async Task RunValidatorAsync(IPolicyValidator validator, PolicyUpdate policyUpdate)
     {
@@ -107,12 +115,14 @@ public class SavePolicyCommand : ISavePolicyCommand
         if (currentPolicy is not { Enabled: true } && policyUpdate.Enabled)
         {
             var missingRequiredPolicyTypes = validator.RequiredPolicies
-                .Where(requiredPolicyType => savedPoliciesDict.GetValueOrDefault(requiredPolicyType) is not { Enabled: true })
+                .Where(requiredPolicyType => savedPoliciesDict.GetValueOrDefault(requiredPolicyType) is not
+                { Enabled: true })
                 .ToList();
 
             if (missingRequiredPolicyTypes.Count != 0)
             {
-                throw new BadRequestException($"Turn on the {missingRequiredPolicyTypes.First().GetName()} policy because it is required for the {validator.Type.GetName()} policy.");
+                throw new BadRequestException(
+                    $"Turn on the {missingRequiredPolicyTypes.First().GetName()} policy because it is required for the {validator.Type.GetName()} policy.");
             }
         }
 
@@ -129,9 +139,11 @@ public class SavePolicyCommand : ISavePolicyCommand
             switch (dependentPolicyTypes)
             {
                 case { Count: 1 }:
-                    throw new BadRequestException($"Turn off the {dependentPolicyTypes.First().GetName()} policy because it requires the {validator.Type.GetName()} policy.");
+                    throw new BadRequestException(
+                        $"Turn off the {dependentPolicyTypes.First().GetName()} policy because it requires the {validator.Type.GetName()} policy.");
                 case { Count: > 1 }:
-                    throw new BadRequestException($"Turn off all of the policies that require the {validator.Type.GetName()} policy.");
+                    throw new BadRequestException(
+                        $"Turn off all of the policies that require the {validator.Type.GetName()} policy.");
             }
         }
 
@@ -146,7 +158,8 @@ public class SavePolicyCommand : ISavePolicyCommand
         await validator.OnSaveSideEffectsAsync(policyUpdate, currentPolicy);
     }
 
-    private async Task<(Dictionary<PolicyType, Policy> savedPoliciesDict, Policy? currentPolicy)> GetCurrentPolicyStateAsync(PolicyUpdate policyUpdate)
+    private async Task<(Dictionary<PolicyType, Policy> savedPoliciesDict, Policy? currentPolicy)>
+        GetCurrentPolicyStateAsync(PolicyUpdate policyUpdate)
     {
         var savedPolicies = await _policyRepository.GetManyByOrganizationIdAsync(policyUpdate.OrganizationId);
         // Note: policies may be missing from this dict if they have never been enabled
@@ -154,4 +167,159 @@ public class SavePolicyCommand : ISavePolicyCommand
         var currentPolicy = savedPoliciesDict.GetValueOrDefault(policyUpdate.Type);
         return (savedPoliciesDict, currentPolicy);
     }
+
+    public async Task<Policy> V3SaveAsync(SavePolicyModel policyModel)
+    {
+        var policyUpdateRequest = policyModel.PolicyUpdate;
+        await EnsureOrganizationCanUsePolicyAsync(policyUpdateRequest);
+
+        var (savedPoliciesDict, currentPolicy) = await GetCurrentPolicyStateAsync(policyUpdateRequest);
+
+        ValidatePolicyDependencies(policyUpdateRequest, currentPolicy, savedPoliciesDict);
+
+        await ValidateTargetedPolicy(policyUpdateRequest, currentPolicy);
+
+        await ExecutePreUpsertSideEffectAsync(policyUpdateRequest, currentPolicy);
+
+        var upsertedPolicy = await UpsertPolicyAsync(policyUpdateRequest);
+
+        await ExecutePostUpsertSideEffectAsync(policyModel, upsertedPolicy, currentPolicy);
+
+        return upsertedPolicy;
+    }
+
+    private async Task EnsureOrganizationCanUsePolicyAsync(PolicyUpdate policyUpdate)
+    {
+        var org = await _applicationCacheService.GetOrganizationAbilityAsync(policyUpdate.OrganizationId);
+        if (org == null)
+        {
+            throw new BadRequestException("Organization not found");
+        }
+
+        if (!org.UsePolicies)
+        {
+            throw new BadRequestException("This organization cannot use policies.");
+        }
+    }
+
+    private async Task<Policy> UpsertPolicyAsync(PolicyUpdate policyUpdateRequest)
+    {
+        var policy = await _policyRepository.GetByOrganizationIdTypeAsync(policyUpdateRequest.OrganizationId, policyUpdateRequest.Type)
+                     ?? new Policy
+                     {
+                         OrganizationId = policyUpdateRequest.OrganizationId,
+                         Type = policyUpdateRequest.Type,
+                         CreationDate = _timeProvider.GetUtcNow().UtcDateTime
+                     };
+
+        policy.Enabled = policyUpdateRequest.Enabled;
+        policy.Data = policyUpdateRequest.Data;
+        policy.RevisionDate = _timeProvider.GetUtcNow().UtcDateTime;
+
+        await _policyRepository.UpsertAsync(policy);
+        await _eventService.LogPolicyEventAsync(policy, EventType.Policy_Updated);
+        return policy;
+    }
+
+    private async Task ValidateTargetedPolicy(PolicyUpdate policyUpdateRequest,
+        Policy? currentPolicy)
+    {
+        var validator = _policyEventHandlerFactory.GetHandler<IPolicyValidationEvent>(currentPolicy!.Type);
+
+        if (validator is null)
+        {
+            return;
+        }
+
+        var validationError = await validator.ValidateAsync(policyUpdateRequest, currentPolicy);
+        if (!string.IsNullOrEmpty(validationError))
+        {
+            throw new BadRequestException(validationError);
+        }
+    }
+
+    private void ValidatePolicyDependencies(PolicyUpdate policyUpdateRequest, Policy? currentPolicy,
+        Dictionary<PolicyType, Policy> savedPoliciesDict)
+    {
+        var validator = _policyEventHandlerFactory.GetHandler<IEnforceDependentPoliciesEvent>(currentPolicy!.Type);
+
+        if (validator is null)
+        {
+            return;
+        }
+
+        if (policyUpdateRequest.Enabled)
+        {
+            ValidateEnablingRequirements(validator, currentPolicy, savedPoliciesDict);
+        }
+        else
+        {
+            ValidateDisablingRequirements(validator, policyUpdateRequest, currentPolicy, savedPoliciesDict);
+        }
+    }
+
+
+    private void ValidateDisablingRequirements(IEnforceDependentPoliciesEvent validator, PolicyUpdate policyUpdate,
+        Policy? currentPolicy, Dictionary<PolicyType, Policy> savedPoliciesDict)
+    {
+        if (currentPolicy is not { Enabled: true })
+            return;
+
+        var dependentPolicyTypes = _policyValidators.Values
+            .Where(otherValidator => otherValidator.RequiredPolicies.Contains(policyUpdate.Type))
+            .Select(otherValidator => otherValidator.Type)
+            .Where(otherPolicyType => savedPoliciesDict.TryGetValue(otherPolicyType, out var savedPolicy) &&
+                                      savedPolicy.Enabled)
+            .ToList();
+
+        switch (dependentPolicyTypes)
+        {
+            case { Count: 1 }:
+                throw new BadRequestException($"Turn off the {dependentPolicyTypes.First().GetName()} policy because it requires the {validator.Type.GetName()} policy.");
+            case { Count: > 1 }:
+                throw new BadRequestException($"Turn off all of the policies that require the {validator.Type.GetName()} policy.");
+        }
+    }
+
+    private static void ValidateEnablingRequirements(IEnforceDependentPoliciesEvent validator, Policy? currentPolicy, Dictionary<PolicyType, Policy> savedPoliciesDict)
+    {
+        if (currentPolicy is { Enabled: true }) return;
+
+        var missingRequiredPolicyTypes = validator.RequiredPolicies
+            .Where(requiredPolicyType => savedPoliciesDict.GetValueOrDefault(requiredPolicyType) is not { Enabled: true })
+            .ToList();
+
+        if (missingRequiredPolicyTypes.Count != 0)
+        {
+            throw new BadRequestException($"Turn on the {missingRequiredPolicyTypes.First().GetName()} policy because it is required for the {validator.Type.GetName()} policy.");
+        }
+    }
+
+    private async Task ExecutePreUpsertSideEffectAsync(PolicyUpdate policyRequest, Policy? currentPolicy)
+    {
+        var handler = _policyEventHandlerFactory.GetHandler<IOnPolicyPreSaveEvent>(policyRequest.Type);
+
+        if (handler is null)
+        {
+            return;
+        }
+
+        await handler.ExecutePreUpsertSideEffectAsync(policyRequest, currentPolicy);
+    }
+
+    private async Task ExecutePostUpsertSideEffectAsync(SavePolicyModel policyRequest,
+        Policy postUpdatedPolicy, Policy? previousPolicyState)
+    {
+        var handler = _policyEventHandlerFactory.GetHandler<IOnPolicyPostSaveEvent>(policyRequest.PolicyUpdate.Type);
+
+        if (handler is null)
+        {
+            return;
+        }
+
+        await handler.ExecutePostUpsertSideEffectAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
+    }
+
+
 }
+

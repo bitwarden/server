@@ -14,6 +14,7 @@ public static class PolicyServiceCollectionExtensions
         services.AddScoped<IPolicyService, PolicyService>();
         services.AddScoped<ISavePolicyCommand, SavePolicyCommand>();
         services.AddScoped<IPolicyRequirementQuery, PolicyRequirementQuery>();
+        services.AddScoped<IPolicyEventHandlerFactory, PolicyEventHandlerHandlerFactory>();
 
         services.AddPolicyValidators();
         services.AddPolicyRequirements();
@@ -22,18 +23,15 @@ public static class PolicyServiceCollectionExtensions
 
     private static void AddPolicyValidators(this IServiceCollection services)
     {
-        services.AddScoped<IPolicyValidator, TwoFactorAuthenticationPolicyValidator>();
         services.AddScoped<IPolicyValidator, SingleOrgPolicyValidator>();
-
         services.AddScoped<IPolicyValidator, ResetPasswordPolicyValidator>();
-
         services.AddScoped<IPolicyValidator, FreeFamiliesForEnterprisePolicyValidator>();
 
         services.AddScoped<IEnforceDependentPoliciesEvent, RequireSsoOnPolicyEventEventEnsureEventValidator>();
-        services.AddScoped<IPolicyValidationEvent, RequireSsoOnPolicyEventEventEnsureEventValidator>();
-        services.AddScoped<IOnPolicyPostSaveEvent, RequireSsoOnPolicyEventEventEnsureEventValidator>();
-
         services.AddScoped<IEnforceDependentPoliciesEvent, MaximumVaultTimeoutPolicyEventEventValidator>();
+
+        services.AddScoped<IPolicyValidationEvent, RequireSsoOnPolicyEventEventEnsureEventValidator>();
+        services.AddScoped<IOnPolicyPreSaveEvent, TwoFactorAuthenticationPolicyHandler>();
     }
 
     private static void AddPolicySideEffects(this IServiceCollection services)
