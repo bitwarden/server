@@ -105,4 +105,14 @@ public static class SendAccessConstants
     {
         public const string Subject = "Your Bitwarden Send verification code is {0}";
     }
+
+    /// <summary>
+    /// We use these static strings to help guide the enumeration protection logic.
+    /// </summary>
+    public static class EnumerationProtection
+    {
+        public const string Guid = "guid";
+        public const string Password = "password";
+        public const string Email = "email";
+    }
 }

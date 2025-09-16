@@ -13,20 +13,18 @@ namespace Bit.Identity.IdentityServer.RequestValidators.SendAccess;
 
 public class SendAccessGrantValidator(
     ISendAuthenticationQuery _sendAuthenticationQuery,
+    ISendAuthenticationMethodValidator<NeverAuthenticate> _sendNeverAuthenticateValidator,
     ISendAuthenticationMethodValidator<ResourcePassword> _sendPasswordRequestValidator,
     ISendAuthenticationMethodValidator<EmailOtp> _sendEmailOtpRequestValidator,
-    IFeatureService _featureService)
-: IExtensionGrantValidator
+    IFeatureService _featureService) : IExtensionGrantValidator
 {
     string IExtensionGrantValidator.GrantType => CustomGrantTypes.SendAccess;
 
-    private static readonly Dictionary<string, string>
-    _sendGrantValidatorErrorDescriptions = new()
+    private static readonly Dictionary<string, string> _sendGrantValidatorErrorDescriptions = new()
     {
         { SendAccessConstants.GrantValidatorResults.SendIdRequired, $"{SendAccessConstants.TokenRequest.SendId} is required." },
         { SendAccessConstants.GrantValidatorResults.InvalidSendId, $"{SendAccessConstants.TokenRequest.SendId} is invalid." }
     };
-
 
     public async Task ValidateAsync(ExtensionGrantValidationContext context)
     {
@@ -38,7 +36,7 @@ public class SendAccessGrantValidator(
         }
 
         var (sendIdGuid, result) = GetRequestSendId(context);
-        if (result != SendAccessConstants.GrantValidatorResults.ValidSendGuid)
+        if (result != SendAccessConstants.GrantValidatorResults.ValidGuid)
         {
             context.Result = BuildErrorResult(result);
             return;
@@ -49,15 +47,10 @@ public class SendAccessGrantValidator(
 
         switch (method)
         {
-            case NeverAuthenticate:
+            case NeverAuthenticate never:
                 // null send scenario.
-                // TODO PM-22675: Add send enumeration protection here (primarily benefits self hosted instances).
-                // We should only map to password or email + OTP protected.
-                // If user submits password guess for a falsely protected send, then we will return invalid password.
-                // If user submits email + OTP guess for a falsely protected send, then we will return email sent, do not actually send an email.
-                context.Result = BuildErrorResult(SendAccessConstants.GrantValidatorResults.InvalidSendId);
+                context.Result = await _sendNeverAuthenticateValidator.ValidateRequestAsync(context, never, sendIdGuid);
                 return;
-
             case NotAuthenticated:
                 // automatically issue access token
                 context.Result = BuildBaseSuccessResult(sendIdGuid);
@@ -102,7 +95,7 @@ public class SendAccessGrantValidator(
             {
                 return (Guid.Empty, SendAccessConstants.GrantValidatorResults.InvalidSendId);
             }
-            return (sendGuid, SendAccessConstants.GrantValidatorResults.ValidSendGuid);
+            return (sendGuid, SendAccessConstants.GrantValidatorResults.ValidGuid);
         }
         catch
         {

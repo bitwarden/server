@@ -14,7 +14,7 @@ public static class EnumerationProtectionHelpers
     /// <returns>An int between 0 and range</returns>
     public static int GetIndexForSaltHash(byte[] hmacKey, string salt, int range)
     {
-        if (hmacKey == null || range <= 0)
+        if (hmacKey == null || range <= 0 || hmacKey.Length == 0)
         {
             return 0;
         }
