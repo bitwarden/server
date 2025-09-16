@@ -1320,12 +1320,6 @@ public class SubscriberServiceTests
         stripeAdapter.SetupIntentList(Arg.Is<SetupIntentListOptions>(options => options.PaymentMethod == "TOKEN"))
             .Returns([matchingSetupIntent]);
 
-        stripeAdapter.SetupIntentList(Arg.Is<SetupIntentListOptions>(options => options.Customer == provider.GatewayCustomerId))
-            .Returns([
-                new SetupIntent { Id = "setup_intent_2", Status = "requires_payment_method" },
-                new SetupIntent { Id = "setup_intent_3", Status = "succeeded" }
-            ]);
-
         stripeAdapter.CustomerListPaymentMethods(provider.GatewayCustomerId).Returns([
             new PaymentMethod { Id = "payment_method_1" }
         ]);
@@ -1335,8 +1329,8 @@ public class SubscriberServiceTests
 
         await sutProvider.GetDependency<ISetupIntentCache>().Received(1).Set(provider.Id, "setup_intent_1");
 
-        await stripeAdapter.Received(1).SetupIntentCancel("setup_intent_2",
-            Arg.Is<SetupIntentCancelOptions>(options => options.CancellationReason == "abandoned"));
+        await stripeAdapter.DidNotReceive().SetupIntentCancel(Arg.Any<string>(),
+            Arg.Any<SetupIntentCancelOptions>());
 
         await stripeAdapter.Received(1).PaymentMethodDetachAsync("payment_method_1");
 
@@ -1364,12 +1358,6 @@ public class SubscriberServiceTests
                 }
             });
 
-        stripeAdapter.SetupIntentList(Arg.Is<SetupIntentListOptions>(options => options.Customer == provider.GatewayCustomerId))
-            .Returns([
-                new SetupIntent { Id = "setup_intent_2", Status = "requires_payment_method" },
-                new SetupIntent { Id = "setup_intent_3", Status = "succeeded" }
-            ]);
-
         stripeAdapter.CustomerListPaymentMethods(provider.GatewayCustomerId).Returns([
             new PaymentMethod { Id = "payment_method_1" }
         ]);
@@ -1377,8 +1365,8 @@ public class SubscriberServiceTests
         await sutProvider.Sut.UpdatePaymentSource(provider,
             new TokenizedPaymentSource(PaymentMethodType.Card, "TOKEN"));
 
-        await stripeAdapter.Received(1).SetupIntentCancel("setup_intent_2",
-            Arg.Is<SetupIntentCancelOptions>(options => options.CancellationReason == "abandoned"));
+        await stripeAdapter.DidNotReceive().SetupIntentCancel(Arg.Any<string>(),
+            Arg.Any<SetupIntentCancelOptions>());
 
         await stripeAdapter.Received(1).PaymentMethodDetachAsync("payment_method_1");
 
