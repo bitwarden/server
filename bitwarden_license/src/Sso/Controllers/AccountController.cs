@@ -108,6 +108,7 @@ public class AccountController : Controller
             // Validate domain_hint provided
             if (string.IsNullOrWhiteSpace(domainHint))
             {
+                _logger.LogError(new ArgumentException("domainHint is required."), "domainHint not specified.");
                 return InvalidJson("SsoInvalidIdentifierError");
             }
 
@@ -115,6 +116,7 @@ public class AccountController : Controller
             var organization = await _organizationRepository.GetByIdentifierAsync(domainHint);
             if (organization is not { UseSso: true })
             {
+                _logger.LogError("Organization not configured to use SSO.");
                 return InvalidJson("SsoInvalidIdentifierError");
             }
 
@@ -122,6 +124,7 @@ public class AccountController : Controller
             var ssoConfig = await _ssoConfigRepository.GetByIdentifierAsync(domainHint);
             if (ssoConfig is not { Enabled: true })
             {
+                _logger.LogError("SsoConfig not enabled.");
                 return InvalidJson("SsoInvalidIdentifierError");
             }
 
@@ -129,6 +132,7 @@ public class AccountController : Controller
             var scheme = await _schemeProvider.GetSchemeAsync(organization.Id.ToString());
             if (scheme is not IDynamicAuthenticationScheme dynamicScheme)
             {
+                _logger.LogError("Invalid authentication scheme for organization.");
                 return InvalidJson("SsoInvalidIdentifierError");
             }
 
