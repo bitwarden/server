@@ -22,6 +22,7 @@ public class OrganizationUserInvitedViewModel : BaseTitleContactUsMailModel
         GlobalSettings globalSettings)
     {
         var freeOrgTitle = "A Bitwarden member invited you to an organization. Join now to start securing your passwords!";
+
         return new OrganizationUserInvitedViewModel
         {
             TitleFirst = orgInvitesInfo.IsFreeOrg ? freeOrgTitle : "Join ",
@@ -48,6 +49,45 @@ public class OrganizationUserInvitedViewModel : BaseTitleContactUsMailModel
         };
     }
 
+    public static OrganizationUserInvitedViewModel CreateFromInviteInfo_v2(
+        OrganizationInvitesInfo orgInvitesInfo,
+        OrganizationUser orgUser,
+        ExpiringToken expiringToken,
+        GlobalSettings globalSettings)
+    {
+        const string freeOrgTitle = "A Bitwarden member invited you to an organization. " +
+                                    "Join now to start securing your passwords!";
+
+        var userHasExistingUser = orgInvitesInfo.OrgUserHasExistingUserDict[orgUser.Id];
+
+        return new OrganizationUserInvitedViewModel
+        {
+            TitleFirst = orgInvitesInfo.IsFreeOrg ? freeOrgTitle : "Join ",
+            TitleSecondBold =
+                orgInvitesInfo.IsFreeOrg
+                    ? string.Empty
+                    : CoreHelpers.SanitizeForEmail(orgInvitesInfo.OrganizationName, false),
+            TitleThird = orgInvitesInfo.IsFreeOrg ? string.Empty : " on Bitwarden and start securing your passwords!",
+            OrganizationName = CoreHelpers.SanitizeForEmail(orgInvitesInfo.OrganizationName, false),
+            Email = WebUtility.UrlEncode(orgUser.Email),
+            OrganizationId = orgUser.OrganizationId.ToString(),
+            OrganizationUserId = orgUser.Id.ToString(),
+            Token = WebUtility.UrlEncode(expiringToken.Token),
+            ExpirationDate =
+                $"{expiringToken.ExpirationDate.ToLongDateString()} {expiringToken.ExpirationDate.ToShortTimeString()} UTC",
+            OrganizationNameUrlEncoded = WebUtility.UrlEncode(orgInvitesInfo.OrganizationName),
+            WebVaultUrl = globalSettings.BaseServiceUri.VaultWithHash,
+            SiteName = globalSettings.SiteName,
+            InitOrganization = orgInvitesInfo.InitOrganization,
+            OrgSsoIdentifier = orgInvitesInfo.OrgSsoIdentifier,
+            OrgSsoEnabled = orgInvitesInfo.OrgSsoEnabled,
+            OrgSsoLoginRequiredPolicyEnabled = orgInvitesInfo.OrgSsoLoginRequiredPolicyEnabled,
+            OrgUserHasExistingUser = userHasExistingUser,
+            JoinOrganizationButtonText = userHasExistingUser || orgInvitesInfo.IsFreeOrg ? "Accept invitation" : "Finish account setup",
+            IsFreeOrg = orgInvitesInfo.IsFreeOrg
+        };
+    }
+
     public string OrganizationName { get; set; }
     public string OrganizationId { get; set; }
     public string OrganizationUserId { get; set; }
@@ -60,6 +100,8 @@ public class OrganizationUserInvitedViewModel : BaseTitleContactUsMailModel
     public bool OrgSsoEnabled { get; set; }
     public bool OrgSsoLoginRequiredPolicyEnabled { get; set; }
     public bool OrgUserHasExistingUser { get; set; }
+    public string JoinOrganizationButtonText { get; set; } = "Join Organization";
+    public bool IsFreeOrg { get; set; }
 
     public string Url
     {
