@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 
 namespace Bit.Core.Utilities;
 

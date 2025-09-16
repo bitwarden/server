@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Utilities;
