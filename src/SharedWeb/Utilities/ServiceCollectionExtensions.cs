@@ -696,7 +696,7 @@ public static class ServiceCollectionExtensions
             options.ServerName = "Bitwarden";
             options.TimestampDriftTolerance = 300000;
 
-            if (globalSettings.Fido2.Origins.Any())
+            if (globalSettings.Fido2?.Origins?.Any() == true)
             {
                 options.Origins = new HashSet<string>(globalSettings.Fido2.Origins);
             }
