@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using System.Text.Json;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -22,6 +23,8 @@ public class IntegrationTemplateContext(EventMessage eventMessage)
     public Guid? CollectionId => Event.CollectionId;
     public Guid? GroupId => Event.GroupId;
     public Guid? PolicyId => Event.PolicyId;
+
+    public string EventMessage => JsonSerializer.Serialize(Event);
 
     public User? User { get; set; }
     public string? UserName => User?.Name;
