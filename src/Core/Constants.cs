@@ -131,7 +131,6 @@ public static class FeatureFlagKeys
     public const string EventBasedOrganizationIntegrations = "event-based-organization-integrations";
     public const string SeparateCustomRolePermissions = "pm-19917-separate-custom-role-permissions";
     public const string CreateDefaultLocation = "pm-19467-create-default-location";
-    public const string DirectoryConnectorPreventUserRemoval = "pm-24592-directory-connector-prevent-user-removal";
     public const string PM23845_VNextApplicationCache = "pm-24957-refactor-memory-application-cache";
     public const string CipherRepositoryBulkResourceCreation = "pm-24951-cipher-repository-bulk-resource-creation-service";
     public const string CollectionVaultRefactor = "pm-25030-resolve-ts-upgrade-errors";
@@ -206,6 +205,8 @@ public static class FeatureFlagKeys
     public const string EnablePMPreloginSettings = "enable-pm-prelogin-settings";
     public const string AppIntents = "app-intents";
     public const string SendAccess = "pm-19394-send-access-control";
+    public const string CxpImportMobile = "cxp-import-mobile";
+    public const string CxpExportMobile = "cxp-export-mobile";
 
     /* Platform Team */
     public const string IpcChannelFramework = "ipc-channel-framework";

@@ -35,7 +35,7 @@ env:
   AZURE_KEY_VAULT_SECRETS: DD-API-KEY, K6-CLIENT-ID, K6-AUTH-USER-EMAIL, K6-AUTH-USER-PASSWORD-HASH
   # Specify defaults for scheduled runs
   TEST_ID: ${{ inputs.test-id || 'server-load-test' }}
-  K6_TEST_PATH: ${{ inputs.k6-test-path || 'test/load/*.js' }}
+  K6_TEST_PATH: ${{ inputs.k6-test-path || 'perf/load/*.js' }}
   API_ENV_URL: ${{ inputs.api-env-url || 'https://api.qa.bitwarden.pw' }}
   IDENTITY_ENV_URL: ${{ inputs.identity-env-url || 'https://identity.qa.bitwarden.pw' }}
 

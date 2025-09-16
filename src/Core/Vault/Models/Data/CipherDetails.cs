@@ -25,6 +25,7 @@ public class CipherDetails : CipherOrganizationDetails
         CreationDate = cipher.CreationDate;
         RevisionDate = cipher.RevisionDate;
         DeletedDate = cipher.DeletedDate;
+        ArchivedDate = cipher.ArchivedDate;
         Reprompt = cipher.Reprompt;
         Key = cipher.Key;
         OrganizationUseTotp = cipher.OrganizationUseTotp;
