@@ -84,12 +84,13 @@ public class PolicyEventHandlerHandlerFactory(
     IEnumerable<IPolicyValidationEvent> validationHandlers,
     IEnumerable<IEnforceDependentPoliciesEvent> dependencyHandlers,
     IEnumerable<IOnPolicyPreSaveEvent> preSaveHandlers,
-    IEnumerable<IOnPolicyPostSaveEvent> postSaveHandlers) : IPolicyEventHandlerFactory
+    IEnumerable<IOnPolicyPostSaveEvent> postSaveHandlers,
+    IEnumerable<IPolicyUpdateEvent> handlers) : IPolicyEventHandlerFactory
 {
     public T? GetHandler<T>(PolicyType policyType) where T : IPolicyUpdateEvent
     {
         var handlers = GetHandlerCollection<T>();
-
+        var test = handlers.OfType<T>();
         return handlers.SingleOrDefault(h => h.Type == policyType);
     }
 

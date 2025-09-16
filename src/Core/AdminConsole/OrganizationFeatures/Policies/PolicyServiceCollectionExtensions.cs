@@ -34,6 +34,8 @@ public static class PolicyServiceCollectionExtensions
         services.AddScoped<IOnPolicyPreSaveEvent, TwoFactorAuthenticationPolicyHandler>();
 
         services.AddScoped<IOnPolicyPostSaveEvent, OrganizationDataOwnershipPolicyHandler>();
+        services.AddScoped<IPolicyUpdateEvent, OrganizationDataOwnershipPolicyHandler>();
+
     }
 
     private static void AddPolicySideEffects(this IServiceCollection services)
