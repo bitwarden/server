@@ -12,7 +12,7 @@ using Duende.IdentityModel;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Identity.IntegrationTest.RequestValidation;
+namespace Bit.Identity.IntegrationTest.RequestValidation.SendAccess;
 
 public class SendEmailOtpRequestValidatorIntegrationTests : IClassFixture<IdentityApplicationFactory>
 {

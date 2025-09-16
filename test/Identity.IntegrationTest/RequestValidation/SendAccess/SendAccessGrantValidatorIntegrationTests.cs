@@ -13,7 +13,7 @@ using Duende.IdentityServer.Validation;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Identity.IntegrationTest.RequestValidation;
+namespace Bit.Identity.IntegrationTest.RequestValidation.SendAccess;
 
 // in order to test the default case for the authentication method, we need to create a custom one so we can ensure the
 // method throws as expected.
