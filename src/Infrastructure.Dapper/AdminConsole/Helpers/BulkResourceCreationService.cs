@@ -9,11 +9,12 @@ namespace Bit.Infrastructure.Dapper.AdminConsole.Helpers;
 public static class BulkResourceCreationService
 {
     private const string _defaultErrorMessage = "Must have at least one record for bulk creation.";
-    public static async Task CreateCollectionsUsersAsync(SqlConnection connection, SqlTransaction transaction, IEnumerable<CollectionUser> collectionUsers, string errorMessage = _defaultErrorMessage)
+    public static async Task CreateCollectionsUsersAsync(SqlConnection connection, SqlTransaction transaction,
+        IEnumerable<CollectionUser> collectionUsers, string errorMessage = _defaultErrorMessage)
     {
         // Offload some work from SQL Server by pre-sorting before insert.
         // This lets us use the SqlBulkCopy.ColumnOrderHints to improve performance and reduce deadlocks.
-        collectionUsers = collectionUsers
+        var sortedCollectionUsers = collectionUsers
             .OrderBySqlGuid(cu => cu.CollectionId)
             .ThenBySqlGuid(cu => cu.OrganizationUserId)
             .ToList();
@@ -26,7 +27,7 @@ public static class BulkResourceCreationService
         bulkCopy.ColumnOrderHints.Add("CollectionId", SortOrder.Ascending);
         bulkCopy.ColumnOrderHints.Add("OrganizationUserId", SortOrder.Ascending);
 
-        var dataTable = BuildCollectionsUsersTable(bulkCopy, collectionUsers, errorMessage);
+        var dataTable = BuildCollectionsUsersTable(bulkCopy, sortedCollectionUsers, errorMessage);
         await bulkCopy.WriteToServerAsync(dataTable);
     }
 
@@ -110,11 +111,12 @@ public static class BulkResourceCreationService
         return table;
     }
 
-    public static async Task CreateCollectionsAsync(SqlConnection connection, SqlTransaction transaction, IEnumerable<Collection> collections, string errorMessage = _defaultErrorMessage)
+    public static async Task CreateCollectionsAsync(SqlConnection connection, SqlTransaction transaction,
+        IEnumerable<Collection> collections, string errorMessage = _defaultErrorMessage)
     {
         // Offload some work from SQL Server by pre-sorting before insert.
         // This lets us use the SqlBulkCopy.ColumnOrderHints to improve performance and reduce deadlocks.
-        collections = collections.OrderBySqlGuid(c => c.Id).ToList();
+        var sortedCollections = collections.OrderBySqlGuid(c => c.Id).ToList();
 
         using var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction);
         bulkCopy.DestinationTableName = "[dbo].[Collection]";
@@ -123,7 +125,7 @@ public static class BulkResourceCreationService
         bulkCopy.EnableStreaming = true;
         bulkCopy.ColumnOrderHints.Add("Id", SortOrder.Ascending);
 
-        var dataTable = BuildCollectionsTable(bulkCopy, collections, errorMessage);
+        var dataTable = BuildCollectionsTable(bulkCopy, sortedCollections, errorMessage);
         await bulkCopy.WriteToServerAsync(dataTable);
     }
 
