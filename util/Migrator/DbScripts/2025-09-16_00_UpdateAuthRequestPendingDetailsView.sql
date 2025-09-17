@@ -36,5 +36,5 @@ SELECT
 FROM [PendingRequests] [PR]
 WHERE [PR].[rn] = 1
   AND [PR].[Approved] IS NULL -- since we only want pending requests we only want the most recent that is also approved = null
-    EXECUTE sp_refreshview N'[dbo].[AuthRequestPendingDetailsView]'
+    EXECUTE sp_refreshview '[dbo].[AuthRequestPendingDetailsView]'
     GO
