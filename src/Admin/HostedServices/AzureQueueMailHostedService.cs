@@ -21,6 +21,9 @@ public class AzureQueueMailHostedService : IHostedService
 
     private QueueClient _mailQueueClient;
 
+    private const int MaxRetryAttempts = 3;
+    private readonly TimeSpan[] RetryDelays = { TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(15) };
+
     public AzureQueueMailHostedService(
         ILogger<AzureQueueMailHostedService> logger,
         IMailService mailService,
@@ -63,31 +66,12 @@ public class AzureQueueMailHostedService : IHostedService
 
             foreach (var message in mailMessages)
             {
-                try
-                {
-                    using var document = JsonDocument.Parse(message.DecodeMessageText());
-                    var root = document.RootElement;
+                var success = await ProcessMessageWithRetryAsync(message, cancellationToken);
 
-                    if (root.ValueKind == JsonValueKind.Array)
-                    {
-                        foreach (var mailQueueMessage in root.Deserialize<List<MailQueueMessage>>())
-                        {
-                            await _mailService.SendEnqueuedMailMessageAsync(mailQueueMessage);
-                        }
-                    }
-                    else if (root.ValueKind == JsonValueKind.Object)
-                    {
-                        var mailQueueMessage = root.Deserialize<MailQueueMessage>();
-                        await _mailService.SendEnqueuedMailMessageAsync(mailQueueMessage);
-                    }
-                }
-                catch (Exception e)
+                if (success || cancellationToken.IsCancellationRequested)
                 {
-                    _logger.LogError(e, "Failed to send email");
-                    // TODO: retries?
+                    await _mailQueueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt);
                 }
-
-                await _mailQueueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt);
 
                 if (cancellationToken.IsCancellationRequested)
                 {
@@ -95,6 +79,57 @@ public class AzureQueueMailHostedService : IHostedService
                 }
             }
         }
+    }
+
+    private async Task<bool> ProcessMessageWithRetryAsync(QueueMessage message, CancellationToken cancellationToken)
+    {
+        for (int attempt = 0; attempt < MaxRetryAttempts; attempt++)
+        {
+            try
+            {
+                using var document = JsonDocument.Parse(message.DecodeMessageText());
+                var root = document.RootElement;
+
+                if (root.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var mailQueueMessage in root.Deserialize<List<MailQueueMessage>>())
+                    {
+                        await _mailService.SendEnqueuedMailMessageAsync(mailQueueMessage);
+                    }
+                }
+                else if (root.ValueKind == JsonValueKind.Object)
+                {
+                    var mailQueueMessage = root.Deserialize<MailQueueMessage>();
+                    await _mailService.SendEnqueuedMailMessageAsync(mailQueueMessage);
+                }
+
+                _logger.LogInformation("Successfully sent email message after {Attempt} attempts", attempt + 1);
+                return true;
+            }
+            catch (Exception e)
+            {
+                var isLastAttempt = attempt == MaxRetryAttempts - 1;
+
+                if (isLastAttempt)
+                {
+                    _logger.LogError(e, "Failed to send email after {MaxAttempts} attempts. Message will be deleted from queue.", MaxRetryAttempts);
+                }
+                else
+                {
+                    _logger.LogWarning(e, "Failed to send email on attempt {Attempt}/{MaxAttempts}. Retrying in {Delay}ms",
+                        attempt + 1, MaxRetryAttempts, RetryDelays[attempt].TotalMilliseconds);
+
+                    await Task.Delay(RetryDelays[attempt], cancellationToken);
+
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        return false;
     }
 
     private async Task<QueueMessage[]> RetrieveMessagesAsync()
