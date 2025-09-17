@@ -2,6 +2,7 @@
 #nullable disable
 
 using System.ComponentModel.DataAnnotations;
+using Bit.Core;
 
 namespace Bit.Api.Models.Request.Accounts;
 
@@ -13,7 +14,7 @@ public class TaxInfoUpdateRequestModel : IValidatableObject
 
     public virtual IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if (Country == "US" && string.IsNullOrWhiteSpace(PostalCode))
+        if (Country == Constants.CountryAbbreviations.UnitedStates && string.IsNullOrWhiteSpace(PostalCode))
         {
             yield return new ValidationResult("Zip / postal code is required.",
                 new string[] { nameof(PostalCode) });

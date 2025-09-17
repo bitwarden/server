@@ -61,4 +61,10 @@ public class OrganizationCiphersQuery : IOrganizationCiphersQuery
         var allOrganizationCiphers = await GetAllOrganizationCiphers(organizationId);
         return allOrganizationCiphers.Where(c => c.CollectionIds.Intersect(managedCollectionIds).Any());
     }
+
+    public async Task<IEnumerable<CipherOrganizationDetailsWithCollections>>
+        GetAllOrganizationCiphersExcludingDefaultUserCollections(Guid orgId)
+    {
+        return (await _cipherRepository.GetManyCipherOrganizationDetailsExcludingDefaultCollectionsAsync(orgId)).ToList();
+    }
 }
