@@ -64,9 +64,10 @@ public class RecoverAccountAuthorizationHandler(
         }
 
         // Even if the role is authorized, we need to make sure they're not trying to recover a provider's account
+        // (regardless of whether they are a provider for this organization specifically)
         var providerUsers =
-            await providerUserRepository.GetManyByOrganizationAsync(targetOrganizationUser.OrganizationId);
-        var targetUserIsProvider = providerUsers.Any(pu => pu.UserId == targetOrganizationUser.UserId!.Value);
+            await providerUserRepository.GetManyByUserAsync(targetOrganizationUser.UserId!.Value);
+        var targetUserIsProvider = providerUsers.Count > 0;
 
         return !targetUserIsProvider;
     }

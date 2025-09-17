@@ -247,7 +247,7 @@ public class RecoverAccountAuthorizationHandlerTests
         OrganizationUser targetOrganizationUser)
     {
         sutProvider.GetDependency<IProviderUserRepository>()
-            .GetManyByOrganizationAsync(targetOrganizationUser.OrganizationId)
+            .GetManyByUserAsync(targetOrganizationUser.UserId!.Value)
             .Returns([new ProviderUser
             {
                 Id = Guid.NewGuid(),
