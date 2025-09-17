@@ -193,7 +193,7 @@ public class SendsController : Controller
     }
 
     [HttpGet("")]
-    public async Task<ListResponseModel<SendResponseModel>> Get()
+    public async Task<ListResponseModel<SendResponseModel>> GetAll()
     {
         var sends = await _sendOwnerQuery.GetOwned(User);
         var responses = sends.Select(s => new SendResponseModel(s));

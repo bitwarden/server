@@ -3,6 +3,7 @@
 
 using System.Globalization;
 using Bit.Commercial.Core.Billing.Providers.Models;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -282,7 +283,7 @@ public class ProviderBillingService(
             ]
         };
 
-        if (providerCustomer.Address is not { Country: "US" })
+        if (providerCustomer.Address is not { Country: Constants.CountryAbbreviations.UnitedStates })
         {
             customerCreateOptions.TaxExempt = StripeConstants.TaxExempt.Reverse;
         }
@@ -525,7 +526,7 @@ public class ProviderBillingService(
             }
         };
 
-        if (taxInfo.BillingAddressCountry is not "US")
+        if (taxInfo.BillingAddressCountry is not Constants.CountryAbbreviations.UnitedStates)
         {
             options.TaxExempt = StripeConstants.TaxExempt.Reverse;
         }
@@ -635,10 +636,10 @@ public class ProviderBillingService(
             {
                 case PaymentMethodType.BankAccount:
                     {
-                        var setupIntentId = await setupIntentCache.Get(provider.Id);
+                        var setupIntentId = await setupIntentCache.GetSetupIntentIdForSubscriber(provider.Id);
                         await stripeAdapter.SetupIntentCancel(setupIntentId,
                             new SetupIntentCancelOptions { CancellationReason = "abandoned" });
-                        await setupIntentCache.Remove(provider.Id);
+                        await setupIntentCache.RemoveSetupIntentForSubscriber(provider.Id);
                         break;
                     }
                 case PaymentMethodType.PayPal when !string.IsNullOrEmpty(braintreeCustomerId):
@@ -688,7 +689,7 @@ public class ProviderBillingService(
             });
         }
 
-        var setupIntentId = await setupIntentCache.Get(provider.Id);
+        var setupIntentId = await setupIntentCache.GetSetupIntentIdForSubscriber(provider.Id);
 
         var setupIntent = !string.IsNullOrEmpty(setupIntentId)
             ? await stripeAdapter.SetupIntentGet(setupIntentId, new SetupIntentGetOptions

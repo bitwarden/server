@@ -92,6 +92,8 @@ src/Admin/Views/Tools @bitwarden/team-billing-dev
 **/.dockerignore @bitwarden/team-platform-dev
 **/Dockerfile @bitwarden/team-platform-dev
 **/entrypoint.sh @bitwarden/team-platform-dev
+# The PushType enum is expected to be editted by anyone without need for Platform review
+src/Core/Platform/Push/PushType.cs
 
 # Multiple owners - DO NOT REMOVE (BRE)
 **/packages.lock.json

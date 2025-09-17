@@ -275,7 +275,7 @@ public class OrganizationBillingService(
 
 
             if (planType.GetProductTier() is not ProductTierType.Free and not ProductTierType.Families &&
-                customerSetup.TaxInformation.Country != "US")
+                customerSetup.TaxInformation.Country != Core.Constants.CountryAbbreviations.UnitedStates)
             {
                 customerCreateOptions.TaxExempt = StripeConstants.TaxExempt.Reverse;
             }
@@ -383,7 +383,7 @@ public class OrganizationBillingService(
                 {
                     case PaymentMethodType.BankAccount:
                         {
-                            await setupIntentCache.Remove(organization.Id);
+                            await setupIntentCache.RemoveSetupIntentForSubscriber(organization.Id);
                             break;
                         }
                     case PaymentMethodType.PayPal when !string.IsNullOrEmpty(braintreeCustomerId):
@@ -514,14 +514,14 @@ public class OrganizationBillingService(
 
         customer = customer switch
         {
-            { Address.Country: not "US", TaxExempt: not StripeConstants.TaxExempt.Reverse } => await
+            { Address.Country: not Core.Constants.CountryAbbreviations.UnitedStates, TaxExempt: not StripeConstants.TaxExempt.Reverse } => await
                 stripeAdapter.CustomerUpdateAsync(customer.Id,
                     new CustomerUpdateOptions
                     {
                         Expand = expansions,
                         TaxExempt = StripeConstants.TaxExempt.Reverse
                     }),
-            { Address.Country: "US", TaxExempt: StripeConstants.TaxExempt.Reverse } => await
+            { Address.Country: Core.Constants.CountryAbbreviations.UnitedStates, TaxExempt: StripeConstants.TaxExempt.Reverse } => await
                 stripeAdapter.CustomerUpdateAsync(customer.Id,
                     new CustomerUpdateOptions
                     {
