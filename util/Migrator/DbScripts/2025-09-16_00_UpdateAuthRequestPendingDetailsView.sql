@@ -36,18 +36,5 @@ SELECT
 FROM [PendingRequests] [PR]
 WHERE [PR].[rn] = 1
   AND [PR].[Approved] IS NULL -- since we only want pending requests we only want the most recent that is also approved = null
+    EXECUTE sp_refreshview N'[dbo].[AuthRequestPendingDetailsView]'
     GO
-
-CREATE OR ALTER PROCEDURE [dbo].[AuthRequest_ReadPendingByUserId]
-    @UserId UNIQUEIDENTIFIER,
-    @ExpirationMinutes INT
-AS
-BEGIN
-    SET NOCOUNT ON
-
-SELECT *
-FROM [dbo].[AuthRequestPendingDetailsView]
-WHERE [UserId] = @UserId
-  AND [CreationDate] >= DATEADD(MINUTE, -@ExpirationMinutes, GETUTCDATE())
-END
-GO
