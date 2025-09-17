@@ -266,6 +266,23 @@ public class AccountController : Controller
         // We will now sign the Bitwarden user in.
         if (user != null)
         {
+            // Block sign-in if the user's organization membership is revoked
+            if (Guid.TryParse(provider, out var organizationId))
+            {
+                var orgUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, user.Id);
+                var organization = await _organizationRepository.GetByIdAsync(organizationId);
+
+                if (orgUser != null && organization != null)
+                {
+                    EnsureOrgUserStatusAllowed(orgUser.Status, organization.DisplayName(),
+                        allowedStatuses: [OrganizationUserStatusType.Accepted, OrganizationUserStatusType.Confirmed]);
+                }
+                else
+                {
+                    _logger.LogError("Organization user or organization not found for user ID: {UserId} and organization ID: {OrganizationId}", user.Id, organizationId);
+                }
+            }
+
             // This allows us to collect any additional claims or properties
             // for the specific protocols used and store them in the local auth cookie.
             // this is typically used to store data needed for signout from those protocols.
