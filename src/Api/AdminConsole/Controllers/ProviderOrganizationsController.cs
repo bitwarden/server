@@ -93,7 +93,6 @@ public class ProviderOrganizationsController : Controller
     }
 
     [HttpDelete("{id:guid}")]
-    [HttpPost("{id:guid}/delete")]
     public async Task Delete(Guid providerId, Guid id)
     {
         if (!_currentContext.ManageProviderOrganizations(providerId))
@@ -111,5 +110,12 @@ public class ProviderOrganizationsController : Controller
             provider,
             providerOrganization,
             organization);
+    }
+
+    [HttpPost("{id:guid}/delete")]
+    [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
+    public async Task PostDelete(Guid providerId, Guid id)
+    {
+        await Delete(providerId, id);
     }
 }
