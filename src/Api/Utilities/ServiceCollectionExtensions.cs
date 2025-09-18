@@ -1,8 +1,6 @@
 ﻿using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.Tools.Authorization;
-using Bit.Api.Vault.AuthorizationHandlers.Collections;
-using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Authorization;
-using Bit.Core.IdentityServer;
+using Bit.Core.Auth.IdentityServer;
 using Bit.Core.PhishingDomainFeatures;
 using Bit.Core.PhishingDomainFeatures.Interfaces;
 using Bit.Core.Repositories;
@@ -82,15 +80,7 @@ public static class ServiceCollectionExtensions
             config.DescribeAllParametersInCamelCase();
             // config.UseReferencedDefinitionsForEnums();
 
-            config.SchemaFilter<EnumSchemaFilter>();
-            config.SchemaFilter<EncryptedStringSchemaFilter>();
-
-            // These two filters require debug symbols/git, so only add them in development mode
-            if (environment.IsDevelopment())
-            {
-                config.DocumentFilter<GitCommitDocumentFilter>();
-                config.OperationFilter<SourceFileLineOperationFilter>();
-            }
+            config.InitializeSwaggerFilters(environment);
 
             var apiFilePath = Path.Combine(AppContext.BaseDirectory, "Api.xml");
             config.IncludeXmlComments(apiFilePath, true);
@@ -117,14 +107,12 @@ public static class ServiceCollectionExtensions
 
     public static void AddAuthorizationHandlers(this IServiceCollection services)
     {
-        services.AddScoped<IAuthorizationHandler, BulkCollectionAuthorizationHandler>();
-        services.AddScoped<IAuthorizationHandler, CollectionAuthorizationHandler>();
-        services.AddScoped<IAuthorizationHandler, GroupAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, VaultExportAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, SecurityTaskAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, SecurityTaskOrganizationAuthorizationHandler>();
 
-        services.AddScoped<IAuthorizationHandler, OrganizationRequirementHandler>();
+        // Admin Console authorization handlers
+        services.AddAdminConsoleAuthorizationHandlers();
     }
 
     public static void AddPhishingDomainServices(this IServiceCollection services, GlobalSettings globalSettings)

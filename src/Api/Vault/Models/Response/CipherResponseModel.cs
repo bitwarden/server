@@ -74,6 +74,7 @@ public class CipherMiniResponseModel : ResponseModel
         DeletedDate = cipher.DeletedDate;
         Reprompt = cipher.Reprompt.GetValueOrDefault(CipherRepromptType.None);
         Key = cipher.Key;
+        ArchivedDate = cipher.ArchivedDate;
     }
 
     public Guid Id { get; set; }
@@ -106,6 +107,7 @@ public class CipherMiniResponseModel : ResponseModel
     public DateTime? DeletedDate { get; set; }
     public CipherRepromptType Reprompt { get; set; }
     public string Key { get; set; }
+    public DateTime? ArchivedDate { get; set; }
 }
 
 public class CipherResponseModel : CipherMiniResponseModel
