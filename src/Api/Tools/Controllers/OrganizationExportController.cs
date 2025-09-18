@@ -1,6 +1,8 @@
 ﻿using Bit.Api.Tools.Authorization;
 using Bit.Api.Tools.Models.Response;
+using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -20,19 +22,22 @@ public class OrganizationExportController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly IOrganizationCiphersQuery _organizationCiphersQuery;
     private readonly ICollectionRepository _collectionRepository;
+    private readonly IFeatureService _featureService;
 
     public OrganizationExportController(
         IUserService userService,
         GlobalSettings globalSettings,
         IAuthorizationService authorizationService,
         IOrganizationCiphersQuery organizationCiphersQuery,
-        ICollectionRepository collectionRepository)
+        ICollectionRepository collectionRepository,
+        IFeatureService featureService)
     {
         _userService = userService;
         _globalSettings = globalSettings;
         _authorizationService = authorizationService;
         _organizationCiphersQuery = organizationCiphersQuery;
         _collectionRepository = collectionRepository;
+        _featureService = featureService;
     }
 
     [HttpGet("export")]
@@ -42,8 +47,15 @@ public class OrganizationExportController : Controller
             VaultExportOperations.ExportWholeVault);
         if (canExportAll.Succeeded)
         {
-            var allOrganizationCiphers = await _organizationCiphersQuery.GetAllOrganizationCiphers(organizationId);
-            var allCollections = await _collectionRepository.GetManyByOrganizationIdAsync(organizationId);
+            var allOrganizationCiphers =
+                _featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation)
+                    ? await _organizationCiphersQuery.GetAllOrganizationCiphersExcludingDefaultUserCollections(
+                        organizationId)
+                    : await _organizationCiphersQuery.GetAllOrganizationCiphers(organizationId);
+
+            var allCollections =
+                await _collectionRepository.GetManySharedCollectionsByOrganizationIdAsync(organizationId);
+
             return Ok(new OrganizationExportResponseModel(allOrganizationCiphers, allCollections, _globalSettings));
         }
 
@@ -54,11 +66,20 @@ public class OrganizationExportController : Controller
             var userId = _userService.GetProperUserId(User)!.Value;
 
             var allUserCollections = await _collectionRepository.GetManyByUserIdAsync(userId);
-            var managedOrgCollections = allUserCollections.Where(c => c.OrganizationId == organizationId && c.Manage).ToList();
-            var managedCiphers =
-                await _organizationCiphersQuery.GetOrganizationCiphersByCollectionIds(organizationId, managedOrgCollections.Select(c => c.Id));
+            var managedOrgCollections =
+                allUserCollections.Where(c => c.OrganizationId == organizationId && c.Manage).ToList();
+            var filteredCollections = _featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation)
+                ? managedOrgCollections.Where(c => c.Type != CollectionType.DefaultUserCollection)
+                : managedOrgCollections;
 
-            return Ok(new OrganizationExportResponseModel(managedCiphers, managedOrgCollections, _globalSettings));
+            var managedCiphers =
+                _featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation)
+                    ? await _organizationCiphersQuery.GetAllOrganizationCiphersExcludingDefaultUserCollections(
+                        organizationId)
+                    : await _organizationCiphersQuery.GetOrganizationCiphersByCollectionIds(organizationId,
+                        filteredCollections.Select(c => c.Id));
+
+            return Ok(new OrganizationExportResponseModel(managedCiphers, filteredCollections, _globalSettings));
         }
 
         // Unauthorized
