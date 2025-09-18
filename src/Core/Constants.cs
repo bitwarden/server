@@ -135,7 +135,6 @@ public static class FeatureFlagKeys
     public const string CipherRepositoryBulkResourceCreation = "pm-24951-cipher-repository-bulk-resource-creation-service";
     public const string CollectionVaultRefactor = "pm-25030-resolve-ts-upgrade-errors";
     public const string DeleteClaimedUserAccountRefactor = "pm-25094-refactor-delete-managed-organization-user-command";
-    public const string InviteEmailImprovements = "pm-25644-update-join-organization-subject-line";
 
     /* Auth Team */
     public const string TwoFactorExtensionDataPersistence = "pm-9115-two-factor-extension-data-persistence";
