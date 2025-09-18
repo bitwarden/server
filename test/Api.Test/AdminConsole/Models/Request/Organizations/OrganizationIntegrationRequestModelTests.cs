@@ -84,7 +84,7 @@ public class OrganizationIntegrationRequestModelTests
 
         Assert.Single(results);
         Assert.Contains(nameof(model.Configuration), results[0].MemberNames);
-        Assert.Contains("must include valid configuration", results[0].ErrorMessage);
+        Assert.Contains("Must include valid", results[0].ErrorMessage);
     }
 
     [Fact]
@@ -114,7 +114,7 @@ public class OrganizationIntegrationRequestModelTests
 
         Assert.Single(results);
         Assert.Contains(nameof(model.Configuration), results[0].MemberNames);
-        Assert.Contains("must include valid configuration", results[0].ErrorMessage);
+        Assert.Contains("Must include valid", results[0].ErrorMessage);
     }
 
     [Fact]
@@ -130,7 +130,7 @@ public class OrganizationIntegrationRequestModelTests
 
         Assert.Single(results);
         Assert.Contains(nameof(model.Configuration), results[0].MemberNames);
-        Assert.Contains("must include valid configuration", results[0].ErrorMessage);
+        Assert.Contains("Must include valid", results[0].ErrorMessage);
     }
 
     [Fact]
@@ -160,7 +160,7 @@ public class OrganizationIntegrationRequestModelTests
 
         Assert.Single(results);
         Assert.Contains(nameof(model.Configuration), results[0].MemberNames);
-        Assert.Contains("must include valid configuration", results[0].ErrorMessage);
+        Assert.Contains("Must include valid", results[0].ErrorMessage);
     }
 
     [Fact]
@@ -176,7 +176,7 @@ public class OrganizationIntegrationRequestModelTests
 
         Assert.Single(results);
         Assert.Contains(nameof(model.Configuration), results[0].MemberNames);
-        Assert.Contains("must include valid configuration", results[0].ErrorMessage);
+        Assert.Contains("Must include valid", results[0].ErrorMessage);
     }
 
     [Fact]

@@ -17,7 +17,8 @@
     @OrganizationUseTotp BIT, -- not used
     @DeletedDate DATETIME2(2),
     @Reprompt TINYINT,
-    @Key VARCHAR(MAX) = NULL
+    @Key VARCHAR(MAX) = NULL,
+    @ArchivedDate DATETIME2(7) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -55,7 +56,8 @@ BEGIN
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate,
         [DeletedDate] = @DeletedDate,
-        [Key] = @Key
+        [Key] = @Key,
+        [ArchivedDate] = @ArchivedDate
     WHERE
         [Id] = @Id
 
