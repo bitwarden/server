@@ -38,23 +38,23 @@ public class CipherRequestModel
     // TODO: Rename to Attachments whenever the above is finally removed.
     public Dictionary<string, CipherAttachmentModel> Attachments2 { get; set; }
 
-    [Obsolete("This property is deprecated and will be removed in an upcoming release.")]
+    [Obsolete("Use Data instead.")]
     public CipherLoginModel Login { get; set; }
 
-    [Obsolete("This property is deprecated and will be removed in an upcoming release.")]
+    [Obsolete("Use Data instead.")]
     public CipherCardModel Card { get; set; }
 
-    [Obsolete("This property is deprecated and will be removed in an upcoming release.")]
+    [Obsolete("Use Data instead.")]
     public CipherIdentityModel Identity { get; set; }
 
-    [Obsolete("This property is deprecated and will be removed in an upcoming release.")]
+    [Obsolete("Use Data instead.")]
     public CipherSecureNoteModel SecureNote { get; set; }
 
-    [Obsolete("This property is deprecated and will be removed in an upcoming release.")]
+    [Obsolete("Use Data instead.")]
     public CipherSSHKeyModel SSHKey { get; set; }
 
     /// <summary>
-    /// Opaque JSON blob containing all cipher-specific data
+    /// JSON string containing cipher-specific data
     /// </summary>
     [StringLength(50000)]
     public string Data { get; set; }
