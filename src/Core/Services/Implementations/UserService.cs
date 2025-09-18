@@ -787,29 +787,38 @@ public class UserService : UserManager<User>, IUserService
             throw new ArgumentNullException(nameof(user));
         }
 
-        if (await CheckPasswordAsync(user, masterPassword))
+        if (!await CheckPasswordAsync(user, masterPassword))
         {
-            var result = await UpdatePasswordHash(user, newMasterPassword);
-            if (!result.Succeeded)
-            {
-                return result;
-            }
-
-            var now = DateTime.UtcNow;
-            user.RevisionDate = user.AccountRevisionDate = now;
-            user.LastKdfChangeDate = now;
-            user.Key = key;
-            user.Kdf = kdf;
-            user.KdfIterations = kdfIterations;
-            user.KdfMemory = kdfMemory;
-            user.KdfParallelism = kdfParallelism;
-            await _userRepository.ReplaceAsync(user);
-            await _pushService.PushLogOutAsync(user.Id);
-            return IdentityResult.Success;
+            Logger.LogWarning("Change KDF failed for user {userId}.", user.Id);
+            return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
         }
 
-        Logger.LogWarning("Change KDF failed for user {userId}.", user.Id);
-        return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
+        var legacyKdfUpdate = !_featureService.IsEnabled(FeatureFlagKeys.ForceUpdateKDFSettings);
+
+        var result = await UpdatePasswordHash(user, newMasterPassword, refreshStamp: legacyKdfUpdate);
+        if (!result.Succeeded)
+        {
+            return result;
+        }
+
+        var now = DateTime.UtcNow;
+        user.RevisionDate = user.AccountRevisionDate = now;
+        user.LastKdfChangeDate = now;
+        user.Key = key;
+        user.Kdf = kdf;
+        user.KdfIterations = kdfIterations;
+        user.KdfMemory = kdfMemory;
+        user.KdfParallelism = kdfParallelism;
+        await _userRepository.ReplaceAsync(user);
+        if (legacyKdfUpdate)
+        {
+            await _pushService.PushLogOutAsync(user.Id);
+        }
+        else
+        {
+            await _pushService.PushSyncSettingsAsync(user.Id);
+        }
+        return IdentityResult.Success;
     }
 
     public async Task<IdentityResult> RefreshSecurityStampAsync(User user, string secret)
@@ -1189,6 +1198,7 @@ public class UserService : UserManager<User>, IUserService
         }
 
         user.MasterPassword = _passwordHasher.HashPassword(user, newPassword);
+        // TODO
         if (refreshStamp)
         {
             user.SecurityStamp = Guid.NewGuid().ToString();
