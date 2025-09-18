@@ -11,6 +11,7 @@ using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccountvNext;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
@@ -71,6 +72,7 @@ public class OrganizationUsersController : Controller
     private readonly IRestoreOrganizationUserCommand _restoreOrganizationUserCommand;
     private readonly IInitPendingOrganizationCommand _initPendingOrganizationCommand;
     private readonly IRevokeOrganizationUserCommand _revokeOrganizationUserCommand;
+    private readonly IAdminRecoverAccountCommand _adminRecoverAccountCommand;
 
     public OrganizationUsersController(IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -99,7 +101,8 @@ public class OrganizationUsersController : Controller
         IRestoreOrganizationUserCommand restoreOrganizationUserCommand,
         IInitPendingOrganizationCommand initPendingOrganizationCommand,
         IRevokeOrganizationUserCommand revokeOrganizationUserCommand,
-        IResendOrganizationInviteCommand resendOrganizationInviteCommand)
+        IResendOrganizationInviteCommand resendOrganizationInviteCommand,
+        IAdminRecoverAccountCommand adminRecoverAccountCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -129,6 +132,7 @@ public class OrganizationUsersController : Controller
         _restoreOrganizationUserCommand = restoreOrganizationUserCommand;
         _initPendingOrganizationCommand = initPendingOrganizationCommand;
         _revokeOrganizationUserCommand = revokeOrganizationUserCommand;
+        _adminRecoverAccountCommand = adminRecoverAccountCommand;
     }
 
     [HttpGet("{id}")]
@@ -479,6 +483,12 @@ public class OrganizationUsersController : Controller
     [Authorize<ManageAccountRecoveryRequirement>]
     public async Task PutResetPassword(Guid orgId, Guid id, [FromBody] OrganizationUserResetPasswordRequestModel model)
     {
+        if (_featureService.IsEnabled(FeatureFlagKeys.AccountRecoveryCommand))
+        {
+            await PutResetPasswordvNext(orgId, id, model);
+            return;
+        }
+
         // Get the users role, since provider users aren't a member of the organization we use the owner check
         var orgUserType = await _currentContext.OrganizationOwner(orgId)
             ? OrganizationUserType.Owner
@@ -489,6 +499,31 @@ public class OrganizationUsersController : Controller
         }
 
         var result = await _userService.AdminResetPasswordAsync(orgUserType.Value, orgId, id, model.NewMasterPasswordHash, model.Key);
+        if (result.Succeeded)
+        {
+            return;
+        }
+
+        foreach (var error in result.Errors)
+        {
+            ModelState.AddModelError(string.Empty, error.Description);
+        }
+
+        await Task.Delay(2000);
+        throw new BadRequestException(ModelState);
+    }
+
+    public async Task PutResetPasswordvNext(Guid orgId, Guid id, [FromBody] OrganizationUserResetPasswordRequestModel model)
+    {
+        var targetOrganizationUser = await _organizationUserRepository.GetByIdAsync(id);
+        if (targetOrganizationUser == null || targetOrganizationUser.OrganizationId != orgId)
+        {
+            throw new NotFoundException();
+        }
+
+        await _authorizationService.AuthorizeOrThrowAsync(User, targetOrganizationUser, new RecoverAccountAuthorizationRequirement());
+
+        var result = await _adminRecoverAccountCommand.RecoverAccountAsync(orgId, targetOrganizationUser, model.NewMasterPasswordHash, model.Key);
         if (result.Succeeded)
         {
             return;
