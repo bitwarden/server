@@ -41,9 +41,12 @@ public static class CoreHelpers
     };
 
     /// <summary>
-    /// Generate sequential Guid for Sql Server.
-    /// ref: https://github.com/nhibernate/nhibernate-core/blob/master/src/NHibernate/Id/GuidCombGenerator.cs
+    /// Generate a sequential Guid for Sql Server. This prevents SQL Server index fragmentation by incorporating timestamp
+    /// information for sequential ordering. This should be preferred to <see cref="Guid.NewGuid"/> for any database IDs.
     /// </summary>
+    /// <remarks>
+    /// ref: https://github.com/nhibernate/nhibernate-core/blob/master/src/NHibernate/Id/GuidCombGenerator.cs
+    /// </remarks>
     /// <returns>A comb Guid.</returns>
     public static Guid GenerateComb()
         => GenerateComb(Guid.NewGuid(), DateTime.UtcNow);

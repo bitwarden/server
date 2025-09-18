@@ -22,7 +22,8 @@ public class SendOrganizationInvitesCommand(
     IPolicyRepository policyRepository,
     IOrgUserInviteTokenableFactory orgUserInviteTokenableFactory,
     IDataProtectorTokenFactory<OrgUserInviteTokenable> dataProtectorTokenFactory,
-    IMailService mailService) : ISendOrganizationInvitesCommand
+    IMailService mailService,
+    IFeatureService featureService) : ISendOrganizationInvitesCommand
 {
     public async Task SendInvitesAsync(SendInvitesRequest request)
     {
@@ -71,12 +72,15 @@ public class SendOrganizationInvitesCommand(
 
         var orgUsersWithExpTokens = orgUsers.Select(MakeOrgUserExpiringTokenPair);
 
+        var isSubjectFeatureEnabled = featureService.IsEnabled(FeatureFlagKeys.InviteEmailImprovements);
+
         return new OrganizationInvitesInfo(
             organization,
             orgSsoEnabled,
             orgSsoLoginRequiredPolicyEnabled,
             orgUsersWithExpTokens,
             orgUserHasExistingUserDict,
+            isSubjectFeatureEnabled,
             initOrganization
         );
     }

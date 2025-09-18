@@ -25,8 +25,7 @@ public class OrganizationBillingVNextController(
     IGetOrganizationWarningsQuery getOrganizationWarningsQuery,
     IGetPaymentMethodQuery getPaymentMethodQuery,
     IUpdateBillingAddressCommand updateBillingAddressCommand,
-    IUpdatePaymentMethodCommand updatePaymentMethodCommand,
-    IVerifyBankAccountCommand verifyBankAccountCommand) : BaseBillingController
+    IUpdatePaymentMethodCommand updatePaymentMethodCommand) : BaseBillingController
 {
     [Authorize<ManageOrganizationBillingRequirement>]
     [HttpGet("address")]
@@ -93,17 +92,6 @@ public class OrganizationBillingVNextController(
     {
         var (paymentMethod, billingAddress) = request.ToDomain();
         var result = await updatePaymentMethodCommand.Run(organization, paymentMethod, billingAddress);
-        return Handle(result);
-    }
-
-    [Authorize<ManageOrganizationBillingRequirement>]
-    [HttpPost("payment-method/verify-bank-account")]
-    [InjectOrganization]
-    public async Task<IResult> VerifyBankAccountAsync(
-        [BindNever] Organization organization,
-        [FromBody] VerifyBankAccountRequest request)
-    {
-        var result = await verifyBankAccountCommand.Run(organization, request.DescriptorCode);
         return Handle(result);
     }
 

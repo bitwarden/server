@@ -8,6 +8,7 @@ public interface ICollectionCipherRepository
 {
     Task<ICollection<CollectionCipher>> GetManyByUserIdAsync(Guid userId);
     Task<ICollection<CollectionCipher>> GetManyByOrganizationIdAsync(Guid organizationId);
+    Task<ICollection<CollectionCipher>> GetManySharedByOrganizationIdAsync(Guid organizationId);
     Task<ICollection<CollectionCipher>> GetManyByUserIdCipherIdAsync(Guid userId, Guid cipherId);
     Task UpdateCollectionsAsync(Guid cipherId, Guid userId, IEnumerable<Guid> collectionIds);
     Task UpdateCollectionsForAdminAsync(Guid cipherId, Guid organizationId, IEnumerable<Guid> collectionIds);

@@ -304,7 +304,7 @@ public class OrganizationBillingController(
             sale.Organization.UsePolicies = plan.HasPolicies;
             sale.Organization.UseSso = plan.HasSso;
             sale.Organization.UseResetPassword = plan.HasResetPassword;
-            sale.Organization.UseKeyConnector = plan.HasKeyConnector;
+            sale.Organization.UseKeyConnector = plan.HasKeyConnector ? organization.UseKeyConnector : false;
             sale.Organization.UseScim = plan.HasScim;
             sale.Organization.UseCustomPermissions = plan.HasCustomPermissions;
             sale.Organization.UseOrganizationDomains = plan.HasOrganizationDomains;

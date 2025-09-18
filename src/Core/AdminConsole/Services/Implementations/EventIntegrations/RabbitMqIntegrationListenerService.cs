@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Microsoft.Extensions.Hosting;

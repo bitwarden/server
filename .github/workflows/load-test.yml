@@ -1,13 +1,112 @@
-name: Test Stub
+name: Load test
+
 on:
+  schedule:
+    - cron: "0 0 * * 1" # Run every Monday at 00:00
   workflow_dispatch:
+    inputs:
+      test-id:
+        type: string
+        description: "Identifier label for Datadog metrics"
+        default: "server-load-test"
+      k6-test-path:
+        type: string
+        description: "Path to load test files"
+        default: "perf/load/*.js"
+      k6-flags:
+        type: string
+        description: "Additional k6 flags"
+      api-env-url:
+        type: string
+        description: "URL of the API environment"
+        default: "https://api.qa.bitwarden.pw"
+      identity-env-url:
+        type: string
+        description: "URL of the Identity environment"
+        default: "https://identity.qa.bitwarden.pw"
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  # Secret configuration
+  AZURE_KEY_VAULT_NAME: gh-server
+  AZURE_KEY_VAULT_SECRETS: DD-API-KEY, K6-CLIENT-ID, K6-AUTH-USER-EMAIL, K6-AUTH-USER-PASSWORD-HASH
+  # Specify defaults for scheduled runs
+  TEST_ID: ${{ inputs.test-id || 'server-load-test' }}
+  K6_TEST_PATH: ${{ inputs.k6-test-path || 'perf/load/*.js' }}
+  API_ENV_URL: ${{ inputs.api-env-url || 'https://api.qa.bitwarden.pw' }}
+  IDENTITY_ENV_URL: ${{ inputs.identity-env-url || 'https://identity.qa.bitwarden.pw' }}
 
 jobs:
-  test:
-    permissions:
-      contents: read
-    name: Test
+  run-tests:
+    name: Run load tests
     runs-on: ubuntu-24.04
     steps:
-      - name: Test
-        run: exit 0
+      - name: Log in to Azure
+        uses: bitwarden/gh-actions/azure-login@main
+        with:
+          subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+          client_id: ${{ secrets.AZURE_CLIENT_ID }}
+
+      - name: Get Azure Key Vault secrets
+        id: get-kv-secrets
+        uses: bitwarden/gh-actions/get-keyvault-secrets@main
+        with:
+          keyvault: ${{ env.AZURE_KEY_VAULT_NAME }}
+          secrets: ${{ env.AZURE_KEY_VAULT_SECRETS }}
+
+      - name: Log out of Azure
+        uses: bitwarden/gh-actions/azure-logout@main
+
+      # Datadog agent for collecting OTEL metrics from k6
+      - name: Start Datadog agent
+        run: |
+          docker run --detach \
+            --name datadog-agent \
+            -p 4317:4317 \
+            -p 5555:5555 \
+            -e DD_SITE=us3.datadoghq.com \
+            -e DD_API_KEY=${{ steps.get-kv-secrets.outputs.DD-API-KEY }} \
+            -e DD_DOGSTATSD_NON_LOCAL_TRAFFIC=1 \
+            -e DD_OTLP_CONFIG_RECEIVER_PROTOCOLS_GRPC_ENDPOINT=0.0.0.0:4317 \
+            -e DD_HEALTH_PORT=5555 \
+            -e HOST_PROC=/proc \
+            --volume /var/run/docker.sock:/var/run/docker.sock:ro \
+            --volume /sys/fs/cgroup/:/host/sys/fs/cgroup:ro \
+            --health-cmd "curl -f http://localhost:5555/health || exit 1" \
+            --health-interval 10s \
+            --health-timeout 5s \
+            --health-retries 10 \
+            --health-start-period 30s \
+            --pid host \
+            datadog/agent:7-full@sha256:7ea933dec3b8baa8c19683b1c3f6f801dbf3291f748d9ed59234accdaac4e479
+
+      - name: Check out repo
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Set up k6
+        uses: grafana/setup-k6-action@ffe7d7290dfa715e48c2ccc924d068444c94bde2 # v1.1.0
+
+      - name: Run k6 tests
+        uses: grafana/run-k6-action@c6b79182b9b666aa4f630f4a6be9158ead62536e # v1.2.0
+        continue-on-error: false
+        env:
+          K6_OTEL_METRIC_PREFIX: k6_
+          K6_OTEL_GRPC_EXPORTER_INSECURE: true
+          # Load test specific environment variables
+          API_URL: ${{ env.API_ENV_URL }}
+          IDENTITY_URL: ${{ env.IDENTITY_ENV_URL }}
+          CLIENT_ID: ${{ steps.get-kv-secrets.outputs.K6-CLIENT-ID }}
+          AUTH_USER_EMAIL: ${{ steps.get-kv-secrets.outputs.K6-AUTH-USER-EMAIL }}
+          AUTH_USER_PASSWORD_HASH: ${{ steps.get-kv-secrets.outputs.K6-AUTH-USER-PASSWORD-HASH }}
+        with:
+          flags: >-
+            --tag test-id=${{ env.TEST_ID }}
+            -o experimental-opentelemetry
+            ${{ inputs.k6-flags }}
+          path: ${{ env.K6_TEST_PATH }}

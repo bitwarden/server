@@ -1,6 +1,5 @@
 ﻿#nullable enable
 
-using System.Text.Json;
 using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.Models.Data;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -41,22 +40,12 @@ public class IntegrationTemplateProcessorTests
     }
 
     [Theory, BitAutoData]
-    public void ReplaceTokens_WithEventMessageToken_ReplacesWithSerializedJson(EventMessage eventMessage)
-    {
-        var template = "#EventMessage#";
-        var expected = $"{JsonSerializer.Serialize(eventMessage)}";
-        var result = IntegrationTemplateProcessor.ReplaceTokens(template, eventMessage);
-
-        Assert.Equal(expected, result);
-    }
-
-    [Theory, BitAutoData]
-    public void ReplaceTokens_WithNullProperty_LeavesTokenUnchanged(EventMessage eventMessage)
+    public void ReplaceTokens_WithNullProperty_InsertsEmptyString(EventMessage eventMessage)
     {
         eventMessage.UserId = null;
 
         var template = "Event #Type#, User (id: #UserId#).";
-        var expected = $"Event {eventMessage.Type}, User (id: #UserId#).";
+        var expected = $"Event {eventMessage.Type}, User (id: ).";
         var result = IntegrationTemplateProcessor.ReplaceTokens(template, eventMessage);
 
         Assert.Equal(expected, result);

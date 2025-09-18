@@ -13,7 +13,7 @@ public class MaskedPaymentMethodTests
         {
             BankName = "Chase",
             Last4 = "9999",
-            Verified = true
+            HostedVerificationUrl = "https://example.com"
         };
 
         var json = JsonSerializer.Serialize(input);
@@ -32,7 +32,7 @@ public class MaskedPaymentMethodTests
         {
             BankName = "Chase",
             Last4 = "9999",
-            Verified = true
+            HostedVerificationUrl = "https://example.com"
         };
 
         var jsonSerializerOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };

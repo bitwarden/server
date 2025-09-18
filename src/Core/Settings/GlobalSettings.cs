@@ -304,6 +304,8 @@ public class GlobalSettings : IGlobalSettings
             public virtual string WebhookIntegrationSubscriptionName { get; set; } = "integration-webhook-subscription";
             public virtual string HecEventSubscriptionName { get; set; } = "events-hec-subscription";
             public virtual string HecIntegrationSubscriptionName { get; set; } = "integration-hec-subscription";
+            public virtual string DatadogEventSubscriptionName { get; set; } = "events-datadog-subscription";
+            public virtual string DatadogIntegrationSubscriptionName { get; set; } = "integration-datadog-subscription";
 
             public string ConnectionString
             {
@@ -345,6 +347,9 @@ public class GlobalSettings : IGlobalSettings
             public virtual string HecEventsQueueName { get; set; } = "events-hec-queue";
             public virtual string HecIntegrationQueueName { get; set; } = "integration-hec-queue";
             public virtual string HecIntegrationRetryQueueName { get; set; } = "integration-hec-retry-queue";
+            public virtual string DatadogEventsQueueName { get; set; } = "events-datadog-queue";
+            public virtual string DatadogIntegrationQueueName { get; set; } = "integration-datadog-queue";
+            public virtual string DatadogIntegrationRetryQueueName { get; set; } = "integration-datadog-retry-queue";
 
             public string HostName
             {
@@ -463,6 +468,18 @@ public class GlobalSettings : IGlobalSettings
         public string RedisConnectionString { get; set; }
         public string CosmosConnectionString { get; set; }
         public string LicenseKey { get; set; } = "eyJhbGciOiJQUzI1NiIsImtpZCI6IklkZW50aXR5U2VydmVyTGljZW5zZWtleS83Y2VhZGJiNzgxMzA0NjllODgwNjg5MTAyNTQxNGYxNiIsInR5cCI6ImxpY2Vuc2Urand0In0.eyJpc3MiOiJodHRwczovL2R1ZW5kZXNvZnR3YXJlLmNvbSIsImF1ZCI6IklkZW50aXR5U2VydmVyIiwiaWF0IjoxNzM0NTY2NDAwLCJleHAiOjE3NjQ5NzkyMDAsImNvbXBhbnlfbmFtZSI6IkJpdHdhcmRlbiBJbmMuIiwiY29udGFjdF9pbmZvIjoiY29udGFjdEBkdWVuZGVzb2Z0d2FyZS5jb20iLCJlZGl0aW9uIjoiU3RhcnRlciIsImlkIjoiNjg3OCIsImZlYXR1cmUiOlsiaXN2IiwidW5saW1pdGVkX2NsaWVudHMiXSwicHJvZHVjdCI6IkJpdHdhcmRlbiJ9.TYc88W_t2t0F2AJV3rdyKwGyQKrKFriSAzm1tWFNHNR9QizfC-8bliGdT4Wgeie-ynCXs9wWaF-sKC5emg--qS7oe2iIt67Qd88WS53AwgTvAddQRA4NhGB1R7VM8GAikLieSos-DzzwLYRgjZdmcsprItYGSJuY73r-7-F97ta915majBytVxGF966tT9zF1aYk0bA8FS6DcDYkr5f7Nsy8daS_uIUAgNa_agKXtmQPqKujqtUb6rgWEpSp4OcQcG-8Dpd5jHqoIjouGvY-5LTgk5WmLxi_m-1QISjxUJrUm-UGao3_VwV5KFGqYrz8csdTl-HS40ihWcsWnrV0ug";
+        /// <summary>
+        /// Global override for sliding refresh token lifetime in seconds. If null, uses the constructor parameter value.
+        /// </summary>
+        public int? SlidingRefreshTokenLifetimeSeconds { get; set; }
+        /// <summary>
+        /// Global override for absolute refresh token lifetime in seconds. If null, uses the constructor parameter value.
+        /// </summary>
+        public int? AbsoluteRefreshTokenLifetimeSeconds { get; set; }
+        /// <summary>
+        /// Global override for refresh token expiration policy. False = Sliding (default), True = Absolute.
+        /// </summary>
+        public bool UseAbsoluteRefreshTokenExpiration { get; set; } = false;
     }
 
     public class DataProtectionSettings

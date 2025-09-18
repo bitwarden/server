@@ -71,7 +71,7 @@ public class GetOrganizationWarningsQueryTests
             });
 
         sutProvider.GetDependency<ICurrentContext>().EditSubscription(organization.Id).Returns(true);
-        sutProvider.GetDependency<ISetupIntentCache>().Get(organization.Id).Returns((string?)null);
+        sutProvider.GetDependency<ISetupIntentCache>().GetSetupIntentIdForSubscriber(organization.Id).Returns((string?)null);
 
         var response = await sutProvider.Sut.Run(organization);
 
@@ -109,7 +109,7 @@ public class GetOrganizationWarningsQueryTests
             });
 
         sutProvider.GetDependency<ICurrentContext>().EditSubscription(organization.Id).Returns(true);
-        sutProvider.GetDependency<ISetupIntentCache>().Get(organization.Id).Returns(setupIntentId);
+        sutProvider.GetDependency<ISetupIntentCache>().GetSetupIntentIdForSubscriber(organization.Id).Returns(setupIntentId);
         sutProvider.GetDependency<IStripeAdapter>().SetupIntentGet(setupIntentId, Arg.Is<SetupIntentGetOptions>(
             options => options.Expand.Contains("payment_method"))).Returns(new SetupIntent
             {

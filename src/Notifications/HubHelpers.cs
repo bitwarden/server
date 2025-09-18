@@ -106,6 +106,20 @@ public static class HubHelpers
                 await hubContext.Clients.Group(NotificationsHub.GetOrganizationGroup(organizationCollectionSettingsChangedNotification.Payload.OrganizationId))
                     .SendAsync(_receiveMessageMethod, organizationCollectionSettingsChangedNotification, cancellationToken);
                 break;
+            case PushType.OrganizationBankAccountVerified:
+                var organizationBankAccountVerifiedNotification =
+                    JsonSerializer.Deserialize<PushNotificationData<OrganizationBankAccountVerifiedPushNotification>>(
+                        notificationJson, _deserializerOptions);
+                await hubContext.Clients.Group(NotificationsHub.GetOrganizationGroup(organizationBankAccountVerifiedNotification.Payload.OrganizationId))
+                    .SendAsync(_receiveMessageMethod, organizationBankAccountVerifiedNotification, cancellationToken);
+                break;
+            case PushType.ProviderBankAccountVerified:
+                var providerBankAccountVerifiedNotification =
+                    JsonSerializer.Deserialize<PushNotificationData<ProviderBankAccountVerifiedPushNotification>>(
+                        notificationJson, _deserializerOptions);
+                await hubContext.Clients.User(providerBankAccountVerifiedNotification.Payload.AdminId.ToString())
+                    .SendAsync(_receiveMessageMethod, providerBankAccountVerifiedNotification, cancellationToken);
+                break;
             case PushType.Notification:
             case PushType.NotificationStatus:
                 var notificationData = JsonSerializer.Deserialize<PushNotificationData<NotificationPushNotification>>(
@@ -144,6 +158,7 @@ public static class HubHelpers
                     .SendAsync(_receiveMessageMethod, pendingTasksData, cancellationToken);
                 break;
             default:
+                logger.LogWarning("Notification type '{NotificationType}' has not been registered in HubHelpers and will not be pushed as as result", notification.Type);
                 break;
         }
     }

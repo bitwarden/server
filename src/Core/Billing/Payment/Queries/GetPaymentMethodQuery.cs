@@ -33,6 +33,7 @@ public class GetPaymentMethodQuery(
             return null;
         }
 
+        // First check for PayPal
         if (customer.Metadata.TryGetValue(StripeConstants.MetadataKeys.BraintreeCustomerId, out var braintreeCustomerId))
         {
             var braintreeCustomer = await braintreeGateway.Customer.FindAsync(braintreeCustomerId);
@@ -47,6 +48,23 @@ public class GetPaymentMethodQuery(
             return null;
         }
 
+        // Then check for a bank account pending verification
+        var setupIntentId = await setupIntentCache.GetSetupIntentIdForSubscriber(subscriber.Id);
+
+        if (!string.IsNullOrEmpty(setupIntentId))
+        {
+            var setupIntent = await stripeAdapter.SetupIntentGet(setupIntentId, new SetupIntentGetOptions
+            {
+                Expand = ["payment_method"]
+            });
+
+            if (setupIntent.IsUnverifiedBankAccount())
+            {
+                return MaskedPaymentMethod.From(setupIntent);
+            }
+        }
+
+        // Then check the default payment method
         var paymentMethod = customer.InvoiceSettings.DefaultPaymentMethod != null
             ? customer.InvoiceSettings.DefaultPaymentMethod.Type switch
             {
@@ -61,40 +79,12 @@ public class GetPaymentMethodQuery(
             return paymentMethod;
         }
 
-        if (customer.DefaultSource != null)
+        return customer.DefaultSource switch
         {
-            paymentMethod = customer.DefaultSource switch
-            {
-                Card card => MaskedPaymentMethod.From(card),
-                BankAccount bankAccount => MaskedPaymentMethod.From(bankAccount),
-                Source { Card: not null } source => MaskedPaymentMethod.From(source.Card),
-                _ => null
-            };
-
-            if (paymentMethod != null)
-            {
-                return paymentMethod;
-            }
-        }
-
-        var setupIntentId = await setupIntentCache.Get(subscriber.Id);
-
-        if (string.IsNullOrEmpty(setupIntentId))
-        {
-            return null;
-        }
-
-        var setupIntent = await stripeAdapter.SetupIntentGet(setupIntentId, new SetupIntentGetOptions
-        {
-            Expand = ["payment_method"]
-        });
-
-        // ReSharper disable once ConvertIfStatementToReturnStatement
-        if (!setupIntent.IsUnverifiedBankAccount())
-        {
-            return null;
-        }
-
-        return MaskedPaymentMethod.From(setupIntent);
+            Card card => MaskedPaymentMethod.From(card),
+            BankAccount bankAccount => MaskedPaymentMethod.From(bankAccount),
+            Source { Card: not null } source => MaskedPaymentMethod.From(source.Card),
+            _ => null
+        };
     }
 }

@@ -47,6 +47,21 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
         }
     }
 
+    public async Task<ICollection<CollectionCipher>> GetManySharedByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var data = await (from cc in dbContext.CollectionCiphers
+                              join c in dbContext.Collections
+                                  on cc.CollectionId equals c.Id
+                              where c.OrganizationId == organizationId
+                                    && c.Type == Core.Enums.CollectionType.SharedCollection
+                              select cc).ToArrayAsync();
+            return data;
+        }
+    }
+
     public async Task<ICollection<CollectionCipher>> GetManyByUserIdAsync(Guid userId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())

@@ -1,10 +1,13 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Api.AdminConsole.Authorization;
+using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.AdminConsole.Models.Request;
 using Bit.Api.AdminConsole.Models.Response.Helpers;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Response;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
@@ -30,7 +33,6 @@ namespace Bit.Api.AdminConsole.Controllers;
 public class PoliciesController : Controller
 {
     private readonly ICurrentContext _currentContext;
-    private readonly IFeatureService _featureService;
     private readonly GlobalSettings _globalSettings;
     private readonly IOrganizationHasVerifiedDomainsQuery _organizationHasVerifiedDomainsQuery;
     private readonly IOrganizationRepository _organizationRepository;
@@ -49,7 +51,6 @@ public class PoliciesController : Controller
         GlobalSettings globalSettings,
         IDataProtectionProvider dataProtectionProvider,
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
-        IFeatureService featureService,
         IOrganizationHasVerifiedDomainsQuery organizationHasVerifiedDomainsQuery,
         IOrganizationRepository organizationRepository,
         ISavePolicyCommand savePolicyCommand)
@@ -63,7 +64,6 @@ public class PoliciesController : Controller
             "OrganizationServiceDataProtector");
         _organizationRepository = organizationRepository;
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
-        _featureService = featureService;
         _organizationHasVerifiedDomainsQuery = organizationHasVerifiedDomainsQuery;
         _savePolicyCommand = savePolicyCommand;
     }
@@ -90,7 +90,7 @@ public class PoliciesController : Controller
     }
 
     [HttpGet("")]
-    public async Task<ListResponseModel<PolicyResponseModel>> Get(string orgId)
+    public async Task<ListResponseModel<PolicyResponseModel>> GetAll(string orgId)
     {
         var orgIdGuid = new Guid(orgId);
         if (!await _currentContext.ManagePolicies(orgIdGuid))
@@ -212,4 +212,18 @@ public class PoliciesController : Controller
         var policy = await _savePolicyCommand.SaveAsync(policyUpdate);
         return new PolicyResponseModel(policy);
     }
+
+
+    [HttpPut("{type}/vnext")]
+    [RequireFeatureAttribute(FeatureFlagKeys.CreateDefaultLocation)]
+    [Authorize<ManagePoliciesRequirement>]
+    public async Task<PolicyResponseModel> PutVNext(Guid orgId, [FromBody] SavePolicyRequest model)
+    {
+        var savePolicyRequest = await model.ToSavePolicyModelAsync(orgId, _currentContext);
+
+        var policy = await _savePolicyCommand.VNextSaveAsync(savePolicyRequest);
+
+        return new PolicyResponseModel(policy);
+    }
+
 }

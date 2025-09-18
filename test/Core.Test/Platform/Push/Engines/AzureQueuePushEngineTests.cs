@@ -652,31 +652,6 @@ public class AzureQueuePushEngineTests
     }
 
     [Fact]
-    public async Task PushSyncOrganizationStatusAsync_SendsExpectedResponse()
-    {
-        var organization = new Organization
-        {
-            Id = Guid.NewGuid(),
-            Enabled = true,
-        };
-
-        var expectedPayload = new JsonObject
-        {
-            ["Type"] = 18,
-            ["Payload"] = new JsonObject
-            {
-                ["OrganizationId"] = organization.Id,
-                ["Enabled"] = organization.Enabled,
-            },
-        };
-
-        await VerifyNotificationAsync(
-            async sut => await sut.PushSyncOrganizationStatusAsync(organization),
-            expectedPayload
-        );
-    }
-
-    [Fact]
     public async Task PushSyncOrganizationCollectionManagementSettingsAsync_SendsExpectedResponse()
     {
         var organization = new Organization

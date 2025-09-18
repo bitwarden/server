@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using System.Linq.Expressions;
+﻿using System.Linq.Expressions;
 using Bit.Core.Models.Data;
 
 namespace Bit.Core.Services;

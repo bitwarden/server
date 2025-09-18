@@ -98,8 +98,6 @@ public class ImportOrganizationUsersAndGroupsCommandTests
         SetupOrganizationConfigForImport(sutProvider, org, existingUsers, []);
 
         // Existing user does not have a master password
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.DirectoryConnectorPreventUserRemoval)
-            .Returns(true);
         existingUsers.First().HasMasterPassword = false;
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(org.Id).Returns(org);

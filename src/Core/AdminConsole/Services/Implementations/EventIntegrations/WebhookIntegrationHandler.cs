@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Text;
 using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 

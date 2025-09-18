@@ -115,7 +115,7 @@ public class DevicesController : Controller
 
     [HttpPost("{id}")]
     [Obsolete("This endpoint is deprecated. Use PUT /{id} instead.")]
-    public async Task<DeviceResponseModel> Post(string id, [FromBody] DeviceRequestModel model)
+    public async Task<DeviceResponseModel> PostPut(string id, [FromBody] DeviceRequestModel model)
     {
         return await Put(id, model);
     }

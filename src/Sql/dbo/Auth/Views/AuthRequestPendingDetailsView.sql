@@ -7,7 +7,7 @@ AS
             SELECT
                 [AR].*,
                 [D].[Id] AS [DeviceId],
-                ROW_NUMBER() OVER (PARTITION BY [AR].[RequestDeviceIdentifier] ORDER BY [AR].[CreationDate] DESC) AS [rn]
+                ROW_NUMBER() OVER (PARTITION BY [AR].[RequestDeviceIdentifier], [AR].[UserId] ORDER BY [AR].[CreationDate] DESC) AS [rn]
             FROM [dbo].[AuthRequest] [AR]
                 LEFT JOIN [dbo].[Device] [D]
                 ON [AR].[RequestDeviceIdentifier] = [D].[Identifier]

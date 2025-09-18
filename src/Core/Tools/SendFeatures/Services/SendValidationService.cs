@@ -125,7 +125,7 @@ public class SendValidationService : ISendValidationService
             {
                 // Users that get access to file storage/premium from their organization get the default
                 // 1 GB max storage.
-                short limit = _globalSettings.SelfHosted ? (short)10240 : (short)1;
+                short limit = _globalSettings.SelfHosted ? Constants.SelfHostedMaxStorageGb : (short)1;
                 storageBytesRemaining = user.StorageBytesRemaining(limit);
             }
         }

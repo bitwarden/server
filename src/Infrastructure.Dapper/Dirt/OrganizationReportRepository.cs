@@ -3,6 +3,7 @@
 
 using System.Data;
 using Bit.Core.Dirt.Entities;
+using Bit.Core.Dirt.Models.Data;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper.Repositories;
@@ -23,26 +24,153 @@ public class OrganizationReportRepository : Repository<OrganizationReport, Guid>
     {
     }
 
-    public async Task<ICollection<OrganizationReport>> GetByOrganizationIdAsync(Guid organizationId)
+    public async Task<OrganizationReport> GetLatestByOrganizationIdAsync(Guid organizationId)
     {
         using (var connection = new SqlConnection(ReadOnlyConnectionString))
         {
-            var results = await connection.QueryAsync<OrganizationReport>(
-                $"[{Schema}].[OrganizationReport_ReadByOrganizationId]",
+            var result = await connection.QuerySingleOrDefaultAsync<OrganizationReport>(
+                $"[{Schema}].[OrganizationReport_GetLatestByOrganizationId]",
                 new { OrganizationId = organizationId },
                 commandType: CommandType.StoredProcedure);
 
-            return results.ToList();
+            return result;
         }
     }
 
-    public async Task<OrganizationReport> GetLatestByOrganizationIdAsync(Guid organizationId)
+    public async Task<OrganizationReport> UpdateSummaryDataAsync(Guid organizationId, Guid reportId, string summaryData)
     {
-        return await GetByOrganizationIdAsync(organizationId)
-        .ContinueWith(task =>
+        using (var connection = new SqlConnection(ConnectionString))
         {
-            var reports = task.Result;
-            return reports.OrderByDescending(r => r.CreationDate).FirstOrDefault();
-        });
+            var parameters = new
+            {
+                Id = reportId,
+                OrganizationId = organizationId,
+                SummaryData = summaryData,
+                RevisionDate = DateTime.UtcNow
+            };
+
+            await connection.ExecuteAsync(
+                $"[{Schema}].[OrganizationReport_UpdateSummaryData]",
+                parameters,
+                commandType: CommandType.StoredProcedure);
+
+            // Return the updated report
+            return await connection.QuerySingleOrDefaultAsync<OrganizationReport>(
+                $"[{Schema}].[OrganizationReport_ReadById]",
+                new { Id = reportId },
+                commandType: CommandType.StoredProcedure);
+        }
+    }
+
+    public async Task<OrganizationReportSummaryDataResponse> GetSummaryDataAsync(Guid reportId)
+    {
+        using (var connection = new SqlConnection(ReadOnlyConnectionString))
+        {
+            var result = await connection.QuerySingleOrDefaultAsync<OrganizationReportSummaryDataResponse>(
+                $"[{Schema}].[OrganizationReport_GetSummaryDataById]",
+                new { Id = reportId },
+                commandType: CommandType.StoredProcedure);
+
+            return result;
+        }
+    }
+
+    public async Task<IEnumerable<OrganizationReportSummaryDataResponse>> GetSummaryDataByDateRangeAsync(
+        Guid organizationId,
+        DateTime startDate, DateTime
+            endDate)
+    {
+        using (var connection = new SqlConnection(ReadOnlyConnectionString))
+        {
+            var parameters = new
+            {
+                OrganizationId = organizationId,
+                StartDate = startDate,
+                EndDate = endDate
+            };
+
+            var results = await connection.QueryAsync<OrganizationReportSummaryDataResponse>(
+                $"[{Schema}].[OrganizationReport_GetSummariesByDateRange]",
+                parameters,
+                commandType: CommandType.StoredProcedure);
+
+            return results;
+        }
+    }
+
+    public async Task<OrganizationReportDataResponse> GetReportDataAsync(Guid reportId)
+    {
+        using (var connection = new SqlConnection(ReadOnlyConnectionString))
+        {
+            var result = await connection.QuerySingleOrDefaultAsync<OrganizationReportDataResponse>(
+                $"[{Schema}].[OrganizationReport_GetReportDataById]",
+                new { Id = reportId },
+                commandType: CommandType.StoredProcedure);
+
+            return result;
+        }
+    }
+
+    public async Task<OrganizationReport> UpdateReportDataAsync(Guid organizationId, Guid reportId, string reportData)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var parameters = new
+            {
+                OrganizationId = organizationId,
+                Id = reportId,
+                ReportData = reportData,
+                RevisionDate = DateTime.UtcNow
+            };
+
+            await connection.ExecuteAsync(
+                $"[{Schema}].[OrganizationReport_UpdateReportData]",
+                parameters,
+                commandType: CommandType.StoredProcedure);
+
+            // Return the updated report
+            return await connection.QuerySingleOrDefaultAsync<OrganizationReport>(
+                $"[{Schema}].[OrganizationReport_ReadById]",
+                new { Id = reportId },
+                commandType: CommandType.StoredProcedure);
+        }
+    }
+
+    public async Task<OrganizationReportApplicationDataResponse> GetApplicationDataAsync(Guid reportId)
+    {
+        using (var connection = new SqlConnection(ReadOnlyConnectionString))
+        {
+            var result = await connection.QuerySingleOrDefaultAsync<OrganizationReportApplicationDataResponse>(
+                $"[{Schema}].[OrganizationReport_GetApplicationDataById]",
+                new { Id = reportId },
+                commandType: CommandType.StoredProcedure);
+
+            return result;
+        }
+    }
+
+    public async Task<OrganizationReport> UpdateApplicationDataAsync(Guid organizationId, Guid reportId, string applicationData)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var parameters = new
+            {
+                OrganizationId = organizationId,
+                Id = reportId,
+                ApplicationData = applicationData,
+                RevisionDate = DateTime.UtcNow
+            };
+
+            await connection.ExecuteAsync(
+                $"[{Schema}].[OrganizationReport_UpdateApplicationData]",
+                parameters,
+                commandType: CommandType.StoredProcedure);
+
+            // Return the updated report
+            return await connection.QuerySingleOrDefaultAsync<OrganizationReport>(
+                $"[{Schema}].[OrganizationReport_ReadById]",
+                new { Id = reportId },
+                commandType: CommandType.StoredProcedure);
+        }
     }
 }
