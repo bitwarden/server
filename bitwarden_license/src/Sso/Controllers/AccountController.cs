@@ -282,6 +282,10 @@ public class AccountController : Controller
                     _logger.LogError("Organization user or organization not found for user ID: {UserId} and organization ID: {OrganizationId}", user.Id, organizationId);
                 }
             }
+            else
+            {
+                _logger.LogError("Failed to parse organization ID: {OrganizationId}", organizationId);
+            }
 
             // This allows us to collect any additional claims or properties
             // for the specific protocols used and store them in the local auth cookie.
