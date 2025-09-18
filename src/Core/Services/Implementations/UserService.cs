@@ -810,6 +810,7 @@ public class UserService : UserManager<User>, IUserService
         user.KdfMemory = kdfMemory;
         user.KdfParallelism = kdfParallelism;
         await _userRepository.ReplaceAsync(user);
+
         if (legacyKdfUpdate)
         {
             await _pushService.PushLogOutAsync(user.Id);
@@ -818,6 +819,7 @@ public class UserService : UserManager<User>, IUserService
         {
             await _pushService.PushSyncSettingsAsync(user.Id);
         }
+
         return IdentityResult.Success;
     }
 
@@ -1198,7 +1200,6 @@ public class UserService : UserManager<User>, IUserService
         }
 
         user.MasterPassword = _passwordHasher.HashPassword(user, newPassword);
-        // TODO
         if (refreshStamp)
         {
             user.SecurityStamp = Guid.NewGuid().ToString();
