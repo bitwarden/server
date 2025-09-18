@@ -1211,4 +1211,34 @@ public class CipherRepositoryTests
 
         Assert.Null(deletedCipher2);
     }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task ArchiveAsync_Works(
+        ICipherRepository sutRepository,
+        IUserRepository userRepository)
+    {
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        // Ciphers
+        var cipher = await sutRepository.CreateAsync(new Cipher
+        {
+            Type = CipherType.Login,
+            Data = "",
+            UserId = user.Id
+        });
+
+        // Act
+        await sutRepository.ArchiveAsync(new List<Guid> { cipher.Id }, user.Id);
+
+        // Assert
+        var archivedCipher = await sutRepository.GetByIdAsync(cipher.Id, user.Id);
+        Assert.NotNull(archivedCipher);
+        Assert.NotNull(archivedCipher.ArchivedDate);
+    }
 }
