@@ -12,7 +12,7 @@ using Bit.Test.Common.Helpers;
 using Microsoft.AspNetCore.Identity;
 using Xunit;
 
-namespace Bit.Identity.IntegrationTest.RequestValidation;
+namespace Bit.Identity.IntegrationTest.RequestValidation.VaultAccess;
 
 public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplicationFactory>
 {
