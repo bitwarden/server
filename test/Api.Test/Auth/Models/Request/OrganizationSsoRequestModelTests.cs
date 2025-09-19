@@ -274,6 +274,7 @@ public class SsoConfigurationDataRequestTests
         Assert.Contains(results, r => r.ErrorMessage.Contains("IdpX509PublicCert") && r.ErrorMessage.Contains("ValidationError"));
     }
 
+    // TODO: On server, make public certificate required for SAML2 SSO: https://bitwarden.atlassian.net/browse/PM-26028
     [Fact]
     public void Validate_Saml2_EmptyCertificate_PassesValidation()
     {
