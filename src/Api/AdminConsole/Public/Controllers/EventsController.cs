@@ -7,6 +7,7 @@ using Bit.Api.Models.Public.Response;
 using Bit.Core.Context;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Vault.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -20,15 +21,21 @@ public class EventsController : Controller
     private readonly IEventRepository _eventRepository;
     private readonly ICipherRepository _cipherRepository;
     private readonly ICurrentContext _currentContext;
+    private readonly ISecretRepository _secretRepository;
+    private readonly IProjectRepository _projectRepository;
 
     public EventsController(
         IEventRepository eventRepository,
         ICipherRepository cipherRepository,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        ISecretRepository secretRepository,
+        IProjectRepository projectRepository)
     {
         _eventRepository = eventRepository;
         _cipherRepository = cipherRepository;
         _currentContext = currentContext;
+        _secretRepository = secretRepository;
+        _projectRepository = projectRepository;
     }
 
     /// <summary>
@@ -57,6 +64,26 @@ public class EventsController : Controller
             {
                 result = await _eventRepository.GetManyByCipherAsync(
                     cipher, dateRange.Item1, dateRange.Item2,
+                    new PageOptions { ContinuationToken = request.ContinuationToken });
+            }
+        }
+        else if (request.SecretId.HasValue)
+        {
+            var secret = await _secretRepository.GetByIdAsync(request.SecretId.Value);
+            if (secret != null && secret.OrganizationId == _currentContext.OrganizationId.Value)
+            {
+                result = await _eventRepository.GetManyBySecretAsync(
+                    secret, dateRange.Item1, dateRange.Item2,
+                    new PageOptions { ContinuationToken = request.ContinuationToken });
+            }
+        }
+        else if (request.ProjectId.HasValue)
+        {
+            var project = await _projectRepository.GetByIdAsync(request.ProjectId.Value);
+            if (project != null && project.OrganizationId == _currentContext.OrganizationId.Value)
+            {
+                result = await _eventRepository.GetManyByProjectAsync(
+                    project, dateRange.Item1, dateRange.Item2,
                     new PageOptions { ContinuationToken = request.ContinuationToken });
             }
         }
