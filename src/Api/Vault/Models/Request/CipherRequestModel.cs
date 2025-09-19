@@ -56,7 +56,7 @@ public class CipherRequestModel
     /// <summary>
     /// JSON string containing cipher-specific data
     /// </summary>
-    [StringLength(50000)]
+    [StringLength(500000)]
     public string Data { get; set; }
     public DateTime? LastKnownRevisionDate { get; set; } = null;
     public DateTime? ArchivedDate { get; set; }
