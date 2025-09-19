@@ -7,6 +7,12 @@ using Duende.IdentityServer.Validation;
 
 namespace Bit.Identity.IdentityServer.RequestValidators.SendAccess;
 
+/// <summary>
+/// This class is used to protect our system from enumeration attacks. This Validator will always return an error result.
+/// We hash the SendId Guid passed into the request to select the an error from the list of possible errors. This ensures
+/// that the same error is always returned for the same SendId.
+/// </summary>
+/// <param name="globalSettings">We need access to a hash key to generate the error index.</param>
 public class SendNeverAuthenticateRequestValidator(GlobalSettings globalSettings) : ISendAuthenticationMethodValidator<NeverAuthenticate>
 {
     private readonly string[] _errorOptions =
