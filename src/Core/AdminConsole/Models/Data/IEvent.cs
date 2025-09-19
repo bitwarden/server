@@ -28,4 +28,5 @@ public interface IEvent
     Guid? SecretId { get; set; }
     Guid? ProjectId { get; set; }
     Guid? ServiceAccountId { get; set; }
+    Guid? GrantedServiceAccountId { get; set; }
 }
