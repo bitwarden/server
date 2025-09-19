@@ -43,20 +43,28 @@ public class OrganizationExportController : Controller
     [HttpGet("export")]
     public async Task<IActionResult> Export(Guid organizationId)
     {
+        var createDefaultLocationEnabled = _featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation);
+
         var canExportAll = await _authorizationService.AuthorizeAsync(User, new OrganizationScope(organizationId),
             VaultExportOperations.ExportWholeVault);
         if (canExportAll.Succeeded)
         {
             var allOrganizationCiphers =
-                _featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation)
+                createDefaultLocationEnabled
                     ? await _organizationCiphersQuery.GetAllOrganizationCiphersExcludingDefaultUserCollections(
                         organizationId)
                     : await _organizationCiphersQuery.GetAllOrganizationCiphers(organizationId);
 
             var allCollections =
-                await _collectionRepository.GetManySharedCollectionsByOrganizationIdAsync(organizationId);
+                createDefaultLocationEnabled
+                    ? await _collectionRepository
+                        .GetManySharedCollectionsByOrganizationIdAsync(
+                            organizationId)
+                    : await _collectionRepository.GetManyByOrganizationIdAsync(organizationId);
 
-            return Ok(new OrganizationExportResponseModel(allOrganizationCiphers, allCollections, _globalSettings));
+
+            return Ok(new OrganizationExportResponseModel(allOrganizationCiphers, allCollections,
+                _globalSettings));
         }
 
         var canExportManaged = await _authorizationService.AuthorizeAsync(User, new OrganizationScope(organizationId),
@@ -68,18 +76,23 @@ public class OrganizationExportController : Controller
             var allUserCollections = await _collectionRepository.GetManyByUserIdAsync(userId);
             var managedOrgCollections =
                 allUserCollections.Where(c => c.OrganizationId == organizationId && c.Manage).ToList();
-            var filteredCollections = _featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation)
-                ? managedOrgCollections.Where(c => c.Type != CollectionType.DefaultUserCollection)
+
+            var filterAwareCollections = createDefaultLocationEnabled
+                ? managedOrgCollections.Where(c =>
+                    // TODO is this encapsulated in a method already?
+                    // GetManyByOrganizationIdWithPermissionsAsync possibly?
+                    // Is the above specific to managed collections?
+                    c.Type != CollectionType.DefaultUserCollection)
                 : managedOrgCollections;
 
             var managedCiphers =
-                _featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation)
+                createDefaultLocationEnabled
                     ? await _organizationCiphersQuery.GetAllOrganizationCiphersExcludingDefaultUserCollections(
                         organizationId)
                     : await _organizationCiphersQuery.GetOrganizationCiphersByCollectionIds(organizationId,
-                        filteredCollections.Select(c => c.Id));
+                        managedOrgCollections.Select(c => c.Id));
 
-            return Ok(new OrganizationExportResponseModel(managedCiphers, filteredCollections, _globalSettings));
+            return Ok(new OrganizationExportResponseModel(managedCiphers, filterAwareCollections, _globalSettings));
         }
 
         // Unauthorized
