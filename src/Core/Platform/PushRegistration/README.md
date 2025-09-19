@@ -3,7 +3,7 @@
 ## About
 
 Push Registration is a feature for managing devices that should receive push notifications. The main
-entrypoint for this feature is `IPushRegistrationService`. 
+entrypoint for this feature is `IPushRegistrationService`.
 
 ## Usage
 
@@ -27,15 +27,15 @@ Since Azure Notification Hub has a limit on the amount of devices per hub we hav
 devices across multiple hubs. Multiple hubs can be configured through configuration and each one can
 have a `RegistrationStartDate` and `RegistrationEndDate`. If the start date is `null` no devices
 will be registered against that given hub. A `null` end date is treated as no known expiry. The
-creation date for a device is retrieved by the device's ID, and that date is used to find a hub that spans
-during it's creation date.
+creation date for a device is retrieved by the device's ID, and that date is used to find a hub that
+spans uring it's creation date.
 
 When we register a device with Azure Notification Hub we include tags, which are data that can later
 be used to specifically target that device with a notification. We send the ID of the user this
 device belongs to, the type of the client (Web, Desktop, Mobile, etc), all the organization IDs of
-organizations of which the user is a confirmed member, the ID of the self-hosted installation if this
-device was relayed to us, and the device identifier, which is a random GUID generated on the device.
-Most of this data is considered immutable after the creation of a device, except for the
+organizations of which the user is a confirmed member, the ID of the self-hosted installation if 
+this device was relayed to us, and the device identifier, which is a random GUID generated on the 
+device. Most of this data is considered immutable after the creation of a device, except for the
 organization memberships of a user. If a user is added/removed from an organization, it is important
 that `CreateOrUpdateRegistrationAsync` is called with the new memberships.
 
@@ -44,3 +44,10 @@ that `CreateOrUpdateRegistrationAsync` is called with the new memberships.
 Used when the application is self-hosted. This sends a API request to the configured cloud instance
 and which will then use [Azure Notification Hub](#azure-notification-hub) but will associate the
 installation as the self-hosted installation id instead of using the cloud one.
+
+### SignalR
+
+While not an implementation of `IPushRegistrationService` the SignalR hub adds users to various
+groups in [`NotificationsHub.OnConnectedAsync`](../../../Notifications/NotificationsHub.cs) method.
+It utilizes a manual build of `ICurrentContext` where it reads the claims provided from the access
+token.

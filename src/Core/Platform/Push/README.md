@@ -36,6 +36,9 @@ team and expected payload type are. Then you may inject
 [`IPushNotificationService`](./IPushNotificationService.cs) into your own service and call its
 `PushAsync` method.
 
+You also need to add code to [`HubHelpers`](../../../Notifications/HubHelpers.cs) to read your
+payload body and select the appropriate group or user to send the notification to.
+
 You should NOT add tests for your specific notification type in any of the `IPushEngine`
 implementations. They do currently have tests for many of the notification types but those will
 eventually be deleted and no new ones need to be added.
@@ -92,3 +95,20 @@ doesn't require the self-hosted customer to run their own queuing infrastructure
 This instance is registered when `GlobalSettings:InternalIdentityKey` and
 `GlobalSettings:BaseServiceUri:InternalNotifications` are set. Both of these settings are usually
 set automatically in supported Bitwarden setups.
+
+## Adding new notification targets
+
+[`NotificationTarget`](./NotificationTarget.cs) is an enum that defines the possible targets for a
+notification, `IPushEngine` implementations may or may not need to be aware and have special
+considerations for each notification target type. For that reason adding a new target is NOT as easy
+as adding a new enum member. The ANH implementation uses it to build it's tag query. A new target
+also needs to be something that is targettable through the tag query. For example, say a team wants
+a notification target for users in an org with a verified email. Today this target would not be
+expressable through a target because when we register a device with ANH we do not include whether
+that user has a verified email. It would be possible to start including that information but the
+effort of tracking that information and updating push registrations when a user verifies their email
+needs to be weighed with the amount this notification is sent. What might instead be worth it would
+be for the team that wants such a target to instead do a query to find users who match that query
+and send a notification for each user individually using `NotificationTarget.User`. If there are
+enough requests like that though we may want to consider adding a `BulkPushAsync` method to
+`IPushNotificationService`.
