@@ -49,7 +49,7 @@ public static class PolicyTypeExtensions
             PolicyType.RemoveUnlockWithPin => "Remove unlock with PIN",
             PolicyType.RestrictedItemTypesPolicy => "Restricted item types",
             PolicyType.UriMatchDefaults => "URI match defaults",
-            PolicyType.AutotypeDefaultSetting => "Auto type default setting",
+            PolicyType.AutotypeDefaultSetting => "Autotype default setting",
         };
     }
 }
