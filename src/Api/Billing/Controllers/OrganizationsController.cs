@@ -211,18 +211,6 @@ public class OrganizationsController(
         return new PaymentResponseModel { Success = true, PaymentIntentClientSecret = result };
     }
 
-    [HttpPost("{id:guid}/verify-bank")]
-    [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PostVerifyBank(Guid id, [FromBody] OrganizationVerifyBankRequestModel model)
-    {
-        if (!await currentContext.EditSubscription(id))
-        {
-            throw new NotFoundException();
-        }
-
-        await organizationService.VerifyBankAsync(id, model.Amount1.Value, model.Amount2.Value);
-    }
-
     [HttpPost("{id}/cancel")]
     public async Task PostCancel(Guid id, [FromBody] SubscriptionCancellationRequestModel request)
     {
