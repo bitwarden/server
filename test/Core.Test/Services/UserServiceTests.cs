@@ -18,6 +18,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -594,6 +595,144 @@ public class UserServiceTests
             user.MasterPassword = null;
         }
     }
+
+    [Theory]
+    [BitAutoData(false)]
+    [BitAutoData(true)]
+    public async Task ChangeKdfAsync_ValidInput_Success(bool featureFlag, User user, string currentPassword,
+        string newPassword, string key)
+    {
+        // Arrange
+        var kdf = KdfType.Argon2id;
+        var kdfIterations = 3;
+        var kdfMemory = 64;
+        var kdfParallelism = 4;
+
+        var sutProvider = new SutProvider<UserService>()
+            .CreateWithUserServiceCustomizations(user);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.ForceUpdateKDFSettings)
+            .Returns(featureFlag);
+
+        // Setup password verification
+        sutProvider.GetDependency<IUserPasswordStore<User>>()
+            .GetPasswordHashAsync(user, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult("hashedPassword"));
+
+        sutProvider.GetDependency<IPasswordHasher<User>>()
+            .VerifyHashedPassword(user, "hashedPassword", currentPassword)
+            .Returns(PasswordVerificationResult.Success);
+
+        sutProvider.GetDependency<IPasswordHasher<User>>()
+            .HashPassword(user, newPassword)
+            .Returns("newHashedPassword");
+
+
+        var originalRevisionDate = user.RevisionDate;
+        var originalAccountRevisionDate = user.AccountRevisionDate;
+        var originalSecurityStamp = user.SecurityStamp;
+
+        // Act
+        var result = await sutProvider.Sut.ChangeKdfAsync(user, currentPassword, newPassword, key,
+            kdf, kdfIterations, kdfMemory, kdfParallelism);
+
+        // Assert
+        Assert.True(result.Succeeded);
+
+        await sutProvider.GetDependency<IUserRepository>()
+            .Received(1)
+            .ReplaceAsync(Arg.Do<User>(updatedUser =>
+            {
+                Assert.Equal(key, updatedUser.Key);
+                Assert.Equal(kdf, updatedUser.Kdf);
+                Assert.Equal(kdfIterations, updatedUser.KdfIterations);
+                Assert.Equal(kdfMemory, updatedUser.KdfMemory);
+                Assert.Equal(kdfParallelism, updatedUser.KdfParallelism);
+                Assert.NotEqual(updatedUser.RevisionDate, originalRevisionDate);
+                Assert.Equal(updatedUser.RevisionDate, DateTime.UtcNow, TimeSpan.FromSeconds(10));
+                Assert.NotEqual(updatedUser.AccountRevisionDate, originalAccountRevisionDate);
+                Assert.Equal(updatedUser.AccountRevisionDate, DateTime.UtcNow, TimeSpan.FromSeconds(10));
+                Assert.NotNull(updatedUser.LastKdfChangeDate);
+                Assert.Equal(updatedUser.LastKdfChangeDate.Value, DateTime.UtcNow, TimeSpan.FromSeconds(10));
+
+                if (featureFlag)
+                {
+                    Assert.Equal(originalSecurityStamp, updatedUser.SecurityStamp);
+                }
+                else
+                {
+                    Assert.NotEqual(originalSecurityStamp, updatedUser.SecurityStamp);
+                }
+            }));
+
+        if (featureFlag)
+        {
+            await sutProvider.GetDependency<IPushNotificationService>()
+                .Received(1)
+                .PushSyncSettingsAsync(user.Id);
+            await sutProvider.GetDependency<IPushNotificationService>()
+                .DidNotReceive()
+                .PushLogOutAsync(user.Id);
+        }
+        else
+        {
+            await sutProvider.GetDependency<IPushNotificationService>()
+                .Received(1)
+                .PushLogOutAsync(user.Id);
+            await sutProvider.GetDependency<IPushNotificationService>()
+                .DidNotReceive()
+                .PushSyncSettingsAsync(user.Id);
+        }
+    }
+
+    [Theory, BitAutoData]
+    public async Task ChangeKdfAsync_NullUser_ThrowsArgumentNullException(SutProvider<UserService> sutProvider,
+        string currentPassword, string newPassword, string key)
+    {
+        var exception = await Assert.ThrowsAsync<ArgumentNullException>(() =>
+            sutProvider.Sut.ChangeKdfAsync(null, currentPassword, newPassword, key, KdfType.PBKDF2_SHA256, 600_000,
+                null, null));
+
+        Assert.Equal("user", exception.ParamName);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ChangeKdfAsync_IncorrectCurrentPassword_ReturnsFailedResult(
+        User user, string currentPassword, string newPassword, string key)
+    {
+        // Arrange
+        var sutProvider = new SutProvider<UserService>()
+            .CreateWithUserServiceCustomizations(user);
+
+        sutProvider.GetDependency<IUserPasswordStore<User>>()
+            .GetPasswordHashAsync(user, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult("hashedPassword"));
+
+        sutProvider.GetDependency<IPasswordHasher<User>>()
+            .VerifyHashedPassword(user, "hashedPassword", currentPassword)
+            .Returns(PasswordVerificationResult.Failed);
+
+        // Act
+        var result = await sutProvider.Sut.ChangeKdfAsync(user, currentPassword, newPassword, key,
+            KdfType.PBKDF2_SHA256, 600_000, null, null);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Contains(result.Errors, e => e.Code == "PasswordMismatch");
+
+        await sutProvider.GetDependency<IUserRepository>()
+            .DidNotReceive()
+            .ReplaceAsync(Arg.Any<User>());
+
+        await sutProvider.GetDependency<IPushNotificationService>()
+            .DidNotReceive()
+            .PushLogOutAsync(Arg.Any<Guid>());
+
+        await sutProvider.GetDependency<IPushNotificationService>()
+            .DidNotReceive()
+            .PushSyncSettingsAsync(Arg.Any<Guid>());
+    }
 }
 
 public static class UserServiceSutProviderExtensions
@@ -644,6 +783,18 @@ public static class UserServiceSutProviderExtensions
     }
 
     /// <summary>
+    /// Sets up password validators that return success by default
+    /// </summary>
+    private static SutProvider<UserService> SetPasswordValidators(this SutProvider<UserService> sutProvider)
+    {
+        var passwordValidator = Substitute.For<IPasswordValidator<User>>();
+        passwordValidator.ValidateAsync(Arg.Any<UserManager<User>>(), Arg.Any<User>(), Arg.Any<string>())
+            .Returns(Task.FromResult(IdentityResult.Success));
+        sutProvider.SetDependency<IEnumerable<IPasswordValidator<User>>>(new[] { passwordValidator });
+        return sutProvider;
+    }
+
+    /// <summary>
     /// Properly registers IUserPasswordStore as IUserStore so it's injected when the sut is initialized.
     /// </summary>
     /// <param name="sutProvider"></param>
@@ -679,11 +830,12 @@ public static class UserServiceSutProviderExtensions
     /// A helper that combines all SutProvider configuration usually required for UserService.
     /// Call this instead of SutProvider.Create, after any additional configuration your test needs.
     /// </summary>
-    public static SutProvider<UserService> CreateWithUserServiceCustomizations(this SutProvider<UserService> sutProvider, User user)
+    public static SutProvider<UserService> CreateWithUserServiceCustomizations(
+        this SutProvider<UserService> sutProvider, User user)
         => sutProvider
             .SetUserPasswordStore()
+            .SetPasswordValidators()
             .SetFakeTokenProvider(user)
             .Create()
             .FixPasswordHasherBug();
-
 }
