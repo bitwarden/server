@@ -19,6 +19,7 @@ public enum PolicyType : byte
     RemoveUnlockWithPin = 14,
     RestrictedItemTypesPolicy = 15,
     UriMatchDefaults = 16,
+    AutotypeDefaultSetting = 17,
 }
 
 public static class PolicyTypeExtensions
@@ -48,6 +49,7 @@ public static class PolicyTypeExtensions
             PolicyType.RemoveUnlockWithPin => "Remove unlock with PIN",
             PolicyType.RestrictedItemTypesPolicy => "Restricted item types",
             PolicyType.UriMatchDefaults => "URI match defaults",
+            PolicyType.AutotypeDefaultSetting => "Autotype default setting",
         };
     }
 }
