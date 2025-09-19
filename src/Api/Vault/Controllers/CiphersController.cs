@@ -1573,7 +1573,7 @@ public class CiphersController : Controller
                     }
                     catch (Exception e)
                     {
-                        _logger.LogError(e, $"Uncaught exception occurred while handling event grid event: {JsonSerializer.Serialize(eventGridEvent)}");
+                        _logger.LogError(e, "Uncaught exception occurred while handling event grid event: {Event}", JsonSerializer.Serialize(eventGridEvent));
                         return;
                     }
                 }
