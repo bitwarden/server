@@ -2,7 +2,6 @@
 using Bit.Api.Tools.Models.Response;
 using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
-using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -77,22 +76,10 @@ public class OrganizationExportController : Controller
             var managedOrgCollections =
                 allUserCollections.Where(c => c.OrganizationId == organizationId && c.Manage).ToList();
 
-            var filterAwareCollections = createDefaultLocationEnabled
-                ? managedOrgCollections.Where(c =>
-                    // TODO is this encapsulated in a method already?
-                    // GetManyByOrganizationIdWithPermissionsAsync possibly?
-                    // Is the above specific to managed collections?
-                    c.Type != CollectionType.DefaultUserCollection)
-                : managedOrgCollections;
+            var managedCiphers = await _organizationCiphersQuery.GetOrganizationCiphersByCollectionIds(organizationId,
+                managedOrgCollections.Select(c => c.Id));
 
-            var managedCiphers =
-                createDefaultLocationEnabled
-                    ? await _organizationCiphersQuery.GetAllOrganizationCiphersExcludingDefaultUserCollections(
-                        organizationId)
-                    : await _organizationCiphersQuery.GetOrganizationCiphersByCollectionIds(organizationId,
-                        managedOrgCollections.Select(c => c.Id));
-
-            return Ok(new OrganizationExportResponseModel(managedCiphers, filterAwareCollections, _globalSettings));
+            return Ok(new OrganizationExportResponseModel(managedCiphers, managedOrgCollections, _globalSettings));
         }
 
         // Unauthorized
