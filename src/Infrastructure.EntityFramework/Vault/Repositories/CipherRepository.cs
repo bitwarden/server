@@ -281,23 +281,20 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         {
             var dbContext = GetDatabaseContext(scope);
 
-            var collectionCiphers = from cc in dbContext.CollectionCiphers
-                                    join c in dbContext.Collections
-                                        on cc.CollectionId equals c.Id
-                                    where c.OrganizationId == organizationId
-                                          && c.Type != CollectionType.DefaultUserCollection
-                                    select cc;
-            dbContext.RemoveRange(collectionCiphers);
+            var ciphersToDelete = from c in dbContext.Ciphers
+                                  where c.OrganizationId == organizationId
+                                        && !c.CollectionCiphers.Any(cc =>
+                                            cc.Collection.Type == CollectionType.DefaultUserCollection)
+                                  select c;
+            dbContext.RemoveRange(ciphersToDelete);
 
-            var ciphers = from c in dbContext.Ciphers
-                          where c.OrganizationId == organizationId
-                                && !dbContext.CollectionCiphers.Any(cc =>
-                                    dbContext.Collections.Any(col =>
-                                        col.Id == cc.CollectionId
-                                        && cc.CipherId == c.Id
-                                        && col.Type == CollectionType.DefaultUserCollection))
-                          select c;
-            dbContext.RemoveRange(ciphers);
+            var collectionCiphersToRemove = from cc in dbContext.CollectionCiphers
+                                            join col in dbContext.Collections on cc.CollectionId equals col.Id
+                                            join c in dbContext.Ciphers on cc.CipherId equals c.Id
+                                            where col.Type != CollectionType.DefaultUserCollection
+                                                  && c.OrganizationId == organizationId
+                                            select cc;
+            dbContext.RemoveRange(collectionCiphersToRemove);
 
             await OrganizationUpdateStorage(organizationId);
             await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(organizationId);
