@@ -93,6 +93,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual bool EnableEmailVerification { get; set; }
     public virtual string KdfDefaultHashKey { get; set; }
     public virtual string PricingUri { get; set; }
+    public virtual Fido2Settings Fido2 { get; set; } = new Fido2Settings();
 
     public string BuildExternalUri(string explicitValue, string name)
     {
@@ -741,5 +742,10 @@ public class GlobalSettings : IGlobalSettings
     public class WebPushSettings : IWebPushSettings
     {
         public string VapidPublicKey { get; set; }
+    }
+
+    public class Fido2Settings
+    {
+        public HashSet<string> Origins { get; set; }
     }
 }
