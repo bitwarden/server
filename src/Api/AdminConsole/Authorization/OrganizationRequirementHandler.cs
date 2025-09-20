@@ -1,5 +1,6 @@
 ﻿#nullable enable
 
+using Bit.Core.AdminConsole.Authorization;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
