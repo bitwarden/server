@@ -332,6 +332,76 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
         Assert.Equal(_initialUserCount + 1, databaseContext.OrganizationUsers.Count());
     }
 
+    [Fact]
+    public async Task Post_LoadTest_Success()
+    {
+        var localFactory = new ScimApplicationFactory();
+        localFactory.SubstituteService((IFeatureService featureService)
+            => featureService.IsEnabled(FeatureFlagKeys.ScimInviteUserOptimization)
+                .Returns(true));
+
+        localFactory.ReinitializeDbForTests(localFactory.GetDatabaseContext());
+
+        var email1 = "scim1@bitwarden.com";
+        var displayName1 = "Scim1 User";
+        var externalId1 = "scim1";
+
+        var email2 = "scim2@bitwarden.com";
+        var displayName2 = "Scim2 User";
+        var externalId2 = "scim2";
+
+        var scimRequest1 = new ScimUserRequestModel
+        {
+            Name = new BaseScimUserModel.NameModel(displayName1),
+            DisplayName = displayName1,
+            Emails = new List<BaseScimUserModel.EmailModel> { new BaseScimUserModel.EmailModel(email1) },
+            ExternalId = externalId1,
+            Active = true,
+            Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
+        };
+        var scimRequest2 = new ScimUserRequestModel
+        {
+            Name = new BaseScimUserModel.NameModel(displayName2),
+            DisplayName = displayName2,
+            Emails = new List<BaseScimUserModel.EmailModel> { new BaseScimUserModel.EmailModel(email2) },
+            ExternalId = externalId2,
+            Active = true,
+            Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
+        };
+
+        var expectedResponse = new ScimUserResponseModel
+        {
+            // DisplayName is not being saved
+            ExternalId = externalId1,
+            Active = true,
+            Emails = new List<BaseScimUserModel.EmailModel>
+            {
+                new BaseScimUserModel.EmailModel { Primary = true, Type = "work", Value = email1 }
+            },
+            Groups = new List<string>(),
+            Name = new BaseScimUserModel.NameModel(),
+            UserName = email1,
+            Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
+        };
+
+        var results = await Task.WhenAll(
+            localFactory.UsersPostAsync(ScimApplicationFactory.TestOrganizationId1, scimRequest2),
+            localFactory.UsersPostAsync(ScimApplicationFactory.TestOrganizationId1, scimRequest1));
+
+        var context = results[1];
+
+        Assert.Equal(StatusCodes.Status201Created, context.Response.StatusCode);
+
+        // Verifying that the response includes a header with the URL of the created Group
+        Assert.Contains(context.Response.Headers, h => h.Key == "Location");
+
+        var responseModel = JsonSerializer.Deserialize<ScimUserResponseModel>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        AssertHelper.AssertPropertyEqual(expectedResponse, responseModel, "Id");
+
+        var databaseContext = localFactory.GetDatabaseContext();
+        Assert.Equal(_initialUserCount + 2, databaseContext.OrganizationUsers.Count());
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]

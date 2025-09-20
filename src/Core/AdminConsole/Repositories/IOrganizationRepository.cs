@@ -1,7 +1,11 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using System.Data.Common;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using OneOf;
+using OneOf.Types;
 
 #nullable enable
 
@@ -37,6 +41,7 @@ public interface IOrganizationRepository : IRepository<Organization, Guid>
     /// <param name="organizationId">The ID of the organization to get the occupied seat count for.</param>
     /// <returns>The number of occupied seats for the organization.</returns>
     Task<OrganizationSeatCounts> GetOccupiedSeatCountByOrganizationIdAsync(Guid organizationId);
+    Task<OrganizationSeatCounts> GetOccupiedSeatCountByOrganizationIdInTransactionAsync(Guid organizationId, DbTransaction transaction);
 
     /// <summary>
     /// Get all organizations that need to have their seat count updated to their Stripe subscription.
@@ -62,4 +67,24 @@ public interface IOrganizationRepository : IRepository<Organization, Guid>
     /// <param name="requestDate">When the action was performed</param>
     /// <returns></returns>
     Task IncrementSeatCountAsync(Guid organizationId, int increaseAmount, DateTime requestDate);
+
+    /// <summary>
+    /// Adds a collection of users to the password manager for a specific organization.  This re-validates that the
+    /// organization can add the desired number of users to Password Manager.
+    ///
+    /// This will throw exceptions if the org cannot add seats.
+    /// </summary>
+    /// <param name="organizationId">Organization to add users to</param>
+    /// <param name="requestDate">DateTime the request was initiated</param>
+    /// <param name="passwordManagerSeatsRequiredToAdd">Number of seats to add to the password manager</param>
+    /// <param name="organizationUserCollection">The collection of users to be added to the password manager.</param>
+    /// <returns></returns>
+    Task AddUsersToPasswordManagerAsync(
+        Guid organizationId,
+        DateTime requestDate,
+        int passwordManagerSeatsRequiredToAdd,
+        IEnumerable<CreateOrganizationUser> organizationUserCollection,
+        DbTransaction transaction);
+
+    Task<OneOf<Organization, None>> GetByIdInTransactionAsync(Guid organizationId, DbTransaction transaction);
 }

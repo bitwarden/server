@@ -1,6 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using System.Data.Common;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
@@ -35,7 +36,8 @@ public class ScimUserRequestModel : BaseScimUserModel
     public InviteOrganizationUsersRequest ToRequest(
         ScimProviderType scimProvider,
         InviteOrganization inviteOrganization,
-        DateTimeOffset performedAt)
+        DateTimeOffset performedAt,
+        DbTransaction transaction)
     {
         var email = EmailForInvite(scimProvider);
 
@@ -54,7 +56,8 @@ public class ScimUserRequestModel : BaseScimUserModel
             ],
             inviteOrganization: inviteOrganization,
             performedBy: Guid.Empty, // SCIM does not have a user id
-            performedAt: performedAt);
+            performedAt: performedAt,
+            transaction);
     }
 
     private string EmailForInvite(ScimProviderType scimProvider)

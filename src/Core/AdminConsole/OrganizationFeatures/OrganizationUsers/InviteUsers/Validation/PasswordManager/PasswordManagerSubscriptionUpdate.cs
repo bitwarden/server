@@ -34,7 +34,7 @@ public class PasswordManagerSubscriptionUpdate
     /// <summary>
     /// Number of seats to scale the organization by.
     ///
-    /// If Organization has no seat limit (Seats is null), then there are no new seats to add.
+    /// If the Organization has no seat limit (Seats is null), then there are no new seats to add.
     /// </summary>
     public int SeatsRequiredToAdd => AvailableSeats.HasValue ? Math.Max(NewUsersToAdd - AvailableSeats.Value, 0) : 0;
 
