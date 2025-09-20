@@ -42,32 +42,43 @@ public class OrganizationExportController : Controller
     [HttpGet("export")]
     public async Task<IActionResult> Export(Guid organizationId)
     {
-        var createDefaultLocationEnabled = _featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation);
-
         var canExportAll = await _authorizationService.AuthorizeAsync(User, new OrganizationScope(organizationId),
             VaultExportOperations.ExportWholeVault);
-        if (canExportAll.Succeeded)
-        {
-            var allOrganizationCiphers =
-                createDefaultLocationEnabled
-                    ? await _organizationCiphersQuery.GetAllOrganizationCiphersExcludingDefaultUserCollections(
-                        organizationId)
-                    : await _organizationCiphersQuery.GetAllOrganizationCiphers(organizationId);
-
-            var allCollections =
-                createDefaultLocationEnabled
-                    ? await _collectionRepository
-                        .GetManySharedCollectionsByOrganizationIdAsync(
-                            organizationId)
-                    : await _collectionRepository.GetManyByOrganizationIdAsync(organizationId);
-
-
-            return Ok(new OrganizationExportResponseModel(allOrganizationCiphers, allCollections,
-                _globalSettings));
-        }
-
         var canExportManaged = await _authorizationService.AuthorizeAsync(User, new OrganizationScope(organizationId),
             VaultExportOperations.ExportManagedCollections);
+
+        var createDefaultLocationEnabled = _featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation);
+        if (createDefaultLocationEnabled)
+        {
+            if (canExportAll.Succeeded)
+            {
+                var allOrganizationCiphers =
+                    await _organizationCiphersQuery.GetAllOrganizationCiphersExcludingDefaultUserCollections(
+                        organizationId);
+
+                var allCollections = await _collectionRepository
+                    .GetManySharedCollectionsByOrganizationIdAsync(
+                        organizationId);
+
+
+                return Ok(new OrganizationExportResponseModel(allOrganizationCiphers, allCollections,
+                    _globalSettings));
+            }
+        }
+        else
+        {
+            if (canExportAll.Succeeded)
+            {
+                var allOrganizationCiphers = await _organizationCiphersQuery.GetAllOrganizationCiphers(organizationId);
+
+                var allCollections = await _collectionRepository.GetManyByOrganizationIdAsync(organizationId);
+
+                return Ok(new OrganizationExportResponseModel(allOrganizationCiphers, allCollections,
+                    _globalSettings));
+            }
+        }
+
+
         if (canExportManaged.Succeeded)
         {
             var userId = _userService.GetProperUserId(User)!.Value;
