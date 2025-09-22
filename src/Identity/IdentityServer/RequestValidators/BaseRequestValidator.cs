@@ -263,7 +263,7 @@ public abstract class BaseRequestValidator<T> where T : class
         if (_globalSettings.SelfHosted)
         {
             _logger.LogWarning(Constants.BypassFiltersEventId,
-                "Failed login attempt{Is2FA} {IpAddress}", twoFactorRequest, CurrentContext.IpAddress);
+                "Failed login attempt. Is2FARequest: {Is2FARequest} IpAddress: {IpAddress}", twoFactorRequest, CurrentContext.IpAddress);
         }
 
         await Task.Delay(2000); // Delay for brute force.
