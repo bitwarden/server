@@ -127,6 +127,8 @@ public static class FeatureFlagKeys
     public const string RecoveryCodeLogin = "pm-17128-recovery-code-login";
     public const string Otp6Digits = "pm-18612-otp-6-digits";
     public const string FailedTwoFactorEmail = "pm-24425-send-2fa-failed-email";
+    public const string PM23174ManageAccountRecoveryPermissionDrivesTheNeedToSetMasterPassword =
+        "pm-23174-manage-account-recovery-permission-drives-the-need-to-set-master-password";
 
     /* Autofill Team */
     public const string IdpAutoSubmitLogin = "idp-auto-submit-login";

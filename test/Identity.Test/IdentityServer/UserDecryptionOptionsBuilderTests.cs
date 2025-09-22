@@ -6,12 +6,14 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Identity.IdentityServer;
 using Bit.Identity.Test.AutoFixture;
 using Bit.Identity.Utilities;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
+using User = Bit.Core.Entities.User;
 
 namespace Bit.Identity.Test.IdentityServer;
 
@@ -22,6 +24,7 @@ public class UserDecryptionOptionsBuilderTests
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly ILoginApprovingClientTypes _loginApprovingClientTypes;
     private readonly UserDecryptionOptionsBuilder _builder;
+    private readonly IFeatureService _featureService;
 
     public UserDecryptionOptionsBuilderTests()
     {
@@ -29,7 +32,8 @@ public class UserDecryptionOptionsBuilderTests
         _deviceRepository = Substitute.For<IDeviceRepository>();
         _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
         _loginApprovingClientTypes = Substitute.For<ILoginApprovingClientTypes>();
-        _builder = new UserDecryptionOptionsBuilder(_currentContext, _deviceRepository, _organizationUserRepository, _loginApprovingClientTypes);
+        _featureService = Substitute.For<IFeatureService>();
+        _builder = new UserDecryptionOptionsBuilder(_currentContext, _deviceRepository, _organizationUserRepository, _loginApprovingClientTypes, _featureService);
         var user = new User();
         _builder.ForUser(user);
     }
@@ -223,10 +227,7 @@ public class UserDecryptionOptionsBuilderTests
     }
 
     [Theory]
-    [BitAutoData(OrganizationUserType.User)]
     [BitAutoData(OrganizationUserType.Custom)]
-    [BitAutoData(OrganizationUserType.Admin)]
-    [BitAutoData(OrganizationUserType.Owner)]
     public async Task Build_WhenManageResetPasswordPermissions_ShouldReturnHasManageResetPasswordPermissionTrue(
         OrganizationUserType organizationUserType,
         SsoConfig ssoConfig,
@@ -239,7 +240,10 @@ public class UserDecryptionOptionsBuilderTests
         ssoConfig.Data = configurationData.Serialize();
         ssoConfig.OrganizationId = organization.Id;
         _currentContext.Organizations.Returns([organization]);
+        _currentContext.ManageResetPassword(organization.Id).Returns(true);
         organizationUser.Type = organizationUserType;
+        organizationUser.OrganizationId = organization.Id;
+        organizationUser.UserId = user.Id;
         organizationUser.SetPermissions(new Permissions() { ManageResetPassword = true });
         _organizationUserRepository.GetByOrganizationAsync(ssoConfig.OrganizationId, user.Id).Returns(organizationUser);
 

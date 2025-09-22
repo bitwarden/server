@@ -1,4 +1,5 @@
-﻿using Bit.Core.Auth.Entities;
+﻿using Bit.Core;
+using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Auth.Utilities;
@@ -7,6 +8,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Response;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Bit.Identity.Utilities;
 
@@ -24,6 +26,7 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
     private readonly IDeviceRepository _deviceRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly ILoginApprovingClientTypes _loginApprovingClientTypes;
+    private readonly IFeatureService _featureService;
 
     private UserDecryptionOptions _options = new UserDecryptionOptions();
     private User _user = null!;
@@ -34,13 +37,15 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
         ICurrentContext currentContext,
         IDeviceRepository deviceRepository,
         IOrganizationUserRepository organizationUserRepository,
-        ILoginApprovingClientTypes loginApprovingClientTypes
+        ILoginApprovingClientTypes loginApprovingClientTypes,
+        IFeatureService featureService
     )
     {
         _currentContext = currentContext;
         _deviceRepository = deviceRepository;
         _organizationUserRepository = organizationUserRepository;
         _loginApprovingClientTypes = loginApprovingClientTypes;
+        _featureService = featureService;
     }
 
     public IUserDecryptionOptionsBuilder ForUser(User user)
@@ -131,25 +136,43 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
                 _loginApprovingClientTypes.TypesThatCanApprove.Contains(DeviceTypes.ToClientType(d.Type)));
         }
 
-        var organizationUser =
-            await _organizationUserRepository.GetByOrganizationAsync(_ssoConfig.OrganizationId, _user.Id);
+        // Just-in-time-provisioned users, which can include users invited to a TDE organization with SSO and granted
+        // the Admin/Owner role or Custom user role with ManageResetPassword permission, will not have claims available
+        // in context to reflect this permission if granted as part of an invite for the current organization.
+        // Therefore, as written today, CurrentContext will not surface those permissions for those users.
+        // In order to make this check accurate at first login for all applicable cases, we have to go back to the
+        // database record.
+        // In the TDE flow, the users will have been JIT-provisioned at SSO callback time, and the relationship between
+        // user and organization user will have been codified.
+        var organizationUser = await _organizationUserRepository.GetByOrganizationAsync(_ssoConfig.OrganizationId, _user.Id);
+        var hasManageResetPasswordPermission = false;
+        if (_featureService.IsEnabled(FeatureFlagKeys.PM23174ManageAccountRecoveryPermissionDrivesTheNeedToSetMasterPassword))
+        {
+            hasManageResetPasswordPermission = await EvaluateHasManageResetPasswordPermission();
+        }
+        else
+        {
+            // TODO: PM-26065 remove use of above feature flag from the server, and remove this branching logic, which
+            // has been replaced by EvaluateHasManageResetPasswordPermission.
+            // Determine if user has manage reset password permission as post sso logic requires it for forcing users with this permission to set a MP
 
-        // SSO users, Organizations, and Providers with Manage Account Recovery (reset password) permission,
-        // as well as all Owners and Admins, must set a Master Password.
-        var hasManageResetPasswordPermission =
-            // We need to interrogate the organizationUser from the repository to solve for an invited status.
-            // The claims won't exist at that time, so currentContext as it is written today won't accommodate for that.
-            // This is the edge case.
-            // TODO: PM-25668 proposes some refactor of the Organization acceptance processes to unify requirement for
-            // Organization acceptance; once it is implemented, we should be able to remove this Organization User check.
-            organizationUser?.GetPermissions() is { ManageResetPassword: true } ||
-            organizationUser?.Type is OrganizationUserType.Admin or OrganizationUserType.Owner ||
-            // For Organization User in Accepted/Confirmed status, claims will be available. CurrentContext will also
-            // offer Provider User information for that case. As MSP, Provider Users will require certain permissions like
-            // ManageResetPassword to perform their role effectively.
-            await _currentContext.ManageResetPassword(_ssoConfig!.OrganizationId);
+            // when a user is being created via JIT provisioning, they will not have any orgs so we can't assume we will have orgs here
+            if (_currentContext.Organizations != null && _currentContext.Organizations.Any(o => o.Id == _ssoConfig.OrganizationId))
+            {
+                // TDE requires single org so grabbing first org & id is fine.
+                hasManageResetPasswordPermission = await _currentContext.ManageResetPassword(_ssoConfig!.OrganizationId);
+            }
 
-        // They can only be approved by an admin if they have enrolled in reset password
+            // If sso configuration data is not null then I know for sure that ssoConfiguration isn't null
+
+            // NOTE: Commented from original impl because the organization user repository call has been hoisted to support
+            // branching paths through flagging.
+            //organizationUser = await _organizationUserRepository.GetByOrganizationAsync(_ssoConfig.OrganizationId, _user.Id);
+
+            hasManageResetPasswordPermission |= organizationUser != null && (organizationUser.Type == OrganizationUserType.Owner || organizationUser.Type == OrganizationUserType.Admin);
+        }
+
+        // They are only able to be approved by an admin if they have enrolled is reset password
         var hasAdminApproval = organizationUser != null && !string.IsNullOrEmpty(organizationUser.ResetPasswordKey);
 
         _options.TrustedDeviceOption = new TrustedDeviceUserDecryptionOption(
@@ -159,6 +182,31 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
             isTdeOffboarding,
             encryptedPrivateKey,
             encryptedUserKey);
+        return;
+
+        async Task<bool> EvaluateHasManageResetPasswordPermission()
+        {
+            // PM-23174
+            // Determine if user has manage reset password permission as post sso logic requires it for forcing users with this permission to set a MP
+            if (organizationUser == null)
+            {
+                return false;
+            }
+
+            var organizationUserHasResetPasswordPermission =
+                // The repository will pull users in all statuses, so we also need to ensure that revoked-status users do not have
+                // permissions sent down.
+                organizationUser.Status is OrganizationUserStatusType.Invited or OrganizationUserStatusType.Accepted or
+                    OrganizationUserStatusType.Confirmed &&
+                // Admins and owners get ManageResetPassword functionally "for free" through their role.
+                (organizationUser.Type is OrganizationUserType.Admin or OrganizationUserType.Owner ||
+                 // Custom users can have the ManagePasswordReset permission assigned directly.
+                 organizationUser.GetPermissions() is { ManageResetPassword: true });
+
+            return organizationUserHasResetPasswordPermission ||
+                   // A provider user for the given organization gets ManageResetPassword through that relationship.
+                   await _currentContext.ProviderUserForOrgAsync(_ssoConfig.OrganizationId);
+        }
     }
 
     private void BuildMasterPasswordUnlock()
