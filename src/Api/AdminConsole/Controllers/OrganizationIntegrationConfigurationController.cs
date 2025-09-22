@@ -18,6 +18,27 @@ public class OrganizationIntegrationConfigurationController(
     IOrganizationIntegrationRepository integrationRepository,
     IOrganizationIntegrationConfigurationRepository integrationConfigurationRepository) : Controller
 {
+    [HttpGet("")]
+    public async Task<List<OrganizationIntegrationConfigurationResponseModel>> GetAsync(
+        Guid organizationId,
+        Guid integrationId)
+    {
+        if (!await HasPermission(organizationId))
+        {
+            throw new NotFoundException();
+        }
+        var integration = await integrationRepository.GetByIdAsync(integrationId);
+        if (integration == null || integration.OrganizationId != organizationId)
+        {
+            throw new NotFoundException();
+        }
+
+        var configurations = await integrationConfigurationRepository.GetManyByIntegrationAsync(integrationId);
+        return configurations
+            .Select(configuration => new OrganizationIntegrationConfigurationResponseModel(configuration))
+            .ToList();
+    }
+
     [HttpPost("")]
     public async Task<OrganizationIntegrationConfigurationResponseModel> CreateAsync(
         Guid organizationId,
@@ -77,7 +98,6 @@ public class OrganizationIntegrationConfigurationController(
     }
 
     [HttpDelete("{configurationId:guid}")]
-    [HttpPost("{configurationId:guid}/delete")]
     public async Task DeleteAsync(Guid organizationId, Guid integrationId, Guid configurationId)
     {
         if (!await HasPermission(organizationId))
@@ -97,6 +117,13 @@ public class OrganizationIntegrationConfigurationController(
         }
 
         await integrationConfigurationRepository.DeleteAsync(configuration);
+    }
+
+    [HttpPost("{configurationId:guid}/delete")]
+    [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
+    public async Task PostDeleteAsync(Guid organizationId, Guid integrationId, Guid configurationId)
+    {
+        await DeleteAsync(organizationId, integrationId, configurationId);
     }
 
     private async Task<bool> HasPermission(Guid organizationId)

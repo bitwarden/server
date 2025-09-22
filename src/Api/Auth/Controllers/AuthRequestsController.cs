@@ -1,4 +1,7 @@
-﻿using Bit.Api.Auth.Models.Response;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.Auth.Models.Response;
 using Bit.Api.Models.Response;
 using Bit.Core;
 using Bit.Core.Auth.Enums;
@@ -28,7 +31,7 @@ public class AuthRequestsController(
     private readonly IAuthRequestService _authRequestService = authRequestService;
 
     [HttpGet("")]
-    public async Task<ListResponseModel<AuthRequestResponseModel>> Get()
+    public async Task<ListResponseModel<AuthRequestResponseModel>> GetAll()
     {
         var userId = _userService.GetProperUserId(User).Value;
         var authRequests = await _authRequestRepository.GetManyByUserIdAsync(userId);
@@ -99,7 +102,37 @@ public class AuthRequestsController(
     public async Task<AuthRequestResponseModel> Put(Guid id, [FromBody] AuthRequestUpdateRequestModel model)
     {
         var userId = _userService.GetProperUserId(User).Value;
+
+        // If the Approving Device is attempting to approve a request, validate the approval
+        if (model.RequestApproved == true)
+        {
+            await ValidateApprovalOfMostRecentAuthRequest(id, userId);
+        }
+
         var authRequest = await _authRequestService.UpdateAuthRequestAsync(id, userId, model);
         return new AuthRequestResponseModel(authRequest, _globalSettings.BaseServiceUri.Vault);
+    }
+
+    private async Task ValidateApprovalOfMostRecentAuthRequest(Guid id, Guid userId)
+    {
+        // Get the current auth request to find the device identifier
+        var currentAuthRequest = await _authRequestService.GetAuthRequestAsync(id, userId);
+        if (currentAuthRequest == null)
+        {
+            throw new NotFoundException();
+        }
+
+        // Get all pending auth requests for this user (returns most recent per device)
+        var pendingRequests = await _authRequestRepository.GetManyPendingAuthRequestByUserId(userId);
+
+        // Find the most recent request for the same device
+        var mostRecentForDevice = pendingRequests
+            .FirstOrDefault(pendingRequest => pendingRequest.RequestDeviceIdentifier == currentAuthRequest.RequestDeviceIdentifier);
+
+        var isMostRecentRequestForDevice = mostRecentForDevice?.Id == id;
+        if (!isMostRecentRequestForDevice)
+        {
+            throw new BadRequestException("This request is no longer valid. Make sure to approve the most recent request.");
+        }
     }
 }

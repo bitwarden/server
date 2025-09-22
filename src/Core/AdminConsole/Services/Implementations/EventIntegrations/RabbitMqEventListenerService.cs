@@ -1,13 +1,13 @@
-﻿#nullable enable
-
-using System.Text;
+﻿using System.Text;
+using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
 namespace Bit.Core.Services;
 
-public class RabbitMqEventListenerService : EventLoggingListenerService
+public class RabbitMqEventListenerService<TConfiguration> : EventLoggingListenerService
+    where TConfiguration : IEventListenerConfiguration
 {
     private readonly Lazy<Task<IChannel>> _lazyChannel;
     private readonly string _queueName;
@@ -15,12 +15,12 @@ public class RabbitMqEventListenerService : EventLoggingListenerService
 
     public RabbitMqEventListenerService(
         IEventMessageHandler handler,
-        string queueName,
+        TConfiguration configuration,
         IRabbitMqService rabbitMqService,
-        ILogger<RabbitMqEventListenerService> logger) : base(handler, logger)
+        ILoggerFactory loggerFactory)
+        : base(handler, CreateLogger(loggerFactory, configuration))
     {
-        _logger = logger;
-        _queueName = queueName;
+        _queueName = configuration.EventQueueName;
         _rabbitMqService = rabbitMqService;
         _lazyChannel = new Lazy<Task<IChannel>>(() => _rabbitMqService.CreateChannelAsync());
     }
@@ -64,5 +64,11 @@ public class RabbitMqEventListenerService : EventLoggingListenerService
             _lazyChannel.Value.Result.Dispose();
         }
         base.Dispose();
+    }
+
+    private static ILogger CreateLogger(ILoggerFactory loggerFactory, TConfiguration configuration)
+    {
+        return loggerFactory.CreateLogger(
+            categoryName: $"Bit.Core.Services.RabbitMqEventListenerService.{configuration.EventQueueName}");
     }
 }

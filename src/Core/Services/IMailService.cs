@@ -3,6 +3,7 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations;
@@ -29,6 +30,8 @@ public interface IMailService
     Task SendChangeEmailAlreadyExistsEmailAsync(string fromEmail, string toEmail);
     Task SendChangeEmailEmailAsync(string newEmailAddress, string token);
     Task SendTwoFactorEmailAsync(string email, string accountEmail, string token, string deviceIp, string deviceType, TwoFactorEmailPurpose purpose);
+    Task SendSendEmailOtpEmailAsync(string email, string token, string subject);
+    Task SendFailedTwoFactorAttemptEmailAsync(string email, TwoFactorProviderType type, DateTime utcNow, string ip);
     Task SendNoMasterPasswordHintEmailAsync(string email);
     Task SendMasterPasswordHintEmailAsync(string email, string hint);
 
@@ -56,6 +59,14 @@ public interface IMailService
         DateTime dueDate,
         List<string> items,
         bool mentionInvoices);
+    Task SendProviderInvoiceUpcoming(
+        IEnumerable<string> emails,
+        decimal amount,
+        DateTime dueDate,
+        List<string> items,
+        string? collectionMethod,
+        bool hasPaymentMethod,
+        string? paymentMethodDescription);
     Task SendPaymentFailedAsync(string email, decimal amount, bool mentionInvoices);
     Task SendAddedCreditAsync(string email, decimal amount);
     Task SendLicenseExpiredAsync(IEnumerable<string> emails, string? organizationName = null);

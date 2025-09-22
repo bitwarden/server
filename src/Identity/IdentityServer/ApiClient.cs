@@ -1,4 +1,7 @@
-﻿using Bit.Core.Settings;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Settings;
 using Bit.Identity.IdentityServer.RequestValidators;
 using Duende.IdentityServer.Models;
 
@@ -15,10 +18,18 @@ public class ApiClient : Client
     {
         ClientId = id;
         AllowedGrantTypes = new[] { GrantType.ResourceOwnerPassword, GrantType.AuthorizationCode, WebAuthnGrantValidator.GrantType };
-        RefreshTokenExpiration = TokenExpiration.Sliding;
+
+        // Use global setting: false = Sliding (default), true = Absolute
+        RefreshTokenExpiration = globalSettings.IdentityServer.UseAbsoluteRefreshTokenExpiration
+            ? TokenExpiration.Absolute
+            : TokenExpiration.Sliding;
+
         RefreshTokenUsage = TokenUsage.ReUse;
-        SlidingRefreshTokenLifetime = 86400 * refreshTokenSlidingDays;
-        AbsoluteRefreshTokenLifetime = 0; // forever
+
+        // Use global setting if provided, otherwise use constructor parameter
+        SlidingRefreshTokenLifetime = globalSettings.IdentityServer.SlidingRefreshTokenLifetimeSeconds ?? (86400 * refreshTokenSlidingDays);
+        AbsoluteRefreshTokenLifetime = globalSettings.IdentityServer.AbsoluteRefreshTokenLifetimeSeconds ?? 0; // forever
+
         UpdateAccessTokenClaimsOnRefresh = true;
         AccessTokenLifetime = 3600 * accessTokenLifetimeHours;
         AllowOfflineAccess = true;

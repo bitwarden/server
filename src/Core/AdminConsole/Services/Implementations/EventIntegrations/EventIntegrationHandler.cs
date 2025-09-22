@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using System.Text.Json;
+﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.Enums;
@@ -14,7 +12,7 @@ public class EventIntegrationHandler<T>(
     IntegrationType integrationType,
     IEventIntegrationPublisher eventIntegrationPublisher,
     IIntegrationFilterService integrationFilterService,
-    IOrganizationIntegrationConfigurationRepository configurationRepository,
+    IIntegrationConfigurationDetailsCache configurationCache,
     IUserRepository userRepository,
     IOrganizationRepository organizationRepository,
     ILogger<EventIntegrationHandler<T>> logger)
@@ -27,7 +25,7 @@ public class EventIntegrationHandler<T>(
             return;
         }
 
-        var configurations = await configurationRepository.GetConfigurationDetailsAsync(
+        var configurations = configurationCache.GetConfigurationDetails(
             organizationId,
             integrationType,
             eventMessage.Type);

@@ -20,8 +20,14 @@ public interface ICollectionRepository : IRepository<Collection, Guid>
     /// </summary>
     Task<ICollection<Collection>> GetManyByOrganizationIdAsync(Guid organizationId);
 
+    /// <inheritdoc cref="GetManyByOrganizationIdAsync"/>
+    /// <remarks>
+    /// Excludes default collections (My Items collections) - used by Admin Console Collections tab.
+    /// </remarks>
+    Task<ICollection<Collection>> GetManySharedCollectionsByOrganizationIdAsync(Guid organizationId);
+
     /// <summary>
-    /// Return all collections that belong to the organization. Includes group/user access relationships for each collection.
+    /// Return all shared collections that belong to the organization. Includes group/user access relationships for each collection.
     /// </summary>
     Task<ICollection<Tuple<Collection, CollectionAccessDetails>>> GetManyByOrganizationIdWithAccessAsync(Guid organizationId);
 
@@ -34,9 +40,10 @@ public interface ICollectionRepository : IRepository<Collection, Guid>
     Task<ICollection<CollectionDetails>> GetManyByUserIdAsync(Guid userId);
 
     /// <summary>
-    /// Returns all collections for an organization, including permission info for the specified user.
+    /// Returns all shared collections for an organization, including permission info for the specified user.
     /// This does not perform any authorization checks internally!
     /// Optionally, you can include access relationships for other Groups/Users and the collections.
+    /// Excludes default collections (My Items collections) - used by Admin Console Collections tab.
     /// </summary>
     Task<ICollection<CollectionAdminDetails>> GetManyByOrganizationIdWithPermissionsAsync(Guid organizationId, Guid userId, bool includeAccessRelationships);
 
@@ -55,4 +62,13 @@ public interface ICollectionRepository : IRepository<Collection, Guid>
     Task DeleteManyAsync(IEnumerable<Guid> collectionIds);
     Task CreateOrUpdateAccessForManyAsync(Guid organizationId, IEnumerable<Guid> collectionIds,
         IEnumerable<CollectionAccessSelection> users, IEnumerable<CollectionAccessSelection> groups);
+
+    /// <summary>
+    /// Creates default user collections for the specified organization users if they do not already have one.
+    /// </summary>
+    /// <param name="organizationId">The Organization ID.</param>
+    /// <param name="organizationUserIds">The Organization User IDs to create default collections for.</param>
+    /// <param name="defaultCollectionName">The encrypted string to use as the default collection name.</param>
+    /// <returns></returns>
+    Task UpsertDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName);
 }

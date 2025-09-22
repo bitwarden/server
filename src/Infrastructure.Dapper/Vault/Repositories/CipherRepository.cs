@@ -1,12 +1,17 @@
-﻿using System.Data;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Data;
 using System.Text.Json;
 using Bit.Core.Entities;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
+using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
+using Bit.Infrastructure.Dapper.AdminConsole.Helpers;
 using Bit.Infrastructure.Dapper.Repositories;
 using Bit.Infrastructure.Dapper.Vault.Helpers;
 using Dapper;
@@ -235,11 +240,24 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
+    public async Task<DateTime> ArchiveAsync(IEnumerable<Guid> ids, Guid userId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.ExecuteScalarAsync<DateTime>(
+                $"[{Schema}].[Cipher_Archive]",
+                new { Ids = ids.ToGuidIdArrayTVP(), UserId = userId },
+                commandType: CommandType.StoredProcedure);
+
+            return results;
+        }
+    }
+
     public async Task DeleteAttachmentAsync(Guid cipherId, string attachmentId)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
-            var results = await connection.ExecuteAsync(
+            await connection.ExecuteAsync(
                 $"[{Schema}].[Cipher_DeleteAttachment]",
                 new { Id = cipherId, AttachmentId = attachmentId },
                 commandType: CommandType.StoredProcedure);
@@ -405,6 +423,52 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         };
     }
 
+    /// <inheritdoc />
+    public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation_vNext(
+        Guid userId, IEnumerable<Cipher> ciphers)
+    {
+        return async (SqlConnection connection, SqlTransaction transaction) =>
+        {
+            // Create temp table
+            var sqlCreateTemp = @"
+                            SELECT TOP 0 *
+                            INTO #TempCipher
+                            FROM [dbo].[Cipher]";
+
+            await using (var cmd = new SqlCommand(sqlCreateTemp, connection, transaction))
+            {
+                cmd.ExecuteNonQuery();
+            }
+
+            // Bulk copy data into temp table
+            await BulkResourceCreationService.CreateTempCiphersAsync(connection, transaction, ciphers);
+
+            // Update cipher table from temp table
+            var sql = @"
+                    UPDATE
+                        [dbo].[Cipher]
+                    SET
+                        [Data] = TC.[Data],
+                        [Attachments] = TC.[Attachments],
+                        [RevisionDate] = TC.[RevisionDate],
+                        [Key] = TC.[Key]
+                    FROM
+                        [dbo].[Cipher] C
+                    INNER JOIN
+                        #TempCipher TC ON C.Id = TC.Id
+                    WHERE
+                        C.[UserId] = @UserId
+
+                    DROP TABLE #TempCipher";
+
+            await using (var cmd = new SqlCommand(sql, connection, transaction))
+            {
+                cmd.Parameters.Add("@UserId", SqlDbType.UniqueIdentifier).Value = userId;
+                cmd.ExecuteNonQuery();
+            }
+        };
+    }
+
     public async Task UpdateCiphersAsync(Guid userId, IEnumerable<Cipher> ciphers)
     {
         if (!ciphers.Any())
@@ -439,6 +503,83 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
                         var dataTable = BuildCiphersTable(bulkCopy, ciphers);
                         bulkCopy.WriteToServer(dataTable);
                     }
+
+                    // 3. Insert into real tables from temp tables and clean up.
+
+                    // Intentionally not including Favorites, Folders, and CreationDate
+                    // since those are not meant to be bulk updated at this time
+                    var sql = @"
+                            UPDATE
+                                [dbo].[Cipher]
+                            SET
+                                [UserId] = TC.[UserId],
+                                [OrganizationId] = TC.[OrganizationId],
+                                [Type] = TC.[Type],
+                                [Data] = TC.[Data],
+                                [Attachments] = TC.[Attachments],
+                                [RevisionDate] = TC.[RevisionDate],
+                                [DeletedDate] = TC.[DeletedDate],
+                                [Key] = TC.[Key]
+                            FROM
+                                [dbo].[Cipher] C
+                            INNER JOIN
+                                #TempCipher TC ON C.Id = TC.Id
+                            WHERE
+                                C.[UserId] = @UserId
+
+                            DROP TABLE #TempCipher";
+
+                    using (var cmd = new SqlCommand(sql, connection, transaction))
+                    {
+                        cmd.Parameters.Add("@UserId", SqlDbType.UniqueIdentifier).Value = userId;
+                        cmd.ExecuteNonQuery();
+                    }
+
+                    await connection.ExecuteAsync(
+                        $"[{Schema}].[User_BumpAccountRevisionDate]",
+                        new { Id = userId },
+                        commandType: CommandType.StoredProcedure, transaction: transaction);
+
+                    transaction.Commit();
+                }
+                catch
+                {
+                    transaction.Rollback();
+                    throw;
+                }
+            }
+        }
+    }
+
+    public async Task UpdateCiphersAsync_vNext(Guid userId, IEnumerable<Cipher> ciphers)
+    {
+        if (!ciphers.Any())
+        {
+            return;
+        }
+
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            connection.Open();
+
+            using (var transaction = connection.BeginTransaction())
+            {
+                try
+                {
+                    // 1. Create temp tables to bulk copy into.
+
+                    var sqlCreateTemp = @"
+                            SELECT TOP 0 *
+                            INTO #TempCipher
+                            FROM [dbo].[Cipher]";
+
+                    using (var cmd = new SqlCommand(sqlCreateTemp, connection, transaction))
+                    {
+                        cmd.ExecuteNonQuery();
+                    }
+
+                    // 2. Bulk copy into temp tables.
+                    await BulkResourceCreationService.CreateTempCiphersAsync(connection, transaction, ciphers);
 
                     // 3. Insert into real tables from temp tables and clean up.
 
@@ -535,6 +676,44 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
+    public async Task CreateAsync_vNext(Guid userId, IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders)
+    {
+        if (!ciphers.Any())
+        {
+            return;
+        }
+
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            connection.Open();
+
+            using (var transaction = connection.BeginTransaction())
+            {
+                try
+                {
+                    if (folders.Any())
+                    {
+                        await BulkResourceCreationService.CreateFoldersAsync(connection, transaction, folders);
+                    }
+
+                    await BulkResourceCreationService.CreateCiphersAsync(connection, transaction, ciphers);
+
+                    await connection.ExecuteAsync(
+                            $"[{Schema}].[User_BumpAccountRevisionDate]",
+                            new { Id = userId },
+                            commandType: CommandType.StoredProcedure, transaction: transaction);
+
+                    transaction.Commit();
+                }
+                catch
+                {
+                    transaction.Rollback();
+                    throw;
+                }
+            }
+        }
+    }
+
     public async Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections,
         IEnumerable<CollectionCipher> collectionCiphers, IEnumerable<CollectionUser> collectionUsers)
     {
@@ -604,6 +783,55 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
+    public async Task CreateAsync_vNext(IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections,
+        IEnumerable<CollectionCipher> collectionCiphers, IEnumerable<CollectionUser> collectionUsers)
+    {
+        if (!ciphers.Any())
+        {
+            return;
+        }
+
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            connection.Open();
+
+            using (var transaction = connection.BeginTransaction())
+            {
+                try
+                {
+                    await BulkResourceCreationService.CreateCiphersAsync(connection, transaction, ciphers);
+
+                    if (collections.Any())
+                    {
+                        await BulkResourceCreationService.CreateCollectionsAsync(connection, transaction, collections);
+                    }
+
+                    if (collectionCiphers.Any())
+                    {
+                        await BulkResourceCreationService.CreateCollectionCiphersAsync(connection, transaction, collectionCiphers);
+                    }
+
+                    if (collectionUsers.Any())
+                    {
+                        await BulkResourceCreationService.CreateCollectionsUsersAsync(connection, transaction, collectionUsers);
+                    }
+
+                    await connection.ExecuteAsync(
+                            $"[{Schema}].[User_BumpAccountRevisionDateByOrganizationId]",
+                            new { OrganizationId = ciphers.First().OrganizationId },
+                            commandType: CommandType.StoredProcedure, transaction: transaction);
+
+                    transaction.Commit();
+                }
+                catch
+                {
+                    transaction.Rollback();
+                    throw;
+                }
+            }
+        }
+    }
+
     public async Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId)
     {
         using (var connection = new SqlConnection(ConnectionString))
@@ -612,6 +840,19 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
                 $"[{Schema}].[Cipher_SoftDelete]",
                 new { Ids = ids.ToGuidIdArrayTVP(), UserId = userId },
                 commandType: CommandType.StoredProcedure);
+        }
+    }
+
+    public async Task<DateTime> UnarchiveAsync(IEnumerable<Guid> ids, Guid userId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.ExecuteScalarAsync<DateTime>(
+                $"[{Schema}].[Cipher_Unarchive]",
+                new { Ids = ids.ToGuidIdArrayTVP(), UserId = userId },
+                commandType: CommandType.StoredProcedure);
+
+            return results;
         }
     }
 
@@ -652,6 +893,50 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
                 commandTimeout: 43200);
         }
     }
+
+    public async Task<IEnumerable<CipherOrganizationDetailsWithCollections>>
+        GetManyCipherOrganizationDetailsExcludingDefaultCollectionsAsync(Guid orgId)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        var dict = new Dictionary<Guid, CipherOrganizationDetailsWithCollections>();
+        var tempCollections = new Dictionary<Guid, List<Guid>>();
+
+        await connection.QueryAsync<
+            CipherOrganizationDetails,
+            CollectionCipher,
+            CipherOrganizationDetailsWithCollections
+        >(
+            $"[{Schema}].[CipherOrganizationDetails_ReadByOrganizationIdExcludingDefaultCollections]",
+            (cipher, cc) =>
+            {
+                if (!dict.TryGetValue(cipher.Id, out var details))
+                {
+                    details = new CipherOrganizationDetailsWithCollections(cipher, new Dictionary<Guid, IGrouping<Guid, CollectionCipher>>());
+                    dict.Add(cipher.Id, details);
+                    tempCollections[cipher.Id] = new List<Guid>();
+                }
+
+                if (cc?.CollectionId != null)
+                {
+                    tempCollections[cipher.Id].AddIfNotExists(cc.CollectionId);
+                }
+
+                return details;
+            },
+            new { OrganizationId = orgId },
+            splitOn: "CollectionId",
+            commandType: CommandType.StoredProcedure
+        );
+
+        foreach (var kv in dict)
+        {
+            kv.Value.CollectionIds = tempCollections[kv.Key].ToArray();
+        }
+
+        return dict.Values.ToList();
+    }
+
 
     private DataTable BuildCiphersTable(SqlBulkCopy bulkCopy, IEnumerable<Cipher> ciphers)
     {

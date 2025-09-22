@@ -18,14 +18,15 @@
     @DeletedDate DATETIME2(7),
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
-    @CollectionIds AS [dbo].[GuidIdArray] READONLY
+    @CollectionIds AS [dbo].[GuidIdArray] READONLY,
+    @ArchivedDate DATETIME2(7) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
 
     EXEC [dbo].[CipherDetails_Create] @Id, @UserId, @OrganizationId, @Type, @Data, @Favorites, @Folders,
         @Attachments, @CreationDate, @RevisionDate, @FolderId, @Favorite, @Edit, @ViewPassword, @Manage,
-        @OrganizationUseTotp, @DeletedDate, @Reprompt, @Key
+        @OrganizationUseTotp, @DeletedDate, @Reprompt, @Key, @ArchivedDate
 
     DECLARE @UpdateCollectionsSuccess INT
     EXEC @UpdateCollectionsSuccess = [dbo].[Cipher_UpdateCollections] @Id, @UserId, @OrganizationId, @CollectionIds

@@ -3,9 +3,9 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Licenses;
 using Bit.Core.Billing.Licenses.Extensions;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Business;
 
 namespace Bit.Core.AdminConsole.Services;
 
@@ -23,7 +23,7 @@ public static class OrganizationFactory
             PlanType = claimsPrincipal.GetValue<PlanType>(OrganizationLicenseConstants.PlanType),
             Seats = claimsPrincipal.GetValue<int?>(OrganizationLicenseConstants.Seats),
             MaxCollections = claimsPrincipal.GetValue<short?>(OrganizationLicenseConstants.MaxCollections),
-            MaxStorageGb = 10240,
+            MaxStorageGb = Constants.SelfHostedMaxStorageGb,
             UsePolicies = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UsePolicies),
             UseSso = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UseSso),
             UseKeyConnector = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UseKeyConnector),
@@ -75,7 +75,7 @@ public static class OrganizationFactory
             PlanType = license.PlanType,
             Seats = license.Seats,
             MaxCollections = license.MaxCollections,
-            MaxStorageGb = 10240,
+            MaxStorageGb = Constants.SelfHostedMaxStorageGb,
             UsePolicies = license.UsePolicies,
             UseSso = license.UseSso,
             UseKeyConnector = license.UseKeyConnector,

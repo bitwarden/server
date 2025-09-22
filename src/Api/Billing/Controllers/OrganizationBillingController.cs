@@ -3,10 +3,10 @@ using System.Diagnostics;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
-using Bit.Api.Billing.Queries.Organizations;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
-using Bit.Core.Billing.Models.Sales;
+using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
@@ -27,7 +27,6 @@ public class OrganizationBillingController(
     ICurrentContext currentContext,
     IOrganizationBillingService organizationBillingService,
     IOrganizationRepository organizationRepository,
-    IOrganizationWarningsQuery organizationWarningsQuery,
     IPaymentService paymentService,
     IPricingClient pricingClient,
     ISubscriberService subscriberService,
@@ -305,7 +304,7 @@ public class OrganizationBillingController(
             sale.Organization.UsePolicies = plan.HasPolicies;
             sale.Organization.UseSso = plan.HasSso;
             sale.Organization.UseResetPassword = plan.HasResetPassword;
-            sale.Organization.UseKeyConnector = plan.HasKeyConnector;
+            sale.Organization.UseKeyConnector = plan.HasKeyConnector ? organization.UseKeyConnector : false;
             sale.Organization.UseScim = plan.HasScim;
             sale.Organization.UseCustomPermissions = plan.HasCustomPermissions;
             sale.Organization.UseOrganizationDomains = plan.HasOrganizationDomains;
@@ -358,14 +357,13 @@ public class OrganizationBillingController(
         return TypedResults.Ok(providerId);
     }
 
-    [HttpGet("warnings")]
-    public async Task<IResult> GetWarningsAsync([FromRoute] Guid organizationId)
+    [HttpPost("change-frequency")]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public async Task<IResult> ChangePlanSubscriptionFrequencyAsync(
+        [FromRoute] Guid organizationId,
+        [FromBody] ChangePlanFrequencyRequest request)
     {
-        /*
-         * We'll keep these available at the User level, because we're hiding any pertinent information and
-         * we want to throw as few errors as possible since these are not core features.
-         */
-        if (!await currentContext.OrganizationUser(organizationId))
+        if (!await currentContext.EditSubscription(organizationId))
         {
             return Error.Unauthorized();
         }
@@ -377,8 +375,15 @@ public class OrganizationBillingController(
             return Error.NotFound();
         }
 
-        var response = await organizationWarningsQuery.Run(organization);
+        if (organization.PlanType == request.NewPlanType)
+        {
+            return Error.BadRequest("Organization is already on the requested plan frequency.");
+        }
 
-        return TypedResults.Ok(response);
+        await organizationBillingService.UpdateSubscriptionPlanFrequency(
+            organization,
+            request.NewPlanType);
+
+        return TypedResults.Ok();
     }
 }
