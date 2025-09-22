@@ -14,7 +14,7 @@ public class SendNeverAuthenticateRequestValidatorIntegrationTests(
     IdentityApplicationFactory _factory) : IClassFixture<IdentityApplicationFactory>
 {
     /// <summary>
-    /// To support the static hashing function <see cref="EnumerationProtectionHelpers.GetIndexForSaltHash"/> theses GUIDs and Key must be hardcoded
+    /// To support the static hashing function <see cref="EnumerationProtectionHelpers.GetIndexForInputHash"/> theses GUIDs and Key must be hardcoded
     /// </summary>
     private static readonly string _testHashKey = "test-key-123456789012345678901234567890";
     // These Guids are static and ensure the correct index for each error type
@@ -37,7 +37,7 @@ public class SendNeverAuthenticateRequestValidatorIntegrationTests(
 
         Assert.Contains(OidcConstants.TokenErrors.InvalidGrant, content);
 
-        var expectedError = SendAccessConstants.GrantValidatorResults.InvalidSendId;
+        var expectedError = SendAccessConstants.SendIdGuidValidationResults.InvalidSendId;
         Assert.Contains(expectedError, content);
     }
 

@@ -34,7 +34,7 @@ public static class SendAccessConstants
         public const string Otp = "otp";
     }
 
-    public static class GrantValidatorResults
+    public static class SendIdGuidValidationResults
     {
         /// <summary>
         /// The <see cref="TokenRequest.SendId"/> in the request is a valid GUID and the request is well formed. Not returned in any response.

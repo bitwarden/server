@@ -34,7 +34,7 @@ public class SendNeverAuthenticateRequestValidator(GlobalSettings globalSettings
         switch (neverAuthenticateError)
         {
             case SendAccessConstants.EnumerationProtection.Guid:
-                errorType = SendAccessConstants.GrantValidatorResults.InvalidSendId;
+                errorType = SendAccessConstants.SendIdGuidValidationResults.InvalidSendId;
                 break;
             case SendAccessConstants.EnumerationProtection.Email:
                 var hasEmail = request.Get(SendAccessConstants.TokenRequest.Email) is not null;
@@ -81,7 +81,7 @@ public class SendNeverAuthenticateRequestValidator(GlobalSettings globalSettings
             hmacKey = Encoding.UTF8.GetBytes(globalSettings.SendDefaultHashKey);
         }
 
-        var index = EnumerationProtectionHelpers.GetIndexForSaltHash(hmacKey, salt, range);
+        var index = EnumerationProtectionHelpers.GetIndexForInputHash(hmacKey, salt, range);
         return _errorOptions[index];
     }
 }

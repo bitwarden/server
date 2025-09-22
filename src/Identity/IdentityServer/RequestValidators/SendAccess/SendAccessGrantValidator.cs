@@ -22,8 +22,8 @@ public class SendAccessGrantValidator(
 
     private static readonly Dictionary<string, string> _sendGrantValidatorErrorDescriptions = new()
     {
-        { SendAccessConstants.GrantValidatorResults.SendIdRequired, $"{SendAccessConstants.TokenRequest.SendId} is required." },
-        { SendAccessConstants.GrantValidatorResults.InvalidSendId, $"{SendAccessConstants.TokenRequest.SendId} is invalid." }
+        { SendAccessConstants.SendIdGuidValidationResults.SendIdRequired, $"{SendAccessConstants.TokenRequest.SendId} is required." },
+        { SendAccessConstants.SendIdGuidValidationResults.InvalidSendId, $"{SendAccessConstants.TokenRequest.SendId} is invalid." }
     };
 
     public async Task ValidateAsync(ExtensionGrantValidationContext context)
@@ -36,7 +36,7 @@ public class SendAccessGrantValidator(
         }
 
         var (sendIdGuid, result) = GetRequestSendId(context);
-        if (result != SendAccessConstants.GrantValidatorResults.ValidGuid)
+        if (result != SendAccessConstants.SendIdGuidValidationResults.ValidSendGuid)
         {
             context.Result = BuildErrorResult(result);
             return;
@@ -83,7 +83,7 @@ public class SendAccessGrantValidator(
         // if the sendId is null then the request is the wrong shape and the request is invalid
         if (sendId == null)
         {
-            return (Guid.Empty, SendAccessConstants.GrantValidatorResults.SendIdRequired);
+            return (Guid.Empty, SendAccessConstants.SendIdGuidValidationResults.SendIdRequired);
         }
         // the send_id is not null so the request is the correct shape, so we will attempt to parse it
         try
@@ -93,20 +93,20 @@ public class SendAccessGrantValidator(
             // Guid.Empty indicates an invalid send_id return invalid grant
             if (sendGuid == Guid.Empty)
             {
-                return (Guid.Empty, SendAccessConstants.GrantValidatorResults.InvalidSendId);
+                return (Guid.Empty, SendAccessConstants.SendIdGuidValidationResults.InvalidSendId);
             }
-            return (sendGuid, SendAccessConstants.GrantValidatorResults.ValidGuid);
+            return (sendGuid, SendAccessConstants.SendIdGuidValidationResults.ValidSendGuid);
         }
         catch
         {
-            return (Guid.Empty, SendAccessConstants.GrantValidatorResults.InvalidSendId);
+            return (Guid.Empty, SendAccessConstants.SendIdGuidValidationResults.InvalidSendId);
         }
     }
 
     /// <summary>
     /// Builds an error result for the specified error type.
     /// </summary>
-    /// <param name="error">This error is a constant string from <see cref="SendAccessConstants.GrantValidatorResults"/></param>
+    /// <param name="error">This error is a constant string from <see cref="SendAccessConstants.SendIdGuidValidationResults"/></param>
     /// <returns>The error result.</returns>
     private static GrantValidationResult BuildErrorResult(string error)
     {
@@ -118,12 +118,12 @@ public class SendAccessGrantValidator(
         return error switch
         {
             // Request is the wrong shape
-            SendAccessConstants.GrantValidatorResults.SendIdRequired => new GrantValidationResult(
+            SendAccessConstants.SendIdGuidValidationResults.SendIdRequired => new GrantValidationResult(
                                 TokenRequestErrors.InvalidRequest,
                                 errorDescription: _sendGrantValidatorErrorDescriptions[error],
                                 customResponse),
             // Request is correct shape but data is bad
-            SendAccessConstants.GrantValidatorResults.InvalidSendId => new GrantValidationResult(
+            SendAccessConstants.SendIdGuidValidationResults.InvalidSendId => new GrantValidationResult(
                                 TokenRequestErrors.InvalidGrant,
                                 errorDescription: _sendGrantValidatorErrorDescriptions[error],
                                 customResponse),

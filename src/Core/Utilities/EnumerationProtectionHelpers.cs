@@ -12,7 +12,7 @@ public static class EnumerationProtectionHelpers
     /// <param name="inputString">The string to derive an index result</param>
     /// <param name="range">The range of possible index values</param>
     /// <returns>An int between 0 and range - 1</returns>
-    public static int GetIndexForSaltHash(byte[] hmacKey, string inputString, int range)
+    public static int GetIndexForInputHash(byte[] hmacKey, string inputString, int range)
     {
         if (hmacKey == null || range <= 0 || hmacKey.Length == 0)
         {

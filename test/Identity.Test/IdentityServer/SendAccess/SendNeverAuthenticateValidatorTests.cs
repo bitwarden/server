@@ -42,12 +42,12 @@ public class SendNeverAuthenticateRequestValidatorTests
         // Assert
         Assert.True(result.IsError);
         Assert.Equal(OidcConstants.TokenErrors.InvalidGrant, result.Error);
-        Assert.Equal(SendAccessConstants.GrantValidatorResults.InvalidSendId, result.ErrorDescription);
+        Assert.Equal(SendAccessConstants.SendIdGuidValidationResults.InvalidSendId, result.ErrorDescription);
 
         var customResponse = result.CustomResponse as Dictionary<string, object>;
         Assert.NotNull(customResponse);
         Assert.Equal(
-            SendAccessConstants.GrantValidatorResults.InvalidSendId, customResponse[SendAccessConstants.SendAccessError]);
+            SendAccessConstants.SendIdGuidValidationResults.InvalidSendId, customResponse[SendAccessConstants.SendAccessError]);
     }
 
     [Theory, BitAutoData]
@@ -173,7 +173,7 @@ public class SendNeverAuthenticateRequestValidatorTests
         // Assert
         Assert.True(result.IsError);
         Assert.Equal(OidcConstants.TokenErrors.InvalidGrant, result.Error);
-        Assert.Contains(result.ErrorDescription, SendAccessConstants.GrantValidatorResults.InvalidSendId);
+        Assert.Contains(result.ErrorDescription, SendAccessConstants.SendIdGuidValidationResults.InvalidSendId);
     }
 
     [Theory, BitAutoData]
@@ -196,7 +196,7 @@ public class SendNeverAuthenticateRequestValidatorTests
         // Assert
         Assert.True(result.IsError);
         Assert.Equal(OidcConstants.TokenErrors.InvalidGrant, result.Error);
-        Assert.Contains(result.ErrorDescription, SendAccessConstants.GrantValidatorResults.InvalidSendId);
+        Assert.Contains(result.ErrorDescription, SendAccessConstants.SendIdGuidValidationResults.InvalidSendId);
     }
 
     [Theory, BitAutoData]
@@ -254,7 +254,7 @@ public class SendNeverAuthenticateRequestValidatorTests
         // Both should have valid error types
         var validErrors = new[]
         {
-            SendAccessConstants.GrantValidatorResults.InvalidSendId,
+            SendAccessConstants.SendIdGuidValidationResults.InvalidSendId,
             SendAccessConstants.EmailOtpValidatorResults.EmailRequired,
             SendAccessConstants.PasswordValidatorResults.RequestPasswordIsRequired
         };

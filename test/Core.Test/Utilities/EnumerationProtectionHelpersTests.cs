@@ -7,10 +7,10 @@ namespace Bit.Core.Test.Utilities;
 
 public class EnumerationProtectionHelpersTests
 {
-    #region GetIndexForSaltHash Tests
+    #region GetIndexForInputHash Tests
 
     [Fact]
-    public void GetIndexForSaltHash_NullHmacKey_ReturnsZero()
+    public void GetIndexForInputHash_NullHmacKey_ReturnsZero()
     {
         // Arrange
         byte[] hmacKey = null;
@@ -18,14 +18,14 @@ public class EnumerationProtectionHelpersTests
         var range = 10;
 
         // Act
-        var result = EnumerationProtectionHelpers.GetIndexForSaltHash(hmacKey, salt, range);
+        var result = EnumerationProtectionHelpers.GetIndexForInputHash(hmacKey, salt, range);
 
         // Assert
         Assert.Equal(0, result);
     }
 
     [Fact]
-    public void GetIndexForSaltHash_ZeroRange_ReturnsZero()
+    public void GetIndexForInputHash_ZeroRange_ReturnsZero()
     {
         // Arrange
         var hmacKey = RandomNumberGenerator.GetBytes(32);
@@ -33,14 +33,14 @@ public class EnumerationProtectionHelpersTests
         var range = 0;
 
         // Act
-        var result = EnumerationProtectionHelpers.GetIndexForSaltHash(hmacKey, salt, range);
+        var result = EnumerationProtectionHelpers.GetIndexForInputHash(hmacKey, salt, range);
 
         // Assert
         Assert.Equal(0, result);
     }
 
     [Fact]
-    public void GetIndexForSaltHash_NegativeRange_ReturnsZero()
+    public void GetIndexForInputHash_NegativeRange_ReturnsZero()
     {
         // Arrange
         var hmacKey = RandomNumberGenerator.GetBytes(32);
@@ -48,14 +48,14 @@ public class EnumerationProtectionHelpersTests
         var range = -5;
 
         // Act
-        var result = EnumerationProtectionHelpers.GetIndexForSaltHash(hmacKey, salt, range);
+        var result = EnumerationProtectionHelpers.GetIndexForInputHash(hmacKey, salt, range);
 
         // Assert
         Assert.Equal(0, result);
     }
 
     [Fact]
-    public void GetIndexForSaltHash_ValidInputs_ReturnsConsistentResult()
+    public void GetIndexForInputHash_ValidInputs_ReturnsConsistentResult()
     {
         // Arrange
         var hmacKey = Encoding.UTF8.GetBytes("test-key-12345678901234567890123456789012");
@@ -63,8 +63,8 @@ public class EnumerationProtectionHelpersTests
         var range = 10;
 
         // Act
-        var result1 = EnumerationProtectionHelpers.GetIndexForSaltHash(hmacKey, salt, range);
-        var result2 = EnumerationProtectionHelpers.GetIndexForSaltHash(hmacKey, salt, range);
+        var result1 = EnumerationProtectionHelpers.GetIndexForInputHash(hmacKey, salt, range);
+        var result2 = EnumerationProtectionHelpers.GetIndexForInputHash(hmacKey, salt, range);
 
         // Assert
         Assert.Equal(result1, result2);
@@ -72,7 +72,7 @@ public class EnumerationProtectionHelpersTests
     }
 
     [Fact]
-    public void GetIndexForSaltHash_SameSaltSameKey_AlwaysReturnsSameResult()
+    public void GetIndexForInputHash_SameInputSameKey_AlwaysReturnsSameResult()
     {
         // Arrange
         var hmacKey = RandomNumberGenerator.GetBytes(32);
@@ -83,7 +83,7 @@ public class EnumerationProtectionHelpersTests
         var results = new int[10];
         for (var i = 0; i < 10; i++)
         {
-            results[i] = EnumerationProtectionHelpers.GetIndexForSaltHash(hmacKey, salt, range);
+            results[i] = EnumerationProtectionHelpers.GetIndexForInputHash(hmacKey, salt, range);
         }
 
         // Assert - All results should be identical
@@ -92,7 +92,7 @@ public class EnumerationProtectionHelpersTests
     }
 
     [Fact]
-    public void GetIndexForSaltHash_DifferentSaltsSameKey_ReturnsDifferentResults()
+    public void GetIndexForInputHash_DifferentInputsSameKey_ReturnsDifferentResults()
     {
         // Arrange
         var hmacKey = RandomNumberGenerator.GetBytes(32);
@@ -101,8 +101,8 @@ public class EnumerationProtectionHelpersTests
         var range = 100;
 
         // Act
-        var result1 = EnumerationProtectionHelpers.GetIndexForSaltHash(hmacKey, salt1, range);
-        var result2 = EnumerationProtectionHelpers.GetIndexForSaltHash(hmacKey, salt2, range);
+        var result1 = EnumerationProtectionHelpers.GetIndexForInputHash(hmacKey, salt1, range);
+        var result2 = EnumerationProtectionHelpers.GetIndexForInputHash(hmacKey, salt2, range);
 
         // Assert
         Assert.NotEqual(result1, result2);
@@ -111,7 +111,7 @@ public class EnumerationProtectionHelpersTests
     }
 
     [Fact]
-    public void GetIndexForSaltHash_DifferentKeysSameSalt_ReturnsDifferentResults()
+    public void GetIndexForInputHash_DifferentKeysSameInput_ReturnsDifferentResults()
     {
         // Arrange
         var hmacKey1 = RandomNumberGenerator.GetBytes(32);
@@ -120,8 +120,8 @@ public class EnumerationProtectionHelpersTests
         var range = 100;
 
         // Act
-        var result1 = EnumerationProtectionHelpers.GetIndexForSaltHash(hmacKey1, salt, range);
-        var result2 = EnumerationProtectionHelpers.GetIndexForSaltHash(hmacKey2, salt, range);
+        var result1 = EnumerationProtectionHelpers.GetIndexForInputHash(hmacKey1, salt, range);
+        var result2 = EnumerationProtectionHelpers.GetIndexForInputHash(hmacKey2, salt, range);
 
         // Assert
         Assert.NotEqual(result1, result2);
@@ -136,14 +136,14 @@ public class EnumerationProtectionHelpersTests
     [InlineData(10)]
     [InlineData(100)]
     [InlineData(1000)]
-    public void GetIndexForSaltHash_VariousRanges_ReturnsValidIndex(int range)
+    public void GetIndexForInputHash_VariousRanges_ReturnsValidIndex(int range)
     {
         // Arrange
         var hmacKey = RandomNumberGenerator.GetBytes(32);
         var salt = "test@example.com";
 
         // Act
-        var result = EnumerationProtectionHelpers.GetIndexForSaltHash(hmacKey, salt, range);
+        var result = EnumerationProtectionHelpers.GetIndexForInputHash(hmacKey, salt, range);
 
         // Assert
         Assert.InRange(result, 0, range - 1);
@@ -152,20 +152,20 @@ public class EnumerationProtectionHelpersTests
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
-    public void GetIndexForSaltHash_EmptyString_HandlesGracefully(string salt)
+    public void GetIndexForInputHash_EmptyString_HandlesGracefully(string salt)
     {
         // Arrange
         var hmacKey = RandomNumberGenerator.GetBytes(32);
 
         // Act
-        var result = EnumerationProtectionHelpers.GetIndexForSaltHash(hmacKey, salt, 10);
+        var result = EnumerationProtectionHelpers.GetIndexForInputHash(hmacKey, salt, 10);
 
         // Assert
         Assert.InRange(result, 0, 9);
     }
 
     [Fact]
-    public void GetIndexForSaltHash_NullSalt_ThrowsException()
+    public void GetIndexForInputHash_NullInput_ThrowsException()
     {
         // Arrange
         var hmacKey = RandomNumberGenerator.GetBytes(32);
@@ -174,11 +174,11 @@ public class EnumerationProtectionHelpersTests
 
         // Act & Assert
         Assert.Throws<NullReferenceException>(() =>
-            EnumerationProtectionHelpers.GetIndexForSaltHash(hmacKey, salt, range));
+            EnumerationProtectionHelpers.GetIndexForInputHash(hmacKey, salt, range));
     }
 
     [Fact]
-    public void GetIndexForSaltHash_SpecialCharacters_HandlesCorrectly()
+    public void GetIndexForInputHash_SpecialCharacters_HandlesCorrectly()
     {
         // Arrange
         var hmacKey = RandomNumberGenerator.GetBytes(32);
@@ -186,8 +186,8 @@ public class EnumerationProtectionHelpersTests
         var range = 50;
 
         // Act
-        var result1 = EnumerationProtectionHelpers.GetIndexForSaltHash(hmacKey, salt, range);
-        var result2 = EnumerationProtectionHelpers.GetIndexForSaltHash(hmacKey, salt, range);
+        var result1 = EnumerationProtectionHelpers.GetIndexForInputHash(hmacKey, salt, range);
+        var result2 = EnumerationProtectionHelpers.GetIndexForInputHash(hmacKey, salt, range);
 
         // Assert
         Assert.Equal(result1, result2);
@@ -195,7 +195,7 @@ public class EnumerationProtectionHelpersTests
     }
 
     [Fact]
-    public void GetIndexForSaltHash_UnicodeCharacters_HandlesCorrectly()
+    public void GetIndexForInputHash_UnicodeCharacters_HandlesCorrectly()
     {
         // Arrange
         var hmacKey = RandomNumberGenerator.GetBytes(32);
@@ -203,8 +203,8 @@ public class EnumerationProtectionHelpersTests
         var range = 25;
 
         // Act
-        var result1 = EnumerationProtectionHelpers.GetIndexForSaltHash(hmacKey, salt, range);
-        var result2 = EnumerationProtectionHelpers.GetIndexForSaltHash(hmacKey, salt, range);
+        var result1 = EnumerationProtectionHelpers.GetIndexForInputHash(hmacKey, salt, range);
+        var result2 = EnumerationProtectionHelpers.GetIndexForInputHash(hmacKey, salt, range);
 
         // Assert
         Assert.Equal(result1, result2);
@@ -212,7 +212,7 @@ public class EnumerationProtectionHelpersTests
     }
 
     [Fact]
-    public void GetIndexForSaltHash_LongSalt_HandlesCorrectly()
+    public void GetIndexForInputHash_LongInput_HandlesCorrectly()
     {
         // Arrange
         var hmacKey = RandomNumberGenerator.GetBytes(32);
@@ -220,7 +220,7 @@ public class EnumerationProtectionHelpersTests
         var range = 30;
 
         // Act
-        var result = EnumerationProtectionHelpers.GetIndexForSaltHash(hmacKey, salt, range);
+        var result = EnumerationProtectionHelpers.GetIndexForInputHash(hmacKey, salt, range);
 
         // Assert
         Assert.InRange(result, 0, range - 1);
