@@ -57,7 +57,8 @@ public class PreviewOrganizationTaxCommand(
                     var sponsoredPlan = StaticStore.GetSponsoredPlan(PlanSponsorshipType.FamiliesForEnterprise);
                     items.Add(new InvoiceSubscriptionDetailsItemOptions
                     {
-                        Price = sponsoredPlan.StripePlanId, Quantity = 1
+                        Price = sponsoredPlan.StripePlanId,
+                        Quantity = 1
                     });
                     break;
 
@@ -65,11 +66,13 @@ public class PreviewOrganizationTaxCommand(
                     items.AddRange([
                         new InvoiceSubscriptionDetailsItemOptions
                         {
-                            Price = plan.PasswordManager.StripeSeatPlanId, Quantity = purchase.PasswordManager.Seats
+                            Price = plan.PasswordManager.StripeSeatPlanId,
+                            Quantity = purchase.PasswordManager.Seats
                         },
                         new InvoiceSubscriptionDetailsItemOptions
                         {
-                            Price = plan.SecretsManager.StripeSeatPlanId, Quantity = purchase.SecretsManager.Seats
+                            Price = plan.SecretsManager.StripeSeatPlanId,
+                            Quantity = purchase.SecretsManager.Seats
                         }
                     ]);
                     options.Coupon = CouponIDs.SecretsManagerStandalone;
@@ -97,7 +100,8 @@ public class PreviewOrganizationTaxCommand(
                     {
                         items.Add(new InvoiceSubscriptionDetailsItemOptions
                         {
-                            Price = plan.SecretsManager.StripeSeatPlanId, Quantity = purchase.SecretsManager.Seats
+                            Price = plan.SecretsManager.StripeSeatPlanId,
+                            Quantity = purchase.SecretsManager.Seats
                         });
 
                         if (purchase.SecretsManager.AdditionalServiceAccounts > 0)
@@ -206,7 +210,8 @@ public class PreviewOrganizationTaxCommand(
                 {
                     items.Add(new InvoiceSubscriptionDetailsItemOptions
                     {
-                        Price = newPlan.PasswordManager.StripeStoragePlanId, Quantity = storage.Quantity
+                        Price = newPlan.PasswordManager.StripeStoragePlanId,
+                        Quantity = storage.Quantity
                     });
                 }
 
@@ -218,7 +223,8 @@ public class PreviewOrganizationTaxCommand(
                 {
                     items.Add(new InvoiceSubscriptionDetailsItemOptions
                     {
-                        Price = newPlan.SecretsManager.StripeSeatPlanId, Quantity = secretsManagerSeats.Quantity
+                        Price = newPlan.SecretsManager.StripeSeatPlanId,
+                        Quantity = secretsManagerSeats.Quantity
                     });
 
                     var hasServiceAccounts =
@@ -295,7 +301,8 @@ public class PreviewOrganizationTaxCommand(
             {
                 items.Add(new InvoiceSubscriptionDetailsItemOptions
                 {
-                    Price = currentPlan.SecretsManager.StripeSeatPlanId, Quantity = update.SecretsManager.Seats
+                    Price = currentPlan.SecretsManager.StripeSeatPlanId,
+                    Quantity = update.SecretsManager.Seats
                 });
 
                 if (update.SecretsManager.AdditionalServiceAccounts is > 0)
@@ -366,7 +373,8 @@ public class PreviewOrganizationTaxCommand(
         {
             options.CustomerDetails.TaxIds.Add(new InvoiceCustomerDetailsTaxIdOptions
             {
-                Type = TaxIdType.EUVAT, Value = $"ES{taxId.Value}"
+                Type = TaxIdType.EUVAT,
+                Value = $"ES{taxId.Value}"
             });
         }
 

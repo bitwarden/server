@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using Bit.Api.Billing.Attributes;
 using Bit.Core.Billing.Payment.Models;
 
@@ -13,7 +13,7 @@ public class MinimalTokenizedPaymentMethodRequest
     [Required]
     public required string Token { get; set; }
 
-    public TokenizedPaymentMethod ToDomain() => new ()
+    public TokenizedPaymentMethod ToDomain() => new()
     {
         Type = TokenizablePaymentMethodTypeExtensions.From(Type),
         Token = Token

@@ -62,31 +62,31 @@ public class RestartSubscriptionCommand(
         switch (subscriber)
         {
             case Organization organization:
-            {
-                organization.GatewaySubscriptionId = subscription.Id;
-                organization.Enabled = true;
-                organization.ExpirationDate = subscription.CurrentPeriodEnd;
-                organization.RevisionDate = DateTime.UtcNow;
-                await organizationRepository.ReplaceAsync(organization);
-                break;
-            }
+                {
+                    organization.GatewaySubscriptionId = subscription.Id;
+                    organization.Enabled = true;
+                    organization.ExpirationDate = subscription.CurrentPeriodEnd;
+                    organization.RevisionDate = DateTime.UtcNow;
+                    await organizationRepository.ReplaceAsync(organization);
+                    break;
+                }
             case Provider provider:
-            {
-                provider.GatewaySubscriptionId = subscription.Id;
-                provider.Enabled = true;
-                provider.RevisionDate = DateTime.UtcNow;
-                await providerRepository.ReplaceAsync(provider);
-                break;
-            }
+                {
+                    provider.GatewaySubscriptionId = subscription.Id;
+                    provider.Enabled = true;
+                    provider.RevisionDate = DateTime.UtcNow;
+                    await providerRepository.ReplaceAsync(provider);
+                    break;
+                }
             case User user:
-            {
-                user.GatewaySubscriptionId = subscription.Id;
-                user.Premium = true;
-                user.PremiumExpirationDate = subscription.CurrentPeriodEnd;
-                user.RevisionDate = DateTime.UtcNow;
-                await userRepository.ReplaceAsync(user);
-                break;
-            }
+                {
+                    user.GatewaySubscriptionId = subscription.Id;
+                    user.Premium = true;
+                    user.PremiumExpirationDate = subscription.CurrentPeriodEnd;
+                    user.RevisionDate = DateTime.UtcNow;
+                    await userRepository.ReplaceAsync(user);
+                    break;
+                }
         }
     }
 }

@@ -32,7 +32,8 @@ public class PreviewPremiumTaxCommand(
                 {
                     Address = new AddressOptions
                     {
-                        Country = billingAddress.Country, PostalCode = billingAddress.PostalCode
+                        Country = billingAddress.Country,
+                        PostalCode = billingAddress.PostalCode
                     }
                 },
                 Currency = "usd",
@@ -49,7 +50,8 @@ public class PreviewPremiumTaxCommand(
             {
                 options.SubscriptionDetails.Items.Add(new InvoiceSubscriptionDetailsItemOptions
                 {
-                    Price = Prices.StoragePlanPersonal, Quantity = additionalStorage
+                    Price = Prices.StoragePlanPersonal,
+                    Quantity = additionalStorage
                 });
             }
 

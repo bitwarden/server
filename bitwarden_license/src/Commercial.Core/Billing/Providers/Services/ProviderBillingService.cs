@@ -118,7 +118,9 @@ public class ProviderBillingService(
 
         var providerOrganization = new ProviderOrganization
         {
-            ProviderId = provider.Id, OrganizationId = organization.Id, Key = key
+            ProviderId = provider.Id,
+            OrganizationId = organization.Id,
+            Key = key
         };
 
         /*
@@ -510,7 +512,8 @@ public class ProviderBillingService(
             {
                 options.TaxIdData.Add(new CustomerTaxIdDataOptions
                 {
-                    Type = TaxIdType.EUVAT, Value = $"ES{billingAddress.TaxId.Value}"
+                    Type = TaxIdType.EUVAT,
+                    Value = $"ES{billingAddress.TaxId.Value}"
                 });
             }
         }
@@ -521,37 +524,37 @@ public class ProviderBillingService(
         switch (paymentMethod.Type)
         {
             case TokenizablePaymentMethodType.BankAccount:
-            {
-                var setupIntent =
-                    (await stripeAdapter.SetupIntentList(new SetupIntentListOptions
-                    {
-                        PaymentMethod = paymentMethod.Token
-                    }))
-                    .FirstOrDefault();
-
-                if (setupIntent == null)
                 {
-                    logger.LogError(
-                        "Cannot create customer for provider ({ProviderID}) without a setup intent for their bank account",
-                        provider.Id);
-                    throw new BillingException();
-                }
+                    var setupIntent =
+                        (await stripeAdapter.SetupIntentList(new SetupIntentListOptions
+                        {
+                            PaymentMethod = paymentMethod.Token
+                        }))
+                        .FirstOrDefault();
 
-                await setupIntentCache.Set(provider.Id, setupIntent.Id);
-                break;
-            }
+                    if (setupIntent == null)
+                    {
+                        logger.LogError(
+                            "Cannot create customer for provider ({ProviderID}) without a setup intent for their bank account",
+                            provider.Id);
+                        throw new BillingException();
+                    }
+
+                    await setupIntentCache.Set(provider.Id, setupIntent.Id);
+                    break;
+                }
             case TokenizablePaymentMethodType.Card:
-            {
-                options.PaymentMethod = paymentMethod.Token;
-                options.InvoiceSettings.DefaultPaymentMethod = paymentMethod.Token;
-                break;
-            }
+                {
+                    options.PaymentMethod = paymentMethod.Token;
+                    options.InvoiceSettings.DefaultPaymentMethod = paymentMethod.Token;
+                    break;
+                }
             case TokenizablePaymentMethodType.PayPal:
-            {
-                braintreeCustomerId = await subscriberService.CreateBraintreeCustomer(provider, paymentMethod.Token);
-                options.Metadata[BraintreeCustomerIdKey] = braintreeCustomerId;
-                break;
-            }
+                {
+                    braintreeCustomerId = await subscriberService.CreateBraintreeCustomer(provider, paymentMethod.Token);
+                    options.Metadata[BraintreeCustomerIdKey] = braintreeCustomerId;
+                    break;
+                }
         }
 
         try
@@ -576,18 +579,18 @@ public class ProviderBillingService(
             switch (paymentMethod.Type)
             {
                 case TokenizablePaymentMethodType.BankAccount:
-                {
-                    var setupIntentId = await setupIntentCache.GetSetupIntentIdForSubscriber(provider.Id);
-                    await stripeAdapter.SetupIntentCancel(setupIntentId,
-                        new SetupIntentCancelOptions { CancellationReason = "abandoned" });
-                    await setupIntentCache.RemoveSetupIntentForSubscriber(provider.Id);
-                    break;
-                }
+                    {
+                        var setupIntentId = await setupIntentCache.GetSetupIntentIdForSubscriber(provider.Id);
+                        await stripeAdapter.SetupIntentCancel(setupIntentId,
+                            new SetupIntentCancelOptions { CancellationReason = "abandoned" });
+                        await setupIntentCache.RemoveSetupIntentForSubscriber(provider.Id);
+                        break;
+                    }
                 case TokenizablePaymentMethodType.PayPal when !string.IsNullOrEmpty(braintreeCustomerId):
-                {
-                    await braintreeGateway.Customer.DeleteAsync(braintreeCustomerId);
-                    break;
-                }
+                    {
+                        await braintreeGateway.Customer.DeleteAsync(braintreeCustomerId);
+                        break;
+                    }
             }
         }
     }
@@ -628,7 +631,8 @@ public class ProviderBillingService(
 
             subscriptionItemOptionsList.Add(new SubscriptionItemOptions
             {
-                Price = priceId, Quantity = providerPlan.SeatMinimum
+                Price = priceId,
+                Quantity = providerPlan.SeatMinimum
             });
         }
 
@@ -745,14 +749,18 @@ public class ProviderBillingService(
 
                         subscriptionItemOptionsList.Add(new SubscriptionItemOptions
                         {
-                            Id = subscriptionItem.Id, Price = priceId, Quantity = providerPlan.AllocatedSeats
+                            Id = subscriptionItem.Id,
+                            Price = priceId,
+                            Quantity = providerPlan.AllocatedSeats
                         });
                     }
                     else
                     {
                         subscriptionItemOptionsList.Add(new SubscriptionItemOptions
                         {
-                            Id = subscriptionItem.Id, Price = priceId, Quantity = updatedSeatMinimum
+                            Id = subscriptionItem.Id,
+                            Price = priceId,
+                            Quantity = updatedSeatMinimum
                         });
                     }
                 }
@@ -769,7 +777,9 @@ public class ProviderBillingService(
                         providerPlan.PurchasedSeats = 0;
                         subscriptionItemOptionsList.Add(new SubscriptionItemOptions
                         {
-                            Id = subscriptionItem.Id, Price = priceId, Quantity = updatedSeatMinimum
+                            Id = subscriptionItem.Id,
+                            Price = priceId,
+                            Quantity = updatedSeatMinimum
                         });
                     }
                 }

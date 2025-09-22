@@ -299,10 +299,4 @@ public class StripeAdapter : IStripeAdapter
 
     public Task<Price> PriceGetAsync(string id, PriceGetOptions options = null)
         => _priceService.GetAsync(id, options);
-
-    public Task<Calculation> TaxCalculationCreateAsync(CalculationCreateOptions options)
-        => _calculationService.CreateAsync(options);
-
-    public Task<Calculation> TaxCalculationGetAsync(string id, CalculationGetOptions options = null)
-        => _calculationService.GetAsync(id, options);
 }

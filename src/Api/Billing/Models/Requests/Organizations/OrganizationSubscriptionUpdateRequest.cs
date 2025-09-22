@@ -14,7 +14,8 @@ public record OrganizationSubscriptionUpdateRequest
             PasswordManager != null
                 ? new OrganizationSubscriptionUpdate.PasswordManagerSelections
                 {
-                    Seats = PasswordManager.Seats, AdditionalStorage = PasswordManager.AdditionalStorage
+                    Seats = PasswordManager.Seats,
+                    AdditionalStorage = PasswordManager.AdditionalStorage
                 }
                 : null,
         SecretsManager =
