@@ -325,49 +325,6 @@ public class OrganizationService : IOrganizationService
         return paymentIntentClientSecret;
     }
 
-    public async Task VerifyBankAsync(Guid organizationId, int amount1, int amount2)
-    {
-        var organization = await GetOrgById(organizationId);
-        if (organization == null)
-        {
-            throw new NotFoundException();
-        }
-
-        if (string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
-        {
-            throw new GatewayException("Not a gateway customer.");
-        }
-
-        var bankService = new BankAccountService();
-        var customer = await _stripeAdapter.CustomerGetAsync(organization.GatewayCustomerId,
-            new CustomerGetOptions { Expand = new List<string> { "sources" } });
-        if (customer == null)
-        {
-            throw new GatewayException("Cannot find customer.");
-        }
-
-        var bankAccount = customer.Sources
-            .FirstOrDefault(s => s is BankAccount && ((BankAccount)s).Status != "verified") as BankAccount;
-        if (bankAccount == null)
-        {
-            throw new GatewayException("Cannot find an unverified bank account.");
-        }
-
-        try
-        {
-            var result = await bankService.VerifyAsync(organization.GatewayCustomerId, bankAccount.Id,
-                new BankAccountVerifyOptions { Amounts = new List<long> { amount1, amount2 } });
-            if (result.Status != "verified")
-            {
-                throw new GatewayException("Unable to verify account.");
-            }
-        }
-        catch (StripeException e)
-        {
-            throw new GatewayException(e.Message);
-        }
-    }
-
     public async Task UpdateExpirationDateAsync(Guid organizationId, DateTime? expirationDate)
     {
         var org = await GetOrgById(organizationId);
