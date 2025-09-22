@@ -233,6 +233,9 @@ public static class FeatureFlagKeys
     /* Innovation Team */
     public const string ArchiveVaultItems = "pm-19148-innovation-archive";
 
+    /* DIRT Team */
+    public const string PM22887_RiskInsightsActivityTab = "pm-22887-risk-insights-activity-tab";
+
     public static List<string> GetAllKeys()
     {
         return typeof(FeatureFlagKeys).GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
