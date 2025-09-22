@@ -7,8 +7,6 @@ using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
-using NS = Newtonsoft.Json;
-using NSL = Newtonsoft.Json.Linq;
 
 namespace Bit.Api.Vault.Models.Request;
 
@@ -40,11 +38,26 @@ public class CipherRequestModel
     // TODO: Rename to Attachments whenever the above is finally removed.
     public Dictionary<string, CipherAttachmentModel> Attachments2 { get; set; }
 
+    [Obsolete("Use Data instead.")]
     public CipherLoginModel Login { get; set; }
+
+    [Obsolete("Use Data instead.")]
     public CipherCardModel Card { get; set; }
+
+    [Obsolete("Use Data instead.")]
     public CipherIdentityModel Identity { get; set; }
+
+    [Obsolete("Use Data instead.")]
     public CipherSecureNoteModel SecureNote { get; set; }
+
+    [Obsolete("Use Data instead.")]
     public CipherSSHKeyModel SSHKey { get; set; }
+
+    /// <summary>
+    /// JSON string containing cipher-specific data
+    /// </summary>
+    [StringLength(500000)]
+    public string Data { get; set; }
     public DateTime? LastKnownRevisionDate { get; set; } = null;
     public DateTime? ArchivedDate { get; set; }
 
@@ -73,29 +86,42 @@ public class CipherRequestModel
 
     public Cipher ToCipher(Cipher existingCipher)
     {
-        switch (existingCipher.Type)
+        // If Data field is provided, use it directly
+        if (!string.IsNullOrWhiteSpace(Data))
         {
-            case CipherType.Login:
-                var loginObj = NSL.JObject.FromObject(ToCipherLoginData(),
-                    new NS.JsonSerializer { NullValueHandling = NS.NullValueHandling.Ignore });
-                // TODO: Switch to JsonNode in .NET 6 https://docs.microsoft.com/en-us/dotnet/standard/serialization/system-text-json-use-dom-utf8jsonreader-utf8jsonwriter?pivots=dotnet-6-0
-                loginObj[nameof(CipherLoginData.Uri)]?.Parent?.Remove();
-                existingCipher.Data = loginObj.ToString(NS.Formatting.None);
-                break;
-            case CipherType.Card:
-                existingCipher.Data = JsonSerializer.Serialize(ToCipherCardData(), JsonHelpers.IgnoreWritingNull);
-                break;
-            case CipherType.Identity:
-                existingCipher.Data = JsonSerializer.Serialize(ToCipherIdentityData(), JsonHelpers.IgnoreWritingNull);
-                break;
-            case CipherType.SecureNote:
-                existingCipher.Data = JsonSerializer.Serialize(ToCipherSecureNoteData(), JsonHelpers.IgnoreWritingNull);
-                break;
-            case CipherType.SSHKey:
-                existingCipher.Data = JsonSerializer.Serialize(ToCipherSSHKeyData(), JsonHelpers.IgnoreWritingNull);
-                break;
-            default:
-                throw new ArgumentException("Unsupported type: " + nameof(Type) + ".");
+            existingCipher.Data = Data;
+        }
+        else
+        {
+            // Fallback to structured fields
+            switch (existingCipher.Type)
+            {
+                case CipherType.Login:
+                    var loginData = ToCipherLoginData();
+                    var loginJson = JsonSerializer.Serialize(loginData, JsonHelpers.IgnoreWritingNull);
+                    var loginObj = JsonDocument.Parse(loginJson);
+                    var loginDict = JsonSerializer.Deserialize<Dictionary<string, object>>(loginJson);
+                    loginDict?.Remove(nameof(CipherLoginData.Uri));
+
+                    existingCipher.Data = JsonSerializer.Serialize(loginDict, JsonHelpers.IgnoreWritingNull);
+                    break;
+                case CipherType.Card:
+                    existingCipher.Data = JsonSerializer.Serialize(ToCipherCardData(), JsonHelpers.IgnoreWritingNull);
+                    break;
+                case CipherType.Identity:
+                    existingCipher.Data =
+                        JsonSerializer.Serialize(ToCipherIdentityData(), JsonHelpers.IgnoreWritingNull);
+                    break;
+                case CipherType.SecureNote:
+                    existingCipher.Data =
+                        JsonSerializer.Serialize(ToCipherSecureNoteData(), JsonHelpers.IgnoreWritingNull);
+                    break;
+                case CipherType.SSHKey:
+                    existingCipher.Data = JsonSerializer.Serialize(ToCipherSSHKeyData(), JsonHelpers.IgnoreWritingNull);
+                    break;
+                default:
+                    throw new ArgumentException("Unsupported type: " + nameof(Type) + ".");
+            }
         }
 
         existingCipher.Reprompt = Reprompt;
