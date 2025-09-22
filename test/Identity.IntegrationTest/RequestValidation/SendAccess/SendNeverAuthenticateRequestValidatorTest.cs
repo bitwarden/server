@@ -37,7 +37,7 @@ public class SendNeverAuthenticateRequestValidatorIntegrationTests(
 
         Assert.Contains(OidcConstants.TokenErrors.InvalidGrant, content);
 
-        var expectedError = SendAccessConstants.SendIdGuidValidationResults.InvalidSendId;
+        var expectedError = SendAccessConstants.SendIdGuidValidatorResults.InvalidSendId;
         Assert.Contains(expectedError, content);
     }
 

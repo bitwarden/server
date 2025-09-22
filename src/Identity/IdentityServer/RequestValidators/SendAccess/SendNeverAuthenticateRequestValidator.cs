@@ -34,7 +34,7 @@ public class SendNeverAuthenticateRequestValidator(GlobalSettings globalSettings
         switch (neverAuthenticateError)
         {
             case SendAccessConstants.EnumerationProtection.Guid:
-                errorType = SendAccessConstants.SendIdGuidValidationResults.InvalidSendId;
+                errorType = SendAccessConstants.SendIdGuidValidatorResults.InvalidSendId;
                 break;
             case SendAccessConstants.EnumerationProtection.Email:
                 var hasEmail = request.Get(SendAccessConstants.TokenRequest.Email) is not null;
