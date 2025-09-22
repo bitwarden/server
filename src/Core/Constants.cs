@@ -184,6 +184,7 @@ public static class FeatureFlagKeys
     public const string PM17987_BlockType0 = "pm-17987-block-type-0";
     public const string ForceUpdateKDFSettings = "pm-18021-force-update-kdf-settings";
     public const string UnlockWithMasterPasswordUnlockData = "pm-23246-unlock-with-master-password-unlock-data";
+    public const string WindowsBiometricsV2 = "pm-25373-windows-biometrics-v2";
 
     /* Mobile Team */
     public const string NativeCarouselFlow = "native-carousel-flow";
@@ -232,6 +233,9 @@ public static class FeatureFlagKeys
 
     /* Innovation Team */
     public const string ArchiveVaultItems = "pm-19148-innovation-archive";
+
+    /* DIRT Team */
+    public const string PM22887_RiskInsightsActivityTab = "pm-22887-risk-insights-activity-tab";
 
     public static List<string> GetAllKeys()
     {
