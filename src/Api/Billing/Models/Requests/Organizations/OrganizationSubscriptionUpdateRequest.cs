@@ -5,8 +5,8 @@ namespace Bit.Api.Billing.Models.Requests.Organizations;
 
 public record OrganizationSubscriptionUpdateRequest
 {
-    public PasswordManagerSelections? PasswordManager { get; set; }
-    public SecretsManagerSelections? SecretsManager { get; set; }
+    public PasswordManagerUpdateSelections? PasswordManager { get; set; }
+    public SecretsManagerUpdateSelections? SecretsManager { get; set; }
 
     public OrganizationSubscriptionUpdate ToDomain() => new()
     {
@@ -28,7 +28,7 @@ public record OrganizationSubscriptionUpdateRequest
                 : null
     };
 
-    public record PasswordManagerSelections
+    public record PasswordManagerUpdateSelections
     {
         [Range(1, 100000, ErrorMessage = "Password Manager seats must be between 1 and 100,000")]
         public int? Seats { get; set; }
@@ -37,7 +37,7 @@ public record OrganizationSubscriptionUpdateRequest
         public int? AdditionalStorage { get; set; }
     }
 
-    public record SecretsManagerSelections
+    public record SecretsManagerUpdateSelections
     {
         [Range(0, 100000, ErrorMessage = "Secrets Manager seats must be between 0 and 100,000")]
         public int? Seats { get; set; }

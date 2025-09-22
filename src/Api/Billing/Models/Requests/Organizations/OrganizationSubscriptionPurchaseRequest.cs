@@ -16,9 +16,9 @@ public record OrganizationSubscriptionPurchaseRequest : IValidatableObject
     public PlanCadenceType Cadence { get; set; }
 
     [Required]
-    public required PasswordManagerSelections PasswordManager { get; set; }
+    public required PasswordManagerPurchaseSelections PasswordManager { get; set; }
 
-    public SecretsManagerSelections? SecretsManager { get; set; }
+    public SecretsManagerPurchaseSelections? SecretsManager { get; set; }
 
     public OrganizationSubscriptionPurchase ToDomain() => new()
     {
@@ -56,7 +56,7 @@ public record OrganizationSubscriptionPurchaseRequest : IValidatableObject
         }
     }
 
-    public record PasswordManagerSelections
+    public record PasswordManagerPurchaseSelections
     {
         [Required]
         [Range(1, 100000, ErrorMessage = "Password Manager seats must be between 1 and 100,000")]
@@ -69,7 +69,7 @@ public record OrganizationSubscriptionPurchaseRequest : IValidatableObject
         public bool Sponsored { get; set; } = false;
     }
 
-    public record SecretsManagerSelections
+    public record SecretsManagerPurchaseSelections
     {
         [Required]
         [Range(1, 100000, ErrorMessage = "Secrets Manager seats must be between 1 and 100,000")]
