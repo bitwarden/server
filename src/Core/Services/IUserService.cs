@@ -133,4 +133,18 @@ public interface IUserService
     /// </summary>
     /// <inheritdoc cref="IsClaimedByAnyOrganizationAsync"/>
     Task<IEnumerable<Organization>> GetOrganizationsClaimingUserAsync(Guid userId);
+
+    /// <summary>
+    /// Updates the failed authentication details for the specified user.
+    /// </summary>
+    /// <param name="user">The user whose failed authentication count is to be updated.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task UpdateFailedAuthenticationDetailsAsync(User user);
+
+    /// <summary>
+    /// Resets the failed authentication details for the specified user.
+    /// </summary>
+    /// <param name="user">The user whose failed authentication details are to be reset.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task ResetFailedAuthenticationDetailsAsync(User user);
 }

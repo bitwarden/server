@@ -1412,4 +1412,30 @@ public class UserService : UserManager<User>, IUserService
             await _mailService.SendWelcomeEmailAsync(user);
         }
     }
+
+    public async Task UpdateFailedAuthenticationDetailsAsync(User user)
+    {
+        if (user == null)
+        {
+            return;
+        }
+
+        var utcNow = DateTime.UtcNow;
+        user.FailedLoginCount = ++user.FailedLoginCount;
+        user.LastFailedLoginDate = user.RevisionDate = utcNow;
+        await _userRepository.ReplaceAsync(user);
+    }
+
+    public async Task ResetFailedAuthenticationDetailsAsync(User user)
+    {
+        // Early escape if db hit not necessary
+        if (user == null || user.FailedLoginCount == 0)
+        {
+            return;
+        }
+
+        user.FailedLoginCount = 0;
+        user.RevisionDate = DateTime.UtcNow;
+        await _userRepository.ReplaceAsync(user);
+    }
 }

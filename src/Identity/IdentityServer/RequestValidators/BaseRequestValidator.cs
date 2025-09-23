@@ -34,7 +34,6 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly ILogger _logger;
     private readonly GlobalSettings _globalSettings;
-    private readonly IUserRepository _userRepository;
     private readonly IAuthRequestRepository _authRequestRepository;
     private readonly IMailService _mailService;
 
@@ -56,7 +55,6 @@ public abstract class BaseRequestValidator<T> where T : class
         ILogger logger,
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
-        IUserRepository userRepository,
         IPolicyService policyService,
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
@@ -76,7 +74,6 @@ public abstract class BaseRequestValidator<T> where T : class
         CurrentContext = currentContext;
         _globalSettings = globalSettings;
         PolicyService = policyService;
-        _userRepository = userRepository;
         FeatureService = featureService;
         SsoConfigRepository = ssoConfigRepository;
         UserDecryptionOptionsBuilder = userDecryptionOptionsBuilder;
@@ -93,7 +90,7 @@ public abstract class BaseRequestValidator<T> where T : class
         var user = validatorContext.User;
         if (!valid)
         {
-            await UpdateFailedAuthDetailsAsync(user);
+            await _userService.UpdateFailedAuthenticationDetailsAsync(user);
 
             await BuildErrorResultAsync("Username or password is incorrect. Try again.", false, context, user);
             return;
@@ -164,7 +161,8 @@ public abstract class BaseRequestValidator<T> where T : class
                 else
                 {
                     await SendFailedTwoFactorEmail(user, twoFactorProviderType);
-                    await UpdateFailedAuthDetailsAsync(user);
+                    await _userService.UpdateFailedAuthenticationDetailsAsync(user);
+
                     await BuildErrorResultAsync("Two-step token is invalid. Try again.", true, context, user);
                 }
                 return;
@@ -234,7 +232,7 @@ public abstract class BaseRequestValidator<T> where T : class
 
         var customResponse = await BuildCustomResponse(user, context, device, sendRememberToken);
 
-        await ResetFailedAuthDetailsAsync(user);
+        await _userService.ResetFailedAuthenticationDetailsAsync(user);
 
         // Once we've built the claims and custom response, we can set the success result.
         // We delegate this to the derived classes, as the implementation varies based on the grant type.
@@ -349,32 +347,6 @@ public abstract class BaseRequestValidator<T> where T : class
 
         // Default - SSO is not required
         return false;
-    }
-
-    private async Task ResetFailedAuthDetailsAsync(User user)
-    {
-        // Early escape if db hit not necessary
-        if (user == null || user.FailedLoginCount == 0)
-        {
-            return;
-        }
-
-        user.FailedLoginCount = 0;
-        user.RevisionDate = DateTime.UtcNow;
-        await _userRepository.ReplaceAsync(user);
-    }
-
-    private async Task UpdateFailedAuthDetailsAsync(User user)
-    {
-        if (user == null)
-        {
-            return;
-        }
-
-        var utcNow = DateTime.UtcNow;
-        user.FailedLoginCount = ++user.FailedLoginCount;
-        user.LastFailedLoginDate = user.RevisionDate = utcNow;
-        await _userRepository.ReplaceAsync(user);
     }
 
     private async Task SendFailedTwoFactorEmail(User user, TwoFactorProviderType failedAttemptType)
