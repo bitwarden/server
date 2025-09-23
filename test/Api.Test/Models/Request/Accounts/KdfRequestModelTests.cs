@@ -1,6 +1,9 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿#nullable enable
+using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Core.Enums;
+using Bit.Core.Utilities;
 using Xunit;
 
 namespace Bit.Api.Test.Models.Request.Accounts;
@@ -14,7 +17,7 @@ public class KdfRequestModelTests
     [InlineData(KdfType.Argon2id, 5, 500, 8)] // Somewhere in the middle
     [InlineData(KdfType.Argon2id, 2, 15, 1)] // Right on the lower boundary
     [InlineData(KdfType.Argon2id, 10, 1024, 16)] // Right on the upper boundary
-    public void Validate_IsValid(KdfType kdfType, int? kdfIterations, int? kdfMemory, int? kdfParallelism)
+    public void Validate_IsValid(KdfType kdfType, int kdfIterations, int? kdfMemory, int? kdfParallelism)
     {
         var model = new KdfRequestModel
         {
@@ -31,7 +34,6 @@ public class KdfRequestModelTests
     }
 
     [Theory]
-    [InlineData(null, 350_000, null, null, 1)] // Although KdfType is nullable, it's marked as [Required]
     [InlineData(KdfType.PBKDF2_SHA256, 500_000, null, null, 1)] // Too few iterations
     [InlineData(KdfType.PBKDF2_SHA256, 2_000_001, null, null, 1)] // Too many iterations
     [InlineData(KdfType.Argon2id, 0, 30, 8, 1)] // Iterations must be greater than 0
@@ -39,7 +41,8 @@ public class KdfRequestModelTests
     [InlineData(KdfType.Argon2id, 10, 14, 0, 1)] // Too small of a parallelism value
     [InlineData(KdfType.Argon2id, 10, 1025, 8, 1)] // Too much memory
     [InlineData(KdfType.Argon2id, 10, 512, 17, 1)] // Too big of a parallelism value
-    public void Validate_Fails(KdfType? kdfType, int? kdfIterations, int? kdfMemory, int? kdfParallelism, int expectedFailures)
+    public void Validate_Fails(KdfType kdfType, int kdfIterations, int? kdfMemory, int? kdfParallelism,
+        int expectedFailures)
     {
         var model = new KdfRequestModel
         {
@@ -54,6 +57,39 @@ public class KdfRequestModelTests
         var results = Validate(model);
         Assert.NotEmpty(results);
         Assert.Equal(expectedFailures, results.Count);
+    }
+
+    [Theory]
+    [InlineData("Kdf")]
+    [InlineData("KdfIterations")]
+    public void Validate_RequiredFieldNotProvided_Invalid(string requiredField)
+    {
+        var model = new KdfRequestModel
+        {
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = 500_000,
+            KdfMemory = null,
+            KdfParallelism = null,
+            Key = "TEST",
+            NewMasterPasswordHash = "TEST",
+        };
+
+        var dictionary = new Dictionary<string, object?>();
+        foreach (var property in model.GetType().GetProperties())
+        {
+            if (property.Name == requiredField)
+            {
+                continue;
+            }
+
+            dictionary[property.Name] = property.GetValue(model);
+        }
+
+        var serialized = JsonSerializer.Serialize(dictionary, JsonHelpers.IgnoreWritingNull);
+        var jsonException =
+            Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<KdfRequestModel>(serialized));
+        Assert.Contains($"missing required properties, including the following: {requiredField}",
+            jsonException.Message);
     }
 
     public static List<ValidationResult> Validate(KdfRequestModel model)

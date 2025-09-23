@@ -9,6 +9,7 @@ using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -21,6 +22,8 @@ namespace Bit.Api.Test.Auth.Controllers;
 
 public class AccountsControllerTests : IDisposable
 {
+    private static readonly string _mockEncryptedString =
+        "2.AOs41Hd8OQiCPXjyJKCiDA==|O6OHgt2U2hJGBSNGnimJmg==|iD33s8B69C8JhYYhSa4V1tArjvLr8eEaGqOV7BRo5Jk=";
 
     private readonly AccountsController _sut;
     private readonly IOrganizationService _organizationService;
@@ -591,6 +594,74 @@ public class AccountsControllerTests : IDisposable
 
         // Assert
         await _twoFactorEmailService.Received(1).SendNewDeviceVerificationEmailAsync(user);
+    }
+
+    [Fact]
+    public async Task PostKdf_WhenUserExistsAndChangeSucceeds_ShouldCallChangeKdfAsync()
+    {
+        var user = GenerateExampleUser();
+        var model = new KdfRequestModel
+        {
+            MasterPasswordHash = "currentPasswordHash",
+            NewMasterPasswordHash = "newPasswordHash",
+            Key = _mockEncryptedString,
+            Kdf = KdfType.Argon2id,
+            KdfIterations = 3,
+            KdfMemory = 64,
+            KdfParallelism = 4
+        };
+
+        ConfigureUserServiceToReturnValidPrincipalFor(user);
+        _userService.ChangeKdfAsync(Arg.Any<User>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+                Arg.Any<KdfType>(), Arg.Any<int>(), Arg.Any<int?>(), Arg.Any<int?>())
+            .Returns(Task.FromResult(IdentityResult.Success));
+
+        await _sut.PostKdf(model);
+
+        await _userService.Received(1).ChangeKdfAsync(user, model.MasterPasswordHash, model.NewMasterPasswordHash,
+            model.Key, model.Kdf, model.KdfIterations, model.KdfMemory, model.KdfParallelism);
+    }
+
+    [Fact]
+    public async Task PostKdf_WhenUserDoesNotExist_ShouldThrowUnauthorizedAccessException()
+    {
+        ConfigureUserServiceToReturnNullPrincipal();
+        var model = new KdfRequestModel { Kdf = KdfType.PBKDF2_SHA256, KdfIterations = 600_000 };
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _sut.PostKdf(model));
+    }
+
+    [Fact]
+    public async Task PostKdf_WhenChangeKdfFails_ShouldThrowBadRequestExceptionWithDelay()
+    {
+        var user = GenerateExampleUser();
+        var model = new KdfRequestModel
+        {
+            MasterPasswordHash = "currentPasswordHash",
+            NewMasterPasswordHash = "newPasswordHash",
+            Key = _mockEncryptedString,
+            Kdf = KdfType.Argon2id,
+            KdfIterations = 3,
+            KdfMemory = 64,
+            KdfParallelism = 4
+        };
+
+        ConfigureUserServiceToReturnValidPrincipalFor(user);
+        _userService.ChangeKdfAsync(Arg.Any<User>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+                Arg.Any<KdfType>(), Arg.Any<int>(), Arg.Any<int?>(), Arg.Any<int?>())
+            .Returns(Task.FromResult(IdentityResult.Failed(new IdentityError
+            {
+                Code = "TestError",
+                Description = "KDF change failed"
+            })));
+
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostKdf(model));
+        stopwatch.Stop();
+
+        Assert.True(stopwatch.ElapsedMilliseconds >= 2000, "Should delay for at least 2 seconds on failure");
+        await _userService.Received(1).ChangeKdfAsync(user, model.MasterPasswordHash, model.NewMasterPasswordHash,
+            model.Key, model.Kdf, model.KdfIterations, model.KdfMemory, model.KdfParallelism);
     }
 
     // Below are helper functions that currently belong to this
