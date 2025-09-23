@@ -490,10 +490,10 @@ public class GlobalSettings : IGlobalSettings
         /// <summary>
         /// Controls whether refresh tokens expire absolutely or on a sliding window basis.
         ///
-        /// Absolute (default):
+        /// Absolute:
         ///     Token expires at a fixed point in time (defined by AbsoluteRefreshTokenLifetimeSeconds). Usage does not extend lifetime.
         ///
-        /// Sliding:
+        /// Sliding(default):
         ///     Token lifetime is renewed on each use, by the amount in SlidingRefreshTokenLifetimeSeconds. Extensions stop once AbsoluteRefreshTokenLifetimeSeconds is reached (if set > 0).
         /// </summary>
         public bool ApplyAbsoluteExpirationOnRefreshToken { get; set; } = false;
