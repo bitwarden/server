@@ -483,8 +483,8 @@ public class GlobalSettings : IGlobalSettings
         /// Token cannot be refreshed by any means beyond the absolute refresh expiration.
         ///
         /// When setting this value to 0, the following effect applies:
-        ///     If AbsoluteRefreshTokenLifetimeSeconds is set to Absolute, the behavior is the same as when no refresh tokens are used.
-        ///     If AbsoluteRefreshTokenLifetimeSeconds is set to Sliding, refresh tokens only expire after the SlidingRefreshTokenLifetimeSeconds has passed.
+        ///     If ApplyAbsoluteExpirationOnRefreshToken is set to true, the behavior is the same as when no refresh tokens are used.
+        ///     If ApplyAbsoluteExpirationOnRefreshToken is set to false, refresh tokens only expire after the SlidingRefreshTokenLifetimeSeconds has passed.
         /// </summary>
         public int? AbsoluteRefreshTokenLifetimeSeconds { get; set; }
         /// <summary>
