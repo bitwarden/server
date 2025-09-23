@@ -8,7 +8,7 @@ using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using OneOf.Types;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccountvNext;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
 
 public class DeleteClaimedOrganizationUserAccountCommand(
     IUserService userService,
