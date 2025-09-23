@@ -1,6 +1,6 @@
 ﻿namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccountvNext;
 
-public interface IDeleteClaimedOrganizationUserAccountValidatorvNext
+public interface IDeleteClaimedOrganizationUserAccountValidator
 {
     Task<IEnumerable<ValidationResult<DeleteUserValidationRequest>>> ValidateAsync(IEnumerable<DeleteUserValidationRequest> requests);
 }

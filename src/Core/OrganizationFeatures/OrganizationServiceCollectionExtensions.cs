@@ -135,8 +135,8 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IConfirmOrganizationUserCommand, ConfirmOrganizationUserCommand>();
 
         // vNext implementations (feature flagged)
-        services.AddScoped<IDeleteClaimedOrganizationUserAccountCommandvNext, DeleteClaimedOrganizationUserAccountCommandvNext>();
-        services.AddScoped<IDeleteClaimedOrganizationUserAccountValidatorvNext, DeleteClaimedOrganizationUserAccountValidatorvNext>();
+        services.AddScoped<IDeleteClaimedOrganizationUserAccountCommand, DeleteClaimedOrganizationUserAccountCommand>();
+        services.AddScoped<IDeleteClaimedOrganizationUserAccountValidator, DeleteClaimedOrganizationUserAccountValidator>();
     }
 
     private static void AddOrganizationApiKeyCommandsQueries(this IServiceCollection services)

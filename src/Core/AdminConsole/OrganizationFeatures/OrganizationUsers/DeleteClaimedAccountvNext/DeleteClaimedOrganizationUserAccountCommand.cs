@@ -10,16 +10,16 @@ using OneOf.Types;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccountvNext;
 
-public class DeleteClaimedOrganizationUserAccountCommandvNext(
+public class DeleteClaimedOrganizationUserAccountCommand(
     IUserService userService,
     IEventService eventService,
     IGetOrganizationUsersClaimedStatusQuery getOrganizationUsersClaimedStatusQuery,
     IOrganizationUserRepository organizationUserRepository,
     IUserRepository userRepository,
     IPushNotificationService pushService,
-    ILogger<DeleteClaimedOrganizationUserAccountCommandvNext> logger,
-    IDeleteClaimedOrganizationUserAccountValidatorvNext deleteClaimedOrganizationUserAccountValidatorvNext)
-    : IDeleteClaimedOrganizationUserAccountCommandvNext
+    ILogger<DeleteClaimedOrganizationUserAccountCommand> logger,
+    IDeleteClaimedOrganizationUserAccountValidator deleteClaimedOrganizationUserAccountValidator)
+    : IDeleteClaimedOrganizationUserAccountCommand
 {
     public async Task<BulkCommandResult> DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid deletingUserId)
     {
@@ -35,7 +35,7 @@ public class DeleteClaimedOrganizationUserAccountCommandvNext(
         var claimedStatuses = await getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(organizationId, orgUserIds);
 
         var internalRequests = CreateInternalRequests(organizationId, deletingUserId, orgUserIds, orgUsers, users, claimedStatuses);
-        var validationResults = (await deleteClaimedOrganizationUserAccountValidatorvNext.ValidateAsync(internalRequests)).ToList();
+        var validationResults = (await deleteClaimedOrganizationUserAccountValidator.ValidateAsync(internalRequests)).ToList();
 
         var validRequests = validationResults.ValidRequests();
         await CancelPremiumsAsync(validRequests);

@@ -1,6 +1,6 @@
 ﻿namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccountvNext;
 
-public interface IDeleteClaimedOrganizationUserAccountCommandvNext
+public interface IDeleteClaimedOrganizationUserAccountCommand
 {
     /// <summary>
     /// Removes a user from an organization and deletes all of their associated user data.

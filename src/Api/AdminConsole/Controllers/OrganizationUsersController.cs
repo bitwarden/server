@@ -60,7 +60,7 @@ public class OrganizationUsersController : Controller
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly IOrganizationUserUserDetailsQuery _organizationUserUserDetailsQuery;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
-    private readonly IDeleteClaimedOrganizationUserAccountCommandvNext _deleteClaimedOrganizationUserAccountCommandvNext;
+    private readonly IDeleteClaimedOrganizationUserAccountCommand _deleteClaimedOrganizationUserAccountCommand;
     private readonly IGetOrganizationUsersClaimedStatusQuery _getOrganizationUsersClaimedStatusQuery;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IFeatureService _featureService;
@@ -88,7 +88,7 @@ public class OrganizationUsersController : Controller
         ISsoConfigRepository ssoConfigRepository,
         IOrganizationUserUserDetailsQuery organizationUserUserDetailsQuery,
         IRemoveOrganizationUserCommand removeOrganizationUserCommand,
-        IDeleteClaimedOrganizationUserAccountCommandvNext deleteClaimedOrganizationUserAccountCommandvNext,
+        IDeleteClaimedOrganizationUserAccountCommand deleteClaimedOrganizationUserAccountCommand,
         IGetOrganizationUsersClaimedStatusQuery getOrganizationUsersClaimedStatusQuery,
         IPolicyRequirementQuery policyRequirementQuery,
         IFeatureService featureService,
@@ -116,7 +116,7 @@ public class OrganizationUsersController : Controller
         _ssoConfigRepository = ssoConfigRepository;
         _organizationUserUserDetailsQuery = organizationUserUserDetailsQuery;
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
-        _deleteClaimedOrganizationUserAccountCommandvNext = deleteClaimedOrganizationUserAccountCommandvNext;
+        _deleteClaimedOrganizationUserAccountCommand = deleteClaimedOrganizationUserAccountCommand;
         _getOrganizationUsersClaimedStatusQuery = getOrganizationUsersClaimedStatusQuery;
         _policyRequirementQuery = policyRequirementQuery;
         _featureService = featureService;
@@ -544,7 +544,7 @@ public class OrganizationUsersController : Controller
             return TypedResults.Unauthorized();
         }
 
-        var commandResult = await _deleteClaimedOrganizationUserAccountCommandvNext.DeleteUserAsync(orgId, id, currentUserId.Value);
+        var commandResult = await _deleteClaimedOrganizationUserAccountCommand.DeleteUserAsync(orgId, id, currentUserId.Value);
 
         return commandResult.Result.Match<IResult>(
             error => error is NotFoundError
@@ -572,7 +572,7 @@ public class OrganizationUsersController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var result = await _deleteClaimedOrganizationUserAccountCommandvNext.DeleteManyUsersAsync(orgId, model.Ids, currentUserId.Value);
+        var result = await _deleteClaimedOrganizationUserAccountCommand.DeleteManyUsersAsync(orgId, model.Ids, currentUserId.Value);
 
         var responses = result.Select(r => r.Result.Match(
             error => new OrganizationUserBulkResponseModel(r.Id, error.Message),
