@@ -104,7 +104,6 @@ public class UserRepositoryTests
         IOrganizationUserRepository organizationUserRepository,
         ICollectionRepository collectionRepository)
     {
-        // Arrange
         var user = await userRepository.CreateAsync(new User
         {
             Name = "Test User",
@@ -148,10 +147,8 @@ public class UserRepositoryTests
             },
         });
 
-        // Act
         await userRepository.DeleteAsync(user);
 
-        // Assert
         var deletedUser = await userRepository.GetByIdAsync(user.Id);
         Assert.Null(deletedUser);
 
@@ -159,5 +156,112 @@ public class UserRepositoryTests
         Assert.NotNull(updatedCollection);
         Assert.Equal(CollectionType.SharedCollection, updatedCollection.Type);
         Assert.Equal(user.Email, updatedCollection.DefaultUserCollectionEmail);
+    }
+
+    [Theory, DatabaseData]
+    public async Task DeleteManyAsync_WhenUsersHaveDefaultUserCollections_MigratesToSharedCollection(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        ICollectionRepository collectionRepository)
+    {
+        // Arrange
+        var user1 = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User 1",
+            Email = $"test1+{Guid.NewGuid()}@example.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var user2 = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User 2",
+            Email = $"test2+{Guid.NewGuid()}@example.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Org",
+            BillingEmail = user1.Email,
+            Plan = "Test",
+        });
+
+        var orgUser1 = await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = user1.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Email = user1.Email
+        });
+
+        var orgUser2 = await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = user2.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Email = user2.Email
+        });
+
+        var defaultUserCollection1 = await collectionRepository.CreateAsync(new Collection
+        {
+            Name = "Test Collection 1",
+            Id = user1.Id,
+            Type = CollectionType.DefaultUserCollection,
+            OrganizationId = organization.Id
+        });
+
+        var defaultUserCollection2 = await collectionRepository.CreateAsync(new Collection
+        {
+            Name = "Test Collection 2",
+            Id = user2.Id,
+            Type = CollectionType.DefaultUserCollection,
+            OrganizationId = organization.Id
+        });
+
+        // Create the CollectionUser entries
+        await collectionRepository.UpdateUsersAsync(defaultUserCollection1.Id, new List<CollectionAccessSelection>()
+        {
+            new CollectionAccessSelection
+            {
+                Id = orgUser1.Id,
+                HidePasswords = false,
+                ReadOnly = false,
+                Manage = true
+            },
+        });
+
+        await collectionRepository.UpdateUsersAsync(defaultUserCollection2.Id, new List<CollectionAccessSelection>()
+        {
+            new CollectionAccessSelection
+            {
+                Id = orgUser2.Id,
+                HidePasswords = false,
+                ReadOnly = false,
+                Manage = true
+            },
+        });
+
+        // Act
+        await userRepository.DeleteManyAsync(new[] { user1, user2 });
+
+        // Assert
+        var deletedUser1 = await userRepository.GetByIdAsync(user1.Id);
+        var deletedUser2 = await userRepository.GetByIdAsync(user2.Id);
+        Assert.Null(deletedUser1);
+        Assert.Null(deletedUser2);
+
+        // Both collections should be migrated to SharedCollection
+        var updatedCollection1 = await collectionRepository.GetByIdAsync(defaultUserCollection1.Id);
+        Assert.NotNull(updatedCollection1);
+        Assert.Equal(CollectionType.SharedCollection, updatedCollection1.Type);
+        Assert.Equal(user1.Email, updatedCollection1.DefaultUserCollectionEmail);
+
+        var updatedCollection2 = await collectionRepository.GetByIdAsync(defaultUserCollection2.Id);
+        Assert.NotNull(updatedCollection2);
+        Assert.Equal(CollectionType.SharedCollection, updatedCollection2.Type);
+        Assert.Equal(user2.Email, updatedCollection2.DefaultUserCollectionEmail);
     }
 }
