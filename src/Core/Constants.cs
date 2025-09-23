@@ -131,9 +131,10 @@ public static class FeatureFlagKeys
     public const string EventBasedOrganizationIntegrations = "event-based-organization-integrations";
     public const string SeparateCustomRolePermissions = "pm-19917-separate-custom-role-permissions";
     public const string CreateDefaultLocation = "pm-19467-create-default-location";
-    public const string DirectoryConnectorPreventUserRemoval = "pm-24592-directory-connector-prevent-user-removal";
+    public const string PM23845_VNextApplicationCache = "pm-24957-refactor-memory-application-cache";
     public const string CipherRepositoryBulkResourceCreation = "pm-24951-cipher-repository-bulk-resource-creation-service";
     public const string CollectionVaultRefactor = "pm-25030-resolve-ts-upgrade-errors";
+    public const string DeleteClaimedUserAccountRefactor = "pm-25094-refactor-delete-managed-organization-user-command";
 
     /* Auth Team */
     public const string TwoFactorExtensionDataPersistence = "pm-9115-two-factor-extension-data-persistence";
@@ -167,7 +168,6 @@ public static class FeatureFlagKeys
     public const string PM17772_AdminInitiatedSponsorships = "pm-17772-admin-initiated-sponsorships";
     public const string UsePricingService = "use-pricing-service";
     public const string PM19422_AllowAutomaticTaxUpdates = "pm-19422-allow-automatic-tax-updates";
-    public const string UseOrganizationWarningsService = "use-organization-warnings-service";
     public const string PM21881_ManagePaymentDetailsOutsideCheckout = "pm-21881-manage-payment-details-outside-checkout";
     public const string PM21821_ProviderPortalTakeover = "pm-21821-provider-portal-takeover";
     public const string PM22415_TaxIDWarnings = "pm-22415-tax-id-warnings";
@@ -184,6 +184,7 @@ public static class FeatureFlagKeys
     public const string PM17987_BlockType0 = "pm-17987-block-type-0";
     public const string ForceUpdateKDFSettings = "pm-18021-force-update-kdf-settings";
     public const string UnlockWithMasterPasswordUnlockData = "pm-23246-unlock-with-master-password-unlock-data";
+    public const string WindowsBiometricsV2 = "pm-25373-windows-biometrics-v2";
 
     /* Mobile Team */
     public const string NativeCarouselFlow = "native-carousel-flow";
@@ -203,6 +204,8 @@ public static class FeatureFlagKeys
     public const string EnablePMPreloginSettings = "enable-pm-prelogin-settings";
     public const string AppIntents = "app-intents";
     public const string SendAccess = "pm-19394-send-access-control";
+    public const string CxpImportMobile = "cxp-import-mobile";
+    public const string CxpExportMobile = "cxp-export-mobile";
 
     /* Platform Team */
     public const string IpcChannelFramework = "ipc-channel-framework";
@@ -227,6 +230,12 @@ public static class FeatureFlagKeys
     public const string PM22134SdkCipherListView = "pm-22134-sdk-cipher-list-view";
     public const string PM19315EndUserActivationMvp = "pm-19315-end-user-activation-mvp";
     public const string PM22136_SdkCipherEncryption = "pm-22136-sdk-cipher-encryption";
+
+    /* Innovation Team */
+    public const string ArchiveVaultItems = "pm-19148-innovation-archive";
+
+    /* DIRT Team */
+    public const string PM22887_RiskInsightsActivityTab = "pm-22887-risk-insights-activity-tab";
 
     public static List<string> GetAllKeys()
     {
