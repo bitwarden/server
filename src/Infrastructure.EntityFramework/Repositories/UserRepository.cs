@@ -302,6 +302,27 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
                 dbContext.UserProjectAccessPolicy.Where(ap => ap.OrganizationUser.UserId == user.Id));
             dbContext.UserServiceAccountAccessPolicy.RemoveRange(
                 dbContext.UserServiceAccountAccessPolicy.Where(ap => ap.OrganizationUser.UserId == user.Id));
+
+            // Migrate DefaultUserCollection to SharedCollection before deleting organization users
+            var orgUsersToDelete = dbContext.OrganizationUsers.Where(ou => ou.UserId == user.Id).ToList();
+            foreach (var orgUser in orgUsersToDelete)
+            {
+                var defaultCollections = dbContext.Collections
+                    .Where(c => c.Type == Core.Enums.CollectionType.DefaultUserCollection)
+                    .Where(c => dbContext.CollectionUsers.Any(cu => cu.OrganizationUserId == orgUser.Id && cu.CollectionId == c.Id))
+                    .ToList();
+
+                foreach (var collection in defaultCollections)
+                {
+                    collection.Type = Core.Enums.CollectionType.SharedCollection;
+                    collection.DefaultUserCollectionEmail = collection.DefaultUserCollectionEmail ?? dbContext.Users
+                        .Where(u => u.Id == user.Id)
+                        .Select(u => u.Email)
+                        .FirstOrDefault();
+                    collection.RevisionDate = DateTime.UtcNow;
+                }
+            }
+
             dbContext.OrganizationUsers.RemoveRange(dbContext.OrganizationUsers.Where(ou => ou.UserId == user.Id));
             dbContext.ProviderUsers.RemoveRange(dbContext.ProviderUsers.Where(pu => pu.UserId == user.Id));
             dbContext.SsoUsers.RemoveRange(dbContext.SsoUsers.Where(su => su.UserId == user.Id));
@@ -346,6 +367,27 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             dbContext.GroupUsers.RemoveRange(groupUsers);
             await dbContext.UserProjectAccessPolicy.Where(ap => targetIds.Contains(ap.OrganizationUser.UserId ?? default)).ExecuteDeleteAsync();
             await dbContext.UserServiceAccountAccessPolicy.Where(ap => targetIds.Contains(ap.OrganizationUser.UserId ?? default)).ExecuteDeleteAsync();
+
+            // Migrate DefaultUserCollection to SharedCollection before deleting organization users
+            var orgUsersToDelete = dbContext.OrganizationUsers.Where(ou => targetIds.Contains(ou.UserId ?? default)).ToList();
+            foreach (var orgUser in orgUsersToDelete)
+            {
+                var defaultCollections = dbContext.Collections
+                    .Where(c => c.Type == Core.Enums.CollectionType.DefaultUserCollection)
+                    .Where(c => dbContext.CollectionUsers.Any(cu => cu.OrganizationUserId == orgUser.Id && cu.CollectionId == c.Id))
+                    .ToList();
+
+                foreach (var collection in defaultCollections)
+                {
+                    collection.Type = Core.Enums.CollectionType.SharedCollection;
+                    collection.DefaultUserCollectionEmail = collection.DefaultUserCollectionEmail ?? dbContext.Users
+                        .Where(u => u.Id == orgUser.UserId)
+                        .Select(u => u.Email)
+                        .FirstOrDefault();
+                    collection.RevisionDate = DateTime.UtcNow;
+                }
+            }
+
             await dbContext.OrganizationUsers.Where(ou => targetIds.Contains(ou.UserId ?? default)).ExecuteDeleteAsync();
             await dbContext.ProviderUsers.Where(pu => targetIds.Contains(pu.UserId ?? default)).ExecuteDeleteAsync();
             await dbContext.SsoUsers.Where(su => targetIds.Contains(su.UserId)).ExecuteDeleteAsync();

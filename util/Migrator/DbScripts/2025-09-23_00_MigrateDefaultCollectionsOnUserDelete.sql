@@ -1,4 +1,160 @@
-CREATE PROCEDURE [dbo].[User_DeleteByIds]
+CREATE OR ALTER PROCEDURE [dbo].[User_DeleteById]
+    @Id UNIQUEIDENTIFIER
+WITH RECOMPILE
+AS
+BEGIN
+    SET NOCOUNT ON
+    DECLARE @BatchSize INT = 100
+
+    -- Delete ciphers
+    WHILE @BatchSize > 0
+    BEGIN
+        BEGIN TRANSACTION User_DeleteById_Ciphers
+
+        DELETE TOP(@BatchSize)
+        FROM
+            [dbo].[Cipher]
+        WHERE
+            [UserId] = @Id
+
+        SET @BatchSize = @@ROWCOUNT
+
+        COMMIT TRANSACTION User_DeleteById_Ciphers
+    END
+
+    BEGIN TRANSACTION User_DeleteById
+
+    -- Delete WebAuthnCredentials
+    DELETE
+    FROM
+        [dbo].[WebAuthnCredential]
+    WHERE
+        [UserId] = @Id
+
+    -- Delete folders
+    DELETE
+    FROM
+        [dbo].[Folder]
+    WHERE
+        [UserId] = @Id
+
+    -- Delete AuthRequest, must be before Device
+    DELETE
+    FROM
+        [dbo].[AuthRequest]
+    WHERE
+        [UserId] = @Id
+
+    -- Delete devices
+    DELETE
+    FROM
+        [dbo].[Device]
+    WHERE
+        [UserId] = @Id
+
+    -- Migrate DefaultUserCollection to SharedCollection before deleting CollectionUser records
+    DECLARE @OrgUserIds [dbo].[GuidIdArray]
+    INSERT INTO @OrgUserIds (Id)
+    SELECT [Id] FROM [dbo].[OrganizationUser] WHERE [UserId] = @Id
+
+    IF EXISTS (SELECT 1 FROM @OrgUserIds)
+    BEGIN
+        EXEC [dbo].[OrganizationUser_MigrateDefaultCollection] @OrgUserIds
+    END
+
+    -- Delete collection users
+    DELETE
+        CU
+    FROM
+        [dbo].[CollectionUser] CU
+        INNER JOIN
+        [dbo].[OrganizationUser] OU ON OU.[Id] = CU.[OrganizationUserId]
+    WHERE
+        OU.[UserId] = @Id
+
+    -- Delete group users
+    DELETE
+        GU
+    FROM
+        [dbo].[GroupUser] GU
+        INNER JOIN
+        [dbo].[OrganizationUser] OU ON OU.[Id] = GU.[OrganizationUserId]
+    WHERE
+        OU.[UserId] = @Id
+
+    -- Delete AccessPolicy
+    DELETE
+        AP
+    FROM
+        [dbo].[AccessPolicy] AP
+        INNER JOIN
+        [dbo].[OrganizationUser] OU ON OU.[Id] = AP.[OrganizationUserId]
+    WHERE
+        [UserId] = @Id
+
+    -- Delete organization users
+    DELETE
+    FROM
+        [dbo].[OrganizationUser]
+    WHERE
+        [UserId] = @Id
+
+    -- Delete provider users
+    DELETE
+    FROM
+        [dbo].[ProviderUser]
+    WHERE
+        [UserId] = @Id
+
+    -- Delete SSO Users
+    DELETE
+    FROM
+        [dbo].[SsoUser]
+    WHERE
+        [UserId] = @Id
+
+    -- Delete Emergency Accesses
+    DELETE
+    FROM
+        [dbo].[EmergencyAccess]
+    WHERE
+        [GrantorId] = @Id
+        OR
+        [GranteeId] = @Id
+
+    -- Delete Sends
+    DELETE
+    FROM
+        [dbo].[Send]
+    WHERE
+        [UserId] = @Id
+
+    -- Delete Notification Status
+    DELETE
+    FROM
+        [dbo].[NotificationStatus]
+    WHERE
+        [UserId] = @Id
+
+    -- Delete Notification
+    DELETE
+    FROM
+        [dbo].[Notification]
+    WHERE
+        [UserId] = @Id
+
+    -- Finally, delete the user
+    DELETE
+    FROM
+        [dbo].[User]
+    WHERE
+        [Id] = @Id
+
+    COMMIT TRANSACTION User_DeleteById
+END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[User_DeleteByIds]
     @Ids NVARCHAR(MAX)
 WITH RECOMPILE
 AS
@@ -56,7 +212,7 @@ BEGIN
     DELETE
     FROM
         [dbo].[AuthRequest]
-    WHERE 
+    WHERE
         [UserId] IN (SELECT * FROM @ParsedIds)
 
     -- Delete devices
@@ -70,7 +226,7 @@ BEGIN
     DECLARE @OrgUserIds [dbo].[GuidIdArray]
     INSERT INTO @OrgUserIds (Id)
     SELECT [Id] FROM [dbo].[OrganizationUser] WHERE [UserId] IN (SELECT * FROM @ParsedIds)
-    
+
     IF EXISTS (SELECT 1 FROM @OrgUserIds)
     BEGIN
         EXEC [dbo].[OrganizationUser_MigrateDefaultCollection] @OrgUserIds
@@ -140,7 +296,7 @@ BEGIN
     DELETE
     FROM
         [dbo].[Send]
-    WHERE 
+    WHERE
         [UserId] IN (SELECT * FROM @ParsedIds)
 
     -- Delete Notification Status
@@ -156,7 +312,7 @@ BEGIN
         [dbo].[Notification]
     WHERE
         [UserId] IN (SELECT * FROM @ParsedIds)
-    
+
     -- Finally, delete the user
     DELETE
     FROM
@@ -166,3 +322,4 @@ BEGIN
 
     COMMIT TRANSACTION User_DeleteById
 END
+GO
