@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Xunit;
 
@@ -96,4 +97,67 @@ public class UserRepositoryTests
         Assert.True(notDeletedOrgUsers.Count > 0);
     }
 
+    [Theory, DatabaseData]
+    public async Task DeleteAsync_WhenUserHasDefaultUserCollections_MigratesToSharedCollection(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        ICollectionRepository collectionRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@example.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Org",
+            BillingEmail = user.Email,
+            Plan = "Test",
+        });
+
+        var orgUser = await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = user.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Email = user.Email
+        });
+
+        var defaultUserCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            Name = "Test Collection",
+            Id = user.Id,
+            Type = CollectionType.DefaultUserCollection,
+            OrganizationId = organization.Id
+        });
+
+        // Create the CollectionUser entry for the defaultUserCollection
+        await collectionRepository.UpdateUsersAsync(defaultUserCollection.Id, new List<CollectionAccessSelection>()
+        {
+            new CollectionAccessSelection
+            {
+                Id = orgUser.Id,
+                HidePasswords = false,
+                ReadOnly = false,
+                Manage = true
+            },
+        });
+
+        // Act
+        await userRepository.DeleteAsync(user);
+
+        // Assert
+        var deletedUser = await userRepository.GetByIdAsync(user.Id);
+        Assert.Null(deletedUser);
+
+        var updatedCollection = await collectionRepository.GetByIdAsync(defaultUserCollection.Id);
+        Assert.NotNull(updatedCollection);
+        Assert.Equal(CollectionType.SharedCollection, updatedCollection.Type);
+        Assert.Equal(user.Email, updatedCollection.DefaultUserCollectionEmail);
+    }
 }
