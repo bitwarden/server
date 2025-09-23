@@ -60,7 +60,6 @@ public class OrganizationUsersController : Controller
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly IOrganizationUserUserDetailsQuery _organizationUserUserDetailsQuery;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
-    private readonly IDeleteClaimedOrganizationUserAccountCommand _deleteClaimedOrganizationUserAccountCommand;
     private readonly IDeleteClaimedOrganizationUserAccountCommandvNext _deleteClaimedOrganizationUserAccountCommandvNext;
     private readonly IGetOrganizationUsersClaimedStatusQuery _getOrganizationUsersClaimedStatusQuery;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
@@ -89,7 +88,6 @@ public class OrganizationUsersController : Controller
         ISsoConfigRepository ssoConfigRepository,
         IOrganizationUserUserDetailsQuery organizationUserUserDetailsQuery,
         IRemoveOrganizationUserCommand removeOrganizationUserCommand,
-        IDeleteClaimedOrganizationUserAccountCommand deleteClaimedOrganizationUserAccountCommand,
         IDeleteClaimedOrganizationUserAccountCommandvNext deleteClaimedOrganizationUserAccountCommandvNext,
         IGetOrganizationUsersClaimedStatusQuery getOrganizationUsersClaimedStatusQuery,
         IPolicyRequirementQuery policyRequirementQuery,
@@ -118,7 +116,6 @@ public class OrganizationUsersController : Controller
         _ssoConfigRepository = ssoConfigRepository;
         _organizationUserUserDetailsQuery = organizationUserUserDetailsQuery;
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
-        _deleteClaimedOrganizationUserAccountCommand = deleteClaimedOrganizationUserAccountCommand;
         _deleteClaimedOrganizationUserAccountCommandvNext = deleteClaimedOrganizationUserAccountCommandvNext;
         _getOrganizationUsersClaimedStatusQuery = getOrganizationUsersClaimedStatusQuery;
         _policyRequirementQuery = policyRequirementQuery;

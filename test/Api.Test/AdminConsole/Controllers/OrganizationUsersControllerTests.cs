@@ -305,21 +305,6 @@ public class OrganizationUsersControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task DeleteAccount_WhenUserCanManageUsers_Success(
-        Guid orgId, Guid id, User currentUser, SutProvider<OrganizationUsersController> sutProvider)
-    {
-        sutProvider.GetDependency<ICurrentContext>().ManageUsers(orgId).Returns(true);
-        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(currentUser);
-
-        await sutProvider.Sut.DeleteAccount(orgId, id);
-
-        await sutProvider.GetDependency<IDeleteClaimedOrganizationUserAccountCommand>()
-            .Received(1)
-            .DeleteUserAsync(orgId, id, currentUser.Id);
-    }
-
-    [Theory]
-    [BitAutoData]
     public async Task DeleteAccount_WhenCurrentUserNotFound_ThrowsUnauthorizedAccessException(
         Guid orgId, Guid id, SutProvider<OrganizationUsersController> sutProvider)
     {
