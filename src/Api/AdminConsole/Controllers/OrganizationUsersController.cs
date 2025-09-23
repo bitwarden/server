@@ -539,32 +539,7 @@ public class OrganizationUsersController : Controller
 
     [HttpDelete("{id}/delete-account")]
     [Authorize<ManageUsersRequirement>]
-    public async Task DeleteAccount(Guid orgId, Guid id)
-    {
-        if (_featureService.IsEnabled(FeatureFlagKeys.DeleteClaimedUserAccountRefactor))
-        {
-            await DeleteAccountvNext(orgId, id);
-            return;
-        }
-
-        var currentUser = await _userService.GetUserByPrincipalAsync(User);
-        if (currentUser == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        await _deleteClaimedOrganizationUserAccountCommand.DeleteUserAsync(orgId, id, currentUser.Id);
-    }
-
-    [HttpPost("{id}/delete-account")]
-    [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
-    [Authorize<ManageUsersRequirement>]
-    public async Task PostDeleteAccount(Guid orgId, Guid id)
-    {
-        await DeleteAccount(orgId, id);
-    }
-
-    private async Task<IResult> DeleteAccountvNext(Guid orgId, Guid id)
+    public async Task<IResult> DeleteAccount(Guid orgId, Guid id)
     {
         var currentUserId = _userService.GetProperUserId(User);
         if (currentUserId == null)
@@ -582,36 +557,17 @@ public class OrganizationUsersController : Controller
         );
     }
 
+    [HttpPost("{id}/delete-account")]
+    [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
+    [Authorize<ManageUsersRequirement>]
+    public async Task PostDeleteAccount(Guid orgId, Guid id)
+    {
+        await DeleteAccount(orgId, id);
+    }
+
     [HttpDelete("delete-account")]
     [Authorize<ManageUsersRequirement>]
     public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkDeleteAccount(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
-    {
-        if (_featureService.IsEnabled(FeatureFlagKeys.DeleteClaimedUserAccountRefactor))
-        {
-            return await BulkDeleteAccountvNext(orgId, model);
-        }
-
-        var currentUser = await _userService.GetUserByPrincipalAsync(User);
-        if (currentUser == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        var results = await _deleteClaimedOrganizationUserAccountCommand.DeleteManyUsersAsync(orgId, model.Ids, currentUser.Id);
-
-        return new ListResponseModel<OrganizationUserBulkResponseModel>(results.Select(r =>
-            new OrganizationUserBulkResponseModel(r.OrganizationUserId, r.ErrorMessage)));
-    }
-
-    [HttpPost("delete-account")]
-    [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
-    [Authorize<ManageUsersRequirement>]
-    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> PostBulkDeleteAccount(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
-    {
-        return await BulkDeleteAccount(orgId, model);
-    }
-
-    private async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkDeleteAccountvNext(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
     {
         var currentUserId = _userService.GetProperUserId(User);
         if (currentUserId == null)
@@ -627,6 +583,14 @@ public class OrganizationUsersController : Controller
         ));
 
         return new ListResponseModel<OrganizationUserBulkResponseModel>(responses);
+    }
+
+    [HttpPost("delete-account")]
+    [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
+    [Authorize<ManageUsersRequirement>]
+    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> PostBulkDeleteAccount(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
+    {
+        return await BulkDeleteAccount(orgId, model);
     }
 
     [HttpPut("{id}/revoke")]

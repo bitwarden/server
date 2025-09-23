@@ -33,10 +33,6 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
             featureService
                 .IsEnabled(FeatureFlagKeys.CreateDefaultLocation)
                 .Returns(true);
-
-            featureService
-                .IsEnabled(FeatureFlagKeys.DeleteClaimedUserAccountRefactor)
-                .Returns(true);
         });
         _client = _factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
