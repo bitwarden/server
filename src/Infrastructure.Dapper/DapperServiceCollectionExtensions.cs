@@ -75,6 +75,8 @@ public static class DapperServiceCollectionExtensions
         services.AddSingleton<IOrganizationApplicationRepository, OrganizationApplicationRepository>();
         services.AddSingleton<IOrganizationMemberBaseDetailRepository, OrganizationMemberBaseDetailRepository>();
 
+        services.AddSingleton<ISqlTransactionProvider, DapperSqlTransactionProvider>();
+
         if (selfHosted)
         {
             services.AddSingleton<IEventRepository, EventRepository>();
