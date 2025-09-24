@@ -1,5 +1,5 @@
-﻿using Bit.Core.Billing.Premium.Commands;
-using Bit.Core.Billing.Payment.Models;
+﻿using Bit.Core.Billing.Payment.Models;
+using Bit.Core.Billing.Premium.Commands;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
