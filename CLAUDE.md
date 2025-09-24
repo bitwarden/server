@@ -12,32 +12,8 @@
 **Architecture**: CQRS pattern with feature-based organization
 **Framework**: .NET 8.0, ASP.NET Core
 **Database**: SQL Server primary, EF Core supports PostgreSQL, MySQL/MariaDB, SQLite
-**Testing**: xUnit 2.4.1, NSubstitute
+**Testing**: xUnit, NSubstitute
 **Container**: Docker, Docker Compose, Kubernetes/Helm deployable
-
-## Technology Stack
-
-- **Backend Framework**: ASP.NET Core & .NET Core written in C#
-- **Services**: Api, Identity, Admin, Notifications, Events, EventsProcessor
-- **Auth**: Custom identity system, JWT tokens, PBKDF2-SHA256
-- **Encryption**: AES-256-CBC, RSA-2048, zero-knowledge architecture
-- **CI/CD**: GitHub Actions - build, test (xUnit), lint (dotnet format), security (Checkmarx)
-- **Database**: SQL Server with T-SQL
-- **Container Platform**: Docker
-
-## Project Structure
-
-```
-/src/
-├── Core/               # Business logic, CQRS commands/queries
-│   └── OrganizationFeatures/  # Feature-based organization
-├── Infrastructure/     # Data access, external services, EF Core
-├── Api/               # REST API endpoints
-├── Identity/          # Authentication/authorization
-└── Sql/               # Database scripts
-/test/                 # xUnit test projects
-/util/Migrator/        # Database migration tools
-```
 
 ## Development Standards
 
