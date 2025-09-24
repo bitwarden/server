@@ -346,7 +346,7 @@ public class AccessPoliciesController : Controller
     {
         foreach (var current in currentPolicies.OfType<GroupServiceAccountAccessPolicy>())
         {
-            if (updatedPolicies.Where(r => r.Id == current.Id).Count() <= 0)
+            if (!updatedPolicies.Any(r => r.Id == current.Id))
             {
                 await _eventService.LogServiceAccountGroupEventAsync(userId, current, EventType.ServiceAccount_GroupRemoved, _currentContext.IdentityClientType);
             }
@@ -354,7 +354,7 @@ public class AccessPoliciesController : Controller
 
         foreach (var policy in updatedPolicies.OfType<GroupServiceAccountAccessPolicy>())
         {
-            if (currentPolicies.Where(e => e.Id == policy.Id).Count() <= 0)
+            if (!currentPolicies.Any(e => e.Id == policy.Id))
             {
                 await _eventService.LogServiceAccountGroupEventAsync(userId, policy, EventType.ServiceAccount_GroupAdded, _currentContext.IdentityClientType);
             }
@@ -362,7 +362,7 @@ public class AccessPoliciesController : Controller
 
         foreach (var current in currentPolicies.OfType<UserServiceAccountAccessPolicy>())
         {
-            if (updatedPolicies.Where(r => r.Id == current.Id).Count() <= 0)
+            if (!updatedPolicies.Any(r => r.Id == current.Id))
             {
                 await _eventService.LogServiceAccountPeopleEventAsync(userId, current, EventType.ServiceAccount_UserRemoved, _currentContext.IdentityClientType);
             }
@@ -370,7 +370,7 @@ public class AccessPoliciesController : Controller
 
         foreach (var policy in updatedPolicies.OfType<UserServiceAccountAccessPolicy>())
         {
-            if (currentPolicies.Where(e => e.Id == policy.Id).Count() <= 0)
+            if (!currentPolicies.Any(e => e.Id == policy.Id))
             {
                 await _eventService.LogServiceAccountPeopleEventAsync(userId, policy, EventType.ServiceAccount_UserAdded, _currentContext.IdentityClientType);
             }

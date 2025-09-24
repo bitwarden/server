@@ -598,14 +598,14 @@ public class EventService : IEventService
         {
             if (!CanUseEvents(orgAbilities, serviceAccount.OrganizationId))
             {
-                return;
+                continue;
             }
 
             var (actingUserId, serviceAccountId) = MapIdentityClientType(userId, identityClientType);
 
             if (actingUserId is null && serviceAccountId is null)
             {
-                return;
+                continue;
             }
 
             if (serviceAccount != null)
@@ -620,9 +620,12 @@ public class EventService : IEventService
                     Date = date.GetValueOrDefault(DateTime.UtcNow)
                 };
                 eventMessages.Add(e);
-
-                await _eventWriteService.CreateManyAsync(eventMessages);
             }
+        }
+
+        if (eventMessages.Any())
+        {
+            await _eventWriteService.CreateManyAsync(eventMessages);
         }
     }
 

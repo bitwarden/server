@@ -84,30 +84,11 @@ public class EventRepository : IEventRepository
         DateTime endDate,
         PageOptions pageOptions)
     {
-        var byServiceAccount = await GetManyAsync(
-            $"OrganizationId={organizationId}",
-            $"ServiceAccountId={serviceAccountId}__Date={{0}}",
-            startDate, endDate, pageOptions);
+        return await GetManyServiceAccountAsync(
+               $"OrganizationId={organizationId}",
+               serviceAccountId.ToString(),
+               startDate, endDate, pageOptions);
 
-        var byGrantedAccount = await GetManyAsync(
-            $"OrganizationId={organizationId}",
-            $"GrantedServiceAccountId={serviceAccountId}__Date={{0}}",
-            startDate, endDate, pageOptions);
-
-        var combinedEvents = byServiceAccount.Data
-            .Concat(byGrantedAccount.Data)
-            .OrderByDescending(e => e.Date)
-            .ToList();
-
-        var pagedItems = combinedEvents
-            .Take(pageOptions.PageSize)
-            .ToList();
-
-        return new PagedResult<IEvent>
-        {
-            Data = pagedItems,
-            ContinuationToken = pageOptions.ContinuationToken
-        };
     }
 
     public async Task CreateAsync(IEvent e)
@@ -166,6 +147,29 @@ public class EventRepository : IEventRepository
         }
     }
 
+    public async Task<PagedResult<IEvent>> GetManyServiceAccountAsync(string partitionKey, string serviceAccountId,
+        DateTime startDate, DateTime endDate, PageOptions pageOptions)
+    {
+        var start = CoreHelpers.DateTimeToTableStorageKey(startDate);
+        var end = CoreHelpers.DateTimeToTableStorageKey(endDate);
+        var filter = MakeFilterForServiceAccount(partitionKey, serviceAccountId, startDate, endDate);
+
+        var result = new PagedResult<IEvent>();
+        var query = _tableClient.QueryAsync<AzureEvent>(filter, pageOptions.PageSize);
+
+        await using (var enumerator = query.AsPages(pageOptions.ContinuationToken,
+            pageOptions.PageSize).GetAsyncEnumerator())
+        {
+            await enumerator.MoveNextAsync();
+
+            result.ContinuationToken = enumerator.Current.ContinuationToken;
+            result.Data.AddRange(enumerator.Current.Values.Select(e => e.ToEventTableEntity()));
+        }
+
+        return result;
+    }
+
+
     public async Task<PagedResult<IEvent>> GetManyAsync(string partitionKey, string rowKey,
         DateTime startDate, DateTime endDate, PageOptions pageOptions)
     {
@@ -197,4 +201,27 @@ public class EventRepository : IEventRepository
     {
         return $"PartitionKey eq '{partitionKey}' and RowKey le '{rowStart}' and RowKey ge '{rowEnd}'";
     }
+
+    private string MakeFilterForServiceAccount(
+        string partitionKey,
+        string machineAccountId,
+        DateTime startDate,
+        DateTime endDate)
+    {
+        var start = CoreHelpers.DateTimeToTableStorageKey(startDate);
+        var end = CoreHelpers.DateTimeToTableStorageKey(endDate);
+
+        var rowKey1Start = $"ServiceAccountId={machineAccountId}__Date={start}";
+        var rowKey1End = $"ServiceAccountId={machineAccountId}__Date={end}";
+
+        var rowKey2Start = $"GrantedServiceAccountId={machineAccountId}__Date={start}";
+        var rowKey2End = $"GrantedServiceAccountId={machineAccountId}__Date={end}";
+
+        var left = $"PartitionKey eq '{partitionKey}' and RowKey le '{rowKey1Start}' and RowKey ge '{rowKey1End}'";
+        var right = $"PartitionKey eq '{partitionKey}' and RowKey le '{rowKey2Start}' and RowKey ge '{rowKey2End}'";
+
+        return $"({left}) or ({right})";
+    }
+
+
 }
