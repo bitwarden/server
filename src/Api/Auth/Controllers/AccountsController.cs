@@ -16,6 +16,7 @@ using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.Models.Api.Response;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -39,7 +40,7 @@ public class AccountsController : Controller
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IFeatureService _featureService;
     private readonly ITwoFactorEmailService _twoFactorEmailService;
-
+    private readonly IChangeKdfCommand _changeKdfCommand;
 
     public AccountsController(
         IOrganizationService organizationService,
@@ -51,7 +52,8 @@ public class AccountsController : Controller
         ITdeOffboardingPasswordCommand tdeOffboardingPasswordCommand,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IFeatureService featureService,
-        ITwoFactorEmailService twoFactorEmailService
+        ITwoFactorEmailService twoFactorEmailService,
+        IChangeKdfCommand changeKdfCommand
         )
     {
         _organizationService = organizationService;
@@ -64,7 +66,7 @@ public class AccountsController : Controller
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _featureService = featureService;
         _twoFactorEmailService = twoFactorEmailService;
-
+        _changeKdfCommand = changeKdfCommand;
     }
 
 
@@ -256,7 +258,7 @@ public class AccountsController : Controller
     }
 
     [HttpPost("kdf")]
-    public async Task PostKdf([FromBody] KdfRequestModel model)
+    public async Task PostKdf([FromBody] PasswordRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -264,8 +266,12 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var result = await _userService.ChangeKdfAsync(user, model.MasterPasswordHash,
-            model.NewMasterPasswordHash, model.Key, model.Kdf.Value, model.KdfIterations.Value, model.KdfMemory, model.KdfParallelism);
+        if (model.AuthenticationData == null || model.UnlockData == null)
+        {
+            throw new BadRequestException("AuthenticationData and UnlockData must be provided.");
+        }
+
+        var result = await _changeKdfCommand.ChangeKdfAsync(user, model.MasterPasswordHash, model.AuthenticationData.ToData(), model.UnlockData.ToData());
         if (result.Succeeded)
         {
             return;
