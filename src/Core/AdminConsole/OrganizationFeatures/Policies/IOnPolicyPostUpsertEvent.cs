@@ -11,6 +11,8 @@ public interface IOnPolicyPostUpsertEvent : IPolicyUpsertEvent
     /// <param name="policyRequest">The policy save request</param>
     /// <param name="postUpsertedPolicyState">The policy after it was upserted</param>
     /// <param name="previousPolicyState">The policy state before it was updated, if any</param>
-    public Task ExecutePostUpsertSideEffectAsync(SavePolicyModel policyRequest, Policy postUpsertedPolicyState,
+    public Task ExecutePostUpsertSideEffectAsync(
+        SavePolicyModel policyRequest,
+        Policy postUpsertedPolicyState,
         Policy? previousPolicyState);
 }

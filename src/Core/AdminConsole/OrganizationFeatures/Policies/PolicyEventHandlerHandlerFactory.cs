@@ -1,17 +1,22 @@
 ﻿
 using Bit.Core.AdminConsole.Enums;
+using OneOf;
+using OneOf.Types;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 
 public class PolicyEventHandlerHandlerFactory(
     IEnumerable<IPolicyUpsertEvent> allEventHandlers) : IPolicyEventHandlerFactory
 {
-
-    public T? GetHandler<T>(PolicyType policyType) where T : IPolicyUpsertEvent
+    public OneOf<T, None> GetHandler<T>(PolicyType policyType) where T : IPolicyUpsertEvent
     {
         var tEventHandlers = allEventHandlers.OfType<T>();
 
         var policyTEventHandler = tEventHandlers.SingleOrDefault(h => h.Type == policyType);
+        if (policyTEventHandler is null)
+        {
+            return new None();
+        }
 
         return policyTEventHandler;
     }

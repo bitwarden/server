@@ -33,9 +33,7 @@ public static class PolicyServiceCollectionExtensions
         services.AddScoped<IPolicyUpsertEvent, OrganizationDataOwnershipPolicyHandler>();
         services.AddScoped<IPolicyUpsertEvent, RequireSsoPolicyHandler>();
         services.AddScoped<IPolicyUpsertEvent, MaximumVaultTimeoutPolicyEventEventValidator>();
-        services.AddScoped<IPolicyUpsertEvent, RequireSsoPolicyHandler>();
         services.AddScoped<IPolicyUpsertEvent, TwoFactorAuthenticationPolicyHandler>();
-        services.AddScoped<IPolicyUpsertEvent, OrganizationDataOwnershipPolicyHandler>();
         services.AddScoped<IPolicyUpsertEvent, OrganizationDataOwnershipPolicyHandler>();
     }
 
