@@ -4,7 +4,8 @@
 
 - **NEVER** edit: `/bin/`, `/obj/`, `/.git/`, `/.vs/`, `/packages/`, generated migration files
 - **Security First**: All code changes must prioritize cryptographic integrity and data protection
-- **Test Coverage**: New features require xUnit tests with NSubstitute mocking
+- **Test Coverage**: New features require xUnit unit tests with NSubstitute mocking
+- **Check CODEOWNERS requirements**: The repo has a `.github/CODEOWNERS` file to define team ownership for different parts of the codebase. Respect that code owners have final authority over their designated areas
 
 ## Project Context
 
@@ -23,22 +24,6 @@
 - **CI/CD**: GitHub Actions - build, test (xUnit), lint (dotnet format), security (Checkmarx)
 - **Database**: SQL Server with T-SQL
 - **Container Platform**: Docker
-
-## Quick Start
-
-```bash
-#Setup Docker
-cd dev
-docker compose --profile cloud --profile mail up -d
-
-# Migrate database
-cd dev
-pwsh migrate.ps1
-
-# Run services
-cd src/Api && dotnet run
-cd src/Identity && dotnet run
-```
 
 ## Project Structure
 
@@ -92,7 +77,9 @@ cd src/Identity && dotnet run
 
 ## References
 
-- Architecture: https://contributing.bitwarden.com/architecture/server/
-- Setup Guide: https://contributing.bitwarden.com/getting-started/server/guide/
-- Code Style: https://contributing.bitwarden.com/contributing/code-style/
-- Security: https://bitwarden.com/help/bitwarden-security-white-paper/
+- [Architecture](https://contributing.bitwarden.com/architecture/server/)
+- [Contributing Guidelines](https://contributing.bitwarden.com/contributing/)
+- [Setup Guide](https://contributing.bitwarden.com/getting-started/server/guide/)
+- [Code Style](https://contributing.bitwarden.com/contributing/code-style/)
+- [Bitwarden security whitepaper](https://bitwarden.com/help/bitwarden-security-white-paper/)
+- [Bitwarden security definitions](https://contributing.bitwarden.com/architecture/security/definitions)
