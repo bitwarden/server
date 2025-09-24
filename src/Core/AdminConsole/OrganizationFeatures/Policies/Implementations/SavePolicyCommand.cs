@@ -39,8 +39,6 @@ public class SavePolicyCommand : ISavePolicyCommand
         {
             if (!policyValidatorsDict.TryAdd(policyValidator.Type, policyValidator))
             {
-                // Jimmy this check should happen earlier in the process.
-                // It doesn’t make sense for this to be compile-time, but maybe a test to ensure this behavior.
                 throw new Exception($"Duplicate PolicyValidator for {policyValidator.Type} policy.");
             }
         }
