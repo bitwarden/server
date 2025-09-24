@@ -73,7 +73,7 @@ public static class Constants
 
 
     /// <summary>
-    /// Constats for our browser extensions ID's.
+    /// Constants for our browser extensions IDs
     /// </summary>
     public static class BrowserExtensions
     {
