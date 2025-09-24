@@ -12,7 +12,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 public interface IPolicyValidator
 {
     /// <summary>
-    /// The PolicyType that this definition relates to.
+    /// The policy type that the associated handler will handle.
     /// </summary>
     public PolicyType Type { get; }
 
@@ -40,69 +40,4 @@ public interface IPolicyValidator
     /// <param name="policyUpdate">The policy update request</param>
     /// <param name="currentPolicy">The current policy, if any</param>
     public Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy);
-}
-
-public interface IPolicyUpdateEvent
-{
-    /// <summary>
-    /// The PolicyType that this definition relates to.
-    /// </summary>
-    public PolicyType Type { get; }
-}
-
-public interface IOnPolicyPostSaveEvent : IPolicyUpdateEvent
-{
-    public Task ExecutePostUpsertSideEffectAsync(SavePolicyModel policyRequest,
-        Policy postUpdatedPolicy, Policy? previousPolicyState);
-}
-
-public interface IOnPolicyPreSaveEvent : IPolicyUpdateEvent
-{
-    public Task ExecutePreUpsertSideEffectAsync(PolicyUpdate policyUpdate, Policy? currentPolicy);
-}
-
-public interface IEnforceDependentPoliciesEvent : IPolicyUpdateEvent
-{
-    /// <summary>
-    /// PolicyTypes that must be enabled before this policy can be enabled, if any.
-    /// These dependencies will be checked when this policy is enabled and when any required policy is disabled.
-    /// </summary>
-    public IEnumerable<PolicyType> RequiredPolicies { get; }
-}
-
-public interface IPolicyValidationEvent : IPolicyUpdateEvent
-{
-    public Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy);
-}
-
-public interface IPolicyEventHandlerFactory
-{
-    T? GetHandler<T>(PolicyType policyType) where T : IPolicyUpdateEvent;
-}
-
-public class PolicyEventHandlerHandlerFactory(
-    IEnumerable<IPolicyValidationEvent> validationHandlers,
-    IEnumerable<IEnforceDependentPoliciesEvent> dependencyHandlers,
-    IEnumerable<IOnPolicyPreSaveEvent> preSaveHandlers,
-    IEnumerable<IOnPolicyPostSaveEvent> postSaveHandlers,
-    IEnumerable<IPolicyUpdateEvent> handlers) : IPolicyEventHandlerFactory
-{
-    public T? GetHandler<T>(PolicyType policyType) where T : IPolicyUpdateEvent
-    {
-        var handlers = GetHandlerCollection<T>();
-        var test = handlers.OfType<T>();
-        return handlers.SingleOrDefault(h => h.Type == policyType);
-    }
-
-    private IEnumerable<T> GetHandlerCollection<T>() where T : IPolicyUpdateEvent
-    {
-        return typeof(T) switch
-        {
-            var t when t == typeof(IPolicyValidationEvent) => validationHandlers.Cast<T>(),
-            var t when t == typeof(IEnforceDependentPoliciesEvent) => dependencyHandlers.Cast<T>(),
-            var t when t == typeof(IOnPolicyPreSaveEvent) => preSaveHandlers.Cast<T>(),
-            var t when t == typeof(IOnPolicyPostSaveEvent) => postSaveHandlers.Cast<T>(),
-            _ => throw new ArgumentException($"Unsupported handler type: {typeof(T)}")
-        };
-    }
 }

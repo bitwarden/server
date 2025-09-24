@@ -16,7 +16,7 @@ public class SavePolicyCommand : ISavePolicyCommand
     private readonly IPolicyRepository _policyRepository;
     private readonly IReadOnlyDictionary<PolicyType, IPolicyValidator> _policyValidators;
     private readonly TimeProvider _timeProvider;
-    private readonly IPostSavePolicySideEffect _postSavePolicySideEffect;
+    private readonly IOnPolicyPostUpsertEvent _onPolicyPostUpsertEvent;
     private readonly IPolicyEventHandlerFactory _policyEventHandlerFactory;
 
     public SavePolicyCommand(IApplicationCacheService applicationCacheService,
@@ -24,14 +24,14 @@ public class SavePolicyCommand : ISavePolicyCommand
         IPolicyRepository policyRepository,
         IEnumerable<IPolicyValidator> policyValidators,
         TimeProvider timeProvider,
-        IPostSavePolicySideEffect postSavePolicySideEffect,
+        IOnPolicyPostUpsertEvent onPolicyPostUpsertEvent,
         IPolicyEventHandlerFactory policyEventHandlerFactory)
     {
         _applicationCacheService = applicationCacheService;
         _eventService = eventService;
         _policyRepository = policyRepository;
         _timeProvider = timeProvider;
-        _postSavePolicySideEffect = postSavePolicySideEffect;
+        _onPolicyPostUpsertEvent = onPolicyPostUpsertEvent;
         _policyEventHandlerFactory = policyEventHandlerFactory;
 
         var policyValidatorsDict = new Dictionary<PolicyType, IPolicyValidator>();
@@ -101,7 +101,7 @@ public class SavePolicyCommand : ISavePolicyCommand
     {
         if (postUpdatedPolicy.Type == PolicyType.OrganizationDataOwnership)
         {
-            await _postSavePolicySideEffect.ExecuteSideEffectsAsync(policyRequest, postUpdatedPolicy,
+            await _onPolicyPostUpsertEvent.ExecutePostUpsertSideEffectAsync(policyRequest, postUpdatedPolicy,
                 previousPolicyState);
         }
     }
@@ -299,7 +299,7 @@ public class SavePolicyCommand : ISavePolicyCommand
 
     private async Task ExecutePreUpsertSideEffectAsync(PolicyUpdate policyRequest, Policy? currentPolicy)
     {
-        var handler = _policyEventHandlerFactory.GetHandler<IOnPolicyPreSaveEvent>(policyRequest.Type);
+        var handler = _policyEventHandlerFactory.GetHandler<IOnPolicyPreUpsertEvent>(policyRequest.Type);
 
         if (handler is null)
         {
@@ -312,7 +312,7 @@ public class SavePolicyCommand : ISavePolicyCommand
     private async Task ExecutePostUpsertSideEffectAsync(SavePolicyModel policyRequest,
         Policy postUpdatedPolicy, Policy? previousPolicyState)
     {
-        var handler = _policyEventHandlerFactory.GetHandler<IOnPolicyPostSaveEvent>(policyRequest.PolicyUpdate.Type);
+        var handler = _policyEventHandlerFactory.GetHandler<IOnPolicyPostUpsertEvent>(policyRequest.PolicyUpdate.Type);
 
         if (handler is null)
         {

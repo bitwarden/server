@@ -31,16 +31,16 @@ public static class PolicyServiceCollectionExtensions
         services.AddScoped<IEnforceDependentPoliciesEvent, MaximumVaultTimeoutPolicyEventEventValidator>();
 
         services.AddScoped<IPolicyValidationEvent, RequireSsoPolicyHandler>();
-        services.AddScoped<IOnPolicyPreSaveEvent, TwoFactorAuthenticationPolicyHandler>();
+        services.AddScoped<IOnPolicyPreUpsertEvent, TwoFactorAuthenticationPolicyHandler>();
 
-        services.AddScoped<IOnPolicyPostSaveEvent, OrganizationDataOwnershipPolicyHandler>();
+        services.AddScoped<IOnPolicyPostUpsertEvent, OrganizationDataOwnershipPolicyHandler>();
         services.AddScoped<IPolicyUpdateEvent, OrganizationDataOwnershipPolicyHandler>();
 
     }
 
     private static void AddPolicySideEffects(this IServiceCollection services)
     {
-        services.AddScoped<IPostSavePolicySideEffect, OrganizationDataOwnershipPolicyHandler>();
+        services.AddScoped<IOnPolicyPostUpsertEvent, OrganizationDataOwnershipPolicyHandler>();
     }
 
     private static void AddPolicyRequirements(this IServiceCollection services)

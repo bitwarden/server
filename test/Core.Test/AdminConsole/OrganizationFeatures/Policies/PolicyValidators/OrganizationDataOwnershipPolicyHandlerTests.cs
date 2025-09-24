@@ -35,7 +35,7 @@ public class OrganizationDataOwnershipPolicyHandlerTests
         var policyRequest = new SavePolicyModel(policyUpdate, null, new OrganizationModelOwnershipPolicyModel(_defaultUserCollectionName));
 
         // Act
-        await sutProvider.Sut.ExecuteSideEffectsAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
+        await sutProvider.Sut.ExecutePostUpsertSideEffectAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
 
         // Assert
         await sutProvider.GetDependency<ICollectionRepository>()
@@ -61,7 +61,7 @@ public class OrganizationDataOwnershipPolicyHandlerTests
         var policyRequest = new SavePolicyModel(policyUpdate, null, new OrganizationModelOwnershipPolicyModel(_defaultUserCollectionName));
 
         // Act
-        await sutProvider.Sut.ExecuteSideEffectsAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
+        await sutProvider.Sut.ExecutePostUpsertSideEffectAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
 
         // Assert
         await sutProvider.GetDependency<ICollectionRepository>()
@@ -87,7 +87,7 @@ public class OrganizationDataOwnershipPolicyHandlerTests
         var policyRequest = new SavePolicyModel(policyUpdate, null, new OrganizationModelOwnershipPolicyModel(_defaultUserCollectionName));
 
         // Act
-        await sutProvider.Sut.ExecuteSideEffectsAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
+        await sutProvider.Sut.ExecutePostUpsertSideEffectAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
 
         // Assert
         await sutProvider.GetDependency<ICollectionRepository>()
@@ -113,7 +113,7 @@ public class OrganizationDataOwnershipPolicyHandlerTests
         var policyRequest = new SavePolicyModel(policyUpdate, null, new OrganizationModelOwnershipPolicyModel(_defaultUserCollectionName));
 
         // Act
-        await sut.ExecuteSideEffectsAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
+        await sut.ExecutePostUpsertSideEffectAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
 
         // Assert
         await collectionRepository
@@ -202,7 +202,7 @@ public class OrganizationDataOwnershipPolicyHandlerTests
         var policyRequest = new SavePolicyModel(policyUpdate, null, new OrganizationModelOwnershipPolicyModel(_defaultUserCollectionName));
 
         // Act
-        await sut.ExecuteSideEffectsAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
+        await sut.ExecutePostUpsertSideEffectAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
 
         // Assert
         await collectionRepository
@@ -241,7 +241,7 @@ public class OrganizationDataOwnershipPolicyHandlerTests
         var policyRequest = new SavePolicyModel(policyUpdate, null, metadata);
 
         // Act
-        await sutProvider.Sut.ExecuteSideEffectsAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
+        await sutProvider.Sut.ExecutePostUpsertSideEffectAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
 
         // Assert
         await sutProvider.GetDependency<ICollectionRepository>()
