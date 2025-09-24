@@ -4,7 +4,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 
-public interface IOnPolicyPreUpsertEvent : IPolicyUpdateEvent
+public interface IOnPolicyPreUpsertEvent : IPolicyUpsertEvent
 {
     /// <summary>
     /// Performs side effects before a policy is upserted.

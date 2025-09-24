@@ -18,7 +18,7 @@ public static class PolicyServiceCollectionExtensions
 
         services.AddPolicyValidators();
         services.AddPolicyRequirements();
-        services.AddPolicySideEffects();
+        services.AddPolicyUpsertEventHandlers();
     }
 
     private static void AddPolicyValidators(this IServiceCollection services)
@@ -26,21 +26,17 @@ public static class PolicyServiceCollectionExtensions
         services.AddScoped<IPolicyValidator, SingleOrgPolicyValidator>();
         services.AddScoped<IPolicyValidator, ResetPasswordPolicyValidator>();
         services.AddScoped<IPolicyValidator, FreeFamiliesForEnterprisePolicyValidator>();
-
-        services.AddScoped<IEnforceDependentPoliciesEvent, RequireSsoPolicyHandler>();
-        services.AddScoped<IEnforceDependentPoliciesEvent, MaximumVaultTimeoutPolicyEventEventValidator>();
-
-        services.AddScoped<IPolicyValidationEvent, RequireSsoPolicyHandler>();
-        services.AddScoped<IOnPolicyPreUpsertEvent, TwoFactorAuthenticationPolicyHandler>();
-
-        services.AddScoped<IOnPolicyPostUpsertEvent, OrganizationDataOwnershipPolicyHandler>();
-        services.AddScoped<IPolicyUpdateEvent, OrganizationDataOwnershipPolicyHandler>();
-
     }
 
-    private static void AddPolicySideEffects(this IServiceCollection services)
+    private static void AddPolicyUpsertEventHandlers(this IServiceCollection services)
     {
-        services.AddScoped<IOnPolicyPostUpsertEvent, OrganizationDataOwnershipPolicyHandler>();
+        services.AddScoped<IPolicyUpsertEvent, OrganizationDataOwnershipPolicyHandler>();
+        services.AddScoped<IPolicyUpsertEvent, RequireSsoPolicyHandler>();
+        services.AddScoped<IPolicyUpsertEvent, MaximumVaultTimeoutPolicyEventEventValidator>();
+        services.AddScoped<IPolicyUpsertEvent, RequireSsoPolicyHandler>();
+        services.AddScoped<IPolicyUpsertEvent, TwoFactorAuthenticationPolicyHandler>();
+        services.AddScoped<IPolicyUpsertEvent, OrganizationDataOwnershipPolicyHandler>();
+        services.AddScoped<IPolicyUpsertEvent, OrganizationDataOwnershipPolicyHandler>();
     }
 
     private static void AddPolicyRequirements(this IServiceCollection services)
