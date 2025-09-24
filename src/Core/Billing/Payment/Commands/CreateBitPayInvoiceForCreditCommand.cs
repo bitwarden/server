@@ -31,6 +31,8 @@ public class CreateBitPayInvoiceForCreditCommand(
     {
         var (name, email, posData) = GetSubscriberInformation(subscriber);
 
+        var notificationUrl = $"{globalSettings.BitPay.NotificationUrl}?key={globalSettings.BitPay.WebhookKey}";
+
         var invoice = new Invoice
         {
             Buyer = new Buyer { Email = email, Name = name },
@@ -38,7 +40,7 @@ public class CreateBitPayInvoiceForCreditCommand(
             ExtendedNotifications = true,
             FullNotifications = true,
             ItemDesc = "Bitwarden",
-            NotificationUrl = globalSettings.BitPay.NotificationUrl,
+            NotificationUrl = notificationUrl,
             PosData = posData,
             Price = Convert.ToDouble(amount),
             RedirectUrl = redirectUrl

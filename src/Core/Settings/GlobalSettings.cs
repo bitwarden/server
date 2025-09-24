@@ -652,6 +652,7 @@ public class GlobalSettings : IGlobalSettings
         public bool Production { get; set; }
         public string Token { get; set; }
         public string NotificationUrl { get; set; }
+        public string WebhookKey { get; set; }
     }
 
     public class InstallationSettings : IInstallationSettings
