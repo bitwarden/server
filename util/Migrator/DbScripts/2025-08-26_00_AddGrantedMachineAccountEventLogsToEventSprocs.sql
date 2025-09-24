@@ -11,7 +11,10 @@ BEGIN
 END
 GO
 
-CREATE VIEW [dbo].[EventView]
+CREATE OR ALTER VIEW [dbo].[EventView]
 AS
-SELECT * FROM [dbo].[Event];
+SELECT
+    *
+FROM
+    [dbo].[Event];
 GO
