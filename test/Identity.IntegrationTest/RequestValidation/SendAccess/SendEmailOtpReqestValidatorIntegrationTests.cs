@@ -1,28 +1,16 @@
 ﻿using Bit.Core.Auth.Identity.TokenProviders;
-using Bit.Core.Auth.IdentityServer;
-using Bit.Core.Enums;
 using Bit.Core.Services;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.SendFeatures.Queries.Interfaces;
-using Bit.Core.Utilities;
-using Bit.Identity.IdentityServer.Enums;
-using Bit.Identity.IdentityServer.RequestValidators.SendAccess;
 using Bit.IntegrationTestCommon.Factories;
 using Duende.IdentityModel;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Identity.IntegrationTest.RequestValidation;
+namespace Bit.Identity.IntegrationTest.RequestValidation.SendAccess;
 
-public class SendEmailOtpRequestValidatorIntegrationTests : IClassFixture<IdentityApplicationFactory>
+public class SendEmailOtpRequestValidatorIntegrationTests(IdentityApplicationFactory _factory) : IClassFixture<IdentityApplicationFactory>
 {
-    private readonly IdentityApplicationFactory _factory;
-
-    public SendEmailOtpRequestValidatorIntegrationTests(IdentityApplicationFactory factory)
-    {
-        _factory = factory;
-    }
-
     [Fact]
     public async Task SendAccess_EmailOtpProtectedSend_MissingEmail_ReturnsInvalidRequest()
     {
@@ -43,7 +31,7 @@ public class SendEmailOtpRequestValidatorIntegrationTests : IClassFixture<Identi
             });
         }).CreateClient();
 
-        var requestBody = CreateTokenRequestBody(sendId); // No email
+        var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId); // No email
 
         // Act
         var response = await client.PostAsync("/connect/token", requestBody);
@@ -87,7 +75,7 @@ public class SendEmailOtpRequestValidatorIntegrationTests : IClassFixture<Identi
             });
         }).CreateClient();
 
-        var requestBody = CreateTokenRequestBody(sendId, sendEmail: email); // Email but no OTP
+        var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId, email: email); // Email but no OTP
 
         // Act
         var response = await client.PostAsync("/connect/token", requestBody);
@@ -130,7 +118,7 @@ public class SendEmailOtpRequestValidatorIntegrationTests : IClassFixture<Identi
             });
         }).CreateClient();
 
-        var requestBody = CreateTokenRequestBody(sendId, sendEmail: email, emailOtp: otp);
+        var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId, email: email, emailOtp: otp);
 
         // Act
         var response = await client.PostAsync("/connect/token", requestBody);
@@ -174,7 +162,7 @@ public class SendEmailOtpRequestValidatorIntegrationTests : IClassFixture<Identi
             });
         }).CreateClient();
 
-        var requestBody = CreateTokenRequestBody(sendId, sendEmail: email, emailOtp: invalidOtp);
+        var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId, email: email, emailOtp: invalidOtp);
 
         // Act
         var response = await client.PostAsync("/connect/token", requestBody);
@@ -216,7 +204,7 @@ public class SendEmailOtpRequestValidatorIntegrationTests : IClassFixture<Identi
             });
         }).CreateClient();
 
-        var requestBody = CreateTokenRequestBody(sendId, sendEmail: email); // Email but no OTP
+        var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId, email: email); // Email but no OTP
 
         // Act
         var response = await client.PostAsync("/connect/token", requestBody);
@@ -224,33 +212,5 @@ public class SendEmailOtpRequestValidatorIntegrationTests : IClassFixture<Identi
         // Assert
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains(OidcConstants.TokenErrors.InvalidRequest, content);
-    }
-
-    private static FormUrlEncodedContent CreateTokenRequestBody(Guid sendId,
-    string sendEmail = null, string emailOtp = null)
-    {
-        var sendIdBase64 = CoreHelpers.Base64UrlEncode(sendId.ToByteArray());
-        var parameters = new List<KeyValuePair<string, string>>
-        {
-            new(OidcConstants.TokenRequest.GrantType, CustomGrantTypes.SendAccess),
-            new(OidcConstants.TokenRequest.ClientId, BitwardenClient.Send ),
-            new(OidcConstants.TokenRequest.Scope, ApiScopes.ApiSendAccess),
-            new("deviceType", ((int)DeviceType.FirefoxBrowser).ToString()),
-            new(SendAccessConstants.TokenRequest.SendId, sendIdBase64)
-        };
-
-        if (!string.IsNullOrEmpty(sendEmail))
-        {
-            parameters.Add(new KeyValuePair<string, string>(
-                SendAccessConstants.TokenRequest.Email, sendEmail));
-        }
-
-        if (!string.IsNullOrEmpty(emailOtp))
-        {
-            parameters.Add(new KeyValuePair<string, string>(
-                SendAccessConstants.TokenRequest.Otp, emailOtp));
-        }
-
-        return new FormUrlEncodedContent(parameters);
     }
 }
