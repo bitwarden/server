@@ -902,13 +902,17 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         var dict = new Dictionary<Guid, CipherOrganizationDetailsWithCollections>();
         var tempCollections = new Dictionary<Guid, List<Guid>>();
 
-        await connection.QueryAsync<CipherOrganizationDetailsWithCollections, CollectionCipher, CipherOrganizationDetailsWithCollections>(
+        await connection.QueryAsync<
+            CipherOrganizationDetails,
+            CollectionCipher,
+            CipherOrganizationDetailsWithCollections
+        >(
             $"[{Schema}].[CipherOrganizationDetails_ReadByOrganizationIdExcludingDefaultCollections]",
             (cipher, cc) =>
             {
                 if (!dict.TryGetValue(cipher.Id, out var details))
                 {
-                    details = new CipherOrganizationDetailsWithCollections(cipher, /*dummy*/null);
+                    details = new CipherOrganizationDetailsWithCollections(cipher, new Dictionary<Guid, IGrouping<Guid, CollectionCipher>>());
                     dict.Add(cipher.Id, details);
                     tempCollections[cipher.Id] = new List<Guid>();
                 }
@@ -925,7 +929,6 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
             commandType: CommandType.StoredProcedure
         );
 
-        // now assign each List<Guid> back to the array property in one shot
         foreach (var kv in dict)
         {
             kv.Value.CollectionIds = tempCollections[kv.Key].ToArray();

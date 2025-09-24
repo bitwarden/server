@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
@@ -13,10 +14,13 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Stripe;
+using Stripe.Tax;
 using Stripe.TestHelpers;
 using Xunit;
 
 namespace Bit.Core.Test.Billing.Organizations.Queries;
+
+using static StripeConstants;
 
 [SutProviderCustomize]
 public class GetOrganizationWarningsQueryTests
@@ -57,7 +61,7 @@ public class GetOrganizationWarningsQueryTests
             ))
             .Returns(new Subscription
             {
-                Status = StripeConstants.SubscriptionStatus.Trialing,
+                Status = SubscriptionStatus.Trialing,
                 TrialEnd = now.AddDays(7),
                 Customer = new Customer
                 {
@@ -95,7 +99,7 @@ public class GetOrganizationWarningsQueryTests
             ))
             .Returns(new Subscription
             {
-                Status = StripeConstants.SubscriptionStatus.Trialing,
+                Status = SubscriptionStatus.Trialing,
                 TrialEnd = now.AddDays(7),
                 Customer = new Customer
                 {
@@ -142,7 +146,7 @@ public class GetOrganizationWarningsQueryTests
             ))
             .Returns(new Subscription
             {
-                Status = StripeConstants.SubscriptionStatus.Unpaid,
+                Status = SubscriptionStatus.Unpaid,
                 Customer = new Customer
                 {
                     InvoiceSettings = new CustomerInvoiceSettings(),
@@ -170,7 +174,8 @@ public class GetOrganizationWarningsQueryTests
             ))
             .Returns(new Subscription
             {
-                Status = StripeConstants.SubscriptionStatus.Unpaid
+                Customer = new Customer(),
+                Status = SubscriptionStatus.Unpaid
             });
 
         sutProvider.GetDependency<IProviderRepository>().GetByOrganizationIdAsync(organization.Id)
@@ -197,7 +202,8 @@ public class GetOrganizationWarningsQueryTests
             ))
             .Returns(new Subscription
             {
-                Status = StripeConstants.SubscriptionStatus.Unpaid
+                Customer = new Customer(),
+                Status = SubscriptionStatus.Unpaid
             });
 
         sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(organization.Id).Returns(true);
@@ -223,7 +229,8 @@ public class GetOrganizationWarningsQueryTests
             ))
             .Returns(new Subscription
             {
-                Status = StripeConstants.SubscriptionStatus.Canceled
+                Customer = new Customer(),
+                Status = SubscriptionStatus.Canceled
             });
 
         sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(organization.Id).Returns(true);
@@ -249,7 +256,8 @@ public class GetOrganizationWarningsQueryTests
             ))
             .Returns(new Subscription
             {
-                Status = StripeConstants.SubscriptionStatus.Unpaid
+                Customer = new Customer(),
+                Status = SubscriptionStatus.Unpaid
             });
 
         sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(organization.Id).Returns(false);
@@ -275,8 +283,9 @@ public class GetOrganizationWarningsQueryTests
             ))
             .Returns(new Subscription
             {
-                CollectionMethod = StripeConstants.CollectionMethod.SendInvoice,
-                Status = StripeConstants.SubscriptionStatus.Active,
+                CollectionMethod = CollectionMethod.SendInvoice,
+                Customer = new Customer(),
+                Status = SubscriptionStatus.Active,
                 CurrentPeriodEnd = now.AddDays(10),
                 TestClock = new TestClock
                 {
@@ -313,11 +322,12 @@ public class GetOrganizationWarningsQueryTests
             ))
             .Returns(new Subscription
             {
-                CollectionMethod = StripeConstants.CollectionMethod.SendInvoice,
-                Status = StripeConstants.SubscriptionStatus.Active,
+                CollectionMethod = CollectionMethod.SendInvoice,
+                Customer = new Customer(),
+                Status = SubscriptionStatus.Active,
                 LatestInvoice = new Invoice
                 {
-                    Status = StripeConstants.InvoiceStatus.Open,
+                    Status = InvoiceStatus.Open,
                     DueDate = now.AddDays(30),
                     Created = now
                 },
@@ -360,8 +370,9 @@ public class GetOrganizationWarningsQueryTests
             .Returns(new Subscription
             {
                 Id = subscriptionId,
-                CollectionMethod = StripeConstants.CollectionMethod.SendInvoice,
-                Status = StripeConstants.SubscriptionStatus.PastDue,
+                CollectionMethod = CollectionMethod.SendInvoice,
+                Customer = new Customer(),
+                Status = SubscriptionStatus.PastDue,
                 TestClock = new TestClock
                 {
                     FrozenTime = now
@@ -389,5 +400,407 @@ public class GetOrganizationWarningsQueryTests
         });
 
         Assert.Equal(dueDate.AddDays(30), response.ResellerRenewal.PastDue!.SuspensionDate);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_USCustomer_NoTaxIdWarning(
+        Organization organization,
+        SutProvider<GetOrganizationWarningsQuery> sutProvider)
+    {
+        var subscription = new Subscription
+        {
+            Customer = new Customer
+            {
+                Address = new Address { Country = "US" },
+                TaxIds = new StripeList<TaxId> { Data = new List<TaxId>() },
+                InvoiceSettings = new CustomerInvoiceSettings(),
+                Metadata = new Dictionary<string, string>()
+            }
+        };
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetSubscription(organization, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        var response = await sutProvider.Sut.Run(organization);
+
+        Assert.Null(response.TaxId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_FreeCustomer_NoTaxIdWarning(
+        Organization organization,
+        SutProvider<GetOrganizationWarningsQuery> sutProvider)
+    {
+        organization.PlanType = PlanType.Free;
+
+        var subscription = new Subscription
+        {
+            Customer = new Customer
+            {
+                Address = new Address { Country = "CA" },
+                TaxIds = new StripeList<TaxId> { Data = new List<TaxId>() },
+                InvoiceSettings = new CustomerInvoiceSettings(),
+                Metadata = new Dictionary<string, string>()
+            }
+        };
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetSubscription(organization, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        var response = await sutProvider.Sut.Run(organization);
+
+        Assert.Null(response.TaxId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_NotOwner_NoTaxIdWarning(
+        Organization organization,
+        SutProvider<GetOrganizationWarningsQuery> sutProvider)
+    {
+        organization.PlanType = PlanType.TeamsAnnually;
+
+        var subscription = new Subscription
+        {
+            Customer = new Customer
+            {
+                Address = new Address { Country = "CA" },
+                TaxIds = new StripeList<TaxId> { Data = new List<TaxId>() },
+                InvoiceSettings = new CustomerInvoiceSettings(),
+                Metadata = new Dictionary<string, string>()
+            }
+        };
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetSubscription(organization, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organization.Id)
+            .Returns(false);
+
+        var response = await sutProvider.Sut.Run(organization);
+
+        Assert.Null(response.TaxId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_HasProvider_NoTaxIdWarning(
+        Organization organization,
+        SutProvider<GetOrganizationWarningsQuery> sutProvider)
+    {
+        organization.PlanType = PlanType.TeamsAnnually;
+
+        var subscription = new Subscription
+        {
+            Customer = new Customer
+            {
+                Address = new Address { Country = "CA" },
+                TaxIds = new StripeList<TaxId> { Data = new List<TaxId>() },
+                InvoiceSettings = new CustomerInvoiceSettings(),
+                Metadata = new Dictionary<string, string>()
+            }
+        };
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetSubscription(organization, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organization.Id)
+            .Returns(true);
+
+        sutProvider.GetDependency<IProviderRepository>()
+            .GetByOrganizationIdAsync(organization.Id)
+            .Returns(new Provider());
+
+        var response = await sutProvider.Sut.Run(organization);
+
+        Assert.Null(response.TaxId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_NoRegistrationInCountry_NoTaxIdWarning(
+        Organization organization,
+        SutProvider<GetOrganizationWarningsQuery> sutProvider)
+    {
+        organization.PlanType = PlanType.TeamsAnnually;
+
+        var subscription = new Subscription
+        {
+            Customer = new Customer
+            {
+                Address = new Address { Country = "CA" },
+                TaxIds = new StripeList<TaxId> { Data = new List<TaxId>() },
+                InvoiceSettings = new CustomerInvoiceSettings(),
+                Metadata = new Dictionary<string, string>()
+            }
+        };
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetSubscription(organization, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organization.Id)
+            .Returns(true);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
+            .Returns(new StripeList<Registration>
+            {
+                Data = new List<Registration>
+                {
+                    new() { Country = "GB" }
+                }
+            });
+
+        var response = await sutProvider.Sut.Run(organization);
+
+        Assert.Null(response.TaxId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_Has_TaxIdWarning_Missing(
+        Organization organization,
+        SutProvider<GetOrganizationWarningsQuery> sutProvider)
+    {
+        organization.PlanType = PlanType.TeamsAnnually;
+
+        var subscription = new Subscription
+        {
+            Customer = new Customer
+            {
+                Address = new Address { Country = "CA" },
+                TaxIds = new StripeList<TaxId> { Data = new List<TaxId>() },
+                InvoiceSettings = new CustomerInvoiceSettings(),
+                Metadata = new Dictionary<string, string>()
+            }
+        };
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetSubscription(organization, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organization.Id)
+            .Returns(true);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
+            .Returns(new StripeList<Registration>
+            {
+                Data = new List<Registration>
+                {
+                    new() { Country = "CA" }
+                }
+            });
+
+        var response = await sutProvider.Sut.Run(organization);
+
+        Assert.True(response is
+        {
+            TaxId.Type: "tax_id_missing"
+        });
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_Has_TaxIdWarning_PendingVerification(
+        Organization organization,
+        SutProvider<GetOrganizationWarningsQuery> sutProvider)
+    {
+        organization.PlanType = PlanType.EnterpriseAnnually;
+
+        var taxId = new TaxId
+        {
+            Verification = new TaxIdVerification
+            {
+                Status = TaxIdVerificationStatus.Pending
+            }
+        };
+
+        var subscription = new Subscription
+        {
+            Customer = new Customer
+            {
+                Address = new Address { Country = "CA" },
+                TaxIds = new StripeList<TaxId> { Data = new List<TaxId> { taxId } },
+                InvoiceSettings = new CustomerInvoiceSettings(),
+                Metadata = new Dictionary<string, string>()
+            }
+        };
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetSubscription(organization, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organization.Id)
+            .Returns(true);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
+            .Returns(new StripeList<Registration>
+            {
+                Data = new List<Registration>
+                {
+                    new() { Country = "CA" }
+                }
+            });
+
+        var response = await sutProvider.Sut.Run(organization);
+
+        Assert.True(response is
+        {
+            TaxId.Type: "tax_id_pending_verification"
+        });
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_Has_TaxIdWarning_FailedVerification(
+        Organization organization,
+        SutProvider<GetOrganizationWarningsQuery> sutProvider)
+    {
+        organization.PlanType = PlanType.TeamsAnnually;
+
+        var taxId = new TaxId
+        {
+            Verification = new TaxIdVerification
+            {
+                Status = TaxIdVerificationStatus.Unverified
+            }
+        };
+
+        var subscription = new Subscription
+        {
+            Customer = new Customer
+            {
+                Address = new Address { Country = "CA" },
+                TaxIds = new StripeList<TaxId> { Data = new List<TaxId> { taxId } },
+                InvoiceSettings = new CustomerInvoiceSettings(),
+                Metadata = new Dictionary<string, string>()
+            }
+        };
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetSubscription(organization, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organization.Id)
+            .Returns(true);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
+            .Returns(new StripeList<Registration>
+            {
+                Data = new List<Registration>
+                {
+                    new() { Country = "CA" }
+                }
+            });
+
+        var response = await sutProvider.Sut.Run(organization);
+
+        Assert.True(response is
+        {
+            TaxId.Type: "tax_id_failed_verification"
+        });
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_VerifiedTaxId_NoTaxIdWarning(
+        Organization organization,
+        SutProvider<GetOrganizationWarningsQuery> sutProvider)
+    {
+        organization.PlanType = PlanType.TeamsAnnually;
+
+        var taxId = new TaxId
+        {
+            Verification = new TaxIdVerification
+            {
+                Status = TaxIdVerificationStatus.Verified
+            }
+        };
+
+        var subscription = new Subscription
+        {
+            Customer = new Customer
+            {
+                Address = new Address { Country = "CA" },
+                TaxIds = new StripeList<TaxId> { Data = new List<TaxId> { taxId } },
+                InvoiceSettings = new CustomerInvoiceSettings(),
+                Metadata = new Dictionary<string, string>()
+            }
+        };
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetSubscription(organization, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organization.Id)
+            .Returns(true);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
+            .Returns(new StripeList<Registration>
+            {
+                Data = new List<Registration>
+                {
+                    new() { Country = "CA" }
+                }
+            });
+
+        var response = await sutProvider.Sut.Run(organization);
+
+        Assert.Null(response.TaxId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_NullVerification_NoTaxIdWarning(
+        Organization organization,
+        SutProvider<GetOrganizationWarningsQuery> sutProvider)
+    {
+        organization.PlanType = PlanType.TeamsAnnually;
+
+        var taxId = new TaxId
+        {
+            Verification = null
+        };
+
+        var subscription = new Subscription
+        {
+            Customer = new Customer
+            {
+                Address = new Address { Country = "CA" },
+                TaxIds = new StripeList<TaxId> { Data = new List<TaxId> { taxId } },
+                InvoiceSettings = new CustomerInvoiceSettings(),
+                Metadata = new Dictionary<string, string>()
+            }
+        };
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetSubscription(organization, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organization.Id)
+            .Returns(true);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
+            .Returns(new StripeList<Registration>
+            {
+                Data = new List<Registration>
+                {
+                    new() { Country = "CA" }
+                }
+            });
+
+        var response = await sutProvider.Sut.Run(organization);
+
+        Assert.Null(response.TaxId);
     }
 }
