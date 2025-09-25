@@ -911,8 +911,8 @@ public class StripePaymentService : IPaymentService
             {
                 Items =
                 [
-                    new InvoiceSubscriptionDetailsItemOptions { Quantity = 1, Plan = "premium-annually" },
-                    new InvoiceSubscriptionDetailsItemOptions { Quantity = parameters.PasswordManager.AdditionalStorage, Plan = "storage-gb-annually" }
+                    new InvoiceSubscriptionDetailsItemOptions { Quantity = 1, Plan = StripeConstants.Prices.PremiumAnnually },
+                    new InvoiceSubscriptionDetailsItemOptions { Quantity = parameters.PasswordManager.AdditionalStorage, Plan = StripeConstants.Prices.StoragePlanPersonal }
                 ]
             },
             CustomerDetails = new InvoiceCustomerDetailsOptions

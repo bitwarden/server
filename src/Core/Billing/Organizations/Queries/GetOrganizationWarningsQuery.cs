@@ -15,6 +15,7 @@ using Stripe.Tax;
 
 namespace Bit.Core.Billing.Organizations.Queries;
 
+using static Core.Constants;
 using static StripeConstants;
 using FreeTrialWarning = OrganizationWarnings.FreeTrialWarning;
 using InactiveSubscriptionWarning = OrganizationWarnings.InactiveSubscriptionWarning;
@@ -238,6 +239,11 @@ public class GetOrganizationWarningsQuery(
         Customer customer,
         Provider? provider)
     {
+        if (customer.Address?.Country == CountryAbbreviations.UnitedStates)
+        {
+            return null;
+        }
+
         var productTier = organization.PlanType.GetProductTier();
 
         // Only business tier customers can have tax IDs

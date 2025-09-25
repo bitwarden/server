@@ -11,6 +11,7 @@ using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
@@ -23,6 +24,7 @@ using Bit.Core.Billing.Pricing;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Api;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
@@ -534,15 +536,22 @@ public class OrganizationUsersController : Controller
 
     [HttpDelete("{id}/delete-account")]
     [Authorize<ManageUsersRequirement>]
-    public async Task DeleteAccount(Guid orgId, Guid id)
+    public async Task<IResult> DeleteAccount(Guid orgId, Guid id)
     {
-        var currentUser = await _userService.GetUserByPrincipalAsync(User);
-        if (currentUser == null)
+        var currentUserId = _userService.GetProperUserId(User);
+        if (currentUserId == null)
         {
-            throw new UnauthorizedAccessException();
+            return TypedResults.Unauthorized();
         }
 
-        await _deleteClaimedOrganizationUserAccountCommand.DeleteUserAsync(orgId, id, currentUser.Id);
+        var commandResult = await _deleteClaimedOrganizationUserAccountCommand.DeleteUserAsync(orgId, id, currentUserId.Value);
+
+        return commandResult.Result.Match<IResult>(
+            error => error is NotFoundError
+                ? TypedResults.NotFound(new ErrorResponseModel(error.Message))
+                : TypedResults.BadRequest(new ErrorResponseModel(error.Message)),
+            TypedResults.Ok
+        );
     }
 
     [HttpPost("{id}/delete-account")]
@@ -557,16 +566,20 @@ public class OrganizationUsersController : Controller
     [Authorize<ManageUsersRequirement>]
     public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkDeleteAccount(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
     {
-        var currentUser = await _userService.GetUserByPrincipalAsync(User);
-        if (currentUser == null)
+        var currentUserId = _userService.GetProperUserId(User);
+        if (currentUserId == null)
         {
             throw new UnauthorizedAccessException();
         }
 
-        var results = await _deleteClaimedOrganizationUserAccountCommand.DeleteManyUsersAsync(orgId, model.Ids, currentUser.Id);
+        var result = await _deleteClaimedOrganizationUserAccountCommand.DeleteManyUsersAsync(orgId, model.Ids, currentUserId.Value);
 
-        return new ListResponseModel<OrganizationUserBulkResponseModel>(results.Select(r =>
-            new OrganizationUserBulkResponseModel(r.OrganizationUserId, r.ErrorMessage)));
+        var responses = result.Select(r => r.Result.Match(
+            error => new OrganizationUserBulkResponseModel(r.Id, error.Message),
+            _ => new OrganizationUserBulkResponseModel(r.Id, string.Empty)
+        ));
+
+        return new ListResponseModel<OrganizationUserBulkResponseModel>(responses);
     }
 
     [HttpPost("delete-account")]
