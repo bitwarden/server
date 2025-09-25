@@ -26,7 +26,7 @@ public class UserDecryptionOptions : ResponseModel
     /// Gets or sets the WebAuthn PRF decryption keys.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public WebAuthnPrfDecryptionOption? WebAuthnPrfOption { get; set; }
+    public WebAuthnPrfDecryptionOption[]? WebAuthnPrfOptions { get; set; }
 
     /// <summary>
     /// Gets or sets information regarding this users trusted device decryption setup.
@@ -45,13 +45,19 @@ public class WebAuthnPrfDecryptionOption
 {
     public string EncryptedPrivateKey { get; }
     public string EncryptedUserKey { get; }
+    public string CredentialId { get; }
+    public string[] Transports { get; }
 
     public WebAuthnPrfDecryptionOption(
         string encryptedPrivateKey,
-        string encryptedUserKey)
+        string encryptedUserKey,
+        string credentialId,
+        string[]? transports = null)
     {
         EncryptedPrivateKey = encryptedPrivateKey;
         EncryptedUserKey = encryptedUserKey;
+        CredentialId = credentialId;
+        Transports = transports ?? [];
     }
 }
 

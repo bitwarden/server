@@ -585,7 +585,7 @@ public class BaseRequestValidatorTests
         _userDecryptionOptionsBuilder.ForUser(Arg.Any<User>()).Returns(_userDecryptionOptionsBuilder);
         _userDecryptionOptionsBuilder.WithDevice(Arg.Any<Device>()).Returns(_userDecryptionOptionsBuilder);
         _userDecryptionOptionsBuilder.WithSso(Arg.Any<SsoConfig>()).Returns(_userDecryptionOptionsBuilder);
-        _userDecryptionOptionsBuilder.WithWebAuthnLoginCredential(Arg.Any<WebAuthnCredential>()).Returns(_userDecryptionOptionsBuilder);
+        _userDecryptionOptionsBuilder.WithWebAuthnLoginCredentials(Arg.Any<IEnumerable<WebAuthnCredential>>()).Returns(_userDecryptionOptionsBuilder);
         _userDecryptionOptionsBuilder.BuildAsync().Returns(Task.FromResult(new UserDecryptionOptions
         {
             HasMasterPassword = false,
@@ -626,7 +626,7 @@ public class BaseRequestValidatorTests
         _userDecryptionOptionsBuilder.ForUser(Arg.Any<User>()).Returns(_userDecryptionOptionsBuilder);
         _userDecryptionOptionsBuilder.WithDevice(Arg.Any<Device>()).Returns(_userDecryptionOptionsBuilder);
         _userDecryptionOptionsBuilder.WithSso(Arg.Any<SsoConfig>()).Returns(_userDecryptionOptionsBuilder);
-        _userDecryptionOptionsBuilder.WithWebAuthnLoginCredential(Arg.Any<WebAuthnCredential>()).Returns(_userDecryptionOptionsBuilder);
+        _userDecryptionOptionsBuilder.WithWebAuthnLoginCredentials(Arg.Any<IEnumerable<WebAuthnCredential>>()).Returns(_userDecryptionOptionsBuilder);
         _userDecryptionOptionsBuilder.BuildAsync().Returns(Task.FromResult(new UserDecryptionOptions
         {
             HasMasterPassword = true,

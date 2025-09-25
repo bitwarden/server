@@ -41,7 +41,7 @@ public class UserDecryptionOptionsBuilderTests
     [BitAutoData(true, false, true)]   // EncryptedPrivateKey and EncryptedUserKey are non-null, EncryptedPublicKey is null
     [BitAutoData(true, true, false)]   // EncryptedPrivateKey and EncryptedPublicKey are non-null, EncryptedUserKey is null
     [BitAutoData(false, true, true)]   // EncryptedPublicKey and EncryptedUserKey are non-null, EncryptedPrivateKey is null
-    public async Task WithWebAuthnLoginCredential_VariousKeyCombinations_ShouldReturnCorrectPrfOption(
+    public async Task WithWebAuthnLoginCredentials_VariousKeyCombinations_ShouldReturnCorrectPrfOption(
         bool hasEncryptedPrivateKey,
         bool hasEncryptedPublicKey,
         bool hasEncryptedUserKey,
@@ -51,17 +51,19 @@ public class UserDecryptionOptionsBuilderTests
         credential.EncryptedPublicKey = hasEncryptedPublicKey ? "encryptedPublicKey" : null;
         credential.EncryptedUserKey = hasEncryptedUserKey ? "encryptedUserKey" : null;
 
-        var result = await _builder.WithWebAuthnLoginCredential(credential).BuildAsync();
+        var result = await _builder.WithWebAuthnLoginCredentials([credential]).BuildAsync();
 
         if (credential.GetPrfStatus() == WebAuthnPrfStatus.Enabled)
         {
-            Assert.NotNull(result.WebAuthnPrfOption);
-            Assert.Equal(credential.EncryptedPrivateKey, result.WebAuthnPrfOption!.EncryptedPrivateKey);
-            Assert.Equal(credential.EncryptedUserKey, result.WebAuthnPrfOption!.EncryptedUserKey);
+            Assert.NotNull(result.WebAuthnPrfOptions);
+            Assert.Single(result.WebAuthnPrfOptions);
+            Assert.Equal(credential.EncryptedPrivateKey, result.WebAuthnPrfOptions![0].EncryptedPrivateKey);
+            Assert.Equal(credential.CredentialId, result.WebAuthnPrfOptions![0].CredentialId);
+            Assert.Equal(credential.EncryptedUserKey, result.WebAuthnPrfOptions![0].EncryptedUserKey);
         }
         else
         {
-            Assert.Null(result.WebAuthnPrfOption);
+            Assert.Null(result.WebAuthnPrfOptions);
         }
     }
 

@@ -57,15 +57,25 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
 
     public IUserDecryptionOptionsBuilder WithDevice(Device device)
     {
-        _device = device;
+        _device = device;>
         return this;
     }
 
-    public IUserDecryptionOptionsBuilder WithWebAuthnLoginCredential(WebAuthnCredential credential)
+    public IUserDecryptionOptionsBuilder WithWebAuthnLoginCredentials(IEnumerable<WebAuthnCredential> credentials)
     {
-        if (credential.GetPrfStatus() == WebAuthnPrfStatus.Enabled)
+        var prfEnabledCredentials = credentials
+            .Where(c => c.GetPrfStatus() == WebAuthnPrfStatus.Enabled)
+            .Select(c => new WebAuthnPrfDecryptionOption(
+                c.EncryptedPrivateKey,
+                c.EncryptedUserKey,
+                c.CredentialId,
+                [] // Stored credentials currently lack Transports, just send an empty array for now
+            ))
+            .ToArray();
+
+        if (prfEnabledCredentials.Length > 0)
         {
-            _options.WebAuthnPrfOption = new WebAuthnPrfDecryptionOption(credential.EncryptedPrivateKey, credential.EncryptedUserKey);
+            _options.WebAuthnPrfOptions = prfEnabledCredentials;
         }
         return this;
     }
