@@ -12,7 +12,9 @@ public class ProviderUserOrganizationDetailsViewQuery : IQuery<ProviderUserOrgan
                     join po in dbContext.ProviderOrganizations on pu.ProviderId equals po.ProviderId
                     join o in dbContext.Organizations on po.OrganizationId equals o.Id
                     join p in dbContext.Providers on pu.ProviderId equals p.Id
-                    select new { pu, po, o, p };
+                    join ss in dbContext.SsoConfigs on o.Id equals ss.OrganizationId into ss_g
+                    from ss in ss_g.DefaultIfEmpty()
+                    select new { pu, po, o, p, ss };
         return query.Select(x => new ProviderUserOrganizationDetails
         {
             OrganizationId = x.po.OrganizationId,
@@ -52,6 +54,8 @@ public class ProviderUserOrganizationDetailsViewQuery : IQuery<ProviderUserOrgan
             ProviderType = x.p.Type,
             UseOrganizationDomains = x.o.UseOrganizationDomains,
             UseAdminSponsoredFamilies = x.o.UseAdminSponsoredFamilies,
+            SsoEnabled = x.ss.Enabled,
+            SsoConfig = x.ss.Data,
         });
     }
 }
