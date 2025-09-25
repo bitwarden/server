@@ -155,6 +155,7 @@ BEGIN
     OFFSET 0 ROWS
     FETCH NEXT @PageSize ROWS ONLY
 END
+GO
 
 IF EXISTS(SELECT 1 FROM sys.indexes WHERE name = 'IX_Event_DateOrganizationIdUserId')
 BEGIN
