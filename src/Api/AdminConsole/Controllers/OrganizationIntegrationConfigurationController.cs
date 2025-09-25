@@ -98,7 +98,6 @@ public class OrganizationIntegrationConfigurationController(
     }
 
     [HttpDelete("{configurationId:guid}")]
-    [HttpPost("{configurationId:guid}/delete")]
     public async Task DeleteAsync(Guid organizationId, Guid integrationId, Guid configurationId)
     {
         if (!await HasPermission(organizationId))
@@ -118,6 +117,13 @@ public class OrganizationIntegrationConfigurationController(
         }
 
         await integrationConfigurationRepository.DeleteAsync(configuration);
+    }
+
+    [HttpPost("{configurationId:guid}/delete")]
+    [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
+    public async Task PostDeleteAsync(Guid organizationId, Guid integrationId, Guid configurationId)
+    {
+        await DeleteAsync(organizationId, integrationId, configurationId);
     }
 
     private async Task<bool> HasPermission(Guid organizationId)

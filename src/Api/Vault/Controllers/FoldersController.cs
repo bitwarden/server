@@ -45,7 +45,7 @@ public class FoldersController : Controller
     }
 
     [HttpGet("")]
-    public async Task<ListResponseModel<FolderResponseModel>> Get()
+    public async Task<ListResponseModel<FolderResponseModel>> GetAll()
     {
         var userId = _userService.GetProperUserId(User).Value;
         var folders = await _folderRepository.GetManyByUserIdAsync(userId);
@@ -63,7 +63,6 @@ public class FoldersController : Controller
     }
 
     [HttpPut("{id}")]
-    [HttpPost("{id}")]
     public async Task<FolderResponseModel> Put(string id, [FromBody] FolderRequestModel model)
     {
         var userId = _userService.GetProperUserId(User).Value;
@@ -77,8 +76,14 @@ public class FoldersController : Controller
         return new FolderResponseModel(folder);
     }
 
+    [HttpPost("{id}")]
+    [Obsolete("This endpoint is deprecated. Use PUT method instead.")]
+    public async Task<FolderResponseModel> PostPut(string id, [FromBody] FolderRequestModel model)
+    {
+        return await Put(id, model);
+    }
+
     [HttpDelete("{id}")]
-    [HttpPost("{id}/delete")]
     public async Task Delete(string id)
     {
         var userId = _userService.GetProperUserId(User).Value;
@@ -89,6 +94,13 @@ public class FoldersController : Controller
         }
 
         await _cipherService.DeleteFolderAsync(folder);
+    }
+
+    [HttpPost("{id}/delete")]
+    [Obsolete("This endpoint is deprecated. Use DELETE method instead.")]
+    public async Task PostDelete(string id)
+    {
+        await Delete(id);
     }
 
     [HttpDelete("all")]

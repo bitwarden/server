@@ -9,6 +9,7 @@ using Bit.Core;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
@@ -16,6 +17,7 @@ using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.Models.Api.Response;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -26,7 +28,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Bit.Api.Auth.Controllers;
 
 [Route("accounts")]
-[Authorize("Application")]
+[Authorize(Policies.Application)]
 public class AccountsController : Controller
 {
     private readonly IOrganizationService _organizationService;
@@ -39,7 +41,7 @@ public class AccountsController : Controller
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IFeatureService _featureService;
     private readonly ITwoFactorEmailService _twoFactorEmailService;
-
+    private readonly IChangeKdfCommand _changeKdfCommand;
 
     public AccountsController(
         IOrganizationService organizationService,
@@ -51,7 +53,8 @@ public class AccountsController : Controller
         ITdeOffboardingPasswordCommand tdeOffboardingPasswordCommand,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IFeatureService featureService,
-        ITwoFactorEmailService twoFactorEmailService
+        ITwoFactorEmailService twoFactorEmailService,
+        IChangeKdfCommand changeKdfCommand
         )
     {
         _organizationService = organizationService;
@@ -64,7 +67,7 @@ public class AccountsController : Controller
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _featureService = featureService;
         _twoFactorEmailService = twoFactorEmailService;
-
+        _changeKdfCommand = changeKdfCommand;
     }
 
 
@@ -256,7 +259,7 @@ public class AccountsController : Controller
     }
 
     [HttpPost("kdf")]
-    public async Task PostKdf([FromBody] KdfRequestModel model)
+    public async Task PostKdf([FromBody] PasswordRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -264,8 +267,12 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var result = await _userService.ChangeKdfAsync(user, model.MasterPasswordHash,
-            model.NewMasterPasswordHash, model.Key, model.Kdf.Value, model.KdfIterations.Value, model.KdfMemory, model.KdfParallelism);
+        if (model.AuthenticationData == null || model.UnlockData == null)
+        {
+            throw new BadRequestException("AuthenticationData and UnlockData must be provided.");
+        }
+
+        var result = await _changeKdfCommand.ChangeKdfAsync(user, model.MasterPasswordHash, model.AuthenticationData.ToData(), model.UnlockData.ToData());
         if (result.Succeeded)
         {
             return;
@@ -344,7 +351,6 @@ public class AccountsController : Controller
     }
 
     [HttpPut("profile")]
-    [HttpPost("profile")]
     public async Task<ProfileResponseModel> PutProfile([FromBody] UpdateProfileRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
@@ -363,8 +369,14 @@ public class AccountsController : Controller
         return response;
     }
 
+    [HttpPost("profile")]
+    [Obsolete("This endpoint is deprecated. Use PUT /profile instead.")]
+    public async Task<ProfileResponseModel> PostProfile([FromBody] UpdateProfileRequestModel model)
+    {
+        return await PutProfile(model);
+    }
+
     [HttpPut("avatar")]
-    [HttpPost("avatar")]
     public async Task<ProfileResponseModel> PutAvatar([FromBody] UpdateAvatarRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
@@ -380,6 +392,13 @@ public class AccountsController : Controller
 
         var response = new ProfileResponseModel(user, null, null, null, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationIdsClaimingActiveUser);
         return response;
+    }
+
+    [HttpPost("avatar")]
+    [Obsolete("This endpoint is deprecated. Use PUT /avatar instead.")]
+    public async Task<ProfileResponseModel> PostAvatar([FromBody] UpdateAvatarRequestModel model)
+    {
+        return await PutAvatar(model);
     }
 
     [HttpGet("revision-date")]
@@ -430,7 +449,6 @@ public class AccountsController : Controller
     }
 
     [HttpDelete]
-    [HttpPost("delete")]
     public async Task Delete([FromBody] SecretVerificationRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
@@ -465,6 +483,13 @@ public class AccountsController : Controller
         }
 
         throw new BadRequestException(ModelState);
+    }
+
+    [HttpPost("delete")]
+    [Obsolete("This endpoint is deprecated. Use DELETE / instead.")]
+    public async Task PostDelete([FromBody] SecretVerificationRequestModel model)
+    {
+        await Delete(model);
     }
 
     [AllowAnonymous]
@@ -638,7 +663,6 @@ public class AccountsController : Controller
         await _twoFactorEmailService.SendNewDeviceVerificationEmailAsync(user);
     }
 
-    [HttpPost("verify-devices")]
     [HttpPut("verify-devices")]
     public async Task SetUserVerifyDevicesAsync([FromBody] SetVerifyDevicesRequestModel request)
     {
@@ -652,6 +676,13 @@ public class AccountsController : Controller
         user.VerifyDevices = request.VerifyDevices;
 
         await _userService.SaveUserAsync(user);
+    }
+
+    [HttpPost("verify-devices")]
+    [Obsolete("This endpoint is deprecated. Use PUT /verify-devices instead.")]
+    public async Task PostSetUserVerifyDevicesAsync([FromBody] SetVerifyDevicesRequestModel request)
+    {
+        await SetUserVerifyDevicesAsync(request);
     }
 
     private async Task<IEnumerable<Guid>> GetOrganizationIdsClaimingUserAsync(Guid userId)

@@ -25,6 +25,7 @@ public class Cipher : ITableObject<Guid>, ICloneable
     public DateTime? DeletedDate { get; set; }
     public Enums.CipherRepromptType? Reprompt { get; set; }
     public string Key { get; set; }
+    public DateTime? ArchivedDate { get; set; }
 
     public void SetNewId()
     {

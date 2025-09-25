@@ -1,7 +1,6 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
@@ -137,20 +136,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
                 Items = [new SubscriptionItemOptions { Price = plan.PasswordManager.StripeSeatPlanId, Quantity = organization.Seats }]
             };
 
-            var setNonUSBusinessUseToReverseCharge = _featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);
-
-            if (setNonUSBusinessUseToReverseCharge)
-            {
-                subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
-            }
-            else if (customer.HasRecognizedTaxLocation())
-            {
-                subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions
-                {
-                    Enabled = customer.Address.Country == "US" ||
-                              customer.TaxIds.Any()
-                };
-            }
+            subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
 
             var subscription = await _stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
 

@@ -63,6 +63,32 @@ public class OrganizationIntegrationConfigurationRequestModelTests
     }
 
     [Theory]
+    [InlineData(data: "")]
+    [InlineData(data: "    ")]
+    public void IsValidForType_EmptyNonNullDatadogConfiguration_ReturnsFalse(string? config)
+    {
+        var model = new OrganizationIntegrationConfigurationRequestModel
+        {
+            Configuration = config,
+            Template = "template"
+        };
+
+        Assert.False(condition: model.IsValidForType(IntegrationType.Datadog));
+    }
+
+    [Fact]
+    public void IsValidForType_NullDatadogConfiguration_ReturnsTrue()
+    {
+        var model = new OrganizationIntegrationConfigurationRequestModel
+        {
+            Configuration = null,
+            Template = "template"
+        };
+
+        Assert.True(condition: model.IsValidForType(IntegrationType.Datadog));
+    }
+
+    [Theory]
     [InlineData(data: null)]
     [InlineData(data: "")]
     [InlineData(data: "    ")]

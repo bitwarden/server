@@ -41,7 +41,6 @@ namespace Bit.Commercial.Core.Billing.Providers.Services;
 public class ProviderBillingService(
     IBraintreeGateway braintreeGateway,
     IEventService eventService,
-    IFeatureService featureService,
     IGlobalSettings globalSettings,
     ILogger<ProviderBillingService> logger,
     IOrganizationRepository organizationRepository,
@@ -284,9 +283,7 @@ public class ProviderBillingService(
             ]
         };
 
-        var setNonUSBusinessUseToReverseCharge = featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);
-
-        if (setNonUSBusinessUseToReverseCharge && providerCustomer.Address is not { Country: "US" })
+        if (providerCustomer.Address is not { Country: Constants.CountryAbbreviations.UnitedStates })
         {
             customerCreateOptions.TaxExempt = StripeConstants.TaxExempt.Reverse;
         }
@@ -529,9 +526,7 @@ public class ProviderBillingService(
             }
         };
 
-        var setNonUSBusinessUseToReverseCharge = featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);
-
-        if (setNonUSBusinessUseToReverseCharge && taxInfo.BillingAddressCountry != "US")
+        if (taxInfo.BillingAddressCountry is not Constants.CountryAbbreviations.UnitedStates)
         {
             options.TaxExempt = StripeConstants.TaxExempt.Reverse;
         }
@@ -641,10 +636,10 @@ public class ProviderBillingService(
             {
                 case PaymentMethodType.BankAccount:
                     {
-                        var setupIntentId = await setupIntentCache.Get(provider.Id);
+                        var setupIntentId = await setupIntentCache.GetSetupIntentIdForSubscriber(provider.Id);
                         await stripeAdapter.SetupIntentCancel(setupIntentId,
                             new SetupIntentCancelOptions { CancellationReason = "abandoned" });
-                        await setupIntentCache.Remove(provider.Id);
+                        await setupIntentCache.RemoveSetupIntentForSubscriber(provider.Id);
                         break;
                     }
                 case PaymentMethodType.PayPal when !string.IsNullOrEmpty(braintreeCustomerId):
@@ -694,7 +689,7 @@ public class ProviderBillingService(
             });
         }
 
-        var setupIntentId = await setupIntentCache.Get(provider.Id);
+        var setupIntentId = await setupIntentCache.GetSetupIntentIdForSubscriber(provider.Id);
 
         var setupIntent = !string.IsNullOrEmpty(setupIntentId)
             ? await stripeAdapter.SetupIntentGet(setupIntentId, new SetupIntentGetOptions
@@ -731,21 +726,8 @@ public class ProviderBillingService(
             TrialPeriodDays = trialPeriodDays
         };
 
-        var setNonUSBusinessUseToReverseCharge =
-            featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);
 
-        if (setNonUSBusinessUseToReverseCharge)
-        {
-            subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
-        }
-        else if (customer.HasRecognizedTaxLocation())
-        {
-            subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions
-            {
-                Enabled = customer.Address.Country == "US" ||
-                          customer.TaxIds.Any()
-            };
-        }
+        subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
 
         try
         {

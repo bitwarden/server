@@ -7,7 +7,6 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
-using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Quartz;
@@ -25,7 +24,6 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     private readonly IStripeFacade _stripeFacade;
     private readonly IOrganizationSponsorshipRenewCommand _organizationSponsorshipRenewCommand;
     private readonly IUserService _userService;
-    private readonly IPushNotificationService _pushNotificationService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ISchedulerFactory _schedulerFactory;
     private readonly IOrganizationEnableCommand _organizationEnableCommand;
@@ -35,6 +33,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     private readonly IProviderRepository _providerRepository;
     private readonly IProviderService _providerService;
     private readonly ILogger<SubscriptionUpdatedHandler> _logger;
+    private readonly IPushNotificationAdapter _pushNotificationAdapter;
 
     public SubscriptionUpdatedHandler(
         IStripeEventService stripeEventService,
@@ -43,7 +42,6 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         IStripeFacade stripeFacade,
         IOrganizationSponsorshipRenewCommand organizationSponsorshipRenewCommand,
         IUserService userService,
-        IPushNotificationService pushNotificationService,
         IOrganizationRepository organizationRepository,
         ISchedulerFactory schedulerFactory,
         IOrganizationEnableCommand organizationEnableCommand,
@@ -52,7 +50,8 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         IFeatureService featureService,
         IProviderRepository providerRepository,
         IProviderService providerService,
-        ILogger<SubscriptionUpdatedHandler> logger)
+        ILogger<SubscriptionUpdatedHandler> logger,
+        IPushNotificationAdapter pushNotificationAdapter)
     {
         _stripeEventService = stripeEventService;
         _stripeEventUtilityService = stripeEventUtilityService;
@@ -61,7 +60,6 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         _stripeFacade = stripeFacade;
         _organizationSponsorshipRenewCommand = organizationSponsorshipRenewCommand;
         _userService = userService;
-        _pushNotificationService = pushNotificationService;
         _organizationRepository = organizationRepository;
         _providerRepository = providerRepository;
         _schedulerFactory = schedulerFactory;
@@ -72,6 +70,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         _providerRepository = providerRepository;
         _providerService = providerService;
         _logger = logger;
+        _pushNotificationAdapter = pushNotificationAdapter;
     }
 
     /// <summary>
@@ -125,7 +124,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                     var organization = await _organizationRepository.GetByIdAsync(organizationId.Value);
                     if (organization != null)
                     {
-                        await _pushNotificationService.PushSyncOrganizationStatusAsync(organization);
+                        await _pushNotificationAdapter.NotifyEnabledChangedAsync(organization);
                     }
                     break;
                 }

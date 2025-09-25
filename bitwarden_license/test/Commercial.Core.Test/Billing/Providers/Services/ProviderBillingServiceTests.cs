@@ -2,7 +2,6 @@
 using System.Net;
 using Bit.Commercial.Core.Billing.Providers.Models;
 using Bit.Commercial.Core.Billing.Providers.Services;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -16,6 +15,7 @@ using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Entities;
 using Bit.Core.Billing.Providers.Models;
 using Bit.Core.Billing.Providers.Repositories;
+using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Entities;
@@ -351,9 +351,6 @@ public class ProviderBillingServiceTests
             {
                 CloudRegion = "US"
             });
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge).Returns(true);
 
         sutProvider.GetDependency<IStripeAdapter>().CustomerCreateAsync(Arg.Is<CustomerCreateOptions>(
                 options =>
@@ -1006,7 +1003,7 @@ public class ProviderBillingServiceTests
                 o.TaxIdData.FirstOrDefault().Value == taxInfo.TaxIdNumber))
             .Throws<StripeException>();
 
-        sutProvider.GetDependency<ISetupIntentCache>().Get(provider.Id).Returns("setup_intent_id");
+        sutProvider.GetDependency<ISetupIntentCache>().GetSetupIntentIdForSubscriber(provider.Id).Returns("setup_intent_id");
 
         await Assert.ThrowsAsync<StripeException>(() =>
             sutProvider.Sut.SetupCustomer(provider, taxInfo, tokenizedPaymentSource));
@@ -1016,7 +1013,7 @@ public class ProviderBillingServiceTests
         await stripeAdapter.Received(1).SetupIntentCancel("setup_intent_id", Arg.Is<SetupIntentCancelOptions>(options =>
             options.CancellationReason == "abandoned"));
 
-        await sutProvider.GetDependency<ISetupIntentCache>().Received(1).Remove(provider.Id);
+        await sutProvider.GetDependency<ISetupIntentCache>().Received(1).RemoveSetupIntentForSubscriber(provider.Id);
     }
 
     [Theory, BitAutoData]
@@ -1249,9 +1246,6 @@ public class ProviderBillingServiceTests
 
         var tokenizedPaymentSource = new TokenizedPaymentSource(PaymentMethodType.Card, "token");
 
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge).Returns(true);
 
         stripeAdapter.CustomerCreateAsync(Arg.Is<CustomerCreateOptions>(o =>
                 o.Address.Country == taxInfo.BillingAddressCountry &&
@@ -1650,7 +1644,7 @@ public class ProviderBillingServiceTests
 
         const string setupIntentId = "seti_123";
 
-        sutProvider.GetDependency<ISetupIntentCache>().Get(provider.Id).Returns(setupIntentId);
+        sutProvider.GetDependency<ISetupIntentCache>().GetSetupIntentIdForSubscriber(provider.Id).Returns(setupIntentId);
 
         sutProvider.GetDependency<IStripeAdapter>().SetupIntentGet(setupIntentId, Arg.Is<SetupIntentGetOptions>(options =>
             options.Expand.Contains("payment_method"))).Returns(new SetupIntent
@@ -1826,9 +1820,6 @@ public class ProviderBillingServiceTests
 
         var expected = new Subscription { Id = "subscription_id", Status = StripeConstants.SubscriptionStatus.Active };
 
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge).Returns(true);
 
         sutProvider.GetDependency<IStripeAdapter>().SubscriptionCreateAsync(Arg.Is<SubscriptionCreateOptions>(
             sub =>
