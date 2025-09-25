@@ -21,11 +21,11 @@
 
 ## Project Structure
 
-- **Source Code**: `/src/` - Api, Identity, Admin, Billing, Core, Infrastructure
-- **Tests**: `/test/` - Matching source structure with `.Test` suffix
-- **Utilities**: `/util/` - Migration tools, seeders, setup scripts
-- **Dev Tools**: `/dev/` - Local development helpers, certificates, docker-compose
-- **Configuration**: `appsettings.{Environment}.json`, `/dev/secrets.json` for local dev
+- **Source Code**: `/src/` - Services and core infrastructure
+- **Tests**: `/test/` - Test logic aligning with the source structure, albeit with a `.Test` suffix
+- **Utilities**: `/util/` - Migration tools, seeders, and setup scripts
+- **Dev Tools**: `/dev/` - Local development helpers
+- **Configuration**: `appsettings.{Environment}.json`, `/dev/secrets.json` for local development
 
 ## Security Requirements
 
