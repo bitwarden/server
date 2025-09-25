@@ -1081,7 +1081,7 @@ public class CipherService : ICipherService
         var newCollections = await _collectionRepository.GetManyByManyIdsAsync(newCollectionIds);
         var newCollectionsContainDefault = newCollections.Any(c => c.Type == CollectionType.DefaultUserCollection);
 
-        if (newCollectionsContainDefault && !currentCollectionsContainDefault)
+        if (newCollectionsContainDefault)
         {
             // User is trying to add the default collection when the cipher is only in shared collections
             throw new BadRequestException("The cipher(s) cannot be assigned to a default collection when only assigned to non-default collections.");
