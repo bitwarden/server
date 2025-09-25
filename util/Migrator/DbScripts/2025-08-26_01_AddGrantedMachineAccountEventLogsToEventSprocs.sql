@@ -186,3 +186,4 @@ BEGIN
         WITH (DROP_EXISTING = ON)
     END    
 END
+GO
