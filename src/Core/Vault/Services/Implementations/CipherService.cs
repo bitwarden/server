@@ -1053,10 +1053,17 @@ public class CipherService : ICipherService
     // Validates that a cipher is not being added to a default collection when it is only currently only in shared collections
     private async Task ValidateChangeInCollectionsAsync(Cipher updatedCipher, IEnumerable<Guid> newCollectionIds, Guid userId)
     {
+
+        if (updatedCipher.Id == Guid.Empty || !updatedCipher.OrganizationId.HasValue)
+        {
+            return;
+        }
+
         var currentCollectionsForCipher = await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, updatedCipher.Id);
 
-        if (updatedCipher.Id == Guid.Empty || !updatedCipher.OrganizationId.HasValue || !currentCollectionsForCipher.Any())
+        if (!currentCollectionsForCipher.Any())
         {
+            // When a cipher is not currently in any collections it can be assigned to any type of collection
             return;
         }
 
