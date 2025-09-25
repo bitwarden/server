@@ -18,6 +18,7 @@ using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models.Api.Response;
 
 namespace Bit.Api.Vault.Models.Response;
 
@@ -60,7 +61,7 @@ public class SyncResponseModel() : ResponseModel("sync")
         Sends = sends.Select(s => new SendResponseModel(s, globalSettings));
         var webAuthnPrfOptions = webAuthnCredentials
             .Where(c => c.GetPrfStatus() == WebAuthnPrfStatus.Enabled)
-            .Select(c => new WebAuthnPrfKeyManagementResponseModel(
+            .Select(c => new WebAuthnPrfDecryptionOption(
                 c.EncryptedPrivateKey,
                 c.EncryptedUserKey,
                 c.CredentialId,
