@@ -16,6 +16,7 @@ using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Bit.Sso.Controllers;
 using Duende.IdentityModel;
+using Duende.IdentityServer.Configuration;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Services;
 using Duende.IdentityServer.Stores;
@@ -26,6 +27,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using AuthenticationOptions = Duende.IdentityServer.Configuration.AuthenticationOptions;
 
 namespace Bit.SSO.Test.Controllers;
 
@@ -44,6 +46,8 @@ public class AccountControllerTest
         out IFeatureService featureService)
     {
         var schemeProvider = Substitute.For<IAuthenticationSchemeProvider>();
+        schemeProvider.GetDefaultAuthenticateSchemeAsync()
+            .Returns(new AuthenticationScheme("idsrv", "idsrv", typeof(IAuthenticationHandler)));
         var clientStore = Substitute.For<IClientStore>();
         interactionService = Substitute.For<IIdentityServerInteractionService>();
         var logger = Substitute.For<ILogger<AccountController>>();
@@ -109,6 +113,14 @@ public class AccountControllerTest
 
         var services = new ServiceCollection();
         services.AddSingleton(authenticationService);
+        services.AddSingleton(schemeProvider);
+        services.AddSingleton(new IdentityServerOptions
+        {
+            Authentication = new AuthenticationOptions
+            {
+                CookieAuthenticationScheme = "idsrv"
+            }
+        });
         var sp = services.BuildServiceProvider();
 
         controller.ControllerContext = new ControllerContext
@@ -120,6 +132,113 @@ public class AccountControllerTest
         };
 
         return controller;
+    }
+
+    private static void InvokeEnsureOrgUserStatusAllowed(
+        AccountController controller,
+        OrganizationUserStatusType status,
+        params OrganizationUserStatusType[] allowed)
+    {
+        var method = typeof(AccountController).GetMethod(
+            "EnsureOrgUserStatusAllowed",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(method);
+        method.Invoke(controller, [status, "Org", allowed]);
+    }
+
+    [Fact]
+    public void EnsureOrgUserStatusAllowed_AllowsAcceptedAndConfirmed()
+    {
+        var authService = Substitute.For<IAuthenticationService>();
+        var controller = CreateController(
+            authService,
+            out var ssoConfigRepository,
+            out var userRepository,
+            out var organizationRepository,
+            out var organizationUserRepository,
+            out var interactionService,
+            out var i18nService,
+            out var ssoUserRepository,
+            out var eventService,
+            out var featureService);
+
+        InvokeEnsureOrgUserStatusAllowed(controller, OrganizationUserStatusType.Accepted,
+            OrganizationUserStatusType.Accepted, OrganizationUserStatusType.Confirmed);
+        InvokeEnsureOrgUserStatusAllowed(controller, OrganizationUserStatusType.Confirmed,
+            OrganizationUserStatusType.Accepted, OrganizationUserStatusType.Confirmed);
+    }
+
+    [Fact]
+    public void EnsureOrgUserStatusAllowed_Invited_ThrowsAcceptInvite()
+    {
+        var authService = Substitute.For<IAuthenticationService>();
+        var controller = CreateController(
+            authService,
+            out var ssoConfigRepository,
+            out var userRepository,
+            out var organizationRepository,
+            out var organizationUserRepository,
+            out var interactionService,
+            out var i18nService,
+            out var ssoUserRepository,
+            out var eventService,
+            out var featureService);
+
+        var ex = Assert.Throws<TargetInvocationException>(() =>
+            InvokeEnsureOrgUserStatusAllowed(controller, OrganizationUserStatusType.Invited,
+                OrganizationUserStatusType.Accepted, OrganizationUserStatusType.Confirmed));
+
+        Assert.IsType<Exception>(ex.InnerException);
+        Assert.Equal("AcceptInviteBeforeUsingSSO", ex.InnerException!.Message);
+    }
+
+    [Fact]
+    public void EnsureOrgUserStatusAllowed_Revoked_ThrowsAccessRevoked()
+    {
+        var authService = Substitute.For<IAuthenticationService>();
+        var controller = CreateController(
+            authService,
+            out var ssoConfigRepository,
+            out var userRepository,
+            out var organizationRepository,
+            out var organizationUserRepository,
+            out var interactionService,
+            out var i18nService,
+            out var ssoUserRepository,
+            out var eventService,
+            out var featureService);
+
+        var ex = Assert.Throws<TargetInvocationException>(() =>
+            InvokeEnsureOrgUserStatusAllowed(controller, OrganizationUserStatusType.Revoked,
+                OrganizationUserStatusType.Accepted, OrganizationUserStatusType.Confirmed));
+
+        Assert.IsType<Exception>(ex.InnerException);
+        Assert.Equal("OrganizationUserAccessRevoked", ex.InnerException!.Message);
+    }
+
+    [Fact]
+    public void EnsureOrgUserStatusAllowed_UnknownStatus_ThrowsUnknown()
+    {
+        var authService = Substitute.For<IAuthenticationService>();
+        var controller = CreateController(
+            authService,
+            out var ssoConfigRepository,
+            out var userRepository,
+            out var organizationRepository,
+            out var organizationUserRepository,
+            out var interactionService,
+            out var i18nService,
+            out var ssoUserRepository,
+            out var eventService,
+            out var featureService);
+
+        var unknown = (OrganizationUserStatusType)999;
+        var ex = Assert.Throws<TargetInvocationException>(() =>
+            InvokeEnsureOrgUserStatusAllowed(controller, unknown,
+                OrganizationUserStatusType.Accepted, OrganizationUserStatusType.Confirmed));
+
+        Assert.IsType<Exception>(ex.InnerException);
+        Assert.Equal("OrganizationUserUnknownStatus", ex.InnerException!.Message);
     }
 
     [Fact]
@@ -252,8 +371,7 @@ public class AccountControllerTest
             BindingFlags.Instance | BindingFlags.NonPublic);
         Assert.NotNull(method);
 
-        var task = (Task<User>)method!.Invoke(controller, new object[]
-        {
+        var task = (Task<User>)method.Invoke(controller, [
             orgId.ToString(),
             providerUserId,
             claims,
@@ -261,7 +379,7 @@ public class AccountControllerTest
             config,
             organization,
             orgUser
-        })!;
+        ])!;
 
         var returnedUser = await task;
         Assert.Equal(existingUser.Id, returnedUser.Id);
