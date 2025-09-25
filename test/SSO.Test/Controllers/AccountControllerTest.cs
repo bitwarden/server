@@ -113,7 +113,7 @@ public class AccountControllerTest
 
         var services = new ServiceCollection();
         services.AddSingleton(authenticationService);
-        services.AddSingleton(schemeProvider);
+        services.AddSingleton<IAuthenticationSchemeProvider>(schemeProvider);
         services.AddSingleton(new IdentityServerOptions
         {
             Authentication = new AuthenticationOptions
@@ -145,6 +145,94 @@ public class AccountControllerTest
         Assert.NotNull(method);
         method.Invoke(controller, [status, "Org", allowed]);
     }
+
+    private static AuthenticateResult BuildSuccessfulExternalAuth(Guid orgId, string providerUserId, string email)
+    {
+        var claims = new[]
+        {
+            new Claim(JwtClaimTypes.Subject, providerUserId),
+            new Claim(JwtClaimTypes.Email, email)
+        };
+        var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, "External"));
+        var properties = new AuthenticationProperties
+        {
+            Items =
+            {
+                ["scheme"] = orgId.ToString(),
+                ["return_url"] = "~/",
+                ["state"] = "state",
+                ["user_identifier"] = string.Empty
+            }
+        };
+        var ticket = new AuthenticationTicket(principal, properties, AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
+        return AuthenticateResult.Success(ticket);
+    }
+
+    private static AccountController CreateControllerWithAuth(
+        AuthenticateResult authResult,
+        out IAuthenticationService authService,
+        out ISsoConfigRepository ssoConfigRepository,
+        out IUserRepository userRepository,
+        out IOrganizationRepository organizationRepository,
+        out IOrganizationUserRepository organizationUserRepository,
+        out IIdentityServerInteractionService interactionService,
+        out II18nService i18nService,
+        out ISsoUserRepository ssoUserRepository,
+        out Core.Services.IEventService eventService,
+        out IFeatureService featureService)
+    {
+        var authServiceSub = Substitute.For<IAuthenticationService>();
+        authServiceSub.AuthenticateAsync(
+            Arg.Any<HttpContext>(),
+            AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
+            .Returns(authResult);
+        authService = authServiceSub;
+        return CreateController(
+            authServiceSub,
+            out ssoConfigRepository,
+            out userRepository,
+            out organizationRepository,
+            out organizationUserRepository,
+            out interactionService,
+            out i18nService,
+            out ssoUserRepository,
+            out eventService,
+            out featureService);
+    }
+
+    private static void ConfigureSsoAndUser(
+        ISsoConfigRepository ssoConfigRepository,
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        Guid orgId,
+        string providerUserId,
+        User user,
+        Organization? organization = null,
+        OrganizationUser? orgUser = null)
+    {
+        var ssoConfig = new SsoConfig { OrganizationId = orgId, Enabled = true };
+        var ssoData = new SsoConfigurationData();
+        ssoConfig.SetData(ssoData);
+        ssoConfigRepository.GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
+
+        userRepository.GetBySsoUserAsync(providerUserId, orgId).Returns(user);
+
+        if (organization != null)
+        {
+            organizationRepository.GetByIdAsync(orgId).Returns(organization);
+        }
+        if (organization != null && orgUser != null)
+        {
+            organizationUserRepository.GetByOrganizationAsync(organization.Id, user.Id).Returns(orgUser);
+        }
+    }
+
+    private static void SetPreventNonCompliant(IFeatureService featureService, bool enabled)
+        => featureService.IsEnabled(Arg.Any<string>()).Returns(enabled);
+
+    private static void SetDefaultReturnContext(IIdentityServerInteractionService interactionService)
+        => interactionService.GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
 
     [Fact]
     public void EnsureOrgUserStatusAllowed_AllowsAcceptedAndConfirmed()
@@ -256,34 +344,10 @@ public class AccountControllerTest
             Type = OrganizationUserType.User
         };
 
-        // Prepare authenticate result that AccountController expects to read
-        var claims = new[]
-        {
-            new Claim(JwtClaimTypes.Subject, providerUserId),
-            new Claim(JwtClaimTypes.Email, user.Email!)
-        };
-        var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, "External"));
-        var properties = new AuthenticationProperties
-        {
-            Items =
-            {
-                ["scheme"] = orgId.ToString(),
-                ["return_url"] = "~/",
-                ["state"] = "state",
-                ["user_identifier"] = string.Empty
-            }
-        };
-        var ticket = new AuthenticationTicket(principal, properties, AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
-        var authenticateResult = AuthenticateResult.Success(ticket);
-
-        var authService = Substitute.For<IAuthenticationService>();
-        authService.AuthenticateAsync(
-            Arg.Any<HttpContext>(),
-            AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
-            .Returns(authenticateResult);
-
-        var controller = CreateController(
-            authService,
+        var authResult = BuildSuccessfulExternalAuth(orgId, providerUserId, user.Email!);
+        var controller = CreateControllerWithAuth(
+            authResult,
+            out var authService,
             out var ssoConfigRepository,
             out var userRepository,
             out var organizationRepository,
@@ -294,18 +358,19 @@ public class AccountControllerTest
             out var eventService,
             out var featureService);
 
-        // Configure dependencies used by FindUserFromExternalProviderAsync and enforcement
-        var ssoConfig = new SsoConfig { OrganizationId = orgId, Enabled = true };
-        var ssoData = new SsoConfigurationData();
-        ssoConfig.SetData(ssoData);
-        ssoConfigRepository.GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
+        ConfigureSsoAndUser(
+            ssoConfigRepository,
+            userRepository,
+            organizationRepository,
+            organizationUserRepository,
+            orgId,
+            providerUserId,
+            user,
+            organization,
+            orgUser);
 
-        userRepository.GetBySsoUserAsync(providerUserId, orgId).Returns(user);
-        organizationRepository.GetByIdAsync(orgId).Returns(organization);
-        organizationUserRepository.GetByOrganizationAsync(organization.Id, user.Id).Returns(orgUser);
-
-        featureService.IsEnabled(Arg.Any<string>()).Returns(true);
-        interactionService.GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
+        SetPreventNonCompliant(featureService, true);
+        SetDefaultReturnContext(interactionService);
 
         var result = await controller.ExternalCallback();
 
@@ -322,6 +387,54 @@ public class AccountControllerTest
             Arg.Any<HttpContext>(),
             AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme,
             Arg.Any<AuthenticationProperties>());
+    }
+
+    [Fact]
+    public async Task ExternalCallback_PreventNonCompliantFalse_SkipsOrgLookupAndSignsIn()
+    {
+        var orgId = Guid.NewGuid();
+        var providerUserId = "ext-flag-off";
+        var user = new User { Id = Guid.NewGuid(), Email = "flagoff@example.com" };
+
+        var authResult = BuildSuccessfulExternalAuth(orgId, providerUserId, user.Email!);
+        var controller = CreateControllerWithAuth(
+            authResult,
+            out var authService,
+            out var ssoConfigRepository,
+            out var userRepository,
+            out var organizationRepository,
+            out var organizationUserRepository,
+            out var interactionService,
+            out var i18nService,
+            out var ssoUserRepository,
+            out var eventService,
+            out var featureService);
+
+        ConfigureSsoAndUser(
+            ssoConfigRepository,
+            userRepository,
+            organizationRepository,
+            organizationUserRepository,
+            orgId,
+            providerUserId,
+            user);
+
+        SetPreventNonCompliant(featureService, false);
+        SetDefaultReturnContext(interactionService);
+
+        var result = await controller.ExternalCallback();
+
+        var redirect = Assert.IsType<RedirectResult>(result);
+        Assert.Equal("~/", redirect.Url);
+
+        await authService.Received().SignInAsync(
+            Arg.Any<HttpContext>(),
+            Arg.Any<string?>(),
+            Arg.Any<ClaimsPrincipal>(),
+            Arg.Any<AuthenticationProperties>());
+
+        // When flag is off, controller does not require org or orgUser; ensure repo not called for orgUser
+        await organizationUserRepository.DidNotReceiveWithAnyArgs().GetByOrganizationAsync(Guid.Empty, Guid.Empty);
     }
 
     [Fact]
