@@ -51,4 +51,6 @@ public class ProviderUserOrganizationDetails
     public bool UseOrganizationDomains { get; set; }
     public bool UseAdminSponsoredFamilies { get; set; }
     public ProviderType ProviderType { get; set; }
+    public bool? SsoEnabled { get; set; }
+    public string SsoConfig { get; set; }
 }
