@@ -1,0 +1,86 @@
+name: Claude Code Review for Vault Team
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "**/Vault/**"
+      - "**/Vault"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  vault-team-pull-request:
+    name: Check for Vault Team Changes
+    runs-on: ubuntu-latest
+    outputs:
+      vault-team-changes: ${{ steps.check-changes.outputs.vault-team-changes }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for Vault team changes
+        id: check-changes
+        run: |
+          # Get list of changed files
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+          # Check if any changed files are in Vault paths (matching CODEOWNERS pattern **/Vault)
+          if echo "$CHANGED_FILES" | grep -qE "(^|/)Vault(/|$)"; then
+            echo "vault-team-changes=true" >> $GITHUB_OUTPUT
+            echo "✅ Vault team changes detected"
+          else
+            echo "vault-team-changes=false" >> $GITHUB_OUTPUT
+            echo "❌ No Vault team changes detected"
+          fi
+
+  claude-review:
+    name: Claude Code Review
+    runs-on: ubuntu-latest
+    needs: vault-team-pull-request
+    if: needs.vault-team-pull-request.outputs.vault-team-changes == 'true'
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Review with Claude Code
+        uses: anthropics/claude-code-action@a5528eec7426a4f0c9c1ac96018daa53ebd05bc4 # v1.0.7
+        timeout-minutes: 15
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          include-patterns: |
+            **/Vault/**
+          track_progress: true
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+            TITLE: ${{ github.event.pull_request.title }}
+            BODY: ${{ github.event.pull_request.body }}
+            AUTHOR: ${{ github.event.pull_request.user.login }}
+
+            Important Context:
+            - You are reviewing changes to code owned by @bitwarden/team-vault-dev
+            - The CODEOWNERS file specifies: **/Vault @bitwarden/team-vault-dev
+            - Focus on Vault-related functionality and security implications
+
+            Please review this pull request with a focus on:
+            - Code quality and best practices
+            - Potential bugs or issues
+            - Security implications
+            - Performance considerations
+
+            The PR branch is already checked out in the current working directory.
+            Provide detailed feedback using inline comments for specific issues.
+            Be thorough but constructive in your review.
+
+          claude_args: |
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
