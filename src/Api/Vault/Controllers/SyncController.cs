@@ -18,6 +18,7 @@ using Bit.Core.Settings;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
+using Bit.Core.Auth.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -42,6 +43,7 @@ public class SyncController : Controller
     private readonly IFeatureService _featureService;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
+    private readonly IWebAuthnCredentialRepository _webAuthnCredentialRepository;
 
     public SyncController(
         IUserService userService,
@@ -57,7 +59,8 @@ public class SyncController : Controller
         ICurrentContext currentContext,
         IFeatureService featureService,
         IApplicationCacheService applicationCacheService,
-        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery)
+        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
+        IWebAuthnCredentialRepository webAuthnCredentialRepository)
     {
         _userService = userService;
         _folderRepository = folderRepository;
@@ -73,6 +76,7 @@ public class SyncController : Controller
         _featureService = featureService;
         _applicationCacheService = applicationCacheService;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
+        _webAuthnCredentialRepository = webAuthnCredentialRepository;
     }
 
     [HttpGet("")]
@@ -115,10 +119,11 @@ public class SyncController : Controller
         var organizationIdsClaimingActiveUser = organizationClaimingActiveUser.Select(o => o.Id);
 
         var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        var webAuthnCredentials = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
 
         var response = new SyncResponseModel(_globalSettings, user, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationAbilities,
             organizationIdsClaimingActiveUser, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,
-            folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains, policies, sends);
+            folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains, policies, sends, webAuthnCredentials);
         return response;
     }
 

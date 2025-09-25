@@ -16,6 +16,9 @@ using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
+using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models.Api.Response;
 
 namespace Bit.Api.Vault.Models.Response;
 
@@ -37,7 +40,8 @@ public class SyncResponseModel() : ResponseModel("sync")
         IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersDict,
         bool excludeDomains,
         IEnumerable<Policy> policies,
-        IEnumerable<Send> sends)
+        IEnumerable<Send> sends,
+        IEnumerable<WebAuthnCredential> webAuthnCredentials)
         : this()
     {
         Profile = new ProfileResponseModel(user, organizationUserDetails, providerUserDetails,
@@ -55,6 +59,16 @@ public class SyncResponseModel() : ResponseModel("sync")
         Domains = excludeDomains ? null : new DomainsResponseModel(user, false);
         Policies = policies?.Select(p => new PolicyResponseModel(p)) ?? new List<PolicyResponseModel>();
         Sends = sends.Select(s => new SendResponseModel(s, globalSettings));
+        var webAuthnPrfOptions = webAuthnCredentials
+            .Where(c => c.GetPrfStatus() == WebAuthnPrfStatus.Enabled)
+            .Select(c => new WebAuthnPrfDecryptionOption(
+                c.EncryptedPrivateKey,
+                c.EncryptedUserKey,
+                c.CredentialId,
+                [] // transports as empty array
+            ))
+            .ToArray();
+
         UserDecryption = new UserDecryptionResponseModel
         {
             MasterPasswordUnlock = user.HasMasterPassword()
@@ -70,7 +84,8 @@ public class SyncResponseModel() : ResponseModel("sync")
                     MasterKeyEncryptedUserKey = user.Key!,
                     Salt = user.Email.ToLowerInvariant()
                 }
-                : null
+                : null,
+            WebAuthnPrfOptions = webAuthnPrfOptions.Length > 0 ? webAuthnPrfOptions : null
         };
     }
 

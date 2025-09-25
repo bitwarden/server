@@ -57,7 +57,7 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
 
     public IUserDecryptionOptionsBuilder WithDevice(Device device)
     {
-        _device = device;>
+        _device = device;
         return this;
     }
 
