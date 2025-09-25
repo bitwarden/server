@@ -78,7 +78,6 @@ public static class Constants
     public static class BrowserExtensions
     {
         public const string ChromeId = "chrome-extension://nngceckbapebfimnlniiiahkandclblb/";
-        public const string ChromeDevelopmentId = "chrome-extension://edgbfddkgonbihacepbkjdmejijnpbcm/";
         public const string EdgeId = "chrome-extension://jbkfoedolllekgbhcbcoahefnbanhhlh/";
         public const string OperaId = "chrome-extension://ccnckbpmaceehanjmeomladnmlffdjgn/";
     }
