@@ -13,7 +13,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccountvNext;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation;
@@ -132,12 +132,10 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IRevokeOrganizationUserCommand, RevokeOrganizationUserCommand>();
         services.AddScoped<IUpdateOrganizationUserCommand, UpdateOrganizationUserCommand>();
         services.AddScoped<IUpdateOrganizationUserGroupsCommand, UpdateOrganizationUserGroupsCommand>();
-        services.AddScoped<IDeleteClaimedOrganizationUserAccountCommand, DeleteClaimedOrganizationUserAccountCommand>();
         services.AddScoped<IConfirmOrganizationUserCommand, ConfirmOrganizationUserCommand>();
 
-        // vNext implementations (feature flagged)
-        services.AddScoped<IDeleteClaimedOrganizationUserAccountCommandvNext, DeleteClaimedOrganizationUserAccountCommandvNext>();
-        services.AddScoped<IDeleteClaimedOrganizationUserAccountValidatorvNext, DeleteClaimedOrganizationUserAccountValidatorvNext>();
+        services.AddScoped<IDeleteClaimedOrganizationUserAccountCommand, DeleteClaimedOrganizationUserAccountCommand>();
+        services.AddScoped<IDeleteClaimedOrganizationUserAccountValidator, DeleteClaimedOrganizationUserAccountValidator>();
     }
 
     private static void AddOrganizationApiKeyCommandsQueries(this IServiceCollection services)

@@ -14,6 +14,6 @@ GO
 
 CREATE NONCLUSTERED INDEX [IX_Collection_OrganizationId_IncludeAll]
     ON [dbo].[Collection]([OrganizationId] ASC)
-    INCLUDE([CreationDate], [Name], [RevisionDate]);
+    INCLUDE([CreationDate], [Name], [RevisionDate], [Type]);
 GO
 

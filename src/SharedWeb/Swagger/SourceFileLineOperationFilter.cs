@@ -23,10 +23,6 @@ public class SourceFileLineOperationFilter : IOperationFilter
         var (fileName, lineNumber) = GetSourceFileLine(context.MethodInfo);
         if (fileName != null && lineNumber > 0)
         {
-            // Add the information with a link to the source file at the end of the operation description
-            operation.Description +=
-                $"\nThis operation is defined on: [`https://github.com/bitwarden/server/blob/main/{fileName}#L{lineNumber}`]";
-
             // Also add the information as extensions, so other tools can use it in the future
             operation.Extensions.Add("x-source-file", new OpenApiString(fileName));
             operation.Extensions.Add("x-source-line", new OpenApiInteger(lineNumber));

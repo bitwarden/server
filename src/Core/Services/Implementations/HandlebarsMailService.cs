@@ -355,11 +355,8 @@ public class HandlebarsMailService : IMailService
         {
             Debug.Assert(orgUserTokenPair.OrgUser.Email is not null);
 
-            var orgUserInviteViewModel = orgInvitesInfo.IsSubjectFeatureEnabled
-                ? OrganizationUserInvitedViewModel.CreateFromInviteInfo_v2(
-                    orgInvitesInfo, orgUserTokenPair.OrgUser, orgUserTokenPair.Token, _globalSettings)
-                : OrganizationUserInvitedViewModel.CreateFromInviteInfo(orgInvitesInfo, orgUserTokenPair.OrgUser,
-                    orgUserTokenPair.Token, _globalSettings);
+            var orgUserInviteViewModel = OrganizationUserInvitedViewModel.CreateFromInviteInfo(orgInvitesInfo, orgUserTokenPair.OrgUser,
+                orgUserTokenPair.Token, _globalSettings);
 
             return CreateMessage(orgUserTokenPair.OrgUser.Email, orgUserInviteViewModel);
         });
@@ -369,20 +366,15 @@ public class HandlebarsMailService : IMailService
 
         MailQueueMessage CreateMessage(string email, OrganizationUserInvitedViewModel model)
         {
-            var subject = $"Join {model.OrganizationName}";
+            ArgumentNullException.ThrowIfNull(model);
 
-            if (orgInvitesInfo.IsSubjectFeatureEnabled)
+            var subject = model! switch
             {
-                ArgumentNullException.ThrowIfNull(model);
-
-                subject = model! switch
-                {
-                    { IsFreeOrg: true, OrgUserHasExistingUser: true } => "You have been invited to a Bitwarden Organization",
-                    { IsFreeOrg: true, OrgUserHasExistingUser: false } => "You have been invited to Bitwarden Password Manager",
-                    { IsFreeOrg: false, OrgUserHasExistingUser: true } => $"{model.OrganizationName} invited you to their Bitwarden organization",
-                    { IsFreeOrg: false, OrgUserHasExistingUser: false } => $"{model.OrganizationName} set up a Bitwarden account for you"
-                };
-            }
+                { IsFreeOrg: true, OrgUserHasExistingUser: true } => "You have been invited to a Bitwarden Organization",
+                { IsFreeOrg: true, OrgUserHasExistingUser: false } => "You have been invited to Bitwarden Password Manager",
+                { IsFreeOrg: false, OrgUserHasExistingUser: true } => $"{model.OrganizationName} invited you to their Bitwarden organization",
+                { IsFreeOrg: false, OrgUserHasExistingUser: false } => $"{model.OrganizationName} set up a Bitwarden account for you"
+            };
 
             var message = CreateDefaultMessage(subject, email);
 

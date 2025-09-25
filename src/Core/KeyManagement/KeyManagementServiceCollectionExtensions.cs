@@ -1,5 +1,7 @@
 ﻿using Bit.Core.KeyManagement.Commands;
 using Bit.Core.KeyManagement.Commands.Interfaces;
+using Bit.Core.KeyManagement.Kdf;
+using Bit.Core.KeyManagement.Kdf.Implementations;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Core.KeyManagement;
@@ -15,5 +17,6 @@ public static class KeyManagementServiceCollectionExtensions
     private static void AddKeyManagementCommands(this IServiceCollection services)
     {
         services.AddScoped<IRegenerateUserAsymmetricKeysCommand, RegenerateUserAsymmetricKeysCommand>();
+        services.AddScoped<IChangeKdfCommand, ChangeKdfCommand>();
     }
 }

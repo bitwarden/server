@@ -31,9 +31,9 @@ public class SendConstantsSnapshotTests
     public void GrantValidatorResults_Constants_HaveCorrectValues()
     {
         // Assert
-        Assert.Equal("valid_send_guid", SendAccessConstants.GrantValidatorResults.ValidSendGuid);
-        Assert.Equal("send_id_required", SendAccessConstants.GrantValidatorResults.SendIdRequired);
-        Assert.Equal("send_id_invalid", SendAccessConstants.GrantValidatorResults.InvalidSendId);
+        Assert.Equal("valid_send_guid", SendAccessConstants.SendIdGuidValidatorResults.ValidSendGuid);
+        Assert.Equal("send_id_required", SendAccessConstants.SendIdGuidValidatorResults.SendIdRequired);
+        Assert.Equal("send_id_invalid", SendAccessConstants.SendIdGuidValidatorResults.InvalidSendId);
     }
 
     [Fact]
