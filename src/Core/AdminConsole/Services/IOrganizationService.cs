@@ -18,7 +18,6 @@ public interface IOrganizationService
     Task UpdateSubscription(Guid organizationId, int seatAdjustment, int? maxAutoscaleSeats);
     Task AutoAddSeatsAsync(Organization organization, int seatsToAdd);
     Task<string> AdjustSeatsAsync(Guid organizationId, int seatAdjustment);
-    Task VerifyBankAsync(Guid organizationId, int amount1, int amount2);
     Task UpdateExpirationDateAsync(Guid organizationId, DateTime? expirationDate);
     Task UpdateAsync(Organization organization, bool updateBilling = false);
     Task<Organization> UpdateCollectionManagementSettingsAsync(Guid organizationId, OrganizationCollectionManagementSettings settings);

@@ -34,18 +34,18 @@ public static class SendAccessConstants
         public const string Otp = "otp";
     }
 
-    public static class GrantValidatorResults
+    public static class SendIdGuidValidatorResults
     {
         /// <summary>
-        /// The sendId is valid and the request is well formed. Not returned in any response.
+        /// The <see cref="TokenRequest.SendId"/> in the request is a valid GUID and the request is well formed. Not returned in any response.
         /// </summary>
         public const string ValidSendGuid = "valid_send_guid";
         /// <summary>
-        /// The sendId is missing from the request.
+        /// The <see cref="TokenRequest.SendId"/> is missing from the request.
         /// </summary>
         public const string SendIdRequired = "send_id_required";
         /// <summary>
-        /// The sendId is invalid, does not match a known send.
+        /// The <see cref="TokenRequest.SendId"/> is invalid, does not match a known send.
         /// </summary>
         public const string InvalidSendId = "send_id_invalid";
     }
@@ -53,11 +53,11 @@ public static class SendAccessConstants
     public static class PasswordValidatorResults
     {
         /// <summary>
-        /// The passwordHashB64 does not match the send's password hash.
+        /// The <see cref="TokenRequest.ClientB64HashedPassword"/> does not match the send's password hash.
         /// </summary>
         public const string RequestPasswordDoesNotMatch = "password_hash_b64_invalid";
         /// <summary>
-        /// The passwordHashB64 is missing from the request.
+        /// The <see cref="TokenRequest.ClientB64HashedPassword"/> is missing from the request.
         /// </summary>
         public const string RequestPasswordIsRequired = "password_hash_b64_required";
     }
@@ -104,5 +104,15 @@ public static class SendAccessConstants
     public static class OtpEmail
     {
         public const string Subject = "Your Bitwarden Send verification code is {0}";
+    }
+
+    /// <summary>
+    /// We use these static strings to help guide the enumeration protection logic.
+    /// </summary>
+    public static class EnumerationProtection
+    {
+        public const string Guid = "guid";
+        public const string Password = "password";
+        public const string Email = "email";
     }
 }

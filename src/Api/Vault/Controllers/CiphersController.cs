@@ -336,13 +336,15 @@ public class CiphersController : Controller
     }
 
     [HttpGet("organization-details")]
-    public async Task<ListResponseModel<CipherMiniDetailsResponseModel>> GetOrganizationCiphers(Guid organizationId)
+    public async Task<ListResponseModel<CipherMiniDetailsResponseModel>> GetOrganizationCiphers(Guid organizationId, bool includeMemberItems = false)
     {
         if (!await CanAccessAllCiphersAsync(organizationId))
         {
             throw new NotFoundException();
         }
-        var allOrganizationCiphers = _featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation)
+
+        bool excludeDefaultUserCollections = _featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation) && !includeMemberItems;
+        var allOrganizationCiphers = excludeDefaultUserCollections
         ?
             await _organizationCiphersQuery.GetAllOrganizationCiphersExcludingDefaultUserCollections(organizationId)
         :

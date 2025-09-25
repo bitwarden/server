@@ -10,6 +10,7 @@ using Stripe.Tax;
 
 namespace Bit.Commercial.Core.Billing.Providers.Queries;
 
+using static Bit.Core.Constants;
 using static StripeConstants;
 using SuspensionWarning = ProviderWarnings.SuspensionWarning;
 using TaxIdWarning = ProviderWarnings.TaxIdWarning;
@@ -61,6 +62,11 @@ public class GetProviderWarningsQuery(
         Provider provider,
         Customer customer)
     {
+        if (customer.Address?.Country == CountryAbbreviations.UnitedStates)
+        {
+            return null;
+        }
+
         if (!currentContext.ProviderProviderAdmin(provider.Id))
         {
             return null;
@@ -75,7 +81,7 @@ public class GetProviderWarningsQuery(
             .SelectMany(registrations => registrations.Data);
 
         // Find the matching registration for the customer
-        var registration = registrations.FirstOrDefault(registration => registration.Country == customer.Address.Country);
+        var registration = registrations.FirstOrDefault(registration => registration.Country == customer.Address?.Country);
 
         // If we're not registered in their country, we don't need a warning
         if (registration == null)

@@ -7,7 +7,7 @@ using Bit.Core.Utilities;
 
 namespace Bit.Api.Auth.Models.Request.Accounts;
 
-public class MasterPasswordUnlockDataModel : IValidatableObject
+public class MasterPasswordUnlockAndAuthenticationDataModel : IValidatableObject
 {
     public required KdfType KdfType { get; set; }
     public required int KdfIterations { get; set; }
@@ -45,9 +45,9 @@ public class MasterPasswordUnlockDataModel : IValidatableObject
         }
     }
 
-    public MasterPasswordUnlockData ToUnlockData()
+    public MasterPasswordUnlockAndAuthenticationData ToUnlockData()
     {
-        var data = new MasterPasswordUnlockData
+        var data = new MasterPasswordUnlockAndAuthenticationData
         {
             KdfType = KdfType,
             KdfIterations = KdfIterations,
