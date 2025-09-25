@@ -14,12 +14,12 @@ permissions:
 jobs:
   vault-team-pull-request:
     name: Check for Vault Team Changes
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     outputs:
-      vault-team-changes: ${{ steps.check-changes.outputs.vault-team-changes }}
+      vault_team_changes: ${{ steps.check-changes.outputs.vault_team_changes }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           fetch-depth: 0
 
@@ -33,18 +33,18 @@ jobs:
 
           # Check if any changed files are in Vault paths (matching CODEOWNERS pattern **/Vault)
           if echo "$CHANGED_FILES" | grep -qE "(^|/)Vault(/|$)"; then
-            echo "vault-team-changes=true" >> $GITHUB_OUTPUT
+            echo "vault_team_changes=true" >> $GITHUB_OUTPUT
             echo "✅ Vault team changes detected"
           else
-            echo "vault-team-changes=false" >> $GITHUB_OUTPUT
+            echo "vault_team_changes=false" >> $GITHUB_OUTPUT
             echo "❌ No Vault team changes detected"
           fi
 
   claude-review:
     name: Claude Code Review
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: vault-team-pull-request
-    if: needs.vault-team-pull-request.outputs.vault-team-changes == 'true'
+    if: needs.vault-team-pull-request.outputs.vault_team_changes == 'true'
     steps:
       - name: Check out repo
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
