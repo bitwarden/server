@@ -165,7 +165,8 @@ ON [dbo].[Event]
 (   [Date] DESC,
     [OrganizationId] ASC,
     [ActingUserId] ASC,
-    [CipherId] ASC
+    [CipherId] ASC,
+    [ServiceAccountId] ASC,
+    [GrantedServiceAccountId] ASC
 )
-INCLUDE ([ServiceAccountId], [GrantedServiceAccountId])
 GO
