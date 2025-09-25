@@ -1,4 +1,4 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccountvNext;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -13,12 +13,12 @@ using Xunit;
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccountvNext;
 
 [SutProviderCustomize]
-public class DeleteClaimedOrganizationUserAccountValidatorvNextTests
+public class DeleteClaimedOrganizationUserAccountValidatorTests
 {
     [Theory]
     [BitAutoData]
     public async Task ValidateAsync_WithValidSingleRequest_ReturnsValidResult(
-        SutProvider<DeleteClaimedOrganizationUserAccountValidatorvNext> sutProvider,
+        SutProvider<DeleteClaimedOrganizationUserAccountValidator> sutProvider,
         User user,
         Guid organizationId,
         Guid deletingUserId,
@@ -50,7 +50,7 @@ public class DeleteClaimedOrganizationUserAccountValidatorvNextTests
     [Theory]
     [BitAutoData]
     public async Task ValidateAsync_WithMultipleValidRequests_ReturnsAllValidResults(
-        SutProvider<DeleteClaimedOrganizationUserAccountValidatorvNext> sutProvider,
+        SutProvider<DeleteClaimedOrganizationUserAccountValidator> sutProvider,
         User user1,
         User user2,
         Guid organizationId,
@@ -97,7 +97,7 @@ public class DeleteClaimedOrganizationUserAccountValidatorvNextTests
     [Theory]
     [BitAutoData]
     public async Task ValidateAsync_WithNullUser_ReturnsUserNotFoundError(
-        SutProvider<DeleteClaimedOrganizationUserAccountValidatorvNext> sutProvider,
+        SutProvider<DeleteClaimedOrganizationUserAccountValidator> sutProvider,
         Guid organizationId,
         Guid deletingUserId,
         [OrganizationUser] OrganizationUser organizationUser)
@@ -123,7 +123,7 @@ public class DeleteClaimedOrganizationUserAccountValidatorvNextTests
     [Theory]
     [BitAutoData]
     public async Task ValidateAsync_WithNullOrganizationUser_ReturnsUserNotFoundError(
-        SutProvider<DeleteClaimedOrganizationUserAccountValidatorvNext> sutProvider,
+        SutProvider<DeleteClaimedOrganizationUserAccountValidator> sutProvider,
         User user,
         Guid organizationId,
         Guid deletingUserId)
@@ -149,7 +149,7 @@ public class DeleteClaimedOrganizationUserAccountValidatorvNextTests
     [Theory]
     [BitAutoData]
     public async Task ValidateAsync_WithInvitedUser_ReturnsInvalidUserStatusError(
-        SutProvider<DeleteClaimedOrganizationUserAccountValidatorvNext> sutProvider,
+        SutProvider<DeleteClaimedOrganizationUserAccountValidator> sutProvider,
         User user,
         Guid organizationId,
         Guid deletingUserId,
@@ -178,7 +178,7 @@ public class DeleteClaimedOrganizationUserAccountValidatorvNextTests
     [Theory]
     [BitAutoData]
     public async Task ValidateAsync_WhenDeletingYourself_ReturnsCannotDeleteYourselfError(
-        SutProvider<DeleteClaimedOrganizationUserAccountValidatorvNext> sutProvider,
+        SutProvider<DeleteClaimedOrganizationUserAccountValidator> sutProvider,
         User user,
         Guid organizationId,
         [OrganizationUser] OrganizationUser organizationUser)
@@ -206,7 +206,7 @@ public class DeleteClaimedOrganizationUserAccountValidatorvNextTests
     [Theory]
     [BitAutoData]
     public async Task ValidateAsync_WithUnclaimedUser_ReturnsUserNotClaimedError(
-        SutProvider<DeleteClaimedOrganizationUserAccountValidatorvNext> sutProvider,
+        SutProvider<DeleteClaimedOrganizationUserAccountValidator> sutProvider,
         User user,
         Guid organizationId,
         Guid deletingUserId,
@@ -235,7 +235,7 @@ public class DeleteClaimedOrganizationUserAccountValidatorvNextTests
     [Theory]
     [BitAutoData]
     public async Task ValidateAsync_DeletingOwnerWhenCurrentUserIsNotOwner_ReturnsCannotDeleteOwnersError(
-        SutProvider<DeleteClaimedOrganizationUserAccountValidatorvNext> sutProvider,
+        SutProvider<DeleteClaimedOrganizationUserAccountValidator> sutProvider,
         User user,
         Guid organizationId,
         Guid deletingUserId,
@@ -266,7 +266,7 @@ public class DeleteClaimedOrganizationUserAccountValidatorvNextTests
     [Theory]
     [BitAutoData]
     public async Task ValidateAsync_DeletingOwnerWhenCurrentUserIsOwner_ReturnsValidResult(
-        SutProvider<DeleteClaimedOrganizationUserAccountValidatorvNext> sutProvider,
+        SutProvider<DeleteClaimedOrganizationUserAccountValidator> sutProvider,
         User user,
         Guid organizationId,
         Guid deletingUserId,
@@ -296,7 +296,7 @@ public class DeleteClaimedOrganizationUserAccountValidatorvNextTests
     [Theory]
     [BitAutoData]
     public async Task ValidateAsync_WithSoleOwnerOfOrganization_ReturnsSoleOwnerError(
-        SutProvider<DeleteClaimedOrganizationUserAccountValidatorvNext> sutProvider,
+        SutProvider<DeleteClaimedOrganizationUserAccountValidator> sutProvider,
         User user,
         Guid organizationId,
         Guid deletingUserId,
@@ -331,7 +331,7 @@ public class DeleteClaimedOrganizationUserAccountValidatorvNextTests
     [Theory]
     [BitAutoData]
     public async Task ValidateAsync_WithSoleProviderOwner_ReturnsSoleProviderError(
-        SutProvider<DeleteClaimedOrganizationUserAccountValidatorvNext> sutProvider,
+        SutProvider<DeleteClaimedOrganizationUserAccountValidator> sutProvider,
         User user,
         Guid organizationId,
         Guid deletingUserId,
@@ -366,7 +366,7 @@ public class DeleteClaimedOrganizationUserAccountValidatorvNextTests
     [Theory]
     [BitAutoData]
     public async Task ValidateAsync_CustomUserDeletingAdmin_ReturnsCannotDeleteAdminsError(
-        SutProvider<DeleteClaimedOrganizationUserAccountValidatorvNext> sutProvider,
+        SutProvider<DeleteClaimedOrganizationUserAccountValidator> sutProvider,
         User user,
         Guid organizationId,
         Guid deletingUserId,
@@ -397,7 +397,7 @@ public class DeleteClaimedOrganizationUserAccountValidatorvNextTests
     [Theory]
     [BitAutoData]
     public async Task ValidateAsync_AdminDeletingAdmin_ReturnsValidResult(
-        SutProvider<DeleteClaimedOrganizationUserAccountValidatorvNext> sutProvider,
+        SutProvider<DeleteClaimedOrganizationUserAccountValidator> sutProvider,
         User user,
         Guid organizationId,
         Guid deletingUserId,
@@ -427,7 +427,7 @@ public class DeleteClaimedOrganizationUserAccountValidatorvNextTests
     [Theory]
     [BitAutoData]
     public async Task ValidateAsync_WithMixedValidAndInvalidRequests_ReturnsCorrespondingResults(
-        SutProvider<DeleteClaimedOrganizationUserAccountValidatorvNext> sutProvider,
+        SutProvider<DeleteClaimedOrganizationUserAccountValidator> sutProvider,
         User validUser,
         User invalidUser,
         Guid organizationId,
@@ -475,7 +475,7 @@ public class DeleteClaimedOrganizationUserAccountValidatorvNextTests
     }
 
     private static void SetupMocks(
-        SutProvider<DeleteClaimedOrganizationUserAccountValidatorvNext> sutProvider,
+        SutProvider<DeleteClaimedOrganizationUserAccountValidator> sutProvider,
         Guid organizationId,
         Guid userId,
         OrganizationUserType currentUserType = OrganizationUserType.Owner)
