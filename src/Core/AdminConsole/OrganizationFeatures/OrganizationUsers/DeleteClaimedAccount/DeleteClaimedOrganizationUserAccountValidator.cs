@@ -2,14 +2,14 @@
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
-using static Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccountvNext.ValidationResultHelpers;
+using static Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount.ValidationResultHelpers;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccountvNext;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
 
-public class DeleteClaimedOrganizationUserAccountValidatorvNext(
+public class DeleteClaimedOrganizationUserAccountValidator(
     ICurrentContext currentContext,
     IOrganizationUserRepository organizationUserRepository,
-    IProviderUserRepository providerUserRepository) : IDeleteClaimedOrganizationUserAccountValidatorvNext
+    IProviderUserRepository providerUserRepository) : IDeleteClaimedOrganizationUserAccountValidator
 {
     public async Task<IEnumerable<ValidationResult<DeleteUserValidationRequest>>> ValidateAsync(IEnumerable<DeleteUserValidationRequest> requests)
     {
