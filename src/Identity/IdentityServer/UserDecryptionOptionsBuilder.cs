@@ -154,7 +154,9 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
         {
             // TODO: PM-26065 remove use of above feature flag from the server, and remove this branching logic, which
             // has been replaced by EvaluateHasManageResetPasswordPermission.
-            // Determine if user has manage reset password permission as post sso logic requires it for forcing users with this permission to set a MP
+            // Determine if user has manage reset password permission as post sso logic requires it for forcing users with this permission to set a MP.
+            // When removing feature flags, please also see notes and removals intended for test suite in
+            // Build_WhenManageResetPasswordPermissions_ShouldReturnHasManageResetPasswordPermissionTrue.
 
             // when a user is being created via JIT provisioning, they will not have any orgs so we can't assume we will have orgs here
             if (_currentContext.Organizations != null && _currentContext.Organizations.Any(o => o.Id == _ssoConfig.OrganizationId))
