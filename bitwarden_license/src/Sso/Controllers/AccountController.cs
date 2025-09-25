@@ -57,6 +57,7 @@ public class AccountController : Controller
     private readonly IDataProtectorTokenFactory<SsoTokenable> _dataProtector;
     private readonly IOrganizationDomainRepository _organizationDomainRepository;
     private readonly IRegisterUserCommand _registerUserCommand;
+    private readonly IFeatureService _featureService;
 
     public AccountController(
         IAuthenticationSchemeProvider schemeProvider,
@@ -77,7 +78,8 @@ public class AccountController : Controller
         Core.Services.IEventService eventService,
         IDataProtectorTokenFactory<SsoTokenable> dataProtector,
         IOrganizationDomainRepository organizationDomainRepository,
-        IRegisterUserCommand registerUserCommand)
+        IRegisterUserCommand registerUserCommand,
+        IFeatureService featureService)
     {
         _schemeProvider = schemeProvider;
         _clientStore = clientStore;
@@ -98,6 +100,7 @@ public class AccountController : Controller
         _dataProtector = dataProtector;
         _organizationDomainRepository = organizationDomainRepository;
         _registerUserCommand = registerUserCommand;
+        _featureService = featureService;
     }
 
     [HttpGet]
@@ -251,6 +254,15 @@ public class AccountController : Controller
         // This is signified by the user existing in the User table and the SSOUser table for the SSO provider they're using.
         var (user, provider, providerUserId, claims, ssoConfigData) = await FindUserFromExternalProviderAsync(result);
 
+        // Feature-flag switch for preventing SSO on non-compliant existing users
+        var preventNonCompliant = _featureService.IsEnabled(FeatureFlagKeys.PM24579_PreventSsoOnExistingNonCompliantUsers);
+
+        // Resolve organization and membership up-front (feature-flagged)
+        // When the flag is off, we skip pre-resolution entirely
+        var (organization, orgUser) = preventNonCompliant
+            ? await ResolveOrganizationAndMembershipAsync(provider, user, claims, ssoConfigData)
+            : (null, null);
+
         // The user has not authenticated with this SSO provider before.
         // They could have an existing Bitwarden account in the User table though.
         if (user == null)
@@ -258,7 +270,21 @@ public class AccountController : Controller
             // If we're manually linking to SSO, the user's external identifier will be passed as query string parameter.
             var userIdentifier = result.Properties.Items.Keys.Contains("user_identifier") ?
                 result.Properties.Items["user_identifier"] : null;
-            user = await AutoProvisionUserAsync(provider, providerUserId, claims, userIdentifier, ssoConfigData);
+            // Pass any pre-resolved org/orgUser only when the flag is enabled
+            user = await AutoProvisionUserAsync(
+                provider,
+                providerUserId,
+                claims,
+                userIdentifier,
+                ssoConfigData,
+                preventNonCompliant ? organization : null,
+                preventNonCompliant ? orgUser : null);
+
+            // If enabled, ensure we have orgUser after provisioning in case it was created/linked
+            if (preventNonCompliant && organization != null)
+            {
+                orgUser ??= await _organizationUserRepository.GetByOrganizationAsync(organization.Id, user.Id);
+            }
         }
 
         // Either the user already authenticated with the SSO provider, or we've just provisioned them.
@@ -266,25 +292,31 @@ public class AccountController : Controller
         // We will now sign the Bitwarden user in.
         if (user != null)
         {
-            // Block sign-in if the user's organization membership is revoked
-            if (Guid.TryParse(provider, out var organizationId))
+            // Feature-flagged enforcement: block sign-in for revoked/non-compliant org membership
+            if (preventNonCompliant)
             {
-                var orgUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, user.Id);
-                var organization = await _organizationRepository.GetByIdAsync(organizationId);
-
-                if (orgUser != null && organization != null)
+                if (organization != null)
                 {
-                    EnsureOrgUserStatusAllowed(orgUser.Status, organization.DisplayName(),
-                        allowedStatuses: [OrganizationUserStatusType.Accepted, OrganizationUserStatusType.Confirmed]);
+                    orgUser ??= await _organizationUserRepository.GetByOrganizationAsync(organization.Id, user.Id);
+                    if (orgUser != null)
+                    {
+                        EnsureOrgUserStatusAllowed(
+                            orgUser.Status,
+                            organization.DisplayName(),
+                            allowedStatuses: [OrganizationUserStatusType.Accepted, OrganizationUserStatusType.Confirmed]);
+                    }
+                    else
+                    {
+                        _logger.LogError(
+                            "Organization user not found for user ID: {UserId} and organization ID: {OrganizationId}",
+                            user.Id,
+                            organization?.Id);
+                    }
                 }
                 else
                 {
-                    _logger.LogError("Organization user or organization not found for user ID: {UserId} and organization ID: {OrganizationId}", user.Id, organizationId);
+                    _logger.LogError("Organization not found for provider: {Provider}", provider);
                 }
-            }
-            else
-            {
-                _logger.LogError("Failed to parse organization ID: {OrganizationId}", organizationId);
             }
 
             // This allows us to collect any additional claims or properties
@@ -440,10 +472,13 @@ public class AccountController : Controller
     /// <param name="claims">The claims from the external IdP.</param>
     /// <param name="userIdentifier">The user identifier used for manual SSO linking.</param>
     /// <param name="config">The SSO configuration for the organization.</param>
+    /// <param name="organization"></param>
+    /// <param name="orgUser"></param>
     /// <returns>The User to sign in.</returns>
     /// <exception cref="Exception">An exception if the user cannot be provisioned as requested.</exception>
     private async Task<User> AutoProvisionUserAsync(string provider, string providerUserId,
-        IEnumerable<Claim> claims, string userIdentifier, SsoConfigurationData config)
+        IEnumerable<Claim> claims, string userIdentifier, SsoConfigurationData config,
+        Organization organization, OrganizationUser orgUser)
     {
         var name = GetName(claims, config.GetAdditionalNameClaimTypes());
         var email = GetEmailAddress(claims, config.GetAdditionalEmailClaimTypes());
@@ -472,8 +507,19 @@ public class AccountController : Controller
             existingUser = await GetUserFromManualLinkingData(userIdentifier);
         }
 
-        // Try to find the OrganizationUser if it exists.
-        var (organization, orgUser) = await FindOrganizationUser(existingUser, email, orgId);
+        // Try to find the OrganizationUser if it exists. Use preloaded values if provided.
+        if (organization == null || orgUser == null)
+        {
+            var (foundOrganization, foundOrgUser) = await FindOrganizationUser(existingUser, email, orgId);
+            if (organization == null)
+            {
+                organization = foundOrganization;
+            }
+            if (orgUser == null)
+            {
+                orgUser = foundOrgUser;
+            }
+        }
 
         //----------------------------------------------------
         // Scenario 1: We've found the user in the User table
@@ -605,6 +651,40 @@ public class AccountController : Controller
         return user;
     }
 
+    private async Task<(Organization organization, OrganizationUser orgUser)> ResolveOrganizationAndMembershipAsync(
+        string provider, User user, IEnumerable<Claim> claims, SsoConfigurationData ssoConfigData)
+    {
+        Organization organization = null;
+        OrganizationUser orgUser = null;
+
+        if (!Guid.TryParse(provider, out var organizationId))
+        {
+            _logger.LogError("Failed to parse organization ID from provider: {Provider}", provider);
+            return (null, null);
+        }
+
+        organization = await _organizationRepository.GetByIdAsync(organizationId);
+        if (organization == null)
+        {
+            _logger.LogError("Organization not found for provider: {Provider}", provider);
+            return (null, null);
+        }
+
+        if (user != null)
+        {
+            orgUser = await _organizationUserRepository.GetByOrganizationAsync(organization.Id, user.Id);
+            return (organization, orgUser);
+        }
+
+        var emailFromClaims = GetEmailAddress(claims, ssoConfigData.GetAdditionalEmailClaimTypes());
+        if (!string.IsNullOrWhiteSpace(emailFromClaims))
+        {
+            orgUser = await _organizationUserRepository.GetByOrganizationEmailAsync(organization.Id, emailFromClaims);
+        }
+
+        return (organization, orgUser);
+    }
+
     private async Task<User> GetUserFromManualLinkingData(string userIdentifier)
     {
         User user = null;
@@ -635,7 +715,7 @@ public class AccountController : Controller
         return user;
     }
 
-    private async Task<(Organization, OrganizationUser)> FindOrganizationUser(User existingUser, string email, Guid orgId)
+    private async Task<(Organization organization, OrganizationUser orgUser)> FindOrganizationUser(User existingUser, string email, Guid orgId)
     {
         OrganizationUser orgUser = null;
         var organization = await _organizationRepository.GetByIdAsync(orgId);
