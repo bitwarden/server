@@ -46,11 +46,11 @@ public class OrganizationExportController : Controller
             VaultExportOperations.ExportWholeVault);
         var canExportManaged = await _authorizationService.AuthorizeAsync(User, new OrganizationScope(organizationId),
             VaultExportOperations.ExportManagedCollections);
-
         var createDefaultLocationEnabled = _featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation);
-        if (createDefaultLocationEnabled)
+
+        if (canExportAll.Succeeded)
         {
-            if (canExportAll.Succeeded)
+            if (createDefaultLocationEnabled)
             {
                 var allOrganizationCiphers =
                     await _organizationCiphersQuery.GetAllOrganizationCiphersExcludingDefaultUserCollections(
@@ -64,10 +64,7 @@ public class OrganizationExportController : Controller
                 return Ok(new OrganizationExportResponseModel(allOrganizationCiphers, allCollections,
                     _globalSettings));
             }
-        }
-        else
-        {
-            if (canExportAll.Succeeded)
+            else
             {
                 var allOrganizationCiphers = await _organizationCiphersQuery.GetAllOrganizationCiphers(organizationId);
 
@@ -77,7 +74,6 @@ public class OrganizationExportController : Controller
                     _globalSettings));
             }
         }
-
 
         if (canExportManaged.Succeeded)
         {
