@@ -1,5 +1,4 @@
 ﻿using System.Text.Json.Serialization;
-using Bit.Core.Auth.Models.Api.Response;
 
 namespace Bit.Core.KeyManagement.Models.Response;
 
@@ -14,5 +13,5 @@ public class UserDecryptionResponseModel
     /// Gets or sets the WebAuthn PRF decryption keys.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public WebAuthnPrfDecryptionOption[]? WebAuthnPrfOptions { get; set; }
+    public WebAuthnPrfKeyManagementResponseModel[]? WebAuthnPrfOptions { get; set; }
 }
