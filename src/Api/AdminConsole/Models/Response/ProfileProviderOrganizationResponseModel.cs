@@ -1,4 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Models.Data.Provider;
+using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models.Data;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Enums;
@@ -52,5 +54,14 @@ public class ProfileProviderOrganizationResponseModel : ProfileOrganizationRespo
         UseRiskInsights = organization.UseRiskInsights;
         UseOrganizationDomains = organization.UseOrganizationDomains;
         UseAdminSponsoredFamilies = organization.UseAdminSponsoredFamilies;
+        SsoEnabled = organization.SsoEnabled ?? false;
+
+        if (organization.SsoConfig != null)
+        {
+            var ssoConfigData = SsoConfigurationData.Deserialize(organization.SsoConfig);
+            KeyConnectorEnabled = ssoConfigData.MemberDecryptionType == MemberDecryptionType.KeyConnector && !string.IsNullOrEmpty(ssoConfigData.KeyConnectorUrl);
+            KeyConnectorUrl = ssoConfigData.KeyConnectorUrl;
+            SsoMemberDecryptionType = ssoConfigData.MemberDecryptionType;
+        }
     }
 }
