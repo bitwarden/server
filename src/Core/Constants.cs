@@ -187,22 +187,15 @@ public static class FeatureFlagKeys
     public const string WindowsBiometricsV2 = "pm-25373-windows-biometrics-v2";
 
     /* Mobile Team */
-    public const string NativeCarouselFlow = "native-carousel-flow";
-    public const string NativeCreateAccountFlow = "native-create-account-flow";
     public const string AndroidImportLoginsFlow = "import-logins-flow";
-    public const string AppReviewPrompt = "app-review-prompt";
     public const string AndroidMutualTls = "mutual-tls";
     public const string SingleTapPasskeyCreation = "single-tap-passkey-creation";
     public const string SingleTapPasskeyAuthentication = "single-tap-passkey-authentication";
-    public const string EnablePMAuthenticatorSync = "enable-pm-bwa-sync";
     public const string PM3503_MobileAnonAddySelfHostAlias = "anon-addy-self-host-alias";
     public const string PM3553_MobileSimpleLoginSelfHostAlias = "simple-login-self-host-alias";
-    public const string EnablePMFlightRecorder = "enable-pm-flight-recorder";
     public const string MobileErrorReporting = "mobile-error-reporting";
     public const string AndroidChromeAutofill = "android-chrome-autofill";
     public const string UserManagedPrivilegedApps = "pm-18970-user-managed-privileged-apps";
-    public const string EnablePMPreloginSettings = "enable-pm-prelogin-settings";
-    public const string AppIntents = "app-intents";
     public const string SendAccess = "pm-19394-send-access-control";
     public const string CxpImportMobile = "cxp-import-mobile";
     public const string CxpExportMobile = "cxp-export-mobile";
