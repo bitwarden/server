@@ -12,7 +12,7 @@ using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccountvNext;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
@@ -62,7 +62,6 @@ public class OrganizationUsersController : Controller
     private readonly IOrganizationUserUserDetailsQuery _organizationUserUserDetailsQuery;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
     private readonly IDeleteClaimedOrganizationUserAccountCommand _deleteClaimedOrganizationUserAccountCommand;
-    private readonly IDeleteClaimedOrganizationUserAccountCommandvNext _deleteClaimedOrganizationUserAccountCommandvNext;
     private readonly IGetOrganizationUsersClaimedStatusQuery _getOrganizationUsersClaimedStatusQuery;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IFeatureService _featureService;
@@ -92,7 +91,6 @@ public class OrganizationUsersController : Controller
         IOrganizationUserUserDetailsQuery organizationUserUserDetailsQuery,
         IRemoveOrganizationUserCommand removeOrganizationUserCommand,
         IDeleteClaimedOrganizationUserAccountCommand deleteClaimedOrganizationUserAccountCommand,
-        IDeleteClaimedOrganizationUserAccountCommandvNext deleteClaimedOrganizationUserAccountCommandvNext,
         IGetOrganizationUsersClaimedStatusQuery getOrganizationUsersClaimedStatusQuery,
         IPolicyRequirementQuery policyRequirementQuery,
         IFeatureService featureService,
@@ -122,7 +120,6 @@ public class OrganizationUsersController : Controller
         _organizationUserUserDetailsQuery = organizationUserUserDetailsQuery;
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
         _deleteClaimedOrganizationUserAccountCommand = deleteClaimedOrganizationUserAccountCommand;
-        _deleteClaimedOrganizationUserAccountCommandvNext = deleteClaimedOrganizationUserAccountCommandvNext;
         _getOrganizationUsersClaimedStatusQuery = getOrganizationUsersClaimedStatusQuery;
         _policyRequirementQuery = policyRequirementQuery;
         _featureService = featureService;
@@ -574,21 +571,22 @@ public class OrganizationUsersController : Controller
 
     [HttpDelete("{id}/delete-account")]
     [Authorize<ManageUsersRequirement>]
-    public async Task DeleteAccount(Guid orgId, Guid id)
+    public async Task<IResult> DeleteAccount(Guid orgId, Guid id)
     {
-        if (_featureService.IsEnabled(FeatureFlagKeys.DeleteClaimedUserAccountRefactor))
+        var currentUserId = _userService.GetProperUserId(User);
+        if (currentUserId == null)
         {
-            await DeleteAccountvNext(orgId, id);
-            return;
+            return TypedResults.Unauthorized();
         }
 
-        var currentUser = await _userService.GetUserByPrincipalAsync(User);
-        if (currentUser == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
+        var commandResult = await _deleteClaimedOrganizationUserAccountCommand.DeleteUserAsync(orgId, id, currentUserId.Value);
 
-        await _deleteClaimedOrganizationUserAccountCommand.DeleteUserAsync(orgId, id, currentUser.Id);
+        return commandResult.Result.Match<IResult>(
+            error => error is NotFoundError
+                ? TypedResults.NotFound(new ErrorResponseModel(error.Message))
+                : TypedResults.BadRequest(new ErrorResponseModel(error.Message)),
+            TypedResults.Ok
+        );
     }
 
     [HttpPost("{id}/delete-account")]
@@ -599,43 +597,24 @@ public class OrganizationUsersController : Controller
         await DeleteAccount(orgId, id);
     }
 
-    private async Task<IResult> DeleteAccountvNext(Guid orgId, Guid id)
-    {
-        var currentUserId = _userService.GetProperUserId(User);
-        if (currentUserId == null)
-        {
-            return TypedResults.Unauthorized();
-        }
-
-        var commandResult = await _deleteClaimedOrganizationUserAccountCommandvNext.DeleteUserAsync(orgId, id, currentUserId.Value);
-
-        return commandResult.Result.Match<IResult>(
-            error => error is NotFoundError
-                ? TypedResults.NotFound(new ErrorResponseModel(error.Message))
-                : TypedResults.BadRequest(new ErrorResponseModel(error.Message)),
-            TypedResults.Ok
-        );
-    }
-
     [HttpDelete("delete-account")]
     [Authorize<ManageUsersRequirement>]
     public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkDeleteAccount(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
     {
-        if (_featureService.IsEnabled(FeatureFlagKeys.DeleteClaimedUserAccountRefactor))
-        {
-            return await BulkDeleteAccountvNext(orgId, model);
-        }
-
-        var currentUser = await _userService.GetUserByPrincipalAsync(User);
-        if (currentUser == null)
+        var currentUserId = _userService.GetProperUserId(User);
+        if (currentUserId == null)
         {
             throw new UnauthorizedAccessException();
         }
 
-        var results = await _deleteClaimedOrganizationUserAccountCommand.DeleteManyUsersAsync(orgId, model.Ids, currentUser.Id);
+        var result = await _deleteClaimedOrganizationUserAccountCommand.DeleteManyUsersAsync(orgId, model.Ids, currentUserId.Value);
 
-        return new ListResponseModel<OrganizationUserBulkResponseModel>(results.Select(r =>
-            new OrganizationUserBulkResponseModel(r.OrganizationUserId, r.ErrorMessage)));
+        var responses = result.Select(r => r.Result.Match(
+            error => new OrganizationUserBulkResponseModel(r.Id, error.Message),
+            _ => new OrganizationUserBulkResponseModel(r.Id, string.Empty)
+        ));
+
+        return new ListResponseModel<OrganizationUserBulkResponseModel>(responses);
     }
 
     [HttpPost("delete-account")]
@@ -644,24 +623,6 @@ public class OrganizationUsersController : Controller
     public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> PostBulkDeleteAccount(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
     {
         return await BulkDeleteAccount(orgId, model);
-    }
-
-    private async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkDeleteAccountvNext(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
-    {
-        var currentUserId = _userService.GetProperUserId(User);
-        if (currentUserId == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        var result = await _deleteClaimedOrganizationUserAccountCommandvNext.DeleteManyUsersAsync(orgId, model.Ids, currentUserId.Value);
-
-        var responses = result.Select(r => r.Result.Match(
-            error => new OrganizationUserBulkResponseModel(r.Id, error.Message),
-            _ => new OrganizationUserBulkResponseModel(r.Id, string.Empty)
-        ));
-
-        return new ListResponseModel<OrganizationUserBulkResponseModel>(responses);
     }
 
     [HttpPut("{id}/revoke")]

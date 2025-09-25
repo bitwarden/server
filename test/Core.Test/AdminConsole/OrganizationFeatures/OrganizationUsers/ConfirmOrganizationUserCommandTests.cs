@@ -10,6 +10,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
@@ -471,18 +472,32 @@ public class ConfirmOrganizationUserCommandTests
 
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.CreateDefaultLocation).Returns(true);
 
+        var policyDetails = new PolicyDetails
+        {
+            OrganizationId = organization.Id,
+            OrganizationUserId = orgUser.Id,
+            IsProvider = false,
+            OrganizationUserStatus = orgUser.Status,
+            OrganizationUserType = orgUser.Type,
+            PolicyType = PolicyType.OrganizationDataOwnership
+        };
         sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetManyByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(organization.Id)
-            .Returns(new List<Guid> { orgUser.Id });
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(orgUser.UserId!.Value)
+            .Returns(new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Enabled, [policyDetails]));
 
         await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, collectionName);
 
         await sutProvider.GetDependency<ICollectionRepository>()
             .Received(1)
-            .UpsertDefaultCollectionsAsync(
-                organization.Id,
-                Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser.Id)),
-                collectionName);
+            .CreateAsync(
+                Arg.Is<Collection>(c =>
+                    c.Name == collectionName &&
+                    c.OrganizationId == organization.Id &&
+                    c.Type == CollectionType.DefaultUserCollection),
+                Arg.Any<IEnumerable<CollectionAccessSelection>>(),
+                Arg.Is<IEnumerable<CollectionAccessSelection>>(cu =>
+                    cu.Single().Id == orgUser.Id &&
+                    cu.Single().Manage));
     }
 
     [Theory, BitAutoData]
@@ -511,7 +526,7 @@ public class ConfirmOrganizationUserCommandTests
     [Theory, BitAutoData]
     public async Task ConfirmUserAsync_WithCreateDefaultLocationEnabled_WithOrganizationDataOwnershipPolicyNotApplicable_DoesNotCreateDefaultCollection(
         Organization org, OrganizationUser confirmingUser,
-        [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser, User user,
+        [OrganizationUser(OrganizationUserStatusType.Accepted, OrganizationUserType.Owner)] OrganizationUser orgUser, User user,
         string key, string collectionName, SutProvider<ConfirmOrganizationUserCommand> sutProvider)
     {
         org.PlanType = PlanType.EnterpriseAnnually;
@@ -523,9 +538,18 @@ public class ConfirmOrganizationUserCommandTests
         sutProvider.GetDependency<IUserRepository>().GetManyAsync(default).ReturnsForAnyArgs(new[] { user });
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.CreateDefaultLocation).Returns(true);
 
+        var policyDetails = new PolicyDetails
+        {
+            OrganizationId = org.Id,
+            OrganizationUserId = orgUser.Id,
+            IsProvider = false,
+            OrganizationUserStatus = orgUser.Status,
+            OrganizationUserType = orgUser.Type,
+            PolicyType = PolicyType.OrganizationDataOwnership
+        };
         sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetManyByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(org.Id)
-            .Returns(new List<Guid> { orgUser.UserId!.Value });
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(orgUser.UserId!.Value)
+            .Returns(new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Disabled, [policyDetails]));
 
         await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, collectionName);
 
