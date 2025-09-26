@@ -3,6 +3,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Infrastructure.IntegrationTest.AdminConsole;
 using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest.Repositories;
@@ -104,48 +105,20 @@ public class UserRepositoryTests
         IOrganizationUserRepository organizationUserRepository,
         ICollectionRepository collectionRepository)
     {
-        var user = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User",
-            Email = $"test+{Guid.NewGuid()}@example.com",
-            ApiKey = "TEST",
-            SecurityStamp = "stamp",
-        });
+        var user = await userRepository.CreateTestUserAsync();
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var orgUser = await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user);
 
-        var organization = await organizationRepository.CreateAsync(new Organization
-        {
-            Name = "Test Org",
-            BillingEmail = user.Email,
-            Plan = "Test",
-        });
-
-        var orgUser = await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            OrganizationId = organization.Id,
-            UserId = user.Id,
-            Status = OrganizationUserStatusType.Confirmed,
-            Email = user.Email
-        });
-
-        var defaultUserCollection = await collectionRepository.CreateAsync(new Collection
+        var defaultUserCollection = new Collection
         {
             Name = "Test Collection",
-            Id = user.Id,
             Type = CollectionType.DefaultUserCollection,
             OrganizationId = organization.Id
-        });
-
-        // Create the CollectionUser entry for the defaultUserCollection
-        await collectionRepository.UpdateUsersAsync(defaultUserCollection.Id, new List<CollectionAccessSelection>()
-        {
-            new CollectionAccessSelection
-            {
-                Id = orgUser.Id,
-                HidePasswords = false,
-                ReadOnly = false,
-                Manage = true
-            },
-        });
+        };
+        await collectionRepository.CreateAsync(
+            defaultUserCollection,
+            groups: null,
+            users: [new CollectionAccessSelection { Id = orgUser.Id, HidePasswords = false, ReadOnly = false, Manage = true }]);
 
         await userRepository.DeleteAsync(user);
 
@@ -165,95 +138,36 @@ public class UserRepositoryTests
         IOrganizationUserRepository organizationUserRepository,
         ICollectionRepository collectionRepository)
     {
-        // Arrange
-        var user1 = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User 1",
-            Email = $"test1+{Guid.NewGuid()}@example.com",
-            ApiKey = "TEST",
-            SecurityStamp = "stamp",
-        });
+        var user1 = await userRepository.CreateTestUserAsync();
+        var user2 = await userRepository.CreateTestUserAsync();
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var orgUser1 = await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user1);
+        var orgUser2 = await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user2);
 
-        var user2 = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User 2",
-            Email = $"test2+{Guid.NewGuid()}@example.com",
-            ApiKey = "TEST",
-            SecurityStamp = "stamp",
-        });
-
-        var organization = await organizationRepository.CreateAsync(new Organization
-        {
-            Name = "Test Org",
-            BillingEmail = user1.Email,
-            Plan = "Test",
-        });
-
-        var orgUser1 = await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            OrganizationId = organization.Id,
-            UserId = user1.Id,
-            Status = OrganizationUserStatusType.Confirmed,
-            Email = user1.Email
-        });
-
-        var orgUser2 = await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            OrganizationId = organization.Id,
-            UserId = user2.Id,
-            Status = OrganizationUserStatusType.Confirmed,
-            Email = user2.Email
-        });
-
-        var defaultUserCollection1 = await collectionRepository.CreateAsync(new Collection
+        var defaultUserCollection1 = new Collection
         {
             Name = "Test Collection 1",
-            Id = user1.Id,
             Type = CollectionType.DefaultUserCollection,
             OrganizationId = organization.Id
-        });
+        };
 
-        var defaultUserCollection2 = await collectionRepository.CreateAsync(new Collection
+        var defaultUserCollection2 = new Collection
         {
             Name = "Test Collection 2",
-            Id = user2.Id,
             Type = CollectionType.DefaultUserCollection,
             OrganizationId = organization.Id
-        });
+        };
 
-        // Create the CollectionUser entries
-        await collectionRepository.UpdateUsersAsync(defaultUserCollection1.Id, new List<CollectionAccessSelection>()
-        {
-            new CollectionAccessSelection
-            {
-                Id = orgUser1.Id,
-                HidePasswords = false,
-                ReadOnly = false,
-                Manage = true
-            },
-        });
+        await collectionRepository.CreateAsync(defaultUserCollection1, groups: null, users: [new CollectionAccessSelection { Id = orgUser1.Id, HidePasswords = false, ReadOnly = false, Manage = true }]);
+        await collectionRepository.CreateAsync(defaultUserCollection2, groups: null, users: [new CollectionAccessSelection { Id = orgUser2.Id, HidePasswords = false, ReadOnly = false, Manage = true }]);
 
-        await collectionRepository.UpdateUsersAsync(defaultUserCollection2.Id, new List<CollectionAccessSelection>()
-        {
-            new CollectionAccessSelection
-            {
-                Id = orgUser2.Id,
-                HidePasswords = false,
-                ReadOnly = false,
-                Manage = true
-            },
-        });
+        await userRepository.DeleteManyAsync([user1, user2]);
 
-        // Act
-        await userRepository.DeleteManyAsync(new[] { user1, user2 });
-
-        // Assert
         var deletedUser1 = await userRepository.GetByIdAsync(user1.Id);
         var deletedUser2 = await userRepository.GetByIdAsync(user2.Id);
         Assert.Null(deletedUser1);
         Assert.Null(deletedUser2);
 
-        // Both collections should be migrated to SharedCollection
         var updatedCollection1 = await collectionRepository.GetByIdAsync(defaultUserCollection1.Id);
         Assert.NotNull(updatedCollection1);
         Assert.Equal(CollectionType.SharedCollection, updatedCollection1.Type);
