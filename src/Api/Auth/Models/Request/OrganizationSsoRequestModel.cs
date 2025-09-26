@@ -121,7 +121,7 @@ public class SsoConfigurationDataRequest : IValidatableObject
                     new[] { nameof(IdpEntityId) });
             }
 
-            if (!Uri.IsWellFormedUriString(IdpEntityId, UriKind.Absolute) && string.IsNullOrWhiteSpace(IdpSingleSignOnServiceUrl))
+            if (string.IsNullOrWhiteSpace(IdpSingleSignOnServiceUrl))
             {
                 yield return new ValidationResult(i18nService.GetLocalizedHtmlString("IdpSingleSignOnServiceUrlValidationError"),
                     new[] { nameof(IdpSingleSignOnServiceUrl) });
@@ -139,6 +139,7 @@ public class SsoConfigurationDataRequest : IValidatableObject
                     new[] { nameof(IdpSingleLogoutServiceUrl) });
             }
 
+            // TODO: On server, make public certificate required for SAML2 SSO: https://bitwarden.atlassian.net/browse/PM-26028
             if (!string.IsNullOrWhiteSpace(IdpX509PublicCert))
             {
                 // Validate the certificate is in a valid format
