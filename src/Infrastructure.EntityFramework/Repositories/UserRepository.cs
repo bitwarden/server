@@ -341,10 +341,20 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             await dbContext.AuthRequests.Where(a => targetIds.Contains(a.UserId)).ExecuteDeleteAsync();
             await dbContext.Devices.Where(d => targetIds.Contains(d.UserId)).ExecuteDeleteAsync();
             await dbContext.CollectionUsers
-                .Where(cu => dbContext.OrganizationUsers.Any(ou => ou.Id == cu.OrganizationUserId && targetIds.Contains(ou.UserId ?? default)))
+                .Join(dbContext.OrganizationUsers,
+                      cu => cu.OrganizationUserId,
+                      ou => ou.Id,
+                      (cu, ou) => new { CollectionUser = cu, OrganizationUser = ou })
+                .Where((joined) => targetIds.Contains(joined.OrganizationUser.UserId ?? default))
+                .Select(joined => joined.CollectionUser)
                 .ExecuteDeleteAsync();
             await dbContext.GroupUsers
-                .Where(gu => dbContext.OrganizationUsers.Any(ou => ou.Id == gu.OrganizationUserId && targetIds.Contains(ou.UserId ?? default)))
+                .Join(dbContext.OrganizationUsers,
+                      gu => gu.OrganizationUserId,
+                      ou => ou.Id,
+                      (gu, ou) => new { GroupUser = gu, OrganizationUser = ou })
+                .Where(joined => targetIds.Contains(joined.OrganizationUser.UserId ?? default))
+                .Select(joined => joined.GroupUser)
                 .ExecuteDeleteAsync();
             await dbContext.UserProjectAccessPolicy.Where(ap => targetIds.Contains(ap.OrganizationUser.UserId ?? default)).ExecuteDeleteAsync();
             await dbContext.UserServiceAccountAccessPolicy.Where(ap => targetIds.Contains(ap.OrganizationUser.UserId ?? default)).ExecuteDeleteAsync();
