@@ -436,7 +436,7 @@ public class PatchGroupCommandTests
         await sutProvider.GetDependency<IGroupService>().DidNotReceiveWithAnyArgs().DeleteUserAsync(default, default);
 
         // Assert: logging
-        sutProvider.GetDependency<ILogger<PatchGroupCommand>>().ReceivedWithAnyArgs().LogWarning(default);
+        sutProvider.GetDependency<ILogger<PatchGroupCommand>>().ReceivedWithAnyArgs().LogWarning("");
     }
 
     [Theory]
