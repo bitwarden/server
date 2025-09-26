@@ -147,8 +147,12 @@ public class EventRepository : IEventRepository
         }
     }
 
-    public async Task<PagedResult<IEvent>> GetManyServiceAccountAsync(string partitionKey, string serviceAccountId,
-        DateTime startDate, DateTime endDate, PageOptions pageOptions)
+    public async Task<PagedResult<IEvent>> GetManyServiceAccountAsync(
+        string partitionKey,
+        string serviceAccountId,
+        DateTime startDate,
+        DateTime endDate,
+        PageOptions pageOptions)
     {
         var start = CoreHelpers.DateTimeToTableStorageKey(startDate);
         var end = CoreHelpers.DateTimeToTableStorageKey(endDate);
@@ -160,15 +164,22 @@ public class EventRepository : IEventRepository
         await using (var enumerator = query.AsPages(pageOptions.ContinuationToken,
             pageOptions.PageSize).GetAsyncEnumerator())
         {
-            await enumerator.MoveNextAsync();
+            if (await enumerator.MoveNextAsync())
+            {
+                result.ContinuationToken = enumerator.Current.ContinuationToken;
 
-            result.ContinuationToken = enumerator.Current.ContinuationToken;
-            result.Data.AddRange(enumerator.Current.Values.Select(e => e.ToEventTableEntity()));
+                var events = enumerator.Current.Values
+                    .Select(e => e.ToEventTableEntity())
+                    .ToList();
+
+                events = events.OrderBy(e => e.Date).ToList();
+
+                result.Data.AddRange(events);
+            }
         }
 
         return result;
     }
-
 
     public async Task<PagedResult<IEvent>> GetManyAsync(string partitionKey, string rowKey,
         DateTime startDate, DateTime endDate, PageOptions pageOptions)
