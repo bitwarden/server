@@ -1,4 +1,4 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccountvNext;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -17,12 +17,12 @@ using Xunit;
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccountvNext;
 
 [SutProviderCustomize]
-public class DeleteClaimedOrganizationUserAccountCommandvNextTests
+public class DeleteClaimedOrganizationUserAccountCommandTests
 {
     [Theory]
     [BitAutoData]
     public async Task DeleteUserAsync_WithValidSingleUser_CallsDeleteManyUsersAsync(
-        SutProvider<DeleteClaimedOrganizationUserAccountCommandvNext> sutProvider,
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider,
         User user,
         Guid organizationId,
         Guid deletingUserId,
@@ -65,7 +65,7 @@ public class DeleteClaimedOrganizationUserAccountCommandvNextTests
     [Theory]
     [BitAutoData]
     public async Task DeleteManyUsersAsync_WithEmptyUserIds_ReturnsEmptyResults(
-        SutProvider<DeleteClaimedOrganizationUserAccountCommandvNext> sutProvider,
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider,
         Guid organizationId,
         Guid deletingUserId)
     {
@@ -77,7 +77,7 @@ public class DeleteClaimedOrganizationUserAccountCommandvNextTests
     [Theory]
     [BitAutoData]
     public async Task DeleteManyUsersAsync_WithValidUsers_DeletesUsersAndLogsEvents(
-        SutProvider<DeleteClaimedOrganizationUserAccountCommandvNext> sutProvider,
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider,
         User user1,
         User user2,
         Guid organizationId,
@@ -135,7 +135,7 @@ public class DeleteClaimedOrganizationUserAccountCommandvNextTests
     [Theory]
     [BitAutoData]
     public async Task DeleteManyUsersAsync_WithValidationErrors_ReturnsErrorResults(
-        SutProvider<DeleteClaimedOrganizationUserAccountCommandvNext> sutProvider,
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider,
         Guid organizationId,
         Guid orgUserId1,
         Guid orgUserId2,
@@ -183,7 +183,7 @@ public class DeleteClaimedOrganizationUserAccountCommandvNextTests
     [Theory]
     [BitAutoData]
     public async Task DeleteManyUsersAsync_WithMixedValidationResults_HandlesPartialSuccessCorrectly(
-        SutProvider<DeleteClaimedOrganizationUserAccountCommandvNext> sutProvider,
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider,
         User validUser,
         Guid organizationId,
         Guid validOrgUserId,
@@ -243,7 +243,7 @@ public class DeleteClaimedOrganizationUserAccountCommandvNextTests
     [Theory]
     [BitAutoData]
     public async Task DeleteManyUsersAsync_CancelPremiumsAsync_HandlesGatewayExceptionAndLogsWarning(
-        SutProvider<DeleteClaimedOrganizationUserAccountCommandvNext> sutProvider,
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider,
         User user,
         Guid organizationId,
         Guid deletingUserId,
@@ -285,7 +285,7 @@ public class DeleteClaimedOrganizationUserAccountCommandvNextTests
         await sutProvider.GetDependency<IUserService>().Received(1).CancelPremiumAsync(user);
         await AssertSuccessfulUserOperations(sutProvider, [user], [orgUser]);
 
-        sutProvider.GetDependency<ILogger<DeleteClaimedOrganizationUserAccountCommandvNext>>()
+        sutProvider.GetDependency<ILogger<DeleteClaimedOrganizationUserAccountCommand>>()
             .Received(1)
             .Log(
                 LogLevel.Warning,
@@ -299,7 +299,7 @@ public class DeleteClaimedOrganizationUserAccountCommandvNextTests
     [Theory]
     [BitAutoData]
     public async Task CreateInternalRequests_CreatesCorrectRequestsForAllUsers(
-        SutProvider<DeleteClaimedOrganizationUserAccountCommandvNext> sutProvider,
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider,
         User user1,
         User user2,
         Guid organizationId,
@@ -326,7 +326,7 @@ public class DeleteClaimedOrganizationUserAccountCommandvNextTests
             .GetUsersOrganizationClaimedStatusAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
             .Returns(claimedStatuses);
 
-        sutProvider.GetDependency<IDeleteClaimedOrganizationUserAccountValidatorvNext>()
+        sutProvider.GetDependency<IDeleteClaimedOrganizationUserAccountValidator>()
             .ValidateAsync(Arg.Any<IEnumerable<DeleteUserValidationRequest>>())
             .Returns(callInfo =>
             {
@@ -338,7 +338,7 @@ public class DeleteClaimedOrganizationUserAccountCommandvNextTests
         await sutProvider.Sut.DeleteManyUsersAsync(organizationId, orgUserIds, deletingUserId);
 
         // Assert
-        await sutProvider.GetDependency<IDeleteClaimedOrganizationUserAccountValidatorvNext>()
+        await sutProvider.GetDependency<IDeleteClaimedOrganizationUserAccountValidator>()
             .Received(1)
             .ValidateAsync(Arg.Is<IEnumerable<DeleteUserValidationRequest>>(requests =>
                 requests.Count() == 2 &&
@@ -359,7 +359,7 @@ public class DeleteClaimedOrganizationUserAccountCommandvNextTests
     [Theory]
     [BitAutoData]
     public async Task GetUsersAsync_WithNullUserIds_ReturnsEmptyCollection(
-        SutProvider<DeleteClaimedOrganizationUserAccountCommandvNext> sutProvider,
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider,
         Guid organizationId,
         Guid deletingUserId,
         [OrganizationUser] OrganizationUser orgUserWithoutUserId)
@@ -374,7 +374,7 @@ public class DeleteClaimedOrganizationUserAccountCommandvNextTests
             .GetManyAsync(Arg.Is<IEnumerable<Guid>>(ids => !ids.Any()))
             .Returns([]);
 
-        sutProvider.GetDependency<IDeleteClaimedOrganizationUserAccountValidatorvNext>()
+        sutProvider.GetDependency<IDeleteClaimedOrganizationUserAccountValidator>()
             .ValidateAsync(Arg.Any<IEnumerable<DeleteUserValidationRequest>>())
             .Returns(callInfo =>
             {
@@ -386,7 +386,7 @@ public class DeleteClaimedOrganizationUserAccountCommandvNextTests
         await sutProvider.Sut.DeleteManyUsersAsync(organizationId, [orgUserWithoutUserId.Id], deletingUserId);
 
         // Assert
-        await sutProvider.GetDependency<IDeleteClaimedOrganizationUserAccountValidatorvNext>()
+        await sutProvider.GetDependency<IDeleteClaimedOrganizationUserAccountValidator>()
             .Received(1)
             .ValidateAsync(Arg.Is<IEnumerable<DeleteUserValidationRequest>>(requests =>
                 requests.Count() == 1 &&
@@ -406,7 +406,7 @@ public class DeleteClaimedOrganizationUserAccountCommandvNextTests
         ValidationResultHelpers.Invalid(request, error);
 
     private static void SetupRepositoryMocks(
-        SutProvider<DeleteClaimedOrganizationUserAccountCommandvNext> sutProvider,
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider,
         ICollection<OrganizationUser> orgUsers,
         IEnumerable<User> users,
         Guid organizationId,
@@ -426,16 +426,16 @@ public class DeleteClaimedOrganizationUserAccountCommandvNextTests
     }
 
     private static void SetupValidatorMock(
-        SutProvider<DeleteClaimedOrganizationUserAccountCommandvNext> sutProvider,
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider,
         IEnumerable<ValidationResult<DeleteUserValidationRequest>> validationResults)
     {
-        sutProvider.GetDependency<IDeleteClaimedOrganizationUserAccountValidatorvNext>()
+        sutProvider.GetDependency<IDeleteClaimedOrganizationUserAccountValidator>()
             .ValidateAsync(Arg.Any<IEnumerable<DeleteUserValidationRequest>>())
             .Returns(validationResults);
     }
 
     private static async Task AssertSuccessfulUserOperations(
-        SutProvider<DeleteClaimedOrganizationUserAccountCommandvNext> sutProvider,
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider,
         IEnumerable<User> expectedUsers,
         IEnumerable<OrganizationUser> expectedOrgUsers)
     {
@@ -457,7 +457,7 @@ public class DeleteClaimedOrganizationUserAccountCommandvNextTests
                     events.Any(e => e.Item1.Id == expectedOrgUser.Id && e.Item2 == EventType.OrganizationUser_Deleted))));
     }
 
-    private static async Task AssertNoUserOperations(SutProvider<DeleteClaimedOrganizationUserAccountCommandvNext> sutProvider)
+    private static async Task AssertNoUserOperations(SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider)
     {
         await sutProvider.GetDependency<IUserRepository>().DidNotReceiveWithAnyArgs().DeleteManyAsync(default);
         await sutProvider.GetDependency<IPushNotificationService>().DidNotReceiveWithAnyArgs().PushLogOutAsync(default);

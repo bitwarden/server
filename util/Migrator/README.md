@@ -4,4 +4,4 @@ A class library leveraged by [utilities](../MsSqlMigratorUtility) and [hosted ap
 
 In production environments the Migrator is typically executed during application startup or as part of CI/CD pipelines to ensure database schemas are up-to-date before application deployment.
 
-See the [documentation on creating migrations](https://contributing.bitwarden.com/contributing/database-migrations/) for how to utilize the files seen here.
+See the [documentation on creating migrations](https://contributing.bitwarden.com/contributing/database-migrations/mssql/) for how to utilize the files seen here.
