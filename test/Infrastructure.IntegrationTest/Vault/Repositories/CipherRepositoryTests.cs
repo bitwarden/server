@@ -13,10 +13,8 @@ using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
-using Bit.Infrastructure.EntityFramework.Repositories;
 using Xunit;
 using CipherType = Bit.Core.Vault.Enums.CipherType;
-using EfCollectionCipher = Bit.Infrastructure.EntityFramework.Models.CollectionCipher;
 
 namespace Bit.Infrastructure.IntegrationTest.Repositories;
 
@@ -1250,8 +1248,7 @@ public class CipherRepositoryTests
         IUserRepository userRepository,
         ICipherRepository cipherRepository,
         ICollectionRepository collectionRepository,
-        ICollectionCipherRepository collectionCipherRepository,
-        DatabaseContext dbContext)
+        ICollectionCipherRepository collectionCipherRepository)
     {
         var user = await userRepository.CreateAsync(new User
         {
@@ -1293,10 +1290,16 @@ public class CipherRepositoryTests
         var cipherInBothCollections = await CreateOrgCipherAsync();
         var unassignedCipher = await CreateOrgCipherAsync();
 
-        await LinkDefaultAsync(cipherInDefaultCollection.Id, defaultCollection.Id, dbContext);
-        await LinkDefaultAsync(cipherInSharedCollection.Id, sharedCollection.Id, dbContext);
-        await LinkDefaultAsync(cipherInBothCollections.Id, defaultCollection.Id, dbContext);
-        await LinkDefaultAsync(cipherInBothCollections.Id, sharedCollection.Id, dbContext);
+        async Task LinkCollectionCipherAsync(Guid cipherId, Guid collectionId) =>
+            await collectionCipherRepository.AddCollectionsForManyCiphersAsync(
+                organization.Id,
+                new[] { cipherId },
+                new[] { collectionId });
+
+        await LinkCollectionCipherAsync(cipherInDefaultCollection.Id, defaultCollection.Id);
+        await LinkCollectionCipherAsync(cipherInSharedCollection.Id, sharedCollection.Id);
+        await LinkCollectionCipherAsync(cipherInBothCollections.Id, defaultCollection.Id);
+        await LinkCollectionCipherAsync(cipherInBothCollections.Id, sharedCollection.Id);
 
         await cipherRepository.DeleteByOrganizationIdAsync(organization.Id);
 
@@ -1402,12 +1405,5 @@ public class CipherRepositoryTests
         var remainingCollectionCiphers = await collectionCipherRepository.GetManyByOrganizationIdAsync(organization.Id);
         Assert.Empty(remainingCollectionCiphers);
     }
-
-    async Task LinkDefaultAsync(Guid cipherId, Guid collectionId, DatabaseContext db)
-    {
-        db.CollectionCiphers.Add(new EfCollectionCipher { CipherId = cipherId, CollectionId = collectionId });
-        await db.SaveChangesAsync();
-    }
-
 }
 
