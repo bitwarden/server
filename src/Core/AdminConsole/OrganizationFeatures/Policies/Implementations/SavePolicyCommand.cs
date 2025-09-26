@@ -17,19 +17,25 @@ public class SavePolicyCommand : ISavePolicyCommand
     private readonly IReadOnlyDictionary<PolicyType, IPolicyValidator> _policyValidators;
     private readonly TimeProvider _timeProvider;
     private readonly IOnPolicyPostUpsertEvent _onPolicyPostUpsertEvent;
+    private readonly IVNextSavePolicyCommand _vNextSavePolicyCommand;
+    private readonly IFeatureService _featureService;
 
     public SavePolicyCommand(IApplicationCacheService applicationCacheService,
         IEventService eventService,
         IPolicyRepository policyRepository,
         IEnumerable<IPolicyValidator> policyValidators,
         TimeProvider timeProvider,
-        IOnPolicyPostUpsertEvent onPolicyPostUpsertEvent)
+        IOnPolicyPostUpsertEvent onPolicyPostUpsertEvent,
+        IVNextSavePolicyCommand vNextSavePolicyCommand,
+        IFeatureService featureService)
     {
         _applicationCacheService = applicationCacheService;
         _eventService = eventService;
         _policyRepository = policyRepository;
         _timeProvider = timeProvider;
         _onPolicyPostUpsertEvent = onPolicyPostUpsertEvent;
+        _vNextSavePolicyCommand = vNextSavePolicyCommand;
+        _featureService = featureService;
 
         var policyValidatorsDict = new Dictionary<PolicyType, IPolicyValidator>();
         foreach (var policyValidator in policyValidators)
@@ -82,6 +88,11 @@ public class SavePolicyCommand : ISavePolicyCommand
 
     public async Task<Policy> VNextSaveAsync(SavePolicyModel policyRequest)
     {
+        if (_featureService.IsEnabled(FeatureFlagKeys.VNextPolicyUpsertPattern))
+        {
+            return await _vNextSavePolicyCommand.SaveAsync(policyRequest);
+        }
+
         var (_, currentPolicy) = await GetCurrentPolicyStateAsync(policyRequest.PolicyUpdate);
 
         var policy = await SaveAsync(policyRequest.PolicyUpdate);

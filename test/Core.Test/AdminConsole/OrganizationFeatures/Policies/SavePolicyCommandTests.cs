@@ -95,7 +95,9 @@ public class SavePolicyCommandTests
                 Substitute.For<IPolicyRepository>(),
                 [new FakeSingleOrgPolicyValidator(), new FakeSingleOrgPolicyValidator()],
                 Substitute.For<TimeProvider>(),
-                Substitute.For<IOnPolicyPostUpsertEvent>()));
+                Substitute.For<IOnPolicyPostUpsertEvent>(),
+                Substitute.For<IVNextSavePolicyCommand>(),
+                Substitute.For<IFeatureService>()));
         Assert.Contains("Duplicate PolicyValidator for SingleOrg policy", exception.Message);
     }
 
@@ -369,6 +371,8 @@ public class SavePolicyCommandTests
             .WithFakeTimeProvider()
             .SetDependency(policyValidators ?? [])
             .SetDependency(Substitute.For<IOnPolicyPostUpsertEvent>())
+            .SetDependency(Substitute.For<IVNextSavePolicyCommand>())
+            .SetDependency(Substitute.For<IFeatureService>())
             .Create();
     }
 
