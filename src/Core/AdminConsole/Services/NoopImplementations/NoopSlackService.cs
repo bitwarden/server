@@ -19,7 +19,7 @@ public class NoopSlackService : ISlackService
         return Task.FromResult(string.Empty);
     }
 
-    public string GetRedirectUrl(string redirectUrl)
+    public string GetRedirectUrl(string callbackUrl, string state)
     {
         return string.Empty;
     }

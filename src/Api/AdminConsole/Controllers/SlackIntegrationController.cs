@@ -1,7 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using System.Text.Json;
+﻿using System.Text.Json;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
@@ -18,25 +15,53 @@ using Microsoft.AspNetCore.Mvc;
 namespace Bit.Api.AdminConsole.Controllers;
 
 [RequireFeature(FeatureFlagKeys.EventBasedOrganizationIntegrations)]
-[Route("organizations/{organizationId:guid}/integrations/slack")]
+[Route("organizations")]
 [Authorize("Application")]
 public class SlackIntegrationController(
     ICurrentContext currentContext,
     IOrganizationIntegrationRepository integrationRepository,
     ISlackService slackService) : Controller
 {
-    [HttpGet("redirect")]
+    [HttpGet("{organizationId:guid}/integrations/slack/redirect")]
     public async Task<IActionResult> RedirectAsync(Guid organizationId)
     {
         if (!await currentContext.OrganizationOwner(organizationId))
         {
             throw new NotFoundException();
         }
-        string callbackUrl = Url.RouteUrl(
-            nameof(CreateAsync),
-            new { organizationId },
-            currentContext.HttpContext.Request.Scheme);
-        var redirectUrl = slackService.GetRedirectUrl(callbackUrl);
+
+        string? callbackUrl = Url.RouteUrl(
+            routeName: nameof(CreateAsync),
+            values: null,
+            protocol: currentContext.HttpContext.Request.Scheme,
+            host: currentContext.HttpContext.Request.Host.ToUriComponent()
+        );
+        if (string.IsNullOrEmpty(callbackUrl))
+        {
+            throw new BadRequestException("Unable to build callback Url");
+        }
+
+        var integrations = await integrationRepository.GetManyByOrganizationAsync(organizationId);
+        var integration = integrations.FirstOrDefault(i => i.Type == IntegrationType.Slack);
+
+        if (integration is null)
+        {
+            integration = await integrationRepository.CreateAsync(new OrganizationIntegration
+            {
+                OrganizationId = organizationId,
+                Type = IntegrationType.Slack,
+                Configuration = null,
+            });
+        }
+        if (integration.Configuration is not null)
+        {
+            throw new BadRequestException("There already exists a Slack integration for this organization");
+        }
+
+        var redirectUrl = slackService.GetRedirectUrl(
+            callbackUrl: callbackUrl,
+            state: integration.Id.ToString()
+        );
 
         if (string.IsNullOrEmpty(redirectUrl))
         {
@@ -46,23 +71,28 @@ public class SlackIntegrationController(
         return Redirect(redirectUrl);
     }
 
-    [HttpGet("create", Name = nameof(CreateAsync))]
-    public async Task<IActionResult> CreateAsync(Guid organizationId, [FromQuery] string code)
+    [HttpGet("integrations/slack/create", Name = nameof(CreateAsync))]
+    [AllowAnonymous]
+    public async Task<IActionResult> CreateAsync([FromQuery] string code, [FromQuery] string state)
     {
-        if (!await currentContext.OrganizationOwner(organizationId))
+        // Fetch existing Initiated record
+        var integration = await integrationRepository.GetByIdAsync(Guid.Parse(state));
+        if (integration is null)
         {
-            throw new NotFoundException();
+            throw new BadRequestException("No record found for given state.");
         }
 
-        if (string.IsNullOrEmpty(code))
+        // Fetch token from Slack and store to DB
+        string? callbackUrl = Url.RouteUrl(
+            routeName: nameof(CreateAsync),
+            values: null,
+            protocol: currentContext.HttpContext.Request.Scheme,
+            host: currentContext.HttpContext.Request.Host.ToUriComponent()
+        );
+        if (string.IsNullOrEmpty(callbackUrl))
         {
-            throw new BadRequestException("Missing code from Slack.");
+            throw new BadRequestException("Unable to build callback Url");
         }
-
-        string callbackUrl = Url.RouteUrl(
-            nameof(CreateAsync),
-            new { organizationId },
-            currentContext.HttpContext.Request.Scheme);
         var token = await slackService.ObtainTokenViaOAuth(code, callbackUrl);
 
         if (string.IsNullOrEmpty(token))
@@ -70,14 +100,10 @@ public class SlackIntegrationController(
             throw new BadRequestException("Invalid response from Slack.");
         }
 
-        var integration = await integrationRepository.CreateAsync(new OrganizationIntegration
-        {
-            OrganizationId = organizationId,
-            Type = IntegrationType.Slack,
-            Configuration = JsonSerializer.Serialize(new SlackIntegration(token)),
-        });
-        var location = $"/organizations/{organizationId}/integrations/{integration.Id}";
+        integration.Configuration = JsonSerializer.Serialize(new SlackIntegration(token));
+        await integrationRepository.UpsertAsync(integration);
 
+        var location = $"/organizations/{integration.OrganizationId}/integrations/{integration.Id}";
         return Created(location, new OrganizationIntegrationResponseModel(integration));
     }
 }

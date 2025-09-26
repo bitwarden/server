@@ -2,8 +2,6 @@
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 
-#nullable enable
-
 namespace Bit.Api.AdminConsole.Models.Response.Organizations;
 
 public class OrganizationIntegrationResponseModel : ResponseModel
@@ -21,4 +19,29 @@ public class OrganizationIntegrationResponseModel : ResponseModel
     public Guid Id { get; set; }
     public IntegrationType Type { get; set; }
     public string? Configuration { get; set; }
+
+    public OrganizationIntegrationStatus Status => Type switch
+    {
+        // Not yet implemented, shouldn't be present, leave Initiated for now
+        IntegrationType.CloudBillingSync => OrganizationIntegrationStatus.Initiated,
+        IntegrationType.Scim => OrganizationIntegrationStatus.Initiated,
+
+        // Webhook is allowed to be null. If it's present, it's Completed
+        IntegrationType.Webhook => OrganizationIntegrationStatus.Completed,
+
+        // If present and the configuration is null, OAuth has been initiated, and we are
+        // waiting on the return call
+        IntegrationType.Slack => string.IsNullOrWhiteSpace(Configuration)
+            ? OrganizationIntegrationStatus.Initiated
+            : OrganizationIntegrationStatus.Completed,
+
+        // HEC and Datadog should only be allowed to be created non-null.
+        // Initiated is a fallback value just in case.
+        IntegrationType.Hec => string.IsNullOrWhiteSpace(Configuration)
+            ? OrganizationIntegrationStatus.Initiated
+            : OrganizationIntegrationStatus.Completed,
+        IntegrationType.Datadog => string.IsNullOrWhiteSpace(Configuration)
+            ? OrganizationIntegrationStatus.Initiated
+            : OrganizationIntegrationStatus.Completed,
+    };
 }
