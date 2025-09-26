@@ -283,20 +283,8 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
             var transaction = await dbContext.Database.BeginTransactionAsync();
 
-            // Migrate all DefaultUserCollection to SharedCollection
-            var defaultCollections = (from c in dbContext.Collections
-                                      join cu in dbContext.CollectionUsers on c.Id equals cu.CollectionId
-                                      join ou in dbContext.OrganizationUsers on cu.OrganizationUserId equals ou.Id
-                                      where ou.UserId == user.Id && c.Type == Core.Enums.CollectionType.DefaultUserCollection
-                                      select c)
-                                     .ToList();
-
-            foreach (var collection in defaultCollections)
-            {
-                collection.Type = Core.Enums.CollectionType.SharedCollection;
-                collection.DefaultUserCollectionEmail = collection.DefaultUserCollectionEmail ?? user.Email;
-                collection.RevisionDate = DateTime.UtcNow;
-            }
+            MigrateDefaultUserCollectionsToShared(dbContext, [user.Id]);
+            await dbContext.SaveChangesAsync();
 
             dbContext.WebAuthnCredentials.RemoveRange(dbContext.WebAuthnCredentials.Where(w => w.UserId == user.Id));
             dbContext.Ciphers.RemoveRange(dbContext.Ciphers.Where(c => c.UserId == user.Id));
@@ -344,23 +332,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
             var targetIds = users.Select(u => u.Id).ToList();
 
-            // Migrate all DefaultUserCollection to SharedCollection
-            var defaultCollections = (from c in dbContext.Collections
-                                      join cu in dbContext.CollectionUsers on c.Id equals cu.CollectionId
-                                      join ou in dbContext.OrganizationUsers on cu.OrganizationUserId equals ou.Id
-                                      join u in dbContext.Users on ou.UserId equals u.Id
-                                      where targetIds.Contains(ou.UserId!.Value)
-                                        && c.Type == Core.Enums.CollectionType.DefaultUserCollection
-                                      select new { Collection = c, UserEmail = u.Email })
-                                     .ToList();
-
-            foreach (var item in defaultCollections)
-            {
-                item.Collection.Type = Core.Enums.CollectionType.SharedCollection;
-                item.Collection.DefaultUserCollectionEmail = item.Collection.DefaultUserCollectionEmail ?? item.UserEmail;
-                item.Collection.RevisionDate = DateTime.UtcNow;
-            }
-
+            MigrateDefaultUserCollectionsToShared(dbContext, targetIds);
             await dbContext.SaveChangesAsync();
 
             await dbContext.WebAuthnCredentials.Where(wa => targetIds.Contains(wa.UserId)).ExecuteDeleteAsync();
@@ -388,6 +360,25 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
             await dbContext.SaveChangesAsync();
             await transaction.CommitAsync();
+        }
+    }
+
+    private static void MigrateDefaultUserCollectionsToShared(DatabaseContext dbContext, IEnumerable<Guid> userIds)
+    {
+        var defaultCollections = (from c in dbContext.Collections
+                                  join cu in dbContext.CollectionUsers on c.Id equals cu.CollectionId
+                                  join ou in dbContext.OrganizationUsers on cu.OrganizationUserId equals ou.Id
+                                  join u in dbContext.Users on ou.UserId equals u.Id
+                                  where userIds.Contains(ou.UserId!.Value)
+                                    && c.Type == Core.Enums.CollectionType.DefaultUserCollection
+                                  select new { Collection = c, UserEmail = u.Email })
+                                 .ToList();
+
+        foreach (var item in defaultCollections)
+        {
+            item.Collection.Type = Core.Enums.CollectionType.SharedCollection;
+            item.Collection.DefaultUserCollectionEmail = item.Collection.DefaultUserCollectionEmail ?? item.UserEmail;
+            item.Collection.RevisionDate = DateTime.UtcNow;
         }
     }
 }
