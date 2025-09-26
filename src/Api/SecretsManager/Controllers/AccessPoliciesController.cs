@@ -29,6 +29,7 @@ public class AccessPoliciesController : Controller
     private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly IUpdateServiceAccountGrantedPoliciesCommand _updateServiceAccountGrantedPoliciesCommand;
     private readonly IUserService _userService;
+    private readonly IEventService _eventService;
     private readonly IProjectServiceAccountsAccessPoliciesUpdatesQuery
         _projectServiceAccountsAccessPoliciesUpdatesQuery;
     private readonly IUpdateProjectServiceAccountsAccessPoliciesCommand
@@ -47,7 +48,8 @@ public class AccessPoliciesController : Controller
         IServiceAccountGrantedPolicyUpdatesQuery serviceAccountGrantedPolicyUpdatesQuery,
         IProjectServiceAccountsAccessPoliciesUpdatesQuery projectServiceAccountsAccessPoliciesUpdatesQuery,
         IUpdateServiceAccountGrantedPoliciesCommand updateServiceAccountGrantedPoliciesCommand,
-        IUpdateProjectServiceAccountsAccessPoliciesCommand updateProjectServiceAccountsAccessPoliciesCommand)
+        IUpdateProjectServiceAccountsAccessPoliciesCommand updateProjectServiceAccountsAccessPoliciesCommand,
+        IEventService eventService)
     {
         _authorizationService = authorizationService;
         _userService = userService;
@@ -61,6 +63,7 @@ public class AccessPoliciesController : Controller
         _serviceAccountGrantedPolicyUpdatesQuery = serviceAccountGrantedPolicyUpdatesQuery;
         _projectServiceAccountsAccessPoliciesUpdatesQuery = projectServiceAccountsAccessPoliciesUpdatesQuery;
         _updateProjectServiceAccountsAccessPoliciesCommand = updateProjectServiceAccountsAccessPoliciesCommand;
+        _eventService = eventService;
     }
 
     [HttpGet("/organizations/{id}/access-policies/people/potential-grantees")]
@@ -186,7 +189,9 @@ public class AccessPoliciesController : Controller
         }
 
         var userId = _userService.GetProperUserId(User)!.Value;
+        var currentPolicies = await _accessPolicyRepository.GetPeoplePoliciesByGrantedServiceAccountIdAsync(peopleAccessPolicies.Id, userId);
         var results = await _accessPolicyRepository.ReplaceServiceAccountPeopleAsync(peopleAccessPolicies, userId);
+        await LogAccessPolicyServiceAccountChanges(currentPolicies, results, userId);
         return new ServiceAccountPeopleAccessPoliciesResponseModel(results, userId);
     }
 
@@ -335,5 +340,40 @@ public class AccessPoliciesController : Controller
             await _accessPolicyRepository.GetServiceAccountGrantedPoliciesPermissionDetailsAsync(serviceAccount.Id,
                 userId, accessClient);
         return new ServiceAccountGrantedPoliciesPermissionDetailsResponseModel(results);
+    }
+
+    public async Task LogAccessPolicyServiceAccountChanges(IEnumerable<BaseAccessPolicy> currentPolicies, IEnumerable<BaseAccessPolicy> updatedPolicies, Guid userId)
+    {
+        foreach (var current in currentPolicies.OfType<GroupServiceAccountAccessPolicy>())
+        {
+            if (!updatedPolicies.Any(r => r.Id == current.Id))
+            {
+                await _eventService.LogServiceAccountGroupEventAsync(userId, current, EventType.ServiceAccount_GroupRemoved, _currentContext.IdentityClientType);
+            }
+        }
+
+        foreach (var policy in updatedPolicies.OfType<GroupServiceAccountAccessPolicy>())
+        {
+            if (!currentPolicies.Any(e => e.Id == policy.Id))
+            {
+                await _eventService.LogServiceAccountGroupEventAsync(userId, policy, EventType.ServiceAccount_GroupAdded, _currentContext.IdentityClientType);
+            }
+        }
+
+        foreach (var current in currentPolicies.OfType<UserServiceAccountAccessPolicy>())
+        {
+            if (!updatedPolicies.Any(r => r.Id == current.Id))
+            {
+                await _eventService.LogServiceAccountPeopleEventAsync(userId, current, EventType.ServiceAccount_UserRemoved, _currentContext.IdentityClientType);
+            }
+        }
+
+        foreach (var policy in updatedPolicies.OfType<UserServiceAccountAccessPolicy>())
+        {
+            if (!currentPolicies.Any(e => e.Id == policy.Id))
+            {
+                await _eventService.LogServiceAccountPeopleEventAsync(userId, policy, EventType.ServiceAccount_UserAdded, _currentContext.IdentityClientType);
+            }
+        }
     }
 }
