@@ -1,10 +1,8 @@
 ﻿using Bit.Core;
-using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Enums;
 using Bit.Core.Services;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.SendFeatures.Queries.Interfaces;
-using Bit.Core.Utilities;
 using Bit.Identity.IdentityServer.Enums;
 using Bit.Identity.IdentityServer.RequestValidators.SendAccess;
 using Bit.IntegrationTestCommon.Factories;
@@ -13,16 +11,14 @@ using Duende.IdentityServer.Validation;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Identity.IntegrationTest.RequestValidation;
+namespace Bit.Identity.IntegrationTest.RequestValidation.SendAccess;
 
 // in order to test the default case for the authentication method, we need to create a custom one so we can ensure the
 // method throws as expected.
 internal record AnUnknownAuthenticationMethod : SendAuthenticationMethod { }
 
-public class SendAccessGrantValidatorIntegrationTests(IdentityApplicationFactory factory) : IClassFixture<IdentityApplicationFactory>
+public class SendAccessGrantValidatorIntegrationTests(IdentityApplicationFactory _factory) : IClassFixture<IdentityApplicationFactory>
 {
-    private readonly IdentityApplicationFactory _factory = factory;
-
     [Fact]
     public async Task SendAccessGrant_FeatureFlagDisabled_ReturnsUnsupportedGrantType()
     {
@@ -39,7 +35,7 @@ public class SendAccessGrantValidatorIntegrationTests(IdentityApplicationFactory
             });
         }).CreateClient();
 
-        var requestBody = CreateTokenRequestBody(sendId);
+        var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId);
 
         // Act
         var response = await client.PostAsync("/connect/token", requestBody);
@@ -70,7 +66,7 @@ public class SendAccessGrantValidatorIntegrationTests(IdentityApplicationFactory
             });
         }).CreateClient();
 
-        var requestBody = CreateTokenRequestBody(sendId);
+        var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId);
 
         // Act
         var response = await client.PostAsync("/connect/token", requestBody);
@@ -125,7 +121,7 @@ public class SendAccessGrantValidatorIntegrationTests(IdentityApplicationFactory
             });
         }).CreateClient();
 
-        var requestBody = CreateTokenRequestBody(sendId);
+        var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId);
 
         // Act
         var response = await client.PostAsync("/connect/token", requestBody);
@@ -154,7 +150,7 @@ public class SendAccessGrantValidatorIntegrationTests(IdentityApplicationFactory
             });
         }).CreateClient();
 
-        var requestBody = CreateTokenRequestBody(sendId);
+        var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId);
 
         // Act
         var response = await client.PostAsync("/connect/token", requestBody);
@@ -183,7 +179,7 @@ public class SendAccessGrantValidatorIntegrationTests(IdentityApplicationFactory
             });
         }).CreateClient();
 
-        var requestBody = CreateTokenRequestBody(sendId);
+        var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId);
 
         // Act
         var error = await client.PostAsync("/connect/token", requestBody);
@@ -225,7 +221,7 @@ public class SendAccessGrantValidatorIntegrationTests(IdentityApplicationFactory
             });
         }).CreateClient();
 
-        var requestBody = CreateTokenRequestBody(sendId, "password123");
+        var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId, "password123");
 
         // Act
         var response = await client.PostAsync("/connect/token", requestBody);
@@ -235,38 +231,5 @@ public class SendAccessGrantValidatorIntegrationTests(IdentityApplicationFactory
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains("access_token", content);
         Assert.Contains("Bearer", content);
-    }
-
-    private static FormUrlEncodedContent CreateTokenRequestBody(
-        Guid sendId,
-        string password = null,
-        string sendEmail = null,
-        string emailOtp = null)
-    {
-        var sendIdBase64 = CoreHelpers.Base64UrlEncode(sendId.ToByteArray());
-        var parameters = new List<KeyValuePair<string, string>>
-        {
-            new(OidcConstants.TokenRequest.GrantType, CustomGrantTypes.SendAccess),
-            new(OidcConstants.TokenRequest.ClientId, BitwardenClient.Send ),
-            new(OidcConstants.TokenRequest.Scope, ApiScopes.ApiSendAccess),
-            new("deviceType", ((int)DeviceType.FirefoxBrowser).ToString()),
-            new(SendAccessConstants.TokenRequest.SendId, sendIdBase64)
-        };
-
-        if (!string.IsNullOrEmpty(password))
-        {
-            parameters.Add(new(SendAccessConstants.TokenRequest.ClientB64HashedPassword, password));
-        }
-
-        if (!string.IsNullOrEmpty(emailOtp) && !string.IsNullOrEmpty(sendEmail))
-        {
-            parameters.AddRange(
-            [
-                new KeyValuePair<string, string>("email", sendEmail),
-                new KeyValuePair<string, string>("email_otp", emailOtp)
-            ]);
-        }
-
-        return new FormUrlEncodedContent(parameters);
     }
 }
