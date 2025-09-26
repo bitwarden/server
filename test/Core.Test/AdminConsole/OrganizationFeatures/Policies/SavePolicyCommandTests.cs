@@ -95,7 +95,8 @@ public class SavePolicyCommandTests
                 Substitute.For<IPolicyRepository>(),
                 [new FakeSingleOrgPolicyValidator(), new FakeSingleOrgPolicyValidator()],
                 Substitute.For<TimeProvider>(),
-                Substitute.For<IPostSavePolicySideEffect>()));
+                Substitute.For<IPostSavePolicySideEffect>(),
+                Substitute.For<IPolicyEventHandlerFactory>()));
         Assert.Contains("Duplicate PolicyValidator for SingleOrg policy", exception.Message);
     }
 
