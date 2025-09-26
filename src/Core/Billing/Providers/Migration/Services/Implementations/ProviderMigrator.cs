@@ -258,7 +258,7 @@ public class ProviderMigrator(
             // Create dummy payment source for legacy migration - this migrator is deprecated and will be removed
             var dummyPaymentSource = new TokenizedPaymentSource(PaymentMethodType.Card, "migration_dummy_token");
 
-            var customer = await providerBillingService.SetupCustomer(provider, taxInfo, dummyPaymentSource);
+            var customer = await providerBillingService.SetupCustomer(provider, null, null);
 
             await stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
             {

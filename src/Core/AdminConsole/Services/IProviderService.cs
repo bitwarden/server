@@ -3,7 +3,7 @@
 
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Models.Business.Provider;
-using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Entities;
 using Bit.Core.Models.Business;
 
@@ -11,8 +11,7 @@ namespace Bit.Core.AdminConsole.Services;
 
 public interface IProviderService
 {
-    Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key, TaxInfo taxInfo,
-        TokenizedPaymentSource tokenizedPaymentSource = null);
+    Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key, TokenizedPaymentMethod paymentMethod, BillingAddress billingAddress);
     Task UpdateAsync(Provider provider, bool updateBilling = false);
 
     Task<List<ProviderUser>> InviteUserAsync(ProviderUserInvite<string> invite);

@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Bit.Core.Billing.Payment.Models;
+﻿using Bit.Core.Billing.Payment.Models;
 
 namespace Bit.Api.Billing.Models.Requests.Payment;
 

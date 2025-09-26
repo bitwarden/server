@@ -3,6 +3,7 @@
 
 using Bit.Core.Models.BitStripe;
 using Stripe;
+using Stripe.Tax;
 
 namespace Bit.Core.Services;
 
@@ -23,6 +24,7 @@ public class StripeAdapter : IStripeAdapter
     private readonly Stripe.TestHelpers.TestClockService _testClockService;
     private readonly CustomerBalanceTransactionService _customerBalanceTransactionService;
     private readonly Stripe.Tax.RegistrationService _taxRegistrationService;
+    private readonly CalculationService _calculationService;
 
     public StripeAdapter()
     {
@@ -41,6 +43,7 @@ public class StripeAdapter : IStripeAdapter
         _testClockService = new Stripe.TestHelpers.TestClockService();
         _customerBalanceTransactionService = new CustomerBalanceTransactionService();
         _taxRegistrationService = new Stripe.Tax.RegistrationService();
+        _calculationService = new CalculationService();
     }
 
     public Task<Stripe.Customer> CustomerCreateAsync(Stripe.CustomerCreateOptions options)
