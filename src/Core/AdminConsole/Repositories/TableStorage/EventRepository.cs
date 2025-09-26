@@ -172,7 +172,7 @@ public class EventRepository : IEventRepository
                     .Select(e => e.ToEventTableEntity())
                     .ToList();
 
-                events = events.OrderBy(e => e.Date).ToList();
+                events = events.OrderByDescending(e => e.Date).ToList();
 
                 result.Data.AddRange(events);
             }
