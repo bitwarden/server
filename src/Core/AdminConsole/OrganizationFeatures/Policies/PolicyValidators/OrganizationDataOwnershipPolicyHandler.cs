@@ -1,5 +1,6 @@
 ﻿
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
@@ -8,20 +9,18 @@ using Bit.Core.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 
-/// <summary>
-/// Please do not extend or expand this validator. We're currently in the process of refactoring our policy validator pattern.
-/// This is a stop-gap solution for post-policy-save side effects, but it is not the long-term solution.
-/// </summary>
-public class OrganizationDataOwnershipPolicyValidator(
+public class OrganizationDataOwnershipPolicyHandler(
     IPolicyRepository policyRepository,
     ICollectionRepository collectionRepository,
     IEnumerable<IPolicyRequirementFactory<IPolicyRequirement>> factories,
     IFeatureService featureService)
-    : OrganizationPolicyValidator(policyRepository, factories), IPostSavePolicySideEffect
+    : OrganizationPolicyHandler(policyRepository, factories), IOnPolicyPostUpsertEvent
 {
-    public async Task ExecuteSideEffectsAsync(
+
+    // Jimmy team needs a way to validate data modly
+    public async Task ExecutePostUpsertSideEffectAsync(
         SavePolicyModel policyRequest,
-        Policy postUpdatedPolicy,
+        Policy postUpsertedPolicyState,
         Policy? previousPolicyState)
     {
         if (!featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation))
@@ -39,9 +38,9 @@ public class OrganizationDataOwnershipPolicyValidator(
             return;
         }
 
-        var isFirstTimeEnabled = postUpdatedPolicy.Enabled && previousPolicyState == null;
+        var isFirstTimeEnabled = postUpsertedPolicyState.Enabled && previousPolicyState == null;
         var reEnabled = previousPolicyState?.Enabled == false
-                        && postUpdatedPolicy.Enabled;
+                        && postUpsertedPolicyState.Enabled;
 
         if (isFirstTimeEnabled || reEnabled)
         {
@@ -68,5 +67,7 @@ public class OrganizationDataOwnershipPolicyValidator(
             userOrgIds,
             defaultCollectionName);
     }
+
+    public PolicyType Type => PolicyType.OrganizationDataOwnership;
 
 }

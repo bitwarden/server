@@ -16,7 +16,7 @@ using Xunit;
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 
 [SutProviderCustomize]
-public class OrganizationDataOwnershipPolicyValidatorTests
+public class OrganizationDataOwnershipPolicyHandlerTests
 {
     private const string _defaultUserCollectionName = "Default";
 
@@ -25,7 +25,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         [PolicyUpdate(PolicyType.OrganizationDataOwnership, false)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.OrganizationDataOwnership, false)] Policy postUpdatedPolicy,
         [Policy(PolicyType.OrganizationDataOwnership, false)] Policy previousPolicyState,
-        SutProvider<OrganizationDataOwnershipPolicyValidator> sutProvider)
+        SutProvider<OrganizationDataOwnershipPolicyHandler> sutProvider)
     {
         // Arrange
         sutProvider.GetDependency<IFeatureService>()
@@ -35,7 +35,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         var policyRequest = new SavePolicyModel(policyUpdate, null, new OrganizationModelOwnershipPolicyModel(_defaultUserCollectionName));
 
         // Act
-        await sutProvider.Sut.ExecuteSideEffectsAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
+        await sutProvider.Sut.ExecutePostUpsertSideEffectAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
 
         // Assert
         await sutProvider.GetDependency<ICollectionRepository>()
@@ -48,7 +48,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         [PolicyUpdate(PolicyType.OrganizationDataOwnership, true)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.OrganizationDataOwnership, true)] Policy postUpdatedPolicy,
         [Policy(PolicyType.OrganizationDataOwnership, true)] Policy previousPolicyState,
-        SutProvider<OrganizationDataOwnershipPolicyValidator> sutProvider)
+        SutProvider<OrganizationDataOwnershipPolicyHandler> sutProvider)
     {
         // Arrange
         postUpdatedPolicy.OrganizationId = policyUpdate.OrganizationId;
@@ -61,7 +61,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         var policyRequest = new SavePolicyModel(policyUpdate, null, new OrganizationModelOwnershipPolicyModel(_defaultUserCollectionName));
 
         // Act
-        await sutProvider.Sut.ExecuteSideEffectsAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
+        await sutProvider.Sut.ExecutePostUpsertSideEffectAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
 
         // Assert
         await sutProvider.GetDependency<ICollectionRepository>()
@@ -74,7 +74,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         [PolicyUpdate(PolicyType.OrganizationDataOwnership, false)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.OrganizationDataOwnership, false)] Policy postUpdatedPolicy,
         [Policy(PolicyType.OrganizationDataOwnership)] Policy previousPolicyState,
-        SutProvider<OrganizationDataOwnershipPolicyValidator> sutProvider)
+        SutProvider<OrganizationDataOwnershipPolicyHandler> sutProvider)
     {
         // Arrange
         previousPolicyState.OrganizationId = policyUpdate.OrganizationId;
@@ -87,7 +87,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         var policyRequest = new SavePolicyModel(policyUpdate, null, new OrganizationModelOwnershipPolicyModel(_defaultUserCollectionName));
 
         // Act
-        await sutProvider.Sut.ExecuteSideEffectsAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
+        await sutProvider.Sut.ExecutePostUpsertSideEffectAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
 
         // Assert
         await sutProvider.GetDependency<ICollectionRepository>()
@@ -113,7 +113,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         var policyRequest = new SavePolicyModel(policyUpdate, null, new OrganizationModelOwnershipPolicyModel(_defaultUserCollectionName));
 
         // Act
-        await sut.ExecuteSideEffectsAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
+        await sut.ExecutePostUpsertSideEffectAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
 
         // Assert
         await collectionRepository
@@ -202,7 +202,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         var policyRequest = new SavePolicyModel(policyUpdate, null, new OrganizationModelOwnershipPolicyModel(_defaultUserCollectionName));
 
         // Act
-        await sut.ExecuteSideEffectsAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
+        await sut.ExecutePostUpsertSideEffectAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
 
         // Assert
         await collectionRepository
@@ -227,7 +227,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         [PolicyUpdate(PolicyType.OrganizationDataOwnership)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.OrganizationDataOwnership, true)] Policy postUpdatedPolicy,
         [Policy(PolicyType.OrganizationDataOwnership, false)] Policy previousPolicyState,
-        SutProvider<OrganizationDataOwnershipPolicyValidator> sutProvider)
+        SutProvider<OrganizationDataOwnershipPolicyHandler> sutProvider)
     {
         // Arrange
         postUpdatedPolicy.OrganizationId = policyUpdate.OrganizationId;
@@ -241,7 +241,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         var policyRequest = new SavePolicyModel(policyUpdate, null, metadata);
 
         // Act
-        await sutProvider.Sut.ExecuteSideEffectsAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
+        await sutProvider.Sut.ExecutePostUpsertSideEffectAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
 
         // Assert
         await sutProvider.GetDependency<ICollectionRepository>()
@@ -259,7 +259,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         return policyRepository;
     }
 
-    private static OrganizationDataOwnershipPolicyValidator ArrangeSut(
+    private static OrganizationDataOwnershipPolicyHandler ArrangeSut(
         OrganizationDataOwnershipPolicyRequirementFactory factory,
         IPolicyRepository policyRepository,
         ICollectionRepository collectionRepository)
@@ -270,7 +270,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
             .IsEnabled(FeatureFlagKeys.CreateDefaultLocation)
             .Returns(true);
 
-        var sut = new OrganizationDataOwnershipPolicyValidator(policyRepository, collectionRepository, [factory], featureService);
+        var sut = new OrganizationDataOwnershipPolicyHandler(policyRepository, collectionRepository, [factory], featureService);
         return sut;
     }
 
