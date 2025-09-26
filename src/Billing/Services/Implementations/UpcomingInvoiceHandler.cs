@@ -36,16 +36,15 @@ public class UpcomingInvoiceHandler(
     {
         var invoice = await stripeEventService.GetInvoice(parsedEvent);
 
-        if (string.IsNullOrEmpty(invoice.SubscriptionId))
+        var customer =
+            await stripeFacade.GetCustomer(invoice.CustomerId, new CustomerGetOptions { Expand = ["subscriptions", "tax", "tax_ids"] });
+
+        var subscription = customer.Subscriptions.FirstOrDefault();
+
+        if (subscription == null)
         {
-            logger.LogInformation("Received 'invoice.upcoming' Event with ID '{eventId}' that did not include a Subscription ID", parsedEvent.Id);
             return;
         }
-
-        var subscription = await stripeFacade.GetSubscription(invoice.SubscriptionId, new SubscriptionGetOptions
-        {
-            Expand = ["customer.tax", "customer.tax_ids"]
-        });
 
         var (organizationId, userId, providerId) = stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata);
 

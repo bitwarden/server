@@ -64,10 +64,12 @@ public static class InvoiceExtensions
             }
         }
 
+        var tax = invoice.TotalTaxes.Sum(invoiceTotalTax => invoiceTotalTax.Amount);
+
         // Add fallback tax from invoice-level tax if present and not already included
-        if (invoice.Tax.HasValue && invoice.Tax.Value > 0)
+        if (tax > 0)
         {
-            var taxAmount = invoice.Tax.Value / 100m;
+            var taxAmount = tax / 100m;
             items.Add($"1 × Tax (at ${taxAmount:F2} / month)");
         }
 

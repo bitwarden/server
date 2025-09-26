@@ -1,6 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Core.Billing.Constants;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Stripe;
@@ -46,7 +47,7 @@ public class BillingHistoryInfo
             Url = inv.HostedInvoiceUrl;
             PdfUrl = inv.InvoicePdf;
             Number = inv.Number;
-            Paid = inv.Paid;
+            Paid = inv.Status == StripeConstants.InvoiceStatus.Paid;
             Amount = inv.Total / 100M;
         }
 
