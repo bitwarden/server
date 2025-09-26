@@ -71,6 +71,7 @@ public class WebAuthnController : Controller
         return new ListResponseModel<WebAuthnCredentialResponseModel>(credentials.Select(c => new WebAuthnCredentialResponseModel(c)));
     }
 
+    [Authorize("Application")]
     [HttpPost("attestation-options")]
     public async Task<WebAuthnCredentialCreateOptionsResponseModel> AttestationOptions([FromBody] SecretVerificationRequestModel model)
     {
@@ -104,6 +105,7 @@ public class WebAuthnController : Controller
         };
     }
 
+    [Authorize("Application")]
     [HttpPost("")]
     public async Task Post([FromBody] WebAuthnLoginCredentialCreateRequestModel model)
     {
@@ -149,6 +151,7 @@ public class WebAuthnController : Controller
         }
     }
 
+    [Authorize("Application")]
     [HttpPut()]
     public async Task UpdateCredential([FromBody] WebAuthnLoginCredentialUpdateRequestModel model)
     {
