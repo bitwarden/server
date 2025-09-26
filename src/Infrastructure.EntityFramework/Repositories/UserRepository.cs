@@ -394,6 +394,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
             await dbContext.Users.Where(u => targetIds.Contains(u.Id)).ExecuteDeleteAsync();
 
+            await dbContext.SaveChangesAsync();
             await transaction.CommitAsync();
         }
     }
