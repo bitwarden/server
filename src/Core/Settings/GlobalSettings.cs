@@ -473,17 +473,34 @@ public class GlobalSettings : IGlobalSettings
         public string CosmosConnectionString { get; set; }
         public string LicenseKey { get; set; } = "eyJhbGciOiJQUzI1NiIsImtpZCI6IklkZW50aXR5U2VydmVyTGljZW5zZWtleS83Y2VhZGJiNzgxMzA0NjllODgwNjg5MTAyNTQxNGYxNiIsInR5cCI6ImxpY2Vuc2Urand0In0.eyJpc3MiOiJodHRwczovL2R1ZW5kZXNvZnR3YXJlLmNvbSIsImF1ZCI6IklkZW50aXR5U2VydmVyIiwiaWF0IjoxNzM0NTY2NDAwLCJleHAiOjE3NjQ5NzkyMDAsImNvbXBhbnlfbmFtZSI6IkJpdHdhcmRlbiBJbmMuIiwiY29udGFjdF9pbmZvIjoiY29udGFjdEBkdWVuZGVzb2Z0d2FyZS5jb20iLCJlZGl0aW9uIjoiU3RhcnRlciIsImlkIjoiNjg3OCIsImZlYXR1cmUiOlsiaXN2IiwidW5saW1pdGVkX2NsaWVudHMiXSwicHJvZHVjdCI6IkJpdHdhcmRlbiJ9.TYc88W_t2t0F2AJV3rdyKwGyQKrKFriSAzm1tWFNHNR9QizfC-8bliGdT4Wgeie-ynCXs9wWaF-sKC5emg--qS7oe2iIt67Qd88WS53AwgTvAddQRA4NhGB1R7VM8GAikLieSos-DzzwLYRgjZdmcsprItYGSJuY73r-7-F97ta915majBytVxGF966tT9zF1aYk0bA8FS6DcDYkr5f7Nsy8daS_uIUAgNa_agKXtmQPqKujqtUb6rgWEpSp4OcQcG-8Dpd5jHqoIjouGvY-5LTgk5WmLxi_m-1QISjxUJrUm-UGao3_VwV5KFGqYrz8csdTl-HS40ihWcsWnrV0ug";
         /// <summary>
-        /// Global override for sliding refresh token lifetime in seconds. If null, uses the constructor parameter value.
+        /// Sliding lifetime of a refresh token in seconds.
+        ///
+        /// Each time the refresh token is used before the sliding window ends, its lifetime is extended by another SlidingRefreshTokenLifetimeSeconds.
+        ///
+        /// If AbsoluteRefreshTokenLifetimeSeconds > 0, the sliding extensions are bounded by the absolute maximum lifetime.
+        /// If SlidingRefreshTokenLifetimeSeconds = 0, sliding mode is invalid (refresh tokens cannot be used).
         /// </summary>
         public int? SlidingRefreshTokenLifetimeSeconds { get; set; }
         /// <summary>
-        /// Global override for absolute refresh token lifetime in seconds. If null, uses the constructor parameter value.
+        /// Maximum lifetime of a refresh token in seconds.
+        ///
+        /// Token cannot be refreshed by any means beyond the absolute refresh expiration.
+        ///
+        /// When setting this value to 0, the following effect applies:
+        ///     If ApplyAbsoluteExpirationOnRefreshToken is set to true, the behavior is the same as when no refresh tokens are used.
+        ///     If ApplyAbsoluteExpirationOnRefreshToken is set to false, refresh tokens only expire after the SlidingRefreshTokenLifetimeSeconds has passed.
         /// </summary>
         public int? AbsoluteRefreshTokenLifetimeSeconds { get; set; }
         /// <summary>
-        /// Global override for refresh token expiration policy. False = Sliding (default), True = Absolute.
+        /// Controls whether refresh tokens expire absolutely or on a sliding window basis.
+        ///
+        /// Absolute:
+        ///     Token expires at a fixed point in time (defined by AbsoluteRefreshTokenLifetimeSeconds). Usage does not extend lifetime.
+        ///
+        /// Sliding(default):
+        ///     Token lifetime is renewed on each use, by the amount in SlidingRefreshTokenLifetimeSeconds. Extensions stop once AbsoluteRefreshTokenLifetimeSeconds is reached (if set > 0).
         /// </summary>
-        public bool UseAbsoluteRefreshTokenExpiration { get; set; } = false;
+        public bool ApplyAbsoluteExpirationOnRefreshToken { get; set; } = false;
     }
 
     public class DataProtectionSettings
