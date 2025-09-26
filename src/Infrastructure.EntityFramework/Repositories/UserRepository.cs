@@ -284,23 +284,18 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             var transaction = await dbContext.Database.BeginTransactionAsync();
 
             // Migrate all DefaultUserCollection to SharedCollection
-            var orgUsersToDelete = dbContext.OrganizationUsers.Where(ou => ou.UserId == user.Id).ToList();
-            foreach (var orgUser in orgUsersToDelete)
-            {
-                var defaultCollections = dbContext.Collections
-                    .Where(c => c.Type == Core.Enums.CollectionType.DefaultUserCollection)
-                    .Where(c => dbContext.CollectionUsers.Any(cu => cu.OrganizationUserId == orgUser.Id && cu.CollectionId == c.Id))
-                    .ToList();
+            var defaultCollections = (from c in dbContext.Collections
+                                      join cu in dbContext.CollectionUsers on c.Id equals cu.CollectionId
+                                      join ou in dbContext.OrganizationUsers on cu.OrganizationUserId equals ou.Id
+                                      where ou.UserId == user.Id && c.Type == Core.Enums.CollectionType.DefaultUserCollection
+                                      select c)
+                                     .ToList();
 
-                foreach (var collection in defaultCollections)
-                {
-                    collection.Type = Core.Enums.CollectionType.SharedCollection;
-                    collection.DefaultUserCollectionEmail = collection.DefaultUserCollectionEmail ?? dbContext.Users
-                        .Where(u => u.Id == user.Id)
-                        .Select(u => u.Email)
-                        .FirstOrDefault();
-                    collection.RevisionDate = DateTime.UtcNow;
-                }
+            foreach (var collection in defaultCollections)
+            {
+                collection.Type = Core.Enums.CollectionType.SharedCollection;
+                collection.DefaultUserCollectionEmail = collection.DefaultUserCollectionEmail ?? user.Email;
+                collection.RevisionDate = DateTime.UtcNow;
             }
 
             dbContext.WebAuthnCredentials.RemoveRange(dbContext.WebAuthnCredentials.Where(w => w.UserId == user.Id));
@@ -350,23 +345,20 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             var targetIds = users.Select(u => u.Id).ToList();
 
             // Migrate all DefaultUserCollection to SharedCollection
-            var orgUsersToDelete = dbContext.OrganizationUsers.Where(ou => targetIds.Contains(ou.UserId ?? default)).ToList();
-            foreach (var orgUser in orgUsersToDelete)
-            {
-                var defaultCollections = dbContext.Collections
-                    .Where(c => c.Type == Core.Enums.CollectionType.DefaultUserCollection)
-                    .Where(c => dbContext.CollectionUsers.Any(cu => cu.OrganizationUserId == orgUser.Id && cu.CollectionId == c.Id))
-                    .ToList();
+            var defaultCollections = (from c in dbContext.Collections
+                                      join cu in dbContext.CollectionUsers on c.Id equals cu.CollectionId
+                                      join ou in dbContext.OrganizationUsers on cu.OrganizationUserId equals ou.Id
+                                      join u in dbContext.Users on ou.UserId equals u.Id
+                                      where targetIds.Contains(ou.UserId!.Value)
+                                        && c.Type == Core.Enums.CollectionType.DefaultUserCollection
+                                      select new { Collection = c, UserEmail = u.Email })
+                                     .ToList();
 
-                foreach (var collection in defaultCollections)
-                {
-                    collection.Type = Core.Enums.CollectionType.SharedCollection;
-                    collection.DefaultUserCollectionEmail = collection.DefaultUserCollectionEmail ?? dbContext.Users
-                        .Where(u => u.Id == orgUser.UserId)
-                        .Select(u => u.Email)
-                        .FirstOrDefault();
-                    collection.RevisionDate = DateTime.UtcNow;
-                }
+            foreach (var item in defaultCollections)
+            {
+                item.Collection.Type = Core.Enums.CollectionType.SharedCollection;
+                item.Collection.DefaultUserCollectionEmail = item.Collection.DefaultUserCollectionEmail ?? item.UserEmail;
+                item.Collection.RevisionDate = DateTime.UtcNow;
             }
 
             await dbContext.SaveChangesAsync();
