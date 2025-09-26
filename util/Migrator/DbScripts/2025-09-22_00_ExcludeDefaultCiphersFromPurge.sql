@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Cipher_DeleteByOrganizationId]
+CREATE OR ALTER PROCEDURE [dbo].[Cipher_DeleteByOrganizationId]
      @OrganizationId UNIQUEIDENTIFIER
  AS
  BEGIN

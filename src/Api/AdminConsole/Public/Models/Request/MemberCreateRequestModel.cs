@@ -31,7 +31,7 @@ public class MemberCreateRequestModel : MemberUpdateRequestModel
         {
             Emails = new[] { Email },
             Type = Type.Value,
-            Collections = Collections?.Select(c => c.ToCollectionAccessSelection()).ToList(),
+            Collections = Collections?.Select(c => c.ToCollectionAccessSelection())?.ToList() ?? [],
             Groups = Groups
         };
 
