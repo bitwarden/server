@@ -1,10 +1,13 @@
-﻿using Bit.Core.AdminConsole.Entities.Provider;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Xunit;
 
@@ -72,25 +75,18 @@ public class ProviderUserRepositoryTests
         var orgWithSsoDetails = results.Single(r => r.OrganizationId == organizationWithSso.Id);
         var orgWithoutSsoDetails = results.Single(r => r.OrganizationId == organizationWithoutSso.Id);
 
-        // Verify common properties for both organizations
-        Assert.Equal(user.Id, orgWithSsoDetails.UserId);
-        Assert.Equal(provider.Id, orgWithSsoDetails.ProviderId);
-        Assert.Equal(provider.Name, orgWithSsoDetails.ProviderName);
-        Assert.Equal(provider.Type, orgWithSsoDetails.ProviderType);
+        // Verify all properties for both organizations
+        AssertProviderOrganizationDetails(orgWithSsoDetails, organizationWithSso, user, provider, providerUser);
+        AssertProviderOrganizationDetails(orgWithoutSsoDetails, organizationWithoutSso, user, provider, providerUser);
 
-        Assert.Equal(user.Id, orgWithoutSsoDetails.UserId);
-        Assert.Equal(provider.Id, orgWithoutSsoDetails.ProviderId);
-        Assert.Equal(provider.Name, orgWithoutSsoDetails.ProviderName);
-        Assert.Equal(provider.Type, orgWithoutSsoDetails.ProviderType);
+        // Organization without SSO should have null SSO properties
+        Assert.Null(orgWithoutSsoDetails.SsoEnabled);
+        Assert.Null(orgWithoutSsoDetails.SsoConfig);
 
         // Organization with SSO should have SSO properties populated
         Assert.True(orgWithSsoDetails.SsoEnabled);
         Assert.NotNull(orgWithSsoDetails.SsoConfig);
         Assert.Equal(serializedSsoConfigData, orgWithSsoDetails.SsoConfig);
-
-        // Organization without SSO should have null SSO properties
-        Assert.Null(orgWithoutSsoDetails.SsoEnabled);
-        Assert.Null(orgWithoutSsoDetails.SsoConfig);
 
         // Cleanup
         await ssoConfigRepository.DeleteAsync(ssoConfig);
@@ -101,5 +97,55 @@ public class ProviderUserRepositoryTests
         await organizationRepository.DeleteAsync(organizationWithSso);
         await organizationRepository.DeleteAsync(organizationWithoutSso);
         await userRepository.DeleteAsync(user);
+    }
+
+    private static void AssertProviderOrganizationDetails(
+        ProviderUserOrganizationDetails actual,
+        Organization expectedOrganization,
+        User expectedUser,
+        Provider expectedProvider,
+        ProviderUser expectedProviderUser)
+    {
+        // Organization properties
+        Assert.Equal(expectedOrganization.Id, actual.OrganizationId);
+        Assert.Equal(expectedUser.Id, actual.UserId);
+        Assert.Equal(expectedOrganization.Name, actual.Name);
+        Assert.Equal(expectedOrganization.UsePolicies, actual.UsePolicies);
+        Assert.Equal(expectedOrganization.UseSso, actual.UseSso);
+        Assert.Equal(expectedOrganization.UseKeyConnector, actual.UseKeyConnector);
+        Assert.Equal(expectedOrganization.UseScim, actual.UseScim);
+        Assert.Equal(expectedOrganization.UseGroups, actual.UseGroups);
+        Assert.Equal(expectedOrganization.UseDirectory, actual.UseDirectory);
+        Assert.Equal(expectedOrganization.UseEvents, actual.UseEvents);
+        Assert.Equal(expectedOrganization.UseTotp, actual.UseTotp);
+        Assert.Equal(expectedOrganization.Use2fa, actual.Use2fa);
+        Assert.Equal(expectedOrganization.UseApi, actual.UseApi);
+        Assert.Equal(expectedOrganization.UseResetPassword, actual.UseResetPassword);
+        Assert.Equal(expectedOrganization.UsersGetPremium, actual.UsersGetPremium);
+        Assert.Equal(expectedOrganization.UseCustomPermissions, actual.UseCustomPermissions);
+        Assert.Equal(expectedOrganization.SelfHost, actual.SelfHost);
+        Assert.Equal(expectedOrganization.Seats, actual.Seats);
+        Assert.Equal(expectedOrganization.MaxCollections, actual.MaxCollections);
+        Assert.Equal(expectedOrganization.MaxStorageGb, actual.MaxStorageGb);
+        Assert.Equal(expectedOrganization.Identifier, actual.Identifier);
+        Assert.Equal(expectedOrganization.PublicKey, actual.PublicKey);
+        Assert.Equal(expectedOrganization.PrivateKey, actual.PrivateKey);
+        Assert.Equal(expectedOrganization.Enabled, actual.Enabled);
+        Assert.Equal(expectedOrganization.PlanType, actual.PlanType);
+        Assert.Equal(expectedOrganization.LimitCollectionCreation, actual.LimitCollectionCreation);
+        Assert.Equal(expectedOrganization.LimitCollectionDeletion, actual.LimitCollectionDeletion);
+        Assert.Equal(expectedOrganization.LimitItemDeletion, actual.LimitItemDeletion);
+        Assert.Equal(expectedOrganization.AllowAdminAccessToAllCollectionItems, actual.AllowAdminAccessToAllCollectionItems);
+        Assert.Equal(expectedOrganization.UseRiskInsights, actual.UseRiskInsights);
+        Assert.Equal(expectedOrganization.UseOrganizationDomains, actual.UseOrganizationDomains);
+        Assert.Equal(expectedOrganization.UseAdminSponsoredFamilies, actual.UseAdminSponsoredFamilies);
+
+        // Provider-specific properties
+        Assert.Equal(expectedProvider.Id, actual.ProviderId);
+        Assert.Equal(expectedProvider.Name, actual.ProviderName);
+        Assert.Equal(expectedProvider.Type, actual.ProviderType);
+        Assert.Equal(expectedProviderUser.Id, actual.ProviderUserId);
+        Assert.Equal(expectedProviderUser.Status, actual.Status);
+        Assert.Equal(expectedProviderUser.Type, actual.Type);
     }
 }
