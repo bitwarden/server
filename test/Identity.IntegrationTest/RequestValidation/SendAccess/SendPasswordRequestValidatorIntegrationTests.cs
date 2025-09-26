@@ -1,28 +1,17 @@
-﻿using Bit.Core.Auth.IdentityServer;
-using Bit.Core.Enums;
-using Bit.Core.KeyManagement.Sends;
+﻿using Bit.Core.KeyManagement.Sends;
 using Bit.Core.Services;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.SendFeatures.Queries.Interfaces;
-using Bit.Core.Utilities;
-using Bit.Identity.IdentityServer.Enums;
 using Bit.Identity.IdentityServer.RequestValidators.SendAccess;
 using Bit.IntegrationTestCommon.Factories;
 using Duende.IdentityModel;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Identity.IntegrationTest.RequestValidation;
+namespace Bit.Identity.IntegrationTest.RequestValidation.SendAccess;
 
-public class SendPasswordRequestValidatorIntegrationTests : IClassFixture<IdentityApplicationFactory>
+public class SendPasswordRequestValidatorIntegrationTests(IdentityApplicationFactory _factory) : IClassFixture<IdentityApplicationFactory>
 {
-    private readonly IdentityApplicationFactory _factory;
-
-    public SendPasswordRequestValidatorIntegrationTests(IdentityApplicationFactory factory)
-    {
-        _factory = factory;
-    }
-
     [Fact]
     public async Task SendAccess_PasswordProtectedSend_ValidPassword_ReturnsAccessToken()
     {
@@ -54,7 +43,7 @@ public class SendPasswordRequestValidatorIntegrationTests : IClassFixture<Identi
             });
         }).CreateClient();
 
-        var requestBody = CreateTokenRequestBody(sendId, clientPasswordHash);
+        var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId, password: clientPasswordHash);
 
         // Act
         var response = await client.PostAsync("/connect/token", requestBody);
@@ -95,7 +84,7 @@ public class SendPasswordRequestValidatorIntegrationTests : IClassFixture<Identi
             });
         }).CreateClient();
 
-        var requestBody = CreateTokenRequestBody(sendId, wrongClientPasswordHash);
+        var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId, password: wrongClientPasswordHash);
 
         // Act
         var response = await client.PostAsync("/connect/token", requestBody);
@@ -131,7 +120,7 @@ public class SendPasswordRequestValidatorIntegrationTests : IClassFixture<Identi
             });
         }).CreateClient();
 
-        var requestBody = CreateTokenRequestBody(sendId); // No password
+        var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId); // No password
 
         // Act
         var response = await client.PostAsync("/connect/token", requestBody);
@@ -176,7 +165,7 @@ public class SendPasswordRequestValidatorIntegrationTests : IClassFixture<Identi
             });
         }).CreateClient();
 
-        var requestBody = CreateTokenRequestBody(sendId, string.Empty);
+        var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId, string.Empty);
 
         // Act
         var response = await client.PostAsync("/connect/token", requestBody);
@@ -185,25 +174,5 @@ public class SendPasswordRequestValidatorIntegrationTests : IClassFixture<Identi
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains(OidcConstants.TokenErrors.InvalidRequest, content);
         Assert.Contains($"{SendAccessConstants.TokenRequest.ClientB64HashedPassword} is required", content);
-    }
-
-    private static FormUrlEncodedContent CreateTokenRequestBody(Guid sendId, string passwordHash = null)
-    {
-        var sendIdBase64 = CoreHelpers.Base64UrlEncode(sendId.ToByteArray());
-        var parameters = new List<KeyValuePair<string, string>>
-        {
-            new(OidcConstants.TokenRequest.GrantType, CustomGrantTypes.SendAccess),
-            new(OidcConstants.TokenRequest.ClientId, BitwardenClient.Send),
-            new(SendAccessConstants.TokenRequest.SendId, sendIdBase64),
-            new(OidcConstants.TokenRequest.Scope, ApiScopes.ApiSendAccess),
-            new("deviceType", "10")
-        };
-
-        if (passwordHash != null)
-        {
-            parameters.Add(new KeyValuePair<string, string>(SendAccessConstants.TokenRequest.ClientB64HashedPassword, passwordHash));
-        }
-
-        return new FormUrlEncodedContent(parameters);
     }
 }
