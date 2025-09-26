@@ -70,6 +70,17 @@ public static class Constants
         /// </summary>
         public const string UnitedStates = "US";
     }
+
+
+    /// <summary>
+    /// Constants for our browser extensions IDs
+    /// </summary>
+    public static class BrowserExtensions
+    {
+        public const string ChromeId = "chrome-extension://nngceckbapebfimnlniiiahkandclblb/";
+        public const string EdgeId = "chrome-extension://jbkfoedolllekgbhcbcoahefnbanhhlh/";
+        public const string OperaId = "chrome-extension://ccnckbpmaceehanjmeomladnmlffdjgn/";
+    }
 }
 
 public static class AuthConstants
