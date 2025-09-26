@@ -541,6 +541,74 @@ public class OrganizationUserRepositoryTests
         Assert.Equal(organization.UseAdminSponsoredFamilies, result.UseAdminSponsoredFamilies);
     }
 
+    [Theory, DatabaseData]
+    public async Task GetManyDetailsByUserAsync_ShouldPopulateSsoPropertiesCorrectly(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        ISsoConfigRepository ssoConfigRepository)
+    {
+        var user = await userRepository.CreateTestUserAsync();
+        var organizationWithSso = await organizationRepository.CreateTestOrganizationAsync();
+        var organizationWithoutSso = await organizationRepository.CreateTestOrganizationAsync();
+
+        var orgUserWithSso = await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organizationWithSso.Id,
+            UserId = user.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.Owner,
+            Email = user.Email
+        });
+
+        var orgUserWithoutSso = await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organizationWithoutSso.Id,
+            UserId = user.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.User,
+            Email = user.Email
+        });
+
+        // Create SSO configuration for first organization only
+        var serializedSsoConfigData = new SsoConfigurationData
+        {
+            MemberDecryptionType = MemberDecryptionType.KeyConnector,
+            KeyConnectorUrl = "https://keyconnector.example.com"
+        }.Serialize();
+
+        var ssoConfig = await ssoConfigRepository.CreateAsync(new SsoConfig
+        {
+            OrganizationId = organizationWithSso.Id,
+            Enabled = true,
+            Data = serializedSsoConfigData
+        });
+
+        var results = (await organizationUserRepository.GetManyDetailsByUserAsync(user.Id)).ToList();
+
+        Assert.Equal(2, results.Count);
+
+        var orgWithSsoDetails = results.Single(r => r.OrganizationId == organizationWithSso.Id);
+        var orgWithoutSsoDetails = results.Single(r => r.OrganizationId == organizationWithoutSso.Id);
+
+        // Organization with SSO should have SSO properties populated
+        Assert.True(orgWithSsoDetails.SsoEnabled);
+        Assert.NotNull(orgWithSsoDetails.SsoConfig);
+        Assert.Equal(serializedSsoConfigData, orgWithSsoDetails.SsoConfig);
+
+        // Organization without SSO should have null SSO properties
+        Assert.Null(orgWithoutSsoDetails.SsoEnabled);
+        Assert.Null(orgWithoutSsoDetails.SsoConfig);
+
+        // Cleanup
+        await ssoConfigRepository.DeleteAsync(ssoConfig);
+        await organizationUserRepository.DeleteAsync(orgUserWithSso);
+        await organizationUserRepository.DeleteAsync(orgUserWithoutSso);
+        await organizationRepository.DeleteAsync(organizationWithSso);
+        await organizationRepository.DeleteAsync(organizationWithoutSso);
+        await userRepository.DeleteAsync(user);
+    }
+
     [DatabaseTheory, DatabaseData]
     public async Task GetManyByOrganizationWithClaimedDomainsAsync_WithVerifiedDomain_WithOneMatchingEmailDomain_ReturnsSingle(
         IUserRepository userRepository,
