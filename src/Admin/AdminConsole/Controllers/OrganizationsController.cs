@@ -105,6 +105,11 @@ public class OrganizationsController : Controller
         _organizationInitiateDeleteCommand = organizationInitiateDeleteCommand;
         _pricingClient = pricingClient;
         _resendOrganizationInviteCommand = resendOrganizationInviteCommand;
+
+        if(_logger == null)
+        {
+            throw new ArgumentNullException(nameof(logger));
+        }
     }
 
     [RequirePermission(Permission.Org_List_View)]
