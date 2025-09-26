@@ -35,7 +35,6 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
         IAuthRequestRepository authRequestRepository,
-        IUserRepository userRepository,
         IPolicyService policyService,
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
@@ -52,7 +51,6 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
             logger,
             currentContext,
             globalSettings,
-            userRepository,
             policyService,
             featureService,
             ssoConfigRepository,
@@ -71,7 +69,7 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
     {
 
         var user = await _userManager.FindByEmailAsync(context.UserName.ToLowerInvariant());
-        // We want to keep this device around incase the device is new for the user
+        // We want to keep this device around in case the device is new for the user
         var requestDevice = DeviceValidator.GetDeviceFromRequest(context.Request);
         var knownDevice = await _deviceValidator.GetKnownDeviceAsync(user, requestDevice);
         var validatorContext = new CustomValidatorRequestContext
