@@ -887,6 +887,9 @@ public class CiphersController : Controller
     [HttpPost("bulk-collections")]
     public async Task PostBulkCollections([FromBody] CipherBulkUpdateCollectionsRequestModel model)
     {
+        var userId = _userService.GetProperUserId(User).Value;
+        await _cipherService.ValidateBulkCollectionAssignmentAsync(model.CollectionIds, model.CipherIds, userId);
+
         if (!await CanModifyCipherCollectionsAsync(model.OrganizationId, model.CipherIds) ||
             !await CanEditItemsInCollections(model.OrganizationId, model.CollectionIds))
         {
