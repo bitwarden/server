@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[CollectionCipher_UpdateCollectionsAdmin]
+CREATE OR ALTER PROCEDURE [dbo].[CollectionCipher_UpdateCollectionsAdmin]
     @CipherId UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
     @CollectionIds AS [dbo].[GuidIdArray] READONLY
