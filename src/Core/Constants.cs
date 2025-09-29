@@ -187,6 +187,7 @@ public static class FeatureFlagKeys
     public const string ForceUpdateKDFSettings = "pm-18021-force-update-kdf-settings";
     public const string UnlockWithMasterPasswordUnlockData = "pm-23246-unlock-with-master-password-unlock-data";
     public const string WindowsBiometricsV2 = "pm-25373-windows-biometrics-v2";
+    public const string NoLogoutOnKdfChange = "pm-23995-no-logout-on-kdf-change";
 
     /* Mobile Team */
     public const string NativeCarouselFlow = "native-carousel-flow";
