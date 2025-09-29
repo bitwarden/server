@@ -27,8 +27,8 @@ public class PrivateKeysResponseModel : ResponseModel
     [System.Diagnostics.CodeAnalysis.SetsRequiredMembersAttribute]
     public PrivateKeysResponseModel(UserAccountKeysData accountKeys) : base("privateKeys")
     {
-        PublicKeyEncryptionKeyPair = new PublicKeyEncryptionKeyPairResponseModel(accountKeys.PublicKeyEncryptionKeyPairData);
         ArgumentNullException.ThrowIfNull(accountKeys);
+        PublicKeyEncryptionKeyPair = new PublicKeyEncryptionKeyPairResponseModel(accountKeys.PublicKeyEncryptionKeyPairData);
 
         if (accountKeys.SignatureKeyPairData != null && accountKeys.SecurityStateData != null)
         {
