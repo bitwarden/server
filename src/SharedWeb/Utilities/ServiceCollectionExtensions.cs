@@ -706,7 +706,7 @@ public static class ServiceCollectionExtensions
                 // Default to allowing the vault domain and chromium browser extension IDs
                 options.Origins = new HashSet<string> {
                     globalSettings.BaseServiceUri.Vault,
-                    Constants.BrowserExtensions.ChromeId,                    
+                    Constants.BrowserExtensions.ChromeId,
                     Constants.BrowserExtensions.EdgeId,
                     Constants.BrowserExtensions.OperaId
                  };
