@@ -19,7 +19,7 @@ IF NOT EXISTS(SELECT name
 FROM sys.indexes
 WHERE name = 'IX_UserSignatureKeyPair_UserId')
 BEGIN
-CREATE NONCLUSTERED INDEX [IX_UserSignatureKeyPair_UserId]
+CREATE UNIQUE NONCLUSTERED INDEX [IX_UserSignatureKeyPair_UserId]
     ON [dbo].[UserSignatureKeyPair]([UserId] ASC);
 END
 GO

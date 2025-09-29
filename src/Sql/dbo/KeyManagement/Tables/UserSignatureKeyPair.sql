@@ -11,6 +11,6 @@
 );
 GO
 
-CREATE NONCLUSTERED INDEX [IX_UserSignatureKeyPair_UserId]
+CREATE UNIQUE NONCLUSTERED INDEX [IX_UserSignatureKeyPair_UserId]
     ON [dbo].[UserSignatureKeyPair]([UserId] ASC);
 GO
