@@ -1,7 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using Bit.Core.AdminConsole.Models.Data;
+﻿using Bit.Core.AdminConsole.Models.Data;
 
 namespace Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
@@ -11,10 +8,10 @@ public class OrganizationUserOrganizationDetails : BaseUserOrganizationDetails
     public bool UseSecretsManager { get; set; }
     public Enums.OrganizationUserStatusType Status { get; set; }
     public Enums.OrganizationUserType Type { get; set; }
-    public string SsoExternalId { get; set; }
-    public string Permissions { get; set; }
-    public string ResetPasswordKey { get; set; }
-    public string FamilySponsorshipFriendlyName { get; set; }
+    public string? SsoExternalId { get; set; }
+    public string? Permissions { get; set; }
+    public string? ResetPasswordKey { get; set; }
+    public string? FamilySponsorshipFriendlyName { get; set; }
     public DateTime? FamilySponsorshipLastSyncDate { get; set; }
     public DateTime? FamilySponsorshipValidUntil { get; set; }
     public bool? FamilySponsorshipToDelete { get; set; }

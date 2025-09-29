@@ -1,7 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Utilities;
@@ -17,9 +14,9 @@ public abstract class BaseUserOrganizationDetails
     public Guid OrganizationId { get; set; }
     public Guid? UserId { get; set; }
     [JsonConverter(typeof(HtmlEncodingStringConverter))]
-    public string Name { get; set; }
+    public string Name { get; set; } = null!;
     public bool Enabled { get; set; }
-    public string Identifier { get; set; }
+    public string? Identifier { get; set; }
     public PlanType PlanType { get; set; }
     public bool UsePolicies { get; set; }
     public bool UseSso { get; set; }
@@ -41,17 +38,17 @@ public abstract class BaseUserOrganizationDetails
     public int? Seats { get; set; }
     public short? MaxCollections { get; set; }
     public short? MaxStorageGb { get; set; }
-    public string Key { get; set; }
-    public string PublicKey { get; set; }
-    public string PrivateKey { get; set; }
+    public string? Key { get; set; }
+    public string? PublicKey { get; set; }
+    public string? PrivateKey { get; set; }
     public Guid? ProviderId { get; set; }
     [JsonConverter(typeof(HtmlEncodingStringConverter))]
-    public string ProviderName { get; set; }
+    public string? ProviderName { get; set; }
     public ProviderType? ProviderType { get; set; }
     public bool LimitCollectionCreation { get; set; }
     public bool LimitCollectionDeletion { get; set; }
     public bool LimitItemDeletion { get; set; }
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
     public bool? SsoEnabled { get; set; }
-    public string SsoConfig { get; set; }
+    public string? SsoConfig { get; set; }
 }
