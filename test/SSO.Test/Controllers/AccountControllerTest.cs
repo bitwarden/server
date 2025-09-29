@@ -228,12 +228,6 @@ public class AccountControllerTest
         }
     }
 
-    private static void SetPreventNonCompliant(IFeatureService featureService, bool enabled)
-        => featureService.IsEnabled(Arg.Any<string>()).Returns(enabled);
-
-    private static void SetDefaultReturnContext(IIdentityServerInteractionService interactionService)
-        => interactionService.GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
-
     [Fact]
     public void EnsureOrgUserStatusAllowed_AllowsAcceptedAndConfirmed()
     {
@@ -369,8 +363,8 @@ public class AccountControllerTest
             organization,
             orgUser);
 
-        SetPreventNonCompliant(featureService, true);
-        SetDefaultReturnContext(interactionService);
+        featureService.IsEnabled(Arg.Any<string>()).Returns(true);
+        interactionService.GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
 
         var result = await controller.ExternalCallback();
 
@@ -419,8 +413,8 @@ public class AccountControllerTest
             providerUserId,
             user);
 
-        SetPreventNonCompliant(featureService, false);
-        SetDefaultReturnContext(interactionService);
+        featureService.IsEnabled(Arg.Any<string>()).Returns(false);
+        interactionService.GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
 
         var result = await controller.ExternalCallback();
 
