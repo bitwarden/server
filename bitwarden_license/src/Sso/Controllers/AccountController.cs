@@ -269,10 +269,6 @@ public class AccountController : Controller
             // If we're manually linking to SSO, the user's external identifier will be passed as query string parameter.
             var userIdentifier = result.Properties.Items.Keys.Contains("user_identifier") ?
                 result.Properties.Items["user_identifier"] : null;
-            // PM-24579: After removing the feature flag, just call AutoProvisionUserAsync
-            // and always use the returned organization/orgUser. The conditional arguments
-            // can be collapsed away at that time.
-            // Pass current organization/orgUser (likely null) and let provisioning populate them once.
             var provision = await AutoProvisionUserAsync(
                 provider,
                 providerUserId,
@@ -520,11 +516,7 @@ public class AccountController : Controller
         }
 
         // Find organization and orgUser (none are preloaded).
-        Organization organization = null;
-        OrganizationUser orgUser = null;
-        var (foundOrganization, foundOrgUser) = await FindOrganizationUser(existingUser, email, orgId);
-        organization ??= foundOrganization;
-        orgUser ??= foundOrgUser;
+        var (organization, orgUser) = await FindOrganizationUser(existingUser, email, orgId);
 
         //----------------------------------------------------
         // Scenario 1: We've found the user in the User table
