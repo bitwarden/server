@@ -88,7 +88,9 @@ public class SlackIntegrationController(
 
         // Fetch existing Initiated record
         var integration = await integrationRepository.GetByIdAsync(oAuthState.IntegrationId);
-        if (integration is null)
+        if (integration is null ||
+            integration.Type != IntegrationType.Slack ||
+            integration.Configuration is not null)
         {
             throw new NotFoundException();
         }

@@ -30,6 +30,8 @@ public class SlackIntegrationControllerTests
         SutProvider<SlackIntegrationController> sutProvider,
         OrganizationIntegration integration)
     {
+        integration.Type = IntegrationType.Slack;
+        integration.Configuration = null;
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == nameof(SlackIntegrationController.CreateAsync)))
@@ -54,6 +56,8 @@ public class SlackIntegrationControllerTests
         SutProvider<SlackIntegrationController> sutProvider,
         OrganizationIntegration integration)
     {
+        integration.Type = IntegrationType.Slack;
+        integration.Configuration = null;
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == nameof(SlackIntegrationController.CreateAsync)))
@@ -72,6 +76,8 @@ public class SlackIntegrationControllerTests
         SutProvider<SlackIntegrationController> sutProvider,
         OrganizationIntegration integration)
     {
+        integration.Type = IntegrationType.Slack;
+        integration.Configuration = null;
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == nameof(SlackIntegrationController.CreateAsync)))
@@ -161,6 +167,50 @@ public class SlackIntegrationControllerTests
 
         var state = IntegrationOAuthState.FromIntegration(integration, sutProvider.GetDependency<TimeProvider>());
 
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.CreateAsync(_validSlackCode, state.ToString()));
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateAsync_StateHasNonEmptyIntegration_ThrowsNotFound(
+        SutProvider<SlackIntegrationController> sutProvider,
+        OrganizationIntegration integration)
+    {
+        integration.Type = IntegrationType.Slack;
+        integration.Configuration = "{}";
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.Sut.Url
+            .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == nameof(SlackIntegrationController.CreateAsync)))
+            .Returns("https://localhost");
+        sutProvider.GetDependency<ISlackService>()
+            .ObtainTokenViaOAuth(_validSlackCode, Arg.Any<string>())
+            .Returns(_slackToken);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(integration.Id)
+            .Returns(integration);
+
+        var state = IntegrationOAuthState.FromIntegration(integration, sutProvider.GetDependency<TimeProvider>());
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.CreateAsync(_validSlackCode, state.ToString()));
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateAsync_StateHasNonSlackIntegration_ThrowsNotFound(
+        SutProvider<SlackIntegrationController> sutProvider,
+        OrganizationIntegration integration)
+    {
+        integration.Type = IntegrationType.Hec;
+        integration.Configuration = null;
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.Sut.Url
+            .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == nameof(SlackIntegrationController.CreateAsync)))
+            .Returns("https://localhost");
+        sutProvider.GetDependency<ISlackService>()
+            .ObtainTokenViaOAuth(_validSlackCode, Arg.Any<string>())
+            .Returns(_slackToken);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(integration.Id)
+            .Returns(integration);
+
+        var state = IntegrationOAuthState.FromIntegration(integration, sutProvider.GetDependency<TimeProvider>());
         await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.CreateAsync(_validSlackCode, state.ToString()));
     }
 
