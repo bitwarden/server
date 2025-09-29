@@ -279,8 +279,8 @@ public class AccountController : Controller
             // PM-24579: After removing the flag, assign these unconditionally and remove this if block.
             if (preventNonCompliant)
             {
-                organization ??= provision.organization;
-                orgUser ??= provision.orgUser;
+                organization = provision.foundOrganization;
+                orgUser = provision.foundOrgUser;
             }
         }
 
@@ -481,7 +481,7 @@ public class AccountController : Controller
     /// <param name="orgUser">The org user pair, can be null.</param>
     /// <returns>The User to sign in.</returns>
     /// <exception cref="Exception">An exception if the user cannot be provisioned as requested.</exception>
-    private async Task<(User user, Organization organization, OrganizationUser orgUser)> AutoProvisionUserAsync(
+    private async Task<(User user, Organization foundOrganization, OrganizationUser foundOrgUser)> AutoProvisionUserAsync(
         string provider,
         string providerUserId,
         IEnumerable<Claim> claims,
@@ -515,7 +515,7 @@ public class AccountController : Controller
             existingUser = await GetUserFromManualLinkingData(userIdentifier);
         }
 
-        // Find organization and orgUser (none are preloaded).
+        // Try to find the OrganizationUser if it exists.
         var (organization, orgUser) = await FindOrganizationUser(existingUser, email, orgId);
 
         //----------------------------------------------------
