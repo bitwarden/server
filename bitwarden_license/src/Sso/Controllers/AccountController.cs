@@ -647,40 +647,6 @@ public class AccountController : Controller
         return (user, organization, orgUser);
     }
 
-    private async Task<(Organization, OrganizationUser)> ResolveOrganizationAndMembershipAsync(
-        string provider, User user, IEnumerable<Claim> claims, SsoConfigurationData ssoConfigData)
-    {
-        Organization organization = null;
-        OrganizationUser orgUser = null;
-
-        if (!Guid.TryParse(provider, out var organizationId))
-        {
-            _logger.LogError("Failed to parse organization ID from provider: {Provider}", provider);
-            return (null, null);
-        }
-
-        organization = await _organizationRepository.GetByIdAsync(organizationId);
-        if (organization == null)
-        {
-            _logger.LogError("Organization not found for provider: {Provider}", provider);
-            return (null, null);
-        }
-
-        if (user != null)
-        {
-            orgUser = await _organizationUserRepository.GetByOrganizationAsync(organization.Id, user.Id);
-            return (organization, orgUser);
-        }
-
-        var emailFromClaims = GetEmailAddress(claims, ssoConfigData.GetAdditionalEmailClaimTypes());
-        if (!string.IsNullOrWhiteSpace(emailFromClaims))
-        {
-            orgUser = await _organizationUserRepository.GetByOrganizationEmailAsync(organization.Id, emailFromClaims);
-        }
-
-        return (organization, orgUser);
-    }
-
     private async Task<User> GetUserFromManualLinkingData(string userIdentifier)
     {
         User user = null;
