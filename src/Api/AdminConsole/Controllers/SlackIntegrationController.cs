@@ -20,7 +20,8 @@ namespace Bit.Api.AdminConsole.Controllers;
 public class SlackIntegrationController(
     ICurrentContext currentContext,
     IOrganizationIntegrationRepository integrationRepository,
-    ISlackService slackService) : Controller
+    ISlackService slackService,
+    TimeProvider timeProvider) : Controller
 {
     [HttpGet("{organizationId:guid}/integrations/slack/redirect")]
     public async Task<IActionResult> RedirectAsync(Guid organizationId)
@@ -46,6 +47,7 @@ public class SlackIntegrationController(
 
         if (integration is null)
         {
+            // No slack integration exists, create Initiated version
             integration = await integrationRepository.CreateAsync(new OrganizationIntegration
             {
                 OrganizationId = organizationId,
@@ -53,14 +55,17 @@ public class SlackIntegrationController(
                 Configuration = null,
             });
         }
-        if (integration.Configuration is not null)
+        else if (integration.Configuration is not null)
         {
+            // A Completed (fully configured) Slack integration already exists, throw to prevent overriding
             throw new BadRequestException("There already exists a Slack integration for this organization");
-        }
 
+        } // An Initiated slack integration exits, re-use it and kick off a new OAuth flow
+
+        var state = IntegrationOAuthState.FromIntegration(integration, timeProvider);
         var redirectUrl = slackService.GetRedirectUrl(
             callbackUrl: callbackUrl,
-            state: integration.Id.ToString()
+            state: state.ToString()
         );
 
         if (string.IsNullOrEmpty(redirectUrl))
@@ -75,11 +80,23 @@ public class SlackIntegrationController(
     [AllowAnonymous]
     public async Task<IActionResult> CreateAsync([FromQuery] string code, [FromQuery] string state)
     {
+        var oAuthState = IntegrationOAuthState.FromString(state: state, timeProvider: timeProvider);
+        if (oAuthState is null)
+        {
+            throw new NotFoundException();
+        }
+
         // Fetch existing Initiated record
-        var integration = await integrationRepository.GetByIdAsync(Guid.Parse(state));
+        var integration = await integrationRepository.GetByIdAsync(oAuthState.IntegrationId);
         if (integration is null)
         {
-            throw new BadRequestException("No record found for given state.");
+            throw new NotFoundException();
+        }
+
+        // Verify Organization matches hash
+        if (!oAuthState.ValidateOrg(integration.OrganizationId))
+        {
+            throw new NotFoundException();
         }
 
         // Fetch token from Slack and store to DB

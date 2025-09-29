@@ -22,9 +22,9 @@ public class OrganizationIntegrationResponseModel : ResponseModel
 
     public OrganizationIntegrationStatus Status => Type switch
     {
-        // Not yet implemented, shouldn't be present, leave Initiated for now
-        IntegrationType.CloudBillingSync => OrganizationIntegrationStatus.Initiated,
-        IntegrationType.Scim => OrganizationIntegrationStatus.Initiated,
+        // Not yet implemented, shouldn't be present, NotApplicable
+        IntegrationType.CloudBillingSync => OrganizationIntegrationStatus.NotApplicable,
+        IntegrationType.Scim => OrganizationIntegrationStatus.NotApplicable,
 
         // Webhook is allowed to be null. If it's present, it's Completed
         IntegrationType.Webhook => OrganizationIntegrationStatus.Completed,
@@ -36,12 +36,12 @@ public class OrganizationIntegrationResponseModel : ResponseModel
             : OrganizationIntegrationStatus.Completed,
 
         // HEC and Datadog should only be allowed to be created non-null.
-        // Initiated is a fallback value just in case.
+        // If they are null, they are NotApplicable
         IntegrationType.Hec => string.IsNullOrWhiteSpace(Configuration)
-            ? OrganizationIntegrationStatus.Initiated
+            ? OrganizationIntegrationStatus.NotApplicable
             : OrganizationIntegrationStatus.Completed,
         IntegrationType.Datadog => string.IsNullOrWhiteSpace(Configuration)
-            ? OrganizationIntegrationStatus.Initiated
+            ? OrganizationIntegrationStatus.NotApplicable
             : OrganizationIntegrationStatus.Completed,
     };
 }

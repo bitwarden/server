@@ -11,29 +11,29 @@ namespace Bit.Api.Test.AdminConsole.Models.Response.Organizations;
 public class OrganizationIntegrationResponseModelTests
 {
     [Theory, BitAutoData]
-    public void Status_CloudBillingSync_AlwaysInitiated(OrganizationIntegration oi)
+    public void Status_CloudBillingSync_AlwaysNotApplicable(OrganizationIntegration oi)
     {
         oi.Type = IntegrationType.CloudBillingSync;
         oi.Configuration = null;
 
         var model = new OrganizationIntegrationResponseModel(oi);
-        Assert.Equal(OrganizationIntegrationStatus.Initiated, model.Status);
+        Assert.Equal(OrganizationIntegrationStatus.NotApplicable, model.Status);
 
         model.Configuration = "{}";
-        Assert.Equal(OrganizationIntegrationStatus.Initiated, model.Status);
+        Assert.Equal(OrganizationIntegrationStatus.NotApplicable, model.Status);
     }
 
     [Theory, BitAutoData]
-    public void Status_Scim_AlwaysInitiated(OrganizationIntegration oi)
+    public void Status_Scim_AlwaysNotApplicable(OrganizationIntegration oi)
     {
         oi.Type = IntegrationType.Scim;
         oi.Configuration = null;
 
         var model = new OrganizationIntegrationResponseModel(oi);
-        Assert.Equal(OrganizationIntegrationStatus.Initiated, model.Status);
+        Assert.Equal(OrganizationIntegrationStatus.NotApplicable, model.Status);
 
         model.Configuration = "{}";
-        Assert.Equal(OrganizationIntegrationStatus.Initiated, model.Status);
+        Assert.Equal(OrganizationIntegrationStatus.NotApplicable, model.Status);
     }
 
     [Theory, BitAutoData]
@@ -72,14 +72,14 @@ public class OrganizationIntegrationResponseModelTests
     }
 
     [Theory, BitAutoData]
-    public void Status_Hec_NullConfig_ReturnsInitiated(OrganizationIntegration oi)
+    public void Status_Hec_NullConfig_ReturnsNotApplicable(OrganizationIntegration oi)
     {
         oi.Type = IntegrationType.Hec;
         oi.Configuration = null;
 
         var model = new OrganizationIntegrationResponseModel(oi);
 
-        Assert.Equal(OrganizationIntegrationStatus.Initiated, model.Status);
+        Assert.Equal(OrganizationIntegrationStatus.NotApplicable, model.Status);
     }
 
     [Theory, BitAutoData]
@@ -94,14 +94,14 @@ public class OrganizationIntegrationResponseModelTests
     }
 
     [Theory, BitAutoData]
-    public void Status_Datadog_NullConfig_ReturnsInitiated(OrganizationIntegration oi)
+    public void Status_Datadog_NullConfig_ReturnsNotApplicable(OrganizationIntegration oi)
     {
         oi.Type = IntegrationType.Datadog;
         oi.Configuration = null;
 
         var model = new OrganizationIntegrationResponseModel(oi);
 
-        Assert.Equal(OrganizationIntegrationStatus.Initiated, model.Status);
+        Assert.Equal(OrganizationIntegrationStatus.NotApplicable, model.Status);
     }
 
     [Theory, BitAutoData]
