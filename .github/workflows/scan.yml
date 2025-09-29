@@ -38,8 +38,6 @@ jobs:
       pull-requests: write
       security-events: write
       id-token: write
-    with:
-      upload-sarif: false
 
   quality:
     name: Sonar

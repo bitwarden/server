@@ -1,9 +1,10 @@
-﻿#nullable enable
-using Bit.Api.AdminConsole.Authorization;
+﻿using Bit.Api.AdminConsole.Authorization;
+using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.Billing.Attributes;
 using Bit.Api.Billing.Models.Requests.Payment;
 using Bit.Api.Billing.Models.Requirements;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Payment.Commands;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Utilities;
@@ -21,10 +22,10 @@ public class OrganizationBillingVNextController(
     ICreateBitPayInvoiceForCreditCommand createBitPayInvoiceForCreditCommand,
     IGetBillingAddressQuery getBillingAddressQuery,
     IGetCreditQuery getCreditQuery,
+    IGetOrganizationWarningsQuery getOrganizationWarningsQuery,
     IGetPaymentMethodQuery getPaymentMethodQuery,
     IUpdateBillingAddressCommand updateBillingAddressCommand,
-    IUpdatePaymentMethodCommand updatePaymentMethodCommand,
-    IVerifyBankAccountCommand verifyBankAccountCommand) : BaseBillingController
+    IUpdatePaymentMethodCommand updatePaymentMethodCommand) : BaseBillingController
 {
     [Authorize<ManageOrganizationBillingRequirement>]
     [HttpGet("address")]
@@ -94,14 +95,13 @@ public class OrganizationBillingVNextController(
         return Handle(result);
     }
 
-    [Authorize<ManageOrganizationBillingRequirement>]
-    [HttpPost("payment-method/verify-bank-account")]
+    [Authorize<MemberOrProviderRequirement>]
+    [HttpGet("warnings")]
     [InjectOrganization]
-    public async Task<IResult> VerifyBankAccountAsync(
-        [BindNever] Organization organization,
-        [FromBody] VerifyBankAccountRequest request)
+    public async Task<IResult> GetWarningsAsync(
+        [BindNever] Organization organization)
     {
-        var result = await verifyBankAccountCommand.Run(organization, request.DescriptorCode);
-        return Handle(result);
+        var warnings = await getOrganizationWarningsQuery.Run(organization);
+        return TypedResults.Ok(warnings);
     }
 }

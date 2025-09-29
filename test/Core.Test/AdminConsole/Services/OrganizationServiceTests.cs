@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
@@ -28,6 +29,7 @@ using Bit.Test.Common.Fakes;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using NSubstitute.ReturnsExtensions;
+using Stripe;
 using Xunit;
 using Organization = Bit.Core.AdminConsole.Entities.Organization;
 using OrganizationUser = Bit.Core.Entities.OrganizationUser;
@@ -39,140 +41,6 @@ namespace Bit.Core.Test.Services;
 public class OrganizationServiceTests
 {
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory = new FakeDataProtectorTokenFactory<OrgUserInviteTokenable>();
-
-    [Theory, PaidOrganizationCustomize, BitAutoData]
-    public async Task OrgImportCreateNewUsers(SutProvider<OrganizationService> sutProvider, Organization org, List<OrganizationUserUserDetails> existingUsers, List<ImportedOrganizationUser> newUsers)
-    {
-        // Setup FakeDataProtectorTokenFactory for creating new tokens - this must come first in order to avoid resetting mocks
-        sutProvider.SetDependency(_orgUserInviteTokenDataFactory, "orgUserInviteTokenDataFactory");
-        sutProvider.Create();
-
-        org.UseDirectory = true;
-        org.Seats = 10;
-        newUsers.Add(new ImportedOrganizationUser
-        {
-            Email = existingUsers.First().Email,
-            ExternalId = existingUsers.First().ExternalId
-        });
-        var expectedNewUsersCount = newUsers.Count - 1;
-
-        existingUsers.First().Type = OrganizationUserType.Owner;
-
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(org.Id).Returns(org);
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetOccupiedSeatCountByOrganizationIdAsync(org.Id).Returns(new OrganizationSeatCounts
-            {
-                Sponsored = 0,
-                Users = 1
-            });
-        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-        SetupOrgUserRepositoryCreateManyAsyncMock(organizationUserRepository);
-
-        organizationUserRepository.GetManyDetailsByOrganizationAsync(org.Id)
-            .Returns(existingUsers);
-        organizationUserRepository.GetCountByOrganizationIdAsync(org.Id)
-            .Returns(existingUsers.Count);
-        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
-            .HasConfirmedOwnersExceptAsync(org.Id, Arg.Any<IEnumerable<Guid>>())
-            .Returns(true);
-        sutProvider.GetDependency<ICurrentContext>().ManageUsers(org.Id).Returns(true);
-
-
-        await sutProvider.Sut.ImportAsync(org.Id, null, newUsers, null, false, EventSystemUser.PublicApi);
-
-        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs()
-            .UpsertAsync(default);
-        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
-            .UpsertManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users => !users.Any()));
-        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs()
-            .CreateAsync(default);
-
-        // Create new users
-        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
-            .CreateManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users => users.Count() == expectedNewUsersCount));
-
-        await sutProvider.GetDependency<ISendOrganizationInvitesCommand>().Received(1)
-            .SendInvitesAsync(
-                Arg.Is<SendInvitesRequest>(
-                    info => info.Users.Length == expectedNewUsersCount &&
-                            info.Organization == org));
-
-        // Send events
-        await sutProvider.GetDependency<IEventService>().Received(1)
-            .LogOrganizationUserEventsAsync(Arg.Is<IEnumerable<(OrganizationUser, EventType, EventSystemUser, DateTime?)>>(events =>
-            events.Count() == expectedNewUsersCount));
-    }
-
-    [Theory, PaidOrganizationCustomize, BitAutoData]
-    public async Task OrgImportCreateNewUsersAndMarryExistingUser(SutProvider<OrganizationService> sutProvider, Organization org, List<OrganizationUserUserDetails> existingUsers,
-        List<ImportedOrganizationUser> newUsers)
-    {
-        // Setup FakeDataProtectorTokenFactory for creating new tokens - this must come first in order to avoid resetting mocks
-        sutProvider.SetDependency(_orgUserInviteTokenDataFactory, "orgUserInviteTokenDataFactory");
-        sutProvider.Create();
-
-        org.UseDirectory = true;
-        org.Seats = newUsers.Count + existingUsers.Count + 1;
-        var reInvitedUser = existingUsers.First();
-        reInvitedUser.ExternalId = null;
-        newUsers.Add(new ImportedOrganizationUser
-        {
-            Email = reInvitedUser.Email,
-            ExternalId = reInvitedUser.Email,
-        });
-        var expectedNewUsersCount = newUsers.Count - 1;
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetOccupiedSeatCountByOrganizationIdAsync(org.Id).Returns(new OrganizationSeatCounts
-            {
-                Sponsored = 0,
-                Users = 1
-            });
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(org.Id).Returns(org);
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyDetailsByOrganizationAsync(org.Id)
-            .Returns(existingUsers);
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetCountByOrganizationIdAsync(org.Id)
-            .Returns(existingUsers.Count);
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(reInvitedUser.Id)
-            .Returns(new OrganizationUser { Id = reInvitedUser.Id });
-
-        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-
-        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
-            .HasConfirmedOwnersExceptAsync(org.Id, Arg.Any<IEnumerable<Guid>>())
-            .Returns(true);
-
-        SetupOrgUserRepositoryCreateManyAsyncMock(organizationUserRepository);
-
-        var currentContext = sutProvider.GetDependency<ICurrentContext>();
-        currentContext.ManageUsers(org.Id).Returns(true);
-
-        await sutProvider.Sut.ImportAsync(org.Id, null, newUsers, null, false, EventSystemUser.PublicApi);
-
-        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs()
-            .UpsertAsync(default);
-        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs()
-            .CreateAsync(default);
-        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs()
-            .CreateAsync(default, default);
-
-        // Upserted existing user
-        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
-            .UpsertManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users => users.Count() == 1));
-
-        // Created and invited new users
-        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
-            .CreateManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users => users.Count() == expectedNewUsersCount));
-
-        await sutProvider.GetDependency<ISendOrganizationInvitesCommand>().Received(1)
-            .SendInvitesAsync(Arg.Is<SendInvitesRequest>(request =>
-                request.Users.Length == expectedNewUsersCount &&
-                request.Organization == org));
-
-        // Sent events
-        await sutProvider.GetDependency<IEventService>().Received(1)
-            .LogOrganizationUserEventsAsync(Arg.Is<IEnumerable<(OrganizationUser, EventType, EventSystemUser, DateTime?)>>(events =>
-            events.Count(e => e.Item2 == EventType.OrganizationUser_Invited) == expectedNewUsersCount));
-    }
 
     [Theory]
     [OrganizationInviteCustomize(InviteeUserType = OrganizationUserType.User,
@@ -1233,6 +1101,233 @@ public class OrganizationServiceTests
             .Returns(organization);
 
         await sutProvider.Sut.ValidateOrganizationCustomPermissionsEnabledAsync(organization.Id, OrganizationUserType.Custom);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_WhenValidOrganization_AndUpdateBillingIsTrue_UpdateStripeCustomerAndOrganization(Organization organization, SutProvider<OrganizationService> sutProvider)
+    {
+        // Arrange
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        var eventService = sutProvider.GetDependency<IEventService>();
+
+        var requestOptionsReturned = new CustomerUpdateOptions
+        {
+            Email = organization.BillingEmail,
+            Description = organization.DisplayBusinessName(),
+            InvoiceSettings = new CustomerInvoiceSettingsOptions
+            {
+                // This overwrites the existing custom fields for this organization
+                CustomFields =
+                [
+                    new CustomerInvoiceSettingsCustomFieldOptions
+                    {
+                        Name = organization.SubscriberType(),
+                        Value = organization.DisplayName()[..30]
+                    }
+                ]
+            },
+        };
+        organizationRepository
+            .GetByIdentifierAsync(organization.Identifier!)
+            .Returns(organization);
+
+        // Act
+        await sutProvider.Sut.UpdateAsync(organization, updateBilling: true);
+
+        // Assert
+        await organizationRepository
+            .Received(1)
+            .GetByIdentifierAsync(Arg.Is<string>(id => id == organization.Identifier));
+        await stripeAdapter
+            .Received(1)
+            .CustomerUpdateAsync(
+                Arg.Is<string>(id => id == organization.GatewayCustomerId),
+                Arg.Is<CustomerUpdateOptions>(options => options.Email == requestOptionsReturned.Email
+                                                         && options.Description == requestOptionsReturned.Description
+                                                         && options.InvoiceSettings.CustomFields.First().Name == requestOptionsReturned.InvoiceSettings.CustomFields.First().Name
+                                                         && options.InvoiceSettings.CustomFields.First().Value == requestOptionsReturned.InvoiceSettings.CustomFields.First().Value)); ;
+        await organizationRepository
+            .Received(1)
+            .ReplaceAsync(Arg.Is<Organization>(org => org == organization));
+        await applicationCacheService
+            .Received(1)
+            .UpsertOrganizationAbilityAsync(Arg.Is<Organization>(org => org == organization));
+        await eventService
+            .Received(1)
+            .LogOrganizationEventAsync(Arg.Is<Organization>(org => org == organization),
+                Arg.Is<EventType>(e => e == EventType.Organization_Updated));
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_WhenValidOrganization_AndUpdateBillingIsFalse_UpdateOrganization(Organization organization, SutProvider<OrganizationService> sutProvider)
+    {
+        // Arrange
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        var eventService = sutProvider.GetDependency<IEventService>();
+
+        organizationRepository
+            .GetByIdentifierAsync(organization.Identifier!)
+            .Returns(organization);
+
+        // Act
+        await sutProvider.Sut.UpdateAsync(organization, updateBilling: false);
+
+        // Assert
+        await organizationRepository
+            .Received(1)
+            .GetByIdentifierAsync(Arg.Is<string>(id => id == organization.Identifier));
+        await stripeAdapter
+            .DidNotReceiveWithAnyArgs()
+            .CustomerUpdateAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>());
+        await organizationRepository
+            .Received(1)
+            .ReplaceAsync(Arg.Is<Organization>(org => org == organization));
+        await applicationCacheService
+            .Received(1)
+            .UpsertOrganizationAbilityAsync(Arg.Is<Organization>(org => org == organization));
+        await eventService
+            .Received(1)
+            .LogOrganizationEventAsync(Arg.Is<Organization>(org => org == organization),
+                Arg.Is<EventType>(e => e == EventType.Organization_Updated));
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_WhenOrganizationHasNoId_ThrowsApplicationException(Organization organization, SutProvider<OrganizationService> sutProvider)
+    {
+        // Arrange
+        organization.Id = Guid.Empty;
+
+        // Act/Assert
+        var exception = await Assert.ThrowsAnyAsync<ApplicationException>(() => sutProvider.Sut.UpdateAsync(organization));
+        Assert.Equal("Cannot create org this way. Call SignUpAsync.", exception.Message);
+
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_WhenIdentifierAlreadyExistsForADifferentOrganization_ThrowsBadRequestException(Organization organization, SutProvider<OrganizationService> sutProvider)
+    {
+        // Arrange
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var differentOrganization = new Organization { Id = Guid.NewGuid() };
+
+        organizationRepository
+            .GetByIdentifierAsync(organization.Identifier!)
+            .Returns(differentOrganization);
+
+        // Act/Assert
+        var exception = await Assert.ThrowsAnyAsync<BadRequestException>(() => sutProvider.Sut.UpdateAsync(organization));
+        Assert.Equal("Identifier already in use by another organization.", exception.Message);
+
+        await organizationRepository
+            .Received(1)
+            .GetByIdentifierAsync(Arg.Is<string>(id => id == organization.Identifier));
+    }
+
+    [Theory]
+    [BitAutoData(false, true, false, true)]
+    [BitAutoData(true, false, true, false)]
+    public async Task UpdateCollectionManagementSettingsAsync_WhenSettingsChanged_LogsSpecificEvents(
+        bool newLimitCollectionCreation,
+        bool newLimitCollectionDeletion,
+        bool newLimitItemDeletion,
+        bool newAllowAdminAccessToAllCollectionItems,
+        Organization existingOrganization, SutProvider<OrganizationService> sutProvider)
+    {
+        // Arrange
+        existingOrganization.LimitCollectionCreation = false;
+        existingOrganization.LimitCollectionDeletion = false;
+        existingOrganization.LimitItemDeletion = false;
+        existingOrganization.AllowAdminAccessToAllCollectionItems = false;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(existingOrganization.Id)
+            .Returns(existingOrganization);
+
+        var settings = new OrganizationCollectionManagementSettings
+        {
+            LimitCollectionCreation = newLimitCollectionCreation,
+            LimitCollectionDeletion = newLimitCollectionDeletion,
+            LimitItemDeletion = newLimitItemDeletion,
+            AllowAdminAccessToAllCollectionItems = newAllowAdminAccessToAllCollectionItems
+        };
+
+        // Act
+        await sutProvider.Sut.UpdateCollectionManagementSettingsAsync(existingOrganization.Id, settings);
+
+        // Assert
+        var eventService = sutProvider.GetDependency<IEventService>();
+        if (newLimitCollectionCreation)
+        {
+            await eventService.Received(1).LogOrganizationEventAsync(
+                Arg.Is<Organization>(org => org.Id == existingOrganization.Id),
+                Arg.Is<EventType>(e => e == EventType.Organization_CollectionManagement_LimitCollectionCreationEnabled));
+        }
+        else
+        {
+            await eventService.DidNotReceive().LogOrganizationEventAsync(
+                Arg.Is<Organization>(org => org.Id == existingOrganization.Id),
+                Arg.Is<EventType>(e => e == EventType.Organization_CollectionManagement_LimitCollectionCreationEnabled));
+        }
+
+        if (newLimitCollectionDeletion)
+        {
+            await eventService.Received(1).LogOrganizationEventAsync(
+                Arg.Is<Organization>(org => org.Id == existingOrganization.Id),
+                Arg.Is<EventType>(e => e == EventType.Organization_CollectionManagement_LimitCollectionDeletionEnabled));
+        }
+        else
+        {
+            await eventService.DidNotReceive().LogOrganizationEventAsync(
+                Arg.Is<Organization>(org => org.Id == existingOrganization.Id),
+                Arg.Is<EventType>(e => e == EventType.Organization_CollectionManagement_LimitCollectionDeletionEnabled));
+        }
+
+        if (newLimitItemDeletion)
+        {
+            await eventService.Received(1).LogOrganizationEventAsync(
+                Arg.Is<Organization>(org => org.Id == existingOrganization.Id),
+                Arg.Is<EventType>(e => e == EventType.Organization_CollectionManagement_LimitItemDeletionEnabled));
+        }
+        else
+        {
+            await eventService.DidNotReceive().LogOrganizationEventAsync(
+                Arg.Is<Organization>(org => org.Id == existingOrganization.Id),
+                Arg.Is<EventType>(e => e == EventType.Organization_CollectionManagement_LimitItemDeletionEnabled));
+        }
+
+        if (newAllowAdminAccessToAllCollectionItems)
+        {
+            await eventService.Received(1).LogOrganizationEventAsync(
+                Arg.Is<Organization>(org => org.Id == existingOrganization.Id),
+                Arg.Is<EventType>(e => e == EventType.Organization_CollectionManagement_AllowAdminAccessToAllCollectionItemsEnabled));
+        }
+        else
+        {
+            await eventService.DidNotReceive().LogOrganizationEventAsync(
+                Arg.Is<Organization>(org => org.Id == existingOrganization.Id),
+                Arg.Is<EventType>(e => e == EventType.Organization_CollectionManagement_AllowAdminAccessToAllCollectionItemsEnabled));
+        }
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateCollectionManagementSettingsAsync_WhenOrganizationNotFound_ThrowsNotFoundException(
+        Guid organizationId, OrganizationCollectionManagementSettings settings, SutProvider<OrganizationService> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organizationId)
+            .Returns((Organization)null);
+
+        // Act/Assert
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateCollectionManagementSettingsAsync(organizationId, settings));
+
+        await sutProvider.GetDependency<IOrganizationRepository>()
+            .Received(1)
+            .GetByIdAsync(organizationId);
     }
 
     // Must set real guids in order for dictionary of guids to not throw aggregate exceptions

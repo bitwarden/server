@@ -52,6 +52,7 @@ BEGIN
     -- Return policy details for each matching organization user.
     SELECT
         OU.[OrganizationUserId],
+        OU.[UserId],
         P.[OrganizationId],
         P.[Type] AS [PolicyType],
             P.[Data] AS [PolicyData],

@@ -79,6 +79,7 @@ public static class StripeConstants
     public static class Prices
     {
         public const string StoragePlanPersonal = "personal-storage-gb-annually";
+        public const string PremiumAnnually = "premium-annually";
     }
 
     public static class ProrationBehavior
@@ -111,6 +112,21 @@ public static class StripeConstants
     {
         public const string EUVAT = "eu_vat";
         public const string SpanishNIF = "es_cif";
+    }
+
+    public static class TaxIdVerificationStatus
+    {
+        public const string Pending = "pending";
+        public const string Unavailable = "unavailable";
+        public const string Unverified = "unverified";
+        public const string Verified = "verified";
+    }
+
+    public static class TaxRegistrationStatus
+    {
+        public const string Active = "active";
+        public const string Expired = "expired";
+        public const string Scheduled = "scheduled";
     }
 
     public static class ValidateTaxLocationTiming

@@ -2,10 +2,12 @@
 using AutoFixture.Xunit2;
 using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.Auth.Models.Request.Accounts;
+using Bit.Api.Models.Request.Organizations;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
@@ -29,6 +31,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tokens;
+using Bit.Core.Utilities;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider;
 using NSubstitute;
 using Xunit;
@@ -292,5 +295,41 @@ public class OrganizationsControllerTests : IDisposable
         await _policyRepository.Received(1).GetByOrganizationIdTypeAsync(organization.Id, PolicyType.ResetPassword);
 
         Assert.True(result.ResetPasswordEnabled);
+    }
+
+    [Theory, AutoData]
+    public async Task PutCollectionManagement_ValidRequest_Success(
+        Organization organization,
+        OrganizationCollectionManagementUpdateRequestModel model)
+    {
+        // Arrange
+        _currentContext.OrganizationOwner(organization.Id).Returns(true);
+
+        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
+        _pricingClient.GetPlan(Arg.Any<PlanType>()).Returns(plan);
+
+        _organizationService
+            .UpdateCollectionManagementSettingsAsync(
+                organization.Id,
+                Arg.Is<OrganizationCollectionManagementSettings>(s =>
+                    s.LimitCollectionCreation == model.LimitCollectionCreation &&
+                    s.LimitCollectionDeletion == model.LimitCollectionDeletion &&
+                    s.LimitItemDeletion == model.LimitItemDeletion &&
+                    s.AllowAdminAccessToAllCollectionItems == model.AllowAdminAccessToAllCollectionItems))
+            .Returns(organization);
+
+        // Act
+        await _sut.PutCollectionManagement(organization.Id, model);
+
+        // Assert
+        await _organizationService
+            .Received(1)
+            .UpdateCollectionManagementSettingsAsync(
+                organization.Id,
+                Arg.Is<OrganizationCollectionManagementSettings>(s =>
+                    s.LimitCollectionCreation == model.LimitCollectionCreation &&
+                    s.LimitCollectionDeletion == model.LimitCollectionDeletion &&
+                    s.LimitItemDeletion == model.LimitItemDeletion &&
+                    s.AllowAdminAccessToAllCollectionItems == model.AllowAdminAccessToAllCollectionItems));
     }
 }

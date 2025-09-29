@@ -1,7 +1,7 @@
-﻿using Bit.Core.IdentityServer;
+﻿using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Settings;
 using Bit.Identity.IdentityServer.ClientProviders;
-using IdentityModel;
+using Duende.IdentityModel;
 using Xunit;
 
 namespace Bit.Identity.Test.IdentityServer.ClientProviders;

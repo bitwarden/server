@@ -10,6 +10,7 @@ using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -35,6 +36,7 @@ public class AccountsControllerTests : IDisposable
     private readonly IFeatureService _featureService;
     private readonly IUserAccountKeysQuery _userAccountKeysQuery;
     private readonly ITwoFactorEmailService _twoFactorEmailService;
+    private readonly IChangeKdfCommand _changeKdfCommand;
 
     public AccountsControllerTests()
     {
@@ -49,6 +51,8 @@ public class AccountsControllerTests : IDisposable
         _featureService = Substitute.For<IFeatureService>();
         _userAccountKeysQuery = Substitute.For<IUserAccountKeysQuery>();
         _twoFactorEmailService = Substitute.For<ITwoFactorEmailService>();
+        _changeKdfCommand = Substitute.For<IChangeKdfCommand>();
+
         _sut = new AccountsController(
             _organizationService,
             _organizationUserRepository,
@@ -60,7 +64,8 @@ public class AccountsControllerTests : IDisposable
             _twoFactorIsEnabledQuery,
             _featureService,
             _userAccountKeysQuery,
-            _twoFactorEmailService
+            _twoFactorEmailService,
+            _changeKdfCommand
         );
     }
 
@@ -243,12 +248,18 @@ public class AccountsControllerTests : IDisposable
     {
         var user = GenerateExampleUser();
         ConfigureUserServiceToReturnValidPrincipalFor(user);
-        _userService.ChangePasswordAsync(user, default, default, default, default)
+        _userService.ChangePasswordAsync(user, Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
                     .Returns(Task.FromResult(IdentityResult.Success));
 
-        await _sut.PostPassword(new PasswordRequestModel());
+        await _sut.PostPassword(new PasswordRequestModel
+        {
+            MasterPasswordHash = "masterPasswordHash",
+            NewMasterPasswordHash = "newMasterPasswordHash",
+            MasterPasswordHint = "masterPasswordHint",
+            Key = "key"
+        });
 
-        await _userService.Received(1).ChangePasswordAsync(user, default, default, default, default);
+        await _userService.Received(1).ChangePasswordAsync(user, Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
     }
 
     [Fact]
@@ -257,7 +268,13 @@ public class AccountsControllerTests : IDisposable
         ConfigureUserServiceToReturnNullPrincipal();
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(
-            () => _sut.PostPassword(new PasswordRequestModel())
+            () => _sut.PostPassword(new PasswordRequestModel
+            {
+                MasterPasswordHash = "masterPasswordHash",
+                NewMasterPasswordHash = "newMasterPasswordHash",
+                MasterPasswordHint = "masterPasswordHint",
+                Key = "key"
+            })
         );
     }
 
@@ -266,11 +283,17 @@ public class AccountsControllerTests : IDisposable
     {
         var user = GenerateExampleUser();
         ConfigureUserServiceToReturnValidPrincipalFor(user);
-        _userService.ChangePasswordAsync(user, default, default, default, default)
+        _userService.ChangePasswordAsync(user, Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
                     .Returns(Task.FromResult(IdentityResult.Failed()));
 
         await Assert.ThrowsAsync<BadRequestException>(
-            () => _sut.PostPassword(new PasswordRequestModel())
+            () => _sut.PostPassword(new PasswordRequestModel
+            {
+                MasterPasswordHash = "masterPasswordHash",
+                NewMasterPasswordHash = "newMasterPasswordHash",
+                MasterPasswordHint = "masterPasswordHint",
+                Key = "key"
+            })
         );
     }
 
@@ -592,6 +615,30 @@ public class AccountsControllerTests : IDisposable
 
         // Assert
         await _twoFactorEmailService.Received(1).SendNewDeviceVerificationEmailAsync(user);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostKdf_WithNullAuthenticationData_ShouldFail(
+        User user, PasswordRequestModel model)
+    {
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+        model.AuthenticationData = null;
+
+        // Act
+        await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostKdf(model));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostKdf_WithNullUnlockData_ShouldFail(
+        User user, PasswordRequestModel model)
+    {
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+        model.UnlockData = null;
+
+        // Act
+        await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostKdf(model));
     }
 
     // Below are helper functions that currently belong to this

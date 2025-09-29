@@ -103,6 +103,11 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     public DateTime? LastEmailChangeDate { get; set; }
     public bool VerifyDevices { get; set; } = true;
 
+    public string GetMasterPasswordSalt()
+    {
+        return Email.ToLowerInvariant().Trim();
+    }
+
     public void SetNewId()
     {
         Id = CoreHelpers.GenerateComb();

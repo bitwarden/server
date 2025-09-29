@@ -31,6 +31,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
     private readonly IWebAuthnCredentialRepository _credentialRepository;
     private readonly IPasswordHasher<User> _passwordHasher;
     private readonly IUserSignatureKeyPairRepository _userSignatureKeyPairRepository;
+    private readonly IFeatureService _featureService;
 
     /// <summary>
     /// Instantiates a new <see cref="RotateUserAccountKeysCommand"/>
@@ -54,7 +55,8 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         IDeviceRepository deviceRepository,
         IPasswordHasher<User> passwordHasher,
         IPushNotificationService pushService, IdentityErrorDescriber errors, IWebAuthnCredentialRepository credentialRepository,
-        IUserSignatureKeyPairRepository userSignatureKeyPairRepository)
+        IUserSignatureKeyPairRepository userSignatureKeyPairRepository,
+        IFeatureService featureService)
     {
         _userService = userService;
         _userRepository = userRepository;
@@ -69,6 +71,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         _credentialRepository = credentialRepository;
         _passwordHasher = passwordHasher;
         _userSignatureKeyPairRepository = userSignatureKeyPairRepository;
+        _featureService = featureService;
     }
 
     /// <inheritdoc />
@@ -154,7 +157,15 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         if (model.Ciphers.Any())
         {
             var ciphersWithUpdatedDate = model.Ciphers.ToList().Select(c => { c.RevisionDate = now; return c; });
-            saveEncryptedDataActions.Add(_cipherRepository.UpdateForKeyRotation(user.Id, ciphersWithUpdatedDate));
+            var useBulkResourceCreationService = _featureService.IsEnabled(FeatureFlagKeys.CipherRepositoryBulkResourceCreation);
+            if (useBulkResourceCreationService)
+            {
+                saveEncryptedDataActions.Add(_cipherRepository.UpdateForKeyRotation_vNext(user.Id, ciphersWithUpdatedDate));
+            }
+            else
+            {
+                saveEncryptedDataActions.Add(_cipherRepository.UpdateForKeyRotation(user.Id, ciphersWithUpdatedDate));
+            }
         }
 
         if (model.Folders.Any())

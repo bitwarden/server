@@ -4,15 +4,16 @@
 using System.Security.Cryptography.X509Certificates;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Sso.Models;
 using Bit.Sso.Utilities;
+using Duende.IdentityModel;
 using Duende.IdentityServer;
 using Duende.IdentityServer.Infrastructure;
-using IdentityModel;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Extensions.Options;
@@ -416,7 +417,7 @@ public class DynamicAuthenticationSchemeProvider : AuthenticationSchemeProvider
             SPOptions = spOptions,
             SignInScheme = AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme,
             SignOutScheme = IdentityServerConstants.DefaultCookieAuthenticationScheme,
-            CookieManager = new IdentityServer.DistributedCacheCookieManager(),
+            CookieManager = new DistributedCacheCookieManager(),
         };
         options.IdentityProviders.Add(idp);
 

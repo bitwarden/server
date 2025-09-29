@@ -2,14 +2,11 @@
 using Bit.Api.AdminConsole.Public.Models.Request;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
-using NSubstitute;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Import;
@@ -25,14 +22,6 @@ public class ImportOrganizationUsersAndGroupsCommandTests : IClassFixture<ApiApp
     public ImportOrganizationUsersAndGroupsCommandTests(ApiApplicationFactory factory)
     {
         _factory = factory;
-        _factory.SubstituteService((IFeatureService featureService)
-            =>
-        {
-            featureService.IsEnabled(FeatureFlagKeys.ImportAsyncRefactor)
-                .Returns(true);
-            featureService.IsEnabled(FeatureFlagKeys.DirectoryConnectorPreventUserRemoval)
-                .Returns(true);
-        });
         _client = _factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
     }

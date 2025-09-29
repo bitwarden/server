@@ -5,6 +5,7 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Payment.Commands;
 using Bit.Core.Billing.Payment.Queries;
+using Bit.Core.Billing.Providers.Queries;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
@@ -19,10 +20,10 @@ public class ProviderBillingVNextController(
     IGetBillingAddressQuery getBillingAddressQuery,
     IGetCreditQuery getCreditQuery,
     IGetPaymentMethodQuery getPaymentMethodQuery,
+    IGetProviderWarningsQuery getProviderWarningsQuery,
     IProviderService providerService,
     IUpdateBillingAddressCommand updateBillingAddressCommand,
-    IUpdatePaymentMethodCommand updatePaymentMethodCommand,
-    IVerifyBankAccountCommand verifyBankAccountCommand) : BaseBillingController
+    IUpdatePaymentMethodCommand updatePaymentMethodCommand) : BaseBillingController
 {
     [HttpGet("address")]
     [InjectProvider(ProviderUserType.ProviderAdmin)]
@@ -95,13 +96,12 @@ public class ProviderBillingVNextController(
         return Handle(result);
     }
 
-    [HttpPost("payment-method/verify-bank-account")]
-    [InjectProvider(ProviderUserType.ProviderAdmin)]
-    public async Task<IResult> VerifyBankAccountAsync(
-        [BindNever] Provider provider,
-        [FromBody] VerifyBankAccountRequest request)
+    [HttpGet("warnings")]
+    [InjectProvider(ProviderUserType.ServiceUser)]
+    public async Task<IResult> GetWarningsAsync(
+        [BindNever] Provider provider)
     {
-        var result = await verifyBankAccountCommand.Run(provider, request.DescriptorCode);
-        return Handle(result);
+        var warnings = await getProviderWarningsQuery.Run(provider);
+        return TypedResults.Ok(warnings);
     }
 }

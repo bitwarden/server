@@ -1,56 +1,87 @@
 CREATE PROCEDURE [dbo].[SecurityTask_ReadByUserIdStatus]
-    @UserId UNIQUEIDENTIFIER,
-    @Status TINYINT = NULL
+    @UserId [UNIQUEIDENTIFIER],
+    @Status [TINYINT] = NULL
 AS
 BEGIN
-    SET NOCOUNT ON
+    SET NOCOUNT ON;
 
+    WITH [OrganizationAccess] AS (
+        SELECT
+            [OU].[OrganizationId]
+        FROM
+            [dbo].[OrganizationUser] [OU]
+        INNER JOIN [dbo].[OrganizationView] [O]
+            ON [O].[Id] = [OU].[OrganizationId]
+        WHERE
+            [OU].[UserId] = @UserId
+            AND [OU].[Status] = 2 -- Confirmed
+            AND [O].[Enabled] = 1
+    ),
+    [UserCollectionAccess] AS (
+        SELECT
+            [CC].[CipherId]
+        FROM
+            [dbo].[OrganizationUser] [OU]
+        INNER JOIN [dbo].[OrganizationView] [O]
+            ON [O].[Id] = [OU].[OrganizationId]
+        INNER JOIN [dbo].[CollectionUser] [CU]
+            ON [CU].[OrganizationUserId] = [OU].[Id]
+        INNER JOIN [dbo].[CollectionCipher] [CC]
+            ON [CC].[CollectionId] = [CU].[CollectionId]
+        WHERE
+            [OU].[UserId] = @UserId
+            AND [OU].[Status] = 2 -- Confirmed
+            AND [O].[Enabled] = 1
+            AND [CU].[ReadOnly] = 0
+    ),
+    [GroupCollectionAccess] AS (
+        SELECT
+            [CC].[CipherId]
+        FROM
+            [dbo].[OrganizationUser] [OU]
+        INNER JOIN [dbo].[OrganizationView] [O]
+            ON [O].[Id] = [OU].[OrganizationId]
+        INNER JOIN [dbo].[GroupUser] [GU]
+            ON [GU].[OrganizationUserId] = [OU].[Id]
+        INNER JOIN [dbo].[CollectionGroup] [CG]
+            ON [CG].[GroupId] = [GU].[GroupId]
+        INNER JOIN [dbo].[CollectionCipher] [CC]
+            ON [CC].[CollectionId] = [CG].[CollectionId]
+        WHERE
+            [OU].[UserId] = @UserId
+            AND [OU].[Status] = 2 -- Confirmed
+            AND [CG].[ReadOnly] = 0
+    ),
+    [AccessibleCiphers] AS (
+        SELECT
+            [CipherId] FROM [UserCollectionAccess]
+        UNION
+        SELECT
+            [CipherId] FROM [GroupCollectionAccess]
+    )
     SELECT
-        ST.Id,
-        ST.OrganizationId,
-        ST.CipherId,
-        ST.Type,
-        ST.Status,
-        ST.CreationDate,
-        ST.RevisionDate
+        [ST].[Id],
+        [ST].[OrganizationId],
+        [ST].[CipherId],
+        [ST].[Type],
+        [ST].[Status],
+        [ST].[CreationDate],
+        [ST].[RevisionDate]
     FROM
-        [dbo].[SecurityTaskView] ST
-    INNER JOIN
-        [dbo].[OrganizationUserView] OU ON OU.[OrganizationId] = ST.[OrganizationId]
-    INNER JOIN
-        [dbo].[Organization] O ON O.[Id] = ST.[OrganizationId]
-    LEFT JOIN
-        [dbo].[CipherView] C ON C.[Id] = ST.[CipherId]
-    LEFT JOIN
-        [dbo].[CollectionCipher] CC ON CC.[CipherId] = C.[Id] AND C.[Id] IS NOT NULL
-    LEFT JOIN
-        [dbo].[CollectionUser] CU ON CU.[CollectionId] = CC.[CollectionId] AND CU.[OrganizationUserId] = OU.[Id] AND C.[Id] IS NOT NULL
-    LEFT JOIN
-        [dbo].[GroupUser] GU ON GU.[OrganizationUserId] = OU.[Id] AND CU.[CollectionId] IS NULL AND C.[Id] IS NOT NULL
-    LEFT JOIN
-        [dbo].[CollectionGroup] CG ON CG.[GroupId] = GU.[GroupId] AND CG.[CollectionId] = CC.[CollectionId]
+        [dbo].[SecurityTaskView] [ST]
+        INNER JOIN [OrganizationAccess] [OA]
+            ON [ST].[OrganizationId] = [OA].[OrganizationId]
     WHERE
-        OU.[UserId] = @UserId
-        AND OU.[Status] = 2 -- Ensure user is confirmed
-        AND O.[Enabled] = 1
+        (@Status IS NULL OR [ST].[Status] = @Status)
         AND (
-            ST.[CipherId] IS NULL
-            OR (
-                C.[Id] IS NOT NULL
-                AND (
-                    CU.[ReadOnly] = 0
-                    OR CG.[ReadOnly] = 0
-                )
-            )
+          [ST].[CipherId] IS NULL
+          OR EXISTS (
+              SELECT 1
+              FROM [AccessibleCiphers] [AC]
+              WHERE [AC].[CipherId] = [ST].[CipherId]
+          )
         )
-        AND ST.[Status] = COALESCE(@Status, ST.[Status])
-    GROUP BY
-        ST.Id,
-        ST.OrganizationId,
-        ST.CipherId,
-        ST.Type,
-        ST.Status,
-        ST.CreationDate,
-        ST.RevisionDate
-    ORDER BY ST.[CreationDate] DESC
+    ORDER BY
+        [ST].[CreationDate] DESC
+    OPTION (RECOMPILE);
 END
