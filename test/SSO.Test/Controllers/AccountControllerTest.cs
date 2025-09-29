@@ -231,6 +231,7 @@ public class AccountControllerTest
     [Fact]
     public void EnsureOrgUserStatusAllowed_AllowsAcceptedAndConfirmed()
     {
+        // Arrange
         var authService = Substitute.For<IAuthenticationService>();
         var controller = CreateController(
             authService,
@@ -244,15 +245,23 @@ public class AccountControllerTest
             out var eventService,
             out var featureService);
 
-        InvokeEnsureOrgUserStatusAllowed(controller, OrganizationUserStatusType.Accepted,
-            OrganizationUserStatusType.Accepted, OrganizationUserStatusType.Confirmed);
-        InvokeEnsureOrgUserStatusAllowed(controller, OrganizationUserStatusType.Confirmed,
-            OrganizationUserStatusType.Accepted, OrganizationUserStatusType.Confirmed);
+        // Act
+        var ex1 = Record.Exception(() =>
+            InvokeEnsureOrgUserStatusAllowed(controller, OrganizationUserStatusType.Accepted,
+                OrganizationUserStatusType.Accepted, OrganizationUserStatusType.Confirmed));
+        var ex2 = Record.Exception(() =>
+            InvokeEnsureOrgUserStatusAllowed(controller, OrganizationUserStatusType.Confirmed,
+                OrganizationUserStatusType.Accepted, OrganizationUserStatusType.Confirmed));
+
+        // Assert
+        Assert.Null(ex1);
+        Assert.Null(ex2);
     }
 
     [Fact]
     public void EnsureOrgUserStatusAllowed_Invited_ThrowsAcceptInvite()
     {
+        // Arrange
         var authService = Substitute.For<IAuthenticationService>();
         var controller = CreateController(
             authService,
@@ -266,10 +275,12 @@ public class AccountControllerTest
             out var eventService,
             out var featureService);
 
+        // Act
         var ex = Assert.Throws<TargetInvocationException>(() =>
             InvokeEnsureOrgUserStatusAllowed(controller, OrganizationUserStatusType.Invited,
                 OrganizationUserStatusType.Accepted, OrganizationUserStatusType.Confirmed));
 
+        // Assert
         Assert.IsType<Exception>(ex.InnerException);
         Assert.Equal("AcceptInviteBeforeUsingSSO", ex.InnerException!.Message);
     }
@@ -277,6 +288,7 @@ public class AccountControllerTest
     [Fact]
     public void EnsureOrgUserStatusAllowed_Revoked_ThrowsAccessRevoked()
     {
+        // Arrange
         var authService = Substitute.For<IAuthenticationService>();
         var controller = CreateController(
             authService,
@@ -290,10 +302,12 @@ public class AccountControllerTest
             out var eventService,
             out var featureService);
 
+        // Act
         var ex = Assert.Throws<TargetInvocationException>(() =>
             InvokeEnsureOrgUserStatusAllowed(controller, OrganizationUserStatusType.Revoked,
                 OrganizationUserStatusType.Accepted, OrganizationUserStatusType.Confirmed));
 
+        // Assert
         Assert.IsType<Exception>(ex.InnerException);
         Assert.Equal("OrganizationUserAccessRevoked", ex.InnerException!.Message);
     }
@@ -301,6 +315,7 @@ public class AccountControllerTest
     [Fact]
     public void EnsureOrgUserStatusAllowed_UnknownStatus_ThrowsUnknown()
     {
+        // Arrange
         var authService = Substitute.For<IAuthenticationService>();
         var controller = CreateController(
             authService,
@@ -315,10 +330,13 @@ public class AccountControllerTest
             out var featureService);
 
         var unknown = (OrganizationUserStatusType)999;
+
+        // Act
         var ex = Assert.Throws<TargetInvocationException>(() =>
             InvokeEnsureOrgUserStatusAllowed(controller, unknown,
                 OrganizationUserStatusType.Accepted, OrganizationUserStatusType.Confirmed));
 
+        // Assert
         Assert.IsType<Exception>(ex.InnerException);
         Assert.Equal("OrganizationUserUnknownStatus", ex.InnerException!.Message);
     }
@@ -326,6 +344,7 @@ public class AccountControllerTest
     [Fact]
     public async Task ExternalCallback_WithExistingUserAndAcceptedMembership_RedirectsToReturnUrl()
     {
+        // Arrange
         var orgId = Guid.NewGuid();
         var providerUserId = "ext-123";
         var user = new User { Id = Guid.NewGuid(), Email = "user@example.com" };
@@ -366,8 +385,10 @@ public class AccountControllerTest
         featureService.IsEnabled(Arg.Any<string>()).Returns(true);
         interactionService.GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
 
+        // Act
         var result = await controller.ExternalCallback();
 
+        // Assert
         var redirect = Assert.IsType<RedirectResult>(result);
         Assert.Equal("~/", redirect.Url);
 
@@ -386,6 +407,7 @@ public class AccountControllerTest
     [Fact]
     public async Task ExternalCallback_PreventNonCompliantFalse_SkipsOrgLookupAndSignsIn()
     {
+        // Arrange
         var orgId = Guid.NewGuid();
         var providerUserId = "ext-flag-off";
         var user = new User { Id = Guid.NewGuid(), Email = "flagoff@example.com" };
@@ -416,8 +438,10 @@ public class AccountControllerTest
         featureService.IsEnabled(Arg.Any<string>()).Returns(false);
         interactionService.GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
 
+        // Act
         var result = await controller.ExternalCallback();
 
+        // Assert
         var redirect = Assert.IsType<RedirectResult>(result);
         Assert.Equal("~/", redirect.Url);
 
@@ -434,6 +458,7 @@ public class AccountControllerTest
     [Fact]
     public async Task AutoProvisionUserAsync_WithExistingAcceptedUser_CreatesSsoLinkAndReturnsUser()
     {
+        // Arrange
         var orgId = Guid.NewGuid();
         var providerUserId = "ext-456";
         var email = "jit@example.com";
@@ -478,6 +503,7 @@ public class AccountControllerTest
             BindingFlags.Instance | BindingFlags.NonPublic);
         Assert.NotNull(method);
 
+        // Act
         var task = (Task<User>)method.Invoke(controller, [
             orgId.ToString(),
             providerUserId,
@@ -489,6 +515,8 @@ public class AccountControllerTest
         ])!;
 
         var returnedUser = await task;
+
+        // Assert
         Assert.Equal(existingUser.Id, returnedUser.Id);
 
         await ssoUserRepository.Received().CreateAsync(Arg.Is<SsoUser>(s =>
