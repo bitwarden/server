@@ -275,7 +275,6 @@ public class AccountController : Controller
                 claims,
                 userIdentifier,
                 ssoConfigData);
-            user = provision.user;
             // PM-24579: After removing the flag, assign these unconditionally and remove this if block.
             if (preventNonCompliant)
             {
@@ -477,16 +476,15 @@ public class AccountController : Controller
     /// <param name="claims">The claims from the external IdP.</param>
     /// <param name="userIdentifier">The user identifier used for manual SSO linking.</param>
     /// <param name="config">The SSO configuration for the organization.</param>
-    /// <param name="organization">The organization to find the user in, can be null.</param>
-    /// <param name="orgUser">The org user pair, can be null.</param>
-    /// <returns>The User to sign in.</returns>
+    /// <returns>The User to sign in as well as the found organization and org user.</returns>
     /// <exception cref="Exception">An exception if the user cannot be provisioned as requested.</exception>
     private async Task<(User user, Organization foundOrganization, OrganizationUser foundOrgUser)> AutoProvisionUserAsync(
         string provider,
         string providerUserId,
         IEnumerable<Claim> claims,
         string userIdentifier,
-        SsoConfigurationData config)
+        SsoConfigurationData config
+        )
     {
         var name = GetName(claims, config.GetAdditionalNameClaimTypes());
         var email = GetEmailAddress(claims, config.GetAdditionalEmailClaimTypes());
