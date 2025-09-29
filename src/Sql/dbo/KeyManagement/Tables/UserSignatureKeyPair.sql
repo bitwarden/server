@@ -7,12 +7,8 @@
     [CreationDate]              DATETIME2 (7) NOT NULL,
     [RevisionDate]              DATETIME2 (7) NOT NULL,
     CONSTRAINT [PK_UserSignatureKeyPair] PRIMARY KEY CLUSTERED ([Id] ASC),
-    CONSTRAINT [FK_UserSignatureKeyPair_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id])
+    CONSTRAINT [FK_UserSignatureKeyPair_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id]) ON DELETE CASCADE
 );
-GO
-
-ALTER TABLE [dbo].[UserSignatureKeyPair] ADD
-CONSTRAINT [FK_UserSignatureKeyPair_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id]) ON DELETE CASCADE;
 GO
 
 CREATE UNIQUE NONCLUSTERED INDEX [IX_UserSignatureKeyPair_UserId]
