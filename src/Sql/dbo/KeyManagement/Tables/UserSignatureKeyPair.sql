@@ -11,6 +11,10 @@
 );
 GO
 
+ALTER TABLE [dbo].[UserSignatureKeyPair] ADD
+CONSTRAINT [FK_UserSignatureKeyPair_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id]) ON DELETE CASCADE;
+GO
+
 CREATE UNIQUE NONCLUSTERED INDEX [IX_UserSignatureKeyPair_UserId]
     ON [dbo].[UserSignatureKeyPair]([UserId] ASC);
 GO
