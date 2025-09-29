@@ -69,7 +69,7 @@ public class UserSignatureKeyPairRepository : Repository<UserSignatureKeyPair, G
                     UserId = grantorId,
                     SignatureAlgorithm = (byte)signingKeys.SignatureAlgorithm,
                     SigningKey = signingKeys.WrappedSigningKey,
-                    signingKeys.VerifyingKey,
+                    VerifyingKey = signingKeys.VerifyingKey,
                     RevisionDate = DateTime.UtcNow
                 },
                 commandType: CommandType.StoredProcedure,
