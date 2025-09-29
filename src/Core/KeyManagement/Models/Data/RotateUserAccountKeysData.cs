@@ -15,7 +15,7 @@ public class RotateUserAccountKeysData
     public required UserAccountKeysData AccountKeys { get; set; }
 
     // All methods to get to the userkey
-    public required MasterPasswordUnlockData MasterPasswordUnlockData { get; set; }
+    public required MasterPasswordUnlockAndAuthenticationData MasterPasswordUnlockData { get; set; }
     public required IEnumerable<EmergencyAccess> EmergencyAccesses { get; set; }
     public required IReadOnlyList<OrganizationUser> OrganizationUsers { get; set; }
     public required IEnumerable<WebAuthnLoginRotateKeyData> WebAuthnKeys { get; set; }

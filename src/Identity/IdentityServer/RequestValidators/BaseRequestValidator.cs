@@ -14,7 +14,6 @@ using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Identity;
 using Bit.Core.KeyManagement.Models.Api.Response;
 using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Models.Api;
