@@ -65,8 +65,7 @@ public class IntegrationOAuthState
 
     private static string ComputeOrgHash(Guid orgId)
     {
-        using var sha = SHA256.Create();
-        var bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(orgId.ToString("N")));
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(orgId.ToString("N")));
         return Convert.ToHexString(bytes)[.._orgHashLength];
     }
 }
