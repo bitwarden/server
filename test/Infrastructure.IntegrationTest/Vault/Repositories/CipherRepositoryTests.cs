@@ -1290,12 +1290,16 @@ public class CipherRepositoryTests
         var cipherInBothCollections = await CreateOrgCipherAsync();
         var unassignedCipher = await CreateOrgCipherAsync();
 
-        await collectionCipherRepository.UpdateCollectionsForAdminAsync(cipherInDefaultCollection.Id, organization.Id,
-            new List<Guid> { defaultCollection.Id });
-        await collectionCipherRepository.UpdateCollectionsForAdminAsync(cipherInSharedCollection.Id, organization.Id,
-            new List<Guid> { sharedCollection.Id });
-        await collectionCipherRepository.UpdateCollectionsForAdminAsync(cipherInBothCollections.Id, organization.Id,
-            new List<Guid> { defaultCollection.Id, sharedCollection.Id });
+        async Task LinkCollectionCipherAsync(Guid cipherId, Guid collectionId) =>
+            await collectionCipherRepository.AddCollectionsForManyCiphersAsync(
+                organization.Id,
+                new[] { cipherId },
+                new[] { collectionId });
+
+        await LinkCollectionCipherAsync(cipherInDefaultCollection.Id, defaultCollection.Id);
+        await LinkCollectionCipherAsync(cipherInSharedCollection.Id, sharedCollection.Id);
+        await LinkCollectionCipherAsync(cipherInBothCollections.Id, defaultCollection.Id);
+        await LinkCollectionCipherAsync(cipherInBothCollections.Id, sharedCollection.Id);
 
         await cipherRepository.DeleteByOrganizationIdAsync(organization.Id);
 
@@ -1402,3 +1406,4 @@ public class CipherRepositoryTests
         Assert.Empty(remainingCollectionCiphers);
     }
 }
+
