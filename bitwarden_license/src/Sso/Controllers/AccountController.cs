@@ -269,18 +269,16 @@ public class AccountController : Controller
             // If we're manually linking to SSO, the user's external identifier will be passed as query string parameter.
             var userIdentifier = result.Properties.Items.Keys.Contains("user_identifier") ?
                 result.Properties.Items["user_identifier"] : null;
-            // Pass any pre-resolved org/orgUser only when the flag is enabled
             // PM-24579: After removing the feature flag, just call AutoProvisionUserAsync
             // and always use the returned organization/orgUser. The conditional arguments
             // can be collapsed away at that time.
+            // Pass current organization/orgUser (likely null) and let provisioning populate them once.
             var provision = await AutoProvisionUserAsync(
                 provider,
                 providerUserId,
                 claims,
                 userIdentifier,
-                ssoConfigData,
-                preventNonCompliant ? organization : null,
-                preventNonCompliant ? orgUser : null);
+                ssoConfigData);
             user = provision.user;
             // PM-24579: After removing the flag, assign these unconditionally and remove this if block.
             if (preventNonCompliant)
@@ -492,9 +490,7 @@ public class AccountController : Controller
         string providerUserId,
         IEnumerable<Claim> claims,
         string userIdentifier,
-        SsoConfigurationData config,
-        Organization organization,
-        OrganizationUser orgUser)
+        SsoConfigurationData config)
     {
         var name = GetName(claims, config.GetAdditionalNameClaimTypes());
         var email = GetEmailAddress(claims, config.GetAdditionalEmailClaimTypes());
@@ -523,19 +519,12 @@ public class AccountController : Controller
             existingUser = await GetUserFromManualLinkingData(userIdentifier);
         }
 
-        // Try to find the OrganizationUser if it exists. Use preloaded values if provided.
-        if (organization == null || orgUser == null)
-        {
-            var (foundOrganization, foundOrgUser) = await FindOrganizationUser(existingUser, email, orgId);
-            if (organization == null)
-            {
-                organization = foundOrganization;
-            }
-            if (orgUser == null)
-            {
-                orgUser = foundOrgUser;
-            }
-        }
+        // Find organization and orgUser (none are preloaded).
+        Organization organization = null;
+        OrganizationUser orgUser = null;
+        var (foundOrganization, foundOrgUser) = await FindOrganizationUser(existingUser, email, orgId);
+        organization ??= foundOrganization;
+        orgUser ??= foundOrgUser;
 
         //----------------------------------------------------
         // Scenario 1: We've found the user in the User table

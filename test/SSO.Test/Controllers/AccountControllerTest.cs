@@ -980,6 +980,10 @@ public class AccountControllerTest
 
         // Arrange repository expectations for the flow
         userRepository.GetByEmailAsync(email).Returns(existingUser);
+        organizationRepository.GetByIdAsync(orgId).Returns(organization);
+        organizationUserRepository.GetManyByUserAsync(existingUser.Id)
+            .Returns(new List<OrganizationUser> { orgUser });
+        organizationUserRepository.GetByOrganizationEmailAsync(orgId, email).Returns(orgUser);
 
         // No existing SSO link so first SSO login event is logged
         ssoUserRepository.GetByUserIdOrganizationIdAsync(orgId, existingUser.Id).Returns((SsoUser?)null);
@@ -997,15 +1001,14 @@ public class AccountControllerTest
         Assert.NotNull(method);
 
         // Act
-        var task = (Task<(User user, Organization organization, OrganizationUser orgUser)>)method.Invoke(controller, [
+        var task = (Task<(User user, Organization organization, OrganizationUser orgUser)>)method!.Invoke(controller, new object[]
+        {
             orgId.ToString(),
             providerUserId,
             claims,
             null!,
-            config,
-            organization,
-            orgUser
-        ])!;
+            config
+        })!;
 
         var returned = await task;
 
