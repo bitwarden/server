@@ -1,7 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.Auth.Enums;
@@ -70,9 +67,9 @@ public abstract class BaseProfileOrganizationResponseModel : ResponseModel
 
     public Guid Id { get; set; }
     [JsonConverter(typeof(HtmlEncodingStringConverter))]
-    public string Name { get; set; }
+    public string Name { get; set; } = null!;
     public bool Enabled { get; set; }
-    public string Identifier { get; set; }
+    public string? Identifier { get; set; }
     public ProductTierType ProductTierType { get; set; }
     public bool UsePolicies { get; set; }
     public bool UseSso { get; set; }
@@ -97,7 +94,7 @@ public abstract class BaseProfileOrganizationResponseModel : ResponseModel
     public int? Seats { get; set; }
     public short? MaxCollections { get; set; }
     public short? MaxStorageGb { get; set; }
-    public string Key { get; set; }
+    public string? Key { get; set; }
     public bool HasPublicAndPrivateKeys { get; set; }
     public bool SsoBound { get; set; }
     public bool ResetPasswordEnrolled { get; set; }
@@ -107,13 +104,13 @@ public abstract class BaseProfileOrganizationResponseModel : ResponseModel
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
     public Guid? ProviderId { get; set; }
     [JsonConverter(typeof(HtmlEncodingStringConverter))]
-    public string ProviderName { get; set; }
+    public string? ProviderName { get; set; }
     public ProviderType? ProviderType { get; set; }
     public bool SsoEnabled { get; set; }
     public bool KeyConnectorEnabled { get; set; }
-    public string KeyConnectorUrl { get; set; }
+    public string? KeyConnectorUrl { get; set; }
     public MemberDecryptionType? SsoMemberDecryptionType { get; set; }
-    public string FamilySponsorshipFriendlyName { get; set; }
+    public string? FamilySponsorshipFriendlyName { get; set; }
     public bool FamilySponsorshipAvailable { get; set; }
     public DateTime? FamilySponsorshipLastSyncDate { get; set; }
     public DateTime? FamilySponsorshipValidUntil { get; set; }
@@ -124,7 +121,7 @@ public abstract class BaseProfileOrganizationResponseModel : ResponseModel
     public Guid? OrganizationUserId { get; set; }
     public OrganizationUserStatusType Status { get; set; }
     public OrganizationUserType Type { get; set; }
-    public Permissions Permissions { get; set; }
+    public Permissions? Permissions { get; set; }
     public bool UserIsClaimedByOrganization { get; set; }
 
     /// <summary>
