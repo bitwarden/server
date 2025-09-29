@@ -8,6 +8,8 @@ CREATE PROCEDURE [dbo].[UserSignatureKeyPair_SetForRotation]
     @RevisionDate DATETIME2(7)
 AS
 BEGIN
+    SET NOCOUNT ON;
+
     INSERT INTO [dbo].[UserSignatureKeyPair] ([Id], [UserId], [SignatureAlgorithm], [SigningKey], [VerifyingKey], [CreationDate], [RevisionDate])
     VALUES (@Id, @UserId, @SignatureAlgorithm, @SigningKey, @VerifyingKey, @CreationDate, @RevisionDate)
 END

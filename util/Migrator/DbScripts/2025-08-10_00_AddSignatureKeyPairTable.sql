@@ -37,6 +37,8 @@ CREATE OR ALTER PROCEDURE [dbo].[UserSignatureKeyPair_ReadByUserId]
     @UserId UNIQUEIDENTIFIER
 AS
 BEGIN
+    SET NOCOUNT ON;
+
     SELECT *
     FROM [dbo].[UserSignatureKeyPairView]
     WHERE [UserId] = @UserId;
@@ -51,6 +53,8 @@ CREATE OR ALTER PROCEDURE [dbo].[UserSignatureKeyPair_UpdateForRotation]
     @RevisionDate DATETIME2(7)
 AS
 BEGIN
+    SET NOCOUNT ON;
+
     UPDATE [dbo].[UserSignatureKeyPair]
     SET [SignatureAlgorithm] = @SignatureAlgorithm,
         [SigningKey] = @SigningKey,
@@ -70,6 +74,8 @@ CREATE OR ALTER PROCEDURE [dbo].[UserSignatureKeyPair_SetForRotation]
     @RevisionDate DATETIME2(7)
 AS
 BEGIN
+    SET NOCOUNT ON;
+
     INSERT INTO [dbo].[UserSignatureKeyPair] ([Id], [UserId], [SignatureAlgorithm], [SigningKey], [VerifyingKey], [CreationDate], [RevisionDate])
     VALUES (@Id, @UserId, @SignatureAlgorithm, @SigningKey, @VerifyingKey, @CreationDate, @RevisionDate)
 END
@@ -145,8 +151,8 @@ CREATE OR ALTER PROCEDURE [dbo].[User_Create]
     @LastKeyRotationDate DATETIME2(7) = NULL,
     @LastEmailChangeDate DATETIME2(7) = NULL,
     @VerifyDevices BIT = 1,
-    @SignedPublicKey NVARCHAR(MAX) = NULL,
-    @SecurityState NVARCHAR(MAX) = NULL,
+    @SignedPublicKey VARCHAR(MAX) = NULL,
+    @SecurityState VARCHAR(MAX) = NULL,
     @SecurityVersion INT = NULL
 AS
 BEGIN
@@ -297,8 +303,8 @@ CREATE OR ALTER PROCEDURE [dbo].[User_Update]
     @LastKeyRotationDate DATETIME2(7) = NULL,
     @LastEmailChangeDate DATETIME2(7) = NULL,
     @VerifyDevices BIT = 1,
-    @SignedPublicKey NVARCHAR(MAX) = NULL,
-    @SecurityState NVARCHAR(MAX) = NULL,
+    @SignedPublicKey VARCHAR(MAX) = NULL,
+    @SecurityState VARCHAR(MAX) = NULL,
     @SecurityVersion INT = NULL
 AS
 BEGIN
