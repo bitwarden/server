@@ -275,6 +275,7 @@ public class AccountController : Controller
                 claims,
                 userIdentifier,
                 ssoConfigData);
+            user = provision.user;
             // PM-24579: After removing the flag, assign these unconditionally and remove this if block.
             if (preventNonCompliant)
             {
