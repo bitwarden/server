@@ -16,6 +16,8 @@ SELECT
     O.[Use2fa],
     O.[UseApi],
     O.[UseResetPassword],
+    O.[UseSecretsManager],
+    O.[UsePasswordManager],
     O.[SelfHost],
     O.[UsersGetPremium],
     O.[UseCustomPermissions],

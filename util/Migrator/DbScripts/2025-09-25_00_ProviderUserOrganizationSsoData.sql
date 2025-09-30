@@ -16,6 +16,8 @@ SELECT
     O.[Use2fa],
     O.[UseApi],
     O.[UseResetPassword],
+    O.[UseSecretsManager],
+    O.[UsePasswordManager],
     O.[SelfHost],
     O.[UsersGetPremium],
     O.[UseCustomPermissions],
@@ -52,4 +54,10 @@ INNER JOIN
     [dbo].[Provider] P ON P.[Id] = PU.[ProviderId]
 LEFT JOIN
     [dbo].[SsoConfig] SS ON SS.[OrganizationId] = O.[Id]
+GO
+
+IF OBJECT_ID('[dbo].[ProviderUserProviderOrganizationDetails_ReadByUserIdStatus]') IS NOT NULL
+BEGIN
+    EXECUTE sp_refreshsqlmodule N'[dbo].[ProviderUserProviderOrganizationDetails_ReadByUserIdStatus]';
+END
 GO
