@@ -133,7 +133,6 @@ public static class FeatureFlagKeys
     public const string CreateDefaultLocation = "pm-19467-create-default-location";
     public const string PM23845_VNextApplicationCache = "pm-24957-refactor-memory-application-cache";
     public const string CipherRepositoryBulkResourceCreation = "pm-24951-cipher-repository-bulk-resource-creation-service";
-    public const string CollectionVaultRefactor = "pm-25030-resolve-ts-upgrade-errors";
 
     /* Auth Team */
     public const string TwoFactorExtensionDataPersistence = "pm-9115-two-factor-extension-data-persistence";
@@ -144,6 +143,8 @@ public static class FeatureFlagKeys
     public const string Otp6Digits = "pm-18612-otp-6-digits";
     public const string FailedTwoFactorEmail = "pm-24425-send-2fa-failed-email";
     public const string DisableAlternateLoginMethods = "pm-22110-disable-alternate-login-methods";
+    public const string PM23174ManageAccountRecoveryPermissionDrivesTheNeedToSetMasterPassword =
+        "pm-23174-manage-account-recovery-permission-drives-the-need-to-set-master-password";
 
     /* Autofill Team */
     public const string IdpAutoSubmitLogin = "idp-auto-submit-login";
@@ -185,6 +186,7 @@ public static class FeatureFlagKeys
     public const string ForceUpdateKDFSettings = "pm-18021-force-update-kdf-settings";
     public const string UnlockWithMasterPasswordUnlockData = "pm-23246-unlock-with-master-password-unlock-data";
     public const string WindowsBiometricsV2 = "pm-25373-windows-biometrics-v2";
+    public const string NoLogoutOnKdfChange = "pm-23995-no-logout-on-kdf-change";
 
     /* Mobile Team */
     public const string NativeCarouselFlow = "native-carousel-flow";
