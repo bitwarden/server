@@ -84,7 +84,7 @@ public class CipherRequestModel
         return existingCipher;
     }
 
-    public Cipher ToCipher(Cipher existingCipher)
+    public Cipher ToCipher(Cipher existingCipher, Guid? userId = null)
     {
         // If Data field is provided, use it directly
         if (!string.IsNullOrWhiteSpace(Data))
@@ -124,9 +124,16 @@ public class CipherRequestModel
             }
         }
 
+        var userIdKey = userId.HasValue ? $"\"{userId.ToString().ToUpperInvariant()}\"" : null;
         existingCipher.Reprompt = Reprompt;
         existingCipher.Key = Key;
         existingCipher.ArchivedDate = ArchivedDate;
+        existingCipher.Folders = userIdKey != null && FolderId != null ?
+            $"{{{userIdKey}:\"{FolderId.ToUpperInvariant()}\"}}" :
+            null;
+        existingCipher.Favorites = userIdKey != null && Favorite ?
+               $"{{{userIdKey}:true}}" :
+               null;
 
         var hasAttachments2 = (Attachments2?.Count ?? 0) > 0;
         var hasAttachments = (Attachments?.Count ?? 0) > 0;

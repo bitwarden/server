@@ -757,7 +757,7 @@ public class CiphersController : Controller
         ValidateClientVersionForFido2CredentialSupport(cipher);
 
         var original = cipher.Clone();
-        await _cipherService.ShareAsync(original, model.Cipher.ToCipher(cipher), new Guid(model.Cipher.OrganizationId),
+        await _cipherService.ShareAsync(original, model.Cipher.ToCipher(cipher, user.Id), new Guid(model.Cipher.OrganizationId),
             model.CollectionIds.Select(c => new Guid(c)), user.Id, model.Cipher.LastKnownRevisionDate);
 
         var sharedCipher = await GetByIdAsync(id, user.Id);
