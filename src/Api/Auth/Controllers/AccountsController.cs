@@ -339,15 +339,15 @@ public class AccountsController : Controller
     }
 
     [HttpGet("organizations")]
-    public async Task<ListResponseModel<ProfileOrganizationResponseModel>> GetOrganizations()
+    public async Task<ListResponseModel<ProfileMemberOrganizationResponseModel>> GetOrganizations()
     {
         var userId = _userService.GetProperUserId(User);
         var organizationUserDetails = await _organizationUserRepository.GetManyDetailsByUserAsync(userId.Value,
             OrganizationUserStatusType.Confirmed);
         var organizationIdsClaimingUser = await GetOrganizationIdsClaimingUserAsync(userId.Value);
 
-        var responseData = organizationUserDetails.Select(o => new ProfileOrganizationResponseModel(o, organizationIdsClaimingUser));
-        return new ListResponseModel<ProfileOrganizationResponseModel>(responseData);
+        var responseData = organizationUserDetails.Select(o => new ProfileMemberOrganizationResponseModel(o, organizationIdsClaimingUser));
+        return new ListResponseModel<ProfileMemberOrganizationResponseModel>(responseData);
     }
 
     [HttpPut("profile")]

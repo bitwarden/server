@@ -13,7 +13,7 @@ using Xunit;
 
 namespace Bit.Api.Test.AdminConsole.Models.Response;
 
-public class ProfileOrganizationResponseModelTests
+public class ProfileMemberOrganizationResponseModelTests
 {
     [Theory, BitAutoData]
     public void Constructor_ShouldPopulatePropertiesCorrectly(Organization organization)
@@ -85,7 +85,7 @@ public class ProfileOrganizationResponseModelTests
             SmServiceAccounts = 10
         };
 
-        var result = new ProfileOrganizationResponseModel(organizationDetails, organizationIdsClaimingUser);
+        var result = new ProfileMemberOrganizationResponseModel(organizationDetails, organizationIdsClaimingUser);
 
         Assert.Equal("profileOrganization", result.Object);
         Assert.Equal(organization.Id, result.Id);

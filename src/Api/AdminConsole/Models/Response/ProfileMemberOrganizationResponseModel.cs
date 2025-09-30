@@ -5,9 +5,9 @@ using Bit.Core.Utilities;
 
 namespace Bit.Api.AdminConsole.Models.Response;
 
-public class ProfileOrganizationResponseModel : BaseProfileOrganizationResponseModel
+public class ProfileMemberOrganizationResponseModel : BaseProfileOrganizationResponseModel
 {
-    public ProfileOrganizationResponseModel(
+    public ProfileMemberOrganizationResponseModel(
         OrganizationUserOrganizationDetails organizationDetails,
         IEnumerable<Guid> organizationIdsClaimingUser)
         : base("profileOrganization", organizationDetails)
