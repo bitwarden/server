@@ -8,27 +8,30 @@ namespace Bit.Api.AdminConsole.Models.Response;
 public class ProfileOrganizationResponseModel : BaseProfileOrganizationResponseModel
 {
     public ProfileOrganizationResponseModel(
-        OrganizationUserOrganizationDetails organization,
+        OrganizationUserOrganizationDetails organizationDetails,
         IEnumerable<Guid> organizationIdsClaimingUser)
-        : base("profileOrganization", organization)
+        : base("profileOrganization", organizationDetails)
     {
-        UseSecretsManager = organization.UseSecretsManager;
-        UsePasswordManager = organization.UsePasswordManager;
-        Status = organization.Status;
-        Type = organization.Type;
-        SsoBound = !string.IsNullOrWhiteSpace(organization.SsoExternalId);
-        Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(organization.Permissions);
-        ResetPasswordEnrolled = !string.IsNullOrWhiteSpace(organization.ResetPasswordKey);
-        OrganizationUserId = organization.OrganizationUserId;
-        FamilySponsorshipFriendlyName = organization.FamilySponsorshipFriendlyName;
-        IsAdminInitiated = organization.IsAdminInitiated ?? false;
-        FamilySponsorshipAvailable = (FamilySponsorshipFriendlyName == null || IsAdminInitiated) &&
+        Status = organizationDetails.Status;
+        Type = organizationDetails.Type;
+        OrganizationUserId = organizationDetails.OrganizationUserId;
+        UserIsClaimedByOrganization = organizationIdsClaimingUser.Contains(organizationDetails.OrganizationId);
+        Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(organizationDetails.Permissions);
+        FamilySponsorshipAvailable = (organizationDetails.FamilySponsorshipFriendlyName == null || IsAdminInitiated) &&
             StaticStore.GetSponsoredPlan(PlanSponsorshipType.FamiliesForEnterprise)
-            .UsersCanSponsor(organization);
-        FamilySponsorshipLastSyncDate = organization.FamilySponsorshipLastSyncDate;
-        FamilySponsorshipToDelete = organization.FamilySponsorshipToDelete;
-        FamilySponsorshipValidUntil = organization.FamilySponsorshipValidUntil;
-        AccessSecretsManager = organization.AccessSecretsManager;
-        UserIsClaimedByOrganization = organizationIdsClaimingUser.Contains(organization.OrganizationId);
+            .UsersCanSponsor(organizationDetails);
+        AccessSecretsManager = organizationDetails.AccessSecretsManager;
+    }
+
+    public Guid OrganizationUserId { get; set; }
+    public bool UserIsClaimedByOrganization { get; set; }
+    /// <summary>
+    /// Obsolete property for backward compatibility
+    /// </summary>
+    [Obsolete("Please use UserIsClaimedByOrganization instead. This property will be removed in a future version.")]
+    public bool UserIsManagedByOrganization
+    {
+        get => UserIsClaimedByOrganization;
+        set => UserIsClaimedByOrganization = value;
     }
 }

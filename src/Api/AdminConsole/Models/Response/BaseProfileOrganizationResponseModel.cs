@@ -18,47 +18,58 @@ namespace Bit.Api.AdminConsole.Models.Response;
 /// </summary>
 public abstract class BaseProfileOrganizationResponseModel : ResponseModel
 {
-    protected BaseProfileOrganizationResponseModel(string type, BaseUserOrganizationDetails organization) : base(type)
+    protected BaseProfileOrganizationResponseModel(
+        string type, IProfileMemberOrganizationDetails organizationDetails) : base(type)
     {
-        Id = organization.OrganizationId;
-        Name = organization.Name;
-        Enabled = organization.Enabled;
-        Identifier = organization.Identifier;
-        ProductTierType = organization.PlanType.GetProductTier();
-        UsePolicies = organization.UsePolicies;
-        UseSso = organization.UseSso;
-        UseKeyConnector = organization.UseKeyConnector;
-        UseScim = organization.UseScim;
-        UseGroups = organization.UseGroups;
-        UseDirectory = organization.UseDirectory;
-        UseEvents = organization.UseEvents;
-        UseTotp = organization.UseTotp;
-        Use2fa = organization.Use2fa;
-        UseApi = organization.UseApi;
-        UseResetPassword = organization.UseResetPassword;
-        UsersGetPremium = organization.UsersGetPremium;
-        UseCustomPermissions = organization.UseCustomPermissions;
-        UseActivateAutofillPolicy = organization.PlanType.GetProductTier() == ProductTierType.Enterprise;
-        UseRiskInsights = organization.UseRiskInsights;
-        UseOrganizationDomains = organization.UseOrganizationDomains;
-        UseAdminSponsoredFamilies = organization.UseAdminSponsoredFamilies;
-        SelfHost = organization.SelfHost;
-        Seats = organization.Seats;
-        MaxCollections = organization.MaxCollections;
-        MaxStorageGb = organization.MaxStorageGb;
-        Key = organization.Key;
-        HasPublicAndPrivateKeys = organization.PublicKey != null && organization.PrivateKey != null;
-        ProviderId = organization.ProviderId;
-        ProviderName = organization.ProviderName;
-        ProviderType = organization.ProviderType;
-        LimitCollectionCreation = organization.LimitCollectionCreation;
-        LimitCollectionDeletion = organization.LimitCollectionDeletion;
-        LimitItemDeletion = organization.LimitItemDeletion;
-        AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
-        SsoEnabled = organization.SsoEnabled ?? false;
-        if (organization.SsoConfig != null)
+        Id = organizationDetails.OrganizationId;
+        UserId = organizationDetails.UserId;
+        Name = organizationDetails.Name;
+        Enabled = organizationDetails.Enabled;
+        Identifier = organizationDetails.Identifier;
+        ProductTierType = organizationDetails.PlanType.GetProductTier();
+        UsePolicies = organizationDetails.UsePolicies;
+        UseSso = organizationDetails.UseSso;
+        UseKeyConnector = organizationDetails.UseKeyConnector;
+        UseScim = organizationDetails.UseScim;
+        UseGroups = organizationDetails.UseGroups;
+        UseDirectory = organizationDetails.UseDirectory;
+        UseEvents = organizationDetails.UseEvents;
+        UseTotp = organizationDetails.UseTotp;
+        Use2fa = organizationDetails.Use2fa;
+        UseApi = organizationDetails.UseApi;
+        UseResetPassword = organizationDetails.UseResetPassword;
+        UsersGetPremium = organizationDetails.UsersGetPremium;
+        UseCustomPermissions = organizationDetails.UseCustomPermissions;
+        UseActivateAutofillPolicy = organizationDetails.PlanType.GetProductTier() == ProductTierType.Enterprise;
+        UseRiskInsights = organizationDetails.UseRiskInsights;
+        UseOrganizationDomains = organizationDetails.UseOrganizationDomains;
+        UseAdminSponsoredFamilies = organizationDetails.UseAdminSponsoredFamilies;
+        UseSecretsManager = organizationDetails.UseSecretsManager;
+        UsePasswordManager = organizationDetails.UsePasswordManager;
+        SelfHost = organizationDetails.SelfHost;
+        Seats = organizationDetails.Seats;
+        MaxCollections = organizationDetails.MaxCollections;
+        MaxStorageGb = organizationDetails.MaxStorageGb;
+        Key = organizationDetails.Key;
+        HasPublicAndPrivateKeys = organizationDetails.PublicKey != null && organizationDetails.PrivateKey != null;
+        SsoBound = !string.IsNullOrWhiteSpace(organizationDetails.SsoExternalId);
+        ResetPasswordEnrolled = !string.IsNullOrWhiteSpace(organizationDetails.ResetPasswordKey);
+        ProviderId = organizationDetails.ProviderId;
+        ProviderName = organizationDetails.ProviderName;
+        ProviderType = organizationDetails.ProviderType;
+        LimitCollectionCreation = organizationDetails.LimitCollectionCreation;
+        LimitCollectionDeletion = organizationDetails.LimitCollectionDeletion;
+        LimitItemDeletion = organizationDetails.LimitItemDeletion;
+        AllowAdminAccessToAllCollectionItems = organizationDetails.AllowAdminAccessToAllCollectionItems;
+        IsAdminInitiated = organizationDetails.IsAdminInitiated ?? false;
+        FamilySponsorshipFriendlyName = organizationDetails.FamilySponsorshipFriendlyName;
+        FamilySponsorshipLastSyncDate = organizationDetails.FamilySponsorshipLastSyncDate;
+        FamilySponsorshipToDelete = organizationDetails.FamilySponsorshipToDelete;
+        FamilySponsorshipValidUntil = organizationDetails.FamilySponsorshipValidUntil;
+        SsoEnabled = organizationDetails.SsoEnabled ?? false;
+        if (organizationDetails.SsoConfig != null)
         {
-            var ssoConfigData = SsoConfigurationData.Deserialize(organization.SsoConfig);
+            var ssoConfigData = SsoConfigurationData.Deserialize(organizationDetails.SsoConfig);
             KeyConnectorEnabled = ssoConfigData.MemberDecryptionType == MemberDecryptionType.KeyConnector && !string.IsNullOrEmpty(ssoConfigData.KeyConnectorUrl);
             KeyConnectorUrl = ssoConfigData.KeyConnectorUrl;
             SsoMemberDecryptionType = ssoConfigData.MemberDecryptionType;
@@ -118,19 +129,7 @@ public abstract class BaseProfileOrganizationResponseModel : ResponseModel
     public bool IsAdminInitiated { get; set; }
     public bool AccessSecretsManager { get; set; }
     public Guid? UserId { get; set; }
-    public Guid? OrganizationUserId { get; set; }
     public OrganizationUserStatusType Status { get; set; }
     public OrganizationUserType Type { get; set; }
     public Permissions? Permissions { get; set; }
-    public bool UserIsClaimedByOrganization { get; set; }
-
-    /// <summary>
-    /// Obsolete property for backward compatibility
-    /// </summary>
-    [Obsolete("Please use UserIsClaimedByOrganization instead. This property will be removed in a future version.")]
-    public bool UserIsManagedByOrganization
-    {
-        get => UserIsClaimedByOrganization;
-        set => UserIsClaimedByOrganization = value;
-    }
 }

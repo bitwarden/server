@@ -6,14 +6,14 @@ namespace Bit.Api.AdminConsole.Models.Response;
 
 public class ProfileProviderOrganizationResponseModel : BaseProfileOrganizationResponseModel
 {
-    public ProfileProviderOrganizationResponseModel(ProviderUserOrganizationDetails organization)
-        : base("profileProviderOrganization", organization)
+    public ProfileProviderOrganizationResponseModel(ProviderUserOrganizationDetails organizationDetails)
+        : base("profileProviderOrganization", organizationDetails)
     {
         Status = OrganizationUserStatusType.Confirmed; // Provider users are always confirmed
         Type = OrganizationUserType.Owner; // Provider users behave like Owners
-        ProviderId = organization.ProviderId;
-        ProviderName = organization.ProviderName;
-        ProviderType = organization.ProviderType;
+        ProviderId = organizationDetails.ProviderId;
+        ProviderName = organizationDetails.ProviderName;
+        ProviderType = organizationDetails.ProviderType;
         Permissions = new Permissions();
     }
 }
