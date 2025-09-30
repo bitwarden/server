@@ -5,6 +5,10 @@ using Bit.Core.Utilities;
 
 namespace Bit.Api.AdminConsole.Models.Response;
 
+/// <summary>
+/// Sync data for organization members and their organization.
+/// Note: see <see cref="ProfileProviderOrganizationResponseModel"/> for organization sync data received by provider users.
+/// </summary>
 public class ProfileMemberOrganizationResponseModel : BaseProfileOrganizationResponseModel
 {
     public ProfileMemberOrganizationResponseModel(
