@@ -1,0 +1,14 @@
+[workspace]
+members = ["crates/*"]
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
+version = "0.1.0"
+authors = ["Bitwarden Inc"]
+license-file = "LICENSE"
+keywords = ["akd", "key transparency"]
+
+[workspace.lints.clippy]
+unused_async = "deny"
+unwrap_used = "deny"

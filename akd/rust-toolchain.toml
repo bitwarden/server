@@ -1,0 +1,8 @@
+[toolchain]
+channel = "1.88.0"
+components = [ "rustfmt", "clippy" ]
+profile = "minimal"
+
+# The following is not part of the rust-toolchain.toml format,
+# but is used by our Renovate config to manage nightly versions.
+nightly-channel = "nightly-2025-05-08"

@@ -1,0 +1,8 @@
+/target
+config.toml
+
+/lib
+
+docker/data
+
+.structurizr
