@@ -13,8 +13,9 @@ using Bit.Core.Utilities;
 namespace Bit.Api.AdminConsole.Models.Response;
 
 /// <summary>
-/// Base class for profile organization response models that ensures all properties are fully populated.
-/// This class cannot be instantiated with an empty constructor to prevent incomplete hydration.
+/// Contains organization properties for both OrganizationUsers and ProviderUsers.
+/// Any organization properties in sync data should be added to this class so they are populated for both
+/// members and providers.
 /// </summary>
 public abstract class BaseProfileOrganizationResponseModel : ResponseModel
 {
