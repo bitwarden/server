@@ -10,11 +10,3 @@ BEGIN
     EXECUTE sp_refreshview N'[dbo].[EventView]'
 END
 GO
-
-CREATE OR ALTER VIEW [dbo].[EventView]
-AS
-SELECT
-    *
-FROM
-    [dbo].[Event];
-GO
