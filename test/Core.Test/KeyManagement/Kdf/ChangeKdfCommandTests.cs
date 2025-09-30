@@ -248,7 +248,7 @@ public class ChangeKdfCommandTests
             MasterKeyWrappedUserKey = "new-wrapped-key",
             Salt = user.GetMasterPasswordSalt()
         };
-        await Assert.ThrowsAsync<ArgumentException>(async () =>
+        await Assert.ThrowsAsync<BadRequestException>(async () =>
             await sutProvider.Sut.ChangeKdfAsync(user, "masterPassword", authenticationData, unlockData));
     }
 
@@ -272,7 +272,7 @@ public class ChangeKdfCommandTests
             MasterKeyWrappedUserKey = "new-wrapped-key",
             Salt = "different-salt"
         };
-        await Assert.ThrowsAsync<ArgumentException>(async () =>
+        await Assert.ThrowsAsync<BadRequestException>(async () =>
             await sutProvider.Sut.ChangeKdfAsync(user, "masterPassword", authenticationData, unlockData));
     }
 
