@@ -152,8 +152,6 @@ public static class FeatureFlagKeys
     public const string UseTreeWalkerApiForPageDetailsCollection = "use-tree-walker-api-for-page-details-collection";
     public const string InlineMenuFieldQualification = "inline-menu-field-qualification";
     public const string InlineMenuPositioningImprovements = "inline-menu-positioning-improvements";
-    public const string SSHAgent = "ssh-agent";
-    public const string SSHVersionCheckQAOverride = "ssh-version-check-qa-override";
     public const string GenerateIdentityFillScriptRefactor = "generate-identity-fill-script-refactor";
     public const string DelayFido2PageScriptInitWithinMv2 = "delay-fido2-page-script-init-within-mv2";
     public const string NotificationBarAddLoginImprovements = "notification-bar-add-login-improvements";
@@ -181,7 +179,6 @@ public static class FeatureFlagKeys
     public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
     public const string Argon2Default = "argon2-default";
     public const string UserkeyRotationV2 = "userkey-rotation-v2";
-    public const string SSHKeyItemVaultItem = "ssh-key-vault-item";
     public const string UserSdkForDecryption = "use-sdk-for-decryption";
     public const string PM17987_BlockType0 = "pm-17987-block-type-0";
     public const string ForceUpdateKDFSettings = "pm-18021-force-update-kdf-settings";
