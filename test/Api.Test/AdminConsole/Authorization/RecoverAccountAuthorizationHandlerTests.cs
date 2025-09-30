@@ -18,38 +18,11 @@ using Xunit;
 namespace Bit.Api.Test.AdminConsole.Authorization;
 
 [SutProviderCustomize]
-public class RecoverAccountAuthorizationHandlerTests
+public class RecoverMemberAccountAuthorizationHandlerTests
 {
     [Theory, BitAutoData]
-    public async Task HandleRequirementAsync_SuccessViaMember_Authorized(
-        SutProvider<RecoverAccountAuthorizationHandler> sutProvider,
-        [OrganizationUser] OrganizationUser targetOrganizationUser,
-        ClaimsPrincipal claimsPrincipal)
-    {
-        // Arrange
-        var context = new AuthorizationHandlerContext(
-            [new RecoverAccountAuthorizationRequirement()],
-            claimsPrincipal,
-            targetOrganizationUser);
-
-        var currentContextOrganization = new CurrentContextOrganization
-        {
-            Type = OrganizationUserType.Owner,
-            Id = targetOrganizationUser.OrganizationId
-        };
-
-        MockOrganizationClaims(sutProvider, claimsPrincipal, targetOrganizationUser, currentContextOrganization);
-
-        // Act
-        await sutProvider.Sut.HandleAsync(context);
-
-        // Assert
-        Assert.True(context.HasSucceeded);
-    }
-
-    [Theory, BitAutoData]
-    public async Task HandleRequirementAsync_SuccessViaProvider_Authorized(
-        SutProvider<RecoverAccountAuthorizationHandler> sutProvider,
+    public async Task HandleRequirementAsync_CurrentUserIsProvider_Authorized(
+        SutProvider<RecoverMemberAccountAuthorizationHandler> sutProvider,
         [OrganizationUser] OrganizationUser targetOrganizationUser,
         ClaimsPrincipal claimsPrincipal)
     {
@@ -71,7 +44,7 @@ public class RecoverAccountAuthorizationHandlerTests
 
     [Theory, BitAutoData]
     public async Task HandleRequirementAsync_NotMemberOrProvider_NotAuthorized(
-        SutProvider<RecoverAccountAuthorizationHandler> sutProvider,
+        SutProvider<RecoverMemberAccountAuthorizationHandler> sutProvider,
         [OrganizationUser] OrganizationUser targetOrganizationUser,
         ClaimsPrincipal claimsPrincipal)
     {
@@ -91,6 +64,7 @@ public class RecoverAccountAuthorizationHandlerTests
     }
 
     // Pairing of CurrentContextOrganization (current user permissions) and target user role
+    // Read this as: a ___ can recover the account for a ___
     public static IEnumerable<object[]> AuthorizedRoleCombinations => new object[][]
     {
         [new CurrentContextOrganization { Type = OrganizationUserType.Owner }, OrganizationUserType.Owner],
@@ -108,7 +82,7 @@ public class RecoverAccountAuthorizationHandlerTests
     public async Task AuthorizeMemberAsync_RecoverEqualOrLesserRoles_Authorized(
         CurrentContextOrganization currentContextOrganization,
         OrganizationUserType targetOrganizationUserType,
-        SutProvider<RecoverAccountAuthorizationHandler> sutProvider,
+        SutProvider<RecoverMemberAccountAuthorizationHandler> sutProvider,
         [OrganizationUser] OrganizationUser targetOrganizationUser,
         ClaimsPrincipal claimsPrincipal)
     {
@@ -131,42 +105,15 @@ public class RecoverAccountAuthorizationHandlerTests
     }
 
     // Pairing of CurrentContextOrganization (current user permissions) and target user role
+    // Read this as: a ___ cannot recover the account for a ___
     public static IEnumerable<object[]> UnauthorizedRoleCombinations => new object[][]
     {
+        // These roles should fail because you cannot recover a greater role
         [new CurrentContextOrganization { Type = OrganizationUserType.Admin }, OrganizationUserType.Owner],
         [new CurrentContextOrganization { Type = OrganizationUserType.Custom, Permissions = new Permissions { ManageResetPassword = true}}, OrganizationUserType.Owner],
         [new CurrentContextOrganization { Type = OrganizationUserType.Custom, Permissions = new Permissions { ManageResetPassword = true} }, OrganizationUserType.Admin],
-    };
 
-    [Theory, BitMemberAutoData(nameof(UnauthorizedRoleCombinations))]
-    public async Task AuthorizeMemberAsync_RecoverGreaterRoles_Unauthorized(
-        CurrentContextOrganization currentContextOrganization,
-        OrganizationUserType targetOrganizationUserType,
-        SutProvider<RecoverAccountAuthorizationHandler> sutProvider,
-        [OrganizationUser] OrganizationUser targetOrganizationUser,
-        ClaimsPrincipal claimsPrincipal)
-    {
-        // Arrange
-        targetOrganizationUser.Type = targetOrganizationUserType;
-        currentContextOrganization.Id = targetOrganizationUser.OrganizationId;
-
-        var context = new AuthorizationHandlerContext(
-            [new RecoverAccountAuthorizationRequirement()],
-            claimsPrincipal,
-            targetOrganizationUser);
-
-        MockOrganizationClaims(sutProvider, claimsPrincipal, targetOrganizationUser, currentContextOrganization);
-
-        // Act
-        await sutProvider.Sut.HandleAsync(context);
-
-        // Assert
-        Assert.False(context.HasSucceeded);
-    }
-
-    // Pairing of CurrentContextOrganization (current user permissions) and target user role
-    public static IEnumerable<object[]> UnauthorizedRoles => new object[][]
-    {
+        // These roles are never authorized to recover any account
         [new CurrentContextOrganization { Type = OrganizationUserType.User }, OrganizationUserType.Owner],
         [new CurrentContextOrganization { Type = OrganizationUserType.User }, OrganizationUserType.Admin],
         [new CurrentContextOrganization { Type = OrganizationUserType.User }, OrganizationUserType.Custom],
@@ -177,11 +124,11 @@ public class RecoverAccountAuthorizationHandlerTests
         [new CurrentContextOrganization { Type = OrganizationUserType.Custom }, OrganizationUserType.User],
     };
 
-    [Theory, BitMemberAutoData(nameof(UnauthorizedRoles))]
-    public async Task AuthorizeMemberAsync_NonAdmin_NotAuthorized(
+    [Theory, BitMemberAutoData(nameof(UnauthorizedRoleCombinations))]
+    public async Task AuthorizeMemberAsync_InvalidRoles_Unauthorized(
         CurrentContextOrganization currentContextOrganization,
         OrganizationUserType targetOrganizationUserType,
-        SutProvider<RecoverAccountAuthorizationHandler> sutProvider,
+        SutProvider<RecoverMemberAccountAuthorizationHandler> sutProvider,
         [OrganizationUser] OrganizationUser targetOrganizationUser,
         ClaimsPrincipal claimsPrincipal)
     {
@@ -205,7 +152,7 @@ public class RecoverAccountAuthorizationHandlerTests
 
     [Theory, BitAutoData]
     public async Task AuthorizeMemberAsync_TargetUserIsProviderAccount_NotAuthorized(
-        SutProvider<RecoverAccountAuthorizationHandler> sutProvider,
+        SutProvider<RecoverMemberAccountAuthorizationHandler> sutProvider,
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser targetOrganizationUser,
         [CurrentContextOrganization(Type = OrganizationUserType.Owner)] CurrentContextOrganization currentContextOrganization,
         ClaimsPrincipal claimsPrincipal)
@@ -226,7 +173,7 @@ public class RecoverAccountAuthorizationHandlerTests
         Assert.False(context.HasSucceeded);
     }
 
-    private static void MockOrganizationClaims(SutProvider<RecoverAccountAuthorizationHandler> sutProvider,
+    private static void MockOrganizationClaims(SutProvider<RecoverMemberAccountAuthorizationHandler> sutProvider,
         ClaimsPrincipal currentUser, OrganizationUser targetOrganizationUser,
         CurrentContextOrganization? currentContextOrganization)
     {
@@ -235,7 +182,7 @@ public class RecoverAccountAuthorizationHandlerTests
             .Returns(currentContextOrganization);
     }
 
-    private static void MockCurrentUserIsProvider(SutProvider<RecoverAccountAuthorizationHandler> sutProvider,
+    private static void MockCurrentUserIsProvider(SutProvider<RecoverMemberAccountAuthorizationHandler> sutProvider,
         ClaimsPrincipal currentUser, OrganizationUser targetOrganizationUser)
     {
         sutProvider.GetDependency<IOrganizationContext>()
@@ -243,7 +190,7 @@ public class RecoverAccountAuthorizationHandlerTests
             .Returns(true);
     }
 
-    private static void MockTargetUserIsProvider(SutProvider<RecoverAccountAuthorizationHandler> sutProvider,
+    private static void MockTargetUserIsProvider(SutProvider<RecoverMemberAccountAuthorizationHandler> sutProvider,
         OrganizationUser targetOrganizationUser)
     {
         sutProvider.GetDependency<IProviderUserRepository>()

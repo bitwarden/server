@@ -1,5 +1,6 @@
 ﻿using System.Security.Claims;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Microsoft.AspNetCore.Authorization;
@@ -15,9 +16,11 @@ namespace Bit.Api.AdminConsole.Authorization;
 /// </remarks>
 public class RecoverAccountAuthorizationRequirement : IAuthorizationRequirement;
 
-public class RecoverAccountAuthorizationHandler(
-    IOrganizationContext organizationContext,
-    IProviderUserRepository providerUserRepository)
+/// <summary>
+/// Authorizes members and providers to recover a target OrganizationUser's account.
+/// </summary>
+public class RecoverMemberAccountAuthorizationHandler(
+    IOrganizationContext organizationContext)
     : AuthorizationHandler<RecoverAccountAuthorizationRequirement, OrganizationUser>
 {
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
@@ -25,7 +28,7 @@ public class RecoverAccountAuthorizationHandler(
         OrganizationUser targetOrganizationUser)
     {
         var authorized =
-            await AuthorizeMemberAsync(context.User, targetOrganizationUser) ||
+            AuthorizeMemberAsync(context.User, targetOrganizationUser) ||
             await AuthorizeProviderAsync(context.User, targetOrganizationUser);
 
         if (authorized)
@@ -39,17 +42,16 @@ public class RecoverAccountAuthorizationHandler(
         return await organizationContext.IsProviderUserForOrganization(currentUser, targetOrganizationUser.OrganizationId);
     }
 
-    private async Task<bool> AuthorizeMemberAsync(ClaimsPrincipal currentUser, OrganizationUser targetOrganizationUser)
+    private bool AuthorizeMemberAsync(ClaimsPrincipal currentUser, OrganizationUser targetOrganizationUser)
     {
         var currentContextOrganization = organizationContext.GetOrganizationClaims(currentUser, targetOrganizationUser.OrganizationId);
-
         if (currentContextOrganization == null)
         {
             return false;
         }
 
         // Current user must have equal or greater permissions than the user account being recovered
-        var roleAuthorized = targetOrganizationUser.Type switch
+        var authorized = targetOrganizationUser.Type switch
         {
             OrganizationUserType.Owner => currentContextOrganization.Type is OrganizationUserType.Owner,
             OrganizationUserType.Admin => currentContextOrganization.Type is OrganizationUserType.Owner or OrganizationUserType.Admin,
@@ -58,17 +60,33 @@ public class RecoverAccountAuthorizationHandler(
                 or { Type: OrganizationUserType.Custom, Permissions.ManageResetPassword: true}
         };
 
-        if (!roleAuthorized)
-        {
-            return false;
-        }
+        return authorized;
+    }
+}
 
+/// <summary>
+/// Prevents a provider user's account from being recovered unless the current user is also a member of the same providers.
+/// This prevents unauthorized access to a provider via account recovery.
+/// This handler does not positively authorize an action, it only disallows it in this case.
+/// </summary>
+public class RecoverProviderAccountAuthorizationHandler(
+    ICurrentContext currentContext,
+    IProviderUserRepository providerUserRepository)
+    : AuthorizationHandler<RecoverAccountAuthorizationRequirement, OrganizationUser>
+{
+    protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
+        RecoverAccountAuthorizationRequirement requirement,
+        OrganizationUser targetOrganizationUser)
+    {
         // Even if the role is authorized, we need to make sure they're not trying to recover a provider's account
         // (regardless of whether they are a provider for this organization specifically)
-        var providerUsers =
+        var targetUserProviderUsers =
             await providerUserRepository.GetManyByUserAsync(targetOrganizationUser.UserId!.Value);
-        var targetUserIsProvider = providerUsers.Count > 0;
 
-        return !targetUserIsProvider;
+        if (targetUserProviderUsers.Any(providerUser => !currentContext.ProviderUser(providerUser.ProviderId)))
+        {
+            var failureReason = new AuthorizationFailureReason(this, "You cannot recover a provider user account.");
+            context.Fail(failureReason);
+        }
     }
 }
