@@ -64,7 +64,7 @@ public static class InvoiceExtensions
             }
         }
 
-        var tax = invoice.TotalTaxes.Sum(invoiceTotalTax => invoiceTotalTax.Amount);
+        var tax = invoice.TotalTaxes?.Sum(invoiceTotalTax => invoiceTotalTax.Amount) ?? 0;
 
         // Add fallback tax from invoice-level tax if present and not already included
         if (tax > 0)
