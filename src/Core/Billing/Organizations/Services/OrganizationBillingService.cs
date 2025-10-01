@@ -72,17 +72,12 @@ public class OrganizationBillingService(
             return OrganizationMetadata.Default;
         }
 
-        var isEligibleForSelfHost = await IsEligibleForSelfHostAsync(organization);
-
-        var isManaged = organization.Status == OrganizationStatusType.Managed;
         var orgOccupiedSeats = await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
 
         if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
         {
             return OrganizationMetadata.Default with
             {
-                IsEligibleForSelfHost = isEligibleForSelfHost,
-                IsManaged = isManaged,
                 OrganizationOccupiedSeats = orgOccupiedSeats.Total
             };
         }
@@ -96,8 +91,6 @@ public class OrganizationBillingService(
         {
             return OrganizationMetadata.Default with
             {
-                IsEligibleForSelfHost = isEligibleForSelfHost,
-                IsManaged = isManaged,
                 OrganizationOccupiedSeats = orgOccupiedSeats.Total
             };
         }
@@ -105,8 +98,6 @@ public class OrganizationBillingService(
         var isOnSecretsManagerStandalone = await IsOnSecretsManagerStandalone(organization, customer, subscription);
 
         return new OrganizationMetadata(
-            isEligibleForSelfHost,
-            isManaged,
             isOnSecretsManagerStandalone,
             orgOccupiedSeats.Total);
     }
@@ -523,16 +514,6 @@ public class OrganizationBillingService(
         };
 
         return customer;
-    }
-
-    private async Task<bool> IsEligibleForSelfHostAsync(
-        Organization organization)
-    {
-        var plans = await pricingClient.ListPlans();
-
-        var eligibleSelfHostPlans = plans.Where(plan => plan.HasSelfHost).Select(plan => plan.Type);
-
-        return eligibleSelfHostPlans.Contains(organization.PlanType);
     }
 
     private async Task<bool> IsOnSecretsManagerStandalone(
