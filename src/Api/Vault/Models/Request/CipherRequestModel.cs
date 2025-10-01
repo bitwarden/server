@@ -128,12 +128,8 @@ public class CipherRequestModel
         existingCipher.Reprompt = Reprompt;
         existingCipher.Key = Key;
         existingCipher.ArchivedDate = ArchivedDate;
-        existingCipher.Folders = userIdKey != null && FolderId != null ?
-            $"{{{userIdKey}:\"{FolderId.ToUpperInvariant()}\"}}" :
-            null;
-        existingCipher.Favorites = userIdKey != null && Favorite ?
-               $"{{{userIdKey}:true}}" :
-               null;
+        existingCipher.Folders = UpdateUserSpecificJsonField(existingCipher.Folders, userIdKey, FolderId);
+        existingCipher.Favorites = UpdateUserSpecificJsonField(existingCipher.Favorites, userIdKey, Favorite);
 
         var hasAttachments2 = (Attachments2?.Count ?? 0) > 0;
         var hasAttachments = (Attachments?.Count ?? 0) > 0;
@@ -297,6 +293,42 @@ public class CipherRequestModel
             PublicKey = SSHKey.PublicKey,
             KeyFingerprint = SSHKey.KeyFingerprint,
         };
+    }
+
+    /// <summary>
+    /// Updates a JSON string representing a dictionary by adding, updating, or removing a key-value pair
+    /// based on the provided userIdKey and newValue.
+    /// </summary>
+    private static string UpdateUserSpecificJsonField(string existingJson, string userIdKey, object newValue)
+    {
+        if (userIdKey == null)
+        {
+            return existingJson;
+        }
+
+        var jsonDict = string.IsNullOrWhiteSpace(existingJson)
+            ? new Dictionary<string, object>()
+            : JsonSerializer.Deserialize<Dictionary<string, object>>(existingJson) ?? new Dictionary<string, object>();
+
+        var userKey = userIdKey.Trim('"');
+        // Remove the key from the value when:
+        // - new value is null
+        // - new value is an empty or whitespace string
+        // - new value is a boolean false
+        var shouldRemove = newValue == null ||
+                          (newValue is string strValue && string.IsNullOrWhiteSpace(strValue)) ||
+                          (newValue is bool boolValue && !boolValue);
+
+        if (shouldRemove)
+        {
+            jsonDict.Remove(userKey);
+        }
+        else
+        {
+            jsonDict[userKey] = newValue is string str ? str.ToUpperInvariant() : newValue;
+        }
+
+        return jsonDict.Count == 0 ? null : JsonSerializer.Serialize(jsonDict);
     }
 }
 
