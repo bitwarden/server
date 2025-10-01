@@ -63,6 +63,7 @@ public class DatabaseContext : DbContext
     public DbSet<Policy> Policies { get; set; }
     public DbSet<Provider> Providers { get; set; }
     public DbSet<Secret> Secret { get; set; }
+    public DbSet<SecretVersion> SecretVersions { get; set; }
     public DbSet<ServiceAccount> ServiceAccount { get; set; }
     public DbSet<Project> Project { get; set; }
     public DbSet<ProviderUser> ProviderUsers { get; set; }
