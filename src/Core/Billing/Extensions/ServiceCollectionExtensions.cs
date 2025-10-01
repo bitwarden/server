@@ -23,6 +23,7 @@ public static class ServiceCollectionExtensions
     {
         services.AddSingleton<ITaxService, TaxService>();
         services.AddTransient<IOrganizationBillingService, OrganizationBillingService>();
+        services.AddTransient<IOrganizationMetadataCache, OrganizationMetadataDistributedCache>();
         services.AddTransient<IPremiumUserBillingService, PremiumUserBillingService>();
         services.AddTransient<ISetupIntentCache, SetupIntentDistributedCache>();
         services.AddTransient<ISubscriberService, SubscriberService>();
@@ -31,6 +32,7 @@ public static class ServiceCollectionExtensions
         services.AddPaymentOperations();
         services.AddOrganizationLicenseCommandsQueries();
         services.AddPremiumCommands();
+        services.AddTransient<IGetOrganizationMetadataQuery, GetOrganizationMetadataQuery>();
         services.AddTransient<IGetOrganizationWarningsQuery, GetOrganizationWarningsQuery>();
         services.AddTransient<IRestartSubscriptionCommand, RestartSubscriptionCommand>();
         services.AddTransient<IPreviewOrganizationTaxCommand, PreviewOrganizationTaxCommand>();
