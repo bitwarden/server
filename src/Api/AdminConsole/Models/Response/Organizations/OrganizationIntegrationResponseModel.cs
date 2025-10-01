@@ -36,12 +36,12 @@ public class OrganizationIntegrationResponseModel : ResponseModel
             : OrganizationIntegrationStatus.Completed,
 
         // HEC and Datadog should only be allowed to be created non-null.
-        // If they are null, they are NotApplicable
+        // If they are null, they are Invalid
         IntegrationType.Hec => string.IsNullOrWhiteSpace(Configuration)
-            ? OrganizationIntegrationStatus.NotApplicable
+            ? OrganizationIntegrationStatus.Invalid
             : OrganizationIntegrationStatus.Completed,
         IntegrationType.Datadog => string.IsNullOrWhiteSpace(Configuration)
-            ? OrganizationIntegrationStatus.NotApplicable
+            ? OrganizationIntegrationStatus.Invalid
             : OrganizationIntegrationStatus.Completed,
     };
 }

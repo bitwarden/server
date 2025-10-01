@@ -72,14 +72,14 @@ public class OrganizationIntegrationResponseModelTests
     }
 
     [Theory, BitAutoData]
-    public void Status_Hec_NullConfig_ReturnsNotApplicable(OrganizationIntegration oi)
+    public void Status_Hec_NullConfig_ReturnsInvalid(OrganizationIntegration oi)
     {
         oi.Type = IntegrationType.Hec;
         oi.Configuration = null;
 
         var model = new OrganizationIntegrationResponseModel(oi);
 
-        Assert.Equal(OrganizationIntegrationStatus.NotApplicable, model.Status);
+        Assert.Equal(OrganizationIntegrationStatus.Invalid, model.Status);
     }
 
     [Theory, BitAutoData]
@@ -94,14 +94,14 @@ public class OrganizationIntegrationResponseModelTests
     }
 
     [Theory, BitAutoData]
-    public void Status_Datadog_NullConfig_ReturnsNotApplicable(OrganizationIntegration oi)
+    public void Status_Datadog_NullConfig_ReturnsInvalid(OrganizationIntegration oi)
     {
         oi.Type = IntegrationType.Datadog;
         oi.Configuration = null;
 
         var model = new OrganizationIntegrationResponseModel(oi);
 
-        Assert.Equal(OrganizationIntegrationStatus.NotApplicable, model.Status);
+        Assert.Equal(OrganizationIntegrationStatus.Invalid, model.Status);
     }
 
     [Theory, BitAutoData]

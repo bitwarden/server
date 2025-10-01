@@ -23,8 +23,8 @@ public class IntegrationOAuthState
     public static IntegrationOAuthState FromIntegration(OrganizationIntegration integration, TimeProvider timeProvider)
     {
         var integrationId = integration.Id;
-        var organizationIdHash = ComputeOrgHash(integration.OrganizationId);
         var issuedUtc = timeProvider.GetUtcNow();
+        var organizationIdHash = ComputeOrgHash(integration.OrganizationId, issuedUtc.ToUnixTimeSeconds());
 
         return new IntegrationOAuthState(integrationId, organizationIdHash, issuedUtc);
     }
@@ -54,7 +54,7 @@ public class IntegrationOAuthState
 
     public bool ValidateOrg(Guid orgId)
     {
-        var expected = ComputeOrgHash(orgId);
+        var expected = ComputeOrgHash(orgId, Issued.ToUnixTimeSeconds());
         return expected == OrganizationIdHash;
     }
 
@@ -63,9 +63,9 @@ public class IntegrationOAuthState
         return $"{IntegrationId}.{OrganizationIdHash}.{Issued.ToUnixTimeSeconds()}";
     }
 
-    private static string ComputeOrgHash(Guid orgId)
+    private static string ComputeOrgHash(Guid orgId, long timestamp)
     {
-        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(orgId.ToString("N")));
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes($"{orgId:N}:{timestamp}"));
         return Convert.ToHexString(bytes)[.._orgHashLength];
     }
 }

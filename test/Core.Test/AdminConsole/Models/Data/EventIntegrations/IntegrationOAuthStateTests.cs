@@ -74,4 +74,18 @@ public class IntegrationOAuthStateTests
 
         Assert.False(state.ValidateOrg(Guid.NewGuid()));
     }
+
+    [Theory, BitAutoData]
+    public void ValidateOrg_ModifiedTimestamp_ReturnsFalse(OrganizationIntegration integration)
+    {
+        var state = IntegrationOAuthState.FromIntegration(integration, _fakeTimeProvider);
+        var parts = state.ToString().Split('.');
+
+        parts[2] = $"{_fakeTimeProvider.GetUtcNow().ToUnixTimeSeconds() - 1}";
+        var modifiedState = IntegrationOAuthState.FromString(string.Join(".", parts), _fakeTimeProvider);
+
+        Assert.True(state.ValidateOrg(integration.OrganizationId));
+        Assert.NotNull(modifiedState);
+        Assert.False(modifiedState.ValidateOrg(integration.OrganizationId));
+    }
 }
