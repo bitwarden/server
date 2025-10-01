@@ -124,7 +124,7 @@ public class CipherRequestModel
             }
         }
 
-        var userIdKey = userId.HasValue ? $"\"{userId.ToString().ToUpperInvariant()}\"" : null;
+        var userIdKey = userId.HasValue ? userId.ToString().ToUpperInvariant() : null;
         existingCipher.Reprompt = Reprompt;
         existingCipher.Key = Key;
         existingCipher.ArchivedDate = ArchivedDate;
@@ -310,7 +310,6 @@ public class CipherRequestModel
             ? new Dictionary<string, object>()
             : JsonSerializer.Deserialize<Dictionary<string, object>>(existingJson) ?? new Dictionary<string, object>();
 
-        var userKey = userIdKey.Trim('"');
         // Remove the key from the value when:
         // - new value is null
         // - new value is an empty or whitespace string
@@ -321,11 +320,11 @@ public class CipherRequestModel
 
         if (shouldRemove)
         {
-            jsonDict.Remove(userKey);
+            jsonDict.Remove(userIdKey);
         }
         else
         {
-            jsonDict[userKey] = newValue is string str ? str.ToUpperInvariant() : newValue;
+            jsonDict[userIdKey] = newValue is string str ? str.ToUpperInvariant() : newValue;
         }
 
         return jsonDict.Count == 0 ? null : JsonSerializer.Serialize(jsonDict);
