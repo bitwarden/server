@@ -76,6 +76,7 @@ public class OrganizationBillingService(
 
         var isManaged = organization.Status == OrganizationStatusType.Managed;
         var orgOccupiedSeats = await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
+
         if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
         {
             return OrganizationMetadata.Default with
@@ -96,27 +97,17 @@ public class OrganizationBillingService(
             return OrganizationMetadata.Default with
             {
                 IsEligibleForSelfHost = isEligibleForSelfHost,
-                IsManaged = isManaged
+                IsManaged = isManaged,
+                OrganizationOccupiedSeats = orgOccupiedSeats.Total
             };
         }
 
         var isOnSecretsManagerStandalone = await IsOnSecretsManagerStandalone(organization, customer, subscription);
 
-        var invoice = !string.IsNullOrEmpty(subscription.LatestInvoiceId)
-            ? await stripeAdapter.InvoiceGetAsync(subscription.LatestInvoiceId, new InvoiceGetOptions())
-            : null;
-
         return new OrganizationMetadata(
             isEligibleForSelfHost,
             isManaged,
             isOnSecretsManagerStandalone,
-            subscription.Status == StripeConstants.SubscriptionStatus.Unpaid,
-            true,
-            invoice?.Status == StripeConstants.InvoiceStatus.Open,
-            subscription.Status == StripeConstants.SubscriptionStatus.Canceled,
-            invoice?.DueDate,
-            invoice?.Created,
-            subscription.CurrentPeriodEnd,
             orgOccupiedSeats.Total);
     }
 
