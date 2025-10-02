@@ -1,0 +1,15 @@
+[package]
+name = "akd_storage"
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+license-file.workspace = true
+keywords.workspace = true
+
+[dependencies]
+akd = "0.11.0"
+async-trait = "0.1.89"
+ms_database = { path = "../ms_database" }
+
+[lints]
+workspace = true

@@ -1,10 +1,8 @@
-use macros::load_migrations;
 use tiberius::{error};
 
 use crate::{ManagedConnection};
 
 type Result<T> = std::result::Result<T, MigrationError>;
-const MIGRATIONS: &[Migration] = load_migrations!("./migrations");
 
 #[derive(thiserror::Error, Debug)]
 pub enum MigrationError {
@@ -13,12 +11,12 @@ pub enum MigrationError {
     // Other error variants can be added here
 }
 
-pub(crate) async fn pending_migrations(conn: &mut ManagedConnection) -> Result<Vec<Migration>> {
+pub(crate) async fn pending_migrations(conn: &mut ManagedConnection, all_migrations: &[Migration]) -> Result<Vec<Migration>> {
     // get applied migrations
     let applied = read_applied_migrations(conn).await?;
 
     // create list of migrations that haven't been applied, in order.
-    let pending = MIGRATIONS
+    let pending = all_migrations
         .iter()
         .filter(|m| !applied.contains(&m.name.to_string()))
         .cloned()
@@ -91,9 +89,9 @@ pub(crate) async fn run_migration(migration: &Migration, conn: &mut ManagedConne
     }
 }
 
-pub async fn run_pending_migrations(conn: &mut ManagedConnection) -> Result<()> {
+pub async fn run_pending_migrations(conn: &mut ManagedConnection, all_migrations: &[Migration]) -> Result<()> {
     ensure_migrations_table_exists(conn).await?;
-    let pending = pending_migrations(conn).await?;
+    let pending = pending_migrations(conn, all_migrations).await?;
     for migration in pending {
         run_migration(&migration, conn).await?;
     }
