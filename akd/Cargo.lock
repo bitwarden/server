@@ -67,6 +67,7 @@ dependencies = [
  "akd",
  "async-trait",
  "ms_database",
+ "thiserror 2.0.17",
 ]
 
 [[package]]

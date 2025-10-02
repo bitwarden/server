@@ -6,7 +6,6 @@ use tokio_util::compat::TokioAsyncWriteCompatExt;
 use bb8::ManageConnection;
 use tiberius::{Client, Config};
 
-
 #[derive(thiserror::Error, Debug)]
 pub enum OnConnectError {
     #[error("Config error: {0}")]
