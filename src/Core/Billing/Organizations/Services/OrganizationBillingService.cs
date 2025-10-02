@@ -26,10 +26,8 @@ namespace Bit.Core.Billing.Organizations.Services;
 
 public class OrganizationBillingService(
     IBraintreeGateway braintreeGateway,
-    IFeatureService featureService,
     IGlobalSettings globalSettings,
     ILogger<OrganizationBillingService> logger,
-    IOrganizationMetadataCache organizationMetadataCache,
     IOrganizationRepository organizationRepository,
     IPricingClient pricingClient,
     ISetupIntentCache setupIntentCache,
@@ -74,18 +72,6 @@ public class OrganizationBillingService(
             return OrganizationMetadata.Default;
         }
 
-        var useCaching = featureService.IsEnabled(FeatureFlagKeys.PM25379_UseNewOrganizationMetadataStructure);
-
-        // Try to get from cache if feature flag is enabled
-        if (useCaching)
-        {
-            var cachedMetadata = await organizationMetadataCache.Get(organizationId);
-            if (cachedMetadata != null)
-            {
-                return cachedMetadata;
-            }
-        }
-
         var orgOccupiedSeats = await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
 
         if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
@@ -111,17 +97,9 @@ public class OrganizationBillingService(
 
         var isOnSecretsManagerStandalone = await IsOnSecretsManagerStandalone(organization, customer, subscription);
 
-        var metadata = new OrganizationMetadata(
+        return new OrganizationMetadata(
             isOnSecretsManagerStandalone,
             orgOccupiedSeats.Total);
-
-        // Cache the result if feature flag is enabled
-        if (useCaching)
-        {
-            await organizationMetadataCache.Set(organizationId, metadata);
-        }
-
-        return metadata;
     }
 
     public async Task
