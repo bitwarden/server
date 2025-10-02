@@ -1,5 +1,4 @@
 ﻿using System.Globalization;
-using Bit.Billing.Constants;
 using Bit.Billing.Models;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
@@ -17,6 +16,7 @@ using Microsoft.Data.SqlClient;
 
 namespace Bit.Billing.Controllers;
 
+using static BitPayConstants;
 using static StripeConstants;
 
 [Route("bitpay")]
@@ -51,13 +51,13 @@ public class BitPayController(
         }
 
         var (organizationId, userId, providerId) = GetIdsFromPosData(invoice);
-        if ((!organizationId.HasValue && !userId.HasValue && !providerId.HasValue) || !invoice.PosData.Contains("accountCredit:1"))
+        if ((!organizationId.HasValue && !userId.HasValue && !providerId.HasValue) || !invoice.PosData.Contains(PosDataKeys.AccountCredit))
         {
             logger.LogWarning("Received BitPay invoice webhook for invoice ({InvoiceID}) that had invalid POS data: {PosData}", invoice.Id, invoice.PosData);
             return new BadRequestObjectResult("Invalid POS data");
         }
 
-        if (invoice.Status != BitPayInvoiceStatus.Complete)
+        if (invoice.Status != InvoiceStatuses.Complete)
         {
             logger.LogInformation("Received valid BitPay invoice webhook for invoice ({InvoiceID}) that is not yet complete: {Status}",
                 invoice.Id, invoice.Status);

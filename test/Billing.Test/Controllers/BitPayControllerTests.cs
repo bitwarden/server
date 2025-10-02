@@ -3,6 +3,7 @@ using Bit.Billing.Models;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Payment.Clients;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
@@ -18,6 +19,8 @@ using Xunit;
 using Transaction = Bit.Core.Entities.Transaction;
 
 namespace Bit.Billing.Test.Controllers;
+
+using static BitPayConstants;
 
 public class BitPayControllerTests
 {
@@ -152,7 +155,7 @@ public class BitPayControllerTests
     {
         var controller = CreateController();
         var eventModel = CreateValidEventModel();
-        var invoice = CreateValidInvoice(posData: "accountCredit:1");
+        var invoice = CreateValidInvoice(posData: PosDataKeys.AccountCredit);
 
         _bitPayClient.GetInvoice(eventModel.Data.Id).Returns(invoice);
 
@@ -200,7 +203,7 @@ public class BitPayControllerTests
         var controller = CreateController();
         var eventModel = CreateValidEventModel();
         var organizationId = Guid.NewGuid();
-        var invoice = CreateValidInvoice(posData: $"organizationId:{organizationId},accountCredit:1");
+        var invoice = CreateValidInvoice(posData: $"organizationId:{organizationId},{PosDataKeys.AccountCredit}");
         var organization = new Organization { Id = organizationId, BillingEmail = "billing@example.com" };
 
         _bitPayClient.GetInvoice(eventModel.Data.Id).Returns(invoice);
@@ -226,7 +229,7 @@ public class BitPayControllerTests
         var controller = CreateController();
         var eventModel = CreateValidEventModel();
         var userId = Guid.NewGuid();
-        var invoice = CreateValidInvoice(posData: $"userId:{userId},accountCredit:1");
+        var invoice = CreateValidInvoice(posData: $"userId:{userId},{PosDataKeys.AccountCredit}");
         var user = new User { Id = userId, Email = "user@example.com" };
 
         _bitPayClient.GetInvoice(eventModel.Data.Id).Returns(invoice);
@@ -251,7 +254,7 @@ public class BitPayControllerTests
         var controller = CreateController();
         var eventModel = CreateValidEventModel();
         var providerId = Guid.NewGuid();
-        var invoice = CreateValidInvoice(posData: $"providerId:{providerId},accountCredit:1");
+        var invoice = CreateValidInvoice(posData: $"providerId:{providerId},{PosDataKeys.AccountCredit}");
         var provider = new Provider { Id = providerId, BillingEmail = "provider@example.com" };
 
         _bitPayClient.GetInvoice(eventModel.Data.Id).Returns(invoice);
@@ -276,7 +279,7 @@ public class BitPayControllerTests
     {
         var controller = CreateController();
         var organizationId = Guid.NewGuid();
-        var invoice = CreateValidInvoice(posData: $"organizationId:{organizationId},accountCredit:1");
+        var invoice = CreateValidInvoice(posData: $"organizationId:{organizationId},{PosDataKeys.AccountCredit}");
 
         var result = controller.GetIdsFromPosData(invoice);
 
@@ -290,7 +293,7 @@ public class BitPayControllerTests
     {
         var controller = CreateController();
         var userId = Guid.NewGuid();
-        var invoice = CreateValidInvoice(posData: $"userId:{userId},accountCredit:1");
+        var invoice = CreateValidInvoice(posData: $"userId:{userId},{PosDataKeys.AccountCredit}");
 
         var result = controller.GetIdsFromPosData(invoice);
 
@@ -304,7 +307,7 @@ public class BitPayControllerTests
     {
         var controller = CreateController();
         var providerId = Guid.NewGuid();
-        var invoice = CreateValidInvoice(posData: $"providerId:{providerId},accountCredit:1");
+        var invoice = CreateValidInvoice(posData: $"providerId:{providerId},{PosDataKeys.AccountCredit}");
 
         var result = controller.GetIdsFromPosData(invoice);
 
@@ -317,7 +320,7 @@ public class BitPayControllerTests
     public void GetIdsFromPosData_InvalidGuid_ReturnsNull()
     {
         var controller = CreateController();
-        var invoice = CreateValidInvoice(posData: "organizationId:invalid-guid,accountCredit:1");
+        var invoice = CreateValidInvoice(posData: "organizationId:invalid-guid,{PosDataKeys.AccountCredit}");
 
         var result = controller.GetIdsFromPosData(invoice);
 
