@@ -1,4 +1,4 @@
-namespace Bit.Core.Billing.Constants;
+﻿namespace Bit.Core.Billing.Constants;
 
 public static class BitPayConstants
 {
