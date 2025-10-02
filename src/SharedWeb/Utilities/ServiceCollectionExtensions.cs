@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using AspNetCoreRateLimit;
+using Azure.Messaging.ServiceBus;
 using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
@@ -855,6 +856,11 @@ public static class ServiceCollectionExtensions
                     configuration: listenerConfiguration,
                     handler: provider.GetRequiredKeyedService<IEventMessageHandler>(serviceKey: listenerConfiguration.RoutingKey),
                     serviceBusService: provider.GetRequiredService<IAzureServiceBusService>(),
+                    serviceBusOptions: new ServiceBusProcessorOptions()
+                    {
+                        PrefetchCount = listenerConfiguration.EventPrefetchCount,
+                        MaxConcurrentCalls = listenerConfiguration.EventMaxConcurrentCalls
+                    },
                     loggerFactory: provider.GetRequiredService<ILoggerFactory>()
                 )
             )
@@ -865,6 +871,11 @@ public static class ServiceCollectionExtensions
                     configuration: listenerConfiguration,
                     handler: provider.GetRequiredService<IIntegrationHandler<TConfig>>(),
                     serviceBusService: provider.GetRequiredService<IAzureServiceBusService>(),
+                    serviceBusOptions: new ServiceBusProcessorOptions()
+                    {
+                        PrefetchCount = listenerConfiguration.IntegrationPrefetchCount,
+                        MaxConcurrentCalls = listenerConfiguration.IntegrationMaxConcurrentCalls
+                    },
                     loggerFactory: provider.GetRequiredService<ILoggerFactory>()
                 )
             )
@@ -927,6 +938,11 @@ public static class ServiceCollectionExtensions
                         configuration: repositoryConfiguration,
                         handler: provider.GetRequiredService<AzureTableStorageEventHandler>(),
                         serviceBusService: provider.GetRequiredService<IAzureServiceBusService>(),
+                        serviceBusOptions: new ServiceBusProcessorOptions()
+                        {
+                            PrefetchCount = repositoryConfiguration.EventPrefetchCount,
+                            MaxConcurrentCalls = repositoryConfiguration.EventMaxConcurrentCalls
+                        },
                         loggerFactory: provider.GetRequiredService<ILoggerFactory>()
                     )
                 )

@@ -301,6 +301,9 @@ public class GlobalSettings : IGlobalSettings
             private string _eventTopicName;
             private string _integrationTopicName;
 
+            public virtual int DefaultMaxConcurrentCalls { get; set; } = 1;
+            public virtual int DefaultPrefetchCount { get; set; } = 0;
+
             public virtual string EventRepositorySubscriptionName { get; set; } = "events-write-subscription";
             public virtual string SlackEventSubscriptionName { get; set; } = "events-slack-subscription";
             public virtual string SlackIntegrationSubscriptionName { get; set; } = "integration-slack-subscription";
