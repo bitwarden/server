@@ -14,7 +14,6 @@ using Bit.Core.Utilities;
 using BitPayLight.Models.Invoice;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.Options;
 
 namespace Bit.Billing.Controllers;
 

@@ -1,4 +1,4 @@
-using Bit.Billing.Controllers;
+﻿using Bit.Billing.Controllers;
 using Bit.Billing.Models;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
@@ -42,7 +42,7 @@ public class BitPayControllerTests
         _globalSettings.BitPay = bitPaySettings;
     }
 
-    private BitPayController CreateController() => new (
+    private BitPayController CreateController() => new(
         _globalSettings,
         _bitPayClient,
         _transactionRepository,
@@ -377,7 +377,9 @@ public class BitPayControllerTests
             [
                 new InvoiceTransaction
                 {
-                    Type = null, Confirmations = "1", ReceivedTime = DateTime.UtcNow.ToString("O")
+                    Type = null,
+                    Confirmations = "1",
+                    ReceivedTime = DateTime.UtcNow.ToString("O")
                 }
             ]
         };
