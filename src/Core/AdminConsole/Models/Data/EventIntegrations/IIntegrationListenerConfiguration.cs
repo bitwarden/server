@@ -10,6 +10,8 @@ public interface IIntegrationListenerConfiguration : IEventListenerConfiguration
     public string IntegrationSubscriptionName { get; }
     public string IntegrationTopicName { get; }
     public int MaxRetries { get; }
+    public int IntegrationPrefetchCount { get; }
+    public int IntegrationMaxConcurrentCalls { get; }
 
     public string RoutingKey
     {
