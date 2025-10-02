@@ -25,4 +25,24 @@ public abstract class ListenerConfiguration
     {
         get => _globalSettings.EventLogging.AzureServiceBus.IntegrationTopicName;
     }
+
+    public int EventPrefetchCount
+    {
+        get => _globalSettings.EventLogging.AzureServiceBus.DefaultPrefetchCount;
+    }
+
+    public int EventMaxConcurrentCalls
+    {
+        get => _globalSettings.EventLogging.AzureServiceBus.DefaultMaxConcurrentCalls;
+    }
+
+    public int IntegrationPrefetchCount
+    {
+        get => _globalSettings.EventLogging.AzureServiceBus.DefaultPrefetchCount;
+    }
+
+    public int IntegrationMaxConcurrentCalls
+    {
+        get => _globalSettings.EventLogging.AzureServiceBus.DefaultMaxConcurrentCalls;
+    }
 }
