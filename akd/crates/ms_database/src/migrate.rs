@@ -1,6 +1,6 @@
 use tiberius::{error};
 
-use crate::{ManagedConnection};
+use crate::pool::ManagedConnection;
 
 type Result<T> = std::result::Result<T, MigrationError>;
 
