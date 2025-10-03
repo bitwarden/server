@@ -3,6 +3,7 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
@@ -64,7 +65,7 @@ public class RestartSubscriptionCommand(
                 {
                     organization.GatewaySubscriptionId = subscription.Id;
                     organization.Enabled = true;
-                    organization.ExpirationDate = subscription.CurrentPeriodEnd;
+                    organization.ExpirationDate = subscription.GetCurrentPeriodEnd();
                     organization.RevisionDate = DateTime.UtcNow;
                     await organizationRepository.ReplaceAsync(organization);
                     break;
@@ -81,7 +82,7 @@ public class RestartSubscriptionCommand(
                 {
                     user.GatewaySubscriptionId = subscription.Id;
                     user.Premium = true;
-                    user.PremiumExpirationDate = subscription.CurrentPeriodEnd;
+                    user.PremiumExpirationDate = subscription.GetCurrentPeriodEnd();
                     user.RevisionDate = DateTime.UtcNow;
                     await userRepository.ReplaceAsync(user);
                     break;

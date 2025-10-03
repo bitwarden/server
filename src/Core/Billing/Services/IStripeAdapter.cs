@@ -12,27 +12,15 @@ public interface IStripeAdapter
     Task<Stripe.Customer> GetCustomerAsync(string id, Stripe.CustomerGetOptions options = null);
     Task<Stripe.Customer> UpdateCustomerAsync(string id, Stripe.CustomerUpdateOptions options = null);
     Task<Stripe.Customer> DeleteCustomerAsync(string id);
-    Task<List<PaymentMethod>> ListCustomerPaymentMethods(string id, CustomerListPaymentMethodsOptions options = null);
+    Task<List<PaymentMethod>> ListCustomerPaymentMethods(string id, CustomerPaymentMethodListOptions options = null);
     Task<CustomerBalanceTransaction> CreateCustomerBalanceTransactionAsync(string customerId,
         CustomerBalanceTransactionCreateOptions options);
     Task<Stripe.Subscription> CreateSubscriptionAsync(Stripe.SubscriptionCreateOptions subscriptionCreateOptions);
     Task<Stripe.Subscription> GetSubscriptionAsync(string id, Stripe.SubscriptionGetOptions options = null);
     Task<Stripe.StripeList<Stripe.Tax.Registration>> ListTaxRegistrationsAsync(Stripe.Tax.RegistrationListOptions options = null);
-
-    /// <summary>
-    /// Retrieves a subscription object for a provider.
-    /// </summary>
-    /// <param name="id">The subscription ID.</param>
-    /// <param name="providerId">The provider ID.</param>
-    /// <param name="options">Additional options.</param>
-    /// <returns>The subscription object.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when the subscription doesn't belong to the provider.</exception>
-    Task<Stripe.Subscription> GetProviderSubscriptionAsync(string id, Guid providerId, Stripe.SubscriptionGetOptions options = null);
-
-    Task<List<Stripe.Subscription>> ListSubscriptionsAsync(StripeSubscriptionListOptions subscriptionSearchOptions);
+    Task CustomerDeleteDiscountAsync(string customerId, CustomerDeleteDiscountOptions options = null);
     Task<Stripe.Subscription> UpdateSubscriptionAsync(string id, Stripe.SubscriptionUpdateOptions options = null);
     Task<Stripe.Subscription> CancelSubscriptionAsync(string Id, Stripe.SubscriptionCancelOptions options = null);
-    Task<Stripe.Invoice> GetUpcomingInvoiceAsync(Stripe.UpcomingInvoiceOptions options);
     Task<Stripe.Invoice> GetInvoiceAsync(string id, Stripe.InvoiceGetOptions options);
     Task<List<Stripe.Invoice>> ListInvoicesAsync(StripeInvoiceListOptions options);
     Task<Stripe.Invoice> CreateInvoicePreviewAsync(InvoiceCreatePreviewOptions options);

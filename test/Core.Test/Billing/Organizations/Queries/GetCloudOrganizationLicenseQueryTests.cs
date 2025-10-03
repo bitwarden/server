@@ -26,25 +26,27 @@ public class GetCloudOrganizationLicenseQueryTests
 {
     [Theory]
     [BitAutoData]
-    public async Task GetLicenseAsync_InvalidInstallationId_Throws(SutProvider<GetCloudOrganizationLicenseQuery> sutProvider,
+    public async Task GetLicenseAsync_InvalidInstallationId_Throws(
+        SutProvider<GetCloudOrganizationLicenseQuery> sutProvider,
         Organization organization, Guid installationId, int version)
     {
         sutProvider.GetDependency<IInstallationRepository>().GetByIdAsync(installationId).ReturnsNull();
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            async () => await sutProvider.Sut.GetLicenseAsync(organization, installationId, version));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(async () =>
+            await sutProvider.Sut.GetLicenseAsync(organization, installationId, version));
         Assert.Contains("Invalid installation id", exception.Message);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task GetLicenseAsync_DisabledOrganization_Throws(SutProvider<GetCloudOrganizationLicenseQuery> sutProvider,
+    public async Task GetLicenseAsync_DisabledOrganization_Throws(
+        SutProvider<GetCloudOrganizationLicenseQuery> sutProvider,
         Organization organization, Guid installationId, Installation installation)
     {
         installation.Enabled = false;
         sutProvider.GetDependency<IInstallationRepository>().GetByIdAsync(installationId).Returns(installation);
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            async () => await sutProvider.Sut.GetLicenseAsync(organization, installationId));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(async () =>
+            await sutProvider.Sut.GetLicenseAsync(organization, installationId));
         Assert.Contains("Invalid installation id", exception.Message);
     }
 
@@ -70,7 +72,8 @@ public class GetCloudOrganizationLicenseQueryTests
 
     [Theory]
     [BitAutoData]
-    public async Task GetLicenseAsync_WhenFeatureFlagEnabled_CreatesToken(SutProvider<GetCloudOrganizationLicenseQuery> sutProvider,
+    public async Task GetLicenseAsync_WhenFeatureFlagEnabled_CreatesToken(
+        SutProvider<GetCloudOrganizationLicenseQuery> sutProvider,
         Organization organization, Guid installationId, Installation installation, SubscriptionInfo subInfo,
         byte[] licenseSignature, string token)
     {
@@ -89,7 +92,8 @@ public class GetCloudOrganizationLicenseQueryTests
 
     [Theory]
     [BitAutoData]
-    public async Task GetLicenseAsync_MSPManagedOrganization_UsesProviderSubscription(SutProvider<GetCloudOrganizationLicenseQuery> sutProvider,
+    public async Task GetLicenseAsync_MSPManagedOrganization_UsesProviderSubscription(
+        SutProvider<GetCloudOrganizationLicenseQuery> sutProvider,
         Organization organization, Guid installationId, Installation installation, SubscriptionInfo subInfo,
         byte[] licenseSignature, Provider provider)
     {
@@ -98,8 +102,17 @@ public class GetCloudOrganizationLicenseQueryTests
 
         subInfo.Subscription = new SubscriptionInfo.BillingSubscription(new Subscription
         {
-            CurrentPeriodStart = DateTime.UtcNow,
-            CurrentPeriodEnd = DateTime.UtcNow.AddMonths(1)
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        CurrentPeriodStart = DateTime.UtcNow,
+                        CurrentPeriodEnd = DateTime.UtcNow.AddMonths(1)
+                    }
+                ]
+            }
         });
 
         installation.Enabled = true;

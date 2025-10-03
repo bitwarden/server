@@ -55,6 +55,9 @@ public class StripeAdapter : IStripeAdapter
         return _customerService.CreateAsync(options);
     }
 
+    public Task CustomerDeleteDiscountAsync(string customerId, CustomerDeleteDiscountOptions options = null) =>
+        _customerService.DeleteDiscountAsync(customerId, options);
+
     public Task<Customer> GetCustomerAsync(string id, CustomerGetOptions options = null)
     {
         return _customerService.GetAsync(id, options);
@@ -71,7 +74,7 @@ public class StripeAdapter : IStripeAdapter
     }
 
     public async Task<List<PaymentMethod>> ListCustomerPaymentMethods(string id,
-        CustomerListPaymentMethodsOptions options = null)
+        CustomerPaymentMethodListOptions options = null)
     {
         var paymentMethods = await _customerService.ListPaymentMethodsAsync(id, options);
         return paymentMethods.Data;
@@ -121,30 +124,9 @@ public class StripeAdapter : IStripeAdapter
         return _subscriptionService.CancelAsync(id, options);
     }
 
-    public async Task<List<Subscription>> ListSubscriptionsAsync(StripeSubscriptionListOptions options)
-    {
-        if (!options.SelectAll)
-        {
-            return (await _subscriptionService.ListAsync(options.ToStripeApiOptions())).Data;
-        }
-
-        options.Limit = 100;
-        var items = new List<Subscription>();
-        await foreach (var i in _subscriptionService.ListAutoPagingAsync(options.ToStripeApiOptions()))
-        {
-            items.Add(i);
-        }
-        return items;
-    }
-
     /*************
      ** INVOICE **
      *************/
-    public Task<Invoice> GetUpcomingInvoiceAsync(UpcomingInvoiceOptions options)
-    {
-        return _invoiceService.UpcomingAsync(options);
-    }
-
     public Task<Invoice> GetInvoiceAsync(string id, InvoiceGetOptions options)
     {
         return _invoiceService.GetAsync(id, options);
