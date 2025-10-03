@@ -230,6 +230,8 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
         eventsTable.Columns.Add(serviceAccountIdColumn);
         var projectIdColumn = new DataColumn(nameof(e.ProjectId), typeof(Guid));
         eventsTable.Columns.Add(projectIdColumn);
+        var grantedServiceAccountIdColumn = new DataColumn(nameof(e.GrantedServiceAccountId), typeof(Guid));
+        eventsTable.Columns.Add(grantedServiceAccountIdColumn);
 
         foreach (DataColumn col in eventsTable.Columns)
         {
@@ -263,6 +265,7 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
             row[secretIdColumn] = ev.SecretId.HasValue ? ev.SecretId.Value : DBNull.Value;
             row[serviceAccountIdColumn] = ev.ServiceAccountId.HasValue ? ev.ServiceAccountId.Value : DBNull.Value;
             row[projectIdColumn] = ev.ProjectId.HasValue ? ev.ProjectId.Value : DBNull.Value;
+            row[grantedServiceAccountIdColumn] = ev.GrantedServiceAccountId.HasValue ? ev.GrantedServiceAccountId.Value : DBNull.Value;
             eventsTable.Rows.Add(row);
         }
 
