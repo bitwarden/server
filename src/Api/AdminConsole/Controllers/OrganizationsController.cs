@@ -141,7 +141,7 @@ public class OrganizationsController : Controller
     }
 
     [HttpGet("")]
-    public async Task<ListResponseModel<ProfileOrganizationResponseModel>> GetUser()
+    public async Task<ListResponseModel<ProfileMemberOrganizationResponseModel>> GetUser()
     {
         var userId = _userService.GetProperUserId(User).Value;
         var organizations = await _organizationUserRepository.GetManyDetailsByUserAsync(userId,
@@ -150,8 +150,8 @@ public class OrganizationsController : Controller
         var organizationsClaimingActiveUser = await _userService.GetOrganizationsClaimingUserAsync(userId);
         var organizationIdsClaimingActiveUser = organizationsClaimingActiveUser.Select(o => o.Id);
 
-        var responses = organizations.Select(o => new ProfileOrganizationResponseModel(o, organizationIdsClaimingActiveUser));
-        return new ListResponseModel<ProfileOrganizationResponseModel>(responses);
+        var responses = organizations.Select(o => new ProfileMemberOrganizationResponseModel(o, organizationIdsClaimingActiveUser));
+        return new ListResponseModel<ProfileMemberOrganizationResponseModel>(responses);
     }
 
     [HttpGet("{identifier}/auto-enroll-status")]

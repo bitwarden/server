@@ -1,4 +1,4 @@
-CREATE VIEW [dbo].[ProviderUserProviderOrganizationDetailsView]
+CREATE OR ALTER VIEW [dbo].[ProviderUserProviderOrganizationDetailsView]
 AS
 SELECT
     PU.[UserId],
@@ -54,3 +54,10 @@ INNER JOIN
     [dbo].[Provider] P ON P.[Id] = PU.[ProviderId]
 LEFT JOIN
     [dbo].[SsoConfig] SS ON SS.[OrganizationId] = O.[Id]
+GO
+
+IF OBJECT_ID('[dbo].[ProviderUserProviderOrganizationDetails_ReadByUserIdStatus]') IS NOT NULL
+BEGIN
+    EXECUTE sp_refreshsqlmodule N'[dbo].[ProviderUserProviderOrganizationDetails_ReadByUserIdStatus]';
+END
+GO

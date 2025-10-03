@@ -41,7 +41,7 @@ public class ProfileResponseModel : ResponseModel
         AvatarColor = user.AvatarColor;
         CreationDate = user.CreationDate;
         VerifyDevices = user.VerifyDevices;
-        Organizations = organizationsUserDetails?.Select(o => new ProfileOrganizationResponseModel(o, organizationIdsClaimingUser));
+        Organizations = organizationsUserDetails?.Select(o => new ProfileMemberOrganizationResponseModel(o, organizationIdsClaimingUser));
         Providers = providerUserDetails?.Select(p => new ProfileProviderResponseModel(p));
         ProviderOrganizations =
             providerUserOrganizationDetails?.Select(po => new ProfileProviderOrganizationResponseModel(po));
@@ -67,7 +67,7 @@ public class ProfileResponseModel : ResponseModel
     public string AvatarColor { get; set; }
     public DateTime CreationDate { get; set; }
     public bool VerifyDevices { get; set; }
-    public IEnumerable<ProfileOrganizationResponseModel> Organizations { get; set; }
+    public IEnumerable<ProfileMemberOrganizationResponseModel> Organizations { get; set; }
     public IEnumerable<ProfileProviderResponseModel> Providers { get; set; }
     public IEnumerable<ProfileProviderOrganizationResponseModel> ProviderOrganizations { get; set; }
 }
