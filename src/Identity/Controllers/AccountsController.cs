@@ -32,8 +32,7 @@ namespace Bit.Identity.Controllers;
 [ExceptionHandlerFilter]
 public class AccountsController : Controller
 {
-    private readonly ICurrentContext _currentContext;
-    private readonly ILogger<AccountsController> _logger;
+    private readonly ICurrentContext _currentContext;   
     private readonly IUserRepository _userRepository;
     private readonly IRegisterUserCommand _registerUserCommand;
     private readonly IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> _assertionOptionsDataProtector;
@@ -78,8 +77,7 @@ public class AccountsController : Controller
     ];
 
     public AccountsController(
-        ICurrentContext currentContext,
-        ILogger<AccountsController> logger,
+        ICurrentContext currentContext,        
         IUserRepository userRepository,
         IRegisterUserCommand registerUserCommand,
         IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> assertionOptionsDataProtector,
@@ -90,8 +88,7 @@ public class AccountsController : Controller
         GlobalSettings globalSettings
         )
     {
-        _currentContext = currentContext;
-        _logger = logger;
+        _currentContext = currentContext;        
         _userRepository = userRepository;
         _registerUserCommand = registerUserCommand;
         _assertionOptionsDataProtector = assertionOptionsDataProtector;
