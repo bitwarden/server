@@ -25,6 +25,7 @@ public interface ICipherRepository : IRepository<Cipher, Guid>
     Task<bool> ReplaceAsync(Cipher obj, IEnumerable<Guid> collectionIds);
     Task UpdatePartialAsync(Guid id, Guid userId, Guid? folderId, bool favorite);
     Task UpdateAttachmentAsync(CipherAttachment attachment);
+    Task<DateTime> ArchiveAsync(IEnumerable<Guid> ids, Guid userId);
     Task DeleteAttachmentAsync(Guid cipherId, string attachmentId);
     Task DeleteAsync(IEnumerable<Guid> ids, Guid userId);
     Task DeleteByIdsOrganizationIdAsync(IEnumerable<Guid> ids, Guid organizationId);
@@ -32,14 +33,31 @@ public interface ICipherRepository : IRepository<Cipher, Guid>
     Task DeleteByUserIdAsync(Guid userId);
     Task DeleteByOrganizationIdAsync(Guid organizationId);
     Task UpdateCiphersAsync(Guid userId, IEnumerable<Cipher> ciphers);
+    /// <inheritdoc cref="UpdateCiphersAsync(Guid, IEnumerable{Cipher})"/>
+    /// <remarks>
+    /// This version uses the bulk resource creation service to create the temp table.
+    /// </remarks>
+    Task UpdateCiphersAsync_vNext(Guid userId, IEnumerable<Cipher> ciphers);
     /// <summary>
     /// Create ciphers and folders for the specified UserId. Must not be used to create organization owned items.
     /// </summary>
     Task CreateAsync(Guid userId, IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders);
+    /// <inheritdoc cref="CreateAsync(Guid, IEnumerable{Cipher}, IEnumerable{Folder})"/>
+    /// <remarks>
+    /// This version uses the bulk resource creation service to create the temp tables.
+    /// </remarks>
+    Task CreateAsync_vNext(Guid userId, IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders);
     Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections,
+        IEnumerable<CollectionCipher> collectionCiphers, IEnumerable<CollectionUser> collectionUsers);
+    /// <inheritdoc cref="CreateAsync(IEnumerable{Cipher}, IEnumerable{Collection}, IEnumerable{CollectionCipher}, IEnumerable{CollectionUser})"/>
+    /// <remarks>
+    /// This version uses the bulk resource creation service to create the temp tables.
+    /// </remarks>
+    Task CreateAsync_vNext(IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections,
         IEnumerable<CollectionCipher> collectionCiphers, IEnumerable<CollectionUser> collectionUsers);
     Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId);
     Task SoftDeleteByIdsOrganizationIdAsync(IEnumerable<Guid> ids, Guid organizationId);
+    Task<DateTime> UnarchiveAsync(IEnumerable<Guid> ids, Guid userId);
     Task<DateTime> RestoreAsync(IEnumerable<Guid> ids, Guid userId);
     Task<DateTime> RestoreByIdsOrganizationIdAsync(IEnumerable<Guid> ids, Guid organizationId);
     Task DeleteDeletedAsync(DateTime deletedDateBefore);
@@ -55,7 +73,7 @@ public interface ICipherRepository : IRepository<Cipher, Guid>
         Guid userId);
 
     /// <summary>
-    /// Returns the users and the cipher ids for security tawsks that are applicable to them.
+    /// Returns the users and the cipher ids for security tasks that are applicable to them.
     ///
     /// Security tasks are actionable when a user has manage access to the associated cipher.
     /// </summary>
@@ -67,5 +85,17 @@ public interface ICipherRepository : IRepository<Cipher, Guid>
     /// <param name="userId">The user that initiated the key rotation</param>
     /// <param name="ciphers">A list of ciphers with updated data</param>
     UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(Guid userId,
+        IEnumerable<Cipher> ciphers);
+
+    /// <summary>
+    /// Returns all ciphers belonging to the organization excluding those with default collections
+    /// </summary>
+    Task<IEnumerable<CipherOrganizationDetailsWithCollections>>
+    GetManyCipherOrganizationDetailsExcludingDefaultCollectionsAsync(Guid organizationId);
+    /// <inheritdoc cref="UpdateForKeyRotation(Guid, IEnumerable{Cipher})"/>
+    /// <remarks>
+    /// This version uses the bulk resource creation service to create the temp table.
+    /// </remarks>
+    UpdateEncryptedDataForKeyRotation UpdateForKeyRotation_vNext(Guid userId,
         IEnumerable<Cipher> ciphers);
 }

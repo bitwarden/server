@@ -3,11 +3,13 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Mail;
 using Bit.Core.Vault.Models.Data;
+using Core.Auth.Enums;
 
 namespace Bit.Core.Services;
 
@@ -86,7 +88,17 @@ public class NoopMailService : IMailService
     public Task SendOrganizationUserRevokedForPolicySingleOrgEmailAsync(string organizationName, string email) =>
         Task.CompletedTask;
 
-    public Task SendTwoFactorEmailAsync(string email, string accountEmail, string token, string deviceIp, string deviceType, bool authentication = true)
+    public Task SendTwoFactorEmailAsync(string email, string accountEmail, string token, string deviceIp, string deviceType, TwoFactorEmailPurpose purpose)
+    {
+        return Task.FromResult(0);
+    }
+
+    public Task SendSendEmailOtpEmailAsync(string email, string token, string subject)
+    {
+        return Task.FromResult(0);
+    }
+
+    public Task SendFailedTwoFactorAttemptEmailAsync(string email, TwoFactorProviderType failedType, DateTime utcNow, string ip)
     {
         return Task.FromResult(0);
     }
@@ -124,6 +136,15 @@ public class NoopMailService : IMailService
         DateTime dueDate,
         List<string> items,
         bool mentionInvoices) => Task.FromResult(0);
+
+    public Task SendProviderInvoiceUpcoming(
+        IEnumerable<string> emails,
+        decimal amount,
+        DateTime dueDate,
+        List<string> items,
+        string? collectionMethod = null,
+        bool hasPaymentMethod = true,
+        string? paymentMethodDescription = null) => Task.FromResult(0);
 
     public Task SendPaymentFailedAsync(string email, decimal amount, bool mentionInvoices)
     {

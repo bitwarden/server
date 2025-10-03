@@ -1,4 +1,7 @@
-﻿using Bit.Core.Enums;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Enums;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 
@@ -85,9 +88,9 @@ public class LocalSendStorageService : ISendFileStorageService
     public Task<string> GetSendFileUploadUrlAsync(Send send, string fileId)
         => Task.FromResult($"/sends/{send.Id}/file/{fileId}");
 
-    public Task<(bool, long?)> ValidateFileAsync(Send send, string fileId, long expectedFileSize, long leeway)
+    public Task<(bool, long)> ValidateFileAsync(Send send, string fileId, long minimum, long maximum)
     {
-        long? length = null;
+        long length = -1;
         var path = FilePath(send, fileId);
         if (!File.Exists(path))
         {
@@ -95,11 +98,7 @@ public class LocalSendStorageService : ISendFileStorageService
         }
 
         length = new FileInfo(path).Length;
-        if (expectedFileSize < length - leeway || expectedFileSize > length + leeway)
-        {
-            return Task.FromResult((false, length));
-        }
-
-        return Task.FromResult((true, length));
+        var valid = minimum < length || length < maximum;
+        return Task.FromResult((valid, length));
     }
 }

@@ -19,7 +19,6 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
-using Bit.Core.Models.StaticStore;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -30,7 +29,6 @@ using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Xunit;
 using static Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Helpers.InviteUserOrganizationValidationRequestHelpers;
-using OrganizationUserInvite = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models.OrganizationUserInvite;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 
@@ -54,7 +52,7 @@ public class InviteOrganizationUserCommandTests
 
         var request = new InviteOrganizationUsersRequest(
             invites: [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: user.Email,
                     assignedCollections: [],
                     groups: [],
@@ -82,10 +80,6 @@ public class InviteOrganizationUserCommandTests
         Assert.IsType<Failure<ScimInviteOrganizationUsersResponse>>(result);
         Assert.Equal(NoUsersToInviteError.Code, (result as Failure<ScimInviteOrganizationUsersResponse>)!.Error.Message);
 
-        await sutProvider.GetDependency<IPaymentService>()
-            .DidNotReceiveWithAnyArgs()
-            .AdjustSeatsAsync(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>());
-
         await sutProvider.GetDependency<ISendOrganizationInvitesCommand>()
             .DidNotReceiveWithAnyArgs()
             .SendInvitesAsync(Arg.Any<SendInvitesRequest>());
@@ -112,7 +106,7 @@ public class InviteOrganizationUserCommandTests
 
         var request = new InviteOrganizationUsersRequest(
             invites: [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: orgUser.Email,
                     assignedCollections: [],
                     groups: [],
@@ -182,7 +176,7 @@ public class InviteOrganizationUserCommandTests
 
         var request = new InviteOrganizationUsersRequest(
             invites: [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: user.Email,
                     assignedCollections: [],
                     groups: [],
@@ -257,7 +251,7 @@ public class InviteOrganizationUserCommandTests
 
         var request = new InviteOrganizationUsersRequest(
             invites: [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: user.Email,
                     assignedCollections: [],
                     groups: [],
@@ -334,7 +328,7 @@ public class InviteOrganizationUserCommandTests
         var request = new InviteOrganizationUsersRequest(
             invites:
             [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: user.Email,
                     assignedCollections: [],
                     groups: [],
@@ -411,7 +405,7 @@ public class InviteOrganizationUserCommandTests
 
         var request = new InviteOrganizationUsersRequest(
             invites: [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: user.Email,
                     assignedCollections: [],
                     groups: [],
@@ -459,10 +453,7 @@ public class InviteOrganizationUserCommandTests
         // Assert
         Assert.IsType<Success<ScimInviteOrganizationUsersResponse>>(result);
 
-        await sutProvider.GetDependency<IPaymentService>()
-            .AdjustSeatsAsync(organization, inviteOrganization.Plan, passwordManagerUpdate.UpdatedSeatTotal!.Value);
-
-        await orgRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(x => x.Seats == passwordManagerUpdate.UpdatedSeatTotal));
+        await orgRepository.Received(1).IncrementSeatCountAsync(organization.Id, passwordManagerUpdate.SeatsRequiredToAdd, request.PerformedAt.UtcDateTime);
 
         await sutProvider.GetDependency<IApplicationCacheService>()
             .Received(1)
@@ -492,7 +483,7 @@ public class InviteOrganizationUserCommandTests
 
         var request = new InviteOrganizationUsersRequest(
             invites: [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: user.Email,
                     assignedCollections: [],
                     groups: [],
@@ -566,7 +557,7 @@ public class InviteOrganizationUserCommandTests
 
         var request = new InviteOrganizationUsersRequest(
             invites: [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: user.Email,
                     assignedCollections: [],
                     groups: [],
@@ -633,11 +624,7 @@ public class InviteOrganizationUserCommandTests
             .UpdateSubscriptionAsync(Arg.Any<SecretsManagerSubscriptionUpdate>());
 
         // PM revert
-        await sutProvider.GetDependency<IPaymentService>()
-            .Received(2)
-            .AdjustSeatsAsync(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>());
-
-        await orgRepository.Received(2).ReplaceAsync(Arg.Any<Organization>());
+        await orgRepository.Received(1).ReplaceAsync(Arg.Any<Organization>());
 
         await sutProvider.GetDependency<IApplicationCacheService>().Received(2)
             .UpsertOrganizationAbilityAsync(Arg.Any<Organization>());
@@ -669,7 +656,7 @@ public class InviteOrganizationUserCommandTests
 
         var request = new InviteOrganizationUsersRequest(
             invites: [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: user.Email,
                     assignedCollections: [],
                     groups: [],
@@ -768,7 +755,7 @@ public class InviteOrganizationUserCommandTests
 
         var request = new InviteOrganizationUsersRequest(
             invites: [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: user.Email,
                     assignedCollections: [],
                     groups: [],
@@ -863,7 +850,7 @@ public class InviteOrganizationUserCommandTests
         var request = new InviteOrganizationUsersRequest(
             invites:
             [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: user.Email,
                     assignedCollections: [],
                     groups: [],
@@ -942,7 +929,7 @@ public class InviteOrganizationUserCommandTests
         var request = new InviteOrganizationUsersRequest(
             invites:
             [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: user.Email,
                     assignedCollections: [],
                     groups: [],

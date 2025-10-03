@@ -57,8 +57,8 @@ public class OrganizationRepositoryTests
         var organization = await organizationRepository.CreateAsync(new Organization
         {
             Name = $"Test Org {id}",
-            BillingEmail = user1.Email, // TODO: EF does not enforce this being NOT NULl
-            Plan = "Test", // TODO: EF does not enforce this being NOT NULl
+            BillingEmail = user1.Email, // TODO: EF does not enforce this being NOT NULL
+            Plan = "Test", // TODO: EF does not enforce this being NOT NULL
             PrivateKey = "privatekey",
         });
 
@@ -422,5 +422,112 @@ public class OrganizationRepositoryTests
         Assert.Equal(0, result.Users);
         Assert.Equal(0, result.Sponsored);
         Assert.Equal(0, result.Total);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task IncrementSeatCountAsync_IncrementsSeatCount(IOrganizationRepository organizationRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        organization.Seats = 5;
+        await organizationRepository.ReplaceAsync(organization);
+
+        await organizationRepository.IncrementSeatCountAsync(organization.Id, 3, DateTime.UtcNow);
+
+        var result = await organizationRepository.GetByIdAsync(organization.Id);
+        Assert.NotNull(result);
+        Assert.Equal(8, result.Seats);
+    }
+
+    [DatabaseData, DatabaseTheory]
+    public async Task IncrementSeatCountAsync_GivenOrganizationHasNotChangedSeatCountBefore_WhenUpdatingOrgSeats_ThenSubscriptionUpdateIsSaved(
+        IOrganizationRepository sutRepository)
+    {
+        // Arrange
+        var organization = await sutRepository.CreateTestOrganizationAsync(seatCount: 2);
+        var requestDate = DateTime.UtcNow;
+
+        // Act
+        await sutRepository.IncrementSeatCountAsync(organization.Id, 1, requestDate);
+
+        // Assert
+        var result = (await sutRepository.GetOrganizationsForSubscriptionSyncAsync()).ToArray();
+
+        var updateResult = result.FirstOrDefault(x => x.Id == organization.Id);
+        Assert.NotNull(updateResult);
+        Assert.Equal(organization.Id, updateResult.Id);
+        Assert.True(updateResult.SyncSeats);
+        Assert.Equal(requestDate.ToString("yyyy-MM-dd HH:mm:ss"), updateResult.RevisionDate.ToString("yyyy-MM-dd HH:mm:ss"));
+
+        // Annul
+        await sutRepository.DeleteAsync(organization);
+    }
+
+    [DatabaseData, DatabaseTheory]
+    public async Task IncrementSeatCountAsync_GivenOrganizationHasChangedSeatCountBeforeAndRecordExists_WhenUpdatingOrgSeats_ThenSubscriptionUpdateIsSaved(
+        IOrganizationRepository sutRepository)
+    {
+        // Arrange
+        var organization = await sutRepository.CreateTestOrganizationAsync(seatCount: 2);
+        await sutRepository.IncrementSeatCountAsync(organization.Id, 1, DateTime.UtcNow);
+
+        var requestDate = DateTime.UtcNow;
+
+        // Act
+        await sutRepository.IncrementSeatCountAsync(organization.Id, 1, DateTime.UtcNow);
+
+        // Assert
+        var result = (await sutRepository.GetOrganizationsForSubscriptionSyncAsync()).ToArray();
+        var updateResult = result.FirstOrDefault(x => x.Id == organization.Id);
+        Assert.NotNull(updateResult);
+        Assert.Equal(organization.Id, updateResult.Id);
+        Assert.True(updateResult.SyncSeats);
+        Assert.Equal(requestDate.ToString("yyyy-MM-dd HH:mm:ss"), updateResult.RevisionDate.ToString("yyyy-MM-dd HH:mm:ss"));
+
+        // Annul
+        await sutRepository.DeleteAsync(organization);
+    }
+
+    [DatabaseData, DatabaseTheory]
+    public async Task GetOrganizationsForSubscriptionSyncAsync_GivenOrganizationHasChangedSeatCount_WhenGettingOrgsToUpdate_ThenReturnsOrgSubscriptionUpdate(
+        IOrganizationRepository sutRepository)
+    {
+        // Arrange
+        var organization = await sutRepository.CreateTestOrganizationAsync(seatCount: 2);
+        var requestDate = DateTime.UtcNow;
+        await sutRepository.IncrementSeatCountAsync(organization.Id, 1, requestDate);
+
+        // Act
+        var result = (await sutRepository.GetOrganizationsForSubscriptionSyncAsync()).ToArray();
+
+        // Assert
+        var updateResult = result.FirstOrDefault(x => x.Id == organization.Id);
+        Assert.NotNull(updateResult);
+        Assert.Equal(organization.Id, updateResult.Id);
+        Assert.True(updateResult.SyncSeats);
+        Assert.Equal(requestDate.ToString("yyyy-MM-dd HH:mm:ss"), updateResult.RevisionDate.ToString("yyyy-MM-dd HH:mm:ss"));
+
+        // Annul
+        await sutRepository.DeleteAsync(organization);
+    }
+
+    [DatabaseData, DatabaseTheory]
+    public async Task UpdateSuccessfulOrganizationSyncStatusAsync_GivenOrganizationHasChangedSeatCount_WhenUpdatingStatus_ThenSuccessfullyUpdatesOrgSoItDoesntSync(
+        IOrganizationRepository sutRepository)
+    {
+        // Arrange
+        var organization = await sutRepository.CreateTestOrganizationAsync(seatCount: 2);
+        var requestDate = DateTime.UtcNow;
+        var syncDate = DateTime.UtcNow.AddMinutes(1);
+        await sutRepository.IncrementSeatCountAsync(organization.Id, 1, requestDate);
+
+        // Act
+        await sutRepository.UpdateSuccessfulOrganizationSyncStatusAsync([organization.Id], syncDate);
+
+        // Assert
+        var result = (await sutRepository.GetOrganizationsForSubscriptionSyncAsync()).ToArray();
+        Assert.Null(result.FirstOrDefault(x => x.Id == organization.Id));
+
+        // Annul
+        await sutRepository.DeleteAsync(organization);
     }
 }

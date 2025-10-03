@@ -1,4 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
@@ -9,7 +12,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Context;
@@ -87,7 +90,7 @@ public class ProviderService : IProviderService
         _providerClientOrganizationSignUpCommand = providerClientOrganizationSignUpCommand;
     }
 
-    public async Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key, TaxInfo taxInfo, TokenizedPaymentSource tokenizedPaymentSource = null)
+    public async Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key, TokenizedPaymentMethod paymentMethod, BillingAddress billingAddress)
     {
         var owner = await _userService.GetUserByIdAsync(ownerUserId);
         if (owner == null)
@@ -112,24 +115,7 @@ public class ProviderService : IProviderService
             throw new BadRequestException("Invalid owner.");
         }
 
-        if (taxInfo == null || string.IsNullOrEmpty(taxInfo.BillingAddressCountry) || string.IsNullOrEmpty(taxInfo.BillingAddressPostalCode))
-        {
-            throw new BadRequestException("Both address and postal code are required to set up your provider.");
-        }
-
-        var requireProviderPaymentMethodDuringSetup =
-            _featureService.IsEnabled(FeatureFlagKeys.PM19956_RequireProviderPaymentMethodDuringSetup);
-
-        if (requireProviderPaymentMethodDuringSetup && tokenizedPaymentSource is not
-            {
-                Type: PaymentMethodType.BankAccount or PaymentMethodType.Card or PaymentMethodType.PayPal,
-                Token: not null and not ""
-            })
-        {
-            throw new BadRequestException("A payment method is required to set up your provider.");
-        }
-
-        var customer = await _providerBillingService.SetupCustomer(provider, taxInfo, tokenizedPaymentSource);
+        var customer = await _providerBillingService.SetupCustomer(provider, paymentMethod, billingAddress);
         provider.GatewayCustomerId = customer.Id;
         var subscription = await _providerBillingService.SetupSubscription(provider);
         provider.GatewaySubscriptionId = subscription.Id;
@@ -149,7 +135,15 @@ public class ProviderService : IProviderService
             throw new ArgumentException("Cannot create provider this way.");
         }
 
+        var existingProvider = await _providerRepository.GetByIdAsync(provider.Id);
+        var enabledStatusChanged = existingProvider != null && existingProvider.Enabled != provider.Enabled;
+
         await _providerRepository.ReplaceAsync(provider);
+
+        if (enabledStatusChanged && (provider.Type == ProviderType.Msp || provider.Type == ProviderType.BusinessUnit))
+        {
+            await UpdateClientOrganizationsEnabledStatusAsync(provider.Id, provider.Enabled);
+        }
     }
 
     public async Task<List<ProviderUser>> InviteUserAsync(ProviderUserInvite<string> invite)
@@ -723,6 +717,22 @@ public class ProviderService : IProviderService
                 break;
             default:
                 throw new BadRequestException($"Unsupported provider type {providerType}.");
+        }
+    }
+
+    private async Task UpdateClientOrganizationsEnabledStatusAsync(Guid providerId, bool enabled)
+    {
+        var providerOrganizations = await _providerOrganizationRepository.GetManyDetailsByProviderAsync(providerId);
+
+        foreach (var providerOrganization in providerOrganizations)
+        {
+            var organization = await _organizationRepository.GetByIdAsync(providerOrganization.OrganizationId);
+            if (organization != null && organization.Enabled != enabled)
+            {
+                organization.Enabled = enabled;
+                await _organizationRepository.ReplaceAsync(organization);
+                await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
+            }
         }
     }
 }

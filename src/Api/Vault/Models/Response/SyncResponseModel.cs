@@ -1,9 +1,13 @@
-﻿using Bit.Api.AdminConsole.Models.Response.Organizations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Api.Tools.Models.Response;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.Entities;
+using Bit.Core.KeyManagement.Models.Response;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
@@ -15,7 +19,7 @@ using Bit.Core.Vault.Models.Data;
 
 namespace Bit.Api.Vault.Models.Response;
 
-public class SyncResponseModel : ResponseModel
+public class SyncResponseModel() : ResponseModel("sync")
 {
     public SyncResponseModel(
         GlobalSettings globalSettings,
@@ -34,7 +38,7 @@ public class SyncResponseModel : ResponseModel
         bool excludeDomains,
         IEnumerable<Policy> policies,
         IEnumerable<Send> sends)
-        : base("sync")
+        : this()
     {
         Profile = new ProfileResponseModel(user, organizationUserDetails, providerUserDetails,
             providerUserOrganizationDetails, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationIdsClaimingingUser);
@@ -51,6 +55,23 @@ public class SyncResponseModel : ResponseModel
         Domains = excludeDomains ? null : new DomainsResponseModel(user, false);
         Policies = policies?.Select(p => new PolicyResponseModel(p)) ?? new List<PolicyResponseModel>();
         Sends = sends.Select(s => new SendResponseModel(s, globalSettings));
+        UserDecryption = new UserDecryptionResponseModel
+        {
+            MasterPasswordUnlock = user.HasMasterPassword()
+                ? new MasterPasswordUnlockResponseModel
+                {
+                    Kdf = new MasterPasswordUnlockKdfResponseModel
+                    {
+                        KdfType = user.Kdf,
+                        Iterations = user.KdfIterations,
+                        Memory = user.KdfMemory,
+                        Parallelism = user.KdfParallelism
+                    },
+                    MasterKeyEncryptedUserKey = user.Key!,
+                    Salt = user.Email.ToLowerInvariant()
+                }
+                : null
+        };
     }
 
     public ProfileResponseModel Profile { get; set; }
@@ -60,4 +81,5 @@ public class SyncResponseModel : ResponseModel
     public DomainsResponseModel Domains { get; set; }
     public IEnumerable<PolicyResponseModel> Policies { get; set; }
     public IEnumerable<SendResponseModel> Sends { get; set; }
+    public UserDecryptionResponseModel UserDecryption { get; set; }
 }

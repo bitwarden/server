@@ -1,4 +1,7 @@
-﻿using Bit.Core.AdminConsole.Enums;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
@@ -8,6 +11,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -28,6 +32,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
     private readonly IDeviceRepository _deviceRepository;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IFeatureService _featureService;
+    private readonly ICollectionRepository _collectionRepository;
 
     public ConfirmOrganizationUserCommand(
         IOrganizationRepository organizationRepository,
@@ -41,7 +46,8 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         IPolicyService policyService,
         IDeviceRepository deviceRepository,
         IPolicyRequirementQuery policyRequirementQuery,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        ICollectionRepository collectionRepository)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -55,12 +61,13 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         _deviceRepository = deviceRepository;
         _policyRequirementQuery = policyRequirementQuery;
         _featureService = featureService;
+        _collectionRepository = collectionRepository;
     }
 
     public async Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key,
-        Guid confirmingUserId)
+        Guid confirmingUserId, string defaultUserCollectionName = null)
     {
-        var result = await ConfirmUsersAsync(
+        var result = await SaveChangesToDatabaseAsync(
             organizationId,
             new Dictionary<Guid, string>() { { organizationUserId, key } },
             confirmingUserId);
@@ -75,10 +82,35 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         {
             throw new BadRequestException(error);
         }
+
+        await CreateDefaultCollectionAsync(orgUser, defaultUserCollectionName);
+
         return orgUser;
     }
 
     public async Task<List<Tuple<OrganizationUser, string>>> ConfirmUsersAsync(Guid organizationId, Dictionary<Guid, string> keys,
+        Guid confirmingUserId, string defaultUserCollectionName = null)
+    {
+        var result = await SaveChangesToDatabaseAsync(organizationId, keys, confirmingUserId);
+
+        var confirmedOrganizationUsers = result
+            .Where(r => string.IsNullOrEmpty(r.Item2))
+            .Select(r => r.Item1)
+            .ToList();
+
+        if (confirmedOrganizationUsers.Count == 1)
+        {
+            await CreateDefaultCollectionAsync(confirmedOrganizationUsers.Single(), defaultUserCollectionName);
+        }
+        else if (confirmedOrganizationUsers.Count > 1)
+        {
+            await CreateManyDefaultCollectionsAsync(organizationId, confirmedOrganizationUsers, defaultUserCollectionName);
+        }
+
+        return result;
+    }
+
+    private async Task<List<Tuple<OrganizationUser, string>>> SaveChangesToDatabaseAsync(Guid organizationId, Dictionary<Guid, string> keys,
         Guid confirmingUserId)
     {
         var selectedOrganizationUsers = await _organizationUserRepository.GetManyAsync(keys.Keys);
@@ -134,7 +166,6 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
 
                 await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
                 await _mailService.SendOrganizationConfirmedEmailAsync(organization.DisplayName(), user.Email, orgUser.AccessSecretsManager);
-                await DeleteAndPushUserRegistrationAsync(organizationId, user.Id);
                 succeededUsers.Add(orgUser);
                 result.Add(Tuple.Create(orgUser, ""));
             }
@@ -145,6 +176,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         }
 
         await _organizationUserRepository.ReplaceManyAsync(succeededUsers);
+        await DeleteAndPushUserRegistrationAsync(organizationId, succeededUsers.Select(u => u.UserId!.Value));
 
         return result;
     }
@@ -198,12 +230,15 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         }
     }
 
-    private async Task DeleteAndPushUserRegistrationAsync(Guid organizationId, Guid userId)
+    private async Task DeleteAndPushUserRegistrationAsync(Guid organizationId, IEnumerable<Guid> userIds)
     {
-        var devices = await GetUserDeviceIdsAsync(userId);
-        await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(devices,
-            organizationId.ToString());
-        await _pushNotificationService.PushSyncOrgKeysAsync(userId);
+        foreach (var userId in userIds)
+        {
+            var devices = await GetUserDeviceIdsAsync(userId);
+            await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(devices,
+                organizationId.ToString());
+            await _pushNotificationService.PushSyncOrgKeysAsync(userId);
+        }
     }
 
     private async Task<IEnumerable<string>> GetUserDeviceIdsAsync(Guid userId)
@@ -212,5 +247,83 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         return devices
             .Where(d => !string.IsNullOrWhiteSpace(d.PushToken))
             .Select(d => d.Id.ToString());
+    }
+
+    /// <summary>
+    /// Creates a default collection for a single user if required by the Organization Data Ownership policy.
+    /// </summary>
+    /// <param name="organizationUser">The organization user who has just been confirmed.</param>
+    /// <param name="defaultUserCollectionName">The encrypted default user collection name.</param>
+    private async Task CreateDefaultCollectionAsync(OrganizationUser organizationUser, string defaultUserCollectionName)
+    {
+        if (!_featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation))
+        {
+            return;
+        }
+
+        // Skip if no collection name provided (backwards compatibility)
+        if (string.IsNullOrWhiteSpace(defaultUserCollectionName))
+        {
+            return;
+        }
+
+        var organizationDataOwnershipPolicy =
+            await _policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(organizationUser.UserId!.Value);
+        if (!organizationDataOwnershipPolicy.RequiresDefaultCollectionOnConfirm(organizationUser.OrganizationId))
+        {
+            return;
+        }
+
+        var defaultCollection = new Collection
+        {
+            OrganizationId = organizationUser.OrganizationId,
+            Name = defaultUserCollectionName,
+            Type = CollectionType.DefaultUserCollection
+        };
+        var collectionUser = new CollectionAccessSelection
+        {
+            Id = organizationUser.Id,
+            ReadOnly = false,
+            HidePasswords = false,
+            Manage = true
+        };
+
+        await _collectionRepository.CreateAsync(defaultCollection, groups: null, users: [collectionUser]);
+    }
+
+    /// <summary>
+    /// Creates default collections for multiple users if required by the Organization Data Ownership policy.
+    /// </summary>
+    /// <param name="organizationId">The organization ID.</param>
+    /// <param name="confirmedOrganizationUsers">The confirmed organization users.</param>
+    /// <param name="defaultUserCollectionName">The encrypted default user collection name.</param>
+    private async Task CreateManyDefaultCollectionsAsync(Guid organizationId,
+        IEnumerable<OrganizationUser> confirmedOrganizationUsers, string defaultUserCollectionName)
+    {
+        if (!_featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation))
+        {
+            return;
+        }
+
+        // Skip if no collection name provided (backwards compatibility)
+        if (string.IsNullOrWhiteSpace(defaultUserCollectionName))
+        {
+            return;
+        }
+
+        var policyEligibleOrganizationUserIds =
+            await _policyRequirementQuery.GetManyByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(organizationId);
+
+        var eligibleOrganizationUserIds = confirmedOrganizationUsers
+            .Where(ou => policyEligibleOrganizationUserIds.Contains(ou.Id))
+            .Select(ou => ou.Id)
+            .ToList();
+
+        if (eligibleOrganizationUserIds.Count == 0)
+        {
+            return;
+        }
+
+        await _collectionRepository.UpsertDefaultCollectionsAsync(organizationId, eligibleOrganizationUserIds, defaultUserCollectionName);
     }
 }

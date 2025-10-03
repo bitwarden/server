@@ -1,4 +1,7 @@
-﻿using Bit.Api.AdminConsole.Authorization.Requirements;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Core.Context;
@@ -76,7 +79,6 @@ public class SelfHostedOrganizationSponsorshipsController : Controller
     }
 
     [HttpDelete("{sponsoringOrgId}")]
-    [HttpPost("{sponsoringOrgId}/delete")]
     public async Task RevokeSponsorship(Guid sponsoringOrgId)
     {
         var orgUser = await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrgId, _currentContext.UserId ?? default);
@@ -90,6 +92,13 @@ public class SelfHostedOrganizationSponsorshipsController : Controller
             .GetBySponsoringOrganizationUserIdAsync(orgUser.Id);
 
         await _revokeSponsorshipCommand.RevokeSponsorshipAsync(existingOrgSponsorship);
+    }
+
+    [HttpPost("{sponsoringOrgId}/delete")]
+    [Obsolete("This endpoint is deprecated. Use DELETE /{sponsoringOrgId} instead.")]
+    public async Task PostRevokeSponsorship(Guid sponsoringOrgId)
+    {
+        await RevokeSponsorship(sponsoringOrgId);
     }
 
     [HttpDelete("{sponsoringOrgId}/{sponsoredFriendlyName}/revoke")]

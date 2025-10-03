@@ -129,7 +129,7 @@ publish/
 # Publish Web Output
 *.[Pp]ublish.xml
 *.azurePubxml
-# TODO: Comment the next line if you want to checkin your web deploy settings 
+# TODO: Comment the next line if you want to checkin your web deploy settings
 # but database connection strings (with potential passwords) will be unencrypted
 *.pubxml
 *.publishproj
@@ -217,6 +217,7 @@ bitwarden_license/src/Sso/wwwroot/assets
 .idea/*
 **/**.swp
 .mono
+src/Core/MailTemplates/Mjml/out
 
 src/Admin/Admin.zip
 src/Api/Api.zip
@@ -228,3 +229,8 @@ src/Notifications/Notifications.zip
 bitwarden_license/src/Portal/Portal.zip
 bitwarden_license/src/Sso/Sso.zip
 **/src/**/flags.json
+
+# Generated swagger specs
+/identity.json
+/api.json
+/api.public.json

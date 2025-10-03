@@ -2,6 +2,7 @@
 using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.SecretsManager.Entities;
 using Bit.Core.Settings;
 using Bit.Core.Vault.Entities;
 using Dapper;
@@ -41,8 +42,30 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
             }, startDate, endDate, pageOptions);
     }
 
-    public async Task<PagedResult<IEvent>> GetManyByOrganizationActingUserAsync(Guid organizationId, Guid actingUserId,
+    public async Task<PagedResult<IEvent>> GetManyBySecretAsync(Secret secret,
         DateTime startDate, DateTime endDate, PageOptions pageOptions)
+    {
+        return await GetManyAsync($"[{Schema}].[Event_ReadPageBySecretId]",
+                  new Dictionary<string, object?>
+                  {
+                      ["@SecretId"] = secret.Id
+                  }, startDate, endDate, pageOptions);
+
+    }
+
+    public async Task<PagedResult<IEvent>> GetManyByProjectAsync(Project project,
+      DateTime startDate, DateTime endDate, PageOptions pageOptions)
+    {
+        return await GetManyAsync($"[{Schema}].[Event_ReadPageByProjectId]",
+                  new Dictionary<string, object?>
+                  {
+                      ["@ProjectId"] = project.Id
+                  }, startDate, endDate, pageOptions);
+
+    }
+
+    public async Task<PagedResult<IEvent>> GetManyByOrganizationActingUserAsync(Guid organizationId, Guid actingUserId,
+    DateTime startDate, DateTime endDate, PageOptions pageOptions)
     {
         return await GetManyAsync($"[{Schema}].[Event_ReadPageByOrganizationIdActingUserId]",
             new Dictionary<string, object?>
@@ -205,6 +228,10 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
         eventsTable.Columns.Add(secretIdColumn);
         var serviceAccountIdColumn = new DataColumn(nameof(e.ServiceAccountId), typeof(Guid));
         eventsTable.Columns.Add(serviceAccountIdColumn);
+        var projectIdColumn = new DataColumn(nameof(e.ProjectId), typeof(Guid));
+        eventsTable.Columns.Add(projectIdColumn);
+        var grantedServiceAccountIdColumn = new DataColumn(nameof(e.GrantedServiceAccountId), typeof(Guid));
+        eventsTable.Columns.Add(grantedServiceAccountIdColumn);
 
         foreach (DataColumn col in eventsTable.Columns)
         {
@@ -237,7 +264,8 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
             row[dateColumn] = ev.Date;
             row[secretIdColumn] = ev.SecretId.HasValue ? ev.SecretId.Value : DBNull.Value;
             row[serviceAccountIdColumn] = ev.ServiceAccountId.HasValue ? ev.ServiceAccountId.Value : DBNull.Value;
-
+            row[projectIdColumn] = ev.ProjectId.HasValue ? ev.ProjectId.Value : DBNull.Value;
+            row[grantedServiceAccountIdColumn] = ev.GrantedServiceAccountId.HasValue ? ev.GrantedServiceAccountId.Value : DBNull.Value;
             eventsTable.Rows.Add(row);
         }
 

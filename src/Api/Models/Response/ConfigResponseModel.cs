@@ -1,4 +1,6 @@
-﻿using Bit.Core;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Services;
@@ -43,8 +45,7 @@ public class ConfigResponseModel : ResponseModel
             Sso = globalSettings.BaseServiceUri.Sso
         };
         FeatureStates = featureService.GetAll();
-        var webPushEnabled = FeatureStates.TryGetValue(FeatureFlagKeys.WebPush, out var webPushEnabledValue) ? (bool)webPushEnabledValue : false;
-        Push = PushSettings.Build(webPushEnabled, globalSettings);
+        Push = PushSettings.Build(globalSettings);
         Settings = new ServerSettingsResponseModel
         {
             DisableUserRegistration = globalSettings.DisableUserRegistration
@@ -73,9 +74,9 @@ public class PushSettings
     public PushTechnologyType PushTechnology { get; private init; }
     public string VapidPublicKey { get; private init; }
 
-    public static PushSettings Build(bool webPushEnabled, IGlobalSettings globalSettings)
+    public static PushSettings Build(IGlobalSettings globalSettings)
     {
-        var vapidPublicKey = webPushEnabled ? globalSettings.WebPush.VapidPublicKey : null;
+        var vapidPublicKey = globalSettings.WebPush.VapidPublicKey;
         var pushTechnology = vapidPublicKey != null ? PushTechnologyType.WebPush : PushTechnologyType.SignalR;
         return new()
         {

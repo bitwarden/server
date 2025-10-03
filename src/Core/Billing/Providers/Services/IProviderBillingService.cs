@@ -1,11 +1,14 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Providers.Entities;
 using Bit.Core.Billing.Providers.Models;
 using Bit.Core.Billing.Tax.Models;
-using Bit.Core.Models.Business;
 using Stripe;
 
 namespace Bit.Core.Billing.Providers.Services;
@@ -76,16 +79,16 @@ public interface IProviderBillingService
         int seatAdjustment);
 
     /// <summary>
-    /// For use during the provider setup process, this method creates a Stripe <see cref="Stripe.Customer"/> for the specified <paramref name="provider"/> utilizing the provided <paramref name="taxInfo"/>.
+    /// For use during the provider setup process, this method creates a Stripe <see cref="Stripe.Customer"/> for the specified <paramref name="provider"/> utilizing the provided <paramref name="paymentMethod"/> and <paramref name="billingAddress"/>.
     /// </summary>
     /// <param name="provider">The <see cref="Provider"/> to create a Stripe customer for.</param>
-    /// <param name="taxInfo">The <see cref="TaxInfo"/> to use for calculating the customer's automatic tax.</param>
-    /// <param name="tokenizedPaymentSource">The <see cref="TokenizedPaymentSource"/> (ex. Credit Card) to attach to the customer.</param>
+    /// <param name="paymentMethod">The <see cref="TokenizedPaymentMethod"/> (e.g., Credit Card, Bank Account, or PayPal) to attach to the customer.</param>
+    /// <param name="billingAddress">The <see cref="BillingAddress"/> containing the customer's billing information including address and tax ID details.</param>
     /// <returns>The newly created <see cref="Stripe.Customer"/> for the <paramref name="provider"/>.</returns>
     Task<Customer> SetupCustomer(
         Provider provider,
-        TaxInfo taxInfo,
-        TokenizedPaymentSource tokenizedPaymentSource = null);
+        TokenizedPaymentMethod paymentMethod,
+        BillingAddress billingAddress);
 
     /// <summary>
     /// For use during the provider setup process, this method starts a Stripe <see cref="Stripe.Subscription"/> for the given <paramref name="provider"/>.

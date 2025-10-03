@@ -20,11 +20,13 @@
     [DomainName]             VARCHAR(256)     NULL,
     [SecretId]               UNIQUEIDENTIFIER NULL,
     [ServiceAccountId]       UNIQUEIDENTIFIER NULL,
+    [ProjectId]              UNIQUEIDENTIFIER NULL,
+    [GrantedServiceAccountId] UNIQUEIDENTIFIER NULL,
     CONSTRAINT [PK_Event] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 
 
 GO
 CREATE NONCLUSTERED INDEX [IX_Event_DateOrganizationIdUserId]
-    ON [dbo].[Event]([Date] DESC, [OrganizationId] ASC, [ActingUserId] ASC, [CipherId] ASC);
+    ON [dbo].[Event]([Date] DESC, [OrganizationId] ASC, [ActingUserId] ASC, [CipherId] ASC) INCLUDE ([ServiceAccountId], [GrantedServiceAccountId]);
 

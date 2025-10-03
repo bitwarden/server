@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Dirt.Reports.Models.Data;
-
 namespace Bit.Api.Dirt.Models.Response;
 
 public class MemberCipherDetailsResponseModel
@@ -15,12 +14,12 @@ public class MemberCipherDetailsResponseModel
     /// </summary>
     public IEnumerable<string> CipherIds { get; set; }
 
-    public MemberCipherDetailsResponseModel(MemberAccessCipherDetails memberAccessCipherDetails)
+    public MemberCipherDetailsResponseModel(RiskInsightsReportDetail reportDetail)
     {
-        this.UserGuid = memberAccessCipherDetails.UserGuid;
-        this.UserName = memberAccessCipherDetails.UserName;
-        this.Email = memberAccessCipherDetails.Email;
-        this.UsesKeyConnector = memberAccessCipherDetails.UsesKeyConnector;
-        this.CipherIds = memberAccessCipherDetails.CipherIds;
+        this.UserGuid = reportDetail.UserGuid;
+        this.UserName = reportDetail.UserName;
+        this.Email = reportDetail.Email;
+        this.UsesKeyConnector = reportDetail.UsesKeyConnector;
+        this.CipherIds = reportDetail.CipherIds;
     }
 }

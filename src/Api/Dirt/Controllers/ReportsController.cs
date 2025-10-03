@@ -1,7 +1,9 @@
 ﻿using Bit.Api.Dirt.Models;
 using Bit.Api.Dirt.Models.Response;
+using Bit.Api.Tools.Models.Response;
+using Bit.Core;
 using Bit.Core.Context;
-using Bit.Core.Dirt.Reports.Entities;
+using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Reports.Models.Data;
 using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
 using Bit.Core.Dirt.Reports.ReportFeatures.OrganizationReportMembers.Interfaces;
@@ -17,24 +19,36 @@ namespace Bit.Api.Dirt.Controllers;
 public class ReportsController : Controller
 {
     private readonly ICurrentContext _currentContext;
-    private readonly IMemberAccessCipherDetailsQuery _memberAccessCipherDetailsQuery;
+    private readonly IMemberAccessReportQuery _memberAccessReportQuery;
+    private readonly IRiskInsightsReportQuery _riskInsightsReportQuery;
     private readonly IAddPasswordHealthReportApplicationCommand _addPwdHealthReportAppCommand;
     private readonly IGetPasswordHealthReportApplicationQuery _getPwdHealthReportAppQuery;
     private readonly IDropPasswordHealthReportApplicationCommand _dropPwdHealthReportAppCommand;
+    private readonly IAddOrganizationReportCommand _addOrganizationReportCommand;
+    private readonly IGetOrganizationReportQuery _getOrganizationReportQuery;
+    private readonly ILogger<ReportsController> _logger;
 
     public ReportsController(
         ICurrentContext currentContext,
-        IMemberAccessCipherDetailsQuery memberAccessCipherDetailsQuery,
+        IMemberAccessReportQuery memberAccessReportQuery,
+        IRiskInsightsReportQuery riskInsightsReportQuery,
         IAddPasswordHealthReportApplicationCommand addPasswordHealthReportApplicationCommand,
         IGetPasswordHealthReportApplicationQuery getPasswordHealthReportApplicationQuery,
-        IDropPasswordHealthReportApplicationCommand dropPwdHealthReportAppCommand
+        IDropPasswordHealthReportApplicationCommand dropPwdHealthReportAppCommand,
+        IGetOrganizationReportQuery getOrganizationReportQuery,
+        IAddOrganizationReportCommand addOrganizationReportCommand,
+        ILogger<ReportsController> logger
     )
     {
         _currentContext = currentContext;
-        _memberAccessCipherDetailsQuery = memberAccessCipherDetailsQuery;
+        _memberAccessReportQuery = memberAccessReportQuery;
+        _riskInsightsReportQuery = riskInsightsReportQuery;
         _addPwdHealthReportAppCommand = addPasswordHealthReportApplicationCommand;
         _getPwdHealthReportAppQuery = getPasswordHealthReportApplicationQuery;
         _dropPwdHealthReportAppCommand = dropPwdHealthReportAppCommand;
+        _getOrganizationReportQuery = getOrganizationReportQuery;
+        _addOrganizationReportCommand = addOrganizationReportCommand;
+        _logger = logger;
     }
 
     /// <summary>
@@ -54,9 +68,9 @@ public class ReportsController : Controller
             throw new NotFoundException();
         }
 
-        var memberCipherDetails = await GetMemberCipherDetails(new MemberAccessCipherDetailsRequest { OrganizationId = orgId });
+        var riskDetails = await GetRiskInsightsReportDetails(new RiskInsightsReportRequest { OrganizationId = orgId });
 
-        var responses = memberCipherDetails.Select(x => new MemberCipherDetailsResponseModel(x));
+        var responses = riskDetails.Select(x => new MemberCipherDetailsResponseModel(x));
 
         return responses;
     }
@@ -69,31 +83,38 @@ public class ReportsController : Controller
     /// <returns>IEnumerable of MemberAccessReportResponseModel</returns>
     /// <exception cref="NotFoundException">If Access reports permission is not assigned</exception>
     [HttpGet("member-access/{orgId}")]
-    public async Task<IEnumerable<MemberAccessReportResponseModel>> GetMemberAccessReport(Guid orgId)
+    public async Task<IEnumerable<MemberAccessDetailReportResponseModel>> GetMemberAccessReport(Guid orgId)
     {
         if (!await _currentContext.AccessReports(orgId))
         {
+            _logger.LogInformation(Constants.BypassFiltersEventId,
+                "AccessReports Check - UserId: {userId} OrgId: {orgId} DeviceType: {deviceType}",
+                _currentContext.UserId, orgId, _currentContext.DeviceType);
             throw new NotFoundException();
         }
 
-        var memberCipherDetails = await GetMemberCipherDetails(new MemberAccessCipherDetailsRequest { OrganizationId = orgId });
+        _logger.LogInformation(Constants.BypassFiltersEventId,
+            "MemberAccessReportQuery starts - UserId: {userId} OrgId: {orgId} DeviceType: {deviceType}",
+            _currentContext.UserId, orgId, _currentContext.DeviceType);
 
-        var responses = memberCipherDetails.Select(x => new MemberAccessReportResponseModel(x));
+        var accessDetails = await _memberAccessReportQuery
+            .GetMemberAccessReportsAsync(new MemberAccessReportRequest { OrganizationId = orgId });
+
+        var responses = accessDetails.Select(x => new MemberAccessDetailReportResponseModel(x));
 
         return responses;
     }
 
     /// <summary>
-    /// Contains the organization member info, the cipher ids associated with the member,
-    /// and details on their collections, groups, and permissions
+    /// Gets the risk insights report details from the risk insights query. Associates a user to their cipher ids
     /// </summary>
-    /// <param name="request">Request to the MemberAccessCipherDetailsQuery</param>
-    /// <returns>IEnumerable of MemberAccessCipherDetails</returns>
-    private async Task<IEnumerable<MemberAccessCipherDetails>> GetMemberCipherDetails(MemberAccessCipherDetailsRequest request)
+    /// <param name="request">Request parameters</param>
+    /// <returns>A list of risk insights data associating the user to cipher ids</returns>
+    private async Task<IEnumerable<RiskInsightsReportDetail>> GetRiskInsightsReportDetails(
+        RiskInsightsReportRequest request)
     {
-        var memberCipherDetails =
-            await _memberAccessCipherDetailsQuery.GetMemberAccessCipherDetails(request);
-        return memberCipherDetails;
+        var riskDetails = await _riskInsightsReportQuery.GetRiskInsightsReportDetails(request);
+        return riskDetails;
     }
 
     /// <summary>
