@@ -95,7 +95,8 @@ public class SavePolicyCommandTests
                 Substitute.For<IPolicyRepository>(),
                 [new FakeSingleOrgPolicyValidator(), new FakeSingleOrgPolicyValidator()],
                 Substitute.For<TimeProvider>(),
-                Substitute.For<IPostSavePolicySideEffect>()));
+                Substitute.For<IOnPolicyPostUpsertEvent>(),
+                Substitute.For<IPolicyEventHandlerFactory>()));
         Assert.Contains("Duplicate PolicyValidator for SingleOrg policy", exception.Message);
     }
 
@@ -312,9 +313,9 @@ public class SavePolicyCommandTests
             .Received(1)
             .LogPolicyEventAsync(result, EventType.Policy_Updated);
 
-        await sutProvider.GetDependency<IPostSavePolicySideEffect>()
+        await sutProvider.GetDependency<IOnPolicyPostUpsertEvent>()
             .Received(1)
-            .ExecuteSideEffectsAsync(savePolicyModel, result, currentPolicy);
+            .ExecutePostUpsertSideEffectAsync(savePolicyModel, result, currentPolicy);
     }
 
     [Theory]
@@ -355,9 +356,9 @@ public class SavePolicyCommandTests
             .Received(1)
             .LogPolicyEventAsync(result, EventType.Policy_Updated);
 
-        await sutProvider.GetDependency<IPostSavePolicySideEffect>()
+        await sutProvider.GetDependency<IOnPolicyPostUpsertEvent>()
             .DidNotReceiveWithAnyArgs()
-            .ExecuteSideEffectsAsync(default!, default!, default!);
+            .ExecutePostUpsertSideEffectAsync(default!, default!, default!);
     }
 
     /// <summary>
@@ -368,7 +369,7 @@ public class SavePolicyCommandTests
         return new SutProvider<SavePolicyCommand>()
             .WithFakeTimeProvider()
             .SetDependency(policyValidators ?? [])
-            .SetDependency(Substitute.For<IPostSavePolicySideEffect>())
+            .SetDependency(Substitute.For<IOnPolicyPostUpsertEvent>())
             .Create();
     }
 

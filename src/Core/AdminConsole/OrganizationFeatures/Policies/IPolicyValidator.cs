@@ -12,7 +12,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 public interface IPolicyValidator
 {
     /// <summary>
-    /// The PolicyType that this definition relates to.
+    /// The policy type that the associated handler will handle.
     /// </summary>
     public PolicyType Type { get; }
 
