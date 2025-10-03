@@ -1,5 +1,5 @@
 {
   "packages": [
-    "components/hero"
+    "components/mj-bw-hero"
   ]
 }
