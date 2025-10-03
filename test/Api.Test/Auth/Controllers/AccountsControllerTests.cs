@@ -11,6 +11,7 @@ using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Kdf;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -616,6 +617,16 @@ public class AccountsControllerTests : IDisposable
 
     [Theory]
     [BitAutoData]
+    public async Task PostKdf_UserNotFound_ShouldFail(PasswordRequestModel model)
+    {
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult<User>(null));
+
+        // Act
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _sut.PostKdf(model));
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task PostKdf_WithNullAuthenticationData_ShouldFail(
         User user, PasswordRequestModel model)
     {
@@ -623,7 +634,9 @@ public class AccountsControllerTests : IDisposable
         model.AuthenticationData = null;
 
         // Act
-        await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostKdf(model));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostKdf(model));
+
+        Assert.Contains("AuthenticationData and UnlockData must be provided.", exception.Message);
     }
 
     [Theory]
@@ -635,7 +648,41 @@ public class AccountsControllerTests : IDisposable
         model.UnlockData = null;
 
         // Act
-        await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostKdf(model));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostKdf(model));
+
+        Assert.Contains("AuthenticationData and UnlockData must be provided.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostKdf_ChangeKdfFailed_ShouldFail(
+        User user, PasswordRequestModel model)
+    {
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+        _changeKdfCommand.ChangeKdfAsync(Arg.Any<User>(), Arg.Any<string>(),
+                Arg.Any<MasterPasswordAuthenticationData>(), Arg.Any<MasterPasswordUnlockData>())
+            .Returns(Task.FromResult(IdentityResult.Failed(new IdentityError { Description = "Change KDF failed" })));
+
+        // Act
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostKdf(model));
+
+        Assert.NotNull(exception.ModelState);
+        Assert.Contains("Change KDF failed",
+            exception.ModelState.Values.SelectMany(x => x.Errors).Select(x => x.ErrorMessage));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostKdf_ChangeKdfSuccess_NoError(
+        User user, PasswordRequestModel model)
+    {
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+        _changeKdfCommand.ChangeKdfAsync(Arg.Any<User>(), Arg.Any<string>(),
+                Arg.Any<MasterPasswordAuthenticationData>(), Arg.Any<MasterPasswordUnlockData>())
+            .Returns(Task.FromResult(IdentityResult.Success));
+
+        // Act
+        await _sut.PostKdf(model);
     }
 
     // Below are helper functions that currently belong to this

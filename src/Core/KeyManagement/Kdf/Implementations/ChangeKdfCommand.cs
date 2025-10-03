@@ -18,17 +18,22 @@ public class ChangeKdfCommand : IChangeKdfCommand
     private readonly IUserRepository _userRepository;
     private readonly IdentityErrorDescriber _identityErrorDescriber;
     private readonly ILogger<ChangeKdfCommand> _logger;
+    private readonly IFeatureService _featureService;
 
-    public ChangeKdfCommand(IUserService userService, IPushNotificationService pushService, IUserRepository userRepository, IdentityErrorDescriber describer, ILogger<ChangeKdfCommand> logger)
+    public ChangeKdfCommand(IUserService userService, IPushNotificationService pushService,
+        IUserRepository userRepository, IdentityErrorDescriber describer, ILogger<ChangeKdfCommand> logger,
+        IFeatureService featureService)
     {
         _userService = userService;
         _pushService = pushService;
         _userRepository = userRepository;
         _identityErrorDescriber = describer;
         _logger = logger;
+        _featureService = featureService;
     }
 
-    public async Task<IdentityResult> ChangeKdfAsync(User user, string masterPasswordAuthenticationHash, MasterPasswordAuthenticationData authenticationData, MasterPasswordUnlockData unlockData)
+    public async Task<IdentityResult> ChangeKdfAsync(User user, string masterPasswordAuthenticationHash,
+        MasterPasswordAuthenticationData authenticationData, MasterPasswordUnlockData unlockData)
     {
         ArgumentNullException.ThrowIfNull(user);
         if (!await _userService.CheckPasswordAsync(user, masterPasswordAuthenticationHash))
@@ -37,8 +42,8 @@ public class ChangeKdfCommand : IChangeKdfCommand
         }
 
         // Validate to prevent user account from becoming un-decryptable from invalid parameters
-        // 
-        // Prevent a de-synced salt value from creating an un-decryptable unlock method 
+        //
+        // Prevent a de-synced salt value from creating an un-decryptable unlock method
         authenticationData.ValidateSaltUnchangedForUser(user);
         unlockData.ValidateSaltUnchangedForUser(user);
 
@@ -47,11 +52,14 @@ public class ChangeKdfCommand : IChangeKdfCommand
         {
             throw new BadRequestException("KDF settings must be equal for authentication and unlock.");
         }
+
         var validationErrors = KdfSettingsValidator.Validate(unlockData.Kdf);
         if (validationErrors.Any())
         {
             throw new BadRequestException("KDF settings are invalid.");
         }
+
+        var logoutOnKdfChange = !_featureService.IsEnabled(FeatureFlagKeys.NoLogoutOnKdfChange);
 
         // Update the user with the new KDF settings
         // This updates the authentication data and unlock data for the user separately. Currently these still
@@ -68,7 +76,8 @@ public class ChangeKdfCommand : IChangeKdfCommand
         // This entire operation MUST be atomic to prevent a user from being locked out of their account.
         // Salt is ensured to be the same as unlock data, and the value stored in the account and not updated.
         // KDF is ensured to be the same as unlock data above and updated below.
-        var result = await _userService.UpdatePasswordHash(user, authenticationData.MasterPasswordAuthenticationHash);
+        var result = await _userService.UpdatePasswordHash(user, authenticationData.MasterPasswordAuthenticationHash,
+            refreshStamp: logoutOnKdfChange);
         if (!result.Succeeded)
         {
             _logger.LogWarning("Change KDF failed for user {userId}.", user.Id);
@@ -88,7 +97,15 @@ public class ChangeKdfCommand : IChangeKdfCommand
         user.LastKdfChangeDate = now;
 
         await _userRepository.ReplaceAsync(user);
-        await _pushService.PushLogOutAsync(user.Id);
+        if (logoutOnKdfChange)
+        {
+            await _pushService.PushLogOutAsync(user.Id);
+        }
+        else
+        {
+            await _pushService.PushSyncSettingsAsync(user.Id);
+        }
+
         return IdentityResult.Success;
     }
 }
