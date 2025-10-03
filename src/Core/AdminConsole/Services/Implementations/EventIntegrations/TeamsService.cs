@@ -112,7 +112,7 @@ public class TeamsService(
         return result?.Value ?? [];
     }
 
-    public async Task SendMessageToChannelAsnc(Uri serviceUri, string channelId, string message)
+    public async Task SendMessageToChannelAsync(Uri serviceUri, string channelId, string message)
     {
         var credentials = new MicrosoftAppCredentials(_clientId, _clientSecret);
         using var connectorClient = new ConnectorClient(serviceUri, credentials);
