@@ -13,6 +13,7 @@ public class Secret : Core.SecretsManager.Entities.Secret
     public virtual ICollection<UserSecretAccessPolicy> UserAccessPolicies { get; set; }
     public virtual ICollection<GroupSecretAccessPolicy> GroupAccessPolicies { get; set; }
     public virtual ICollection<ServiceAccountSecretAccessPolicy> ServiceAccountAccessPolicies { get; set; }
+    public virtual ICollection<SecretVersion> SecretVersions { get; set; }
 }
 
 public class SecretMapperProfile : Profile
