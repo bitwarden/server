@@ -70,8 +70,8 @@ public enum EventType : int
     Organization_EnabledKeyConnector = 1606,
     Organization_DisabledKeyConnector = 1607,
     Organization_SponsorshipsSynced = 1608,
-    [Obsolete("Use other specific Organization_CollectionManagement events instead")]
-    Organization_CollectionManagement_Updated = 1609, // TODO: Will be removed in PM-25315
+    [Obsolete("Kept for historical data. Use specific Organization_CollectionManagement events instead.")]
+    Organization_CollectionManagement_Updated = 1609,
     Organization_CollectionManagement_LimitCollectionCreationEnabled = 1610,
     Organization_CollectionManagement_LimitCollectionCreationDisabled = 1611,
     Organization_CollectionManagement_LimitCollectionDeletionEnabled = 1612,
