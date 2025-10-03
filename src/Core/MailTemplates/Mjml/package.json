@@ -16,6 +16,7 @@
   "homepage": "https://bitwarden.com",
   "scripts": {
     "build": "./build.sh",
+    "build:all": "powershell ./build.ps1",
     "watch": "nodemon --exec ./build.sh --watch ./components --watch ./emails --ext js,mjml",
     "prettier": "prettier --cache --write ."
   },
