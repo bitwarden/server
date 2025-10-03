@@ -5,9 +5,13 @@ using System.Net;
 using Bit.Api.Models.Public.Request;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.Context;
+using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Vault.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -23,19 +27,22 @@ public class EventsController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly ISecretRepository _secretRepository;
     private readonly IProjectRepository _projectRepository;
+    private readonly IUserService _userService;
 
     public EventsController(
         IEventRepository eventRepository,
         ICipherRepository cipherRepository,
         ICurrentContext currentContext,
         ISecretRepository secretRepository,
-        IProjectRepository projectRepository)
+        IProjectRepository projectRepository,
+        IUserService userService)
     {
         _eventRepository = eventRepository;
         _cipherRepository = cipherRepository;
         _currentContext = currentContext;
         _secretRepository = secretRepository;
         _projectRepository = projectRepository;
+        _userService = userService;
     }
 
     /// <summary>
@@ -70,6 +77,25 @@ public class EventsController : Controller
         else if (request.SecretId.HasValue)
         {
             var secret = await _secretRepository.GetByIdAsync(request.SecretId.Value);
+            bool canViewLogs = false;
+
+            if (secret == null)
+            {
+                var currentContextOrg = _currentContext.OrganizationId.Value;
+                var secretOrg = _currentContext.GetOrganization(currentContextOrg);
+                secret = new Core.SecretsManager.Entities.Secret { Id = request.SecretId.Value, OrganizationId = currentContextOrg };
+                canViewLogs = secretOrg.Type is Core.Enums.OrganizationUserType.Admin or Core.Enums.OrganizationUserType.Owner;
+            }
+            else
+            {
+                canViewLogs = await CanViewSecretsLogs(secret);
+            }
+
+            if (!canViewLogs)
+            {
+                throw new NotFoundException();
+            }
+
             if (secret != null && secret.OrganizationId == _currentContext.OrganizationId.Value)
             {
                 result = await _eventRepository.GetManyBySecretAsync(
@@ -97,5 +123,20 @@ public class EventsController : Controller
         var eventResponses = result.Data.Select(e => new EventResponseModel(e));
         var response = new PagedListResponseModel<EventResponseModel>(eventResponses, result.ContinuationToken);
         return new JsonResult(response);
+    }
+
+    [ApiExplorerSettings(IgnoreApi = true)]
+    private async Task<bool> CanViewSecretsLogs(Secret secret)
+    {
+        if (!_currentContext.AccessSecretsManager(secret.OrganizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        var userId = _userService.GetProperUserId(User)!.Value;
+        var isAdmin = await _currentContext.OrganizationAdmin(secret.OrganizationId);
+        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.IdentityClientType, isAdmin);
+        var access = await _secretRepository.AccessToSecretAsync(secret.Id, userId, accessClient);
+        return access.Read;
     }
 }
