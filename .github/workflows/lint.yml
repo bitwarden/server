@@ -23,6 +23,6 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Lint with MegaLinter
-        uses: oxsecurity/megalinter/flavors/formatters@5a91fb06c83d0e69fbd23756d47438aa723b4a5a # v8.7.0
+        uses: oxsecurity/megalinter/flavors/formatters@0dcbedd66ea456ba2d54fd350affaa15df8a0da3 # v9.0.1
         env:
           VALIDATE_ALL_CODEBASE: false
