@@ -16,7 +16,7 @@ There is no change to how we create the `txt.hbs`. MJML does not impact how we c
 
 ## Building MJML files
 
-```ps1
+```powershell
 npm ci
 
 # Build once
@@ -25,6 +25,14 @@ npm run build
 # To build on changes
 npm run watch
 ```
+
+### Building all MJML files
+```powershell
+npm run build:all # searches all sub directories for mjml files
+```
+This command will parse the email directory for all mjml files and attempt to compile them into `*html.hbs` files and output them into the `out/` directory. This command maintains the structure of the input directories. Meaning if an mjml template is located in `email/auth` then the compiled version will be in `out/auth`.
+
+The script was generated and works as expected. It is more fully featured than it's usage here. If interested take a look.
 
 ## Development
 MJML supports components and you can create your own components by adding them to `.mjmlconfig`. Components are simple JavaScipt that return HTML based on the attributes assigned. (see components/mj-bw-hero.js)
