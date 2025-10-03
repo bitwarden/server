@@ -34,6 +34,9 @@ public class OrganizationIntegrationResponseModel : ResponseModel
         IntegrationType.Slack => string.IsNullOrWhiteSpace(Configuration)
             ? OrganizationIntegrationStatus.Initiated
             : OrganizationIntegrationStatus.Completed,
+        IntegrationType.Teams => string.IsNullOrWhiteSpace(Configuration)
+            ? OrganizationIntegrationStatus.Initiated
+            : OrganizationIntegrationStatus.Completed,
 
         // HEC and Datadog should only be allowed to be created non-null.
         // If they are null, they are Invalid
