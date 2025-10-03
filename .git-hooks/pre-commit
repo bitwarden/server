@@ -1,5 +1,10 @@
 #!/bin/sh
 
+# Skip hook if this is a merge commit
+if [ -f .git/MERGE_HEAD ]; then
+        exit 0
+fi
+
 FILES=$(git diff --cached --name-only --diff-filter=ACMR | sed 's| |\\ |g')
 [ -z "$FILES" ] && exit 0
 
