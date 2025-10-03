@@ -39,7 +39,7 @@ public class OrganizationIntegrationConfigurationRequestModelTests
     [Theory]
     [InlineData(data: "")]
     [InlineData(data: "    ")]
-    public void IsValidForType_EmptyNonNullHecConfiguration_ReturnsFalse(string? config)
+    public void IsValidForType_EmptyNonNullConfiguration_ReturnsFalse(string? config)
     {
         var model = new OrganizationIntegrationConfigurationRequestModel
         {
@@ -48,10 +48,12 @@ public class OrganizationIntegrationConfigurationRequestModelTests
         };
 
         Assert.False(condition: model.IsValidForType(IntegrationType.Hec));
+        Assert.False(condition: model.IsValidForType(IntegrationType.Datadog));
+        Assert.False(condition: model.IsValidForType(IntegrationType.Teams));
     }
 
     [Fact]
-    public void IsValidForType_NullHecConfiguration_ReturnsTrue()
+    public void IsValidForType_NullConfiguration_ReturnsTrue()
     {
         var model = new OrganizationIntegrationConfigurationRequestModel
         {
@@ -60,32 +62,8 @@ public class OrganizationIntegrationConfigurationRequestModelTests
         };
 
         Assert.True(condition: model.IsValidForType(IntegrationType.Hec));
-    }
-
-    [Theory]
-    [InlineData(data: "")]
-    [InlineData(data: "    ")]
-    public void IsValidForType_EmptyNonNullDatadogConfiguration_ReturnsFalse(string? config)
-    {
-        var model = new OrganizationIntegrationConfigurationRequestModel
-        {
-            Configuration = config,
-            Template = "template"
-        };
-
-        Assert.False(condition: model.IsValidForType(IntegrationType.Datadog));
-    }
-
-    [Fact]
-    public void IsValidForType_NullDatadogConfiguration_ReturnsTrue()
-    {
-        var model = new OrganizationIntegrationConfigurationRequestModel
-        {
-            Configuration = null,
-            Template = "template"
-        };
-
         Assert.True(condition: model.IsValidForType(IntegrationType.Datadog));
+        Assert.True(condition: model.IsValidForType(IntegrationType.Teams));
     }
 
     [Theory]
@@ -107,6 +85,8 @@ public class OrganizationIntegrationConfigurationRequestModelTests
         Assert.False(condition: model.IsValidForType(IntegrationType.Slack));
         Assert.False(condition: model.IsValidForType(IntegrationType.Webhook));
         Assert.False(condition: model.IsValidForType(IntegrationType.Hec));
+        Assert.False(condition: model.IsValidForType(IntegrationType.Datadog));
+        Assert.False(condition: model.IsValidForType(IntegrationType.Teams));
     }
 
     [Fact]
@@ -121,6 +101,8 @@ public class OrganizationIntegrationConfigurationRequestModelTests
         Assert.False(condition: model.IsValidForType(IntegrationType.Slack));
         Assert.False(condition: model.IsValidForType(IntegrationType.Webhook));
         Assert.False(condition: model.IsValidForType(IntegrationType.Hec));
+        Assert.False(condition: model.IsValidForType(IntegrationType.Datadog));
+        Assert.False(condition: model.IsValidForType(IntegrationType.Teams));
     }
 
 

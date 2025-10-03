@@ -29,4 +29,17 @@ public class OrganizationIntegrationRepository : Repository<OrganizationIntegrat
             return results.ToList();
         }
     }
+
+    public async Task<OrganizationIntegration?> GetByTenantIdTeamId(string tenantId, string teamId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var result = await connection.QuerySingleOrDefaultAsync<OrganizationIntegration>(
+                "[dbo].[OrganizationIntegration_ReadByTenantIdTeamId]",
+                new { TenantId = tenantId, TeamId = teamId },
+                commandType: CommandType.StoredProcedure);
+
+            return result;
+        }
+    }
 }
