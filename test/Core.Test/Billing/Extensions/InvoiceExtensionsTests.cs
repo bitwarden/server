@@ -294,7 +294,8 @@ public class InvoiceExtensionsTests
                 Amount = 600
             }
         );
-        invoice.Tax = 120; // $1.20 in cents
+
+        invoice.TotalTaxes = [new InvoiceTotalTax { Amount = 120 }]; // $1.20 in cents
         var subscription = new Subscription();
 
         // Act
@@ -318,7 +319,7 @@ public class InvoiceExtensionsTests
                 Amount = 600
             }
         );
-        invoice.Tax = null;
+        invoice.TotalTaxes = [];
         var subscription = new Subscription();
 
         // Act
@@ -341,7 +342,7 @@ public class InvoiceExtensionsTests
                 Amount = 600
             }
         );
-        invoice.Tax = 0;
+        invoice.TotalTaxes = [new InvoiceTotalTax { Amount = 0 }];
         var subscription = new Subscription();
 
         // Act
@@ -374,7 +375,7 @@ public class InvoiceExtensionsTests
         var invoice = new Invoice
         {
             Lines = lineItems,
-            Tax = 200 // Additional $2.00 tax
+            TotalTaxes = [new InvoiceTotalTax { Amount = 200 }] // Additional $2.00 tax
         };
         var subscription = new Subscription();
 

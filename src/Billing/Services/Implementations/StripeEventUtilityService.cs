@@ -2,6 +2,7 @@
 #nullable disable
 
 using Bit.Billing.Constants;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -87,25 +88,6 @@ public class StripeEventUtilityService : IStripeEventUtilityService
     /// <returns></returns>
     public async Task<(Guid?, Guid?, Guid?)> GetEntityIdsFromChargeAsync(Charge charge)
     {
-        Guid? organizationId = null;
-        Guid? userId = null;
-        Guid? providerId = null;
-
-        if (charge.InvoiceId != null)
-        {
-            var invoice = await _stripeFacade.GetInvoice(charge.InvoiceId);
-            if (invoice?.SubscriptionId != null)
-            {
-                var subscription = await _stripeFacade.GetSubscription(invoice.SubscriptionId);
-                (organizationId, userId, providerId) = GetIdsFromMetadata(subscription?.Metadata);
-            }
-        }
-
-        if (organizationId.HasValue || userId.HasValue || providerId.HasValue)
-        {
-            return (organizationId, userId, providerId);
-        }
-
         var subscriptions = await _stripeFacade.ListSubscriptions(new SubscriptionListOptions
         {
             Customer = charge.CustomerId
@@ -118,7 +100,7 @@ public class StripeEventUtilityService : IStripeEventUtilityService
                 continue;
             }
 
-            (organizationId, userId, providerId) = GetIdsFromMetadata(subscription.Metadata);
+            var (organizationId, userId, providerId) = GetIdsFromMetadata(subscription.Metadata);
 
             if (organizationId.HasValue || userId.HasValue || providerId.HasValue)
             {
@@ -256,10 +238,10 @@ public class StripeEventUtilityService : IStripeEventUtilityService
         invoice is
         {
             AmountDue: > 0,
-            Paid: false,
+            Status: not StripeConstants.InvoiceStatus.Paid,
             CollectionMethod: "charge_automatically",
             BillingReason: "subscription_cycle" or "automatic_pending_invoice_item_invoice",
-            SubscriptionId: not null
+            Parent.SubscriptionDetails: not null
         };
 
     private async Task<bool> AttemptToPayInvoiceWithBraintreeAsync(Invoice invoice, Customer customer)
@@ -272,7 +254,13 @@ public class StripeEventUtilityService : IStripeEventUtilityService
             return false;
         }
 
-        var subscription = await _stripeFacade.GetSubscription(invoice.SubscriptionId);
+        if (invoice.Parent?.SubscriptionDetails == null)
+        {
+            _logger.LogWarning("Invoice parent was not a subscription.");
+            return false;
+        }
+
+        var subscription = await _stripeFacade.GetSubscription(invoice.Parent.SubscriptionDetails.SubscriptionId);
         var (organizationId, userId, providerId) = GetIdsFromMetadata(subscription?.Metadata);
         if (!organizationId.HasValue && !userId.HasValue && !providerId.HasValue)
         {
