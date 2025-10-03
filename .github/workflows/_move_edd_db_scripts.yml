@@ -41,18 +41,19 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           token: ${{ steps.retrieve-secrets.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
+          persist-credentials: false
 
       - name: Get script prefix
         id: prefix
-        run: echo "prefix=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+        run: echo "prefix=$(date +'%Y-%m-%d')" >> "$GITHUB_OUTPUT"
 
       - name: Check if any files in DB transition or finalization directories
         id: check-script-existence
         run: |
           if [ -f util/Migrator/DbScripts_transition/* -o -f util/Migrator/DbScripts_finalization/* ]; then
-            echo "copy_edd_scripts=true" >> $GITHUB_OUTPUT
+            echo "copy_edd_scripts=true" >> "$GITHUB_OUTPUT"
           else
-            echo "copy_edd_scripts=false" >> $GITHUB_OUTPUT
+            echo "copy_edd_scripts=false" >> "$GITHUB_OUTPUT"
           fi
 
   move-scripts:
@@ -70,17 +71,18 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
+          persist-credentials: true
 
       - name: Generate branch name
         id: branch_name
         env:
           PREFIX: ${{ needs.setup.outputs.migration_filename_prefix }}
-        run: echo "branch_name=move_edd_db_scripts_$PREFIX" >> $GITHUB_OUTPUT
+        run: echo "branch_name=move_edd_db_scripts_$PREFIX" >> "$GITHUB_OUTPUT"
 
       - name: "Create branch"
         env:
           BRANCH: ${{ steps.branch_name.outputs.branch_name }}
-        run: git switch -c $BRANCH
+        run: git switch -c "$BRANCH"
 
       - name: Move scripts and finalization database schema
         id: move-files
@@ -120,7 +122,7 @@ jobs:
 
           # sync finalization schema back to dbo, maintaining structure
           rsync -r "$src_dir/" "$dest_dir/"
-          rm -rf $src_dir/*
+          rm -rf "${src_dir}/*"
 
           # Replace any finalization references due to the move
           find ./src/Sql/dbo -name "*.sql" -type f -exec sed -i \
@@ -131,7 +133,7 @@ jobs:
             moved_files="$moved_files \n $file"
           done
 
-          echo "moved_files=$moved_files" >> $GITHUB_OUTPUT
+          echo "moved_files=$moved_files" >> "$GITHUB_OUTPUT"
 
       - name: Log in to Azure
         uses: bitwarden/gh-actions/azure-login@main
@@ -162,18 +164,20 @@ jobs:
 
       - name: Commit and push changes
         id: commit
+        env:
+          BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
         run: |
           git config --local user.email "106330231+bitwarden-devops-bot@users.noreply.github.com"
           git config --local user.name "bitwarden-devops-bot"
           if [ -n "$(git status --porcelain)" ]; then
             git add .
             git commit -m "Move EDD database scripts" -a
-            git push -u origin ${{ steps.branch_name.outputs.branch_name }}
-            echo "pr_needed=true" >> $GITHUB_OUTPUT
+            git push -u origin "${BRANCH_NAME}"
+            echo "pr_needed=true" >> "$GITHUB_OUTPUT"
           else
             echo "No changes to commit!";
-            echo "pr_needed=false" >> $GITHUB_OUTPUT
-            echo "### :mega: No changes to commit! PR was ommited." >> $GITHUB_STEP_SUMMARY
+            echo "pr_needed=false" >> "$GITHUB_OUTPUT"
+            echo "### :mega: No changes to commit! PR was ommited." >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Create PR for ${{ steps.branch_name.outputs.branch_name }}
@@ -195,7 +199,7 @@ jobs:
               Files moved:
               $(echo -e "$MOVED_FILES")
               ")
-          echo "pr_url=${PR_URL}" >> $GITHUB_OUTPUT
+          echo "pr_url=${PR_URL}" >> "$GITHUB_OUTPUT"
 
       - name: Notify Slack about creation of PR
         if: ${{ steps.commit.outputs.pr_needed == 'true' }}
