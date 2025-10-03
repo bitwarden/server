@@ -4,6 +4,7 @@
 using Bit.Api.Models.Response;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.SecretsManager.Models.Response;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -29,6 +30,7 @@ public class ProjectsController : Controller
     private readonly IUpdateProjectCommand _updateProjectCommand;
     private readonly IDeleteProjectCommand _deleteProjectCommand;
     private readonly IAuthorizationService _authorizationService;
+    private readonly IEventService _eventService;
 
     public ProjectsController(
         ICurrentContext currentContext,
@@ -38,7 +40,8 @@ public class ProjectsController : Controller
         ICreateProjectCommand createProjectCommand,
         IUpdateProjectCommand updateProjectCommand,
         IDeleteProjectCommand deleteProjectCommand,
-        IAuthorizationService authorizationService)
+        IAuthorizationService authorizationService,
+        IEventService eventService)
     {
         _currentContext = currentContext;
         _userService = userService;
@@ -48,6 +51,7 @@ public class ProjectsController : Controller
         _updateProjectCommand = updateProjectCommand;
         _deleteProjectCommand = deleteProjectCommand;
         _authorizationService = authorizationService;
+        _eventService = eventService;
     }
 
     [HttpGet("organizations/{organizationId}/projects")]
@@ -89,6 +93,11 @@ public class ProjectsController : Controller
         var userId = _userService.GetProperUserId(User).Value;
         var result = await _createProjectCommand.CreateAsync(project, userId, _currentContext.IdentityClientType);
 
+        if (result != null)
+        {
+            await LogProjectEventAsync(project, EventType.Project_Created);
+        }
+
         // Creating a project means you have read & write permission.
         return new ProjectResponseModel(result, true, true);
     }
@@ -106,6 +115,10 @@ public class ProjectsController : Controller
         }
 
         var result = await _updateProjectCommand.UpdateAsync(updateRequest.ToProject(id));
+        if (result != null)
+        {
+            await LogProjectEventAsync(project, EventType.Project_Edited);
+        }
 
         // Updating a project means you have read & write permission.
         return new ProjectResponseModel(result, true, true);
@@ -135,6 +148,8 @@ public class ProjectsController : Controller
         {
             throw new NotFoundException();
         }
+
+        await LogProjectEventAsync(project, EventType.Project_Retrieved);
 
         return new ProjectResponseModel(project, access.Read, access.Write);
     }
@@ -175,9 +190,32 @@ public class ProjectsController : Controller
             }
         }
 
-        await _deleteProjectCommand.DeleteProjects(projectsToDelete);
+        if (projectsToDelete.Count > 0)
+        {
+            await _deleteProjectCommand.DeleteProjects(projectsToDelete);
+            await LogProjectsEventAsync(projectsToDelete, EventType.Project_Deleted);
+        }
 
         var responses = results.Select(r => new BulkDeleteResponseModel(r.Project.Id, r.Error));
         return new ListResponseModel<BulkDeleteResponseModel>(responses);
     }
+
+
+    private async Task LogProjectsEventAsync(IEnumerable<Project> projects, EventType eventType)
+    {
+        var userId = _userService.GetProperUserId(User)!.Value;
+
+        switch (_currentContext.IdentityClientType)
+        {
+            case IdentityClientType.ServiceAccount:
+                await _eventService.LogServiceAccountProjectsEventAsync(userId, projects, eventType);
+                break;
+            case IdentityClientType.User:
+                await _eventService.LogUserProjectsEventAsync(userId, projects, eventType);
+                break;
+        }
+    }
+
+    private Task LogProjectEventAsync(Project project, EventType eventType) =>
+       LogProjectsEventAsync(new[] { project }, eventType);
 }

@@ -3,81 +3,113 @@
 
 using System.Security.Claims;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Billing.Enums;
 using Bit.Core.Models.Business;
 
 namespace Bit.Core.Billing.Licenses.Extensions;
 
 public static class LicenseExtensions
 {
-    public static DateTime CalculateFreshExpirationDate(this Organization org, SubscriptionInfo subscriptionInfo)
+    public static DateTime CalculateFreshExpirationDate(this Organization org, SubscriptionInfo subscriptionInfo, DateTime issued)
     {
+
         if (subscriptionInfo?.Subscription == null)
         {
-            if (org.PlanType == PlanType.Custom && org.ExpirationDate.HasValue)
-            {
-                return org.ExpirationDate.Value;
-            }
-
-            return DateTime.UtcNow.AddDays(7);
+            // Subscription isn't setup yet, so fallback to the organization's expiration date
+            // If there isn't an expiration date on the org, treat it as a free trial
+            return org.ExpirationDate ?? issued.AddDays(7);
         }
 
         var subscription = subscriptionInfo.Subscription;
 
         if (subscription.TrialEndDate > DateTime.UtcNow)
         {
+            // Still trialing, use trial's end date
             return subscription.TrialEndDate.Value;
         }
 
-        if (org.ExpirationDate.HasValue && org.ExpirationDate.Value < DateTime.UtcNow)
+        if (org.ExpirationDate < DateTime.UtcNow)
         {
+            // Organization is expired
             return org.ExpirationDate.Value;
         }
 
-        if (subscription.PeriodEndDate.HasValue && subscription.PeriodDuration > TimeSpan.FromDays(180))
+        if (subscription.PeriodDuration > TimeSpan.FromDays(180))
         {
+            // Annual subscription - include grace period to give the administrators time to upload a new license
             return subscription.PeriodEndDate
-                .Value
-                .AddDays(Bit.Core.Constants.OrganizationSelfHostSubscriptionGracePeriodDays);
+                !.Value
+                .AddDays(Core.Constants.OrganizationSelfHostSubscriptionGracePeriodDays);
         }
 
-        return org.ExpirationDate?.AddMonths(11) ?? DateTime.UtcNow.AddYears(1);
+        // Monthly subscription - giving an annual expiration to not burnden admins to upload fresh licenses each month
+        return org.ExpirationDate?.AddMonths(11) ?? issued.AddYears(1);
     }
 
-    public static DateTime CalculateFreshRefreshDate(this Organization org, SubscriptionInfo subscriptionInfo, DateTime expirationDate)
+    public static DateTime CalculateFreshRefreshDate(this Organization org, SubscriptionInfo subscriptionInfo, DateTime issued)
     {
-        if (subscriptionInfo?.Subscription == null ||
-            subscriptionInfo.Subscription.TrialEndDate > DateTime.UtcNow ||
-            org.ExpirationDate < DateTime.UtcNow)
-        {
-            return expirationDate;
-        }
 
-        return subscriptionInfo.Subscription.PeriodDuration > TimeSpan.FromDays(180) ||
-            DateTime.UtcNow - expirationDate > TimeSpan.FromDays(30)
-            ? DateTime.UtcNow.AddDays(30)
-            : expirationDate;
-    }
-
-    public static DateTime CalculateFreshExpirationDateWithoutGracePeriod(this Organization org, SubscriptionInfo subscriptionInfo, DateTime expirationDate)
-    {
-        if (subscriptionInfo?.Subscription is null)
+        if (subscriptionInfo?.Subscription == null)
         {
-            return expirationDate;
+            // Subscription isn't setup yet, so fallback to the organization's expiration date
+            // If there isn't an expiration date on the org, treat it as a free trial
+            return org.ExpirationDate ?? issued.AddDays(7);
         }
 
         var subscription = subscriptionInfo.Subscription;
 
-        if (subscription.TrialEndDate <= DateTime.UtcNow &&
-            org.ExpirationDate >= DateTime.UtcNow &&
-            subscription.PeriodEndDate.HasValue &&
-            subscription.PeriodDuration > TimeSpan.FromDays(180))
+        if (subscription.TrialEndDate > DateTime.UtcNow)
         {
-            return subscription.PeriodEndDate.Value;
+            // Still trialing, use trial's end date
+            return subscription.TrialEndDate.Value;
         }
 
-        return expirationDate;
+        if (org.ExpirationDate < DateTime.UtcNow)
+        {
+            // Organization is expired
+            return org.ExpirationDate.Value;
+        }
+
+        if (subscription.PeriodDuration > TimeSpan.FromDays(180))
+        {
+            // Annual subscription - refresh every 30 days to check for plan changes, cancellations, and payment issues
+            return issued.AddDays(30);
+        }
+
+        var expires = org.ExpirationDate?.AddMonths(11) ?? issued.AddYears(1);
+
+        // If expiration is more than 30 days in the past, refresh in 30 days instead of using the stale date to give
+        // them a chance to refresh. Otherwise, uses the expiration date
+        return issued - expires > TimeSpan.FromDays(30)
+            ? issued.AddDays(30)
+            : expires;
     }
+
+    public static DateTime? CalculateFreshExpirationDateWithoutGracePeriod(this Organization org, SubscriptionInfo subscriptionInfo)
+    {
+        // It doesn't make sense that this returns null sometimes. If the expiration date doesn't include a grace period
+        // then we should just return the expiration date instead of null. This is currently forcing the single consumer
+        // to check for nulls.
+
+        // At some point in the future, we should update this. We can't easily, though, without breaking the signatures
+        // since `ExpirationWithoutGracePeriod` is included on them. So for now, I'll shake my fist and then move on.
+
+        // Only set expiration without grace period for active, non-trial, annual subscriptions
+        if (subscriptionInfo?.Subscription != null &&
+            subscriptionInfo.Subscription.TrialEndDate <= DateTime.UtcNow &&
+            org.ExpirationDate >= DateTime.UtcNow &&
+            subscriptionInfo.Subscription.PeriodDuration > TimeSpan.FromDays(180))
+        {
+            return subscriptionInfo.Subscription.PeriodEndDate;
+        }
+
+        // Otherwise, return null.
+        return null;
+    }
+
+    public static bool CalculateIsTrialing(this Organization org, SubscriptionInfo subscriptionInfo) =>
+        subscriptionInfo?.Subscription is null
+            ? !org.ExpirationDate.HasValue
+            : subscriptionInfo.Subscription.TrialEndDate > DateTime.UtcNow;
 
     public static T GetValue<T>(this ClaimsPrincipal principal, string claimType)
     {

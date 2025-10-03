@@ -6,7 +6,6 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Requests;
 using Bit.Core.Context;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

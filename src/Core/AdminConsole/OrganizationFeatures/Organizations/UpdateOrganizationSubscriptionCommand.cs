@@ -2,7 +2,6 @@
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.Billing.Services;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations;

@@ -102,7 +102,7 @@ public class CollectionsController : Controller
     }
 
     [HttpGet("")]
-    public async Task<ListResponseModel<CollectionResponseModel>> Get(Guid orgId)
+    public async Task<ListResponseModel<CollectionResponseModel>> GetAll(Guid orgId)
     {
         IEnumerable<Collection> orgCollections;
 
@@ -146,7 +146,7 @@ public class CollectionsController : Controller
     }
 
     [HttpPost("")]
-    public async Task<CollectionResponseModel> Post(Guid orgId, [FromBody] CollectionRequestModel model)
+    public async Task<CollectionResponseModel> Post(Guid orgId, [FromBody] CreateCollectionRequestModel model)
     {
         var collection = model.ToCollection(orgId);
 
@@ -173,8 +173,7 @@ public class CollectionsController : Controller
     }
 
     [HttpPut("{id}")]
-    [HttpPost("{id}")]
-    public async Task<CollectionResponseModel> Put(Guid orgId, Guid id, [FromBody] CollectionRequestModel model)
+    public async Task<CollectionResponseModel> Put(Guid orgId, Guid id, [FromBody] UpdateCollectionRequestModel model)
     {
         var collection = await _collectionRepository.GetByIdAsync(id);
         var authorized = (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.Update)).Succeeded;
@@ -196,6 +195,13 @@ public class CollectionsController : Controller
         var collectionWithPermissions = await _collectionRepository.GetByIdWithPermissionsAsync(collection.Id, _currentContext.UserId.Value, false);
 
         return new CollectionAccessDetailsResponseModel(collectionWithPermissions);
+    }
+
+    [HttpPost("{id}")]
+    [Obsolete("This endpoint is deprecated. Use PUT /{id} instead.")]
+    public async Task<CollectionResponseModel> PostPut(Guid orgId, Guid id, [FromBody] UpdateCollectionRequestModel model)
+    {
+        return await Put(orgId, id, model);
     }
 
     [HttpPost("bulk-access")]
@@ -222,7 +228,6 @@ public class CollectionsController : Controller
     }
 
     [HttpDelete("{id}")]
-    [HttpPost("{id}/delete")]
     public async Task Delete(Guid orgId, Guid id)
     {
         var collection = await _collectionRepository.GetByIdAsync(id);
@@ -235,8 +240,14 @@ public class CollectionsController : Controller
         await _deleteCollectionCommand.DeleteAsync(collection);
     }
 
+    [HttpPost("{id}/delete")]
+    [Obsolete("This endpoint is deprecated. Use DELETE /{id} instead.")]
+    public async Task PostDelete(Guid orgId, Guid id)
+    {
+        await Delete(orgId, id);
+    }
+
     [HttpDelete("")]
-    [HttpPost("delete")]
     public async Task DeleteMany(Guid orgId, [FromBody] CollectionBulkDeleteRequestModel model)
     {
         var collections = await _collectionRepository.GetManyByManyIdsAsync(model.Ids);
@@ -247,5 +258,12 @@ public class CollectionsController : Controller
         }
 
         await _deleteCollectionCommand.DeleteManyAsync(collections);
+    }
+
+    [HttpPost("delete")]
+    [Obsolete("This endpoint is deprecated. Use DELETE / instead.")]
+    public async Task PostDeleteMany(Guid orgId, [FromBody] CollectionBulkDeleteRequestModel model)
+    {
+        await DeleteMany(orgId, model);
     }
 }

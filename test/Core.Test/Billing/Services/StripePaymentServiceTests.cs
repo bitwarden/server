@@ -1,13 +1,11 @@
-﻿using Bit.Core.Billing.Enums;
+﻿using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models.StaticStore.Plans;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Implementations;
-using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Billing.Tax.Requests;
-using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Enums;
-using Bit.Core.Test.Billing.Tax.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -24,10 +22,6 @@ public class StripePaymentServiceTests
     public async Task PreviewInvoiceAsync_ForOrganization_CalculatesSalesTaxCorrectlyForFamiliesWithoutAdditionalStorage(
         SutProvider<StripePaymentService> sutProvider)
     {
-        sutProvider.GetDependency<IAutomaticTaxFactory>()
-            .CreateAsync(Arg.Is<AutomaticTaxFactoryParameters>(p => p.PlanType == PlanType.FamiliesAnnually))
-            .Returns(new FakeAutomaticTaxStrategy(true));
-
         var familiesPlan = new FamiliesPlan();
         sutProvider.GetDependency<IPricingClient>()
             .GetPlanOrThrow(Arg.Is<PlanType>(p => p == PlanType.FamiliesAnnually))
@@ -75,10 +69,6 @@ public class StripePaymentServiceTests
     public async Task PreviewInvoiceAsync_ForOrganization_CalculatesSalesTaxCorrectlyForFamiliesWithAdditionalStorage(
         SutProvider<StripePaymentService> sutProvider)
     {
-        sutProvider.GetDependency<IAutomaticTaxFactory>()
-            .CreateAsync(Arg.Is<AutomaticTaxFactoryParameters>(p => p.PlanType == PlanType.FamiliesAnnually))
-            .Returns(new FakeAutomaticTaxStrategy(true));
-
         var familiesPlan = new FamiliesPlan();
         sutProvider.GetDependency<IPricingClient>()
             .GetPlanOrThrow(Arg.Is<PlanType>(p => p == PlanType.FamiliesAnnually))
@@ -126,10 +116,6 @@ public class StripePaymentServiceTests
     public async Task PreviewInvoiceAsync_ForOrganization_CalculatesSalesTaxCorrectlyForFamiliesForEnterpriseWithoutAdditionalStorage(
         SutProvider<StripePaymentService> sutProvider)
     {
-        sutProvider.GetDependency<IAutomaticTaxFactory>()
-            .CreateAsync(Arg.Is<AutomaticTaxFactoryParameters>(p => p.PlanType == PlanType.FamiliesAnnually))
-            .Returns(new FakeAutomaticTaxStrategy(true));
-
         var familiesPlan = new FamiliesPlan();
         sutProvider.GetDependency<IPricingClient>()
             .GetPlanOrThrow(Arg.Is<PlanType>(p => p == PlanType.FamiliesAnnually))
@@ -178,10 +164,6 @@ public class StripePaymentServiceTests
     public async Task PreviewInvoiceAsync_ForOrganization_CalculatesSalesTaxCorrectlyForFamiliesForEnterpriseWithAdditionalStorage(
         SutProvider<StripePaymentService> sutProvider)
     {
-        sutProvider.GetDependency<IAutomaticTaxFactory>()
-            .CreateAsync(Arg.Is<AutomaticTaxFactoryParameters>(p => p.PlanType == PlanType.FamiliesAnnually))
-            .Returns(new FakeAutomaticTaxStrategy(true));
-
         var familiesPlan = new FamiliesPlan();
         sutProvider.GetDependency<IPricingClient>()
             .GetPlanOrThrow(Arg.Is<PlanType>(p => p == PlanType.FamiliesAnnually))
@@ -223,5 +205,341 @@ public class StripePaymentServiceTests
         Assert.Equal(0.08M, actual.TaxAmount);
         Assert.Equal(4.08M, actual.TotalAmount);
         Assert.Equal(4M, actual.TaxableBaseAmount);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PreviewInvoiceAsync_USBased_PersonalUse_SetsAutomaticTaxEnabled(SutProvider<StripePaymentService> sutProvider)
+    {
+        // Arrange
+        var familiesPlan = new FamiliesPlan();
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(Arg.Is<PlanType>(p => p == PlanType.FamiliesAnnually))
+            .Returns(familiesPlan);
+
+        var parameters = new PreviewOrganizationInvoiceRequestBody
+        {
+            PasswordManager = new OrganizationPasswordManagerRequestModel
+            {
+                Plan = PlanType.FamiliesAnnually
+            },
+            TaxInformation = new TaxInformationRequestModel
+            {
+                Country = "US",
+                PostalCode = "12345"
+            }
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter
+            .CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(new Invoice
+            {
+                TotalExcludingTax = 400,
+                Tax = 8,
+                Total = 408
+            });
+
+        // Act
+        await sutProvider.Sut.PreviewInvoiceAsync(parameters, null, null);
+
+        // Assert
+        await stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.AutomaticTax.Enabled == true
+        ));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PreviewInvoiceAsync_USBased_BusinessUse_SetsAutomaticTaxEnabled(SutProvider<StripePaymentService> sutProvider)
+    {
+        // Arrange
+        var plan = new EnterprisePlan(true);
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(Arg.Is<PlanType>(p => p == PlanType.EnterpriseAnnually))
+            .Returns(plan);
+
+        var parameters = new PreviewOrganizationInvoiceRequestBody
+        {
+            PasswordManager = new OrganizationPasswordManagerRequestModel
+            {
+                Plan = PlanType.EnterpriseAnnually
+            },
+            TaxInformation = new TaxInformationRequestModel
+            {
+                Country = "US",
+                PostalCode = "12345"
+            }
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter
+            .CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(new Invoice
+            {
+                TotalExcludingTax = 400,
+                Tax = 8,
+                Total = 408
+            });
+
+        // Act
+        await sutProvider.Sut.PreviewInvoiceAsync(parameters, null, null);
+
+        // Assert
+        await stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.AutomaticTax.Enabled == true
+        ));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PreviewInvoiceAsync_NonUSBased_PersonalUse_SetsAutomaticTaxEnabled(SutProvider<StripePaymentService> sutProvider)
+    {
+        // Arrange
+        var familiesPlan = new FamiliesPlan();
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(Arg.Is<PlanType>(p => p == PlanType.FamiliesAnnually))
+            .Returns(familiesPlan);
+
+        var parameters = new PreviewOrganizationInvoiceRequestBody
+        {
+            PasswordManager = new OrganizationPasswordManagerRequestModel
+            {
+                Plan = PlanType.FamiliesAnnually
+            },
+            TaxInformation = new TaxInformationRequestModel
+            {
+                Country = "FR",
+                PostalCode = "12345"
+            }
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter
+            .CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(new Invoice
+            {
+                TotalExcludingTax = 400,
+                Tax = 8,
+                Total = 408
+            });
+
+        // Act
+        await sutProvider.Sut.PreviewInvoiceAsync(parameters, null, null);
+
+        // Assert
+        await stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.AutomaticTax.Enabled == true
+        ));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PreviewInvoiceAsync_NonUSBased_BusinessUse_SetsAutomaticTaxEnabled(SutProvider<StripePaymentService> sutProvider)
+    {
+        // Arrange
+        var plan = new EnterprisePlan(true);
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(Arg.Is<PlanType>(p => p == PlanType.EnterpriseAnnually))
+            .Returns(plan);
+
+        var parameters = new PreviewOrganizationInvoiceRequestBody
+        {
+            PasswordManager = new OrganizationPasswordManagerRequestModel
+            {
+                Plan = PlanType.EnterpriseAnnually
+            },
+            TaxInformation = new TaxInformationRequestModel
+            {
+                Country = "FR",
+                PostalCode = "12345"
+            }
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter
+            .CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(new Invoice
+            {
+                TotalExcludingTax = 400,
+                Tax = 8,
+                Total = 408
+            });
+
+        // Act
+        await sutProvider.Sut.PreviewInvoiceAsync(parameters, null, null);
+
+        // Assert
+        await stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.AutomaticTax.Enabled == true
+        ));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PreviewInvoiceAsync_USBased_PersonalUse_DoesNotSetTaxExempt(SutProvider<StripePaymentService> sutProvider)
+    {
+        // Arrange
+        var familiesPlan = new FamiliesPlan();
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(Arg.Is<PlanType>(p => p == PlanType.FamiliesAnnually))
+            .Returns(familiesPlan);
+
+        var parameters = new PreviewOrganizationInvoiceRequestBody
+        {
+            PasswordManager = new OrganizationPasswordManagerRequestModel
+            {
+                Plan = PlanType.FamiliesAnnually
+            },
+            TaxInformation = new TaxInformationRequestModel
+            {
+                Country = "US",
+                PostalCode = "12345"
+            }
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter
+            .CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(new Invoice
+            {
+                TotalExcludingTax = 400,
+                Tax = 8,
+                Total = 408
+            });
+
+        // Act
+        await sutProvider.Sut.PreviewInvoiceAsync(parameters, null, null);
+
+        // Assert
+        await stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.CustomerDetails.TaxExempt == null
+        ));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PreviewInvoiceAsync_USBased_BusinessUse_DoesNotSetTaxExempt(SutProvider<StripePaymentService> sutProvider)
+    {
+        // Arrange
+        var plan = new EnterprisePlan(true);
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(Arg.Is<PlanType>(p => p == PlanType.EnterpriseAnnually))
+            .Returns(plan);
+
+        var parameters = new PreviewOrganizationInvoiceRequestBody
+        {
+            PasswordManager = new OrganizationPasswordManagerRequestModel
+            {
+                Plan = PlanType.EnterpriseAnnually
+            },
+            TaxInformation = new TaxInformationRequestModel
+            {
+                Country = "US",
+                PostalCode = "12345"
+            }
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter
+            .CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(new Invoice
+            {
+                TotalExcludingTax = 400,
+                Tax = 8,
+                Total = 408
+            });
+
+        // Act
+        await sutProvider.Sut.PreviewInvoiceAsync(parameters, null, null);
+
+        // Assert
+        await stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.CustomerDetails.TaxExempt == null
+        ));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PreviewInvoiceAsync_NonUSBased_PersonalUse_DoesNotSetTaxExempt(SutProvider<StripePaymentService> sutProvider)
+    {
+        // Arrange
+        var familiesPlan = new FamiliesPlan();
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(Arg.Is<PlanType>(p => p == PlanType.FamiliesAnnually))
+            .Returns(familiesPlan);
+
+        var parameters = new PreviewOrganizationInvoiceRequestBody
+        {
+            PasswordManager = new OrganizationPasswordManagerRequestModel
+            {
+                Plan = PlanType.FamiliesAnnually
+            },
+            TaxInformation = new TaxInformationRequestModel
+            {
+                Country = "FR",
+                PostalCode = "12345"
+            }
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter
+            .CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(new Invoice
+            {
+                TotalExcludingTax = 400,
+                Tax = 8,
+                Total = 408
+            });
+
+        // Act
+        await sutProvider.Sut.PreviewInvoiceAsync(parameters, null, null);
+
+        // Assert
+        await stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.CustomerDetails.TaxExempt == null
+        ));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PreviewInvoiceAsync_NonUSBased_BusinessUse_SetsTaxExemptReverse(SutProvider<StripePaymentService> sutProvider)
+    {
+        // Arrange
+        var plan = new EnterprisePlan(true);
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(Arg.Is<PlanType>(p => p == PlanType.EnterpriseAnnually))
+            .Returns(plan);
+
+        var parameters = new PreviewOrganizationInvoiceRequestBody
+        {
+            PasswordManager = new OrganizationPasswordManagerRequestModel
+            {
+                Plan = PlanType.EnterpriseAnnually
+            },
+            TaxInformation = new TaxInformationRequestModel
+            {
+                Country = "FR",
+                PostalCode = "12345"
+            }
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter
+            .CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(new Invoice
+            {
+                TotalExcludingTax = 400,
+                Tax = 8,
+                Total = 408
+            });
+
+        // Act
+        await sutProvider.Sut.PreviewInvoiceAsync(parameters, null, null);
+
+        // Assert
+        await stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.CustomerDetails.TaxExempt == StripeConstants.TaxExempt.Reverse
+        ));
     }
 }

@@ -11,7 +11,6 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities.Validation;
 using Bit.Core.Billing.Services;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.PasswordManager;

@@ -1016,6 +1016,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ApplicationData")
+                        .HasColumnType("text");
+
                     b.Property<string>("ContentEncryptionKey")
                         .IsRequired()
                         .HasColumnType("text");
@@ -1023,14 +1026,17 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTime>("Date")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("ReportData")
                         .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("RevisionDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SummaryData")
                         .HasColumnType("text");
 
                     b.HasKey("Id");
@@ -1281,6 +1287,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<string>("DomainName")
                         .HasColumnType("text");
 
+                    b.Property<Guid?>("GrantedServiceAccountId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("GroupId")
                         .HasColumnType("uuid");
 
@@ -1298,6 +1307,9 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<Guid?>("PolicyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ProjectId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid?>("ProviderId")
@@ -1324,10 +1336,13 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid?>("UserId")
                         .HasColumnType("uuid");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasAnnotation("SqlServer:Clustered", true);
 
                     b.HasIndex("Date", "OrganizationId", "ActingUserId", "CipherId")
-                        .HasAnnotation("SqlServer:Clustered", false);
+                        .HasDatabaseName("IX_Event_DateOrganizationIdUserId")
+                        .HasAnnotation("SqlServer:Clustered", false)
+                        .HasAnnotation("SqlServer:Include", new[] { "ServiceAccountId", "GrantedServiceAccountId" });
 
                     b.ToTable("Event", (string)null);
                 });
@@ -2180,6 +2195,9 @@ namespace Bit.PostgresMigrations.Migrations
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ArchivedDate")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Attachments")
                         .HasColumnType("text");

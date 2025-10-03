@@ -4,7 +4,6 @@ using Bit.Core.Billing.Models;
 using Bit.Core.Entities;
 using Bit.Core.Models.BitStripe;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 
 namespace Bit.Core.Billing.Services.Implementations;
 

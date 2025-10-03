@@ -6,7 +6,6 @@ using Bit.Core.Billing.Models.StaticStore.Plans;
 using Bit.Core.Billing.Services;
 using Bit.Core.Models.StaticStore;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;

@@ -4,7 +4,6 @@ using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
-using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using Stripe;
 
@@ -84,7 +83,7 @@ public class UpdateBillingAddressCommand(
                         State = billingAddress.State
                     },
                     Expand = ["subscriptions", "tax_ids"],
-                    TaxExempt = billingAddress.Country != "US"
+                    TaxExempt = billingAddress.Country != Core.Constants.CountryAbbreviations.UnitedStates
                         ? StripeConstants.TaxExempt.Reverse
                         : StripeConstants.TaxExempt.None
                 });

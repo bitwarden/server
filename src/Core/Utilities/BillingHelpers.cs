@@ -1,7 +1,6 @@
 ﻿using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
-using Bit.Core.Services;
 
 namespace Bit.Core.Utilities;
 

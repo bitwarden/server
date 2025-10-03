@@ -49,6 +49,19 @@ public class SecurityTaskRepository : Repository<SecurityTask, Guid>, ISecurityT
     }
 
     /// <inheritdoc />
+    public async Task<SecurityTaskMetrics> GetTaskMetricsAsync(Guid organizationId)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        var result = await connection.QueryAsync<SecurityTaskMetrics>(
+            $"[{Schema}].[SecurityTask_ReadMetricsByOrganizationId]",
+            new { OrganizationId = organizationId },
+            commandType: CommandType.StoredProcedure);
+
+        return result.FirstOrDefault() ?? new SecurityTaskMetrics(0, 0);
+    }
+
+    /// <inheritdoc />
     public async Task<ICollection<SecurityTask>> CreateManyAsync(IEnumerable<SecurityTask> tasks)
     {
         var tasksList = tasks?.ToList();

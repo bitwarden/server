@@ -13,7 +13,6 @@ using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Braintree;
 using Microsoft.Extensions.Logging;
@@ -26,7 +25,6 @@ namespace Bit.Core.Billing.Organizations.Services;
 
 public class OrganizationBillingService(
     IBraintreeGateway braintreeGateway,
-    IFeatureService featureService,
     IGlobalSettings globalSettings,
     ILogger<OrganizationBillingService> logger,
     IOrganizationRepository organizationRepository,
@@ -273,12 +271,10 @@ public class OrganizationBillingService(
                 ValidateLocation = StripeConstants.ValidateTaxLocationTiming.Immediately
             };
 
-            var setNonUSBusinessUseToReverseCharge =
-                featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);
 
-            if (setNonUSBusinessUseToReverseCharge &&
-                planType.GetProductTier() is not ProductTierType.Free and not ProductTierType.Families &&
-                customerSetup.TaxInformation.Country != "US")
+
+            if (planType.GetProductTier() is not ProductTierType.Free and not ProductTierType.Families &&
+                customerSetup.TaxInformation.Country != Core.Constants.CountryAbbreviations.UnitedStates)
             {
                 customerCreateOptions.TaxExempt = StripeConstants.TaxExempt.Reverse;
             }
@@ -386,7 +382,7 @@ public class OrganizationBillingService(
                 {
                     case PaymentMethodType.BankAccount:
                         {
-                            await setupIntentCache.Remove(organization.Id);
+                            await setupIntentCache.RemoveSetupIntentForSubscriber(organization.Id);
                             break;
                         }
                     case PaymentMethodType.PayPal when !string.IsNullOrEmpty(braintreeCustomerId):
@@ -491,24 +487,10 @@ public class OrganizationBillingService(
             };
         }
 
-        var setNonUSBusinessUseToReverseCharge =
-            featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);
-
-        if (setNonUSBusinessUseToReverseCharge && customer.HasBillingLocation())
+        if (customer.HasBillingLocation())
         {
             subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
         }
-        else if (customer.HasRecognizedTaxLocation())
-        {
-            subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions
-            {
-                Enabled =
-                    subscriptionSetup.PlanType.GetProductTier() == ProductTierType.Families ||
-                    customer.Address.Country == "US" ||
-                    customer.TaxIds.Any()
-            };
-        }
-
         return await stripeAdapter.CreateSubscriptionAsync(subscriptionCreateOptions);
     }
 
@@ -519,9 +501,7 @@ public class OrganizationBillingService(
         var customer = await subscriberService.GetCustomerOrThrow(organization,
             new CustomerGetOptions { Expand = ["tax", "tax_ids"] });
 
-        var setNonUSBusinessUseToReverseCharge = featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);
-
-        if (!setNonUSBusinessUseToReverseCharge || subscriptionSetup.PlanType.GetProductTier() is
+        if (subscriptionSetup.PlanType.GetProductTier() is
                 not (ProductTierType.Teams or
                 ProductTierType.TeamsStarter or
                 ProductTierType.Enterprise))
@@ -533,14 +513,14 @@ public class OrganizationBillingService(
 
         customer = customer switch
         {
-            { Address.Country: not "US", TaxExempt: not StripeConstants.TaxExempt.Reverse } => await
+            { Address.Country: not Core.Constants.CountryAbbreviations.UnitedStates, TaxExempt: not StripeConstants.TaxExempt.Reverse } => await
                 stripeAdapter.UpdateCustomerAsync(customer.Id,
                     new CustomerUpdateOptions
                     {
                         Expand = expansions,
                         TaxExempt = StripeConstants.TaxExempt.Reverse
                     }),
-            { Address.Country: "US", TaxExempt: StripeConstants.TaxExempt.Reverse } => await
+            { Address.Country: Core.Constants.CountryAbbreviations.UnitedStates, TaxExempt: StripeConstants.TaxExempt.Reverse } => await
                 stripeAdapter.UpdateCustomerAsync(customer.Id,
                     new CustomerUpdateOptions
                     {

@@ -1,10 +1,10 @@
 ﻿#nullable enable
 
 using System.Diagnostics;
-using Bit.Core.IdentityServer;
+using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Settings;
+using Duende.IdentityModel;
 using Duende.IdentityServer.Models;
-using IdentityModel;
 
 namespace Bit.Identity.IdentityServer.ClientProviders;
 

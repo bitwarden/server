@@ -7,7 +7,6 @@ using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Http.HttpResults;

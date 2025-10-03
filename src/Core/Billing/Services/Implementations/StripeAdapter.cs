@@ -3,6 +3,7 @@
 
 using Bit.Core.Models.BitStripe;
 using Stripe;
+using Stripe.Tax;
 using Stripe.TestHelpers;
 using CustomerService = Stripe.CustomerService;
 using RefundService = Stripe.RefundService;
@@ -24,6 +25,8 @@ public class StripeAdapter : IStripeAdapter
     private readonly SetupIntentService _setupIntentService;
     private readonly TestClockService _testClockService;
     private readonly CustomerBalanceTransactionService _customerBalanceTransactionService;
+    private readonly Stripe.Tax.RegistrationService _taxRegistrationService;
+    private readonly CalculationService _calculationService;
 
     public StripeAdapter()
     {
@@ -40,6 +43,8 @@ public class StripeAdapter : IStripeAdapter
         _setupIntentService = new SetupIntentService();
         _testClockService = new TestClockService();
         _customerBalanceTransactionService = new CustomerBalanceTransactionService();
+        _taxRegistrationService = new Stripe.Tax.RegistrationService();
+        _calculationService = new CalculationService();
     }
 
     /**************
@@ -301,6 +306,11 @@ public class StripeAdapter : IStripeAdapter
     public Task<StripeList<Charge>> ListChargesAsync(ChargeListOptions options)
     {
         return _chargeService.ListAsync(options);
+    }
+
+    public Task<StripeList<Registration>> ListTaxRegistrationsAsync(RegistrationListOptions options = null)
+    {
+        return _taxRegistrationService.ListAsync(options);
     }
 
     public Task<Refund> CreateRefundAsync(RefundCreateOptions options)

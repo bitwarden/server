@@ -8,12 +8,12 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Identity;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Api.Response;
 using Bit.Core.Repositories;
@@ -36,6 +36,7 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly GlobalSettings _globalSettings;
     private readonly IUserRepository _userRepository;
     private readonly IAuthRequestRepository _authRequestRepository;
+    private readonly IMailService _mailService;
 
     protected ICurrentContext CurrentContext { get; }
     protected IPolicyService PolicyService { get; }
@@ -61,7 +62,8 @@ public abstract class BaseRequestValidator<T> where T : class
         ISsoConfigRepository ssoConfigRepository,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
         IPolicyRequirementQuery policyRequirementQuery,
-        IAuthRequestRepository authRequestRepository
+        IAuthRequestRepository authRequestRepository,
+        IMailService mailService
         )
     {
         _userManager = userManager;
@@ -80,6 +82,7 @@ public abstract class BaseRequestValidator<T> where T : class
         UserDecryptionOptionsBuilder = userDecryptionOptionsBuilder;
         PolicyRequirementQuery = policyRequirementQuery;
         _authRequestRepository = authRequestRepository;
+        _mailService = mailService;
     }
 
     protected async Task ValidateAsync(T context, ValidatedTokenRequest request,
@@ -160,6 +163,7 @@ public abstract class BaseRequestValidator<T> where T : class
                 }
                 else
                 {
+                    await SendFailedTwoFactorEmail(user, twoFactorProviderType);
                     await UpdateFailedAuthDetailsAsync(user);
                     await BuildErrorResultAsync("Two-step token is invalid. Try again.", true, context, user);
                 }
@@ -371,6 +375,14 @@ public abstract class BaseRequestValidator<T> where T : class
         user.FailedLoginCount = ++user.FailedLoginCount;
         user.LastFailedLoginDate = user.RevisionDate = utcNow;
         await _userRepository.ReplaceAsync(user);
+    }
+
+    private async Task SendFailedTwoFactorEmail(User user, TwoFactorProviderType failedAttemptType)
+    {
+        if (FeatureService.IsEnabled(FeatureFlagKeys.FailedTwoFactorEmail))
+        {
+            await _mailService.SendFailedTwoFactorAttemptEmailAsync(user.Email, failedAttemptType, DateTime.UtcNow, CurrentContext.IpAddress);
+        }
     }
 
     private async Task<MasterPasswordPolicyResponseModel> GetMasterPasswordPolicyAsync(User user)

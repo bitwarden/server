@@ -4,7 +4,6 @@ using Bit.Core.Billing.Services.Implementations;
 using Bit.Core.Entities;
 using Bit.Core.Models.BitStripe;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using NSubstitute;
 using Stripe;
 using Xunit;

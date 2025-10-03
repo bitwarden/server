@@ -10,7 +10,6 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Braintree;
 using Microsoft.Extensions.Logging;
@@ -283,7 +282,7 @@ public class PremiumUserBillingService(
             {
                 case PaymentMethodType.BankAccount:
                     {
-                        await setupIntentCache.Remove(user.Id);
+                        await setupIntentCache.RemoveSetupIntentForSubscriber(user.Id);
                         break;
                     }
                 case PaymentMethodType.PayPal when !string.IsNullOrEmpty(braintreeCustomerId):
@@ -304,7 +303,7 @@ public class PremiumUserBillingService(
         {
             new ()
             {
-                Price = "premium-annually",
+                Price = StripeConstants.Prices.PremiumAnnually,
                 Quantity = 1
             }
         };

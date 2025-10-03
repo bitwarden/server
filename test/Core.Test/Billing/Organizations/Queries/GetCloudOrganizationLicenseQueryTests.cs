@@ -8,7 +8,6 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Platform.Installations;
-using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture;
 using Bit.Core.Test.Billing.AutoFixture;
 using Bit.Test.Common.AutoFixture;

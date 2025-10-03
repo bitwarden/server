@@ -5,7 +5,6 @@ using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.OrganizationSponsorshipFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;

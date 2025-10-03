@@ -1,13 +1,8 @@
-﻿#nullable enable
-
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
-using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -18,7 +13,7 @@ using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.Import;
 
 public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersAndGroupsCommand
 {
@@ -27,10 +22,7 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
     private readonly IStripePaymentService _paymentService;
     private readonly IGroupRepository _groupRepository;
     private readonly IEventService _eventService;
-    private readonly ICurrentContext _currentContext;
     private readonly IOrganizationService _organizationService;
-    private readonly IInviteOrganizationUsersCommand _inviteOrganizationUsersCommand;
-    private readonly IPricingClient _pricingClient;
 
     private readonly EventSystemUser _EventSystemUser = EventSystemUser.PublicApi;
 
@@ -39,21 +31,14 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
             IStripePaymentService paymentService,
             IGroupRepository groupRepository,
             IEventService eventService,
-            ICurrentContext currentContext,
-            IOrganizationService organizationService,
-            IInviteOrganizationUsersCommand inviteOrganizationUsersCommand,
-            IPricingClient pricingClient
-            )
+            IOrganizationService organizationService)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
         _paymentService = paymentService;
         _groupRepository = groupRepository;
         _eventService = eventService;
-        _currentContext = currentContext;
         _organizationService = organizationService;
-        _inviteOrganizationUsersCommand = inviteOrganizationUsersCommand;
-        _pricingClient = pricingClient;
     }
 
     /// <summary>
@@ -244,10 +229,22 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
             List<(OrganizationUserUserDetails ou, EventType e, DateTime? d)> events,
             OrganizationUserImportData importUserData)
     {
-        var usersToDelete = importUserData.ExistingExternalUsers.Where(u =>
-            u.Type != OrganizationUserType.Owner &&
-            !importUserData.ImportedExternalIds.Contains(u.ExternalId) &&
-            importUserData.ExistingExternalUsersIdDict.ContainsKey(u.ExternalId));
+        var usersToDelete = importUserData.ExistingExternalUsers
+            .Where(u =>
+                u.Type != OrganizationUserType.Owner &&
+                !importUserData.ImportedExternalIds.Contains(u.ExternalId) &&
+                importUserData.ExistingExternalUsersIdDict.ContainsKey(u.ExternalId))
+            .ToList();
+
+        if (usersToDelete.Any(u => !u.HasMasterPassword))
+        {
+            // Removing users without an MP will put their account in an unrecoverable state.
+            // We allow this during normal syncs for offboarding, but overwriteExisting risks bricking every user in
+            // the organization, so you don't get to do it here.
+            throw new BadRequestException(
+                "Sync failed. To proceed, disable the 'Remove and re-add users during next sync' setting and try again.");
+        }
+
         await _organizationUserRepository.DeleteManyAsync(usersToDelete.Select(u => u.Id));
         events.AddRange(usersToDelete.Select(u => (
           u,

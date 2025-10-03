@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.OrganizationAuth.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Import;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationConnections;
@@ -12,6 +13,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation;
@@ -130,8 +132,10 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IRevokeOrganizationUserCommand, RevokeOrganizationUserCommand>();
         services.AddScoped<IUpdateOrganizationUserCommand, UpdateOrganizationUserCommand>();
         services.AddScoped<IUpdateOrganizationUserGroupsCommand, UpdateOrganizationUserGroupsCommand>();
-        services.AddScoped<IDeleteClaimedOrganizationUserAccountCommand, DeleteClaimedOrganizationUserAccountCommand>();
         services.AddScoped<IConfirmOrganizationUserCommand, ConfirmOrganizationUserCommand>();
+
+        services.AddScoped<IDeleteClaimedOrganizationUserAccountCommand, DeleteClaimedOrganizationUserAccountCommand>();
+        services.AddScoped<IDeleteClaimedOrganizationUserAccountValidator, DeleteClaimedOrganizationUserAccountValidator>();
     }
 
     private static void AddOrganizationApiKeyCommandsQueries(this IServiceCollection services)
@@ -185,6 +189,7 @@ public static class OrganizationServiceCollectionExtensions
 
         services.AddScoped<IInviteOrganizationUsersCommand, InviteOrganizationUsersCommand>();
         services.AddScoped<ISendOrganizationInvitesCommand, SendOrganizationInvitesCommand>();
+        services.AddScoped<IResendOrganizationInviteCommand, ResendOrganizationInviteCommand>();
 
         services.AddScoped<IInviteUsersValidator, InviteOrganizationUsersValidator>();
         services.AddScoped<IInviteUsersOrganizationValidator, InviteUsersOrganizationValidator>();

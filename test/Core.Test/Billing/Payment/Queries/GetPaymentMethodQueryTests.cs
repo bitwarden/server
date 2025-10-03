@@ -3,7 +3,6 @@ using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Services;
-using Bit.Core.Services;
 using Bit.Core.Test.Billing.Extensions;
 using Braintree;
 using Microsoft.Extensions.Logging;
@@ -108,7 +107,7 @@ public class GetPaymentMethodQueryTests
         var maskedBankAccount = maskedPaymentMethod.AsT0;
         Assert.Equal("Chase", maskedBankAccount.BankName);
         Assert.Equal("9999", maskedBankAccount.Last4);
-        Assert.True(maskedBankAccount.Verified);
+        Assert.Null(maskedBankAccount.HostedVerificationUrl);
     }
 
     [Fact]
@@ -142,7 +141,7 @@ public class GetPaymentMethodQueryTests
         var maskedBankAccount = maskedPaymentMethod.AsT0;
         Assert.Equal("Chase", maskedBankAccount.BankName);
         Assert.Equal("9999", maskedBankAccount.Last4);
-        Assert.True(maskedBankAccount.Verified);
+        Assert.Null(maskedBankAccount.HostedVerificationUrl);
     }
 
     [Fact]
@@ -163,7 +162,7 @@ public class GetPaymentMethodQueryTests
             Arg.Is<CustomerGetOptions>(options =>
                 options.HasExpansions("default_source", "invoice_settings.default_payment_method"))).Returns(customer);
 
-        _setupIntentCache.Get(organization.Id).Returns("seti_123");
+        _setupIntentCache.GetSetupIntentIdForSubscriber(organization.Id).Returns("seti_123");
 
         _stripeAdapter
             .GetSetupIntentAsync("seti_123",
@@ -177,7 +176,10 @@ public class GetPaymentMethodQueryTests
                     },
                     NextAction = new SetupIntentNextAction
                     {
-                        VerifyWithMicrodeposits = new SetupIntentNextActionVerifyWithMicrodeposits()
+                        VerifyWithMicrodeposits = new SetupIntentNextActionVerifyWithMicrodeposits
+                        {
+                            HostedVerificationUrl = "https://example.com"
+                        }
                     },
                     Status = "requires_action"
                 });
@@ -189,7 +191,7 @@ public class GetPaymentMethodQueryTests
         var maskedBankAccount = maskedPaymentMethod.AsT0;
         Assert.Equal("Chase", maskedBankAccount.BankName);
         Assert.Equal("9999", maskedBankAccount.Last4);
-        Assert.False(maskedBankAccount.Verified);
+        Assert.Equal("https://example.com", maskedBankAccount.HostedVerificationUrl);
     }
 
     [Fact]

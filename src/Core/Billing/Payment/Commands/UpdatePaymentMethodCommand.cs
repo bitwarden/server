@@ -4,7 +4,6 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Braintree;

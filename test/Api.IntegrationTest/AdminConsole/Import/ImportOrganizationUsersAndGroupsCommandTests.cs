@@ -2,14 +2,11 @@
 using Bit.Api.AdminConsole.Public.Models.Request;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
-using NSubstitute;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Import;
@@ -25,9 +22,6 @@ public class ImportOrganizationUsersAndGroupsCommandTests : IClassFixture<ApiApp
     public ImportOrganizationUsersAndGroupsCommandTests(ApiApplicationFactory factory)
     {
         _factory = factory;
-        _factory.SubstituteService((IFeatureService featureService)
-            => featureService.IsEnabled(FeatureFlagKeys.ImportAsyncRefactor)
-                .Returns(true));
         _client = _factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
     }
@@ -308,5 +302,30 @@ public class ImportOrganizationUsersAndGroupsCommandTests : IClassFixture<ApiApp
         Assert.Equal(existingGroup.Id, existingGroupInDb.Id);
         Assert.Equal("new-name", existingGroupInDb.Name);
         Assert.Equal(existingGroup.ExternalId, existingGroupInDb.ExternalId);
+    }
+
+    [Fact]
+    public async Task Import_Remove_Member_Without_Master_Password_Throws_400_Error()
+    {
+        // ARRANGE: a member without a master password
+        await OrganizationTestHelpers.CreateUserWithoutMasterPasswordAsync(_factory, Guid.NewGuid() + "@example.com",
+            _organization.Id);
+
+        // ACT: an import request that would remove that member
+        var request = new OrganizationImportRequestModel
+        {
+            LargeImport = false,
+            OverwriteExisting = true, // removes all members not in the request
+            Groups = [],
+            Members = []
+        };
+
+        var response = await _client.PostAsync($"/public/organization/import", JsonContent.Create(request));
+
+        // ASSERT: that a 400 error is thrown with the correct error message
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var responseContent = await response.Content.ReadAsStringAsync();
+        Assert.Contains("Sync failed. To proceed, disable the 'Remove and re-add users during next sync' setting and try again.", responseContent);
     }
 }

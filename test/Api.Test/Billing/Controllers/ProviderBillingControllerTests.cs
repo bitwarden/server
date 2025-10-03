@@ -1,8 +1,6 @@
 ﻿using Bit.Api.Billing.Controllers;
 using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
-using Bit.Commercial.Core.Billing.Providers.Services;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
@@ -17,7 +15,6 @@ using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Context;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.BitStripe;
-using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -345,9 +342,6 @@ public class ProviderBillingControllerTests
                 AllocatedSeats = 90
             }
         };
-
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PM21383_GetProviderPriceFromStripe)
-            .Returns(true);
 
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id).Returns(providerPlans);
 

@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Exceptions;
-using Bit.Core.Services;
 
 namespace Bit.Core.Billing.Services.Implementations;
 

@@ -1,6 +1,5 @@
 ﻿using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Services;
-using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;

@@ -17,6 +17,7 @@ public interface IStripeAdapter
         CustomerBalanceTransactionCreateOptions options);
     Task<Stripe.Subscription> CreateSubscriptionAsync(Stripe.SubscriptionCreateOptions subscriptionCreateOptions);
     Task<Stripe.Subscription> GetSubscriptionAsync(string id, Stripe.SubscriptionGetOptions options = null);
+    Task<Stripe.StripeList<Stripe.Tax.Registration>> ListTaxRegistrationsAsync(Stripe.Tax.RegistrationListOptions options = null);
 
     /// <summary>
     /// Retrieves a subscription object for a provider.
