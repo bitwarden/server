@@ -25,8 +25,7 @@ public class StripeAdapter : IStripeAdapter
     private readonly SetupIntentService _setupIntentService;
     private readonly TestClockService _testClockService;
     private readonly CustomerBalanceTransactionService _customerBalanceTransactionService;
-    private readonly Stripe.Tax.RegistrationService _taxRegistrationService;
-    private readonly CalculationService _calculationService;
+    private readonly RegistrationService _taxRegistrationService;
 
     public StripeAdapter()
     {
@@ -43,8 +42,7 @@ public class StripeAdapter : IStripeAdapter
         _setupIntentService = new SetupIntentService();
         _testClockService = new TestClockService();
         _customerBalanceTransactionService = new CustomerBalanceTransactionService();
-        _taxRegistrationService = new Stripe.Tax.RegistrationService();
-        _calculationService = new CalculationService();
+        _taxRegistrationService = new RegistrationService();
     }
 
     /**************

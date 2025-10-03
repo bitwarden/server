@@ -679,7 +679,7 @@ public class StripePaymentService : IStripePaymentService
                 Customer = subscriber.GatewayCustomerId
             };
 
-            var upcomingInvoice = await _stripeAdapter.InvoiceCreatePreviewAsync(invoiceCreatePreviewOptions);
+            var upcomingInvoice = await _stripeAdapter.CreateInvoicePreviewAsync(invoiceCreatePreviewOptions);
 
             if (upcomingInvoice != null)
             {
