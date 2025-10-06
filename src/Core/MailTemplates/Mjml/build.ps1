@@ -3,6 +3,7 @@
 param(
     [string]$InputDir = "emails",
     [string]$OutputDir = "out",
+    [switch]$Watch,
     [switch]$Minify,
     [switch]$Clean,
     [switch]$Trace
@@ -58,6 +59,26 @@ function Get-MjmlFiles {
     return $mjmlFiles
 }
 
+function Get-ComponentFiles {
+    param([string]$Directory)
+
+    if (!(Test-Path $Directory)) {
+        Write-ColorOutput "[ERROR] Directory not found: $Directory" "Red"
+        return @()
+    }
+
+    $jsFiles = Get-ChildItem -Path $Directory -Filter "*.js" -Recurse | ForEach-Object {
+        [PSCustomObject]@{
+            FullPath     = $_.FullName
+            RelativePath = $_.FullName.Replace("$(Resolve-Path $Directory)\", "")
+            Name         = $_.BaseName
+            Directory    = $_.DirectoryName
+        }
+    }
+
+    return $jsFiles
+}
+
 function Invoke-BuildMjmlFile {
     param(
         [PSCustomObject]$MjmlFile,
@@ -70,7 +91,7 @@ function Invoke-BuildMjmlFile {
     $relativePath = $MjmlFile.FullPath.Replace("$(Resolve-Path $BaseInputDir)\", "")
     $relativeDir = Split-Path $relativePath -Parent
     $outputSubDir = if ($relativeDir) { Join-Path $BaseOutputDir $relativeDir } else { $BaseOutputDir }
-    $outputFile = Join-Path $outputSubDir "$($MjmlFile.Name).html.hbs"
+    $outputFile = Join-Path $outputSubDir "$($MjmlFile.Name).html"
 
     # Ensure output directory exists
     if (!(Test-Path $outputSubDir)) {
@@ -113,6 +134,82 @@ function Invoke-BuildMjmlFile {
     }
 }
 
+function Start-MjmlWatch {
+    param(
+        [string]$InputDirectory,
+        [string]$OutputDirectory,
+        [bool]$MinifyOutput = $false
+    )
+
+    # Watch both the input directory and components directory
+    $watchDirectories = @($InputDirectory)
+    $componentsDir = "components"
+
+    if (Test-Path $componentsDir) {
+        $watchDirectories += $componentsDir
+    }
+
+    Write-ColorOutput "[WATCH] Watching for changes in: $($watchDirectories -join ', ')" "Magenta"
+    Write-ColorOutput "        Press Ctrl+C to stop watching" "Gray"
+
+    $lastBuildTime = @{}
+
+    while ($true) {
+        try {
+            $hasChanges = $false
+
+            # Watch all directories for changes
+            foreach ($watchDir in $watchDirectories) {
+                # For components directory, watch JS files; for others, watch MJML files
+                if ($watchDir -eq $componentsDir) {
+                    $watchFiles = Get-ComponentFiles -Directory $watchDir
+                } else {
+                    $watchFiles = Get-MjmlFiles -Directory $watchDir
+                }
+
+                foreach ($file in $watchFiles) {
+                    $fileInfo = Get-Item $file.FullPath
+                    $lastWrite = $fileInfo.LastWriteTime
+
+                    if (!$lastBuildTime.ContainsKey($file.FullPath) -or $lastBuildTime[$file.FullPath] -lt $lastWrite) {
+                        Write-ColorOutput "[CHANGE] Change detected: $($file.RelativePath)" "Yellow"
+
+                        # If it's a component file, rebuild all email files
+                        if ($watchDir -eq $componentsDir) {
+                            Write-ColorOutput "[INFO] Component JS file changed, rebuilding all email files..." "Cyan"
+                            $emailFiles = Get-MjmlFiles -Directory $InputDirectory
+                            foreach ($emailFile in $emailFiles) {
+                                $success = Invoke-BuildMjmlFile -MjmlFile $emailFile -BaseInputDir $InputDirectory -BaseOutputDir $OutputDirectory -MinifyOutput $MinifyOutput
+                            }
+                            # Update the component's last build time
+                            $lastBuildTime[$file.FullPath] = $lastWrite
+                        }
+                        else {
+                            # Regular email file, build it normally
+                            $success = Invoke-BuildMjmlFile -MjmlFile $file -BaseInputDir $InputDirectory -BaseOutputDir $OutputDirectory -MinifyOutput $MinifyOutput
+                            if ($success) {
+                                $lastBuildTime[$file.FullPath] = $lastWrite
+                            }
+                        }
+                        $hasChanges = $true
+                    }
+                }
+            }
+
+            if (!$hasChanges) {
+                Start-Sleep -Seconds 1
+            }
+        }
+        catch [System.Management.Automation.PipelineStoppedException] {
+            Write-ColorOutput "`n[STOP] Watch mode stopped" "Yellow"
+            break
+        }
+        catch {
+            Write-ColorOutput "[ERROR] Error in watch mode: $($_.Exception.Message)" "Red"
+            Start-Sleep -Seconds 2
+        }
+    }
+}
 
 function Invoke-CleanOutputDirectory {
     param([string]$Directory)
@@ -159,34 +256,50 @@ function Main {
         Write-ColorOutput "[INFO] Created output directory: $OutputDir" "Cyan"
     }
 
-    # Build once
-    Write-ColorOutput "`n[BUILD] Building files..." "White"
-    $successCount = 0
-    $failedFiles = @()
+    if ($Watch) {
+        # Initial build
+        Write-ColorOutput "`n[BUILD] Initial build..." "White"
+        $successCount = 0
+        foreach ($file in $mjmlFiles) {
+            if (Invoke-BuildMjmlFile -MjmlFile $file -BaseInputDir $InputDir -BaseOutputDir $OutputDir -MinifyOutput $Minify) {
+                $successCount++
+            }
+        }
+        Write-ColorOutput "`n[OK] Initial build complete: $successCount/$($mjmlFiles.Count) files built successfully" "Green"
 
-    foreach ($file in $mjmlFiles) {
-        if (Invoke-BuildMjmlFile -MjmlFile $file -BaseInputDir $InputDir -BaseOutputDir $OutputDir -MinifyOutput $Minify) {
-            $successCount++
-        }
-        else {
-            $failedFiles += $file.RelativePath
-        }
+        # Start watching
+        Start-MjmlWatch -InputDirectory $InputDir -OutputDirectory $OutputDir -MinifyOutput $Minify
     }
+    else {
 
-    Write-ColorOutput "`n[SUMMARY] Build Summary:" "Cyan"
-    Write-ColorOutput "          Success: $successCount" "Green"
-    Write-ColorOutput "          Failed:  $($failedFiles.Count)" "Red"
+        # Build once
+        Write-ColorOutput "`n[BUILD] Building files..." "White"
+        $successCount = 0
+        $failedFiles = @()
 
-    if ($failedFiles.Count -gt 0) {
-        Write-ColorOutput "`n[ERROR] Failed files:" "Red"
-        foreach ($file in $failedFiles) {
-            Write-ColorOutput "        * $file" "Red"
+        foreach ($file in $mjmlFiles) {
+            if (Invoke-BuildMjmlFile -MjmlFile $file -BaseInputDir $InputDir -BaseOutputDir $OutputDir -MinifyOutput $Minify) {
+                $successCount++
+            }
+            else {
+                $failedFiles += $file.RelativePath
+            }
         }
-        exit 1
+
+        Write-ColorOutput "`n[SUMMARY] Build Summary:" "Cyan"
+        Write-ColorOutput "          Success: $successCount" "Green"
+        Write-ColorOutput "          Failed:  $($failedFiles.Count)" "Red"
+
+        if ($failedFiles.Count -gt 0) {
+            Write-ColorOutput "`n[ERROR] Failed files:" "Red"
+            foreach ($file in $failedFiles) {
+                Write-ColorOutput "        * $file" "Red"
+            }
+            exit 1
+        }
+
+        Write-ColorOutput "`n[SUCCESS] All files built successfully!" "Green"
     }
-
-    Write-ColorOutput "`n[SUCCESS] All files built successfully!" "Green"
-
 }
 
 # Run the main function

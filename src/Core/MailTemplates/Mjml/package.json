@@ -17,7 +17,7 @@
   "scripts": {
     "build": "powershell ./build.ps1",
     "build:clean": "powershell ./build.ps1 -Clean",
-    "watch": "nodemon --exec ./build.sh --watch ./components --watch ./emails --ext js,mjml",
+    "build:watch": "powershell ./build.ps1 -Watch",
     "prettier": "prettier --cache --write ."
   },
   "dependencies": {
