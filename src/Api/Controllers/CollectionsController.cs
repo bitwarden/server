@@ -199,7 +199,7 @@ public class CollectionsController : Controller
 
     [HttpPost("{id}")]
     [Obsolete("This endpoint is deprecated. Use PUT /{id} instead.")]
-    public async Task<CollectionResponseModel> Post(Guid orgId, Guid id, [FromBody] UpdateCollectionRequestModel model)
+    public async Task<CollectionResponseModel> PostPut(Guid orgId, Guid id, [FromBody] UpdateCollectionRequestModel model)
     {
         return await Put(orgId, id, model);
     }
