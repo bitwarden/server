@@ -57,6 +57,8 @@ RUN apk add --no-cache curl \
 WORKDIR /app
 COPY --from=build /source/src/Notifications/out /app
 COPY ./src/Notifications/entrypoint.sh /entrypoint.sh
+RUN echo "net.ipv4.ip_local_port_range = 5024 65000" >> /etc/sysctl.d/99-sysctl.conf
+RUN echo "net.ipv4.tcp_fin_timeout = 30" >> /etc/sysctl.d/99-sysctl.conf
 RUN chmod +x /entrypoint.sh
 HEALTHCHECK CMD curl -f http://localhost:5000/alive || exit 1
 

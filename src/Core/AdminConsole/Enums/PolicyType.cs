@@ -20,6 +20,7 @@ public enum PolicyType : byte
     RestrictedItemTypesPolicy = 15,
     UriMatchDefaults = 16,
     AutotypeDefaultSetting = 17,
+    AutomaticUserConfirmation = 18,
 }
 
 public static class PolicyTypeExtensions
@@ -50,6 +51,7 @@ public static class PolicyTypeExtensions
             PolicyType.RestrictedItemTypesPolicy => "Restricted item types",
             PolicyType.UriMatchDefaults => "URI match defaults",
             PolicyType.AutotypeDefaultSetting => "Autotype default setting",
+            PolicyType.AutomaticUserConfirmation => "Automatically confirm invited users",
         };
     }
 }
