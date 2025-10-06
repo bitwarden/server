@@ -461,13 +461,7 @@ public class OrganizationUserRepositoryTests
             KdfParallelism = 3
         });
 
-        var organization = await organizationRepository.CreateAsync(new Organization
-        {
-            Name = "Test Org",
-            BillingEmail = user1.Email, // TODO: EF does not enforce this being NOT NULL
-            Plan = "Test", // TODO: EF does not enforce this being NOT NULL
-            PrivateKey = "privatekey",
-        });
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
 
         var orgUser1 = await organizationUserRepository.CreateAsync(new OrganizationUser
         {
@@ -536,8 +530,10 @@ public class OrganizationUserRepositoryTests
         Assert.Equal(organization.SmServiceAccounts, result.SmServiceAccounts);
         Assert.Equal(organization.LimitCollectionCreation, result.LimitCollectionCreation);
         Assert.Equal(organization.LimitCollectionDeletion, result.LimitCollectionDeletion);
+        Assert.Equal(organization.LimitItemDeletion, result.LimitItemDeletion);
         Assert.Equal(organization.AllowAdminAccessToAllCollectionItems, result.AllowAdminAccessToAllCollectionItems);
         Assert.Equal(organization.UseRiskInsights, result.UseRiskInsights);
+        Assert.Equal(organization.UseOrganizationDomains, result.UseOrganizationDomains);
         Assert.Equal(organization.UseAdminSponsoredFamilies, result.UseAdminSponsoredFamilies);
     }
 
