@@ -87,16 +87,6 @@ public class ProviderUserRepositoryTests
         Assert.True(orgWithSsoDetails.SsoEnabled);
         Assert.NotNull(orgWithSsoDetails.SsoConfig);
         Assert.Equal(serializedSsoConfigData, orgWithSsoDetails.SsoConfig);
-
-        // Cleanup
-        await ssoConfigRepository.DeleteAsync(ssoConfig);
-        await providerOrganizationRepository.DeleteAsync(providerOrganizationWithSso);
-        await providerOrganizationRepository.DeleteAsync(providerOrganizationWithoutSso);
-        await providerUserRepository.DeleteAsync(providerUser);
-        await providerRepository.DeleteAsync(provider);
-        await organizationRepository.DeleteAsync(organizationWithSso);
-        await organizationRepository.DeleteAsync(organizationWithoutSso);
-        await userRepository.DeleteAsync(user);
     }
 
     private static void AssertProviderOrganizationDetails(
