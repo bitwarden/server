@@ -20,7 +20,7 @@ namespace Bit.Api.AdminConsole.Models.Response;
 public abstract class BaseProfileOrganizationResponseModel : ResponseModel
 {
     protected BaseProfileOrganizationResponseModel(
-        string type, IProfileMemberOrganizationDetails organizationDetails) : base(type)
+        string type, IProfileOrganizationDetails organizationDetails) : base(type)
     {
         Id = organizationDetails.OrganizationId;
         UserId = organizationDetails.UserId;

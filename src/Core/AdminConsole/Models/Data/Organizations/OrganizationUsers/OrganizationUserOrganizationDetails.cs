@@ -6,7 +6,7 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
-public class OrganizationUserOrganizationDetails : IProfileMemberOrganizationDetails
+public class OrganizationUserOrganizationDetails : IProfileOrganizationDetails
 {
     public Guid OrganizationId { get; set; }
     public Guid? UserId { get; set; }

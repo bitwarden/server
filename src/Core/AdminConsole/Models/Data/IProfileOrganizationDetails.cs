@@ -7,7 +7,7 @@ namespace Bit.Core.AdminConsole.Models.Data;
 /// Interface defining common organization details properties shared between
 /// regular organization users and provider organization users for profile endpoints.
 /// </summary>
-public interface IProfileMemberOrganizationDetails
+public interface IProfileOrganizationDetails
 {
     Guid? UserId { get; set; }
     Guid OrganizationId { get; set; }

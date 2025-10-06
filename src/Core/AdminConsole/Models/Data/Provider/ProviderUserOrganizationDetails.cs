@@ -5,7 +5,7 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.AdminConsole.Models.Data.Provider;
 
-public class ProviderUserOrganizationDetails : IProfileMemberOrganizationDetails
+public class ProviderUserOrganizationDetails : IProfileOrganizationDetails
 {
     public Guid OrganizationId { get; set; }
     public Guid? UserId { get; set; }
