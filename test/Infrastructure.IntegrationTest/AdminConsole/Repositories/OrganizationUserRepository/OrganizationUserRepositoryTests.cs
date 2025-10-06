@@ -599,14 +599,6 @@ public class OrganizationUserRepositoryTests
         // Organization without SSO should have null SSO properties
         Assert.Null(orgWithoutSsoDetails.SsoEnabled);
         Assert.Null(orgWithoutSsoDetails.SsoConfig);
-
-        // Cleanup
-        await ssoConfigRepository.DeleteAsync(ssoConfig);
-        await organizationUserRepository.DeleteAsync(orgUserWithSso);
-        await organizationUserRepository.DeleteAsync(orgUserWithoutSso);
-        await organizationRepository.DeleteAsync(organizationWithSso);
-        await organizationRepository.DeleteAsync(organizationWithoutSso);
-        await userRepository.DeleteAsync(user);
     }
 
     [DatabaseTheory, DatabaseData]
