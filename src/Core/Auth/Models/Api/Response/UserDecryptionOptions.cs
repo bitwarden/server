@@ -23,10 +23,10 @@ public class UserDecryptionOptions : ResponseModel
     public MasterPasswordUnlockResponseModel? MasterPasswordUnlock { get; set; }
 
     /// <summary>
-    /// Gets or sets the WebAuthn PRF decryption keys.
+    /// Gets or sets the WebAuthn PRF decryption key.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public WebAuthnPrfDecryptionOption[]? WebAuthnPrfOptions { get; set; }
+    public WebAuthnPrfDecryptionOption? WebAuthnPrfOption { get; set; }
 
     /// <summary>
     /// Gets or sets information regarding this users trusted device decryption setup.

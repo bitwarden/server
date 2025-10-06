@@ -61,21 +61,16 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
         return this;
     }
 
-    public IUserDecryptionOptionsBuilder WithWebAuthnLoginCredentials(IEnumerable<WebAuthnCredential> credentials)
+    public IUserDecryptionOptionsBuilder WithWebAuthnLoginCredential(WebAuthnCredential credential)
     {
-        var prfEnabledCredentials = credentials
-            .Where(c => c.GetPrfStatus() == WebAuthnPrfStatus.Enabled)
-            .Select(c => new WebAuthnPrfDecryptionOption(
-                c.EncryptedPrivateKey,
-                c.EncryptedUserKey,
-                c.CredentialId,
-                [] // Stored credentials currently lack Transports, just send an empty array for now
-            ))
-            .ToArray();
-
-        if (prfEnabledCredentials.Length > 0)
+        if (credential.GetPrfStatus() == WebAuthnPrfStatus.Enabled)
         {
-            _options.WebAuthnPrfOptions = prfEnabledCredentials;
+            _options.WebAuthnPrfOption = new WebAuthnPrfDecryptionOption(
+                credential.EncryptedPrivateKey,
+                credential.EncryptedUserKey,
+                credential.CredentialId,
+                [] // Stored credentials currently lack Transports, just send an empty array for now
+            );
         }
         return this;
     }

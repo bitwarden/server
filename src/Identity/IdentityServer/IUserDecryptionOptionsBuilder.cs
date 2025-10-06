@@ -11,6 +11,6 @@ public interface IUserDecryptionOptionsBuilder
     IUserDecryptionOptionsBuilder ForUser(User user);
     IUserDecryptionOptionsBuilder WithDevice(Device device);
     IUserDecryptionOptionsBuilder WithSso(SsoConfig ssoConfig);
-    IUserDecryptionOptionsBuilder WithWebAuthnLoginCredentials(IEnumerable<WebAuthnCredential> credentials);
+    IUserDecryptionOptionsBuilder WithWebAuthnLoginCredential(WebAuthnCredential credential);
     Task<UserDecryptionOptions> BuildAsync();
 }

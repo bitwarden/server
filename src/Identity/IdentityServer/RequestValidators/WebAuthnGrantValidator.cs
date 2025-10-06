@@ -30,7 +30,6 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
     private readonly IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> _assertionOptionsDataProtector;
     private readonly IAssertWebAuthnLoginCredentialCommand _assertWebAuthnLoginCredentialCommand;
     private readonly IDeviceValidator _deviceValidator;
-    private readonly IWebAuthnCredentialRepository _webAuthnCredentialRepository;
 
     public WebAuthnGrantValidator(
         UserManager<User> userManager,
@@ -51,8 +50,7 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         IAssertWebAuthnLoginCredentialCommand assertWebAuthnLoginCredentialCommand,
         IPolicyRequirementQuery policyRequirementQuery,
         IAuthRequestRepository authRequestRepository,
-        IMailService mailService,
-        IWebAuthnCredentialRepository webAuthnCredentialRepository)
+        IMailService mailService)
         : base(
             userManager,
             userService,
@@ -75,7 +73,6 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         _assertionOptionsDataProtector = assertionOptionsDataProtector;
         _assertWebAuthnLoginCredentialCommand = assertWebAuthnLoginCredentialCommand;
         _deviceValidator = deviceValidator;
-        _webAuthnCredentialRepository = webAuthnCredentialRepository;
     }
 
     string IExtensionGrantValidator.GrantType => "webauthn";
@@ -101,8 +98,7 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         }
 
         var (user, credential) = await _assertWebAuthnLoginCredentialCommand.AssertWebAuthnLoginCredential(token.Options, deviceResponse);
-        var allCredentials = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
-        UserDecryptionOptionsBuilder.WithWebAuthnLoginCredentials(allCredentials);
+        UserDecryptionOptionsBuilder.WithWebAuthnLoginCredential(credential);
 
         await ValidateAsync(context, context.Request, new CustomValidatorRequestContext { User = user });
     }
