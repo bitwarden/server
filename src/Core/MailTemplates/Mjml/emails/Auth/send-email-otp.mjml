@@ -8,7 +8,7 @@
     <!-- Blue Header Section -->
     <mj-wrapper css-class="border-fix" padding="20px 20px 10px 20px">
       <mj-bw-hero
-        img-src="https://assets.bitwarden.com/email/v1/business.png"
+        img-src="https://assets.bitwarden.com/email/v1/spot-secure-send-round.png"
         title="Verify your email to access this Bitwarden Send"
       />
     </mj-wrapper>

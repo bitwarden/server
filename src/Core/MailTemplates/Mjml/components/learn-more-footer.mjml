@@ -10,7 +10,7 @@
   </mj-column>
   <mj-column width="30%">
     <mj-image
-      src="https://assets.bitwarden.com/email/v1/chat.png"
+      src="https://assets.bitwarden.com/email/v1/spot-community.png"
       css-class="hide-small-img"
       width="94px"
     />
