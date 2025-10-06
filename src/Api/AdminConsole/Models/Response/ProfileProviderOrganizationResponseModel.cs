@@ -19,5 +19,6 @@ public class ProfileProviderOrganizationResponseModel : BaseProfileOrganizationR
         ProviderName = organizationDetails.ProviderName;
         ProviderType = organizationDetails.ProviderType;
         Permissions = new Permissions();
+        AccessSecretsManager = false; // Provider users cannot access Secrets Manager
     }
 }

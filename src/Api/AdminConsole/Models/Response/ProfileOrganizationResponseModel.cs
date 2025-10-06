@@ -21,6 +21,11 @@ public class ProfileOrganizationResponseModel : BaseProfileOrganizationResponseM
         OrganizationUserId = organizationDetails.OrganizationUserId;
         UserIsClaimedByOrganization = organizationIdsClaimingUser.Contains(organizationDetails.OrganizationId);
         Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(organizationDetails.Permissions);
+        IsAdminInitiated = organizationDetails.IsAdminInitiated ?? false;
+        FamilySponsorshipFriendlyName = organizationDetails.FamilySponsorshipFriendlyName;
+        FamilySponsorshipLastSyncDate = organizationDetails.FamilySponsorshipLastSyncDate;
+        FamilySponsorshipToDelete = organizationDetails.FamilySponsorshipToDelete;
+        FamilySponsorshipValidUntil = organizationDetails.FamilySponsorshipValidUntil;
         FamilySponsorshipAvailable = (organizationDetails.FamilySponsorshipFriendlyName == null || IsAdminInitiated) &&
             StaticStore.GetSponsoredPlan(PlanSponsorshipType.FamiliesForEnterprise)
             .UsersCanSponsor(organizationDetails);
@@ -29,6 +34,12 @@ public class ProfileOrganizationResponseModel : BaseProfileOrganizationResponseM
 
     public Guid OrganizationUserId { get; set; }
     public bool UserIsClaimedByOrganization { get; set; }
+    public string? FamilySponsorshipFriendlyName { get; set; }
+    public bool FamilySponsorshipAvailable { get; set; }
+    public DateTime? FamilySponsorshipLastSyncDate { get; set; }
+    public DateTime? FamilySponsorshipValidUntil { get; set; }
+    public bool? FamilySponsorshipToDelete { get; set; }
+    public bool IsAdminInitiated { get; set; }
     /// <summary>
     /// Obsolete property for backward compatibility
     /// </summary>

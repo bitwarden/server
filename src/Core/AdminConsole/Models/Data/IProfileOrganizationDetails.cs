@@ -44,10 +44,6 @@ public interface IProfileOrganizationDetails
     ProviderType? ProviderType { get; set; }
     bool? SsoEnabled { get; set; }
     string? SsoConfig { get; set; }
-    string? FamilySponsorshipFriendlyName { get; set; }
-    DateTime? FamilySponsorshipLastSyncDate { get; set; }
-    bool? FamilySponsorshipToDelete { get; set; }
-    DateTime? FamilySponsorshipValidUntil { get; set; }
     bool UsePasswordManager { get; set; }
     bool LimitCollectionCreation { get; set; }
     bool LimitCollectionDeletion { get; set; }
@@ -56,5 +52,4 @@ public interface IProfileOrganizationDetails
     bool LimitItemDeletion { get; set; }
     bool UseAdminSponsoredFamilies { get; set; }
     bool UseOrganizationDomains { get; set; }
-    bool? IsAdminInitiated { get; set; }
 }

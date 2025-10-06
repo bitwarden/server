@@ -55,9 +55,4 @@ public class ProviderUserOrganizationDetails : IProfileOrganizationDetails
     public string? SsoExternalId { get; set; }
     public string? Permissions { get; set; }
     public string? ResetPasswordKey { get; set; }
-    public string? FamilySponsorshipFriendlyName { get; set; }
-    public DateTime? FamilySponsorshipLastSyncDate { get; set; }
-    public bool? FamilySponsorshipToDelete { get; set; }
-    public DateTime? FamilySponsorshipValidUntil { get; set; }
-    public bool? IsAdminInitiated { get; set; }
 }

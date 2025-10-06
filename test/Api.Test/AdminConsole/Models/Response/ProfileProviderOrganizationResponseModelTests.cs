@@ -123,11 +123,5 @@ public class ProfileProviderOrganizationResponseModelTests
         Assert.False(result.Permissions.ManageUsers);
         Assert.False(result.ResetPasswordEnrolled);
         Assert.False(result.AccessSecretsManager);
-        Assert.Equal(organizationDetails.FamilySponsorshipFriendlyName, result.FamilySponsorshipFriendlyName);
-        Assert.Equal(organizationDetails.FamilySponsorshipLastSyncDate, result.FamilySponsorshipLastSyncDate);
-        Assert.Equal(organizationDetails.FamilySponsorshipToDelete, result.FamilySponsorshipToDelete);
-        Assert.Equal(organizationDetails.FamilySponsorshipValidUntil, result.FamilySponsorshipValidUntil);
-        Assert.False(result.FamilySponsorshipAvailable);
-        Assert.False(result.IsAdminInitiated);
     }
 }

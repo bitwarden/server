@@ -62,11 +62,6 @@ public abstract class BaseProfileOrganizationResponseModel : ResponseModel
         LimitCollectionDeletion = organizationDetails.LimitCollectionDeletion;
         LimitItemDeletion = organizationDetails.LimitItemDeletion;
         AllowAdminAccessToAllCollectionItems = organizationDetails.AllowAdminAccessToAllCollectionItems;
-        IsAdminInitiated = organizationDetails.IsAdminInitiated ?? false;
-        FamilySponsorshipFriendlyName = organizationDetails.FamilySponsorshipFriendlyName;
-        FamilySponsorshipLastSyncDate = organizationDetails.FamilySponsorshipLastSyncDate;
-        FamilySponsorshipToDelete = organizationDetails.FamilySponsorshipToDelete;
-        FamilySponsorshipValidUntil = organizationDetails.FamilySponsorshipValidUntil;
         SsoEnabled = organizationDetails.SsoEnabled ?? false;
         if (organizationDetails.SsoConfig != null)
         {
@@ -122,12 +117,6 @@ public abstract class BaseProfileOrganizationResponseModel : ResponseModel
     public bool KeyConnectorEnabled { get; set; }
     public string? KeyConnectorUrl { get; set; }
     public MemberDecryptionType? SsoMemberDecryptionType { get; set; }
-    public string? FamilySponsorshipFriendlyName { get; set; }
-    public bool FamilySponsorshipAvailable { get; set; }
-    public DateTime? FamilySponsorshipLastSyncDate { get; set; }
-    public DateTime? FamilySponsorshipValidUntil { get; set; }
-    public bool? FamilySponsorshipToDelete { get; set; }
-    public bool IsAdminInitiated { get; set; }
     public bool AccessSecretsManager { get; set; }
     public Guid? UserId { get; set; }
     public OrganizationUserStatusType Status { get; set; }
