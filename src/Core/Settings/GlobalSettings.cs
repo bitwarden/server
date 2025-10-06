@@ -8,6 +8,7 @@ namespace Bit.Core.Settings;
 
 public class GlobalSettings : IGlobalSettings
 {
+    private string _mailTemplateDirectory;
     private string _logDirectory;
     private string _licenseDirectory;
 
@@ -36,6 +37,11 @@ public class GlobalSettings : IGlobalSettings
     {
         get => BuildDirectory(_licenseDirectory, "/core/licenses");
         set => _licenseDirectory = value;
+    }
+    public virtual string MailTemplateDirectory
+    {
+        get => BuildDirectory(_mailTemplateDirectory, "/mail-templates");
+        set => _mailTemplateDirectory = value;
     }
     public string LicenseCertificatePassword { get; set; }
     public virtual string PushRelayBaseUri { get; set; }
@@ -300,6 +306,9 @@ public class GlobalSettings : IGlobalSettings
             private string _connectionString;
             private string _eventTopicName;
             private string _integrationTopicName;
+
+            public virtual int DefaultMaxConcurrentCalls { get; set; } = 1;
+            public virtual int DefaultPrefetchCount { get; set; } = 0;
 
             public virtual string EventRepositorySubscriptionName { get; set; } = "events-write-subscription";
             public virtual string SlackEventSubscriptionName { get; set; } = "events-slack-subscription";
