@@ -1,5 +1,4 @@
-﻿#nullable enable
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace Bit.Api.Billing.Models.Requests.Payment;
 
