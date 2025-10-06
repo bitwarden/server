@@ -9,9 +9,9 @@ namespace Bit.Api.AdminConsole.Models.Response;
 /// Sync data for organization members and their organization.
 /// Note: see <see cref="ProfileProviderOrganizationResponseModel"/> for organization sync data received by provider users.
 /// </summary>
-public class ProfileMemberOrganizationResponseModel : BaseProfileOrganizationResponseModel
+public class ProfileOrganizationResponseModel : BaseProfileOrganizationResponseModel
 {
-    public ProfileMemberOrganizationResponseModel(
+    public ProfileOrganizationResponseModel(
         OrganizationUserOrganizationDetails organizationDetails,
         IEnumerable<Guid> organizationIdsClaimingUser)
         : base("profileOrganization", organizationDetails)

@@ -132,7 +132,7 @@ public class OrganizationsController(
 
     [HttpPost("{id}/sm-subscription")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task<ProfileMemberOrganizationResponseModel> PostSmSubscription(Guid id, [FromBody] SecretsManagerSubscriptionUpdateRequestModel model)
+    public async Task<ProfileOrganizationResponseModel> PostSmSubscription(Guid id, [FromBody] SecretsManagerSubscriptionUpdateRequestModel model)
     {
         if (!await currentContext.EditSubscription(id))
         {
@@ -159,7 +159,7 @@ public class OrganizationsController(
 
     [HttpPost("{id:guid}/subscription")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task<ProfileMemberOrganizationResponseModel> PostSubscription(Guid id, [FromBody] OrganizationSubscriptionUpdateRequestModel model)
+    public async Task<ProfileOrganizationResponseModel> PostSubscription(Guid id, [FromBody] OrganizationSubscriptionUpdateRequestModel model)
     {
         if (!await currentContext.EditSubscription(id))
         {
@@ -175,7 +175,7 @@ public class OrganizationsController(
 
     [HttpPost("{id:guid}/subscribe-secrets-manager")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task<ProfileMemberOrganizationResponseModel> PostSubscribeSecretsManagerAsync(Guid id, [FromBody] SecretsManagerSubscribeRequestModel model)
+    public async Task<ProfileOrganizationResponseModel> PostSubscribeSecretsManagerAsync(Guid id, [FromBody] SecretsManagerSubscribeRequestModel model)
     {
         if (!await currentContext.EditSubscription(id))
         {
@@ -358,7 +358,7 @@ public class OrganizationsController(
         }
     }
 
-    private async Task<ProfileMemberOrganizationResponseModel> GetProfileOrganizationResponseModelAsync(
+    private async Task<ProfileOrganizationResponseModel> GetProfileOrganizationResponseModelAsync(
         Guid organizationId,
         Guid userId)
     {
@@ -370,6 +370,6 @@ public class OrganizationsController(
         var organizationIdsClaimingActiveUser = (await userService.GetOrganizationsClaimingUserAsync(userId))
             .Select(o => o.Id);
 
-        return new ProfileMemberOrganizationResponseModel(organizationUserDetails, organizationIdsClaimingActiveUser);
+        return new ProfileOrganizationResponseModel(organizationUserDetails, organizationIdsClaimingActiveUser);
     }
 }

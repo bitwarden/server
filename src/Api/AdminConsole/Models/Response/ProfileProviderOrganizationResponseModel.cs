@@ -6,7 +6,7 @@ namespace Bit.Api.AdminConsole.Models.Response;
 
 /// <summary>
 /// Sync data for provider users and their managed organizations.
-/// Note: see <see cref="ProfileMemberOrganizationResponseModel"/> for organization sync data received by organization members.
+/// Note: see <see cref="ProfileOrganizationResponseModel"/> for organization sync data received by organization members.
 /// </summary>
 public class ProfileProviderOrganizationResponseModel : BaseProfileOrganizationResponseModel
 {
