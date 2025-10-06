@@ -6,6 +6,9 @@ using Bit.Api.Models.Response;
 using Bit.Api.Tools.Models.Response;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Data.Provider;
+using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Entities;
 using Bit.Core.KeyManagement.Models.Response;
 using Bit.Core.Models.Api;
@@ -16,9 +19,6 @@ using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
-using Bit.Core.Auth.Entities;
-using Bit.Core.Auth.Enums;
-using Bit.Core.Auth.Models.Api.Response;
 
 namespace Bit.Api.Vault.Models.Response;
 
