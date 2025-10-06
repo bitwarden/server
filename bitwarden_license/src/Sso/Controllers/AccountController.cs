@@ -294,33 +294,36 @@ public class AccountController : Controller
             if (preventNonCompliant)
             {
                 // Lazily resolve organization if not already known
-                if (organization == null && Guid.TryParse(provider, out var organizationId))
-                {
-                    organization = await _organizationRepository.GetByIdAsync(organizationId);
-                }
-
                 if (organization == null)
                 {
-                    _logger.LogError("Organization not found for provider: {Provider}", provider);
+                    if (!Guid.TryParse(provider, out var organizationId))
+                    {
+                        throw new Exception(_i18nService.T("SSOProviderIsNotAnOrgId", provider));
+                    }
+
+                    organization = await _organizationRepository.GetByIdAsync(organizationId);
+
+                    if (organization == null)
+                    {
+                        throw new Exception(_i18nService.T("CouldNotFindOrganization", organizationId));
+                    }
+                }
+
+                // Lazily resolve orgUser only when we have an organization and a user
+                orgUser ??= await _organizationUserRepository.GetByOrganizationAsync(organization.Id, user.Id);
+                if (orgUser != null)
+                {
+                    EnsureOrgUserStatusAllowed(
+                        orgUser.Status,
+                        organization.DisplayName(),
+                        allowedStatuses: [OrganizationUserStatusType.Accepted, OrganizationUserStatusType.Confirmed]);
                 }
                 else
                 {
-                    // Lazily resolve orgUser only when we have an organization and a user
-                    orgUser ??= await _organizationUserRepository.GetByOrganizationAsync(organization.Id, user.Id);
-                    if (orgUser != null)
-                    {
-                        EnsureOrgUserStatusAllowed(
-                            orgUser.Status,
-                            organization.DisplayName(),
-                            allowedStatuses: [OrganizationUserStatusType.Accepted, OrganizationUserStatusType.Confirmed]);
-                    }
-                    else
-                    {
-                        _logger.LogError(
-                            "Organization user not found for user ID: {UserId} and organization ID: {OrganizationId}",
-                            user.Id,
-                            organization?.Id);
-                    }
+                    _logger.LogError(
+                        "Organization user not found for user ID: {UserId} and organization ID: {OrganizationId}",
+                        user.Id,
+                        organization?.Id);
                 }
             }
 
