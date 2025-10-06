@@ -16,7 +16,7 @@ namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories;
 public class ProviderUserRepositoryTests
 {
     [Theory, DatabaseData]
-    public async Task GetManyOrganizationDetailsByUserAsync_ShouldPopulateSsoPropertiesCorrectly(
+    public async Task GetManyOrganizationDetailsByUserAsync_ShouldPopulatePropertiesCorrectly(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IProviderRepository providerRepository,
