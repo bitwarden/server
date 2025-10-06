@@ -2,36 +2,34 @@
 using System.Security.Claims;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
-using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
-using Bit.Core.Auth.UserFeatures.Registration;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Settings;
-using Bit.Core.Tokens;
 using Bit.Sso.Controllers;
+using Bit.Test.Common.AutoFixture;
+using Bit.Test.Common.AutoFixture.Attributes;
 using Duende.IdentityModel;
 using Duende.IdentityServer.Configuration;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Services;
-using Duende.IdentityServer.Stores;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit.Abstractions;
 using AuthenticationOptions = Duende.IdentityServer.Configuration.AuthenticationOptions;
 
 namespace Bit.SSO.Test.Controllers;
 
+[
+    ControllerCustomize(typeof(AccountController)),
+    SutProviderCustomize
+]
 public class AccountControllerTest
 {
     private readonly ITestOutputHelper _output;
@@ -40,86 +38,24 @@ public class AccountControllerTest
     {
         _output = output;
     }
-    private static AccountController CreateController(
-        IAuthenticationService authenticationService,
-        out ISsoConfigRepository ssoConfigRepository,
-        out IUserRepository userRepository,
-        out IOrganizationRepository organizationRepository,
-        out IOrganizationUserRepository organizationUserRepository,
-        out IIdentityServerInteractionService interactionService,
-        out II18nService i18nService,
-        out ISsoUserRepository ssoUserRepository,
-        out Core.Services.IEventService eventService,
-        out IFeatureService featureService)
+
+    private static IAuthenticationService SetupHttpContextWithAuth(
+        SutProvider<AccountController> sutProvider,
+        AuthenticateResult authResult,
+        IAuthenticationService? authService = null)
     {
         var schemeProvider = Substitute.For<IAuthenticationSchemeProvider>();
         schemeProvider.GetDefaultAuthenticateSchemeAsync()
             .Returns(new AuthenticationScheme("idsrv", "idsrv", typeof(IAuthenticationHandler)));
-        var clientStore = Substitute.For<IClientStore>();
-        interactionService = Substitute.For<IIdentityServerInteractionService>();
-        var logger = Substitute.For<ILogger<AccountController>>();
-        organizationRepository = Substitute.For<IOrganizationRepository>();
-        organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
-        var organizationService = Substitute.For<IOrganizationService>();
-        ssoConfigRepository = Substitute.For<ISsoConfigRepository>();
-        ssoUserRepository = Substitute.For<ISsoUserRepository>();
-        userRepository = Substitute.For<IUserRepository>();
-        var policyRepository = Substitute.For<IPolicyRepository>();
-        var userService = Substitute.For<IUserService>();
-        i18nService = Substitute.For<II18nService>();
-        i18nService.T(Arg.Any<string>(), Arg.Any<object?[]>()).Returns(ci => (string)ci[0]!);
 
-        // Minimal UserManager setup (not used in tested code paths, but required by ctor)
-        var userStore = Substitute.For<IUserStore<User>>();
-        var identityOptions = Microsoft.Extensions.Options.Options.Create(new IdentityOptions());
-        var passwordHasher = Substitute.For<IPasswordHasher<User>>();
-        var userValidators = Array.Empty<IUserValidator<User>>();
-        var passwordValidators = Array.Empty<IPasswordValidator<User>>();
-        var lookupNormalizer = Substitute.For<ILookupNormalizer>();
-        var errorDescriber = new IdentityErrorDescriber();
-        var userLogger = Substitute.For<ILogger<UserManager<User>>>();
-        var userManager = new UserManager<User>(
-            userStore,
-            identityOptions,
-            passwordHasher,
-            userValidators,
-            passwordValidators,
-            lookupNormalizer,
-            errorDescriber,
-            new ServiceCollection().BuildServiceProvider(),
-            userLogger);
-
-        var globalSettings = Substitute.For<IGlobalSettings>();
-        eventService = Substitute.For<Core.Services.IEventService>();
-        var dataProtector = Substitute.For<IDataProtectorTokenFactory<SsoTokenable>>();
-        var organizationDomainRepository = Substitute.For<IOrganizationDomainRepository>();
-        var registerUserCommand = Substitute.For<IRegisterUserCommand>();
-        featureService = Substitute.For<IFeatureService>();
-
-        var controller = new AccountController(
-            schemeProvider,
-            clientStore,
-            interactionService,
-            logger,
-            organizationRepository,
-            organizationUserRepository,
-            organizationService,
-            ssoConfigRepository,
-            ssoUserRepository,
-            userRepository,
-            policyRepository,
-            userService,
-            i18nService,
-            userManager,
-            globalSettings,
-            eventService,
-            dataProtector,
-            organizationDomainRepository,
-            registerUserCommand,
-            featureService);
+        var resolvedAuthService = authService ?? Substitute.For<IAuthenticationService>();
+        resolvedAuthService.AuthenticateAsync(
+                Arg.Any<HttpContext>(),
+                AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
+            .Returns(authResult);
 
         var services = new ServiceCollection();
-        services.AddSingleton(authenticationService);
+        services.AddSingleton(resolvedAuthService);
         services.AddSingleton<IAuthenticationSchemeProvider>(schemeProvider);
         services.AddSingleton(new IdentityServerOptions
         {
@@ -130,7 +66,7 @@ public class AccountControllerTest
         });
         var sp = services.BuildServiceProvider();
 
-        controller.ControllerContext = new ControllerContext
+        sutProvider.Sut.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext
             {
@@ -138,7 +74,7 @@ public class AccountControllerTest
             }
         };
 
-        return controller;
+        return resolvedAuthService;
     }
 
     private static void InvokeEnsureOrgUserStatusAllowed(
@@ -175,49 +111,19 @@ public class AccountControllerTest
         return AuthenticateResult.Success(ticket);
     }
 
-    private static AccountController CreateControllerWithAuth(
-        AuthenticateResult authResult,
-        out IAuthenticationService authService,
-        out ISsoConfigRepository ssoConfigRepository,
-        out IUserRepository userRepository,
-        out IOrganizationRepository organizationRepository,
-        out IOrganizationUserRepository organizationUserRepository,
-        out IIdentityServerInteractionService interactionService,
-        out II18nService i18nService,
-        out ISsoUserRepository ssoUserRepository,
-        out Core.Services.IEventService eventService,
-        out IFeatureService featureService)
-    {
-        var authServiceSub = Substitute.For<IAuthenticationService>();
-        authServiceSub.AuthenticateAsync(
-            Arg.Any<HttpContext>(),
-            AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
-            .Returns(authResult);
-        authService = authServiceSub;
-        return CreateController(
-            authServiceSub,
-            out ssoConfigRepository,
-            out userRepository,
-            out organizationRepository,
-            out organizationUserRepository,
-            out interactionService,
-            out i18nService,
-            out ssoUserRepository,
-            out eventService,
-            out featureService);
-    }
-
     private static void ConfigureSsoAndUser(
-        ISsoConfigRepository ssoConfigRepository,
-        IUserRepository userRepository,
-        IOrganizationRepository organizationRepository,
-        IOrganizationUserRepository organizationUserRepository,
+        SutProvider<AccountController> sutProvider,
         Guid orgId,
         string providerUserId,
         User user,
         Organization? organization = null,
         OrganizationUser? orgUser = null)
     {
+        var ssoConfigRepository = sutProvider.GetDependency<ISsoConfigRepository>();
+        var userRepository = sutProvider.GetDependency<IUserRepository>();
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+
         var ssoConfig = new SsoConfig { OrganizationId = orgId, Enabled = true };
         var ssoData = new SsoConfigurationData();
         ssoConfig.SetData(ssoData);
@@ -251,7 +157,10 @@ public class AccountControllerTest
         public int OrgUserGetByEmail { get; init; }
     }
 
-    private async Task<LookupCounts> MeasureCountsForScenarioAsync(MeasurementScenario scenario, bool preventNonCompliant)
+    private async Task<LookupCounts> MeasureCountsForScenarioAsync(
+        SutProvider<AccountController> sutProvider,
+        MeasurementScenario scenario,
+        bool preventNonCompliant)
     {
         var orgId = Guid.NewGuid();
         var providerUserId = $"meas-{scenario}-{(preventNonCompliant ? "on" : "off")}";
@@ -263,20 +172,16 @@ public class AccountControllerTest
         var user = new User { Id = Guid.NewGuid(), Email = email };
 
         var authResult = BuildSuccessfulExternalAuth(orgId, providerUserId, email);
-        var controller = CreateControllerWithAuth(
-            authResult,
-            out var authService,
-            out var ssoConfigRepository,
-            out var userRepository,
-            out var organizationRepository,
-            out var organizationUserRepository,
-            out var interactionService,
-            out var i18nService,
-            out var ssoUserRepository,
-            out var eventService,
-            out var featureService);
+        SetupHttpContextWithAuth(sutProvider, authResult);
 
         // SSO config present
+        var ssoConfigRepository = sutProvider.GetDependency<ISsoConfigRepository>();
+        var userRepository = sutProvider.GetDependency<IUserRepository>();
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        var featureService = sutProvider.GetDependency<IFeatureService>();
+        var interactionService = sutProvider.GetDependency<IIdentityServerInteractionService>();
+
         var ssoConfig = new SsoConfig { OrganizationId = orgId, Enabled = true };
         var ssoData = new SsoConfigurationData();
         ssoConfig.SetData(ssoData);
@@ -316,14 +221,14 @@ public class AccountControllerTest
 
         try
         {
-            _ = await controller.ExternalCallback();
+            _ = await sutProvider.Sut.ExternalCallback();
         }
         catch
         {
             // Ignore exceptions for measurement; some flows can throw based on status enforcement
         }
 
-        return new LookupCounts
+        var counts = new LookupCounts
         {
             UserGetBySso = userRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IUserRepository.GetBySsoUserAsync)),
             UserGetByEmail = userRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IUserRepository.GetByEmailAsync)),
@@ -331,31 +236,29 @@ public class AccountControllerTest
             OrgUserGetByOrg = organizationUserRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IOrganizationUserRepository.GetByOrganizationAsync)),
             OrgUserGetByEmail = organizationUserRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IOrganizationUserRepository.GetByOrganizationEmailAsync)),
         };
+
+        userRepository.ClearReceivedCalls();
+        organizationRepository.ClearReceivedCalls();
+        organizationUserRepository.ClearReceivedCalls();
+
+        return counts;
     }
 
-    [Fact]
-    public void EnsureOrgUserStatusAllowed_AllowsAcceptedAndConfirmed()
+    [Theory, BitAutoData]
+    public void EnsureOrgUserStatusAllowed_AllowsAcceptedAndConfirmed(
+        SutProvider<AccountController> sutProvider)
     {
         // Arrange
-        var authService = Substitute.For<IAuthenticationService>();
-        var controller = CreateController(
-            authService,
-            out var ssoConfigRepository,
-            out var userRepository,
-            out var organizationRepository,
-            out var organizationUserRepository,
-            out var interactionService,
-            out var i18nService,
-            out var ssoUserRepository,
-            out var eventService,
-            out var featureService);
+        sutProvider.GetDependency<II18nService>()
+            .T(Arg.Any<string>(), Arg.Any<object?[]>())
+            .Returns(ci => (string)ci[0]!);
 
         // Act
         var ex1 = Record.Exception(() =>
-            InvokeEnsureOrgUserStatusAllowed(controller, OrganizationUserStatusType.Accepted,
+            InvokeEnsureOrgUserStatusAllowed(sutProvider.Sut, OrganizationUserStatusType.Accepted,
                 OrganizationUserStatusType.Accepted, OrganizationUserStatusType.Confirmed));
         var ex2 = Record.Exception(() =>
-            InvokeEnsureOrgUserStatusAllowed(controller, OrganizationUserStatusType.Confirmed,
+            InvokeEnsureOrgUserStatusAllowed(sutProvider.Sut, OrganizationUserStatusType.Confirmed,
                 OrganizationUserStatusType.Accepted, OrganizationUserStatusType.Confirmed));
 
         // Assert
@@ -363,26 +266,18 @@ public class AccountControllerTest
         Assert.Null(ex2);
     }
 
-    [Fact]
-    public void EnsureOrgUserStatusAllowed_Invited_ThrowsAcceptInvite()
+    [Theory, BitAutoData]
+    public void EnsureOrgUserStatusAllowed_Invited_ThrowsAcceptInvite(
+        SutProvider<AccountController> sutProvider)
     {
         // Arrange
-        var authService = Substitute.For<IAuthenticationService>();
-        var controller = CreateController(
-            authService,
-            out var ssoConfigRepository,
-            out var userRepository,
-            out var organizationRepository,
-            out var organizationUserRepository,
-            out var interactionService,
-            out var i18nService,
-            out var ssoUserRepository,
-            out var eventService,
-            out var featureService);
+        sutProvider.GetDependency<II18nService>()
+            .T(Arg.Any<string>(), Arg.Any<object?[]>())
+            .Returns(ci => (string)ci[0]!);
 
         // Act
         var ex = Assert.Throws<TargetInvocationException>(() =>
-            InvokeEnsureOrgUserStatusAllowed(controller, OrganizationUserStatusType.Invited,
+            InvokeEnsureOrgUserStatusAllowed(sutProvider.Sut, OrganizationUserStatusType.Invited,
                 OrganizationUserStatusType.Accepted, OrganizationUserStatusType.Confirmed));
 
         // Assert
@@ -390,26 +285,18 @@ public class AccountControllerTest
         Assert.Equal("AcceptInviteBeforeUsingSSO", ex.InnerException!.Message);
     }
 
-    [Fact]
-    public void EnsureOrgUserStatusAllowed_Revoked_ThrowsAccessRevoked()
+    [Theory, BitAutoData]
+    public void EnsureOrgUserStatusAllowed_Revoked_ThrowsAccessRevoked(
+        SutProvider<AccountController> sutProvider)
     {
         // Arrange
-        var authService = Substitute.For<IAuthenticationService>();
-        var controller = CreateController(
-            authService,
-            out var ssoConfigRepository,
-            out var userRepository,
-            out var organizationRepository,
-            out var organizationUserRepository,
-            out var interactionService,
-            out var i18nService,
-            out var ssoUserRepository,
-            out var eventService,
-            out var featureService);
+        sutProvider.GetDependency<II18nService>()
+            .T(Arg.Any<string>(), Arg.Any<object?[]>())
+            .Returns(ci => (string)ci[0]!);
 
         // Act
         var ex = Assert.Throws<TargetInvocationException>(() =>
-            InvokeEnsureOrgUserStatusAllowed(controller, OrganizationUserStatusType.Revoked,
+            InvokeEnsureOrgUserStatusAllowed(sutProvider.Sut, OrganizationUserStatusType.Revoked,
                 OrganizationUserStatusType.Accepted, OrganizationUserStatusType.Confirmed));
 
         // Assert
@@ -417,28 +304,20 @@ public class AccountControllerTest
         Assert.Equal("OrganizationUserAccessRevoked", ex.InnerException!.Message);
     }
 
-    [Fact]
-    public void EnsureOrgUserStatusAllowed_UnknownStatus_ThrowsUnknown()
+    [Theory, BitAutoData]
+    public void EnsureOrgUserStatusAllowed_UnknownStatus_ThrowsUnknown(
+        SutProvider<AccountController> sutProvider)
     {
         // Arrange
-        var authService = Substitute.For<IAuthenticationService>();
-        var controller = CreateController(
-            authService,
-            out var ssoConfigRepository,
-            out var userRepository,
-            out var organizationRepository,
-            out var organizationUserRepository,
-            out var interactionService,
-            out var i18nService,
-            out var ssoUserRepository,
-            out var eventService,
-            out var featureService);
+        sutProvider.GetDependency<II18nService>()
+            .T(Arg.Any<string>(), Arg.Any<object?[]>())
+            .Returns(ci => (string)ci[0]!);
 
         var unknown = (OrganizationUserStatusType)999;
 
         // Act
         var ex = Assert.Throws<TargetInvocationException>(() =>
-            InvokeEnsureOrgUserStatusAllowed(controller, unknown,
+            InvokeEnsureOrgUserStatusAllowed(sutProvider.Sut, unknown,
                 OrganizationUserStatusType.Accepted, OrganizationUserStatusType.Confirmed));
 
         // Assert
@@ -446,8 +325,9 @@ public class AccountControllerTest
         Assert.Equal("OrganizationUserUnknownStatus", ex.InnerException!.Message);
     }
 
-    [Fact]
-    public async Task ExternalCallback_WithExistingUserAndAcceptedMembership_RedirectsToReturnUrl()
+    [Theory, BitAutoData]
+    public async Task ExternalCallback_WithExistingUserAndAcceptedMembership_RedirectsToReturnUrl(
+        SutProvider<AccountController> sutProvider)
     {
         // Arrange
         var orgId = Guid.NewGuid();
@@ -463,35 +343,22 @@ public class AccountControllerTest
         };
 
         var authResult = BuildSuccessfulExternalAuth(orgId, providerUserId, user.Email!);
-        var controller = CreateControllerWithAuth(
-            authResult,
-            out var authService,
-            out var ssoConfigRepository,
-            out var userRepository,
-            out var organizationRepository,
-            out var organizationUserRepository,
-            out var interactionService,
-            out var i18nService,
-            out var ssoUserRepository,
-            out var eventService,
-            out var featureService);
+        var authService = SetupHttpContextWithAuth(sutProvider, authResult);
 
         ConfigureSsoAndUser(
-            ssoConfigRepository,
-            userRepository,
-            organizationRepository,
-            organizationUserRepository,
+            sutProvider,
             orgId,
             providerUserId,
             user,
             organization,
             orgUser);
 
-        featureService.IsEnabled(Arg.Any<string>()).Returns(true);
-        interactionService.GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(true);
+        sutProvider.GetDependency<IIdentityServerInteractionService>()
+            .GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
 
         // Act
-        var result = await controller.ExternalCallback();
+        var result = await sutProvider.Sut.ExternalCallback();
 
         // Assert
         var redirect = Assert.IsType<RedirectResult>(result);
@@ -512,8 +379,9 @@ public class AccountControllerTest
     /// <summary>
     /// PM-24579: Temporary test, remove with feature flag.
     /// </summary>
-    [Fact]
-    public async Task ExternalCallback_PreventNonCompliantFalse_SkipsOrgLookupAndSignsIn()
+    [Theory, BitAutoData]
+    public async Task ExternalCallback_PreventNonCompliantFalse_SkipsOrgLookupAndSignsIn(
+        SutProvider<AccountController> sutProvider)
     {
         // Arrange
         var orgId = Guid.NewGuid();
@@ -521,33 +389,20 @@ public class AccountControllerTest
         var user = new User { Id = Guid.NewGuid(), Email = "flagoff@example.com" };
 
         var authResult = BuildSuccessfulExternalAuth(orgId, providerUserId, user.Email!);
-        var controller = CreateControllerWithAuth(
-            authResult,
-            out var authService,
-            out var ssoConfigRepository,
-            out var userRepository,
-            out var organizationRepository,
-            out var organizationUserRepository,
-            out var interactionService,
-            out var i18nService,
-            out var ssoUserRepository,
-            out var eventService,
-            out var featureService);
+        var authService = SetupHttpContextWithAuth(sutProvider, authResult);
 
         ConfigureSsoAndUser(
-            ssoConfigRepository,
-            userRepository,
-            organizationRepository,
-            organizationUserRepository,
+            sutProvider,
             orgId,
             providerUserId,
             user);
 
-        featureService.IsEnabled(Arg.Any<string>()).Returns(false);
-        interactionService.GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(false);
+        sutProvider.GetDependency<IIdentityServerInteractionService>()
+            .GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
 
         // Act
-        var result = await controller.ExternalCallback();
+        var result = await sutProvider.Sut.ExternalCallback();
 
         // Assert
         var redirect = Assert.IsType<RedirectResult>(result);
@@ -559,16 +414,17 @@ public class AccountControllerTest
             Arg.Any<ClaimsPrincipal>(),
             Arg.Any<AuthenticationProperties>());
 
-        // When flag is off, controller does not require org or orgUser; ensure repo not called for orgUser
-        await organizationUserRepository.DidNotReceiveWithAnyArgs().GetByOrganizationAsync(Guid.Empty, Guid.Empty);
+        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs()
+            .GetByOrganizationAsync(Guid.Empty, Guid.Empty);
     }
 
     /// <summary>
     /// PM-24579: Permanent test, remove the True in PreventNonCompliantTrue and remove the configure for the feature
     /// flag.
     /// </summary>
-    [Fact]
-    public async Task ExternalCallback_PreventNonCompliantTrue_ExistingSsoLinkedAccepted_MeasureLookups()
+    [Theory, BitAutoData]
+    public async Task ExternalCallback_PreventNonCompliantTrue_ExistingSsoLinkedAccepted_MeasureLookups(
+        SutProvider<AccountController> sutProvider)
     {
         // Arrange
         var orgId = Guid.NewGuid();
@@ -584,37 +440,24 @@ public class AccountControllerTest
         };
 
         var authResult = BuildSuccessfulExternalAuth(orgId, providerUserId, user.Email!);
-        var controller = CreateControllerWithAuth(
-            authResult,
-            out var authService,
-            out var ssoConfigRepository,
-            out var userRepository,
-            out var organizationRepository,
-            out var organizationUserRepository,
-            out var interactionService,
-            out var i18nService,
-            out var ssoUserRepository,
-            out var eventService,
-            out var featureService);
+        var authService = SetupHttpContextWithAuth(sutProvider, authResult);
 
         ConfigureSsoAndUser(
-            ssoConfigRepository,
-            userRepository,
-            organizationRepository,
-            organizationUserRepository,
+            sutProvider,
             orgId,
             providerUserId,
             user,
             organization,
             orgUser);
 
-        featureService.IsEnabled(Arg.Any<string>()).Returns(true);
-        interactionService.GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(true);
+        sutProvider.GetDependency<IIdentityServerInteractionService>()
+            .GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
 
         // Act
         try
         {
-            _ = await controller.ExternalCallback();
+            _ = await sutProvider.Sut.ExternalCallback();
         }
         catch
         {
@@ -622,6 +465,10 @@ public class AccountControllerTest
         }
 
         // Assert (measurement only - no asserts on counts)
+        var userRepository = sutProvider.GetDependency<IUserRepository>();
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+
         var userGetBySso = userRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IUserRepository.GetBySsoUserAsync));
         var userGetByEmail = userRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IUserRepository.GetByEmailAsync));
         var orgGet = organizationRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IOrganizationRepository.GetByIdAsync));
@@ -646,8 +493,9 @@ public class AccountControllerTest
     /// PM-24579: Permanent test, remove the True in PreventNonCompliantTrue and remove the configure for the feature
     /// flag.
     /// </summary>
-    [Fact]
-    public async Task ExternalCallback_PreventNonCompliantTrue_JitProvision_MeasureLookups()
+    [Theory, BitAutoData]
+    public async Task ExternalCallback_PreventNonCompliantTrue_JitProvision_MeasureLookups(
+        SutProvider<AccountController> sutProvider)
     {
         // Arrange
         var orgId = Guid.NewGuid();
@@ -656,37 +504,32 @@ public class AccountControllerTest
         var organization = new Organization { Id = orgId, Name = "Org", Seats = null };
 
         var authResult = BuildSuccessfulExternalAuth(orgId, providerUserId, email);
-        var controller = CreateControllerWithAuth(
-            authResult,
-            out var authService,
-            out var ssoConfigRepository,
-            out var userRepository,
-            out var organizationRepository,
-            out var organizationUserRepository,
-            out var interactionService,
-            out var i18nService,
-            out var ssoUserRepository,
-            out var eventService,
-            out var featureService);
+        SetupHttpContextWithAuth(sutProvider, authResult);
 
-        // Configure SSO config and ensure there is NO existing SSO link or user (JIT)
+        var ssoConfigRepository = sutProvider.GetDependency<ISsoConfigRepository>();
+        var userRepository = sutProvider.GetDependency<IUserRepository>();
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+
         var ssoConfig = new SsoConfig { OrganizationId = orgId, Enabled = true };
         var ssoData = new SsoConfigurationData();
         ssoConfig.SetData(ssoData);
         ssoConfigRepository.GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
 
+        // JIT (no existing user or sso link)
         userRepository.GetBySsoUserAsync(providerUserId, orgId).Returns((User?)null);
         userRepository.GetByEmailAsync(email).Returns((User?)null);
         organizationRepository.GetByIdAsync(orgId).Returns(organization);
         organizationUserRepository.GetByOrganizationEmailAsync(orgId, email).Returns((OrganizationUser?)null);
 
-        featureService.IsEnabled(Arg.Any<string>()).Returns(true);
-        interactionService.GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(true);
+        sutProvider.GetDependency<IIdentityServerInteractionService>()
+            .GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
 
         // Act
         try
         {
-            _ = await controller.ExternalCallback();
+            _ = await sutProvider.Sut.ExternalCallback();
         }
         catch
         {
@@ -718,8 +561,9 @@ public class AccountControllerTest
     /// PM-24579: Permanent test, remove the True in PreventNonCompliantTrue and remove the configure for the feature
     /// flag.
     /// </summary>
-    [Fact]
-    public async Task ExternalCallback_PreventNonCompliantTrue_ExistingUser_NoOrgUser_MeasureLookups()
+    [Theory, BitAutoData]
+    public async Task ExternalCallback_PreventNonCompliantTrue_ExistingUser_NoOrgUser_MeasureLookups(
+        SutProvider<AccountController> sutProvider)
     {
         // Arrange
         var orgId = Guid.NewGuid();
@@ -728,24 +572,10 @@ public class AccountControllerTest
         var organization = new Organization { Id = orgId, Name = "Org" };
 
         var authResult = BuildSuccessfulExternalAuth(orgId, providerUserId, user.Email!);
-        var controller = CreateControllerWithAuth(
-            authResult,
-            out var authService,
-            out var ssoConfigRepository,
-            out var userRepository,
-            out var organizationRepository,
-            out var organizationUserRepository,
-            out var interactionService,
-            out var i18nService,
-            out var ssoUserRepository,
-            out var eventService,
-            out var featureService);
+        SetupHttpContextWithAuth(sutProvider, authResult);
 
         ConfigureSsoAndUser(
-            ssoConfigRepository,
-            userRepository,
-            organizationRepository,
-            organizationUserRepository,
+            sutProvider,
             orgId,
             providerUserId,
             user,
@@ -753,15 +583,17 @@ public class AccountControllerTest
             orgUser: null);
 
         // Ensure orgUser lookup returns null
-        organizationUserRepository.GetByOrganizationAsync(organization.Id, user.Id).Returns((OrganizationUser?)null);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(organization.Id, user.Id).Returns((OrganizationUser?)null);
 
-        featureService.IsEnabled(Arg.Any<string>()).Returns(true);
-        interactionService.GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(true);
+        sutProvider.GetDependency<IIdentityServerInteractionService>()
+            .GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
 
         // Act
         try
         {
-            _ = await controller.ExternalCallback();
+            _ = await sutProvider.Sut.ExternalCallback();
         }
         catch
         {
@@ -769,6 +601,10 @@ public class AccountControllerTest
         }
 
         // Assert (measurement only - no asserts on counts)
+        var userRepository = sutProvider.GetDependency<IUserRepository>();
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+
         var userGetBySso = userRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IUserRepository.GetBySsoUserAsync));
         var userGetByEmail = userRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IUserRepository.GetByEmailAsync));
         var orgGet = organizationRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IOrganizationRepository.GetByIdAsync));
@@ -792,8 +628,9 @@ public class AccountControllerTest
     /// <summary>
     /// PM-24579: Temporary test, remove with feature flag.
     /// </summary>
-    [Fact]
-    public async Task ExternalCallback_PreventNonCompliantFalse_ExistingSsoLinkedAccepted_MeasureLookups()
+    [Theory, BitAutoData]
+    public async Task ExternalCallback_PreventNonCompliantFalse_ExistingSsoLinkedAccepted_MeasureLookups(
+        SutProvider<AccountController> sutProvider)
     {
         // Arrange
         var orgId = Guid.NewGuid();
@@ -801,32 +638,26 @@ public class AccountControllerTest
         var user = new User { Id = Guid.NewGuid(), Email = "existing.flagoff@example.com" };
 
         var authResult = BuildSuccessfulExternalAuth(orgId, providerUserId, user.Email!);
-        var controller = CreateControllerWithAuth(
-            authResult,
-            out var authService,
-            out var ssoConfigRepository,
-            out var userRepository,
-            out var organizationRepository,
-            out var organizationUserRepository,
-            out var interactionService,
-            out var i18nService,
-            out var ssoUserRepository,
-            out var eventService,
-            out var featureService);
+        SetupHttpContextWithAuth(sutProvider, authResult);
 
         var ssoConfig = new SsoConfig { OrganizationId = orgId, Enabled = true };
         var ssoData = new SsoConfigurationData();
         ssoConfig.SetData(ssoData);
-        ssoConfigRepository.GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
-        userRepository.GetBySsoUserAsync(providerUserId, orgId).Returns(user);
+        sutProvider.GetDependency<ISsoConfigRepository>().GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
+        sutProvider.GetDependency<IUserRepository>().GetBySsoUserAsync(providerUserId, orgId).Returns(user);
 
-        featureService.IsEnabled(Arg.Any<string>()).Returns(false);
-        interactionService.GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(false);
+        sutProvider.GetDependency<IIdentityServerInteractionService>()
+            .GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
 
         // Act
-        try { _ = await controller.ExternalCallback(); } catch { }
+        try { _ = await sutProvider.Sut.ExternalCallback(); } catch { }
 
         // Assert (measurement)
+        var userRepository = sutProvider.GetDependency<IUserRepository>();
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+
         var userGetBySso = userRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IUserRepository.GetBySsoUserAsync));
         var userGetByEmail = userRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IUserRepository.GetByEmailAsync));
         var orgGet = organizationRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IOrganizationRepository.GetByIdAsync));
@@ -843,8 +674,9 @@ public class AccountControllerTest
     /// <summary>
     /// PM-24579: Temporary test, remove with feature flag.
     /// </summary>
-    [Fact]
-    public async Task ExternalCallback_PreventNonCompliantFalse_ExistingUser_NoOrgUser_MeasureLookups()
+    [Theory, BitAutoData]
+    public async Task ExternalCallback_PreventNonCompliantFalse_ExistingUser_NoOrgUser_MeasureLookups(
+        SutProvider<AccountController> sutProvider)
     {
         // Arrange
         var orgId = Guid.NewGuid();
@@ -852,32 +684,26 @@ public class AccountControllerTest
         var user = new User { Id = Guid.NewGuid(), Email = "existing2.flagoff@example.com" };
 
         var authResult = BuildSuccessfulExternalAuth(orgId, providerUserId, user.Email!);
-        var controller = CreateControllerWithAuth(
-            authResult,
-            out var authService,
-            out var ssoConfigRepository,
-            out var userRepository,
-            out var organizationRepository,
-            out var organizationUserRepository,
-            out var interactionService,
-            out var i18nService,
-            out var ssoUserRepository,
-            out var eventService,
-            out var featureService);
+        SetupHttpContextWithAuth(sutProvider, authResult);
 
         var ssoConfig = new SsoConfig { OrganizationId = orgId, Enabled = true };
         var ssoData = new SsoConfigurationData();
         ssoConfig.SetData(ssoData);
-        ssoConfigRepository.GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
-        userRepository.GetBySsoUserAsync(providerUserId, orgId).Returns(user);
+        sutProvider.GetDependency<ISsoConfigRepository>().GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
+        sutProvider.GetDependency<IUserRepository>().GetBySsoUserAsync(providerUserId, orgId).Returns(user);
 
-        featureService.IsEnabled(Arg.Any<string>()).Returns(false);
-        interactionService.GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(false);
+        sutProvider.GetDependency<IIdentityServerInteractionService>()
+            .GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
 
         // Act
-        try { _ = await controller.ExternalCallback(); } catch { }
+        try { _ = await sutProvider.Sut.ExternalCallback(); } catch { }
 
         // Assert (measurement)
+        var userRepository = sutProvider.GetDependency<IUserRepository>();
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+
         var userGetBySso = userRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IUserRepository.GetBySsoUserAsync));
         var userGetByEmail = userRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IUserRepository.GetByEmailAsync));
         var orgGet = organizationRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IOrganizationRepository.GetByIdAsync));
@@ -894,8 +720,9 @@ public class AccountControllerTest
     /// <summary>
     /// PM-24579: Temporary test, remove with feature flag.
     /// </summary>
-    [Fact]
-    public async Task ExternalCallback_PreventNonCompliantFalse_JitProvision_MeasureLookups()
+    [Theory, BitAutoData]
+    public async Task ExternalCallback_PreventNonCompliantFalse_JitProvision_MeasureLookups(
+        SutProvider<AccountController> sutProvider)
     {
         // Arrange
         var orgId = Guid.NewGuid();
@@ -904,37 +731,31 @@ public class AccountControllerTest
         var organization = new Organization { Id = orgId, Name = "Org", Seats = null };
 
         var authResult = BuildSuccessfulExternalAuth(orgId, providerUserId, email);
-        var controller = CreateControllerWithAuth(
-            authResult,
-            out var authService,
-            out var ssoConfigRepository,
-            out var userRepository,
-            out var organizationRepository,
-            out var organizationUserRepository,
-            out var interactionService,
-            out var i18nService,
-            out var ssoUserRepository,
-            out var eventService,
-            out var featureService);
+        SetupHttpContextWithAuth(sutProvider, authResult);
 
         var ssoConfig = new SsoConfig { OrganizationId = orgId, Enabled = true };
         var ssoData = new SsoConfigurationData();
         ssoConfig.SetData(ssoData);
-        ssoConfigRepository.GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
+        sutProvider.GetDependency<ISsoConfigRepository>().GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
 
         // JIT (no existing user or sso link)
-        userRepository.GetBySsoUserAsync(providerUserId, orgId).Returns((User?)null);
-        userRepository.GetByEmailAsync(email).Returns((User?)null);
-        organizationRepository.GetByIdAsync(orgId).Returns(organization);
-        organizationUserRepository.GetByOrganizationEmailAsync(orgId, email).Returns((OrganizationUser?)null);
+        sutProvider.GetDependency<IUserRepository>().GetBySsoUserAsync(providerUserId, orgId).Returns((User?)null);
+        sutProvider.GetDependency<IUserRepository>().GetByEmailAsync(email).Returns((User?)null);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(organization);
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetByOrganizationEmailAsync(orgId, email).Returns((OrganizationUser?)null);
 
-        featureService.IsEnabled(Arg.Any<string>()).Returns(false);
-        interactionService.GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(false);
+        sutProvider.GetDependency<IIdentityServerInteractionService>()
+            .GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
 
         // Act
-        try { _ = await controller.ExternalCallback(); } catch { }
+        try { _ = await sutProvider.Sut.ExternalCallback(); } catch { }
 
         // Assert (measurement)
+        var userRepository = sutProvider.GetDependency<IUserRepository>();
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+
         var userGetBySso = userRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IUserRepository.GetBySsoUserAsync));
         var userGetByEmail = userRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IUserRepository.GetByEmailAsync));
         var orgGet = organizationRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IOrganizationRepository.GetByIdAsync));
@@ -948,8 +769,9 @@ public class AccountControllerTest
         _output.WriteLine($"[flag off] GetByOrganizationEmailAsync (OrgUser): {orgUserGetByEmail}");
     }
 
-    [Fact]
-    public async Task AutoProvisionUserAsync_WithExistingAcceptedUser_CreatesSsoLinkAndReturnsUser()
+    [Theory, BitAutoData]
+    public async Task AutoProvisionUserAsync_WithExistingAcceptedUser_CreatesSsoLinkAndReturnsUser(
+        SutProvider<AccountController> sutProvider)
     {
         // Arrange
         var orgId = Guid.NewGuid();
@@ -965,28 +787,15 @@ public class AccountControllerTest
             Type = OrganizationUserType.User
         };
 
-        var authService = Substitute.For<IAuthenticationService>();
-        var controller = CreateController(
-            authService,
-            out var ssoConfigRepository,
-            out var userRepository,
-            out var organizationRepository,
-            out var organizationUserRepository,
-            out var interactionService,
-            out var i18nService,
-            out var ssoUserRepository,
-            out var eventService,
-            out var featureService);
-
         // Arrange repository expectations for the flow
-        userRepository.GetByEmailAsync(email).Returns(existingUser);
-        organizationRepository.GetByIdAsync(orgId).Returns(organization);
-        organizationUserRepository.GetManyByUserAsync(existingUser.Id)
+        sutProvider.GetDependency<IUserRepository>().GetByEmailAsync(email).Returns(existingUser);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(organization);
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByUserAsync(existingUser.Id)
             .Returns(new List<OrganizationUser> { orgUser });
-        organizationUserRepository.GetByOrganizationEmailAsync(orgId, email).Returns(orgUser);
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetByOrganizationEmailAsync(orgId, email).Returns(orgUser);
 
         // No existing SSO link so first SSO login event is logged
-        ssoUserRepository.GetByUserIdOrganizationIdAsync(orgId, existingUser.Id).Returns((SsoUser?)null);
+        sutProvider.GetDependency<ISsoUserRepository>().GetByUserIdOrganizationIdAsync(orgId, existingUser.Id).Returns((SsoUser?)null);
 
         var claims = new[]
         {
@@ -1001,7 +810,7 @@ public class AccountControllerTest
         Assert.NotNull(method);
 
         // Act
-        var task = (Task<(User user, Organization organization, OrganizationUser orgUser)>)method!.Invoke(controller, new object[]
+        var task = (Task<(User user, Organization organization, OrganizationUser orgUser)>)method!.Invoke(sutProvider.Sut, new object[]
         {
             orgId.ToString(),
             providerUserId,
@@ -1015,10 +824,10 @@ public class AccountControllerTest
         // Assert
         Assert.Equal(existingUser.Id, returned.user.Id);
 
-        await ssoUserRepository.Received().CreateAsync(Arg.Is<SsoUser>(s =>
+        await sutProvider.GetDependency<ISsoUserRepository>().Received().CreateAsync(Arg.Is<SsoUser>(s =>
             s.OrganizationId == orgId && s.UserId == existingUser.Id && s.ExternalId == providerUserId));
 
-        await eventService.Received().LogOrganizationUserEventAsync(
+        await sutProvider.GetDependency<Core.Services.IEventService>().Received().LogOrganizationUserEventAsync(
             orgUser,
             EventType.OrganizationUser_FirstSsoLogin);
     }
@@ -1028,8 +837,9 @@ public class AccountControllerTest
     /// regress lookup counts compared to OFF. When removing the flag, delete this
     /// comparison test and keep the specific scenario snapshot tests if desired.
     /// </summary>
-    [Fact]
-    public async Task ExternalCallback_Measurements_FlagOnVsOff_Comparisons()
+    [Theory, BitAutoData]
+    public async Task ExternalCallback_Measurements_FlagOnVsOff_Comparisons(
+        SutProvider<AccountController> sutProvider)
     {
         // Arrange
         var scenarios = new[]
@@ -1042,8 +852,8 @@ public class AccountControllerTest
         foreach (var scenario in scenarios)
         {
             // Act
-            var onCounts = await MeasureCountsForScenarioAsync(scenario, preventNonCompliant: true);
-            var offCounts = await MeasureCountsForScenarioAsync(scenario, preventNonCompliant: false);
+            var onCounts = await MeasureCountsForScenarioAsync(sutProvider, scenario, preventNonCompliant: true);
+            var offCounts = await MeasureCountsForScenarioAsync(sutProvider, scenario, preventNonCompliant: false);
 
             // Assert: off should not exceed on in any measured lookup type
             Assert.True(offCounts.UserGetBySso <= onCounts.UserGetBySso, $"{scenario}: off UserGetBySso={offCounts.UserGetBySso} > on {onCounts.UserGetBySso}");

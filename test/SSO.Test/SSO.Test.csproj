@@ -29,6 +29,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\..\bitwarden_license\src\Sso\Sso.csproj" />
+      <ProjectReference Include="..\Common\Common.csproj" />
     </ItemGroup>
 
 </Project>
