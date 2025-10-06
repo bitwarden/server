@@ -7,6 +7,7 @@ using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using AspNetCoreRateLimit;
 using Azure.Messaging.ServiceBus;
+using Bit.Core;
 using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
@@ -725,8 +726,23 @@ public static class ServiceCollectionExtensions
         {
             options.ServerDomain = new Uri(globalSettings.BaseServiceUri.Vault).Host;
             options.ServerName = "Bitwarden";
-            options.Origins = new HashSet<string> { globalSettings.BaseServiceUri.Vault, };
             options.TimestampDriftTolerance = 300000;
+
+            if (globalSettings.Fido2?.Origins?.Any() == true)
+            {
+                options.Origins = new HashSet<string>(globalSettings.Fido2.Origins);
+            }
+            else
+            {
+                // Default to allowing the vault domain and chromium browser extension IDs
+                options.Origins = new HashSet<string> {
+                    globalSettings.BaseServiceUri.Vault,
+                    Constants.BrowserExtensions.ChromeId,
+                    Constants.BrowserExtensions.EdgeId,
+                    Constants.BrowserExtensions.OperaId
+                 };
+            }
+
         });
     }
 
