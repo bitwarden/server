@@ -59,6 +59,28 @@ public class OrganizationIntegrationResponseModelTests
     }
 
     [Theory, BitAutoData]
+    public void Status_Teams_NullConfig_ReturnsInitiated(OrganizationIntegration oi)
+    {
+        oi.Type = IntegrationType.Teams;
+        oi.Configuration = null;
+
+        var model = new OrganizationIntegrationResponseModel(oi);
+
+        Assert.Equal(OrganizationIntegrationStatus.Initiated, model.Status);
+    }
+
+    [Theory, BitAutoData]
+    public void Status_Teams_WithConfig_ReturnsCompleted(OrganizationIntegration oi)
+    {
+        oi.Type = IntegrationType.Teams;
+        oi.Configuration = "{}";
+
+        var model = new OrganizationIntegrationResponseModel(oi);
+
+        Assert.Equal(OrganizationIntegrationStatus.Completed, model.Status);
+    }
+
+    [Theory, BitAutoData]
     public void Status_Webhook_AlwaysCompleted(OrganizationIntegration oi)
     {
         oi.Type = IntegrationType.Webhook;

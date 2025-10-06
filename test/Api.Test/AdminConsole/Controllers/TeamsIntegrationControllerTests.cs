@@ -188,6 +188,8 @@ public class TeamsIntegrationControllerTests
         OrganizationIntegration wrongOrgIntegration)
     {
         wrongOrgIntegration.Id = integration.Id;
+        wrongOrgIntegration.Type = IntegrationType.Teams;
+        wrongOrgIntegration.Configuration = null;
 
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url

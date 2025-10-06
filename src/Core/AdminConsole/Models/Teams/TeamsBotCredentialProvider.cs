@@ -4,6 +4,8 @@ namespace Bit.Core.AdminConsole.Models.Teams;
 
 public class TeamsBotCredentialProvider(string clientId, string clientSecret) : ICredentialProvider
 {
+    private const string _microsoftBotFrameworkIssuer = "https://api.botframework.com";
+
     public Task<bool> IsValidAppIdAsync(string appId)
     {
         return Task.FromResult(appId == clientId);
@@ -21,6 +23,6 @@ public class TeamsBotCredentialProvider(string clientId, string clientSecret) : 
 
     public Task<bool> ValidateIssuerAsync(string issuer)
     {
-        return Task.FromResult(issuer == "https://api.botframework.com");
+        return Task.FromResult(issuer == _microsoftBotFrameworkIssuer);
     }
 }

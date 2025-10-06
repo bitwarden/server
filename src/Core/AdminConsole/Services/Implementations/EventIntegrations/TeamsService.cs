@@ -161,12 +161,12 @@ public class TeamsService(
             tenantId: tenantId,
             teamId: teamId);
 
-        if (integration is null)
+        if (integration is null || integration.Configuration is null)
         {
             return;
         }
 
-        var teamsConfig = JsonSerializer.Deserialize<TeamsIntegration>(integration.Configuration ?? "");
+        var teamsConfig = JsonSerializer.Deserialize<TeamsIntegration>(integration.Configuration);
         if (teamsConfig is null || teamsConfig.isVerified)
         {
             return;

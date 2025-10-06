@@ -11,7 +11,6 @@ using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.MockedHttpClient;
-using Microsoft.Bot.Schema;
 using NSubstitute;
 using Xunit;
 using GlobalSettings = Bit.Core.Settings.GlobalSettings;
@@ -67,7 +66,7 @@ public class TeamsServiceTests
     }
 
     [Fact]
-    public async Task ObtainTokenViaOAuth_ReturnsAccessToken_WhenSuccessful()
+    public async Task ObtainTokenViaOAuth_Success_ReturnsAccessToken()
     {
         var sutProvider = GetSutProvider();
         var jsonResponse = JsonSerializer.Serialize(new
@@ -88,7 +87,7 @@ public class TeamsServiceTests
     [InlineData("test-code", "")]
     [InlineData("", "https://example.com/callback")]
     [InlineData("", "")]
-    public async Task ObtainTokenViaOAuth_ReturnsEmptyString_WhenCodeOrRedirectUrlIsEmpty(string code, string redirectUrl)
+    public async Task ObtainTokenViaOAuth_CodeOrRedirectUrlIsEmpty_ReturnsEmptyString(string code, string redirectUrl)
     {
         var sutProvider = GetSutProvider();
         var result = await sutProvider.Sut.ObtainTokenViaOAuth(code, redirectUrl);
@@ -97,18 +96,12 @@ public class TeamsServiceTests
     }
 
     [Fact]
-    public async Task ObtainTokenViaOAuth_ReturnsEmptyString_WhenErrorResponse()
+    public async Task ObtainTokenViaOAuth_HttpFailure_ReturnsEmptyString()
     {
         var sutProvider = GetSutProvider();
-        var jsonResponse = JsonSerializer.Serialize(new
-        {
-            ok = false,
-            error = "invalid_code"
-        });
-
         _handler.When("https://login.example.com/common/oauth2/v2.0/token")
-            .RespondWith(HttpStatusCode.OK)
-            .WithContent(new StringContent(jsonResponse));
+            .RespondWith(HttpStatusCode.InternalServerError)
+            .WithContent(new StringContent(string.Empty));
 
         var result = await sutProvider.Sut.ObtainTokenViaOAuth("test-code", "https://example.com/callback");
 
@@ -116,12 +109,13 @@ public class TeamsServiceTests
     }
 
     [Fact]
-    public async Task ObtainTokenViaOAuth_ReturnsEmptyString_WhenHttpCallFails()
+    public async Task ObtainTokenViaOAuth_UnknownResponse_ReturnsEmptyString()
     {
         var sutProvider = GetSutProvider();
+
         _handler.When("https://login.example.com/common/oauth2/v2.0/token")
-            .RespondWith(HttpStatusCode.InternalServerError)
-            .WithContent(new StringContent(string.Empty));
+            .RespondWith(HttpStatusCode.OK)
+            .WithContent(new StringContent("Not an expected response"));
 
         var result = await sutProvider.Sut.ObtainTokenViaOAuth("test-code", "https://example.com/callback");
 
@@ -149,8 +143,8 @@ public class TeamsServiceTests
         var result = await sutProvider.Sut.GetJoinedTeamsAsync("fake-access-token");
 
         Assert.Equal(2, result.Count);
-        Assert.Contains(result, t => t.Id == "team1" && t.DisplayName == "Team One");
-        Assert.Contains(result, t => t.Id == "team2" && t.DisplayName == "Team Two");
+        Assert.Contains(result, t => t is { Id: "team1", DisplayName: "Team One" });
+        Assert.Contains(result, t => t is { Id: "team2", DisplayName: "Team Two" });
     }
 
     [Fact]
@@ -258,6 +252,28 @@ public class TeamsServiceTests
 
         sutProvider.GetDependency<IOrganizationIntegrationRepository>()
             .GetByTenantIdTeamId(tenantId, teamId)
+            .Returns(integration);
+
+        await sutProvider.Sut.HandleIncomingAppInstall(
+            conversationId: "conversationId",
+            serviceUrl: new Uri("https://localhost"),
+            teamId: teamId,
+            tenantId: tenantId
+        );
+
+        await sutProvider.GetDependency<IOrganizationIntegrationRepository>().Received(1).GetByTenantIdTeamId(tenantId, teamId);
+        await sutProvider.GetDependency<IOrganizationIntegrationRepository>().DidNotReceive().UpsertAsync(Arg.Any<OrganizationIntegration>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task HandleIncomingAppInstall_MatchedIntegrationWithMissingConfiguration_DoesNothing(
+        OrganizationIntegration integration)
+    {
+        var sutProvider = GetSutProvider();
+        integration.Configuration = null;
+
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByTenantIdTeamId("tenantId", "teamId")
             .Returns(integration);
 
         await sutProvider.Sut.HandleIncomingAppInstall(
