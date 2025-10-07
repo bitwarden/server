@@ -6,9 +6,9 @@ using OneOf.Types;
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 
 public class PolicyEventHandlerHandlerFactory(
-    IEnumerable<IPolicyUpsertEvent> allEventHandlers) : IPolicyEventHandlerFactory
+    IEnumerable<IPolicyUpdateEvent> allEventHandlers) : IPolicyEventHandlerFactory
 {
-    public OneOf<T, None> GetHandler<T>(PolicyType policyType) where T : IPolicyUpsertEvent
+    public OneOf<T, None> GetHandler<T>(PolicyType policyType) where T : IPolicyUpdateEvent
     {
         var tEventHandlers = allEventHandlers.OfType<T>();
 

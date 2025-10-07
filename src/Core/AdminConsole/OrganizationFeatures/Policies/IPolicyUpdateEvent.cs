@@ -2,7 +2,7 @@
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 
-public interface IPolicyUpsertEvent
+public interface IPolicyUpdateEvent
 {
     /// <summary>
     /// The policy type that the associated handler will handle.

@@ -2,7 +2,7 @@
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-public interface IOnPolicyPostUpsertEvent : IPolicyUpsertEvent
+public interface IOnPolicyPostUpdateEvent : IPolicyUpdateEvent
 {
     /// <summary>
     /// Performs side effects after a policy has been upserted.

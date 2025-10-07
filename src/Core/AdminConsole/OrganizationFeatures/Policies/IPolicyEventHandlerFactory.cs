@@ -8,5 +8,5 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 
 public interface IPolicyEventHandlerFactory
 {
-    OneOf<T, None> GetHandler<T>(PolicyType policyType) where T : IPolicyUpsertEvent;
+    OneOf<T, None> GetHandler<T>(PolicyType policyType) where T : IPolicyUpdateEvent;
 }

@@ -2,7 +2,7 @@
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 
-public interface IEnforceDependentPoliciesEvent : IPolicyUpsertEvent
+public interface IEnforceDependentPoliciesEvent : IPolicyUpdateEvent
 {
     /// <summary>
     /// PolicyTypes that must be enabled before this policy can be enabled, if any.

@@ -174,12 +174,12 @@ public class VNextSavePolicyCommand : IVNextSavePolicyCommand
 
     private async Task ExecutePreUpsertSideEffectAsync(PolicyUpdate policyRequest, Policy? currentPolicy)
     {
-        await ExecutePolicyEventAsync<IOnPolicyPreUpsertEvent>(
+        await ExecutePolicyEventAsync<IOnPolicyPreUpdateEvent>(
             policyRequest.Type,
             handler => handler.ExecutePreUpsertSideEffectAsync(policyRequest, currentPolicy));
     }
 
-    private async Task ExecutePolicyEventAsync<T>(PolicyType type, Func<T, Task> func) where T : IPolicyUpsertEvent
+    private async Task ExecutePolicyEventAsync<T>(PolicyType type, Func<T, Task> func) where T : IPolicyUpdateEvent
     {
         var handler = _policyEventHandlerFactory.GetHandler<T>(type);
 
@@ -193,7 +193,7 @@ public class VNextSavePolicyCommand : IVNextSavePolicyCommand
         SavePolicyModel policyRequest,
         Policy postUpsertedPolicyState, Policy? previousPolicyState)
     {
-        await ExecutePolicyEventAsync<IOnPolicyPostUpsertEvent>(
+        await ExecutePolicyEventAsync<IOnPolicyPostUpdateEvent>(
             policyRequest.PolicyUpdate.Type,
             handler => handler.ExecutePostUpsertSideEffectAsync(
                 policyRequest,

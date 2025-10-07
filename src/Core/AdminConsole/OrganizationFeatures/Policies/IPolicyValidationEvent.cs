@@ -4,7 +4,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 
-public interface IPolicyValidationEvent : IPolicyUpsertEvent
+public interface IPolicyValidationEvent : IPolicyUpdateEvent
 {
     /// <summary>
     /// Performs side effects after a policy is validated but before it is saved.
