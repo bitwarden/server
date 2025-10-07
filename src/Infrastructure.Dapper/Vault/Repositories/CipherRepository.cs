@@ -13,7 +13,6 @@ using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
 using Bit.Infrastructure.Dapper.AdminConsole.Helpers;
 using Bit.Infrastructure.Dapper.Repositories;
-using Bit.Infrastructure.Dapper.Vault.Helpers;
 using Dapper;
 using Microsoft.Data.SqlClient;
 
