@@ -26,10 +26,7 @@ using AuthenticationOptions = Duende.IdentityServer.Configuration.Authentication
 
 namespace Bit.SSO.Test.Controllers;
 
-[
-    ControllerCustomize(typeof(AccountController)),
-    SutProviderCustomize
-]
+[ControllerCustomize(typeof(AccountController)), SutProviderCustomize]
 public class AccountControllerTest
 {
     private readonly ITestOutputHelper _output;
