@@ -64,7 +64,7 @@ public class RelayPushNotificationServiceTests : PushTestBase
                 ["UserId"] = cipher.UserId,
                 ["OrganizationId"] = null,
                 // Currently CollectionIds are not passed along from the method signature
-                // to the request body. 
+                // to the request body.
                 ["CollectionIds"] = null,
                 ["RevisionDate"] = cipher.RevisionDate,
             },
@@ -88,7 +88,7 @@ public class RelayPushNotificationServiceTests : PushTestBase
                 ["UserId"] = cipher.UserId,
                 ["OrganizationId"] = null,
                 // Currently CollectionIds are not passed along from the method signature
-                // to the request body. 
+                // to the request body.
                 ["CollectionIds"] = null,
                 ["RevisionDate"] = cipher.RevisionDate,
             },
@@ -274,7 +274,7 @@ public class RelayPushNotificationServiceTests : PushTestBase
         };
     }
 
-    protected override JsonNode GetPushLogOutPayload(Guid userId, bool excludeCurrentContext)
+    protected override JsonNode GetPushLogOutPayload(Guid userId, bool excludeCurrentContext, string? reason)
     {
         JsonNode? identifier = excludeCurrentContext ? DeviceIdentifier : null;
 
@@ -288,7 +288,7 @@ public class RelayPushNotificationServiceTests : PushTestBase
             ["Payload"] = new JsonObject
             {
                 ["UserId"] = userId,
-                ["Date"] = FakeTimeProvider.GetUtcNow().UtcDateTime,
+                ["Reason"] = reason
             },
             ["ClientType"] = null,
             ["InstallationId"] = null,

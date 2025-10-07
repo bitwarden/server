@@ -103,6 +103,8 @@ public class ChangeKdfCommand : IChangeKdfCommand
         }
         else
         {
+            // Clients that support the new feature flag will ignore the logout when it matches the reason and the feature flag is enabled.
+            await _pushService.PushLogOutAsync(user.Id, reason: "kdfChange");
             await _pushService.PushSyncSettingsAsync(user.Id);
         }
 

@@ -193,7 +193,7 @@ public class NotificationsApiPushEngineTests : PushTestBase
         };
     }
 
-    protected override JsonNode GetPushLogOutPayload(Guid userId, bool excludeCurrentContext)
+    protected override JsonNode GetPushLogOutPayload(Guid userId, bool excludeCurrentContext, string? reason)
     {
         JsonNode? contextId = excludeCurrentContext ? DeviceIdentifier : null;
 
@@ -203,7 +203,7 @@ public class NotificationsApiPushEngineTests : PushTestBase
             ["Payload"] = new JsonObject
             {
                 ["UserId"] = userId,
-                ["Date"] = FakeTimeProvider.GetUtcNow().UtcDateTime,
+                ["Reason"] = reason
             },
             ["ContextId"] = contextId,
         };

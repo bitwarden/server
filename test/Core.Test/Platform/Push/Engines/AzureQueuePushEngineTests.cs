@@ -358,20 +358,27 @@ public class AzureQueuePushEngineTests
     }
 
     [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task PushLogOutAsync_SendsExpectedResponse(bool excludeCurrentContext)
+    [InlineData(true, null)]
+    [InlineData(true, "test-reason")]
+    [InlineData(false, null)]
+    [InlineData(false, "test-reason")]
+    public async Task PushLogOutAsync_SendsExpectedResponse(bool excludeCurrentContext, string? reason)
     {
         var userId = Guid.NewGuid();
+
+        var payload = new JsonObject
+        {
+            ["UserId"] = userId
+        };
+        if (reason != null)
+        {
+            payload["Reason"] = reason;
+        }
 
         var expectedPayload = new JsonObject
         {
             ["Type"] = 11,
-            ["Payload"] = new JsonObject
-            {
-                ["UserId"] = userId,
-                ["Date"] = _fakeTimeProvider.GetUtcNow().UtcDateTime,
-            },
+            ["Payload"] = payload,
         };
 
         if (excludeCurrentContext)
@@ -380,7 +387,7 @@ public class AzureQueuePushEngineTests
         }
 
         await VerifyNotificationAsync(
-            async sut => await sut.PushLogOutAsync(userId, excludeCurrentContext),
+            async sut => await sut.PushLogOutAsync(userId, excludeCurrentContext, reason),
             expectedPayload
         );
     }

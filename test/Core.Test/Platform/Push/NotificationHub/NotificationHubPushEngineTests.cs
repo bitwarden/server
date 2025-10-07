@@ -404,16 +404,18 @@ public class NotificationHubPushNotificationServiceTests
     }
 
     [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task PushLogOutAsync_SendExpectedData(bool excludeCurrentContext)
+    [InlineData(true, null)]
+    [InlineData(true, "test-reason")]
+    [InlineData(false, null)]
+    [InlineData(false, "test-reason")]
+    public async Task PushLogOutAsync_SendExpectedData(bool excludeCurrentContext, string? reason)
     {
         var userId = Guid.NewGuid();
 
         var expectedPayload = new JsonObject
         {
             ["UserId"] = userId,
-            ["Date"] = _now,
+            ["Reason"] = reason,
         };
 
         var expectedTag = excludeCurrentContext
@@ -421,7 +423,7 @@ public class NotificationHubPushNotificationServiceTests
             : $"(template:payload_userId:{userId})";
 
         await VerifyNotificationAsync(
-            async sut => await sut.PushLogOutAsync(userId, excludeCurrentContext),
+            async sut => await sut.PushLogOutAsync(userId, excludeCurrentContext, reason),
             PushType.LogOut,
             expectedPayload,
             expectedTag

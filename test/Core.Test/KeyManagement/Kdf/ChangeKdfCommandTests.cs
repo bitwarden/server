@@ -193,7 +193,8 @@ public class ChangeKdfCommandTests
         ));
         await sutProvider.GetDependency<IUserService>().Received(1).UpdatePasswordHash(user,
             authenticationData.MasterPasswordAuthenticationHash, validatePassword: true, refreshStamp: false);
-        await sutProvider.GetDependency<IPushNotificationService>().Received(0).PushLogOutAsync(Arg.Any<Guid>());
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1)
+            .PushLogOutAsync(user.Id, false, "kdfChange");
         await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncSettingsAsync(user.Id);
         sutProvider.GetDependency<IFeatureService>().Received(1).IsEnabled(FeatureFlagKeys.NoLogoutOnKdfChange);
     }

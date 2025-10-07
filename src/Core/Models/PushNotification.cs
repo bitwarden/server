@@ -97,3 +97,9 @@ public class ProviderBankAccountVerifiedPushNotification
     public Guid ProviderId { get; set; }
     public Guid AdminId { get; set; }
 }
+
+public class LogOutPushNotification
+{
+    public Guid UserId { get; set; }
+    public string? Reason { get; set; }
+}
