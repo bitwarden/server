@@ -2164,41 +2164,6 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.ToTable("Secret", (string)null);
                 });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.SecretVersion", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("EditorOrganizationUserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("EditorServiceAccountId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("SecretId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Value")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("VersionDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id")
-                        .HasAnnotation("SqlServer:Clustered", true);
-
-                    b.HasIndex("EditorOrganizationUserId");
-
-                    b.HasIndex("EditorServiceAccountId");
-
-                    b.HasIndex("SecretId")
-                        .HasDatabaseName("IX_SecretVersion_SecretId");
-
-                    b.ToTable("SecretVersion");
-                });
-
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ServiceAccount", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3024,31 +2989,6 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("Organization");
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.SecretVersion", b =>
-                {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.OrganizationUser", "EditorOrganizationUser")
-                        .WithMany()
-                        .HasForeignKey("EditorOrganizationUserId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ServiceAccount", "EditorServiceAccount")
-                        .WithMany()
-                        .HasForeignKey("EditorServiceAccountId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("Bit.Infrastructure.EntityFramework.SecretsManager.Models.Secret", "Secret")
-                        .WithMany("SecretVersion")
-                        .HasForeignKey("SecretId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("EditorOrganizationUser");
-
-                    b.Navigation("EditorServiceAccount");
-
-                    b.Navigation("Secret");
-                });
-
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ServiceAccount", b =>
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
@@ -3319,8 +3259,6 @@ namespace Bit.PostgresMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.Secret", b =>
                 {
                     b.Navigation("GroupAccessPolicies");
-
-                    b.Navigation("SecretVersion");
 
                     b.Navigation("ServiceAccountAccessPolicies");
 
