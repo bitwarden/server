@@ -1,3 +1,4 @@
+using Bit.SeederApi.Services;
 using Bit.SharedWeb.Utilities;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -13,6 +14,9 @@ builder.Services.AddCustomDataProtectionServices(builder.Environment, globalSett
 
 // Repositories
 builder.Services.AddDatabaseRepositories(globalSettings);
+
+// Recipe Service
+builder.Services.AddScoped<IRecipeService, RecipeService>();
 
 var app = builder.Build();
 
