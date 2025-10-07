@@ -66,7 +66,7 @@ After the email is developed from the [initial step](#initial-email-development-
 
 ### Custom tags
 
-There is currently a `mj-bw-hero` tag you can use within your `*.mjml` templates. This is a good example of how to create a component that takes in attribute values allowing us to be more DRY in our development of emails. Since the attributes input is a string we are able to define whatever we need into the component, in this case `mj-bw-hero`.
+There is currently a `mj-bw-hero` tag you can use within your `*.mjml` templates. This is a good example of how to create a component that takes in attribute values allowing us to be more DRY in our development of emails. Since the attribute's input is a string we are able to define whatever we need into the component, in this case `mj-bw-hero`.
 
 In order to view the custom component you have written you will need to include it in the `.mjmlconfig` and reference it in an `mjml` template file.
 
@@ -78,7 +78,7 @@ In order to view the custom component you have written you will need to include 
 />
 ```
 
-Attributes in Custom Components are defined by the developer. They can be required or optional depending on implementation. See the documentation for more information.
+Attributes in Custom Components are defined by the developer. They can be required or optional depending on implementation. See the official MJML documentation for more information.
 
 ```js
 static allowedAttributes = {
