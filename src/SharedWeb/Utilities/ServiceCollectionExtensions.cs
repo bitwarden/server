@@ -86,12 +86,12 @@ namespace Bit.SharedWeb.Utilities;
 
 public static class ServiceCollectionExtensions
 {
-    public static SupportedDatabaseProviders AddDatabaseRepositories(this IServiceCollection services, GlobalSettings globalSettings)
+    public static SupportedDatabaseProviders AddDatabaseRepositories(this IServiceCollection services, GlobalSettings globalSettings, bool forceEf = false)
     {
         var (provider, connectionString) = GetDatabaseProvider(globalSettings);
         services.SetupEntityFramework(connectionString, provider);
 
-        if (provider != SupportedDatabaseProviders.SqlServer)
+        if (provider != SupportedDatabaseProviders.SqlServer && !forceEf)
         {
             services.AddPasswordManagerEFRepositories(globalSettings.SelfHosted);
         }
