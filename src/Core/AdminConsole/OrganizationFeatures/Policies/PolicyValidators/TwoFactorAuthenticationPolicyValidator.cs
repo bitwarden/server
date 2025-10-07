@@ -28,7 +28,6 @@ public class TwoFactorAuthenticationPolicyValidator : IPolicyValidator
     public const string NonCompliantMembersWillLoseAccessMessage = "Policy could not be enabled. Non-compliant members will lose access to their accounts. Identify members without two-step login from the policies column in the members page.";
 
     public PolicyType Type => PolicyType.TwoFactorAuthentication;
-
     public IEnumerable<PolicyType> RequiredPolicies => [];
 
     public TwoFactorAuthenticationPolicyValidator(
@@ -45,11 +44,6 @@ public class TwoFactorAuthenticationPolicyValidator : IPolicyValidator
         _currentContext = currentContext;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _revokeNonCompliantOrganizationUserCommand = revokeNonCompliantOrganizationUserCommand;
-    }
-
-    public Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
-    {
-        return Task.FromResult(string.Empty);
     }
 
     public async Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
@@ -121,4 +115,5 @@ public class TwoFactorAuthenticationPolicyValidator : IPolicyValidator
                 !x.HasMasterPassword && !organizationUsersTwoFactorEnabled.FirstOrDefault(u => u.user.Id == x.Id)
                     .isTwoFactorEnabled);
 
+    public Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult("");
 }

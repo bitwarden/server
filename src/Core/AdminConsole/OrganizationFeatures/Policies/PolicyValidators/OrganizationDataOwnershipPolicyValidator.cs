@@ -1,6 +1,5 @@
 ﻿
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
@@ -9,60 +8,65 @@ using Bit.Core.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 
-public class OrganizationDataOwnershipPolicyValidator : IPolicyValidator
+/// <summary>
+/// Please do not extend or expand this validator. We're currently in the process of refactoring our policy validator pattern.
+/// This is a stop-gap solution for post-policy-save side effects, but it is not the long-term solution.
+/// </summary>
+public class OrganizationDataOwnershipPolicyValidator(
+    IPolicyRepository policyRepository,
+    ICollectionRepository collectionRepository,
+    IEnumerable<IPolicyRequirementFactory<IPolicyRequirement>> factories,
+    IFeatureService featureService)
+    : OrganizationPolicyValidator(policyRepository, factories), IPostSavePolicySideEffect
 {
-    private readonly IPolicyRepository _policyRepository;
-    private readonly ICollectionRepository _collectionRepository;
-    private readonly IEnumerable<IPolicyRequirementFactory<IPolicyRequirement>> _factories;
-    private readonly IFeatureService _featureService;
-
-    public OrganizationDataOwnershipPolicyValidator(
-        IPolicyRepository policyRepository,
-        ICollectionRepository collectionRepository,
-        IEnumerable<IPolicyRequirementFactory<IPolicyRequirement>> factories,
-        IFeatureService featureService)
+    public async Task ExecuteSideEffectsAsync(
+        SavePolicyModel policyRequest,
+        Policy postUpdatedPolicy,
+        Policy? previousPolicyState)
     {
-        _policyRepository = policyRepository;
-        _collectionRepository = collectionRepository;
-        _factories = factories;
-        _featureService = featureService;
-    }
-
-    public PolicyType Type => PolicyType.OrganizationDataOwnership;
-
-    public IEnumerable<PolicyType> RequiredPolicies => [];
-
-    public Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
-    {
-        return Task.FromResult(string.Empty);
-    }
-
-    public Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
-    {
-        return Task.CompletedTask;
-    }
-
-    private async Task<IEnumerable<T>> GetUserPolicyRequirementsByOrganizationIdAsync<T>(Guid organizationId, PolicyType policyType) where T : IPolicyRequirement
-    {
-        var factory = _factories.OfType<IPolicyRequirementFactory<T>>().SingleOrDefault();
-        if (factory is null)
+        if (!featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation))
         {
-            throw new NotImplementedException("No Requirement Factory found for " + typeof(T));
+            return;
         }
 
-        var policyDetails = await _policyRepository.GetPolicyDetailsByOrganizationIdAsync(organizationId, policyType);
-        var policyDetailGroups = policyDetails.GroupBy(policyDetail => policyDetail.UserId);
-        var requirements = new List<T>();
-
-        foreach (var policyDetailGroup in policyDetailGroups)
+        if (policyRequest.Metadata is not OrganizationModelOwnershipPolicyModel metadata)
         {
-            var filteredPolicies = policyDetailGroup
-                .Where(factory.Enforce)
-                .ToList();
-
-            requirements.Add(factory.Create(filteredPolicies));
+            return;
         }
 
-        return requirements;
+        if (string.IsNullOrWhiteSpace(metadata.DefaultUserCollectionName))
+        {
+            return;
+        }
+
+        var isFirstTimeEnabled = postUpdatedPolicy.Enabled && previousPolicyState == null;
+        var reEnabled = previousPolicyState?.Enabled == false
+                        && postUpdatedPolicy.Enabled;
+
+        if (isFirstTimeEnabled || reEnabled)
+        {
+            await UpsertDefaultCollectionsForUsersAsync(policyRequest.PolicyUpdate, metadata.DefaultUserCollectionName);
+        }
     }
+
+    private async Task UpsertDefaultCollectionsForUsersAsync(PolicyUpdate policyUpdate, string defaultCollectionName)
+    {
+        var requirements = await GetUserPolicyRequirementsByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(policyUpdate.OrganizationId, policyUpdate.Type);
+
+        var userOrgIds = requirements
+            .Select(requirement => requirement.GetDefaultCollectionRequestOnPolicyEnable(policyUpdate.OrganizationId))
+            .Where(request => request.ShouldCreateDefaultCollection)
+            .Select(request => request.OrganizationUserId);
+
+        if (!userOrgIds.Any())
+        {
+            return;
+        }
+
+        await collectionRepository.UpsertDefaultCollectionsAsync(
+            policyUpdate.OrganizationId,
+            userOrgIds,
+            defaultCollectionName);
+    }
+
 }
