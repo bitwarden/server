@@ -136,7 +136,6 @@ public static class FeatureFlagKeys
 {
     /* Admin Console Team */
     public const string VerifiedSsoDomainEndpoint = "pm-12337-refactor-sso-details-endpoint";
-    public const string LimitItemDeletion = "pm-15493-restrict-item-deletion-to-can-manage-permission";
     public const string PolicyRequirements = "pm-14439-policy-requirements";
     public const string ScimInviteUserOptimization = "pm-16811-optimize-invite-user-flow-to-fail-fast";
     public const string EventBasedOrganizationIntegrations = "event-based-organization-integrations";
