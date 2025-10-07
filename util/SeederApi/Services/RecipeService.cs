@@ -17,23 +17,33 @@ public class RecipeService : IRecipeService
 
     public object? ExecuteRecipe(string templateName, JsonElement? arguments)
     {
+        return ExecuteRecipeMethod(templateName, arguments, "Seed");
+    }
+
+    public object? DestroyRecipe(string templateName, JsonElement? arguments)
+    {
+        return ExecuteRecipeMethod(templateName, arguments, "Destroy");
+    }
+
+    private object? ExecuteRecipeMethod(string templateName, JsonElement? arguments, string methodName)
+    {
         try
         {
             var recipeType = LoadRecipeType(templateName);
-            var seedMethod = GetSeedMethod(recipeType, templateName);
+            var method = GetRecipeMethod(recipeType, templateName, methodName);
             var recipeInstance = Activator.CreateInstance(recipeType, _databaseContext)!;
 
-            var methodArguments = ParseMethodArguments(seedMethod, arguments);
-            var result = seedMethod.Invoke(recipeInstance, methodArguments);
+            var methodArguments = ParseMethodArguments(method, arguments);
+            var result = method.Invoke(recipeInstance, methodArguments);
 
-            _logger.LogInformation("Successfully executed recipe: {TemplateName}", templateName);
+            _logger.LogInformation("Successfully executed {MethodName} on recipe: {TemplateName}", methodName, templateName);
             return result;
         }
         catch (Exception ex) when (ex is not RecipeNotFoundException and not RecipeExecutionException)
         {
-            _logger.LogError(ex, "Unexpected error executing recipe: {TemplateName}", templateName);
+            _logger.LogError(ex, "Unexpected error executing {MethodName} on recipe: {TemplateName}", methodName, templateName);
             throw new RecipeExecutionException(
-                $"An unexpected error occurred while executing recipe '{templateName}'",
+                $"An unexpected error occurred while executing {methodName} on recipe '{templateName}'",
                 ex.InnerException ?? ex);
         }
     }
@@ -48,10 +58,10 @@ public class RecipeService : IRecipeService
         return recipeType ?? throw new RecipeNotFoundException(templateName);
     }
 
-    private static MethodInfo GetSeedMethod(Type recipeType, string templateName)
+    private static MethodInfo GetRecipeMethod(Type recipeType, string templateName, string methodName)
     {
-        var seedMethod = recipeType.GetMethod("Seed");
-        return seedMethod ?? throw new RecipeExecutionException($"Seed method not found in recipe '{templateName}'");
+        var method = recipeType.GetMethod(methodName);
+        return method ?? throw new RecipeExecutionException($"{methodName} method not found in recipe '{templateName}'");
     }
 
     private static object?[] ParseMethodArguments(MethodInfo seedMethod, JsonElement? arguments)

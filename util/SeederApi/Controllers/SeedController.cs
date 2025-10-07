@@ -64,9 +64,43 @@ public class SeedController : Controller
         }
     }
 
-    [HttpGet("/delete")]
-    public string Delete()
+    [HttpDelete("/delete")]
+    public IActionResult Delete([FromBody] SeedRequestModel request)
     {
-        return "hello delete";
+        _logger.LogInformation("Deleting with template: {Template}", request.Template);
+
+        try
+        {
+            var result = _recipeService.DestroyRecipe(request.Template, request.Arguments);
+
+            return Ok(new
+            {
+                Message = "Delete completed successfully",
+                request.Template,
+                Result = result
+            });
+        }
+        catch (RecipeNotFoundException ex)
+        {
+            return NotFound(new { Error = ex.Message });
+        }
+        catch (RecipeExecutionException ex)
+        {
+            _logger.LogError(ex, "Error executing recipe delete: {Template}", request.Template);
+            return BadRequest(new
+            {
+                Error = ex.Message,
+                Details = ex.InnerException?.Message
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error deleting with template: {Template}", request.Template);
+            return StatusCode(500, new
+            {
+                Error = "An unexpected error occurred while deleting",
+                Details = ex.Message
+            });
+        }
     }
 }
