@@ -26,15 +26,14 @@ public static class PolicyServiceCollectionExtensions
         services.AddScoped<IPolicyValidator, SingleOrgPolicyValidator>();
         services.AddScoped<IPolicyValidator, ResetPasswordPolicyValidator>();
         services.AddScoped<IPolicyValidator, FreeFamiliesForEnterprisePolicyValidator>();
+        services.AddScoped<IPolicyValidator, TwoFactorAuthenticationPolicyValidator>();
+        services.AddScoped<IPolicyValidator, OrganizationDataOwnershipPolicyValidator>();
     }
 
     private static void AddPolicyUpsertEventHandlers(this IServiceCollection services)
     {
-        services.AddScoped<IPolicyUpsertEvent, OrganizationDataOwnershipPolicyHandler>();
         services.AddScoped<IPolicyUpsertEvent, RequireSsoPolicyHandler>();
         services.AddScoped<IPolicyUpsertEvent, MaximumVaultTimeoutPolicyEventEventValidator>();
-        services.AddScoped<IPolicyUpsertEvent, TwoFactorAuthenticationPolicyHandler>();
-        services.AddScoped<IPolicyUpsertEvent, OrganizationDataOwnershipPolicyHandler>();
     }
 
     private static void AddPolicyRequirements(this IServiceCollection services)

@@ -16,7 +16,7 @@ using Bit.Core.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 
-public class TwoFactorAuthenticationPolicyHandler : IOnPolicyPreUpsertEvent
+public class TwoFactorAuthenticationPolicyValidator : IPolicyValidator
 {
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IMailService _mailService;
@@ -29,7 +29,9 @@ public class TwoFactorAuthenticationPolicyHandler : IOnPolicyPreUpsertEvent
 
     public PolicyType Type => PolicyType.TwoFactorAuthentication;
 
-    public TwoFactorAuthenticationPolicyHandler(
+    public IEnumerable<PolicyType> RequiredPolicies => [];
+
+    public TwoFactorAuthenticationPolicyValidator(
         IOrganizationUserRepository organizationUserRepository,
         IMailService mailService,
         IOrganizationRepository organizationRepository,
@@ -45,7 +47,12 @@ public class TwoFactorAuthenticationPolicyHandler : IOnPolicyPreUpsertEvent
         _revokeNonCompliantOrganizationUserCommand = revokeNonCompliantOrganizationUserCommand;
     }
 
-    public async Task ExecutePreUpsertSideEffectAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
+    public Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
+    {
+        return Task.FromResult(string.Empty);
+    }
+
+    public async Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
     {
         if (currentPolicy is not { Enabled: true } && policyUpdate is { Enabled: true })
         {

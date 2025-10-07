@@ -16,7 +16,6 @@ public class SavePolicyCommand : ISavePolicyCommand
     private readonly IPolicyRepository _policyRepository;
     private readonly IReadOnlyDictionary<PolicyType, IPolicyValidator> _policyValidators;
     private readonly TimeProvider _timeProvider;
-    private readonly IOnPolicyPostUpsertEvent _onPolicyPostUpsertEvent;
     private readonly IVNextSavePolicyCommand _vNextSavePolicyCommand;
     private readonly IFeatureService _featureService;
 
@@ -25,7 +24,6 @@ public class SavePolicyCommand : ISavePolicyCommand
         IPolicyRepository policyRepository,
         IEnumerable<IPolicyValidator> policyValidators,
         TimeProvider timeProvider,
-        IOnPolicyPostUpsertEvent onPolicyPostUpsertEvent,
         IVNextSavePolicyCommand vNextSavePolicyCommand,
         IFeatureService featureService)
     {
@@ -33,7 +31,6 @@ public class SavePolicyCommand : ISavePolicyCommand
         _eventService = eventService;
         _policyRepository = policyRepository;
         _timeProvider = timeProvider;
-        _onPolicyPostUpsertEvent = onPolicyPostUpsertEvent;
         _vNextSavePolicyCommand = vNextSavePolicyCommand;
         _featureService = featureService;
 
@@ -93,23 +90,7 @@ public class SavePolicyCommand : ISavePolicyCommand
             return await _vNextSavePolicyCommand.SaveAsync(policyRequest);
         }
 
-        var (_, currentPolicy) = await GetCurrentPolicyStateAsync(policyRequest.PolicyUpdate);
-
-        var policy = await SaveAsync(policyRequest.PolicyUpdate);
-
-        await ExecutePostPolicySaveSideEffectsForSupportedPoliciesAsync(policyRequest, policy, currentPolicy);
-
-        return policy;
-    }
-
-    private async Task ExecutePostPolicySaveSideEffectsForSupportedPoliciesAsync(SavePolicyModel policyRequest,
-        Policy postUpdatedPolicy, Policy? previousPolicyState)
-    {
-        if (postUpdatedPolicy.Type == PolicyType.OrganizationDataOwnership)
-        {
-            await _onPolicyPostUpsertEvent.ExecutePostUpsertSideEffectAsync(policyRequest, postUpdatedPolicy,
-                previousPolicyState);
-        }
+        return await SaveAsync(policyRequest.PolicyUpdate);
     }
 
 
