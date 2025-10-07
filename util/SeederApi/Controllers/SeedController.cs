@@ -31,13 +31,14 @@ public class SeedController : Controller
 
         try
         {
-            var result = _recipeService.ExecuteRecipe(request.Template, request.Arguments);
+            var (result, seedId) = _recipeService.ExecuteRecipe(request.Template, request.Arguments);
 
             return Ok(new
             {
                 Message = "Seed completed successfully",
                 request.Template,
-                Result = result
+                Result = result,
+                SeedId = seedId
             });
         }
         catch (RecipeNotFoundException ex)
@@ -64,29 +65,24 @@ public class SeedController : Controller
         }
     }
 
-    [HttpDelete("/delete")]
-    public IActionResult Delete([FromBody] SeedRequestModel request)
+    [HttpDelete("/seed/{seedId}")]
+    public IActionResult Delete([FromRoute] Guid seedId)
     {
-        _logger.LogInformation("Deleting with template: {Template}", request.Template);
+        _logger.LogInformation("Deleting seeded data with ID: {SeedId}", seedId);
 
         try
         {
-            var result = _recipeService.DestroyRecipe(request.Template, request.Arguments);
+            var result = _recipeService.DestroyRecipe(seedId);
 
             return Ok(new
             {
                 Message = "Delete completed successfully",
-                request.Template,
                 Result = result
             });
         }
-        catch (RecipeNotFoundException ex)
-        {
-            return NotFound(new { Error = ex.Message });
-        }
         catch (RecipeExecutionException ex)
         {
-            _logger.LogError(ex, "Error executing recipe delete: {Template}", request.Template);
+            _logger.LogError(ex, "Error deleting seeded data: {SeedId}", seedId);
             return BadRequest(new
             {
                 Error = ex.Message,
@@ -95,7 +91,7 @@ public class SeedController : Controller
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error deleting with template: {Template}", request.Template);
+            _logger.LogError(ex, "Unexpected error deleting seeded data: {SeedId}", seedId);
             return StatusCode(500, new
             {
                 Error = "An unexpected error occurred while deleting",

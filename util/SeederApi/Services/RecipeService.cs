@@ -1,4 +1,6 @@
+using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
+using Bit.Seeder;
 using System.Reflection;
 using System.Text.Json;
 
@@ -15,14 +17,71 @@ public class RecipeService : IRecipeService
         _logger = logger;
     }
 
-    public object? ExecuteRecipe(string templateName, JsonElement? arguments)
+    public (object? Result, Guid? SeedId) ExecuteRecipe(string templateName, JsonElement? arguments)
     {
-        return ExecuteRecipeMethod(templateName, arguments, "Seed");
+        var result = ExecuteRecipeMethod(templateName, arguments, "Seed");
+
+        if (result is not RecipeResult recipeResult)
+        {
+            return (Result: result, SeedId: null);
+        }
+
+        if (recipeResult.TrackedEntities.Count == 0)
+        {
+            return (Result: recipeResult.Result, SeedId: null);
+        }
+
+        var seededData = new SeededData
+        {
+            Id = Guid.NewGuid(),
+            RecipeName = templateName,
+            Data = JsonSerializer.Serialize(recipeResult.TrackedEntities),
+            CreationDate = DateTime.UtcNow
+        };
+
+        _databaseContext.Add(seededData);
+        _databaseContext.SaveChanges();
+
+        _logger.LogInformation("Saved seeded data with ID {SeedId} for recipe {RecipeName}",
+            seededData.Id, templateName);
+
+        return (Result: recipeResult.Result, SeedId: seededData.Id);
     }
 
-    public object? DestroyRecipe(string templateName, JsonElement? arguments)
+    public object? DestroyRecipe(Guid seedId)
     {
-        return ExecuteRecipeMethod(templateName, arguments, "Destroy");
+        var seededData = _databaseContext.SeededData.FirstOrDefault(s => s.Id == seedId);
+        if (seededData == null)
+        {
+            throw new RecipeExecutionException($"Seeded data with ID {seedId} not found");
+        }
+
+        var trackedEntities = JsonSerializer.Deserialize<Dictionary<string, List<Guid>>>(seededData.Data);
+        if (trackedEntities == null)
+        {
+            throw new RecipeExecutionException($"Failed to deserialize tracked entities for seed ID {seedId}");
+        }
+
+        // Delete in reverse order to respect foreign key constraints
+        if (trackedEntities.TryGetValue("User", out var userIds))
+        {
+            var users = _databaseContext.Users.Where(u => userIds.Contains(u.Id));
+            _databaseContext.RemoveRange(users);
+        }
+
+        if (trackedEntities.TryGetValue("Organization", out var orgIds))
+        {
+            var organizations = _databaseContext.Organizations.Where(o => orgIds.Contains(o.Id));
+            _databaseContext.RemoveRange(organizations);
+        }
+
+        _databaseContext.Remove(seededData);
+        _databaseContext.SaveChanges();
+
+        _logger.LogInformation("Successfully destroyed seeded data with ID {SeedId} for recipe {RecipeName}",
+            seedId, seededData.RecipeName);
+
+        return new { SeedId = seedId, RecipeName = seededData.RecipeName };
     }
 
     private object? ExecuteRecipeMethod(string templateName, JsonElement? arguments, string methodName)

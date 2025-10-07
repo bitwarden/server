@@ -9,18 +9,16 @@ public interface IRecipeService
     /// </summary>
     /// <param name="templateName">The name of the recipe template (e.g., "OrganizationWithUsersRecipe")</param>
     /// <param name="arguments">Optional JSON arguments to pass to the recipe's Seed method</param>
-    /// <returns>The result returned by the recipe's Seed method</returns>
+    /// <returns>A tuple containing the result and optional seed ID for tracked entities</returns>
     /// <exception cref="RecipeNotFoundException">Thrown when the recipe template is not found</exception>
     /// <exception cref="RecipeExecutionException">Thrown when there's an error executing the recipe</exception>
-    object? ExecuteRecipe(string templateName, JsonElement? arguments);
+    (object? Result, Guid? SeedId) ExecuteRecipe(string templateName, JsonElement? arguments);
 
     /// <summary>
-    /// Destroys data created by a recipe with the given template name and arguments.
+    /// Destroys data created by a recipe using the seeded data ID.
     /// </summary>
-    /// <param name="templateName">The name of the recipe template (e.g., "OrganizationWithUsersRecipe")</param>
-    /// <param name="arguments">Optional JSON arguments to pass to the recipe's Destroy method</param>
-    /// <returns>The result returned by the recipe's Destroy method</returns>
-    /// <exception cref="RecipeNotFoundException">Thrown when the recipe template is not found</exception>
-    /// <exception cref="RecipeExecutionException">Thrown when there's an error executing the recipe</exception>
-    object? DestroyRecipe(string templateName, JsonElement? arguments);
+    /// <param name="seedId">The ID of the seeded data to destroy</param>
+    /// <returns>The result of the destroy operation</returns>
+    /// <exception cref="RecipeExecutionException">Thrown when there's an error destroying the seeded data</exception>
+    object? DestroyRecipe(Guid seedId);
 }

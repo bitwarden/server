@@ -1,15 +1,13 @@
-﻿using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
-using Bit.Infrastructure.EntityFramework.Models;
+﻿using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Seeder.Factories;
 using LinqToDB.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore;
 
 namespace Bit.Seeder.Recipes;
 
 public class OrganizationWithUsersRecipe(DatabaseContext db)
 {
-    public Guid Seed(string name, int users, string domain)
+    public RecipeResult Seed(string name, int users, string domain)
     {
         var organization = OrganizationSeeder.CreateEnterprise(name, domain, users);
         var user = UserSeeder.CreateUser($"admin@{domain}");
@@ -34,20 +32,14 @@ public class OrganizationWithUsersRecipe(DatabaseContext db)
         db.BulkCopy(additionalUsers);
         db.BulkCopy(additionalOrgUsers);
 
-        return organization.Id;
-    }
-
-    public void Destroy(Guid organizationId)
-    {
-        var organization = db.Organizations.Include(o => o.OrganizationUsers)
-            .ThenInclude(ou => ou.User).FirstOrDefault(p => p.Id == organizationId);
-        if (organization == null)
+        return new RecipeResult
         {
-            throw new Exception($"Organization with ID {organizationId} not found.");
-        }
-        var users = organization.OrganizationUsers.Select(u => u.User);
-
-        db.RemoveRange(users);
-        db.Remove(organization);
+            Result = organization.Id,
+            TrackedEntities = new Dictionary<string, List<Guid>>
+            {
+                ["Organization"] = [organization.Id],
+                ["User"] = [user.Id, .. additionalUsers.Select(u => u.Id)]
+            }
+        };
     }
 }
