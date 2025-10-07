@@ -6,7 +6,8 @@ param(
     [switch]$Watch,
     [switch]$Minify,
     [switch]$Clean,
-    [switch]$Trace
+    [switch]$Trace,
+    [switch]$HbsOutput
 )
 
 # Abort on any error
@@ -91,7 +92,12 @@ function Invoke-BuildMjmlFile {
     $relativePath = $MjmlFile.FullPath.Replace("$(Resolve-Path $BaseInputDir)\", "")
     $relativeDir = Split-Path $relativePath -Parent
     $outputSubDir = if ($relativeDir) { Join-Path $BaseOutputDir $relativeDir } else { $BaseOutputDir }
-    $outputFile = Join-Path $outputSubDir "$($MjmlFile.Name).html"
+    if ($HbsOutput) {
+        $outputFile = Join-Path $outputSubDir "$($MjmlFile.Name).html.hbs"
+    }
+    else {
+        $outputFile = Join-Path $outputSubDir "$($MjmlFile.Name).html"
+    }
 
     # Ensure output directory exists
     if (!(Test-Path $outputSubDir)) {
@@ -163,7 +169,8 @@ function Start-MjmlWatch {
                 # For components directory, watch JS files; for others, watch MJML files
                 if ($watchDir -eq $componentsDir) {
                     $watchFiles = Get-ComponentFiles -Directory $watchDir
-                } else {
+                }
+                else {
                     $watchFiles = Get-MjmlFiles -Directory $watchDir
                 }
 
@@ -229,6 +236,10 @@ function Main {
     Write-ColorOutput "`n[BUILD] MJML Builder Script" "Cyan"
     Write-ColorOutput "=========================" "Cyan"
 
+    if($HbsOutput){
+        $OutputDir = "out-hbs"
+    }
+
     if ($Clean) {
         Invoke-CleanOutputDirectory -Directory $OutputDir
         exit 0
@@ -271,7 +282,6 @@ function Main {
         Start-MjmlWatch -InputDirectory $InputDir -OutputDirectory $OutputDir -MinifyOutput $Minify
     }
     else {
-
         # Build once
         Write-ColorOutput "`n[BUILD] Building files..." "White"
         $successCount = 0
