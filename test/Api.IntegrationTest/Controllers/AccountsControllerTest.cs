@@ -89,7 +89,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     [Theory]
     [BitAutoData(KdfType.PBKDF2_SHA256, 600001, null, null)]
     [BitAutoData(KdfType.Argon2id, 4, 65, 5)]
-    public async Task PostKdf_ValidRequestNoLogoutOnKdfChangeFeatureFlagOff_SuccessLogout(KdfType kdf,
+    public async Task PostKdf_ValidRequestLogoutOnKdfChangeFeatureFlagOff_SuccessLogout(KdfType kdf,
         int kdfIterations, int? kdfMemory, int? kdfParallelism)
     {
         var userBeforeKdfChange = await _userRepository.GetByEmailAsync(_ownerEmail);
@@ -134,7 +134,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     [Theory]
     [BitAutoData(KdfType.PBKDF2_SHA256, 600001, null, null)]
     [BitAutoData(KdfType.Argon2id, 4, 65, 5)]
-    public async Task PostKdf_ValidRequestNoLogoutOnKdfChangeFeatureFlagOn_SuccessNoLogout(KdfType kdf,
+    public async Task PostKdf_ValidRequestLogoutOnKdfChangeFeatureFlagOn_SuccessNoLogout(KdfType kdf,
         int kdfIterations, int? kdfMemory, int? kdfParallelism)
     {
         var userBeforeKdfChange = await _userRepository.GetByEmailAsync(_ownerEmail);
