@@ -130,8 +130,7 @@ public class OrganizationBillingVNextController(
             return TypedResults.NotFound();
         }
 
-        var response = OrganizationMetadataResponse.From(metadata);
-        return TypedResults.Ok(response);
+        return TypedResults.Ok(metadata);
     }
 
     [Authorize<MemberOrProviderRequirement>]

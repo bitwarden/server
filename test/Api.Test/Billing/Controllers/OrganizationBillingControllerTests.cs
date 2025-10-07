@@ -57,9 +57,9 @@ public class OrganizationBillingControllerTests
 
         var result = await sutProvider.Sut.GetMetadataAsync(organizationId);
 
-        Assert.IsType<Ok<OrganizationMetadataResponse>>(result);
+        Assert.IsType<Ok<OrganizationMetadata>>(result);
 
-        var response = ((Ok<OrganizationMetadataResponse>)result).Value;
+        var response = ((Ok<OrganizationMetadata>)result).Value;
 
         Assert.True(response.IsOnSecretsManagerStandalone);
         Assert.Equal(10, response.OrganizationOccupiedSeats);
