@@ -2196,7 +2196,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.HasIndex("SecretId")
                         .HasDatabaseName("IX_SecretVersion_SecretId");
 
-                    b.ToTable("SecretVersions");
+                    b.ToTable("SecretVersion");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ServiceAccount", b =>
@@ -3037,7 +3037,7 @@ namespace Bit.PostgresMigrations.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("Bit.Infrastructure.EntityFramework.SecretsManager.Models.Secret", "Secret")
-                        .WithMany("SecretVersions")
+                        .WithMany("SecretVersion")
                         .HasForeignKey("SecretId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -3320,7 +3320,7 @@ namespace Bit.PostgresMigrations.Migrations
                 {
                     b.Navigation("GroupAccessPolicies");
 
-                    b.Navigation("SecretVersions");
+                    b.Navigation("SecretVersion");
 
                     b.Navigation("ServiceAccountAccessPolicies");
 

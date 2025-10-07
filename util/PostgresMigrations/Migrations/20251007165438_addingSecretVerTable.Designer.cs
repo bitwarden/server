@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20251001155013_CreateSecretVersionsTable")]
-    partial class CreateSecretVersionsTable
+    [Migration("20251007165438_addingSecretVerTable")]
+    partial class addingSecretVerTable
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1290,6 +1290,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<string>("DomainName")
                         .HasColumnType("text");
 
+                    b.Property<Guid?>("GrantedServiceAccountId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("GroupId")
                         .HasColumnType("uuid");
 
@@ -1336,10 +1339,13 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid?>("UserId")
                         .HasColumnType("uuid");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasAnnotation("SqlServer:Clustered", true);
 
                     b.HasIndex("Date", "OrganizationId", "ActingUserId", "CipherId")
-                        .HasAnnotation("SqlServer:Clustered", false);
+                        .HasDatabaseName("IX_Event_DateOrganizationIdUserId")
+                        .HasAnnotation("SqlServer:Clustered", false)
+                        .HasAnnotation("SqlServer:Include", new[] { "ServiceAccountId", "GrantedServiceAccountId" });
 
                     b.ToTable("Event", (string)null);
                 });
@@ -2193,7 +2199,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.HasIndex("SecretId")
                         .HasDatabaseName("IX_SecretVersion_SecretId");
 
-                    b.ToTable("SecretVersions");
+                    b.ToTable("SecretVersion");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ServiceAccount", b =>
@@ -3034,7 +3040,7 @@ namespace Bit.PostgresMigrations.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("Bit.Infrastructure.EntityFramework.SecretsManager.Models.Secret", "Secret")
-                        .WithMany("SecretVersions")
+                        .WithMany("SecretVersion")
                         .HasForeignKey("SecretId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -3317,7 +3323,7 @@ namespace Bit.PostgresMigrations.Migrations
                 {
                     b.Navigation("GroupAccessPolicies");
 
-                    b.Navigation("SecretVersions");
+                    b.Navigation("SecretVersion");
 
                     b.Navigation("ServiceAccountAccessPolicies");
 
