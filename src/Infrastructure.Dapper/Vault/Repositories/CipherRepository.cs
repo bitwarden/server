@@ -588,54 +588,6 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
                 {
                     if (folders.Any())
                     {
-                        using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
-                        {
-                            bulkCopy.DestinationTableName = "[dbo].[Folder]";
-                            var dataTable = BuildFoldersTable(bulkCopy, folders);
-                            bulkCopy.WriteToServer(dataTable);
-                        }
-                    }
-
-                    using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
-                    {
-                        bulkCopy.DestinationTableName = "[dbo].[Cipher]";
-                        var dataTable = BuildCiphersTable(bulkCopy, ciphers);
-                        bulkCopy.WriteToServer(dataTable);
-                    }
-
-                    await connection.ExecuteAsync(
-                            $"[{Schema}].[User_BumpAccountRevisionDate]",
-                            new { Id = userId },
-                            commandType: CommandType.StoredProcedure, transaction: transaction);
-
-                    transaction.Commit();
-                }
-                catch
-                {
-                    transaction.Rollback();
-                    throw;
-                }
-            }
-        }
-    }
-
-    public async Task CreateAsync_vNext(Guid userId, IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders)
-    {
-        if (!ciphers.Any())
-        {
-            return;
-        }
-
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            connection.Open();
-
-            using (var transaction = connection.BeginTransaction())
-            {
-                try
-                {
-                    if (folders.Any())
-                    {
                         await BulkResourceCreationService.CreateFoldersAsync(connection, transaction, folders);
                     }
 
@@ -658,75 +610,6 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
     }
 
     public async Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections,
-        IEnumerable<CollectionCipher> collectionCiphers, IEnumerable<CollectionUser> collectionUsers)
-    {
-        if (!ciphers.Any())
-        {
-            return;
-        }
-
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            connection.Open();
-
-            using (var transaction = connection.BeginTransaction())
-            {
-                try
-                {
-                    using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
-                    {
-                        bulkCopy.DestinationTableName = "[dbo].[Cipher]";
-                        var dataTable = BuildCiphersTable(bulkCopy, ciphers);
-                        bulkCopy.WriteToServer(dataTable);
-                    }
-
-                    if (collections.Any())
-                    {
-                        using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
-                        {
-                            bulkCopy.DestinationTableName = "[dbo].[Collection]";
-                            var dataTable = BuildCollectionsTable(bulkCopy, collections);
-                            bulkCopy.WriteToServer(dataTable);
-                        }
-                    }
-
-                    if (collectionCiphers.Any())
-                    {
-                        using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
-                        {
-                            bulkCopy.DestinationTableName = "[dbo].[CollectionCipher]";
-                            var dataTable = BuildCollectionCiphersTable(bulkCopy, collectionCiphers);
-                            bulkCopy.WriteToServer(dataTable);
-                        }
-                    }
-
-                    if (collectionUsers.Any())
-                    {
-                        using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
-                        {
-                            bulkCopy.DestinationTableName = "[dbo].[CollectionUser]";
-                            var dataTable = BuildCollectionUsersTable(bulkCopy, collectionUsers);
-                            bulkCopy.WriteToServer(dataTable);
-                        }
-                    }
-
-                    await connection.ExecuteAsync(
-                            $"[{Schema}].[User_BumpAccountRevisionDateByOrganizationId]",
-                            new { OrganizationId = ciphers.First().OrganizationId },
-                            commandType: CommandType.StoredProcedure, transaction: transaction);
-
-                    transaction.Commit();
-                }
-                catch
-                {
-                    transaction.Rollback();
-                    throw;
-                }
-            }
-        }
-    }
-
-    public async Task CreateAsync_vNext(IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections,
         IEnumerable<CollectionCipher> collectionCiphers, IEnumerable<CollectionUser> collectionUsers)
     {
         if (!ciphers.Any())

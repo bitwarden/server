@@ -168,16 +168,6 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
-    /// <inheritdoc cref="CreateAsync(Guid, IEnumerable{Cipher}, IEnumerable{Folder})"/>
-    /// <remarks>
-    /// EF does not use the bulk resource creation service, so we need to use the regular create method.
-    /// </remarks>
-    public async Task CreateAsync_vNext(Guid userId, IEnumerable<Core.Vault.Entities.Cipher> ciphers,
-        IEnumerable<Core.Vault.Entities.Folder> folders)
-    {
-        await CreateAsync(userId, ciphers, folders);
-    }
-
     public async Task CreateAsync(IEnumerable<Core.Vault.Entities.Cipher> ciphers,
         IEnumerable<Core.Entities.Collection> collections,
         IEnumerable<Core.Entities.CollectionCipher> collectionCiphers,
@@ -214,18 +204,6 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
             await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(ciphers.First().OrganizationId.Value);
             await dbContext.SaveChangesAsync();
         }
-    }
-
-    /// <inheritdoc cref="CreateAsync(IEnumerable{Cipher}, IEnumerable{Collection}, IEnumerable{CollectionCipher}, IEnumerable{CollectionUser})"/>
-    /// <remarks>
-    /// EF does not use the bulk resource creation service, so we need to use the regular create method.
-    /// </remarks>
-    public async Task CreateAsync_vNext(IEnumerable<Core.Vault.Entities.Cipher> ciphers,
-        IEnumerable<Core.Entities.Collection> collections,
-        IEnumerable<Core.Entities.CollectionCipher> collectionCiphers,
-        IEnumerable<Core.Entities.CollectionUser> collectionUsers)
-    {
-        await CreateAsync(ciphers, collections, collectionCiphers, collectionUsers);
     }
 
     public async Task DeleteAsync(IEnumerable<Guid> ids, Guid userId)
@@ -1106,7 +1084,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         var result = await query.ToListAsync();
         return result;
     }
-    
+
     public async Task UpsertAsync(CipherDetails cipher)
     {
         if (cipher.Id.Equals(default))

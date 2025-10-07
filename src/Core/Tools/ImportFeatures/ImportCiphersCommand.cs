@@ -108,7 +108,7 @@ public class ImportCiphersCommand : IImportCiphersCommand
         }
 
         // Create it all
-        await _cipherRepository.CreateAsync_vNext(importingUserId, ciphers, newFolders);
+        await _cipherRepository.CreateAsync(importingUserId, ciphers, newFolders);
 
         // push
         await _pushService.PushSyncVaultAsync(importingUserId);
@@ -183,7 +183,7 @@ public class ImportCiphersCommand : IImportCiphersCommand
         }
 
         // Create it all
-        await _cipherRepository.CreateAsync_vNext(ciphers, newCollections, collectionCiphers, newCollectionUsers);
+        await _cipherRepository.CreateAsync(ciphers, newCollections, collectionCiphers, newCollectionUsers);
 
         // push
         await _pushService.PushSyncVaultAsync(importingUserId);

@@ -42,18 +42,7 @@ public interface ICipherRepository : IRepository<Cipher, Guid>
     /// Create ciphers and folders for the specified UserId. Must not be used to create organization owned items.
     /// </summary>
     Task CreateAsync(Guid userId, IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders);
-    /// <inheritdoc cref="CreateAsync(Guid, IEnumerable{Cipher}, IEnumerable{Folder})"/>
-    /// <remarks>
-    /// This version uses the bulk resource creation service to create the temp tables.
-    /// </remarks>
-    Task CreateAsync_vNext(Guid userId, IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders);
     Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections,
-        IEnumerable<CollectionCipher> collectionCiphers, IEnumerable<CollectionUser> collectionUsers);
-    /// <inheritdoc cref="CreateAsync(IEnumerable{Cipher}, IEnumerable{Collection}, IEnumerable{CollectionCipher}, IEnumerable{CollectionUser})"/>
-    /// <remarks>
-    /// This version uses the bulk resource creation service to create the temp tables.
-    /// </remarks>
-    Task CreateAsync_vNext(IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections,
         IEnumerable<CollectionCipher> collectionCiphers, IEnumerable<CollectionUser> collectionUsers);
     Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId);
     Task SoftDeleteByIdsOrganizationIdAsync(IEnumerable<Guid> ids, Guid organizationId);
