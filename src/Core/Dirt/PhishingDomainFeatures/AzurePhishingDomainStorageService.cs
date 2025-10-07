@@ -7,7 +7,7 @@ using Azure.Storage.Blobs.Models;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 
-namespace Bit.Core.PhishingDomainFeatures;
+namespace Bit.Core.Dirt.PhishingDomainFeatures;
 
 public class AzurePhishingDomainStorageService
 {

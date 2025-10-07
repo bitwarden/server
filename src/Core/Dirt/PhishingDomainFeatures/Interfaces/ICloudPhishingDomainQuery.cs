@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.PhishingDomainFeatures.Interfaces;
+﻿namespace Bit.Core.Dirt.PhishingDomainFeatures.Interfaces;
 
 public interface ICloudPhishingDomainQuery
 {

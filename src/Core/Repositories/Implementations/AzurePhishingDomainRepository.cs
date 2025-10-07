@@ -1,5 +1,5 @@
 ﻿using System.Text.Json;
-using Bit.Core.PhishingDomainFeatures;
+using Bit.Core.Dirt.PhishingDomainFeatures;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 
