@@ -70,6 +70,17 @@ public static class Constants
         /// </summary>
         public const string UnitedStates = "US";
     }
+
+
+    /// <summary>
+    /// Constants for our browser extensions IDs
+    /// </summary>
+    public static class BrowserExtensions
+    {
+        public const string ChromeId = "chrome-extension://nngceckbapebfimnlniiiahkandclblb/";
+        public const string EdgeId = "chrome-extension://jbkfoedolllekgbhcbcoahefnbanhhlh/";
+        public const string OperaId = "chrome-extension://ccnckbpmaceehanjmeomladnmlffdjgn/";
+    }
 }
 
 public static class AuthConstants
@@ -133,8 +144,6 @@ public static class FeatureFlagKeys
     public const string CreateDefaultLocation = "pm-19467-create-default-location";
     public const string PM23845_VNextApplicationCache = "pm-24957-refactor-memory-application-cache";
     public const string CipherRepositoryBulkResourceCreation = "pm-24951-cipher-repository-bulk-resource-creation-service";
-    public const string CollectionVaultRefactor = "pm-25030-resolve-ts-upgrade-errors";
-    public const string DeleteClaimedUserAccountRefactor = "pm-25094-refactor-delete-managed-organization-user-command";
 
     /* Auth Team */
     public const string TwoFactorExtensionDataPersistence = "pm-9115-two-factor-extension-data-persistence";
@@ -144,6 +153,9 @@ public static class FeatureFlagKeys
     public const string ChangeExistingPasswordRefactor = "pm-16117-change-existing-password-refactor";
     public const string Otp6Digits = "pm-18612-otp-6-digits";
     public const string FailedTwoFactorEmail = "pm-24425-send-2fa-failed-email";
+    public const string DisableAlternateLoginMethods = "pm-22110-disable-alternate-login-methods";
+    public const string PM23174ManageAccountRecoveryPermissionDrivesTheNeedToSetMasterPassword =
+        "pm-23174-manage-account-recovery-permission-drives-the-need-to-set-master-password";
 
     /* Autofill Team */
     public const string IdpAutoSubmitLogin = "idp-auto-submit-login";
@@ -168,11 +180,11 @@ public static class FeatureFlagKeys
     public const string PM17772_AdminInitiatedSponsorships = "pm-17772-admin-initiated-sponsorships";
     public const string UsePricingService = "use-pricing-service";
     public const string PM19422_AllowAutomaticTaxUpdates = "pm-19422-allow-automatic-tax-updates";
-    public const string UseOrganizationWarningsService = "use-organization-warnings-service";
-    public const string PM21881_ManagePaymentDetailsOutsideCheckout = "pm-21881-manage-payment-details-outside-checkout";
     public const string PM21821_ProviderPortalTakeover = "pm-21821-provider-portal-takeover";
     public const string PM22415_TaxIDWarnings = "pm-22415-tax-id-warnings";
     public const string PM23385_UseNewPremiumFlow = "pm-23385-use-new-premium-flow";
+    public const string PM24996ImplementUpgradeFromFreeDialog = "pm-24996-implement-upgrade-from-free-dialog";
+    public const string PM24032_NewNavigationPremiumUpgradeButton = "pm-24032-new-navigation-premium-upgrade-button";
 
     /* Key Management Team */
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
@@ -185,6 +197,8 @@ public static class FeatureFlagKeys
     public const string PM17987_BlockType0 = "pm-17987-block-type-0";
     public const string ForceUpdateKDFSettings = "pm-18021-force-update-kdf-settings";
     public const string UnlockWithMasterPasswordUnlockData = "pm-23246-unlock-with-master-password-unlock-data";
+    public const string WindowsBiometricsV2 = "pm-25373-windows-biometrics-v2";
+    public const string NoLogoutOnKdfChange = "pm-23995-no-logout-on-kdf-change";
 
     /* Mobile Team */
     public const string NativeCarouselFlow = "native-carousel-flow";
@@ -220,7 +234,6 @@ public static class FeatureFlagKeys
     /* Vault Team */
     public const string PM8851_BrowserOnboardingNudge = "pm-8851-browser-onboarding-nudge";
     public const string PM9111ExtensionPersistAddEditForm = "pm-9111-extension-persist-add-edit-form";
-    public const string SecurityTasks = "security-tasks";
     public const string CipherKeyEncryption = "cipher-key-encryption";
     public const string DesktopCipherForms = "pm-18520-desktop-cipher-forms";
     public const string PM19941MigrateCipherDomainToSdk = "pm-19941-migrate-cipher-domain-to-sdk";
@@ -233,6 +246,9 @@ public static class FeatureFlagKeys
 
     /* Innovation Team */
     public const string ArchiveVaultItems = "pm-19148-innovation-archive";
+
+    /* DIRT Team */
+    public const string PM22887_RiskInsightsActivityTab = "pm-22887-risk-insights-activity-tab";
 
     public static List<string> GetAllKeys()
     {

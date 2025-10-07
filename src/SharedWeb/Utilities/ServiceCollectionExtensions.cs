@@ -6,6 +6,8 @@ using System.Reflection;
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using AspNetCoreRateLimit;
+using Azure.Messaging.ServiceBus;
+using Bit.Core;
 using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
@@ -694,8 +696,23 @@ public static class ServiceCollectionExtensions
         {
             options.ServerDomain = new Uri(globalSettings.BaseServiceUri.Vault).Host;
             options.ServerName = "Bitwarden";
-            options.Origins = new HashSet<string> { globalSettings.BaseServiceUri.Vault, };
             options.TimestampDriftTolerance = 300000;
+
+            if (globalSettings.Fido2?.Origins?.Any() == true)
+            {
+                options.Origins = new HashSet<string>(globalSettings.Fido2.Origins);
+            }
+            else
+            {
+                // Default to allowing the vault domain and chromium browser extension IDs
+                options.Origins = new HashSet<string> {
+                    globalSettings.BaseServiceUri.Vault,
+                    Constants.BrowserExtensions.ChromeId,
+                    Constants.BrowserExtensions.EdgeId,
+                    Constants.BrowserExtensions.OperaId
+                 };
+            }
+
         });
     }
 
@@ -855,6 +872,11 @@ public static class ServiceCollectionExtensions
                     configuration: listenerConfiguration,
                     handler: provider.GetRequiredKeyedService<IEventMessageHandler>(serviceKey: listenerConfiguration.RoutingKey),
                     serviceBusService: provider.GetRequiredService<IAzureServiceBusService>(),
+                    serviceBusOptions: new ServiceBusProcessorOptions()
+                    {
+                        PrefetchCount = listenerConfiguration.EventPrefetchCount,
+                        MaxConcurrentCalls = listenerConfiguration.EventMaxConcurrentCalls
+                    },
                     loggerFactory: provider.GetRequiredService<ILoggerFactory>()
                 )
             )
@@ -865,6 +887,11 @@ public static class ServiceCollectionExtensions
                     configuration: listenerConfiguration,
                     handler: provider.GetRequiredService<IIntegrationHandler<TConfig>>(),
                     serviceBusService: provider.GetRequiredService<IAzureServiceBusService>(),
+                    serviceBusOptions: new ServiceBusProcessorOptions()
+                    {
+                        PrefetchCount = listenerConfiguration.IntegrationPrefetchCount,
+                        MaxConcurrentCalls = listenerConfiguration.IntegrationMaxConcurrentCalls
+                    },
                     loggerFactory: provider.GetRequiredService<ILoggerFactory>()
                 )
             )
@@ -927,6 +954,11 @@ public static class ServiceCollectionExtensions
                         configuration: repositoryConfiguration,
                         handler: provider.GetRequiredService<AzureTableStorageEventHandler>(),
                         serviceBusService: provider.GetRequiredService<IAzureServiceBusService>(),
+                        serviceBusOptions: new ServiceBusProcessorOptions()
+                        {
+                            PrefetchCount = repositoryConfiguration.EventPrefetchCount,
+                            MaxConcurrentCalls = repositoryConfiguration.EventMaxConcurrentCalls
+                        },
                         loggerFactory: provider.GetRequiredService<ILoggerFactory>()
                     )
                 )
