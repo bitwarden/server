@@ -6,7 +6,6 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 
-#nullable enable
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
 
 public class SavePolicyCommand : ISavePolicyCommand
@@ -16,23 +15,20 @@ public class SavePolicyCommand : ISavePolicyCommand
     private readonly IPolicyRepository _policyRepository;
     private readonly IReadOnlyDictionary<PolicyType, IPolicyValidator> _policyValidators;
     private readonly TimeProvider _timeProvider;
-    private readonly IVNextSavePolicyCommand _vNextSavePolicyCommand;
-    private readonly IFeatureService _featureService;
+    private readonly IPostSavePolicySideEffect _postSavePolicySideEffect;
 
     public SavePolicyCommand(IApplicationCacheService applicationCacheService,
         IEventService eventService,
         IPolicyRepository policyRepository,
         IEnumerable<IPolicyValidator> policyValidators,
         TimeProvider timeProvider,
-        IVNextSavePolicyCommand vNextSavePolicyCommand,
-        IFeatureService featureService)
+        IPostSavePolicySideEffect postSavePolicySideEffect)
     {
         _applicationCacheService = applicationCacheService;
         _eventService = eventService;
         _policyRepository = policyRepository;
         _timeProvider = timeProvider;
-        _vNextSavePolicyCommand = vNextSavePolicyCommand;
-        _featureService = featureService;
+        _postSavePolicySideEffect = postSavePolicySideEffect;
 
         var policyValidatorsDict = new Dictionary<PolicyType, IPolicyValidator>();
         foreach (var policyValidator in policyValidators)
@@ -64,14 +60,13 @@ public class SavePolicyCommand : ISavePolicyCommand
             await RunValidatorAsync(validator, policyUpdate);
         }
 
-        var policy =
-            await _policyRepository.GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, policyUpdate.Type)
-            ?? new Policy
-            {
-                OrganizationId = policyUpdate.OrganizationId,
-                Type = policyUpdate.Type,
-                CreationDate = _timeProvider.GetUtcNow().UtcDateTime
-            };
+        var policy = await _policyRepository.GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, policyUpdate.Type)
+                     ?? new Policy
+                     {
+                         OrganizationId = policyUpdate.OrganizationId,
+                         Type = policyUpdate.Type,
+                         CreationDate = _timeProvider.GetUtcNow().UtcDateTime
+                     };
 
         policy.Enabled = policyUpdate.Enabled;
         policy.Data = policyUpdate.Data;
@@ -85,14 +80,22 @@ public class SavePolicyCommand : ISavePolicyCommand
 
     public async Task<Policy> VNextSaveAsync(SavePolicyModel policyRequest)
     {
-        if (_featureService.IsEnabled(FeatureFlagKeys.VNextPolicyUpsertPattern))
-        {
-            return await _vNextSavePolicyCommand.SaveAsync(policyRequest);
-        }
+        var (_, currentPolicy) = await GetCurrentPolicyStateAsync(policyRequest.PolicyUpdate);
 
-        return await SaveAsync(policyRequest.PolicyUpdate);
+        var policy = await SaveAsync(policyRequest.PolicyUpdate);
+
+        await ExecutePostPolicySaveSideEffectsForSupportedPoliciesAsync(policyRequest, policy, currentPolicy);
+
+        return policy;
     }
 
+    private async Task ExecutePostPolicySaveSideEffectsForSupportedPoliciesAsync(SavePolicyModel policyRequest, Policy postUpdatedPolicy, Policy? previousPolicyState)
+    {
+        if (postUpdatedPolicy.Type == PolicyType.OrganizationDataOwnership)
+        {
+            await _postSavePolicySideEffect.ExecuteSideEffectsAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
+        }
+    }
 
     private async Task RunValidatorAsync(IPolicyValidator validator, PolicyUpdate policyUpdate)
     {
@@ -102,14 +105,12 @@ public class SavePolicyCommand : ISavePolicyCommand
         if (currentPolicy is not { Enabled: true } && policyUpdate.Enabled)
         {
             var missingRequiredPolicyTypes = validator.RequiredPolicies
-                .Where(requiredPolicyType => savedPoliciesDict.GetValueOrDefault(requiredPolicyType) is not
-                { Enabled: true })
+                .Where(requiredPolicyType => savedPoliciesDict.GetValueOrDefault(requiredPolicyType) is not { Enabled: true })
                 .ToList();
 
             if (missingRequiredPolicyTypes.Count != 0)
             {
-                throw new BadRequestException(
-                    $"Turn on the {missingRequiredPolicyTypes.First().GetName()} policy because it is required for the {validator.Type.GetName()} policy.");
+                throw new BadRequestException($"Turn on the {missingRequiredPolicyTypes.First().GetName()} policy because it is required for the {validator.Type.GetName()} policy.");
             }
         }
 
@@ -126,11 +127,9 @@ public class SavePolicyCommand : ISavePolicyCommand
             switch (dependentPolicyTypes)
             {
                 case { Count: 1 }:
-                    throw new BadRequestException(
-                        $"Turn off the {dependentPolicyTypes.First().GetName()} policy because it requires the {validator.Type.GetName()} policy.");
+                    throw new BadRequestException($"Turn off the {dependentPolicyTypes.First().GetName()} policy because it requires the {validator.Type.GetName()} policy.");
                 case { Count: > 1 }:
-                    throw new BadRequestException(
-                        $"Turn off all of the policies that require the {validator.Type.GetName()} policy.");
+                    throw new BadRequestException($"Turn off all of the policies that require the {validator.Type.GetName()} policy.");
             }
         }
 
@@ -145,8 +144,7 @@ public class SavePolicyCommand : ISavePolicyCommand
         await validator.OnSaveSideEffectsAsync(policyUpdate, currentPolicy);
     }
 
-    private async Task<(Dictionary<PolicyType, Policy> savedPoliciesDict, Policy? currentPolicy)>
-        GetCurrentPolicyStateAsync(PolicyUpdate policyUpdate)
+    private async Task<(Dictionary<PolicyType, Policy> savedPoliciesDict, Policy? currentPolicy)> GetCurrentPolicyStateAsync(PolicyUpdate policyUpdate)
     {
         var savedPolicies = await _policyRepository.GetManyByOrganizationIdAsync(policyUpdate.OrganizationId);
         // Note: policies may be missing from this dict if they have never been enabled
@@ -154,17 +152,4 @@ public class SavePolicyCommand : ISavePolicyCommand
         var currentPolicy = savedPoliciesDict.GetValueOrDefault(policyUpdate.Type);
         return (savedPoliciesDict, currentPolicy);
     }
-
-
-
-
-
-
-
-
-
-
-
-
 }
-
