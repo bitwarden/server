@@ -27,6 +27,7 @@ public interface IEventRepository
         DateTime startDate, DateTime endDate, PageOptions pageOptions);
     Task<PagedResult<IEvent>> GetManyByCipherAsync(Cipher cipher, DateTime startDate, DateTime endDate,
         PageOptions pageOptions);
+
     Task CreateAsync(IEvent e);
     Task CreateManyAsync(IEnumerable<IEvent> e);
     Task<PagedResult<IEvent>> GetManyByOrganizationServiceAccountAsync(Guid organizationId, Guid serviceAccountId,

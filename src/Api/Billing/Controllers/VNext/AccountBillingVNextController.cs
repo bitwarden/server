@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Bit.Api.Billing.Attributes;
+﻿using Bit.Api.Billing.Attributes;
 using Bit.Api.Billing.Models.Requests.Payment;
 using Bit.Api.Billing.Models.Requests.Premium;
 using Bit.Core;
