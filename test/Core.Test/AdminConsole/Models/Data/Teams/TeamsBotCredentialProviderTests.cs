@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Models.Teams;
+using Microsoft.Bot.Connector.Authentication;
 using Xunit;
 
 namespace Bit.Core.Test.Models.Data.Teams;
@@ -7,7 +8,6 @@ public class TeamsBotCredentialProviderTests
 {
     private string _clientId = "client id";
     private string _clientSecret = "client secret";
-    private string _microsoftTeamsBotIssuer = "https://api.botframework.com";
 
     [Fact]
     public async Task IsValidAppId_MustMatchClientId()
@@ -44,7 +44,7 @@ public class TeamsBotCredentialProviderTests
     public async Task ValidateIssuerAsync_ExpectedIssuer_ReturnsTrue()
     {
         var sut = new TeamsBotCredentialProvider(_clientId, _clientSecret);
-        Assert.True(await sut.ValidateIssuerAsync(_microsoftTeamsBotIssuer));
+        Assert.True(await sut.ValidateIssuerAsync(AuthenticationConstants.ToBotFromChannelTokenIssuer));
     }
 
     [Fact]

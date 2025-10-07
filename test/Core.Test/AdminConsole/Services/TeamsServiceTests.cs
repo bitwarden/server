@@ -197,21 +197,21 @@ public class TeamsServiceTests
         integration.Configuration = JsonSerializer.Serialize(initiatedConfiguration);
 
         sutProvider.GetDependency<IOrganizationIntegrationRepository>()
-            .GetByTenantIdTeamId(tenantId, teamId)
+            .GetByTeamsConfigurationTenantIdTeamId(tenantId, teamId)
             .Returns(integration);
 
         OrganizationIntegration? capturedIntegration = null;
         await sutProvider.GetDependency<IOrganizationIntegrationRepository>()
             .UpsertAsync(Arg.Do<OrganizationIntegration>(x => capturedIntegration = x));
 
-        await sutProvider.Sut.HandleIncomingAppInstall(
+        await sutProvider.Sut.HandleIncomingAppInstallAsync(
             conversationId: conversationId,
             serviceUrl: serviceUrl,
             teamId: teamId,
             tenantId: tenantId
         );
 
-        await sutProvider.GetDependency<IOrganizationIntegrationRepository>().Received(1).GetByTenantIdTeamId(tenantId, teamId);
+        await sutProvider.GetDependency<IOrganizationIntegrationRepository>().Received(1).GetByTeamsConfigurationTenantIdTeamId(tenantId, teamId);
         Assert.NotNull(capturedIntegration);
         var configuration = JsonSerializer.Deserialize<TeamsIntegration>(capturedIntegration.Configuration ?? string.Empty);
         Assert.NotNull(configuration);
@@ -224,14 +224,14 @@ public class TeamsServiceTests
     public async Task HandleIncomingAppInstall_NoIntegrationMatched_DoesNothing()
     {
         var sutProvider = GetSutProvider();
-        await sutProvider.Sut.HandleIncomingAppInstall(
+        await sutProvider.Sut.HandleIncomingAppInstallAsync(
             conversationId: "conversationId",
             serviceUrl: new Uri("https://localhost"),
             teamId: "teamId",
             tenantId: "tenantId"
         );
 
-        await sutProvider.GetDependency<IOrganizationIntegrationRepository>().Received(1).GetByTenantIdTeamId("tenantId", "teamId");
+        await sutProvider.GetDependency<IOrganizationIntegrationRepository>().Received(1).GetByTeamsConfigurationTenantIdTeamId("tenantId", "teamId");
         await sutProvider.GetDependency<IOrganizationIntegrationRepository>().DidNotReceive().UpsertAsync(Arg.Any<OrganizationIntegration>());
     }
 
@@ -251,17 +251,17 @@ public class TeamsServiceTests
         integration.Configuration = JsonSerializer.Serialize(initiatedConfiguration);
 
         sutProvider.GetDependency<IOrganizationIntegrationRepository>()
-            .GetByTenantIdTeamId(tenantId, teamId)
+            .GetByTeamsConfigurationTenantIdTeamId(tenantId, teamId)
             .Returns(integration);
 
-        await sutProvider.Sut.HandleIncomingAppInstall(
+        await sutProvider.Sut.HandleIncomingAppInstallAsync(
             conversationId: "conversationId",
             serviceUrl: new Uri("https://localhost"),
             teamId: teamId,
             tenantId: tenantId
         );
 
-        await sutProvider.GetDependency<IOrganizationIntegrationRepository>().Received(1).GetByTenantIdTeamId(tenantId, teamId);
+        await sutProvider.GetDependency<IOrganizationIntegrationRepository>().Received(1).GetByTeamsConfigurationTenantIdTeamId(tenantId, teamId);
         await sutProvider.GetDependency<IOrganizationIntegrationRepository>().DidNotReceive().UpsertAsync(Arg.Any<OrganizationIntegration>());
     }
 
@@ -273,17 +273,17 @@ public class TeamsServiceTests
         integration.Configuration = null;
 
         sutProvider.GetDependency<IOrganizationIntegrationRepository>()
-            .GetByTenantIdTeamId("tenantId", "teamId")
+            .GetByTeamsConfigurationTenantIdTeamId("tenantId", "teamId")
             .Returns(integration);
 
-        await sutProvider.Sut.HandleIncomingAppInstall(
+        await sutProvider.Sut.HandleIncomingAppInstallAsync(
             conversationId: "conversationId",
             serviceUrl: new Uri("https://localhost"),
             teamId: "teamId",
             tenantId: "tenantId"
         );
 
-        await sutProvider.GetDependency<IOrganizationIntegrationRepository>().Received(1).GetByTenantIdTeamId("tenantId", "teamId");
+        await sutProvider.GetDependency<IOrganizationIntegrationRepository>().Received(1).GetByTeamsConfigurationTenantIdTeamId("tenantId", "teamId");
         await sutProvider.GetDependency<IOrganizationIntegrationRepository>().DidNotReceive().UpsertAsync(Arg.Any<OrganizationIntegration>());
     }
 }

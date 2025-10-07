@@ -4,7 +4,7 @@ namespace Bit.Core.AdminConsole.Models.Teams;
 
 public class TeamsBotCredentialProvider(string clientId, string clientSecret) : ICredentialProvider
 {
-    private const string _microsoftBotFrameworkIssuer = "https://api.botframework.com";
+    private const string _microsoftBotFrameworkIssuer = AuthenticationConstants.ToBotFromChannelTokenIssuer;
 
     public Task<bool> IsValidAppIdAsync(string appId)
     {

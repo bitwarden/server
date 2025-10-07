@@ -140,7 +140,7 @@ public class TeamsService(
             !string.IsNullOrWhiteSpace(teamId) &&
             !string.IsNullOrWhiteSpace(tenantId))
         {
-            await HandleIncomingAppInstall(
+            await HandleIncomingAppInstallAsync(
                 conversationId: conversationId,
                 serviceUrl: parsedUri,
                 teamId: teamId,
@@ -151,17 +151,17 @@ public class TeamsService(
         await base.OnInstallationUpdateAddAsync(turnContext, cancellationToken);
     }
 
-    internal async Task HandleIncomingAppInstall(
+    internal async Task HandleIncomingAppInstallAsync(
         string conversationId,
         Uri serviceUrl,
         string teamId,
         string tenantId)
     {
-        var integration = await _integrationRepository.GetByTenantIdTeamId(
+        var integration = await _integrationRepository.GetByTeamsConfigurationTenantIdTeamId(
             tenantId: tenantId,
             teamId: teamId);
 
-        if (integration is null || integration.Configuration is null)
+        if (integration?.Configuration is null)
         {
             return;
         }

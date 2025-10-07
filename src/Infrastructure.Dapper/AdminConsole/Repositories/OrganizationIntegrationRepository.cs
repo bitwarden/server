@@ -30,12 +30,12 @@ public class OrganizationIntegrationRepository : Repository<OrganizationIntegrat
         }
     }
 
-    public async Task<OrganizationIntegration?> GetByTenantIdTeamId(string tenantId, string teamId)
+    public async Task<OrganizationIntegration?> GetByTeamsConfigurationTenantIdTeamId(string tenantId, string teamId)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var result = await connection.QuerySingleOrDefaultAsync<OrganizationIntegration>(
-                "[dbo].[OrganizationIntegration_ReadByTenantIdTeamId]",
+                "[dbo].[OrganizationIntegration_ReadByTeamsConfigurationTenantIdTeamId]",
                 new { TenantId = tenantId, TeamId = teamId },
                 commandType: CommandType.StoredProcedure);
 

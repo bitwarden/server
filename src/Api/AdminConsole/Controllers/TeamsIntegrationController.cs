@@ -119,12 +119,12 @@ public class TeamsIntegrationController(
         var token = await teamsService.ObtainTokenViaOAuth(code, callbackUrl);
         if (string.IsNullOrEmpty(token))
         {
-            throw new BadRequestException("Invalid response from Slack.");
+            throw new BadRequestException("Invalid response from Teams.");
         }
 
         var teams = await teamsService.GetJoinedTeamsAsync(token);
 
-        if (teams.Count == 0)
+        if (!teams.Any())
         {
             throw new BadRequestException("No teams were found.");
         }
