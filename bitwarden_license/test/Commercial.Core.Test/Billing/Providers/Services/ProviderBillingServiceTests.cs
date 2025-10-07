@@ -1,5 +1,4 @@
 ﻿using System.Globalization;
-using System.Net;
 using Bit.Commercial.Core.Billing.Providers.Models;
 using Bit.Commercial.Core.Billing.Providers.Services;
 using Bit.Core.AdminConsole.Entities;
@@ -10,18 +9,16 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Entities;
 using Bit.Core.Billing.Providers.Models;
 using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
-using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -895,118 +892,53 @@ public class ProviderBillingServiceTests
     #region SetupCustomer
 
     [Theory, BitAutoData]
-    public async Task SetupCustomer_MissingCountry_ContactSupport(
+    public async Task SetupCustomer_NullPaymentMethod_ThrowsNullReferenceException(
         SutProvider<ProviderBillingService> sutProvider,
         Provider provider,
-        TaxInfo taxInfo,
-        TokenizedPaymentSource tokenizedPaymentSource)
+        BillingAddress billingAddress)
     {
-        taxInfo.BillingAddressCountry = null;
-
-        await ThrowsBillingExceptionAsync(() => sutProvider.Sut.SetupCustomer(provider, taxInfo, tokenizedPaymentSource));
-
-        await sutProvider.GetDependency<IStripeAdapter>()
-            .DidNotReceiveWithAnyArgs()
-            .CustomerGetAsync(Arg.Any<string>(), Arg.Any<CustomerGetOptions>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task SetupCustomer_MissingPostalCode_ContactSupport(
-        SutProvider<ProviderBillingService> sutProvider,
-        Provider provider,
-        TaxInfo taxInfo,
-        TokenizedPaymentSource tokenizedPaymentSource)
-    {
-        taxInfo.BillingAddressCountry = null;
-
-        await ThrowsBillingExceptionAsync(() => sutProvider.Sut.SetupCustomer(provider, taxInfo, tokenizedPaymentSource));
-
-        await sutProvider.GetDependency<IStripeAdapter>()
-            .DidNotReceiveWithAnyArgs()
-            .CustomerGetAsync(Arg.Any<string>(), Arg.Any<CustomerGetOptions>());
-    }
-
-
-    [Theory, BitAutoData]
-    public async Task SetupCustomer_NullPaymentSource_ThrowsArgumentNullException(
-        SutProvider<ProviderBillingService> sutProvider,
-        Provider provider,
-        TaxInfo taxInfo)
-    {
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            sutProvider.Sut.SetupCustomer(provider, taxInfo, null));
-    }
-
-    [Theory, BitAutoData]
-    public async Task SetupCustomer_InvalidRequiredPaymentMethod_ThrowsBillingException(
-        SutProvider<ProviderBillingService> sutProvider,
-        Provider provider,
-        TaxInfo taxInfo,
-        TokenizedPaymentSource tokenizedPaymentSource)
-    {
-        provider.Name = "MSP";
-
-        sutProvider.GetDependency<ITaxService>()
-            .GetStripeTaxCode(Arg.Is<string>(
-                    p => p == taxInfo.BillingAddressCountry),
-                Arg.Is<string>(p => p == taxInfo.TaxIdNumber))
-            .Returns(taxInfo.TaxIdType);
-
-        taxInfo.BillingAddressCountry = "AD";
-
-
-        tokenizedPaymentSource = tokenizedPaymentSource with { Type = PaymentMethodType.BitPay };
-
-        await ThrowsBillingExceptionAsync(() =>
-            sutProvider.Sut.SetupCustomer(provider, taxInfo, tokenizedPaymentSource));
+        await Assert.ThrowsAsync<NullReferenceException>(() =>
+            sutProvider.Sut.SetupCustomer(provider, null, billingAddress));
     }
 
     [Theory, BitAutoData]
     public async Task SetupCustomer_WithBankAccount_Error_Reverts(
         SutProvider<ProviderBillingService> sutProvider,
         Provider provider,
-        TaxInfo taxInfo)
+        BillingAddress billingAddress)
     {
         provider.Name = "MSP";
-
-        sutProvider.GetDependency<ITaxService>()
-            .GetStripeTaxCode(Arg.Is<string>(
-                    p => p == taxInfo.BillingAddressCountry),
-                Arg.Is<string>(p => p == taxInfo.TaxIdNumber))
-            .Returns(taxInfo.TaxIdType);
-
-        taxInfo.BillingAddressCountry = "AD";
+        billingAddress.Country = "AD";
+        billingAddress.TaxId = new TaxID("es_nif", "12345678Z");
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-
-        var tokenizedPaymentSource = new TokenizedPaymentSource(PaymentMethodType.BankAccount, "token");
-
+        var tokenizedPaymentMethod = new TokenizedPaymentMethod { Type = TokenizablePaymentMethodType.BankAccount, Token = "token" };
 
         stripeAdapter.SetupIntentList(Arg.Is<SetupIntentListOptions>(options =>
-            options.PaymentMethod == tokenizedPaymentSource.Token)).Returns([
+            options.PaymentMethod == tokenizedPaymentMethod.Token)).Returns([
             new SetupIntent { Id = "setup_intent_id" }
         ]);
 
         stripeAdapter.CustomerCreateAsync(Arg.Is<CustomerCreateOptions>(o =>
-                o.Address.Country == taxInfo.BillingAddressCountry &&
-                o.Address.PostalCode == taxInfo.BillingAddressPostalCode &&
-                o.Address.Line1 == taxInfo.BillingAddressLine1 &&
-                o.Address.Line2 == taxInfo.BillingAddressLine2 &&
-                o.Address.City == taxInfo.BillingAddressCity &&
-                o.Address.State == taxInfo.BillingAddressState &&
-                o.Description == WebUtility.HtmlDecode(provider.BusinessName) &&
+                o.Address.Country == billingAddress.Country &&
+                o.Address.PostalCode == billingAddress.PostalCode &&
+                o.Address.Line1 == billingAddress.Line1 &&
+                o.Address.Line2 == billingAddress.Line2 &&
+                o.Address.City == billingAddress.City &&
+                o.Address.State == billingAddress.State &&
+                o.Description == provider.DisplayBusinessName() &&
                 o.Email == provider.BillingEmail &&
-                o.InvoiceSettings.CustomFields.FirstOrDefault().Name == "Provider" &&
-                o.InvoiceSettings.CustomFields.FirstOrDefault().Value == "MSP" &&
+                o.InvoiceSettings.CustomFields.FirstOrDefault().Name == provider.SubscriberType() &&
+                o.InvoiceSettings.CustomFields.FirstOrDefault().Value == provider.DisplayName() &&
                 o.Metadata["region"] == "" &&
-                o.TaxIdData.FirstOrDefault().Type == taxInfo.TaxIdType &&
-                o.TaxIdData.FirstOrDefault().Value == taxInfo.TaxIdNumber))
+                o.TaxIdData.FirstOrDefault().Type == billingAddress.TaxId.Code &&
+                o.TaxIdData.FirstOrDefault().Value == billingAddress.TaxId.Value))
             .Throws<StripeException>();
 
         sutProvider.GetDependency<ISetupIntentCache>().GetSetupIntentIdForSubscriber(provider.Id).Returns("setup_intent_id");
 
         await Assert.ThrowsAsync<StripeException>(() =>
-            sutProvider.Sut.SetupCustomer(provider, taxInfo, tokenizedPaymentSource));
+            sutProvider.Sut.SetupCustomer(provider, tokenizedPaymentMethod, billingAddress));
 
         await sutProvider.GetDependency<ISetupIntentCache>().Received(1).Set(provider.Id, "setup_intent_id");
 
@@ -1020,45 +952,37 @@ public class ProviderBillingServiceTests
     public async Task SetupCustomer_WithPayPal_Error_Reverts(
         SutProvider<ProviderBillingService> sutProvider,
         Provider provider,
-        TaxInfo taxInfo)
+        BillingAddress billingAddress)
     {
         provider.Name = "MSP";
-
-        sutProvider.GetDependency<ITaxService>()
-            .GetStripeTaxCode(Arg.Is<string>(
-                    p => p == taxInfo.BillingAddressCountry),
-                Arg.Is<string>(p => p == taxInfo.TaxIdNumber))
-            .Returns(taxInfo.TaxIdType);
-
-        taxInfo.BillingAddressCountry = "AD";
+        billingAddress.Country = "AD";
+        billingAddress.TaxId = new TaxID("es_nif", "12345678Z");
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        var tokenizedPaymentMethod = new TokenizedPaymentMethod { Type = TokenizablePaymentMethodType.PayPal, Token = "token" };
 
-        var tokenizedPaymentSource = new TokenizedPaymentSource(PaymentMethodType.PayPal, "token");
-
-
-        sutProvider.GetDependency<ISubscriberService>().CreateBraintreeCustomer(provider, tokenizedPaymentSource.Token)
+        sutProvider.GetDependency<ISubscriberService>().CreateBraintreeCustomer(provider, tokenizedPaymentMethod.Token)
             .Returns("braintree_customer_id");
 
         stripeAdapter.CustomerCreateAsync(Arg.Is<CustomerCreateOptions>(o =>
-                o.Address.Country == taxInfo.BillingAddressCountry &&
-                o.Address.PostalCode == taxInfo.BillingAddressPostalCode &&
-                o.Address.Line1 == taxInfo.BillingAddressLine1 &&
-                o.Address.Line2 == taxInfo.BillingAddressLine2 &&
-                o.Address.City == taxInfo.BillingAddressCity &&
-                o.Address.State == taxInfo.BillingAddressState &&
-                o.Description == WebUtility.HtmlDecode(provider.BusinessName) &&
+                o.Address.Country == billingAddress.Country &&
+                o.Address.PostalCode == billingAddress.PostalCode &&
+                o.Address.Line1 == billingAddress.Line1 &&
+                o.Address.Line2 == billingAddress.Line2 &&
+                o.Address.City == billingAddress.City &&
+                o.Address.State == billingAddress.State &&
+                o.Description == provider.DisplayBusinessName() &&
                 o.Email == provider.BillingEmail &&
-                o.InvoiceSettings.CustomFields.FirstOrDefault().Name == "Provider" &&
-                o.InvoiceSettings.CustomFields.FirstOrDefault().Value == "MSP" &&
+                o.InvoiceSettings.CustomFields.FirstOrDefault().Name == provider.SubscriberType() &&
+                o.InvoiceSettings.CustomFields.FirstOrDefault().Value == provider.DisplayName() &&
                 o.Metadata["region"] == "" &&
                 o.Metadata["btCustomerId"] == "braintree_customer_id" &&
-                o.TaxIdData.FirstOrDefault().Type == taxInfo.TaxIdType &&
-                o.TaxIdData.FirstOrDefault().Value == taxInfo.TaxIdNumber))
+                o.TaxIdData.FirstOrDefault().Type == billingAddress.TaxId.Code &&
+                o.TaxIdData.FirstOrDefault().Value == billingAddress.TaxId.Value))
             .Throws<StripeException>();
 
         await Assert.ThrowsAsync<StripeException>(() =>
-            sutProvider.Sut.SetupCustomer(provider, taxInfo, tokenizedPaymentSource));
+            sutProvider.Sut.SetupCustomer(provider, tokenizedPaymentMethod, billingAddress));
 
         await sutProvider.GetDependency<IBraintreeGateway>().Customer.Received(1).DeleteAsync("braintree_customer_id");
     }
@@ -1067,17 +991,11 @@ public class ProviderBillingServiceTests
     public async Task SetupCustomer_WithBankAccount_Success(
         SutProvider<ProviderBillingService> sutProvider,
         Provider provider,
-        TaxInfo taxInfo)
+        BillingAddress billingAddress)
     {
         provider.Name = "MSP";
-
-        sutProvider.GetDependency<ITaxService>()
-            .GetStripeTaxCode(Arg.Is<string>(
-                    p => p == taxInfo.BillingAddressCountry),
-                Arg.Is<string>(p => p == taxInfo.TaxIdNumber))
-            .Returns(taxInfo.TaxIdType);
-
-        taxInfo.BillingAddressCountry = "AD";
+        billingAddress.Country = "AD";
+        billingAddress.TaxId = new TaxID("es_nif", "12345678Z");
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
@@ -1087,31 +1005,30 @@ public class ProviderBillingServiceTests
             Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
         };
 
-        var tokenizedPaymentSource = new TokenizedPaymentSource(PaymentMethodType.BankAccount, "token");
-
+        var tokenizedPaymentMethod = new TokenizedPaymentMethod { Type = TokenizablePaymentMethodType.BankAccount, Token = "token" };
 
         stripeAdapter.SetupIntentList(Arg.Is<SetupIntentListOptions>(options =>
-            options.PaymentMethod == tokenizedPaymentSource.Token)).Returns([
+            options.PaymentMethod == tokenizedPaymentMethod.Token)).Returns([
             new SetupIntent { Id = "setup_intent_id" }
         ]);
 
         stripeAdapter.CustomerCreateAsync(Arg.Is<CustomerCreateOptions>(o =>
-                o.Address.Country == taxInfo.BillingAddressCountry &&
-                o.Address.PostalCode == taxInfo.BillingAddressPostalCode &&
-                o.Address.Line1 == taxInfo.BillingAddressLine1 &&
-                o.Address.Line2 == taxInfo.BillingAddressLine2 &&
-                o.Address.City == taxInfo.BillingAddressCity &&
-                o.Address.State == taxInfo.BillingAddressState &&
-                o.Description == WebUtility.HtmlDecode(provider.BusinessName) &&
+                o.Address.Country == billingAddress.Country &&
+                o.Address.PostalCode == billingAddress.PostalCode &&
+                o.Address.Line1 == billingAddress.Line1 &&
+                o.Address.Line2 == billingAddress.Line2 &&
+                o.Address.City == billingAddress.City &&
+                o.Address.State == billingAddress.State &&
+                o.Description == provider.DisplayBusinessName() &&
                 o.Email == provider.BillingEmail &&
-                o.InvoiceSettings.CustomFields.FirstOrDefault().Name == "Provider" &&
-                o.InvoiceSettings.CustomFields.FirstOrDefault().Value == "MSP" &&
+                o.InvoiceSettings.CustomFields.FirstOrDefault().Name == provider.SubscriberType() &&
+                o.InvoiceSettings.CustomFields.FirstOrDefault().Value == provider.DisplayName() &&
                 o.Metadata["region"] == "" &&
-                o.TaxIdData.FirstOrDefault().Type == taxInfo.TaxIdType &&
-                o.TaxIdData.FirstOrDefault().Value == taxInfo.TaxIdNumber))
+                o.TaxIdData.FirstOrDefault().Type == billingAddress.TaxId.Code &&
+                o.TaxIdData.FirstOrDefault().Value == billingAddress.TaxId.Value))
             .Returns(expected);
 
-        var actual = await sutProvider.Sut.SetupCustomer(provider, taxInfo, tokenizedPaymentSource);
+        var actual = await sutProvider.Sut.SetupCustomer(provider, tokenizedPaymentMethod, billingAddress);
 
         Assert.Equivalent(expected, actual);
 
@@ -1122,17 +1039,11 @@ public class ProviderBillingServiceTests
     public async Task SetupCustomer_WithPayPal_Success(
         SutProvider<ProviderBillingService> sutProvider,
         Provider provider,
-        TaxInfo taxInfo)
+        BillingAddress billingAddress)
     {
         provider.Name = "MSP";
-
-        sutProvider.GetDependency<ITaxService>()
-            .GetStripeTaxCode(Arg.Is<string>(
-                    p => p == taxInfo.BillingAddressCountry),
-                Arg.Is<string>(p => p == taxInfo.TaxIdNumber))
-            .Returns(taxInfo.TaxIdType);
-
-        taxInfo.BillingAddressCountry = "AD";
+        billingAddress.Country = "AD";
+        billingAddress.TaxId = new TaxID("es_nif", "12345678Z");
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
@@ -1142,30 +1053,29 @@ public class ProviderBillingServiceTests
             Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
         };
 
-        var tokenizedPaymentSource = new TokenizedPaymentSource(PaymentMethodType.PayPal, "token");
+        var tokenizedPaymentMethod = new TokenizedPaymentMethod { Type = TokenizablePaymentMethodType.PayPal, Token = "token" };
 
-
-        sutProvider.GetDependency<ISubscriberService>().CreateBraintreeCustomer(provider, tokenizedPaymentSource.Token)
+        sutProvider.GetDependency<ISubscriberService>().CreateBraintreeCustomer(provider, tokenizedPaymentMethod.Token)
             .Returns("braintree_customer_id");
 
         stripeAdapter.CustomerCreateAsync(Arg.Is<CustomerCreateOptions>(o =>
-                o.Address.Country == taxInfo.BillingAddressCountry &&
-                o.Address.PostalCode == taxInfo.BillingAddressPostalCode &&
-                o.Address.Line1 == taxInfo.BillingAddressLine1 &&
-                o.Address.Line2 == taxInfo.BillingAddressLine2 &&
-                o.Address.City == taxInfo.BillingAddressCity &&
-                o.Address.State == taxInfo.BillingAddressState &&
-                o.Description == WebUtility.HtmlDecode(provider.BusinessName) &&
+                o.Address.Country == billingAddress.Country &&
+                o.Address.PostalCode == billingAddress.PostalCode &&
+                o.Address.Line1 == billingAddress.Line1 &&
+                o.Address.Line2 == billingAddress.Line2 &&
+                o.Address.City == billingAddress.City &&
+                o.Address.State == billingAddress.State &&
+                o.Description == provider.DisplayBusinessName() &&
                 o.Email == provider.BillingEmail &&
-                o.InvoiceSettings.CustomFields.FirstOrDefault().Name == "Provider" &&
-                o.InvoiceSettings.CustomFields.FirstOrDefault().Value == "MSP" &&
+                o.InvoiceSettings.CustomFields.FirstOrDefault().Name == provider.SubscriberType() &&
+                o.InvoiceSettings.CustomFields.FirstOrDefault().Value == provider.DisplayName() &&
                 o.Metadata["region"] == "" &&
                 o.Metadata["btCustomerId"] == "braintree_customer_id" &&
-                o.TaxIdData.FirstOrDefault().Type == taxInfo.TaxIdType &&
-                o.TaxIdData.FirstOrDefault().Value == taxInfo.TaxIdNumber))
+                o.TaxIdData.FirstOrDefault().Type == billingAddress.TaxId.Code &&
+                o.TaxIdData.FirstOrDefault().Value == billingAddress.TaxId.Value))
             .Returns(expected);
 
-        var actual = await sutProvider.Sut.SetupCustomer(provider, taxInfo, tokenizedPaymentSource);
+        var actual = await sutProvider.Sut.SetupCustomer(provider, tokenizedPaymentMethod, billingAddress);
 
         Assert.Equivalent(expected, actual);
     }
@@ -1174,17 +1084,11 @@ public class ProviderBillingServiceTests
     public async Task SetupCustomer_WithCard_Success(
         SutProvider<ProviderBillingService> sutProvider,
         Provider provider,
-        TaxInfo taxInfo)
+        BillingAddress billingAddress)
     {
         provider.Name = "MSP";
-
-        sutProvider.GetDependency<ITaxService>()
-            .GetStripeTaxCode(Arg.Is<string>(
-                    p => p == taxInfo.BillingAddressCountry),
-                Arg.Is<string>(p => p == taxInfo.TaxIdNumber))
-            .Returns(taxInfo.TaxIdType);
-
-        taxInfo.BillingAddressCountry = "AD";
+        billingAddress.Country = "AD";
+        billingAddress.TaxId = new TaxID("es_nif", "12345678Z");
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
@@ -1194,28 +1098,26 @@ public class ProviderBillingServiceTests
             Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
         };
 
-        var tokenizedPaymentSource = new TokenizedPaymentSource(PaymentMethodType.Card, "token");
-
+        var tokenizedPaymentMethod = new TokenizedPaymentMethod { Type = TokenizablePaymentMethodType.Card, Token = "token" };
 
         stripeAdapter.CustomerCreateAsync(Arg.Is<CustomerCreateOptions>(o =>
-                o.Address.Country == taxInfo.BillingAddressCountry &&
-                o.Address.PostalCode == taxInfo.BillingAddressPostalCode &&
-                o.Address.Line1 == taxInfo.BillingAddressLine1 &&
-                o.Address.Line2 == taxInfo.BillingAddressLine2 &&
-                o.Address.City == taxInfo.BillingAddressCity &&
-                o.Address.State == taxInfo.BillingAddressState &&
-                o.Description == WebUtility.HtmlDecode(provider.BusinessName) &&
+                o.Address.Country == billingAddress.Country &&
+                o.Address.PostalCode == billingAddress.PostalCode &&
+                o.Address.Line1 == billingAddress.Line1 &&
+                o.Address.Line2 == billingAddress.Line2 &&
+                o.Address.City == billingAddress.City &&
+                o.Address.State == billingAddress.State &&
+                o.Description == provider.DisplayBusinessName() &&
                 o.Email == provider.BillingEmail &&
-                o.PaymentMethod == tokenizedPaymentSource.Token &&
-                o.InvoiceSettings.DefaultPaymentMethod == tokenizedPaymentSource.Token &&
-                o.InvoiceSettings.CustomFields.FirstOrDefault().Name == "Provider" &&
-                o.InvoiceSettings.CustomFields.FirstOrDefault().Value == "MSP" &&
+                o.InvoiceSettings.DefaultPaymentMethod == tokenizedPaymentMethod.Token &&
+                o.InvoiceSettings.CustomFields.FirstOrDefault().Name == provider.SubscriberType() &&
+                o.InvoiceSettings.CustomFields.FirstOrDefault().Value == provider.DisplayName() &&
                 o.Metadata["region"] == "" &&
-                o.TaxIdData.FirstOrDefault().Type == taxInfo.TaxIdType &&
-                o.TaxIdData.FirstOrDefault().Value == taxInfo.TaxIdNumber))
+                o.TaxIdData.FirstOrDefault().Type == billingAddress.TaxId.Code &&
+                o.TaxIdData.FirstOrDefault().Value == billingAddress.TaxId.Value))
             .Returns(expected);
 
-        var actual = await sutProvider.Sut.SetupCustomer(provider, taxInfo, tokenizedPaymentSource);
+        var actual = await sutProvider.Sut.SetupCustomer(provider, tokenizedPaymentMethod, billingAddress);
 
         Assert.Equivalent(expected, actual);
     }
@@ -1224,17 +1126,11 @@ public class ProviderBillingServiceTests
     public async Task SetupCustomer_WithCard_ReverseCharge_Success(
         SutProvider<ProviderBillingService> sutProvider,
         Provider provider,
-        TaxInfo taxInfo)
+        BillingAddress billingAddress)
     {
         provider.Name = "MSP";
-
-        sutProvider.GetDependency<ITaxService>()
-            .GetStripeTaxCode(Arg.Is<string>(
-                    p => p == taxInfo.BillingAddressCountry),
-                Arg.Is<string>(p => p == taxInfo.TaxIdNumber))
-            .Returns(taxInfo.TaxIdType);
-
-        taxInfo.BillingAddressCountry = "AD";
+        billingAddress.Country = "FR"; // Non-US country to trigger reverse charge
+        billingAddress.TaxId = new TaxID("fr_siren", "123456789");
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
@@ -1244,55 +1140,51 @@ public class ProviderBillingServiceTests
             Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
         };
 
-        var tokenizedPaymentSource = new TokenizedPaymentSource(PaymentMethodType.Card, "token");
-
+        var tokenizedPaymentMethod = new TokenizedPaymentMethod { Type = TokenizablePaymentMethodType.Card, Token = "token" };
 
         stripeAdapter.CustomerCreateAsync(Arg.Is<CustomerCreateOptions>(o =>
-                o.Address.Country == taxInfo.BillingAddressCountry &&
-                o.Address.PostalCode == taxInfo.BillingAddressPostalCode &&
-                o.Address.Line1 == taxInfo.BillingAddressLine1 &&
-                o.Address.Line2 == taxInfo.BillingAddressLine2 &&
-                o.Address.City == taxInfo.BillingAddressCity &&
-                o.Address.State == taxInfo.BillingAddressState &&
-                o.Description == WebUtility.HtmlDecode(provider.BusinessName) &&
+                o.Address.Country == billingAddress.Country &&
+                o.Address.PostalCode == billingAddress.PostalCode &&
+                o.Address.Line1 == billingAddress.Line1 &&
+                o.Address.Line2 == billingAddress.Line2 &&
+                o.Address.City == billingAddress.City &&
+                o.Address.State == billingAddress.State &&
+                o.Description == provider.DisplayBusinessName() &&
                 o.Email == provider.BillingEmail &&
-                o.PaymentMethod == tokenizedPaymentSource.Token &&
-                o.InvoiceSettings.DefaultPaymentMethod == tokenizedPaymentSource.Token &&
-                o.InvoiceSettings.CustomFields.FirstOrDefault().Name == "Provider" &&
-                o.InvoiceSettings.CustomFields.FirstOrDefault().Value == "MSP" &&
+                o.InvoiceSettings.DefaultPaymentMethod == tokenizedPaymentMethod.Token &&
+                o.InvoiceSettings.CustomFields.FirstOrDefault().Name == provider.SubscriberType() &&
+                o.InvoiceSettings.CustomFields.FirstOrDefault().Value == provider.DisplayName() &&
                 o.Metadata["region"] == "" &&
-                o.TaxIdData.FirstOrDefault().Type == taxInfo.TaxIdType &&
-                o.TaxIdData.FirstOrDefault().Value == taxInfo.TaxIdNumber &&
+                o.TaxIdData.FirstOrDefault().Type == billingAddress.TaxId.Code &&
+                o.TaxIdData.FirstOrDefault().Value == billingAddress.TaxId.Value &&
                 o.TaxExempt == StripeConstants.TaxExempt.Reverse))
             .Returns(expected);
 
-        var actual = await sutProvider.Sut.SetupCustomer(provider, taxInfo, tokenizedPaymentSource);
+        var actual = await sutProvider.Sut.SetupCustomer(provider, tokenizedPaymentMethod, billingAddress);
 
         Assert.Equivalent(expected, actual);
     }
 
     [Theory, BitAutoData]
-    public async Task SetupCustomer_Throws_BadRequestException_WhenTaxIdIsInvalid(
+    public async Task SetupCustomer_WithInvalidTaxId_ThrowsBadRequestException(
         SutProvider<ProviderBillingService> sutProvider,
         Provider provider,
-        TaxInfo taxInfo,
-        TokenizedPaymentSource tokenizedPaymentSource)
+        BillingAddress billingAddress)
     {
         provider.Name = "MSP";
+        billingAddress.Country = "AD";
+        billingAddress.TaxId = new TaxID("es_nif", "invalid_tax_id");
 
-        taxInfo.BillingAddressCountry = "AD";
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        var tokenizedPaymentMethod = new TokenizedPaymentMethod { Type = TokenizablePaymentMethodType.Card, Token = "token" };
 
-        sutProvider.GetDependency<ITaxService>()
-            .GetStripeTaxCode(Arg.Is<string>(
-                    p => p == taxInfo.BillingAddressCountry),
-                Arg.Is<string>(p => p == taxInfo.TaxIdNumber))
-            .Returns((string)null);
+        stripeAdapter.CustomerCreateAsync(Arg.Any<CustomerCreateOptions>())
+            .Throws(new StripeException("Invalid tax ID") { StripeError = new StripeError { Code = "tax_id_invalid" } });
 
         var actual = await Assert.ThrowsAsync<BadRequestException>(async () =>
-            await sutProvider.Sut.SetupCustomer(provider, taxInfo, tokenizedPaymentSource));
+            await sutProvider.Sut.SetupCustomer(provider, tokenizedPaymentMethod, billingAddress));
 
-        Assert.IsType<BadRequestException>(actual);
-        Assert.Equal("billingTaxIdTypeInferenceError", actual.Message);
+        Assert.Equal("Your tax ID wasn't recognized for your selected country. Please ensure your country and tax ID are valid.", actual.Message);
     }
 
     #endregion
