@@ -1106,17 +1106,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         var result = await query.ToListAsync();
         return result;
     }
-
-    /// <inheritdoc cref="UpdateForKeyRotation(Guid, IEnumerable{Cipher})"/>
-    /// <remarks>
-    /// EF does not use the bulk resource creation service, so we need to use the regular update method.
-    /// </remarks>
-    public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation_vNext(
-        Guid userId, IEnumerable<Core.Vault.Entities.Cipher> ciphers)
-    {
-        return UpdateForKeyRotation(userId, ciphers);
-    }
-
+    
     public async Task UpsertAsync(CipherDetails cipher)
     {
         if (cipher.Id.Equals(default))

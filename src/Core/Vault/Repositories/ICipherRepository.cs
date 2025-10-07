@@ -92,10 +92,4 @@ public interface ICipherRepository : IRepository<Cipher, Guid>
     /// </summary>
     Task<IEnumerable<CipherOrganizationDetailsWithCollections>>
     GetManyCipherOrganizationDetailsExcludingDefaultCollectionsAsync(Guid organizationId);
-    /// <inheritdoc cref="UpdateForKeyRotation(Guid, IEnumerable{Cipher})"/>
-    /// <remarks>
-    /// This version uses the bulk resource creation service to create the temp table.
-    /// </remarks>
-    UpdateEncryptedDataForKeyRotation UpdateForKeyRotation_vNext(Guid userId,
-        IEnumerable<Cipher> ciphers);
 }

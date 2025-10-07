@@ -101,7 +101,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions = new();
         if (model.Ciphers.Any())
         {
-            saveEncryptedDataActions.Add(_cipherRepository.UpdateForKeyRotation_vNext(user.Id, model.Ciphers));
+            saveEncryptedDataActions.Add(_cipherRepository.UpdateForKeyRotation(user.Id, model.Ciphers));
         }
 
         if (model.Folders.Any())
