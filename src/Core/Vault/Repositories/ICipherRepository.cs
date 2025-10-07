@@ -33,11 +33,6 @@ public interface ICipherRepository : IRepository<Cipher, Guid>
     Task DeleteByUserIdAsync(Guid userId);
     Task DeleteByOrganizationIdAsync(Guid organizationId);
     Task UpdateCiphersAsync(Guid userId, IEnumerable<Cipher> ciphers);
-    /// <inheritdoc cref="UpdateCiphersAsync(Guid, IEnumerable{Cipher})"/>
-    /// <remarks>
-    /// This version uses the bulk resource creation service to create the temp table.
-    /// </remarks>
-    Task UpdateCiphersAsync_vNext(Guid userId, IEnumerable<Cipher> ciphers);
     /// <summary>
     /// Create ciphers and folders for the specified UserId. Must not be used to create organization owned items.
     /// </summary>

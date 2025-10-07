@@ -644,7 +644,7 @@ public class CipherService : ICipherService
             cipherIds.Add(cipher.Id);
         }
 
-        await _cipherRepository.UpdateCiphersAsync_vNext(sharingUserId, cipherInfos.Select(c => c.cipher));
+        await _cipherRepository.UpdateCiphersAsync(sharingUserId, cipherInfos.Select(c => c.cipher));
         await _collectionCipherRepository.UpdateCollectionsForCiphersAsync(cipherIds, sharingUserId,
             organizationId, collectionIds);
 

@@ -964,15 +964,6 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
-    /// <inheritdoc cref="UpdateCiphersAsync(Guid, IEnumerable{Cipher})"/>
-    /// <remarks>
-    /// EF does not use the bulk resource creation service, so we need to use the regular update method.
-    /// </remarks>
-    public async Task UpdateCiphersAsync_vNext(Guid userId, IEnumerable<Core.Vault.Entities.Cipher> ciphers)
-    {
-        await UpdateCiphersAsync(userId, ciphers);
-    }
-
     public async Task UpdatePartialAsync(Guid id, Guid userId, Guid? folderId, bool favorite)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
