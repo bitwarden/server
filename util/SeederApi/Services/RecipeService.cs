@@ -19,87 +19,79 @@ public class RecipeService : IRecipeService
     {
         try
         {
-            // Find the recipe class
-            var recipeTypeName = $"Bit.Seeder.Recipes.{templateName}";
-            var recipeType = Assembly.Load("Seeder")
-                .GetTypes()
-                .FirstOrDefault(t => t.FullName == recipeTypeName);
+            var recipeType = LoadRecipeType(templateName);
+            var seedMethod = GetSeedMethod(recipeType, templateName);
+            var recipeInstance = Activator.CreateInstance(recipeType, _databaseContext)!;
 
-            if (recipeType == null)
-            {
-                throw new RecipeNotFoundException($"Recipe '{templateName}' not found");
-            }
-
-            // Instantiate the recipe with DatabaseContext
-            var recipeInstance = Activator.CreateInstance(recipeType, _databaseContext);
-            if (recipeInstance == null)
-            {
-                throw new RecipeExecutionException("Failed to instantiate recipe");
-            }
-
-            // Find the Seed method
-            var seedMethod = recipeType.GetMethod("Seed");
-            if (seedMethod == null)
-            {
-                throw new RecipeExecutionException($"Seed method not found in recipe '{templateName}'");
-            }
-
-            // Parse arguments and match to method parameters
-            var parameters = seedMethod.GetParameters();
-            var methodArguments = new object?[parameters.Length];
-
-            if (arguments == null && parameters.Length > 0)
-            {
-                throw new RecipeExecutionException("Arguments are required for this recipe");
-            }
-
-            for (var i = 0; i < parameters.Length; i++)
-            {
-                var parameter = parameters[i];
-                var parameterName = parameter.Name!;
-
-                if (arguments?.TryGetProperty(parameterName, out JsonElement value) == true)
-                {
-                    try
-                    {
-                        methodArguments[i] = JsonSerializer.Deserialize(value.GetRawText(), parameter.ParameterType);
-                    }
-                    catch (JsonException ex)
-                    {
-                        throw new RecipeExecutionException(
-                            $"Failed to deserialize parameter '{parameterName}': {ex.Message}", ex);
-                    }
-                }
-                else if (!parameter.HasDefaultValue)
-                {
-                    throw new RecipeExecutionException($"Missing required parameter: {parameterName}");
-                }
-                else
-                {
-                    methodArguments[i] = parameter.DefaultValue;
-                }
-            }
-
-            // Invoke the Seed method
+            var methodArguments = ParseMethodArguments(seedMethod, arguments);
             var result = seedMethod.Invoke(recipeInstance, methodArguments);
-            _logger.LogInformation("Successfully executed recipe: {TemplateName}", templateName);
 
+            _logger.LogInformation("Successfully executed recipe: {TemplateName}", templateName);
             return result;
         }
-        catch (RecipeNotFoundException)
-        {
-            throw;
-        }
-        catch (RecipeExecutionException)
-        {
-            throw;
-        }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not RecipeNotFoundException and not RecipeExecutionException)
         {
             _logger.LogError(ex, "Unexpected error executing recipe: {TemplateName}", templateName);
             throw new RecipeExecutionException(
                 $"An unexpected error occurred while executing recipe '{templateName}'",
                 ex.InnerException ?? ex);
         }
+    }
+
+    private static Type LoadRecipeType(string templateName)
+    {
+        var recipeTypeName = $"Bit.Seeder.Recipes.{templateName}";
+        var recipeType = Assembly.Load("Seeder")
+            .GetTypes()
+            .FirstOrDefault(t => t.FullName == recipeTypeName);
+
+        return recipeType ?? throw new RecipeNotFoundException(templateName);
+    }
+
+    private static MethodInfo GetSeedMethod(Type recipeType, string templateName)
+    {
+        var seedMethod = recipeType.GetMethod("Seed");
+        return seedMethod ?? throw new RecipeExecutionException($"Seed method not found in recipe '{templateName}'");
+    }
+
+    private static object?[] ParseMethodArguments(MethodInfo seedMethod, JsonElement? arguments)
+    {
+        var parameters = seedMethod.GetParameters();
+
+        if (arguments == null && parameters.Length > 0)
+        {
+            throw new RecipeExecutionException("Arguments are required for this recipe");
+        }
+
+        var methodArguments = new object?[parameters.Length];
+
+        for (var i = 0; i < parameters.Length; i++)
+        {
+            var parameter = parameters[i];
+            var parameterName = parameter.Name!;
+
+            if (arguments?.TryGetProperty(parameterName, out var value) == true)
+            {
+                try
+                {
+                    methodArguments[i] = JsonSerializer.Deserialize(value.GetRawText(), parameter.ParameterType);
+                }
+                catch (JsonException ex)
+                {
+                    throw new RecipeExecutionException(
+                        $"Failed to deserialize parameter '{parameterName}': {ex.Message}", ex);
+                }
+            }
+            else if (!parameter.HasDefaultValue)
+            {
+                throw new RecipeExecutionException($"Missing required parameter: {parameterName}");
+            }
+            else
+            {
+                methodArguments[i] = parameter.DefaultValue;
+            }
+        }
+
+        return methodArguments;
     }
 }
