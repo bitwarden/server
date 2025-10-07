@@ -15,8 +15,12 @@
   },
   "homepage": "https://bitwarden.com",
   "scripts": {
-    "build": "./build.sh",
-    "watch": "nodemon --exec ./build.sh --watch ./components --watch ./emails --ext js,mjml",
+    "build": "powershell ./build.ps1",
+    "build:watch": "powershell ./build.ps1 -Watch",
+    "build:clean": "powershell ./build.ps1 -Clean",
+    "build:hbs": "powershell ./build.ps1 -HbsOutput",
+    "build:clean:hbs": "powershell ./build.ps1 -Clean -HbsOutput",
+    "build:watch:hbs": "powershell ./build.ps1 -Watch -HbsOutput",
     "prettier": "prettier --cache --write ."
   },
   "dependencies": {
@@ -25,6 +29,6 @@
   },
   "devDependencies": {
     "nodemon": "3.1.10",
-    "prettier": "3.5.3"
+    "prettier": "3.6.2"
   }
 }
