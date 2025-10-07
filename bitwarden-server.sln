@@ -135,7 +135,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DbSeederUtility", "util\DbS
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharedWeb.Test", "test\SharedWeb.Test\SharedWeb.Test.csproj", "{AD59537D-5259-4B7A-948F-0CF58E80B359}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SSO.Test", "test\SSO.Test\SSO.Test.csproj", "{7D98784C-C253-43FB-9873-25B65C6250D6}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SSO.Test", "bitwarden_license\test\SSO.Test\SSO.Test.csproj", "{7D98784C-C253-43FB-9873-25B65C6250D6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
