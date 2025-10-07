@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -55,8 +56,7 @@ public class VNextSavePolicyCommand : IVNextSavePolicyCommand
 
         await ValidateTargetedPolicyAsync(policyUpdateRequest, currentPolicy);
 
-        await ExecutePreUpsertSideEffectAsync(policyUpdateRequest, currentPolicy);
-
+        await ExecutePreUpsertSideEffectAsync(policyRequest, currentPolicy);
 
         var upsertedPolicy = await UpsertPolicyAsync(policyUpdateRequest);
 
@@ -172,11 +172,25 @@ public class VNextSavePolicyCommand : IVNextSavePolicyCommand
         }
     }
 
-    private async Task ExecutePreUpsertSideEffectAsync(PolicyUpdate policyRequest, Policy? currentPolicy)
+    private async Task ExecutePreUpsertSideEffectAsync(
+        SavePolicyModel policyRequest,
+        Policy? currentPolicy)
     {
         await ExecutePolicyEventAsync<IOnPolicyPreUpdateEvent>(
-            policyRequest.Type,
+            policyRequest.PolicyUpdate.Type,
             handler => handler.ExecutePreUpsertSideEffectAsync(policyRequest, currentPolicy));
+    }
+    private async Task ExecutePostUpsertSideEffectAsync(
+        SavePolicyModel policyRequest,
+        Policy postUpsertedPolicyState,
+        Policy? previousPolicyState)
+    {
+        await ExecutePolicyEventAsync<IOnPolicyPostUpdateEvent>(
+            policyRequest.PolicyUpdate.Type,
+            handler => handler.ExecutePostUpsertSideEffectAsync(
+                policyRequest,
+                postUpsertedPolicyState,
+                previousPolicyState));
     }
 
     private async Task ExecutePolicyEventAsync<T>(PolicyType type, Func<T, Task> func) where T : IPolicyUpdateEvent
@@ -189,17 +203,6 @@ public class VNextSavePolicyCommand : IVNextSavePolicyCommand
         );
     }
 
-    private async Task ExecutePostUpsertSideEffectAsync(
-        SavePolicyModel policyRequest,
-        Policy postUpsertedPolicyState, Policy? previousPolicyState)
-    {
-        await ExecutePolicyEventAsync<IOnPolicyPostUpdateEvent>(
-            policyRequest.PolicyUpdate.Type,
-            handler => handler.ExecutePostUpsertSideEffectAsync(
-                policyRequest,
-                postUpsertedPolicyState,
-                previousPolicyState));
-    }
 
     private async Task<(Dictionary<PolicyType, Policy> savedPoliciesDict, Policy? currentPolicy)>
         GetCurrentPolicyStateAsync(PolicyUpdate policyUpdate)

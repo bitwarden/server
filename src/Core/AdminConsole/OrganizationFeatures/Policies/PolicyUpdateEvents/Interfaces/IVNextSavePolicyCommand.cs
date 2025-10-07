@@ -1,8 +1,8 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿#nullable enable
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 
-#nullable enable
-namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 
 public interface IVNextSavePolicyCommand
 {

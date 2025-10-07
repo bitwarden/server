@@ -1,6 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Enums;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 
 public interface IEnforceDependentPoliciesEvent : IPolicyUpdateEvent
 {

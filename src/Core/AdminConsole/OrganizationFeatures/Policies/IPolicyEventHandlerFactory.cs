@@ -1,6 +1,7 @@
 ﻿#nullable enable
 
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using OneOf;
 using OneOf.Types;
 
