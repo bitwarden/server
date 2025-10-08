@@ -1,5 +1,6 @@
 ﻿using Bit.Api.AdminConsole.Jobs;
 using Bit.Api.Auth.Jobs;
+using Bit.Api.Dirt.Jobs;
 using Bit.Core.Jobs;
 using Bit.Core.Settings;
 using Quartz;

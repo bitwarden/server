@@ -1,9 +1,10 @@
 ﻿using System.Text.Json;
-using Bit.Core.PhishingDomainFeatures;
+using Bit.Core.Dirt.PhishingDomainFeatures;
+using Bit.Core.Dirt.Repositories;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 
-namespace Bit.Core.Repositories.Implementations;
+namespace Bit.Infrastructure.EntityFramework.Dirt.Repositories;
 
 public class AzurePhishingDomainRepository : IPhishingDomainRepository
 {
