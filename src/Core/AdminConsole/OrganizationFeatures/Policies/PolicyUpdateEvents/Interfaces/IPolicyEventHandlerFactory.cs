@@ -1,11 +1,10 @@
 ﻿#nullable enable
 
 using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using OneOf;
 using OneOf.Types;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 
 public interface IPolicyEventHandlerFactory
 {
