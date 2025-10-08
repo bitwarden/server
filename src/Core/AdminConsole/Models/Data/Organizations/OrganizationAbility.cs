@@ -28,6 +28,7 @@ public class OrganizationAbility
         UseRiskInsights = organization.UseRiskInsights;
         UseOrganizationDomains = organization.UseOrganizationDomains;
         UseAdminSponsoredFamilies = organization.UseAdminSponsoredFamilies;
+        AutomaticallyConfirmUsers = organization.AutomaticUserConfirmation;
     }
 
     public Guid Id { get; set; }
@@ -49,4 +50,5 @@ public class OrganizationAbility
     public bool UseRiskInsights { get; set; }
     public bool UseOrganizationDomains { get; set; }
     public bool UseAdminSponsoredFamilies { get; set; }
+    public bool AutomaticallyConfirmUsers { get; set; }
 }

@@ -153,6 +153,7 @@ public class OrganizationLicense : ILicense
     public LicenseType? LicenseType { get; set; }
     public bool UseOrganizationDomains { get; set; }
     public bool UseAdminSponsoredFamilies { get; set; }
+    public bool AutomaticallyConfirmUsers { get; set; }
     public string Hash { get; set; }
     public string Signature { get; set; }
     public string Token { get; set; }
