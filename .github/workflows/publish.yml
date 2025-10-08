@@ -37,7 +37,7 @@ jobs:
       - name: Version output
         id: version-output
         env:
-          INPUT_VERSION: ${{inputs.version}}
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
           if [[ "${INPUT_VERSION}" == "latest" || "${INPUT_VERSION}" == "" ]]; then
             VERSION=$(curl  "https://api.github.com/repos/bitwarden/server/releases" | jq -c '.[] | select(.tag_name) | .tag_name' | head -1 | grep -ohE '20[0-9]{2}\.([1-9]|1[0-2])\.[0-9]+')
