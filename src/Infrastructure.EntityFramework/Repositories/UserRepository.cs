@@ -283,6 +283,9 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
             var transaction = await dbContext.Database.BeginTransactionAsync();
 
+            MigrateDefaultUserCollectionsToShared(dbContext, [user.Id]);
+            await dbContext.SaveChangesAsync();
+
             dbContext.WebAuthnCredentials.RemoveRange(dbContext.WebAuthnCredentials.Where(w => w.UserId == user.Id));
             dbContext.Ciphers.RemoveRange(dbContext.Ciphers.Where(c => c.UserId == user.Id));
             dbContext.Folders.RemoveRange(dbContext.Folders.Where(f => f.UserId == user.Id));
@@ -314,8 +317,8 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             var mappedUser = Mapper.Map<User>(user);
             dbContext.Users.Remove(mappedUser);
 
-            await transaction.CommitAsync();
             await dbContext.SaveChangesAsync();
+            await transaction.CommitAsync();
         }
     }
 
@@ -329,21 +332,30 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
             var targetIds = users.Select(u => u.Id).ToList();
 
+            MigrateDefaultUserCollectionsToShared(dbContext, targetIds);
+            await dbContext.SaveChangesAsync();
+
             await dbContext.WebAuthnCredentials.Where(wa => targetIds.Contains(wa.UserId)).ExecuteDeleteAsync();
             await dbContext.Ciphers.Where(c => targetIds.Contains(c.UserId ?? default)).ExecuteDeleteAsync();
             await dbContext.Folders.Where(f => targetIds.Contains(f.UserId)).ExecuteDeleteAsync();
             await dbContext.AuthRequests.Where(a => targetIds.Contains(a.UserId)).ExecuteDeleteAsync();
             await dbContext.Devices.Where(d => targetIds.Contains(d.UserId)).ExecuteDeleteAsync();
-            var collectionUsers = from cu in dbContext.CollectionUsers
-                                  join ou in dbContext.OrganizationUsers on cu.OrganizationUserId equals ou.Id
-                                  where targetIds.Contains(ou.UserId ?? default)
-                                  select cu;
-            dbContext.CollectionUsers.RemoveRange(collectionUsers);
-            var groupUsers = from gu in dbContext.GroupUsers
-                             join ou in dbContext.OrganizationUsers on gu.OrganizationUserId equals ou.Id
-                             where targetIds.Contains(ou.UserId ?? default)
-                             select gu;
-            dbContext.GroupUsers.RemoveRange(groupUsers);
+            await dbContext.CollectionUsers
+                .Join(dbContext.OrganizationUsers,
+                      cu => cu.OrganizationUserId,
+                      ou => ou.Id,
+                      (cu, ou) => new { CollectionUser = cu, OrganizationUser = ou })
+                .Where((joined) => targetIds.Contains(joined.OrganizationUser.UserId ?? default))
+                .Select(joined => joined.CollectionUser)
+                .ExecuteDeleteAsync();
+            await dbContext.GroupUsers
+                .Join(dbContext.OrganizationUsers,
+                      gu => gu.OrganizationUserId,
+                      ou => ou.Id,
+                      (gu, ou) => new { GroupUser = gu, OrganizationUser = ou })
+                .Where(joined => targetIds.Contains(joined.OrganizationUser.UserId ?? default))
+                .Select(joined => joined.GroupUser)
+                .ExecuteDeleteAsync();
             await dbContext.UserProjectAccessPolicy.Where(ap => targetIds.Contains(ap.OrganizationUser.UserId ?? default)).ExecuteDeleteAsync();
             await dbContext.UserServiceAccountAccessPolicy.Where(ap => targetIds.Contains(ap.OrganizationUser.UserId ?? default)).ExecuteDeleteAsync();
             await dbContext.OrganizationUsers.Where(ou => targetIds.Contains(ou.UserId ?? default)).ExecuteDeleteAsync();
@@ -354,15 +366,29 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             await dbContext.NotificationStatuses.Where(ns => targetIds.Contains(ns.UserId)).ExecuteDeleteAsync();
             await dbContext.Notifications.Where(n => targetIds.Contains(n.UserId ?? default)).ExecuteDeleteAsync();
 
-            foreach (var u in users)
-            {
-                var mappedUser = Mapper.Map<User>(u);
-                dbContext.Users.Remove(mappedUser);
-            }
+            await dbContext.Users.Where(u => targetIds.Contains(u.Id)).ExecuteDeleteAsync();
 
-
-            await transaction.CommitAsync();
             await dbContext.SaveChangesAsync();
+            await transaction.CommitAsync();
+        }
+    }
+
+    private static void MigrateDefaultUserCollectionsToShared(DatabaseContext dbContext, IEnumerable<Guid> userIds)
+    {
+        var defaultCollections = (from c in dbContext.Collections
+                                  join cu in dbContext.CollectionUsers on c.Id equals cu.CollectionId
+                                  join ou in dbContext.OrganizationUsers on cu.OrganizationUserId equals ou.Id
+                                  join u in dbContext.Users on ou.UserId equals u.Id
+                                  where userIds.Contains(ou.UserId!.Value)
+                                    && c.Type == Core.Enums.CollectionType.DefaultUserCollection
+                                  select new { Collection = c, UserEmail = u.Email })
+                                 .ToList();
+
+        foreach (var item in defaultCollections)
+        {
+            item.Collection.Type = Core.Enums.CollectionType.SharedCollection;
+            item.Collection.DefaultUserCollectionEmail = item.Collection.DefaultUserCollectionEmail ?? item.UserEmail;
+            item.Collection.RevisionDate = DateTime.UtcNow;
         }
     }
 }
