@@ -1909,4 +1909,237 @@ public class CiphersControllerTests
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PostPurge(model, organizationId));
     }
+
+    [Theory, BitAutoData]
+    public async Task PutShare_WithNullFolderAndFalseFavorite_UpdatesFieldsCorrectly(
+        Guid cipherId,
+        Guid userId,
+        Guid organizationId,
+        Guid folderId,
+        SutProvider<CiphersController> sutProvider)
+    {
+        var user = new User { Id = userId };
+        var userIdKey = userId.ToString().ToUpperInvariant();
+
+        var existingCipher = new Cipher
+        {
+            Id = cipherId,
+            UserId = userId,
+            Type = CipherType.Login,
+            Data = JsonSerializer.Serialize(new { Username = "test", Password = "test" }),
+            Folders = JsonSerializer.Serialize(new Dictionary<string, object> { { userIdKey, folderId.ToString().ToUpperInvariant() } }),
+            Favorites = JsonSerializer.Serialize(new Dictionary<string, object> { { userIdKey, true } })
+        };
+
+        // Clears folder and favorite when sharing
+        var model = new CipherShareRequestModel
+        {
+            Cipher = new CipherRequestModel
+            {
+                Type = CipherType.Login,
+                OrganizationId = organizationId.ToString(),
+                Name = "SharedCipher",
+                Data = JsonSerializer.Serialize(new { Username = "test", Password = "test" }),
+                FolderId = null,
+                Favorite = false,
+                EncryptedFor = userId
+            },
+            CollectionIds = [Guid.NewGuid().ToString()]
+        };
+
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipherId)
+            .Returns(existingCipher);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationUser(organizationId)
+            .Returns(true);
+
+        var sharedCipher = new CipherDetails
+        {
+            Id = cipherId,
+            OrganizationId = organizationId,
+            Type = CipherType.Login,
+            Data = JsonSerializer.Serialize(new { Username = "test", Password = "test" }),
+            FolderId = null,
+            Favorite = false
+        };
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipherId, userId)
+            .Returns(sharedCipher);
+
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilitiesAsync()
+            .Returns(new Dictionary<Guid, OrganizationAbility>
+            {
+                { organizationId, new OrganizationAbility { Id = organizationId } }
+            });
+
+        var result = await sutProvider.Sut.PutShare(cipherId, model);
+
+        Assert.Null(result.FolderId);
+        Assert.False(result.Favorite);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PutShare_WithFolderAndFavoriteSet_AddsUserSpecificFields(
+        Guid cipherId,
+        Guid userId,
+        Guid organizationId,
+        Guid folderId,
+        SutProvider<CiphersController> sutProvider)
+    {
+        var user = new User { Id = userId };
+        var userIdKey = userId.ToString().ToUpperInvariant();
+
+        var existingCipher = new Cipher
+        {
+            Id = cipherId,
+            UserId = userId,
+            Type = CipherType.Login,
+            Data = JsonSerializer.Serialize(new { Username = "test", Password = "test" }),
+            Folders = null,
+            Favorites = null
+        };
+
+        // Sets folder and favorite when sharing
+        var model = new CipherShareRequestModel
+        {
+            Cipher = new CipherRequestModel
+            {
+                Type = CipherType.Login,
+                OrganizationId = organizationId.ToString(),
+                Name = "SharedCipher",
+                Data = JsonSerializer.Serialize(new { Username = "test", Password = "test" }),
+                FolderId = folderId.ToString(),
+                Favorite = true,
+                EncryptedFor = userId
+            },
+            CollectionIds = [Guid.NewGuid().ToString()]
+        };
+
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipherId)
+            .Returns(existingCipher);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationUser(organizationId)
+            .Returns(true);
+
+        var sharedCipher = new CipherDetails
+        {
+            Id = cipherId,
+            OrganizationId = organizationId,
+            Type = CipherType.Login,
+            Data = JsonSerializer.Serialize(new { Username = "test", Password = "test" }),
+            Folders = JsonSerializer.Serialize(new Dictionary<string, object> { { userIdKey, folderId.ToString().ToUpperInvariant() } }),
+            Favorites = JsonSerializer.Serialize(new Dictionary<string, object> { { userIdKey, true } }),
+            FolderId = folderId,
+            Favorite = true
+        };
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipherId, userId)
+            .Returns(sharedCipher);
+
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilitiesAsync()
+            .Returns(new Dictionary<Guid, OrganizationAbility>
+            {
+                { organizationId, new OrganizationAbility { Id = organizationId } }
+            });
+
+        var result = await sutProvider.Sut.PutShare(cipherId, model);
+
+        Assert.Equal(folderId, result.FolderId);
+        Assert.True(result.Favorite);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PutShare_UpdateExistingFolderAndFavorite_UpdatesUserSpecificFields(
+        Guid cipherId,
+        Guid userId,
+        Guid organizationId,
+        Guid oldFolderId,
+        Guid newFolderId,
+        SutProvider<CiphersController> sutProvider)
+    {
+        var user = new User { Id = userId };
+        var userIdKey = userId.ToString().ToUpperInvariant();
+
+        // Existing cipher with old folder and not favorited
+        var existingCipher = new Cipher
+        {
+            Id = cipherId,
+            UserId = userId,
+            Type = CipherType.Login,
+            Data = JsonSerializer.Serialize(new { Username = "test", Password = "test" }),
+            Folders = JsonSerializer.Serialize(new Dictionary<string, object> { { userIdKey, oldFolderId.ToString().ToUpperInvariant() } }),
+            Favorites = null
+        };
+
+        var model = new CipherShareRequestModel
+        {
+            Cipher = new CipherRequestModel
+            {
+                Type = CipherType.Login,
+                OrganizationId = organizationId.ToString(),
+                Name = "SharedCipher",
+                Data = JsonSerializer.Serialize(new { Username = "test", Password = "test" }),
+                FolderId = newFolderId.ToString(),  // Update to new folder
+                Favorite = true,  // Add favorite
+                EncryptedFor = userId
+            },
+            CollectionIds = [Guid.NewGuid().ToString()]
+        };
+
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipherId)
+            .Returns(existingCipher);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationUser(organizationId)
+            .Returns(true);
+
+        var sharedCipher = new CipherDetails
+        {
+            Id = cipherId,
+            OrganizationId = organizationId,
+            Type = CipherType.Login,
+            Data = JsonSerializer.Serialize(new { Username = "test", Password = "test" }),
+            Folders = JsonSerializer.Serialize(new Dictionary<string, object> { { userIdKey, newFolderId.ToString().ToUpperInvariant() } }),
+            Favorites = JsonSerializer.Serialize(new Dictionary<string, object> { { userIdKey, true } }),
+            FolderId = newFolderId,
+            Favorite = true
+        };
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipherId, userId)
+            .Returns(sharedCipher);
+
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilitiesAsync()
+            .Returns(new Dictionary<Guid, OrganizationAbility>
+            {
+                { organizationId, new OrganizationAbility { Id = organizationId } }
+            });
+
+        var result = await sutProvider.Sut.PutShare(cipherId, model);
+
+        Assert.Equal(newFolderId, result.FolderId);
+        Assert.True(result.Favorite);
+    }
 }
