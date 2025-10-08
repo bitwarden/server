@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Net.Http.Headers;
 using Bit.Billing.Services;
 using Bit.Billing.Services.Implementations;
+using Bit.Commercial.Core.Utilities;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Context;
 using Bit.Core.SecretsManager.Repositories;
@@ -72,6 +73,7 @@ public class Startup
         services.AddScoped<IPaymentMethodAttachedHandler, PaymentMethodAttachedHandler>();
         services.AddScoped<IPaymentSucceededHandler, PaymentSucceededHandler>();
         services.AddScoped<IInvoiceFinalizedHandler, InvoiceFinalizedHandler>();
+        services.AddScoped<ISetupIntentSucceededHandler, SetupIntentSucceededHandler>();
         services.AddScoped<IStripeEventProcessor, StripeEventProcessor>();
 
         // Identity
@@ -83,6 +85,7 @@ public class Startup
         services.AddDefaultServices(globalSettings);
         services.AddDistributedCache(globalSettings);
         services.AddBillingOperations();
+        services.AddCommercialCoreServices();
 
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
@@ -109,6 +112,7 @@ public class Startup
         services.AddScoped<IStripeFacade, StripeFacade>();
         services.AddScoped<IStripeEventService, StripeEventService>();
         services.AddScoped<IProviderEventService, ProviderEventService>();
+        services.AddScoped<IPushNotificationAdapter, PushNotificationAdapter>();
 
         // Add Quartz services first
         services.AddQuartz(q =>

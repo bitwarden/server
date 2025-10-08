@@ -1,4 +1,6 @@
-﻿using Bit.Core.Enums;
+﻿#nullable enable
+
+using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories.Queries;
@@ -27,6 +29,7 @@ public class OrganizationIntegrationConfigurationDetailsReadManyByEventTypeOrgan
                     select new OrganizationIntegrationConfigurationDetails()
                     {
                         Id = oic.Id,
+                        OrganizationId = oi.OrganizationId,
                         OrganizationIntegrationId = oic.OrganizationIntegrationId,
                         IntegrationType = oi.Type,
                         EventType = oic.EventType,

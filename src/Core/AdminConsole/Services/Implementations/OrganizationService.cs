@@ -27,7 +27,6 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
@@ -43,13 +42,9 @@ public class OrganizationService : IOrganizationService
 {
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly ICollectionRepository _collectionRepository;
     private readonly IGroupRepository _groupRepository;
     private readonly IMailService _mailService;
     private readonly IPushNotificationService _pushNotificationService;
-    private readonly IPushRegistrationService _pushRegistrationService;
-    private readonly IDeviceRepository _deviceRepository;
-    private readonly ILicensingService _licensingService;
     private readonly IEventService _eventService;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IPaymentService _paymentService;
@@ -57,7 +52,6 @@ public class OrganizationService : IOrganizationService
     private readonly IPolicyService _policyService;
     private readonly ISsoUserRepository _ssoUserRepository;
     private readonly IGlobalSettings _globalSettings;
-    private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
     private readonly ICurrentContext _currentContext;
     private readonly ILogger<OrganizationService> _logger;
     private readonly IProviderOrganizationRepository _providerOrganizationRepository;
@@ -70,17 +64,14 @@ public class OrganizationService : IOrganizationService
     private readonly IPricingClient _pricingClient;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly ISendOrganizationInvitesCommand _sendOrganizationInvitesCommand;
+    private readonly IStripeAdapter _stripeAdapter;
 
     public OrganizationService(
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
-        ICollectionRepository collectionRepository,
         IGroupRepository groupRepository,
         IMailService mailService,
         IPushNotificationService pushNotificationService,
-        IPushRegistrationService pushRegistrationService,
-        IDeviceRepository deviceRepository,
-        ILicensingService licensingService,
         IEventService eventService,
         IApplicationCacheService applicationCacheService,
         IPaymentService paymentService,
@@ -88,7 +79,6 @@ public class OrganizationService : IOrganizationService
         IPolicyService policyService,
         ISsoUserRepository ssoUserRepository,
         IGlobalSettings globalSettings,
-        IOrganizationApiKeyRepository organizationApiKeyRepository,
         ICurrentContext currentContext,
         ILogger<OrganizationService> logger,
         IProviderOrganizationRepository providerOrganizationRepository,
@@ -100,18 +90,15 @@ public class OrganizationService : IOrganizationService
         IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
         IPricingClient pricingClient,
         IPolicyRequirementQuery policyRequirementQuery,
-        ISendOrganizationInvitesCommand sendOrganizationInvitesCommand
+        ISendOrganizationInvitesCommand sendOrganizationInvitesCommand,
+        IStripeAdapter stripeAdapter
     )
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
-        _collectionRepository = collectionRepository;
         _groupRepository = groupRepository;
         _mailService = mailService;
         _pushNotificationService = pushNotificationService;
-        _pushRegistrationService = pushRegistrationService;
-        _deviceRepository = deviceRepository;
-        _licensingService = licensingService;
         _eventService = eventService;
         _applicationCacheService = applicationCacheService;
         _paymentService = paymentService;
@@ -119,7 +106,6 @@ public class OrganizationService : IOrganizationService
         _policyService = policyService;
         _ssoUserRepository = ssoUserRepository;
         _globalSettings = globalSettings;
-        _organizationApiKeyRepository = organizationApiKeyRepository;
         _currentContext = currentContext;
         _logger = logger;
         _providerOrganizationRepository = providerOrganizationRepository;
@@ -132,24 +118,7 @@ public class OrganizationService : IOrganizationService
         _pricingClient = pricingClient;
         _policyRequirementQuery = policyRequirementQuery;
         _sendOrganizationInvitesCommand = sendOrganizationInvitesCommand;
-    }
-
-    public async Task CancelSubscriptionAsync(Guid organizationId, bool? endOfPeriod = null)
-    {
-        var organization = await GetOrgById(organizationId);
-        if (organization == null)
-        {
-            throw new NotFoundException();
-        }
-
-        var eop = endOfPeriod.GetValueOrDefault(true);
-        if (!endOfPeriod.HasValue && organization.ExpirationDate.HasValue &&
-            organization.ExpirationDate.Value < DateTime.UtcNow)
-        {
-            eop = false;
-        }
-
-        await _paymentService.CancelSubscriptionAsync(organization, eop);
+        _stripeAdapter = stripeAdapter;
     }
 
     public async Task ReinstateSubscriptionAsync(Guid organizationId)
@@ -323,8 +292,14 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("You cannot have more Secrets Manager seats than Password Manager seats.");
         }
 
+        _logger.LogInformation("{Method}: Invoking _paymentService.AdjustSeatsAsync with {AdditionalSeats} additional seats for Organization ({OrganizationID})",
+            nameof(AdjustSeatsAsync), additionalSeats, organization.Id);
+
         var paymentIntentClientSecret = await _paymentService.AdjustSeatsAsync(organization, plan, additionalSeats);
         organization.Seats = (short?)newSeatTotal;
+
+        _logger.LogInformation("{Method}: Invoking _organizationRepository.ReplaceAsync with {Seats} seats for Organization ({OrganizationID})", nameof(AdjustSeatsAsync), organization.Seats, organization.Id); ;
+
         await ReplaceAndUpdateCacheAsync(organization);
 
         if (organization.Seats.HasValue && organization.MaxAutoscaleSeats.HasValue &&
@@ -350,199 +325,6 @@ public class OrganizationService : IOrganizationService
         return paymentIntentClientSecret;
     }
 
-    public async Task VerifyBankAsync(Guid organizationId, int amount1, int amount2)
-    {
-        var organization = await GetOrgById(organizationId);
-        if (organization == null)
-        {
-            throw new NotFoundException();
-        }
-
-        if (string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
-        {
-            throw new GatewayException("Not a gateway customer.");
-        }
-
-        var bankService = new BankAccountService();
-        var customerService = new CustomerService();
-        var customer = await customerService.GetAsync(organization.GatewayCustomerId,
-            new CustomerGetOptions { Expand = new List<string> { "sources" } });
-        if (customer == null)
-        {
-            throw new GatewayException("Cannot find customer.");
-        }
-
-        var bankAccount = customer.Sources
-            .FirstOrDefault(s => s is BankAccount && ((BankAccount)s).Status != "verified") as BankAccount;
-        if (bankAccount == null)
-        {
-            throw new GatewayException("Cannot find an unverified bank account.");
-        }
-
-        try
-        {
-            var result = await bankService.VerifyAsync(organization.GatewayCustomerId, bankAccount.Id,
-                new BankAccountVerifyOptions { Amounts = new List<long> { amount1, amount2 } });
-            if (result.Status != "verified")
-            {
-                throw new GatewayException("Unable to verify account.");
-            }
-        }
-        catch (StripeException e)
-        {
-            throw new GatewayException(e.Message);
-        }
-    }
-
-    private async Task ValidateSignUpPoliciesAsync(Guid ownerId)
-    {
-        var anySingleOrgPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(ownerId, PolicyType.SingleOrg);
-        if (anySingleOrgPolicies)
-        {
-            throw new BadRequestException("You may not create an organization. You belong to an organization " +
-                                          "which has a policy that prohibits you from being a member of any other organization.");
-        }
-    }
-
-    /// <summary>
-    /// Create a new organization on a self-hosted instance
-    /// </summary>
-    public async Task<(Organization organization, OrganizationUser organizationUser)> SignUpAsync(
-        OrganizationLicense license, User owner, string ownerKey, string collectionName, string publicKey,
-        string privateKey)
-    {
-        if (license.LicenseType != LicenseType.Organization)
-        {
-            throw new BadRequestException("Premium licenses cannot be applied to an organization. " +
-                                          "Upload this license from your personal account settings page.");
-        }
-
-        var claimsPrincipal = _licensingService.GetClaimsPrincipalFromLicense(license);
-        var canUse = license.CanUse(_globalSettings, _licensingService, claimsPrincipal, out var exception);
-
-        if (!canUse)
-        {
-            throw new BadRequestException(exception);
-        }
-
-        var enabledOrgs = await _organizationRepository.GetManyByEnabledAsync();
-        if (enabledOrgs.Any(o => string.Equals(o.LicenseKey, license.LicenseKey)))
-        {
-            throw new BadRequestException("License is already in use by another organization.");
-        }
-
-        await ValidateSignUpPoliciesAsync(owner.Id);
-
-        var organization = claimsPrincipal != null
-            // If the ClaimsPrincipal exists (there's a token on the license), use it to build the organization.
-            ? OrganizationFactory.Create(owner, claimsPrincipal, publicKey, privateKey)
-            // If there's no ClaimsPrincipal (there's no token on the license), use the license to build the organization.
-            : OrganizationFactory.Create(owner, license, publicKey, privateKey);
-
-        var result = await SignUpAsync(organization, owner.Id, ownerKey, collectionName, false);
-
-        var dir = $"{_globalSettings.LicenseDirectory}/organization";
-        Directory.CreateDirectory(dir);
-        await using var fs = new FileStream(Path.Combine(dir, $"{organization.Id}.json"), FileMode.Create);
-        await JsonSerializer.SerializeAsync(fs, license, JsonHelpers.Indented);
-        return (result.organization, result.organizationUser);
-    }
-
-    /// <summary>
-    /// Private helper method to create a new organization.
-    /// This is common code used by both the cloud and self-hosted methods.
-    /// </summary>
-    private async Task<(Organization organization, OrganizationUser organizationUser, Collection defaultCollection)>
-        SignUpAsync(Organization organization,
-            Guid ownerId, string ownerKey, string collectionName, bool withPayment)
-    {
-        try
-        {
-            await _organizationRepository.CreateAsync(organization);
-            await _organizationApiKeyRepository.CreateAsync(new OrganizationApiKey
-            {
-                OrganizationId = organization.Id,
-                ApiKey = CoreHelpers.SecureRandomString(30),
-                Type = OrganizationApiKeyType.Default,
-                RevisionDate = DateTime.UtcNow,
-            });
-            await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
-
-            // ownerId == default if the org is created by a provider - in this case it's created without an
-            // owner and the first owner is immediately invited afterwards
-            OrganizationUser orgUser = null;
-            if (ownerId != default)
-            {
-                orgUser = new OrganizationUser
-                {
-                    OrganizationId = organization.Id,
-                    UserId = ownerId,
-                    Key = ownerKey,
-                    AccessSecretsManager = organization.UseSecretsManager,
-                    Type = OrganizationUserType.Owner,
-                    Status = OrganizationUserStatusType.Confirmed,
-                    CreationDate = organization.CreationDate,
-                    RevisionDate = organization.CreationDate
-                };
-                orgUser.SetNewId();
-
-                await _organizationUserRepository.CreateAsync(orgUser);
-
-                var devices = await GetUserDeviceIdsAsync(orgUser.UserId.Value);
-                await _pushRegistrationService.AddUserRegistrationOrganizationAsync(devices,
-                    organization.Id.ToString());
-                await _pushNotificationService.PushSyncOrgKeysAsync(ownerId);
-            }
-
-            Collection defaultCollection = null;
-            if (!string.IsNullOrWhiteSpace(collectionName))
-            {
-                defaultCollection = new Collection
-                {
-                    Name = collectionName,
-                    OrganizationId = organization.Id,
-                    CreationDate = organization.CreationDate,
-                    RevisionDate = organization.CreationDate
-                };
-
-                // Give the owner Can Manage access over the default collection
-                List<CollectionAccessSelection> defaultOwnerAccess = null;
-                if (orgUser != null)
-                {
-                    defaultOwnerAccess =
-                    [
-                        new CollectionAccessSelection
-                        {
-                            Id = orgUser.Id,
-                            HidePasswords = false,
-                            ReadOnly = false,
-                            Manage = true
-                        }
-                    ];
-                }
-
-                await _collectionRepository.CreateAsync(defaultCollection, null, defaultOwnerAccess);
-            }
-
-            return (organization, orgUser, defaultCollection);
-        }
-        catch
-        {
-            if (withPayment)
-            {
-                await _paymentService.CancelAndRecoverChargesAsync(organization);
-            }
-
-            if (organization.Id != default(Guid))
-            {
-                await _organizationRepository.DeleteAsync(organization);
-                await _applicationCacheService.DeleteOrganizationAbilityAsync(organization.Id);
-            }
-
-            throw;
-        }
-    }
-
     public async Task UpdateExpirationDateAsync(Guid organizationId, DateTime? expirationDate)
     {
         var org = await GetOrgById(organizationId);
@@ -554,8 +336,7 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    public async Task UpdateAsync(Organization organization, bool updateBilling = false,
-        EventType eventType = EventType.Organization_Updated)
+    public async Task UpdateAsync(Organization organization, bool updateBilling = false)
     {
         if (organization.Id == default(Guid))
         {
@@ -571,23 +352,60 @@ public class OrganizationService : IOrganizationService
             }
         }
 
-        await ReplaceAndUpdateCacheAsync(organization, eventType);
+        await ReplaceAndUpdateCacheAsync(organization, EventType.Organization_Updated);
 
         if (updateBilling && !string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
         {
-            var customerService = new CustomerService();
-            await customerService.UpdateAsync(organization.GatewayCustomerId,
+            var newDisplayName = organization.DisplayName();
+
+            await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId,
                 new CustomerUpdateOptions
                 {
                     Email = organization.BillingEmail,
-                    Description = organization.DisplayBusinessName()
+                    Description = organization.DisplayBusinessName(),
+                    InvoiceSettings = new CustomerInvoiceSettingsOptions
+                    {
+                        // This overwrites the existing custom fields for this organization
+                        CustomFields = [
+                            new CustomerInvoiceSettingsCustomFieldOptions
+                            {
+                                Name = organization.SubscriberType(),
+                                Value = newDisplayName.Length <= 30
+                                    ? newDisplayName
+                                    : newDisplayName[..30]
+                            }]
+                    },
                 });
         }
+    }
 
-        if (eventType == EventType.Organization_CollectionManagement_Updated)
+    public async Task<Organization> UpdateCollectionManagementSettingsAsync(Guid organizationId, OrganizationCollectionManagementSettings settings)
+    {
+        var existingOrganization = await _organizationRepository.GetByIdAsync(organizationId);
+        if (existingOrganization == null)
         {
-            await _pushNotificationService.PushSyncOrganizationCollectionManagementSettingsAsync(organization);
+            throw new NotFoundException();
         }
+
+        // Create logging actions based on what will change
+        var loggingActions = CreateCollectionManagementLoggingActions(existingOrganization, settings);
+
+        existingOrganization.LimitCollectionCreation = settings.LimitCollectionCreation;
+        existingOrganization.LimitCollectionDeletion = settings.LimitCollectionDeletion;
+        existingOrganization.LimitItemDeletion = settings.LimitItemDeletion;
+        existingOrganization.AllowAdminAccessToAllCollectionItems = settings.AllowAdminAccessToAllCollectionItems;
+        existingOrganization.RevisionDate = DateTime.UtcNow;
+
+        await ReplaceAndUpdateCacheAsync(existingOrganization);
+
+        if (loggingActions.Any())
+        {
+            await Task.WhenAll(loggingActions.Select(action => action()));
+        }
+
+        await _pushNotificationService.PushSyncOrganizationCollectionManagementSettingsAsync(existingOrganization);
+
+        return existingOrganization;
     }
 
     public async Task UpdateTwoFactorProviderAsync(Organization organization, TwoFactorProviderType type)
@@ -924,21 +742,6 @@ public class OrganizationService : IOrganizationService
         return result;
     }
 
-    public async Task ResendInviteAsync(Guid organizationId, Guid? invitingUserId, Guid organizationUserId,
-        bool initOrganization = false)
-    {
-        var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
-        if (orgUser == null || orgUser.OrganizationId != organizationId ||
-            orgUser.Status != OrganizationUserStatusType.Invited)
-        {
-            throw new BadRequestException("User invalid.");
-        }
-
-        _logger.LogUserInviteStateDiagnostics(orgUser);
-
-        var org = await GetOrgById(orgUser.OrganizationId);
-        await SendInviteAsync(orgUser, org, initOrganization);
-    }
 
     private async Task SendInvitesAsync(IEnumerable<OrganizationUser> orgUsers, Organization organization) =>
         await _sendOrganizationInvitesCommand.SendInvitesAsync(new SendInvitesRequest(orgUsers, organization));
@@ -1099,214 +902,6 @@ public class OrganizationService : IOrganizationService
                 : EventType.OrganizationUser_ResetPassword_Withdraw);
     }
 
-    public async Task ImportAsync(Guid organizationId,
-        IEnumerable<ImportedGroup> groups,
-        IEnumerable<ImportedOrganizationUser> newUsers,
-        IEnumerable<string> removeUserExternalIds,
-        bool overwriteExisting,
-        EventSystemUser eventSystemUser
-    )
-    {
-        var organization = await GetOrgById(organizationId);
-        if (organization == null)
-        {
-            throw new NotFoundException();
-        }
-
-        if (!organization.UseDirectory)
-        {
-            throw new BadRequestException("Organization cannot use directory syncing.");
-        }
-
-        var newUsersSet = new HashSet<string>(newUsers?.Select(u => u.ExternalId) ?? new List<string>());
-        var existingUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId);
-        var existingExternalUsers = existingUsers.Where(u => !string.IsNullOrWhiteSpace(u.ExternalId)).ToList();
-        var existingExternalUsersIdDict = existingExternalUsers.ToDictionary(u => u.ExternalId, u => u.Id);
-
-        // Users
-
-        var events = new List<(OrganizationUserUserDetails ou, EventType e, DateTime? d)>();
-
-        // Remove Users
-        if (removeUserExternalIds?.Any() ?? false)
-        {
-            var existingUsersDict = existingExternalUsers.ToDictionary(u => u.ExternalId);
-            var removeUsersSet = new HashSet<string>(removeUserExternalIds)
-                .Except(newUsersSet)
-                .Where(u => existingUsersDict.TryGetValue(u, out var existingUser) &&
-                            existingUser.Type != OrganizationUserType.Owner)
-                .Select(u => existingUsersDict[u]);
-
-            await _organizationUserRepository.DeleteManyAsync(removeUsersSet.Select(u => u.Id));
-            events.AddRange(removeUsersSet.Select(u => (
-                    u,
-                    EventType.OrganizationUser_Removed,
-                    (DateTime?)DateTime.UtcNow
-                ))
-            );
-        }
-
-        if (overwriteExisting)
-        {
-            // Remove existing external users that are not in new user set
-            var usersToDelete = existingExternalUsers.Where(u =>
-                u.Type != OrganizationUserType.Owner &&
-                !newUsersSet.Contains(u.ExternalId) &&
-                existingExternalUsersIdDict.ContainsKey(u.ExternalId));
-            await _organizationUserRepository.DeleteManyAsync(usersToDelete.Select(u => u.Id));
-            events.AddRange(usersToDelete.Select(u => (
-                    u,
-                    EventType.OrganizationUser_Removed,
-                    (DateTime?)DateTime.UtcNow
-                ))
-            );
-            foreach (var deletedUser in usersToDelete)
-            {
-                existingExternalUsersIdDict.Remove(deletedUser.ExternalId);
-            }
-        }
-
-        if (newUsers?.Any() ?? false)
-        {
-            // Marry existing users
-            var existingUsersEmailsDict = existingUsers
-                .Where(u => string.IsNullOrWhiteSpace(u.ExternalId))
-                .ToDictionary(u => u.Email);
-            var newUsersEmailsDict = newUsers.ToDictionary(u => u.Email);
-            var usersToAttach = existingUsersEmailsDict.Keys.Intersect(newUsersEmailsDict.Keys).ToList();
-            var usersToUpsert = new List<OrganizationUser>();
-            foreach (var user in usersToAttach)
-            {
-                var orgUserDetails = existingUsersEmailsDict[user];
-                var orgUser = await _organizationUserRepository.GetByIdAsync(orgUserDetails.Id);
-                if (orgUser != null)
-                {
-                    orgUser.ExternalId = newUsersEmailsDict[user].ExternalId;
-                    usersToUpsert.Add(orgUser);
-                    existingExternalUsersIdDict.Add(orgUser.ExternalId, orgUser.Id);
-                }
-            }
-
-            await _organizationUserRepository.UpsertManyAsync(usersToUpsert);
-
-            // Add new users
-            var existingUsersSet = new HashSet<string>(existingExternalUsersIdDict.Keys);
-            var usersToAdd = newUsersSet.Except(existingUsersSet).ToList();
-
-            var seatsAvailable = int.MaxValue;
-            var enoughSeatsAvailable = true;
-            if (organization.Seats.HasValue)
-            {
-                var seatCounts =
-                    await _organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
-                seatsAvailable = organization.Seats.Value - seatCounts.Total;
-                enoughSeatsAvailable = seatsAvailable >= usersToAdd.Count;
-            }
-
-            var hasStandaloneSecretsManager = await _paymentService.HasSecretsManagerStandalone(organization);
-
-            var userInvites = new List<(OrganizationUserInvite, string)>();
-            foreach (var user in newUsers)
-            {
-                if (!usersToAdd.Contains(user.ExternalId) || string.IsNullOrWhiteSpace(user.Email))
-                {
-                    continue;
-                }
-
-                try
-                {
-                    var invite = new OrganizationUserInvite
-                    {
-                        Emails = new List<string> { user.Email },
-                        Type = OrganizationUserType.User,
-                        Collections = new List<CollectionAccessSelection>(),
-                        AccessSecretsManager = hasStandaloneSecretsManager
-                    };
-                    userInvites.Add((invite, user.ExternalId));
-                }
-                catch (BadRequestException)
-                {
-                    // Thrown when the user is already invited to the organization
-                    continue;
-                }
-            }
-
-            var invitedUsers = await InviteUsersAsync(organizationId, invitingUserId: null, systemUser: eventSystemUser,
-                userInvites);
-            foreach (var invitedUser in invitedUsers)
-            {
-                existingExternalUsersIdDict.Add(invitedUser.ExternalId, invitedUser.Id);
-            }
-        }
-
-
-        // Groups
-        if (groups?.Any() ?? false)
-        {
-            if (!organization.UseGroups)
-            {
-                throw new BadRequestException("Organization cannot use groups.");
-            }
-
-            var groupsDict = groups.ToDictionary(g => g.Group.ExternalId);
-            var existingGroups = await _groupRepository.GetManyByOrganizationIdAsync(organizationId);
-            var existingExternalGroups = existingGroups
-                .Where(u => !string.IsNullOrWhiteSpace(u.ExternalId)).ToList();
-            var existingExternalGroupsDict = existingExternalGroups.ToDictionary(g => g.ExternalId);
-
-            var newGroups = groups
-                .Where(g => !existingExternalGroupsDict.ContainsKey(g.Group.ExternalId))
-                .Select(g => g.Group).ToList();
-
-            var savedGroups = new List<Group>();
-            foreach (var group in newGroups)
-            {
-                group.CreationDate = group.RevisionDate = DateTime.UtcNow;
-
-                savedGroups.Add(await _groupRepository.CreateAsync(group));
-                await UpdateUsersAsync(group, groupsDict[group.ExternalId].ExternalUserIds,
-                    existingExternalUsersIdDict);
-            }
-
-            await _eventService.LogGroupEventsAsync(
-                savedGroups.Select(g => (g, EventType.Group_Created, (EventSystemUser?)eventSystemUser,
-                    (DateTime?)DateTime.UtcNow)));
-
-            var updateGroups = existingExternalGroups
-                .Where(g => groupsDict.ContainsKey(g.ExternalId))
-                .ToList();
-
-            if (updateGroups.Any())
-            {
-                var groupUsers = await _groupRepository.GetManyGroupUsersByOrganizationIdAsync(organizationId);
-                var existingGroupUsers = groupUsers
-                    .GroupBy(gu => gu.GroupId)
-                    .ToDictionary(g => g.Key, g => new HashSet<Guid>(g.Select(gr => gr.OrganizationUserId)));
-
-                foreach (var group in updateGroups)
-                {
-                    var updatedGroup = groupsDict[group.ExternalId].Group;
-                    if (group.Name != updatedGroup.Name)
-                    {
-                        group.RevisionDate = DateTime.UtcNow;
-                        group.Name = updatedGroup.Name;
-
-                        await _groupRepository.ReplaceAsync(group);
-                    }
-
-                    await UpdateUsersAsync(group, groupsDict[group.ExternalId].ExternalUserIds,
-                        existingExternalUsersIdDict,
-                        existingGroupUsers.ContainsKey(group.Id) ? existingGroupUsers[group.Id] : null);
-                }
-
-                await _eventService.LogGroupEventsAsync(
-                    updateGroups.Select(g => (g, EventType.Group_Updated, (EventSystemUser?)eventSystemUser,
-                        (DateTime?)DateTime.UtcNow)));
-            }
-        }
-
-        await _eventService.LogOrganizationUserEventsAsync(events.Select(e => (e.ou, e.e, eventSystemUser, e.d)));
-    }
 
     public async Task DeleteSsoUserAsync(Guid userId, Guid? organizationId)
     {
@@ -1323,35 +918,23 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    private async Task UpdateUsersAsync(Group group, HashSet<string> groupUsers,
-        Dictionary<string, Guid> existingUsersIdDict, HashSet<Guid> existingUsers = null)
-    {
-        var availableUsers = groupUsers.Intersect(existingUsersIdDict.Keys);
-        var users = new HashSet<Guid>(availableUsers.Select(u => existingUsersIdDict[u]));
-        if (existingUsers != null && existingUsers.Count == users.Count && users.SetEquals(existingUsers))
-        {
-            return;
-        }
-
-        await _groupRepository.UpdateUsersAsync(group.Id, users);
-    }
-
-    private async Task<IEnumerable<string>> GetUserDeviceIdsAsync(Guid userId)
-    {
-        var devices = await _deviceRepository.GetManyByUserIdAsync(userId);
-        return devices
-            .Where(d => !string.IsNullOrWhiteSpace(d.PushToken))
-            .Select(d => d.Id.ToString());
-    }
 
     public async Task ReplaceAndUpdateCacheAsync(Organization org, EventType? orgEvent = null)
     {
-        await _organizationRepository.ReplaceAsync(org);
-        await _applicationCacheService.UpsertOrganizationAbilityAsync(org);
-
-        if (orgEvent.HasValue)
+        try
         {
-            await _eventService.LogOrganizationEventAsync(org, orgEvent.Value);
+            await _organizationRepository.ReplaceAsync(org);
+            await _applicationCacheService.UpsertOrganizationAbilityAsync(org);
+
+            if (orgEvent.HasValue)
+            {
+                await _eventService.LogOrganizationEventAsync(org, orgEvent.Value);
+            }
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "An error occurred while calling {Method} for Organization ({OrganizationID})", nameof(ReplaceAndUpdateCacheAsync), org.Id);
+            throw;
         }
     }
 
@@ -1595,122 +1178,6 @@ public class OrganizationService : IOrganizationService
         return true;
     }
 
-    public async Task RevokeUserAsync(OrganizationUser organizationUser, Guid? revokingUserId)
-    {
-        if (revokingUserId.HasValue && organizationUser.UserId == revokingUserId.Value)
-        {
-            throw new BadRequestException("You cannot revoke yourself.");
-        }
-
-        if (organizationUser.Type == OrganizationUserType.Owner && revokingUserId.HasValue &&
-            !await _currentContext.OrganizationOwner(organizationUser.OrganizationId))
-        {
-            throw new BadRequestException("Only owners can revoke other owners.");
-        }
-
-        await RepositoryRevokeUserAsync(organizationUser);
-        await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked);
-
-        if (organizationUser.UserId.HasValue)
-        {
-            await _pushNotificationService.PushSyncOrgKeysAsync(organizationUser.UserId.Value);
-        }
-    }
-
-    public async Task RevokeUserAsync(OrganizationUser organizationUser,
-        EventSystemUser systemUser)
-    {
-        await RepositoryRevokeUserAsync(organizationUser);
-        await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked,
-            systemUser);
-
-        if (organizationUser.UserId.HasValue)
-        {
-            await _pushNotificationService.PushSyncOrgKeysAsync(organizationUser.UserId.Value);
-        }
-    }
-
-    private async Task RepositoryRevokeUserAsync(OrganizationUser organizationUser)
-    {
-        if (organizationUser.Status == OrganizationUserStatusType.Revoked)
-        {
-            throw new BadRequestException("Already revoked.");
-        }
-
-        if (!await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(organizationUser.OrganizationId,
-                new[] { organizationUser.Id }, includeProvider: true))
-        {
-            throw new BadRequestException("Organization must have at least one confirmed owner.");
-        }
-
-        await _organizationUserRepository.RevokeAsync(organizationUser.Id);
-        organizationUser.Status = OrganizationUserStatusType.Revoked;
-    }
-
-    public async Task<List<Tuple<OrganizationUser, string>>> RevokeUsersAsync(Guid organizationId,
-        IEnumerable<Guid> organizationUserIds, Guid? revokingUserId)
-    {
-        var orgUsers = await _organizationUserRepository.GetManyAsync(organizationUserIds);
-        var filteredUsers = orgUsers.Where(u => u.OrganizationId == organizationId)
-            .ToList();
-
-        if (!filteredUsers.Any())
-        {
-            throw new BadRequestException("Users invalid.");
-        }
-
-        if (!await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(organizationId, organizationUserIds))
-        {
-            throw new BadRequestException("Organization must have at least one confirmed owner.");
-        }
-
-        var deletingUserIsOwner = false;
-        if (revokingUserId.HasValue)
-        {
-            deletingUserIsOwner = await _currentContext.OrganizationOwner(organizationId);
-        }
-
-        var result = new List<Tuple<OrganizationUser, string>>();
-
-        foreach (var organizationUser in filteredUsers)
-        {
-            try
-            {
-                if (organizationUser.Status == OrganizationUserStatusType.Revoked)
-                {
-                    throw new BadRequestException("Already revoked.");
-                }
-
-                if (revokingUserId.HasValue && organizationUser.UserId == revokingUserId)
-                {
-                    throw new BadRequestException("You cannot revoke yourself.");
-                }
-
-                if (organizationUser.Type == OrganizationUserType.Owner && revokingUserId.HasValue &&
-                    !deletingUserIsOwner)
-                {
-                    throw new BadRequestException("Only owners can revoke other owners.");
-                }
-
-                await _organizationUserRepository.RevokeAsync(organizationUser.Id);
-                organizationUser.Status = OrganizationUserStatusType.Revoked;
-                await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked);
-                if (organizationUser.UserId.HasValue)
-                {
-                    await _pushNotificationService.PushSyncOrgKeysAsync(organizationUser.UserId.Value);
-                }
-
-                result.Add(Tuple.Create(organizationUser, ""));
-            }
-            catch (BadRequestException e)
-            {
-                result.Add(Tuple.Create(organizationUser, e.Message));
-            }
-        }
-
-        return result;
-    }
-
     public static OrganizationUserStatusType GetPriorActiveOrganizationUserStatusType(OrganizationUser organizationUser)
     {
         // Determine status to revert back to
@@ -1727,5 +1194,45 @@ public class OrganizationService : IOrganizationService
         }
 
         return status;
+    }
+
+    private List<Func<Task>> CreateCollectionManagementLoggingActions(
+        Organization existingOrganization, OrganizationCollectionManagementSettings settings)
+    {
+        var loggingActions = new List<Func<Task>>();
+
+        if (existingOrganization.LimitCollectionCreation != settings.LimitCollectionCreation)
+        {
+            var eventType = settings.LimitCollectionCreation
+                ? EventType.Organization_CollectionManagement_LimitCollectionCreationEnabled
+                : EventType.Organization_CollectionManagement_LimitCollectionCreationDisabled;
+            loggingActions.Add(() => _eventService.LogOrganizationEventAsync(existingOrganization, eventType));
+        }
+
+        if (existingOrganization.LimitCollectionDeletion != settings.LimitCollectionDeletion)
+        {
+            var eventType = settings.LimitCollectionDeletion
+                ? EventType.Organization_CollectionManagement_LimitCollectionDeletionEnabled
+                : EventType.Organization_CollectionManagement_LimitCollectionDeletionDisabled;
+            loggingActions.Add(() => _eventService.LogOrganizationEventAsync(existingOrganization, eventType));
+        }
+
+        if (existingOrganization.LimitItemDeletion != settings.LimitItemDeletion)
+        {
+            var eventType = settings.LimitItemDeletion
+                ? EventType.Organization_CollectionManagement_LimitItemDeletionEnabled
+                : EventType.Organization_CollectionManagement_LimitItemDeletionDisabled;
+            loggingActions.Add(() => _eventService.LogOrganizationEventAsync(existingOrganization, eventType));
+        }
+
+        if (existingOrganization.AllowAdminAccessToAllCollectionItems != settings.AllowAdminAccessToAllCollectionItems)
+        {
+            var eventType = settings.AllowAdminAccessToAllCollectionItems
+                ? EventType.Organization_CollectionManagement_AllowAdminAccessToAllCollectionItemsEnabled
+                : EventType.Organization_CollectionManagement_AllowAdminAccessToAllCollectionItemsDisabled;
+            loggingActions.Add(() => _eventService.LogOrganizationEventAsync(existingOrganization, eventType));
+        }
+
+        return loggingActions;
     }
 }

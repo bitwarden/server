@@ -1,7 +1,5 @@
-﻿#nullable enable
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
-using Bit.Core.Billing.Pricing.JSON;
 using Braintree;
 using OneOf;
 using Stripe;
@@ -12,7 +10,7 @@ public record MaskedBankAccount
 {
     public required string BankName { get; init; }
     public required string Last4 { get; init; }
-    public required bool Verified { get; init; }
+    public string? HostedVerificationUrl { get; init; }
     public string Type => "bankAccount";
 }
 
@@ -41,8 +39,7 @@ public class MaskedPaymentMethod(OneOf<MaskedBankAccount, MaskedCard, MaskedPayP
     public static MaskedPaymentMethod From(BankAccount bankAccount) => new MaskedBankAccount
     {
         BankName = bankAccount.BankName,
-        Last4 = bankAccount.Last4,
-        Verified = bankAccount.Status == "verified"
+        Last4 = bankAccount.Last4
     };
 
     public static MaskedPaymentMethod From(Card card) => new MaskedCard
@@ -63,7 +60,7 @@ public class MaskedPaymentMethod(OneOf<MaskedBankAccount, MaskedCard, MaskedPayP
     {
         BankName = setupIntent.PaymentMethod.UsBankAccount.BankName,
         Last4 = setupIntent.PaymentMethod.UsBankAccount.Last4,
-        Verified = false
+        HostedVerificationUrl = setupIntent.NextAction?.VerifyWithMicrodeposits?.HostedVerificationUrl
     };
 
     public static MaskedPaymentMethod From(SourceCard sourceCard) => new MaskedCard
@@ -76,39 +73,34 @@ public class MaskedPaymentMethod(OneOf<MaskedBankAccount, MaskedCard, MaskedPayP
     public static MaskedPaymentMethod From(PaymentMethodUsBankAccount bankAccount) => new MaskedBankAccount
     {
         BankName = bankAccount.BankName,
-        Last4 = bankAccount.Last4,
-        Verified = true
+        Last4 = bankAccount.Last4
     };
 
     public static MaskedPaymentMethod From(PayPalAccount payPalAccount) => new MaskedPayPalAccount { Email = payPalAccount.Email };
 }
 
-public class MaskedPaymentMethodJsonConverter : TypeReadingJsonConverter<MaskedPaymentMethod>
+public class MaskedPaymentMethodJsonConverter : JsonConverter<MaskedPaymentMethod>
 {
-    protected override string TypePropertyName => nameof(MaskedBankAccount.Type).ToLower();
+    private const string _typePropertyName = nameof(MaskedBankAccount.Type);
 
-    public override MaskedPaymentMethod? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public override MaskedPaymentMethod Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        var type = ReadType(reader);
+        var element = JsonElement.ParseValue(ref reader);
+
+        if (!element.TryGetProperty(options.PropertyNamingPolicy?.ConvertName(_typePropertyName) ?? _typePropertyName, out var typeProperty))
+        {
+            throw new JsonException(
+                $"Failed to deserialize {nameof(MaskedPaymentMethod)}: missing '{_typePropertyName}' property");
+        }
+
+        var type = typeProperty.GetString();
 
         return type switch
         {
-            "bankAccount" => JsonSerializer.Deserialize<MaskedBankAccount>(ref reader, options) switch
-            {
-                null => null,
-                var bankAccount => new MaskedPaymentMethod(bankAccount)
-            },
-            "card" => JsonSerializer.Deserialize<MaskedCard>(ref reader, options) switch
-            {
-                null => null,
-                var card => new MaskedPaymentMethod(card)
-            },
-            "payPal" => JsonSerializer.Deserialize<MaskedPayPalAccount>(ref reader, options) switch
-            {
-                null => null,
-                var payPal => new MaskedPaymentMethod(payPal)
-            },
-            _ => Skip(ref reader)
+            "bankAccount" => element.Deserialize<MaskedBankAccount>(options)!,
+            "card" => element.Deserialize<MaskedCard>(options)!,
+            "payPal" => element.Deserialize<MaskedPayPalAccount>(options)!,
+            _ => throw new JsonException($"Failed to deserialize {nameof(MaskedPaymentMethod)}: invalid '{_typePropertyName}' value - '{type}'")
         };
     }
 

@@ -5,6 +5,7 @@ using System.Security.Claims;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
+using Bit.Core.Billing.Models.Business;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
@@ -37,8 +38,6 @@ public interface IUserService
     Task<IdentityResult> ConvertToKeyConnectorAsync(User user);
     Task<IdentityResult> AdminResetPasswordAsync(OrganizationUserType type, Guid orgId, Guid id, string newMasterPassword, string key);
     Task<IdentityResult> UpdateTempPasswordAsync(User user, string newMasterPassword, string key, string hint);
-    Task<IdentityResult> ChangeKdfAsync(User user, string masterPassword, string newMasterPassword, string key,
-        KdfType kdf, int kdfIterations, int? kdfMemory, int? kdfParallelism);
     Task<IdentityResult> RefreshSecurityStampAsync(User user, string masterPasswordHash);
     Task UpdateTwoFactorProviderAsync(User user, TwoFactorProviderType type, bool setEnabled = true, bool logEvent = true);
     Task DisableTwoFactorProviderAsync(User user, TwoFactorProviderType type);
@@ -88,9 +87,6 @@ public interface IUserService
     Task ToggleNewDeviceVerificationException(Guid userId);
 
     void SetTwoFactorProvider(User user, TwoFactorProviderType type, bool setEnabled = true);
-
-    [Obsolete("To be removed when the feature flag pm-17128-recovery-code-login is removed PM-18175.")]
-    Task<bool> RecoverTwoFactorAsync(string email, string masterPassword, string recoveryCode);
 
     /// <summary>
     /// This method is used by the TwoFactorAuthenticationValidator to recover two

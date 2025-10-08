@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Services;
@@ -46,7 +47,9 @@ public class ImportCiphersAsyncCommandTests
         await sutProvider.Sut.ImportIntoIndividualVaultAsync(folders, ciphers, folderRelationships, importingUserId);
 
         // Assert
-        await sutProvider.GetDependency<ICipherRepository>().Received(1).CreateAsync(importingUserId, ciphers, Arg.Any<List<Folder>>());
+        await sutProvider.GetDependency<ICipherRepository>()
+            .Received(1)
+            .CreateAsync(importingUserId, ciphers, Arg.Any<List<Folder>>());
         await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncVaultAsync(importingUserId);
     }
 
@@ -76,7 +79,9 @@ public class ImportCiphersAsyncCommandTests
 
         await sutProvider.Sut.ImportIntoIndividualVaultAsync(folders, ciphers, folderRelationships, importingUserId);
 
-        await sutProvider.GetDependency<ICipherRepository>().Received(1).CreateAsync(importingUserId, ciphers, Arg.Any<List<Folder>>());
+        await sutProvider.GetDependency<ICipherRepository>()
+            .Received(1)
+            .CreateAsync(importingUserId, ciphers, Arg.Any<List<Folder>>());
         await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncVaultAsync(importingUserId);
     }
 
@@ -120,7 +125,7 @@ public class ImportCiphersAsyncCommandTests
             .GetAsync<OrganizationDataOwnershipPolicyRequirement>(userId)
             .Returns(new OrganizationDataOwnershipPolicyRequirement(
                 OrganizationDataOwnershipState.Enabled,
-                [Guid.NewGuid()]));
+                [new PolicyDetails()]));
 
         var folderRelationships = new List<KeyValuePair<int, int>>();
 

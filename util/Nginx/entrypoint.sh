@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # Setup
 
@@ -30,7 +30,7 @@ mkhomedir_helper $USERNAME
 # The rest...
 
 chown -R $USERNAME:$GROUPNAME /etc/bitwarden
-cp /etc/bitwarden/nginx/*.conf /etc/nginx/conf.d/
+cp -p /etc/bitwarden/nginx/*.conf /etc/nginx/conf.d/
 mkdir -p /etc/letsencrypt
 chown -R $USERNAME:$GROUPNAME /etc/letsencrypt
 mkdir -p /etc/ssl

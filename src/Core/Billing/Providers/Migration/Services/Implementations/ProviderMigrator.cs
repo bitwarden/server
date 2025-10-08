@@ -7,11 +7,13 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Providers.Entities;
 using Bit.Core.Billing.Providers.Migration.Models;
 using Bit.Core.Billing.Providers.Models;
 using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Billing.Providers.Services;
+using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
@@ -253,7 +255,10 @@ public class ProviderMigrator(
 
             var taxInfo = await paymentService.GetTaxInfoAsync(sampleOrganization);
 
-            var customer = await providerBillingService.SetupCustomer(provider, taxInfo);
+            // Create dummy payment source for legacy migration - this migrator is deprecated and will be removed
+            var dummyPaymentSource = new TokenizedPaymentSource(PaymentMethodType.Card, "migration_dummy_token");
+
+            var customer = await providerBillingService.SetupCustomer(provider, null, null);
 
             await stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
             {

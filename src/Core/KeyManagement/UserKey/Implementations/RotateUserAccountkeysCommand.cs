@@ -45,7 +45,8 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         IEmergencyAccessRepository emergencyAccessRepository, IOrganizationUserRepository organizationUserRepository,
         IDeviceRepository deviceRepository,
         IPasswordHasher<User> passwordHasher,
-        IPushNotificationService pushService, IdentityErrorDescriber errors, IWebAuthnCredentialRepository credentialRepository)
+        IPushNotificationService pushService, IdentityErrorDescriber errors, IWebAuthnCredentialRepository credentialRepository,
+        IFeatureService featureService)
     {
         _userService = userService;
         _userRepository = userRepository;

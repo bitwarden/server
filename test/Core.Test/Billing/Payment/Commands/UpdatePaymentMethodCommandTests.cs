@@ -45,6 +45,69 @@ public class UpdatePaymentMethodCommandTests
     {
         var organization = new Organization
         {
+            Id = Guid.NewGuid(),
+            GatewayCustomerId = "cus_123"
+        };
+
+        var customer = new Customer
+        {
+            Address = new Address
+            {
+                Country = "US",
+                PostalCode = "12345"
+            },
+            Metadata = new Dictionary<string, string>()
+        };
+
+        _subscriberService.GetCustomer(organization).Returns(customer);
+
+        const string token = "TOKEN";
+
+        var setupIntent = new SetupIntent
+        {
+            Id = "seti_123",
+            PaymentMethod =
+                new PaymentMethod
+                {
+                    Type = "us_bank_account",
+                    UsBankAccount = new PaymentMethodUsBankAccount { BankName = "Chase", Last4 = "9999" }
+                },
+            NextAction = new SetupIntentNextAction
+            {
+                VerifyWithMicrodeposits = new SetupIntentNextActionVerifyWithMicrodeposits
+                {
+                    HostedVerificationUrl = "https://example.com"
+                }
+            },
+            Status = "requires_action"
+        };
+
+        _stripeAdapter.SetupIntentList(Arg.Is<SetupIntentListOptions>(options =>
+            options.PaymentMethod == token && options.HasExpansions("data.payment_method"))).Returns([setupIntent]);
+
+        var result = await _command.Run(organization,
+            new TokenizedPaymentMethod { Type = TokenizablePaymentMethodType.BankAccount, Token = token }, new BillingAddress
+            {
+                Country = "US",
+                PostalCode = "12345"
+            });
+
+        Assert.True(result.IsT0);
+        var maskedPaymentMethod = result.AsT0;
+        Assert.True(maskedPaymentMethod.IsT0);
+        var maskedBankAccount = maskedPaymentMethod.AsT0;
+        Assert.Equal("Chase", maskedBankAccount.BankName);
+        Assert.Equal("9999", maskedBankAccount.Last4);
+        Assert.Equal("https://example.com", maskedBankAccount.HostedVerificationUrl);
+
+        await _setupIntentCache.Received(1).Set(organization.Id, setupIntent.Id);
+    }
+
+    [Fact]
+    public async Task Run_BankAccount_NoCurrentCustomer_MakesCorrectInvocations_ReturnsMaskedBankAccount()
+    {
+        var organization = new Organization
+        {
             Id = Guid.NewGuid()
         };
 
@@ -73,7 +136,10 @@ public class UpdatePaymentMethodCommandTests
                 },
             NextAction = new SetupIntentNextAction
             {
-                VerifyWithMicrodeposits = new SetupIntentNextActionVerifyWithMicrodeposits()
+                VerifyWithMicrodeposits = new SetupIntentNextActionVerifyWithMicrodeposits
+                {
+                    HostedVerificationUrl = "https://example.com"
+                }
             },
             Status = "requires_action"
         };
@@ -94,7 +160,9 @@ public class UpdatePaymentMethodCommandTests
         var maskedBankAccount = maskedPaymentMethod.AsT0;
         Assert.Equal("Chase", maskedBankAccount.BankName);
         Assert.Equal("9999", maskedBankAccount.Last4);
-        Assert.False(maskedBankAccount.Verified);
+        Assert.Equal("https://example.com", maskedBankAccount.HostedVerificationUrl);
+
+        await _subscriberService.Received(1).CreateStripeCustomer(organization);
 
         await _setupIntentCache.Received(1).Set(organization.Id, setupIntent.Id);
     }
@@ -104,7 +172,8 @@ public class UpdatePaymentMethodCommandTests
     {
         var organization = new Organization
         {
-            Id = Guid.NewGuid()
+            Id = Guid.NewGuid(),
+            GatewayCustomerId = "cus_123"
         };
 
         var customer = new Customer
@@ -136,7 +205,10 @@ public class UpdatePaymentMethodCommandTests
                 },
             NextAction = new SetupIntentNextAction
             {
-                VerifyWithMicrodeposits = new SetupIntentNextActionVerifyWithMicrodeposits()
+                VerifyWithMicrodeposits = new SetupIntentNextActionVerifyWithMicrodeposits
+                {
+                    HostedVerificationUrl = "https://example.com"
+                }
             },
             Status = "requires_action"
         };
@@ -157,7 +229,7 @@ public class UpdatePaymentMethodCommandTests
         var maskedBankAccount = maskedPaymentMethod.AsT0;
         Assert.Equal("Chase", maskedBankAccount.BankName);
         Assert.Equal("9999", maskedBankAccount.Last4);
-        Assert.False(maskedBankAccount.Verified);
+        Assert.Equal("https://example.com", maskedBankAccount.HostedVerificationUrl);
 
         await _setupIntentCache.Received(1).Set(organization.Id, setupIntent.Id);
         await _stripeAdapter.Received(1).CustomerUpdateAsync(customer.Id, Arg.Is<CustomerUpdateOptions>(options =>
@@ -170,7 +242,8 @@ public class UpdatePaymentMethodCommandTests
     {
         var organization = new Organization
         {
-            Id = Guid.NewGuid()
+            Id = Guid.NewGuid(),
+            GatewayCustomerId = "cus_123"
         };
 
         var customer = new Customer
@@ -227,7 +300,8 @@ public class UpdatePaymentMethodCommandTests
     {
         var organization = new Organization
         {
-            Id = Guid.NewGuid()
+            Id = Guid.NewGuid(),
+            GatewayCustomerId = "cus_123"
         };
 
         var customer = new Customer
@@ -282,7 +356,8 @@ public class UpdatePaymentMethodCommandTests
     {
         var organization = new Organization
         {
-            Id = Guid.NewGuid()
+            Id = Guid.NewGuid(),
+            GatewayCustomerId = "cus_123"
         };
 
         var customer = new Customer
@@ -343,7 +418,8 @@ public class UpdatePaymentMethodCommandTests
     {
         var organization = new Organization
         {
-            Id = Guid.NewGuid()
+            Id = Guid.NewGuid(),
+            GatewayCustomerId = "cus_123"
         };
 
         var customer = new Customer

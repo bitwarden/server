@@ -1,6 +1,7 @@
 ﻿using Bit.Api.Dirt.Models;
 using Bit.Api.Dirt.Models.Response;
 using Bit.Api.Tools.Models.Response;
+using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Reports.Models.Data;
@@ -24,8 +25,8 @@ public class ReportsController : Controller
     private readonly IGetPasswordHealthReportApplicationQuery _getPwdHealthReportAppQuery;
     private readonly IDropPasswordHealthReportApplicationCommand _dropPwdHealthReportAppCommand;
     private readonly IAddOrganizationReportCommand _addOrganizationReportCommand;
-    private readonly IDropOrganizationReportCommand _dropOrganizationReportCommand;
     private readonly IGetOrganizationReportQuery _getOrganizationReportQuery;
+    private readonly ILogger<ReportsController> _logger;
 
     public ReportsController(
         ICurrentContext currentContext,
@@ -36,7 +37,7 @@ public class ReportsController : Controller
         IDropPasswordHealthReportApplicationCommand dropPwdHealthReportAppCommand,
         IGetOrganizationReportQuery getOrganizationReportQuery,
         IAddOrganizationReportCommand addOrganizationReportCommand,
-        IDropOrganizationReportCommand dropOrganizationReportCommand
+        ILogger<ReportsController> logger
     )
     {
         _currentContext = currentContext;
@@ -47,7 +48,7 @@ public class ReportsController : Controller
         _dropPwdHealthReportAppCommand = dropPwdHealthReportAppCommand;
         _getOrganizationReportQuery = getOrganizationReportQuery;
         _addOrganizationReportCommand = addOrganizationReportCommand;
-        _dropOrganizationReportCommand = dropOrganizationReportCommand;
+        _logger = logger;
     }
 
     /// <summary>
@@ -86,30 +87,22 @@ public class ReportsController : Controller
     {
         if (!await _currentContext.AccessReports(orgId))
         {
+            _logger.LogInformation(Constants.BypassFiltersEventId,
+                "AccessReports Check - UserId: {userId} OrgId: {orgId} DeviceType: {deviceType}",
+                _currentContext.UserId, orgId, _currentContext.DeviceType);
             throw new NotFoundException();
         }
 
-        var accessDetails = await GetMemberAccessDetails(new MemberAccessReportRequest { OrganizationId = orgId });
+        _logger.LogInformation(Constants.BypassFiltersEventId,
+            "MemberAccessReportQuery starts - UserId: {userId} OrgId: {orgId} DeviceType: {deviceType}",
+            _currentContext.UserId, orgId, _currentContext.DeviceType);
+
+        var accessDetails = await _memberAccessReportQuery
+            .GetMemberAccessReportsAsync(new MemberAccessReportRequest { OrganizationId = orgId });
 
         var responses = accessDetails.Select(x => new MemberAccessDetailReportResponseModel(x));
 
         return responses;
-    }
-
-    /// <summary>
-    /// Contains the organization member info, the cipher ids associated with the member,
-    /// and details on their collections, groups, and permissions
-    /// </summary>
-    /// <param name="request">Request parameters</param>
-    /// <returns>
-    ///     List of a user's permissions at a group and collection level as well as the number of ciphers
-    ///     associated with that group/collection
-    /// </returns>
-    private async Task<IEnumerable<MemberAccessReportDetail>> GetMemberAccessDetails(
-        MemberAccessReportRequest request)
-    {
-        var accessDetails = await _memberAccessReportQuery.GetMemberAccessReportsAsync(request);
-        return accessDetails;
     }
 
     /// <summary>
@@ -212,73 +205,5 @@ public class ReportsController : Controller
         }
 
         await _dropPwdHealthReportAppCommand.DropPasswordHealthReportApplicationAsync(request);
-    }
-
-    /// <summary>
-    /// Adds a new organization report
-    /// </summary>
-    /// <param name="request">A single instance of AddOrganizationReportRequest</param>
-    /// <returns>A single instance of OrganizationReport</returns>
-    /// <exception cref="NotFoundException">If user does not have access to the organization</exception>
-    /// <exception cref="BadRequestException">If the organization Id is not valid</exception>
-    [HttpPost("organization-reports")]
-    public async Task<OrganizationReport> AddOrganizationReport([FromBody] AddOrganizationReportRequest request)
-    {
-        if (!await _currentContext.AccessReports(request.OrganizationId))
-        {
-            throw new NotFoundException();
-        }
-        return await _addOrganizationReportCommand.AddOrganizationReportAsync(request);
-    }
-
-    /// <summary>
-    /// Drops organization reports for an organization
-    /// </summary>
-    /// <param name="request">A single instance of DropOrganizationReportRequest</param>
-    /// <returns></returns>
-    /// <exception cref="NotFoundException">If user does not have access to the organization</exception>
-    /// <exception cref="BadRequestException">If the organization does not have any records</exception>
-    [HttpDelete("organization-reports")]
-    public async Task DropOrganizationReport([FromBody] DropOrganizationReportRequest request)
-    {
-        if (!await _currentContext.AccessReports(request.OrganizationId))
-        {
-            throw new NotFoundException();
-        }
-        await _dropOrganizationReportCommand.DropOrganizationReportAsync(request);
-    }
-
-    /// <summary>
-    /// Gets organization reports for an organization
-    /// </summary>
-    /// <param name="orgId">A valid Organization Id</param>
-    /// <returns>An Enumerable of OrganizationReport</returns>
-    /// <exception cref="NotFoundException">If user does not have access to the organization</exception>
-    /// <exception cref="BadRequestException">If the organization Id is not valid</exception>
-    [HttpGet("organization-reports/{orgId}")]
-    public async Task<IEnumerable<OrganizationReport>> GetOrganizationReports(Guid orgId)
-    {
-        if (!await _currentContext.AccessReports(orgId))
-        {
-            throw new NotFoundException();
-        }
-        return await _getOrganizationReportQuery.GetOrganizationReportAsync(orgId);
-    }
-
-    /// <summary>
-    /// Gets the latest organization report for an organization
-    /// </summary>
-    /// <param name="orgId">A valid Organization Id</param>
-    /// <returns>A single instance of OrganizationReport</returns>
-    /// <exception cref="NotFoundException">If user does not have access to the organization</exception>
-    /// <exception cref="BadRequestException">If the organization Id is not valid</exception>
-    [HttpGet("organization-reports/latest/{orgId}")]
-    public async Task<OrganizationReport> GetLatestOrganizationReport(Guid orgId)
-    {
-        if (!await _currentContext.AccessReports(orgId))
-        {
-            throw new NotFoundException();
-        }
-        return await _getOrganizationReportQuery.GetLatestOrganizationReportAsync(orgId);
     }
 }

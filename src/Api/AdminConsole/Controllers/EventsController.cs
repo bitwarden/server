@@ -5,9 +5,12 @@ using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Vault.Repositories;
 using Microsoft.AspNetCore.Authorization;
@@ -25,6 +28,10 @@ public class EventsController : Controller
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IEventRepository _eventRepository;
     private readonly ICurrentContext _currentContext;
+    private readonly ISecretRepository _secretRepository;
+    private readonly IProjectRepository _projectRepository;
+    private readonly IServiceAccountRepository _serviceAccountRepository;
+
 
     public EventsController(
         IUserService userService,
@@ -32,7 +39,10 @@ public class EventsController : Controller
         IOrganizationUserRepository organizationUserRepository,
         IProviderUserRepository providerUserRepository,
         IEventRepository eventRepository,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        ISecretRepository secretRepository,
+        IProjectRepository projectRepository,
+        IServiceAccountRepository serviceAccountRepository)
     {
         _userService = userService;
         _cipherRepository = cipherRepository;
@@ -40,6 +50,9 @@ public class EventsController : Controller
         _providerUserRepository = providerUserRepository;
         _eventRepository = eventRepository;
         _currentContext = currentContext;
+        _secretRepository = secretRepository;
+        _projectRepository = projectRepository;
+        _serviceAccountRepository = serviceAccountRepository;
     }
 
     [HttpGet("")]
@@ -104,6 +117,128 @@ public class EventsController : Controller
         return new ListResponseModel<EventResponseModel>(responses, result.ContinuationToken);
     }
 
+    [HttpGet("~/organization/{orgId}/secrets/{id}/events")]
+    public async Task<ListResponseModel<EventResponseModel>> GetSecrets(
+        Guid id, Guid orgId,
+        [FromQuery] DateTime? start = null,
+        [FromQuery] DateTime? end = null,
+        [FromQuery] string continuationToken = null)
+    {
+        if (id == Guid.Empty || orgId == Guid.Empty)
+        {
+            throw new NotFoundException();
+        }
+
+        var secret = await _secretRepository.GetByIdAsync(id);
+        var orgIdForVerification = secret?.OrganizationId ?? orgId;
+        var secretOrg = _currentContext.GetOrganization(orgIdForVerification);
+
+        if (secretOrg == null || !await _currentContext.AccessEventLogs(secretOrg.Id))
+        {
+            throw new NotFoundException();
+        }
+
+        bool canViewLogs = false;
+
+        if (secret == null)
+        {
+            secret = new Core.SecretsManager.Entities.Secret { Id = id, OrganizationId = orgId };
+            canViewLogs = secretOrg.Type is Core.Enums.OrganizationUserType.Admin or Core.Enums.OrganizationUserType.Owner;
+        }
+        else
+        {
+            canViewLogs = await CanViewSecretsLogs(secret);
+        }
+
+        if (!canViewLogs)
+        {
+            throw new NotFoundException();
+        }
+
+        var (fromDate, toDate) = ApiHelpers.GetDateRange(start, end);
+        var result = await _eventRepository.GetManyBySecretAsync(secret, fromDate, toDate, new PageOptions { ContinuationToken = continuationToken });
+        var responses = result.Data.Select(e => new EventResponseModel(e));
+        return new ListResponseModel<EventResponseModel>(responses, result.ContinuationToken);
+    }
+
+    [HttpGet("~/organization/{orgId}/projects/{id}/events")]
+    public async Task<ListResponseModel<EventResponseModel>> GetProjects(
+        Guid id,
+        Guid orgId,
+        [FromQuery] DateTime? start = null,
+        [FromQuery] DateTime? end = null,
+        [FromQuery] string continuationToken = null)
+    {
+        if (id == Guid.Empty || orgId == Guid.Empty)
+        {
+            throw new NotFoundException();
+        }
+
+        var project = await GetProject(id, orgId);
+        await ValidateOrganization(project);
+
+        var (fromDate, toDate) = ApiHelpers.GetDateRange(start, end);
+        var result = await _eventRepository.GetManyByProjectAsync(
+            project,
+            fromDate,
+            toDate,
+            new PageOptions { ContinuationToken = continuationToken });
+
+        var responses = result.Data.Select(e => new EventResponseModel(e));
+        return new ListResponseModel<EventResponseModel>(responses, result.ContinuationToken);
+    }
+
+    [HttpGet("~/organization/{orgId}/service-account/{id}/events")]
+    public async Task<ListResponseModel<EventResponseModel>> GetServiceAccounts(
+       Guid orgId,
+       Guid id,
+       [FromQuery] DateTime? start = null,
+       [FromQuery] DateTime? end = null,
+       [FromQuery] string continuationToken = null)
+    {
+        if (id == Guid.Empty || orgId == Guid.Empty)
+        {
+            throw new NotFoundException();
+        }
+
+        var serviceAccount = await GetServiceAccount(id, orgId);
+        var org = _currentContext.GetOrganization(orgId);
+
+        if (org == null || !await _currentContext.AccessEventLogs(org.Id))
+        {
+            throw new NotFoundException();
+        }
+
+        var (fromDate, toDate) = ApiHelpers.GetDateRange(start, end);
+        var result = await _eventRepository.GetManyByOrganizationServiceAccountAsync(
+            serviceAccount.OrganizationId,
+            serviceAccount.Id,
+            fromDate,
+            toDate,
+            new PageOptions { ContinuationToken = continuationToken });
+
+        var responses = result.Data.Select(e => new EventResponseModel(e));
+        return new ListResponseModel<EventResponseModel>(responses, result.ContinuationToken);
+    }
+
+    [ApiExplorerSettings(IgnoreApi = true)]
+    private async Task<ServiceAccount> GetServiceAccount(Guid serviceAccountId, Guid orgId)
+    {
+        var serviceAccount = await _serviceAccountRepository.GetByIdAsync(serviceAccountId);
+        if (serviceAccount != null)
+        {
+            return serviceAccount;
+        }
+
+        var fallbackServiceAccount = new ServiceAccount
+        {
+            Id = serviceAccountId,
+            OrganizationId = orgId
+        };
+
+        return fallbackServiceAccount;
+    }
+
     [HttpGet("~/organizations/{orgId}/users/{id}/events")]
     public async Task<ListResponseModel<EventResponseModel>> GetOrganizationUser(string orgId, string id,
         [FromQuery] DateTime? start = null, [FromQuery] DateTime? end = null, [FromQuery] string continuationToken = null)
@@ -156,5 +291,49 @@ public class EventsController : Controller
             new PageOptions { ContinuationToken = continuationToken });
         var responses = result.Data.Select(e => new EventResponseModel(e));
         return new ListResponseModel<EventResponseModel>(responses, result.ContinuationToken);
+    }
+
+    [ApiExplorerSettings(IgnoreApi = true)]
+    private async Task ValidateOrganization(Project project)
+    {
+        var org = _currentContext.GetOrganization(project.OrganizationId);
+
+        if (org == null || !await _currentContext.AccessEventLogs(org.Id))
+        {
+            throw new NotFoundException();
+        }
+    }
+
+    [ApiExplorerSettings(IgnoreApi = true)]
+    private async Task<Project> GetProject(Guid projectGuid, Guid orgGuid)
+    {
+        var project = await _projectRepository.GetByIdAsync(projectGuid);
+        if (project != null)
+        {
+            return project;
+        }
+
+        var fallbackProject = new Project
+        {
+            Id = projectGuid,
+            OrganizationId = orgGuid
+        };
+
+        return fallbackProject;
+    }
+
+    [ApiExplorerSettings(IgnoreApi = true)]
+    private async Task<bool> CanViewSecretsLogs(Secret secret)
+    {
+        if (!_currentContext.AccessSecretsManager(secret.OrganizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        var userId = _userService.GetProperUserId(User)!.Value;
+        var isAdmin = await _currentContext.OrganizationAdmin(secret.OrganizationId);
+        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.IdentityClientType, isAdmin);
+        var access = await _secretRepository.AccessToSecretAsync(secret.Id, userId, accessClient);
+        return access.Read;
     }
 }

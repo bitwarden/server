@@ -1,5 +1,4 @@
-﻿#nullable enable
-using OneOf;
+﻿using OneOf;
 
 namespace Bit.Core.Billing.Commands;
 
@@ -20,12 +19,38 @@ public record Unhandled(Exception? Exception = null, string Response = "Somethin
 /// </remarks>
 /// </summary>
 /// <typeparam name="T">The successful result type of the operation.</typeparam>
-public class BillingCommandResult<T> : OneOfBase<T, BadRequest, Conflict, Unhandled>
+public class BillingCommandResult<T>(OneOf<T, BadRequest, Conflict, Unhandled> input)
+    : OneOfBase<T, BadRequest, Conflict, Unhandled>(input)
 {
-    private BillingCommandResult(OneOf<T, BadRequest, Conflict, Unhandled> input) : base(input) { }
-
     public static implicit operator BillingCommandResult<T>(T output) => new(output);
     public static implicit operator BillingCommandResult<T>(BadRequest badRequest) => new(badRequest);
     public static implicit operator BillingCommandResult<T>(Conflict conflict) => new(conflict);
     public static implicit operator BillingCommandResult<T>(Unhandled unhandled) => new(unhandled);
+
+    public BillingCommandResult<TResult> Map<TResult>(Func<T, TResult> f)
+        => Match(
+            value => new BillingCommandResult<TResult>(f(value)),
+            badRequest => new BillingCommandResult<TResult>(badRequest),
+            conflict => new BillingCommandResult<TResult>(conflict),
+            unhandled => new BillingCommandResult<TResult>(unhandled));
+
+    public Task TapAsync(Func<T, Task> f) => Match(
+        f,
+        _ => Task.CompletedTask,
+        _ => Task.CompletedTask,
+        _ => Task.CompletedTask);
+}
+
+public static class BillingCommandResultExtensions
+{
+    public static async Task<BillingCommandResult<TResult>> AndThenAsync<T, TResult>(
+        this Task<BillingCommandResult<T>> task, Func<T, Task<BillingCommandResult<TResult>>> binder)
+    {
+        var result = await task;
+        return await result.Match(
+            binder,
+            badRequest => Task.FromResult(new BillingCommandResult<TResult>(badRequest)),
+            conflict => Task.FromResult(new BillingCommandResult<TResult>(conflict)),
+            unhandled => Task.FromResult(new BillingCommandResult<TResult>(unhandled)));
+    }
 }

@@ -5,13 +5,13 @@ using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Core.AdminConsole.Models.OrganizationConnectionConfigs;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationConnections.Interfaces;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -140,7 +140,6 @@ public class OrganizationConnectionsController : Controller
     }
 
     [HttpDelete("{organizationConnectionId}")]
-    [HttpPost("{organizationConnectionId}/delete")]
     public async Task DeleteConnection(Guid organizationConnectionId)
     {
         var connection = await _organizationConnectionRepository.GetByIdAsync(organizationConnectionId);
@@ -156,6 +155,13 @@ public class OrganizationConnectionsController : Controller
         }
 
         await _deleteOrganizationConnectionCommand.DeleteAsync(connection);
+    }
+
+    [HttpPost("{organizationConnectionId}/delete")]
+    [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
+    public async Task PostDeleteConnection(Guid organizationConnectionId)
+    {
+        await DeleteConnection(organizationConnectionId);
     }
 
     private async Task<ICollection<OrganizationConnection>> GetConnectionsAsync(Guid organizationId, OrganizationConnectionType type) =>
