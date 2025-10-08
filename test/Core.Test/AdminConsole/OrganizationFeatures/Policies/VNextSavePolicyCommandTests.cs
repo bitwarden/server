@@ -89,6 +89,7 @@ public class VNextSavePolicyCommandTests
             .GetManyByOrganizationIdAsync(policyUpdate.OrganizationId)
             .Returns([currentPolicy]);
 
+        // Act
         await sutProvider.Sut.SaveAsync(savePolicyModel);
 
         // Assert
@@ -114,6 +115,7 @@ public class VNextSavePolicyCommandTests
     [Fact]
     public void Constructor_DuplicatePolicyDependencyEvents_Throws()
     {
+        // Arrange & Act
         var exception = Assert.Throws<Exception>(() =>
             new VNextSavePolicyCommand(
                 Substitute.For<IApplicationCacheService>(),
@@ -122,6 +124,8 @@ public class VNextSavePolicyCommandTests
                 [new FakeSingleOrgDependencyEvent(), new FakeSingleOrgDependencyEvent()],
                 Substitute.For<TimeProvider>(),
                 Substitute.For<IPolicyEventHandlerFactory>()));
+
+        // Assert
         Assert.Contains("Duplicate PolicyValidationEvent for SingleOrg policy", exception.Message);
     }
 
@@ -148,6 +152,7 @@ public class VNextSavePolicyCommandTests
     [Theory, BitAutoData]
     public async Task SaveAsync_OrganizationCannotUsePolicies_ThrowsBadRequest([PolicyUpdate(PolicyType.ActivateAutofill)] PolicyUpdate policyUpdate)
     {
+        // Arrange
         var sutProvider = SutProviderFactory();
         var savePolicyModel = new SavePolicyModel(policyUpdate, null, new EmptyMetadataModel());
 
@@ -159,9 +164,11 @@ public class VNextSavePolicyCommandTests
                 UsePolicies = false
             });
 
+        // Act
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(savePolicyModel));
 
+        // Assert
         Assert.Contains("cannot use policies", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
         await AssertPolicyNotSavedAsync(sutProvider);
     }
@@ -274,6 +281,7 @@ public class VNextSavePolicyCommandTests
         [Policy(PolicyType.SingleOrg)] Policy currentPolicy,
         [Policy(PolicyType.RequireSso)] Policy requireSsoPolicy)
     {
+        // Arrange
         var sutProvider = SutProviderFactory(
             [
                 new FakeRequireSsoDependencyEvent(),
@@ -287,9 +295,11 @@ public class VNextSavePolicyCommandTests
             .GetManyByOrganizationIdAsync(policyUpdate.OrganizationId)
             .Returns([currentPolicy, requireSsoPolicy]);
 
+        // Act
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(savePolicyModel));
 
+        // Assert
         Assert.Contains("Turn off the Require single sign-on authentication policy because it requires the Single organization policy", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
         await AssertPolicyNotSavedAsync(sutProvider);
     }
@@ -301,6 +311,7 @@ public class VNextSavePolicyCommandTests
         [Policy(PolicyType.RequireSso)] Policy requireSsoPolicy,
         [Policy(PolicyType.MaximumVaultTimeout)] Policy vaultTimeoutPolicy)
     {
+        // Arrange
         var sutProvider = SutProviderFactory(
             [
                 new FakeRequireSsoDependencyEvent(),
@@ -315,9 +326,11 @@ public class VNextSavePolicyCommandTests
             .GetManyByOrganizationIdAsync(policyUpdate.OrganizationId)
             .Returns([currentPolicy, requireSsoPolicy, vaultTimeoutPolicy]);
 
+        // Act
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(savePolicyModel));
 
+        // Assert
         Assert.Contains("Turn off all of the policies that require the Single organization policy", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
         await AssertPolicyNotSavedAsync(sutProvider);
     }
@@ -328,6 +341,7 @@ public class VNextSavePolicyCommandTests
         [Policy(PolicyType.SingleOrg)] Policy currentPolicy,
         [Policy(PolicyType.RequireSso, false)] Policy requireSsoPolicy)
     {
+        // Arrange
         var sutProvider = SutProviderFactory(
             [
                 new FakeRequireSsoDependencyEvent(),
@@ -341,14 +355,17 @@ public class VNextSavePolicyCommandTests
             .GetManyByOrganizationIdAsync(policyUpdate.OrganizationId)
             .Returns([currentPolicy, requireSsoPolicy]);
 
+        // Act
         await sutProvider.Sut.SaveAsync(savePolicyModel);
 
+        // Assert
         await AssertPolicySavedAsync(sutProvider, policyUpdate);
     }
 
     [Theory, BitAutoData]
     public async Task SaveAsync_ThrowsOnValidationError([PolicyUpdate(PolicyType.SingleOrg)] PolicyUpdate policyUpdate)
     {
+        // Arrange
         var fakePolicyValidationEvent = new FakeSingleOrgValidationEvent();
         fakePolicyValidationEvent.ValidateAsyncMock(Arg.Any<SavePolicyModel>(), Arg.Any<Policy>()).Returns("Validation error!");
         var sutProvider = SutProviderFactory(
@@ -367,9 +384,11 @@ public class VNextSavePolicyCommandTests
         ArrangeOrganization(sutProvider, policyUpdate);
         sutProvider.GetDependency<IPolicyRepository>().GetManyByOrganizationIdAsync(policyUpdate.OrganizationId).Returns([singleOrgPolicy]);
 
+        // Act
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(savePolicyModel));
 
+        // Assert
         Assert.Contains("Validation error!", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
         await AssertPolicyNotSavedAsync(sutProvider);
     }
