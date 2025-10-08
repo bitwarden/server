@@ -9,68 +9,59 @@ using Bit.Core.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
 
-public class VNextSavePolicyCommand : IVNextSavePolicyCommand
+public class VNextSavePolicyCommand(
+    IApplicationCacheService applicationCacheService,
+    IEventService eventService,
+    IPolicyRepository policyRepository,
+    IEnumerable<IEnforceDependentPoliciesEvent> policyValidationEventHandlers,
+    TimeProvider timeProvider,
+    IPolicyEventHandlerFactory policyEventHandlerFactory)
+    : IVNextSavePolicyCommand
 {
-    private readonly IApplicationCacheService _applicationCacheService;
-    private readonly IEventService _eventService;
-    private readonly IPolicyRepository _policyRepository;
-    private readonly IReadOnlyDictionary<PolicyType, IPolicyValidator> _policyValidators;
-    private readonly TimeProvider _timeProvider;
-    private readonly IPolicyEventHandlerFactory _policyEventHandlerFactory;
+    private readonly IReadOnlyDictionary<PolicyType, IEnforceDependentPoliciesEvent> _policyValidationEvents = MapToDictionary(policyValidationEventHandlers);
 
-    public VNextSavePolicyCommand(
-        IApplicationCacheService applicationCacheService,
-        IEventService eventService,
-        IPolicyRepository policyRepository,
-        IEnumerable<IPolicyValidator> policyValidators,
-        TimeProvider timeProvider,
-        IPolicyEventHandlerFactory policyEventHandlerFactory)
+    private static Dictionary<PolicyType, IEnforceDependentPoliciesEvent> MapToDictionary(IEnumerable<IEnforceDependentPoliciesEvent> policyValidationEventHandlers)
     {
-        _applicationCacheService = applicationCacheService;
-        _eventService = eventService;
-        _policyRepository = policyRepository;
-        _timeProvider = timeProvider;
-        _policyEventHandlerFactory = policyEventHandlerFactory;
-
-        var policyValidatorsDict = new Dictionary<PolicyType, IPolicyValidator>();
-        foreach (var policyValidator in policyValidators)
+        var policyValidationEventsDict = new Dictionary<PolicyType, IEnforceDependentPoliciesEvent>();
+        foreach (var policyValidationEvent in policyValidationEventHandlers)
         {
-            if (!policyValidatorsDict.TryAdd(policyValidator.Type, policyValidator))
+            if (!policyValidationEventsDict.TryAdd(policyValidationEvent.Type, policyValidationEvent))
             {
-                throw new Exception($"Duplicate PolicyValidator for {policyValidator.Type} policy.");
+                throw new Exception($"Duplicate PolicyValidationEvent for {policyValidationEvent.Type} policy.");
             }
         }
-
-        _policyValidators = policyValidatorsDict;
+        return policyValidationEventsDict;
     }
 
     public async Task<Policy> SaveAsync(SavePolicyModel policyRequest)
     {
         var policyUpdateRequest = policyRequest.PolicyUpdate;
+        var organizationId = policyUpdateRequest.OrganizationId;
 
-        await EnsureOrganizationCanUsePolicyAsync(policyUpdateRequest.OrganizationId);
+        await EnsureOrganizationCanUsePolicyAsync(organizationId);
 
-        var (savedPoliciesDict, currentPolicy) = await GetCurrentPolicyStateAsync(policyUpdateRequest);
+        var savedPoliciesDict = await GetCurrentPolicyStateAsync(organizationId);
+
+        var currentPolicy = savedPoliciesDict.GetValueOrDefault(policyUpdateRequest.Type);
 
         ValidatePolicyDependencies(policyUpdateRequest, currentPolicy, savedPoliciesDict);
 
-        await ValidateTargetedPolicyAsync(policyUpdateRequest, currentPolicy);
+        await ValidateTargetedPolicyAsync(policyRequest, currentPolicy);
 
         await ExecutePreUpsertSideEffectAsync(policyRequest, currentPolicy);
 
         var upsertedPolicy = await UpsertPolicyAsync(policyUpdateRequest);
 
-        await _eventService.LogPolicyEventAsync(upsertedPolicy, EventType.Policy_Updated);
+        await eventService.LogPolicyEventAsync(upsertedPolicy, EventType.Policy_Updated);
 
         await ExecutePostUpsertSideEffectAsync(policyRequest, upsertedPolicy, currentPolicy);
-
 
         return upsertedPolicy;
     }
 
     private async Task EnsureOrganizationCanUsePolicyAsync(Guid organizationId)
     {
-        var org = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
+        var org = await applicationCacheService.GetOrganizationAbilityAsync(organizationId);
         if (org == null)
         {
             throw new BadRequestException("Organization not found");
@@ -84,31 +75,31 @@ public class VNextSavePolicyCommand : IVNextSavePolicyCommand
 
     private async Task<Policy> UpsertPolicyAsync(PolicyUpdate policyUpdateRequest)
     {
-        var policy = await _policyRepository.GetByOrganizationIdTypeAsync(policyUpdateRequest.OrganizationId, policyUpdateRequest.Type)
+        var policy = await policyRepository.GetByOrganizationIdTypeAsync(policyUpdateRequest.OrganizationId, policyUpdateRequest.Type)
                      ?? new Policy
                      {
                          OrganizationId = policyUpdateRequest.OrganizationId,
                          Type = policyUpdateRequest.Type,
-                         CreationDate = _timeProvider.GetUtcNow().UtcDateTime
+                         CreationDate = timeProvider.GetUtcNow().UtcDateTime
                      };
 
         policy.Enabled = policyUpdateRequest.Enabled;
         policy.Data = policyUpdateRequest.Data;
-        policy.RevisionDate = _timeProvider.GetUtcNow().UtcDateTime;
+        policy.RevisionDate = timeProvider.GetUtcNow().UtcDateTime;
 
-        await _policyRepository.UpsertAsync(policy);
+        await policyRepository.UpsertAsync(policy);
 
         return policy;
     }
 
-    private async Task ValidateTargetedPolicyAsync(PolicyUpdate policyUpdateRequest,
+    private async Task ValidateTargetedPolicyAsync(SavePolicyModel policyRequest,
         Policy? currentPolicy)
     {
         await ExecutePolicyEventAsync<IPolicyValidationEvent>(
             currentPolicy!.Type,
             async validator =>
             {
-                var validationError = await validator.ValidateAsync(policyUpdateRequest, currentPolicy);
+                var validationError = await validator.ValidateAsync(policyRequest, currentPolicy);
                 if (!string.IsNullOrEmpty(validationError))
                 {
                     throw new BadRequestException(validationError);
@@ -116,10 +107,12 @@ public class VNextSavePolicyCommand : IVNextSavePolicyCommand
             });
     }
 
-    private void ValidatePolicyDependencies(PolicyUpdate policyUpdateRequest, Policy? currentPolicy,
+    private void ValidatePolicyDependencies(
+        PolicyUpdate policyUpdateRequest,
+        Policy? currentPolicy,
         Dictionary<PolicyType, Policy> savedPoliciesDict)
     {
-        var result = _policyEventHandlerFactory.GetHandler<IEnforceDependentPoliciesEvent>(currentPolicy!.Type);
+        var result = policyEventHandlerFactory.GetHandler<IEnforceDependentPoliciesEvent>(currentPolicy!.Type);
 
         result.Switch(
             validator =>
@@ -127,23 +120,23 @@ public class VNextSavePolicyCommand : IVNextSavePolicyCommand
                 if (policyUpdateRequest.Enabled)
                 {
                     ValidateEnablingRequirements(validator, currentPolicy, savedPoliciesDict);
+                    return;
                 }
-                else
-                {
-                    ValidateDisablingRequirements(validator, policyUpdateRequest, currentPolicy, savedPoliciesDict);
-                }
+                if (currentPolicy is not { Enabled: true })
+                    return;
+
+                ValidateDisablingRequirements(validator, policyUpdateRequest.Type, savedPoliciesDict);
             },
             _ => { });
     }
 
-    private void ValidateDisablingRequirements(IEnforceDependentPoliciesEvent validator, PolicyUpdate policyUpdate,
-        Policy? currentPolicy, Dictionary<PolicyType, Policy> savedPoliciesDict)
+    private void ValidateDisablingRequirements(
+        IEnforceDependentPoliciesEvent validator,
+        PolicyType policyType,
+        Dictionary<PolicyType, Policy> savedPoliciesDict)
     {
-        if (currentPolicy is not { Enabled: true })
-            return;
-
-        var dependentPolicyTypes = _policyValidators.Values
-            .Where(otherValidator => otherValidator.RequiredPolicies.Contains(policyUpdate.Type))
+        var dependentPolicyTypes = _policyValidationEvents.Values
+            .Where(otherValidator => otherValidator.RequiredPolicies.Contains(policyType))
             .Select(otherValidator => otherValidator.Type)
             .Where(otherPolicyType => savedPoliciesDict.TryGetValue(otherPolicyType, out var savedPolicy) &&
                                       savedPolicy.Enabled)
@@ -195,7 +188,7 @@ public class VNextSavePolicyCommand : IVNextSavePolicyCommand
 
     private async Task ExecutePolicyEventAsync<T>(PolicyType type, Func<T, Task> func) where T : IPolicyUpdateEvent
     {
-        var handler = _policyEventHandlerFactory.GetHandler<T>(type);
+        var handler = policyEventHandlerFactory.GetHandler<T>(type);
 
         await handler.Match(
             async h => await func(h),
@@ -203,14 +196,11 @@ public class VNextSavePolicyCommand : IVNextSavePolicyCommand
         );
     }
 
-
-    private async Task<(Dictionary<PolicyType, Policy> savedPoliciesDict, Policy? currentPolicy)>
-        GetCurrentPolicyStateAsync(PolicyUpdate policyUpdate)
+    private async Task<Dictionary<PolicyType, Policy>> GetCurrentPolicyStateAsync(Guid organizationId)
     {
-        var savedPolicies = await _policyRepository.GetManyByOrganizationIdAsync(policyUpdate.OrganizationId);
+        var savedPolicies = await policyRepository.GetManyByOrganizationIdAsync(organizationId);
         // Note: policies may be missing from this dict if they have never been enabled
         var savedPoliciesDict = savedPolicies.ToDictionary(p => p.Type);
-        var currentPolicy = savedPoliciesDict.GetValueOrDefault(policyUpdate.Type);
-        return (savedPoliciesDict, currentPolicy);
+        return savedPoliciesDict;
     }
 }
