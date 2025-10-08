@@ -117,15 +117,17 @@ public class VNextSavePolicyCommand(
         result.Switch(
             validator =>
             {
-                if (policyUpdateRequest.Enabled)
-                {
-                    ValidateEnablingRequirements(validator, currentPolicy, savedPoliciesDict);
-                    return;
-                }
-                if (currentPolicy is not { Enabled: true })
-                    return;
+                var isCurrentlyEnabled = currentPolicy?.Enabled == true;
 
-                ValidateDisablingRequirements(validator, policyUpdateRequest.Type, savedPoliciesDict);
+                switch (policyUpdateRequest.Enabled)
+                {
+                    case true when !isCurrentlyEnabled:
+                        ValidateEnablingRequirements(validator, currentPolicy, savedPoliciesDict);
+                        return;
+                    case false when isCurrentlyEnabled:
+                        ValidateDisablingRequirements(validator, policyUpdateRequest.Type, savedPoliciesDict);
+                        break;
+                }
             },
             _ => { });
     }
@@ -151,10 +153,11 @@ public class VNextSavePolicyCommand(
         }
     }
 
-    private static void ValidateEnablingRequirements(IEnforceDependentPoliciesEvent validator, Policy? currentPolicy, Dictionary<PolicyType, Policy> savedPoliciesDict)
+    private static void ValidateEnablingRequirements(
+        IEnforceDependentPoliciesEvent validator,
+        Policy? currentPolicy,
+        Dictionary<PolicyType, Policy> savedPoliciesDict)
     {
-        if (currentPolicy is { Enabled: true }) return;
-
         var missingRequiredPolicyTypes = validator.RequiredPolicies
             .Where(requiredPolicyType => savedPoliciesDict.GetValueOrDefault(requiredPolicyType) is not { Enabled: true })
             .ToList();
