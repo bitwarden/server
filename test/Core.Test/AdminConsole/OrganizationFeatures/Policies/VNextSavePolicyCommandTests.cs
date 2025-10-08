@@ -24,7 +24,6 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies;
 public class VNextSavePolicyCommandTests
 {
     [Theory, BitAutoData]
-
     public async Task SaveAsync_NewPolicy_Success([PolicyUpdate(PolicyType.SingleOrg)] PolicyUpdate policyUpdate)
     {
         // Arrange
