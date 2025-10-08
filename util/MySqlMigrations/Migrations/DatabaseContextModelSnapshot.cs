@@ -78,6 +78,9 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("tinyint(1)")
                         .HasDefaultValue(true);
 
+                    b.Property<bool>("AutomaticUserConfirmation")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<string>("BillingEmail")
                         .IsRequired()
                         .HasMaxLength(256)
