@@ -310,10 +310,6 @@ public class CipherRequestModel
             ? new Dictionary<string, object>()
             : JsonSerializer.Deserialize<Dictionary<string, object>>(existingJson) ?? new Dictionary<string, object>();
 
-        // Remove the key from the value when:
-        // - new value is null
-        // - new value is an empty or whitespace string
-        // - new value is a boolean false
         var shouldRemove = newValue == null ||
                           (newValue is string strValue && string.IsNullOrWhiteSpace(strValue)) ||
                           (newValue is bool boolValue && !boolValue);
