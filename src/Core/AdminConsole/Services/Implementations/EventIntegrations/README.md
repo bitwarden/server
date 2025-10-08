@@ -203,31 +203,17 @@ Currently, there are integrations / handlers for Slack, webhooks, and HTTP Event
 
 - The top-level object that enables a specific integration for the organization.
 - Includes any properties that apply to the entire integration across all events.
-    - For Slack, it consists of the token: `{ "Token": "xoxb-token-from-slack" }`.
-    - For webhooks, it is optional. Webhooks can either be configured at this level or the configuration level,
-      but the configuration level takes precedence. However, even though it is optional, an organization must
-      have a webhook `OrganizationIntegration` (even will a `null` `Configuration`) to enable configuration
-      via `OrganizationIntegrationConfiguration`.
-    - For HEC, it consists of the scheme, token, and URI:
-
-```json
-    {
-      "Scheme": "Bearer",
-      "Token": "Auth-token-from-HEC-service",
-      "Uri": "https://example.com/api"
-    }
-```
+  - For example, Slack stores the token in the `Configuration` which applies to every event, but stores the
+channel id in the `Configuration` of the `OrganizationIntegrationConfiguration`. The token applies to the entire slack
+integration, but the channel could be configured differently depending on event type.
+  - See the table below for more examples / details on what is stored at which level.
 
 ### `OrganizationIntegrationConfiguration`
 
 - This contains the configurations specific to each `EventType` for the integration.
 - `Configuration` contains the event-specific configuration.
-    - For Slack, this would contain what channel to send the message to: `{ "channelId": "C123456" }`
-    - For webhooks, this is the URL the request should be sent to: `{ "url": "https://api.example.com" }`
-      - Optionally this also can include a `Scheme` and `Token` if this webhook needs Authentication.
-      - As stated above, all of this information can be specified here or at the `OrganizationIntegration`
-        level, but any properties declared here will take precedence over the ones above.
-    - For HEC, this must be null. HEC is configured only at the `OrganizationIntegration` level.
+    - Any properties at this level override the `Configuration` form the `OrganizationIntegration`.
+    - See the table below for examples of specific integrations.
 - `Template` contains a template string that is expected to be filled in with the contents of the actual event.
     - The tokens in the string are wrapped in `#` characters. For instance, the UserId would be `#UserId#`.
     - The `IntegrationTemplateProcessor` does the actual work of replacing these tokens with introspected values from
@@ -244,6 +230,23 @@ Currently, there are integrations / handlers for Slack, webhooks, and HTTP Event
   both will receive the value declared in `OrganizationIntegrationConfiguration`.
 - An array of `OrganizationIntegrationConfigurationDetails` is what the `EventIntegrationHandler` fetches from
   the database to determine what to publish at the integration level.
+
+### Existing integrations and the configurations at each level
+
+The following table illustrates how each integration is configured and what exactly is stored in the `Configuration`
+property at each level (`OrganizationIntegration` or `OrganizationIntegrationConfiguration`). Under
+`OrganizationIntegration` the valid `OrganizationIntegrationStatus` are in bold, with an example of what would be
+stored at each status.
+
+| **Integration**  | **OrganizationIntegration**                                                                                                                                                                                                                                                                 | **OrganizationIntegrationConfiguration**                                                                                                           |
+|------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
+| CloudBillingSync | **Not Applicable** (not yet used)                                                                                                                                                                                                                                                           | **Not Applicable** (not yet used)                                                                                                                  |
+| Scim             | **Not Applicable** (not yet used)                                                                                                                                                                                                                                                           | **Not Applicable** (not yet used)                                                                                                                  |
+| Slack            | **Initiated**: `null`<br/>**Completed**:<br/>`{ "Token": "xoxb-token-from-slack" }`                                                                                                                                                                                                         | `{ "channelId": "C123456" }`                                                                                                                       |
+| Webhook          | `null` or `{ "Scheme": "Bearer", "Token": "AUTH-TOKEN", "Uri": "https://example.com" }`                                                                                                                                                                                                     | `null` or `{ "Scheme": "Bearer", "Token":"AUTH-TOKEN", "Uri": "https://example.com" }`<br/><br/>Whatever is defined at this level takes precedence |
+| Hec              | `{ "Scheme": "Bearer", "Token": "AUTH-TOKEN", "Uri": "https://example.com" }`                                                                                                                                                                                                               | Always `null`                                                                                                                                      |
+| Datadog          | `{ "ApiKey": "TheKey12345", "Uri": "https://api.us5.datadoghq.com/api/v1/events"}`                                                                                                                                                                                                          | Always `null`                                                                                                                                      |
+| Teams            | **Initiated**: `null`<br/>**In Progress**: <br/> `{ "TenantID": "tenant", "Teams": ["Id": "team", DisplayName: "MyTeam"]}`<br/>**Completed**: <br/>`{ "TenantID": "tenant", "Teams": ["Id": "team", DisplayName: "MyTeam"], "ServiceUrl":"https://example.com", ChannelId: "channel-1234"}` | Always `null`                                                                                                                                      |
 
 ## Filtering
 
@@ -349,10 +352,20 @@ and event type.
     - This will be the deserialized version of the `MergedConfiguration` in
       `OrganizationIntegrationConfigurationDetails`.
 
+A new row with the new integration should be added to this doc in the table above [Existing integrations
+and the configurations at each level](#existing-integrations-and-the-configurations-at-each-level).
+
 ## Request Models
 
 1. Add a new case to the switch method in `OrganizationIntegrationRequestModel.Validate`.
+   - Additionally, add tests in `OrganizationIntegrationRequestModelTests`
 2. Add a new case to the switch method in `OrganizationIntegrationConfigurationRequestModel.IsValidForType`.
+    - Additionally, add / update tests in `OrganizationIntegrationConfigurationRequestModelTests`
+
+## Response Model
+
+1. Add a new case to the switch method in `OrganizationIntegrationResponseModel.Status`.
+    - Additionally, add / update tests in `OrganizationIntegrationResponseModelTests`
 
 ## Integration Handler
 

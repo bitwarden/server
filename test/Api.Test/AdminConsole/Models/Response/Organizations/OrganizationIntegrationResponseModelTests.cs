@@ -1,8 +1,11 @@
 ﻿#nullable enable
 
+using System.Text.Json;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.Enums;
+using Bit.Core.Models.Teams;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
 
@@ -70,10 +73,28 @@ public class OrganizationIntegrationResponseModelTests
     }
 
     [Theory, BitAutoData]
-    public void Status_Teams_WithConfig_ReturnsCompleted(OrganizationIntegration oi)
+    public void Status_Teams_WithTenantAndTeamsConfig_ReturnsInProgress(OrganizationIntegration oi)
     {
         oi.Type = IntegrationType.Teams;
-        oi.Configuration = "{}";
+        oi.Configuration = JsonSerializer.Serialize(new TeamsIntegration(
+            TenantId: "tenant", Teams: [new TeamInfo() { DisplayName = "Team", Id = "TeamId", TenantId = "tenant" }]
+        ));
+
+        var model = new OrganizationIntegrationResponseModel(oi);
+
+        Assert.Equal(OrganizationIntegrationStatus.InProgress, model.Status);
+    }
+
+    [Theory, BitAutoData]
+    public void Status_Teams_WithCompletedConfig_ReturnsCompleted(OrganizationIntegration oi)
+    {
+        oi.Type = IntegrationType.Teams;
+        oi.Configuration = JsonSerializer.Serialize(new TeamsIntegration(
+            TenantId: "tenant",
+            Teams: [new TeamInfo() { DisplayName = "Team", Id = "TeamId", TenantId = "tenant" }],
+            ServiceUrl: new Uri("https://example.com"),
+            ChannelId: "channellId"
+        ));
 
         var model = new OrganizationIntegrationResponseModel(oi);
 
