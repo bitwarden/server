@@ -111,6 +111,10 @@ public abstract class BaseRequestValidator<T> where T : class
             return;
         }
 
+        // TODO: ensure integration testing and then extract two factor logic into _twoFactorAuthenticationValidator.validate
+        // as step 1 so we can have confidence in changes for adding NDV soft lock
+        // Consider adding integration test for current brute force behavior
+
         // 3. Check if 2FA is required.
         (validatorContext.TwoFactorRequired, var twoFactorOrganization) =
             await _twoFactorAuthenticationValidator.RequiresTwoFactorAsync(user, request);
@@ -119,12 +123,19 @@ public abstract class BaseRequestValidator<T> where T : class
         // authentication is successful.
         var returnRememberMeToken = false;
 
+        // TODO: for resource owner password validator flows, we will always know known device status here
+        // because we have to look it up in that validator and add it to the context.
         if (validatorContext.TwoFactorRequired)
         {
             var twoFactorToken = request.Raw["TwoFactorToken"];
             var twoFactorProvider = request.Raw["TwoFactorProvider"];
             var validTwoFactorRequest = !string.IsNullOrWhiteSpace(twoFactorToken) &&
                                         !string.IsNullOrWhiteSpace(twoFactorProvider);
+
+            // TODO: we must check cache for for account authenticator 2FA failure count and see if past threshold to
+            // be considered soft locked.
+
+            // TODO: how do we get new device verification response here?
 
             // 3a. Response for 2FA required and not provided state.
             if (!validTwoFactorRequest ||
