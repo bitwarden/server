@@ -70,7 +70,16 @@ public enum EventType : int
     Organization_EnabledKeyConnector = 1606,
     Organization_DisabledKeyConnector = 1607,
     Organization_SponsorshipsSynced = 1608,
+    [Obsolete("Kept for historical data. Use specific Organization_CollectionManagement events instead.")]
     Organization_CollectionManagement_Updated = 1609,
+    Organization_CollectionManagement_LimitCollectionCreationEnabled = 1610,
+    Organization_CollectionManagement_LimitCollectionCreationDisabled = 1611,
+    Organization_CollectionManagement_LimitCollectionDeletionEnabled = 1612,
+    Organization_CollectionManagement_LimitCollectionDeletionDisabled = 1613,
+    Organization_CollectionManagement_LimitItemDeletionEnabled = 1614,
+    Organization_CollectionManagement_LimitItemDeletionDisabled = 1615,
+    Organization_CollectionManagement_AllowAdminAccessToAllCollectionItemsEnabled = 1616,
+    Organization_CollectionManagement_AllowAdminAccessToAllCollectionItemsDisabled = 1617,
 
     Policy_Updated = 1700,
 
@@ -100,4 +109,11 @@ public enum EventType : int
     Project_Created = 2201,
     Project_Edited = 2202,
     Project_Deleted = 2203,
+
+    ServiceAccount_UserAdded = 2300,
+    ServiceAccount_UserRemoved = 2301,
+    ServiceAccount_GroupAdded = 2302,
+    ServiceAccount_GroupRemoved = 2303,
+    ServiceAccount_Created = 2304,
+    ServiceAccount_Deleted = 2305,
 }

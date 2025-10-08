@@ -1000,6 +1000,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ApplicationData")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("ContentEncryptionKey")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -1007,14 +1010,17 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime>("Date")
-                        .HasColumnType("TEXT");
-
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ReportData")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("RevisionDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SummaryData")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -1265,6 +1271,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<string>("DomainName")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("GrantedServiceAccountId")
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid?>("GroupId")
                         .HasColumnType("TEXT");
 
@@ -1311,10 +1320,13 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<Guid?>("UserId")
                         .HasColumnType("TEXT");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasAnnotation("SqlServer:Clustered", true);
 
                     b.HasIndex("Date", "OrganizationId", "ActingUserId", "CipherId")
-                        .HasAnnotation("SqlServer:Clustered", false);
+                        .HasDatabaseName("IX_Event_DateOrganizationIdUserId")
+                        .HasAnnotation("SqlServer:Clustered", false)
+                        .HasAnnotation("SqlServer:Include", new[] { "ServiceAccountId", "GrantedServiceAccountId" });
 
                     b.ToTable("Event", (string)null);
                 });
@@ -2165,6 +2177,9 @@ namespace Bit.SqliteMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Vault.Models.Cipher", b =>
                 {
                     b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ArchivedDate")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Attachments")
