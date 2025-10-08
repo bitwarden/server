@@ -15,12 +15,10 @@
   },
   "homepage": "https://bitwarden.com",
   "scripts": {
-    "build": "powershell ./build.ps1",
-    "build:watch": "powershell ./build.ps1 -Watch",
-    "build:clean": "powershell ./build.ps1 -Clean",
-    "build:hbs": "powershell ./build.ps1 -HbsOutput",
-    "build:clean:hbs": "powershell ./build.ps1 -Clean -HbsOutput",
-    "build:watch:hbs": "powershell ./build.ps1 -Watch -HbsOutput",
+    "build": "node ./build.js",
+    "build:hbs": "node ./build.js --hbs",
+    "build:minify": "node ./build.js --hbs --minify",
+    "build:watch": "nodemon ./build.js --watch emails --watch components --ext mjml,js",
     "prettier": "prettier --cache --write ."
   },
   "dependencies": {

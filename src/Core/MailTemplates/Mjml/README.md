@@ -18,26 +18,23 @@ There is no change to how we create the `txt.hbs`. MJML does not impact how we c
 
 ## Building `MJML` files
 
-```powershell
+```shell
 npm ci
 
-# Build once, output is the ./out directory
+# Build *.html, output is the ./out directory
 npm run build
 
-# To build on changes to *.mjml and *.js files, new *.js/*.mjml files will not be tracked, you will need to run again
+# To build on changes to *.mjml and *.js files, new files will not be tracked, you will need to run again
 npm run build:watch
 
-# clean ./out directory
-npm run build:clean
-
-# Build *.html.hbs once, output is the ./out-hbs directory
+# Build *.html.hbs once, output is the ./out directory
 npm run build:hbs
 
-# To build on changes to *.mjml and *.js files, new *.js/*.mjml files will not be tracked, you will need to run again
-npm run build:watch:hbs
+# Build *.html.hbs in a minified ./out directory
+npm run build:minify
 
-# clean ./out-hbs directory
-npm run build:clean:hbs
+# apply prettier formatting to all files
+npm run prettier
 ```
 
 ## Development
@@ -61,7 +58,7 @@ Not all MJML tags have the same attributes, it is highly recommended to review t
 
 After the email is developed from the [initial step](#initial-email-development-might-look-something-like) you'll probably want to make sure the email `{{variables}}` are populated properly by running it through an `IMailService`.
 
-1. run `npm run build:hbs`
+1. run `npm run build:minify`
 2. copy built `*.html.hbs` files from the build directory to a location the mail service can consume them
 
 ### Custom tags
