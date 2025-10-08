@@ -204,7 +204,7 @@ Currently, there are integrations / handlers for Slack, webhooks, and HTTP Event
 - The top-level object that enables a specific integration for the organization.
 - Includes any properties that apply to the entire integration across all events.
   - For example, Slack stores the token in the `Configuration` which applies to every event, but stores the
-channel id in the `Configuration` of the `OrganizationIntegrationConfiguration`. The token applies to the entire slack
+channel id in the `Configuration` of the `OrganizationIntegrationConfiguration`. The token applies to the entire Slack
 integration, but the channel could be configured differently depending on event type.
   - See the table below for more examples / details on what is stored at which level.
 
