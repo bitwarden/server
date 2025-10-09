@@ -53,12 +53,31 @@ BEGIN
 END
 GO
 
--- Ensure index exists
 IF NOT EXISTS (
     SELECT 1 FROM sys.indexes WHERE name = 'IX_SecretVersion_SecretId' AND object_id = OBJECT_ID('[dbo].[SecretVersion]')
 )
 BEGIN
     CREATE NONCLUSTERED INDEX [IX_SecretVersion_SecretId]
         ON [dbo].[SecretVersion]([SecretId] ASC);
+END
+GO
+
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes WHERE name = 'IX_SecretVersion_EditorServiceAccountId' AND object_id = OBJECT_ID('[dbo].[SecretVersion]')
+)
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_SecretVersion_EditorServiceAccountId]
+        ON [dbo].[SecretVersion]([EditorServiceAccountId] ASC)
+        WHERE [EditorServiceAccountId] IS NOT NULL;
+END
+GO
+
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes WHERE name = 'IX_SecretVersion_EditorOrganizationUserId' AND object_id = OBJECT_ID('[dbo].[SecretVersion]')
+)
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_SecretVersion_EditorOrganizationUserId]
+        ON [dbo].[SecretVersion]([EditorOrganizationUserId] ASC)
+        WHERE [EditorOrganizationUserId] IS NOT NULL;
 END
 GO
