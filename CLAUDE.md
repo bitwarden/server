@@ -39,10 +39,24 @@
 - **Validation**: Input sanitization, parameterized queries, rate limiting
 - **Logging**: Structured logs, no PII/sensitive data in logs
 
-## Non-Obvious Commands
+## Common Commands
 
+- **Build**: `dotnet build`
+- **Test**: `dotnet test`
+- **Run locally**: `dotnet run --project src/Api`
 - **Database update**: `pwsh dev/migrate.ps1`
 - **Generate OpenAPI**: `pwsh dev/generate_openapi_files.ps1`
+
+## Code Review Checklist
+
+- Security impact assessed
+- xUnit tests added / updated
+- Performance impact considered
+- Error handling implemented
+- Breaking changes documented
+- CI passes: build, test, lint
+- Feature flags considered for new features
+- CODEOWNERS file respected
 
 ### Key Architectural Decisions
 
