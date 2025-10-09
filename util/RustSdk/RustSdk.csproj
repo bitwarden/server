@@ -23,4 +23,8 @@
     </Content>
   </ItemGroup>
 
+  <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
+    <Exec Command="cd rust &amp;&amp; cargo build --release" />
+  </Target>
+
 </Project>
