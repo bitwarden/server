@@ -20,7 +20,13 @@ public static partial class IntegrationTemplateProcessor
         {
             var propertyName = match.Groups[1].Value;
             var property = type.GetProperty(propertyName);
-            return property?.GetValue(values)?.ToString() ?? match.Value;
+
+            if (property == null)
+            {
+                return match.Value;  // Return unknown keys as keys - i.e. #Key#
+            }
+
+            return property?.GetValue(values)?.ToString() ?? "";
         });
     }
 

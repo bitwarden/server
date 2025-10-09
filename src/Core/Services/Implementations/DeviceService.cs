@@ -3,8 +3,8 @@ using Bit.Core.Auth.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.NotificationHub;
 using Bit.Core.Platform.Push;
+using Bit.Core.Platform.PushRegistration;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 
@@ -29,9 +29,17 @@ public class DeviceService : IDeviceService
         _globalSettings = globalSettings;
     }
 
-    public async Task SaveAsync(WebPushRegistrationData webPush, Device device)
+    public async Task SaveAsync(WebPushRegistrationData webPush, Device device, IEnumerable<string> organizationIds)
     {
-        await SaveAsync(new PushRegistrationData(webPush.Endpoint, webPush.P256dh, webPush.Auth), device);
+        await _pushRegistrationService.CreateOrUpdateRegistrationAsync(
+            new PushRegistrationData(webPush.Endpoint, webPush.P256dh, webPush.Auth),
+            device.Id.ToString(),
+            device.UserId.ToString(),
+            device.Identifier,
+            device.Type,
+            organizationIds,
+            _globalSettings.Installation.Id
+        );
     }
 
     public async Task SaveAsync(Device device)

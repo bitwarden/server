@@ -1,4 +1,7 @@
-﻿using Bit.Api.Models.Response;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.Models.Response;
 using Bit.Api.Vault.Models.Request;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core.Services;
@@ -21,6 +24,7 @@ public class SecurityTaskController : Controller
     private readonly IGetTasksForOrganizationQuery _getTasksForOrganizationQuery;
     private readonly ICreateManyTasksCommand _createManyTasksCommand;
     private readonly ICreateManyTaskNotificationsCommand _createManyTaskNotificationsCommand;
+    private readonly IGetTaskMetricsForOrganizationQuery _getTaskMetricsForOrganizationQuery;
 
     public SecurityTaskController(
         IUserService userService,
@@ -28,7 +32,8 @@ public class SecurityTaskController : Controller
         IMarkTaskAsCompleteCommand markTaskAsCompleteCommand,
         IGetTasksForOrganizationQuery getTasksForOrganizationQuery,
         ICreateManyTasksCommand createManyTasksCommand,
-        ICreateManyTaskNotificationsCommand createManyTaskNotificationsCommand)
+        ICreateManyTaskNotificationsCommand createManyTaskNotificationsCommand,
+        IGetTaskMetricsForOrganizationQuery getTaskMetricsForOrganizationQuery)
     {
         _userService = userService;
         _getTaskDetailsForUserQuery = getTaskDetailsForUserQuery;
@@ -36,6 +41,7 @@ public class SecurityTaskController : Controller
         _getTasksForOrganizationQuery = getTasksForOrganizationQuery;
         _createManyTasksCommand = createManyTasksCommand;
         _createManyTaskNotificationsCommand = createManyTaskNotificationsCommand;
+        _getTaskMetricsForOrganizationQuery = getTaskMetricsForOrganizationQuery;
     }
 
     /// <summary>
@@ -75,6 +81,18 @@ public class SecurityTaskController : Controller
         var securityTasks = await _getTasksForOrganizationQuery.GetTasksAsync(organizationId, status);
         var response = securityTasks.Select(x => new SecurityTasksResponseModel(x)).ToList();
         return new ListResponseModel<SecurityTasksResponseModel>(response);
+    }
+
+    /// <summary>
+    /// Retrieves security task metrics for an organization.
+    /// </summary>
+    /// <param name="organizationId">The organization Id</param>
+    [HttpGet("{organizationId:guid}/metrics")]
+    public async Task<SecurityTaskMetricsResponseModel> GetTaskMetricsForOrganization([FromRoute] Guid organizationId)
+    {
+        var metrics = await _getTaskMetricsForOrganizationQuery.GetTaskMetrics(organizationId);
+
+        return new SecurityTaskMetricsResponseModel(metrics.CompletedTasks, metrics.TotalTasks);
     }
 
     /// <summary>

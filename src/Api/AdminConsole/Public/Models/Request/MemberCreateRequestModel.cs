@@ -1,4 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
@@ -28,7 +31,7 @@ public class MemberCreateRequestModel : MemberUpdateRequestModel
         {
             Emails = new[] { Email },
             Type = Type.Value,
-            Collections = Collections?.Select(c => c.ToCollectionAccessSelection()).ToList(),
+            Collections = Collections?.Select(c => c.ToCollectionAccessSelection())?.ToList() ?? [],
             Groups = Groups
         };
 

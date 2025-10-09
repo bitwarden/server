@@ -1,5 +1,9 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
@@ -10,6 +14,7 @@ using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -24,14 +29,18 @@ using Subscription = Stripe.Subscription;
 
 namespace Bit.Core.Billing.Services.Implementations;
 
+using static StripeConstants;
+
 public class SubscriberService(
     IBraintreeGateway braintreeGateway,
-    IFeatureService featureService,
     IGlobalSettings globalSettings,
     ILogger<SubscriberService> logger,
+    IOrganizationRepository organizationRepository,
+    IProviderRepository providerRepository,
     ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
-    ITaxService taxService) : ISubscriberService
+    ITaxService taxService,
+    IUserRepository userRepository) : ISubscriberService
 {
     public async Task CancelSubscription(
         ISubscriber subscriber,
@@ -143,6 +152,110 @@ public class SubscriberService(
         throw new BillingException();
     }
 
+#nullable enable
+    public async Task<Customer> CreateStripeCustomer(ISubscriber subscriber)
+    {
+        if (!string.IsNullOrEmpty(subscriber.GatewayCustomerId))
+        {
+            throw new ConflictException("Subscriber already has a linked Stripe Customer");
+        }
+
+        var options = subscriber switch
+        {
+            Organization organization => new CustomerCreateOptions
+            {
+                Description = organization.DisplayBusinessName(),
+                Email = organization.BillingEmail,
+                InvoiceSettings = new CustomerInvoiceSettingsOptions
+                {
+                    CustomFields =
+                    [
+                        new CustomerInvoiceSettingsCustomFieldOptions
+                        {
+                            Name = organization.SubscriberType(),
+                            Value = Max30Characters(organization.DisplayName())
+                        }
+                    ]
+                },
+                Metadata = new Dictionary<string, string>
+                {
+                    [MetadataKeys.OrganizationId] = organization.Id.ToString(),
+                    [MetadataKeys.Region] = globalSettings.BaseServiceUri.CloudRegion
+                }
+            },
+            Provider provider => new CustomerCreateOptions
+            {
+                Description = provider.DisplayBusinessName(),
+                Email = provider.BillingEmail,
+                InvoiceSettings = new CustomerInvoiceSettingsOptions
+                {
+                    CustomFields =
+                    [
+                        new CustomerInvoiceSettingsCustomFieldOptions
+                        {
+                            Name = provider.SubscriberType(),
+                            Value = Max30Characters(provider.DisplayName())
+                        }
+                    ]
+                },
+                Metadata = new Dictionary<string, string>
+                {
+                    [MetadataKeys.ProviderId] = provider.Id.ToString(),
+                    [MetadataKeys.Region] = globalSettings.BaseServiceUri.CloudRegion
+                }
+            },
+            User user => new CustomerCreateOptions
+            {
+                Description = user.Name,
+                Email = user.Email,
+                InvoiceSettings = new CustomerInvoiceSettingsOptions
+                {
+                    CustomFields =
+                    [
+                        new CustomerInvoiceSettingsCustomFieldOptions
+                        {
+                            Name = user.SubscriberType(),
+                            Value = Max30Characters(user.SubscriberName())
+                        }
+                    ]
+                },
+                Metadata = new Dictionary<string, string>
+                {
+                    [MetadataKeys.Region] = globalSettings.BaseServiceUri.CloudRegion,
+                    [MetadataKeys.UserId] = user.Id.ToString()
+                }
+            },
+            _ => throw new ArgumentOutOfRangeException(nameof(subscriber))
+        };
+
+        var customer = await stripeAdapter.CustomerCreateAsync(options);
+
+        switch (subscriber)
+        {
+            case Organization organization:
+                organization.Gateway = GatewayType.Stripe;
+                organization.GatewayCustomerId = customer.Id;
+                await organizationRepository.ReplaceAsync(organization);
+                break;
+            case Provider provider:
+                provider.Gateway = GatewayType.Stripe;
+                provider.GatewayCustomerId = customer.Id;
+                await providerRepository.ReplaceAsync(provider);
+                break;
+            case User user:
+                user.Gateway = GatewayType.Stripe;
+                user.GatewayCustomerId = customer.Id;
+                await userRepository.ReplaceAsync(user);
+                break;
+        }
+
+        return customer;
+
+        string? Max30Characters(string? input)
+            => input?.Length <= 30 ? input : input?[..30];
+    }
+#nullable disable
+
     public async Task<Customer> GetCustomer(
         ISubscriber subscriber,
         CustomerGetOptions customerGetOptions = null)
@@ -232,7 +345,7 @@ public class SubscriberService(
             return PaymentMethod.Empty;
         }
 
-        var accountCredit = customer.Balance * -1 / 100;
+        var accountCredit = customer.Balance * -1 / 100M;
 
         var paymentMethod = await GetPaymentSourceAsync(subscriber.Id, customer);
 
@@ -467,11 +580,6 @@ public class SubscriberService(
                         PaymentMethod = token
                     });
 
-                    var getExistingSetupIntentsForCustomer = stripeAdapter.SetupIntentList(new SetupIntentListOptions
-                    {
-                        Customer = subscriber.GatewayCustomerId
-                    });
-
                     // Find the setup intent for the incoming payment method token.
                     var setupIntentsForUpdatedPaymentMethod = await getSetupIntentsForUpdatedPaymentMethod;
 
@@ -484,24 +592,15 @@ public class SubscriberService(
 
                     var matchingSetupIntent = setupIntentsForUpdatedPaymentMethod.First();
 
-                    // Find the customer's existing setup intents that should be canceled.
-                    var existingSetupIntentsForCustomer = (await getExistingSetupIntentsForCustomer)
-                        .Where(si =>
-                            si.Status is "requires_payment_method" or "requires_confirmation" or "requires_action");
-
                     // Store the incoming payment method's setup intent ID in the cache for the subscriber so it can be verified later.
                     await setupIntentCache.Set(subscriber.Id, matchingSetupIntent.Id);
 
-                    // Cancel the customer's other open setup intents.
-                    var postProcessing = existingSetupIntentsForCustomer.Select(si =>
-                        stripeAdapter.SetupIntentCancel(si.Id,
-                            new SetupIntentCancelOptions { CancellationReason = "abandoned" })).ToList();
-
                     // Remove the customer's other attached Stripe payment methods.
-                    postProcessing.Add(RemoveStripePaymentMethodsAsync(customer));
-
-                    // Remove the customer's Braintree customer ID.
-                    postProcessing.Add(RemoveBraintreeCustomerIdAsync(customer));
+                    var postProcessing = new List<Task>
+                    {
+                        RemoveStripePaymentMethodsAsync(customer),
+                        RemoveBraintreeCustomerIdAsync(customer)
+                    };
 
                     await Task.WhenAll(postProcessing);
 
@@ -509,27 +608,12 @@ public class SubscriberService(
                 }
             case PaymentMethodType.Card:
                 {
-                    var getExistingSetupIntentsForCustomer = stripeAdapter.SetupIntentList(new SetupIntentListOptions
-                    {
-                        Customer = subscriber.GatewayCustomerId
-                    });
-
                     // Remove the customer's other attached Stripe payment methods.
                     await RemoveStripePaymentMethodsAsync(customer);
 
                     // Attach the incoming payment method.
                     await stripeAdapter.PaymentMethodAttachAsync(token,
                         new PaymentMethodAttachOptions { Customer = subscriber.GatewayCustomerId });
-
-                    // Find the customer's existing setup intents that should be canceled.
-                    var existingSetupIntentsForCustomer = (await getExistingSetupIntentsForCustomer)
-                        .Where(si =>
-                            si.Status is "requires_payment_method" or "requires_confirmation" or "requires_action");
-
-                    // Cancel the customer's other open setup intents.
-                    var postProcessing = existingSetupIntentsForCustomer.Select(si =>
-                        stripeAdapter.SetupIntentCancel(si.Id,
-                            new SetupIntentCancelOptions { CancellationReason = "abandoned" })).ToList();
 
                     var metadata = customer.Metadata;
 
@@ -540,16 +624,14 @@ public class SubscriberService(
                     }
 
                     // Set the customer's default payment method in Stripe and remove their Braintree customer ID.
-                    postProcessing.Add(stripeAdapter.CustomerUpdateAsync(subscriber.GatewayCustomerId, new CustomerUpdateOptions
+                    await stripeAdapter.CustomerUpdateAsync(subscriber.GatewayCustomerId, new CustomerUpdateOptions
                     {
                         InvoiceSettings = new CustomerInvoiceSettingsOptions
                         {
                             DefaultPaymentMethod = token
                         },
                         Metadata = metadata
-                    }));
-
-                    await Task.WhenAll(postProcessing);
+                    });
 
                     break;
                 }
@@ -688,28 +770,25 @@ public class SubscriberService(
             _ => false
         };
 
-        var setNonUSBusinessUseToReverseCharge =
-            featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);
-
-        if (setNonUSBusinessUseToReverseCharge && isBusinessUseSubscriber)
+        if (isBusinessUseSubscriber)
         {
             switch (customer)
             {
                 case
                 {
-                    Address.Country: not "US",
-                    TaxExempt: not StripeConstants.TaxExempt.Reverse
+                    Address.Country: not Core.Constants.CountryAbbreviations.UnitedStates,
+                    TaxExempt: not TaxExempt.Reverse
                 }:
                     await stripeAdapter.CustomerUpdateAsync(customer.Id,
-                        new CustomerUpdateOptions { TaxExempt = StripeConstants.TaxExempt.Reverse });
+                        new CustomerUpdateOptions { TaxExempt = TaxExempt.Reverse });
                     break;
                 case
                 {
-                    Address.Country: "US",
-                    TaxExempt: StripeConstants.TaxExempt.Reverse
+                    Address.Country: Core.Constants.CountryAbbreviations.UnitedStates,
+                    TaxExempt: TaxExempt.Reverse
                 }:
                     await stripeAdapter.CustomerUpdateAsync(customer.Id,
-                        new CustomerUpdateOptions { TaxExempt = StripeConstants.TaxExempt.None });
+                        new CustomerUpdateOptions { TaxExempt = TaxExempt.None });
                     break;
             }
 
@@ -728,8 +807,8 @@ public class SubscriberService(
             {
                 User => true,
                 Organization organization => organization.PlanType.GetProductTier() == ProductTierType.Families ||
-                                             customer.Address.Country == "US" || (customer.TaxIds?.Any() ?? false),
-                Provider => customer.Address.Country == "US" || (customer.TaxIds?.Any() ?? false),
+                                             customer.Address.Country == Core.Constants.CountryAbbreviations.UnitedStates || (customer.TaxIds?.Any() ?? false),
+                Provider => customer.Address.Country == Core.Constants.CountryAbbreviations.UnitedStates || (customer.TaxIds?.Any() ?? false),
                 _ => false
             };
 
@@ -748,7 +827,7 @@ public class SubscriberService(
         ISubscriber subscriber,
         string descriptorCode)
     {
-        var setupIntentId = await setupIntentCache.Get(subscriber.Id);
+        var setupIntentId = await setupIntentCache.GetSetupIntentIdForSubscriber(subscriber.Id);
 
         if (string.IsNullOrEmpty(setupIntentId))
         {
@@ -795,6 +874,44 @@ public class SubscriberService(
         }
     }
 
+    public async Task<bool> IsValidGatewayCustomerIdAsync(ISubscriber subscriber)
+    {
+        ArgumentNullException.ThrowIfNull(subscriber);
+        if (string.IsNullOrEmpty(subscriber.GatewayCustomerId))
+        {
+            // subscribers are allowed to have no customer id as a business rule
+            return true;
+        }
+        try
+        {
+            await stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId);
+            return true;
+        }
+        catch (StripeException e) when (e.StripeError.Code == "resource_missing")
+        {
+            return false;
+        }
+    }
+
+    public async Task<bool> IsValidGatewaySubscriptionIdAsync(ISubscriber subscriber)
+    {
+        ArgumentNullException.ThrowIfNull(subscriber);
+        if (string.IsNullOrEmpty(subscriber.GatewaySubscriptionId))
+        {
+            // subscribers are allowed to have no subscription id as a business rule
+            return true;
+        }
+        try
+        {
+            await stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId);
+            return true;
+        }
+        catch (StripeException e) when (e.StripeError.Code == "resource_missing")
+        {
+            return false;
+        }
+    }
+
     #region Shared Utilities
 
     private async Task AddBraintreeCustomerIdAsync(
@@ -838,7 +955,7 @@ public class SubscriberService(
          * attachedPaymentMethodDTO being null represents a case where we could be looking for the SetupIntent for an unverified "us_bank_account".
          * We store the ID of this SetupIntent in the cache when we originally update the payment method.
          */
-        var setupIntentId = await setupIntentCache.Get(subscriberId);
+        var setupIntentId = await setupIntentCache.GetSetupIntentIdForSubscriber(subscriberId);
 
         if (string.IsNullOrEmpty(setupIntentId))
         {

@@ -1,10 +1,8 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.Text.Json;
+﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.Enums;
 
-#nullable enable
 
 namespace Bit.Api.AdminConsole.Models.Request.Organizations;
 
@@ -12,8 +10,7 @@ public class OrganizationIntegrationConfigurationRequestModel
 {
     public string? Configuration { get; set; }
 
-    [Required]
-    public EventType EventType { get; set; }
+    public EventType? EventType { get; set; }
 
     public string? Filters { get; set; }
 
@@ -32,6 +29,14 @@ public class OrganizationIntegrationConfigurationRequestModel
             case IntegrationType.Webhook:
                 return !string.IsNullOrWhiteSpace(Template) &&
                        IsConfigurationValid<WebhookIntegrationConfiguration>() &&
+                       IsFiltersValid();
+            case IntegrationType.Hec:
+                return !string.IsNullOrWhiteSpace(Template) &&
+                       Configuration is null &&
+                       IsFiltersValid();
+            case IntegrationType.Datadog:
+                return !string.IsNullOrWhiteSpace(Template) &&
+                       Configuration is null &&
                        IsFiltersValid();
             default:
                 return false;

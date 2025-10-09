@@ -1,4 +1,8 @@
-﻿using Bit.Core.Entities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
@@ -26,6 +30,11 @@ public class UpdateCollectionCommand : IUpdateCollectionCommand
     public async Task<Collection> UpdateAsync(Collection collection, IEnumerable<CollectionAccessSelection> groups = null,
         IEnumerable<CollectionAccessSelection> users = null)
     {
+        if (collection.Type == CollectionType.DefaultUserCollection)
+        {
+            throw new BadRequestException("You cannot edit a collection with the type as DefaultUserCollection.");
+        }
+
         var org = await _organizationRepository.GetByIdAsync(collection.OrganizationId);
         if (org == null)
         {

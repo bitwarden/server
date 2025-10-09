@@ -1,4 +1,7 @@
-﻿using System.Text.Json;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text.Json;
 using Bit.Core.Enums;
 using Bit.Core.Vault.Models.Data;
 using Bit.Infrastructure.EntityFramework.Vault.Models;
@@ -68,7 +71,8 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
                         Manage = cu == null ? (cg != null && cg.Manage == true) : cu.Manage == true,
                         OrganizationUseTotp = o.UseTotp,
                         c.Reprompt,
-                        c.Key
+                        c.Key,
+                        c.ArchivedDate
                     };
 
         var query2 = from c in dbContext.Ciphers
@@ -91,7 +95,8 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
                          Manage = true,
                          OrganizationUseTotp = false,
                          c.Reprompt,
-                         c.Key
+                         c.Key,
+                         c.ArchivedDate
                      };
 
         var union = query.Union(query2).Select(c => new CipherDetails
@@ -112,7 +117,8 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
             ViewPassword = c.ViewPassword,
             Manage = c.Manage,
             OrganizationUseTotp = c.OrganizationUseTotp,
-            Key = c.Key
+            Key = c.Key,
+            ArchivedDate = c.ArchivedDate
         });
         return union;
     }

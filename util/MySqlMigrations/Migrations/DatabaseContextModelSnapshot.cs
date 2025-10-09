@@ -205,6 +205,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<long?>("Storage")
                         .HasColumnType("bigint");
 
+                    b.Property<bool>("SyncSeats")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<string>("TwoFactorProviders")
                         .HasColumnType("longtext");
 
@@ -313,7 +316,7 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<int>("EventType")
+                    b.Property<int?>("EventType")
                         .HasColumnType("int");
 
                     b.Property<string>("Filters")
@@ -979,6 +982,10 @@ namespace Bit.MySqlMigrations.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<string>("ContentEncryptionKey")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
 
@@ -1004,10 +1011,14 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
 
-                    b.Property<DateTime>("CreationDate")
-                        .HasColumnType("datetime(6)");
+                    b.Property<string>("ApplicationData")
+                        .HasColumnType("longtext");
 
-                    b.Property<DateTime>("Date")
+                    b.Property<string>("ContentEncryptionKey")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
 
                     b.Property<Guid>("OrganizationId")
@@ -1015,6 +1026,12 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.Property<string>("ReportData")
                         .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("RevisionDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("SummaryData")
                         .HasColumnType("longtext");
 
                     b.HasKey("Id");
@@ -1265,6 +1282,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<string>("DomainName")
                         .HasColumnType("longtext");
 
+                    b.Property<Guid?>("GrantedServiceAccountId")
+                        .HasColumnType("char(36)");
+
                     b.Property<Guid?>("GroupId")
                         .HasColumnType("char(36)");
 
@@ -1282,6 +1302,9 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("char(36)");
 
                     b.Property<Guid?>("PolicyId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("ProjectId")
                         .HasColumnType("char(36)");
 
                     b.Property<Guid?>("ProviderId")
@@ -1308,10 +1331,13 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid?>("UserId")
                         .HasColumnType("char(36)");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasAnnotation("SqlServer:Clustered", true);
 
                     b.HasIndex("Date", "OrganizationId", "ActingUserId", "CipherId")
-                        .HasAnnotation("SqlServer:Clustered", false);
+                        .HasDatabaseName("IX_Event_DateOrganizationIdUserId")
+                        .HasAnnotation("SqlServer:Clustered", false)
+                        .HasAnnotation("SqlServer:Include", new[] { "ServiceAccountId", "GrantedServiceAccountId" });
 
                     b.ToTable("Event", (string)null);
                 });
@@ -2163,6 +2189,9 @@ namespace Bit.MySqlMigrations.Migrations
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
+
+                    b.Property<DateTime?>("ArchivedDate")
+                        .HasColumnType("datetime(6)");
 
                     b.Property<string>("Attachments")
                         .HasColumnType("longtext");

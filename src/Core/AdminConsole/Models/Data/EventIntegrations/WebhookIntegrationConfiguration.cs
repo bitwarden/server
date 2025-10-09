@@ -1,5 +1,3 @@
-﻿#nullable enable
+﻿namespace Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 
-namespace Bit.Core.AdminConsole.Models.Data.EventIntegrations;
-
-public record WebhookIntegrationConfiguration(string Url, string? Scheme = null, string? Token = null);
+public record WebhookIntegrationConfiguration(Uri Uri, string? Scheme = null, string? Token = null);

@@ -40,12 +40,12 @@ public class IntegrationTemplateProcessorTests
     }
 
     [Theory, BitAutoData]
-    public void ReplaceTokens_WithNullProperty_LeavesTokenUnchanged(EventMessage eventMessage)
+    public void ReplaceTokens_WithNullProperty_InsertsEmptyString(EventMessage eventMessage)
     {
         eventMessage.UserId = null;
 
         var template = "Event #Type#, User (id: #UserId#).";
-        var expected = $"Event {eventMessage.Type}, User (id: #UserId#).";
+        var expected = $"Event {eventMessage.Type}, User (id: ).";
         var result = IntegrationTemplateProcessor.ReplaceTokens(template, eventMessage);
 
         Assert.Equal(expected, result);

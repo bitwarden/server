@@ -22,8 +22,26 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     Task<OrganizationUser?> GetByOrganizationAsync(Guid organizationId, Guid userId);
     Task<Tuple<OrganizationUser?, ICollection<CollectionAccessSelection>>> GetByIdWithCollectionsAsync(Guid id);
     Task<OrganizationUserUserDetails?> GetDetailsByIdAsync(Guid id);
+    /// <summary>
+    /// Returns the OrganizationUser and its associated collections (excluding DefaultUserCollections).
+    /// </summary>
+    /// <param name="id">The id of the OrganizationUser</param>
+    /// <returns>A tuple containing the OrganizationUser and its associated collections</returns>
     Task<(OrganizationUserUserDetails? OrganizationUser, ICollection<CollectionAccessSelection> Collections)> GetDetailsByIdWithCollectionsAsync(Guid id);
+    /// <summary>
+    /// Returns the OrganizationUsers and their associated collections (excluding DefaultUserCollections).
+    /// </summary>
+    /// <param name="organizationId">The id of the organization</param>
+    /// <param name="includeGroups">Whether to include groups</param>
+    /// <param name="includeCollections">Whether to include collections</param>
+    /// <returns>A list of OrganizationUserUserDetails</returns>
     Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId, bool includeGroups = false, bool includeCollections = false);
+    /// <inheritdoc cref="GetManyDetailsByOrganizationAsync"/>
+    /// <remarks>
+    /// This method is optimized for performance.
+    /// Reduces database round trips by fetching all data in fewer queries.
+    /// </remarks>
+    Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync_vNext(Guid organizationId, bool includeGroups = false, bool includeCollections = false);
     Task<ICollection<OrganizationUserOrganizationDetails>> GetManyDetailsByUserAsync(Guid userId,
         OrganizationUserStatusType? status = null);
     Task<OrganizationUserOrganizationDetails?> GetDetailsByUserAsync(Guid userId, Guid organizationId,
@@ -58,7 +76,6 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     /// Returns a list of OrganizationUsers with email domains that match one of the Organization's claimed domains.
     /// </summary>
     Task<ICollection<OrganizationUser>> GetManyByOrganizationWithClaimedDomainsAsync(Guid organizationId);
-
     Task RevokeManyByIdAsync(IEnumerable<Guid> organizationUserIds);
 
     /// <summary>

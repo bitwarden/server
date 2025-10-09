@@ -1,4 +1,7 @@
-﻿using System.Text.Json;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.Models.Api;
@@ -7,6 +10,10 @@ namespace Bit.Api.AdminConsole.Models.Response.Organizations;
 
 public class PolicyResponseModel : ResponseModel
 {
+    public PolicyResponseModel() : base("policy")
+    {
+    }
+
     public PolicyResponseModel(Policy policy, string obj = "policy")
         : base(obj)
     {

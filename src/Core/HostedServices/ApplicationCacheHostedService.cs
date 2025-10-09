@@ -3,6 +3,7 @@ using Azure.Messaging.ServiceBus.Administration;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Services.Implementations;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Hosting;
@@ -14,7 +15,7 @@ namespace Bit.Core.HostedServices;
 
 public class ApplicationCacheHostedService : IHostedService, IDisposable
 {
-    private readonly InMemoryServiceBusApplicationCacheService? _applicationCacheService;
+    private readonly FeatureRoutedCacheService? _applicationCacheService;
     private readonly IOrganizationRepository _organizationRepository;
     protected readonly ILogger<ApplicationCacheHostedService> _logger;
     private readonly ServiceBusClient _serviceBusClient;
@@ -34,7 +35,7 @@ public class ApplicationCacheHostedService : IHostedService, IDisposable
     {
         _topicName = globalSettings.ServiceBus.ApplicationCacheTopicName;
         _subName = CoreHelpers.GetApplicationCacheServiceBusSubscriptionName(globalSettings);
-        _applicationCacheService = applicationCacheService as InMemoryServiceBusApplicationCacheService;
+        _applicationCacheService = applicationCacheService as FeatureRoutedCacheService;
         _organizationRepository = organizationRepository;
         _logger = logger;
         _serviceBusClient = new ServiceBusClient(globalSettings.ServiceBus.ConnectionString);
@@ -67,19 +68,25 @@ public class ApplicationCacheHostedService : IHostedService, IDisposable
 
     public virtual async Task StopAsync(CancellationToken cancellationToken)
     {
+        // Step 1: Signal ExecuteAsync to stop gracefully
+        _cts?.Cancel();
+
+        // Step 2: Wait for ExecuteAsync to finish cleanly
+        if (_executingTask != null)
+        {
+            await _executingTask;
+        }
+
+        // Step 3: Now safely dispose resources (ExecuteAsync is done)
         await _subscriptionReceiver.CloseAsync(cancellationToken);
         await _serviceBusClient.DisposeAsync();
-        _cts?.Cancel();
+
+        // Step 4: Clean up subscription
         try
         {
             await _serviceBusAdministrationClient.DeleteSubscriptionAsync(_topicName, _subName, cancellationToken);
         }
         catch { }
-
-        if (_executingTask != null)
-        {
-            await _executingTask;
-        }
     }
 
     public virtual void Dispose()
@@ -87,15 +94,39 @@ public class ApplicationCacheHostedService : IHostedService, IDisposable
 
     private async Task ExecuteAsync(CancellationToken cancellationToken)
     {
-        await foreach (var message in _subscriptionReceiver.ReceiveMessagesAsync(cancellationToken))
+        while (!cancellationToken.IsCancellationRequested)
         {
             try
             {
-                await ProcessMessageAsync(message, cancellationToken);
+                var messages = await _subscriptionReceiver.ReceiveMessagesAsync(
+                    maxMessages: 1,
+                    maxWaitTime: TimeSpan.FromSeconds(30),
+                    cancellationToken);
+
+                if (messages?.Any() == true)
+                {
+                    foreach (var message in messages)
+                    {
+                        try
+                        {
+                            await ProcessMessageAsync(message, cancellationToken);
+                        }
+                        catch (Exception e)
+                        {
+                            _logger.LogError(e, "Error processing messages in ApplicationCacheHostedService");
+                        }
+                    }
+                }
             }
-            catch (Exception e)
+            catch (ObjectDisposedException) when (cancellationToken.IsCancellationRequested)
             {
-                _logger.LogError(e, "Error processing messages in ApplicationCacheHostedService");
+                _logger.LogDebug("ServiceBus receiver disposed during Alpine container shutdown");
+                break;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                _logger.LogDebug("ServiceBus operation cancelled during Alpine container shutdown");
+                break;
             }
         }
     }

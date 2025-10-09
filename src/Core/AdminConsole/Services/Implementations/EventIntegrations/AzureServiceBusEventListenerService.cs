@@ -1,28 +1,27 @@
-﻿#nullable enable
-
-using System.Text;
+﻿using System.Text;
 using Azure.Messaging.ServiceBus;
-using Bit.Core.Settings;
+using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services;
 
-public class AzureServiceBusEventListenerService : EventLoggingListenerService
+public class AzureServiceBusEventListenerService<TConfiguration> : EventLoggingListenerService
+    where TConfiguration : IEventListenerConfiguration
 {
     private readonly ServiceBusProcessor _processor;
 
     public AzureServiceBusEventListenerService(
+        TConfiguration configuration,
         IEventMessageHandler handler,
         IAzureServiceBusService serviceBusService,
-        string subscriptionName,
-        GlobalSettings globalSettings,
-        ILogger<AzureServiceBusEventListenerService> logger) : base(handler, logger)
+        ServiceBusProcessorOptions serviceBusOptions,
+        ILoggerFactory loggerFactory)
+        : base(handler, CreateLogger(loggerFactory, configuration))
     {
         _processor = serviceBusService.CreateProcessor(
-            globalSettings.EventLogging.AzureServiceBus.EventTopicName,
-            subscriptionName,
-            new ServiceBusProcessorOptions());
-        _logger = logger;
+            topicName: configuration.EventTopicName,
+            subscriptionName: configuration.EventSubscriptionName,
+            options: serviceBusOptions);
     }
 
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
@@ -38,6 +37,12 @@ public class AzureServiceBusEventListenerService : EventLoggingListenerService
         await _processor.StopProcessingAsync(cancellationToken);
         await _processor.DisposeAsync();
         await base.StopAsync(cancellationToken);
+    }
+
+    private static ILogger CreateLogger(ILoggerFactory loggerFactory, TConfiguration configuration)
+    {
+        return loggerFactory.CreateLogger(
+            categoryName: $"Bit.Core.Services.AzureServiceBusEventListenerService.{configuration.EventSubscriptionName}");
     }
 
     internal Task ProcessErrorAsync(ProcessErrorEventArgs args)
