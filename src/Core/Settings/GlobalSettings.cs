@@ -8,6 +8,7 @@ namespace Bit.Core.Settings;
 
 public class GlobalSettings : IGlobalSettings
 {
+    private string _mailTemplateDirectory;
     private string _logDirectory;
     private string _licenseDirectory;
 
@@ -36,6 +37,11 @@ public class GlobalSettings : IGlobalSettings
     {
         get => BuildDirectory(_licenseDirectory, "/core/licenses");
         set => _licenseDirectory = value;
+    }
+    public virtual string MailTemplateDirectory
+    {
+        get => BuildDirectory(_mailTemplateDirectory, "/mail-templates");
+        set => _mailTemplateDirectory = value;
     }
     public string LicenseCertificatePassword { get; set; }
     public virtual string PushRelayBaseUri { get; set; }
@@ -97,6 +103,7 @@ public class GlobalSettings : IGlobalSettings
     /// </summary>
     public virtual string SendDefaultHashKey { get; set; }
     public virtual string PricingUri { get; set; }
+    public virtual Fido2Settings Fido2 { get; set; } = new Fido2Settings();
 
     public string BuildExternalUri(string explicitValue, string name)
     {
@@ -765,5 +772,10 @@ public class GlobalSettings : IGlobalSettings
     public class WebPushSettings : IWebPushSettings
     {
         public string VapidPublicKey { get; set; }
+    }
+
+    public class Fido2Settings
+    {
+        public HashSet<string> Origins { get; set; }
     }
 }

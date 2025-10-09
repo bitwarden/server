@@ -70,6 +70,17 @@ public static class Constants
         /// </summary>
         public const string UnitedStates = "US";
     }
+
+
+    /// <summary>
+    /// Constants for our browser extensions IDs
+    /// </summary>
+    public static class BrowserExtensions
+    {
+        public const string ChromeId = "chrome-extension://nngceckbapebfimnlniiiahkandclblb/";
+        public const string EdgeId = "chrome-extension://jbkfoedolllekgbhcbcoahefnbanhhlh/";
+        public const string OperaId = "chrome-extension://ccnckbpmaceehanjmeomladnmlffdjgn/";
+    }
 }
 
 public static class AuthConstants
@@ -124,15 +135,12 @@ public static class AuthenticationSchemes
 public static class FeatureFlagKeys
 {
     /* Admin Console Team */
-    public const string VerifiedSsoDomainEndpoint = "pm-12337-refactor-sso-details-endpoint";
-    public const string LimitItemDeletion = "pm-15493-restrict-item-deletion-to-can-manage-permission";
     public const string PolicyRequirements = "pm-14439-policy-requirements";
     public const string ScimInviteUserOptimization = "pm-16811-optimize-invite-user-flow-to-fail-fast";
     public const string EventBasedOrganizationIntegrations = "event-based-organization-integrations";
     public const string SeparateCustomRolePermissions = "pm-19917-separate-custom-role-permissions";
     public const string CreateDefaultLocation = "pm-19467-create-default-location";
     public const string PM23845_VNextApplicationCache = "pm-24957-refactor-memory-application-cache";
-    public const string CipherRepositoryBulkResourceCreation = "pm-24951-cipher-repository-bulk-resource-creation-service";
 
     /* Auth Team */
     public const string TwoFactorExtensionDataPersistence = "pm-9115-two-factor-extension-data-persistence";
@@ -171,8 +179,9 @@ public static class FeatureFlagKeys
     public const string PM19422_AllowAutomaticTaxUpdates = "pm-19422-allow-automatic-tax-updates";
     public const string PM21821_ProviderPortalTakeover = "pm-21821-provider-portal-takeover";
     public const string PM22415_TaxIDWarnings = "pm-22415-tax-id-warnings";
-    public const string PM23385_UseNewPremiumFlow = "pm-23385-use-new-premium-flow";
     public const string PM24996ImplementUpgradeFromFreeDialog = "pm-24996-implement-upgrade-from-free-dialog";
+    public const string PM24032_NewNavigationPremiumUpgradeButton = "pm-24032-new-navigation-premium-upgrade-button";
+    public const string PM23713_PremiumBadgeOpensNewPremiumUpgradeDialog = "pm-23713-premium-badge-opens-new-premium-upgrade-dialog";
 
     /* Key Management Team */
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
@@ -222,7 +231,6 @@ public static class FeatureFlagKeys
     /* Vault Team */
     public const string PM8851_BrowserOnboardingNudge = "pm-8851-browser-onboarding-nudge";
     public const string PM9111ExtensionPersistAddEditForm = "pm-9111-extension-persist-add-edit-form";
-    public const string SecurityTasks = "security-tasks";
     public const string CipherKeyEncryption = "cipher-key-encryption";
     public const string DesktopCipherForms = "pm-18520-desktop-cipher-forms";
     public const string PM19941MigrateCipherDomainToSdk = "pm-19941-migrate-cipher-domain-to-sdk";

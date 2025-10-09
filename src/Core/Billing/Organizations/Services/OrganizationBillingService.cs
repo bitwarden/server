@@ -6,6 +6,7 @@ using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Models;
@@ -27,6 +28,7 @@ namespace Bit.Core.Billing.Organizations.Services;
 public class OrganizationBillingService(
     IBraintreeGateway braintreeGateway,
     IGlobalSettings globalSettings,
+    IHasPaymentMethodQuery hasPaymentMethodQuery,
     ILogger<OrganizationBillingService> logger,
     IOrganizationRepository organizationRepository,
     IPricingClient pricingClient,
@@ -43,7 +45,7 @@ public class OrganizationBillingService(
             ? await CreateCustomerAsync(organization, customerSetup, subscriptionSetup.PlanType)
             : await GetCustomerWhileEnsuringCorrectTaxExemptionAsync(organization, subscriptionSetup);
 
-        var subscription = await CreateSubscriptionAsync(organization.Id, customer, subscriptionSetup, customerSetup?.Coupon);
+        var subscription = await CreateSubscriptionAsync(organization, customer, subscriptionSetup, customerSetup?.Coupon);
 
         if (subscription.Status is StripeConstants.SubscriptionStatus.Trialing or StripeConstants.SubscriptionStatus.Active)
         {
@@ -120,8 +122,7 @@ public class OrganizationBillingService(
             orgOccupiedSeats.Total);
     }
 
-    public async Task
-        UpdatePaymentMethod(
+    public async Task UpdatePaymentMethod(
         Organization organization,
         TokenizedPaymentSource tokenizedPaymentSource,
         TaxInformation taxInformation)
@@ -296,7 +297,7 @@ public class OrganizationBillingService(
 
                 customerCreateOptions.TaxIdData =
                 [
-                    new() { Type = taxIdType, Value = customerSetup.TaxInformation.TaxId }
+                    new CustomerTaxIdDataOptions { Type = taxIdType, Value = customerSetup.TaxInformation.TaxId }
                 ];
 
                 if (taxIdType == StripeConstants.TaxIdType.SpanishNIF)
@@ -396,7 +397,7 @@ public class OrganizationBillingService(
     }
 
     private async Task<Subscription> CreateSubscriptionAsync(
-        Guid organizationId,
+        Organization organization,
         Customer customer,
         SubscriptionSetup subscriptionSetup,
         string? coupon)
@@ -466,7 +467,7 @@ public class OrganizationBillingService(
             Items = subscriptionItemOptionsList,
             Metadata = new Dictionary<string, string>
             {
-                ["organizationId"] = organizationId.ToString(),
+                ["organizationId"] = organization.Id.ToString(),
                 ["trialInitiationPath"] = !string.IsNullOrEmpty(subscriptionSetup.InitiationPath) &&
                     subscriptionSetup.InitiationPath.Contains("trial from marketing website")
                     ? "marketing-initiated"
@@ -476,9 +477,10 @@ public class OrganizationBillingService(
             TrialPeriodDays = subscriptionSetup.SkipTrial ? 0 : plan.TrialPeriodDays
         };
 
+        var hasPaymentMethod = await hasPaymentMethodQuery.Run(organization);
+
         // Only set trial_settings.end_behavior.missing_payment_method to "cancel" if there is no payment method
-        if (string.IsNullOrEmpty(customer.InvoiceSettings?.DefaultPaymentMethodId) &&
-            !customer.Metadata.ContainsKey(BraintreeCustomerIdKey))
+        if (!hasPaymentMethod)
         {
             subscriptionCreateOptions.TrialSettings = new SubscriptionTrialSettingsOptions
             {
