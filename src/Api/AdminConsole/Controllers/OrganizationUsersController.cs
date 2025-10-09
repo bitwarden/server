@@ -518,7 +518,13 @@ public class OrganizationUsersController : Controller
             throw new NotFoundException();
         }
 
-        await _authorizationService.AuthorizeOrThrowAsync(User, targetOrganizationUser, new RecoverAccountAuthorizationRequirement());
+        var authorizationResult = await _authorizationService.AuthorizeAsync(User, targetOrganizationUser, new RecoverAccountAuthorizationRequirement());
+        if (!authorizationResult.Succeeded)
+        {
+            var failureReason = authorizationResult.Failure?.FailureReasons.FirstOrDefault()?.Message ??
+                               "You do not have permission to reset this user's master password";
+            throw new NotFoundException(failureReason);
+        }
 
         var result = await _adminRecoverAccountCommand.RecoverAccountAsync(orgId, targetOrganizationUser, model.NewMasterPasswordHash, model.Key);
         if (result.Succeeded)
