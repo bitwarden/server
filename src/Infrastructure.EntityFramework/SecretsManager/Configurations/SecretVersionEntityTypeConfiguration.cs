@@ -32,5 +32,11 @@ public class SecretVersionEntityTypeConfiguration : IEntityTypeConfiguration<Sec
 
         builder.HasIndex(sv => sv.SecretId)
             .HasDatabaseName("IX_SecretVersion_SecretId");
+
+        builder.HasIndex(sv => sv.EditorServiceAccountId)
+            .HasDatabaseName("IX_SecretVersion_EditorServiceAccountId");
+
+        builder.HasIndex(sv => sv.EditorOrganizationUserId)
+            .HasDatabaseName("IX_SecretVersion_EditorOrganizationUserId");
     }
 }

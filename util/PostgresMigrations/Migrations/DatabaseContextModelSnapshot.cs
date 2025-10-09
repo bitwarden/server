@@ -2189,9 +2189,11 @@ namespace Bit.PostgresMigrations.Migrations
                     b.HasKey("Id")
                         .HasAnnotation("SqlServer:Clustered", true);
 
-                    b.HasIndex("EditorOrganizationUserId");
+                    b.HasIndex("EditorOrganizationUserId")
+                        .HasDatabaseName("IX_SecretVersion_EditorOrganizationUserId");
 
-                    b.HasIndex("EditorServiceAccountId");
+                    b.HasIndex("EditorServiceAccountId")
+                        .HasDatabaseName("IX_SecretVersion_EditorServiceAccountId");
 
                     b.HasIndex("SecretId")
                         .HasDatabaseName("IX_SecretVersion_SecretId");

@@ -2,10 +2,10 @@
 
 #nullable disable
 
-namespace Bit.MySqlMigrations.Migrations;
+namespace Bit.PostgresMigrations.Migrations;
 
 /// <inheritdoc />
-public partial class SecretVersionAddingTablesAndFK : Migration
+public partial class CreatingSecretVersionTables : Migration
 {
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
@@ -14,13 +14,12 @@ public partial class SecretVersionAddingTablesAndFK : Migration
             name: "SecretVersion",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                SecretId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                Value = table.Column<string>(type: "longtext", nullable: false)
-                    .Annotation("MySql:CharSet", "utf8mb4"),
-                VersionDate = table.Column<DateTime>(type: "datetime(6)", nullable: false),
-                EditorServiceAccountId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
-                EditorOrganizationUserId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci")
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                SecretId = table.Column<Guid>(type: "uuid", nullable: false),
+                Value = table.Column<string>(type: "text", nullable: false),
+                VersionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                EditorServiceAccountId = table.Column<Guid>(type: "uuid", nullable: true),
+                EditorOrganizationUserId = table.Column<Guid>(type: "uuid", nullable: true)
             },
             constraints: table =>
             {
@@ -43,8 +42,7 @@ public partial class SecretVersionAddingTablesAndFK : Migration
                     principalTable: "ServiceAccount",
                     principalColumn: "Id",
                     onDelete: ReferentialAction.SetNull);
-            })
-            .Annotation("MySql:CharSet", "utf8mb4");
+            });
 
         migrationBuilder.CreateIndex(
             name: "IX_SecretVersion_EditorOrganizationUserId",
