@@ -6,7 +6,7 @@ using Bit.Core.Billing.Tax.Models;
 namespace Bit.Core.Billing.Models;
 
 public record PaymentMethod(
-    long AccountCredit,
+    decimal AccountCredit,
     PaymentSource PaymentSource,
     string SubscriptionStatus,
     TaxInformation TaxInformation)

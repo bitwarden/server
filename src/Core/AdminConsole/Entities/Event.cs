@@ -34,6 +34,7 @@ public class Event : ITableObject<Guid>, IEvent
         SecretId = e.SecretId;
         ProjectId = e.ProjectId;
         ServiceAccountId = e.ServiceAccountId;
+        GrantedServiceAccountId = e.GrantedServiceAccountId;
     }
 
     public Guid Id { get; set; }
@@ -59,7 +60,7 @@ public class Event : ITableObject<Guid>, IEvent
     public Guid? SecretId { get; set; }
     public Guid? ProjectId { get; set; }
     public Guid? ServiceAccountId { get; set; }
-
+    public Guid? GrantedServiceAccountId { get; set; }
     public void SetNewId()
     {
         Id = CoreHelpers.GenerateComb();

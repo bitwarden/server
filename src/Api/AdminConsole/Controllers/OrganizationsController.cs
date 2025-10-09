@@ -225,7 +225,6 @@ public class OrganizationsController : Controller
     }
 
     [HttpPut("{id}")]
-    [HttpPost("{id}")]
     public async Task<OrganizationResponseModel> Put(string id, [FromBody] OrganizationUpdateRequestModel model)
     {
         var orgIdGuid = new Guid(id);
@@ -250,6 +249,13 @@ public class OrganizationsController : Controller
         await _organizationService.UpdateAsync(model.ToOrganization(organization, _globalSettings), updateBilling);
         var plan = await _pricingClient.GetPlan(organization.PlanType);
         return new OrganizationResponseModel(organization, plan);
+    }
+
+    [HttpPost("{id}")]
+    [Obsolete("This endpoint is deprecated. Use PUT method instead")]
+    public async Task<OrganizationResponseModel> PostPut(string id, [FromBody] OrganizationUpdateRequestModel model)
+    {
+        return await Put(id, model);
     }
 
     [HttpPost("{id}/storage")]
@@ -291,7 +297,6 @@ public class OrganizationsController : Controller
     }
 
     [HttpDelete("{id}")]
-    [HttpPost("{id}/delete")]
     public async Task Delete(string id, [FromBody] SecretVerificationRequestModel model)
     {
         var orgIdGuid = new Guid(id);
@@ -332,6 +337,13 @@ public class OrganizationsController : Controller
         }
 
         await _organizationDeleteCommand.DeleteAsync(organization);
+    }
+
+    [HttpPost("{id}/delete")]
+    [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
+    public async Task PostDelete(string id, [FromBody] SecretVerificationRequestModel model)
+    {
+        await Delete(id, model);
     }
 
     [HttpPost("{id}/delete-recover-token")]
@@ -554,18 +566,12 @@ public class OrganizationsController : Controller
     [HttpPut("{id}/collection-management")]
     public async Task<OrganizationResponseModel> PutCollectionManagement(Guid id, [FromBody] OrganizationCollectionManagementUpdateRequestModel model)
     {
-        var organization = await _organizationRepository.GetByIdAsync(id);
-        if (organization == null)
-        {
-            throw new NotFoundException();
-        }
-
         if (!await _currentContext.OrganizationOwner(id))
         {
             throw new NotFoundException();
         }
 
-        await _organizationService.UpdateAsync(model.ToOrganization(organization, _featureService), eventType: EventType.Organization_CollectionManagement_Updated);
+        var organization = await _organizationService.UpdateCollectionManagementSettingsAsync(id, model.ToSettings());
         var plan = await _pricingClient.GetPlan(organization.PlanType);
         return new OrganizationResponseModel(organization, plan);
     }

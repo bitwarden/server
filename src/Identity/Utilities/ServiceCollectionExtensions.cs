@@ -1,5 +1,5 @@
-﻿using Bit.Core.Auth.Repositories;
-using Bit.Core.IdentityServer;
+﻿using Bit.Core.Auth.IdentityServer;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Utilities;
@@ -29,6 +29,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<ILoginApprovingClientTypes, LoginApprovingClientTypes>();
         services.AddTransient<ISendAuthenticationMethodValidator<ResourcePassword>, SendPasswordRequestValidator>();
         services.AddTransient<ISendAuthenticationMethodValidator<EmailOtp>, SendEmailOtpRequestValidator>();
+        services.AddTransient<ISendAuthenticationMethodValidator<NeverAuthenticate>, SendNeverAuthenticateRequestValidator>();
 
         var issuerUri = new Uri(globalSettings.BaseServiceUri.InternalIdentity);
         var identityServerBuilder = services

@@ -315,7 +315,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             throw new BadRequestException($"Cannot set max Secrets Manager seat autoscaling below current Secrets Manager seat count.");
         }
 
-        if (plan.SecretsManager.MaxSeats.HasValue && update.MaxAutoscaleSmSeats.Value > plan.SecretsManager.MaxSeats)
+        if (plan.SecretsManager.MaxSeats.HasValue && plan.SecretsManager.MaxSeats.Value > 0 && update.MaxAutoscaleSmSeats.Value > plan.SecretsManager.MaxSeats)
         {
             throw new BadRequestException(string.Concat(
                 $"Your plan has a Secrets Manager seat limit of {plan.SecretsManager.MaxSeats}, ",
