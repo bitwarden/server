@@ -9,15 +9,16 @@ public class OrganizationWithUsersRecipe(DatabaseContext db)
 {
     public RecipeResult Seed(string name, int users, string domain)
     {
+        var mangleId = Guid.NewGuid();
         var organization = OrganizationSeeder.CreateEnterprise(name, domain, users);
-        var user = UserSeeder.CreateUser($"admin@{domain}");
+        var user = UserSeeder.CreateUserNoMangle($"admin@{domain}");
         var orgUser = organization.CreateOrganizationUser(user);
 
         var additionalUsers = new List<User>();
         var additionalOrgUsers = new List<OrganizationUser>();
         for (var i = 0; i < users; i++)
         {
-            var additionalUser = UserSeeder.CreateUser($"user{i}@{domain}");
+            var additionalUser = UserSeeder.CreateUserNoMangle($"user{i}@{domain}");
             additionalUsers.Add(additionalUser);
             additionalOrgUsers.Add(organization.CreateOrganizationUser(additionalUser));
         }
