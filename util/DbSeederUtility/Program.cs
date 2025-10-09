@@ -37,9 +37,8 @@ public class Program
         using var scope = serviceProvider.CreateScope();
         var scopedServices = scope.ServiceProvider;
         var db = scopedServices.GetRequiredService<DatabaseContext>();
-        var passwordHasher = scopedServices.GetRequiredService<IPasswordHasher<User>>();
 
-        var recipe = new OrganizationWithUsersRecipe(db, passwordHasher);
+        var recipe = new OrganizationWithUsersRecipe(db);
         recipe.Seed(name, users, domain);
     }
 }
