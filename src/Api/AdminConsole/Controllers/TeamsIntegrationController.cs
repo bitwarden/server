@@ -35,7 +35,7 @@ public class TeamsIntegrationController(
             throw new NotFoundException();
         }
 
-        string? callbackUrl = Url.RouteUrl(
+        var callbackUrl = Url.RouteUrl(
             routeName: "TeamsIntegration_Create",
             values: null,
             protocol: currentContext.HttpContext.Request.Scheme,
@@ -105,7 +105,7 @@ public class TeamsIntegrationController(
             throw new NotFoundException();
         }
 
-        string? callbackUrl = Url.RouteUrl(
+        var callbackUrl = Url.RouteUrl(
             routeName: "TeamsIntegration_Create",
             values: null,
             protocol: currentContext.HttpContext.Request.Scheme,
@@ -129,7 +129,7 @@ public class TeamsIntegrationController(
             throw new BadRequestException("No teams were found.");
         }
 
-        var teamsIntegration = new TeamsIntegration(TenantId: teams.First().TenantId, Teams: teams);
+        var teamsIntegration = new TeamsIntegration(TenantId: teams[0].TenantId, Teams: teams);
         integration.Configuration = JsonSerializer.Serialize(teamsIntegration);
         await integrationRepository.UpsertAsync(integration);
 

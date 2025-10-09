@@ -38,12 +38,12 @@ public class OrganizationIntegrationResponseModel : ResponseModel
             : OrganizationIntegrationStatus.Completed,
 
         // If present and the configuration is null, OAuth has been initiated, and we are
-        // waiting on the return OAuth call. If Configuration is not null and isVerified is true,
+        // waiting on the return OAuth call. If Configuration is not null and IsCompleted is true,
         // then we've received the app install bot callback, and it's Completed. Otherwise,
         // it is In Progress while we await the app install bot callback.
         IntegrationType.Teams => string.IsNullOrWhiteSpace(Configuration)
             ? OrganizationIntegrationStatus.Initiated
-            : (JsonSerializer.Deserialize<TeamsIntegration>(Configuration)?.isVerified ?? false)
+            : (JsonSerializer.Deserialize<TeamsIntegration>(Configuration)?.IsCompleted ?? false)
                 ? OrganizationIntegrationStatus.Completed
                 : OrganizationIntegrationStatus.InProgress,
 

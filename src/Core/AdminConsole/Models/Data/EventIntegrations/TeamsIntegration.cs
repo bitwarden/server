@@ -8,5 +8,5 @@ public record TeamsIntegration(
     string? ChannelId = null,
     Uri? ServiceUrl = null)
 {
-    public bool isVerified => (!string.IsNullOrEmpty(ChannelId) && ServiceUrl is not null);
+    public bool IsCompleted => !string.IsNullOrEmpty(ChannelId) && ServiceUrl is not null;
 }

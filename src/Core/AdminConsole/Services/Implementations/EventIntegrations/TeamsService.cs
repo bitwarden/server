@@ -22,7 +22,6 @@ public class TeamsService(
     GlobalSettings globalSettings,
     ILogger<TeamsService> logger) : ActivityHandler, ITeamsService
 {
-    private readonly IOrganizationIntegrationRepository _integrationRepository = integrationRepository;
     private readonly HttpClient _httpClient = httpClientFactory.CreateClient(HttpClientName);
     private readonly string _clientId = globalSettings.Teams.ClientId;
     private readonly string _clientSecret = globalSettings.Teams.ClientSecret;
@@ -157,7 +156,7 @@ public class TeamsService(
         string teamId,
         string tenantId)
     {
-        var integration = await _integrationRepository.GetByTeamsConfigurationTenantIdTeamId(
+        var integration = await integrationRepository.GetByTeamsConfigurationTenantIdTeamId(
             tenantId: tenantId,
             teamId: teamId);
 
@@ -167,7 +166,7 @@ public class TeamsService(
         }
 
         var teamsConfig = JsonSerializer.Deserialize<TeamsIntegration>(integration.Configuration);
-        if (teamsConfig is null || teamsConfig.isVerified)
+        if (teamsConfig is null || teamsConfig.IsCompleted)
         {
             return;
         }
@@ -178,6 +177,6 @@ public class TeamsService(
             ServiceUrl = serviceUrl
         });
 
-        await _integrationRepository.UpsertAsync(integration);
+        await integrationRepository.UpsertAsync(integration);
     }
 }
