@@ -1,6 +1,5 @@
 ﻿using Bit.Core;
 using Bit.Core.Dirt.Repositories;
-using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Mvc;
 
