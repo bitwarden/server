@@ -1,8 +1,8 @@
 -- Add AutomaticallyConfirmUsers column to Organization table
-IF COL_LENGTH('[dbo].[Organization]', 'AutomaticallyConfirmUsers') IS NULL
+IF COL_LENGTH('[dbo].[Organization]', 'AutomaticUserConfirmation') IS NULL
     BEGIN
         ALTER TABLE [dbo].[Organization]
-            ADD [AutomaticallyConfirmUsers] BIT NOT NULL CONSTRAINT [DF_Organization_AutomaticallyConfirmUsers] DEFAULT (0);
+            ADD [AutomaticUserConfirmation] BIT NOT NULL CONSTRAINT [DF_Organization_AutomaticallyConfirmUsers] DEFAULT (0);
     END
 GO
 
@@ -68,7 +68,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Organization_Create]
     @UseOrganizationDomains BIT = 0,
     @UseAdminSponsoredFamilies BIT = 0,
     @SyncSeats BIT = 0,
-    @AutomaticallyConfirmUsers BIT
+    @AutomaticUserConfirmation BIT
 AS
 BEGIN
     SET NOCOUNT ON
@@ -137,7 +137,7 @@ BEGIN
         [UseOrganizationDomains],
         [UseAdminSponsoredFamilies],
         [SyncSeats],
-        [AutomaticallyConfirmUsers]
+        [AutomaticUserConfirmation]
     )
     VALUES
         (
@@ -201,7 +201,7 @@ BEGIN
             @UseOrganizationDomains,
             @UseAdminSponsoredFamilies,
             @SyncSeats,
-            @AutomaticallyConfirmUsers
+            @AutomaticUserConfirmation
         );
 END
 GO
@@ -268,7 +268,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Organization_Update]
     @UseOrganizationDomains BIT = 0,
     @UseAdminSponsoredFamilies BIT = 0,
     @SyncSeats BIT = 0,
-    @AutomaticallyConfirmUsers BIT
+    @AutomaticUserConfirmation BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -334,7 +334,7 @@ BEGIN
         [UseOrganizationDomains] = @UseOrganizationDomains,
         [UseAdminSponsoredFamilies] = @UseAdminSponsoredFamilies,
         [SyncSeats] = @SyncSeats,
-        [AutomaticallyConfirmUsers] = @AutomaticallyConfirmUsers
+        [AutomaticUserConfirmation] = @AutomaticUserConfirmation
     WHERE [Id] = @Id;
 END
 GO
