@@ -9,7 +9,7 @@ public class TeamsOAuthResponse
 {
     /// <summary>The access token issued by Microsoft, used to call the Microsoft Graph API.</summary>
     [JsonPropertyName("access_token")]
-    public string AccessToken { get; } = string.Empty;
+    public string AccessToken { get; set; } = string.Empty;
 }
 
 /// <summary>Represents the response from the <c>/me/joinedTeams</c> Microsoft Graph API call.
@@ -19,7 +19,7 @@ public class JoinedTeamsResponse
 {
     /// <summary>The collection of teams that the user has joined.</summary>
     [JsonPropertyName("value")]
-    public List<TeamInfo> Value { get; } = [];
+    public List<TeamInfo> Value { get; set; } = [];
 }
 
 /// <summary>Represents a Microsoft Teams team returned by the Graph API.
