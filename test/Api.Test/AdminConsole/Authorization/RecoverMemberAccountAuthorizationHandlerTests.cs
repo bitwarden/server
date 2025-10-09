@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Bit.Api.AdminConsole.Authorization;
 using Bit.Core.Context;
 using Bit.Core.Entities;

@@ -54,8 +54,8 @@ public class RecoverMemberAccountAuthorizationHandler(
             OrganizationUserType.Owner => currentContextOrganization.Type is OrganizationUserType.Owner,
             OrganizationUserType.Admin => currentContextOrganization.Type is OrganizationUserType.Owner or OrganizationUserType.Admin,
             _ => currentContextOrganization is
-                { Type: OrganizationUserType.Owner or OrganizationUserType.Admin }
-                or { Type: OrganizationUserType.Custom, Permissions.ManageResetPassword: true}
+            { Type: OrganizationUserType.Owner or OrganizationUserType.Admin }
+                or { Type: OrganizationUserType.Custom, Permissions.ManageResetPassword: true }
         };
 
         return authorized;
