@@ -1,6 +1,8 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.Utilities;
 using Bit.Infrastructure.EntityFramework.Models;
+using Bit.RustSDK;
+using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Seeder.Factories;
 
@@ -66,27 +68,56 @@ public class UserSeeder(Guid mangleId)
     {
         var mangleMap = new Dictionary<string, string?>
         {
-            {expectedUserData.Email, MangleEmail(expectedUserData.Email) },
-            {expectedUserData.Id.ToString(), user.Id.ToString() },
-            {expectedUserData.Kdf.ToString(), user.Kdf.ToString() },
-            {expectedUserData.KdfIterations.ToString(), user.KdfIterations.ToString() }
+            { expectedUserData.Email, MangleEmail(expectedUserData.Email) },
+            { expectedUserData.Id.ToString(), user.Id.ToString() },
+            { expectedUserData.Kdf.ToString(), user.Kdf.ToString() },
+            { expectedUserData.KdfIterations.ToString(), user.KdfIterations.ToString() }
         };
         if (expectedUserData.Key != null)
         {
             mangleMap[expectedUserData.Key] = user.Key;
         }
+
         if (expectedUserData.PublicKey != null)
         {
             mangleMap[expectedUserData.PublicKey] = user.PublicKey;
         }
+
         if (expectedUserData.PrivateKey != null)
         {
             mangleMap[expectedUserData.PrivateKey] = user.PrivateKey;
         }
+
         if (expectedUserData.ApiKey != null)
         {
             mangleMap[expectedUserData.ApiKey] = user.ApiKey;
         }
+
         return mangleMap;
+    }
+
+    public static (User user, string userKey) CreateSdkUser(IPasswordHasher<Bit.Core.Entities.User> passwordHasher, string email)
+    {
+        var nativeService = RustSdkServiceFactory.CreateSingleton();
+        var keys = nativeService.GenerateUserKeys(email, "asdfasdfasdf");
+
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = email,
+            MasterPassword = null,
+            SecurityStamp = "4830e359-e150-4eae-be2a-996c81c5e609",
+            Key = keys.EncryptedUserKey,
+            PublicKey = keys.PublicKey,
+            PrivateKey = keys.PrivateKey,
+            ApiKey = "7gp59kKHt9kMlks0BuNC4IjNXYkljR",
+
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = 5_000,
+        };
+
+        user.MasterPassword = passwordHasher.HashPassword(user, keys.MasterPasswordHash);
+
+        return (user, keys.Key);
     }
 }
