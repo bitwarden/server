@@ -14,6 +14,7 @@ BEGIN
 
     ;WITH OrgUsers AS
     (
+        -- All users except invited (Status <> 0): direct UserId match
         SELECT
             OU.[Id],
             OU.[OrganizationId],
@@ -23,8 +24,24 @@ BEGIN
         FROM
             [dbo].[OrganizationUserView] OU
         WHERE
-            (OU.[Status] <> 0 AND OU.[UserId] = @UserId)
-            OR (OU.[Status] = 0 AND OU.[Email] = @UserEmail AND @UserEmail IS NOT NULL)
+            OU.[Status] <> 0
+            AND OU.[UserId] = @UserId
+
+        UNION ALL
+
+        -- Invited users: email match
+        SELECT
+            OU.[Id],
+            OU.[OrganizationId],
+            OU.[Type],
+            OU.[Status],
+            OU.[Permissions]
+        FROM
+            [dbo].[OrganizationUserView] OU
+        WHERE
+            OU.[Status] = 0
+            AND OU.[Email] = @UserEmail
+            AND @UserEmail IS NOT NULL
     ),
     Providers AS
     (
