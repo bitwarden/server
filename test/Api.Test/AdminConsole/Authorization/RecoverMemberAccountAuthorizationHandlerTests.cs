@@ -1,8 +1,5 @@
 using System.Security.Claims;
 using Bit.Api.AdminConsole.Authorization;
-using Bit.Core.AdminConsole.Entities.Provider;
-using Bit.Core.AdminConsole.Enums.Provider;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;

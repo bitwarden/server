@@ -25,10 +25,11 @@ public class RecoverProviderAccountAuthorizationHandler(
             // This should be checked as part of the command validation, but it's also required
             // for this logic to work properly, so we'll fail here if not set.
             context.Fail();
+            return;
         }
 
         var targetUserProviderUsers =
-            await providerUserRepository.GetManyByUserAsync(targetOrganizationUser.UserId!.Value);
+            await providerUserRepository.GetManyByUserAsync(targetOrganizationUser.UserId.Value);
 
         if (targetUserProviderUsers.Any(providerUser => !currentContext.ProviderUser(providerUser.ProviderId)))
         {
