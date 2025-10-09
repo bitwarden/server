@@ -51,3 +51,13 @@
 - Authorization patterns (ADR 0022)
 - OpenTelemetry for observability (ADR 0020)
 - Log to standard output (ADR 0021)
+
+## References
+
+- [Server architecture](https://contributing.bitwarden.com/architecture/server/)
+- [Architectural Decision Records (ADRs)](https://contributing.bitwarden.com/architecture/adr/)
+- [Contributing guidelines](https://contributing.bitwarden.com/contributing/)
+- [Setup guide](https://contributing.bitwarden.com/getting-started/server/guide/)
+- [Code style](https://contributing.bitwarden.com/contributing/code-style/)
+- [Bitwarden security whitepaper](https://bitwarden.com/help/bitwarden-security-white-paper/)
+- [Bitwarden security definitions](https://contributing.bitwarden.com/architecture/security/definitions)
