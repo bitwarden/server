@@ -4,7 +4,7 @@
     "windowsAuthentication": false,
     "anonymousAuthentication": true,
     "iisExpress": {
-      "applicationUrl": "http://localhost:50467",
+      "applicationUrl": "http://localhost:5047",
       "sslPort": 0
     }
   },
@@ -16,6 +16,16 @@
       "applicationUrl": "http://localhost:5047",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    "SeederApi-SelfHost": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": true,
+      "applicationUrl": "http://localhost:5048",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "developSelfHosted": "true"
       }
     },
     "IIS Express": {
