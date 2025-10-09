@@ -12,6 +12,7 @@ These are the compiled HTML email templates that serve as the foundation for all
 - **Source**: Built from `*.mjml` files in the `./mjml` directory.
   - The MJML source acts as a toolkit for developers to generate HTML. It is the developers responsibility to generate the HTML and then ensure it is accessible to `IMailService` implementations.
 - **Build Tool**: Generated via node build scripts: `npm run build`.
+  - The build script definitions can be viewed in the `Mjml/package.json` as well as in `Mjml/build.js`. 
 - **Output**: Cross-client compatible HTML with embedded CSS for maximum email client support
 - **Template Engine**: Enhanced with Handlebars syntax for dynamic content injection
 
