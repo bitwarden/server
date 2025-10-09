@@ -14,3 +14,13 @@ CREATE TABLE [dbo].[SecretVersion] (
 GO
 CREATE NONCLUSTERED INDEX [IX_SecretVersion_SecretId]
     ON [dbo].[SecretVersion]([SecretId] ASC);
+
+GO
+CREATE NONCLUSTERED INDEX [IX_SecretVersion_EditorServiceAccountId]
+    ON [dbo].[SecretVersion]([EditorServiceAccountId] ASC)
+    WHERE [EditorServiceAccountId] IS NOT NULL;
+
+GO
+CREATE NONCLUSTERED INDEX [IX_SecretVersion_EditorOrganizationUserId]
+    ON [dbo].[SecretVersion]([EditorOrganizationUserId] ASC)
+    WHERE [EditorOrganizationUserId] IS NOT NULL;
