@@ -66,7 +66,7 @@ public class RecoverMemberAccountAuthorizationHandler(
 
 /// <summary>
 /// Prevents a provider user's account from being recovered unless the current user is also a member of the same providers.
-/// This prevents unauthorized access to a provider via account recovery.
+/// This prevents privilege escalation from a client organization to a provider via account recovery.
 /// This handler does not positively authorize an action, it only disallows it in this case.
 /// </summary>
 public class RecoverProviderAccountAuthorizationHandler(
@@ -78,8 +78,14 @@ public class RecoverProviderAccountAuthorizationHandler(
         RecoverAccountAuthorizationRequirement requirement,
         OrganizationUser targetOrganizationUser)
     {
-        // Even if the role is authorized, we need to make sure they're not trying to recover a provider's account
-        // (regardless of whether they are a provider for this organization specifically)
+        if (!targetOrganizationUser.UserId.HasValue)
+        {
+            // Cannot recover an OrganizationUser that is not linked to a User.
+            // This should be checked as part of the command validation, but it's also required
+            // for this logic to work properly, so we'll fail here if not set.
+            context.Fail();
+        }
+
         var targetUserProviderUsers =
             await providerUserRepository.GetManyByUserAsync(targetOrganizationUser.UserId!.Value);
 
