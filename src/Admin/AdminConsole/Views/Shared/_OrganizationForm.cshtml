@@ -159,6 +159,13 @@
                         <label class="form-check-label" asp-for="UseAdminSponsoredFamilies"></label>
                     </div>
                 }
+                @* @if(FeatureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)) *@
+                @* { *@
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" asp-for="AutomaticUserConfirmation" disabled='@(canEditPlan ? null : "disabled")'>
+                        <label class="form-check-label" asp-for="AutomaticUserConfirmation"></label>
+                    </div>
+                @* } *@
             </div>
             <div class="col-3">
                 <h3>Password Manager</h3>

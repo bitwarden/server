@@ -193,8 +193,8 @@ public class OrganizationEditModel : OrganizationViewModel
     [Display(Name = "Use Organization Domains")]
     public bool UseOrganizationDomains { get; set; }
 
-    [Display(Name = "Automatically Confirm Users")]
-    public bool AutomaticallyConfirmUsers { get; set; }
+    [Display(Name = "Automatic User Confirmation")]
+    public bool AutomaticUserConfirmation { get; set; }
     /**
      * Creates a Plan[] object for use in Javascript
      * This is mapped manually below to provide some type safety in case the plan objects change
