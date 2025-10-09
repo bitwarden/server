@@ -2,7 +2,7 @@
 IF COL_LENGTH('[dbo].[Organization]', 'AutomaticUserConfirmation') IS NULL
     BEGIN
         ALTER TABLE [dbo].[Organization]
-            ADD [AutomaticUserConfirmation] BIT NOT NULL CONSTRAINT [DF_Organization_AutomaticallyConfirmUsers] DEFAULT (0);
+            ADD [AutomaticUserConfirmation] BIT NOT NULL CONSTRAINT [DF_Organization_AutomaticUserConfirmation] DEFAULT (0);
     END
 GO
 
