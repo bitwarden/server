@@ -47,7 +47,7 @@
 - **Database update**: `pwsh dev/migrate.ps1`
 - **Generate OpenAPI**: `pwsh dev/generate_openapi_files.ps1`
 
-## Code Review Checklist
+## Development Workflow
 
 - Security impact assessed
 - xUnit tests added / updated
