@@ -1,4 +1,4 @@
-namespace Bit.Seeder;
+﻿namespace Bit.Seeder;
 
 public class RecipeResult
 {

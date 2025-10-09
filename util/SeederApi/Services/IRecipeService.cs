@@ -1,4 +1,5 @@
-using System.Text.Json;
+﻿using System.Text.Json;
+using Bit.Infrastructure.EntityFramework.Models;
 
 namespace Bit.SeederApi.Services;
 
@@ -21,4 +22,5 @@ public interface IRecipeService
     /// <returns>The result of the destroy operation</returns>
     /// <exception cref="RecipeExecutionException">Thrown when there's an error destroying the seeded data</exception>
     object? DestroyRecipe(Guid seedId);
+    List<SeededData> GetAllSeededData();
 }

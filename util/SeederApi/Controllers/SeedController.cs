@@ -1,7 +1,7 @@
+﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 using Bit.SeederApi.Services;
 using Microsoft.AspNetCore.Mvc;
-using System.ComponentModel.DataAnnotations;
-using System.Text.Json;
 
 namespace Bit.SeederApi.Controllers;
 
@@ -98,5 +98,45 @@ public class SeedController : Controller
                 Details = ex.Message
             });
         }
+    }
+
+    [HttpDelete("/seed")]
+    public async Task<IActionResult> DeleteAll()
+    {
+        _logger.LogInformation("Deleting all seeded data");
+
+        // Pull all Seeded Data ids
+        var seededData = _recipeService.GetAllSeededData();
+
+        var aggregateException = new AggregateException();
+
+        await Task.Run(() =>
+        {
+            foreach (var sd in seededData)
+            {
+                try
+                {
+                    _recipeService.DestroyRecipe(sd.Id);
+                }
+                catch (Exception ex)
+                {
+                    aggregateException = new AggregateException(aggregateException, ex);
+                    _logger.LogError(ex, "Error deleting seeded data: {SeedId}", sd.Id);
+                }
+            }
+        });
+
+        if (aggregateException.InnerExceptions.Count > 0)
+        {
+            return BadRequest(new
+            {
+                Error = "One or more errors occurred while deleting seeded data",
+                Details = aggregateException.InnerExceptions.Select(e => e.Message).ToList()
+            });
+        }
+        return Ok(new
+        {
+            Message = "All seeded data deleted successfully"
+        });
     }
 }

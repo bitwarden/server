@@ -1,8 +1,8 @@
+﻿using System.Reflection;
+using System.Text.Json;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Seeder;
-using System.Reflection;
-using System.Text.Json;
 
 namespace Bit.SeederApi.Services;
 
@@ -15,6 +15,11 @@ public class RecipeService : IRecipeService
     {
         _databaseContext = databaseContext;
         _logger = logger;
+    }
+
+    public List<SeededData> GetAllSeededData()
+    {
+        return _databaseContext.SeededData.ToList();
     }
 
     public (object? Result, Guid? SeedId) ExecuteRecipe(string templateName, JsonElement? arguments)
