@@ -96,7 +96,7 @@ public class VNextSavePolicyCommand(
         Policy? currentPolicy)
     {
         await ExecutePolicyEventAsync<IPolicyValidationEvent>(
-            currentPolicy!.Type,
+            policyRequest.PolicyUpdate.Type,
             async validator =>
             {
                 var validationError = await validator.ValidateAsync(policyRequest, currentPolicy);
@@ -112,7 +112,7 @@ public class VNextSavePolicyCommand(
         Policy? currentPolicy,
         Dictionary<PolicyType, Policy> savedPoliciesDict)
     {
-        var result = policyEventHandlerFactory.GetHandler<IEnforceDependentPoliciesEvent>(currentPolicy!.Type);
+        var result = policyEventHandlerFactory.GetHandler<IEnforceDependentPoliciesEvent>(policyUpdateRequest.Type);
 
         result.Switch(
             validator =>
@@ -122,7 +122,7 @@ public class VNextSavePolicyCommand(
                 switch (policyUpdateRequest.Enabled)
                 {
                     case true when !isCurrentlyEnabled:
-                        ValidateEnablingRequirements(validator, currentPolicy, savedPoliciesDict);
+                        ValidateEnablingRequirements(validator, savedPoliciesDict);
                         return;
                     case false when isCurrentlyEnabled:
                         ValidateDisablingRequirements(validator, policyUpdateRequest.Type, savedPoliciesDict);
@@ -155,7 +155,6 @@ public class VNextSavePolicyCommand(
 
     private static void ValidateEnablingRequirements(
         IEnforceDependentPoliciesEvent validator,
-        Policy? currentPolicy,
         Dictionary<PolicyType, Policy> savedPoliciesDict)
     {
         var missingRequiredPolicyTypes = validator.RequiredPolicies
