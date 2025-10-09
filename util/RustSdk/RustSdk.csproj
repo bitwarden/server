@@ -21,10 +21,17 @@
     <Content Include="./rust/target/release/libsdk.dll">
       <PackageCopyToOutput>true</PackageCopyToOutput>
     </Content>
+
+    <!-- This is a work around because this file is compiled by the PreBuild event below, and won't
+    always be detected -->
+    <Compile Remove="NativeMethods.g.cs" />
   </ItemGroup>
 
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
-    <Exec Command="cd rust &amp;&amp; cargo build --release" />
+    <Exec Command="cargo build --release" WorkingDirectory="$(ProjectDir)/rust" />
+    <ItemGroup>
+      <Compile Include="NativeMethods.g.cs" />
+    </ItemGroup>
   </Target>
 
 </Project>
