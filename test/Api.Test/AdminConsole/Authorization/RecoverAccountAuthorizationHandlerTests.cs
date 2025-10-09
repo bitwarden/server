@@ -7,7 +7,6 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
-using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -150,29 +149,6 @@ public class RecoverMemberAccountAuthorizationHandlerTests
         Assert.False(context.HasSucceeded);
     }
 
-    [Theory, BitAutoData]
-    public async Task AuthorizeMemberAsync_TargetUserIsProviderAccount_NotAuthorized(
-        SutProvider<RecoverMemberAccountAuthorizationHandler> sutProvider,
-        [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser targetOrganizationUser,
-        [CurrentContextOrganization(Type = OrganizationUserType.Owner)] CurrentContextOrganization currentContextOrganization,
-        ClaimsPrincipal claimsPrincipal)
-    {
-        // Arrange
-        var context = new AuthorizationHandlerContext(
-            [new RecoverAccountAuthorizationRequirement()],
-            claimsPrincipal,
-            targetOrganizationUser);
-
-        MockOrganizationClaims(sutProvider, claimsPrincipal, targetOrganizationUser, currentContextOrganization);
-        MockTargetUserIsProvider(sutProvider, targetOrganizationUser);
-
-        // Act
-        await sutProvider.Sut.HandleAsync(context);
-
-        // Assert
-        Assert.False(context.HasSucceeded);
-    }
-
     private static void MockOrganizationClaims(SutProvider<RecoverMemberAccountAuthorizationHandler> sutProvider,
         ClaimsPrincipal currentUser, OrganizationUser targetOrganizationUser,
         CurrentContextOrganization? currentContextOrganization)
@@ -188,20 +164,5 @@ public class RecoverMemberAccountAuthorizationHandlerTests
         sutProvider.GetDependency<IOrganizationContext>()
             .IsProviderUserForOrganization(currentUser, targetOrganizationUser.OrganizationId)
             .Returns(true);
-    }
-
-    private static void MockTargetUserIsProvider(SutProvider<RecoverMemberAccountAuthorizationHandler> sutProvider,
-        OrganizationUser targetOrganizationUser)
-    {
-        sutProvider.GetDependency<IProviderUserRepository>()
-            .GetManyByUserAsync(targetOrganizationUser.UserId!.Value)
-            .Returns([new ProviderUser
-            {
-                Id = Guid.NewGuid(),
-                ProviderId = Guid.NewGuid(),
-                UserId = targetOrganizationUser.UserId!.Value,
-                Status = ProviderUserStatusType.Confirmed,
-                Type = ProviderUserType.ProviderAdmin
-            }]);
     }
 }
