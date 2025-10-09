@@ -1,12 +1,12 @@
 # MJML email templating
 
-This directory contains MJML templates for emails. MJML is a markup language designed to reduce the pain of coding responsive email templates. There are DRY features within the library which will improve code quality.
+This directory contains MJML templates for emails. MJML is a markup language designed to reduce the pain of coding responsive email templates. Component based development features in MJML improve code quality and reusability.
 
 MJML stands for MailJet Markup Language.
 
 ## Implementation considerations
 
-These `MJML` templates are compiled into HTML which will then be further consumed by our HandleBars mail service. We can continue to use this service to assign values from our View Models. This leverages the existing infrastructure. It also means we can continue to use the double brace (`{{}}`) syntax within MJML since Handlebars can be used to assign values to those `{{variables}}`.
+These `MJML` templates are compiled into HTML which will then be further consumed by our Handlebars mail service. We can continue to use this service to assign values from our View Models. This leverages the existing infrastructure. It also means we can continue to use the double brace (`{{}}`) syntax within MJML since Handlebars can be used to assign values to those `{{variables}}`.
 
 There is no change on how we interact with our view models.
 
@@ -18,26 +18,23 @@ There is no change to how we create the `txt.hbs`. MJML does not impact how we c
 
 ## Building `MJML` files
 
-```powershell
+```shell
 npm ci
 
-# Build once, output is the ./out directory
+# Build *.html to ./out directory
 npm run build
 
-# To build on changes to *.mjml and *.js files, new *.js/*.mjml files will not be tracked, you will need to run again
+# To build on changes to *.mjml and *.js files, new files will not be tracked, you will need to run again
 npm run build:watch
 
-# clean ./out directory
-npm run build:clean
-
-# Build *.html.hbs once, output is the ./out-hbs directory
+# Build *.html.hbs to ./out directory
 npm run build:hbs
 
-# To build on changes to *.mjml and *.js files, new *.js/*.mjml files will not be tracked, you will need to run again
-npm run build:watch:hbs
+# Build minified *.html.hbs to ./out directory
+npm run build:minify
 
-# clean ./out-hbs directory
-npm run build:clean:hbs
+# apply prettier formatting
+npm run prettier
 ```
 
 ## Development
@@ -48,21 +45,24 @@ When using MJML templating you can use the above [commands](#building-mjml-files
 
 Not all MJML tags have the same attributes, it is highly recommended to review the documentation on the official MJML website to understand the usages of each of the tags.
 
-### Possible process
+### Recommended development
 
-#### Initial email development might look something like:
+#### Mjml email template development
 
-1. create `cool-email.mjml`
+1. create `cool-email.mjml` in appropriate team directory
 2. run `npm run build:watch`
 3. view compiled `HTML` output in a web browser
-4. iterate -> while `build:watch`'ing you should be able to refresh the browser page after the mjml re-compile to see the changes
+4. iterate -> while `build:watch`'ing you should be able to refresh the browser page after the mjml/js re-compile to see the changes
 
 #### Testing with `IMailService`
 
-After the email is developed from the [initial step](#initial-email-development-might-look-something-like) you'll probably want to make sure the email `{{variables}}` are populated properly by running it through an `IMailService`.
+After the email is developed from the [initial step](#mjml-email-template-development) make sure the email `{{variables}}` are populated properly by running it through an `IMailService` implementation.
 
-1. run `npm run build:hbs`
+1. run `npm run build:minify`
 2. copy built `*.html.hbs` files from the build directory to a location the mail service can consume them
+3. run code that will send the email
+
+The minified `html.hbs` artifacts are deliverables and must be placed into the correct `src/Core/MailTemplates/Handlebars/` directories in order to be used by `IMailService` implementations.
 
 ### Custom tags
 

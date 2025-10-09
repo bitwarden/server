@@ -8,11 +8,19 @@
   <mj-body background-color="#e6e9ef" width="660px" />
 </mj-attributes>
 <mj-style inline="inline">
-  .link { text-decoration: none; color: #175ddc; font-weight: 600 }
+  .link {
+    text-decoration: none;
+    color: #175ddc;
+    font-weight: 600;
+  }
 </mj-style>
 <mj-style>
-  .border-fix > table { border-collapse:separate !important; } .border-fix >
-  table > tbody > tr > td { border-radius: 3px; }
+  .border-fix > table {
+    border-collapse: separate !important;
+  }
+  .border-fix > table > tbody > tr > td {
+    border-radius: 3px;
+  }
 </mj-style>
 
 <!-- Responsive icon visibility -->
