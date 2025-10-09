@@ -73,8 +73,6 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    SET @Id = COALESCE(@Id, NEWID());
-
     INSERT INTO [dbo].[Organization]
     (
         [Id],
