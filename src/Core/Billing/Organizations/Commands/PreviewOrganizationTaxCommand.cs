@@ -135,6 +135,8 @@ public class PreviewOrganizationTaxCommand(
 
                 var newPlan = await pricingClient.GetPlanOrThrow(planChange.PlanType);
 
+                var quantity = newPlan.HasNonSeatBasedPasswordManagerPlan() ? 1 : 2;
+
                 var items = new List<InvoiceSubscriptionDetailsItemOptions>
                 {
                     new ()
@@ -142,7 +144,7 @@ public class PreviewOrganizationTaxCommand(
                         Price = newPlan.HasNonSeatBasedPasswordManagerPlan()
                             ? newPlan.PasswordManager.StripePlanId
                             : newPlan.PasswordManager.StripeSeatPlanId,
-                        Quantity = 2
+                        Quantity = quantity
                     }
                 };
 
@@ -194,12 +196,17 @@ public class PreviewOrganizationTaxCommand(
                         ? currentPlan.PasswordManager.StripePlanId
                         : currentPlan.PasswordManager.StripeSeatPlanId];
 
+                var quantity = currentPlan.HasNonSeatBasedPasswordManagerPlan() &&
+                               !newPlan.HasNonSeatBasedPasswordManagerPlan()
+                    ? (long)organization.Seats!
+                    : passwordManagerSeats.Quantity;
+
                 items.Add(new InvoiceSubscriptionDetailsItemOptions
                 {
                     Price = newPlan.HasNonSeatBasedPasswordManagerPlan()
                         ? newPlan.PasswordManager.StripePlanId
                         : newPlan.PasswordManager.StripeSeatPlanId,
-                    Quantity = passwordManagerSeats.Quantity
+                    Quantity = quantity
                 });
 
                 var hasStorage =
