@@ -11,6 +11,7 @@ using Bit.Core;
 using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
+using Bit.Core.AdminConsole.Models.Teams;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.AdminConsole.Services.Implementations;
@@ -69,6 +70,8 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Azure.Cosmos.Fluent;
+using Microsoft.Bot.Builder;
+using Microsoft.Bot.Builder.Integration.AspNet.Core;
 using Microsoft.Extensions.Caching.Cosmos;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
@@ -604,6 +607,33 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
+    public static IServiceCollection AddTeamsService(this IServiceCollection services, GlobalSettings globalSettings)
+    {
+        if (CoreHelpers.SettingHasValue(globalSettings.Teams.ClientId) &&
+            CoreHelpers.SettingHasValue(globalSettings.Teams.ClientSecret) &&
+            CoreHelpers.SettingHasValue(globalSettings.Teams.Scopes))
+        {
+            services.AddHttpClient(TeamsService.HttpClientName);
+            services.TryAddSingleton<TeamsService>();
+            services.TryAddSingleton<IBot>(sp => sp.GetRequiredService<TeamsService>());
+            services.TryAddSingleton<ITeamsService>(sp => sp.GetRequiredService<TeamsService>());
+            services.TryAddSingleton<IBotFrameworkHttpAdapter>(sp =>
+                new BotFrameworkHttpAdapter(
+                    new TeamsBotCredentialProvider(
+                        clientId: globalSettings.Teams.ClientId,
+                        clientSecret: globalSettings.Teams.ClientSecret
+                    )
+                )
+            );
+        }
+        else
+        {
+            services.TryAddSingleton<ITeamsService, NoopTeamsService>();
+        }
+
+        return services;
+    }
+
     public static void UseDefaultMiddleware(this IApplicationBuilder app,
         IWebHostEnvironment env, GlobalSettings globalSettings)
     {
@@ -913,6 +943,7 @@ public static class ServiceCollectionExtensions
 
         // Add services in support of handlers
         services.AddSlackService(globalSettings);
+        services.AddTeamsService(globalSettings);
         services.TryAddSingleton(TimeProvider.System);
         services.AddHttpClient(WebhookIntegrationHandler.HttpClientName);
         services.AddHttpClient(DatadogIntegrationHandler.HttpClientName);
@@ -921,12 +952,14 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<IIntegrationHandler<SlackIntegrationConfigurationDetails>, SlackIntegrationHandler>();
         services.TryAddSingleton<IIntegrationHandler<WebhookIntegrationConfigurationDetails>, WebhookIntegrationHandler>();
         services.TryAddSingleton<IIntegrationHandler<DatadogIntegrationConfigurationDetails>, DatadogIntegrationHandler>();
+        services.TryAddSingleton<IIntegrationHandler<TeamsIntegrationConfigurationDetails>, TeamsIntegrationHandler>();
 
         var repositoryConfiguration = new RepositoryListenerConfiguration(globalSettings);
         var slackConfiguration = new SlackListenerConfiguration(globalSettings);
         var webhookConfiguration = new WebhookListenerConfiguration(globalSettings);
         var hecConfiguration = new HecListenerConfiguration(globalSettings);
         var datadogConfiguration = new DatadogListenerConfiguration(globalSettings);
+        var teamsConfiguration = new TeamsListenerConfiguration(globalSettings);
 
         if (IsRabbitMqEnabled(globalSettings))
         {
@@ -944,6 +977,7 @@ public static class ServiceCollectionExtensions
             services.AddRabbitMqIntegration<WebhookIntegrationConfigurationDetails, WebhookListenerConfiguration>(webhookConfiguration);
             services.AddRabbitMqIntegration<WebhookIntegrationConfigurationDetails, HecListenerConfiguration>(hecConfiguration);
             services.AddRabbitMqIntegration<DatadogIntegrationConfigurationDetails, DatadogListenerConfiguration>(datadogConfiguration);
+            services.AddRabbitMqIntegration<TeamsIntegrationConfigurationDetails, TeamsListenerConfiguration>(teamsConfiguration);
         }
 
         if (IsAzureServiceBusEnabled(globalSettings))
@@ -967,6 +1001,7 @@ public static class ServiceCollectionExtensions
             services.AddAzureServiceBusIntegration<WebhookIntegrationConfigurationDetails, WebhookListenerConfiguration>(webhookConfiguration);
             services.AddAzureServiceBusIntegration<WebhookIntegrationConfigurationDetails, HecListenerConfiguration>(hecConfiguration);
             services.AddAzureServiceBusIntegration<DatadogIntegrationConfigurationDetails, DatadogListenerConfiguration>(datadogConfiguration);
+            services.AddAzureServiceBusIntegration<TeamsIntegrationConfigurationDetails, TeamsListenerConfiguration>(teamsConfiguration);
         }
 
         return services;

@@ -26,4 +26,16 @@ public class OrganizationIntegrationRepository :
             return await query.Run(dbContext).ToListAsync();
         }
     }
+
+    public async Task<Core.AdminConsole.Entities.OrganizationIntegration?> GetByTeamsConfigurationTenantIdTeamId(
+        string tenantId,
+        string teamId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = new OrganizationIntegrationReadByTeamsConfigurationTenantIdTeamIdQuery(tenantId: tenantId, teamId: teamId);
+            return await query.Run(dbContext).SingleOrDefaultAsync();
+        }
+    }
 }

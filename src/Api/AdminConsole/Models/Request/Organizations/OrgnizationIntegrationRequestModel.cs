@@ -35,7 +35,7 @@ public class OrganizationIntegrationRequestModel : IValidatableObject
             case IntegrationType.CloudBillingSync or IntegrationType.Scim:
                 yield return new ValidationResult($"{nameof(Type)} integrations are not yet supported.", [nameof(Type)]);
                 break;
-            case IntegrationType.Slack:
+            case IntegrationType.Slack or IntegrationType.Teams:
                 yield return new ValidationResult($"{nameof(Type)} integrations cannot be created directly.", [nameof(Type)]);
                 break;
             case IntegrationType.Webhook:
