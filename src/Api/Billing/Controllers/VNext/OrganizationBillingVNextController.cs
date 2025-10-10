@@ -4,7 +4,6 @@ using Bit.Api.Billing.Attributes;
 using Bit.Api.Billing.Models.Requests.Payment;
 using Bit.Api.Billing.Models.Requests.Subscriptions;
 using Bit.Api.Billing.Models.Requirements;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Organizations.Queries;
@@ -26,7 +25,6 @@ public class OrganizationBillingVNextController(
     ICreateBitPayInvoiceForCreditCommand createBitPayInvoiceForCreditCommand,
     IGetBillingAddressQuery getBillingAddressQuery,
     IGetCreditQuery getCreditQuery,
-    IGetOrganizationMetadataQuery getOrganizationMetadataQuery,
     IGetOrganizationWarningsQuery getOrganizationWarningsQuery,
     IGetPaymentMethodQuery getPaymentMethodQuery,
     IRestartSubscriptionCommand restartSubscriptionCommand,
@@ -113,23 +111,6 @@ public class OrganizationBillingVNextController(
             .AndThenAsync(_ => updateBillingAddressCommand.Run(organization, billingAddress))
             .AndThenAsync(_ => restartSubscriptionCommand.Run(organization));
         return Handle(result);
-    }
-
-    [Authorize<MemberOrProviderRequirement>]
-    [HttpGet("metadata")]
-    [RequireFeature(FeatureFlagKeys.PM25379_UseNewOrganizationMetadataStructure)]
-    [InjectOrganization]
-    public async Task<IResult> GetMetadataAsync(
-        [BindNever] Organization organization)
-    {
-        var metadata = await getOrganizationMetadataQuery.Run(organization);
-
-        if (metadata == null)
-        {
-            return TypedResults.NotFound();
-        }
-
-        return TypedResults.Ok(metadata);
     }
 
     [Authorize<MemberOrProviderRequirement>]
