@@ -26,14 +26,14 @@ jobs:
         id: check_changes
         run: |
           # Ensure we have the base branch
-          git fetch origin ${{ github.base_ref }}
+          git fetch origin "${GITHUB_BASE_REF}"
 
-          echo "Comparing changes between origin/${{ github.base_ref }} and HEAD"
-          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+          echo "Comparing changes between origin/${GITHUB_BASE_REF} and HEAD"
+          CHANGED_FILES=$(git diff --name-only "origin/${GITHUB_BASE_REF}...HEAD")
 
           if [ -z "$CHANGED_FILES" ]; then
             echo "Zero files changed"
-            echo "vault_team_changes=false" >> $GITHUB_OUTPUT
+            echo "vault_team_changes=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -42,7 +42,7 @@ jobs:
 
           if [ -z "$VAULT_PATTERNS" ]; then
             echo "⚠️ No patterns found for @bitwarden/team-vault-dev in CODEOWNERS"
-            echo "vault_team_changes=false" >> $GITHUB_OUTPUT
+            echo "vault_team_changes=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -72,7 +72,7 @@ jobs:
             fi
           done
 
-          echo "vault_team_changes=$vault_team_changes" >> $GITHUB_OUTPUT
+          echo "vault_team_changes=$vault_team_changes" >> "$GITHUB_OUTPUT"
 
           if [ "$vault_team_changes" = "true" ]; then
             echo ""
