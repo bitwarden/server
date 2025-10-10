@@ -19,5 +19,16 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents
 /// </remarks>
 public interface IVNextSavePolicyCommand
 {
+/// <summary>
+    /// Performs necessary validations, saves the policy and any side effects
+    /// </summary>
+    /// <param name="policyRequest">Policy data, acting user, and metadata.</param>
+    /// <returns>The saved policy with updated revision and applied changes.</returns>
+    /// <exception cref="BadRequestException">
+    /// Thrown if:
+    /// - The organization can’t use policies  
+    /// - Dependent policies are missing or block changes  
+    /// - Custom validation fails  
+    /// </exception>
     Task<Policy> SaveAsync(SavePolicyModel policyRequest);
 }
