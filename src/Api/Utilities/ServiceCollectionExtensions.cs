@@ -1,13 +1,13 @@
 ﻿using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.Tools.Authorization;
 using Bit.Core.Auth.IdentityServer;
-using Bit.Core.PhishingDomainFeatures;
-using Bit.Core.PhishingDomainFeatures.Interfaces;
-using Bit.Core.Repositories;
-using Bit.Core.Repositories.Implementations;
+using Bit.Core.Dirt.PhishingDomainFeatures;
+using Bit.Core.Dirt.PhishingDomainFeatures.Interfaces;
+using Bit.Core.Dirt.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Authorization.SecurityTasks;
+using Bit.Infrastructure.EntityFramework.Dirt.Repositories;
 using Bit.SharedWeb.Health;
 using Bit.SharedWeb.Swagger;
 using Microsoft.AspNetCore.Authorization;
