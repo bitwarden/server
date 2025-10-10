@@ -65,7 +65,8 @@ public class RecipeService : IRecipeService
         var seededData = _databaseContext.SeededData.FirstOrDefault(s => s.Id == seedId);
         if (seededData == null)
         {
-            throw new RecipeExecutionException($"Seeded data with ID {seedId} not found");
+            _logger.LogInformation("No seeded data found with ID {SeedId}, skipping", seedId);
+            return null;
         }
 
         var trackedEntities = JsonSerializer.Deserialize<Dictionary<string, List<Guid>>>(seededData.Data);

@@ -65,6 +65,43 @@ public class SeedController : Controller
         }
     }
 
+    [HttpDelete("/seed/batch")]
+    public async Task<IActionResult> DeleteBatch([FromBody] List<Guid> seedIds)
+    {
+        _logger.LogInformation("Deleting batch of seeded data with IDs: {SeedIds}", string.Join(", ", seedIds));
+
+        var aggregateException = new AggregateException();
+
+        await Task.Run(async () =>
+        {
+            foreach (var seedId in seedIds)
+            {
+                try
+                {
+                    await _recipeService.DestroyRecipe(seedId);
+                }
+                catch (Exception ex)
+                {
+                    aggregateException = new AggregateException(aggregateException, ex);
+                    _logger.LogError(ex, "Error deleting seeded data: {SeedId}", seedId);
+                }
+            }
+        });
+
+        if (aggregateException.InnerExceptions.Count > 0)
+        {
+            return BadRequest(new
+            {
+                Error = "One or more errors occurred while deleting seeded data",
+                Details = aggregateException.InnerExceptions.Select(e => e.Message).ToList()
+            });
+        }
+        return Ok(new
+        {
+            Message = "Batch delete completed successfully"
+        });
+    }
+
     [HttpDelete("/seed/{seedId}")]
     public async Task<IActionResult> Delete([FromRoute] Guid seedId)
     {
@@ -99,6 +136,7 @@ public class SeedController : Controller
             });
         }
     }
+
 
     [HttpDelete("/seed")]
     public async Task<IActionResult> DeleteAll()
