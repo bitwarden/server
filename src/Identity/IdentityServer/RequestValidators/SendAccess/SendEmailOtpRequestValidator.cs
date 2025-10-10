@@ -61,7 +61,7 @@ public class SendEmailOtpRequestValidator(
             {
                 return BuildErrorResult(SendAccessConstants.EmailOtpValidatorResults.OtpGenerationFailed);
             }
-            if(featureService.IsEnabled("mjml-based-email-templates"))
+            if (featureService.IsEnabled("mjml-based-email-templates"))
             {
                 await mailService.SendSendEmailOtpEmailv2Async(
                     email,
