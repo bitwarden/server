@@ -106,7 +106,7 @@ public class OrganizationEditModel : OrganizationViewModel
         SmServiceAccounts = org.SmServiceAccounts;
         MaxAutoscaleSmServiceAccounts = org.MaxAutoscaleSmServiceAccounts;
         UseOrganizationDomains = org.UseOrganizationDomains;
-        AutomaticUserConfirmation = org.AutomaticUserConfirmation;
+        UseAutomaticUserConfirmation = org.UseAutomaticUserConfirmation;
 
         _plans = plans;
     }
@@ -195,7 +195,7 @@ public class OrganizationEditModel : OrganizationViewModel
     public bool UseOrganizationDomains { get; set; }
 
     [Display(Name = "Automatic User Confirmation")]
-    public bool AutomaticUserConfirmation { get; set; }
+    public bool UseAutomaticUserConfirmation { get; set; }
     /**
      * Creates a Plan[] object for use in Javascript
      * This is mapped manually below to provide some type safety in case the plan objects change

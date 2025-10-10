@@ -73,9 +73,6 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("INTEGER")
                         .HasDefaultValue(true);
 
-                    b.Property<bool>("AutomaticUserConfirmation")
-                        .HasColumnType("INTEGER");
-
                     b.Property<string>("BillingEmail")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -216,6 +213,9 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("UseApi")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("UseAutomaticUserConfirmation")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("UseCustomPermissions")

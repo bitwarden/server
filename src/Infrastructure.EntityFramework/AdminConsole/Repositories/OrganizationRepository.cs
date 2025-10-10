@@ -113,7 +113,7 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 UseRiskInsights = e.UseRiskInsights,
                 UseOrganizationDomains = e.UseOrganizationDomains,
                 UseAdminSponsoredFamilies = e.UseAdminSponsoredFamilies,
-                AutomaticUserConfirmation = e.AutomaticUserConfirmation
+                UseAutomaticUserConfirmation = e.UseAutomaticUserConfirmation
             }).ToListAsync();
         }
     }

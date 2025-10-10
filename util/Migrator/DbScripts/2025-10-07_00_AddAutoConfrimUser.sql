@@ -1,8 +1,8 @@
 -- Add AutomaticallyConfirmUsers column to Organization table
-IF COL_LENGTH('[dbo].[Organization]', 'AutomaticUserConfirmation') IS NULL
+IF COL_LENGTH('[dbo].[Organization]', 'UseAutomaticUserConfirmation') IS NULL
     BEGIN
         ALTER TABLE [dbo].[Organization]
-            ADD [AutomaticUserConfirmation] BIT NOT NULL CONSTRAINT [DF_Organization_AutomaticUserConfirmation] DEFAULT (0);
+            ADD [UseAutomaticUserConfirmation] BIT NOT NULL CONSTRAINT [DF_Organization_UseAutomaticUserConfirmation] DEFAULT (0);
     END
 GO
 
@@ -68,7 +68,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Organization_Create]
     @UseOrganizationDomains BIT = 0,
     @UseAdminSponsoredFamilies BIT = 0,
     @SyncSeats BIT = 0,
-    @AutomaticUserConfirmation BIT
+    @UseAutomaticUserConfirmation BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -135,7 +135,7 @@ BEGIN
         [UseOrganizationDomains],
         [UseAdminSponsoredFamilies],
         [SyncSeats],
-        [AutomaticUserConfirmation]
+        [UseAutomaticUserConfirmation]
     )
     VALUES
         (
@@ -199,7 +199,7 @@ BEGIN
             @UseOrganizationDomains,
             @UseAdminSponsoredFamilies,
             @SyncSeats,
-            @AutomaticUserConfirmation
+            @UseAutomaticUserConfirmation
         );
 END
 GO
@@ -266,7 +266,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Organization_Update]
     @UseOrganizationDomains BIT = 0,
     @UseAdminSponsoredFamilies BIT = 0,
     @SyncSeats BIT = 0,
-    @AutomaticUserConfirmation BIT = 0
+    @UseAutomaticUserConfirmation BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -332,7 +332,171 @@ BEGIN
         [UseOrganizationDomains] = @UseOrganizationDomains,
         [UseAdminSponsoredFamilies] = @UseAdminSponsoredFamilies,
         [SyncSeats] = @SyncSeats,
-        [AutomaticUserConfirmation] = @AutomaticUserConfirmation
+        [UseAutomaticUserConfirmation] = @UseAutomaticUserConfirmation
     WHERE [Id] = @Id;
 END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[Organization_ReadAbilities]
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        [Id],
+        [UseEvents],
+        [Use2fa],
+        CASE
+            WHEN [Use2fa] = 1 AND [TwoFactorProviders] IS NOT NULL AND [TwoFactorProviders] != '{}' THEN
+                1
+            ELSE
+                0
+            END AS [Using2fa],
+        [UsersGetPremium],
+        [UseCustomPermissions],
+        [UseSso],
+        [UseKeyConnector],
+        [UseScim],
+        [UseResetPassword],
+        [UsePolicies],
+        [Enabled],
+        [LimitCollectionCreation],
+        [LimitCollectionDeletion],
+        [AllowAdminAccessToAllCollectionItems],
+        [UseRiskInsights],
+        [LimitItemDeletion],
+        [UseOrganizationDomains],
+        [UseAdminSponsoredFamilies],
+        [UseAutomaticUserConfirmation]
+    FROM
+        [dbo].[Organization]
+END
+GO
+
+CREATE OR ALTER VIEW [dbo].[OrganizationUserOrganizationDetailsView]
+AS
+SELECT
+    OU.[UserId],
+    OU.[OrganizationId],
+    OU.[Id] OrganizationUserId,
+    O.[Name],
+    O.[Enabled],
+    O.[PlanType],
+    O.[UsePolicies],
+    O.[UseSso],
+    O.[UseKeyConnector],
+    O.[UseScim],
+    O.[UseGroups],
+    O.[UseDirectory],
+    O.[UseEvents],
+    O.[UseTotp],
+    O.[Use2fa],
+    O.[UseApi],
+    O.[UseResetPassword],
+    O.[SelfHost],
+    O.[UsersGetPremium],
+    O.[UseCustomPermissions],
+    O.[UseSecretsManager],
+    O.[Seats],
+    O.[MaxCollections],
+    O.[MaxStorageGb],
+    O.[Identifier],
+    OU.[Key],
+    OU.[ResetPasswordKey],
+    O.[PublicKey],
+    O.[PrivateKey],
+    OU.[Status],
+    OU.[Type],
+    SU.[ExternalId] SsoExternalId,
+    OU.[Permissions],
+    PO.[ProviderId],
+    P.[Name] ProviderName,
+    P.[Type] ProviderType,
+    SS.[Enabled] SsoEnabled,
+    SS.[Data] SsoConfig,
+    OS.[FriendlyName] FamilySponsorshipFriendlyName,
+    OS.[LastSyncDate] FamilySponsorshipLastSyncDate,
+    OS.[ToDelete] FamilySponsorshipToDelete,
+    OS.[ValidUntil] FamilySponsorshipValidUntil,
+    OU.[AccessSecretsManager],
+    O.[UsePasswordManager],
+    O.[SmSeats],
+    O.[SmServiceAccounts],
+    O.[LimitCollectionCreation],
+    O.[LimitCollectionDeletion],
+    O.[AllowAdminAccessToAllCollectionItems],
+    O.[UseRiskInsights],
+    O.[LimitItemDeletion],
+    O.[UseAdminSponsoredFamilies],
+    O.[UseOrganizationDomains],
+    OS.[IsAdminInitiated],
+    O.[UseAutomaticUserConfirmation]
+FROM
+    [dbo].[OrganizationUser] OU
+        LEFT JOIN
+    [dbo].[Organization] O ON O.[Id] = OU.[OrganizationId]
+        LEFT JOIN
+    [dbo].[SsoUser] SU ON SU.[UserId] = OU.[UserId] AND SU.[OrganizationId] = OU.[OrganizationId]
+        LEFT JOIN
+    [dbo].[ProviderOrganization] PO ON PO.[OrganizationId] = O.[Id]
+        LEFT JOIN
+    [dbo].[Provider] P ON P.[Id] = PO.[ProviderId]
+        LEFT JOIN
+    [dbo].[SsoConfig] SS ON SS.[OrganizationId] = OU.[OrganizationId]
+        LEFT JOIN
+    [dbo].[OrganizationSponsorship] OS ON OS.[SponsoringOrganizationUserID] = OU.[Id]
+
+GO
+
+CREATE OR ALTER VIEW [dbo].[ProviderUserProviderOrganizationDetailsView]
+AS
+SELECT
+    PU.[UserId],
+    PO.[OrganizationId],
+    O.[Name],
+    O.[Enabled],
+    O.[UsePolicies],
+    O.[UseSso],
+    O.[UseKeyConnector],
+    O.[UseScim],
+    O.[UseGroups],
+    O.[UseDirectory],
+    O.[UseEvents],
+    O.[UseTotp],
+    O.[Use2fa],
+    O.[UseApi],
+    O.[UseResetPassword],
+    O.[SelfHost],
+    O.[UsersGetPremium],
+    O.[UseCustomPermissions],
+    O.[Seats],
+    O.[MaxCollections],
+    O.[MaxStorageGb],
+    O.[Identifier],
+    PO.[Key],
+    O.[PublicKey],
+    O.[PrivateKey],
+    PU.[Status],
+    PU.[Type],
+    PO.[ProviderId],
+    PU.[Id] ProviderUserId,
+    P.[Name] ProviderName,
+    O.[PlanType],
+    O.[LimitCollectionCreation],
+    O.[LimitCollectionDeletion],
+    O.[AllowAdminAccessToAllCollectionItems],
+    O.[UseRiskInsights],
+    O.[UseAdminSponsoredFamilies],
+    P.[Type] ProviderType,
+    O.[LimitItemDeletion],
+    O.[UseOrganizationDomains],
+    O.[UseAutomaticUserConfirmation]
+FROM
+    [dbo].[ProviderUser] PU
+        INNER JOIN
+    [dbo].[ProviderOrganization] PO ON PO.[ProviderId] = PU.[ProviderId]
+        INNER JOIN
+    [dbo].[Organization] O ON O.[Id] = PO.[OrganizationId]
+        INNER JOIN
+    [dbo].[Provider] P ON P.[Id] = PU.[ProviderId]
 GO

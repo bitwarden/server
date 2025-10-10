@@ -11,7 +11,7 @@ public partial class AddAutoConfrimUserToOrg : Migration
     protected override void Up(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.AddColumn<bool>(
-            name: "AutomaticUserConfirmation",
+            name: "UseAutomaticUserConfirmation",
             table: "Organization",
             type: "INTEGER",
             nullable: false,
@@ -22,7 +22,7 @@ public partial class AddAutoConfrimUserToOrg : Migration
     protected override void Down(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.DropColumn(
-            name: "AutomaticUserConfirmation",
+            name: "UseAutomaticUserConfirmation",
             table: "Organization");
     }
 }

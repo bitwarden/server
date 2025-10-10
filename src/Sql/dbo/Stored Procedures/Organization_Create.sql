@@ -126,7 +126,7 @@ BEGIN
         [UseOrganizationDomains],
         [UseAdminSponsoredFamilies],
         [SyncSeats],
-        [AutomaticUserConfirmation]
+        [UseAutomaticUserConfirmation]
     )
     VALUES
         (
@@ -190,6 +190,6 @@ BEGIN
             @UseOrganizationDomains,
             @UseAdminSponsoredFamilies,
             @SyncSeats,
-            @AutomaticUserConfirmation
+            @UseAutomaticUserConfirmation
         );
 END
