@@ -19,7 +19,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents
 /// </remarks>
 public interface IVNextSavePolicyCommand
 {
-/// <summary>
+    /// <summary>
     /// Performs necessary validations, saves the policy and any side effects
     /// </summary>
     /// <param name="policyRequest">Policy data, acting user, and metadata.</param>
