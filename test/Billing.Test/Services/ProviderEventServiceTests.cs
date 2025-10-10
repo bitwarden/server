@@ -68,6 +68,36 @@ public class ProviderEventServiceTests
     }
 
     [Fact]
+    public async Task TryRecordInvoiceLineItems_InvoiceParentTypeNotSubscriptionDetails_NoOp()
+    {
+        // Arrange
+        var stripeEvent = new Event
+        {
+            Type = "invoice.created"
+        };
+
+        var invoice = new Invoice
+        {
+            Parent = new InvoiceParent
+            {
+                Type = "credit_note",
+                SubscriptionDetails = new InvoiceParentSubscriptionDetails
+                {
+                    SubscriptionId = "sub_1"
+                }
+            }
+        };
+
+        _stripeEventService.GetInvoice(stripeEvent).Returns(invoice);
+
+        // Act
+        await _providerEventService.TryRecordInvoiceLineItems(stripeEvent);
+
+        // Assert
+        await _stripeFacade.DidNotReceiveWithAnyArgs().GetSubscription(Arg.Any<string>());
+    }
+
+    [Fact]
     public async Task TryRecordInvoiceLineItems_EventNotProviderRelated_NoOp()
     {
         // Arrange
@@ -82,6 +112,7 @@ public class ProviderEventServiceTests
         {
             Parent = new InvoiceParent
             {
+                Type = "subscription_details",
                 SubscriptionDetails = new InvoiceParentSubscriptionDetails
                 {
                     SubscriptionId = subscriptionId
@@ -123,6 +154,7 @@ public class ProviderEventServiceTests
             Number = "A",
             Parent = new InvoiceParent
             {
+                Type = "subscription_details",
                 SubscriptionDetails = new InvoiceParentSubscriptionDetails
                 {
                     SubscriptionId = subscriptionId
@@ -282,6 +314,7 @@ public class ProviderEventServiceTests
             Number = "A",
             Parent = new InvoiceParent
             {
+                Type = "subscription_details",
                 SubscriptionDetails = new InvoiceParentSubscriptionDetails
                 {
                     SubscriptionId = subscriptionId
