@@ -25,7 +25,7 @@ public class UserSeeder(RustSdkService sdkService, IPasswordHasher<Bit.Core.Enti
         return $"{mangleId}+{email}";
     }
 
-    public User CreateUser(string email)
+    public User CreateUser(string email, bool emailVerified = false, bool premium = false)
     {
         email = MangleEmail(email);
         var keys = sdkService.GenerateUserKeys(email, "asdfasdfasdf");
@@ -34,11 +34,13 @@ public class UserSeeder(RustSdkService sdkService, IPasswordHasher<Bit.Core.Enti
         {
             Id = CoreHelpers.GenerateComb(),
             Email = email,
+            EmailVerified = emailVerified,
             MasterPassword = null,
             SecurityStamp = "4830e359-e150-4eae-be2a-996c81c5e609",
             Key = keys.EncryptedUserKey,
             PublicKey = keys.PublicKey,
             PrivateKey = keys.PrivateKey,
+            Premium = premium,
             ApiKey = "7gp59kKHt9kMlks0BuNC4IjNXYkljR",
 
             Kdf = KdfType.PBKDF2_SHA256,

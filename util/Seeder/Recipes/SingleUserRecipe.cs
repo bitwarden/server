@@ -6,9 +6,9 @@ namespace Bit.Seeder.Recipes;
 
 public class SingleUserRecipe(DatabaseContext db, UserSeeder userSeeder)
 {
-    public RecipeResult Seed(string email)
+    public RecipeResult Seed(string email, bool emailVerified = false, bool premium = false)
     {
-        var user = userSeeder.CreateUser(email);
+        var user = userSeeder.CreateUser(email, emailVerified, premium);
 
         db.Add(user);
         db.SaveChanges();
