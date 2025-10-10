@@ -153,7 +153,7 @@ public class OrganizationLicense : ILicense
     public LicenseType? LicenseType { get; set; }
     public bool UseOrganizationDomains { get; set; }
     public bool UseAdminSponsoredFamilies { get; set; }
-    public bool AutomaticallyConfirmUsers { get; set; }
+    public bool UseAutomaticUserConfirmation { get; set; }
     public string Hash { get; set; }
     public string Signature { get; set; }
     public string Token { get; set; }
@@ -227,7 +227,8 @@ public class OrganizationLicense : ILicense
                     // any new fields added need to be added here so that they're ignored
                     !p.Name.Equals(nameof(UseRiskInsights)) &&
                     !p.Name.Equals(nameof(UseAdminSponsoredFamilies)) &&
-                    !p.Name.Equals(nameof(UseOrganizationDomains)))
+                    !p.Name.Equals(nameof(UseOrganizationDomains)) &&
+                    !p.Name.Equals(nameof(UseAutomaticUserConfirmation)))
                 .OrderBy(p => p.Name)
                 .Select(p => $"{p.Name}:{Core.Utilities.CoreHelpers.FormatLicenseSignatureValue(p.GetValue(this, null))}")
                 .Aggregate((c, n) => $"{c}|{n}");
@@ -422,6 +423,7 @@ public class OrganizationLicense : ILicense
         var smServiceAccounts = claimsPrincipal.GetValue<int?>(nameof(SmServiceAccounts));
         var useAdminSponsoredFamilies = claimsPrincipal.GetValue<bool>(nameof(UseAdminSponsoredFamilies));
         var useOrganizationDomains = claimsPrincipal.GetValue<bool>(nameof(UseOrganizationDomains));
+        var useAutomaticUserConfirmation = claimsPrincipal.GetValue<bool>(nameof(UseAutomaticUserConfirmation));
 
         return issued <= DateTime.UtcNow &&
                expires >= DateTime.UtcNow &&
@@ -451,7 +453,8 @@ public class OrganizationLicense : ILicense
                smSeats == organization.SmSeats &&
                smServiceAccounts == organization.SmServiceAccounts &&
                useAdminSponsoredFamilies == organization.UseAdminSponsoredFamilies &&
-               useOrganizationDomains == organization.UseOrganizationDomains;
+               useOrganizationDomains == organization.UseOrganizationDomains &&
+               useAutomaticUserConfirmation == organization.UseAutomaticUserConfirmation;
 
     }
 
