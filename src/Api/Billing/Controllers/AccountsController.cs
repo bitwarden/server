@@ -1,4 +1,5 @@
 ﻿#nullable enable
+
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Response;
@@ -8,6 +9,7 @@ using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Services;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Models.Business;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -21,7 +23,8 @@ namespace Bit.Api.Billing.Controllers;
 [Authorize("Application")]
 public class AccountsController(
     IUserService userService,
-    ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery) : Controller
+    ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
+    IUserAccountKeysQuery userAccountKeysQuery) : Controller
 {
     [HttpPost("premium")]
     public async Task<PaymentResponseModel> PostPremiumAsync(
@@ -58,8 +61,9 @@ public class AccountsController(
         var userTwoFactorEnabled = await twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
         var userHasPremiumFromOrganization = await userService.HasPremiumFromOrganization(user);
         var organizationIdsClaimingActiveUser = await GetOrganizationIdsClaimingUserAsync(user.Id);
+        var accountKeys = await userAccountKeysQuery.Run(user);
 
-        var profile = new ProfileResponseModel(user, null, null, null, userTwoFactorEnabled,
+        var profile = new ProfileResponseModel(user, accountKeys, null, null, null, userTwoFactorEnabled,
             userHasPremiumFromOrganization, organizationIdsClaimingActiveUser);
         return new PaymentResponseModel
         {

@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -64,7 +65,8 @@ IBaseRequestValidatorTestWrapper
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
         IPolicyRequirementQuery policyRequirementQuery,
         IAuthRequestRepository authRequestRepository,
-        IMailService mailService) :
+        IMailService mailService,
+        IUserAccountKeysQuery userAccountKeysQuery) :
          base(
             userManager,
             userService,
@@ -82,7 +84,8 @@ IBaseRequestValidatorTestWrapper
             userDecryptionOptionsBuilder,
             policyRequirementQuery,
             authRequestRepository,
-            mailService)
+            mailService,
+            userAccountKeysQuery)
     {
     }
 
