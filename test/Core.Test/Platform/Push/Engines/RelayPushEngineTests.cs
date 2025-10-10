@@ -275,7 +275,8 @@ public class RelayPushNotificationServiceTests : PushTestBase
         };
     }
 
-    protected override JsonNode GetPushLogOutPayload(Guid userId, bool excludeCurrentContext, LogOutReason? reason)
+    protected override JsonNode GetPushLogOutPayload(Guid userId, bool excludeCurrentContext,
+        PushNotificationLogOutReason? reason)
     {
         JsonNode? identifier = excludeCurrentContext ? DeviceIdentifier : null;
 

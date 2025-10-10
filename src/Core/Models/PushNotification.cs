@@ -101,5 +101,5 @@ public class ProviderBankAccountVerifiedPushNotification
 public class LogOutPushNotification
 {
     public Guid UserId { get; set; }
-    public LogOutReason? Reason { get; set; }
+    public PushNotificationLogOutReason? Reason { get; set; }
 }

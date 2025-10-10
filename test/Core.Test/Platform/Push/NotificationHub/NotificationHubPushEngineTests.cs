@@ -405,10 +405,10 @@ public class NotificationHubPushNotificationServiceTests
 
     [Theory]
     [InlineData(true, null)]
-    [InlineData(true, LogOutReason.KdfChange)]
+    [InlineData(true, PushNotificationLogOutReason.KdfChange)]
     [InlineData(false, null)]
-    [InlineData(false, LogOutReason.KdfChange)]
-    public async Task PushLogOutAsync_SendExpectedData(bool excludeCurrentContext, LogOutReason? reason)
+    [InlineData(false, PushNotificationLogOutReason.KdfChange)]
+    public async Task PushLogOutAsync_SendExpectedData(bool excludeCurrentContext, PushNotificationLogOutReason? reason)
     {
         var userId = Guid.NewGuid();
 

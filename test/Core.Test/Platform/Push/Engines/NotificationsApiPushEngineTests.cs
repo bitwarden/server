@@ -194,7 +194,8 @@ public class NotificationsApiPushEngineTests : PushTestBase
         };
     }
 
-    protected override JsonNode GetPushLogOutPayload(Guid userId, bool excludeCurrentContext, LogOutReason? reason)
+    protected override JsonNode GetPushLogOutPayload(Guid userId, bool excludeCurrentContext,
+        PushNotificationLogOutReason? reason)
     {
         JsonNode? contextId = excludeCurrentContext ? DeviceIdentifier : null;
 

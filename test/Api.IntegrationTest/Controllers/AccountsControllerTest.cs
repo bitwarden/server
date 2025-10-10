@@ -173,7 +173,8 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
             _passwordHasher.VerifyHashedPassword(user, user.MasterPassword!, _newMasterPasswordHash));
 
         // Validate push notification
-        await _pushNotificationService.Received(1).PushLogOutAsync(user.Id, false, LogOutReason.KdfChange);
+        await _pushNotificationService.Received(1)
+            .PushLogOutAsync(user.Id, false, PushNotificationLogOutReason.KdfChange);
         await _pushNotificationService.Received(1).PushSyncSettingsAsync(user.Id);
     }
 

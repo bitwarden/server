@@ -167,7 +167,8 @@ public interface IPushNotificationService
             ExcludeCurrentContext = false,
         });
 
-    Task PushLogOutAsync(Guid userId, bool excludeCurrentContextFromPush = false, LogOutReason? reason = null)
+    Task PushLogOutAsync(Guid userId, bool excludeCurrentContextFromPush = false,
+        PushNotificationLogOutReason? reason = null)
         => PushAsync(new PushNotification<LogOutPushNotification>
         {
             Type = PushType.LogOut,

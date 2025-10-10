@@ -1,6 +1,6 @@
 ﻿namespace Bit.Core.Enums;
 
-public enum LogOutReason : byte
+public enum PushNotificationLogOutReason : byte
 {
     KdfChange = 0
 }
