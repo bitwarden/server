@@ -90,6 +90,12 @@ public class SlackService(
 
     public async Task<string> ObtainTokenViaOAuth(string code, string redirectUrl)
     {
+        if (string.IsNullOrEmpty(code) || string.IsNullOrWhiteSpace(redirectUrl))
+        {
+            logger.LogError("Error obtaining token via OAuth: Code and/or RedirectUrl were empty");
+            return string.Empty;
+        }
+
         var tokenResponse = await _httpClient.PostAsync($"{_slackApiBaseUrl}/oauth.v2.access",
             new FormUrlEncodedContent(new[]
             {
