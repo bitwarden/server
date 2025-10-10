@@ -31,6 +31,7 @@ public static class ServiceCollectionExtensions
         services.AddPaymentOperations();
         services.AddOrganizationLicenseCommandsQueries();
         services.AddPremiumCommands();
+        services.AddTransient<IGetOrganizationMetadataQuery, GetOrganizationMetadataQuery>();
         services.AddTransient<IGetOrganizationWarningsQuery, GetOrganizationWarningsQuery>();
         services.AddTransient<IRestartSubscriptionCommand, RestartSubscriptionCommand>();
         services.AddTransient<IPreviewOrganizationTaxCommand, PreviewOrganizationTaxCommand>();
