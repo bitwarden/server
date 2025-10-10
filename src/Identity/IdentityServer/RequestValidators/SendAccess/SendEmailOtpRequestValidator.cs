@@ -10,6 +10,7 @@ using Duende.IdentityServer.Validation;
 namespace Bit.Identity.IdentityServer.RequestValidators.SendAccess;
 
 public class SendEmailOtpRequestValidator(
+    IFeatureService featureService,
     IOtpTokenProvider<DefaultOtpTokenProviderOptions> otpTokenProvider,
     IMailService mailService) : ISendAuthenticationMethodValidator<EmailOtp>
 {
@@ -60,11 +61,20 @@ public class SendEmailOtpRequestValidator(
             {
                 return BuildErrorResult(SendAccessConstants.EmailOtpValidatorResults.OtpGenerationFailed);
             }
-
-            await mailService.SendSendEmailOtpEmailAsync(
-                email,
-                token,
-                string.Format(SendAccessConstants.OtpEmail.Subject, token));
+            if(featureService.IsEnabled("mjml-based-email-templates"))
+            {
+                await mailService.SendSendEmailOtpEmailv2Async(
+                    email,
+                    token,
+                    string.Format(SendAccessConstants.OtpEmail.Subject, token));
+            }
+            else
+            {
+                await mailService.SendSendEmailOtpEmailAsync(
+                    email,
+                    token,
+                    string.Format(SendAccessConstants.OtpEmail.Subject, token));
+            }
             return BuildErrorResult(SendAccessConstants.EmailOtpValidatorResults.EmailOtpSent);
         }
 
