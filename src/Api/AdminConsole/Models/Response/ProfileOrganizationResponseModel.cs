@@ -87,6 +87,8 @@ public class ProfileOrganizationResponseModel : ResponseModel
             KeyConnectorUrl = ssoConfigData.KeyConnectorUrl;
             SsoMemberDecryptionType = ssoConfigData.MemberDecryptionType;
         }
+
+        UseAutomaticUserConfirmation = organization.UseAutomaticUserConfirmation;
     }
 
     public Guid Id { get; set; }
@@ -164,4 +166,5 @@ public class ProfileOrganizationResponseModel : ResponseModel
     public bool IsAdminInitiated { get; set; }
     public bool SsoEnabled { get; set; }
     public MemberDecryptionType? SsoMemberDecryptionType { get; set; }
+    public bool UseAutomaticUserConfirmation { get; set; }
 }
