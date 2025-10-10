@@ -1,6 +1,6 @@
-﻿#nullable enable
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
+using Microsoft.Azure.NotificationHubs.Messaging;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 
@@ -24,7 +24,7 @@ public interface IVNextSavePolicyCommand
     /// </summary>
     /// <param name="policyRequest">Policy data, acting user, and metadata.</param>
     /// <returns>The saved policy with updated revision and applied changes.</returns>
-    /// <exception cref="Exception">
+    /// <exception cref="BadRequestException">
     /// Thrown if:
     /// - The organization can’t use policies
     /// - Dependent policies are missing or block changes
