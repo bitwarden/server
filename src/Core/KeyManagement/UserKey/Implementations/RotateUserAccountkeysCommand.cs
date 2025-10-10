@@ -157,15 +157,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         if (model.Ciphers.Any())
         {
             var ciphersWithUpdatedDate = model.Ciphers.ToList().Select(c => { c.RevisionDate = now; return c; });
-            var useBulkResourceCreationService = _featureService.IsEnabled(FeatureFlagKeys.CipherRepositoryBulkResourceCreation);
-            if (useBulkResourceCreationService)
-            {
-                saveEncryptedDataActions.Add(_cipherRepository.UpdateForKeyRotation_vNext(user.Id, ciphersWithUpdatedDate));
-            }
-            else
-            {
-                saveEncryptedDataActions.Add(_cipherRepository.UpdateForKeyRotation(user.Id, ciphersWithUpdatedDate));
-            }
+            saveEncryptedDataActions.Add(_cipherRepository.UpdateForKeyRotation(user.Id, ciphersWithUpdatedDate));
         }
 
         if (model.Folders.Any())
