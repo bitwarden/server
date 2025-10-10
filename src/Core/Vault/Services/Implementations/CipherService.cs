@@ -644,15 +644,7 @@ public class CipherService : ICipherService
             cipherIds.Add(cipher.Id);
         }
 
-        var useBulkResourceCreationService = _featureService.IsEnabled(FeatureFlagKeys.CipherRepositoryBulkResourceCreation);
-        if (useBulkResourceCreationService)
-        {
-            await _cipherRepository.UpdateCiphersAsync_vNext(sharingUserId, cipherInfos.Select(c => c.cipher));
-        }
-        else
-        {
-            await _cipherRepository.UpdateCiphersAsync(sharingUserId, cipherInfos.Select(c => c.cipher));
-        }
+        await _cipherRepository.UpdateCiphersAsync(sharingUserId, cipherInfos.Select(c => c.cipher));
         await _collectionCipherRepository.UpdateCollectionsForCiphersAsync(cipherIds, sharingUserId,
             organizationId, collectionIds);
 
@@ -720,6 +712,13 @@ public class CipherService : ICipherService
         }
 
         cipherDetails.DeletedDate = cipherDetails.RevisionDate = DateTime.UtcNow;
+
+        if (cipherDetails.ArchivedDate.HasValue)
+        {
+            // If the cipher was archived, clear the archived date when soft deleting
+            // If a user were to restore an archived cipher, it should go back to the vault not the archive vault
+            cipherDetails.ArchivedDate = null;
+        }
 
         await _cipherRepository.UpsertAsync(cipherDetails);
         await _eventService.LogCipherEventAsync(cipherDetails, EventType.Cipher_SoftDeleted);
