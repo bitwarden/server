@@ -24,3 +24,4 @@ GO
 CREATE NONCLUSTERED INDEX [IX_SecretVersion_EditorOrganizationUserId]
     ON [dbo].[SecretVersion]([EditorOrganizationUserId] ASC)
     WHERE [EditorOrganizationUserId] IS NOT NULL;
+GO
