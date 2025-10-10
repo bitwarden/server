@@ -61,8 +61,7 @@ public static class OrganizationFactory
             claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UseOrganizationDomains),
             UseAdminSponsoredFamilies =
             claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UseAdminSponsoredFamilies),
-            UseAutomaticUserConfirmation =
-            claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.AutomaticUserConfirmation),
+            UseAutomaticUserConfirmation = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UseAutomaticUserConfirmation),
         };
 
     public static Organization Create(
@@ -112,6 +111,5 @@ public static class OrganizationFactory
             UseRiskInsights = license.UseRiskInsights,
             UseOrganizationDomains = license.UseOrganizationDomains,
             UseAdminSponsoredFamilies = license.UseAdminSponsoredFamilies,
-            UseAutomaticUserConfirmation = license.AutomaticallyConfirmUsers,
         };
 }
