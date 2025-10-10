@@ -10,16 +10,6 @@ public partial class UserCryptoV2 : Migration
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.RenameColumn(
-            name: "Date",
-            table: "OrganizationReport",
-            newName: "RevisionDate");
-
-        migrationBuilder.RenameIndex(
-            name: "IX_Event_Date_OrganizationId_ActingUserId_CipherId",
-            table: "Event",
-            newName: "IX_Event_DateOrganizationIdUserId");
-
         migrationBuilder.AddColumn<string>(
             name: "SecurityState",
             table: "User",
@@ -39,40 +29,6 @@ public partial class UserCryptoV2 : Migration
             type: "longtext",
             nullable: true)
             .Annotation("MySql:CharSet", "utf8mb4");
-
-        migrationBuilder.AddColumn<string>(
-            name: "ApplicationData",
-            table: "OrganizationReport",
-            type: "longtext",
-            nullable: true)
-            .Annotation("MySql:CharSet", "utf8mb4");
-
-        migrationBuilder.AddColumn<string>(
-            name: "SummaryData",
-            table: "OrganizationReport",
-            type: "longtext",
-            nullable: true)
-            .Annotation("MySql:CharSet", "utf8mb4");
-
-        migrationBuilder.AddColumn<Guid>(
-            name: "GrantedServiceAccountId",
-            table: "Event",
-            type: "char(36)",
-            nullable: true,
-            collation: "ascii_general_ci");
-
-        migrationBuilder.AddColumn<Guid>(
-            name: "ProjectId",
-            table: "Event",
-            type: "char(36)",
-            nullable: true,
-            collation: "ascii_general_ci");
-
-        migrationBuilder.AddColumn<DateTime>(
-            name: "ArchivedDate",
-            table: "Cipher",
-            type: "datetime(6)",
-            nullable: true);
 
         migrationBuilder.CreateTable(
             name: "UserSignatureKeyPair",
@@ -123,35 +79,5 @@ public partial class UserCryptoV2 : Migration
         migrationBuilder.DropColumn(
             name: "SignedPublicKey",
             table: "User");
-
-        migrationBuilder.DropColumn(
-            name: "ApplicationData",
-            table: "OrganizationReport");
-
-        migrationBuilder.DropColumn(
-            name: "SummaryData",
-            table: "OrganizationReport");
-
-        migrationBuilder.DropColumn(
-            name: "GrantedServiceAccountId",
-            table: "Event");
-
-        migrationBuilder.DropColumn(
-            name: "ProjectId",
-            table: "Event");
-
-        migrationBuilder.DropColumn(
-            name: "ArchivedDate",
-            table: "Cipher");
-
-        migrationBuilder.RenameColumn(
-            name: "RevisionDate",
-            table: "OrganizationReport",
-            newName: "Date");
-
-        migrationBuilder.RenameIndex(
-            name: "IX_Event_DateOrganizationIdUserId",
-            table: "Event",
-            newName: "IX_Event_Date_OrganizationId_ActingUserId_CipherId");
     }
 }
