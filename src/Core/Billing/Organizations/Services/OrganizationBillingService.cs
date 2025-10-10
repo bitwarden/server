@@ -51,13 +51,8 @@ public class OrganizationBillingService(
         {
             organization.Enabled = true;
             organization.ExpirationDate = subscription.CurrentPeriodEnd;
+            await organizationRepository.ReplaceAsync(organization);
         }
-
-        organization.Gateway = GatewayType.Stripe;
-        organization.GatewayCustomerId = customer.Id;
-        organization.GatewaySubscriptionId = subscription.Id;
-
-        await organizationRepository.ReplaceAsync(organization);
     }
 
     public async Task<OrganizationMetadata?> GetMetadata(Guid organizationId)
@@ -255,8 +250,6 @@ public class OrganizationBillingService(
                 ValidateLocation = StripeConstants.ValidateTaxLocationTiming.Immediately
             };
 
-
-
             if (planType.GetProductTier() is not ProductTierType.Free and not ProductTierType.Families &&
                 customerSetup.TaxInformation.Country != Core.Constants.CountryAbbreviations.UnitedStates)
             {
@@ -335,7 +328,13 @@ public class OrganizationBillingService(
 
         try
         {
-            return await stripeAdapter.CustomerCreateAsync(customerCreateOptions);
+            var customer = await stripeAdapter.CustomerCreateAsync(customerCreateOptions);
+
+            organization.Gateway = GatewayType.Stripe;
+            organization.GatewayCustomerId = customer.Id;
+            await organizationRepository.ReplaceAsync(organization);
+
+            return customer;
         }
         catch (StripeException stripeException) when (stripeException.StripeError?.Code ==
                                                       StripeConstants.ErrorCodes.CustomerTaxLocationInvalid)
@@ -476,7 +475,13 @@ public class OrganizationBillingService(
         {
             subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
         }
-        return await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
+
+        var subscription = await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
+
+        organization.GatewaySubscriptionId = subscription.Id;
+        await organizationRepository.ReplaceAsync(organization);
+
+        return subscription;
     }
 
     private async Task<Customer> GetCustomerWhileEnsuringCorrectTaxExemptionAsync(
