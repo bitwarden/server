@@ -59,7 +59,7 @@ CREATE PROCEDURE [dbo].[Organization_Create]
     @UseOrganizationDomains BIT = 0,
     @UseAdminSponsoredFamilies BIT = 0,
     @SyncSeats BIT = 0,
-    @AutomaticUserConfirmation BIT
+    @UseAutomaticUserConfirmation BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
