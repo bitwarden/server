@@ -106,6 +106,7 @@ public class OrganizationEditModel : OrganizationViewModel
         SmServiceAccounts = org.SmServiceAccounts;
         MaxAutoscaleSmServiceAccounts = org.MaxAutoscaleSmServiceAccounts;
         UseOrganizationDomains = org.UseOrganizationDomains;
+        AutomaticUserConfirmation = org.AutomaticUserConfirmation;
 
         _plans = plans;
     }
@@ -234,6 +235,7 @@ public class OrganizationEditModel : OrganizationViewModel
                     LegacyYear = p.LegacyYear,
                     Disabled = p.Disabled,
                     SupportsSecretsManager = p.SupportsSecretsManager,
+                    AutomaticUserConfirmation = p.AutomaticUserConfirmation,
                     PasswordManager =
                         new
                         {
