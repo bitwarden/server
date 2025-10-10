@@ -752,6 +752,11 @@ public class CiphersController : Controller
                 _logger.LogError("Cipher was not encrypted for the current user. CipherId: {CipherId} CurrentUser: {CurrentUserId}, EncryptedFor: {EncryptedFor}", id, user.Id, model.Cipher.EncryptedFor);
                 throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
             }
+
+            if (cipher.ArchivedDate.HasValue)
+            {
+                throw new BadRequestException("Cannot move an archived item to an organization.");
+            }
         }
 
         ValidateClientVersionForFido2CredentialSupport(cipher);
@@ -1262,6 +1267,11 @@ public class CiphersController : Controller
             {
                 _logger.LogError("Cipher was not encrypted for the current user. CipherId: {CipherId}, CurrentUser: {CurrentUserId}, EncryptedFor: {EncryptedFor}", cipher.Id, userId, cipher.EncryptedFor);
                 throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
+            }
+
+            if (cipher.ArchivedDate.HasValue)
+            {
+                throw new BadRequestException("Cannot move archived items to an organization.");
             }
         }
 

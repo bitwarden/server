@@ -1791,6 +1791,73 @@ public class CiphersControllerTests
     }
 
     [Theory, BitAutoData]
+    public async Task PutShareMany_ArchivedCipher_ThrowsBadRequestException(
+        Guid organizationId,
+        Guid userId,
+        CipherWithIdRequestModel request,
+        SutProvider<CiphersController> sutProvider)
+    {
+        request.EncryptedFor = userId;
+        request.OrganizationId = organizationId.ToString();
+        request.ArchivedDate = DateTime.UtcNow;
+        var model = new CipherBulkShareRequestModel
+        {
+            Ciphers = [request],
+            CollectionIds = [Guid.NewGuid().ToString()]
+        };
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationUser(organizationId)
+            .Returns(Task.FromResult(true));
+        sutProvider.GetDependency<IUserService>()
+            .GetProperUserId(default)
+            .ReturnsForAnyArgs(userId);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.PutShareMany(model)
+        );
+
+        Assert.Equal("Cannot move archived items to an organization.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PutShare_ArchivedCipher_ThrowsBadRequestException(
+        Guid cipherId,
+        Guid organizationId,
+        User user,
+        CipherShareRequestModel model,
+        SutProvider<CiphersController> sutProvider)
+    {
+        model.Cipher.OrganizationId = organizationId.ToString();
+        model.Cipher.EncryptedFor = user.Id;
+
+        var cipher = new Cipher
+        {
+            Id = cipherId,
+            UserId = user.Id,
+            ArchivedDate = DateTime.UtcNow.AddDays(-1),
+            Type = CipherType.Login,
+            Data = JsonSerializer.Serialize(new CipherLoginData())
+        };
+
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipherId)
+            .Returns(cipher);
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationUser(organizationId)
+            .Returns(Task.FromResult(true));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.PutShare(cipherId, model)
+        );
+
+        Assert.Equal("Cannot move an archived item to an organization.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
     public async Task PostPurge_WhenUserNotFound_ThrowsUnauthorizedAccessException(
         SecretVerificationRequestModel model,
         SutProvider<CiphersController> sutProvider)
