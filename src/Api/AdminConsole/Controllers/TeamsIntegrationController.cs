@@ -11,19 +11,23 @@ using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Bot.Builder;
+using Microsoft.Bot.Builder.Integration.AspNet.Core;
 
 namespace Bit.Api.AdminConsole.Controllers;
 
 [RequireFeature(FeatureFlagKeys.EventBasedOrganizationIntegrations)]
 [Route("organizations")]
 [Authorize("Application")]
-public class SlackIntegrationController(
+public class TeamsIntegrationController(
     ICurrentContext currentContext,
     IOrganizationIntegrationRepository integrationRepository,
-    ISlackService slackService,
+    IBot bot,
+    IBotFrameworkHttpAdapter adapter,
+    ITeamsService teamsService,
     TimeProvider timeProvider) : Controller
 {
-    [HttpGet("{organizationId:guid}/integrations/slack/redirect")]
+    [HttpGet("{organizationId:guid}/integrations/teams/redirect")]
     public async Task<IActionResult> RedirectAsync(Guid organizationId)
     {
         if (!await currentContext.OrganizationOwner(organizationId))
@@ -31,8 +35,8 @@ public class SlackIntegrationController(
             throw new NotFoundException();
         }
 
-        string? callbackUrl = Url.RouteUrl(
-            routeName: "SlackIntegration_Create",
+        var callbackUrl = Url.RouteUrl(
+            routeName: "TeamsIntegration_Create",
             values: null,
             protocol: currentContext.HttpContext.Request.Scheme,
             host: currentContext.HttpContext.Request.Host.ToUriComponent()
@@ -43,27 +47,27 @@ public class SlackIntegrationController(
         }
 
         var integrations = await integrationRepository.GetManyByOrganizationAsync(organizationId);
-        var integration = integrations.FirstOrDefault(i => i.Type == IntegrationType.Slack);
+        var integration = integrations.FirstOrDefault(i => i.Type == IntegrationType.Teams);
 
         if (integration is null)
         {
-            // No slack integration exists, create Initiated version
+            // No teams integration exists, create Initiated version
             integration = await integrationRepository.CreateAsync(new OrganizationIntegration
             {
                 OrganizationId = organizationId,
-                Type = IntegrationType.Slack,
+                Type = IntegrationType.Teams,
                 Configuration = null,
             });
         }
         else if (integration.Configuration is not null)
         {
-            // A Completed (fully configured) Slack integration already exists, throw to prevent overriding
-            throw new BadRequestException("There already exists a Slack integration for this organization");
+            // A Completed (fully configured) Teams integration already exists, throw to prevent overriding
+            throw new BadRequestException("There already exists a Teams integration for this organization");
 
-        } // An Initiated slack integration exits, re-use it and kick off a new OAuth flow
+        } // An Initiated teams integration exits, re-use it and kick off a new OAuth flow
 
         var state = IntegrationOAuthState.FromIntegration(integration, timeProvider);
-        var redirectUrl = slackService.GetRedirectUrl(
+        var redirectUrl = teamsService.GetRedirectUrl(
             callbackUrl: callbackUrl,
             state: state.ToString()
         );
@@ -76,7 +80,7 @@ public class SlackIntegrationController(
         return Redirect(redirectUrl);
     }
 
-    [HttpGet("integrations/slack/create", Name = "SlackIntegration_Create")]
+    [HttpGet("integrations/teams/create", Name = "TeamsIntegration_Create")]
     [AllowAnonymous]
     public async Task<IActionResult> CreateAsync([FromQuery] string code, [FromQuery] string state)
     {
@@ -89,7 +93,7 @@ public class SlackIntegrationController(
         // Fetch existing Initiated record
         var integration = await integrationRepository.GetByIdAsync(oAuthState.IntegrationId);
         if (integration is null ||
-            integration.Type != IntegrationType.Slack ||
+            integration.Type != IntegrationType.Teams ||
             integration.Configuration is not null)
         {
             throw new NotFoundException();
@@ -101,9 +105,8 @@ public class SlackIntegrationController(
             throw new NotFoundException();
         }
 
-        // Fetch token from Slack and store to DB
-        string? callbackUrl = Url.RouteUrl(
-            routeName: "SlackIntegration_Create",
+        var callbackUrl = Url.RouteUrl(
+            routeName: "TeamsIntegration_Create",
             values: null,
             protocol: currentContext.HttpContext.Request.Scheme,
             host: currentContext.HttpContext.Request.Host.ToUriComponent()
@@ -112,17 +115,33 @@ public class SlackIntegrationController(
         {
             throw new BadRequestException("Unable to build callback Url");
         }
-        var token = await slackService.ObtainTokenViaOAuth(code, callbackUrl);
 
+        var token = await teamsService.ObtainTokenViaOAuth(code, callbackUrl);
         if (string.IsNullOrEmpty(token))
         {
-            throw new BadRequestException("Invalid response from Slack.");
+            throw new BadRequestException("Invalid response from Teams.");
         }
 
-        integration.Configuration = JsonSerializer.Serialize(new SlackIntegration(token));
+        var teams = await teamsService.GetJoinedTeamsAsync(token);
+
+        if (!teams.Any())
+        {
+            throw new BadRequestException("No teams were found.");
+        }
+
+        var teamsIntegration = new TeamsIntegration(TenantId: teams[0].TenantId, Teams: teams);
+        integration.Configuration = JsonSerializer.Serialize(teamsIntegration);
         await integrationRepository.UpsertAsync(integration);
 
         var location = $"/organizations/{integration.OrganizationId}/integrations/{integration.Id}";
         return Created(location, new OrganizationIntegrationResponseModel(integration));
+    }
+
+    [Route("integrations/teams/incoming")]
+    [AllowAnonymous]
+    [HttpPost]
+    public async Task IncomingPostAsync()
+    {
+        await adapter.ProcessAsync(Request, Response, bot);
     }
 }
