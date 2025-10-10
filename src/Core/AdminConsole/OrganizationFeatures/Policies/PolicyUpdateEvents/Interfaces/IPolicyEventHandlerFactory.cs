@@ -18,7 +18,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents
 /// </remarks>
 public interface IPolicyEventHandlerFactory
 {
-/// <summary>
+    /// <summary>
     /// Gets the event handler for the given policy type and handler interface.
     /// </summary>
     /// <typeparam name="T">Handler type implementing <see cref="IPolicyUpdateEvent"/>.</typeparam>
