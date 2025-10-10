@@ -111,13 +111,25 @@ public class StripePaymentService : IPaymentService
         var updatedItemOptions = subscriptionUpdate.UpgradeItemsOptions(sub);
         var isAnnualPlan = sub?.Items?.Data.FirstOrDefault()?.Plan?.Interval == "year";
 
+        // Check if subscription has trial settings that prevent using send_invoice collection method
+        var hasTrialCancelBehavior = sub.TrialSettings?.EndBehavior?.MissingPaymentMethod == StripeConstants.MissingPaymentMethodBehaviorOptions.Cancel;
+
+        // When trial_settings.end_behavior.missing_payment_method is "cancel", we cannot use "send_invoice"
+        // In this case, keep the original collection method
+        var shouldUseSendInvoice = !hasTrialCancelBehavior;
+
         var subUpdateOptions = new SubscriptionUpdateOptions
         {
             Items = updatedItemOptions,
             ProrationBehavior = invoiceNow ? Constants.AlwaysInvoice : Constants.CreateProrations,
-            DaysUntilDue = daysUntilDue ?? 1,
-            CollectionMethod = "send_invoice"
+            CollectionMethod = shouldUseSendInvoice ? "send_invoice" : collectionMethod
         };
+
+        // DaysUntilDue can only be set when CollectionMethod is "send_invoice"
+        if (shouldUseSendInvoice)
+        {
+            subUpdateOptions.DaysUntilDue = daysUntilDue ?? 1;
+        }
         if (!invoiceNow && isAnnualPlan && sub.Status.Trim() != "trialing")
         {
             subUpdateOptions.PendingInvoiceItemInterval =
