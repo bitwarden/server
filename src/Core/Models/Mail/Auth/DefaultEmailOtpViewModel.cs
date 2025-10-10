@@ -9,4 +9,5 @@ public class DefaultEmailOtpViewModel : BaseMailModel
     public string? TheDate { get; set; }
     public string? TheTime { get; set; }
     public string? TimeZone { get; set; }
+    public string? Expiry { get; set; }
 }

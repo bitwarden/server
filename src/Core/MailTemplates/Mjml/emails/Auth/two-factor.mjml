@@ -1,10 +1,10 @@
 <mjml>
   <mj-head>
-    <mj-include path="../components/head.mjml" />
+    <mj-include path="../../components/head.mjml" />
   </mj-head>
 
   <mj-body background-color="#f6f6f6">
-    <mj-include path="../components/logo.mjml" />
+    <mj-include path="../../components/logo.mjml" />
 
     <mj-wrapper
       background-color="#fff"
@@ -24,6 +24,6 @@
       </mj-section>
     </mj-wrapper>
 
-    <mj-include path="../components/footer.mjml" />
+    <mj-include path="../../components/footer.mjml" />
   </mj-body>
 </mjml>
