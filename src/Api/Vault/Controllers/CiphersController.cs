@@ -1285,6 +1285,11 @@ public class CiphersController : Controller
 
             ValidateClientVersionForFido2CredentialSupport(existingCipher);
 
+            if (existingCipher.ArchivedDate.HasValue)
+            {
+                throw new BadRequestException("Cannot move archived items to an organization.");
+            }
+
             shareCiphers.Add((cipher.ToCipherDetails(existingCipher), cipher.LastKnownRevisionDate));
         }
 

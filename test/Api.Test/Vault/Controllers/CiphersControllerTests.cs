@@ -1821,6 +1821,51 @@ public class CiphersControllerTests
     }
 
     [Theory, BitAutoData]
+    public async Task PutShareMany_ExistingCipherArchived_ThrowsBadRequestException(
+        Guid organizationId,
+        Guid userId,
+        CipherWithIdRequestModel request,
+        SutProvider<CiphersController> sutProvider)
+    {
+        // Request model does not have ArchivedDate (only the existing cipher does)
+        request.EncryptedFor = userId;
+        request.OrganizationId = organizationId.ToString();
+        request.ArchivedDate = null;
+
+        var model = new CipherBulkShareRequestModel
+        {
+            Ciphers = [request],
+            CollectionIds = [Guid.NewGuid().ToString()]
+        };
+
+        // The existing cipher from the repository IS archived
+        var existingCipher = new CipherDetails
+        {
+            Id = request.Id!.Value,
+            UserId = userId,
+            Type = CipherType.Login,
+            Data = JsonSerializer.Serialize(new CipherLoginData()),
+            ArchivedDate = DateTime.UtcNow
+        };
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationUser(organizationId)
+            .Returns(Task.FromResult(true));
+        sutProvider.GetDependency<IUserService>()
+            .GetProperUserId(default)
+            .ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(userId, withOrganizations: false)
+            .Returns(Task.FromResult((ICollection<CipherDetails>)[existingCipher]));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.PutShareMany(model)
+        );
+
+        Assert.Equal("Cannot move archived items to an organization.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
     public async Task PutShare_ArchivedCipher_ThrowsBadRequestException(
         Guid cipherId,
         Guid organizationId,
