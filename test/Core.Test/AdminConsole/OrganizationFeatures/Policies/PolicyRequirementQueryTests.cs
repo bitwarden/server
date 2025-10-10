@@ -14,10 +14,12 @@ public class PolicyRequirementQueryTests
     [Theory, BitAutoData]
     public async Task GetAsync_IgnoresOtherPolicyTypes(Guid userId)
     {
-        var thisPolicy = new PolicyDetails { PolicyType = PolicyType.SingleOrg };
-        var otherPolicy = new PolicyDetails { PolicyType = PolicyType.RequireSso };
+        var thisPolicy = new OrganizationPolicyDetails { PolicyType = PolicyType.SingleOrg, UserId = userId };
+        var otherPolicy = new OrganizationPolicyDetails { PolicyType = PolicyType.RequireSso, UserId = userId };
         var policyRepository = Substitute.For<IPolicyRepository>();
-        policyRepository.GetPolicyDetailsByUserId(userId).Returns([otherPolicy, thisPolicy]);
+        policyRepository.GetPolicyDetailsByUserIdsAndPolicyType(
+                Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(userId)), PolicyType.SingleOrg)
+            .Returns([otherPolicy, thisPolicy]);
 
         var factory = new TestPolicyRequirementFactory(_ => true);
         var sut = new PolicyRequirementQuery(policyRepository, [factory]);
@@ -33,9 +35,11 @@ public class PolicyRequirementQueryTests
     {
         // Arrange policies
         var policyRepository = Substitute.For<IPolicyRepository>();
-        var thisPolicy = new PolicyDetails { PolicyType = PolicyType.SingleOrg };
-        var otherPolicy = new PolicyDetails { PolicyType = PolicyType.SingleOrg };
-        policyRepository.GetPolicyDetailsByUserId(userId).Returns([thisPolicy, otherPolicy]);
+        var thisPolicy = new OrganizationPolicyDetails { PolicyType = PolicyType.SingleOrg, UserId = userId };
+        var otherPolicy = new OrganizationPolicyDetails { PolicyType = PolicyType.SingleOrg, UserId = userId };
+        policyRepository.GetPolicyDetailsByUserIdsAndPolicyType(
+                Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(userId)), PolicyType.SingleOrg)
+            .Returns([thisPolicy, otherPolicy]);
 
         // Arrange a substitute Enforce function so that we can inspect the received calls
         var callback = Substitute.For<Func<PolicyDetails, bool>>();
@@ -70,7 +74,9 @@ public class PolicyRequirementQueryTests
     public async Task GetAsync_HandlesNoPolicies(Guid userId)
     {
         var policyRepository = Substitute.For<IPolicyRepository>();
-        policyRepository.GetPolicyDetailsByUserId(userId).Returns([]);
+        policyRepository.GetPolicyDetailsByUserIdsAndPolicyType(
+                Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(userId)), PolicyType.SingleOrg)
+            .Returns([]);
 
         var factory = new TestPolicyRequirementFactory(x => x.IsProvider);
         var sut = new PolicyRequirementQuery(policyRepository, [factory]);
