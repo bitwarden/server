@@ -1351,7 +1351,7 @@ public class CiphersController : Controller
         }
 
         var (attachmentId, uploadUrl) = await _cipherService.CreateAttachmentForDelayedUploadAsync(cipher,
-            request.Key, request.FileName, request.FileSize, request.AdminRequest, user.Id);
+            request.Key, request.FileName, request.FileSize, request.AdminRequest, user.Id, request.LastKnownCipherRevisionDate);
         return new AttachmentUploadDataResponseModel
         {
             AttachmentId = attachmentId,
@@ -1404,9 +1404,17 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
+        // Extract lastKnownRevisionDate from form data if present
+        DateTime? lastKnownRevisionDate = null;
+        if (Request.Form.TryGetValue("lastKnownRevisionDate", out var dateValue) &&
+            DateTime.TryParse(dateValue, out var parsedDate))
+        {
+            lastKnownRevisionDate = parsedDate;
+        }
+
         await Request.GetFileAsync(async (stream) =>
         {
-            await _cipherService.UploadFileForExistingAttachmentAsync(stream, cipher, attachmentData);
+            await _cipherService.UploadFileForExistingAttachmentAsync(stream, cipher, attachmentData, lastKnownRevisionDate);
         });
     }
 
@@ -1425,10 +1433,18 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
+        // Extract lastKnownRevisionDate from form data if present
+        DateTime? lastKnownRevisionDate = null;
+        if (Request.Form.TryGetValue("lastKnownRevisionDate", out var dateValue) &&
+            DateTime.TryParse(dateValue, out var parsedDate))
+        {
+            lastKnownRevisionDate = parsedDate;
+        }
+
         await Request.GetFileAsync(async (stream, fileName, key) =>
         {
             await _cipherService.CreateAttachmentAsync(cipher, stream, fileName, key,
-                    Request.ContentLength.GetValueOrDefault(0), user.Id);
+                    Request.ContentLength.GetValueOrDefault(0), user.Id, false, lastKnownRevisionDate);
         });
 
         return new CipherResponseModel(
@@ -1454,10 +1470,18 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
+        // Extract lastKnownRevisionDate from form data if present
+        DateTime? lastKnownRevisionDate = null;
+        if (Request.Form.TryGetValue("lastKnownRevisionDate", out var dateValue) &&
+            DateTime.TryParse(dateValue, out var parsedDate))
+        {
+            lastKnownRevisionDate = parsedDate;
+        }
+
         await Request.GetFileAsync(async (stream, fileName, key) =>
         {
             await _cipherService.CreateAttachmentAsync(cipher, stream, fileName, key,
-                    Request.ContentLength.GetValueOrDefault(0), userId, true);
+                    Request.ContentLength.GetValueOrDefault(0), userId, true, lastKnownRevisionDate);
         });
 
         return new CipherMiniResponseModel(cipher, _globalSettings, cipher.OrganizationUseTotp);
@@ -1500,10 +1524,18 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
+        // Extract lastKnownRevisionDate from form data if present
+        DateTime? lastKnownRevisionDate = null;
+        if (Request.Form.TryGetValue("lastKnownRevisionDate", out var dateValue) &&
+            DateTime.TryParse(dateValue, out var parsedDate))
+        {
+            lastKnownRevisionDate = parsedDate;
+        }
+
         await Request.GetFileAsync(async (stream, fileName, key) =>
         {
             await _cipherService.CreateAttachmentShareAsync(cipher, stream, fileName, key,
-                Request.ContentLength.GetValueOrDefault(0), attachmentId, organizationId);
+                Request.ContentLength.GetValueOrDefault(0), attachmentId, organizationId, lastKnownRevisionDate);
         });
     }
 
