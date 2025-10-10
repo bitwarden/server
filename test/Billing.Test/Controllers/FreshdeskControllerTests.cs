@@ -169,7 +169,7 @@ public class FreshdeskControllerTests
     [BitAutoData(WebhookKey)]
     public async Task PostWebhookOnyxAi_success(
         string freshdeskWebhookKey, FreshdeskOnyxAiWebhookModel model,
-        OnyxAnswerWithCitationResponseModel onyxResponse,
+        OnyxResponseModel onyxResponse,
         SutProvider<FreshdeskController> sutProvider)
     {
         var billingSettings = sutProvider.GetDependency<IOptions<BillingSettings>>().Value;

@@ -32,7 +32,7 @@ public class SlackIntegrationController(
         }
 
         string? callbackUrl = Url.RouteUrl(
-            routeName: nameof(CreateAsync),
+            routeName: "SlackIntegration_Create",
             values: null,
             protocol: currentContext.HttpContext.Request.Scheme,
             host: currentContext.HttpContext.Request.Host.ToUriComponent()
@@ -76,7 +76,7 @@ public class SlackIntegrationController(
         return Redirect(redirectUrl);
     }
 
-    [HttpGet("integrations/slack/create", Name = nameof(CreateAsync))]
+    [HttpGet("integrations/slack/create", Name = "SlackIntegration_Create")]
     [AllowAnonymous]
     public async Task<IActionResult> CreateAsync([FromQuery] string code, [FromQuery] string state)
     {
@@ -103,7 +103,7 @@ public class SlackIntegrationController(
 
         // Fetch token from Slack and store to DB
         string? callbackUrl = Url.RouteUrl(
-            routeName: nameof(CreateAsync),
+            routeName: "SlackIntegration_Create",
             values: null,
             protocol: currentContext.HttpContext.Request.Scheme,
             host: currentContext.HttpContext.Request.Host.ToUriComponent()
