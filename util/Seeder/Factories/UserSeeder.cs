@@ -18,16 +18,16 @@ public struct UserData
     public int KdfIterations;
 }
 
-public class UserSeeder(RustSdkService sdkService, IPasswordHasher<Bit.Core.Entities.User> passwordHasher)
+public class UserSeeder(RustSdkService sdkService, IPasswordHasher<Bit.Core.Entities.User> passwordHasher, MangleId mangleId)
 {
     private string MangleEmail(string email)
     {
-        return "admin@large.test"; // only this email works, for now
-        // return $"{mangleId}+{email}";
+        return $"{mangleId}+{email}";
     }
 
     public User CreateUser(string email)
     {
+        email = MangleEmail(email);
         var keys = sdkService.GenerateUserKeys(email, "asdfasdfasdf");
 
         var user = new User

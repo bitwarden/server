@@ -1,7 +1,11 @@
+﻿using Bit.Seeder;
 using Bit.SeederApi.Services;
 using Bit.SharedWeb.Utilities;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Generate a new MangleId for a request
+builder.Services.AddScoped<MangleId>(_ => new MangleId());
 
 // Add services to the container.
 builder.Services.AddControllers();
