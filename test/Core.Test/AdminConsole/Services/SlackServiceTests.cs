@@ -296,6 +296,18 @@ public class SlackServiceTests
         Assert.Equal("test-access-token", result);
     }
 
+    [Theory]
+    [InlineData("test-code", "")]
+    [InlineData("", "https://example.com/callback")]
+    [InlineData("", "")]
+    public async Task ObtainTokenViaOAuth_ReturnsEmptyString_WhenCodeOrRedirectUrlIsEmpty(string code, string redirectUrl)
+    {
+        var sutProvider = GetSutProvider();
+        var result = await sutProvider.Sut.ObtainTokenViaOAuth(code, redirectUrl);
+
+        Assert.Equal(string.Empty, result);
+    }
+
     [Fact]
     public async Task ObtainTokenViaOAuth_ReturnsEmptyString_WhenErrorResponse()
     {
