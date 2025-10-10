@@ -10,11 +10,13 @@ public class RecipeService : IRecipeService
 {
     private readonly DatabaseContext _databaseContext;
     private readonly ILogger<RecipeService> _logger;
+    private readonly IServiceProvider _serviceProvider;
 
-    public RecipeService(DatabaseContext databaseContext, ILogger<RecipeService> logger)
+    public RecipeService(DatabaseContext databaseContext, ILogger<RecipeService> logger, IServiceProvider serviceProvider)
     {
         _databaseContext = databaseContext;
         _logger = logger;
+        _serviceProvider = serviceProvider;
     }
 
     public List<SeededData> GetAllSeededData()
@@ -95,7 +97,7 @@ public class RecipeService : IRecipeService
         {
             var recipeType = LoadRecipeType(templateName);
             var method = GetRecipeMethod(recipeType, templateName, methodName);
-            var recipeInstance = Activator.CreateInstance(recipeType, _databaseContext)!;
+            var recipeInstance = CreateRecipeInstance(recipeType);
 
             var methodArguments = ParseMethodArguments(method, arguments);
             var result = method.Invoke(recipeInstance, methodArguments);
@@ -126,6 +128,35 @@ public class RecipeService : IRecipeService
     {
         var method = recipeType.GetMethod(methodName);
         return method ?? throw new RecipeExecutionException($"{methodName} method not found in recipe '{templateName}'");
+    }
+
+    private object CreateRecipeInstance(Type recipeType)
+    {
+        var constructors = recipeType.GetConstructors();
+        if (constructors.Length == 0)
+        {
+            throw new RecipeExecutionException($"No public constructors found for recipe type '{recipeType.Name}'");
+        }
+
+        var constructor = constructors[0];
+        var parameters = constructor.GetParameters();
+        var constructorArgs = new object[parameters.Length];
+
+        for (var i = 0; i < parameters.Length; i++)
+        {
+            var parameter = parameters[i];
+            var service = _serviceProvider.GetService(parameter.ParameterType);
+
+            if (service == null)
+            {
+                throw new RecipeExecutionException(
+                    $"Unable to resolve service of type '{parameter.ParameterType.Name}' for recipe constructor");
+            }
+
+            constructorArgs[i] = service;
+        }
+
+        return Activator.CreateInstance(recipeType, constructorArgs)!;
     }
 
     private static object?[] ParseMethodArguments(MethodInfo seedMethod, JsonElement? arguments)

@@ -4,11 +4,10 @@ using Bit.Seeder.Factories;
 
 namespace Bit.Seeder.Recipes;
 
-public class SingleUserRecipe(DatabaseContext db)
+public class SingleUserRecipe(DatabaseContext db, UserSeeder userSeeder)
 {
     public RecipeResult Seed(string email)
     {
-        var userSeeder = new UserSeeder(Guid.NewGuid());
         var user = userSeeder.CreateUser(email);
 
         db.Add(user);

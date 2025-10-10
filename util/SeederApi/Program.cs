@@ -15,6 +15,15 @@ builder.Services.AddCustomDataProtectionServices(builder.Environment, globalSett
 // Repositories
 builder.Services.AddDatabaseRepositories(globalSettings);
 
+// Identity Services
+builder.Services.AddScoped<Microsoft.AspNetCore.Identity.IPasswordHasher<Bit.Core.Entities.User>, Microsoft.AspNetCore.Identity.PasswordHasher<Bit.Core.Entities.User>>();
+
+// RustSDK Services
+builder.Services.AddSingleton<Bit.RustSDK.RustSdkService>();
+
+// Seeder Services
+builder.Services.AddScoped<Bit.Seeder.Factories.UserSeeder>();
+
 // Recipe Service
 builder.Services.AddScoped<IRecipeService, RecipeService>();
 
