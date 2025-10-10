@@ -4,6 +4,19 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 
+/// <summary>
+/// Handles creating or updating organization policies with validation and side effect execution.
+/// </summary>
+/// <remarks>
+/// Workflow:
+/// 1. Validates organization can use policies  
+/// 2. Validates required and dependent policies  
+/// 3. Runs policy-specific validation (<see cref="IPolicyValidationEvent"/>)  
+/// 4. Executes pre-save logic (<see cref="IOnPolicyPreUpdateEvent"/>)  
+/// 5. Saves the policy  
+/// 6. Logs the event  
+/// 7. Executes post-save logic (<see cref="IOnPolicyPostUpdateEvent"/>)  
+/// </remarks>
 public interface IVNextSavePolicyCommand
 {
     Task<Policy> SaveAsync(SavePolicyModel policyRequest);
