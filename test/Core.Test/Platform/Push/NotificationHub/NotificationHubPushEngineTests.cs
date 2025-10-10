@@ -405,17 +405,17 @@ public class NotificationHubPushNotificationServiceTests
 
     [Theory]
     [InlineData(true, null)]
-    [InlineData(true, "test-reason")]
+    [InlineData(true, LogOutReason.KdfChange)]
     [InlineData(false, null)]
-    [InlineData(false, "test-reason")]
-    public async Task PushLogOutAsync_SendExpectedData(bool excludeCurrentContext, string? reason)
+    [InlineData(false, LogOutReason.KdfChange)]
+    public async Task PushLogOutAsync_SendExpectedData(bool excludeCurrentContext, LogOutReason? reason)
     {
         var userId = Guid.NewGuid();
 
         var expectedPayload = new JsonObject
         {
             ["UserId"] = userId,
-            ["Reason"] = reason,
+            ["Reason"] = reason != null ? (int)reason : null,
         };
 
         var expectedTag = excludeCurrentContext

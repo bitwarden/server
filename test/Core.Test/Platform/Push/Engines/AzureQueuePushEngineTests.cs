@@ -359,10 +359,10 @@ public class AzureQueuePushEngineTests
 
     [Theory]
     [InlineData(true, null)]
-    [InlineData(true, "test-reason")]
+    [InlineData(true, LogOutReason.KdfChange)]
     [InlineData(false, null)]
-    [InlineData(false, "test-reason")]
-    public async Task PushLogOutAsync_SendsExpectedResponse(bool excludeCurrentContext, string? reason)
+    [InlineData(false, LogOutReason.KdfChange)]
+    public async Task PushLogOutAsync_SendsExpectedResponse(bool excludeCurrentContext, LogOutReason? reason)
     {
         var userId = Guid.NewGuid();
 
@@ -372,7 +372,7 @@ public class AzureQueuePushEngineTests
         };
         if (reason != null)
         {
-            payload["Reason"] = reason;
+            payload["Reason"] = (int)reason;
         }
 
         var expectedPayload = new JsonObject

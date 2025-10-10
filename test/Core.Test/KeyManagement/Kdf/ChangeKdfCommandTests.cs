@@ -1,6 +1,7 @@
 ﻿#nullable enable
 
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Kdf.Implementations;
 using Bit.Core.KeyManagement.Models.Data;
@@ -194,7 +195,7 @@ public class ChangeKdfCommandTests
         await sutProvider.GetDependency<IUserService>().Received(1).UpdatePasswordHash(user,
             authenticationData.MasterPasswordAuthenticationHash, validatePassword: true, refreshStamp: false);
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id, false, "kdfChange");
+            .PushLogOutAsync(user.Id, false, LogOutReason.KdfChange);
         await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncSettingsAsync(user.Id);
         sutProvider.GetDependency<IFeatureService>().Received(1).IsEnabled(FeatureFlagKeys.NoLogoutOnKdfChange);
     }

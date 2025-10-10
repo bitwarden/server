@@ -1,6 +1,7 @@
 ﻿using System.Text.Json.Nodes;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Entities;
+using Bit.Core.Enums;
 using Bit.Core.NotificationCenter.Entities;
 using Bit.Core.Platform.Push.Internal;
 using Bit.Core.Tools.Entities;
@@ -193,7 +194,7 @@ public class NotificationsApiPushEngineTests : PushTestBase
         };
     }
 
-    protected override JsonNode GetPushLogOutPayload(Guid userId, bool excludeCurrentContext, string? reason)
+    protected override JsonNode GetPushLogOutPayload(Guid userId, bool excludeCurrentContext, LogOutReason? reason)
     {
         JsonNode? contextId = excludeCurrentContext ? DeviceIdentifier : null;
 
@@ -203,7 +204,7 @@ public class NotificationsApiPushEngineTests : PushTestBase
             ["Payload"] = new JsonObject
             {
                 ["UserId"] = userId,
-                ["Reason"] = reason
+                ["Reason"] = reason != null ? (int)reason : null
             },
             ["ContextId"] = contextId,
         };

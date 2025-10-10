@@ -86,7 +86,7 @@ public abstract class PushTestBase
     protected abstract JsonNode GetPushSyncOrganizationsPayload(Guid userId);
     protected abstract JsonNode GetPushSyncOrgKeysPayload(Guid userId);
     protected abstract JsonNode GetPushSyncSettingsPayload(Guid userId);
-    protected abstract JsonNode GetPushLogOutPayload(Guid userId, bool excludeCurrentContext, string? reason);
+    protected abstract JsonNode GetPushLogOutPayload(Guid userId, bool excludeCurrentContext, LogOutReason? reason);
     protected abstract JsonNode GetPushSendCreatePayload(Send send);
     protected abstract JsonNode GetPushSendUpdatePayload(Send send);
     protected abstract JsonNode GetPushSendDeletePayload(Send send);
@@ -264,10 +264,10 @@ public abstract class PushTestBase
 
     [Theory]
     [InlineData(true, null)]
-    [InlineData(true, "test-reason")]
+    [InlineData(true, LogOutReason.KdfChange)]
     [InlineData(false, null)]
-    [InlineData(false, "test-reason")]
-    public async Task PushLogOutAsync_SendsExpectedResponse(bool excludeCurrentContext, string? reason)
+    [InlineData(false, LogOutReason.KdfChange)]
+    public async Task PushLogOutAsync_SendsExpectedResponse(bool excludeCurrentContext, LogOutReason? reason)
     {
         var userId = Guid.NewGuid();
 
