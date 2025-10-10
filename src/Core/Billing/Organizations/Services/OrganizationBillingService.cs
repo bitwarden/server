@@ -45,12 +45,12 @@ public class OrganizationBillingService(
             ? await CreateCustomerAsync(organization, customerSetup, subscriptionSetup.PlanType)
             : await GetCustomerWhileEnsuringCorrectTaxExemptionAsync(organization, subscriptionSetup);
 
-        var subscription = await CreateSubscriptionAsync(organization, customer, subscriptionSetup);
+        var subscription = await CreateSubscriptionAsync(organization, customer, subscriptionSetup, customerSetup?.Coupon);
 
         if (subscription.Status is StripeConstants.SubscriptionStatus.Trialing or StripeConstants.SubscriptionStatus.Active)
         {
             organization.Enabled = true;
-            organization.ExpirationDate = subscription.CurrentPeriodEnd;
+            organization.ExpirationDate = subscription.GetCurrentPeriodEnd();
         }
 
         organization.Gateway = GatewayType.Stripe;
@@ -118,7 +118,7 @@ public class OrganizationBillingService(
             subscription.Status == StripeConstants.SubscriptionStatus.Canceled,
             invoice?.DueDate,
             invoice?.Created,
-            subscription.CurrentPeriodEnd,
+            subscription.GetCurrentPeriodEnd(),
             orgOccupiedSeats.Total);
     }
 
@@ -210,7 +210,6 @@ public class OrganizationBillingService(
 
         var customerCreateOptions = new CustomerCreateOptions
         {
-            Coupon = customerSetup.Coupon,
             Description = organization.DisplayBusinessName(),
             Email = organization.BillingEmail,
             Expand = ["tax", "tax_ids"],
@@ -298,7 +297,7 @@ public class OrganizationBillingService(
 
                 customerCreateOptions.TaxIdData =
                 [
-                    new() { Type = taxIdType, Value = customerSetup.TaxInformation.TaxId }
+                    new CustomerTaxIdDataOptions { Type = taxIdType, Value = customerSetup.TaxInformation.TaxId }
                 ];
 
                 if (taxIdType == StripeConstants.TaxIdType.SpanishNIF)
@@ -400,7 +399,8 @@ public class OrganizationBillingService(
     private async Task<Subscription> CreateSubscriptionAsync(
         Organization organization,
         Customer customer,
-        SubscriptionSetup subscriptionSetup)
+        SubscriptionSetup subscriptionSetup,
+        string? coupon)
     {
         var plan = await pricingClient.GetPlanOrThrow(subscriptionSetup.PlanType);
 
@@ -463,6 +463,7 @@ public class OrganizationBillingService(
         {
             CollectionMethod = StripeConstants.CollectionMethod.ChargeAutomatically,
             Customer = customer.Id,
+            Discounts = !string.IsNullOrEmpty(coupon) ? [new SubscriptionDiscountOptions { Coupon = coupon }] : null,
             Items = subscriptionItemOptionsList,
             Metadata = new Dictionary<string, string>
             {

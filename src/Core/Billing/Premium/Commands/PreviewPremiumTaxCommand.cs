@@ -60,6 +60,6 @@ public class PreviewPremiumTaxCommand(
         });
 
     private static (decimal, decimal) GetAmounts(Invoice invoice) => (
-        Convert.ToDecimal(invoice.Tax) / 100,
+        Convert.ToDecimal(invoice.TotalTaxes.Sum(invoiceTotalTax => invoiceTotalTax.Amount)) / 100,
         Convert.ToDecimal(invoice.Total) / 100);
 }
