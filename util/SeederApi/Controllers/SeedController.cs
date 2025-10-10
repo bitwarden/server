@@ -66,13 +66,13 @@ public class SeedController : Controller
     }
 
     [HttpDelete("/seed/{seedId}")]
-    public IActionResult Delete([FromRoute] Guid seedId)
+    public async Task<IActionResult> Delete([FromRoute] Guid seedId)
     {
         _logger.LogInformation("Deleting seeded data with ID: {SeedId}", seedId);
 
         try
         {
-            var result = _recipeService.DestroyRecipe(seedId);
+            var result = await _recipeService.DestroyRecipe(seedId);
 
             return Ok(new
             {
@@ -110,13 +110,13 @@ public class SeedController : Controller
 
         var aggregateException = new AggregateException();
 
-        await Task.Run(() =>
+        await Task.Run(async () =>
         {
             foreach (var sd in seededData)
             {
                 try
                 {
-                    _recipeService.DestroyRecipe(sd.Id);
+                    await _recipeService.DestroyRecipe(sd.Id);
                 }
                 catch (Exception ex)
                 {

@@ -1,5 +1,6 @@
 ﻿using System.Reflection;
 using System.Text.Json;
+using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Seeder;
@@ -11,12 +12,16 @@ public class RecipeService : IRecipeService
     private readonly DatabaseContext _databaseContext;
     private readonly ILogger<RecipeService> _logger;
     private readonly IServiceProvider _serviceProvider;
+    private readonly IUserRepository _userRepository;
+    private readonly IOrganizationRepository _organizationRepository;
 
-    public RecipeService(DatabaseContext databaseContext, ILogger<RecipeService> logger, IServiceProvider serviceProvider)
+    public RecipeService(DatabaseContext databaseContext, ILogger<RecipeService> logger, IServiceProvider serviceProvider, IUserRepository userRepository, IOrganizationRepository organizationRepository)
     {
         _databaseContext = databaseContext;
         _logger = logger;
         _serviceProvider = serviceProvider;
+        _userRepository = userRepository;
+        _organizationRepository = organizationRepository;
     }
 
     public List<SeededData> GetAllSeededData()
@@ -55,7 +60,7 @@ public class RecipeService : IRecipeService
         return (Result: recipeResult.Result, SeedId: seededData.Id);
     }
 
-    public object? DestroyRecipe(Guid seedId)
+    public async Task<object?> DestroyRecipe(Guid seedId)
     {
         var seededData = _databaseContext.SeededData.FirstOrDefault(s => s.Id == seedId);
         if (seededData == null)
@@ -73,13 +78,30 @@ public class RecipeService : IRecipeService
         if (trackedEntities.TryGetValue("User", out var userIds))
         {
             var users = _databaseContext.Users.Where(u => userIds.Contains(u.Id));
-            _databaseContext.RemoveRange(users);
+            await _userRepository.DeleteManyAsync(users);
         }
 
         if (trackedEntities.TryGetValue("Organization", out var orgIds))
         {
             var organizations = _databaseContext.Organizations.Where(o => orgIds.Contains(o.Id));
-            _databaseContext.RemoveRange(organizations);
+            var aggregateException = new AggregateException();
+            foreach (var org in organizations)
+            {
+                try
+                {
+                    await _organizationRepository.DeleteAsync(org);
+                }
+                catch (Exception ex)
+                {
+                    aggregateException = new AggregateException(aggregateException, ex);
+                }
+            }
+            if (aggregateException.InnerExceptions.Count > 0)
+            {
+                throw new RecipeExecutionException(
+                    $"One or more errors occurred while deleting organizations for seed ID {seedId}",
+                    aggregateException);
+            }
         }
 
         _databaseContext.Remove(seededData);

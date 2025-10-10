@@ -21,6 +21,6 @@ public interface IRecipeService
     /// <param name="seedId">The ID of the seeded data to destroy</param>
     /// <returns>The result of the destroy operation</returns>
     /// <exception cref="RecipeExecutionException">Thrown when there's an error destroying the seeded data</exception>
-    object? DestroyRecipe(Guid seedId);
+    Task<object?> DestroyRecipe(Guid seedId);
     List<SeededData> GetAllSeededData();
 }
