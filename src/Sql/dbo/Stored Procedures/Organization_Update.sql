@@ -59,7 +59,7 @@ CREATE PROCEDURE [dbo].[Organization_Update]
     @UseOrganizationDomains BIT = 0,
     @UseAdminSponsoredFamilies BIT = 0,
     @SyncSeats BIT = 0,
-    @AutomaticUserConfirmation BIT = 0
+    @UseAutomaticUserConfirmation BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -125,6 +125,6 @@ BEGIN
         [UseOrganizationDomains] = @UseOrganizationDomains,
         [UseAdminSponsoredFamilies] = @UseAdminSponsoredFamilies,
         [SyncSeats] = @SyncSeats,
-        [AutomaticUserConfirmation] = @AutomaticUserConfirmation
+        [UseAutomaticUserConfirmation] = @UseAutomaticUserConfirmation
     WHERE [Id] = @Id;
 END

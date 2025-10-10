@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.SqliteMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20251007194454_AddAutoConfrimUserToOrg")]
+    [Migration("20251010142244_AddAutoConfrimUserToOrg")]
     partial class AddAutoConfrimUserToOrg
     {
         /// <inheritdoc />
@@ -75,9 +75,6 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool>("AllowAdminAccessToAllCollectionItems")
                         .HasColumnType("INTEGER")
                         .HasDefaultValue(true);
-
-                    b.Property<bool>("AutomaticUserConfirmation")
-                        .HasColumnType("INTEGER");
 
                     b.Property<string>("BillingEmail")
                         .IsRequired()
@@ -219,6 +216,9 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("UseApi")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("UseAutomaticUserConfirmation")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("UseCustomPermissions")

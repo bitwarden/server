@@ -79,9 +79,6 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(true);
 
-                    b.Property<bool>("AutomaticUserConfirmation")
-                        .HasColumnType("boolean");
-
                     b.Property<string>("BillingEmail")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -223,6 +220,9 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<bool>("UseApi")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("UseAutomaticUserConfirmation")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("UseCustomPermissions")

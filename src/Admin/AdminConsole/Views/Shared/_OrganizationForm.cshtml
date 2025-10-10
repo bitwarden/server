@@ -162,8 +162,8 @@
                 @if(FeatureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
                 {
                     <div class="form-check">
-                        <input type="checkbox" class="form-check-input" asp-for="AutomaticUserConfirmation" disabled='@(canEditPlan ? null : "disabled")'>
-                        <label class="form-check-label" asp-for="AutomaticUserConfirmation"></label>
+                        <input type="checkbox" class="form-check-input" asp-for="UseAutomaticUserConfirmation" disabled='@(canEditPlan ? null : "disabled")'>
+                        <label class="form-check-label" asp-for="UseAutomaticUserConfirmation"></label>
                     </div>
                 }
             </div>
