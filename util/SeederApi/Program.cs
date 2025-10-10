@@ -17,7 +17,7 @@ var globalSettings = builder.Services.AddGlobalSettingsServices(builder.Configur
 builder.Services.AddCustomDataProtectionServices(builder.Environment, globalSettings);
 
 // Repositories
-builder.Services.AddDatabaseRepositories(globalSettings);
+builder.Services.AddDatabaseRepositories(globalSettings, true);
 
 // Identity Services
 builder.Services.AddScoped<Microsoft.AspNetCore.Identity.IPasswordHasher<Bit.Core.Entities.User>, Microsoft.AspNetCore.Identity.PasswordHasher<Bit.Core.Entities.User>>();
