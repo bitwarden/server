@@ -13,22 +13,16 @@ builder.Services.AddControllers();
 // Configure GlobalSettings from appsettings
 var globalSettings = builder.Services.AddGlobalSettingsServices(builder.Configuration, builder.Environment);
 
-// Data Protection
+// Common services
 builder.Services.AddCustomDataProtectionServices(builder.Environment, globalSettings);
-
-// Repositories
+builder.Services.AddTokenizers();
 builder.Services.AddDatabaseRepositories(globalSettings, forceEf: true);
 
-// Identity Services
 builder.Services.AddScoped<Microsoft.AspNetCore.Identity.IPasswordHasher<Bit.Core.Entities.User>, Microsoft.AspNetCore.Identity.PasswordHasher<Bit.Core.Entities.User>>();
 
-// RustSDK Services
+// Seeder services
 builder.Services.AddSingleton<Bit.RustSDK.RustSdkService>();
-
-// Seeder Services
 builder.Services.AddScoped<Bit.Seeder.Factories.UserSeeder>();
-
-// Recipe Service
 builder.Services.AddScoped<IRecipeService, RecipeService>();
 
 var app = builder.Build();
