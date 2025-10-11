@@ -87,6 +87,7 @@ public class DatabaseContext : DbContext
     public DbSet<OrganizationInstallation> OrganizationInstallations { get; set; }
     public DbSet<OrganizationReport> OrganizationReports { get; set; }
     public DbSet<OrganizationApplication> OrganizationApplications { get; set; }
+    public DbSet<SeededData> SeededData { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
