@@ -1351,7 +1351,7 @@ public class CiphersController : Controller
         }
 
         var (attachmentId, uploadUrl) = await _cipherService.CreateAttachmentForDelayedUploadAsync(cipher,
-            request.Key, request.FileName, request.FileSize, request.AdminRequest, user.Id, request.LastKnownCipherRevisionDate);
+            request.Key, request.FileName, request.FileSize, request.AdminRequest, user.Id, request.LastKnownRevisionDate);
         return new AttachmentUploadDataResponseModel
         {
             AttachmentId = attachmentId,

@@ -11,5 +11,5 @@ public class AttachmentRequestModel
     public bool AdminRequest { get; set; } = false;
 
     /// The last known revision date of the Cipher that this attachment belongs to.
-    public DateTime? LastKnownCipherRevisionDate { get; set; } = null;
+    public DateTime? LastKnownRevisionDate { get; set; } = null;
 }
