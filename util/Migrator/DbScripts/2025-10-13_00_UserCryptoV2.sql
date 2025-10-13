@@ -122,13 +122,6 @@ BEGIN
 END
 GO
 
-EXECUTE sp_refreshview 'dbo.UserView'
-EXECUTE sp_refreshview 'dbo.EmergencyAccessDetailsView'
-EXECUTE sp_refreshview 'dbo.OrganizationUserUserDetailsView'
-EXECUTE sp_refreshview 'dbo.ProviderUserUserDetailsView'
-EXECUTE sp_refreshview 'dbo.UserEmailDomainView'   
-GO
-
 CREATE OR ALTER PROCEDURE [dbo].[User_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @Name NVARCHAR(50),
@@ -383,4 +376,11 @@ BEGIN
     WHERE
         [Id] = @Id
 END
+GO
+
+EXECUTE sp_refreshview 'dbo.UserView'
+EXECUTE sp_refreshview 'dbo.EmergencyAccessDetailsView'
+EXECUTE sp_refreshview 'dbo.OrganizationUserUserDetailsView'
+EXECUTE sp_refreshview 'dbo.ProviderUserUserDetailsView'
+EXECUTE sp_refreshview 'dbo.UserEmailDomainView'   
 GO
