@@ -1406,9 +1406,12 @@ public class CiphersController : Controller
 
         // Extract lastKnownRevisionDate from form data if present
         DateTime? lastKnownRevisionDate = null;
-        if (Request.Form.TryGetValue("lastKnownRevisionDate", out var dateValue) &&
-            DateTime.TryParse(dateValue, out var parsedDate))
+        if (Request.Form.TryGetValue("lastKnownRevisionDate", out var dateValue))
         {
+            if (!DateTime.TryParse(dateValue, out var parsedDate))
+            {
+                throw new BadRequestException("Invalid lastKnownRevisionDate format.");
+            }
             lastKnownRevisionDate = parsedDate;
         }
 
@@ -1435,9 +1438,13 @@ public class CiphersController : Controller
 
         // Extract lastKnownRevisionDate from form data if present
         DateTime? lastKnownRevisionDate = null;
-        if (Request.Form.TryGetValue("lastKnownRevisionDate", out var dateValue) &&
-            DateTime.TryParse(dateValue, out var parsedDate))
+
+        if (Request.Form.TryGetValue("lastKnownRevisionDate", out var dateValue))
         {
+            if (!DateTime.TryParse(dateValue, out var parsedDate))
+            {
+                throw new BadRequestException("Invalid lastKnownRevisionDate format.");
+            }
             lastKnownRevisionDate = parsedDate;
         }
 
@@ -1472,9 +1479,13 @@ public class CiphersController : Controller
 
         // Extract lastKnownRevisionDate from form data if present
         DateTime? lastKnownRevisionDate = null;
-        if (Request.Form.TryGetValue("lastKnownRevisionDate", out var dateValue) &&
-            DateTime.TryParse(dateValue, out var parsedDate))
+
+        if (Request.Form.TryGetValue("lastKnownRevisionDate", out var dateValue))
         {
+            if (!DateTime.TryParse(dateValue, out var parsedDate))
+            {
+                throw new BadRequestException("Invalid lastKnownRevisionDate format.");
+            }
             lastKnownRevisionDate = parsedDate;
         }
 
@@ -1526,9 +1537,13 @@ public class CiphersController : Controller
 
         // Extract lastKnownRevisionDate from form data if present
         DateTime? lastKnownRevisionDate = null;
-        if (Request.Form.TryGetValue("lastKnownRevisionDate", out var dateValue) &&
-            DateTime.TryParse(dateValue, out var parsedDate))
+
+        if (Request.Form.TryGetValue("lastKnownRevisionDate", out var dateValue))
         {
+            if (!DateTime.TryParse(dateValue, out var parsedDate))
+            {
+                throw new BadRequestException("Invalid lastKnownRevisionDate format.");
+            }
             lastKnownRevisionDate = parsedDate;
         }
 
