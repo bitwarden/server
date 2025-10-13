@@ -2,10 +2,10 @@
 
 #nullable disable
 
-namespace Bit.MySqlMigrations.Migrations;
+namespace Bit.PostgresMigrations.Migrations;
 
 /// <inheritdoc />
-public partial class AddAutoConfrimUserToOrg : Migration
+public partial class AddAutoConfirmUserToOrg : Migration
 {
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
@@ -13,7 +13,7 @@ public partial class AddAutoConfrimUserToOrg : Migration
         migrationBuilder.AddColumn<bool>(
             name: "UseAutomaticUserConfirmation",
             table: "Organization",
-            type: "tinyint(1)",
+            type: "boolean",
             nullable: false,
             defaultValue: false);
     }

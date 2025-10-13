@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.SqliteMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20251010142244_AddAutoConfrimUserToOrg")]
-    partial class AddAutoConfrimUserToOrg
+    [Migration("20251010142244_AddAutoConfirmUserToOrg")]
+    partial class AddAutoConfirmUserToOrg
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
