@@ -76,26 +76,8 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    INSERT INTO [dbo].[UserSignatureKeyPair]
-    (
-        [Id],
-        [UserId],
-        [SignatureAlgorithm],
-        [SigningKey],
-        [VerifyingKey],
-        [CreationDate],
-        [RevisionDate]
-    )
-    VALUES
-    (
-        @Id,
-        @UserId,
-        @SignatureAlgorithm,
-        @SigningKey,
-        @VerifyingKey,
-        @CreationDate,
-        @RevisionDate
-    )
+    INSERT INTO [dbo].[UserSignatureKeyPair] ([Id], [UserId], [SignatureAlgorithm], [SigningKey], [VerifyingKey], [CreationDate], [RevisionDate])
+    VALUES (@Id, @UserId, @SignatureAlgorithm, @SigningKey, @VerifyingKey, @CreationDate, @RevisionDate)
 END
 GO
 
@@ -120,6 +102,9 @@ BEGIN
     ALTER TABLE [dbo].[User]
     ADD [SecurityState] NVARCHAR(MAX) NULL;
 END
+GO
+
+EXECUTE sp_refreshview 'dbo.UserView'
 GO
 
 CREATE OR ALTER PROCEDURE [dbo].[User_Create]
@@ -376,7 +361,4 @@ BEGIN
     WHERE
         [Id] = @Id
 END
-GO
-
-EXECUTE sp_refreshview 'dbo.UserView'
 GO

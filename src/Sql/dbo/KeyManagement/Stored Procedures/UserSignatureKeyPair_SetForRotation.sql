@@ -10,24 +10,6 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    INSERT INTO [dbo].[UserSignatureKeyPair]
-    (
-        [Id],
-        [UserId],
-        [SignatureAlgorithm],
-        [SigningKey],
-        [VerifyingKey],
-        [CreationDate],
-        [RevisionDate]
-    )
-    VALUES
-    (
-        @Id,
-        @UserId,
-        @SignatureAlgorithm,
-        @SigningKey,
-        @VerifyingKey,
-        @CreationDate,
-        @RevisionDate
-    )
+    INSERT INTO [dbo].[UserSignatureKeyPair] ([Id], [UserId], [SignatureAlgorithm], [SigningKey], [VerifyingKey], [CreationDate], [RevisionDate])
+    VALUES (@Id, @UserId, @SignatureAlgorithm, @SigningKey, @VerifyingKey, @CreationDate, @RevisionDate)
 END
