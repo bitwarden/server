@@ -64,7 +64,8 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    UPDATE [dbo].[Organization]
+    UPDATE
+        [dbo].[Organization]
     SET
         [Identifier] = @Identifier,
         [Name] = @Name,
@@ -126,5 +127,6 @@ BEGIN
         [UseAdminSponsoredFamilies] = @UseAdminSponsoredFamilies,
         [SyncSeats] = @SyncSeats,
         [UseAutomaticUserConfirmation] = @UseAutomaticUserConfirmation
-    WHERE [Id] = @Id;
+    WHERE
+        [Id] = @Id;
 END
