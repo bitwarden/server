@@ -76,8 +76,26 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    INSERT INTO [dbo].[UserSignatureKeyPair] ([Id], [UserId], [SignatureAlgorithm], [SigningKey], [VerifyingKey], [CreationDate], [RevisionDate])
-    VALUES (@Id, @UserId, @SignatureAlgorithm, @SigningKey, @VerifyingKey, @CreationDate, @RevisionDate)
+    INSERT INTO [dbo].[UserSignatureKeyPair]
+    (
+        [Id],
+        [UserId],
+        [SignatureAlgorithm],
+        [SigningKey],
+        [VerifyingKey],
+        [CreationDate],
+        [RevisionDate]
+    )
+    VALUES
+    (
+        @Id,
+        @UserId,
+        @SignatureAlgorithm,
+        @SigningKey,
+        @VerifyingKey,
+        @CreationDate,
+        @RevisionDate
+    )
 END
 GO
 
@@ -105,6 +123,10 @@ END
 GO
 
 EXECUTE sp_refreshview 'dbo.UserView'
+EXECUTE sp_refreshview 'dbo.EmergencyAccessDetailsView'
+EXECUTE sp_refreshview 'dbo.OrganizationUserUserDetailsView'
+EXECUTE sp_refreshview 'dbo.ProviderUserUserDetailsView'
+EXECUTE sp_refreshview 'dbo.UserEmailDomainView'   
 GO
 
 CREATE OR ALTER PROCEDURE [dbo].[User_Create]
@@ -151,8 +173,8 @@ CREATE OR ALTER PROCEDURE [dbo].[User_Create]
     @LastKeyRotationDate DATETIME2(7) = NULL,
     @LastEmailChangeDate DATETIME2(7) = NULL,
     @VerifyDevices BIT = 1,
-    @SignedPublicKey NVARCHAR(MAX) = NULL,
-    @SecurityState NVARCHAR(MAX) = NULL,
+    @SignedPublicKey VARCHAR(MAX) = NULL,
+    @SecurityState VARCHAR(MAX) = NULL,
     @SecurityVersion INT = NULL
 AS
 BEGIN
@@ -303,8 +325,8 @@ CREATE OR ALTER PROCEDURE [dbo].[User_Update]
     @LastKeyRotationDate DATETIME2(7) = NULL,
     @LastEmailChangeDate DATETIME2(7) = NULL,
     @VerifyDevices BIT = 1,
-    @SignedPublicKey NVARCHAR(MAX) = NULL,
-    @SecurityState NVARCHAR(MAX) = NULL,
+    @SignedPublicKey VARCHAR(MAX) = NULL,
+    @SecurityState VARCHAR(MAX) = NULL,
     @SecurityVersion INT = NULL
 AS
 BEGIN
