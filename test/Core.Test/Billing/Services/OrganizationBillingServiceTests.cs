@@ -96,6 +96,10 @@ public class OrganizationBillingServiceTests
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType)
             .Returns(StaticStore.GetPlan(organization.PlanType));
 
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Users = 1, Sponsored = 0 });
+
         var subscriberService = sutProvider.GetDependency<ISubscriberService>();
 
         // Set up subscriber service to return null for customer
@@ -110,13 +114,7 @@ public class OrganizationBillingServiceTests
 
         Assert.NotNull(metadata);
         Assert.False(metadata!.IsOnSecretsManagerStandalone);
-        Assert.False(metadata.HasSubscription);
-        Assert.False(metadata.IsSubscriptionUnpaid);
-        Assert.False(metadata.HasOpenInvoice);
-        Assert.False(metadata.IsSubscriptionCanceled);
-        Assert.Null(metadata.InvoiceDueDate);
-        Assert.Null(metadata.InvoiceCreatedDate);
-        Assert.Null(metadata.SubPeriodEndDate);
+        Assert.Equal(1, metadata.OrganizationOccupiedSeats);
     }
 
     #endregion
