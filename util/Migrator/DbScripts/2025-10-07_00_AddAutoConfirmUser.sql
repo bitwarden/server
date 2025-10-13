@@ -502,4 +502,6 @@ FROM
 GO
 
 EXEC sp_refreshview '[dbo].[OrganizationView]';
+EXEC sp_refreshview '[dbo].[OrganizationCipherDetailsCollectionsView]';
+EXEC sp_refreshview '[dbo].[ProviderOrganizationOrganizationDetailsView]';
 GO
