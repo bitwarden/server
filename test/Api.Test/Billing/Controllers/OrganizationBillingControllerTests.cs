@@ -1,4 +1,5 @@
 ﻿using Bit.Api.Billing.Controllers;
+using Bit.Api.Billing.Models.Responses;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Organizations.Models;
@@ -52,16 +53,19 @@ public class OrganizationBillingControllerTests
     {
         sutProvider.GetDependency<ICurrentContext>().OrganizationUser(organizationId).Returns(true);
         sutProvider.GetDependency<IOrganizationBillingService>().GetMetadata(organizationId)
-            .Returns(new OrganizationMetadata(true, 10));
+            .Returns(new OrganizationMetadata(true, true, true, true, true, true, true, null, null, null, 0));
 
         var result = await sutProvider.Sut.GetMetadataAsync(organizationId);
 
-        Assert.IsType<Ok<OrganizationMetadata>>(result);
+        Assert.IsType<Ok<OrganizationMetadataResponse>>(result);
 
-        var response = ((Ok<OrganizationMetadata>)result).Value;
+        var response = ((Ok<OrganizationMetadataResponse>)result).Value;
 
+        Assert.True(response.IsEligibleForSelfHost);
+        Assert.True(response.IsManaged);
         Assert.True(response.IsOnSecretsManagerStandalone);
-        Assert.Equal(10, response.OrganizationOccupiedSeats);
+        Assert.True(response.IsSubscriptionUnpaid);
+        Assert.True(response.HasSubscription);
     }
 
     [Theory, BitAutoData]
