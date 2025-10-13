@@ -500,3 +500,6 @@ FROM
         INNER JOIN
     [dbo].[Provider] P ON P.[Id] = PU.[ProviderId]
 GO
+
+EXEC sp_refreshview '[dbo].[OrganizationView]';
+GO
