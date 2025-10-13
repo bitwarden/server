@@ -10,7 +10,6 @@ public static class ScimServiceCollectionExtensions
     public static void AddScimGroupCommands(this IServiceCollection services)
     {
         services.AddScoped<IPatchGroupCommand, PatchGroupCommand>();
-        services.AddScoped<IPatchGroupCommandvNext, PatchGroupCommandvNext>();
         services.AddScoped<IPostGroupCommand, PostGroupCommand>();
         services.AddScoped<IPutGroupCommand, PutGroupCommand>();
     }

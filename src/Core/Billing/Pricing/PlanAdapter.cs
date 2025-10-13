@@ -1,22 +1,20 @@
 ﻿using Bit.Core.Billing.Enums;
-using Bit.Core.Models.StaticStore;
-using Proto.Billing.Pricing;
-
-#nullable enable
+using Bit.Core.Billing.Pricing.Models;
+using Plan = Bit.Core.Billing.Pricing.Models.Plan;
 
 namespace Bit.Core.Billing.Pricing;
 
-public record PlanAdapter : Plan
+public record PlanAdapter : Core.Models.StaticStore.Plan
 {
-    public PlanAdapter(PlanResponse planResponse)
+    public PlanAdapter(Plan plan)
     {
-        Type = ToPlanType(planResponse.LookupKey);
+        Type = ToPlanType(plan.LookupKey);
         ProductTier = ToProductTierType(Type);
-        Name = planResponse.Name;
-        IsAnnual = !string.IsNullOrEmpty(planResponse.Cadence) && planResponse.Cadence == "annually";
-        NameLocalizationKey = planResponse.AdditionalData?["nameLocalizationKey"];
-        DescriptionLocalizationKey = planResponse.AdditionalData?["descriptionLocalizationKey"];
-        TrialPeriodDays = planResponse.TrialPeriodDays;
+        Name = plan.Name;
+        IsAnnual = plan.Cadence is "annually";
+        NameLocalizationKey = plan.AdditionalData["nameLocalizationKey"];
+        DescriptionLocalizationKey = plan.AdditionalData["descriptionLocalizationKey"];
+        TrialPeriodDays = plan.TrialPeriodDays;
         HasSelfHost = HasFeature("selfHost");
         HasPolicies = HasFeature("policies");
         HasGroups = HasFeature("groups");
@@ -26,24 +24,26 @@ public record PlanAdapter : Plan
         Has2fa = HasFeature("2fa");
         HasApi = HasFeature("api");
         HasSso = HasFeature("sso");
+        HasOrganizationDomains = HasFeature("organizationDomains");
         HasKeyConnector = HasFeature("keyConnector");
         HasScim = HasFeature("scim");
         HasResetPassword = HasFeature("resetPassword");
         UsersGetPremium = HasFeature("usersGetPremium");
-        UpgradeSortOrder = planResponse.AdditionalData != null
-            ? int.Parse(planResponse.AdditionalData["upgradeSortOrder"])
-            : 0;
-        DisplaySortOrder = planResponse.AdditionalData != null
-            ? int.Parse(planResponse.AdditionalData["displaySortOrder"])
-            : 0;
         HasCustomPermissions = HasFeature("customPermissions");
-        Disabled = !planResponse.Available;
-        PasswordManager = ToPasswordManagerPlanFeatures(planResponse);
-        SecretsManager = planResponse.SecretsManager != null ? ToSecretsManagerPlanFeatures(planResponse) : null;
+        UpgradeSortOrder = plan.AdditionalData.TryGetValue("upgradeSortOrder", out var upgradeSortOrder)
+            ? int.Parse(upgradeSortOrder)
+            : 0;
+        DisplaySortOrder = plan.AdditionalData.TryGetValue("displaySortOrder", out var displaySortOrder)
+            ? int.Parse(displaySortOrder)
+            : 0;
+        Disabled = !plan.Available;
+        LegacyYear = plan.LegacyYear;
+        PasswordManager = ToPasswordManagerPlanFeatures(plan);
+        SecretsManager = plan.SecretsManager != null ? ToSecretsManagerPlanFeatures(plan) : null;
 
         return;
 
-        bool HasFeature(string lookupKey) => planResponse.Features.Any(feature => feature.LookupKey == lookupKey);
+        bool HasFeature(string lookupKey) => plan.Features.Any(feature => feature.LookupKey == lookupKey);
     }
 
     #region Mappings
@@ -86,29 +86,25 @@ public record PlanAdapter : Plan
             _ => throw new BillingException() // TODO: Flesh out
         };
 
-    private static PasswordManagerPlanFeatures ToPasswordManagerPlanFeatures(PlanResponse planResponse)
+    private static PasswordManagerPlanFeatures ToPasswordManagerPlanFeatures(Plan plan)
     {
-        var stripePlanId = GetStripePlanId(planResponse.Seats);
-        var stripeSeatPlanId = GetStripeSeatPlanId(planResponse.Seats);
-        var stripeProviderPortalSeatPlanId = planResponse.ManagedSeats?.StripePriceId;
-        var basePrice = GetBasePrice(planResponse.Seats);
-        var seatPrice = GetSeatPrice(planResponse.Seats);
-        var providerPortalSeatPrice =
-            planResponse.ManagedSeats != null ? decimal.Parse(planResponse.ManagedSeats.Price) : 0;
-        var scales = planResponse.Seats.KindCase switch
-        {
-            PurchasableDTO.KindOneofCase.Scalable => true,
-            PurchasableDTO.KindOneofCase.Packaged => planResponse.Seats.Packaged.Additional != null,
-            _ => false
-        };
-        var baseSeats = GetBaseSeats(planResponse.Seats);
-        var maxSeats = GetMaxSeats(planResponse.Seats);
-        var baseStorageGb = (short?)planResponse.Storage?.Provided;
-        var hasAdditionalStorageOption = planResponse.Storage != null;
-        var stripeStoragePlanId = planResponse.Storage?.StripePriceId;
-        short? maxCollections =
-            planResponse.AdditionalData != null &&
-            planResponse.AdditionalData.TryGetValue("passwordManager.maxCollections", out var value) ? short.Parse(value) : null;
+        var stripePlanId = GetStripePlanId(plan.Seats);
+        var stripeSeatPlanId = GetStripeSeatPlanId(plan.Seats);
+        var stripeProviderPortalSeatPlanId = plan.ManagedSeats?.StripePriceId;
+        var basePrice = GetBasePrice(plan.Seats);
+        var seatPrice = GetSeatPrice(plan.Seats);
+        var providerPortalSeatPrice = plan.ManagedSeats?.Price ?? 0;
+        var scales = plan.Seats.Match(
+            _ => false,
+            packaged => packaged.Additional != null,
+            _ => true);
+        var baseSeats = GetBaseSeats(plan.Seats);
+        var maxSeats = GetMaxSeats(plan.Seats);
+        var baseStorageGb = (short?)plan.Storage?.Provided;
+        var hasAdditionalStorageOption = plan.Storage != null;
+        var additionalStoragePricePerGb = plan.Storage?.Price ?? 0;
+        var stripeStoragePlanId = plan.Storage?.StripePriceId;
+        short? maxCollections = plan.AdditionalData.TryGetValue("passwordManager.maxCollections", out var value) ? short.Parse(value) : null;
 
         return new PasswordManagerPlanFeatures
         {
@@ -124,30 +120,30 @@ public record PlanAdapter : Plan
             MaxSeats = maxSeats,
             BaseStorageGb = baseStorageGb,
             HasAdditionalStorageOption = hasAdditionalStorageOption,
+            AdditionalStoragePricePerGb = additionalStoragePricePerGb,
             StripeStoragePlanId = stripeStoragePlanId,
             MaxCollections = maxCollections
         };
     }
 
-    private static SecretsManagerPlanFeatures ToSecretsManagerPlanFeatures(PlanResponse planResponse)
+    private static SecretsManagerPlanFeatures ToSecretsManagerPlanFeatures(Plan plan)
     {
-        var seats = planResponse.SecretsManager.Seats;
-        var serviceAccounts = planResponse.SecretsManager.ServiceAccounts;
+        var seats = plan.SecretsManager!.Seats;
+        var serviceAccounts = plan.SecretsManager.ServiceAccounts;
 
         var maxServiceAccounts = GetMaxServiceAccounts(serviceAccounts);
-        var allowServiceAccountsAutoscale = serviceAccounts.KindCase == FreeOrScalableDTO.KindOneofCase.Scalable;
+        var allowServiceAccountsAutoscale = serviceAccounts.IsScalable;
         var stripeServiceAccountPlanId = GetStripeServiceAccountPlanId(serviceAccounts);
         var additionalPricePerServiceAccount = GetAdditionalPricePerServiceAccount(serviceAccounts);
         var baseServiceAccount = GetBaseServiceAccount(serviceAccounts);
-        var hasAdditionalServiceAccountOption = serviceAccounts.KindCase == FreeOrScalableDTO.KindOneofCase.Scalable;
+        var hasAdditionalServiceAccountOption = serviceAccounts.IsScalable;
         var stripeSeatPlanId = GetStripeSeatPlanId(seats);
-        var hasAdditionalSeatsOption = seats.KindCase == FreeOrScalableDTO.KindOneofCase.Scalable;
+        var hasAdditionalSeatsOption = seats.IsScalable;
         var seatPrice = GetSeatPrice(seats);
+        var baseSeats = GetBaseSeats(seats);
         var maxSeats = GetMaxSeats(seats);
-        var allowSeatAutoscale = seats.KindCase == FreeOrScalableDTO.KindOneofCase.Scalable;
-        var maxProjects =
-            planResponse.AdditionalData != null &&
-            planResponse.AdditionalData.TryGetValue("secretsManager.maxProjects", out var value) ? short.Parse(value) : 0;
+        var allowSeatAutoscale = seats.IsScalable;
+        var maxProjects = plan.AdditionalData.TryGetValue("secretsManager.maxProjects", out var value) ? short.Parse(value) : 0;
 
         return new SecretsManagerPlanFeatures
         {
@@ -160,73 +156,70 @@ public record PlanAdapter : Plan
             StripeSeatPlanId = stripeSeatPlanId,
             HasAdditionalSeatsOption = hasAdditionalSeatsOption,
             SeatPrice = seatPrice,
+            BaseSeats = baseSeats,
             MaxSeats = maxSeats,
             AllowSeatAutoscale = allowSeatAutoscale,
             MaxProjects = maxProjects
         };
     }
 
-    private static decimal? GetAdditionalPricePerServiceAccount(FreeOrScalableDTO freeOrScalable)
-        => freeOrScalable.KindCase != FreeOrScalableDTO.KindOneofCase.Scalable
-            ? null
-            : decimal.Parse(freeOrScalable.Scalable.Price);
+    private static decimal? GetAdditionalPricePerServiceAccount(FreeOrScalable freeOrScalable)
+        => freeOrScalable.FromScalable(x => x.Price);
 
-    private static decimal GetBasePrice(PurchasableDTO purchasable)
-        => purchasable.KindCase != PurchasableDTO.KindOneofCase.Packaged ? 0 : decimal.Parse(purchasable.Packaged.Price);
+    private static decimal GetBasePrice(Purchasable purchasable)
+        => purchasable.FromPackaged(x => x.Price);
 
-    private static int GetBaseSeats(PurchasableDTO purchasable)
-        => purchasable.KindCase != PurchasableDTO.KindOneofCase.Packaged ? 0 : purchasable.Packaged.Quantity;
+    private static int GetBaseSeats(FreeOrScalable freeOrScalable)
+        => freeOrScalable.Match(
+            free => free.Quantity,
+            scalable => scalable.Provided);
 
-    private static short GetBaseServiceAccount(FreeOrScalableDTO freeOrScalable)
-        => freeOrScalable.KindCase switch
-        {
-            FreeOrScalableDTO.KindOneofCase.Free => (short)freeOrScalable.Free.Quantity,
-            FreeOrScalableDTO.KindOneofCase.Scalable => (short)freeOrScalable.Scalable.Provided,
-            _ => 0
-        };
+    private static int GetBaseSeats(Purchasable purchasable)
+        => purchasable.Match(
+            free => free.Quantity,
+            packaged => packaged.Quantity,
+            scalable => scalable.Provided);
 
-    private static short? GetMaxSeats(PurchasableDTO purchasable)
-        => purchasable.KindCase != PurchasableDTO.KindOneofCase.Free ? null : (short)purchasable.Free.Quantity;
+    private static short GetBaseServiceAccount(FreeOrScalable freeOrScalable)
+        => freeOrScalable.Match(
+            free => (short)free.Quantity,
+            scalable => (short)scalable.Provided);
 
-    private static short? GetMaxSeats(FreeOrScalableDTO freeOrScalable)
-        => freeOrScalable.KindCase != FreeOrScalableDTO.KindOneofCase.Free ? null : (short)freeOrScalable.Free.Quantity;
+    private static short? GetMaxSeats(Purchasable purchasable)
+        => purchasable.Match<short?>(
+            free => (short)free.Quantity,
+            packaged => (short)packaged.Quantity,
+            _ => null);
 
-    private static short? GetMaxServiceAccounts(FreeOrScalableDTO freeOrScalable)
-        => freeOrScalable.KindCase != FreeOrScalableDTO.KindOneofCase.Free ? null : (short)freeOrScalable.Free.Quantity;
+    private static short? GetMaxSeats(FreeOrScalable freeOrScalable)
+        => freeOrScalable.FromFree(x => (short)x.Quantity);
 
-    private static decimal GetSeatPrice(PurchasableDTO purchasable)
-        => purchasable.KindCase switch
-        {
-            PurchasableDTO.KindOneofCase.Packaged => purchasable.Packaged.Additional != null ? decimal.Parse(purchasable.Packaged.Additional.Price) : 0,
-            PurchasableDTO.KindOneofCase.Scalable => decimal.Parse(purchasable.Scalable.Price),
-            _ => 0
-        };
+    private static short? GetMaxServiceAccounts(FreeOrScalable freeOrScalable)
+        => freeOrScalable.FromFree(x => (short)x.Quantity);
 
-    private static decimal GetSeatPrice(FreeOrScalableDTO freeOrScalable)
-        => freeOrScalable.KindCase != FreeOrScalableDTO.KindOneofCase.Scalable
-            ? 0
-            : decimal.Parse(freeOrScalable.Scalable.Price);
+    private static decimal GetSeatPrice(Purchasable purchasable)
+        => purchasable.Match(
+            _ => 0,
+            packaged => packaged.Additional?.Price ?? 0,
+            scalable => scalable.Price);
 
-    private static string? GetStripePlanId(PurchasableDTO purchasable)
-        => purchasable.KindCase != PurchasableDTO.KindOneofCase.Packaged ? null : purchasable.Packaged.StripePriceId;
+    private static decimal GetSeatPrice(FreeOrScalable freeOrScalable)
+        => freeOrScalable.FromScalable(x => x.Price);
 
-    private static string? GetStripeSeatPlanId(PurchasableDTO purchasable)
-        => purchasable.KindCase switch
-        {
-            PurchasableDTO.KindOneofCase.Packaged => purchasable.Packaged.Additional?.StripePriceId,
-            PurchasableDTO.KindOneofCase.Scalable => purchasable.Scalable.StripePriceId,
-            _ => null
-        };
+    private static string? GetStripePlanId(Purchasable purchasable)
+        => purchasable.FromPackaged(x => x.StripePriceId);
 
-    private static string? GetStripeSeatPlanId(FreeOrScalableDTO freeOrScalable)
-        => freeOrScalable.KindCase != FreeOrScalableDTO.KindOneofCase.Scalable
-            ? null
-            : freeOrScalable.Scalable.StripePriceId;
+    private static string? GetStripeSeatPlanId(Purchasable purchasable)
+        => purchasable.Match(
+            _ => null,
+            packaged => packaged.Additional?.StripePriceId,
+            scalable => scalable.StripePriceId);
 
-    private static string? GetStripeServiceAccountPlanId(FreeOrScalableDTO freeOrScalable)
-        => freeOrScalable.KindCase != FreeOrScalableDTO.KindOneofCase.Scalable
-            ? null
-            : freeOrScalable.Scalable.StripePriceId;
+    private static string? GetStripeSeatPlanId(FreeOrScalable freeOrScalable)
+        => freeOrScalable.FromScalable(x => x.StripePriceId);
+
+    private static string? GetStripeServiceAccountPlanId(FreeOrScalable freeOrScalable)
+        => freeOrScalable.FromScalable(x => x.StripePriceId);
 
     #endregion
 }

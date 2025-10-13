@@ -3,7 +3,6 @@ using System.Text.Json;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Enums;
-using Bit.Core.Tools.Entities;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Identity;
 
@@ -11,7 +10,7 @@ using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Core.Entities;
 
-public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFactorProvidersUser, IReferenceable
+public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFactorProvidersUser
 {
     private Dictionary<TwoFactorProviderType, TwoFactorProvider>? _twoFactorProviders;
 
@@ -36,6 +35,11 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     public string? TwoFactorRecoveryCode { get; set; }
     public string? EquivalentDomains { get; set; }
     public string? ExcludedGlobalEquivalentDomains { get; set; }
+    /// <summary>
+    /// The Account Revision Date is used to check if new sync needs to occur. It should be updated
+    /// whenever a change is made that affects a client's sync data; for example, updating their vault or
+    /// organization membership.
+    /// </summary>
     public DateTime AccountRevisionDate { get; set; } = DateTime.UtcNow;
     public string? Key { get; set; }
     public string? PublicKey { get; set; }
@@ -73,6 +77,11 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     public DateTime? LastKeyRotationDate { get; set; }
     public DateTime? LastEmailChangeDate { get; set; }
     public bool VerifyDevices { get; set; } = true;
+
+    public string GetMasterPasswordSalt()
+    {
+        return Email.ToLowerInvariant().Trim();
+    }
 
     public void SetNewId()
     {
@@ -128,6 +137,10 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
 
     public bool IsExpired() => PremiumExpirationDate.HasValue && PremiumExpirationDate.Value <= DateTime.UtcNow;
 
+    /// <summary>
+    /// Deserializes the User.TwoFactorProviders property from JSON to the appropriate C# dictionary.
+    /// </summary>
+    /// <returns>Dictionary of TwoFactor providers</returns>
     public Dictionary<TwoFactorProviderType, TwoFactorProvider>? GetTwoFactorProviders()
     {
         if (string.IsNullOrWhiteSpace(TwoFactorProviders))
@@ -137,19 +150,17 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
 
         try
         {
-            if (_twoFactorProviders == null)
-            {
-                _twoFactorProviders =
-                    JsonHelpers.LegacyDeserialize<Dictionary<TwoFactorProviderType, TwoFactorProvider>>(
-                        TwoFactorProviders);
-            }
+            _twoFactorProviders ??=
+                JsonHelpers.LegacyDeserialize<Dictionary<TwoFactorProviderType, TwoFactorProvider>>(
+                    TwoFactorProviders);
 
-            // U2F is no longer supported, and all users keys should have been migrated to WebAuthn.
-            // To prevent issues with accounts being prompted for unsupported U2F we remove them
-            if (_twoFactorProviders.ContainsKey(TwoFactorProviderType.U2f))
-            {
-                _twoFactorProviders.Remove(TwoFactorProviderType.U2f);
-            }
+            /*
+                U2F is no longer supported, and all users keys should have been migrated to WebAuthn.
+                To prevent issues with accounts being prompted for unsupported U2F we remove them.
+                This will probably exist in perpetuity since there is no way to know for sure if any
+                given user does or doesn't have this enabled. It is a non-zero chance.
+            */
+            _twoFactorProviders?.Remove(TwoFactorProviderType.U2f);
 
             return _twoFactorProviders;
         }
@@ -169,6 +180,10 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
         return Premium;
     }
 
+    /// <summary>
+    /// Serializes the C# object to the User.TwoFactorProviders property in JSON format.
+    /// </summary>
+    /// <param name="providers">Dictionary of Two Factor providers</param>
     public void SetTwoFactorProviders(Dictionary<TwoFactorProviderType, TwoFactorProvider> providers)
     {
         // When replacing with system.text remember to remove the extra serialization in WebAuthnTokenProvider.
@@ -176,20 +191,16 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
         _twoFactorProviders = providers;
     }
 
-    public void ClearTwoFactorProviders()
-    {
-        SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>());
-    }
-
+    /// <summary>
+    /// Checks if the user has a specific TwoFactorProvider configured. If a user has a premium TwoFactor
+    /// configured it will still be found, even if the user's premium subscription has ended.
+    /// </summary>
+    /// <param name="provider">TwoFactor provider being searched for</param>
+    /// <returns>TwoFactorProvider if found; null otherwise.</returns>
     public TwoFactorProvider? GetTwoFactorProvider(TwoFactorProviderType provider)
     {
         var providers = GetTwoFactorProviders();
-        if (providers == null || !providers.ContainsKey(provider))
-        {
-            return null;
-        }
-
-        return providers[provider];
+        return providers?.GetValueOrDefault(provider);
     }
 
     public long StorageBytesRemaining()

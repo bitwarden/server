@@ -1,22 +1,24 @@
 name: Collect code references
 
 on:
-  pull_request:
+  push:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  check-ld-secret:
-    name: Check for LD secret
+  check-secret-access:
+    name: Check for secret access
     runs-on: ubuntu-22.04
     outputs:
-      available: ${{ steps.check-ld-secret.outputs.available }}
-    permissions:
-      contents: read
+      available: ${{ steps.check-secret-access.outputs.available }}
+    permissions: {}
 
     steps:
       - name: Check
-        id: check-ld-secret
+        id: check-secret-access
         run: |
-          if [ "${{ secrets.LD_ACCESS_TOKEN }}" != '' ]; then
+          if [ "${{ secrets.AZURE_CLIENT_ID }}" != '' ]; then
             echo "available=true" >> $GITHUB_OUTPUT;
           else
             echo "available=false" >> $GITHUB_OUTPUT;
@@ -25,24 +27,41 @@ jobs:
   refs:
     name: Code reference collection
     runs-on: ubuntu-22.04
-    needs: check-ld-secret
-    if: ${{ needs.check-ld-secret.outputs.available == 'true' }}
+    needs: check-secret-access
+    if: ${{ needs.check-secret-access.outputs.available == 'true' }}
     permissions:
       contents: read
       pull-requests: write
+      id-token: write
 
     steps:
       - name: Check out repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
+      - name: Log in to Azure
+        uses: bitwarden/gh-actions/azure-login@main
+        with:
+          subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+          client_id: ${{ secrets.AZURE_CLIENT_ID }}
+
+      - name: Get Azure Key Vault secrets
+        id: get-kv-secrets
+        uses: bitwarden/gh-actions/get-keyvault-secrets@main
+        with:
+          keyvault: gh-server
+          secrets: "LD-ACCESS-TOKEN"
+
+      - name: Log out from Azure
+        uses: bitwarden/gh-actions/azure-logout@main
+
       - name: Collect
         id: collect
-        uses: launchdarkly/find-code-references-in-pull-request@30f4c4ab2949bbf258b797ced2fbf6dea34df9ce # v2.1.0
+        uses: launchdarkly/find-code-references@e3e9da201b87ada54eb4c550c14fb783385c5c8a # v2.13.0
         with:
-          project-key: default
-          environment-key: dev
-          access-token: ${{ secrets.LD_ACCESS_TOKEN }}
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          accessToken: ${{ steps.get-kv-secrets.outputs.LD-ACCESS-TOKEN }}
+          projKey: default
+          allowTags: true
 
       - name: Add label
         if: steps.collect.outputs.any-changed == 'true'

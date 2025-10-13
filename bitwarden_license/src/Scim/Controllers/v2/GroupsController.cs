@@ -1,10 +1,11 @@
-﻿using Bit.Core;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Scim.Groups.Interfaces;
 using Bit.Scim.Models;
 using Bit.Scim.Utilities;
@@ -24,10 +25,8 @@ public class GroupsController : Controller
     private readonly IGetGroupsListQuery _getGroupsListQuery;
     private readonly IDeleteGroupCommand _deleteGroupCommand;
     private readonly IPatchGroupCommand _patchGroupCommand;
-    private readonly IPatchGroupCommandvNext _patchGroupCommandvNext;
     private readonly IPostGroupCommand _postGroupCommand;
     private readonly IPutGroupCommand _putGroupCommand;
-    private readonly IFeatureService _featureService;
 
     public GroupsController(
         IGroupRepository groupRepository,
@@ -35,10 +34,8 @@ public class GroupsController : Controller
         IGetGroupsListQuery getGroupsListQuery,
         IDeleteGroupCommand deleteGroupCommand,
         IPatchGroupCommand patchGroupCommand,
-        IPatchGroupCommandvNext patchGroupCommandvNext,
         IPostGroupCommand postGroupCommand,
-        IPutGroupCommand putGroupCommand,
-        IFeatureService featureService
+        IPutGroupCommand putGroupCommand
         )
     {
         _groupRepository = groupRepository;
@@ -46,10 +43,8 @@ public class GroupsController : Controller
         _getGroupsListQuery = getGroupsListQuery;
         _deleteGroupCommand = deleteGroupCommand;
         _patchGroupCommand = patchGroupCommand;
-        _patchGroupCommandvNext = patchGroupCommandvNext;
         _postGroupCommand = postGroupCommand;
         _putGroupCommand = putGroupCommand;
-        _featureService = featureService;
     }
 
     [HttpGet("{id}")]
@@ -103,21 +98,13 @@ public class GroupsController : Controller
     [HttpPatch("{id}")]
     public async Task<IActionResult> Patch(Guid organizationId, Guid id, [FromBody] ScimPatchModel model)
     {
-        if (_featureService.IsEnabled(FeatureFlagKeys.ShortcutDuplicatePatchRequests))
+        var group = await _groupRepository.GetByIdAsync(id);
+        if (group == null || group.OrganizationId != organizationId)
         {
-            var group = await _groupRepository.GetByIdAsync(id);
-            if (group == null || group.OrganizationId != organizationId)
-            {
-                throw new NotFoundException("Group not found.");
-            }
-
-            await _patchGroupCommandvNext.PatchGroupAsync(group, model);
-            return new NoContentResult();
+            throw new NotFoundException("Group not found.");
         }
 
-        var organization = await _organizationRepository.GetByIdAsync(organizationId);
-        await _patchGroupCommand.PatchGroupAsync(organization, id, model);
-
+        await _patchGroupCommand.PatchGroupAsync(group, model);
         return new NoContentResult();
     }
 

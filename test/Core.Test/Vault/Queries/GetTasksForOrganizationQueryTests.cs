@@ -40,12 +40,12 @@ public class GetTasksForOrganizationQueryTests
         var result = await sutProvider.Sut.GetTasksAsync(org.Id, status);
 
         Assert.Equal(2, result.Count);
-        sutProvider.GetDependency<IAuthorizationService>().Received(1).AuthorizeAsync(
+        await sutProvider.GetDependency<IAuthorizationService>().Received(1).AuthorizeAsync(
             Arg.Any<ClaimsPrincipal>(), org, Arg.Is<IEnumerable<IAuthorizationRequirement>>(
                 e => e.Contains(SecurityTaskOperations.ListAllForOrganization)
             )
         );
-        sutProvider.GetDependency<ISecurityTaskRepository>().Received(1).GetManyByOrganizationIdStatusAsync(org.Id, SecurityTaskStatus.Pending);
+        await sutProvider.GetDependency<ISecurityTaskRepository>().Received(1).GetManyByOrganizationIdStatusAsync(org.Id, SecurityTaskStatus.Pending);
     }
 
     [Theory, BitAutoData]
@@ -82,11 +82,11 @@ public class GetTasksForOrganizationQueryTests
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetTasksAsync(org.Id));
 
-        sutProvider.GetDependency<IAuthorizationService>().Received(1).AuthorizeAsync(
+        await sutProvider.GetDependency<IAuthorizationService>().Received(1).AuthorizeAsync(
             Arg.Any<ClaimsPrincipal>(), org, Arg.Is<IEnumerable<IAuthorizationRequirement>>(
                 e => e.Contains(SecurityTaskOperations.ListAllForOrganization)
             )
         );
-        sutProvider.GetDependency<ISecurityTaskRepository>().Received(0).GetManyByOrganizationIdStatusAsync(org.Id, SecurityTaskStatus.Pending);
+        await sutProvider.GetDependency<ISecurityTaskRepository>().Received(0).GetManyByOrganizationIdStatusAsync(org.Id, SecurityTaskStatus.Pending);
     }
 }

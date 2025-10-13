@@ -8,8 +8,10 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NSubstitute;
+using NSubstitute.ReceivedExtensions;
 using Xunit;
 
 namespace Bit.Billing.Test.Controllers;
@@ -72,11 +74,46 @@ public class FreshdeskControllerTests
     }
 
     [Theory]
+    [BitAutoData(WebhookKey)]
+    public async Task PostWebhook_add_note_when_user_is_invalid(
+        string freshdeskWebhookKey, FreshdeskWebhookModel model,
+        SutProvider<FreshdeskController> sutProvider)
+    {
+        // Arrange - for an invalid user
+        model.TicketContactEmail = "invalid@user";
+        sutProvider.GetDependency<IUserRepository>().GetByEmailAsync(model.TicketContactEmail).Returns((User)null);
+        sutProvider.GetDependency<IOptions<BillingSettings>>().Value.FreshDesk.WebhookKey.Returns(WebhookKey);
+
+        var mockHttpMessageHandler = Substitute.ForPartsOf<MockHttpMessageHandler>();
+        var mockResponse = new HttpResponseMessage(System.Net.HttpStatusCode.OK);
+        mockHttpMessageHandler.Send(Arg.Any<HttpRequestMessage>(), Arg.Any<CancellationToken>())
+           .Returns(mockResponse);
+        var httpClient = new HttpClient(mockHttpMessageHandler);
+        sutProvider.GetDependency<IHttpClientFactory>().CreateClient("FreshdeskApi").Returns(httpClient);
+
+        // Act
+        var response = await sutProvider.Sut.PostWebhook(freshdeskWebhookKey, model);
+
+        // Assert
+        var statusCodeResult = Assert.IsAssignableFrom<StatusCodeResult>(response);
+        Assert.Equal(StatusCodes.Status200OK, statusCodeResult.StatusCode);
+
+        await mockHttpMessageHandler
+            .Received(1).Send(
+                Arg.Is<HttpRequestMessage>(
+                    m => m.Method == HttpMethod.Post
+                        && m.RequestUri.ToString().EndsWith($"{model.TicketId}/notes")
+                        && m.Content.ReadAsStringAsync().Result.Contains("No user found")),
+                Arg.Any<CancellationToken>());
+    }
+
+
+    [Theory]
     [BitAutoData((string)null, null)]
     [BitAutoData((string)null)]
     [BitAutoData(WebhookKey, null)]
     public async Task PostWebhookOnyxAi_InvalidWebhookKey_results_in_BadRequest(
-        string freshdeskWebhookKey, FreshdeskWebhookModel model,
+        string freshdeskWebhookKey, FreshdeskOnyxAiWebhookModel model,
         BillingSettings billingSettings, SutProvider<FreshdeskController> sutProvider)
     {
         sutProvider.GetDependency<IOptions<BillingSettings>>()
@@ -90,57 +127,9 @@ public class FreshdeskControllerTests
 
     [Theory]
     [BitAutoData(WebhookKey)]
-    public async Task PostWebhookOnyxAi_invalid_ticketid_results_in_BadRequest(
-        string freshdeskWebhookKey, FreshdeskWebhookModel model, SutProvider<FreshdeskController> sutProvider)
-    {
-        sutProvider.GetDependency<IOptions<BillingSettings>>()
-            .Value.FreshDesk.WebhookKey.Returns(freshdeskWebhookKey);
-
-        var mockHttpMessageHandler = Substitute.ForPartsOf<MockHttpMessageHandler>();
-        var mockResponse = new HttpResponseMessage(System.Net.HttpStatusCode.BadRequest);
-        mockHttpMessageHandler.Send(Arg.Any<HttpRequestMessage>(), Arg.Any<CancellationToken>())
-           .Returns(mockResponse);
-        var httpClient = new HttpClient(mockHttpMessageHandler);
-
-        sutProvider.GetDependency<IHttpClientFactory>().CreateClient("FreshdeskApi").Returns(httpClient);
-
-        var response = await sutProvider.Sut.PostWebhookOnyxAi(freshdeskWebhookKey, model);
-
-        var result = Assert.IsAssignableFrom<BadRequestObjectResult>(response);
-        Assert.Equal(StatusCodes.Status400BadRequest, result.StatusCode);
-    }
-
-    [Theory]
-    [BitAutoData(WebhookKey)]
-    public async Task PostWebhookOnyxAi_invalid_freshdesk_response_results_in_BadRequest(
-        string freshdeskWebhookKey, FreshdeskWebhookModel model,
+    public async Task PostWebhookOnyxAi_invalid_onyx_response_results_is_logged(
+        string freshdeskWebhookKey, FreshdeskOnyxAiWebhookModel model,
         SutProvider<FreshdeskController> sutProvider)
-    {
-        sutProvider.GetDependency<IOptions<BillingSettings>>()
-            .Value.FreshDesk.WebhookKey.Returns(freshdeskWebhookKey);
-
-        var mockHttpMessageHandler = Substitute.ForPartsOf<MockHttpMessageHandler>();
-        var mockResponse = new HttpResponseMessage(System.Net.HttpStatusCode.OK)
-        {
-            Content = new StringContent("non json content. expect json deserializer to throw error")
-        };
-        mockHttpMessageHandler.Send(Arg.Any<HttpRequestMessage>(), Arg.Any<CancellationToken>())
-           .Returns(mockResponse);
-        var httpClient = new HttpClient(mockHttpMessageHandler);
-
-        sutProvider.GetDependency<IHttpClientFactory>().CreateClient("FreshdeskApi").Returns(httpClient);
-
-        var response = await sutProvider.Sut.PostWebhookOnyxAi(freshdeskWebhookKey, model);
-
-        var result = Assert.IsAssignableFrom<BadRequestObjectResult>(response);
-        Assert.Equal(StatusCodes.Status400BadRequest, result.StatusCode);
-    }
-
-    [Theory]
-    [BitAutoData(WebhookKey)]
-    public async Task PostWebhookOnyxAi_invalid_onyx_response_results_in_BadRequest(
-        string freshdeskWebhookKey, FreshdeskWebhookModel model,
-        FreshdeskViewTicketModel freshdeskTicketInfo, SutProvider<FreshdeskController> sutProvider)
     {
         var billingSettings = sutProvider.GetDependency<IOptions<BillingSettings>>().Value;
         billingSettings.FreshDesk.WebhookKey.Returns(freshdeskWebhookKey);
@@ -148,12 +137,6 @@ public class FreshdeskControllerTests
 
         // mocking freshdesk Api request for ticket info
         var mockFreshdeskHttpMessageHandler = Substitute.ForPartsOf<MockHttpMessageHandler>();
-        var mockFreshdeskResponse = new HttpResponseMessage(System.Net.HttpStatusCode.OK)
-        {
-            Content = new StringContent(JsonSerializer.Serialize(freshdeskTicketInfo))
-        };
-        mockFreshdeskHttpMessageHandler.Send(Arg.Any<HttpRequestMessage>(), Arg.Any<CancellationToken>())
-           .Returns(mockFreshdeskResponse);
         var freshdeskHttpClient = new HttpClient(mockFreshdeskHttpMessageHandler);
 
         // mocking Onyx api response given a ticket description
@@ -168,34 +151,33 @@ public class FreshdeskControllerTests
 
         var response = await sutProvider.Sut.PostWebhookOnyxAi(freshdeskWebhookKey, model);
 
-        var result = Assert.IsAssignableFrom<BadRequestObjectResult>(response);
-        Assert.Equal(StatusCodes.Status400BadRequest, result.StatusCode);
+        var statusCodeResult = Assert.IsAssignableFrom<StatusCodeResult>(response);
+        Assert.Equal(StatusCodes.Status200OK, statusCodeResult.StatusCode);
+
+        var _logger = sutProvider.GetDependency<ILogger<FreshdeskController>>();
+
+        // workaround because _logger.Received(1).LogWarning(...) does not work
+        _logger.ReceivedCalls().Any(c => c.GetMethodInfo().Name == "Log" && c.GetArguments()[1].ToString().Contains("Error getting answer from Onyx AI"));
+
+        // sent call to Onyx API - but we got an error response
+        _ = mockOnyxHttpMessageHandler.Received(1).Send(Arg.Any<HttpRequestMessage>(), Arg.Any<CancellationToken>());
+        // did not call freshdesk to add a note since onyx failed
+        _ = mockFreshdeskHttpMessageHandler.DidNotReceive().Send(Arg.Any<HttpRequestMessage>(), Arg.Any<CancellationToken>());
     }
 
     [Theory]
     [BitAutoData(WebhookKey)]
     public async Task PostWebhookOnyxAi_success(
-        string freshdeskWebhookKey, FreshdeskWebhookModel model,
-        FreshdeskViewTicketModel freshdeskTicketInfo,
-        OnyxAnswerWithCitationResponseModel onyxResponse,
+        string freshdeskWebhookKey, FreshdeskOnyxAiWebhookModel model,
+        OnyxResponseModel onyxResponse,
         SutProvider<FreshdeskController> sutProvider)
     {
         var billingSettings = sutProvider.GetDependency<IOptions<BillingSettings>>().Value;
         billingSettings.FreshDesk.WebhookKey.Returns(freshdeskWebhookKey);
         billingSettings.Onyx.BaseUrl.Returns("http://simulate-onyx-api.com/api");
 
-        // mocking freshdesk Api request for ticket info (GET)
-        var mockFreshdeskHttpMessageHandler = Substitute.ForPartsOf<MockHttpMessageHandler>();
-        var mockFreshdeskResponse = new HttpResponseMessage(System.Net.HttpStatusCode.OK)
-        {
-            Content = new StringContent(JsonSerializer.Serialize(freshdeskTicketInfo))
-        };
-        mockFreshdeskHttpMessageHandler.Send(
-                Arg.Is<HttpRequestMessage>(_ => _.Method == HttpMethod.Get),
-                Arg.Any<CancellationToken>())
-            .Returns(mockFreshdeskResponse);
-
         // mocking freshdesk api add note request (POST)
+        var mockFreshdeskHttpMessageHandler = Substitute.ForPartsOf<MockHttpMessageHandler>();
         var mockFreshdeskAddNoteResponse = new HttpResponseMessage(System.Net.HttpStatusCode.BadRequest);
         mockFreshdeskHttpMessageHandler.Send(
                 Arg.Is<HttpRequestMessage>(_ => _.Method == HttpMethod.Post),
@@ -203,10 +185,9 @@ public class FreshdeskControllerTests
             .Returns(mockFreshdeskAddNoteResponse);
         var freshdeskHttpClient = new HttpClient(mockFreshdeskHttpMessageHandler);
 
-
         // mocking Onyx api response given a ticket description
         var mockOnyxHttpMessageHandler = Substitute.ForPartsOf<MockHttpMessageHandler>();
-        onyxResponse.ErrorMsg = string.Empty;
+        onyxResponse.ErrorMsg = "string.Empty";
         var mockOnyxResponse = new HttpResponseMessage(System.Net.HttpStatusCode.OK)
         {
             Content = new StringContent(JsonSerializer.Serialize(onyxResponse))
@@ -222,6 +203,37 @@ public class FreshdeskControllerTests
 
         var result = Assert.IsAssignableFrom<OkResult>(response);
         Assert.Equal(StatusCodes.Status200OK, result.StatusCode);
+    }
+
+    [Theory]
+    [BitAutoData(WebhookKey)]
+    public async Task PostWebhookOnyxAi_ticket_description_is_empty_return_success(
+        string freshdeskWebhookKey, FreshdeskOnyxAiWebhookModel model,
+        SutProvider<FreshdeskController> sutProvider)
+    {
+        var billingSettings = sutProvider.GetDependency<IOptions<BillingSettings>>().Value;
+        billingSettings.FreshDesk.WebhookKey.Returns(freshdeskWebhookKey);
+        billingSettings.Onyx.BaseUrl.Returns("http://simulate-onyx-api.com/api");
+
+        model.TicketDescriptionText = "   "; // empty description
+
+        // mocking freshdesk api add note request (POST)
+        var mockFreshdeskHttpMessageHandler = Substitute.ForPartsOf<MockHttpMessageHandler>();
+        var freshdeskHttpClient = new HttpClient(mockFreshdeskHttpMessageHandler);
+
+        // mocking Onyx api response given a ticket description
+        var mockOnyxHttpMessageHandler = Substitute.ForPartsOf<MockHttpMessageHandler>();
+        var onyxHttpClient = new HttpClient(mockOnyxHttpMessageHandler);
+
+        sutProvider.GetDependency<IHttpClientFactory>().CreateClient("FreshdeskApi").Returns(freshdeskHttpClient);
+        sutProvider.GetDependency<IHttpClientFactory>().CreateClient("OnyxApi").Returns(onyxHttpClient);
+
+        var response = await sutProvider.Sut.PostWebhookOnyxAi(freshdeskWebhookKey, model);
+
+        var result = Assert.IsAssignableFrom<OkResult>(response);
+        Assert.Equal(StatusCodes.Status200OK, result.StatusCode);
+        _ = mockFreshdeskHttpMessageHandler.DidNotReceive().Send(Arg.Any<HttpRequestMessage>(), Arg.Any<CancellationToken>());
+        _ = mockOnyxHttpMessageHandler.DidNotReceive().Send(Arg.Any<HttpRequestMessage>(), Arg.Any<CancellationToken>());
     }
 
     public class MockHttpMessageHandler : HttpMessageHandler

@@ -1,11 +1,12 @@
-﻿using System.Globalization;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Globalization;
 using System.Security.Claims;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Licenses.Extensions;
 using Bit.Core.Billing.Licenses.Models;
 using Bit.Core.Enums;
-using Bit.Core.Models.Business;
 
 namespace Bit.Core.Billing.Licenses.Services.Implementations;
 
@@ -13,11 +14,12 @@ public class OrganizationLicenseClaimsFactory : ILicenseClaimsFactory<Organizati
 {
     public Task<List<Claim>> GenerateClaims(Organization entity, LicenseContext licenseContext)
     {
+        var issued = DateTime.UtcNow;
         var subscriptionInfo = licenseContext.SubscriptionInfo;
-        var expires = entity.CalculateFreshExpirationDate(subscriptionInfo);
-        var refresh = entity.CalculateFreshRefreshDate(subscriptionInfo, expires);
-        var expirationWithoutGracePeriod = entity.CalculateFreshExpirationDateWithoutGracePeriod(subscriptionInfo, expires);
-        var trial = IsTrialing(entity, subscriptionInfo);
+        var expires = entity.CalculateFreshExpirationDate(subscriptionInfo, issued);
+        var refresh = entity.CalculateFreshRefreshDate(subscriptionInfo, issued);
+        var expirationWithoutGracePeriod = entity.CalculateFreshExpirationDateWithoutGracePeriod(subscriptionInfo);
+        var trial = entity.CalculateIsTrialing(subscriptionInfo);
 
         var claims = new List<Claim>
         {
@@ -47,11 +49,13 @@ public class OrganizationLicenseClaimsFactory : ILicenseClaimsFactory<Organizati
             new(nameof(OrganizationLicenseConstants.LimitCollectionCreationDeletion),
                 (entity.LimitCollectionCreation || entity.LimitCollectionDeletion).ToString()),
             new(nameof(OrganizationLicenseConstants.AllowAdminAccessToAllCollectionItems), entity.AllowAdminAccessToAllCollectionItems.ToString()),
-            new(nameof(OrganizationLicenseConstants.Issued), DateTime.UtcNow.ToString(CultureInfo.InvariantCulture)),
+            new(nameof(OrganizationLicenseConstants.UseRiskInsights), entity.UseRiskInsights.ToString()),
+            new(nameof(OrganizationLicenseConstants.Issued), issued.ToString(CultureInfo.InvariantCulture)),
             new(nameof(OrganizationLicenseConstants.Expires), expires.ToString(CultureInfo.InvariantCulture)),
             new(nameof(OrganizationLicenseConstants.Refresh), refresh.ToString(CultureInfo.InvariantCulture)),
-            new(nameof(OrganizationLicenseConstants.ExpirationWithoutGracePeriod), expirationWithoutGracePeriod.ToString(CultureInfo.InvariantCulture)),
             new(nameof(OrganizationLicenseConstants.Trial), trial.ToString()),
+            new(nameof(OrganizationLicenseConstants.UseAdminSponsoredFamilies), entity.UseAdminSponsoredFamilies.ToString()),
+            new(nameof(OrganizationLicenseConstants.UseOrganizationDomains), entity.UseOrganizationDomains.ToString()),
         };
 
         if (entity.Name is not null)
@@ -109,11 +113,12 @@ public class OrganizationLicenseClaimsFactory : ILicenseClaimsFactory<Organizati
             claims.Add(new Claim(nameof(OrganizationLicenseConstants.SmServiceAccounts), entity.SmServiceAccounts.ToString()));
         }
 
+        if (expirationWithoutGracePeriod is not null)
+        {
+            claims.Add(new Claim(nameof(OrganizationLicenseConstants.ExpirationWithoutGracePeriod),
+                expirationWithoutGracePeriod.Value.ToString(CultureInfo.InvariantCulture)));
+        }
+
         return Task.FromResult(claims);
     }
-
-    private static bool IsTrialing(Organization org, SubscriptionInfo subscriptionInfo) =>
-        subscriptionInfo?.Subscription is null
-            ? org.PlanType != PlanType.Custom || !org.ExpirationDate.HasValue
-            : subscriptionInfo.Subscription.TrialEndDate > DateTime.UtcNow;
 }

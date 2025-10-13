@@ -6,6 +6,8 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -205,6 +207,8 @@ public class RemoveOrganizationFromProviderCommandTests
 
         var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
 
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(PlanType.TeamsMonthly).Returns(teamsMonthlyPlan);
+
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>().HasConfirmedOwnersExceptAsync(
                 providerOrganization.OrganizationId,
                 [],
@@ -219,6 +223,19 @@ public class RemoveOrganizationFromProviderCommandTests
         ]);
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+
+        stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
+            options.Description == string.Empty &&
+            options.Email == organization.BillingEmail &&
+            options.Expand[0] == "tax" &&
+            options.Expand[1] == "tax_ids")).Returns(new Customer
+            {
+                Id = "customer_id",
+                Address = new Address
+                {
+                    Country = "US"
+                }
+            });
 
         stripeAdapter.SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(new Subscription
         {
@@ -245,7 +262,97 @@ public class RemoveOrganizationFromProviderCommandTests
             org =>
                 org.BillingEmail == "a@example.com" &&
                 org.GatewaySubscriptionId == "subscription_id" &&
-                org.Status == OrganizationStatusType.Created));
+                org.Status == OrganizationStatusType.Created &&
+                org.Enabled == true)); // Verify organization is enabled when new subscription is created
+
+        await sutProvider.GetDependency<IProviderOrganizationRepository>().Received(1)
+            .DeleteAsync(providerOrganization);
+
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Removed);
+
+        await sutProvider.GetDependency<IMailService>().Received(1)
+            .SendProviderUpdatePaymentMethod(
+                organization.Id,
+                organization.Name,
+                provider.Name,
+                Arg.Is<IEnumerable<string>>(emails => emails.FirstOrDefault() == "a@example.com"));
+    }
+
+    [Theory, BitAutoData]
+    public async Task RemoveOrganizationFromProvider_OrganizationStripeEnabled_ConsolidatedBilling_ReverseCharge_MakesCorrectInvocations(
+        Provider provider,
+        ProviderOrganization providerOrganization,
+        Organization organization,
+        SutProvider<RemoveOrganizationFromProviderCommand> sutProvider)
+    {
+        provider.Status = ProviderStatusType.Billable;
+
+        providerOrganization.ProviderId = provider.Id;
+
+        organization.Status = OrganizationStatusType.Managed;
+
+        organization.PlanType = PlanType.TeamsMonthly;
+
+        var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
+
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(PlanType.TeamsMonthly).Returns(teamsMonthlyPlan);
+
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>().HasConfirmedOwnersExceptAsync(
+                providerOrganization.OrganizationId,
+                [],
+                includeProvider: false)
+            .Returns(true);
+
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+
+        organizationRepository.GetOwnerEmailAddressesById(organization.Id).Returns([
+            "a@example.com",
+            "b@example.com"
+        ]);
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+
+        stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
+            options.Description == string.Empty &&
+            options.Email == organization.BillingEmail &&
+            options.Expand[0] == "tax" &&
+            options.Expand[1] == "tax_ids")).Returns(new Customer
+            {
+                Id = "customer_id",
+                Address = new Address
+                {
+                    Country = "US"
+                }
+            });
+
+        stripeAdapter.SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(new Subscription
+        {
+            Id = "subscription_id"
+        });
+
+        await sutProvider.Sut.RemoveOrganizationFromProvider(provider, providerOrganization, organization);
+
+        await stripeAdapter.Received(1).SubscriptionCreateAsync(Arg.Is<SubscriptionCreateOptions>(options =>
+            options.Customer == organization.GatewayCustomerId &&
+            options.CollectionMethod == StripeConstants.CollectionMethod.SendInvoice &&
+            options.DaysUntilDue == 30 &&
+            options.AutomaticTax.Enabled == true &&
+            options.Metadata["organizationId"] == organization.Id.ToString() &&
+            options.OffSession == true &&
+            options.ProrationBehavior == StripeConstants.ProrationBehavior.CreateProrations &&
+            options.Items.First().Price == teamsMonthlyPlan.PasswordManager.StripeSeatPlanId &&
+            options.Items.First().Quantity == organization.Seats));
+
+        await sutProvider.GetDependency<IProviderBillingService>().Received(1)
+            .ScaleSeats(provider, organization.PlanType, -organization.Seats ?? 0);
+
+        await organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(
+            org =>
+                org.BillingEmail == "a@example.com" &&
+                org.GatewaySubscriptionId == "subscription_id" &&
+                org.Status == OrganizationStatusType.Created &&
+                org.Enabled == true)); // Verify organization is enabled when new subscription is created
 
         await sutProvider.GetDependency<IProviderOrganizationRepository>().Received(1)
             .DeleteAsync(providerOrganization);
@@ -281,4 +388,62 @@ public class RemoveOrganizationFromProviderCommandTests
                 }
             }
         };
+
+    [Theory, BitAutoData]
+    public async Task RemoveOrganizationFromProvider_DisabledOrganization_ConsolidatedBilling_EnablesOrganization(
+        Provider provider,
+        ProviderOrganization providerOrganization,
+        Organization organization,
+        SutProvider<RemoveOrganizationFromProviderCommand> sutProvider)
+    {
+        // Arrange: Set up a disabled organization that meets the criteria for consolidated billing
+        provider.Status = ProviderStatusType.Billable;
+        providerOrganization.ProviderId = provider.Id;
+        organization.Status = OrganizationStatusType.Managed;
+        organization.PlanType = PlanType.TeamsMonthly;
+        organization.Enabled = false; // Start with a disabled organization
+
+        var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
+
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(PlanType.TeamsMonthly).Returns(teamsMonthlyPlan);
+
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>().HasConfirmedOwnersExceptAsync(
+                providerOrganization.OrganizationId,
+                [],
+                includeProvider: false)
+            .Returns(true);
+
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+
+        organizationRepository.GetOwnerEmailAddressesById(organization.Id).Returns([
+            "owner@example.com"
+        ]);
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+
+        stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, Arg.Any<CustomerUpdateOptions>())
+            .Returns(new Customer
+            {
+                Id = "customer_id",
+                Address = new Address
+                {
+                    Country = "US"
+                }
+            });
+
+        stripeAdapter.SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(new Subscription
+        {
+            Id = "new_subscription_id"
+        });
+
+        // Act
+        await sutProvider.Sut.RemoveOrganizationFromProvider(provider, providerOrganization, organization);
+
+        // Assert: Verify the disabled organization is now enabled
+        await organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(
+            org =>
+                org.Enabled == true && // The previously disabled organization should now be enabled
+                org.Status == OrganizationStatusType.Created &&
+                org.GatewaySubscriptionId == "new_subscription_id"));
+    }
 }

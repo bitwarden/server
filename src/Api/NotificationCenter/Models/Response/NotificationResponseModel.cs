@@ -22,6 +22,7 @@ public class NotificationResponseModel : ResponseModel
         Title = notificationStatusDetails.Title;
         Body = notificationStatusDetails.Body;
         Date = notificationStatusDetails.RevisionDate;
+        TaskId = notificationStatusDetails.TaskId;
         ReadDate = notificationStatusDetails.ReadDate;
         DeletedDate = notificationStatusDetails.DeletedDate;
     }
@@ -39,6 +40,8 @@ public class NotificationResponseModel : ResponseModel
     public string? Body { get; set; }
 
     public DateTime Date { get; set; }
+
+    public Guid? TaskId { get; set; }
 
     public DateTime? ReadDate { get; set; }
 

@@ -1,10 +1,14 @@
-﻿using AutoMapper;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using LinqToDB.Tools;
 using Microsoft.EntityFrameworkCore;
@@ -106,7 +110,9 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 LimitCollectionDeletion = e.LimitCollectionDeletion,
                 LimitItemDeletion = e.LimitItemDeletion,
                 AllowAdminAccessToAllCollectionItems = e.AllowAdminAccessToAllCollectionItems,
-                UseRiskInsights = e.UseRiskInsights
+                UseRiskInsights = e.UseRiskInsights,
+                UseOrganizationDomains = e.UseOrganizationDomains,
+                UseAdminSponsoredFamilies = e.UseAdminSponsoredFamilies
             }).ToListAsync();
         }
     }
@@ -199,6 +205,8 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 .ExecuteDeleteAsync();
             await dbContext.ProviderOrganizations.Where(po => po.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
+            await dbContext.OrganizationIntegrations.Where(oi => oi.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
 
             await dbContext.GroupServiceAccountAccessPolicy.Where(ap => ap.GrantedServiceAccount.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
@@ -290,21 +298,33 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
 
     public async Task<ICollection<Core.AdminConsole.Entities.Organization>> GetByVerifiedUserEmailDomainAsync(Guid userId)
     {
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
+        using var scope = ServiceScopeFactory.CreateScope();
 
-            var query = from u in dbContext.Users
-                        join ou in dbContext.OrganizationUsers on u.Id equals ou.UserId
-                        join o in dbContext.Organizations on ou.OrganizationId equals o.Id
-                        join od in dbContext.OrganizationDomains on ou.OrganizationId equals od.OrganizationId
+        var dbContext = GetDatabaseContext(scope);
+
+        var userQuery = from u in dbContext.Users
                         where u.Id == userId
-                              && od.VerifiedDate != null
-                              && u.Email.ToLower().EndsWith("@" + od.DomainName.ToLower())
-                        select o;
+                        select u;
 
-            return await query.ToArrayAsync();
+        var user = await userQuery.FirstOrDefaultAsync();
+
+        if (user is null)
+        {
+            return new List<Core.AdminConsole.Entities.Organization>();
         }
+
+        var userWithDomain = new { UserId = user.Id, EmailDomain = user.Email.Split('@').Last() };
+
+        var query = from o in dbContext.Organizations
+                    join ou in dbContext.OrganizationUsers on o.Id equals ou.OrganizationId
+                    join od in dbContext.OrganizationDomains on ou.OrganizationId equals od.OrganizationId
+                    where ou.UserId == userWithDomain.UserId &&
+                          od.DomainName == userWithDomain.EmailDomain &&
+                          od.VerifiedDate != null &&
+                          o.Enabled == true
+                    select o;
+
+        return await query.ToArrayAsync();
     }
 
     public async Task<ICollection<Core.AdminConsole.Entities.Organization>> GetAddableToProviderByUserIdAsync(
@@ -318,7 +338,7 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             var planTypes = providerType switch
             {
                 ProviderType.Msp => PlanConstants.EnterprisePlanTypes.Concat(PlanConstants.TeamsPlanTypes),
-                ProviderType.MultiOrganizationEnterprise => PlanConstants.EnterprisePlanTypes,
+                ProviderType.BusinessUnit => PlanConstants.EnterprisePlanTypes,
                 _ => []
             };
 
@@ -342,8 +362,82 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
         }
     }
 
+    public async Task<ICollection<Core.AdminConsole.Entities.Organization>> GetManyByIdsAsync(IEnumerable<Guid> ids)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+
+        var dbContext = GetDatabaseContext(scope);
+
+        var query = from organization in dbContext.Organizations
+                    where ids.Contains(organization.Id)
+                    select organization;
+
+        return await query.ToArrayAsync();
+    }
+
     public Task EnableCollectionEnhancements(Guid organizationId)
     {
         throw new NotImplementedException("Collection enhancements migration is not yet supported for Entity Framework.");
+    }
+
+    public async Task<OrganizationSeatCounts> GetOccupiedSeatCountByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var users = await dbContext.OrganizationUsers
+                .Where(ou => ou.OrganizationId == organizationId && ou.Status >= 0)
+                .CountAsync();
+
+            var sponsored = await dbContext.OrganizationSponsorships
+                .Where(os => os.SponsoringOrganizationId == organizationId &&
+                    os.IsAdminInitiated &&
+                    (os.ToDelete == false || (os.ToDelete == true && os.ValidUntil != null && os.ValidUntil > DateTime.UtcNow)) &&
+                    (os.SponsoredOrganizationId == null || (os.SponsoredOrganizationId != null && (os.ValidUntil == null || os.ValidUntil > DateTime.UtcNow))))
+                .CountAsync();
+
+            return new OrganizationSeatCounts
+            {
+                Users = users,
+                Sponsored = sponsored
+            };
+        }
+    }
+
+    public async Task<IEnumerable<Core.AdminConsole.Entities.Organization>> GetOrganizationsForSubscriptionSyncAsync()
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        await using var dbContext = GetDatabaseContext(scope);
+
+        var organizations = await dbContext.Organizations
+            .Where(o => o.SyncSeats == true && o.Seats != null)
+            .ToArrayAsync();
+
+        return organizations;
+    }
+
+    public async Task UpdateSuccessfulOrganizationSyncStatusAsync(IEnumerable<Guid> successfulOrganizations, DateTime syncDate)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        await using var dbContext = GetDatabaseContext(scope);
+
+        await dbContext.Organizations
+            .Where(o => successfulOrganizations.Contains(o.Id))
+            .ExecuteUpdateAsync(o => o
+                .SetProperty(x => x.SyncSeats, false)
+                .SetProperty(x => x.RevisionDate, syncDate.Date));
+    }
+
+    public async Task IncrementSeatCountAsync(Guid organizationId, int increaseAmount, DateTime requestDate)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        await using var dbContext = GetDatabaseContext(scope);
+
+        await dbContext.Organizations
+            .Where(o => o.Id == organizationId)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(o => o.Seats, o => o.Seats + increaseAmount)
+                .SetProperty(o => o.SyncSeats, true)
+                .SetProperty(o => o.RevisionDate, requestDate));
     }
 }

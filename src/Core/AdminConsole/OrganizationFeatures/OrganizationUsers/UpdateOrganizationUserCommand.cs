@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -24,6 +25,7 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
     private readonly ICollectionRepository _collectionRepository;
     private readonly IGroupRepository _groupRepository;
     private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
+    private readonly IPricingClient _pricingClient;
 
     public UpdateOrganizationUserCommand(
         IEventService eventService,
@@ -34,7 +36,8 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
         ICollectionRepository collectionRepository,
         IGroupRepository groupRepository,
-        IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery)
+        IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
+        IPricingClient pricingClient)
     {
         _eventService = eventService;
         _organizationService = organizationService;
@@ -45,24 +48,27 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
         _collectionRepository = collectionRepository;
         _groupRepository = groupRepository;
         _hasConfirmedOwnersExceptQuery = hasConfirmedOwnersExceptQuery;
+        _pricingClient = pricingClient;
     }
 
     /// <summary>
     /// Update an organization user.
     /// </summary>
     /// <param name="organizationUser">The modified organization user to save.</param>
+    /// <param name="existingUserType">The current type (member role) of the user.</param>
     /// <param name="savingUserId">The userId of the currently logged in user who is making the change.</param>
     /// <param name="collectionAccess">The user's updated collection access. If set to null, this removes all collection access.</param>
     /// <param name="groupAccess">The user's updated group access. If set to null, groups are not updated.</param>
     /// <exception cref="BadRequestException"></exception>
-    public async Task UpdateUserAsync(OrganizationUser organizationUser, Guid? savingUserId,
+    public async Task UpdateUserAsync(OrganizationUser organizationUser, OrganizationUserType existingUserType,
+        Guid? savingUserId,
         List<CollectionAccessSelection>? collectionAccess, IEnumerable<Guid>? groupAccess)
     {
         // Avoid multiple enumeration
-        collectionAccess = collectionAccess?.ToList();
+        var collectionAccessList = collectionAccess?.ToList() ?? [];
         groupAccess = groupAccess?.ToList();
 
-        if (organizationUser.Id.Equals(default(Guid)))
+        if (organizationUser.Id.Equals(Guid.Empty))
         {
             throw new BadRequestException("Invite the user first.");
         }
@@ -79,19 +85,11 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
             throw new NotFoundException();
         }
 
-        if (organizationUser.UserId.HasValue && organization.PlanType == PlanType.Free && organizationUser.Type is OrganizationUserType.Admin or OrganizationUserType.Owner)
-        {
-            // Since free organizations only supports a few users there is not much point in avoiding N+1 queries for this.
-            var adminCount = await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(organizationUser.UserId.Value);
-            if (adminCount > 0)
-            {
-                throw new BadRequestException("User can only be an admin of one free organization.");
-            }
-        }
+        await EnsureUserCannotBeAdminOrOwnerForMultipleFreeOrganizationAsync(organizationUser, existingUserType, organization);
 
-        if (collectionAccess?.Any() == true)
+        if (collectionAccessList.Count != 0)
         {
-            await ValidateCollectionAccessAsync(originalOrganizationUser, collectionAccess.ToList());
+            collectionAccessList = await ValidateAccessAndFilterDefaultUserCollectionsAsync(originalOrganizationUser, collectionAccessList);
         }
 
         if (groupAccess?.Any() == true)
@@ -107,14 +105,15 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
         await _organizationService.ValidateOrganizationCustomPermissionsEnabledAsync(organizationUser.OrganizationId, organizationUser.Type);
 
         if (organizationUser.Type != OrganizationUserType.Owner &&
-            !await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(organizationUser.OrganizationId, new[] { organizationUser.Id }))
+            !await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(organizationUser.OrganizationId,
+                [organizationUser.Id]))
         {
             throw new BadRequestException("Organization must have at least one confirmed owner.");
         }
 
-        if (collectionAccess?.Count > 0)
+        if (collectionAccessList.Count > 0)
         {
-            var invalidAssociations = collectionAccess.Where(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords));
+            var invalidAssociations = collectionAccessList.Where(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords));
             if (invalidAssociations.Any())
             {
                 throw new BadRequestException("The Manage property is mutually exclusive and cannot be true while the ReadOnly or HidePasswords properties are also true.");
@@ -128,13 +127,15 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
             var additionalSmSeatsRequired = await _countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(organizationUser.OrganizationId, 1);
             if (additionalSmSeatsRequired > 0)
             {
-                var update = new SecretsManagerSubscriptionUpdate(organization, true)
-                   .AdjustSeats(additionalSmSeatsRequired);
+                // TODO: https://bitwarden.atlassian.net/browse/PM-17012
+                var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
+                var update = new SecretsManagerSubscriptionUpdate(organization, plan, true)
+                    .AdjustSeats(additionalSmSeatsRequired);
                 await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(update);
             }
         }
 
-        await _organizationUserRepository.ReplaceAsync(organizationUser, collectionAccess);
+        await _organizationUserRepository.ReplaceAsync(organizationUser, collectionAccessList);
 
         if (groupAccess != null)
         {
@@ -144,11 +145,53 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
         await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Updated);
     }
 
-    private async Task ValidateCollectionAccessAsync(OrganizationUser originalUser,
-        ICollection<CollectionAccessSelection> collectionAccess)
+    private async Task EnsureUserCannotBeAdminOrOwnerForMultipleFreeOrganizationAsync(OrganizationUser updatedOrgUser, OrganizationUserType existingUserType, Entities.Organization organization)
+    {
+
+        if (organization.PlanType != PlanType.Free)
+        {
+            return;
+        }
+        if (!updatedOrgUser.UserId.HasValue)
+        {
+            return;
+        }
+        if (updatedOrgUser.Type is not (OrganizationUserType.Admin or OrganizationUserType.Owner))
+        {
+            return;
+        }
+
+        // Since free organizations only supports a few users there is not much point in avoiding N+1 queries for this.
+        var adminCount = await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(updatedOrgUser.UserId!.Value);
+
+        var isCurrentAdminOrOwner = existingUserType is OrganizationUserType.Admin or OrganizationUserType.Owner;
+
+        if (isCurrentAdminOrOwner && adminCount <= 1)
+        {
+            return;
+        }
+
+        if (!isCurrentAdminOrOwner && adminCount == 0)
+        {
+            return;
+        }
+
+        throw new BadRequestException("User can only be an admin of one free organization.");
+    }
+
+    private async Task<List<CollectionAccessSelection>> ValidateAccessAndFilterDefaultUserCollectionsAsync(
+        OrganizationUser originalUser, List<CollectionAccessSelection> collectionAccess)
     {
         var collections = await _collectionRepository
             .GetManyByManyIdsAsync(collectionAccess.Select(c => c.Id));
+
+        ValidateCollections(originalUser, collectionAccess, collections);
+
+        return ExcludeDefaultUserCollections(collectionAccess, collections);
+    }
+
+    private static void ValidateCollections(OrganizationUser originalUser, List<CollectionAccessSelection> collectionAccess, ICollection<Collection> collections)
+    {
         var collectionIds = collections.Select(c => c.Id);
 
         var missingCollection = collectionAccess
@@ -165,6 +208,12 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
             throw new NotFoundException();
         }
     }
+
+    private static List<CollectionAccessSelection> ExcludeDefaultUserCollections(
+        List<CollectionAccessSelection> collectionAccess, ICollection<Collection> collections) =>
+            collectionAccess
+                .Where(cas => collections.Any(c => c.Id == cas.Id && c.Type != CollectionType.DefaultUserCollection))
+                .ToList();
 
     private async Task ValidateGroupAccessAsync(OrganizationUser originalUser,
         ICollection<Guid> groupAccess)

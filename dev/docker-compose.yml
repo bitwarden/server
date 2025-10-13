@@ -53,6 +53,7 @@ services:
       - ./.data/postgres/log:/var/log/postgresql
     profiles:
       - postgres
+      - ef
 
   mysql:
     image: mysql:8.0
@@ -69,6 +70,21 @@ services:
       - mysql_dev_data:/var/lib/mysql
     profiles:
       - mysql
+      - ef
+
+  mariadb:
+    image: mariadb:10
+    ports:
+      - 4306:3306
+    environment:
+      MARIADB_USER: maria
+      MARIADB_DATABASE: vault_dev
+      MARIADB_RANDOM_ROOT_PASSWORD: "true"
+    volumes:
+      - mariadb_dev_data:/var/lib/mysql
+    profiles:
+      - mariadb
+      - ef
 
   idp:
     image: kenchan0130/simplesamlphp:1.19.8
@@ -85,7 +101,7 @@ services:
       - idp
 
   rabbitmq:
-    image: rabbitmq:management
+    image: rabbitmq:4.1.3-management
     container_name: rabbitmq
     ports:
       - "5672:5672"
@@ -94,7 +110,7 @@ services:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
     volumes:
-      - rabbitmq_data:/var/lib/rabbitmq_data
+      - rabbitmq_data:/var/lib/rabbitmq
     profiles:
       - rabbitmq
 
@@ -124,8 +140,21 @@ services:
     profiles:
       - servicebus
 
+  redis:
+    image: redis:alpine
+    container_name: bw-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    profiles:
+      - redis
+
 volumes:
   mssql_dev_data:
   postgres_dev_data:
   mysql_dev_data:
+  mariadb_dev_data:
   rabbitmq_data:
+  redis_data:

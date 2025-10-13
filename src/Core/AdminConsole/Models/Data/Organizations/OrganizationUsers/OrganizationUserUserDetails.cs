@@ -1,4 +1,7 @@
-﻿using Bit.Core.AdminConsole.Interfaces;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Interfaces;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Enums;

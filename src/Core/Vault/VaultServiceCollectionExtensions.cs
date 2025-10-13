@@ -21,6 +21,12 @@ public static class VaultServiceCollectionExtensions
         services.AddScoped<IMarkTaskAsCompleteCommand, MarkTaskAsCompletedCommand>();
         services.AddScoped<IGetCipherPermissionsForUserQuery, GetCipherPermissionsForUserQuery>();
         services.AddScoped<IGetTasksForOrganizationQuery, GetTasksForOrganizationQuery>();
+        services.AddScoped<IGetSecurityTasksNotificationDetailsQuery, GetSecurityTasksNotificationDetailsQuery>();
+        services.AddScoped<ICreateManyTaskNotificationsCommand, CreateManyTaskNotificationsCommand>();
         services.AddScoped<ICreateManyTasksCommand, CreateManyTasksCommand>();
+        services.AddScoped<IArchiveCiphersCommand, ArchiveCiphersCommand>();
+        services.AddScoped<IUnarchiveCiphersCommand, UnarchiveCiphersCommand>();
+        services.AddScoped<IMarkNotificationsForTaskAsDeletedCommand, MarkNotificationsForTaskAsDeletedCommand>();
+        services.AddScoped<IGetTaskMetricsForOrganizationQuery, GetTaskMetricsForOrganizationQuery>();
     }
 }

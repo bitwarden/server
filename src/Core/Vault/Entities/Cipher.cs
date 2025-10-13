@@ -1,4 +1,7 @@
-﻿using System.Text.Json;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text.Json;
 using Bit.Core.Entities;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Models.Data;
@@ -22,6 +25,7 @@ public class Cipher : ITableObject<Guid>, ICloneable
     public DateTime? DeletedDate { get; set; }
     public Enums.CipherRepromptType? Reprompt { get; set; }
     public string Key { get; set; }
+    public DateTime? ArchivedDate { get; set; }
 
     public void SetNewId()
     {

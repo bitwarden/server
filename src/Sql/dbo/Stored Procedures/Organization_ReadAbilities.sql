@@ -25,7 +25,9 @@ BEGIN
         [LimitCollectionDeletion],
         [AllowAdminAccessToAllCollectionItems],
         [UseRiskInsights],
-        [LimitItemDeletion]
+        [LimitItemDeletion],
+        [UseOrganizationDomains],
+        [UseAdminSponsoredFamilies]
     FROM
         [dbo].[Organization]
 END

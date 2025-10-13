@@ -1,13 +1,16 @@
-﻿using System.Text;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text;
 using System.Text.Json;
 using Bit.Admin.Enums;
 using Bit.Admin.Models;
 using Bit.Admin.Utilities;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Entities;
 using Bit.Core.Models.BitStripe;
-using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.Platform.Installations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -24,7 +27,7 @@ public class ToolsController : Controller
 {
     private readonly GlobalSettings _globalSettings;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly ICloudGetOrganizationLicenseQuery _cloudGetOrganizationLicenseQuery;
+    private readonly IGetCloudOrganizationLicenseQuery _getCloudOrganizationLicenseQuery;
     private readonly IUserService _userService;
     private readonly ITransactionRepository _transactionRepository;
     private readonly IInstallationRepository _installationRepository;
@@ -37,7 +40,7 @@ public class ToolsController : Controller
     public ToolsController(
         GlobalSettings globalSettings,
         IOrganizationRepository organizationRepository,
-        ICloudGetOrganizationLicenseQuery cloudGetOrganizationLicenseQuery,
+        IGetCloudOrganizationLicenseQuery getCloudOrganizationLicenseQuery,
         IUserService userService,
         ITransactionRepository transactionRepository,
         IInstallationRepository installationRepository,
@@ -49,7 +52,7 @@ public class ToolsController : Controller
     {
         _globalSettings = globalSettings;
         _organizationRepository = organizationRepository;
-        _cloudGetOrganizationLicenseQuery = cloudGetOrganizationLicenseQuery;
+        _getCloudOrganizationLicenseQuery = getCloudOrganizationLicenseQuery;
         _userService = userService;
         _transactionRepository = transactionRepository;
         _installationRepository = installationRepository;
@@ -317,7 +320,7 @@ public class ToolsController : Controller
 
         if (organization != null)
         {
-            var license = await _cloudGetOrganizationLicenseQuery.GetLicenseAsync(organization,
+            var license = await _getCloudOrganizationLicenseQuery.GetLicenseAsync(organization,
                 model.InstallationId.Value, model.Version);
             var ms = new MemoryStream();
             await JsonSerializer.SerializeAsync(ms, license, JsonHelpers.Indented);

@@ -58,9 +58,9 @@ public class AuthRequestService : IAuthRequestService
         _logger = logger;
     }
 
-    public async Task<AuthRequest?> GetAuthRequestAsync(Guid id, Guid userId)
+    public async Task<AuthRequest?> GetAuthRequestAsync(Guid authRequestId, Guid userId)
     {
-        var authRequest = await _authRequestRepository.GetByIdAsync(id);
+        var authRequest = await _authRequestRepository.GetByIdAsync(authRequestId);
         if (authRequest == null || authRequest.UserId != userId)
         {
             return null;
@@ -69,10 +69,10 @@ public class AuthRequestService : IAuthRequestService
         return authRequest;
     }
 
-    public async Task<AuthRequest?> GetValidatedAuthRequestAsync(Guid id, string code)
+    public async Task<AuthRequest?> GetValidatedAuthRequestAsync(Guid authRequestId, string accessCode)
     {
-        var authRequest = await _authRequestRepository.GetByIdAsync(id);
-        if (authRequest == null || !CoreHelpers.FixedTimeEquals(authRequest.AccessCode, code))
+        var authRequest = await _authRequestRepository.GetByIdAsync(authRequestId);
+        if (authRequest == null || !CoreHelpers.FixedTimeEquals(authRequest.AccessCode, accessCode))
         {
             return null;
         }
@@ -85,12 +85,6 @@ public class AuthRequestService : IAuthRequestService
         return authRequest;
     }
 
-    /// <summary>
-    /// Validates and Creates an <see cref="AuthRequest" /> in the database, as well as pushes it through notifications services
-    /// </summary>
-    /// <remarks>
-    /// This method can only be called inside of an HTTP call because of it's reliance on <see cref="ICurrentContext" />
-    /// </remarks>
     public async Task<AuthRequest> CreateAuthRequestAsync(AuthRequestCreateRequestModel model)
     {
         if (!_currentContext.DeviceType.HasValue)
@@ -164,6 +158,7 @@ public class AuthRequestService : IAuthRequestService
             RequestDeviceIdentifier = model.DeviceIdentifier,
             RequestDeviceType = _currentContext.DeviceType.Value,
             RequestIpAddress = _currentContext.IpAddress,
+            RequestCountryName = _currentContext.CountryName,
             AccessCode = model.AccessCode,
             PublicKey = model.PublicKey,
             UserId = user.Id,
@@ -176,12 +171,7 @@ public class AuthRequestService : IAuthRequestService
 
     public async Task<AuthRequest> UpdateAuthRequestAsync(Guid authRequestId, Guid currentUserId, AuthRequestUpdateRequestModel model)
     {
-        var authRequest = await _authRequestRepository.GetByIdAsync(authRequestId);
-
-        if (authRequest == null)
-        {
-            throw new NotFoundException();
-        }
+        var authRequest = await _authRequestRepository.GetByIdAsync(authRequestId) ?? throw new NotFoundException();
 
         // Once Approval/Disapproval has been set, this AuthRequest should not be updated again.
         if (authRequest.Approved is not null)
@@ -291,13 +281,13 @@ public class AuthRequestService : IAuthRequestService
 
     private async Task NotifyAdminsOfDeviceApprovalRequestAsync(OrganizationUser organizationUser, User user)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.DeviceApprovalRequestAdminNotifications))
+        var adminEmails = await GetAdminAndAccountRecoveryEmailsAsync(organizationUser.OrganizationId);
+
+        if (adminEmails.Count == 0)
         {
-            _logger.LogWarning("Skipped sending device approval notification to admins - feature flag disabled");
+            _logger.LogWarning("There are no admin emails to send to.");
             return;
         }
-
-        var adminEmails = await GetAdminAndAccountRecoveryEmailsAsync(organizationUser.OrganizationId);
 
         await _mailService.SendDeviceApprovalRequestedNotificationEmailAsync(
             adminEmails,

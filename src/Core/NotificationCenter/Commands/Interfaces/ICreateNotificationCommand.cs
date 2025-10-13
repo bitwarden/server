@@ -5,5 +5,5 @@ namespace Bit.Core.NotificationCenter.Commands.Interfaces;
 
 public interface ICreateNotificationCommand
 {
-    Task<Notification> CreateAsync(Notification notification);
+    Task<Notification> CreateAsync(Notification notification, bool sendPush = true);
 }

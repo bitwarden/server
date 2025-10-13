@@ -1,9 +1,7 @@
-﻿#nullable enable
-using Bit.Api.AdminConsole.Models.Request.Organizations;
-using Bit.Api.Billing.Models.Requests;
+﻿using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
-using Bit.Core.Billing.Models;
-using Bit.Core.Billing.Models.Sales;
+using Bit.Core.Billing.Organizations.Services;
+using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Repositories;
@@ -17,13 +15,13 @@ namespace Bit.Api.Billing.Controllers;
 [Route("organizations/{organizationId:guid}/billing")]
 [Authorize("Application")]
 public class OrganizationBillingController(
+    IBusinessUnitConverter businessUnitConverter,
     ICurrentContext currentContext,
     IOrganizationBillingService organizationBillingService,
     IOrganizationRepository organizationRepository,
     IPaymentService paymentService,
     ISubscriberService subscriberService,
-    IPaymentHistoryService paymentHistoryService,
-    IUserService userService) : BaseBillingController
+    IPaymentHistoryService paymentHistoryService) : BaseBillingController
 {
     [HttpGet("metadata")]
     public async Task<IResult> GetMetadataAsync([FromRoute] Guid organizationId)
@@ -40,9 +38,7 @@ public class OrganizationBillingController(
             return Error.NotFound();
         }
 
-        var response = OrganizationMetadataResponse.From(metadata);
-
-        return TypedResults.Ok(response);
+        return TypedResults.Ok(metadata);
     }
 
     [HttpGet("history")]
@@ -256,17 +252,41 @@ public class OrganizationBillingController(
         return TypedResults.Ok();
     }
 
-    [HttpPost("restart-subscription")]
-    public async Task<IResult> RestartSubscriptionAsync([FromRoute] Guid organizationId,
-        [FromBody] OrganizationCreateRequestModel model)
+    [HttpPost("setup-business-unit")]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public async Task<IResult> SetupBusinessUnitAsync(
+        [FromRoute] Guid organizationId,
+        [FromBody] SetupBusinessUnitRequestBody requestBody)
     {
-        var user = await userService.GetUserByPrincipalAsync(User);
-        if (user == null)
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
+
+        if (organization == null)
         {
-            throw new UnauthorizedAccessException();
+            return Error.NotFound();
         }
 
-        if (!await currentContext.EditPaymentMethods(organizationId))
+        if (!await currentContext.OrganizationUser(organizationId))
+        {
+            return Error.Unauthorized();
+        }
+
+        var providerId = await businessUnitConverter.FinalizeConversion(
+            organization,
+            requestBody.UserId,
+            requestBody.Token,
+            requestBody.ProviderKey,
+            requestBody.OrganizationKey);
+
+        return TypedResults.Ok(providerId);
+    }
+
+    [HttpPost("change-frequency")]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public async Task<IResult> ChangePlanSubscriptionFrequencyAsync(
+        [FromRoute] Guid organizationId,
+        [FromBody] ChangePlanFrequencyRequest request)
+    {
+        if (!await currentContext.EditSubscription(organizationId))
         {
             return Error.Unauthorized();
         }
@@ -277,20 +297,15 @@ public class OrganizationBillingController(
         {
             return Error.NotFound();
         }
-        var organizationSignup = model.ToOrganizationSignup(user);
-        var sale = OrganizationSale.From(organization, organizationSignup);
-        var plan = StaticStore.GetPlan(model.PlanType);
-        sale.Organization.PlanType = plan.Type;
-        sale.Organization.Plan = plan.Name;
-        sale.SubscriptionSetup.SkipTrial = true;
-        await organizationBillingService.Finalize(sale);
-        var org = await organizationRepository.GetByIdAsync(organizationId);
-        if (organizationSignup.PaymentMethodType != null)
+
+        if (organization.PlanType == request.NewPlanType)
         {
-            var paymentSource = new TokenizedPaymentSource(organizationSignup.PaymentMethodType.Value, organizationSignup.PaymentToken);
-            var taxInformation = TaxInformation.From(organizationSignup.TaxInfo);
-            await organizationBillingService.UpdatePaymentMethod(org, paymentSource, taxInformation);
+            return Error.BadRequest("Organization is already on the requested plan frequency.");
         }
+
+        await organizationBillingService.UpdateSubscriptionPlanFrequency(
+            organization,
+            request.NewPlanType);
 
         return TypedResults.Ok();
     }

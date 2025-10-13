@@ -1,10 +1,11 @@
-version: '3'
-
 services:
   bitwarden_server:
     image: mcr.microsoft.com/devcontainers/dotnet:8.0
     volumes:
       - ../../:/workspace:cached
+    env_file:
+      - path: ../../dev/.env
+        required: false
     # Overrides default command so things don't shut down after the process ends.
     command: sleep infinity
 
@@ -13,7 +14,8 @@ services:
     platform: linux/amd64
     restart: unless-stopped
     env_file:
-      ../../dev/.env
+      - path: ../../dev/.env
+        required: false
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_PID: Developer

@@ -3,9 +3,9 @@
 using System.Security.Claims;
 using Bit.Core.AdminConsole.Context;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Identity;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Http;
@@ -20,6 +20,7 @@ public interface ICurrentContext
     string DeviceIdentifier { get; set; }
     DeviceType? DeviceType { get; set; }
     string IpAddress { get; set; }
+    string CountryName { get; set; }
     List<CurrentContextOrganization> Organizations { get; set; }
     Guid? InstallationId { get; set; }
     Guid? OrganizationId { get; set; }

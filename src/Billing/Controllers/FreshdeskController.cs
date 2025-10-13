@@ -8,6 +8,7 @@ using Bit.Billing.Models;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Markdig;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 
@@ -31,7 +32,7 @@ public class FreshdeskController : Controller
         GlobalSettings globalSettings,
         IHttpClientFactory httpClientFactory)
     {
-        _billingSettings = billingSettings?.Value;
+        _billingSettings = billingSettings?.Value ?? throw new ArgumentNullException(nameof(billingSettings));
         _userRepository = userRepository;
         _organizationRepository = organizationRepository;
         _logger = logger;
@@ -63,6 +64,12 @@ public class FreshdeskController : Controller
             note += $"<li>Region: {_billingSettings.FreshDesk.Region}</li>";
             var customFields = new Dictionary<string, object>();
             var user = await _userRepository.GetByEmailAsync(ticketContactEmail);
+            if (user == null)
+            {
+                note += $"<li>No user found: {ticketContactEmail}</li>";
+                await CreateNote(ticketId, note);
+            }
+
             if (user != null)
             {
                 var userLink = $"{_globalSettings.BaseServiceUri.Admin}/users/edit/{user.Id}";
@@ -91,7 +98,8 @@ public class FreshdeskController : Controller
                         customFields[_billingSettings.FreshDesk.OrgFieldName] += $"\n{orgNote}";
                     }
 
-                    var planName = GetAttribute<DisplayAttribute>(org.PlanType).Name.Split(" ").FirstOrDefault();
+                    var displayAttribute = GetAttribute<DisplayAttribute>(org.PlanType);
+                    var planName = displayAttribute?.Name?.Split(" ").FirstOrDefault();
                     if (!string.IsNullOrWhiteSpace(planName))
                     {
                         tags.Add(string.Format("Org: {0}", planName));
@@ -121,18 +129,7 @@ public class FreshdeskController : Controller
                     Content = JsonContent.Create(updateBody),
                 };
                 await CallFreshdeskApiAsync(updateRequest);
-
-                var noteBody = new Dictionary<string, object>
-                {
-                    { "body", $"<ul>{note}</ul>" },
-                    { "private", true }
-                };
-                var noteRequest = new HttpRequestMessage(HttpMethod.Post,
-                    string.Format("https://bitwarden.freshdesk.com/api/v2/tickets/{0}/notes", ticketId))
-                {
-                    Content = JsonContent.Create(noteBody),
-                };
-                await CallFreshdeskApiAsync(noteRequest);
+                await CreateNote(ticketId, note);
             }
 
             return new OkResult();
@@ -146,7 +143,7 @@ public class FreshdeskController : Controller
 
     [HttpPost("webhook-onyx-ai")]
     public async Task<IActionResult> PostWebhookOnyxAi([FromQuery, Required] string key,
-        [FromBody, Required] FreshdeskWebhookModel model)
+        [FromBody, Required] FreshdeskOnyxAiWebhookModel model)
     {
         // ensure that the key is from Freshdesk
         if (!IsValidRequestFromFreshdesk(key))
@@ -154,45 +151,68 @@ public class FreshdeskController : Controller
             return new BadRequestResult();
         }
 
-        // get ticket info from Freshdesk
-        var getTicketRequest = new HttpRequestMessage(HttpMethod.Get,
-            string.Format("https://bitwarden.freshdesk.com/api/v2/tickets/{0}", model.TicketId));
-        var getTicketResponse = await CallFreshdeskApiAsync(getTicketRequest);
-
-        // check if we have a valid response from freshdesk
-        if (getTicketResponse.StatusCode != System.Net.HttpStatusCode.OK)
+        // if there is no description, then we don't send anything to onyx
+        if (string.IsNullOrEmpty(model.TicketDescriptionText.Trim()))
         {
-            _logger.LogError("Error getting ticket info from Freshdesk. Ticket Id: {0}. Status code: {1}",
-                            model.TicketId, getTicketResponse.StatusCode);
-            return BadRequest("Failed to retrieve ticket info from Freshdesk");
+            return Ok();
         }
 
-        // extract info from the response
-        var ticketInfo = await ExtractTicketInfoFromResponse(getTicketResponse);
-        if (ticketInfo == null)
-        {
-            return BadRequest("Failed to extract ticket info from Freshdesk response");
-        }
-
-        // create the onyx `answer-with-citation` request
-        var onyxRequestModel = new OnyxAnswerWithCitationRequestModel(ticketInfo.DescriptionText);
-        var onyxRequest = new HttpRequestMessage(HttpMethod.Post,
-                            string.Format("{0}/query/answer-with-citation", _billingSettings.Onyx.BaseUrl))
-        {
-            Content = JsonContent.Create(onyxRequestModel, mediaType: new MediaTypeHeaderValue("application/json")),
-        };
-        var (_, onyxJsonResponse) = await CallOnyxApi<OnyxAnswerWithCitationResponseModel>(onyxRequest);
+        // Get response from Onyx AI
+        var (onyxRequest, onyxResponse) = await GetAnswerFromOnyx(model);
 
         // the CallOnyxApi will return a null if we have an error response
-        if (onyxJsonResponse?.Answer == null || !string.IsNullOrEmpty(onyxJsonResponse?.ErrorMsg))
+        if (onyxResponse?.Answer == null || !string.IsNullOrEmpty(onyxResponse?.ErrorMsg))
         {
-            return BadRequest(
-                string.Format("Failed to get a valid response from Onyx API. Response: {0}",
-                            JsonSerializer.Serialize(onyxJsonResponse ?? new OnyxAnswerWithCitationResponseModel())));
+            _logger.LogWarning("Error getting answer from Onyx AI. Freshdesk model: {model}\r\n Onyx query {query}\r\nresponse: {response}. ",
+                    JsonSerializer.Serialize(model),
+                    JsonSerializer.Serialize(onyxRequest),
+                    JsonSerializer.Serialize(onyxResponse));
+
+            return Ok(); // return ok so we don't retry
         }
 
         // add the answer as a note to the ticket
-        await AddAnswerNoteToTicketAsync(onyxJsonResponse.Answer, model.TicketId);
+        await AddAnswerNoteToTicketAsync(onyxResponse?.Answer ?? string.Empty, model.TicketId);
+
+        return Ok();
+    }
+
+    [HttpPost("webhook-onyx-ai-reply")]
+    public async Task<IActionResult> PostWebhookOnyxAiReply([FromQuery, Required] string key,
+        [FromBody, Required] FreshdeskOnyxAiWebhookModel model)
+    {
+        // NOTE:
+        // at this time, this endpoint is a duplicate of `webhook-onyx-ai`
+        // eventually, we will merge both endpoints into one webhook for Freshdesk
+
+        // ensure that the key is from Freshdesk
+        if (!IsValidRequestFromFreshdesk(key) || !ModelState.IsValid)
+        {
+            return new BadRequestResult();
+        }
+
+        // if there is no description, then we don't send anything to onyx
+        if (string.IsNullOrEmpty(model.TicketDescriptionText.Trim()))
+        {
+            return Ok();
+        }
+
+        // create the onyx `answer-with-citation` request
+        var (onyxRequest, onyxResponse) = await GetAnswerFromOnyx(model);
+
+        // the CallOnyxApi will return a null if we have an error response
+        if (onyxResponse?.Answer == null || !string.IsNullOrEmpty(onyxResponse?.ErrorMsg))
+        {
+            _logger.LogWarning("Error getting answer from Onyx AI. Freshdesk model: {model}\r\n Onyx query {query}\r\nresponse: {response}. ",
+                    JsonSerializer.Serialize(model),
+                    JsonSerializer.Serialize(onyxRequest),
+                    JsonSerializer.Serialize(onyxResponse));
+
+            return Ok(); // return ok so we don't retry
+        }
+
+        // add the reply to the ticket
+        await AddReplyToTicketAsync(onyxResponse?.Answer ?? string.Empty, model.TicketId);
 
         return Ok();
     }
@@ -206,6 +226,21 @@ public class FreshdeskController : Controller
         }
 
         return true;
+    }
+
+    private async Task CreateNote(string ticketId, string note)
+    {
+        var noteBody = new Dictionary<string, object>
+                {
+                    { "body", $"<ul>{note}</ul>" },
+                    { "private", true }
+                };
+        var noteRequest = new HttpRequestMessage(HttpMethod.Post,
+            string.Format("https://bitwarden.freshdesk.com/api/v2/tickets/{0}/notes", ticketId))
+        {
+            Content = JsonContent.Create(noteBody),
+        };
+        await CallFreshdeskApiAsync(noteRequest);
     }
 
     private async Task AddAnswerNoteToTicketAsync(string note, string ticketId)
@@ -236,27 +271,51 @@ public class FreshdeskController : Controller
         }
     }
 
-    private async Task<FreshdeskViewTicketModel> ExtractTicketInfoFromResponse(HttpResponseMessage getTicketResponse)
+    private async Task AddReplyToTicketAsync(string note, string ticketId)
     {
-        var responseString = string.Empty;
+        // if there is no content, then we don't need to add a note
+        if (string.IsNullOrWhiteSpace(note))
+        {
+            return;
+        }
+
+        // convert note from markdown to html
+        var htmlNote = note;
         try
         {
-            responseString = await getTicketResponse.Content.ReadAsStringAsync();
-            var ticketInfo = JsonSerializer.Deserialize<FreshdeskViewTicketModel>(responseString,
-                options: new System.Text.Json.JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true,
-                });
-
-            return ticketInfo;
+            var pipeline = new MarkdownPipelineBuilder().UseAdvancedExtensions().Build();
+            htmlNote = Markdig.Markdown.ToHtml(note, pipeline);
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
-            _logger.LogError("Error deserializing ticket info from Freshdesk response. Response: {0}. Exception {1}",
-                            responseString, ex.ToString());
+            _logger.LogError(ex, "Error converting markdown to HTML for Freshdesk reply. Ticket Id: {0}. Note: {1}",
+                            ticketId, note);
+            htmlNote = note; // fallback to the original note
         }
 
-        return null;
+        // clear out any new lines that Freshdesk doesn't like
+        if (_billingSettings.FreshDesk.RemoveNewlinesInReplies)
+        {
+            htmlNote = htmlNote.Replace(Environment.NewLine, string.Empty);
+        }
+
+        var replyBody = new FreshdeskReplyRequestModel
+        {
+            Body = $"{_billingSettings.FreshDesk.AutoReplyGreeting}{htmlNote}{_billingSettings.FreshDesk.AutoReplySalutation}",
+        };
+
+        var replyRequest = new HttpRequestMessage(HttpMethod.Post,
+                    string.Format("https://bitwarden.freshdesk.com/api/v2/tickets/{0}/reply", ticketId))
+        {
+            Content = JsonContent.Create(replyBody),
+        };
+
+        var addReplyResponse = await CallFreshdeskApiAsync(replyRequest);
+        if (addReplyResponse.StatusCode != System.Net.HttpStatusCode.Created)
+        {
+            _logger.LogError("Error adding reply to Freshdesk ticket. Ticket Id: {0}. Status: {1}",
+                            ticketId, addReplyResponse.ToString());
+        }
     }
 
     private async Task<HttpResponseMessage> CallFreshdeskApiAsync(HttpRequestMessage request, int retriedCount = 0)
@@ -283,7 +342,32 @@ public class FreshdeskController : Controller
         return await CallFreshdeskApiAsync(request, retriedCount++);
     }
 
-    private async Task<(HttpResponseMessage, T)> CallOnyxApi<T>(HttpRequestMessage request)
+    async Task<(OnyxRequestModel onyxRequest, OnyxResponseModel onyxResponse)> GetAnswerFromOnyx(FreshdeskOnyxAiWebhookModel model)
+    {
+        // TODO: remove the use of the deprecated answer-with-citation models after we are sure
+        if (_billingSettings.Onyx.UseAnswerWithCitationModels)
+        {
+            var onyxRequest = new OnyxAnswerWithCitationRequestModel(model.TicketDescriptionText, _billingSettings.Onyx);
+            var onyxAnswerWithCitationRequest = new HttpRequestMessage(HttpMethod.Post,
+                                string.Format("{0}/query/answer-with-citation", _billingSettings.Onyx.BaseUrl))
+            {
+                Content = JsonContent.Create(onyxRequest, mediaType: new MediaTypeHeaderValue("application/json")),
+            };
+            var onyxResponse = await CallOnyxApi<OnyxResponseModel>(onyxAnswerWithCitationRequest);
+            return (onyxRequest, onyxResponse);
+        }
+
+        var request = new OnyxSendMessageSimpleApiRequestModel(model.TicketDescriptionText, _billingSettings.Onyx);
+        var onyxSimpleRequest = new HttpRequestMessage(HttpMethod.Post,
+                            string.Format("{0}{1}", _billingSettings.Onyx.BaseUrl, _billingSettings.Onyx.Path))
+        {
+            Content = JsonContent.Create(request, mediaType: new MediaTypeHeaderValue("application/json")),
+        };
+        var onyxSimpleResponse = await CallOnyxApi<OnyxResponseModel>(onyxSimpleRequest);
+        return (request, onyxSimpleResponse);
+    }
+
+    private async Task<T> CallOnyxApi<T>(HttpRequestMessage request) where T : class, new()
     {
         var httpClient = _httpClientFactory.CreateClient("OnyxApi");
         var response = await httpClient.SendAsync(request);
@@ -292,7 +376,7 @@ public class FreshdeskController : Controller
         {
             _logger.LogError("Error calling Onyx AI API. Status code: {0}. Response {1}",
                 response.StatusCode, JsonSerializer.Serialize(response));
-            return (null, default);
+            return new T();
         }
         var responseStr = await response.Content.ReadAsStringAsync();
         var responseJson = JsonSerializer.Deserialize<T>(responseStr, options: new JsonSerializerOptions
@@ -300,11 +384,12 @@ public class FreshdeskController : Controller
             PropertyNameCaseInsensitive = true,
         });
 
-        return (response, responseJson);
+        return responseJson ?? new T();
     }
 
-    private TAttribute GetAttribute<TAttribute>(Enum enumValue) where TAttribute : Attribute
+    private TAttribute? GetAttribute<TAttribute>(Enum enumValue) where TAttribute : Attribute
     {
-        return enumValue.GetType().GetMember(enumValue.ToString()).First().GetCustomAttribute<TAttribute>();
+        var memberInfo = enumValue.GetType().GetMember(enumValue.ToString()).FirstOrDefault();
+        return memberInfo != null ? memberInfo.GetCustomAttribute<TAttribute>() : null;
     }
 }

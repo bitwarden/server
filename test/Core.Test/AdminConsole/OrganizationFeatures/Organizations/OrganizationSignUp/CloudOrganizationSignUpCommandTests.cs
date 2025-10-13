@@ -1,17 +1,15 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Models.Sales;
-using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Billing.Organizations.Services;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
-using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -38,6 +36,8 @@ public class CloudICloudOrganizationSignUpCommandTests
         signup.IsFromSecretsManagerTrial = false;
         signup.IsFromProvider = false;
 
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(StaticStore.GetPlan(signup.Plan));
+
         var result = await sutProvider.Sut.SignUpOrganizationAsync(signup);
 
         await sutProvider.GetDependency<IOrganizationRepository>().Received(1).CreateAsync(
@@ -48,15 +48,6 @@ public class CloudICloudOrganizationSignUpCommandTests
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).CreateAsync(
             Arg.Is<OrganizationUser>(o => o.AccessSecretsManager == signup.UseSecretsManager));
 
-        await sutProvider.GetDependency<IReferenceEventService>().Received(1)
-            .RaiseEventAsync(Arg.Is<ReferenceEvent>(referenceEvent =>
-                referenceEvent.Type == ReferenceEventType.Signup &&
-                referenceEvent.PlanName == plan.Name &&
-                referenceEvent.PlanType == plan.Type &&
-                referenceEvent.Seats == result.Organization.Seats &&
-                referenceEvent.Storage == result.Organization.MaxStorageGb));
-        // TODO: add reference events for SmSeats and Service Accounts - see AC-1481
-
         Assert.NotNull(result.Organization);
         Assert.NotNull(result.OrganizationUser);
 
@@ -66,7 +57,7 @@ public class CloudICloudOrganizationSignUpCommandTests
                 sale.CustomerSetup.TokenizedPaymentSource.Token == signup.PaymentToken &&
                 sale.CustomerSetup.TaxInformation.Country == signup.TaxInfo.BillingAddressCountry &&
                 sale.CustomerSetup.TaxInformation.PostalCode == signup.TaxInfo.BillingAddressPostalCode &&
-                sale.SubscriptionSetup.Plan == plan &&
+                sale.SubscriptionSetup.PlanType == plan.Type &&
                 sale.SubscriptionSetup.PasswordManagerOptions.Seats == signup.AdditionalSeats &&
                 sale.SubscriptionSetup.PasswordManagerOptions.Storage == signup.AdditionalStorageGb &&
                 sale.SubscriptionSetup.SecretsManagerOptions == null));
@@ -83,6 +74,8 @@ public class CloudICloudOrganizationSignUpCommandTests
         signup.PremiumAccessAddon = false;
         signup.UseSecretsManager = false;
         signup.IsFromProvider = false;
+
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(StaticStore.GetPlan(signup.Plan));
 
         // Extract orgUserId when created
         Guid? orgUserId = null;
@@ -128,6 +121,7 @@ public class CloudICloudOrganizationSignUpCommandTests
         signup.IsFromSecretsManagerTrial = false;
         signup.IsFromProvider = false;
 
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(StaticStore.GetPlan(signup.Plan));
 
         var result = await sutProvider.Sut.SignUpOrganizationAsync(signup);
 
@@ -139,15 +133,6 @@ public class CloudICloudOrganizationSignUpCommandTests
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).CreateAsync(
             Arg.Is<OrganizationUser>(o => o.AccessSecretsManager == signup.UseSecretsManager));
 
-        await sutProvider.GetDependency<IReferenceEventService>().Received(1)
-            .RaiseEventAsync(Arg.Is<ReferenceEvent>(referenceEvent =>
-                referenceEvent.Type == ReferenceEventType.Signup &&
-                referenceEvent.PlanName == plan.Name &&
-                referenceEvent.PlanType == plan.Type &&
-                referenceEvent.Seats == result.Organization.Seats &&
-                referenceEvent.Storage == result.Organization.MaxStorageGb));
-        // TODO: add reference events for SmSeats and Service Accounts - see AC-1481
-
         Assert.NotNull(result.Organization);
         Assert.NotNull(result.OrganizationUser);
 
@@ -157,7 +142,7 @@ public class CloudICloudOrganizationSignUpCommandTests
                 sale.CustomerSetup.TokenizedPaymentSource.Token == signup.PaymentToken &&
                 sale.CustomerSetup.TaxInformation.Country == signup.TaxInfo.BillingAddressCountry &&
                 sale.CustomerSetup.TaxInformation.PostalCode == signup.TaxInfo.BillingAddressPostalCode &&
-                sale.SubscriptionSetup.Plan == plan &&
+                sale.SubscriptionSetup.PlanType == plan.Type &&
                 sale.SubscriptionSetup.PasswordManagerOptions.Seats == signup.AdditionalSeats &&
                 sale.SubscriptionSetup.PasswordManagerOptions.Storage == signup.AdditionalStorageGb &&
                 sale.SubscriptionSetup.SecretsManagerOptions.Seats == signup.AdditionalSmSeats &&
@@ -177,6 +162,8 @@ public class CloudICloudOrganizationSignUpCommandTests
         signup.PremiumAccessAddon = false;
         signup.IsFromProvider = true;
 
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(StaticStore.GetPlan(signup.Plan));
+
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpOrganizationAsync(signup));
         Assert.Contains("Organizations with a Managed Service Provider do not support Secrets Manager.", exception.Message);
     }
@@ -194,6 +181,8 @@ public class CloudICloudOrganizationSignUpCommandTests
         signup.AdditionalServiceAccounts = 10;
         signup.AdditionalStorageGb = 0;
         signup.IsFromProvider = false;
+
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(StaticStore.GetPlan(signup.Plan));
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SignUpOrganizationAsync(signup));
@@ -213,6 +202,8 @@ public class CloudICloudOrganizationSignUpCommandTests
         signup.AdditionalServiceAccounts = 10;
         signup.IsFromProvider = false;
 
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(StaticStore.GetPlan(signup.Plan));
+
         var exception = await Assert.ThrowsAsync<BadRequestException>(
            () => sutProvider.Sut.SignUpOrganizationAsync(signup));
         Assert.Contains("You cannot have more Secrets Manager seats than Password Manager seats", exception.Message);
@@ -231,6 +222,8 @@ public class CloudICloudOrganizationSignUpCommandTests
         signup.AdditionalServiceAccounts = -10;
         signup.IsFromProvider = false;
 
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(StaticStore.GetPlan(signup.Plan));
+
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SignUpOrganizationAsync(signup));
         Assert.Contains("You can't subtract Machine Accounts!", exception.Message);
@@ -248,6 +241,8 @@ public class CloudICloudOrganizationSignUpCommandTests
             IsFromProvider = false,
             Owner = new User { Id = Guid.NewGuid() }
         };
+
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(StaticStore.GetPlan(signup.Plan));
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetCountByFreeOrganizationAdminUserAsync(signup.Owner.Id)

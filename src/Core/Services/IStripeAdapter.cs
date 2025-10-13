@@ -1,4 +1,7 @@
-﻿using Bit.Core.Models.BitStripe;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Models.BitStripe;
 using Stripe;
 
 namespace Bit.Core.Services;
@@ -45,6 +48,7 @@ public interface IStripeAdapter
     Task<Stripe.PaymentMethod> PaymentMethodDetachAsync(string id, Stripe.PaymentMethodDetachOptions options = null);
     Task<Stripe.TaxId> TaxIdCreateAsync(string id, Stripe.TaxIdCreateOptions options);
     Task<Stripe.TaxId> TaxIdDeleteAsync(string customerId, string taxIdId, Stripe.TaxIdDeleteOptions options = null);
+    Task<Stripe.StripeList<Stripe.Tax.Registration>> TaxRegistrationsListAsync(Stripe.Tax.RegistrationListOptions options = null);
     Task<Stripe.StripeList<Stripe.Charge>> ChargeListAsync(Stripe.ChargeListOptions options);
     Task<Stripe.Refund> RefundCreateAsync(Stripe.RefundCreateOptions options);
     Task<Stripe.Card> CardDeleteAsync(string customerId, string cardId, Stripe.CardDeleteOptions options = null);
@@ -57,4 +61,5 @@ public interface IStripeAdapter
     Task<SetupIntent> SetupIntentGet(string id, SetupIntentGetOptions options = null);
     Task SetupIntentVerifyMicroDeposit(string id, SetupIntentVerifyMicrodepositsOptions options);
     Task<List<Stripe.TestHelpers.TestClock>> TestClockListAsync();
+    Task<Price> PriceGetAsync(string id, PriceGetOptions options = null);
 }

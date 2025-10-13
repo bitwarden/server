@@ -1,6 +1,10 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Exceptions;
 using Stripe;
+using Plan = Bit.Core.Models.StaticStore.Plan;
 
 namespace Bit.Core.Models.Business;
 
@@ -9,7 +13,7 @@ namespace Bit.Core.Models.Business;
 /// </summary>
 public class SubscriptionData
 {
-    public StaticStore.Plan Plan { get; init; }
+    public Plan Plan { get; init; }
     public int PurchasedPasswordManagerSeats { get; init; }
     public bool SubscribedToSecretsManager { get; set; }
     public int? PurchasedSecretsManagerSeats { get; init; }
@@ -38,22 +42,24 @@ public class CompleteSubscriptionUpdate : SubscriptionUpdate
     /// in the case of an error.
     /// </summary>
     /// <param name="organization">The <see cref="Organization"/> to upgrade.</param>
+    /// <param name="plan">The organization's plan.</param>
     /// <param name="updatedSubscription">The updates you want to apply to the organization's subscription.</param>
     public CompleteSubscriptionUpdate(
         Organization organization,
+        Plan plan,
         SubscriptionData updatedSubscription)
     {
-        _currentSubscription = GetSubscriptionDataFor(organization);
+        _currentSubscription = GetSubscriptionDataFor(organization, plan);
         _updatedSubscription = updatedSubscription;
     }
 
-    protected override List<string> PlanIds => new()
-    {
+    protected override List<string> PlanIds =>
+    [
         GetPasswordManagerPlanId(_updatedSubscription.Plan),
         _updatedSubscription.Plan.SecretsManager.StripeSeatPlanId,
         _updatedSubscription.Plan.SecretsManager.StripeServiceAccountPlanId,
         _updatedSubscription.Plan.PasswordManager.StripeStoragePlanId
-    };
+    ];
 
     /// <summary>
     /// Generates the <see cref="SubscriptionItemOptions"/> necessary to revert an <see cref="Organization"/>'s
@@ -94,7 +100,7 @@ public class CompleteSubscriptionUpdate : SubscriptionUpdate
      */
     /// <summary>
     /// Checks whether the updates provided in the <see cref="CompleteSubscriptionUpdate"/>'s constructor
-    /// are actually different than the organization's current <see cref="Subscription"/>.
+    /// are actually different from the organization's current <see cref="Subscription"/>.
     /// </summary>
     /// <param name="subscription">The organization's <see cref="Subscription"/>.</param>
     public override bool UpdateNeeded(Subscription subscription)
@@ -278,11 +284,8 @@ public class CompleteSubscriptionUpdate : SubscriptionUpdate
         };
     }
 
-    private static SubscriptionData GetSubscriptionDataFor(Organization organization)
-    {
-        var plan = Utilities.StaticStore.GetPlan(organization.PlanType);
-
-        return new SubscriptionData
+    private static SubscriptionData GetSubscriptionDataFor(Organization organization, Plan plan)
+        => new()
         {
             Plan = plan,
             PurchasedPasswordManagerSeats = organization.Seats.HasValue
@@ -299,5 +302,4 @@ public class CompleteSubscriptionUpdate : SubscriptionUpdate
                 ? organization.MaxStorageGb.Value - (plan.PasswordManager.BaseStorageGb ?? 0) :
                 0
         };
-    }
 }

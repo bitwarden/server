@@ -1,7 +1,11 @@
-﻿using System.Security.Claims;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Security.Claims;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
+using Bit.Core.Billing.Models.Business;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
@@ -21,7 +25,6 @@ public interface IUserService
     Task<IdentityResult> CreateUserAsync(User user);
     Task<IdentityResult> CreateUserAsync(User user, string masterPasswordHash);
     Task SendMasterPasswordHintAsync(string email);
-    Task SendTwoFactorEmailAsync(User user);
     Task<CredentialCreateOptions> StartWebAuthnRegistrationAsync(User user);
     Task<bool> DeleteWebAuthnKeyAsync(User user, int id);
     Task<bool> CompleteWebAuthRegistrationAsync(User user, int value, string name, AuthenticatorAttestationRawResponse attestationResponse);
@@ -35,8 +38,6 @@ public interface IUserService
     Task<IdentityResult> ConvertToKeyConnectorAsync(User user);
     Task<IdentityResult> AdminResetPasswordAsync(OrganizationUserType type, Guid orgId, Guid id, string newMasterPassword, string key);
     Task<IdentityResult> UpdateTempPasswordAsync(User user, string newMasterPassword, string key, string hint);
-    Task<IdentityResult> ChangeKdfAsync(User user, string masterPassword, string newMasterPassword, string key,
-        KdfType kdf, int kdfIterations, int? kdfMemory, int? kdfParallelism);
     Task<IdentityResult> RefreshSecurityStampAsync(User user, string masterPasswordHash);
     Task UpdateTwoFactorProviderAsync(User user, TwoFactorProviderType type, bool setEnabled = true, bool logEvent = true);
     Task DisableTwoFactorProviderAsync(User user, TwoFactorProviderType type);
@@ -57,11 +58,13 @@ public interface IUserService
     Task<UserLicense> GenerateLicenseAsync(User user, SubscriptionInfo subscriptionInfo = null,
         int? version = null);
     Task<bool> CheckPasswordAsync(User user, string password);
+    /// <summary>
+    /// Checks if the user has access to premium features, either through a personal subscription or through an organization.
+    /// </summary>
+    /// <param name="user">user being acted on</param>
+    /// <returns>true if they can access premium; false otherwise.</returns>
     Task<bool> CanAccessPremium(ITwoFactorProvidersUser user);
     Task<bool> HasPremiumFromOrganization(ITwoFactorProvidersUser user);
-    [Obsolete("Use ITwoFactorIsEnabledQuery instead.")]
-    Task<bool> TwoFactorIsEnabledAsync(ITwoFactorProvidersUser user);
-    Task<bool> TwoFactorProviderIsEnabledAsync(TwoFactorProviderType provider, ITwoFactorProvidersUser user);
     Task<string> GenerateSignInTokenAsync(User user, string purpose);
 
     Task<IdentityResult> UpdatePasswordHash(User user, string newPassword,
@@ -71,7 +74,6 @@ public interface IUserService
     Task SendOTPAsync(User user);
     Task<bool> VerifyOTPAsync(User user, string token);
     Task<bool> VerifySecretAsync(User user, string secret, bool isSettingMFA = false);
-    Task ResendNewDeviceVerificationEmail(string email, string secret);
     /// <summary>
     /// We use this method to check if the user has an active new device verification bypass
     /// </summary>
@@ -85,9 +87,6 @@ public interface IUserService
     Task ToggleNewDeviceVerificationException(Guid userId);
 
     void SetTwoFactorProvider(User user, TwoFactorProviderType type, bool setEnabled = true);
-
-    [Obsolete("To be removed when the feature flag pm-17128-recovery-code-login is removed PM-18175.")]
-    Task<bool> RecoverTwoFactorAsync(string email, string masterPassword, string recoveryCode);
 
     /// <summary>
     /// This method is used by the TwoFactorAuthenticationValidator to recover two
@@ -117,17 +116,19 @@ public interface IUserService
     /// verified domains of that organization, and the user is a member of it.
     /// The organization must be enabled and able to have verified domains.
     /// </remarks>
+    Task<bool> IsClaimedByAnyOrganizationAsync(Guid userId);
+
+    /// <summary>
+    /// Verify whether the new email domain meets the requirements for managed users.
+    /// </summary>
     /// <returns>
-    /// False if the Account Deprovisioning feature flag is disabled.
+    /// IdentityResult
     /// </returns>
-    Task<bool> IsManagedByAnyOrganizationAsync(Guid userId);
+    Task<IdentityResult> ValidateClaimedUserDomainAsync(User user, string newEmail);
 
     /// <summary>
     /// Gets the organizations that manage the user.
     /// </summary>
-    /// <returns>
-    /// An empty collection if the Account Deprovisioning feature flag is disabled.
-    /// </returns>
-    /// <inheritdoc cref="IsManagedByAnyOrganizationAsync(Guid)"/>
-    Task<IEnumerable<Organization>> GetOrganizationsManagingUserAsync(Guid userId);
+    /// <inheritdoc cref="IsClaimedByAnyOrganizationAsync"/>
+    Task<IEnumerable<Organization>> GetOrganizationsClaimingUserAsync(Guid userId);
 }

@@ -1,5 +1,4 @@
 ﻿using System.Collections;
-using Bit.Core;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -25,15 +24,6 @@ public sealed class RequestLoggingMiddleware
 
     public Task Invoke(HttpContext context, IFeatureService featureService)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.RemoveServerVersionHeader))
-        {
-            context.Response.OnStarting(() =>
-            {
-                context.Response.Headers.Append("Server-Version", AssemblyHelpers.GetVersion());
-                return Task.CompletedTask;
-            });
-        }
-
         using (_logger.BeginScope(
           new RequestLogScope(context.GetIpAddress(_globalSettings),
             GetHeaderValue(context, "user-agent"),

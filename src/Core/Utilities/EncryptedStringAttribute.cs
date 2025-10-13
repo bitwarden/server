@@ -16,6 +16,7 @@ public class EncryptedStringAttribute : ValidationAttribute
         [EncryptionType.AesCbc256_B64] = 2, // iv|ct
         [EncryptionType.AesCbc128_HmacSha256_B64] = 3, // iv|ct|mac
         [EncryptionType.AesCbc256_HmacSha256_B64] = 3, // iv|ct|mac
+        [EncryptionType.XChaCha20Poly1305_B64] = 1, // cose bytes
         [EncryptionType.Rsa2048_OaepSha256_B64] = 1, // rsaCt
         [EncryptionType.Rsa2048_OaepSha1_B64] = 1, // rsaCt
         [EncryptionType.Rsa2048_OaepSha256_HmacSha256_B64] = 2, // rsaCt|mac

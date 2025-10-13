@@ -28,7 +28,7 @@ public class CreateNotificationCommand : ICreateNotificationCommand
         _pushNotificationService = pushNotificationService;
     }
 
-    public async Task<Notification> CreateAsync(Notification notification)
+    public async Task<Notification> CreateAsync(Notification notification, bool sendPush = true)
     {
         notification.CreationDate = notification.RevisionDate = DateTime.UtcNow;
 
@@ -37,7 +37,10 @@ public class CreateNotificationCommand : ICreateNotificationCommand
 
         var newNotification = await _notificationRepository.CreateAsync(notification);
 
-        await _pushNotificationService.PushNotificationAsync(newNotification);
+        if (sendPush)
+        {
+            await _pushNotificationService.PushNotificationAsync(newNotification);
+        }
 
         return newNotification;
     }

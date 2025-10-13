@@ -1,8 +1,12 @@
-﻿using Bit.Api.Vault.Models.Response;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.Vault.Models.Response;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -36,6 +40,8 @@ public class SyncController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly Version _sshKeyCipherMinimumVersion = new(Constants.SSHKeyCipherMinimumVersion);
     private readonly IFeatureService _featureService;
+    private readonly IApplicationCacheService _applicationCacheService;
+    private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
 
     public SyncController(
         IUserService userService,
@@ -49,7 +55,9 @@ public class SyncController : Controller
         ISendRepository sendRepository,
         GlobalSettings globalSettings,
         ICurrentContext currentContext,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        IApplicationCacheService applicationCacheService,
+        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery)
     {
         _userService = userService;
         _folderRepository = folderRepository;
@@ -63,6 +71,8 @@ public class SyncController : Controller
         _globalSettings = globalSettings;
         _currentContext = currentContext;
         _featureService = featureService;
+        _applicationCacheService = applicationCacheService;
+        _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
     }
 
     [HttpGet("")]
@@ -99,13 +109,15 @@ public class SyncController : Controller
             collectionCiphersGroupDict = collectionCiphers.GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
         }
 
-        var userTwoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
+        var userTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
         var userHasPremiumFromOrganization = await _userService.HasPremiumFromOrganization(user);
-        var organizationManagingActiveUser = await _userService.GetOrganizationsManagingUserAsync(user.Id);
-        var organizationIdsManagingActiveUser = organizationManagingActiveUser.Select(o => o.Id);
+        var organizationClaimingActiveUser = await _userService.GetOrganizationsClaimingUserAsync(user.Id);
+        var organizationIdsClaimingActiveUser = organizationClaimingActiveUser.Select(o => o.Id);
 
-        var response = new SyncResponseModel(_globalSettings, user, userTwoFactorEnabled, userHasPremiumFromOrganization,
-            organizationIdsManagingActiveUser, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,
+        var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+
+        var response = new SyncResponseModel(_globalSettings, user, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationAbilities,
+            organizationIdsClaimingActiveUser, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,
             folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains, policies, sends);
         return response;
     }

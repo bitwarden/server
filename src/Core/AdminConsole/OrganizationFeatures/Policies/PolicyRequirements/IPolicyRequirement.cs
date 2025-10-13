@@ -1,24 +1,11 @@
-﻿#nullable enable
-
-using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 
 /// <summary>
-/// Represents the business requirements of how one or more enterprise policies will be enforced against a user.
-/// The implementation of this interface will depend on how the policies are enforced in the relevant domain.
+/// An object that represents how a <see cref="PolicyType"/> will be enforced against a user.
+/// This acts as a bridge between the <see cref="Policy"/> entity saved to the database and the domain that the policy
+/// affects. You may represent the impact of the policy in any way that makes sense for the domain.
 /// </summary>
 public interface IPolicyRequirement;
-
-/// <summary>
-/// A factory function that takes a sequence of <see cref="PolicyDetails"/> and transforms them into a single
-/// <see cref="IPolicyRequirement"/> for consumption by the relevant domain. This will receive *all* policy types
-/// that may be enforced against a user; when implementing this delegate, you must filter out irrelevant policy types
-/// as well as policies that should not be enforced against a user (e.g. due to the user's role or status).
-/// </summary>
-/// <remarks>
-/// See <see cref="PolicyRequirementHelpers"/> for extension methods to handle common requirements when implementing
-/// this delegate.
-/// </remarks>
-public delegate T RequirementFactory<out T>(IEnumerable<PolicyDetails> policyDetails)
-    where T : IPolicyRequirement;

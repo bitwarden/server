@@ -1,8 +1,12 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Interfaces;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -409,9 +413,30 @@ public class EventService : IEventService
         await _eventWriteService.CreateAsync(e);
     }
 
-    public async Task LogServiceAccountSecretEventAsync(Guid serviceAccountId, Secret secret, EventType type, DateTime? date = null)
+    public async Task LogUserSecretsEventAsync(Guid userId, IEnumerable<Secret> secrets, EventType type, DateTime? date = null)
     {
-        await LogServiceAccountSecretsEventAsync(serviceAccountId, new[] { secret }, type, date);
+        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        var eventMessages = new List<IEvent>();
+
+        foreach (var secret in secrets)
+        {
+            if (!CanUseEvents(orgAbilities, secret.OrganizationId))
+            {
+                continue;
+            }
+
+            var e = new EventMessage(_currentContext)
+            {
+                OrganizationId = secret.OrganizationId,
+                Type = type,
+                SecretId = secret.Id,
+                UserId = userId,
+                Date = date.GetValueOrDefault(DateTime.UtcNow)
+            };
+            eventMessages.Add(e);
+        }
+
+        await _eventWriteService.CreateManyAsync(eventMessages);
     }
 
     public async Task LogServiceAccountSecretsEventAsync(Guid serviceAccountId, IEnumerable<Secret> secrets, EventType type, DateTime? date = null)
@@ -440,6 +465,187 @@ public class EventService : IEventService
         await _eventWriteService.CreateManyAsync(eventMessages);
     }
 
+    public async Task LogUserProjectsEventAsync(Guid userId, IEnumerable<Project> projects, EventType type, DateTime? date = null)
+    {
+        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        var eventMessages = new List<IEvent>();
+
+        foreach (var project in projects)
+        {
+            if (!CanUseEvents(orgAbilities, project.OrganizationId))
+            {
+                continue;
+            }
+
+            var e = new EventMessage(_currentContext)
+            {
+                OrganizationId = project.OrganizationId,
+                Type = type,
+                ProjectId = project.Id,
+                UserId = userId,
+                Date = date.GetValueOrDefault(DateTime.UtcNow)
+            };
+            eventMessages.Add(e);
+        }
+
+        await _eventWriteService.CreateManyAsync(eventMessages);
+    }
+
+    public async Task LogServiceAccountProjectsEventAsync(Guid serviceAccountId, IEnumerable<Project> projects, EventType type, DateTime? date = null)
+    {
+        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        var eventMessages = new List<IEvent>();
+
+        foreach (var project in projects)
+        {
+            if (!CanUseEvents(orgAbilities, project.OrganizationId))
+            {
+                continue;
+            }
+
+            var e = new EventMessage(_currentContext)
+            {
+                OrganizationId = project.OrganizationId,
+                Type = type,
+                ProjectId = project.Id,
+                ServiceAccountId = serviceAccountId,
+                Date = date.GetValueOrDefault(DateTime.UtcNow)
+            };
+            eventMessages.Add(e);
+        }
+
+        await _eventWriteService.CreateManyAsync(eventMessages);
+    }
+
+
+    public async Task LogServiceAccountPeopleEventAsync(Guid userId, UserServiceAccountAccessPolicy policy, EventType type, IdentityClientType identityClientType, DateTime? date = null)
+    {
+        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        var eventMessages = new List<IEvent>();
+        var orgUser = await _organizationUserRepository.GetByIdAsync((Guid)policy.OrganizationUserId);
+
+        if (!CanUseEvents(orgAbilities, orgUser.OrganizationId))
+        {
+            return;
+        }
+
+        var (actingUserId, serviceAccountId) = MapIdentityClientType(userId, identityClientType);
+
+        if (actingUserId is null && serviceAccountId is null)
+        {
+            return;
+        }
+
+        if (policy.OrganizationUserId != null)
+        {
+            var e = new EventMessage(_currentContext)
+            {
+                OrganizationId = orgUser.OrganizationId,
+                Type = type,
+                GrantedServiceAccountId = policy.GrantedServiceAccountId,
+                ServiceAccountId = serviceAccountId,
+                UserId = policy.OrganizationUserId,
+                ActingUserId = actingUserId,
+                Date = date.GetValueOrDefault(DateTime.UtcNow)
+            };
+            eventMessages.Add(e);
+
+            await _eventWriteService.CreateManyAsync(eventMessages);
+        }
+    }
+
+    public async Task LogServiceAccountGroupEventAsync(Guid userId, GroupServiceAccountAccessPolicy policy, EventType type, IdentityClientType identityClientType, DateTime? date = null)
+    {
+        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        var eventMessages = new List<IEvent>();
+
+        if (!CanUseEvents(orgAbilities, policy.Group.OrganizationId))
+        {
+            return;
+        }
+
+        var (actingUserId, serviceAccountId) = MapIdentityClientType(userId, identityClientType);
+
+        if (actingUserId is null && serviceAccountId is null)
+        {
+            return;
+        }
+
+        if (policy.GroupId != null)
+        {
+            var e = new EventMessage(_currentContext)
+            {
+                OrganizationId = policy.Group.OrganizationId,
+                Type = type,
+                GrantedServiceAccountId = policy.GrantedServiceAccountId,
+                ServiceAccountId = serviceAccountId,
+                GroupId = policy.GroupId,
+                ActingUserId = actingUserId,
+                Date = date.GetValueOrDefault(DateTime.UtcNow)
+            };
+            eventMessages.Add(e);
+
+            await _eventWriteService.CreateManyAsync(eventMessages);
+        }
+    }
+
+    public async Task LogServiceAccountEventAsync(Guid userId, List<ServiceAccount> serviceAccounts, EventType type, IdentityClientType identityClientType, DateTime? date = null)
+    {
+        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        var eventMessages = new List<IEvent>();
+
+        foreach (var serviceAccount in serviceAccounts)
+        {
+            if (!CanUseEvents(orgAbilities, serviceAccount.OrganizationId))
+            {
+                continue;
+            }
+
+            var (actingUserId, serviceAccountId) = MapIdentityClientType(userId, identityClientType);
+
+            if (actingUserId is null && serviceAccountId is null)
+            {
+                continue;
+            }
+
+            if (serviceAccount != null)
+            {
+                var e = new EventMessage(_currentContext)
+                {
+                    OrganizationId = serviceAccount.OrganizationId,
+                    Type = type,
+                    GrantedServiceAccountId = serviceAccount.Id,
+                    ServiceAccountId = serviceAccountId,
+                    ActingUserId = actingUserId,
+                    Date = date.GetValueOrDefault(DateTime.UtcNow)
+                };
+                eventMessages.Add(e);
+            }
+        }
+
+        if (eventMessages.Any())
+        {
+            await _eventWriteService.CreateManyAsync(eventMessages);
+        }
+    }
+
+    private (Guid? actingUserId, Guid? serviceAccountId) MapIdentityClientType(
+           Guid userId, IdentityClientType identityClientType)
+    {
+        if (identityClientType == IdentityClientType.Organization)
+        {
+            return (null, null);
+        }
+
+        return identityClientType switch
+        {
+            IdentityClientType.User => (userId, null),
+            IdentityClientType.ServiceAccount => (null, userId),
+            _ => throw new InvalidOperationException("Unknown identity client type.")
+        };
+    }
+
+
     private async Task<Guid?> GetProviderIdAsync(Guid? orgId)
     {
         if (_currentContext == null || !orgId.HasValue)
@@ -462,13 +668,13 @@ public class EventService : IEventService
 
     private bool CanUseEvents(IDictionary<Guid, OrganizationAbility> orgAbilities, Guid orgId)
     {
-        return orgAbilities != null && orgAbilities.ContainsKey(orgId) &&
-               orgAbilities[orgId].Enabled && orgAbilities[orgId].UseEvents;
+        return orgAbilities != null && orgAbilities.TryGetValue(orgId, out var orgAbility) &&
+               orgAbility.Enabled && orgAbility.UseEvents;
     }
 
     private bool CanUseProviderEvents(IDictionary<Guid, ProviderAbility> providerAbilities, Guid providerId)
     {
-        return providerAbilities != null && providerAbilities.ContainsKey(providerId) &&
-               providerAbilities[providerId].Enabled && providerAbilities[providerId].UseEvents;
+        return providerAbilities != null && providerAbilities.TryGetValue(providerId, out var providerAbility) &&
+               providerAbility.Enabled && providerAbility.UseEvents;
     }
 }

@@ -69,4 +69,19 @@ public class CreateNotificationCommandTest
             .Received(0)
             .PushNotificationStatusAsync(Arg.Any<Notification>(), Arg.Any<NotificationStatus>());
     }
+
+    [Theory]
+    [BitAutoData]
+    public async Task CreateAsync_Authorized_NotificationPushSkipped(
+        SutProvider<CreateNotificationCommand> sutProvider,
+        Notification notification)
+    {
+        Setup(sutProvider, notification, true);
+
+        var newNotification = await sutProvider.Sut.CreateAsync(notification, false);
+
+        await sutProvider.GetDependency<IPushNotificationService>()
+            .Received(0)
+            .PushNotificationAsync(newNotification);
+    }
 }

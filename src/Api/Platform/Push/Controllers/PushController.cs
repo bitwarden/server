@@ -1,7 +1,14 @@
-﻿using Bit.Core.Context;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Diagnostics;
+using System.Text.Json;
+using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api;
 using Bit.Core.Platform.Push;
+using Bit.Core.Platform.Push.Internal;
+using Bit.Core.Platform.PushRegistration;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
@@ -19,14 +26,14 @@ namespace Bit.Api.Platform.Push;
 public class PushController : Controller
 {
     private readonly IPushRegistrationService _pushRegistrationService;
-    private readonly IPushNotificationService _pushNotificationService;
+    private readonly IPushRelayer _pushRelayer;
     private readonly IWebHostEnvironment _environment;
     private readonly ICurrentContext _currentContext;
     private readonly IGlobalSettings _globalSettings;
 
     public PushController(
         IPushRegistrationService pushRegistrationService,
-        IPushNotificationService pushNotificationService,
+        IPushRelayer pushRelayer,
         IWebHostEnvironment environment,
         ICurrentContext currentContext,
         IGlobalSettings globalSettings)
@@ -34,7 +41,7 @@ public class PushController : Controller
         _currentContext = currentContext;
         _environment = environment;
         _pushRegistrationService = pushRegistrationService;
-        _pushNotificationService = pushNotificationService;
+        _pushRelayer = pushRelayer;
         _globalSettings = globalSettings;
     }
 
@@ -42,9 +49,9 @@ public class PushController : Controller
     public async Task RegisterAsync([FromBody] PushRegistrationRequestModel model)
     {
         CheckUsage();
-        await _pushRegistrationService.CreateOrUpdateRegistrationAsync(model.PushToken, Prefix(model.DeviceId),
-            Prefix(model.UserId), Prefix(model.Identifier), model.Type, model.OrganizationIds.Select(Prefix),
-            model.InstallationId);
+        await _pushRegistrationService.CreateOrUpdateRegistrationAsync(new PushRegistrationData(model.PushToken),
+            Prefix(model.DeviceId), Prefix(model.UserId), Prefix(model.Identifier), model.Type,
+            model.OrganizationIds?.Select(Prefix) ?? [], model.InstallationId);
     }
 
     [HttpPost("delete")]
@@ -73,31 +80,50 @@ public class PushController : Controller
     }
 
     [HttpPost("send")]
-    public async Task SendAsync([FromBody] PushSendRequestModel model)
+    public async Task SendAsync([FromBody] PushSendRequestModel<JsonElement> model)
     {
         CheckUsage();
 
-        if (!string.IsNullOrWhiteSpace(model.InstallationId))
+        NotificationTarget target;
+        Guid targetId;
+
+        if (model.InstallationId.HasValue)
         {
-            if (_currentContext.InstallationId!.Value.ToString() != model.InstallationId!)
+            if (_currentContext.InstallationId!.Value != model.InstallationId.Value)
             {
                 throw new BadRequestException("InstallationId does not match current context.");
             }
 
-            await _pushNotificationService.SendPayloadToInstallationAsync(
-                _currentContext.InstallationId.Value.ToString(), model.Type, model.Payload, Prefix(model.Identifier),
-                Prefix(model.DeviceId), model.ClientType);
+            target = NotificationTarget.Installation;
+            targetId = _currentContext.InstallationId.Value;
         }
-        else if (!string.IsNullOrWhiteSpace(model.UserId))
+        else if (model.UserId.HasValue)
         {
-            await _pushNotificationService.SendPayloadToUserAsync(Prefix(model.UserId),
-                model.Type, model.Payload, Prefix(model.Identifier), Prefix(model.DeviceId), model.ClientType);
+            target = NotificationTarget.User;
+            targetId = model.UserId.Value;
         }
-        else if (!string.IsNullOrWhiteSpace(model.OrganizationId))
+        else if (model.OrganizationId.HasValue)
         {
-            await _pushNotificationService.SendPayloadToOrganizationAsync(Prefix(model.OrganizationId),
-                model.Type, model.Payload, Prefix(model.Identifier), Prefix(model.DeviceId), model.ClientType);
+            target = NotificationTarget.Organization;
+            targetId = model.OrganizationId.Value;
         }
+        else
+        {
+            throw new UnreachableException("Model validation should have prevented getting here.");
+        }
+
+        var notification = new RelayedNotification
+        {
+            Type = model.Type,
+            Target = target,
+            TargetId = targetId,
+            Payload = model.Payload,
+            Identifier = model.Identifier,
+            DeviceId = model.DeviceId,
+            ClientType = model.ClientType,
+        };
+
+        await _pushRelayer.RelayAsync(_currentContext.InstallationId.Value, notification);
     }
 
     private string Prefix(string value)

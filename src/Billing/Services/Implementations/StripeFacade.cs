@@ -1,4 +1,9 @@
-﻿using Stripe;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Stripe;
+using Stripe.TestHelpers;
+using CustomerService = Stripe.CustomerService;
 
 namespace Bit.Billing.Services.Implementations;
 
@@ -11,6 +16,8 @@ public class StripeFacade : IStripeFacade
     private readonly PaymentMethodService _paymentMethodService = new();
     private readonly SubscriptionService _subscriptionService = new();
     private readonly DiscountService _discountService = new();
+    private readonly SetupIntentService _setupIntentService = new();
+    private readonly TestClockService _testClockService = new();
 
     public async Task<Charge> GetCharge(
         string chargeId,
@@ -33,12 +40,26 @@ public class StripeFacade : IStripeFacade
         CancellationToken cancellationToken = default) =>
         await _customerService.GetAsync(customerId, customerGetOptions, requestOptions, cancellationToken);
 
+    public async Task<Customer> UpdateCustomer(
+        string customerId,
+        CustomerUpdateOptions customerUpdateOptions = null,
+        RequestOptions requestOptions = null,
+        CancellationToken cancellationToken = default) =>
+        await _customerService.UpdateAsync(customerId, customerUpdateOptions, requestOptions, cancellationToken);
+
     public async Task<Invoice> GetInvoice(
         string invoiceId,
         InvoiceGetOptions invoiceGetOptions = null,
         RequestOptions requestOptions = null,
         CancellationToken cancellationToken = default) =>
         await _invoiceService.GetAsync(invoiceId, invoiceGetOptions, requestOptions, cancellationToken);
+
+    public async Task<SetupIntent> GetSetupIntent(
+        string setupIntentId,
+        SetupIntentGetOptions setupIntentGetOptions = null,
+        RequestOptions requestOptions = null,
+        CancellationToken cancellationToken = default) =>
+        await _setupIntentService.GetAsync(setupIntentId, setupIntentGetOptions, requestOptions, cancellationToken);
 
     public async Task<StripeList<Invoice>> ListInvoices(
         InvoiceListOptions options = null,
@@ -109,4 +130,11 @@ public class StripeFacade : IStripeFacade
         RequestOptions requestOptions = null,
         CancellationToken cancellationToken = default) =>
         await _discountService.DeleteSubscriptionDiscountAsync(subscriptionId, requestOptions, cancellationToken);
+
+    public Task<TestClock> GetTestClock(
+        string testClockId,
+        TestClockGetOptions testClockGetOptions = null,
+        RequestOptions requestOptions = null,
+        CancellationToken cancellationToken = default) =>
+        _testClockService.GetAsync(testClockId, testClockGetOptions, requestOptions, cancellationToken);
 }

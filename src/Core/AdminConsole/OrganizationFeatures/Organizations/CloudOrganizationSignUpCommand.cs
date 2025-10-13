@@ -1,10 +1,13 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Models.Sales;
-using Bit.Core.Billing.Services;
-using Bit.Core.Context;
+using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Billing.Organizations.Services;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -14,17 +17,13 @@ using Bit.Core.Models.StaticStore;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 
 public record SignUpOrganizationResponse(
     Organization Organization,
-    OrganizationUser OrganizationUser,
-    Collection DefaultCollection);
+    OrganizationUser OrganizationUser);
 
 public interface ICloudOrganizationSignUpCommand
 {
@@ -33,23 +32,21 @@ public interface ICloudOrganizationSignUpCommand
 
 public class CloudOrganizationSignUpCommand(
     IOrganizationUserRepository organizationUserRepository,
-    IFeatureService featureService,
     IOrganizationBillingService organizationBillingService,
     IPaymentService paymentService,
     IPolicyService policyService,
-    IReferenceEventService referenceEventService,
-    ICurrentContext currentContext,
     IOrganizationRepository organizationRepository,
     IOrganizationApiKeyRepository organizationApiKeyRepository,
     IApplicationCacheService applicationCacheService,
     IPushRegistrationService pushRegistrationService,
     IPushNotificationService pushNotificationService,
     ICollectionRepository collectionRepository,
-    IDeviceRepository deviceRepository) : ICloudOrganizationSignUpCommand
+    IDeviceRepository deviceRepository,
+    IPricingClient pricingClient) : ICloudOrganizationSignUpCommand
 {
     public async Task<SignUpOrganizationResponse> SignUpOrganizationAsync(OrganizationSignup signup)
     {
-        var plan = StaticStore.GetPlan(signup.Plan);
+        var plan = await pricingClient.GetPlanOrThrow(signup.Plan);
 
         ValidatePasswordManagerPlan(plan, signup);
 
@@ -104,7 +101,8 @@ public class CloudOrganizationSignUpCommand(
             RevisionDate = DateTime.UtcNow,
             Status = OrganizationStatusType.Created,
             UsePasswordManager = true,
-            UseSecretsManager = signup.UseSecretsManager
+            UseSecretsManager = signup.UseSecretsManager,
+            UseOrganizationDomains = plan.HasOrganizationDomains,
         };
 
         if (signup.UseSecretsManager)
@@ -131,18 +129,7 @@ public class CloudOrganizationSignUpCommand(
 
         var ownerId = signup.IsFromProvider ? default : signup.Owner.Id;
         var returnValue = await SignUpAsync(organization, ownerId, signup.OwnerKey, signup.CollectionName, true);
-        await referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.Signup, organization, currentContext)
-            {
-                PlanName = plan.Name,
-                PlanType = plan.Type,
-                Seats = returnValue.Item1.Seats,
-                SignupInitiationPath = signup.InitiationPath,
-                Storage = returnValue.Item1.MaxStorageGb,
-                // TODO: add reference events for SmSeats and Service Accounts - see AC-1481
-            });
-
-        return new SignUpOrganizationResponse(returnValue.organization, returnValue.organizationUser, returnValue.defaultCollection);
+        return new SignUpOrganizationResponse(returnValue.organization, returnValue.organizationUser);
     }
 
     public void ValidatePasswordManagerPlan(Plan plan, OrganizationUpgrade upgrade)

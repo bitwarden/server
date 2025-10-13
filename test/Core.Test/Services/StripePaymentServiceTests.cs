@@ -1,20 +1,15 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Models.StaticStore.Plans;
+using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Tax.Requests;
 using Bit.Core.Enums;
-using Bit.Core.Exceptions;
-using Bit.Core.Models.Business;
 using Bit.Core.Services;
-using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Braintree;
 using NSubstitute;
+using Stripe;
 using Xunit;
-using Customer = Braintree.Customer;
-using PaymentMethod = Braintree.PaymentMethod;
-using PaymentMethodType = Bit.Core.Enums.PaymentMethodType;
 
 namespace Bit.Core.Test.Services;
 
@@ -22,807 +17,528 @@ namespace Bit.Core.Test.Services;
 public class StripePaymentServiceTests
 {
     [Theory]
-    [BitAutoData(PaymentMethodType.BitPay)]
-    [BitAutoData(PaymentMethodType.BitPay)]
-    [BitAutoData(PaymentMethodType.Credit)]
-    [BitAutoData(PaymentMethodType.WireTransfer)]
-    [BitAutoData(PaymentMethodType.Check)]
-    public async Task PurchaseOrganizationAsync_Invalid(PaymentMethodType paymentMethodType, SutProvider<StripePaymentService> sutProvider)
+    [BitAutoData]
+    public async Task PreviewInvoiceAsync_ForOrganization_CalculatesSalesTaxCorrectlyForFamiliesWithoutAdditionalStorage(
+        SutProvider<StripePaymentService> sutProvider)
     {
-        var exception = await Assert.ThrowsAsync<GatewayException>(
-            () => sutProvider.Sut.PurchaseOrganizationAsync(null, paymentMethodType, null, null, 0, 0, false, null, false, -1, -1));
+        var familiesPlan = new FamiliesPlan();
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(Arg.Is<PlanType>(p => p == PlanType.FamiliesAnnually))
+            .Returns(familiesPlan);
 
-        Assert.Equal("Payment method is not supported at this time.", exception.Message);
-    }
-
-    [Theory, BitAutoData]
-    public async Task PurchaseOrganizationAsync_Stripe_ProviderOrg_Coupon_Add(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo, bool provider = true)
-    {
-        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
-
-        sutProvider
-            .GetDependency<ITaxService>()
-            .GetStripeTaxCode(Arg.Is<string>(p => p == taxInfo.BillingAddressCountry), Arg.Is<string>(p => p == taxInfo.TaxIdNumber))
-            .Returns(taxInfo.TaxIdType);
-
-        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
+        var parameters = new PreviewOrganizationInvoiceRequestBody
         {
-            Id = "C-1",
-        });
-        stripeAdapter.SubscriptionCreateAsync(default).ReturnsForAnyArgs(new Stripe.Subscription
-        {
-            Id = "S-1",
-            CurrentPeriodEnd = DateTime.Today.AddDays(10),
-        });
-        sutProvider.GetDependency<IGlobalSettings>()
-            .BaseServiceUri.CloudRegion
-            .Returns("US");
-
-        var result = await sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.Card, paymentToken, plan, 0, 0, false, taxInfo, provider);
-
-        Assert.Null(result);
-        Assert.Equal(GatewayType.Stripe, organization.Gateway);
-        Assert.Equal("C-1", organization.GatewayCustomerId);
-        Assert.Equal("S-1", organization.GatewaySubscriptionId);
-        Assert.True(organization.Enabled);
-        Assert.Equal(DateTime.Today.AddDays(10), organization.ExpirationDate);
-
-        await stripeAdapter.Received().CustomerCreateAsync(Arg.Is<Stripe.CustomerCreateOptions>(c =>
-            c.Description == organization.BusinessName &&
-            c.Email == organization.BillingEmail &&
-            c.Source == paymentToken &&
-            c.PaymentMethod == null &&
-            c.Coupon == "msp-discount-35" &&
-            c.Metadata.Count == 1 &&
-            c.Metadata["region"] == "US" &&
-            c.InvoiceSettings.DefaultPaymentMethod == null &&
-            c.Address.Country == taxInfo.BillingAddressCountry &&
-            c.Address.PostalCode == taxInfo.BillingAddressPostalCode &&
-            c.Address.Line1 == taxInfo.BillingAddressLine1 &&
-            c.Address.Line2 == taxInfo.BillingAddressLine2 &&
-            c.Address.City == taxInfo.BillingAddressCity &&
-            c.Address.State == taxInfo.BillingAddressState &&
-            c.TaxIdData.First().Value == taxInfo.TaxIdNumber &&
-            c.TaxIdData.First().Type == taxInfo.TaxIdType
-        ));
-
-        await stripeAdapter.Received().SubscriptionCreateAsync(Arg.Is<Stripe.SubscriptionCreateOptions>(s =>
-            s.Customer == "C-1" &&
-            s.Expand[0] == "latest_invoice.payment_intent" &&
-            s.Metadata[organization.GatewayIdField()] == organization.Id.ToString() &&
-            s.Items.Count == 0
-        ));
-    }
-
-    [Theory, BitAutoData]
-    public async Task PurchaseOrganizationAsync_SM_Stripe_ProviderOrg_Coupon_Add(SutProvider<StripePaymentService> sutProvider, Organization organization,
-        string paymentToken, TaxInfo taxInfo, bool provider = true)
-    {
-        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
-        organization.UseSecretsManager = true;
-
-        sutProvider
-            .GetDependency<ITaxService>()
-            .GetStripeTaxCode(Arg.Is<string>(p => p == taxInfo.BillingAddressCountry), Arg.Is<string>(p => p == taxInfo.TaxIdNumber))
-            .Returns(taxInfo.TaxIdType);
-
-        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
-        {
-            Id = "C-1",
-        });
-        stripeAdapter.SubscriptionCreateAsync(default).ReturnsForAnyArgs(new Stripe.Subscription
-        {
-            Id = "S-1",
-            CurrentPeriodEnd = DateTime.Today.AddDays(10),
-
-        });
-        sutProvider.GetDependency<IGlobalSettings>()
-            .BaseServiceUri.CloudRegion
-            .Returns("US");
-
-        var result = await sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.Card, paymentToken, plan, 1, 1,
-            false, taxInfo, provider, 1, 1);
-
-        Assert.Null(result);
-        Assert.Equal(GatewayType.Stripe, organization.Gateway);
-        Assert.Equal("C-1", organization.GatewayCustomerId);
-        Assert.Equal("S-1", organization.GatewaySubscriptionId);
-        Assert.True(organization.Enabled);
-        Assert.Equal(DateTime.Today.AddDays(10), organization.ExpirationDate);
-
-        await stripeAdapter.Received().CustomerCreateAsync(Arg.Is<Stripe.CustomerCreateOptions>(c =>
-            c.Description == organization.BusinessName &&
-            c.Email == organization.BillingEmail &&
-            c.Source == paymentToken &&
-            c.PaymentMethod == null &&
-            c.Coupon == "msp-discount-35" &&
-            c.Metadata.Count == 1 &&
-            c.Metadata["region"] == "US" &&
-            c.InvoiceSettings.DefaultPaymentMethod == null &&
-            c.Address.Country == taxInfo.BillingAddressCountry &&
-            c.Address.PostalCode == taxInfo.BillingAddressPostalCode &&
-            c.Address.Line1 == taxInfo.BillingAddressLine1 &&
-            c.Address.Line2 == taxInfo.BillingAddressLine2 &&
-            c.Address.City == taxInfo.BillingAddressCity &&
-            c.Address.State == taxInfo.BillingAddressState &&
-            c.TaxIdData.First().Value == taxInfo.TaxIdNumber &&
-            c.TaxIdData.First().Type == taxInfo.TaxIdType
-        ));
-
-        await stripeAdapter.Received().SubscriptionCreateAsync(Arg.Is<Stripe.SubscriptionCreateOptions>(s =>
-            s.Customer == "C-1" &&
-            s.Expand[0] == "latest_invoice.payment_intent" &&
-            s.Metadata[organization.GatewayIdField()] == organization.Id.ToString() &&
-            s.Items.Count == 4
-        ));
-    }
-
-    [Theory, BitAutoData]
-    public async Task PurchaseOrganizationAsync_Stripe(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
-    {
-        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
-        organization.UseSecretsManager = true;
-
-        sutProvider
-            .GetDependency<ITaxService>()
-            .GetStripeTaxCode(Arg.Is<string>(p => p == taxInfo.BillingAddressCountry), Arg.Is<string>(p => p == taxInfo.TaxIdNumber))
-            .Returns(taxInfo.TaxIdType);
-
-        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
-        {
-            Id = "C-1",
-        });
-        stripeAdapter.SubscriptionCreateAsync(default).ReturnsForAnyArgs(new Stripe.Subscription
-        {
-            Id = "S-1",
-            CurrentPeriodEnd = DateTime.Today.AddDays(10),
-        });
-        sutProvider.GetDependency<IGlobalSettings>()
-            .BaseServiceUri.CloudRegion
-            .Returns("US");
-
-        var result = await sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.Card, paymentToken, plan, 0, 0
-            , false, taxInfo, false, 8, 10);
-
-        Assert.Null(result);
-        Assert.Equal(GatewayType.Stripe, organization.Gateway);
-        Assert.Equal("C-1", organization.GatewayCustomerId);
-        Assert.Equal("S-1", organization.GatewaySubscriptionId);
-        Assert.True(organization.Enabled);
-        Assert.Equal(DateTime.Today.AddDays(10), organization.ExpirationDate);
-        await stripeAdapter.Received().CustomerCreateAsync(Arg.Is<Stripe.CustomerCreateOptions>(c =>
-            c.Description == organization.BusinessName &&
-            c.Email == organization.BillingEmail &&
-            c.Source == paymentToken &&
-            c.PaymentMethod == null &&
-            c.Metadata.Count == 1 &&
-            c.Metadata["region"] == "US" &&
-            c.InvoiceSettings.DefaultPaymentMethod == null &&
-            c.InvoiceSettings.CustomFields != null &&
-            c.InvoiceSettings.CustomFields[0].Name == "Organization" &&
-            c.InvoiceSettings.CustomFields[0].Value == organization.SubscriberName().Substring(0, 30) &&
-            c.Address.Country == taxInfo.BillingAddressCountry &&
-            c.Address.PostalCode == taxInfo.BillingAddressPostalCode &&
-            c.Address.Line1 == taxInfo.BillingAddressLine1 &&
-            c.Address.Line2 == taxInfo.BillingAddressLine2 &&
-            c.Address.City == taxInfo.BillingAddressCity &&
-            c.Address.State == taxInfo.BillingAddressState &&
-            c.TaxIdData.First().Value == taxInfo.TaxIdNumber &&
-            c.TaxIdData.First().Type == taxInfo.TaxIdType
-        ));
-
-        await stripeAdapter.Received().SubscriptionCreateAsync(Arg.Is<Stripe.SubscriptionCreateOptions>(s =>
-            s.Customer == "C-1" &&
-            s.Expand[0] == "latest_invoice.payment_intent" &&
-            s.Metadata[organization.GatewayIdField()] == organization.Id.ToString() &&
-            s.Items.Count == 2
-        ));
-    }
-
-    [Theory, BitAutoData]
-    public async Task PurchaseOrganizationAsync_Stripe_PM(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
-    {
-        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
-        paymentToken = "pm_" + paymentToken;
-
-        sutProvider
-            .GetDependency<ITaxService>()
-            .GetStripeTaxCode(Arg.Is<string>(p => p == taxInfo.BillingAddressCountry), Arg.Is<string>(p => p == taxInfo.TaxIdNumber))
-            .Returns(taxInfo.TaxIdType);
-
-        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
-        {
-            Id = "C-1",
-        });
-        stripeAdapter.SubscriptionCreateAsync(default).ReturnsForAnyArgs(new Stripe.Subscription
-        {
-            Id = "S-1",
-            CurrentPeriodEnd = DateTime.Today.AddDays(10),
-        });
-        sutProvider.GetDependency<IGlobalSettings>()
-            .BaseServiceUri.CloudRegion
-            .Returns("US");
-
-        var result = await sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.Card, paymentToken, plan, 0, 0, false, taxInfo);
-
-        Assert.Null(result);
-        Assert.Equal(GatewayType.Stripe, organization.Gateway);
-        Assert.Equal("C-1", organization.GatewayCustomerId);
-        Assert.Equal("S-1", organization.GatewaySubscriptionId);
-        Assert.True(organization.Enabled);
-        Assert.Equal(DateTime.Today.AddDays(10), organization.ExpirationDate);
-
-        await stripeAdapter.Received().CustomerCreateAsync(Arg.Is<Stripe.CustomerCreateOptions>(c =>
-            c.Description == organization.BusinessName &&
-            c.Email == organization.BillingEmail &&
-            c.Source == null &&
-            c.PaymentMethod == paymentToken &&
-            c.Metadata.Count == 1 &&
-            c.Metadata["region"] == "US" &&
-            c.InvoiceSettings.DefaultPaymentMethod == paymentToken &&
-            c.InvoiceSettings.CustomFields != null &&
-            c.InvoiceSettings.CustomFields[0].Name == "Organization" &&
-            c.InvoiceSettings.CustomFields[0].Value == organization.SubscriberName().Substring(0, 30) &&
-            c.Address.Country == taxInfo.BillingAddressCountry &&
-            c.Address.PostalCode == taxInfo.BillingAddressPostalCode &&
-            c.Address.Line1 == taxInfo.BillingAddressLine1 &&
-            c.Address.Line2 == taxInfo.BillingAddressLine2 &&
-            c.Address.City == taxInfo.BillingAddressCity &&
-            c.Address.State == taxInfo.BillingAddressState &&
-            c.TaxIdData.First().Value == taxInfo.TaxIdNumber &&
-            c.TaxIdData.First().Type == taxInfo.TaxIdType
-        ));
-
-        await stripeAdapter.Received().SubscriptionCreateAsync(Arg.Is<Stripe.SubscriptionCreateOptions>(s =>
-            s.Customer == "C-1" &&
-            s.Expand[0] == "latest_invoice.payment_intent" &&
-            s.Metadata[organization.GatewayIdField()] == organization.Id.ToString() &&
-            s.Items.Count == 0
-        ));
-    }
-
-    [Theory, BitAutoData]
-    public async Task PurchaseOrganizationAsync_Stripe_Declined(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
-    {
-        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
-        paymentToken = "pm_" + paymentToken;
-
-        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
-        {
-            Id = "C-1",
-        });
-        stripeAdapter.SubscriptionCreateAsync(default).ReturnsForAnyArgs(new Stripe.Subscription
-        {
-            Id = "S-1",
-            CurrentPeriodEnd = DateTime.Today.AddDays(10),
-            Status = "incomplete",
-            LatestInvoice = new Stripe.Invoice
+            PasswordManager = new OrganizationPasswordManagerRequestModel
             {
-                PaymentIntent = new Stripe.PaymentIntent
-                {
-                    Status = "requires_payment_method",
-                },
+                Plan = PlanType.FamiliesAnnually,
+                AdditionalStorage = 0
             },
-        });
-
-        var exception = await Assert.ThrowsAsync<GatewayException>(
-            () => sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.Card, paymentToken, plan, 0, 0, false, taxInfo));
-
-        Assert.Equal("Payment method was declined.", exception.Message);
-
-        await stripeAdapter.Received(1).CustomerDeleteAsync("C-1");
-    }
-
-    [Theory, BitAutoData]
-    public async Task PurchaseOrganizationAsync_SM_Stripe_Declined(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
-    {
-        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
-        paymentToken = "pm_" + paymentToken;
-
-        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
-        {
-            Id = "C-1",
-        });
-        stripeAdapter.SubscriptionCreateAsync(default).ReturnsForAnyArgs(new Stripe.Subscription
-        {
-            Id = "S-1",
-            CurrentPeriodEnd = DateTime.Today.AddDays(10),
-            Status = "incomplete",
-            LatestInvoice = new Stripe.Invoice
+            TaxInformation = new TaxInformationRequestModel
             {
-                PaymentIntent = new Stripe.PaymentIntent
-                {
-                    Status = "requires_payment_method",
-                },
-            },
-        });
+                Country = "FR",
+                PostalCode = "12345"
+            }
+        };
 
-        var exception = await Assert.ThrowsAsync<GatewayException>(
-            () => sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.Card, paymentToken, plan,
-                1, 12, false, taxInfo, false, 10, 10));
-
-        Assert.Equal("Payment method was declined.", exception.Message);
-
-        await stripeAdapter.Received(1).CustomerDeleteAsync("C-1");
-    }
-
-    [Theory, BitAutoData]
-    public async Task PurchaseOrganizationAsync_Stripe_RequiresAction(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
-    {
-        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
-
-        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
-        {
-            Id = "C-1",
-        });
-        stripeAdapter.SubscriptionCreateAsync(default).ReturnsForAnyArgs(new Stripe.Subscription
-        {
-            Id = "S-1",
-            CurrentPeriodEnd = DateTime.Today.AddDays(10),
-            Status = "incomplete",
-            LatestInvoice = new Stripe.Invoice
+        sutProvider.GetDependency<IStripeAdapter>()
+            .InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(p =>
+                p.Currency == "usd" &&
+                p.SubscriptionDetails.Items.Any(x =>
+                    x.Plan == familiesPlan.PasswordManager.StripePlanId &&
+                    x.Quantity == 1) &&
+                p.SubscriptionDetails.Items.Any(x =>
+                    x.Plan == familiesPlan.PasswordManager.StripeStoragePlanId &&
+                    x.Quantity == 0)))
+            .Returns(new Invoice
             {
-                PaymentIntent = new Stripe.PaymentIntent
-                {
-                    Status = "requires_action",
-                    ClientSecret = "clientSecret",
-                },
-            },
-        });
+                TotalExcludingTax = 4000,
+                Tax = 800,
+                Total = 4800
+            });
 
-        var result = await sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.Card, paymentToken, plan, 0, 0, false, taxInfo);
+        var actual = await sutProvider.Sut.PreviewInvoiceAsync(parameters, null, null);
 
-        Assert.Equal("clientSecret", result);
-        Assert.False(organization.Enabled);
-    }
-
-    [Theory, BitAutoData]
-    public async Task PurchaseOrganizationAsync_SM_Stripe_RequiresAction(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
-    {
-        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
-
-        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
-        {
-            Id = "C-1",
-        });
-        stripeAdapter.SubscriptionCreateAsync(default).ReturnsForAnyArgs(new Stripe.Subscription
-        {
-            Id = "S-1",
-            CurrentPeriodEnd = DateTime.Today.AddDays(10),
-            Status = "incomplete",
-            LatestInvoice = new Stripe.Invoice
-            {
-                PaymentIntent = new Stripe.PaymentIntent
-                {
-                    Status = "requires_action",
-                    ClientSecret = "clientSecret",
-                },
-            },
-        });
-
-        var result = await sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.Card, paymentToken, plan,
-            10, 10, false, taxInfo, false, 10, 10);
-
-        Assert.Equal("clientSecret", result);
-        Assert.False(organization.Enabled);
-    }
-
-    [Theory, BitAutoData]
-    public async Task PurchaseOrganizationAsync_Paypal(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
-    {
-        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
-
-        sutProvider
-            .GetDependency<ITaxService>()
-            .GetStripeTaxCode(Arg.Is<string>(p => p == taxInfo.BillingAddressCountry), Arg.Is<string>(p => p == taxInfo.TaxIdNumber))
-            .Returns(taxInfo.TaxIdType);
-
-        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
-        {
-            Id = "C-1",
-        });
-        stripeAdapter.SubscriptionCreateAsync(default).ReturnsForAnyArgs(new Stripe.Subscription
-        {
-            Id = "S-1",
-            CurrentPeriodEnd = DateTime.Today.AddDays(10),
-        });
-
-        sutProvider.GetDependency<IGlobalSettings>()
-            .BaseServiceUri.CloudRegion
-            .Returns("US");
-
-        var customer = Substitute.For<Customer>();
-        customer.Id.ReturnsForAnyArgs("Braintree-Id");
-        customer.PaymentMethods.ReturnsForAnyArgs(new[] { Substitute.For<PaymentMethod>() });
-        var customerResult = Substitute.For<Result<Customer>>();
-        customerResult.IsSuccess().Returns(true);
-        customerResult.Target.ReturnsForAnyArgs(customer);
-
-        var braintreeGateway = sutProvider.GetDependency<IBraintreeGateway>();
-        braintreeGateway.Customer.CreateAsync(default).ReturnsForAnyArgs(customerResult);
-
-        var result = await sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.PayPal, paymentToken, plan, 0, 0, false, taxInfo);
-
-        Assert.Null(result);
-        Assert.Equal(GatewayType.Stripe, organization.Gateway);
-        Assert.Equal("C-1", organization.GatewayCustomerId);
-        Assert.Equal("S-1", organization.GatewaySubscriptionId);
-        Assert.True(organization.Enabled);
-        Assert.Equal(DateTime.Today.AddDays(10), organization.ExpirationDate);
-
-        await stripeAdapter.Received().CustomerCreateAsync(Arg.Is<Stripe.CustomerCreateOptions>(c =>
-            c.Description == organization.BusinessName &&
-            c.Email == organization.BillingEmail &&
-            c.PaymentMethod == null &&
-            c.Metadata.Count == 2 &&
-            c.Metadata["btCustomerId"] == "Braintree-Id" &&
-            c.Metadata["region"] == "US" &&
-            c.InvoiceSettings.DefaultPaymentMethod == null &&
-            c.Address.Country == taxInfo.BillingAddressCountry &&
-            c.Address.PostalCode == taxInfo.BillingAddressPostalCode &&
-            c.Address.Line1 == taxInfo.BillingAddressLine1 &&
-            c.Address.Line2 == taxInfo.BillingAddressLine2 &&
-            c.Address.City == taxInfo.BillingAddressCity &&
-            c.Address.State == taxInfo.BillingAddressState &&
-            c.TaxIdData.First().Value == taxInfo.TaxIdNumber &&
-            c.TaxIdData.First().Type == taxInfo.TaxIdType
-        ));
-
-        await stripeAdapter.Received().SubscriptionCreateAsync(Arg.Is<Stripe.SubscriptionCreateOptions>(s =>
-            s.Customer == "C-1" &&
-            s.Expand[0] == "latest_invoice.payment_intent" &&
-            s.Metadata[organization.GatewayIdField()] == organization.Id.ToString() &&
-            s.Items.Count == 0
-        ));
-    }
-
-    [Theory, BitAutoData]
-    public async Task PurchaseOrganizationAsync_SM_Paypal(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
-    {
-        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
-        organization.UseSecretsManager = true;
-
-        sutProvider
-            .GetDependency<ITaxService>()
-            .GetStripeTaxCode(Arg.Is<string>(p => p == taxInfo.BillingAddressCountry), Arg.Is<string>(p => p == taxInfo.TaxIdNumber))
-            .Returns(taxInfo.TaxIdType);
-
-        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
-        {
-            Id = "C-1",
-        });
-        stripeAdapter.SubscriptionCreateAsync(default).ReturnsForAnyArgs(new Stripe.Subscription
-        {
-            Id = "S-1",
-            CurrentPeriodEnd = DateTime.Today.AddDays(10),
-        });
-
-        var customer = Substitute.For<Customer>();
-        customer.Id.ReturnsForAnyArgs("Braintree-Id");
-        customer.PaymentMethods.ReturnsForAnyArgs(new[] { Substitute.For<PaymentMethod>() });
-        var customerResult = Substitute.For<Result<Customer>>();
-        customerResult.IsSuccess().Returns(true);
-        customerResult.Target.ReturnsForAnyArgs(customer);
-
-        var braintreeGateway = sutProvider.GetDependency<IBraintreeGateway>();
-        braintreeGateway.Customer.CreateAsync(default).ReturnsForAnyArgs(customerResult);
-
-        sutProvider.GetDependency<IGlobalSettings>()
-            .BaseServiceUri.CloudRegion
-            .Returns("US");
-
-        var additionalStorage = (short)2;
-        var additionalSeats = 10;
-        var additionalSmSeats = 5;
-        var additionalServiceAccounts = 20;
-        var result = await sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.PayPal, paymentToken, plan,
-            additionalStorage, additionalSeats, false, taxInfo, false, additionalSmSeats, additionalServiceAccounts);
-
-        Assert.Null(result);
-        Assert.Equal(GatewayType.Stripe, organization.Gateway);
-        Assert.Equal("C-1", organization.GatewayCustomerId);
-        Assert.Equal("S-1", organization.GatewaySubscriptionId);
-        Assert.True(organization.Enabled);
-        Assert.Equal(DateTime.Today.AddDays(10), organization.ExpirationDate);
-
-        await stripeAdapter.Received().CustomerCreateAsync(Arg.Is<Stripe.CustomerCreateOptions>(c =>
-            c.Description == organization.BusinessName &&
-            c.Email == organization.BillingEmail &&
-            c.PaymentMethod == null &&
-            c.Metadata.Count == 2 &&
-            c.Metadata["region"] == "US" &&
-            c.Metadata["btCustomerId"] == "Braintree-Id" &&
-            c.InvoiceSettings.DefaultPaymentMethod == null &&
-            c.Address.Country == taxInfo.BillingAddressCountry &&
-            c.Address.PostalCode == taxInfo.BillingAddressPostalCode &&
-            c.Address.Line1 == taxInfo.BillingAddressLine1 &&
-            c.Address.Line2 == taxInfo.BillingAddressLine2 &&
-            c.Address.City == taxInfo.BillingAddressCity &&
-            c.Address.State == taxInfo.BillingAddressState &&
-            c.TaxIdData.First().Value == taxInfo.TaxIdNumber &&
-            c.TaxIdData.First().Type == taxInfo.TaxIdType
-        ));
-
-        await stripeAdapter.Received().SubscriptionCreateAsync(Arg.Is<Stripe.SubscriptionCreateOptions>(s =>
-            s.Customer == "C-1" &&
-            s.Expand[0] == "latest_invoice.payment_intent" &&
-            s.Metadata[organization.GatewayIdField()] == organization.Id.ToString() &&
-            s.Items.Count == 4 &&
-            s.Items.Count(i => i.Plan == plan.PasswordManager.StripeSeatPlanId && i.Quantity == additionalSeats) == 1 &&
-            s.Items.Count(i => i.Plan == plan.PasswordManager.StripeStoragePlanId && i.Quantity == additionalStorage) == 1 &&
-            s.Items.Count(i => i.Plan == plan.SecretsManager.StripeSeatPlanId && i.Quantity == additionalSmSeats) == 1 &&
-            s.Items.Count(i => i.Plan == plan.SecretsManager.StripeServiceAccountPlanId && i.Quantity == additionalServiceAccounts) == 1
-        ));
-    }
-
-    [Theory, BitAutoData]
-    public async Task PurchaseOrganizationAsync_Paypal_FailedCreate(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
-    {
-        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
-
-        var customerResult = Substitute.For<Result<Customer>>();
-        customerResult.IsSuccess().Returns(false);
-
-        var braintreeGateway = sutProvider.GetDependency<IBraintreeGateway>();
-        braintreeGateway.Customer.CreateAsync(default).ReturnsForAnyArgs(customerResult);
-
-        var exception = await Assert.ThrowsAsync<GatewayException>(
-            () => sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.PayPal, paymentToken, plan, 0, 0, false, taxInfo));
-
-        Assert.Equal("Failed to create PayPal customer record.", exception.Message);
-    }
-
-    [Theory, BitAutoData]
-    public async Task PurchaseOrganizationAsync_SM_Paypal_FailedCreate(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
-    {
-        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
-
-        var customerResult = Substitute.For<Result<Customer>>();
-        customerResult.IsSuccess().Returns(false);
-
-        var braintreeGateway = sutProvider.GetDependency<IBraintreeGateway>();
-        braintreeGateway.Customer.CreateAsync(default).ReturnsForAnyArgs(customerResult);
-
-        var exception = await Assert.ThrowsAsync<GatewayException>(
-            () => sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.PayPal, paymentToken, plan,
-                1, 1, false, taxInfo, false, 8, 8));
-
-        Assert.Equal("Failed to create PayPal customer record.", exception.Message);
-    }
-
-    [Theory, BitAutoData]
-    public async Task PurchaseOrganizationAsync_PayPal_Declined(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
-    {
-        var plans = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
-        paymentToken = "pm_" + paymentToken;
-
-        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
-        {
-            Id = "C-1",
-        });
-        stripeAdapter.SubscriptionCreateAsync(default).ReturnsForAnyArgs(new Stripe.Subscription
-        {
-            Id = "S-1",
-            CurrentPeriodEnd = DateTime.Today.AddDays(10),
-            Status = "incomplete",
-            LatestInvoice = new Stripe.Invoice
-            {
-                PaymentIntent = new Stripe.PaymentIntent
-                {
-                    Status = "requires_payment_method",
-                },
-            },
-        });
-
-        var customer = Substitute.For<Customer>();
-        customer.Id.ReturnsForAnyArgs("Braintree-Id");
-        customer.PaymentMethods.ReturnsForAnyArgs(new[] { Substitute.For<PaymentMethod>() });
-        var customerResult = Substitute.For<Result<Customer>>();
-        customerResult.IsSuccess().Returns(true);
-        customerResult.Target.ReturnsForAnyArgs(customer);
-
-        var braintreeGateway = sutProvider.GetDependency<IBraintreeGateway>();
-        braintreeGateway.Customer.CreateAsync(default).ReturnsForAnyArgs(customerResult);
-
-        var exception = await Assert.ThrowsAsync<GatewayException>(
-            () => sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.PayPal, paymentToken, plans, 0, 0, false, taxInfo));
-
-        Assert.Equal("Payment method was declined.", exception.Message);
-
-        await stripeAdapter.Received(1).CustomerDeleteAsync("C-1");
-        await braintreeGateway.Customer.Received(1).DeleteAsync("Braintree-Id");
+        Assert.Equal(8M, actual.TaxAmount);
+        Assert.Equal(48M, actual.TotalAmount);
+        Assert.Equal(40M, actual.TaxableBaseAmount);
     }
 
     [Theory]
-    [BitAutoData("ES", "A5372895732985327895237")]
-    public async Task PurchaseOrganizationAsync_ThrowsBadRequestException_WhenTaxIdInvalid(string country, string taxId, SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
+    [BitAutoData]
+    public async Task PreviewInvoiceAsync_ForOrganization_CalculatesSalesTaxCorrectlyForFamiliesWithAdditionalStorage(
+        SutProvider<StripePaymentService> sutProvider)
     {
-        taxInfo.BillingAddressCountry = country;
-        taxInfo.TaxIdNumber = taxId;
-        taxInfo.TaxIdType = null;
+        var familiesPlan = new FamiliesPlan();
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(Arg.Is<PlanType>(p => p == PlanType.FamiliesAnnually))
+            .Returns(familiesPlan);
 
-        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
-        organization.UseSecretsManager = true;
-        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
+        var parameters = new PreviewOrganizationInvoiceRequestBody
         {
-            Id = "C-1",
-        });
-        stripeAdapter.SubscriptionCreateAsync(default).ReturnsForAnyArgs(new Stripe.Subscription
-        {
-            Id = "S-1",
-            CurrentPeriodEnd = DateTime.Today.AddDays(10),
-        });
-        sutProvider.GetDependency<IGlobalSettings>()
-            .BaseServiceUri.CloudRegion
-            .Returns("US");
-        sutProvider
-            .GetDependency<ITaxService>()
-            .GetStripeTaxCode(Arg.Is<string>(p => p == country), Arg.Is<string>(p => p == taxId))
-            .Returns((string)null);
-
-        var actual = await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.Card, paymentToken, plan, 0, 0, false, taxInfo, false, 8, 10));
-
-        Assert.Equal("billingTaxIdTypeInferenceError", actual.Message);
-
-        await stripeAdapter.Received(0).CustomerCreateAsync(Arg.Any<Stripe.CustomerCreateOptions>());
-        await stripeAdapter.Received(0).SubscriptionCreateAsync(Arg.Any<Stripe.SubscriptionCreateOptions>());
-    }
-
-
-    [Theory, BitAutoData]
-    public async Task UpgradeFreeOrganizationAsync_Success(SutProvider<StripePaymentService> sutProvider,
-        Organization organization, TaxInfo taxInfo)
-    {
-        organization.GatewaySubscriptionId = null;
-        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        stripeAdapter.CustomerGetAsync(default).ReturnsForAnyArgs(new Stripe.Customer
-        {
-            Id = "C-1",
-            Metadata = new Dictionary<string, string>
+            PasswordManager = new OrganizationPasswordManagerRequestModel
             {
-                { "btCustomerId", "B-123" },
-            }
-        });
-        stripeAdapter.CustomerUpdateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
-        {
-            Id = "C-1",
-            Metadata = new Dictionary<string, string>
+                Plan = PlanType.FamiliesAnnually,
+                AdditionalStorage = 1
+            },
+            TaxInformation = new TaxInformationRequestModel
             {
-                { "btCustomerId", "B-123" },
+                Country = "FR",
+                PostalCode = "12345"
             }
-        });
-        stripeAdapter.InvoiceUpcomingAsync(default).ReturnsForAnyArgs(new Stripe.Invoice
-        {
-            PaymentIntent = new Stripe.PaymentIntent { Status = "requires_payment_method", },
-            AmountDue = 0
-        });
-        stripeAdapter.SubscriptionCreateAsync(default).ReturnsForAnyArgs(new Stripe.Subscription { });
-
-        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
-
-        var upgrade = new OrganizationUpgrade()
-        {
-            AdditionalStorageGb = 0,
-            AdditionalSeats = 0,
-            PremiumAccessAddon = false,
-            TaxInfo = taxInfo,
-            AdditionalSmSeats = 0,
-            AdditionalServiceAccounts = 0
-        };
-        var result = await sutProvider.Sut.UpgradeFreeOrganizationAsync(organization, plan, upgrade);
-
-        Assert.Null(result);
-    }
-
-    [Theory, BitAutoData]
-    public async Task UpgradeFreeOrganizationAsync_SM_Success(SutProvider<StripePaymentService> sutProvider,
-        Organization organization, TaxInfo taxInfo)
-    {
-        organization.GatewaySubscriptionId = null;
-        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        stripeAdapter.CustomerGetAsync(default).ReturnsForAnyArgs(new Stripe.Customer
-        {
-            Id = "C-1",
-            Metadata = new Dictionary<string, string>
-            {
-                { "btCustomerId", "B-123" },
-            }
-        });
-        stripeAdapter.CustomerUpdateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
-        {
-            Id = "C-1",
-            Metadata = new Dictionary<string, string>
-            {
-                { "btCustomerId", "B-123" },
-            }
-        });
-        stripeAdapter.InvoiceUpcomingAsync(default).ReturnsForAnyArgs(new Stripe.Invoice
-        {
-            PaymentIntent = new Stripe.PaymentIntent { Status = "requires_payment_method", },
-            AmountDue = 0
-        });
-        stripeAdapter.SubscriptionCreateAsync(default).ReturnsForAnyArgs(new Stripe.Subscription { });
-
-        var upgrade = new OrganizationUpgrade()
-        {
-            AdditionalStorageGb = 1,
-            AdditionalSeats = 10,
-            PremiumAccessAddon = false,
-            TaxInfo = taxInfo,
-            AdditionalSmSeats = 5,
-            AdditionalServiceAccounts = 50
         };
 
-        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
-        var result = await sutProvider.Sut.UpgradeFreeOrganizationAsync(organization, plan, upgrade);
+        sutProvider.GetDependency<IStripeAdapter>()
+            .InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(p =>
+                p.Currency == "usd" &&
+                p.SubscriptionDetails.Items.Any(x =>
+                    x.Plan == familiesPlan.PasswordManager.StripePlanId &&
+                    x.Quantity == 1) &&
+                p.SubscriptionDetails.Items.Any(x =>
+                    x.Plan == familiesPlan.PasswordManager.StripeStoragePlanId &&
+                    x.Quantity == 1)))
+            .Returns(new Invoice
+            {
+                TotalExcludingTax = 4000,
+                Tax = 800,
+                Total = 4800
+            });
 
-        Assert.Null(result);
+        var actual = await sutProvider.Sut.PreviewInvoiceAsync(parameters, null, null);
+
+        Assert.Equal(8M, actual.TaxAmount);
+        Assert.Equal(48M, actual.TotalAmount);
+        Assert.Equal(40M, actual.TaxableBaseAmount);
     }
 
-    [Theory, BitAutoData]
-    public async Task UpgradeFreeOrganizationAsync_WhenCustomerHasNoAddress_UpdatesCustomerAddressWithTaxInfo(
-        SutProvider<StripePaymentService> sutProvider,
-        Organization organization,
-        TaxInfo taxInfo)
+    [Theory]
+    [BitAutoData]
+    public async Task PreviewInvoiceAsync_ForOrganization_CalculatesSalesTaxCorrectlyForFamiliesForEnterpriseWithoutAdditionalStorage(
+        SutProvider<StripePaymentService> sutProvider)
     {
-        organization.GatewaySubscriptionId = null;
-        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        var featureService = sutProvider.GetDependency<IFeatureService>();
-        stripeAdapter.CustomerGetAsync(default).ReturnsForAnyArgs(new Stripe.Customer
-        {
-            Id = "C-1",
-            Metadata = new Dictionary<string, string>
-            {
-                { "btCustomerId", "B-123" },
-            }
-        });
-        stripeAdapter.CustomerUpdateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
-        {
-            Id = "C-1",
-            Metadata = new Dictionary<string, string>
-            {
-                { "btCustomerId", "B-123" },
-            }
-        });
-        stripeAdapter.InvoiceUpcomingAsync(default).ReturnsForAnyArgs(new Stripe.Invoice
-        {
-            PaymentIntent = new Stripe.PaymentIntent { Status = "requires_payment_method", },
-            AmountDue = 0
-        });
-        stripeAdapter.SubscriptionCreateAsync(default).ReturnsForAnyArgs(new Stripe.Subscription { });
+        var familiesPlan = new FamiliesPlan();
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(Arg.Is<PlanType>(p => p == PlanType.FamiliesAnnually))
+            .Returns(familiesPlan);
 
-        var upgrade = new OrganizationUpgrade()
+        var parameters = new PreviewOrganizationInvoiceRequestBody
         {
-            AdditionalStorageGb = 1,
-            AdditionalSeats = 10,
-            PremiumAccessAddon = false,
-            TaxInfo = taxInfo,
-            AdditionalSmSeats = 5,
-            AdditionalServiceAccounts = 50
+            PasswordManager = new OrganizationPasswordManagerRequestModel
+            {
+                Plan = PlanType.FamiliesAnnually,
+                SponsoredPlan = PlanSponsorshipType.FamiliesForEnterprise,
+                AdditionalStorage = 0
+            },
+            TaxInformation = new TaxInformationRequestModel
+            {
+                Country = "FR",
+                PostalCode = "12345"
+            }
         };
 
-        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
-        _ = await sutProvider.Sut.UpgradeFreeOrganizationAsync(organization, plan, upgrade);
+        sutProvider.GetDependency<IStripeAdapter>()
+            .InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(p =>
+                p.Currency == "usd" &&
+                p.SubscriptionDetails.Items.Any(x =>
+                    x.Plan == "2021-family-for-enterprise-annually" &&
+                    x.Quantity == 1) &&
+                p.SubscriptionDetails.Items.Any(x =>
+                    x.Plan == familiesPlan.PasswordManager.StripeStoragePlanId &&
+                    x.Quantity == 0)))
+            .Returns(new Invoice
+            {
+                TotalExcludingTax = 0,
+                Tax = 0,
+                Total = 0
+            });
 
-        await stripeAdapter.Received()
-            .CustomerUpdateAsync(organization.GatewayCustomerId, Arg.Is<Stripe.CustomerUpdateOptions>(c =>
-                c.Address.Country == taxInfo.BillingAddressCountry &&
-                c.Address.PostalCode == taxInfo.BillingAddressPostalCode &&
-                c.Address.Line1 == taxInfo.BillingAddressLine1 &&
-                c.Address.Line2 == taxInfo.BillingAddressLine2 &&
-                c.Address.City == taxInfo.BillingAddressCity &&
-                c.Address.State == taxInfo.BillingAddressState));
+        var actual = await sutProvider.Sut.PreviewInvoiceAsync(parameters, null, null);
+
+        Assert.Equal(0M, actual.TaxAmount);
+        Assert.Equal(0M, actual.TotalAmount);
+        Assert.Equal(0M, actual.TaxableBaseAmount);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PreviewInvoiceAsync_ForOrganization_CalculatesSalesTaxCorrectlyForFamiliesForEnterpriseWithAdditionalStorage(
+        SutProvider<StripePaymentService> sutProvider)
+    {
+        var familiesPlan = new FamiliesPlan();
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(Arg.Is<PlanType>(p => p == PlanType.FamiliesAnnually))
+            .Returns(familiesPlan);
+
+        var parameters = new PreviewOrganizationInvoiceRequestBody
+        {
+            PasswordManager = new OrganizationPasswordManagerRequestModel
+            {
+                Plan = PlanType.FamiliesAnnually,
+                SponsoredPlan = PlanSponsorshipType.FamiliesForEnterprise,
+                AdditionalStorage = 1
+            },
+            TaxInformation = new TaxInformationRequestModel
+            {
+                Country = "FR",
+                PostalCode = "12345"
+            }
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(p =>
+                p.Currency == "usd" &&
+                p.SubscriptionDetails.Items.Any(x =>
+                    x.Plan == "2021-family-for-enterprise-annually" &&
+                    x.Quantity == 1) &&
+                p.SubscriptionDetails.Items.Any(x =>
+                    x.Plan == familiesPlan.PasswordManager.StripeStoragePlanId &&
+                    x.Quantity == 1)))
+            .Returns(new Invoice
+            {
+                TotalExcludingTax = 400,
+                Tax = 8,
+                Total = 408
+            });
+
+        var actual = await sutProvider.Sut.PreviewInvoiceAsync(parameters, null, null);
+
+        Assert.Equal(0.08M, actual.TaxAmount);
+        Assert.Equal(4.08M, actual.TotalAmount);
+        Assert.Equal(4M, actual.TaxableBaseAmount);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PreviewInvoiceAsync_USBased_PersonalUse_SetsAutomaticTaxEnabled(SutProvider<StripePaymentService> sutProvider)
+    {
+        // Arrange
+        var familiesPlan = new FamiliesPlan();
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(Arg.Is<PlanType>(p => p == PlanType.FamiliesAnnually))
+            .Returns(familiesPlan);
+
+        var parameters = new PreviewOrganizationInvoiceRequestBody
+        {
+            PasswordManager = new OrganizationPasswordManagerRequestModel
+            {
+                Plan = PlanType.FamiliesAnnually
+            },
+            TaxInformation = new TaxInformationRequestModel
+            {
+                Country = "US",
+                PostalCode = "12345"
+            }
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter
+            .InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(new Invoice
+            {
+                TotalExcludingTax = 400,
+                Tax = 8,
+                Total = 408
+            });
+
+        // Act
+        await sutProvider.Sut.PreviewInvoiceAsync(parameters, null, null);
+
+        // Assert
+        await stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.AutomaticTax.Enabled == true
+        ));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PreviewInvoiceAsync_USBased_BusinessUse_SetsAutomaticTaxEnabled(SutProvider<StripePaymentService> sutProvider)
+    {
+        // Arrange
+        var plan = new EnterprisePlan(true);
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(Arg.Is<PlanType>(p => p == PlanType.EnterpriseAnnually))
+            .Returns(plan);
+
+        var parameters = new PreviewOrganizationInvoiceRequestBody
+        {
+            PasswordManager = new OrganizationPasswordManagerRequestModel
+            {
+                Plan = PlanType.EnterpriseAnnually
+            },
+            TaxInformation = new TaxInformationRequestModel
+            {
+                Country = "US",
+                PostalCode = "12345"
+            }
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter
+            .InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(new Invoice
+            {
+                TotalExcludingTax = 400,
+                Tax = 8,
+                Total = 408
+            });
+
+        // Act
+        await sutProvider.Sut.PreviewInvoiceAsync(parameters, null, null);
+
+        // Assert
+        await stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.AutomaticTax.Enabled == true
+        ));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PreviewInvoiceAsync_NonUSBased_PersonalUse_SetsAutomaticTaxEnabled(SutProvider<StripePaymentService> sutProvider)
+    {
+        // Arrange
+        var familiesPlan = new FamiliesPlan();
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(Arg.Is<PlanType>(p => p == PlanType.FamiliesAnnually))
+            .Returns(familiesPlan);
+
+        var parameters = new PreviewOrganizationInvoiceRequestBody
+        {
+            PasswordManager = new OrganizationPasswordManagerRequestModel
+            {
+                Plan = PlanType.FamiliesAnnually
+            },
+            TaxInformation = new TaxInformationRequestModel
+            {
+                Country = "FR",
+                PostalCode = "12345"
+            }
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter
+            .InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(new Invoice
+            {
+                TotalExcludingTax = 400,
+                Tax = 8,
+                Total = 408
+            });
+
+        // Act
+        await sutProvider.Sut.PreviewInvoiceAsync(parameters, null, null);
+
+        // Assert
+        await stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.AutomaticTax.Enabled == true
+        ));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PreviewInvoiceAsync_NonUSBased_BusinessUse_SetsAutomaticTaxEnabled(SutProvider<StripePaymentService> sutProvider)
+    {
+        // Arrange
+        var plan = new EnterprisePlan(true);
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(Arg.Is<PlanType>(p => p == PlanType.EnterpriseAnnually))
+            .Returns(plan);
+
+        var parameters = new PreviewOrganizationInvoiceRequestBody
+        {
+            PasswordManager = new OrganizationPasswordManagerRequestModel
+            {
+                Plan = PlanType.EnterpriseAnnually
+            },
+            TaxInformation = new TaxInformationRequestModel
+            {
+                Country = "FR",
+                PostalCode = "12345"
+            }
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter
+            .InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(new Invoice
+            {
+                TotalExcludingTax = 400,
+                Tax = 8,
+                Total = 408
+            });
+
+        // Act
+        await sutProvider.Sut.PreviewInvoiceAsync(parameters, null, null);
+
+        // Assert
+        await stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.AutomaticTax.Enabled == true
+        ));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PreviewInvoiceAsync_USBased_PersonalUse_DoesNotSetTaxExempt(SutProvider<StripePaymentService> sutProvider)
+    {
+        // Arrange
+        var familiesPlan = new FamiliesPlan();
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(Arg.Is<PlanType>(p => p == PlanType.FamiliesAnnually))
+            .Returns(familiesPlan);
+
+        var parameters = new PreviewOrganizationInvoiceRequestBody
+        {
+            PasswordManager = new OrganizationPasswordManagerRequestModel
+            {
+                Plan = PlanType.FamiliesAnnually
+            },
+            TaxInformation = new TaxInformationRequestModel
+            {
+                Country = "US",
+                PostalCode = "12345"
+            }
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter
+            .InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(new Invoice
+            {
+                TotalExcludingTax = 400,
+                Tax = 8,
+                Total = 408
+            });
+
+        // Act
+        await sutProvider.Sut.PreviewInvoiceAsync(parameters, null, null);
+
+        // Assert
+        await stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.CustomerDetails.TaxExempt == null
+        ));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PreviewInvoiceAsync_USBased_BusinessUse_DoesNotSetTaxExempt(SutProvider<StripePaymentService> sutProvider)
+    {
+        // Arrange
+        var plan = new EnterprisePlan(true);
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(Arg.Is<PlanType>(p => p == PlanType.EnterpriseAnnually))
+            .Returns(plan);
+
+        var parameters = new PreviewOrganizationInvoiceRequestBody
+        {
+            PasswordManager = new OrganizationPasswordManagerRequestModel
+            {
+                Plan = PlanType.EnterpriseAnnually
+            },
+            TaxInformation = new TaxInformationRequestModel
+            {
+                Country = "US",
+                PostalCode = "12345"
+            }
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter
+            .InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(new Invoice
+            {
+                TotalExcludingTax = 400,
+                Tax = 8,
+                Total = 408
+            });
+
+        // Act
+        await sutProvider.Sut.PreviewInvoiceAsync(parameters, null, null);
+
+        // Assert
+        await stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.CustomerDetails.TaxExempt == null
+        ));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PreviewInvoiceAsync_NonUSBased_PersonalUse_DoesNotSetTaxExempt(SutProvider<StripePaymentService> sutProvider)
+    {
+        // Arrange
+        var familiesPlan = new FamiliesPlan();
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(Arg.Is<PlanType>(p => p == PlanType.FamiliesAnnually))
+            .Returns(familiesPlan);
+
+        var parameters = new PreviewOrganizationInvoiceRequestBody
+        {
+            PasswordManager = new OrganizationPasswordManagerRequestModel
+            {
+                Plan = PlanType.FamiliesAnnually
+            },
+            TaxInformation = new TaxInformationRequestModel
+            {
+                Country = "FR",
+                PostalCode = "12345"
+            }
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter
+            .InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(new Invoice
+            {
+                TotalExcludingTax = 400,
+                Tax = 8,
+                Total = 408
+            });
+
+        // Act
+        await sutProvider.Sut.PreviewInvoiceAsync(parameters, null, null);
+
+        // Assert
+        await stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.CustomerDetails.TaxExempt == null
+        ));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PreviewInvoiceAsync_NonUSBased_BusinessUse_SetsTaxExemptReverse(SutProvider<StripePaymentService> sutProvider)
+    {
+        // Arrange
+        var plan = new EnterprisePlan(true);
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(Arg.Is<PlanType>(p => p == PlanType.EnterpriseAnnually))
+            .Returns(plan);
+
+        var parameters = new PreviewOrganizationInvoiceRequestBody
+        {
+            PasswordManager = new OrganizationPasswordManagerRequestModel
+            {
+                Plan = PlanType.EnterpriseAnnually
+            },
+            TaxInformation = new TaxInformationRequestModel
+            {
+                Country = "FR",
+                PostalCode = "12345"
+            }
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter
+            .InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(new Invoice
+            {
+                TotalExcludingTax = 400,
+                Tax = 8,
+                Total = 408
+            });
+
+        // Act
+        await sutProvider.Sut.PreviewInvoiceAsync(parameters, null, null);
+
+        // Assert
+        await stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.CustomerDetails.TaxExempt == StripeConstants.TaxExempt.Reverse
+        ));
     }
 }

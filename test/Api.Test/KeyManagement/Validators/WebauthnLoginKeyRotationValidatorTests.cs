@@ -16,7 +16,72 @@ public class WebAuthnLoginKeyRotationValidatorTests
 {
     [Theory]
     [BitAutoData]
-    public async Task ValidateAsync_WrongWebAuthnKeys_Throws(
+    public async Task ValidateAsync_Succeeds_ReturnsValidCredentials(
+        SutProvider<WebAuthnLoginKeyRotationValidator> sutProvider, User user,
+        IEnumerable<WebAuthnLoginRotateKeyRequestModel> webauthnRotateCredentialData)
+    {
+        var guid = Guid.NewGuid();
+
+        var webauthnKeysToRotate = webauthnRotateCredentialData.Select(e => new WebAuthnLoginRotateKeyRequestModel
+        {
+            Id = guid,
+            EncryptedPublicKey = e.EncryptedPublicKey,
+            EncryptedUserKey = e.EncryptedUserKey
+        }).ToList();
+
+        var data = new WebAuthnCredential
+        {
+            Id = guid,
+            SupportsPrf = true,
+            EncryptedPublicKey = "TestPublicKey",
+            EncryptedUserKey = "TestUserKey",
+            EncryptedPrivateKey = "TestPrivateKey"
+        };
+        sutProvider.GetDependency<IWebAuthnCredentialRepository>().GetManyByUserIdAsync(user.Id)
+            .Returns(new List<WebAuthnCredential> { data });
+
+        var result = await sutProvider.Sut.ValidateAsync(user, webauthnKeysToRotate);
+        Assert.Single(result);
+        Assert.Equal(guid, result.First().Id);
+    }
+
+    [Theory]
+    [BitAutoData(false, null, null, null)]
+    [BitAutoData(true, null, "TestPublicKey", "TestPrivateKey")]
+    [BitAutoData(true, "TestUserKey", null, "TestPrivateKey")]
+    [BitAutoData(true, "TestUserKey", "TestPublicKey", null)]
+    public async Task ValidateAsync_NotEncryptedOrPrfNotSupported_Ignores(
+        bool supportsPrf, string encryptedUserKey, string encryptedPublicKey, string encryptedPrivateKey,
+        SutProvider<WebAuthnLoginKeyRotationValidator> sutProvider, User user,
+        IEnumerable<WebAuthnLoginRotateKeyRequestModel> webauthnRotateCredentialData)
+    {
+        var guid = Guid.NewGuid();
+        var webauthnKeysToRotate = webauthnRotateCredentialData.Select(e => new WebAuthnLoginRotateKeyRequestModel
+        {
+            Id = guid,
+            EncryptedUserKey = e.EncryptedUserKey,
+            EncryptedPublicKey = e.EncryptedPublicKey,
+        }).ToList();
+
+        var data = new WebAuthnCredential
+        {
+            Id = guid,
+            SupportsPrf = supportsPrf,
+            EncryptedUserKey = encryptedUserKey,
+            EncryptedPublicKey = encryptedPublicKey,
+            EncryptedPrivateKey = encryptedPrivateKey
+        };
+
+        sutProvider.GetDependency<IWebAuthnCredentialRepository>().GetManyByUserIdAsync(user.Id)
+            .Returns(new List<WebAuthnCredential> { data });
+
+        var result = await sutProvider.Sut.ValidateAsync(user, webauthnKeysToRotate);
+        Assert.Empty(result);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_WebAuthnKeysNotMatchingExisting_Throws(
         SutProvider<WebAuthnLoginKeyRotationValidator> sutProvider, User user,
         IEnumerable<WebAuthnLoginRotateKeyRequestModel> webauthnRotateCredentialData)
     {
@@ -30,10 +95,13 @@ public class WebAuthnLoginKeyRotationValidatorTests
         var data = new WebAuthnCredential
         {
             Id = Guid.Parse("00000000-0000-0000-0000-000000000002"),
-            EncryptedPublicKey = "TestKey",
-            EncryptedUserKey = "Test"
+            SupportsPrf = true,
+            EncryptedPublicKey = "TestPublicKey",
+            EncryptedUserKey = "TestUserKey",
+            EncryptedPrivateKey = "TestPrivateKey"
         };
-        sutProvider.GetDependency<IWebAuthnCredentialRepository>().GetManyByUserIdAsync(user.Id).Returns(new List<WebAuthnCredential> { data });
+        sutProvider.GetDependency<IWebAuthnCredentialRepository>().GetManyByUserIdAsync(user.Id)
+            .Returns(new List<WebAuthnCredential> { data });
 
         await Assert.ThrowsAsync<BadRequestException>(async () =>
             await sutProvider.Sut.ValidateAsync(user, webauthnKeysToRotate));
@@ -46,19 +114,24 @@ public class WebAuthnLoginKeyRotationValidatorTests
         IEnumerable<WebAuthnLoginRotateKeyRequestModel> webauthnRotateCredentialData)
     {
         var guid = Guid.NewGuid();
-        var webauthnKeysToRotate = webauthnRotateCredentialData.Select(e => new WebAuthnLoginRotateKeyRequestModel
-        {
-            Id = guid,
-            EncryptedPublicKey = e.EncryptedPublicKey,
-        }).ToList();
+        var webauthnKeysToRotate = webauthnRotateCredentialData.Select(e =>
+            new WebAuthnLoginRotateKeyRequestModel
+            {
+                Id = guid,
+                EncryptedPublicKey = e.EncryptedPublicKey,
+                EncryptedUserKey = null
+            }).ToList();
 
         var data = new WebAuthnCredential
         {
             Id = guid,
-            EncryptedPublicKey = "TestKey",
-            EncryptedUserKey = "Test"
+            SupportsPrf = true,
+            EncryptedPublicKey = "TestPublicKey",
+            EncryptedUserKey = "TestUserKey",
+            EncryptedPrivateKey = "TestPrivateKey"
         };
-        sutProvider.GetDependency<IWebAuthnCredentialRepository>().GetManyByUserIdAsync(user.Id).Returns(new List<WebAuthnCredential> { data });
+        sutProvider.GetDependency<IWebAuthnCredentialRepository>().GetManyByUserIdAsync(user.Id)
+            .Returns(new List<WebAuthnCredential> { data });
 
         await Assert.ThrowsAsync<BadRequestException>(async () =>
             await sutProvider.Sut.ValidateAsync(user, webauthnKeysToRotate));
@@ -76,18 +149,21 @@ public class WebAuthnLoginKeyRotationValidatorTests
         {
             Id = guid,
             EncryptedUserKey = e.EncryptedUserKey,
+            EncryptedPublicKey = null,
         }).ToList();
 
         var data = new WebAuthnCredential
         {
             Id = guid,
-            EncryptedPublicKey = "TestKey",
-            EncryptedUserKey = "Test"
+            SupportsPrf = true,
+            EncryptedPublicKey = "TestPublicKey",
+            EncryptedUserKey = "TestUserKey",
+            EncryptedPrivateKey = "TestPrivateKey"
         };
-        sutProvider.GetDependency<IWebAuthnCredentialRepository>().GetManyByUserIdAsync(user.Id).Returns(new List<WebAuthnCredential> { data });
+        sutProvider.GetDependency<IWebAuthnCredentialRepository>().GetManyByUserIdAsync(user.Id)
+            .Returns(new List<WebAuthnCredential> { data });
 
         await Assert.ThrowsAsync<BadRequestException>(async () =>
             await sutProvider.Sut.ValidateAsync(user, webauthnKeysToRotate));
     }
-
 }

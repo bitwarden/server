@@ -1,14 +1,16 @@
 ﻿using Bit.Billing.Services;
 using Bit.Billing.Services.Implementations;
 using Bit.Billing.Test.Utilities;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Repositories;
+using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Providers.Entities;
+using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Enums;
+using Bit.Core.Repositories;
 using Bit.Core.Utilities;
-using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Stripe;
 using Xunit;
@@ -17,6 +19,12 @@ namespace Bit.Billing.Test.Services;
 
 public class ProviderEventServiceTests
 {
+    private readonly IOrganizationRepository _organizationRepository =
+        Substitute.For<IOrganizationRepository>();
+
+    private readonly IPricingClient _pricingClient =
+        Substitute.For<IPricingClient>();
+
     private readonly IProviderInvoiceItemRepository _providerInvoiceItemRepository =
         Substitute.For<IProviderInvoiceItemRepository>();
 
@@ -37,7 +45,8 @@ public class ProviderEventServiceTests
     public ProviderEventServiceTests()
     {
         _providerEventService = new ProviderEventService(
-            Substitute.For<ILogger<ProviderEventService>>(),
+            _organizationRepository,
+            _pricingClient,
             _providerInvoiceItemRepository,
             _providerOrganizationRepository,
             _providerPlanRepository,
@@ -147,6 +156,12 @@ public class ProviderEventServiceTests
 
         _providerOrganizationRepository.GetManyDetailsByProviderAsync(providerId).Returns(clients);
 
+        _organizationRepository.GetByIdAsync(client1Id)
+            .Returns(new Organization { PlanType = PlanType.TeamsMonthly });
+
+        _organizationRepository.GetByIdAsync(client2Id)
+            .Returns(new Organization { PlanType = PlanType.EnterpriseMonthly });
+
         var providerPlans = new List<ProviderPlan>
         {
             new ()
@@ -168,6 +183,11 @@ public class ProviderEventServiceTests
                 SeatMinimum = 100
             }
         };
+
+        foreach (var providerPlan in providerPlans)
+        {
+            _pricingClient.GetPlanOrThrow(providerPlan.PlanType).Returns(StaticStore.GetPlan(providerPlan.PlanType));
+        }
 
         _providerPlanRepository.GetByProviderId(providerId).Returns(providerPlans);
 

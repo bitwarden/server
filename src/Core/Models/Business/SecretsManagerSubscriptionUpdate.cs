@@ -7,6 +7,7 @@ namespace Bit.Core.Models.Business;
 public class SecretsManagerSubscriptionUpdate
 {
     public Organization Organization { get; }
+    public Plan Plan { get; }
 
     /// <summary>
     /// The total seats the organization will have after the update, including any base seats included in the plan
@@ -49,21 +50,12 @@ public class SecretsManagerSubscriptionUpdate
     public bool MaxAutoscaleSmSeatsChanged => MaxAutoscaleSmSeats != Organization.MaxAutoscaleSmSeats;
     public bool MaxAutoscaleSmServiceAccountsChanged =>
         MaxAutoscaleSmServiceAccounts != Organization.MaxAutoscaleSmServiceAccounts;
-    public Plan Plan => Utilities.StaticStore.GetPlan(Organization.PlanType);
-    public bool SmSeatAutoscaleLimitReached => SmSeats.HasValue && MaxAutoscaleSmSeats.HasValue && SmSeats == MaxAutoscaleSmSeats;
 
-    public bool SmServiceAccountAutoscaleLimitReached => SmServiceAccounts.HasValue &&
-                                                         MaxAutoscaleSmServiceAccounts.HasValue &&
-                                                         SmServiceAccounts == MaxAutoscaleSmServiceAccounts;
 
-    public SecretsManagerSubscriptionUpdate(Organization organization, bool autoscaling)
+    public SecretsManagerSubscriptionUpdate(Organization organization, Plan plan, bool autoscaling)
     {
-        if (organization == null)
-        {
-            throw new NotFoundException("Organization is not found.");
-        }
-
-        Organization = organization;
+        Organization = organization ?? throw new NotFoundException("Organization is not found.");
+        Plan = plan;
 
         if (!Plan.SupportsSecretsManager)
         {

@@ -1,0 +1,3 @@
+UPDATE "Organization"
+SET "UseOrganizationDomains" = "UseSso"
+WHERE "UseSso" IS true
