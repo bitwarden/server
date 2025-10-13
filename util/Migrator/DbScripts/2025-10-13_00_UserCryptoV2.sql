@@ -100,7 +100,7 @@ GO
 IF COL_LENGTH('[dbo].[User]', 'SecurityState') IS NULL
 BEGIN
     ALTER TABLE [dbo].[User]
-    ADD [SecurityState] NVARCHAR(MAX) NULL;
+    ADD [SecurityState] VARCHAR(MAX) NULL;
 END
 GO
 
