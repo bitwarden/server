@@ -12,6 +12,11 @@ public class UserSignatureKeyPairEntityTypeConfiguration : IEntityTypeConfigurat
             .Property(s => s.Id)
             .ValueGeneratedNever();
 
+        builder
+            .HasIndex(s => s.UserId)
+            .IsUnique()
+            .IsClustered(false);
+
         builder.ToTable(nameof(UserSignatureKeyPair));
     }
 }

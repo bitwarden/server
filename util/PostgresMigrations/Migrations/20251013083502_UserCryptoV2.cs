@@ -2,7 +2,7 @@
 
 #nullable disable
 
-namespace Bit.SqliteMigrations.Migrations;
+namespace Bit.PostgresMigrations.Migrations;
 
 /// <inheritdoc />
 public partial class UserCryptoV2 : Migration
@@ -13,32 +13,32 @@ public partial class UserCryptoV2 : Migration
         migrationBuilder.AddColumn<string>(
             name: "SecurityState",
             table: "User",
-            type: "TEXT",
+            type: "text",
             nullable: true);
 
         migrationBuilder.AddColumn<int>(
             name: "SecurityVersion",
             table: "User",
-            type: "INTEGER",
+            type: "integer",
             nullable: true);
 
         migrationBuilder.AddColumn<string>(
             name: "SignedPublicKey",
             table: "User",
-            type: "TEXT",
+            type: "text",
             nullable: true);
 
         migrationBuilder.CreateTable(
             name: "UserSignatureKeyPair",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                UserId = table.Column<Guid>(type: "TEXT", nullable: false),
-                SignatureAlgorithm = table.Column<byte>(type: "INTEGER", nullable: false),
-                VerifyingKey = table.Column<string>(type: "TEXT", nullable: false),
-                SigningKey = table.Column<string>(type: "TEXT", nullable: false),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                SignatureAlgorithm = table.Column<byte>(type: "smallint", nullable: false),
+                VerifyingKey = table.Column<string>(type: "text", nullable: false),
+                SigningKey = table.Column<string>(type: "text", nullable: false),
+                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                RevisionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
             },
             constraints: table =>
             {
@@ -54,7 +54,8 @@ public partial class UserCryptoV2 : Migration
         migrationBuilder.CreateIndex(
             name: "IX_UserSignatureKeyPair_UserId",
             table: "UserSignatureKeyPair",
-            column: "UserId");
+            column: "UserId",
+            unique: true);
     }
 
     /// <inheritdoc />

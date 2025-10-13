@@ -59,7 +59,8 @@ public partial class UserCryptoV2 : Migration
         migrationBuilder.CreateIndex(
             name: "IX_UserSignatureKeyPair_UserId",
             table: "UserSignatureKeyPair",
-            column: "UserId");
+            column: "UserId",
+            unique: true);
     }
 
     /// <inheritdoc />
