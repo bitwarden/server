@@ -1,6 +1,8 @@
 ﻿using Bit.Core.Billing.Caches;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Premium.Commands;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Platform.Push;
@@ -15,6 +17,8 @@ using Xunit;
 using Address = Stripe.Address;
 using StripeCustomer = Stripe.Customer;
 using StripeSubscription = Stripe.Subscription;
+using PremiumPlan = Bit.Core.Billing.Pricing.Premium.Plan;
+using PremiumPurchasable = Bit.Core.Billing.Pricing.Premium.Purchasable;
 
 namespace Bit.Core.Test.Billing.Premium.Commands;
 
@@ -27,6 +31,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
     private readonly ISubscriberService _subscriberService = Substitute.For<ISubscriberService>();
     private readonly IUserService _userService = Substitute.For<IUserService>();
     private readonly IPushNotificationService _pushNotificationService = Substitute.For<IPushNotificationService>();
+    private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly CreatePremiumCloudHostedSubscriptionCommand _command;
 
     public CreatePremiumCloudHostedSubscriptionCommandTests()
@@ -34,6 +39,17 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         var baseServiceUri = Substitute.For<IBaseServiceUriSettings>();
         baseServiceUri.CloudRegion.Returns("US");
         _globalSettings.BaseServiceUri.Returns(baseServiceUri);
+
+        // Setup default premium plan with standard pricing
+        var premiumPlan = new PremiumPlan
+        {
+            Name = "Premium",
+            Available = true,
+            LegacyYear = null,
+            Seat = new PremiumPurchasable { Price = 10M, StripePriceId = StripeConstants.Prices.PremiumAnnually },
+            Storage = new PremiumPurchasable { Price = 4M, StripePriceId = StripeConstants.Prices.StoragePlanPersonal }
+        };
+        _pricingClient.GetAvailablePremiumPlan().Returns(premiumPlan);
 
         _command = new CreatePremiumCloudHostedSubscriptionCommand(
             _braintreeGateway,
@@ -43,7 +59,8 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
             _subscriberService,
             _userService,
             _pushNotificationService,
-            Substitute.For<ILogger<CreatePremiumCloudHostedSubscriptionCommand>>());
+            Substitute.For<ILogger<CreatePremiumCloudHostedSubscriptionCommand>>(),
+            _pricingClient);
     }
 
     [Theory, BitAutoData]
