@@ -92,6 +92,38 @@ public class ImportCiphersControllerTests
             );
     }
 
+    [Theory, BitAutoData]
+    public async Task PostImportIndividual_WithArchivedDate_SavesArchivedDate(User user,
+        IFixture fixture, SutProvider<ImportCiphersController> sutProvider)
+    {
+        var archivedDate = DateTime.UtcNow;
+        sutProvider.GetDependency<GlobalSettings>()
+            .SelfHosted = false;
+
+        sutProvider.GetDependency<Core.Services.IUserService>()
+            .GetProperUserId(Arg.Any<ClaimsPrincipal>())
+            .Returns(user.Id);
+
+        var request = fixture.Build<ImportCiphersRequestModel>()
+            .With(x => x.Ciphers, fixture.Build<CipherRequestModel>()
+                .With(c => c.ArchivedDate, archivedDate)
+                .With(c => c.OrganizationId, Guid.NewGuid().ToString())
+                .With(c => c.FolderId, Guid.NewGuid().ToString())
+                .CreateMany(1).ToArray())
+            .Create();
+
+        await sutProvider.Sut.PostImport(request);
+
+        await sutProvider.GetDependency<IImportCiphersCommand>()
+            .Received()
+            .ImportIntoIndividualVaultAsync(
+                Arg.Any<List<Folder>>(),
+                Arg.Is<List<CipherDetails>>(ciphers => ciphers.First().ArchivedDate == archivedDate),
+                Arg.Any<IEnumerable<KeyValuePair<int, int>>>(),
+                user.Id
+            );
+    }
+
     /****************************
      * PostImport - Organization
      ****************************/
