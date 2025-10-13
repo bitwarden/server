@@ -1,10 +1,13 @@
 #![allow(clippy::missing_safety_doc)]
-use std::ffi::{c_char, CStr, CString};
+use std::{
+    ffi::{c_char, CStr, CString},
+    num::NonZeroU32,
+};
 
 use base64::{engine::general_purpose::STANDARD, Engine};
 
 use bitwarden_crypto::{
-    pbkdf2, AsymmetricCryptoKey, AsymmetricPublicCryptoKey, BitwardenLegacyKeyBytes, HashPurpose,
+    AsymmetricCryptoKey, AsymmetricPublicCryptoKey, BitwardenLegacyKeyBytes, HashPurpose, Kdf,
     KeyEncryptable, MasterKey, RsaKeyPair, SpkiPublicKeyBytes, SymmetricCryptoKey,
     UnsignedSharedKey, UserKey,
 };
@@ -17,11 +20,19 @@ pub unsafe extern "C" fn generate_user_keys(
     let email = CStr::from_ptr(email).to_str().unwrap();
     let password = CStr::from_ptr(password).to_str().unwrap();
 
-    let master_key = derive_master_key(password, email);
+    println!("Generating keys for {email}");
+    println!("Password: {password}");
 
-    let master_password_hash = master_key
-        .derive_master_key_hash(password.as_bytes(), HashPurpose::ServerAuthorization)
-        .unwrap();
+    let kdf = Kdf::PBKDF2 {
+        iterations: NonZeroU32::new(5_000).unwrap(),
+    };
+
+    let master_key = MasterKey::derive(password, email, &kdf).unwrap();
+
+    let master_password_hash =
+        master_key.derive_master_key_hash(password.as_bytes(), HashPurpose::ServerAuthorization);
+
+    println!("Master password hash: {}", master_password_hash);
 
     let (user_key, encrypted_user_key) = master_key.make_user_key().unwrap();
 
@@ -39,14 +50,6 @@ pub unsafe extern "C" fn generate_user_keys(
     let result = CString::new(json).unwrap();
 
     result.into_raw()
-}
-
-fn derive_master_key(email: &str, password: &str) -> MasterKey {
-    let mut hash = pbkdf2(password.as_bytes(), email.as_bytes(), 5000);
-
-    let hash = hash.as_mut_slice();
-
-    hash.try_into().unwrap()
 }
 
 fn keypair(key: &SymmetricCryptoKey) -> RsaKeyPair {
@@ -82,13 +85,11 @@ XKZBokBGnjFnTnKcs7nv/O8=
     let private_key = AsymmetricCryptoKey::from_pem(RSA_PRIVATE_KEY).unwrap();
     let public_key = private_key.to_public_key().to_der().unwrap();
 
-    let b64 = STANDARD.encode(public_key);
-
     let p = private_key.to_der().unwrap();
 
     RsaKeyPair {
         private: p.encrypt_with_key(key).unwrap(),
-        public: b64,
+        public: public_key.into(),
     }
 }
 
