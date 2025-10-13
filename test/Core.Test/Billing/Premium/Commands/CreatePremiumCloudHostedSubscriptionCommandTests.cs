@@ -15,10 +15,10 @@ using NSubstitute;
 using Stripe;
 using Xunit;
 using Address = Stripe.Address;
-using StripeCustomer = Stripe.Customer;
-using StripeSubscription = Stripe.Subscription;
 using PremiumPlan = Bit.Core.Billing.Pricing.Premium.Plan;
 using PremiumPurchasable = Bit.Core.Billing.Pricing.Premium.Purchasable;
+using StripeCustomer = Stripe.Customer;
+using StripeSubscription = Stripe.Subscription;
 
 namespace Bit.Core.Test.Billing.Premium.Commands;
 

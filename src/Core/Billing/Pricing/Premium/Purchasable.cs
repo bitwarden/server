@@ -1,4 +1,4 @@
-namespace Bit.Core.Billing.Pricing.Premium;
+﻿namespace Bit.Core.Billing.Pricing.Premium;
 
 public class Purchasable
 {
