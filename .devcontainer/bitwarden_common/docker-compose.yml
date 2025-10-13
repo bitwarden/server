@@ -10,7 +10,7 @@ services:
     command: sleep infinity
 
   bitwarden_mssql:
-    image: mcr.microsoft.com/mssql/server:2022-latest
+    image: mcr.microsoft.com/mssql/server:2025-latest
     platform: linux/amd64
     restart: unless-stopped
     env_file:
