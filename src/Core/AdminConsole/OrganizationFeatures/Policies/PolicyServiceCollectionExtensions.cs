@@ -31,6 +31,7 @@ public static class PolicyServiceCollectionExtensions
         services.AddScoped<IPolicyValidator, RequireSsoPolicyValidator>();
         services.AddScoped<IPolicyValidator, ResetPasswordPolicyValidator>();
         services.AddScoped<IPolicyValidator, MaximumVaultTimeoutPolicyValidator>();
+        services.AddScoped<IPolicyValidator, UriMatchDefaultPolicyValidator>();
         services.AddScoped<IPolicyValidator, FreeFamiliesForEnterprisePolicyValidator>();
     }
 
