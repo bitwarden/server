@@ -7,7 +7,6 @@ namespace Bit.Seeder.Factories;
 
 public class UserSeeder
 {
-
     public static User CreateUser(string email)
     {
         return new User
