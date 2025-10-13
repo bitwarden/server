@@ -151,8 +151,8 @@ CREATE OR ALTER PROCEDURE [dbo].[User_Create]
     @LastKeyRotationDate DATETIME2(7) = NULL,
     @LastEmailChangeDate DATETIME2(7) = NULL,
     @VerifyDevices BIT = 1,
-    @SignedPublicKey VARCHAR(MAX) = NULL,
-    @SecurityState VARCHAR(MAX) = NULL,
+    @SignedPublicKey NVARCHAR(MAX) = NULL,
+    @SecurityState NVARCHAR(MAX) = NULL,
     @SecurityVersion INT = NULL
 AS
 BEGIN
@@ -303,8 +303,8 @@ CREATE OR ALTER PROCEDURE [dbo].[User_Update]
     @LastKeyRotationDate DATETIME2(7) = NULL,
     @LastEmailChangeDate DATETIME2(7) = NULL,
     @VerifyDevices BIT = 1,
-    @SignedPublicKey VARCHAR(MAX) = NULL,
-    @SecurityState VARCHAR(MAX) = NULL,
+    @SignedPublicKey NVARCHAR(MAX) = NULL,
+    @SecurityState NVARCHAR(MAX) = NULL,
     @SecurityVersion INT = NULL
 AS
 BEGIN
