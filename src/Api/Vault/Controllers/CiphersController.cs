@@ -1,6 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using System.Globalization;
 using System.Text.Json;
 using Azure.Messaging.EventGrid;
 using Bit.Api.Auth.Models.Request.Accounts;
@@ -1408,7 +1409,7 @@ public class CiphersController : Controller
         DateTime? lastKnownRevisionDate = null;
         if (Request.Form.TryGetValue("lastKnownRevisionDate", out var dateValue))
         {
-            if (!DateTime.TryParse(dateValue, out var parsedDate))
+            if (!DateTime.TryParse(dateValue, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsedDate))
             {
                 throw new BadRequestException("Invalid lastKnownRevisionDate format.");
             }
@@ -1441,7 +1442,7 @@ public class CiphersController : Controller
 
         if (Request.Form.TryGetValue("lastKnownRevisionDate", out var dateValue))
         {
-            if (!DateTime.TryParse(dateValue, out var parsedDate))
+            if (!DateTime.TryParse(dateValue, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsedDate))
             {
                 throw new BadRequestException("Invalid lastKnownRevisionDate format.");
             }
@@ -1482,7 +1483,7 @@ public class CiphersController : Controller
 
         if (Request.Form.TryGetValue("lastKnownRevisionDate", out var dateValue))
         {
-            if (!DateTime.TryParse(dateValue, out var parsedDate))
+            if (!DateTime.TryParse(dateValue, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsedDate))
             {
                 throw new BadRequestException("Invalid lastKnownRevisionDate format.");
             }
@@ -1540,7 +1541,7 @@ public class CiphersController : Controller
 
         if (Request.Form.TryGetValue("lastKnownRevisionDate", out var dateValue))
         {
-            if (!DateTime.TryParse(dateValue, out var parsedDate))
+            if (!DateTime.TryParse(dateValue, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsedDate))
             {
                 throw new BadRequestException("Invalid lastKnownRevisionDate format.");
             }
