@@ -4,7 +4,10 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    SELECT *
-    FROM [dbo].[UserSignatureKeyPairView]
-    WHERE [UserId] = @UserId;
+    SELECT
+        *
+    FROM
+        [dbo].[UserSignatureKeyPairView]
+    WHERE
+        [UserId] = @UserId;
 END

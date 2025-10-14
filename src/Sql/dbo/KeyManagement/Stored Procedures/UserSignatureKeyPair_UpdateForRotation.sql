@@ -7,11 +7,13 @@ CREATE PROCEDURE [dbo].[UserSignatureKeyPair_UpdateForRotation]
 AS
 BEGIN
     SET NOCOUNT ON;
-
-    UPDATE [dbo].[UserSignatureKeyPair]
-    SET [SignatureAlgorithm] = @SignatureAlgorithm,
-        [SigningKey] = @SigningKey,
-        [VerifyingKey] = @VerifyingKey,
-        [RevisionDate] = @RevisionDate
-    WHERE [UserId] = @UserId;
+    UPDATE  
+        [dbo].[UserSignatureKeyPair]  
+    SET  
+        [SignatureAlgorithm] = @SignatureAlgorithm,  
+        [SigningKey] = @SigningKey,  
+        [VerifyingKey] = @VerifyingKey,  
+        [RevisionDate] = @RevisionDate  
+    WHERE  
+        [UserId] = @UserId;
 END

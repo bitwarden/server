@@ -39,9 +39,12 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    SELECT *
-    FROM [dbo].[UserSignatureKeyPairView]
-    WHERE [UserId] = @UserId;
+    SELECT
+        *
+    FROM
+        [dbo].[UserSignatureKeyPairView]
+    WHERE
+        [UserId] = @UserId;
 END
 GO
 
@@ -55,12 +58,15 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    UPDATE [dbo].[UserSignatureKeyPair]
-    SET [SignatureAlgorithm] = @SignatureAlgorithm,
+    UPDATE
+        [dbo].[UserSignatureKeyPair]
+    SET 
+        [SignatureAlgorithm] = @SignatureAlgorithm,
         [SigningKey] = @SigningKey,
         [VerifyingKey] = @VerifyingKey,
         [RevisionDate] = @RevisionDate
-    WHERE [UserId] = @UserId;
+    WHERE
+        [UserId] = @UserId;
 END
 GO
 
@@ -108,17 +114,21 @@ BEGIN
 END
 GO
 
-IF COL_LENGTH('[dbo].[User]', 'SecurityVersion') IS NULL
+IF COL_LENGTH('[dbo].[User]', 'SecurityState') IS NULL
 BEGIN
-    ALTER TABLE [dbo].[User]
-    ADD [SecurityVersion] INT NULL;
+    ALTER TABLE
+        [dbo].[User]
+    ADD
+        [SecurityState] VARCHAR(MAX) NULL;
 END
 GO
 
-IF COL_LENGTH('[dbo].[User]', 'SecurityState') IS NULL
+IF COL_LENGTH('[dbo].[User]', 'SecurityVersion') IS NULL
 BEGIN
-    ALTER TABLE [dbo].[User]
-    ADD [SecurityState] VARCHAR(MAX) NULL;
+    ALTER TABLE
+        [dbo].[User]
+    ADD
+        [SecurityVersion] INT NULL;
 END
 GO
 
