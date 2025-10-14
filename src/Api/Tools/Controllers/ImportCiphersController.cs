@@ -162,7 +162,6 @@ public class ImportCiphersController : Controller
         {
             return true;
         }
-        ;
 
         return false;
     }
