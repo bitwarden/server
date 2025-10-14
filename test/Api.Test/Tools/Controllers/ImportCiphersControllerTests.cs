@@ -824,8 +824,6 @@ public class ImportCiphersControllerTests
         SetupUserService(sutProvider, user);
 
         var ciphers = fixture.Build<CipherRequestModel>()
-                .With(_ => _.OrganizationId, orgId.ToString())
-                .With(_ => _.FolderId, Guid.NewGuid().ToString())
                 .With(_ => _.ArchivedDate, DateTime.UtcNow)
                 .CreateMany(2).ToArray();
 
