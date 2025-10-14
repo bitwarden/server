@@ -1,6 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
+﻿
 using System.Net;
 using Bit.Api.Models.Public.Request;
 using Bit.Api.Models.Public.Response;
@@ -56,18 +54,24 @@ public class EventsController : Controller
     [ProducesResponseType(typeof(PagedListResponseModel<EventResponseModel>), (int)HttpStatusCode.OK)]
     public async Task<IActionResult> List([FromQuery] EventFilterRequestModel request)
     {
+        if (!_currentContext.OrganizationId.HasValue)
+        {
+            return new JsonResult(new PagedListResponseModel<EventResponseModel>([], null));
+        }
+
+        var organizationId = _currentContext.OrganizationId.Value;
         var dateRange = request.ToDateRange();
         var result = new PagedResult<IEvent>();
         if (request.ActingUserId.HasValue)
         {
             result = await _eventRepository.GetManyByOrganizationActingUserAsync(
-                _currentContext.OrganizationId.Value, request.ActingUserId.Value, dateRange.Item1, dateRange.Item2,
+                organizationId, request.ActingUserId.Value, dateRange.Item1, dateRange.Item2,
                 new PageOptions { ContinuationToken = request.ContinuationToken });
         }
         else if (request.ItemId.HasValue)
         {
             var cipher = await _cipherRepository.GetByIdAsync(request.ItemId.Value);
-            if (cipher != null && cipher.OrganizationId == _currentContext.OrganizationId.Value)
+            if (cipher != null && cipher.OrganizationId == organizationId)
             {
                 result = await _eventRepository.GetManyByCipherAsync(
                     cipher, dateRange.Item1, dateRange.Item2,
@@ -81,10 +85,15 @@ public class EventsController : Controller
 
             if (secret == null)
             {
-                var currentContextOrg = _currentContext.OrganizationId.Value;
-                var secretOrg = _currentContext.GetOrganization(currentContextOrg);
-                secret = new Core.SecretsManager.Entities.Secret { Id = request.SecretId.Value, OrganizationId = currentContextOrg };
-                canViewLogs = secretOrg.Type is Core.Enums.OrganizationUserType.Admin or Core.Enums.OrganizationUserType.Owner;
+                var currentContextOrg = _currentContext.GetOrganization(organizationId);
+
+                if (currentContextOrg == null)
+                {
+                    return new JsonResult(new PagedListResponseModel<EventResponseModel>([], ""));
+                }
+
+                secret = new Core.SecretsManager.Entities.Secret { Id = request.SecretId.Value, OrganizationId = organizationId };
+                canViewLogs = currentContextOrg.Type is Core.Enums.OrganizationUserType.Admin or Core.Enums.OrganizationUserType.Owner;
             }
             else
             {
@@ -93,10 +102,10 @@ public class EventsController : Controller
 
             if (!canViewLogs)
             {
-                throw new NotFoundException();
+                return new JsonResult(new PagedListResponseModel<EventResponseModel>([], ""));
             }
 
-            if (secret != null && secret.OrganizationId == _currentContext.OrganizationId.Value)
+            if (secret.OrganizationId == organizationId)
             {
                 result = await _eventRepository.GetManyBySecretAsync(
                     secret, dateRange.Item1, dateRange.Item2,
@@ -106,7 +115,7 @@ public class EventsController : Controller
         else if (request.ProjectId.HasValue)
         {
             var project = await _projectRepository.GetByIdAsync(request.ProjectId.Value);
-            if (project != null && project.OrganizationId == _currentContext.OrganizationId.Value)
+            if (project != null && project.OrganizationId == organizationId)
             {
                 result = await _eventRepository.GetManyByProjectAsync(
                     project, dateRange.Item1, dateRange.Item2,
@@ -116,7 +125,7 @@ public class EventsController : Controller
         else
         {
             result = await _eventRepository.GetManyByOrganizationAsync(
-                _currentContext.OrganizationId.Value, dateRange.Item1, dateRange.Item2,
+                organizationId, dateRange.Item1, dateRange.Item2,
                 new PageOptions { ContinuationToken = request.ContinuationToken });
         }
 
