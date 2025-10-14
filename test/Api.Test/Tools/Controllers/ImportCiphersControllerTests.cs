@@ -75,6 +75,7 @@ public class ImportCiphersControllerTests
             .With(x => x.Ciphers, fixture.Build<CipherRequestModel>()
                 .With(c => c.OrganizationId, Guid.NewGuid().ToString())
                 .With(c => c.FolderId, Guid.NewGuid().ToString())
+                .With(c => c.ArchivedDate, (DateTime?)null)
                 .CreateMany(1).ToArray())
             .Create();
 
@@ -188,6 +189,7 @@ public class ImportCiphersControllerTests
             .With(x => x.Ciphers, fixture.Build<CipherRequestModel>()
                 .With(c => c.OrganizationId, Guid.NewGuid().ToString())
                 .With(c => c.FolderId, Guid.NewGuid().ToString())
+                .With(c => c.ArchivedDate, (DateTime?)null)
                 .CreateMany(1).ToArray())
             .With(y => y.Collections, fixture.Build<CollectionWithIdRequestModel>()
                 .With(c => c.Id, orgIdGuid)
@@ -259,6 +261,7 @@ public class ImportCiphersControllerTests
             .With(x => x.Ciphers, fixture.Build<CipherRequestModel>()
                 .With(c => c.OrganizationId, Guid.NewGuid().ToString())
                 .With(c => c.FolderId, Guid.NewGuid().ToString())
+                .With(c => c.ArchivedDate, (DateTime?)null)
                 .CreateMany(1).ToArray())
             .With(y => y.Collections, fixture.Build<CollectionWithIdRequestModel>()
                 .With(c => c.Id, orgIdGuid)
@@ -323,6 +326,7 @@ public class ImportCiphersControllerTests
             .With(x => x.Ciphers, fixture.Build<CipherRequestModel>()
                 .With(c => c.OrganizationId, Guid.NewGuid().ToString())
                 .With(c => c.FolderId, Guid.NewGuid().ToString())
+                .With(c => c.ArchivedDate, (DateTime?)null)
                 .CreateMany(1).ToArray())
             .With(y => y.Collections, fixture.Build<CollectionWithIdRequestModel>()
                 .With(c => c.Id, orgIdGuid)
@@ -386,6 +390,7 @@ public class ImportCiphersControllerTests
             .With(x => x.Ciphers, fixture.Build<CipherRequestModel>()
                 .With(c => c.OrganizationId, Guid.NewGuid().ToString())
                 .With(c => c.FolderId, Guid.NewGuid().ToString())
+                .With(c => c.ArchivedDate, (DateTime?)null)
                 .CreateMany(1).ToArray())
             .With(y => y.Collections, fixture.Build<CollectionWithIdRequestModel>()
                 .With(c => c.Id, orgIdGuid)
@@ -455,6 +460,7 @@ public class ImportCiphersControllerTests
             Ciphers = fixture.Build<CipherRequestModel>()
                 .With(_ => _.OrganizationId, orgId.ToString())
                 .With(_ => _.FolderId, Guid.NewGuid().ToString())
+                .With(_ => _.ArchivedDate, (DateTime?)null)
                 .CreateMany(2).ToArray(),
             CollectionRelationships = new List<KeyValuePair<int, int>>().ToArray(),
         };
@@ -531,6 +537,7 @@ public class ImportCiphersControllerTests
             Ciphers = fixture.Build<CipherRequestModel>()
                 .With(_ => _.OrganizationId, orgId.ToString())
                 .With(_ => _.FolderId, Guid.NewGuid().ToString())
+                .With(_ => _.ArchivedDate, (DateTime?)null)
                 .CreateMany(2).ToArray(),
             CollectionRelationships = new List<KeyValuePair<int, int>>().ToArray(),
         };
@@ -610,6 +617,7 @@ public class ImportCiphersControllerTests
             Ciphers = fixture.Build<CipherRequestModel>()
                 .With(_ => _.OrganizationId, orgId.ToString())
                 .With(_ => _.FolderId, Guid.NewGuid().ToString())
+                .With(_ => _.ArchivedDate, (DateTime?)null)
                 .CreateMany(2).ToArray(),
             CollectionRelationships = new List<KeyValuePair<int, int>>().ToArray(),
         };
@@ -683,6 +691,7 @@ public class ImportCiphersControllerTests
             Ciphers = fixture.Build<CipherRequestModel>()
                 .With(_ => _.OrganizationId, orgId.ToString())
                 .With(_ => _.FolderId, Guid.NewGuid().ToString())
+                .With(_ => _.ArchivedDate, (DateTime?)null)
                 .CreateMany(2).ToArray(),
             CollectionRelationships = new List<KeyValuePair<int, int>>().ToArray(),
         };
@@ -752,6 +761,7 @@ public class ImportCiphersControllerTests
             Ciphers = fixture.Build<CipherRequestModel>()
                 .With(_ => _.OrganizationId, orgId.ToString())
                 .With(_ => _.FolderId, Guid.NewGuid().ToString())
+                .With(_ => _.ArchivedDate, (DateTime?)null)
                 .CreateMany(2).ToArray(),
             CollectionRelationships = new List<KeyValuePair<int, int>>().ToArray(),
         };
