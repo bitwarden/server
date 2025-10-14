@@ -807,6 +807,65 @@ public class ImportCiphersControllerTests
                 Arg.Any<Guid>());
     }
 
+    [Theory, BitAutoData]
+    public async Task PostImportOrganization_ThrowsException_WhenAnyCipherIsArchived(
+        SutProvider<ImportCiphersController> sutProvider,
+        IFixture fixture,
+        User user
+    )
+    {
+        var orgId = Guid.NewGuid();
+
+        sutProvider.GetDependency<GlobalSettings>()
+            .SelfHosted = false;
+        sutProvider.GetDependency<GlobalSettings>()
+            .ImportCiphersLimitation = _organizationCiphersLimitations;
+
+        SetupUserService(sutProvider, user);
+
+        var ciphers = fixture.Build<CipherRequestModel>()
+                .With(_ => _.OrganizationId, orgId.ToString())
+                .With(_ => _.FolderId, Guid.NewGuid().ToString())
+                .With(_ => _.ArchivedDate, DateTime.UtcNow)
+                .CreateMany(2).ToArray();
+
+        var request = new ImportOrganizationCiphersRequestModel
+        {
+            Collections = new List<CollectionWithIdRequestModel>().ToArray(),
+            Ciphers = ciphers,
+            CollectionRelationships = new List<KeyValuePair<int, int>>().ToArray(),
+        };
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .AccessImportExport(Arg.Any<Guid>())
+            .Returns(false);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<IEnumerable<Collection>>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs =>
+                    reqs.Contains(BulkCollectionOperations.ImportCiphers)))
+            .Returns(AuthorizationResult.Failed());
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<IEnumerable<Collection>>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs =>
+                    reqs.Contains(BulkCollectionOperations.Create)))
+            .Returns(AuthorizationResult.Success());
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByOrganizationIdAsync(orgId)
+            .Returns(new List<Collection>());
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(async () =>
+        {
+            await sutProvider.Sut.PostImportOrganization(orgId.ToString(), request);
+        });
+
+        Assert.Equal("You cannot import archived items into an organization.", exception.Message);
+    }
+
     private static void SetupUserService(SutProvider<ImportCiphersController> sutProvider, User user)
     {
         // This is a workaround for the NSubstitute issue with ambiguous arguments
