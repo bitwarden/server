@@ -172,7 +172,6 @@ public static class FeatureFlagKeys
     public const string WindowsDesktopAutotype = "windows-desktop-autotype";
 
     /* Billing Team */
-    public const string AC2101UpdateTrialInitiationEmail = "AC-2101-update-trial-initiation-email";
     public const string TrialPayment = "PM-8163-trial-payment";
     public const string PM17772_AdminInitiatedSponsorships = "pm-17772-admin-initiated-sponsorships";
     public const string UsePricingService = "use-pricing-service";
