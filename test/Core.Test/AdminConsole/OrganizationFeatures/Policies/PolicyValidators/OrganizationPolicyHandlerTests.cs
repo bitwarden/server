@@ -12,15 +12,15 @@ using Xunit;
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 
 [SutProviderCustomize]
-public class OrganizationPolicyValidatorTests
+public class OrganizationPolicyHandlerTests
 {
     [Theory, BitAutoData]
     public async Task GetUserPolicyRequirementsByOrganizationIdAsync_WithNoFactory_ThrowsNotImplementedException(
         Guid organizationId,
-        SutProvider<TestOrganizationPolicyValidator> sutProvider)
+        SutProvider<TestOrganizationPolicyHandler> sutProvider)
     {
         // Arrange
-        var sut = new TestOrganizationPolicyValidator(sutProvider.GetDependency<IPolicyRepository>(), []);
+        var sut = new TestOrganizationPolicyHandler(sutProvider.GetDependency<IPolicyRepository>(), []);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<NotImplementedException>(() =>
@@ -35,7 +35,7 @@ public class OrganizationPolicyValidatorTests
         Guid organizationId,
         Guid userId1,
         Guid userId2,
-        SutProvider<TestOrganizationPolicyValidator> sutProvider)
+        SutProvider<TestOrganizationPolicyHandler> sutProvider)
     {
         // Arrange
         var policyDetails = new List<OrganizationPolicyDetails>
@@ -54,7 +54,7 @@ public class OrganizationPolicyValidatorTests
             .Returns(policyDetails);
 
         var factories = new List<IPolicyRequirementFactory<IPolicyRequirement>> { factory };
-        var sut = new TestOrganizationPolicyValidator(sutProvider.GetDependency<IPolicyRepository>(), factories);
+        var sut = new TestOrganizationPolicyHandler(sutProvider.GetDependency<IPolicyRepository>(), factories);
 
         // Act
         var result = await sut.TestGetUserPolicyRequirementsByOrganizationIdAsync<TestPolicyRequirement>(
@@ -74,7 +74,7 @@ public class OrganizationPolicyValidatorTests
     public async Task GetUserPolicyRequirementsByOrganizationIdAsync_ShouldEnforceFilters(
         Guid organizationId,
         Guid userId,
-        SutProvider<TestOrganizationPolicyValidator> sutProvider)
+        SutProvider<TestOrganizationPolicyHandler> sutProvider)
     {
         // Arrange
         var adminUser = new OrganizationPolicyDetails()
@@ -108,7 +108,7 @@ public class OrganizationPolicyValidatorTests
             .Returns(false);
 
         var factories = new List<IPolicyRequirementFactory<IPolicyRequirement>> { factory };
-        var sut = new TestOrganizationPolicyValidator(sutProvider.GetDependency<IPolicyRepository>(), factories);
+        var sut = new TestOrganizationPolicyHandler(sutProvider.GetDependency<IPolicyRepository>(), factories);
 
         // Act
         var result = await sut.TestGetUserPolicyRequirementsByOrganizationIdAsync<TestPolicyRequirement>(
@@ -128,7 +128,7 @@ public class OrganizationPolicyValidatorTests
     [Theory, BitAutoData]
     public async Task GetUserPolicyRequirementsByOrganizationIdAsync_WithEmptyPolicyDetails_ReturnsEmptyCollection(
         Guid organizationId,
-        SutProvider<TestOrganizationPolicyValidator> sutProvider)
+        SutProvider<TestOrganizationPolicyHandler> sutProvider)
     {
         // Arrange
         var factory = Substitute.For<IPolicyRequirementFactory<TestPolicyRequirement>>();
@@ -138,7 +138,7 @@ public class OrganizationPolicyValidatorTests
             .Returns(new List<OrganizationPolicyDetails>());
 
         var factories = new List<IPolicyRequirementFactory<IPolicyRequirement>> { factory };
-        var sut = new TestOrganizationPolicyValidator(sutProvider.GetDependency<IPolicyRepository>(), factories);
+        var sut = new TestOrganizationPolicyHandler(sutProvider.GetDependency<IPolicyRepository>(), factories);
 
         // Act
         var result = await sut.TestGetUserPolicyRequirementsByOrganizationIdAsync<TestPolicyRequirement>(
@@ -150,9 +150,9 @@ public class OrganizationPolicyValidatorTests
     }
 }
 
-public class TestOrganizationPolicyValidator : OrganizationPolicyValidator
+public class TestOrganizationPolicyHandler : OrganizationPolicyHandler
 {
-    public TestOrganizationPolicyValidator(
+    public TestOrganizationPolicyHandler(
         IPolicyRepository policyRepository,
         IEnumerable<IPolicyRequirementFactory<IPolicyRequirement>>? factories = null)
         : base(policyRepository, factories ?? [])
