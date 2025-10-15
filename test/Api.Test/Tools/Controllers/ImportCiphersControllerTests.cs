@@ -108,8 +108,7 @@ public class ImportCiphersControllerTests
         var request = fixture.Build<ImportCiphersRequestModel>()
             .With(x => x.Ciphers, fixture.Build<CipherRequestModel>()
                 .With(c => c.ArchivedDate, archivedDate)
-                .With(c => c.OrganizationId, Guid.NewGuid().ToString())
-                .With(c => c.FolderId, Guid.NewGuid().ToString())
+                .With(c => c.FolderId, (string)null)
                 .CreateMany(1).ToArray())
             .Create();
 
