@@ -20,11 +20,11 @@ public class BitPayClient : IBitPayClient
         GlobalSettings globalSettings,
         ILogger<BitPayClient> logger)
     {
-        TemporarilyLogBitPayConfiguration(globalSettings);
-
         _bitPay = new BitPay(
             globalSettings.BitPay.Token, globalSettings.BitPay.Production ? Env.Prod : Env.Test);
         _logger = logger;
+
+        TemporarilyLogBitPayConfiguration(globalSettings);
     }
 
     public Task<Invoice> GetInvoice(string invoiceId)
