@@ -10,6 +10,8 @@ public class AttachmentRequestModel
     public long FileSize { get; set; }
     public bool AdminRequest { get; set; } = false;
 
+    /// <summary>
     /// The last known revision date of the Cipher that this attachment belongs to.
-    public DateTime? LastKnownRevisionDate { get; set; } = null;
+    /// </summary>
+    public DateTime? LastKnownRevisionDate { get; set; }
 }
