@@ -72,4 +72,65 @@ public class FreeFamiliesForEnterprisePolicyValidatorTests
                 organizationSponsorships[0].SponsoredOrganizationId.ToString(), organization.Name);
 
     }
+
+    [Theory, BitAutoData]
+    public async Task ExecutePreUpsertSideEffectAsync_DoesNotNotifyUserWhenPolicyDisabledAsync(
+        Organization organization,
+        List<OrganizationSponsorship> organizationSponsorships,
+        [PolicyUpdate(PolicyType.FreeFamiliesSponsorshipPolicy)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.FreeFamiliesSponsorshipPolicy, true)] Policy policy,
+        SutProvider<FreeFamiliesForEnterprisePolicyValidator> sutProvider)
+    {
+        policy.Enabled = true;
+        policyUpdate.Enabled = false;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(policyUpdate.OrganizationId)
+            .Returns(organization);
+
+        sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+            .GetManyBySponsoringOrganizationAsync(policyUpdate.OrganizationId)
+            .Returns(organizationSponsorships);
+
+        var savePolicyModel = new SavePolicyModel(policyUpdate, null, new EmptyMetadataModel());
+
+        await sutProvider.Sut.ExecutePreUpsertSideEffectAsync(savePolicyModel, policy);
+
+        await sutProvider.GetDependency<IMailService>()
+            .DidNotReceiveWithAnyArgs()
+            .SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync(default, default, default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ExecutePreUpsertSideEffectAsync_DoesNotifyUserWhenPolicyEnabledAsync(
+        Organization organization,
+        List<OrganizationSponsorship> organizationSponsorships,
+        [PolicyUpdate(PolicyType.FreeFamiliesSponsorshipPolicy)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.FreeFamiliesSponsorshipPolicy, false)] Policy policy,
+        SutProvider<FreeFamiliesForEnterprisePolicyValidator> sutProvider)
+    {
+        policy.Enabled = false;
+        policyUpdate.Enabled = true;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(policyUpdate.OrganizationId)
+            .Returns(organization);
+
+        sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+            .GetManyBySponsoringOrganizationAsync(policyUpdate.OrganizationId)
+            .Returns(organizationSponsorships);
+
+        var savePolicyModel = new SavePolicyModel(policyUpdate, null, new EmptyMetadataModel());
+
+        await sutProvider.Sut.ExecutePreUpsertSideEffectAsync(savePolicyModel, policy);
+
+        var offerAcceptanceDate = organizationSponsorships[0].ValidUntil!.Value.AddDays(-7).ToString("MM/dd/yyyy");
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync(
+                organizationSponsorships[0].FriendlyName,
+                offerAcceptanceDate,
+                organizationSponsorships[0].SponsoredOrganizationId.ToString(),
+                organization.Name);
+    }
 }
