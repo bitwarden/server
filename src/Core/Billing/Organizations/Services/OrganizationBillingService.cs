@@ -51,13 +51,8 @@ public class OrganizationBillingService(
         {
             organization.Enabled = true;
             organization.ExpirationDate = subscription.CurrentPeriodEnd;
+            await organizationRepository.ReplaceAsync(organization);
         }
-
-        organization.Gateway = GatewayType.Stripe;
-        organization.GatewayCustomerId = customer.Id;
-        organization.GatewaySubscriptionId = subscription.Id;
-
-        await organizationRepository.ReplaceAsync(organization);
     }
 
     public async Task<OrganizationMetadata?> GetMetadata(Guid organizationId)
@@ -74,16 +69,12 @@ public class OrganizationBillingService(
             return OrganizationMetadata.Default;
         }
 
-        var isEligibleForSelfHost = await IsEligibleForSelfHostAsync(organization);
-
-        var isManaged = organization.Status == OrganizationStatusType.Managed;
         var orgOccupiedSeats = await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
+
         if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
         {
             return OrganizationMetadata.Default with
             {
-                IsEligibleForSelfHost = isEligibleForSelfHost,
-                IsManaged = isManaged,
                 OrganizationOccupiedSeats = orgOccupiedSeats.Total
             };
         }
@@ -97,28 +88,14 @@ public class OrganizationBillingService(
         {
             return OrganizationMetadata.Default with
             {
-                IsEligibleForSelfHost = isEligibleForSelfHost,
-                IsManaged = isManaged
+                OrganizationOccupiedSeats = orgOccupiedSeats.Total
             };
         }
 
         var isOnSecretsManagerStandalone = await IsOnSecretsManagerStandalone(organization, customer, subscription);
 
-        var invoice = !string.IsNullOrEmpty(subscription.LatestInvoiceId)
-            ? await stripeAdapter.InvoiceGetAsync(subscription.LatestInvoiceId, new InvoiceGetOptions())
-            : null;
-
         return new OrganizationMetadata(
-            isEligibleForSelfHost,
-            isManaged,
             isOnSecretsManagerStandalone,
-            subscription.Status == StripeConstants.SubscriptionStatus.Unpaid,
-            true,
-            invoice?.Status == StripeConstants.InvoiceStatus.Open,
-            subscription.Status == StripeConstants.SubscriptionStatus.Canceled,
-            invoice?.DueDate,
-            invoice?.Created,
-            subscription.CurrentPeriodEnd,
             orgOccupiedSeats.Total);
     }
 
@@ -273,8 +250,6 @@ public class OrganizationBillingService(
                 ValidateLocation = StripeConstants.ValidateTaxLocationTiming.Immediately
             };
 
-
-
             if (planType.GetProductTier() is not ProductTierType.Free and not ProductTierType.Families &&
                 customerSetup.TaxInformation.Country != Core.Constants.CountryAbbreviations.UnitedStates)
             {
@@ -353,7 +328,13 @@ public class OrganizationBillingService(
 
         try
         {
-            return await stripeAdapter.CustomerCreateAsync(customerCreateOptions);
+            var customer = await stripeAdapter.CustomerCreateAsync(customerCreateOptions);
+
+            organization.Gateway = GatewayType.Stripe;
+            organization.GatewayCustomerId = customer.Id;
+            await organizationRepository.ReplaceAsync(organization);
+
+            return customer;
         }
         catch (StripeException stripeException) when (stripeException.StripeError?.Code ==
                                                       StripeConstants.ErrorCodes.CustomerTaxLocationInvalid)
@@ -494,7 +475,13 @@ public class OrganizationBillingService(
         {
             subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
         }
-        return await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
+
+        var subscription = await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
+
+        organization.GatewaySubscriptionId = subscription.Id;
+        await organizationRepository.ReplaceAsync(organization);
+
+        return subscription;
     }
 
     private async Task<Customer> GetCustomerWhileEnsuringCorrectTaxExemptionAsync(
@@ -534,16 +521,6 @@ public class OrganizationBillingService(
         };
 
         return customer;
-    }
-
-    private async Task<bool> IsEligibleForSelfHostAsync(
-        Organization organization)
-    {
-        var plans = await pricingClient.ListPlans();
-
-        var eligibleSelfHostPlans = plans.Where(plan => plan.HasSelfHost).Select(plan => plan.Type);
-
-        return eligibleSelfHostPlans.Contains(organization.PlanType);
     }
 
     private async Task<bool> IsOnSecretsManagerStandalone(
