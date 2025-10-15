@@ -278,7 +278,7 @@ BEGIN
         @LastEmailChangeDate,
         @VerifyDevices,
         @SecurityState,
-        @SecurityVersion
+        @SecurityVersion,
         @SignedPublicKey
     )
 END
