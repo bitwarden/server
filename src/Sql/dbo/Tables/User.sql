@@ -42,9 +42,9 @@
     [LastKeyRotationDate]              DATETIME2 (7)    NULL,
     [LastEmailChangeDate]              DATETIME2 (7)    NULL,
     [VerifyDevices]                    BIT              DEFAULT ((1)) NOT NULL,
-    [SignedPublicKey]                  VARCHAR (MAX)   NULL,
     [SecurityState]                    VARCHAR (MAX)   NULL,
     [SecurityVersion]                  INT              NULL,
+    [SignedPublicKey]                  VARCHAR (MAX)   NULL,
     CONSTRAINT [PK_User] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 

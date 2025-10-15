@@ -105,15 +105,6 @@ BEGIN
 END
 GO
 
-IF COL_LENGTH('[dbo].[User]', 'SignedPublicKey') IS NULL
-BEGIN
-    ALTER TABLE
-        [dbo].[User]
-    ADD
-        [SignedPublicKey] VARCHAR(MAX) NULL;
-END
-GO
-
 IF COL_LENGTH('[dbo].[User]', 'SecurityState') IS NULL
 BEGIN
     ALTER TABLE
@@ -129,6 +120,15 @@ BEGIN
         [dbo].[User]
     ADD
         [SecurityVersion] INT NULL;
+END
+GO
+
+IF COL_LENGTH('[dbo].[User]', 'SignedPublicKey') IS NULL
+BEGIN
+    ALTER TABLE
+        [dbo].[User]
+    ADD
+        [SignedPublicKey] VARCHAR(MAX) NULL;
 END
 GO
 
@@ -176,9 +176,9 @@ CREATE OR ALTER PROCEDURE [dbo].[User_Create]
     @LastKeyRotationDate DATETIME2(7) = NULL,
     @LastEmailChangeDate DATETIME2(7) = NULL,
     @VerifyDevices BIT = 1,
-    @SignedPublicKey VARCHAR(MAX) = NULL,
     @SecurityState VARCHAR(MAX) = NULL,
-    @SecurityVersion INT = NULL
+    @SecurityVersion INT = NULL,
+    @SignedPublicKey VARCHAR(MAX) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -228,9 +228,9 @@ BEGIN
         [LastKeyRotationDate],
         [LastEmailChangeDate],
         [VerifyDevices],
-        [SignedPublicKey],
         [SecurityState],
-        [SecurityVersion]
+        [SecurityVersion],
+        [SignedPublicKey]
     )
     VALUES
     (
@@ -277,9 +277,9 @@ BEGIN
         @LastKeyRotationDate,
         @LastEmailChangeDate,
         @VerifyDevices,
-        @SignedPublicKey,
         @SecurityState,
         @SecurityVersion
+        @SignedPublicKey
     )
 END
 GO
@@ -328,9 +328,9 @@ CREATE OR ALTER PROCEDURE [dbo].[User_Update]
     @LastKeyRotationDate DATETIME2(7) = NULL,
     @LastEmailChangeDate DATETIME2(7) = NULL,
     @VerifyDevices BIT = 1,
-    @SignedPublicKey VARCHAR(MAX) = NULL,
     @SecurityState VARCHAR(MAX) = NULL,
-    @SecurityVersion INT = NULL
+    @SecurityVersion INT = NULL,
+    @SignedPublicKey VARCHAR(MAX) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -380,9 +380,9 @@ BEGIN
         [LastKeyRotationDate] = @LastKeyRotationDate,
         [LastEmailChangeDate] = @LastEmailChangeDate,
         [VerifyDevices] = @VerifyDevices,
-        [SignedPublicKey] = @SignedPublicKey,
         [SecurityState] = @SecurityState,
-        [SecurityVersion] = @SecurityVersion
+        [SecurityVersion] = @SecurityVersion,
+        [SignedPublicKey] = @SignedPublicKey
     WHERE
         [Id] = @Id
 END
