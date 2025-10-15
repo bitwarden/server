@@ -74,7 +74,7 @@ public class FreeFamiliesForEnterprisePolicyValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async Task ExecutePreUpsertSideEffectAsync_DoesNotNotifyUserWhenPolicyDisabledAsync(
+    public async Task ExecutePreUpsertSideEffectAsync_DoesNotNotifyUserWhenPolicyDisabled(
         Organization organization,
         List<OrganizationSponsorship> organizationSponsorships,
         [PolicyUpdate(PolicyType.FreeFamiliesSponsorshipPolicy)] PolicyUpdate policyUpdate,
@@ -102,7 +102,7 @@ public class FreeFamiliesForEnterprisePolicyValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async Task ExecutePreUpsertSideEffectAsync_DoesNotifyUserWhenPolicyEnabledAsync(
+    public async Task ExecutePreUpsertSideEffectAsync_DoesNotifyUserWhenPolicyEnabled(
         Organization organization,
         List<OrganizationSponsorship> organizationSponsorships,
         [PolicyUpdate(PolicyType.FreeFamiliesSponsorshipPolicy)] PolicyUpdate policyUpdate,
