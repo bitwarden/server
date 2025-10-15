@@ -13,25 +13,11 @@ public class VNextSavePolicyCommand(
     IApplicationCacheService applicationCacheService,
     IEventService eventService,
     IPolicyRepository policyRepository,
-    IEnumerable<IEnforceDependentPoliciesEvent> policyValidationEventHandlers,
+    IEnumerable<IPolicyUpdateEvent> policyUpdateEventHandlers,
     TimeProvider timeProvider,
     IPolicyEventHandlerFactory policyEventHandlerFactory)
     : IVNextSavePolicyCommand
 {
-    private readonly IReadOnlyDictionary<PolicyType, IEnforceDependentPoliciesEvent> _policyValidationEvents = MapToDictionary(policyValidationEventHandlers);
-
-    private static Dictionary<PolicyType, IEnforceDependentPoliciesEvent> MapToDictionary(IEnumerable<IEnforceDependentPoliciesEvent> policyValidationEventHandlers)
-    {
-        var policyValidationEventsDict = new Dictionary<PolicyType, IEnforceDependentPoliciesEvent>();
-        foreach (var policyValidationEvent in policyValidationEventHandlers)
-        {
-            if (!policyValidationEventsDict.TryAdd(policyValidationEvent.Type, policyValidationEvent))
-            {
-                throw new Exception($"Duplicate PolicyValidationEvent for {policyValidationEvent.Type} policy.");
-            }
-        }
-        return policyValidationEventsDict;
-    }
 
     public async Task<Policy> SaveAsync(SavePolicyModel policyRequest)
     {
@@ -130,7 +116,8 @@ public class VNextSavePolicyCommand(
         PolicyType policyType,
         Dictionary<PolicyType, Policy> savedPoliciesDict)
     {
-        var dependentPolicyTypes = _policyValidationEvents.Values
+        var dependentPolicyTypes = policyUpdateEventHandlers
+            .OfType<IEnforceDependentPoliciesEvent>()
             .Where(otherValidator => otherValidator.RequiredPolicies.Contains(policyType))
             .Select(otherValidator => otherValidator.Type)
             .Where(otherPolicyType => savedPoliciesDict.TryGetValue(otherPolicyType, out var savedPolicy) &&
