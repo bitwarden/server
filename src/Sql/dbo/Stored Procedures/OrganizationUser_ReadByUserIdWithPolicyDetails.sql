@@ -5,7 +5,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    DECLARE @UserEmail NVARCHAR(320)
+    DECLARE @UserEmail NVARCHAR(256)
     SELECT @UserEmail = Email
     FROM
         [dbo].[UserView]
