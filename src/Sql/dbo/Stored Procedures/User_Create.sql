@@ -94,9 +94,9 @@ BEGIN
         [LastKeyRotationDate],
         [LastEmailChangeDate],
         [VerifyDevices],
-        [SignedPublicKey],
         [SecurityState],
         [SecurityVersion]
+        [SignedPublicKey],
     )
     VALUES
     (
