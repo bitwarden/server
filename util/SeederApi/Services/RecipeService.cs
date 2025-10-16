@@ -7,26 +7,17 @@ using Bit.Seeder;
 
 namespace Bit.SeederApi.Services;
 
-public class RecipeService : IRecipeService
+public class RecipeService(
+    DatabaseContext databaseContext,
+    ILogger<RecipeService> logger,
+    IServiceProvider serviceProvider,
+    IUserRepository userRepository,
+    IOrganizationRepository organizationRepository)
+    : IRecipeService
 {
-    private readonly DatabaseContext _databaseContext;
-    private readonly ILogger<RecipeService> _logger;
-    private readonly IServiceProvider _serviceProvider;
-    private readonly IUserRepository _userRepository;
-    private readonly IOrganizationRepository _organizationRepository;
-
-    public RecipeService(DatabaseContext databaseContext, ILogger<RecipeService> logger, IServiceProvider serviceProvider, IUserRepository userRepository, IOrganizationRepository organizationRepository)
-    {
-        _databaseContext = databaseContext;
-        _logger = logger;
-        _serviceProvider = serviceProvider;
-        _userRepository = userRepository;
-        _organizationRepository = organizationRepository;
-    }
-
     public List<SeededData> GetAllSeededData()
     {
-        return _databaseContext.SeededData.ToList();
+        return databaseContext.SeededData.ToList();
     }
 
     public (object? Result, Guid? SeedId) ExecuteRecipe(string templateName, JsonElement? arguments)
@@ -51,10 +42,10 @@ public class RecipeService : IRecipeService
             CreationDate = DateTime.UtcNow
         };
 
-        _databaseContext.Add(seededData);
-        _databaseContext.SaveChanges();
+        databaseContext.Add(seededData);
+        databaseContext.SaveChanges();
 
-        _logger.LogInformation("Saved seeded data with ID {SeedId} for recipe {RecipeName}",
+        logger.LogInformation("Saved seeded data with ID {SeedId} for recipe {RecipeName}",
             seededData.Id, templateName);
 
         return (Result: recipeResult.Result, SeedId: seededData.Id);
@@ -62,10 +53,10 @@ public class RecipeService : IRecipeService
 
     public async Task<object?> DestroyRecipe(Guid seedId)
     {
-        var seededData = _databaseContext.SeededData.FirstOrDefault(s => s.Id == seedId);
+        var seededData = databaseContext.SeededData.FirstOrDefault(s => s.Id == seedId);
         if (seededData == null)
         {
-            _logger.LogInformation("No seeded data found with ID {SeedId}, skipping", seedId);
+            logger.LogInformation("No seeded data found with ID {SeedId}, skipping", seedId);
             return null;
         }
 
@@ -78,19 +69,19 @@ public class RecipeService : IRecipeService
         // Delete in reverse order to respect foreign key constraints
         if (trackedEntities.TryGetValue("User", out var userIds))
         {
-            var users = _databaseContext.Users.Where(u => userIds.Contains(u.Id));
-            await _userRepository.DeleteManyAsync(users);
+            var users = databaseContext.Users.Where(u => userIds.Contains(u.Id));
+            await userRepository.DeleteManyAsync(users);
         }
 
         if (trackedEntities.TryGetValue("Organization", out var orgIds))
         {
-            var organizations = _databaseContext.Organizations.Where(o => orgIds.Contains(o.Id));
+            var organizations = databaseContext.Organizations.Where(o => orgIds.Contains(o.Id));
             var aggregateException = new AggregateException();
             foreach (var org in organizations)
             {
                 try
                 {
-                    await _organizationRepository.DeleteAsync(org);
+                    await organizationRepository.DeleteAsync(org);
                 }
                 catch (Exception ex)
                 {
@@ -105,10 +96,10 @@ public class RecipeService : IRecipeService
             }
         }
 
-        _databaseContext.Remove(seededData);
-        _databaseContext.SaveChanges();
+        databaseContext.Remove(seededData);
+        databaseContext.SaveChanges();
 
-        _logger.LogInformation("Successfully destroyed seeded data with ID {SeedId} for recipe {RecipeName}",
+        logger.LogInformation("Successfully destroyed seeded data with ID {SeedId} for recipe {RecipeName}",
             seedId, seededData.RecipeName);
 
         return new { SeedId = seedId, RecipeName = seededData.RecipeName };
@@ -125,12 +116,12 @@ public class RecipeService : IRecipeService
             var methodArguments = ParseMethodArguments(method, arguments);
             var result = method.Invoke(recipeInstance, methodArguments);
 
-            _logger.LogInformation("Successfully executed {MethodName} on recipe: {TemplateName}", methodName, templateName);
+            logger.LogInformation("Successfully executed {MethodName} on recipe: {TemplateName}", methodName, templateName);
             return result;
         }
         catch (Exception ex) when (ex is not RecipeNotFoundException and not RecipeExecutionException)
         {
-            _logger.LogError(ex, "Unexpected error executing {MethodName} on recipe: {TemplateName}", methodName, templateName);
+            logger.LogError(ex, "Unexpected error executing {MethodName} on recipe: {TemplateName}", methodName, templateName);
             throw new RecipeExecutionException(
                 $"An unexpected error occurred while executing {methodName} on recipe '{templateName}'",
                 ex.InnerException ?? ex);
@@ -168,7 +159,7 @@ public class RecipeService : IRecipeService
         for (var i = 0; i < parameters.Length; i++)
         {
             var parameter = parameters[i];
-            var service = _serviceProvider.GetService(parameter.ParameterType);
+            var service = serviceProvider.GetService(parameter.ParameterType);
 
             if (service == null)
             {

@@ -13,25 +13,17 @@ public class SeedRequestModel
 }
 
 [Route("")]
-public class SeedController : Controller
+public class SeedController(ILogger<SeedController> logger, IRecipeService recipeService)
+    : Controller
 {
-    private readonly ILogger<SeedController> _logger;
-    private readonly IRecipeService _recipeService;
-
-    public SeedController(ILogger<SeedController> logger, IRecipeService recipeService)
-    {
-        _logger = logger;
-        _recipeService = recipeService;
-    }
-
     [HttpPost("/seed")]
     public IActionResult Seed([FromBody] SeedRequestModel request)
     {
-        _logger.LogInformation("Seeding with template: {Template}", request.Template);
+        logger.LogInformation("Seeding with template: {Template}", request.Template);
 
         try
         {
-            var (result, seedId) = _recipeService.ExecuteRecipe(request.Template, request.Arguments);
+            var (result, seedId) = recipeService.ExecuteRecipe(request.Template, request.Arguments);
 
             return Ok(new
             {
@@ -47,7 +39,7 @@ public class SeedController : Controller
         }
         catch (RecipeExecutionException ex)
         {
-            _logger.LogError(ex, "Error executing recipe: {Template}", request.Template);
+            logger.LogError(ex, "Error executing recipe: {Template}", request.Template);
             return BadRequest(new
             {
                 Error = ex.Message,
@@ -56,7 +48,7 @@ public class SeedController : Controller
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error seeding with template: {Template}", request.Template);
+            logger.LogError(ex, "Unexpected error seeding with template: {Template}", request.Template);
             return StatusCode(500, new
             {
                 Error = "An unexpected error occurred while seeding",
@@ -68,7 +60,7 @@ public class SeedController : Controller
     [HttpDelete("/seed/batch")]
     public async Task<IActionResult> DeleteBatch([FromBody] List<Guid> seedIds)
     {
-        _logger.LogInformation("Deleting batch of seeded data with IDs: {SeedIds}", string.Join(", ", seedIds));
+        logger.LogInformation("Deleting batch of seeded data with IDs: {SeedIds}", string.Join(", ", seedIds));
 
         var aggregateException = new AggregateException();
 
@@ -78,12 +70,12 @@ public class SeedController : Controller
             {
                 try
                 {
-                    await _recipeService.DestroyRecipe(seedId);
+                    await recipeService.DestroyRecipe(seedId);
                 }
                 catch (Exception ex)
                 {
                     aggregateException = new AggregateException(aggregateException, ex);
-                    _logger.LogError(ex, "Error deleting seeded data: {SeedId}", seedId);
+                    logger.LogError(ex, "Error deleting seeded data: {SeedId}", seedId);
                 }
             }
         });
@@ -105,11 +97,11 @@ public class SeedController : Controller
     [HttpDelete("/seed/{seedId}")]
     public async Task<IActionResult> Delete([FromRoute] Guid seedId)
     {
-        _logger.LogInformation("Deleting seeded data with ID: {SeedId}", seedId);
+        logger.LogInformation("Deleting seeded data with ID: {SeedId}", seedId);
 
         try
         {
-            var result = await _recipeService.DestroyRecipe(seedId);
+            var result = await recipeService.DestroyRecipe(seedId);
 
             return Ok(new
             {
@@ -119,7 +111,7 @@ public class SeedController : Controller
         }
         catch (RecipeExecutionException ex)
         {
-            _logger.LogError(ex, "Error deleting seeded data: {SeedId}", seedId);
+            logger.LogError(ex, "Error deleting seeded data: {SeedId}", seedId);
             return BadRequest(new
             {
                 Error = ex.Message,
@@ -128,7 +120,7 @@ public class SeedController : Controller
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error deleting seeded data: {SeedId}", seedId);
+            logger.LogError(ex, "Unexpected error deleting seeded data: {SeedId}", seedId);
             return StatusCode(500, new
             {
                 Error = "An unexpected error occurred while deleting",
@@ -141,10 +133,10 @@ public class SeedController : Controller
     [HttpDelete("/seed")]
     public async Task<IActionResult> DeleteAll()
     {
-        _logger.LogInformation("Deleting all seeded data");
+        logger.LogInformation("Deleting all seeded data");
 
         // Pull all Seeded Data ids
-        var seededData = _recipeService.GetAllSeededData();
+        var seededData = recipeService.GetAllSeededData();
 
         var aggregateException = new AggregateException();
 
@@ -154,12 +146,12 @@ public class SeedController : Controller
             {
                 try
                 {
-                    await _recipeService.DestroyRecipe(sd.Id);
+                    await recipeService.DestroyRecipe(sd.Id);
                 }
                 catch (Exception ex)
                 {
                     aggregateException = new AggregateException(aggregateException, ex);
-                    _logger.LogError(ex, "Error deleting seeded data: {SeedId}", sd.Id);
+                    logger.LogError(ex, "Error deleting seeded data: {SeedId}", sd.Id);
                 }
             }
         });
