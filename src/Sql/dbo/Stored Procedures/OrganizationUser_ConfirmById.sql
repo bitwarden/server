@@ -11,7 +11,7 @@ BEGIN
     UPDATE
         [dbo].[OrganizationUser]
     SET
-        [Status] = 2,
+        [Status] = 2, -- Set to Confirmed
         [RevisionDate] = @RevisionDate
     WHERE
         [Id] = @Id
