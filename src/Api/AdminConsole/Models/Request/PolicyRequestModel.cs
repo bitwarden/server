@@ -1,7 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data;
@@ -19,7 +16,7 @@ public class PolicyRequestModel
     public PolicyType? Type { get; set; }
     [Required]
     public bool? Enabled { get; set; }
-    public Dictionary<string, object> Data { get; set; }
+    public Dictionary<string, object>? Data { get; set; }
 
     public async Task<PolicyUpdate> ToPolicyUpdateAsync(Guid organizationId, ICurrentContext currentContext)
     {
@@ -36,7 +33,7 @@ public class PolicyRequestModel
         };
     }
 
-    private string ValidateAndSerializePolicyData()
+    private string? ValidateAndSerializePolicyData()
     {
         if (Data == null)
         {
