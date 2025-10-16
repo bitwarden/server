@@ -26,7 +26,6 @@ public class Program
         // Create service provider with necessary services
         var services = new ServiceCollection();
         ServiceCollectionExtension.ConfigureServices(services);
-
         var serviceProvider = services.BuildServiceProvider();
 
         // Get a scoped DB context

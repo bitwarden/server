@@ -215,6 +215,7 @@ bitwarden_license/src/Sso/wwwroot/assets
 **/**.swp
 .mono
 src/Core/MailTemplates/Mjml/out
+src/Core/MailTemplates/Mjml/out-hbs
 NativeMethods.g.cs
 util/RustSdk/rust/target
 
