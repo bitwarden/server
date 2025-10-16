@@ -3,11 +3,8 @@ using System.Net;
 using Bit.Api.Models.Public.Request;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.Context;
-using Bit.Core.Enums;
-using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
-using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Vault.Repositories;
@@ -81,45 +78,36 @@ public class EventsController : Controller
         else if (request.SecretId.HasValue)
         {
             var secret = await _secretRepository.GetByIdAsync(request.SecretId.Value);
-            bool canViewLogs = false;
 
             if (secret == null)
             {
-                var currentContextOrg = _currentContext.GetOrganization(organizationId);
-
-                if (currentContextOrg == null)
-                {
-                    return new JsonResult(new PagedListResponseModel<EventResponseModel>([], ""));
-                }
-
                 secret = new Core.SecretsManager.Entities.Secret { Id = request.SecretId.Value, OrganizationId = organizationId };
-                canViewLogs = currentContextOrg.Type is Core.Enums.OrganizationUserType.Admin or Core.Enums.OrganizationUserType.Owner;
-            }
-            else
-            {
-                canViewLogs = await CanViewSecretsLogs(secret);
             }
 
-            if (!canViewLogs)
-            {
-                return new JsonResult(new PagedListResponseModel<EventResponseModel>([], ""));
-            }
 
-            if (secret.OrganizationId == organizationId)
+            if (secret.OrganizationId == organizationId && _currentContext.AccessSecretsManager(organizationId))
             {
                 result = await _eventRepository.GetManyBySecretAsync(
                     secret, dateRange.Item1, dateRange.Item2,
                     new PageOptions { ContinuationToken = request.ContinuationToken });
             }
+            else
+            {
+                return new JsonResult(new PagedListResponseModel<EventResponseModel>([], ""));
+            }
         }
         else if (request.ProjectId.HasValue)
         {
             var project = await _projectRepository.GetByIdAsync(request.ProjectId.Value);
-            if (project != null && project.OrganizationId == organizationId)
+            if (project != null && project.OrganizationId == organizationId && _currentContext.AccessSecretsManager(organizationId))
             {
                 result = await _eventRepository.GetManyByProjectAsync(
                     project, dateRange.Item1, dateRange.Item2,
                     new PageOptions { ContinuationToken = request.ContinuationToken });
+            }
+            else
+            {
+                return new JsonResult(new PagedListResponseModel<EventResponseModel>([], ""));
             }
         }
         else
@@ -132,20 +120,5 @@ public class EventsController : Controller
         var eventResponses = result.Data.Select(e => new EventResponseModel(e));
         var response = new PagedListResponseModel<EventResponseModel>(eventResponses, result.ContinuationToken ?? "");
         return new JsonResult(response);
-    }
-
-    [ApiExplorerSettings(IgnoreApi = true)]
-    private async Task<bool> CanViewSecretsLogs(Secret secret)
-    {
-        if (!_currentContext.AccessSecretsManager(secret.OrganizationId))
-        {
-            throw new NotFoundException();
-        }
-
-        var userId = _userService.GetProperUserId(User)!.Value;
-        var isAdmin = await _currentContext.OrganizationAdmin(secret.OrganizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.IdentityClientType, isAdmin);
-        var access = await _secretRepository.AccessToSecretAsync(secret.Id, userId, accessClient);
-        return access.Read;
     }
 }
