@@ -168,16 +168,6 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
-    /// <inheritdoc cref="CreateAsync(Guid, IEnumerable{Cipher}, IEnumerable{Folder})"/>
-    /// <remarks>
-    /// EF does not use the bulk resource creation service, so we need to use the regular create method.
-    /// </remarks>
-    public async Task CreateAsync_vNext(Guid userId, IEnumerable<Core.Vault.Entities.Cipher> ciphers,
-        IEnumerable<Core.Vault.Entities.Folder> folders)
-    {
-        await CreateAsync(userId, ciphers, folders);
-    }
-
     public async Task CreateAsync(IEnumerable<Core.Vault.Entities.Cipher> ciphers,
         IEnumerable<Core.Entities.Collection> collections,
         IEnumerable<Core.Entities.CollectionCipher> collectionCiphers,
@@ -214,18 +204,6 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
             await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(ciphers.First().OrganizationId.Value);
             await dbContext.SaveChangesAsync();
         }
-    }
-
-    /// <inheritdoc cref="CreateAsync(IEnumerable{Cipher}, IEnumerable{Collection}, IEnumerable{CollectionCipher}, IEnumerable{CollectionUser})"/>
-    /// <remarks>
-    /// EF does not use the bulk resource creation service, so we need to use the regular create method.
-    /// </remarks>
-    public async Task CreateAsync_vNext(IEnumerable<Core.Vault.Entities.Cipher> ciphers,
-        IEnumerable<Core.Entities.Collection> collections,
-        IEnumerable<Core.Entities.CollectionCipher> collectionCiphers,
-        IEnumerable<Core.Entities.CollectionUser> collectionUsers)
-    {
-        await CreateAsync(ciphers, collections, collectionCiphers, collectionUsers);
     }
 
     public async Task DeleteAsync(IEnumerable<Guid> ids, Guid userId)
@@ -281,17 +259,20 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         {
             var dbContext = GetDatabaseContext(scope);
 
-            var collectionCiphers = from cc in dbContext.CollectionCiphers
-                                    join c in dbContext.Collections
-                                        on cc.CollectionId equals c.Id
-                                    where c.OrganizationId == organizationId
-                                    select cc;
-            dbContext.RemoveRange(collectionCiphers);
+            var ciphersToDelete = from c in dbContext.Ciphers
+                                  where c.OrganizationId == organizationId
+                                        && !c.CollectionCiphers.Any(cc =>
+                                            cc.Collection.Type == CollectionType.DefaultUserCollection)
+                                  select c;
+            dbContext.RemoveRange(ciphersToDelete);
 
-            var ciphers = from c in dbContext.Ciphers
-                          where c.OrganizationId == organizationId
-                          select c;
-            dbContext.RemoveRange(ciphers);
+            var collectionCiphersToRemove = from cc in dbContext.CollectionCiphers
+                                            join col in dbContext.Collections on cc.CollectionId equals col.Id
+                                            join c in dbContext.Ciphers on cc.CipherId equals c.Id
+                                            where col.Type != CollectionType.DefaultUserCollection
+                                                  && c.OrganizationId == organizationId
+                                            select cc;
+            dbContext.RemoveRange(collectionCiphersToRemove);
 
             await OrganizationUpdateStorage(organizationId);
             await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(organizationId);
@@ -983,15 +964,6 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
-    /// <inheritdoc cref="UpdateCiphersAsync(Guid, IEnumerable{Cipher})"/>
-    /// <remarks>
-    /// EF does not use the bulk resource creation service, so we need to use the regular update method.
-    /// </remarks>
-    public async Task UpdateCiphersAsync_vNext(Guid userId, IEnumerable<Core.Vault.Entities.Cipher> ciphers)
-    {
-        await UpdateCiphersAsync(userId, ciphers);
-    }
-
     public async Task UpdatePartialAsync(Guid id, Guid userId, Guid? folderId, bool favorite)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -1102,16 +1074,6 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
 
         var result = await query.ToListAsync();
         return result;
-    }
-
-    /// <inheritdoc cref="UpdateForKeyRotation(Guid, IEnumerable{Cipher})"/>
-    /// <remarks>
-    /// EF does not use the bulk resource creation service, so we need to use the regular update method.
-    /// </remarks>
-    public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation_vNext(
-        Guid userId, IEnumerable<Core.Vault.Entities.Cipher> ciphers)
-    {
-        return UpdateForKeyRotation(userId, ciphers);
     }
 
     public async Task UpsertAsync(CipherDetails cipher)

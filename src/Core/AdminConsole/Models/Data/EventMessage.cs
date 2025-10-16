@@ -39,4 +39,5 @@ public class EventMessage : IEvent
     public Guid? SecretId { get; set; }
     public Guid? ProjectId { get; set; }
     public Guid? ServiceAccountId { get; set; }
+    public Guid? GrantedServiceAccountId { get; set; }
 }

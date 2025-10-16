@@ -26,6 +26,7 @@ using Bit.Core.Vault.Models.Data;
 using Core.Auth.Enums;
 using HandlebarsDotNet;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services;
 
@@ -39,6 +40,7 @@ public class HandlebarsMailService : IMailService
     private readonly IMailDeliveryService _mailDeliveryService;
     private readonly IMailEnqueuingService _mailEnqueuingService;
     private readonly IDistributedCache _distributedCache;
+    private readonly ILogger<HandlebarsMailService> _logger;
     private readonly Dictionary<string, HandlebarsTemplate<object, object>> _templateCache = new();
 
     private bool _registeredHelpersAndPartials = false;
@@ -47,12 +49,14 @@ public class HandlebarsMailService : IMailService
         GlobalSettings globalSettings,
         IMailDeliveryService mailDeliveryService,
         IMailEnqueuingService mailEnqueuingService,
-        IDistributedCache distributedCache)
+        IDistributedCache distributedCache,
+        ILogger<HandlebarsMailService> logger)
     {
         _globalSettings = globalSettings;
         _mailDeliveryService = mailDeliveryService;
         _mailEnqueuingService = mailEnqueuingService;
         _distributedCache = distributedCache;
+        _logger = logger;
     }
 
     public async Task SendVerifyEmailEmailAsync(string email, Guid userId, string token)
@@ -355,11 +359,8 @@ public class HandlebarsMailService : IMailService
         {
             Debug.Assert(orgUserTokenPair.OrgUser.Email is not null);
 
-            var orgUserInviteViewModel = orgInvitesInfo.IsSubjectFeatureEnabled
-                ? OrganizationUserInvitedViewModel.CreateFromInviteInfo_v2(
-                    orgInvitesInfo, orgUserTokenPair.OrgUser, orgUserTokenPair.Token, _globalSettings)
-                : OrganizationUserInvitedViewModel.CreateFromInviteInfo(orgInvitesInfo, orgUserTokenPair.OrgUser,
-                    orgUserTokenPair.Token, _globalSettings);
+            var orgUserInviteViewModel = OrganizationUserInvitedViewModel.CreateFromInviteInfo(orgInvitesInfo, orgUserTokenPair.OrgUser,
+                orgUserTokenPair.Token, _globalSettings);
 
             return CreateMessage(orgUserTokenPair.OrgUser.Email, orgUserInviteViewModel);
         });
@@ -369,20 +370,15 @@ public class HandlebarsMailService : IMailService
 
         MailQueueMessage CreateMessage(string email, OrganizationUserInvitedViewModel model)
         {
-            var subject = $"Join {model.OrganizationName}";
+            ArgumentNullException.ThrowIfNull(model);
 
-            if (orgInvitesInfo.IsSubjectFeatureEnabled)
+            var subject = model! switch
             {
-                ArgumentNullException.ThrowIfNull(model);
-
-                subject = model! switch
-                {
-                    { IsFreeOrg: true, OrgUserHasExistingUser: true } => "You have been invited to a Bitwarden Organization",
-                    { IsFreeOrg: true, OrgUserHasExistingUser: false } => "You have been invited to Bitwarden Password Manager",
-                    { IsFreeOrg: false, OrgUserHasExistingUser: true } => $"{model.OrganizationName} invited you to their Bitwarden organization",
-                    { IsFreeOrg: false, OrgUserHasExistingUser: false } => $"{model.OrganizationName} set up a Bitwarden account for you"
-                };
-            }
+                { IsFreeOrg: true, OrgUserHasExistingUser: true } => "You have been invited to a Bitwarden Organization",
+                { IsFreeOrg: true, OrgUserHasExistingUser: false } => "You have been invited to Bitwarden Password Manager",
+                { IsFreeOrg: false, OrgUserHasExistingUser: true } => $"{model.OrganizationName} invited you to their Bitwarden organization",
+                { IsFreeOrg: false, OrgUserHasExistingUser: false } => $"{model.OrganizationName} set up a Bitwarden account for you"
+            };
 
             var message = CreateDefaultMessage(subject, email);
 
@@ -716,6 +712,12 @@ public class HandlebarsMailService : IMailService
 
     private async Task<string?> ReadSourceAsync(string templateName)
     {
+        var diskSource = await ReadSourceFromDiskAsync(templateName);
+        if (!string.IsNullOrWhiteSpace(diskSource))
+        {
+            return diskSource;
+        }
+
         var assembly = typeof(HandlebarsMailService).GetTypeInfo().Assembly;
         var fullTemplateName = $"{Namespace}.{templateName}.hbs";
         if (!assembly.GetManifestResourceNames().Any(f => f == fullTemplateName))
@@ -727,6 +729,42 @@ public class HandlebarsMailService : IMailService
         {
             return await sr.ReadToEndAsync();
         }
+    }
+
+    private async Task<string?> ReadSourceFromDiskAsync(string templateName)
+    {
+        if (!_globalSettings.SelfHosted)
+        {
+            return null;
+        }
+        try
+        {
+            var templateFileSuffix = ".html";
+            if (templateName.EndsWith(".txt"))
+            {
+                templateFileSuffix = ".txt";
+            }
+            else if (!templateName.EndsWith(".html"))
+            {
+                // unexpected suffix
+                return null;
+            }
+            var suffixPosition = templateName.LastIndexOf(templateFileSuffix);
+            var templateNameNoSuffix = templateName.Substring(0, suffixPosition);
+            var templatePathNoSuffix = templateNameNoSuffix.Replace(".", "/");
+            var diskPath = $"{_globalSettings.MailTemplateDirectory}/{templatePathNoSuffix}{templateFileSuffix}.hbs";
+            var directory = Path.GetDirectoryName(diskPath);
+            if (Directory.Exists(directory) && File.Exists(diskPath))
+            {
+                var fileContents = await File.ReadAllTextAsync(diskPath);
+                return fileContents;
+            }
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Failed to read mail template from disk.");
+        }
+        return null;
     }
 
     private async Task RegisterHelpersAndPartialsAsync()

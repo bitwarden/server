@@ -336,13 +336,15 @@ public class CiphersController : Controller
     }
 
     [HttpGet("organization-details")]
-    public async Task<ListResponseModel<CipherMiniDetailsResponseModel>> GetOrganizationCiphers(Guid organizationId)
+    public async Task<ListResponseModel<CipherMiniDetailsResponseModel>> GetOrganizationCiphers(Guid organizationId, bool includeMemberItems = false)
     {
         if (!await CanAccessAllCiphersAsync(organizationId))
         {
             throw new NotFoundException();
         }
-        var allOrganizationCiphers = _featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation)
+
+        bool excludeDefaultUserCollections = _featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation) && !includeMemberItems;
+        var allOrganizationCiphers = excludeDefaultUserCollections
         ?
             await _organizationCiphersQuery.GetAllOrganizationCiphersExcludingDefaultUserCollections(organizationId)
         :
@@ -752,6 +754,11 @@ public class CiphersController : Controller
             }
         }
 
+        if (cipher.ArchivedDate.HasValue)
+        {
+            throw new BadRequestException("Cannot move an archived item to an organization.");
+        }
+
         ValidateClientVersionForFido2CredentialSupport(cipher);
 
         var original = cipher.Clone();
@@ -885,6 +892,9 @@ public class CiphersController : Controller
     [HttpPost("bulk-collections")]
     public async Task PostBulkCollections([FromBody] CipherBulkUpdateCollectionsRequestModel model)
     {
+        var userId = _userService.GetProperUserId(User).Value;
+        await _cipherService.ValidateBulkCollectionAssignmentAsync(model.CollectionIds, model.CipherIds, userId);
+
         if (!await CanModifyCipherCollectionsAsync(model.OrganizationId, model.CipherIds) ||
             !await CanEditItemsInCollections(model.OrganizationId, model.CollectionIds))
         {
@@ -1258,6 +1268,11 @@ public class CiphersController : Controller
                 _logger.LogError("Cipher was not encrypted for the current user. CipherId: {CipherId}, CurrentUser: {CurrentUserId}, EncryptedFor: {EncryptedFor}", cipher.Id, userId, cipher.EncryptedFor);
                 throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
             }
+
+            if (cipher.ArchivedDate.HasValue)
+            {
+                throw new BadRequestException("Cannot move archived items to an organization.");
+            }
         }
 
         var shareCiphers = new List<(CipherDetails, DateTime?)>();
@@ -1269,6 +1284,11 @@ public class CiphersController : Controller
             }
 
             ValidateClientVersionForFido2CredentialSupport(existingCipher);
+
+            if (existingCipher.ArchivedDate.HasValue)
+            {
+                throw new BadRequestException("Cannot move archived items to an organization.");
+            }
 
             shareCiphers.Add((cipher.ToCipherDetails(existingCipher), cipher.LastKnownRevisionDate));
         }
