@@ -12,3 +12,8 @@ keywords = ["akd", "key transparency"]
 [workspace.lints.clippy]
 unused_async = "deny"
 unwrap_used = "deny"
+
+[workspace.dependencies]
+tokio = { version = "1.47.1", features = ["full"] }
+tracing = { version = "0.1.41" }
+tracing-subscriber = {version = "0.3.19" }
