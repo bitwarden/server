@@ -676,7 +676,8 @@ public class StripePaymentService : IPaymentService
         {
             var invoiceCreatePreviewOptions = new InvoiceCreatePreviewOptions
             {
-                Customer = subscriber.GatewayCustomerId
+                Customer = subscriber.GatewayCustomerId,
+                Subscription = subscriber.GatewaySubscriptionId
             };
 
             var upcomingInvoice = await _stripeAdapter.InvoiceCreatePreviewAsync(invoiceCreatePreviewOptions);
@@ -688,7 +689,12 @@ public class StripePaymentService : IPaymentService
         }
         catch (StripeException ex)
         {
-            _logger.LogWarning(ex, "Encountered an unexpected Stripe error");
+            _logger.LogWarning(
+                ex,
+                "Failed to retrieve upcoming invoice for customer {CustomerId}, subscription {SubscriptionId}. Error Code: {ErrorCode}",
+                subscriber.GatewayCustomerId,
+                subscriber.GatewaySubscriptionId,
+                ex.StripeError?.Code);
         }
 
         return subscriptionInfo;

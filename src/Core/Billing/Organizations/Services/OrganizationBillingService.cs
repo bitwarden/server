@@ -460,8 +460,9 @@ public class OrganizationBillingService(
 
         var hasPaymentMethod = await hasPaymentMethodQuery.Run(organization);
 
-        // Only set trial_settings.end_behavior.missing_payment_method to "cancel" if there is no payment method
-        if (!hasPaymentMethod)
+        // Only set trial_settings.end_behavior.missing_payment_method to "cancel"
+        // if there is no payment method AND there's an actual trial period
+        if (!hasPaymentMethod && subscriptionCreateOptions.TrialPeriodDays > 0)
         {
             subscriptionCreateOptions.TrialSettings = new SubscriptionTrialSettingsOptions
             {
