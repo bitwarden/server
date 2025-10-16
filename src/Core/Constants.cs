@@ -198,6 +198,7 @@ public static class FeatureFlagKeys
     public const string WindowsBiometricsV2 = "pm-25373-windows-biometrics-v2";
     public const string LinuxBiometricsV2 = "pm-26340-linux-biometrics-v2";
     public const string NoLogoutOnKdfChange = "pm-23995-no-logout-on-kdf-change";
+    public const string DisableType0Decryption = "pm-25174-disable-type-0-decryption";
 
     /* Mobile Team */
     public const string NativeCarouselFlow = "native-carousel-flow";
@@ -233,7 +234,6 @@ public static class FeatureFlagKeys
     public const string PM8851_BrowserOnboardingNudge = "pm-8851-browser-onboarding-nudge";
     public const string PM9111ExtensionPersistAddEditForm = "pm-9111-extension-persist-add-edit-form";
     public const string CipherKeyEncryption = "cipher-key-encryption";
-    public const string DesktopCipherForms = "pm-18520-desktop-cipher-forms";
     public const string PM19941MigrateCipherDomainToSdk = "pm-19941-migrate-cipher-domain-to-sdk";
     public const string EndUserNotifications = "pm-10609-end-user-notifications";
     public const string PhishingDetection = "phishing-detection";
