@@ -4,6 +4,9 @@ public class SeededData
 {
     public Guid Id { get; set; }
     public required string RecipeName { get; set; }
-    public required string Data { get; set; } // JSON blob with entity tracking info
+    /// <summary>
+    /// JSON blob containing all
+    /// </summary>
+    public required string Data { get; set; }
     public DateTime CreationDate { get; set; }
 }
