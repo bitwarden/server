@@ -22,8 +22,10 @@ public static class PolicyServiceCollectionExtensions
         services.AddPolicyValidators();
         services.AddPolicyRequirements();
         services.AddPolicySideEffects();
+        services.AddPolicyUpdateEvents();
     }
 
+    [Obsolete("Use AddPolicyUpdateEvents instead.")]
     private static void AddPolicyValidators(this IServiceCollection services)
     {
         services.AddScoped<IPolicyValidator, TwoFactorAuthenticationPolicyValidator>();
@@ -34,9 +36,21 @@ public static class PolicyServiceCollectionExtensions
         services.AddScoped<IPolicyValidator, FreeFamiliesForEnterprisePolicyValidator>();
     }
 
+    [Obsolete("Use AddPolicyUpdateEvents instead.")]
     private static void AddPolicySideEffects(this IServiceCollection services)
     {
         services.AddScoped<IPostSavePolicySideEffect, OrganizationDataOwnershipPolicyValidator>();
+    }
+
+    private static void AddPolicyUpdateEvents(this IServiceCollection services)
+    {
+        services.AddScoped<IPolicyUpdateEvent, RequireSsoPolicyValidator>();
+        services.AddScoped<IPolicyUpdateEvent, TwoFactorAuthenticationPolicyValidator>();
+        services.AddScoped<IPolicyUpdateEvent, SingleOrgPolicyValidator>();
+        services.AddScoped<IPolicyUpdateEvent, ResetPasswordPolicyValidator>();
+        services.AddScoped<IPolicyUpdateEvent, MaximumVaultTimeoutPolicyValidator>();
+        services.AddScoped<IPolicyUpdateEvent, FreeFamiliesForEnterprisePolicyValidator>();
+        services.AddScoped<IPolicyUpdateEvent, OrganizationDataOwnershipPolicyValidator>();
     }
 
     private static void AddPolicyRequirements(this IServiceCollection services)
