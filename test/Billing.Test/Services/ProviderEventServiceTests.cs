@@ -64,7 +64,7 @@ public class ProviderEventServiceTests
         await _providerEventService.TryRecordInvoiceLineItems(stripeEvent);
 
         // Assert
-        await _stripeEventService.DidNotReceiveWithAnyArgs().GetInvoice(Arg.Any<Event>());
+        await _stripeEventService.DidNotReceiveWithAnyArgs().GetInvoice(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>?>());
     }
 
     [Fact]
@@ -88,7 +88,7 @@ public class ProviderEventServiceTests
             }
         };
 
-        _stripeEventService.GetInvoice(stripeEvent).Returns(invoice);
+        _stripeEventService.GetInvoice(stripeEvent, true, Arg.Any<List<string>?>()).Returns(invoice);
 
         // Act
         await _providerEventService.TryRecordInvoiceLineItems(stripeEvent);
@@ -120,7 +120,7 @@ public class ProviderEventServiceTests
             }
         };
 
-        _stripeEventService.GetInvoice(stripeEvent).Returns(invoice);
+        _stripeEventService.GetInvoice(stripeEvent, true, Arg.Any<List<string>?>()).Returns(invoice);
 
         var subscription = new Subscription
         {
@@ -171,7 +171,7 @@ public class ProviderEventServiceTests
             ]
         };
 
-        _stripeEventService.GetInvoice(stripeEvent).Returns(invoice);
+        _stripeEventService.GetInvoice(stripeEvent, true, Arg.Any<List<string>?>()).Returns(invoice);
 
         var subscription = new Subscription
         {
@@ -322,7 +322,7 @@ public class ProviderEventServiceTests
             },
         };
 
-        _stripeEventService.GetInvoice(stripeEvent).Returns(invoice);
+        _stripeEventService.GetInvoice(stripeEvent, true, Arg.Any<List<string>?>()).Returns(invoice);
 
         var subscription = new Subscription
         {
