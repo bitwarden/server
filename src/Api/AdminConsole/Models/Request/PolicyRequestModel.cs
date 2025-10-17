@@ -13,7 +13,7 @@ public class PolicyRequestModel
     public PolicyType? Type { get; set; }
     [Required]
     public bool? Enabled { get; set; }
-    public Dictionary<string, object>? Data { get; set; }
+    public Dictionary<string, object> Data { get; set; } = new();
 
     public async Task<PolicyUpdate> ToPolicyUpdateAsync(Guid organizationId, ICurrentContext currentContext)
     {

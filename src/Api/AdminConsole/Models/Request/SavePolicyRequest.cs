@@ -11,7 +11,7 @@ public class SavePolicyRequest
     [Required]
     public PolicyRequestModel Policy { get; set; } = null!;
 
-    public Dictionary<string, object>? Metadata { get; set; }
+    public Dictionary<string, object> Metadata { get; set; } = new();
 
     public async Task<SavePolicyModel> ToSavePolicyModelAsync(Guid organizationId, ICurrentContext currentContext)
     {

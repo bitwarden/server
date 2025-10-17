@@ -14,11 +14,11 @@ public static class PolicyDataValidator
     /// </summary>
     /// <param name="data">The policy data to validate</param>
     /// <param name="policyType">The type of policy</param>
-    /// <returns>Serialized JSON string if data is valid, null if data is null</returns>
+    /// <returns>Serialized JSON string if data is valid, null if data is null or empty</returns>
     /// <exception cref="BadRequestException">Thrown when data validation fails</exception>
     public static string? ValidateAndSerialize(Dictionary<string, object>? data, PolicyType policyType)
     {
-        if (data == null)
+        if (data == null || data.Count == 0)
         {
             return null;
         }
@@ -53,10 +53,10 @@ public static class PolicyDataValidator
     /// </summary>
     /// <param name="metadata">The policy metadata to validate</param>
     /// <param name="policyType">The type of policy</param>
-    /// <returns>Deserialized metadata model, or EmptyMetadataModel if metadata is null or validation fails</returns>
+    /// <returns>Deserialized metadata model, or EmptyMetadataModel if metadata is null, empty, or validation fails</returns>
     public static IPolicyMetadataModel ValidateAndDeserializeMetadata(Dictionary<string, object>? metadata, PolicyType policyType)
     {
-        if (metadata == null)
+        if (metadata == null || metadata.Count == 0)
         {
             return new EmptyMetadataModel();
         }
