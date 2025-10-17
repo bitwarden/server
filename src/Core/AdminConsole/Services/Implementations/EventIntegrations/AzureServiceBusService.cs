@@ -1,8 +1,8 @@
-﻿using System.Collections.Concurrent;
-using Azure.Messaging.ServiceBus;
+﻿using Azure.Messaging.ServiceBus;
 using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.Enums;
 using Bit.Core.Settings;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services;
 
@@ -12,20 +12,20 @@ public class AzureServiceBusService : IAzureServiceBusService
     private readonly ServiceBusSender _eventSender;
     private readonly ServiceBusSender _integrationSender;
 
-    private readonly int _batchSize;
-    private readonly ConcurrentQueue<string> _eventBuffer = new();
-    private int _eventBufferCount = 0;
-    private readonly SemaphoreSlim _flushLock = new(1, 1);
-    private readonly Timer _flushTimer;
+    private readonly AzureServiceBusEventBatchBackgroundService _backgroundEventWorker;
+    private readonly CancellationTokenSource _cts = new();
 
-    public AzureServiceBusService(GlobalSettings globalSettings)
+    public AzureServiceBusService(GlobalSettings globalSettings, ILogger<AzureServiceBusService> logger)
     {
         _client = new ServiceBusClient(globalSettings.EventLogging.AzureServiceBus.ConnectionString);
         _eventSender = _client.CreateSender(globalSettings.EventLogging.AzureServiceBus.EventTopicName);
         _integrationSender = _client.CreateSender(globalSettings.EventLogging.AzureServiceBus.IntegrationTopicName);
-        _batchSize = globalSettings.EventLogging.AzureServiceBus.SenderBatchSize;
-        var flushInterval = TimeSpan.FromMilliseconds(globalSettings.EventLogging.AzureServiceBus.SenderFlushInterval);
-        _flushTimer = new Timer(_ => _ = FlushAsync(), null, flushInterval, flushInterval);
+
+        _backgroundEventWorker = new AzureServiceBusEventBatchBackgroundService(
+            sender: _eventSender,
+            batchSize: globalSettings.EventLogging.AzureServiceBus.SenderBatchSize,
+            logger: logger);
+        _ = _backgroundEventWorker.StartAsync(_cts.Token);
     }
 
     public ServiceBusProcessor CreateProcessor(string topicName, string subscriptionName, ServiceBusProcessorOptions options)
@@ -62,60 +62,16 @@ public class AzureServiceBusService : IAzureServiceBusService
 
     public Task PublishEventAsync(string body)
     {
-        _eventBuffer.Enqueue(body);
-        if (Interlocked.Increment(ref _eventBufferCount) >= _batchSize)
-        {
-            _ = FlushAsync();
-        }
-
+        _backgroundEventWorker.Enqueue(body);
         return Task.CompletedTask;
     }
 
     public async ValueTask DisposeAsync()
     {
-        await _flushTimer.DisposeAsync();
-        await FlushAsync();
+        await _cts.CancelAsync();
+        await _backgroundEventWorker.StopAsync(CancellationToken.None);
         await _eventSender.DisposeAsync();
         await _integrationSender.DisposeAsync();
         await _client.DisposeAsync();
-    }
-
-    private async Task FlushAsync()
-    {
-        if (_eventBuffer.IsEmpty) return;
-        if (!await _flushLock.WaitAsync(0)) return;
-
-        try
-        {
-            var added = 0;
-            using var batch = await _eventSender.CreateMessageBatchAsync();
-
-            while (added < _batchSize && _eventBuffer.TryDequeue(out var body))
-            {
-                var message = new ServiceBusMessage(body)
-                {
-                    ContentType = "application/json",
-                    MessageId = Guid.NewGuid().ToString()
-                };
-
-                if (!batch.TryAddMessage(message))
-                {
-                    _eventBuffer.Enqueue(body);
-                    break; // Batch full, send what we have
-                }
-
-                added++;
-                Interlocked.Decrement(ref _eventBufferCount);
-            }
-
-            if (batch.Count > 0)
-            {
-                await _eventSender.SendMessagesAsync(batch);
-            }
-        }
-        finally
-        {
-            _flushLock.Release();
-        }
     }
 }
