@@ -205,6 +205,17 @@
             "preLaunchTask": "buildSso",
         },
         {
+            "name": "Seeder API",
+            "configurations": [
+                "run-SeederAPI"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "cloud",
+            },
+            "preLaunchTask": "buildSeederAPI",
+        },
+        {
             "name": "Admin Self Host",
             "configurations": [
                 "run-Admin-SelfHost"
@@ -270,6 +281,17 @@
             },
             "preLaunchTask": "buildSso",
         },
+        {
+            "name": "Seeder API Self Host",
+            "configurations": [
+                "run-SeederAPI-SelfHost"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "self-host",
+            },
+            "preLaunchTask": "buildSeederAPI",
+        }
     ],
     "configurations": [
         // Configurations represent run-only scenarios so that they can be used in multiple compounds
@@ -303,6 +325,25 @@
             "program": "${workspaceFolder}/src/Api/bin/Debug/net8.0/Api.dll",
             "args": [],
             "cwd": "${workspaceFolder}/src/Api",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/Views"
+            }
+        },
+        {
+            "name": "run-SeederAPI",
+            "presentation": {
+                "hidden": true,
+            },
+            "requireExactSource": true,
+            "type": "coreclr",
+            "request": "launch",
+            "program": "${workspaceFolder}/util/SeederApi/bin/Debug/net8.0/SeederApi.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/util/SeederApi",
             "stopAtEntry": false,
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development",
@@ -482,6 +523,27 @@
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development",
                 "ASPNETCORE_URLS": "http://localhost:4001",
+                "developSelfHosted": "true",
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/Views"
+            }
+        },
+        {
+            "name": "run-SeederAPI-SelfHost",
+            "presentation": {
+                "hidden": true,
+            },
+            "requireExactSource": true,
+            "type": "coreclr",
+            "request": "launch",
+            "program": "${workspaceFolder}/util/SeederApi/bin/Debug/net8.0/SeederApi.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/util/SeederApi",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ASPNETCORE_URLS": "http://localhost:5048",
                 "developSelfHosted": "true",
             },
             "sourceFileMap": {
