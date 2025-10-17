@@ -16,7 +16,9 @@
   <ItemGroup>
     <EmbeddedResource Include="licensing.cer" />
     <EmbeddedResource Include="licensing_dev.cer" />
-    <EmbeddedResource Include="MailTemplates\Handlebars\**\*.hbs" />
+
+    <!-- Email templates uses .hbs extension, they must be included for emails to work -->
+    <EmbeddedResource Include="**\*.hbs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -72,7 +74,7 @@
     <PackageReference Include="System.Text.Json" Version="8.0.5" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="8.0.1" />
   </ItemGroup>
-  
+
   <ItemGroup>
     <Folder Include="Resources\" />
     <Folder Include="Properties\" />
