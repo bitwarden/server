@@ -44,6 +44,15 @@ public class BillingSettings
     {
         public virtual string ApiKey { get; set; }
         public virtual string BaseUrl { get; set; }
+        public virtual string Path { get; set; }
         public virtual int PersonaId { get; set; }
+        public virtual bool UseAnswerWithCitationModels { get; set; } = true;
+
+        public virtual SearchSettings SearchSettings { get; set; } = new SearchSettings();
+    }
+    public class SearchSettings
+    {
+        public virtual string RunSearch { get; set; } = "auto"; // "always", "never", "auto"
+        public virtual bool RealTime { get; set; } = true;
     }
 }

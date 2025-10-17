@@ -8,6 +8,7 @@ namespace Bit.Core.Settings;
 
 public class GlobalSettings : IGlobalSettings
 {
+    private string _mailTemplateDirectory;
     private string _logDirectory;
     private string _licenseDirectory;
 
@@ -37,6 +38,11 @@ public class GlobalSettings : IGlobalSettings
         get => BuildDirectory(_licenseDirectory, "/core/licenses");
         set => _licenseDirectory = value;
     }
+    public virtual string MailTemplateDirectory
+    {
+        get => BuildDirectory(_mailTemplateDirectory, "/mail-templates");
+        set => _mailTemplateDirectory = value;
+    }
     public string LicenseCertificatePassword { get; set; }
     public virtual string PushRelayBaseUri { get; set; }
     public virtual string InternalIdentityKey { get; set; }
@@ -56,6 +62,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual SqlSettings MySql { get; set; } = new SqlSettings();
     public virtual SqlSettings Sqlite { get; set; } = new SqlSettings() { ConnectionString = "Data Source=:memory:" };
     public virtual SlackSettings Slack { get; set; } = new SlackSettings();
+    public virtual TeamsSettings Teams { get; set; } = new TeamsSettings();
     public virtual EventLoggingSettings EventLogging { get; set; } = new EventLoggingSettings();
     public virtual MailSettings Mail { get; set; } = new MailSettings();
     public virtual IConnectionStringSettings Storage { get; set; } = new ConnectionStringSettings();
@@ -97,6 +104,7 @@ public class GlobalSettings : IGlobalSettings
     /// </summary>
     public virtual string SendDefaultHashKey { get; set; }
     public virtual string PricingUri { get; set; }
+    public virtual Fido2Settings Fido2 { get; set; } = new Fido2Settings();
 
     public string BuildExternalUri(string explicitValue, string name)
     {
@@ -288,6 +296,15 @@ public class GlobalSettings : IGlobalSettings
         public virtual string Scopes { get; set; }
     }
 
+    public class TeamsSettings
+    {
+        public virtual string LoginBaseUrl { get; set; } = "https://login.microsoftonline.com";
+        public virtual string GraphBaseUrl { get; set; } = "https://graph.microsoft.com/v1.0";
+        public virtual string ClientId { get; set; }
+        public virtual string ClientSecret { get; set; }
+        public virtual string Scopes { get; set; }
+    }
+
     public class EventLoggingSettings
     {
         public AzureServiceBusSettings AzureServiceBus { get; set; } = new AzureServiceBusSettings();
@@ -301,6 +318,9 @@ public class GlobalSettings : IGlobalSettings
             private string _eventTopicName;
             private string _integrationTopicName;
 
+            public virtual int DefaultMaxConcurrentCalls { get; set; } = 1;
+            public virtual int DefaultPrefetchCount { get; set; } = 0;
+
             public virtual string EventRepositorySubscriptionName { get; set; } = "events-write-subscription";
             public virtual string SlackEventSubscriptionName { get; set; } = "events-slack-subscription";
             public virtual string SlackIntegrationSubscriptionName { get; set; } = "integration-slack-subscription";
@@ -310,6 +330,8 @@ public class GlobalSettings : IGlobalSettings
             public virtual string HecIntegrationSubscriptionName { get; set; } = "integration-hec-subscription";
             public virtual string DatadogEventSubscriptionName { get; set; } = "events-datadog-subscription";
             public virtual string DatadogIntegrationSubscriptionName { get; set; } = "integration-datadog-subscription";
+            public virtual string TeamsEventSubscriptionName { get; set; } = "events-teams-subscription";
+            public virtual string TeamsIntegrationSubscriptionName { get; set; } = "integration-teams-subscription";
 
             public string ConnectionString
             {
@@ -354,6 +376,9 @@ public class GlobalSettings : IGlobalSettings
             public virtual string DatadogEventsQueueName { get; set; } = "events-datadog-queue";
             public virtual string DatadogIntegrationQueueName { get; set; } = "integration-datadog-queue";
             public virtual string DatadogIntegrationRetryQueueName { get; set; } = "integration-datadog-retry-queue";
+            public virtual string TeamsEventsQueueName { get; set; } = "events-teams-queue";
+            public virtual string TeamsIntegrationQueueName { get; set; } = "integration-teams-queue";
+            public virtual string TeamsIntegrationRetryQueueName { get; set; } = "integration-teams-retry-queue";
 
             public string HostName
             {
@@ -762,5 +787,10 @@ public class GlobalSettings : IGlobalSettings
     public class WebPushSettings : IWebPushSettings
     {
         public string VapidPublicKey { get; set; }
+    }
+
+    public class Fido2Settings
+    {
+        public HashSet<string> Origins { get; set; }
     }
 }

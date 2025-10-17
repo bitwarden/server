@@ -21,7 +21,7 @@ public class SelfHostedAccountBillingController(
     ICreatePremiumSelfHostedSubscriptionCommand createPremiumSelfHostedSubscriptionCommand) : BaseBillingController
 {
     [HttpPost("license")]
-    [RequireFeature(FeatureFlagKeys.PM23385_UseNewPremiumFlow)]
+    [RequireFeature(FeatureFlagKeys.PM24996ImplementUpgradeFromFreeDialog)]
     [InjectUser]
     public async Task<IResult> UploadLicenseAsync(
         [BindNever] User user,

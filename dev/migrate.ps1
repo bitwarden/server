@@ -70,7 +70,7 @@ Foreach ($item in @(
     @($mysql, "MySQL", "MySqlMigrations", "mySql", 2),
     # MariaDB shares the MySQL connection string in the server config so they are mutually exclusive in that context.
     # However they can still be run independently for integration tests.
-    @($mariadb, "MariaDB", "MySqlMigrations", "mySql", 3) 
+    @($mariadb, "MariaDB", "MySqlMigrations", "mySql", 4) 
 )) {
   if (!$item[0] -and !$all) {
     continue

@@ -44,13 +44,13 @@ BEGIN
         [CollectionId],
         [CipherId]
     )
-    SELECT 
+    SELECT
         [Id],
         @CipherId
     FROM @CollectionIds
     WHERE [Id] IN (SELECT [Id] FROM [#TempAvailableCollections])
     AND NOT EXISTS (
-        SELECT 1 
+        SELECT 1
         FROM [dbo].[CollectionCipher]
         WHERE [CollectionId] = [@CollectionIds].[Id]
         AND [CipherId] = @CipherId
