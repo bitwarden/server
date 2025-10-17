@@ -1,4 +1,15 @@
-﻿CREATE PROCEDURE [dbo].[OrganizationUser_ReadByUserIdWithPolicyDetails]
+CREATE OR ALTER VIEW [dbo].[UserProviderAccessView]
+AS
+SELECT DISTINCT
+    PU.[UserId],
+    PO.[OrganizationId]
+FROM
+    [dbo].[ProviderUserView] PU
+INNER JOIN
+    [dbo].[ProviderOrganizationView] PO ON PO.[ProviderId] = PU.[ProviderId]
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_ReadByUserIdWithPolicyDetails]
     @UserId UNIQUEIDENTIFIER,
     @PolicyType TINYINT
 AS
@@ -71,3 +82,4 @@ BEGIN
     WHERE
         P.[Type] = @PolicyType
 END
+GO
