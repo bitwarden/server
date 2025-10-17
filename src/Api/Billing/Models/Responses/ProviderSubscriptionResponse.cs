@@ -52,10 +52,12 @@ public record ProviderSubscriptionResponse(
 
         var accountCredit = Convert.ToDecimal(subscription.Customer?.Balance) * -1 / 100;
 
+        var discount = subscription.Customer?.Discount ?? subscription.Discounts?.FirstOrDefault();
+
         return new ProviderSubscriptionResponse(
             subscription.Status,
             subscription.GetCurrentPeriodEnd(),
-            subscription.Customer?.Discount?.Coupon?.PercentOff,
+            discount?.Coupon?.PercentOff,
             subscription.CollectionMethod,
             providerPlanResponses,
             accountCredit,

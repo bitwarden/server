@@ -4,6 +4,7 @@
 
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Business;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Payments;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
@@ -634,40 +635,32 @@ public class StripePaymentService : IPaymentService
     {
         var subscriptionInfo = new SubscriptionInfo();
 
-        if (!string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
-        {
-            var customerGetOptions = new CustomerGetOptions();
-            customerGetOptions.AddExpand("discount.coupon.applies_to");
-            var customer = await _stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId, customerGetOptions);
-
-            if (customer.Discount != null)
-            {
-                subscriptionInfo.CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount(customer.Discount);
-            }
-        }
-
-        if (string.IsNullOrWhiteSpace(subscriber.GatewaySubscriptionId))
+        if (string.IsNullOrEmpty(subscriber.GatewaySubscriptionId))
         {
             return subscriptionInfo;
         }
 
-        var sub = await _stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId,
-            new SubscriptionGetOptions { Expand = ["test_clock"] });
+        var subscription = await _stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId,
+            new SubscriptionGetOptions { Expand = ["customer", "discounts", "test_clock"] });
 
-        if (sub != null)
+        subscriptionInfo.Subscription = new SubscriptionInfo.BillingSubscription(subscription);
+
+        var discount = subscription.Customer.Discount ?? subscription.Discounts.FirstOrDefault();
+
+        if (discount != null)
         {
-            subscriptionInfo.Subscription = new SubscriptionInfo.BillingSubscription(sub);
-
-            var (suspensionDate, unpaidPeriodEndDate) = await GetSuspensionDateAsync(sub);
-
-            if (suspensionDate.HasValue && unpaidPeriodEndDate.HasValue)
-            {
-                subscriptionInfo.Subscription.SuspensionDate = suspensionDate;
-                subscriptionInfo.Subscription.UnpaidPeriodEndDate = unpaidPeriodEndDate;
-            }
+            subscriptionInfo.CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount(discount);
         }
 
-        if (sub is { CanceledAt: not null } || string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
+        var (suspensionDate, unpaidPeriodEndDate) = await GetSuspensionDateAsync(subscription);
+
+        if (suspensionDate.HasValue && unpaidPeriodEndDate.HasValue)
+        {
+            subscriptionInfo.Subscription.SuspensionDate = suspensionDate;
+            subscriptionInfo.Subscription.UnpaidPeriodEndDate = unpaidPeriodEndDate;
+        }
+
+        if (subscription is { CanceledAt: not null } || string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
         {
             return subscriptionInfo;
         }
