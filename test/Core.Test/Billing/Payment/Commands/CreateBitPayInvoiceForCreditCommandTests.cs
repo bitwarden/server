@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Payment.Clients;
 using Bit.Core.Billing.Payment.Commands;
 using Bit.Core.Entities;
@@ -11,12 +12,18 @@ using Invoice = BitPayLight.Models.Invoice.Invoice;
 
 namespace Bit.Core.Test.Billing.Payment.Commands;
 
+using static BitPayConstants;
+
 public class CreateBitPayInvoiceForCreditCommandTests
 {
     private readonly IBitPayClient _bitPayClient = Substitute.For<IBitPayClient>();
     private readonly GlobalSettings _globalSettings = new()
     {
-        BitPay = new GlobalSettings.BitPaySettings { NotificationUrl = "https://example.com/bitpay/notification" }
+        BitPay = new GlobalSettings.BitPaySettings
+        {
+            NotificationUrl = "https://example.com/bitpay/notification",
+            WebhookKey = "test-webhook-key"
+        }
     };
     private const string _redirectUrl = "https://bitwarden.com/redirect";
     private readonly CreateBitPayInvoiceForCreditCommand _command;
@@ -37,8 +44,8 @@ public class CreateBitPayInvoiceForCreditCommandTests
         _bitPayClient.CreateInvoice(Arg.Is<Invoice>(options =>
             options.Buyer.Email == user.Email &&
             options.Buyer.Name == user.Email &&
-            options.NotificationUrl == _globalSettings.BitPay.NotificationUrl &&
-            options.PosData == $"userId:{user.Id},accountCredit:1" &&
+            options.NotificationUrl == $"{_globalSettings.BitPay.NotificationUrl}?key={_globalSettings.BitPay.WebhookKey}" &&
+            options.PosData == $"userId:{user.Id},{PosDataKeys.AccountCredit}" &&
             // ReSharper disable once CompareOfFloatsByEqualityOperator
             options.Price == Convert.ToDouble(10M) &&
             options.RedirectUrl == _redirectUrl)).Returns(new Invoice { Url = "https://bitpay.com/invoice/123" });
@@ -58,8 +65,8 @@ public class CreateBitPayInvoiceForCreditCommandTests
         _bitPayClient.CreateInvoice(Arg.Is<Invoice>(options =>
             options.Buyer.Email == organization.BillingEmail &&
             options.Buyer.Name == organization.Name &&
-            options.NotificationUrl == _globalSettings.BitPay.NotificationUrl &&
-            options.PosData == $"organizationId:{organization.Id},accountCredit:1" &&
+            options.NotificationUrl == $"{_globalSettings.BitPay.NotificationUrl}?key={_globalSettings.BitPay.WebhookKey}" &&
+            options.PosData == $"organizationId:{organization.Id},{PosDataKeys.AccountCredit}" &&
             // ReSharper disable once CompareOfFloatsByEqualityOperator
             options.Price == Convert.ToDouble(10M) &&
             options.RedirectUrl == _redirectUrl)).Returns(new Invoice { Url = "https://bitpay.com/invoice/123" });
@@ -79,8 +86,8 @@ public class CreateBitPayInvoiceForCreditCommandTests
         _bitPayClient.CreateInvoice(Arg.Is<Invoice>(options =>
             options.Buyer.Email == provider.BillingEmail &&
             options.Buyer.Name == provider.Name &&
-            options.NotificationUrl == _globalSettings.BitPay.NotificationUrl &&
-            options.PosData == $"providerId:{provider.Id},accountCredit:1" &&
+            options.NotificationUrl == $"{_globalSettings.BitPay.NotificationUrl}?key={_globalSettings.BitPay.WebhookKey}" &&
+            options.PosData == $"providerId:{provider.Id},{PosDataKeys.AccountCredit}" &&
             // ReSharper disable once CompareOfFloatsByEqualityOperator
             options.Price == Convert.ToDouble(10M) &&
             options.RedirectUrl == _redirectUrl)).Returns(new Invoice { Url = "https://bitpay.com/invoice/123" });
