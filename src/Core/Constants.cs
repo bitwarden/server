@@ -155,20 +155,14 @@ public static class FeatureFlagKeys
         "pm-23174-manage-account-recovery-permission-drives-the-need-to-set-master-password";
 
     /* Autofill Team */
-    public const string IdpAutoSubmitLogin = "idp-auto-submit-login";
     public const string UseTreeWalkerApiForPageDetailsCollection = "use-tree-walker-api-for-page-details-collection";
-    public const string InlineMenuFieldQualification = "inline-menu-field-qualification";
-    public const string InlineMenuPositioningImprovements = "inline-menu-positioning-improvements";
     public const string SSHAgent = "ssh-agent";
     public const string SSHVersionCheckQAOverride = "ssh-version-check-qa-override";
-    public const string GenerateIdentityFillScriptRefactor = "generate-identity-fill-script-refactor";
-    public const string DelayFido2PageScriptInitWithinMv2 = "delay-fido2-page-script-init-within-mv2";
     public const string NotificationBarAddLoginImprovements = "notification-bar-add-login-improvements";
     public const string BlockBrowserInjectionsByDomain = "block-browser-injections-by-domain";
     public const string NotificationRefresh = "notification-refresh";
     public const string EnableNewCardCombinedExpiryAutofill = "enable-new-card-combined-expiry-autofill";
     public const string MacOsNativeCredentialSync = "macos-native-credential-sync";
-    public const string InlineMenuTotp = "inline-menu-totp";
     public const string WindowsDesktopAutotype = "windows-desktop-autotype";
 
     /* Billing Team */
