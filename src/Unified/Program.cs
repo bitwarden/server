@@ -13,22 +13,7 @@ builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
 });
 
 IEnumerable<IApplicationConfigurator> services = [
-    // Bootstrap API
-    new ApplicationConfigurator<Bit.Api.Startup>(
-        "api",
-        new Bit.Api.Startup(builder.Environment, builder.Configuration),
-        static (startup, builder, services) => startup.ConfigureServices(services),
-        static (startup, app, builder) => 
-        { 
-            startup.Configure(
-                builder,
-                app.Environment,
-                app.Lifetime,
-                app.Services.GetRequiredService<GlobalSettings>(),
-                app.Services.GetRequiredService<ILoggerFactory>().CreateLogger<Bit.Api.Startup>()
-            );
-        }
-    ),
+    // Bootstap Identity
     new ApplicationConfigurator<Bit.Identity.Startup>(
         "identity",
         new Bit.Identity.Startup(builder.Environment, builder.Configuration),
@@ -41,6 +26,22 @@ IEnumerable<IApplicationConfigurator> services = [
                 app.Lifetime,
                 app.Services.GetRequiredService<GlobalSettings>(),
                 app.Services.GetRequiredService<ILoggerFactory>().CreateLogger<Bit.Identity.Startup>()
+            );
+        }
+    ),
+    // Bootstrap API
+    new ApplicationConfigurator<Bit.Api.Startup>(
+        "api",
+        new Bit.Api.Startup(builder.Environment, builder.Configuration),
+        static (startup, builder, services) => startup.ConfigureServices(services),
+        static (startup, app, builder) =>
+        {
+            startup.Configure(
+                builder,
+                app.Environment,
+                app.Lifetime,
+                app.Services.GetRequiredService<GlobalSettings>(),
+                app.Services.GetRequiredService<ILoggerFactory>().CreateLogger<Bit.Api.Startup>()
             );
         }
     ),
