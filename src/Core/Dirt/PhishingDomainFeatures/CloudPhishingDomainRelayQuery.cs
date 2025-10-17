@@ -1,12 +1,12 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
-using Bit.Core.PhishingDomainFeatures.Interfaces;
+using Bit.Core.Dirt.PhishingDomainFeatures.Interfaces;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 
-namespace Bit.Core.PhishingDomainFeatures;
+namespace Bit.Core.Dirt.PhishingDomainFeatures;
 
 /// <summary>
 /// Implementation of ICloudPhishingDomainQuery for self-hosted environments

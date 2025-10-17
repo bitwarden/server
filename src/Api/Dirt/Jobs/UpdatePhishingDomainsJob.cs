@@ -1,12 +1,12 @@
 ﻿using Bit.Core;
+using Bit.Core.Dirt.PhishingDomainFeatures.Interfaces;
+using Bit.Core.Dirt.Repositories;
 using Bit.Core.Jobs;
-using Bit.Core.PhishingDomainFeatures.Interfaces;
-using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Quartz;
 
-namespace Bit.Api.Jobs;
+namespace Bit.Api.Dirt.Jobs;
 
 public class UpdatePhishingDomainsJob : BaseJob
 {
