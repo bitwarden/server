@@ -40,6 +40,9 @@ jobs:
 
       - name: Check out repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
 
       - name: Check release version
         id: version
@@ -52,8 +55,8 @@ jobs:
       - name: Get branch name
         id: branch
         run: |
-          BRANCH_NAME=$(basename ${{ github.ref }})
-          echo "branch-name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          BRANCH_NAME=$(basename "${GITHUB_REF}")
+          echo "branch-name=$BRANCH_NAME" >> "$GITHUB_OUTPUT"
 
   release:
     name: Create GitHub release

@@ -63,13 +63,15 @@ jobs:
 
       # Datadog agent for collecting OTEL metrics from k6
       - name: Start Datadog agent
+        env:
+          DD_API_KEY: ${{ steps.get-kv-secrets.outputs.DD-API-KEY }}
         run: |
           docker run --detach \
             --name datadog-agent \
             -p 4317:4317 \
             -p 5555:5555 \
             -e DD_SITE=us3.datadoghq.com \
-            -e DD_API_KEY=${{ steps.get-kv-secrets.outputs.DD-API-KEY }} \
+            -e DD_API_KEY="${DD_API_KEY}" \
             -e DD_DOGSTATSD_NON_LOCAL_TRAFFIC=1 \
             -e DD_OTLP_CONFIG_RECEIVER_PROTOCOLS_GRPC_ENDPOINT=0.0.0.0:4317 \
             -e DD_HEALTH_PORT=5555 \

@@ -35,6 +35,8 @@ jobs:
         with:
           ref: main
           token: ${{ steps.retrieve-bot-secrets.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
+          persist-credentials: false
+          fetch-depth: 0
 
       - name: Check if a RC branch exists
         id: branch-check
@@ -43,11 +45,11 @@ jobs:
           rc_branch_check=$(git ls-remote --heads origin rc | wc -l)
 
           if [[ "${hotfix_rc_branch_check}" -gt 0 ]]; then
-            echo "hotfix-rc branch exists." | tee -a $GITHUB_STEP_SUMMARY
-            echo "name=hotfix-rc" >> $GITHUB_OUTPUT
+            echo "hotfix-rc branch exists." | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "name=hotfix-rc" >> "$GITHUB_OUTPUT"
           elif [[ "${rc_branch_check}" -gt 0 ]]; then
-            echo "rc branch exists." | tee -a $GITHUB_STEP_SUMMARY
-            echo "name=rc" >> $GITHUB_OUTPUT
+            echo "rc branch exists." | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "name=rc" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Delete RC branch
@@ -55,6 +57,6 @@ jobs:
           BRANCH_NAME: ${{ steps.branch-check.outputs.name }}
         run: |
           if ! [[ -z "$BRANCH_NAME" ]]; then
-            git push --quiet origin --delete $BRANCH_NAME
-            echo "Deleted $BRANCH_NAME branch." | tee -a $GITHUB_STEP_SUMMARY
+            git push --quiet origin --delete "$BRANCH_NAME"
+            echo "Deleted $BRANCH_NAME branch." | tee -a "$GITHUB_STEP_SUMMARY"
           fi
