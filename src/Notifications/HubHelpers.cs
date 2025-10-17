@@ -64,7 +64,7 @@ public static class HubHelpers
             case PushType.SyncSettings:
             case PushType.LogOut:
                 var userNotification =
-                    JsonSerializer.Deserialize<PushNotificationData<UserPushNotification>>(
+                    JsonSerializer.Deserialize<PushNotificationData<LogOutPushNotification>>(
                         notificationJson, _deserializerOptions);
                 await hubContext.Clients.User(userNotification.Payload.UserId.ToString())
                     .SendAsync(_receiveMessageMethod, userNotification, cancellationToken);
