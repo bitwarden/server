@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Billing.Caches;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Premium.Commands;
 using Bit.Core.Billing.Services;
@@ -105,6 +106,16 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         var mockSubscription = Substitute.For<StripeSubscription>();
         mockSubscription.Id = "sub_123";
         mockSubscription.Status = "active";
+        mockSubscription.Items = new StripeList<SubscriptionItem>
+        {
+            Data =
+            [
+                new SubscriptionItem
+                {
+                    CurrentPeriodEnd = DateTime.UtcNow.AddDays(30)
+                }
+            ]
+        };
 
         var mockInvoice = Substitute.For<Invoice>();
 
@@ -152,6 +163,16 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         var mockSubscription = Substitute.For<StripeSubscription>();
         mockSubscription.Id = "sub_123";
         mockSubscription.Status = "active";
+        mockSubscription.Items = new StripeList<SubscriptionItem>
+        {
+            Data =
+            [
+                new SubscriptionItem
+                {
+                    CurrentPeriodEnd = DateTime.UtcNow.AddDays(30)
+                }
+            ]
+        };
 
         var mockInvoice = Substitute.For<Invoice>();
 
@@ -241,7 +262,16 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         var mockSubscription = Substitute.For<StripeSubscription>();
         mockSubscription.Id = "sub_123";
         mockSubscription.Status = "active";
-        mockSubscription.CurrentPeriodEnd = DateTime.UtcNow.AddDays(30);
+        mockSubscription.Items = new StripeList<SubscriptionItem>
+        {
+            Data =
+            [
+                new SubscriptionItem
+                {
+                    CurrentPeriodEnd = DateTime.UtcNow.AddDays(30)
+                }
+            ]
+        };
 
         var mockInvoice = Substitute.For<Invoice>();
 
@@ -286,6 +316,16 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         var mockSubscription = Substitute.For<StripeSubscription>();
         mockSubscription.Id = "sub_123";
         mockSubscription.Status = "active";
+        mockSubscription.Items = new StripeList<SubscriptionItem>
+        {
+            Data =
+            [
+                new SubscriptionItem
+                {
+                    CurrentPeriodEnd = DateTime.UtcNow.AddDays(30)
+                }
+            ]
+        };
 
         var mockInvoice = Substitute.For<Invoice>();
 
@@ -326,7 +366,16 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         var mockSubscription = Substitute.For<StripeSubscription>();
         mockSubscription.Id = "sub_123";
         mockSubscription.Status = "incomplete";
-        mockSubscription.CurrentPeriodEnd = DateTime.UtcNow.AddDays(30);
+        mockSubscription.Items = new StripeList<SubscriptionItem>
+        {
+            Data =
+            [
+                new SubscriptionItem
+                {
+                    CurrentPeriodEnd = DateTime.UtcNow.AddDays(30)
+                }
+            ]
+        };
 
         var mockInvoice = Substitute.For<Invoice>();
 
@@ -342,7 +391,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         // Assert
         Assert.True(result.IsT0);
         Assert.True(user.Premium);
-        Assert.Equal(mockSubscription.CurrentPeriodEnd, user.PremiumExpirationDate);
+        Assert.Equal(mockSubscription.GetCurrentPeriodEnd(), user.PremiumExpirationDate);
     }
 
     [Theory, BitAutoData]
@@ -368,7 +417,16 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         var mockSubscription = Substitute.For<StripeSubscription>();
         mockSubscription.Id = "sub_123";
         mockSubscription.Status = "active";
-        mockSubscription.CurrentPeriodEnd = DateTime.UtcNow.AddDays(30);
+        mockSubscription.Items = new StripeList<SubscriptionItem>
+        {
+            Data =
+            [
+                new SubscriptionItem
+                {
+                    CurrentPeriodEnd = DateTime.UtcNow.AddDays(30)
+                }
+            ]
+        };
 
         var mockInvoice = Substitute.For<Invoice>();
 
@@ -384,7 +442,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         // Assert
         Assert.True(result.IsT0);
         Assert.True(user.Premium);
-        Assert.Equal(mockSubscription.CurrentPeriodEnd, user.PremiumExpirationDate);
+        Assert.Equal(mockSubscription.GetCurrentPeriodEnd(), user.PremiumExpirationDate);
     }
 
     [Theory, BitAutoData]
@@ -411,7 +469,16 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         var mockSubscription = Substitute.For<StripeSubscription>();
         mockSubscription.Id = "sub_123";
         mockSubscription.Status = "active"; // PayPal + active doesn't match pattern
-        mockSubscription.CurrentPeriodEnd = DateTime.UtcNow.AddDays(30);
+        mockSubscription.Items = new StripeList<SubscriptionItem>
+        {
+            Data =
+            [
+                new SubscriptionItem
+                {
+                    CurrentPeriodEnd = DateTime.UtcNow.AddDays(30)
+                }
+            ]
+        };
 
         var mockInvoice = Substitute.For<Invoice>();
 
@@ -453,7 +520,16 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         var mockSubscription = Substitute.For<StripeSubscription>();
         mockSubscription.Id = "sub_123";
         mockSubscription.Status = "incomplete";
-        mockSubscription.CurrentPeriodEnd = DateTime.UtcNow.AddDays(30);
+        mockSubscription.Items = new StripeList<SubscriptionItem>
+        {
+            Data =
+            [
+                new SubscriptionItem
+                {
+                    CurrentPeriodEnd = DateTime.UtcNow.AddDays(30)
+                }
+            ]
+        };
 
         var mockInvoice = Substitute.For<Invoice>();
 

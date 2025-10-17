@@ -31,7 +31,7 @@ public class PreviewPremiumTaxCommandTests
 
         var invoice = new Invoice
         {
-            Tax = 300,
+            TotalTaxes = [new InvoiceTotalTax { Amount = 300 }],
             Total = 3300
         };
 
@@ -65,7 +65,7 @@ public class PreviewPremiumTaxCommandTests
 
         var invoice = new Invoice
         {
-            Tax = 500,
+            TotalTaxes = [new InvoiceTotalTax { Amount = 500 }],
             Total = 5500
         };
 
@@ -101,7 +101,7 @@ public class PreviewPremiumTaxCommandTests
 
         var invoice = new Invoice
         {
-            Tax = 250,
+            TotalTaxes = [new InvoiceTotalTax { Amount = 250 }],
             Total = 2750
         };
 
@@ -135,7 +135,7 @@ public class PreviewPremiumTaxCommandTests
 
         var invoice = new Invoice
         {
-            Tax = 800,
+            TotalTaxes = [new InvoiceTotalTax { Amount = 800 }],
             Total = 8800
         };
 
@@ -171,7 +171,7 @@ public class PreviewPremiumTaxCommandTests
 
         var invoice = new Invoice
         {
-            Tax = 450,
+            TotalTaxes = [new InvoiceTotalTax { Amount = 450 }],
             Total = 4950
         };
 
@@ -207,7 +207,7 @@ public class PreviewPremiumTaxCommandTests
 
         var invoice = new Invoice
         {
-            Tax = 0,
+            TotalTaxes = [new InvoiceTotalTax { Amount = 0 }],
             Total = 3000
         };
 
@@ -241,7 +241,7 @@ public class PreviewPremiumTaxCommandTests
 
         var invoice = new Invoice
         {
-            Tax = 600,
+            TotalTaxes = [new InvoiceTotalTax { Amount = 600 }],
             Total = 6600
         };
 
@@ -276,7 +276,7 @@ public class PreviewPremiumTaxCommandTests
         // Stripe amounts are in cents
         var invoice = new Invoice
         {
-            Tax = 123, // $1.23
+            TotalTaxes = [new InvoiceTotalTax { Amount = 123 }], // $1.23
             Total = 3123 // $31.23
         };
 

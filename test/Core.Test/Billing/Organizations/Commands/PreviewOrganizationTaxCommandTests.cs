@@ -54,7 +54,7 @@ public class PreviewOrganizationTaxCommandTests
 
         var invoice = new Invoice
         {
-            Tax = 500,
+            TotalTaxes = [new InvoiceTotalTax { Amount = 500 }],
             Total = 5500
         };
 
@@ -77,7 +77,7 @@ public class PreviewOrganizationTaxCommandTests
             options.SubscriptionDetails.Items.Count == 1 &&
             options.SubscriptionDetails.Items[0].Price == "2021-family-for-enterprise-annually" &&
             options.SubscriptionDetails.Items[0].Quantity == 1 &&
-            options.Coupon == null));
+            options.Discounts == null));
     }
 
     [Fact]
@@ -112,7 +112,7 @@ public class PreviewOrganizationTaxCommandTests
 
         var invoice = new Invoice
         {
-            Tax = 750,
+            TotalTaxes = [new InvoiceTotalTax { Amount = 750 }],
             Total = 8250
         };
 
@@ -137,7 +137,9 @@ public class PreviewOrganizationTaxCommandTests
                 item.Price == "2023-teams-org-seat-monthly" && item.Quantity == 5) &&
             options.SubscriptionDetails.Items.Any(item =>
                 item.Price == "secrets-manager-teams-seat-monthly" && item.Quantity == 3) &&
-            options.Coupon == CouponIDs.SecretsManagerStandalone));
+            options.Discounts != null &&
+            options.Discounts.Count == 1 &&
+            options.Discounts[0].Coupon == CouponIDs.SecretsManagerStandalone));
     }
 
     [Fact]
@@ -173,7 +175,7 @@ public class PreviewOrganizationTaxCommandTests
 
         var invoice = new Invoice
         {
-            Tax = 1200,
+            TotalTaxes = [new InvoiceTotalTax { Amount = 1200 }],
             Total = 12200
         };
 
@@ -205,7 +207,7 @@ public class PreviewOrganizationTaxCommandTests
                 item.Price == "secrets-manager-enterprise-seat-annually" && item.Quantity == 8) &&
             options.SubscriptionDetails.Items.Any(item =>
                 item.Price == "secrets-manager-service-account-2024-annually" && item.Quantity == 3) &&
-            options.Coupon == null));
+            options.Discounts == null));
     }
 
     [Fact]
@@ -234,7 +236,7 @@ public class PreviewOrganizationTaxCommandTests
 
         var invoice = new Invoice
         {
-            Tax = 300,
+            TotalTaxes = [new InvoiceTotalTax { Amount = 300 }],
             Total = 3300
         };
 
@@ -257,7 +259,7 @@ public class PreviewOrganizationTaxCommandTests
             options.SubscriptionDetails.Items.Count == 1 &&
             options.SubscriptionDetails.Items[0].Price == "2020-families-org-annually" &&
             options.SubscriptionDetails.Items[0].Quantity == 6 &&
-            options.Coupon == null));
+            options.Discounts == null));
     }
 
     [Fact]
@@ -286,7 +288,7 @@ public class PreviewOrganizationTaxCommandTests
 
         var invoice = new Invoice
         {
-            Tax = 0,
+            TotalTaxes = [new InvoiceTotalTax { Amount = 0 }],
             Total = 2700
         };
 
@@ -309,7 +311,7 @@ public class PreviewOrganizationTaxCommandTests
             options.SubscriptionDetails.Items.Count == 1 &&
             options.SubscriptionDetails.Items[0].Price == "2023-teams-org-seat-monthly" &&
             options.SubscriptionDetails.Items[0].Quantity == 3 &&
-            options.Coupon == null));
+            options.Discounts == null));
     }
 
     [Fact]
@@ -339,7 +341,7 @@ public class PreviewOrganizationTaxCommandTests
 
         var invoice = new Invoice
         {
-            Tax = 2100,
+            TotalTaxes = [new InvoiceTotalTax { Amount = 2100 }],
             Total = 12100
         };
 
@@ -365,7 +367,7 @@ public class PreviewOrganizationTaxCommandTests
             options.SubscriptionDetails.Items.Count == 1 &&
             options.SubscriptionDetails.Items[0].Price == "2023-enterprise-seat-monthly" &&
             options.SubscriptionDetails.Items[0].Quantity == 15 &&
-            options.Coupon == null));
+            options.Discounts == null));
     }
 
     #endregion
@@ -399,7 +401,7 @@ public class PreviewOrganizationTaxCommandTests
 
         var invoice = new Invoice
         {
-            Tax = 120,
+            TotalTaxes = [new InvoiceTotalTax { Amount = 120 }],
             Total = 1320
         };
 
@@ -422,7 +424,7 @@ public class PreviewOrganizationTaxCommandTests
             options.SubscriptionDetails.Items.Count == 1 &&
             options.SubscriptionDetails.Items[0].Price == "2023-teams-org-seat-monthly" &&
             options.SubscriptionDetails.Items[0].Quantity == 2 &&
-            options.Coupon == null));
+            options.Discounts == null));
     }
 
     [Fact]
@@ -452,7 +454,7 @@ public class PreviewOrganizationTaxCommandTests
 
         var invoice = new Invoice
         {
-            Tax = 400,
+            TotalTaxes = [new InvoiceTotalTax { Amount = 400 }],
             Total = 4400
         };
 
@@ -475,7 +477,7 @@ public class PreviewOrganizationTaxCommandTests
             options.SubscriptionDetails.Items.Count == 1 &&
             options.SubscriptionDetails.Items[0].Price == "2020-families-org-annually" &&
             options.SubscriptionDetails.Items[0].Quantity == 1 &&
-            options.Coupon == null));
+            options.Discounts == null));
     }
 
     [Fact]
@@ -524,7 +526,11 @@ public class PreviewOrganizationTaxCommandTests
 
         var invoice = new Invoice
         {
-            Tax = 900,
+            TotalTaxes = [new InvoiceTotalTax
+            {
+                Amount = 900
+            }
+            ],
             Total = 9900
         };
 
@@ -546,7 +552,7 @@ public class PreviewOrganizationTaxCommandTests
             options.SubscriptionDetails.Items.Count == 1 &&
             options.SubscriptionDetails.Items[0].Price == "2023-teams-org-seat-annually" &&
             options.SubscriptionDetails.Items[0].Quantity == 6 &&
-            options.Coupon == null));
+            options.Discounts == null));
     }
 
     [Fact]
@@ -595,7 +601,11 @@ public class PreviewOrganizationTaxCommandTests
 
         var invoice = new Invoice
         {
-            Tax = 1200,
+            TotalTaxes = [new InvoiceTotalTax
+            {
+                Amount = 1200
+            }
+            ],
             Total = 13200
         };
 
@@ -617,7 +627,7 @@ public class PreviewOrganizationTaxCommandTests
             options.SubscriptionDetails.Items.Count == 1 &&
             options.SubscriptionDetails.Items[0].Price == "2023-enterprise-org-seat-annually" &&
             options.SubscriptionDetails.Items[0].Quantity == 6 &&
-            options.Coupon == null));
+            options.Discounts == null));
     }
 
     [Fact]
@@ -647,7 +657,7 @@ public class PreviewOrganizationTaxCommandTests
 
         var invoice = new Invoice
         {
-            Tax = 800,
+            TotalTaxes = [new InvoiceTotalTax { Amount = 800 }],
             Total = 8800
         };
 
@@ -672,7 +682,7 @@ public class PreviewOrganizationTaxCommandTests
                 item.Price == "2023-enterprise-org-seat-annually" && item.Quantity == 2) &&
             options.SubscriptionDetails.Items.Any(item =>
                 item.Price == "secrets-manager-enterprise-seat-annually" && item.Quantity == 2) &&
-            options.Coupon == null));
+            options.Discounts == null));
     }
 
     [Fact]
@@ -724,7 +734,7 @@ public class PreviewOrganizationTaxCommandTests
 
         var invoice = new Invoice
         {
-            Tax = 1500,
+            TotalTaxes = [new InvoiceTotalTax { Amount = 1500 }],
             Total = 16500
         };
 
@@ -753,7 +763,7 @@ public class PreviewOrganizationTaxCommandTests
                 item.Price == "secrets-manager-enterprise-seat-annually" && item.Quantity == 5) &&
             options.SubscriptionDetails.Items.Any(item =>
                 item.Price == "secrets-manager-service-account-2024-annually" && item.Quantity == 10) &&
-            options.Coupon == null));
+            options.Discounts == null));
     }
 
     [Fact]
@@ -808,7 +818,7 @@ public class PreviewOrganizationTaxCommandTests
 
         var invoice = new Invoice
         {
-            Tax = 600,
+            TotalTaxes = [new InvoiceTotalTax { Amount = 600 }],
             Total = 6600
         };
 
@@ -831,7 +841,9 @@ public class PreviewOrganizationTaxCommandTests
             options.SubscriptionDetails.Items.Count == 1 &&
             options.SubscriptionDetails.Items[0].Price == "2023-enterprise-org-seat-annually" &&
             options.SubscriptionDetails.Items[0].Quantity == 5 &&
-            options.Coupon == "EXISTING_DISCOUNT_50"));
+            options.Discounts != null &&
+            options.Discounts.Count == 1 &&
+            options.Discounts[0].Coupon == "EXISTING_DISCOUNT_50"));
     }
 
     [Fact]
@@ -911,7 +923,7 @@ public class PreviewOrganizationTaxCommandTests
 
         var invoice = new Invoice
         {
-            Tax = 600,
+            TotalTaxes = [new InvoiceTotalTax { Amount = 600 }],
             Total = 6600
         };
 
@@ -934,7 +946,7 @@ public class PreviewOrganizationTaxCommandTests
             options.SubscriptionDetails.Items.Count == 1 &&
             options.SubscriptionDetails.Items[0].Price == "2023-teams-org-seat-monthly" &&
             options.SubscriptionDetails.Items[0].Quantity == 10 &&
-            options.Coupon == null));
+            options.Discounts == null));
     }
 
     [Fact]
@@ -976,7 +988,7 @@ public class PreviewOrganizationTaxCommandTests
 
         var invoice = new Invoice
         {
-            Tax = 1200,
+            TotalTaxes = [new InvoiceTotalTax { Amount = 1200 }],
             Total = 13200
         };
 
@@ -1001,7 +1013,7 @@ public class PreviewOrganizationTaxCommandTests
                 item.Price == "2023-enterprise-org-seat-annually" && item.Quantity == 15) &&
             options.SubscriptionDetails.Items.Any(item =>
                 item.Price == "storage-gb-annually" && item.Quantity == 5) &&
-            options.Coupon == null));
+            options.Discounts == null));
     }
 
     [Fact]
@@ -1043,7 +1055,7 @@ public class PreviewOrganizationTaxCommandTests
 
         var invoice = new Invoice
         {
-            Tax = 800,
+            TotalTaxes = [new InvoiceTotalTax { Amount = 800 }],
             Total = 8800
         };
 
@@ -1066,7 +1078,7 @@ public class PreviewOrganizationTaxCommandTests
             options.SubscriptionDetails.Items.Count == 1 &&
             options.SubscriptionDetails.Items[0].Price == "secrets-manager-teams-seat-annually" &&
             options.SubscriptionDetails.Items[0].Quantity == 8 &&
-            options.Coupon == null));
+            options.Discounts == null));
     }
 
     [Fact]
@@ -1111,7 +1123,7 @@ public class PreviewOrganizationTaxCommandTests
 
         var invoice = new Invoice
         {
-            Tax = 1500,
+            TotalTaxes = [new InvoiceTotalTax { Amount = 1500 }],
             Total = 16500
         };
 
@@ -1139,7 +1151,7 @@ public class PreviewOrganizationTaxCommandTests
                 item.Price == "secrets-manager-enterprise-seat-monthly" && item.Quantity == 12) &&
             options.SubscriptionDetails.Items.Any(item =>
                 item.Price == "secrets-manager-service-account-2024-monthly" && item.Quantity == 20) &&
-            options.Coupon == null));
+            options.Discounts == null));
     }
 
     [Fact]
@@ -1192,7 +1204,7 @@ public class PreviewOrganizationTaxCommandTests
 
         var invoice = new Invoice
         {
-            Tax = 2500,
+            TotalTaxes = [new InvoiceTotalTax { Amount = 2500 }],
             Total = 27500
         };
 
@@ -1224,7 +1236,9 @@ public class PreviewOrganizationTaxCommandTests
                 item.Price == "secrets-manager-enterprise-seat-annually" && item.Quantity == 15) &&
             options.SubscriptionDetails.Items.Any(item =>
                 item.Price == "secrets-manager-service-account-2024-annually" && item.Quantity == 30) &&
-            options.Coupon == "ENTERPRISE_DISCOUNT_20"));
+            options.Discounts != null &&
+            options.Discounts.Count == 1 &&
+            options.Discounts[0].Coupon == "ENTERPRISE_DISCOUNT_20"));
     }
 
     [Fact]
@@ -1266,7 +1280,7 @@ public class PreviewOrganizationTaxCommandTests
 
         var invoice = new Invoice
         {
-            Tax = 500,
+            TotalTaxes = [new InvoiceTotalTax { Amount = 500 }],
             Total = 5500
         };
 
@@ -1291,7 +1305,7 @@ public class PreviewOrganizationTaxCommandTests
                 item.Price == "2020-families-org-annually" && item.Quantity == 6) &&
             options.SubscriptionDetails.Items.Any(item =>
                 item.Price == "personal-storage-gb-annually" && item.Quantity == 2) &&
-            options.Coupon == null));
+            options.Discounts == null));
     }
 
     [Fact]
@@ -1368,7 +1382,7 @@ public class PreviewOrganizationTaxCommandTests
 
         var invoice = new Invoice
         {
-            Tax = 300,
+            TotalTaxes = [new InvoiceTotalTax { Amount = 300 }],
             Total = 3300
         };
 
@@ -1391,7 +1405,7 @@ public class PreviewOrganizationTaxCommandTests
             options.SubscriptionDetails.Items.Count == 1 &&
             options.SubscriptionDetails.Items[0].Price == "2023-teams-org-seat-monthly" &&
             options.SubscriptionDetails.Items[0].Quantity == 5 &&
-            options.Coupon == null));
+            options.Discounts == null));
     }
 
     #endregion
