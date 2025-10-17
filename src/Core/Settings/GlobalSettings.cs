@@ -320,6 +320,8 @@ public class GlobalSettings : IGlobalSettings
 
             public virtual int DefaultMaxConcurrentCalls { get; set; } = 1;
             public virtual int DefaultPrefetchCount { get; set; } = 0;
+            public virtual int SenderBatchSize { get; set; } = 100;
+            public virtual int SenderFlushInterval { get; set; } = 50;
 
             public virtual string EventRepositorySubscriptionName { get; set; } = "events-write-subscription";
             public virtual string SlackEventSubscriptionName { get; set; } = "events-slack-subscription";
