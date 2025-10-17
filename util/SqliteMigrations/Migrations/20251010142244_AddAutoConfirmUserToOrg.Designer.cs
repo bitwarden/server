@@ -3,6 +3,7 @@ using System;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.SqliteMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20251010142244_AddAutoConfirmUserToOrg")]
+    partial class AddAutoConfirmUserToOrg
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.8");
@@ -2151,42 +2154,6 @@ namespace Bit.SqliteMigrations.Migrations
                     b.ToTable("Secret", (string)null);
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.SecretVersion", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid?>("EditorOrganizationUserId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid?>("EditorServiceAccountId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("SecretId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Value")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("VersionDate")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id")
-                        .HasAnnotation("SqlServer:Clustered", true);
-
-                    b.HasIndex("EditorOrganizationUserId")
-                        .HasDatabaseName("IX_SecretVersion_EditorOrganizationUserId");
-
-                    b.HasIndex("EditorServiceAccountId")
-                        .HasDatabaseName("IX_SecretVersion_EditorServiceAccountId");
-
-                    b.HasIndex("SecretId")
-                        .HasDatabaseName("IX_SecretVersion_SecretId");
-
-                    b.ToTable("SecretVersion");
-                });
-
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ServiceAccount", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3012,31 +2979,6 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Navigation("Organization");
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.SecretVersion", b =>
-                {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.OrganizationUser", "EditorOrganizationUser")
-                        .WithMany()
-                        .HasForeignKey("EditorOrganizationUserId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ServiceAccount", "EditorServiceAccount")
-                        .WithMany()
-                        .HasForeignKey("EditorServiceAccountId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("Bit.Infrastructure.EntityFramework.SecretsManager.Models.Secret", "Secret")
-                        .WithMany("SecretVersions")
-                        .HasForeignKey("SecretId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("EditorOrganizationUser");
-
-                    b.Navigation("EditorServiceAccount");
-
-                    b.Navigation("Secret");
-                });
-
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ServiceAccount", b =>
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
@@ -3307,8 +3249,6 @@ namespace Bit.SqliteMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.Secret", b =>
                 {
                     b.Navigation("GroupAccessPolicies");
-
-                    b.Navigation("SecretVersions");
 
                     b.Navigation("ServiceAccountAccessPolicies");
 

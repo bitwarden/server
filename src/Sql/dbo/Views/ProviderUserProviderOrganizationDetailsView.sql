@@ -39,7 +39,8 @@ SELECT
     O.[UseAdminSponsoredFamilies],
     P.[Type] ProviderType,
     O.[LimitItemDeletion],
-    O.[UseOrganizationDomains]
+    O.[UseOrganizationDomains],
+    O.[UseAutomaticUserConfirmation]
 FROM
     [dbo].[ProviderUser] PU
 INNER JOIN

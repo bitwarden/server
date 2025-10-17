@@ -51,4 +51,5 @@ public class ProviderUserOrganizationDetails
     public bool UseOrganizationDomains { get; set; }
     public bool UseAdminSponsoredFamilies { get; set; }
     public ProviderType ProviderType { get; set; }
+    public bool UseAutomaticUserConfirmation { get; set; }
 }

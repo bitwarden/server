@@ -54,7 +54,8 @@ SELECT
     O.[LimitItemDeletion],
     O.[UseAdminSponsoredFamilies],
     O.[UseOrganizationDomains],
-    OS.[IsAdminInitiated]
+    OS.[IsAdminInitiated],
+    O.[UseAutomaticUserConfirmation]
 FROM
     [dbo].[OrganizationUser] OU
 LEFT JOIN
