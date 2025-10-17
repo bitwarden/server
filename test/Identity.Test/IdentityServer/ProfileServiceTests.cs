@@ -61,7 +61,7 @@ public class ProfileServiceTests
         context.Client.ClientId = BitwardenClient.Send;
         var existingClaims = new[]
         {
-            new Claim("send_id", Guid.NewGuid().ToString()), new Claim("send_access", "test")
+            new Claim(Claims.SendAccessClaims.SendId, Guid.NewGuid().ToString()), new Claim("send_access", "test")
         };
         context.Subject = new ClaimsPrincipal(new ClaimsIdentity(existingClaims));
 
@@ -149,7 +149,7 @@ public class ProfileServiceTests
         var existingClaims = new[]
         {
             new Claim("sub", Guid.NewGuid().ToString()), new Claim("email", "test@example.com"),
-            new Claim("orgowner", Guid.NewGuid().ToString()) // This should be filtered out
+            new Claim(Claims.OrganizationOwner, Guid.NewGuid().ToString()) // This should be filtered out
         };
         context.Subject = new ClaimsPrincipal(new ClaimsIdentity(existingClaims));
         _userService.GetUserByPrincipalAsync(context.Subject).Returns((User)null);
@@ -201,7 +201,7 @@ public class ProfileServiceTests
 
         Assert.NotEmpty(context.IssuedClaims);
         Assert.Contains(context.IssuedClaims,
-            issuedClaim => issuedClaim.Type == "premium" &&
+            issuedClaim => issuedClaim.Type == Claims.Premium &&
                            issuedClaim.Value.Equals("true", StringComparison.CurrentCultureIgnoreCase));
         await _licensingService.Received(1).ValidateUserPremiumAsync(user);
         await _currentContext.Received(1).OrganizationMembershipAsync(_organizationUserRepository, user.Id);
@@ -241,9 +241,9 @@ public class ProfileServiceTests
 
         await _sut.GetProfileDataAsync(context);
 
-        var booleanClaims = context.IssuedClaims.Where(c =>
-            c.Value.Equals("true", StringComparison.OrdinalIgnoreCase) ||
-            c.Value.Equals("false", StringComparison.OrdinalIgnoreCase));
+        var booleanClaims = context.IssuedClaims.Where(claim =>
+            claim.Value.Equals("true", StringComparison.OrdinalIgnoreCase) ||
+            claim.Value.Equals("false", StringComparison.OrdinalIgnoreCase));
 
         Assert.All(booleanClaims, claim =>
             Assert.Equal(ClaimValueTypes.Boolean, claim.ValueType));
@@ -273,8 +273,9 @@ public class ProfileServiceTests
 
         var existingClaims = new[]
         {
-            new Claim("orgowner", Guid.NewGuid().ToString()), new Claim("orgadmin", Guid.NewGuid().ToString()),
-            new Claim("email", "test@example.com"), new Claim("name", "Test User")
+            new Claim(Claims.OrganizationOwner, Guid.NewGuid().ToString()),
+            new Claim(Claims.OrganizationAdmin, Guid.NewGuid().ToString()), new Claim("email", "test@example.com"),
+            new Claim("name", "Test User")
         };
         context.Subject = new ClaimsPrincipal(new ClaimsIdentity(existingClaims));
 
@@ -287,9 +288,9 @@ public class ProfileServiceTests
 
         await _sut.GetProfileDataAsync(context);
 
-        Assert.DoesNotContain(context.IssuedClaims, c => c.Type.StartsWith("org"));
-        Assert.Contains(context.IssuedClaims, c => c.Type == "email");
-        Assert.Contains(context.IssuedClaims, c => c.Type == "name");
+        Assert.DoesNotContain(context.IssuedClaims, issuedClaim => issuedClaim.Type.StartsWith("org"));
+        Assert.Contains(context.IssuedClaims, issuedClaim => issuedClaim.Type == "email");
+        Assert.Contains(context.IssuedClaims, issuedClaim => issuedClaim.Type == "name");
     }
 
     /// <summary>
@@ -317,7 +318,7 @@ public class ProfileServiceTests
         var existingClaims = new[]
         {
             new Claim("sub", user.Id.ToString()), new Claim("email", "old@example.com"),
-            new Claim("premium", "false")
+            new Claim(Claims.Premium, "false")
         };
         context.Subject = new ClaimsPrincipal(new ClaimsIdentity(existingClaims));
 
@@ -331,12 +332,18 @@ public class ProfileServiceTests
         await _sut.GetProfileDataAsync(context);
 
         // Should have new premium claim, not old one
-        Assert.Contains(context.IssuedClaims, c => c.Type == "premium" && c.Value.ToLower() == "true");
-        Assert.DoesNotContain(context.IssuedClaims, c => c.Type == "premium" && c.Value.ToLower() == "false");
+        Assert.Contains(context.IssuedClaims,
+            issuedClaim => issuedClaim.Type == Claims.Premium &&
+                           issuedClaim.Value.Equals("true", StringComparison.CurrentCultureIgnoreCase));
+        Assert.DoesNotContain(context.IssuedClaims,
+            issuedClaim => issuedClaim.Type == Claims.Premium &&
+                           issuedClaim.Value.Equals("false", StringComparison.CurrentCultureIgnoreCase));
 
         // Should have new email
-        Assert.Contains(context.IssuedClaims, c => c.Type == "email" && c.Value == "new@example.com");
-        Assert.DoesNotContain(context.IssuedClaims, c => c.Type == "email" && c.Value == "old@example.com");
+        Assert.Contains(context.IssuedClaims,
+            issuedClaim => issuedClaim.Type == "email" && issuedClaim.Value == "new@example.com");
+        Assert.DoesNotContain(context.IssuedClaims,
+            issuedClaim => issuedClaim.Type == "email" && issuedClaim.Value == "old@example.com");
     }
 
     /// <summary>
@@ -377,8 +384,10 @@ public class ProfileServiceTests
 
         await _sut.GetProfileDataAsync(context);
 
-        Assert.Contains(context.IssuedClaims, c => c.Type == "orgowner" && c.Value == orgId1.ToString());
-        Assert.Contains(context.IssuedClaims, c => c.Type == "orgadmin" && c.Value == orgId2.ToString());
+        Assert.Contains(context.IssuedClaims,
+            issuedClaim => issuedClaim.Type == Claims.OrganizationOwner && issuedClaim.Value == orgId1.ToString());
+        Assert.Contains(context.IssuedClaims,
+            issuedClaim => issuedClaim.Type == Claims.OrganizationAdmin && issuedClaim.Value == orgId2.ToString());
     }
 
     /// <summary>
@@ -417,7 +426,7 @@ public class ProfileServiceTests
 
         await _sut.GetProfileDataAsync(context);
 
-        Assert.Contains(context.IssuedClaims, c => c.Type.StartsWith("provider"));
+        Assert.Contains(context.IssuedClaims, issuedClaim => issuedClaim.Type.StartsWith("provider"));
     }
 
     /// <summary>
