@@ -2,6 +2,7 @@
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
   extends: ["github>bitwarden/renovate-config"], // Extends our default configuration for pinned dependencies
   enabledManagers: [
+    "cargo",
     "dockerfile",
     "docker-compose",
     "github-actions",
