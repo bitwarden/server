@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.Enums;
 using Bit.Core.Settings;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services;
 
@@ -11,11 +12,20 @@ public class AzureServiceBusService : IAzureServiceBusService
     private readonly ServiceBusSender _eventSender;
     private readonly ServiceBusSender _integrationSender;
 
-    public AzureServiceBusService(GlobalSettings globalSettings)
+    private readonly AzureServiceBusEventBatchBackgroundService _backgroundEventWorker;
+    private readonly CancellationTokenSource _cts = new();
+
+    public AzureServiceBusService(GlobalSettings globalSettings, ILogger<AzureServiceBusService> logger)
     {
         _client = new ServiceBusClient(globalSettings.EventLogging.AzureServiceBus.ConnectionString);
         _eventSender = _client.CreateSender(globalSettings.EventLogging.AzureServiceBus.EventTopicName);
         _integrationSender = _client.CreateSender(globalSettings.EventLogging.AzureServiceBus.IntegrationTopicName);
+
+        _backgroundEventWorker = new AzureServiceBusEventBatchBackgroundService(
+            sender: _eventSender,
+            batchSize: globalSettings.EventLogging.AzureServiceBus.SenderBatchSize,
+            logger: logger);
+        _ = _backgroundEventWorker.StartAsync(_cts.Token);
     }
 
     public ServiceBusProcessor CreateProcessor(string topicName, string subscriptionName, ServiceBusProcessorOptions options)
@@ -50,19 +60,16 @@ public class AzureServiceBusService : IAzureServiceBusService
         await _integrationSender.SendMessageAsync(serviceBusMessage);
     }
 
-    public async Task PublishEventAsync(string body)
+    public Task PublishEventAsync(string body)
     {
-        var message = new ServiceBusMessage(body)
-        {
-            ContentType = "application/json",
-            MessageId = Guid.NewGuid().ToString()
-        };
-
-        await _eventSender.SendMessageAsync(message);
+        _backgroundEventWorker.Enqueue(body);
+        return Task.CompletedTask;
     }
 
     public async ValueTask DisposeAsync()
     {
+        await _cts.CancelAsync();
+        await _backgroundEventWorker.StopAsync(CancellationToken.None);
         await _eventSender.DisposeAsync();
         await _integrationSender.DisposeAsync();
         await _client.DisposeAsync();
