@@ -7,9 +7,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
 {
     // Unified is always ran as self hosted.
-    {"GlobalSettings:SelfHosted", "true"},
+    { "GlobalSettings:SelfHosted", "true" },
     // TODO: Remove
-    {"GlobalSettings:Installation:Id", Guid.NewGuid().ToString() },
+    { "GlobalSettings:Installation:Id", Guid.NewGuid().ToString() },
 });
 
 IEnumerable<IApplicationConfigurator> services = [
