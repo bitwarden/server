@@ -39,7 +39,7 @@ public class SeedController(ILogger<SeedController> logger, IRecipeService recip
         }
         catch (RecipeExecutionException ex)
         {
-            logger.LogError(ex, "Error executing recipe: {Template}", request.Template);
+            logger.LogError(ex, "Error executing scene: {Template}", request.Template);
             return BadRequest(new
             {
                 Error = ex.Message,

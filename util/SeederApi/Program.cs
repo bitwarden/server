@@ -1,4 +1,5 @@
 ﻿using Bit.Seeder;
+using Bit.SeederApi.Extensions;
 using Bit.SeederApi.Services;
 using Bit.SharedWeb.Utilities;
 
@@ -20,6 +21,7 @@ builder.Services.AddSingleton<Bit.RustSDK.RustSdkService>();
 builder.Services.AddScoped<Bit.Seeder.Factories.UserSeeder>();
 builder.Services.AddScoped<IRecipeService, RecipeService>();
 builder.Services.AddScoped<MangleId>(_ => new MangleId());
+builder.Services.AddScenes();
 
 var app = builder.Build();
 

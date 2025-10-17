@@ -1,5 +1,4 @@
-﻿using System.Reflection;
-using System.Text.Json;
+﻿using System.Text.Json;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
@@ -15,6 +14,12 @@ public class RecipeService(
     IOrganizationRepository organizationRepository)
     : IRecipeService
 {
+    private static readonly JsonSerializerOptions _jsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
+
     public List<SeededData> GetAllSeededData()
     {
         return databaseContext.SeededData.ToList();
@@ -45,7 +50,7 @@ public class RecipeService(
         databaseContext.Add(seededData);
         databaseContext.SaveChanges();
 
-        logger.LogInformation("Saved seeded data with ID {SeedId} for recipe {RecipeName}",
+        logger.LogInformation("Saved seeded data with ID {SeedId} for scene {RecipeName}",
             seededData.Id, templateName);
 
         return (Result: recipeResult.Result, SeedId: seededData.Id);
@@ -99,118 +104,70 @@ public class RecipeService(
         databaseContext.Remove(seededData);
         databaseContext.SaveChanges();
 
-        logger.LogInformation("Successfully destroyed seeded data with ID {SeedId} for recipe {RecipeName}",
+        logger.LogInformation("Successfully destroyed seeded data with ID {SeedId} for scene {RecipeName}",
             seedId, seededData.RecipeName);
 
         return new { SeedId = seedId, RecipeName = seededData.RecipeName };
     }
 
-    private object? ExecuteRecipeMethod(string templateName, JsonElement? arguments, string methodName)
+    private RecipeResult? ExecuteRecipeMethod(string templateName, JsonElement? arguments, string methodName)
     {
         try
         {
-            var recipeType = LoadRecipeType(templateName);
-            var method = GetRecipeMethod(recipeType, templateName, methodName);
-            var recipeInstance = CreateRecipeInstance(recipeType);
+            var scene = serviceProvider.GetKeyedService<IScene>(templateName)
+                ?? throw new RecipeNotFoundException(templateName);
 
-            var methodArguments = ParseMethodArguments(method, arguments);
-            var result = method.Invoke(recipeInstance, methodArguments);
+            var requestType = scene.GetRequestType();
 
-            logger.LogInformation("Successfully executed {MethodName} on recipe: {TemplateName}", methodName, templateName);
-            return result;
-        }
-        catch (Exception ex) when (ex is not RecipeNotFoundException and not RecipeExecutionException)
-        {
-            logger.LogError(ex, "Unexpected error executing {MethodName} on recipe: {TemplateName}", methodName, templateName);
-            throw new RecipeExecutionException(
-                $"An unexpected error occurred while executing {methodName} on recipe '{templateName}'",
-                ex.InnerException ?? ex);
-        }
-    }
-
-    private static Type LoadRecipeType(string templateName)
-    {
-        var recipeTypeName = $"Bit.Seeder.Recipes.{templateName}";
-        var recipeType = Assembly.Load("Seeder")
-            .GetTypes()
-            .FirstOrDefault(t => t.FullName == recipeTypeName);
-
-        return recipeType ?? throw new RecipeNotFoundException(templateName);
-    }
-
-    private static MethodInfo GetRecipeMethod(Type recipeType, string templateName, string methodName)
-    {
-        var method = recipeType.GetMethod(methodName);
-        return method ?? throw new RecipeExecutionException($"{methodName} method not found in recipe '{templateName}'");
-    }
-
-    private object CreateRecipeInstance(Type recipeType)
-    {
-        var constructors = recipeType.GetConstructors();
-        if (constructors.Length == 0)
-        {
-            throw new RecipeExecutionException($"No public constructors found for recipe type '{recipeType.Name}'");
-        }
-
-        var constructor = constructors[0];
-        var parameters = constructor.GetParameters();
-        var constructorArgs = new object[parameters.Length];
-
-        for (var i = 0; i < parameters.Length; i++)
-        {
-            var parameter = parameters[i];
-            var service = serviceProvider.GetService(parameter.ParameterType);
-
-            if (service == null)
+            // Deserialize the arguments into the request model
+            object? requestModel;
+            if (arguments == null)
             {
-                throw new RecipeExecutionException(
-                    $"Unable to resolve service of type '{parameter.ParameterType.Name}' for recipe constructor");
+                // Try to create an instance with default values
+                try
+                {
+                    requestModel = Activator.CreateInstance(requestType);
+                    if (requestModel == null)
+                    {
+                        throw new RecipeExecutionException(
+                            $"Arguments are required for scene '{templateName}'");
+                    }
+                }
+                catch
+                {
+                    throw new RecipeExecutionException(
+                        $"Arguments are required for scene '{templateName}'");
+                }
             }
-
-            constructorArgs[i] = service;
-        }
-
-        return Activator.CreateInstance(recipeType, constructorArgs)!;
-    }
-
-    private static object?[] ParseMethodArguments(MethodInfo seedMethod, JsonElement? arguments)
-    {
-        var parameters = seedMethod.GetParameters();
-
-        if (arguments == null && parameters.Length > 0)
-        {
-            throw new RecipeExecutionException("Arguments are required for this recipe");
-        }
-
-        var methodArguments = new object?[parameters.Length];
-
-        for (var i = 0; i < parameters.Length; i++)
-        {
-            var parameter = parameters[i];
-            var parameterName = parameter.Name!;
-
-            if (arguments?.TryGetProperty(parameterName, out var value) == true)
+            else
             {
                 try
                 {
-                    methodArguments[i] = JsonSerializer.Deserialize(value.GetRawText(), parameter.ParameterType);
+                    requestModel = JsonSerializer.Deserialize(arguments.Value.GetRawText(), requestType, _jsonOptions);
+                    if (requestModel == null)
+                    {
+                        throw new RecipeExecutionException(
+                            $"Failed to deserialize request model for scene '{templateName}'");
+                    }
                 }
                 catch (JsonException ex)
                 {
                     throw new RecipeExecutionException(
-                        $"Failed to deserialize parameter '{parameterName}': {ex.Message}", ex);
+                        $"Failed to deserialize request model for scene '{templateName}': {ex.Message}", ex);
                 }
             }
-            else if (!parameter.HasDefaultValue)
-            {
-                throw new RecipeExecutionException($"Missing required parameter: {parameterName}");
-            }
-            else
-            {
-                methodArguments[i] = parameter.DefaultValue;
-            }
-        }
 
-        return methodArguments;
+            var result = scene.Seed(requestModel);
+
+            logger.LogInformation("Successfully executed {MethodName} on scene: {TemplateName}", methodName, templateName);
+            return result;
+        }
+        catch (Exception ex) when (ex is not RecipeNotFoundException and not RecipeExecutionException)
+        {
+            logger.LogError(ex, "Unexpected error executing {MethodName} on scene: {TemplateName}", methodName, templateName);
+            throw new RecipeExecutionException(
+                $"An unexpected error occurred while executing {methodName} on scene '{templateName}'",
+                ex.InnerException ?? ex);
+        }
     }
 }
