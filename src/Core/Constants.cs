@@ -160,6 +160,7 @@ public static class FeatureFlagKeys
     public const string InlineMenuFieldQualification = "inline-menu-field-qualification";
     public const string InlineMenuPositioningImprovements = "inline-menu-positioning-improvements";
     public const string SSHAgent = "ssh-agent";
+    public const string SSHAgentV2 = "ssh-agent-v2";
     public const string SSHVersionCheckQAOverride = "ssh-version-check-qa-override";
     public const string GenerateIdentityFillScriptRefactor = "generate-identity-fill-script-refactor";
     public const string DelayFido2PageScriptInitWithinMv2 = "delay-fido2-page-script-init-within-mv2";
