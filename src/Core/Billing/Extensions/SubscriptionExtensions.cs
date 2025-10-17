@@ -13,13 +13,13 @@ public static class SubscriptionExtensions
      */
     public static (DateTime? Start, DateTime? End)? GetCurrentPeriod(this Subscription subscription)
     {
-        var item = subscription.Items.FirstOrDefault();
+        var item = subscription.Items?.FirstOrDefault();
         return item is null ? null : (item.CurrentPeriodStart, item.CurrentPeriodEnd);
     }
 
     public static DateTime? GetCurrentPeriodStart(this Subscription subscription) =>
-        subscription.Items.FirstOrDefault()?.CurrentPeriodStart;
+        subscription.Items?.FirstOrDefault()?.CurrentPeriodStart;
 
     public static DateTime? GetCurrentPeriodEnd(this Subscription subscription) =>
-        subscription.Items.FirstOrDefault()?.CurrentPeriodEnd;
+        subscription.Items?.FirstOrDefault()?.CurrentPeriodEnd;
 }
