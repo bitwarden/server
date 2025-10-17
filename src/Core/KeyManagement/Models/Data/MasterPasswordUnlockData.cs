@@ -1,34 +1,20 @@
 ﻿#nullable enable
+
 using Bit.Core.Entities;
-using Bit.Core.Enums;
 
 namespace Bit.Core.KeyManagement.Models.Data;
 
 public class MasterPasswordUnlockData
 {
-    public KdfType KdfType { get; set; }
-    public int KdfIterations { get; set; }
-    public int? KdfMemory { get; set; }
-    public int? KdfParallelism { get; set; }
+    public required KdfSettings Kdf { get; init; }
+    public required string MasterKeyWrappedUserKey { get; init; }
+    public required string Salt { get; init; }
 
-    public required string Email { get; set; }
-    public required string MasterKeyAuthenticationHash { get; set; }
-    public required string MasterKeyEncryptedUserKey { get; set; }
-    public string? MasterPasswordHint { get; set; }
-
-    public bool ValidateForUser(User user)
+    public void ValidateSaltUnchangedForUser(User user)
     {
-        if (KdfType != user.Kdf || KdfMemory != user.KdfMemory || KdfParallelism != user.KdfParallelism || KdfIterations != user.KdfIterations)
+        if (user.GetMasterPasswordSalt() != Salt)
         {
-            return false;
-        }
-        else if (Email != user.Email)
-        {
-            return false;
-        }
-        else
-        {
-            return true;
+            throw new ArgumentException("Invalid master password salt.");
         }
     }
 }

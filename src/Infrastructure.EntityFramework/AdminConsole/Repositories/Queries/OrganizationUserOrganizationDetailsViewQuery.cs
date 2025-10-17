@@ -56,6 +56,7 @@ public class OrganizationUserOrganizationDetailsViewQuery : IQuery<OrganizationU
                         ProviderId = p.Id,
                         ProviderName = p.Name,
                         ProviderType = p.Type,
+                        SsoEnabled = ss.Enabled,
                         SsoConfig = ss.Data,
                         FamilySponsorshipFriendlyName = os.FriendlyName,
                         FamilySponsorshipLastSyncDate = os.LastSyncDate,
@@ -71,7 +72,8 @@ public class OrganizationUserOrganizationDetailsViewQuery : IQuery<OrganizationU
                         UseRiskInsights = o.UseRiskInsights,
                         UseAdminSponsoredFamilies = o.UseAdminSponsoredFamilies,
                         LimitItemDeletion = o.LimitItemDeletion,
-                        IsAdminInitiated = os.IsAdminInitiated
+                        IsAdminInitiated = os.IsAdminInitiated,
+                        UseOrganizationDomains = o.UseOrganizationDomains
                     };
         return query;
     }

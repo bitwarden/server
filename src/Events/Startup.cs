@@ -1,13 +1,13 @@
 ﻿using System.Globalization;
-using Bit.Core.AdminConsole.Services.Implementations;
-using Bit.Core.AdminConsole.Services.NoopImplementations;
+using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Context;
-using Bit.Core.IdentityServer;
 using Bit.Core.Services;
+using Bit.Core.Services.Implementations;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
-using IdentityModel;
+using Duende.IdentityModel;
 
 namespace Bit.Events;
 
@@ -54,46 +54,21 @@ public class Startup
         // Services
         var usingServiceBusAppCache = CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
             CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName);
+        services.AddScoped<IApplicationCacheService, FeatureRoutedCacheService>();
+        services.AddSingleton<IVNextInMemoryApplicationCacheService, VNextInMemoryApplicationCacheService>();
+
         if (usingServiceBusAppCache)
         {
-            services.AddSingleton<IApplicationCacheService, InMemoryServiceBusApplicationCacheService>();
+            services.AddSingleton<IVCurrentInMemoryApplicationCacheService, InMemoryServiceBusApplicationCacheService>();
+            services.AddSingleton<IApplicationCacheServiceBusMessaging, ServiceBusApplicationCacheMessaging>();
         }
         else
         {
-            services.AddSingleton<IApplicationCacheService, InMemoryApplicationCacheService>();
+            services.AddSingleton<IVCurrentInMemoryApplicationCacheService, InMemoryApplicationCacheService>();
+            services.AddSingleton<IApplicationCacheServiceBusMessaging, NoOpApplicationCacheMessaging>();
         }
 
-        if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Events.ConnectionString))
-        {
-            services.AddKeyedSingleton<IEventWriteService, AzureQueueEventWriteService>("storage");
-
-            if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.ConnectionString) &&
-                CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.TopicName))
-            {
-                services.AddKeyedSingleton<IEventWriteService, AzureServiceBusEventWriteService>("broadcast");
-            }
-            else
-            {
-                services.AddKeyedSingleton<IEventWriteService, NoopEventWriteService>("broadcast");
-            }
-        }
-        else
-        {
-            services.AddKeyedSingleton<IEventWriteService, RepositoryEventWriteService>("storage");
-
-            if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.HostName) &&
-                CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.Username) &&
-                CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.Password) &&
-                CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.ExchangeName))
-            {
-                services.AddKeyedSingleton<IEventWriteService, RabbitMqEventWriteService>("broadcast");
-            }
-            else
-            {
-                services.AddKeyedSingleton<IEventWriteService, NoopEventWriteService>("broadcast");
-            }
-        }
-        services.AddScoped<IEventWriteService, EventRouteService>();
+        services.AddEventWriteServices(globalSettings);
         services.AddScoped<IEventService, EventService>();
 
         services.AddOptionality();
@@ -109,49 +84,7 @@ public class Startup
             services.AddHostedService<Core.HostedServices.ApplicationCacheHostedService>();
         }
 
-        // Optional RabbitMQ Listeners
-        if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.HostName) &&
-            CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.Username) &&
-            CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.Password) &&
-            CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.ExchangeName))
-        {
-            services.AddSingleton<EventRepositoryHandler>();
-            services.AddKeyedSingleton<IEventWriteService, RepositoryEventWriteService>("persistent");
-            services.AddSingleton<IHostedService>(provider =>
-                new RabbitMqEventListenerService(
-                    provider.GetRequiredService<EventRepositoryHandler>(),
-                    provider.GetRequiredService<ILogger<RabbitMqEventListenerService>>(),
-                    globalSettings,
-                    globalSettings.EventLogging.RabbitMq.EventRepositoryQueueName));
-
-            if (CoreHelpers.SettingHasValue(globalSettings.Slack.ClientId) &&
-                CoreHelpers.SettingHasValue(globalSettings.Slack.ClientSecret) &&
-                CoreHelpers.SettingHasValue(globalSettings.Slack.Scopes))
-            {
-                services.AddHttpClient(SlackService.HttpClientName);
-                services.AddSingleton<ISlackService, SlackService>();
-            }
-            else
-            {
-                services.AddSingleton<ISlackService, NoopSlackService>();
-            }
-            services.AddSingleton<SlackEventHandler>();
-            services.AddSingleton<IHostedService>(provider =>
-                new RabbitMqEventListenerService(
-                    provider.GetRequiredService<SlackEventHandler>(),
-                    provider.GetRequiredService<ILogger<RabbitMqEventListenerService>>(),
-                    globalSettings,
-                    globalSettings.EventLogging.RabbitMq.SlackQueueName));
-
-            services.AddHttpClient(WebhookEventHandler.HttpClientName);
-            services.AddSingleton<WebhookEventHandler>();
-            services.AddSingleton<IHostedService>(provider =>
-                new RabbitMqEventListenerService(
-                    provider.GetRequiredService<WebhookEventHandler>(),
-                    provider.GetRequiredService<ILogger<RabbitMqEventListenerService>>(),
-                    globalSettings,
-                    globalSettings.EventLogging.RabbitMq.WebhookQueueName));
-        }
+        services.AddRabbitMqListeners(globalSettings);
     }
 
     public void Configure(

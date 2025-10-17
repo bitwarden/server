@@ -3,19 +3,19 @@ using System.Security.Claims;
 using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
-using Bit.Core.IdentityServer;
 using Bit.Core.Platform.Installations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Duende.IdentityModel;
 using Duende.IdentityServer.Extensions;
 using Duende.IdentityServer.Validation;
 using HandlebarsDotNet;
-using IdentityModel;
 using Microsoft.AspNetCore.Identity;
 
 #nullable enable
@@ -27,6 +27,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
 {
     private readonly UserManager<User> _userManager;
     private readonly IUpdateInstallationCommand _updateInstallationCommand;
+    private readonly Version _denyLegacyUserMinimumVersion = new(Constants.DenyLegacyUserMinimumVersion);
 
     public CustomTokenRequestValidator(
         UserManager<User> userManager,
@@ -44,7 +45,9 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         ISsoConfigRepository ssoConfigRepository,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
         IUpdateInstallationCommand updateInstallationCommand,
-        IPolicyRequirementQuery policyRequirementQuery)
+        IPolicyRequirementQuery policyRequirementQuery,
+        IAuthRequestRepository authRequestRepository,
+        IMailService mailService)
         : base(
             userManager,
             userService,
@@ -60,7 +63,9 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             featureService,
             ssoConfigRepository,
             userDecryptionOptionsBuilder,
-            policyRequirementQuery)
+            policyRequirementQuery,
+            authRequestRepository,
+            mailService)
     {
         _userManager = userManager;
         _updateInstallationCommand = updateInstallationCommand;
@@ -73,7 +78,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         {
             // Force legacy users to the web for migration
             if (await _userService.IsLegacyUser(GetSubject(context)?.GetSubjectId()) &&
-                context.Result.ValidatedRequest.ClientId != "web")
+                (context.Result.ValidatedRequest.ClientId != "web" || CurrentContext.ClientVersion >= _denyLegacyUserMinimumVersion))
             {
                 await FailAuthForLegacyUserAsync(null, context);
                 return;
@@ -94,10 +99,8 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
                 context.Result.CustomResponse = new Dictionary<string, object> { { "encrypted_payload", payload } };
 
             }
-            if (FeatureService.IsEnabled(FeatureFlagKeys.RecordInstallationLastActivityDate)
-                && context.Result.ValidatedRequest.ClientId.StartsWith("installation"))
+            if (context.Result.ValidatedRequest.ClientId.StartsWith("installation"))
             {
-                var installationIdPart = clientId.Split(".")[1];
                 await RecordActivityForInstallation(clientId.Split(".")[1]);
             }
             return;

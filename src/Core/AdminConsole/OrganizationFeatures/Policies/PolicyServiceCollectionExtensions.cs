@@ -1,5 +1,7 @@
 ﻿using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.AdminConsole.Services.Implementations;
@@ -13,12 +15,17 @@ public static class PolicyServiceCollectionExtensions
     {
         services.AddScoped<IPolicyService, PolicyService>();
         services.AddScoped<ISavePolicyCommand, SavePolicyCommand>();
+        services.AddScoped<IVNextSavePolicyCommand, VNextSavePolicyCommand>();
         services.AddScoped<IPolicyRequirementQuery, PolicyRequirementQuery>();
+        services.AddScoped<IPolicyEventHandlerFactory, PolicyEventHandlerHandlerFactory>();
 
         services.AddPolicyValidators();
         services.AddPolicyRequirements();
+        services.AddPolicySideEffects();
+        services.AddPolicyUpdateEvents();
     }
 
+    [Obsolete("Use AddPolicyUpdateEvents instead.")]
     private static void AddPolicyValidators(this IServiceCollection services)
     {
         services.AddScoped<IPolicyValidator, TwoFactorAuthenticationPolicyValidator>();
@@ -29,12 +36,31 @@ public static class PolicyServiceCollectionExtensions
         services.AddScoped<IPolicyValidator, FreeFamiliesForEnterprisePolicyValidator>();
     }
 
+    [Obsolete("Use AddPolicyUpdateEvents instead.")]
+    private static void AddPolicySideEffects(this IServiceCollection services)
+    {
+        services.AddScoped<IPostSavePolicySideEffect, OrganizationDataOwnershipPolicyValidator>();
+    }
+
+    private static void AddPolicyUpdateEvents(this IServiceCollection services)
+    {
+        services.AddScoped<IPolicyUpdateEvent, RequireSsoPolicyValidator>();
+        services.AddScoped<IPolicyUpdateEvent, TwoFactorAuthenticationPolicyValidator>();
+        services.AddScoped<IPolicyUpdateEvent, SingleOrgPolicyValidator>();
+        services.AddScoped<IPolicyUpdateEvent, ResetPasswordPolicyValidator>();
+        services.AddScoped<IPolicyUpdateEvent, MaximumVaultTimeoutPolicyValidator>();
+        services.AddScoped<IPolicyUpdateEvent, FreeFamiliesForEnterprisePolicyValidator>();
+        services.AddScoped<IPolicyUpdateEvent, OrganizationDataOwnershipPolicyValidator>();
+    }
+
     private static void AddPolicyRequirements(this IServiceCollection services)
     {
         services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, DisableSendPolicyRequirementFactory>();
         services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, SendOptionsPolicyRequirementFactory>();
         services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, ResetPasswordPolicyRequirementFactory>();
-        services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, PersonalOwnershipPolicyRequirementFactory>();
+        services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, OrganizationDataOwnershipPolicyRequirementFactory>();
         services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, RequireSsoPolicyRequirementFactory>();
+        services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, RequireTwoFactorPolicyRequirementFactory>();
+        services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, MasterPasswordPolicyRequirementFactory>();
     }
 }

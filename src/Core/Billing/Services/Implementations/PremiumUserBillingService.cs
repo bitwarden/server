@@ -1,10 +1,11 @@
-﻿using Bit.Core.Billing.Caches;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Tax.Models;
-using Bit.Core.Billing.Tax.Services;
-using Bit.Core.Billing.Tax.Services.Implementations;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -12,7 +13,6 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Braintree;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Stripe;
 using Customer = Stripe.Customer;
@@ -24,20 +24,18 @@ using static Utilities;
 
 public class PremiumUserBillingService(
     IBraintreeGateway braintreeGateway,
-    IFeatureService featureService,
     IGlobalSettings globalSettings,
     ILogger<PremiumUserBillingService> logger,
     ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService,
-    IUserRepository userRepository,
-    [FromKeyedServices(AutomaticTaxFactory.PersonalUse)] IAutomaticTaxStrategy automaticTaxStrategy) : IPremiumUserBillingService
+    IUserRepository userRepository) : IPremiumUserBillingService
 {
     public async Task Credit(User user, decimal amount)
     {
         var customer = await subscriberService.GetCustomer(user);
 
-        // Negative credit represents a balance and all Stripe denomination is in cents.
+        // Negative credit represents a balance, and all Stripe denomination is in cents.
         var credit = (long)(amount * -100);
 
         if (customer == null)
@@ -184,7 +182,7 @@ public class PremiumUserBillingService(
                 City = customerSetup.TaxInformation.City,
                 PostalCode = customerSetup.TaxInformation.PostalCode,
                 State = customerSetup.TaxInformation.State,
-                Country = customerSetup.TaxInformation.Country,
+                Country = customerSetup.TaxInformation.Country
             },
             Description = user.Name,
             Email = user.Email,
@@ -285,7 +283,7 @@ public class PremiumUserBillingService(
             {
                 case PaymentMethodType.BankAccount:
                     {
-                        await setupIntentCache.Remove(user.Id);
+                        await setupIntentCache.RemoveSetupIntentForSubscriber(user.Id);
                         break;
                     }
                 case PaymentMethodType.PayPal when !string.IsNullOrEmpty(braintreeCustomerId):
@@ -306,7 +304,7 @@ public class PremiumUserBillingService(
         {
             new ()
             {
-                Price = "premium-annually",
+                Price = StripeConstants.Prices.PremiumAnnually,
                 Quantity = 1
             }
         };
@@ -324,6 +322,10 @@ public class PremiumUserBillingService(
 
         var subscriptionCreateOptions = new SubscriptionCreateOptions
         {
+            AutomaticTax = new SubscriptionAutomaticTaxOptions
+            {
+                Enabled = true
+            },
             CollectionMethod = StripeConstants.CollectionMethod.ChargeAutomatically,
             Customer = customer.Id,
             Items = subscriptionItemOptionsList,
@@ -336,18 +338,6 @@ public class PremiumUserBillingService(
                 : null,
             OffSession = true
         };
-
-        if (featureService.IsEnabled(FeatureFlagKeys.PM19147_AutomaticTaxImprovements))
-        {
-            automaticTaxStrategy.SetCreateOptions(subscriptionCreateOptions, customer);
-        }
-        else
-        {
-            subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions
-            {
-                Enabled = customer.Tax?.AutomaticTax == StripeConstants.AutomaticTaxStatus.Supported,
-            };
-        }
 
         var subscription = await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
 
@@ -380,7 +370,7 @@ public class PremiumUserBillingService(
                 City = taxInformation.City,
                 PostalCode = taxInformation.PostalCode,
                 State = taxInformation.State,
-                Country = taxInformation.Country,
+                Country = taxInformation.Country
             },
             Expand = ["tax"],
             Tax = new CustomerTaxOptions

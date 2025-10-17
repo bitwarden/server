@@ -16,12 +16,12 @@ using Azure.Storage.Queues.Models;
 using Bit.Core.AdminConsole.Context;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Context;
 using Bit.Core.Entities;
-using Bit.Core.Identity;
 using Bit.Core.Settings;
-using IdentityModel;
+using Duende.IdentityModel;
 using Microsoft.AspNetCore.DataProtection;
 using MimeKit;
 
@@ -41,9 +41,12 @@ public static class CoreHelpers
     };
 
     /// <summary>
-    /// Generate sequential Guid for Sql Server.
-    /// ref: https://github.com/nhibernate/nhibernate-core/blob/master/src/NHibernate/Id/GuidCombGenerator.cs
+    /// Generate a sequential Guid for Sql Server. This prevents SQL Server index fragmentation by incorporating timestamp
+    /// information for sequential ordering. This should be preferred to <see cref="Guid.NewGuid"/> for any database IDs.
     /// </summary>
+    /// <remarks>
+    /// ref: https://github.com/nhibernate/nhibernate-core/blob/master/src/NHibernate/Id/GuidCombGenerator.cs
+    /// </remarks>
     /// <returns>A comb Guid.</returns>
     public static Guid GenerateComb()
         => GenerateComb(Guid.NewGuid(), DateTime.UtcNow);
@@ -637,9 +640,9 @@ public static class CoreHelpers
             return null;
         }
 
-        if (!globalSettings.SelfHosted && httpContext.Request.Headers.ContainsKey(RealConnectingIp))
+        if (!globalSettings.SelfHosted && httpContext.Request.Headers.TryGetValue(RealConnectingIp, out var realConnectingIp))
         {
-            return httpContext.Request.Headers[RealConnectingIp].ToString();
+            return realConnectingIp.ToString();
         }
 
         return httpContext.Connection?.RemoteIpAddress?.ToString();
@@ -660,9 +663,9 @@ public static class CoreHelpers
     {
         if (globalSettings.SelfHosted &&
             SettingHasValue(globalSettings.IdentityServer.CertificatePassword)
-            && File.Exists("identity.pfx"))
+            && File.Exists(globalSettings.IdentityServer.CertificateLocation))
         {
-            return GetCertificate("identity.pfx",
+            return GetCertificate(globalSettings.IdentityServer.CertificateLocation,
                 globalSettings.IdentityServer.CertificatePassword);
         }
         else if (SettingHasValue(globalSettings.IdentityServer.CertificateThumbprint))
@@ -712,6 +715,7 @@ public static class CoreHelpers
             new(Claims.Premium, isPremium ? "true" : "false"),
             new(JwtClaimTypes.Email, user.Email),
             new(JwtClaimTypes.EmailVerified, user.EmailVerified ? "true" : "false"),
+            // TODO: [https://bitwarden.atlassian.net/browse/PM-22171] Remove this since it is already added from the persisted grant
             new(Claims.SecurityStamp, user.SecurityStamp),
         };
 

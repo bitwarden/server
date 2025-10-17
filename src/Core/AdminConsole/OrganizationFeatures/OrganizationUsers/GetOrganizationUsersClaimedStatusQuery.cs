@@ -24,9 +24,7 @@ public class GetOrganizationUsersClaimedStatusQuery : IGetOrganizationUsersClaim
             // Users can only be claimed by an Organization that is enabled and can have organization domains
             var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
 
-            // TODO: Replace "UseSso" with a new organization ability like "UseOrganizationDomains" (PM-11622).
-            // Verified domains were tied to SSO, so we currently check the "UseSso" organization ability.
-            if (organizationAbility is { Enabled: true, UseSso: true })
+            if (organizationAbility is { Enabled: true, UseOrganizationDomains: true })
             {
                 // Get all organization users with claimed domains by the organization
                 var organizationUsersWithClaimedDomain = await _organizationUserRepository.GetManyByOrganizationWithClaimedDomainsAsync(organizationId);

@@ -1,4 +1,7 @@
-﻿using Bit.Core.Auth.Entities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Entities;
 using Bit.Core.Tools.Entities;
@@ -16,7 +19,7 @@ public class RotateUserAccountKeysData
     public string AccountPublicKey { get; set; }
 
     // All methods to get to the userkey
-    public MasterPasswordUnlockData MasterPasswordUnlockData { get; set; }
+    public MasterPasswordUnlockAndAuthenticationData MasterPasswordUnlockData { get; set; }
     public IEnumerable<EmergencyAccess> EmergencyAccesses { get; set; }
     public IReadOnlyList<OrganizationUser> OrganizationUsers { get; set; }
     public IEnumerable<WebAuthnLoginRotateKeyData> WebAuthnKeys { get; set; }

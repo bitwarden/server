@@ -5,10 +5,11 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
-using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
-using Bit.Core.Billing.Repositories;
+using Bit.Core.Billing.Providers.Entities;
+using Bit.Core.Billing.Providers.Repositories;
+using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Context;
@@ -285,6 +286,19 @@ public class ProviderBillingControllerTests
                 Discount = new Discount { Coupon = new Coupon { PercentOff = 10 } },
                 TaxIds = new StripeList<TaxId> { Data = [new TaxId { Value = "123456789" }] }
             },
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = ProviderPriceAdapter.MSP.Active.Enterprise }
+                    },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = ProviderPriceAdapter.MSP.Active.Teams }
+                    }
+                ]
+            },
             Status = "unpaid",
         };
 
@@ -334,7 +348,14 @@ public class ProviderBillingControllerTests
 
         foreach (var providerPlan in providerPlans)
         {
-            sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(providerPlan.PlanType).Returns(StaticStore.GetPlan(providerPlan.PlanType));
+            var plan = StaticStore.GetPlan(providerPlan.PlanType);
+            sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(providerPlan.PlanType).Returns(plan);
+            var priceId = ProviderPriceAdapter.GetPriceId(provider, subscription, providerPlan.PlanType);
+            sutProvider.GetDependency<IStripeAdapter>().PriceGetAsync(priceId)
+                .Returns(new Price
+                {
+                    UnitAmountDecimal = plan.PasswordManager.ProviderPortalSeatPrice * 100
+                });
         }
 
         var result = await sutProvider.Sut.GetSubscriptionAsync(provider.Id);

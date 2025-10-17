@@ -5,6 +5,7 @@ param(
   [switch]$all,
   [switch]$postgres,
   [switch]$mysql,
+  [switch]$mariadb,
   [switch]$mssql,
   [switch]$sqlite,
   [switch]$selfhost,
@@ -15,11 +16,15 @@ param(
 $ErrorActionPreference = "Stop"
 $currentDir = Get-Location
 
-if (!$all -and !$postgres -and !$mysql -and !$sqlite) {
+function Get-IsEFDatabase {
+  return $postgres -or $mysql -or $mariadb -or $sqlite;
+}
+
+if (!$all -and !$(Get-IsEFDatabase)) {
   $mssql = $true;
 }
 
-if ($all -or $postgres -or $mysql -or $sqlite) {
+if ($all -or $(Get-IsEFDatabase)) {
   dotnet ef *> $null
   if ($LASTEXITCODE -ne 0) {
     Write-Host "Entity Framework Core tools were not found in the dotnet global tools. Attempting to install"
@@ -60,9 +65,12 @@ if ($all -or $mssql) {
 }
 
 Foreach ($item in @(
-    @($mysql, "MySQL", "MySqlMigrations", "mySql", 2),
     @($postgres, "PostgreSQL", "PostgresMigrations", "postgreSql", 0),
-    @($sqlite, "SQLite", "SqliteMigrations", "sqlite", 1)
+    @($sqlite, "SQLite", "SqliteMigrations", "sqlite", 1),
+    @($mysql, "MySQL", "MySqlMigrations", "mySql", 2),
+    # MariaDB shares the MySQL connection string in the server config so they are mutually exclusive in that context.
+    # However they can still be run independently for integration tests.
+    @($mariadb, "MariaDB", "MySqlMigrations", "mySql", 4) 
 )) {
   if (!$item[0] -and !$all) {
     continue

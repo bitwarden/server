@@ -1,11 +1,11 @@
-﻿using Bit.Core.Exceptions;
+﻿using Bit.Core.Dirt.Entities;
+using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
+using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
+using Bit.Core.Dirt.Repositories;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Core.Tools.Entities;
-using Bit.Core.Tools.ReportFeatures.Interfaces;
-using Bit.Core.Tools.ReportFeatures.Requests;
-using Bit.Core.Tools.Repositories;
 
-namespace Bit.Core.Tools.ReportFeatures;
+namespace Bit.Core.Dirt.Reports.ReportFeatures;
 
 public class AddPasswordHealthReportApplicationCommand : IAddPasswordHealthReportApplicationCommand
 {

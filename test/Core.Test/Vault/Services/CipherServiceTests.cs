@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Services;
@@ -72,7 +73,7 @@ public class CipherServiceTests
 
     [Theory, BitAutoData]
     public async Task ShareManyAsync_WrongRevisionDate_Throws(SutProvider<CipherService> sutProvider,
-        IEnumerable<Cipher> ciphers, Guid organizationId, List<Guid> collectionIds)
+        IEnumerable<CipherDetails> ciphers, Guid organizationId, List<Guid> collectionIds)
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId)
             .Returns(new Organization
@@ -114,7 +115,7 @@ public class CipherServiceTests
 
     [Theory]
     [BitAutoData]
-    public async Task SaveDetailsAsync_PersonalVault_WithDisablePersonalOwnershipPolicyEnabled_Throws(
+    public async Task SaveDetailsAsync_PersonalVault_WithOrganizationDataOwnershipPolicyEnabled_Throws(
         SutProvider<CipherService> sutProvider,
         CipherDetails cipher,
         Guid savingUserId)
@@ -124,7 +125,7 @@ public class CipherServiceTests
         cipher.OrganizationId = null;
 
         sutProvider.GetDependency<IPolicyService>()
-            .AnyPoliciesApplicableToUserAsync(savingUserId, PolicyType.PersonalOwnership)
+            .AnyPoliciesApplicableToUserAsync(savingUserId, PolicyType.OrganizationDataOwnership)
             .Returns(true);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
@@ -134,7 +135,7 @@ public class CipherServiceTests
 
     [Theory]
     [BitAutoData]
-    public async Task SaveDetailsAsync_PersonalVault_WithDisablePersonalOwnershipPolicyDisabled_Succeeds(
+    public async Task SaveDetailsAsync_PersonalVault_WithOrganizationDataOwnershipPolicyDisabled_Succeeds(
         SutProvider<CipherService> sutProvider,
         CipherDetails cipher,
         Guid savingUserId)
@@ -144,7 +145,7 @@ public class CipherServiceTests
         cipher.OrganizationId = null;
 
         sutProvider.GetDependency<IPolicyService>()
-            .AnyPoliciesApplicableToUserAsync(savingUserId, PolicyType.PersonalOwnership)
+            .AnyPoliciesApplicableToUserAsync(savingUserId, PolicyType.OrganizationDataOwnership)
             .Returns(false);
 
         await sutProvider.Sut.SaveDetailsAsync(cipher, savingUserId, null);
@@ -156,7 +157,7 @@ public class CipherServiceTests
 
     [Theory]
     [BitAutoData]
-    public async Task SaveDetailsAsync_PersonalVault_WithPolicyRequirementsEnabled_WithDisablePersonalOwnershipPolicyEnabled_Throws(
+    public async Task SaveDetailsAsync_PersonalVault_WithPolicyRequirementsEnabled_WithOrganizationDataOwnershipPolicyEnabled_Throws(
         SutProvider<CipherService> sutProvider,
         CipherDetails cipher,
         Guid savingUserId)
@@ -170,8 +171,10 @@ public class CipherServiceTests
             .Returns(true);
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<PersonalOwnershipPolicyRequirement>(savingUserId)
-            .Returns(new PersonalOwnershipPolicyRequirement { DisablePersonalOwnership = true });
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(savingUserId)
+            .Returns(new OrganizationDataOwnershipPolicyRequirement(
+                OrganizationDataOwnershipState.Enabled,
+                [new PolicyDetails()]));
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveDetailsAsync(cipher, savingUserId, null));
@@ -180,7 +183,7 @@ public class CipherServiceTests
 
     [Theory]
     [BitAutoData]
-    public async Task SaveDetailsAsync_PersonalVault_WithPolicyRequirementsEnabled_WithDisablePersonalOwnershipPolicyDisabled_Succeeds(
+    public async Task SaveDetailsAsync_PersonalVault_WithPolicyRequirementsEnabled_WithOrganizationDataOwnershipPolicyDisabled_Succeeds(
         SutProvider<CipherService> sutProvider,
         CipherDetails cipher,
         Guid savingUserId)
@@ -194,8 +197,10 @@ public class CipherServiceTests
             .Returns(true);
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<PersonalOwnershipPolicyRequirement>(savingUserId)
-            .Returns(new PersonalOwnershipPolicyRequirement { DisablePersonalOwnership = false });
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(savingUserId)
+            .Returns(new OrganizationDataOwnershipPolicyRequirement(
+                OrganizationDataOwnershipState.Disabled,
+                []));
 
         await sutProvider.Sut.SaveDetailsAsync(cipher, savingUserId, null);
 
@@ -651,7 +656,7 @@ public class CipherServiceTests
     [BitAutoData("")]
     [BitAutoData("Correct Time")]
     public async Task ShareManyAsync_CorrectRevisionDate_Passes(string revisionDateString,
-        SutProvider<CipherService> sutProvider, IEnumerable<Cipher> ciphers, Organization organization, List<Guid> collectionIds)
+        SutProvider<CipherService> sutProvider, IEnumerable<CipherDetails> ciphers, Organization organization, List<Guid> collectionIds)
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id)
             .Returns(new Organization
@@ -673,13 +678,21 @@ public class CipherServiceTests
     [BitAutoData]
     public async Task RestoreAsync_UpdatesUserCipher(Guid restoringUserId, CipherDetails cipher, SutProvider<CipherService> sutProvider)
     {
-        sutProvider.GetDependency<ICipherRepository>().GetCanEditByIdAsync(restoringUserId, cipher.Id).Returns(true);
+        cipher.UserId = restoringUserId;
+        cipher.OrganizationId = null;
 
         var initialRevisionDate = new DateTime(1970, 1, 1, 0, 0, 0);
         cipher.DeletedDate = initialRevisionDate;
         cipher.RevisionDate = initialRevisionDate;
 
-        await sutProvider.Sut.RestoreAsync(cipher, restoringUserId, cipher.OrganizationId.HasValue);
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByIdAsync(restoringUserId)
+            .Returns(new User
+            {
+                Id = restoringUserId,
+            });
+
+        await sutProvider.Sut.RestoreAsync(cipher, restoringUserId);
 
         Assert.Null(cipher.DeletedDate);
         Assert.NotEqual(initialRevisionDate, cipher.RevisionDate);
@@ -688,15 +701,28 @@ public class CipherServiceTests
     [Theory]
     [OrganizationCipherCustomize]
     [BitAutoData]
-    public async Task RestoreAsync_UpdatesOrganizationCipher(Guid restoringUserId, CipherDetails cipher, SutProvider<CipherService> sutProvider)
+    public async Task RestoreAsync_UpdatesOrganizationCipher(Guid restoringUserId, CipherDetails cipher, User user, SutProvider<CipherService> sutProvider)
     {
-        sutProvider.GetDependency<ICipherRepository>().GetCanEditByIdAsync(restoringUserId, cipher.Id).Returns(true);
+        cipher.OrganizationId = Guid.NewGuid();
+        cipher.Edit = false;
+        cipher.Manage = true;
+
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByIdAsync(restoringUserId)
+            .Returns(user);
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilityAsync(cipher.OrganizationId.Value)
+            .Returns(new OrganizationAbility
+            {
+                Id = cipher.OrganizationId.Value,
+                LimitItemDeletion = true
+            });
 
         var initialRevisionDate = new DateTime(1970, 1, 1, 0, 0, 0);
         cipher.DeletedDate = initialRevisionDate;
         cipher.RevisionDate = initialRevisionDate;
 
-        await sutProvider.Sut.RestoreAsync(cipher, restoringUserId, cipher.OrganizationId.HasValue);
+        await sutProvider.Sut.RestoreAsync(cipher, restoringUserId);
 
         Assert.Null(cipher.DeletedDate);
         Assert.NotEqual(initialRevisionDate, cipher.RevisionDate);
@@ -724,24 +750,12 @@ public class CipherServiceTests
         cipherDetails.UserId = Guid.NewGuid();
         cipherDetails.OrganizationId = null;
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.RestoreAsync(cipherDetails, restoringUserId));
-
-        Assert.Contains("do not have permissions", exception.Message);
-        await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().UpsertAsync(default);
-        await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogCipherEventAsync(default, default);
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceiveWithAnyArgs().PushSyncCipherUpdateAsync(default, default);
-    }
-
-    [Theory]
-    [OrganizationCipherCustomize]
-    [BitAutoData]
-    public async Task RestoreAsync_WithOrgCipherLackingEditPermission_ThrowsBadRequestException(
-        Guid restoringUserId, CipherDetails cipherDetails, SutProvider<CipherService> sutProvider)
-    {
-        sutProvider.GetDependency<ICipherRepository>()
-            .GetCanEditByIdAsync(restoringUserId, cipherDetails.Id)
-            .Returns(false);
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByIdAsync(restoringUserId)
+            .Returns(new User
+            {
+                Id = restoringUserId,
+            });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RestoreAsync(cipherDetails, restoringUserId));
@@ -750,28 +764,6 @@ public class CipherServiceTests
         await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().UpsertAsync(default);
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogCipherEventAsync(default, default);
         await sutProvider.GetDependency<IPushNotificationService>().DidNotReceiveWithAnyArgs().PushSyncCipherUpdateAsync(default, default);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task RestoreAsync_WithEditPermission_RestoresCipherDetails(
-        Guid restoringUserId, CipherDetails cipherDetails, SutProvider<CipherService> sutProvider)
-    {
-        sutProvider.GetDependency<ICipherRepository>()
-            .GetCanEditByIdAsync(restoringUserId, cipherDetails.Id)
-            .Returns(true);
-
-        var initialRevisionDate = new DateTime(1970, 1, 1, 0, 0, 0);
-        cipherDetails.DeletedDate = initialRevisionDate;
-        cipherDetails.RevisionDate = initialRevisionDate;
-
-        await sutProvider.Sut.RestoreAsync(cipherDetails, restoringUserId);
-
-        Assert.Null(cipherDetails.DeletedDate);
-        Assert.NotEqual(initialRevisionDate, cipherDetails.RevisionDate);
-        await sutProvider.GetDependency<ICipherRepository>().Received(1).UpsertAsync(cipherDetails);
-        await sutProvider.GetDependency<IEventService>().Received(1).LogCipherEventAsync(cipherDetails, EventType.Cipher_Restored);
-        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncCipherUpdateAsync(cipherDetails, null);
     }
 
     [Theory]
@@ -794,7 +786,7 @@ public class CipherServiceTests
     [Theory]
     [OrganizationCipherCustomize]
     [BitAutoData]
-    public async Task RestoreAsync_WithLimitItemDeletionEnabled_WithManagePermission_RestoresCipher(
+    public async Task RestoreAsync_WithManagePermission_RestoresCipher(
         Guid restoringUserId, CipherDetails cipherDetails, User user, SutProvider<CipherService> sutProvider)
     {
         cipherDetails.OrganizationId = Guid.NewGuid();
@@ -802,9 +794,6 @@ public class CipherServiceTests
         cipherDetails.Edit = false;
         cipherDetails.Manage = true;
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.LimitItemDeletion)
-            .Returns(true);
         sutProvider.GetDependency<IUserService>()
             .GetUserByIdAsync(restoringUserId)
             .Returns(user);
@@ -828,7 +817,7 @@ public class CipherServiceTests
     [Theory]
     [OrganizationCipherCustomize]
     [BitAutoData]
-    public async Task RestoreAsync_WithLimitItemDeletionEnabled_WithoutManagePermission_ThrowsBadRequestException(
+    public async Task RestoreAsync_WithoutManagePermission_ThrowsBadRequestException(
         Guid restoringUserId, CipherDetails cipherDetails, User user, SutProvider<CipherService> sutProvider)
     {
         cipherDetails.OrganizationId = Guid.NewGuid();
@@ -836,9 +825,6 @@ public class CipherServiceTests
         cipherDetails.Edit = true;
         cipherDetails.Manage = false;
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.LimitItemDeletion)
-            .Returns(true);
         sutProvider.GetDependency<IUserService>()
             .GetUserByIdAsync(restoringUserId)
             .Returns(user);
@@ -859,32 +845,7 @@ public class CipherServiceTests
         await sutProvider.GetDependency<IPushNotificationService>().DidNotReceiveWithAnyArgs().PushSyncCipherUpdateAsync(default, default);
     }
 
-    [Theory]
-    [BitAutoData]
-    public async Task RestoreManyAsync_UpdatesCiphers(ICollection<CipherDetails> ciphers,
-        SutProvider<CipherService> sutProvider)
-    {
-        var cipherIds = ciphers.Select(c => c.Id).ToArray();
-        var restoringUserId = ciphers.First().UserId.Value;
-        var previousRevisionDate = DateTime.UtcNow;
-        foreach (var cipher in ciphers)
-        {
-            cipher.Edit = true;
-            cipher.RevisionDate = previousRevisionDate;
-        }
 
-        sutProvider.GetDependency<ICipherRepository>().GetManyByUserIdAsync(restoringUserId).Returns(ciphers);
-        var revisionDate = previousRevisionDate + TimeSpan.FromMinutes(1);
-        sutProvider.GetDependency<ICipherRepository>().RestoreAsync(Arg.Any<IEnumerable<Guid>>(), restoringUserId).Returns(revisionDate);
-
-        await sutProvider.Sut.RestoreManyAsync(cipherIds, restoringUserId);
-
-        foreach (var cipher in ciphers)
-        {
-            Assert.Null(cipher.DeletedDate);
-            Assert.Equal(revisionDate, cipher.RevisionDate);
-        }
-    }
 
     [Theory]
     [BitAutoData]
@@ -971,90 +932,14 @@ public class CipherServiceTests
             .PushSyncCiphersAsync(restoringUserId);
     }
 
-    [Theory]
-    [OrganizationCipherCustomize]
-    [BitAutoData]
-    public async Task RestoreManyAsync_WithOrgCipherAndEditPermission_RestoresCiphers(
-        Guid restoringUserId, List<CipherDetails> ciphers, Guid organizationId, SutProvider<CipherService> sutProvider)
-    {
-        var cipherIds = ciphers.Select(c => c.Id).ToArray();
-        var previousRevisionDate = DateTime.UtcNow;
 
-        foreach (var cipher in ciphers)
-        {
-            cipher.OrganizationId = organizationId;
-            cipher.Edit = true;
-            cipher.DeletedDate = DateTime.UtcNow;
-            cipher.RevisionDate = previousRevisionDate;
-        }
 
-        sutProvider.GetDependency<ICipherRepository>()
-            .GetManyByUserIdAsync(restoringUserId)
-            .Returns(ciphers);
 
-        var revisionDate = previousRevisionDate + TimeSpan.FromMinutes(1);
-        sutProvider.GetDependency<ICipherRepository>()
-            .RestoreAsync(Arg.Any<IEnumerable<Guid>>(), restoringUserId)
-            .Returns(revisionDate);
-
-        var result = await sutProvider.Sut.RestoreManyAsync(cipherIds, restoringUserId);
-
-        Assert.Equal(ciphers.Count, result.Count);
-        foreach (var cipher in result)
-        {
-            Assert.Null(cipher.DeletedDate);
-            Assert.Equal(revisionDate, cipher.RevisionDate);
-        }
-
-        await sutProvider.GetDependency<ICipherRepository>()
-            .Received(1)
-            .RestoreAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Count() == cipherIds.Count() &&
-                ids.All(id => cipherIds.Contains(id))), restoringUserId);
-        await sutProvider.GetDependency<IEventService>()
-            .Received(1)
-            .LogCipherEventsAsync(Arg.Any<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>());
-        await sutProvider.GetDependency<IPushNotificationService>()
-            .Received(1)
-            .PushSyncCiphersAsync(restoringUserId);
-    }
 
     [Theory]
     [OrganizationCipherCustomize]
     [BitAutoData]
-    public async Task RestoreManyAsync_WithOrgCipherLackingEditPermission_DoesNotRestoreCiphers(
-        Guid restoringUserId, List<Cipher> ciphers, Guid organizationId, SutProvider<CipherService> sutProvider)
-    {
-        var cipherIds = ciphers.Select(c => c.Id).ToArray();
-        var cipherDetailsList = ciphers.Select(c => new CipherDetails
-        {
-            Id = c.Id,
-            OrganizationId = organizationId,
-            Edit = false,
-            DeletedDate = DateTime.UtcNow
-        }).ToList();
-
-        sutProvider.GetDependency<ICipherRepository>()
-            .GetManyByUserIdAsync(restoringUserId)
-            .Returns(cipherDetailsList);
-
-        var result = await sutProvider.Sut.RestoreManyAsync(cipherIds, restoringUserId);
-
-        Assert.Empty(result);
-        await sutProvider.GetDependency<ICipherRepository>()
-            .Received(1)
-            .RestoreAsync(Arg.Is<IEnumerable<Guid>>(ids => !ids.Any()), restoringUserId);
-        await sutProvider.GetDependency<IEventService>()
-            .DidNotReceiveWithAnyArgs()
-            .LogCipherEventsAsync(Arg.Any<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>());
-        await sutProvider.GetDependency<IPushNotificationService>()
-            .Received(1)
-            .PushSyncCiphersAsync(restoringUserId);
-    }
-
-    [Theory]
-    [OrganizationCipherCustomize]
-    [BitAutoData]
-    public async Task RestoreManyAsync_WithLimitItemDeletionEnabled_WithManagePermission_RestoresCiphers(
+    public async Task RestoreManyAsync_WithManagePermission_RestoresCiphers(
         Guid restoringUserId, List<CipherDetails> ciphers, User user, SutProvider<CipherService> sutProvider)
     {
         var organizationId = Guid.NewGuid();
@@ -1070,9 +955,6 @@ public class CipherServiceTests
             cipher.RevisionDate = previousRevisionDate;
         }
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.LimitItemDeletion)
-            .Returns(true);
         sutProvider.GetDependency<ICipherRepository>()
             .GetManyByUserIdAsync(restoringUserId)
             .Returns(ciphers);
@@ -1121,7 +1003,7 @@ public class CipherServiceTests
     [Theory]
     [OrganizationCipherCustomize]
     [BitAutoData]
-    public async Task RestoreManyAsync_WithLimitItemDeletionEnabled_WithoutManagePermission_DoesNotRestoreCiphers(
+    public async Task RestoreManyAsync_WithoutManagePermission_DoesNotRestoreCiphers(
         Guid restoringUserId, List<CipherDetails> ciphers, User user, SutProvider<CipherService> sutProvider)
     {
         var organizationId = Guid.NewGuid();
@@ -1135,9 +1017,6 @@ public class CipherServiceTests
             cipher.DeletedDate = DateTime.UtcNow;
         }
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.LimitItemDeletion)
-            .Returns(true);
         sutProvider.GetDependency<ICipherRepository>()
             .GetManyByUserIdAsync(restoringUserId)
             .Returns(ciphers);
@@ -1173,7 +1052,7 @@ public class CipherServiceTests
 
     [Theory, BitAutoData]
     public async Task ShareManyAsync_FreeOrgWithAttachment_Throws(SutProvider<CipherService> sutProvider,
-        IEnumerable<Cipher> ciphers, Guid organizationId, List<Guid> collectionIds)
+        IEnumerable<CipherDetails> ciphers, Guid organizationId, List<Guid> collectionIds)
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(new Organization
         {
@@ -1194,7 +1073,7 @@ public class CipherServiceTests
 
     [Theory, BitAutoData]
     public async Task ShareManyAsync_PaidOrgWithAttachment_Passes(SutProvider<CipherService> sutProvider,
-        IEnumerable<Cipher> ciphers, Guid organizationId, List<Guid> collectionIds)
+        IEnumerable<CipherDetails> ciphers, Guid organizationId, List<Guid> collectionIds)
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId)
             .Returns(new Organization
@@ -1502,23 +1381,12 @@ public class CipherServiceTests
         cipherDetails.UserId = deletingUserId;
         cipherDetails.OrganizationId = null;
 
-        await sutProvider.Sut.DeleteAsync(cipherDetails, deletingUserId);
-
-        await sutProvider.GetDependency<ICipherRepository>().Received(1).DeleteAsync(cipherDetails);
-        await sutProvider.GetDependency<IAttachmentStorageService>().Received(1).DeleteAttachmentsForCipherAsync(cipherDetails.Id);
-        await sutProvider.GetDependency<IEventService>().Received(1).LogCipherEventAsync(cipherDetails, EventType.Cipher_Deleted);
-        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncCipherDeleteAsync(cipherDetails);
-    }
-
-    [Theory]
-    [OrganizationCipherCustomize]
-    [BitAutoData]
-    public async Task DeleteAsync_WithOrgCipherAndEditPermission_DeletesCipher(
-        Guid deletingUserId, CipherDetails cipherDetails, SutProvider<CipherService> sutProvider)
-    {
-        sutProvider.GetDependency<ICipherRepository>()
-            .GetCanEditByIdAsync(deletingUserId, cipherDetails.Id)
-            .Returns(true);
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByIdAsync(deletingUserId)
+            .Returns(new User
+            {
+                Id = deletingUserId,
+            });
 
         await sutProvider.Sut.DeleteAsync(cipherDetails, deletingUserId);
 
@@ -1527,6 +1395,8 @@ public class CipherServiceTests
         await sutProvider.GetDependency<IEventService>().Received(1).LogCipherEventAsync(cipherDetails, EventType.Cipher_Deleted);
         await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncCipherDeleteAsync(cipherDetails);
     }
+
+
 
     [Theory]
     [BitAutoData]
@@ -1536,25 +1406,12 @@ public class CipherServiceTests
         cipherDetails.UserId = Guid.NewGuid();
         cipherDetails.OrganizationId = null;
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.DeleteAsync(cipherDetails, deletingUserId));
-
-        Assert.Contains("do not have permissions", exception.Message);
-        await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().DeleteAsync(default);
-        await sutProvider.GetDependency<IAttachmentStorageService>().DidNotReceiveWithAnyArgs().DeleteAttachmentsForCipherAsync(default);
-        await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogCipherEventAsync(default, default);
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceiveWithAnyArgs().PushSyncCipherDeleteAsync(default);
-    }
-
-    [Theory]
-    [OrganizationCipherCustomize]
-    [BitAutoData]
-    public async Task DeleteAsync_WithOrgCipherLackingEditPermission_ThrowsBadRequestException(
-        Guid deletingUserId, CipherDetails cipherDetails, SutProvider<CipherService> sutProvider)
-    {
-        sutProvider.GetDependency<ICipherRepository>()
-            .GetCanEditByIdAsync(deletingUserId, cipherDetails.Id)
-            .Returns(false);
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByIdAsync(deletingUserId)
+            .Returns(new User
+            {
+                Id = deletingUserId,
+            });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.DeleteAsync(cipherDetails, deletingUserId));
@@ -1583,16 +1440,13 @@ public class CipherServiceTests
     [Theory]
     [OrganizationCipherCustomize]
     [BitAutoData]
-    public async Task DeleteAsync_WithLimitItemDeletionEnabled_WithManagePermission_DeletesCipher(
+    public async Task DeleteAsync_WithManagePermission_DeletesCipher(
         Guid deletingUserId, CipherDetails cipherDetails, User user, SutProvider<CipherService> sutProvider)
     {
         cipherDetails.OrganizationId = Guid.NewGuid();
         cipherDetails.Edit = false;
         cipherDetails.Manage = true;
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.LimitItemDeletion)
-            .Returns(true);
         sutProvider.GetDependency<IUserService>()
             .GetUserByIdAsync(deletingUserId)
             .Returns(user);
@@ -1615,16 +1469,13 @@ public class CipherServiceTests
     [Theory]
     [OrganizationCipherCustomize]
     [BitAutoData]
-    public async Task DeleteAsync_WithLimitItemDeletionEnabled_WithoutManagePermission_ThrowsBadRequestException(
+    public async Task DeleteAsync_WithoutManagePermission_ThrowsBadRequestException(
         Guid deletingUserId, CipherDetails cipherDetails, User user, SutProvider<CipherService> sutProvider)
     {
         cipherDetails.OrganizationId = Guid.NewGuid();
         cipherDetails.Edit = true;
         cipherDetails.Manage = false;
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.LimitItemDeletion)
-            .Returns(true);
         sutProvider.GetDependency<IUserService>()
             .GetUserByIdAsync(deletingUserId)
             .Returns(user);
@@ -1691,6 +1542,12 @@ public class CipherServiceTests
             cipher.Edit = true;
         }
 
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByIdAsync(deletingUserId)
+            .Returns(new User
+            {
+                Id = deletingUserId,
+            });
         sutProvider.GetDependency<ICipherRepository>()
             .GetManyByUserIdAsync(deletingUserId)
             .Returns(ciphers);
@@ -1740,71 +1597,14 @@ public class CipherServiceTests
             .PushSyncCiphersAsync(deletingUserId);
     }
 
-    [Theory]
-    [OrganizationCipherCustomize]
-    [BitAutoData]
-    public async Task DeleteManyAsync_WithOrgCipherAndEditPermission_DeletesCiphers(
-        Guid deletingUserId, List<CipherDetails> ciphers, Guid organizationId, SutProvider<CipherService> sutProvider)
-    {
-        var cipherIds = ciphers.Select(c => c.Id).ToArray();
-        foreach (var cipher in ciphers)
-        {
-            cipher.OrganizationId = organizationId;
-            cipher.Edit = true;
-        }
 
-        sutProvider.GetDependency<ICipherRepository>()
-            .GetManyByUserIdAsync(deletingUserId)
-            .Returns(ciphers);
 
-        await sutProvider.Sut.DeleteManyAsync(cipherIds, deletingUserId, organizationId);
 
-        await sutProvider.GetDependency<ICipherRepository>()
-            .Received(1)
-            .DeleteAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Count() == cipherIds.Count() && ids.All(id => cipherIds.Contains(id))), deletingUserId);
-        await sutProvider.GetDependency<IEventService>()
-            .Received(1)
-            .LogCipherEventsAsync(Arg.Any<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>());
-        await sutProvider.GetDependency<IPushNotificationService>()
-            .Received(1)
-            .PushSyncCiphersAsync(deletingUserId);
-    }
 
     [Theory]
     [OrganizationCipherCustomize]
     [BitAutoData]
-    public async Task DeleteManyAsync_WithOrgCipherLackingEditPermission_DoesNotDeleteCiphers(
-        Guid deletingUserId, List<Cipher> ciphers, Guid organizationId, SutProvider<CipherService> sutProvider)
-    {
-        var cipherIds = ciphers.Select(c => c.Id).ToArray();
-        var cipherDetailsList = ciphers.Select(c => new CipherDetails
-        {
-            Id = c.Id,
-            OrganizationId = organizationId,
-            Edit = false
-        }).ToList();
-
-        sutProvider.GetDependency<ICipherRepository>()
-            .GetManyByUserIdAsync(deletingUserId)
-            .Returns(cipherDetailsList);
-
-        await sutProvider.Sut.DeleteManyAsync(cipherIds, deletingUserId, organizationId);
-
-        await sutProvider.GetDependency<ICipherRepository>()
-            .Received(1)
-            .DeleteAsync(Arg.Is<IEnumerable<Guid>>(ids => !ids.Any()), deletingUserId);
-        await sutProvider.GetDependency<IEventService>()
-            .DidNotReceiveWithAnyArgs()
-            .LogCipherEventsAsync(Arg.Any<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>());
-        await sutProvider.GetDependency<IPushNotificationService>()
-            .Received(1)
-            .PushSyncCiphersAsync(deletingUserId);
-    }
-
-    [Theory]
-    [OrganizationCipherCustomize]
-    [BitAutoData]
-    public async Task DeleteManyAsync_WithLimitItemDeletionEnabled_WithoutManagePermission_DoesNotDeleteCiphers(
+    public async Task DeleteManyAsync_WithoutManagePermission_DoesNotDeleteCiphers(
         Guid deletingUserId, List<CipherDetails> ciphers, User user, SutProvider<CipherService> sutProvider)
     {
         var organizationId = Guid.NewGuid();
@@ -1817,9 +1617,6 @@ public class CipherServiceTests
             cipher.Manage = false;
         }
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.LimitItemDeletion)
-            .Returns(true);
         sutProvider.GetDependency<ICipherRepository>()
             .GetManyByUserIdAsync(deletingUserId)
             .Returns(ciphers);
@@ -1855,7 +1652,7 @@ public class CipherServiceTests
     [Theory]
     [OrganizationCipherCustomize]
     [BitAutoData]
-    public async Task DeleteManyAsync_WithLimitItemDeletionEnabled_WithManagePermission_DeletesCiphers(
+    public async Task DeleteManyAsync_WithManagePermission_DeletesCiphers(
         Guid deletingUserId, List<CipherDetails> ciphers, User user, SutProvider<CipherService> sutProvider)
     {
         var organizationId = Guid.NewGuid();
@@ -1868,9 +1665,6 @@ public class CipherServiceTests
             cipher.Manage = true;
         }
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.LimitItemDeletion)
-            .Returns(true);
         sutProvider.GetDependency<ICipherRepository>()
             .GetManyByUserIdAsync(deletingUserId)
             .Returns(ciphers);
@@ -1913,9 +1707,12 @@ public class CipherServiceTests
         cipherDetails.OrganizationId = null;
         cipherDetails.DeletedDate = null;
 
-        sutProvider.GetDependency<ICipherRepository>()
-            .GetCanEditByIdAsync(deletingUserId, cipherDetails.Id)
-            .Returns(true);
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByIdAsync(deletingUserId)
+            .Returns(new User
+            {
+                Id = deletingUserId,
+            });
 
         await sutProvider.Sut.SoftDeleteAsync(cipherDetails, deletingUserId);
 
@@ -1926,26 +1723,7 @@ public class CipherServiceTests
         await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncCipherUpdateAsync(cipherDetails, null);
     }
 
-    [Theory]
-    [OrganizationCipherCustomize]
-    [BitAutoData]
-    public async Task SoftDeleteAsync_WithOrgCipherAndEditPermission_SoftDeletesCipher(
-        Guid deletingUserId, CipherDetails cipherDetails, SutProvider<CipherService> sutProvider)
-    {
-        cipherDetails.DeletedDate = null;
 
-        sutProvider.GetDependency<ICipherRepository>()
-            .GetCanEditByIdAsync(deletingUserId, cipherDetails.Id)
-            .Returns(true);
-
-        await sutProvider.Sut.SoftDeleteAsync(cipherDetails, deletingUserId);
-
-        Assert.NotNull(cipherDetails.DeletedDate);
-        Assert.Equal(cipherDetails.RevisionDate, cipherDetails.DeletedDate);
-        await sutProvider.GetDependency<ICipherRepository>().Received(1).UpsertAsync(cipherDetails);
-        await sutProvider.GetDependency<IEventService>().Received(1).LogCipherEventAsync(cipherDetails, EventType.Cipher_SoftDeleted);
-        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncCipherUpdateAsync(cipherDetails, null);
-    }
 
     [Theory]
     [BitAutoData]
@@ -1955,46 +1733,17 @@ public class CipherServiceTests
         cipherDetails.UserId = Guid.NewGuid();
         cipherDetails.OrganizationId = null;
 
-        sutProvider.GetDependency<ICipherRepository>()
-            .GetCanEditByIdAsync(deletingUserId, cipherDetails.Id)
-            .Returns(false);
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByIdAsync(deletingUserId)
+            .Returns(new User
+            {
+                Id = deletingUserId,
+            });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SoftDeleteAsync(cipherDetails, deletingUserId));
 
         Assert.Contains("do not have permissions", exception.Message);
-    }
-
-    [Theory]
-    [OrganizationCipherCustomize]
-    [BitAutoData]
-    public async Task SoftDeleteAsync_WithOrgCipherLackingEditPermission_ThrowsBadRequestException(
-        Guid deletingUserId, CipherDetails cipherDetails, SutProvider<CipherService> sutProvider)
-    {
-        sutProvider.GetDependency<ICipherRepository>()
-            .GetCanEditByIdAsync(deletingUserId, cipherDetails.Id)
-            .Returns(false);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SoftDeleteAsync(cipherDetails, deletingUserId));
-
-        Assert.Contains("do not have permissions", exception.Message);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task SoftDeleteAsync_WithEditPermission_SoftDeletesCipherDetails(
-        Guid deletingUserId, CipherDetails cipherDetails, SutProvider<CipherService> sutProvider)
-    {
-        cipherDetails.DeletedDate = null;
-
-        await sutProvider.Sut.SoftDeleteAsync(cipherDetails, deletingUserId, true);
-
-        Assert.NotNull(cipherDetails.DeletedDate);
-        Assert.Equal(cipherDetails.RevisionDate, cipherDetails.DeletedDate);
-        await sutProvider.GetDependency<ICipherRepository>().Received(1).UpsertAsync(cipherDetails);
-        await sutProvider.GetDependency<IEventService>().Received(1).LogCipherEventAsync(cipherDetails, EventType.Cipher_SoftDeleted);
-        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncCipherUpdateAsync(cipherDetails, null);
     }
 
     [Theory]
@@ -2002,10 +1751,17 @@ public class CipherServiceTests
     public async Task SoftDeleteAsync_WithAlreadySoftDeletedCipher_SkipsOperation(
         Guid deletingUserId, CipherDetails cipherDetails, SutProvider<CipherService> sutProvider)
     {
-        sutProvider.GetDependency<ICipherRepository>()
-            .GetCanEditByIdAsync(deletingUserId, cipherDetails.Id)
-            .Returns(true);
+        // Set up as personal cipher owned by the deleting user
+        cipherDetails.UserId = deletingUserId;
+        cipherDetails.OrganizationId = null;
         cipherDetails.DeletedDate = DateTime.UtcNow.AddDays(-1);
+
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByIdAsync(deletingUserId)
+            .Returns(new User
+            {
+                Id = deletingUserId,
+            });
 
         await sutProvider.Sut.SoftDeleteAsync(cipherDetails, deletingUserId);
 
@@ -2032,7 +1788,7 @@ public class CipherServiceTests
     [Theory]
     [OrganizationCipherCustomize]
     [BitAutoData]
-    public async Task SoftDeleteAsync_WithLimitItemDeletionEnabled_WithManagePermission_SoftDeletesCipher(
+    public async Task SoftDeleteAsync_WithManagePermission_SoftDeletesCipher(
         Guid deletingUserId, CipherDetails cipherDetails, User user, SutProvider<CipherService> sutProvider)
     {
         cipherDetails.OrganizationId = Guid.NewGuid();
@@ -2040,9 +1796,6 @@ public class CipherServiceTests
         cipherDetails.Edit = false;
         cipherDetails.Manage = true;
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.LimitItemDeletion)
-            .Returns(true);
         sutProvider.GetDependency<IUserService>()
             .GetUserByIdAsync(deletingUserId)
             .Returns(user);
@@ -2066,7 +1819,7 @@ public class CipherServiceTests
     [Theory]
     [OrganizationCipherCustomize]
     [BitAutoData]
-    public async Task SoftDeleteAsync_WithLimitItemDeletionEnabled_WithoutManagePermission_ThrowsBadRequestException(
+    public async Task SoftDeleteAsync_WithoutManagePermission_ThrowsBadRequestException(
         Guid deletingUserId, CipherDetails cipherDetails, User user, SutProvider<CipherService> sutProvider)
     {
         cipherDetails.OrganizationId = Guid.NewGuid();
@@ -2074,9 +1827,6 @@ public class CipherServiceTests
         cipherDetails.Edit = true;
         cipherDetails.Manage = false;
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.LimitItemDeletion)
-            .Returns(true);
         sutProvider.GetDependency<IUserService>()
             .GetUserByIdAsync(deletingUserId)
             .Returns(user);
@@ -2143,6 +1893,12 @@ public class CipherServiceTests
             cipher.DeletedDate = null;
         }
 
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByIdAsync(deletingUserId)
+            .Returns(new User
+            {
+                Id = deletingUserId,
+            });
         sutProvider.GetDependency<ICipherRepository>()
             .GetManyByUserIdAsync(deletingUserId)
             .Returns(ciphers);
@@ -2192,72 +1948,14 @@ public class CipherServiceTests
             .PushSyncCiphersAsync(deletingUserId);
     }
 
-    [Theory]
-    [OrganizationCipherCustomize]
-    [BitAutoData]
-    public async Task SoftDeleteManyAsync_WithOrgCipherAndEditPermission_SoftDeletesCiphers(
-        Guid deletingUserId, List<CipherDetails> ciphers, Guid organizationId, SutProvider<CipherService> sutProvider)
-    {
-        var cipherIds = ciphers.Select(c => c.Id).ToArray();
-        foreach (var cipher in ciphers)
-        {
-            cipher.OrganizationId = organizationId;
-            cipher.Edit = true;
-            cipher.DeletedDate = null;
-        }
 
-        sutProvider.GetDependency<ICipherRepository>()
-            .GetManyByUserIdAsync(deletingUserId)
-            .Returns(ciphers);
 
-        await sutProvider.Sut.SoftDeleteManyAsync(cipherIds, deletingUserId, organizationId, false);
 
-        await sutProvider.GetDependency<ICipherRepository>()
-            .Received(1)
-            .SoftDeleteAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Count() == cipherIds.Count() && ids.All(id => cipherIds.Contains(id))), deletingUserId);
-        await sutProvider.GetDependency<IEventService>()
-            .Received(1)
-            .LogCipherEventsAsync(Arg.Any<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>());
-        await sutProvider.GetDependency<IPushNotificationService>()
-            .Received(1)
-            .PushSyncCiphersAsync(deletingUserId);
-    }
 
     [Theory]
     [OrganizationCipherCustomize]
     [BitAutoData]
-    public async Task SoftDeleteManyAsync_WithOrgCipherLackingEditPermission_DoesNotDeleteCiphers(
-        Guid deletingUserId, List<Cipher> ciphers, Guid organizationId, SutProvider<CipherService> sutProvider)
-    {
-        var cipherIds = ciphers.Select(c => c.Id).ToArray();
-        var cipherDetailsList = ciphers.Select(c => new CipherDetails
-        {
-            Id = c.Id,
-            OrganizationId = organizationId,
-            Edit = false
-        }).ToList();
-
-        sutProvider.GetDependency<ICipherRepository>()
-            .GetManyByUserIdAsync(deletingUserId)
-            .Returns(cipherDetailsList);
-
-        await sutProvider.Sut.SoftDeleteManyAsync(cipherIds, deletingUserId, organizationId, false);
-
-        await sutProvider.GetDependency<ICipherRepository>()
-            .Received(1)
-            .SoftDeleteAsync(Arg.Is<IEnumerable<Guid>>(ids => !ids.Any()), deletingUserId);
-        await sutProvider.GetDependency<IEventService>()
-            .DidNotReceiveWithAnyArgs()
-            .LogCipherEventsAsync(Arg.Any<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>());
-        await sutProvider.GetDependency<IPushNotificationService>()
-            .Received(1)
-            .PushSyncCiphersAsync(deletingUserId);
-    }
-
-    [Theory]
-    [OrganizationCipherCustomize]
-    [BitAutoData]
-    public async Task SoftDeleteManyAsync_WithLimitItemDeletionEnabled_WithoutManagePermission_DoesNotDeleteCiphers(
+    public async Task SoftDeleteManyAsync_WithoutManagePermission_DoesNotDeleteCiphers(
         Guid deletingUserId, List<CipherDetails> ciphers, User user, SutProvider<CipherService> sutProvider)
     {
         var organizationId = Guid.NewGuid();
@@ -2270,9 +1968,6 @@ public class CipherServiceTests
             cipher.Manage = false;
         }
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.LimitItemDeletion)
-            .Returns(true);
         sutProvider.GetDependency<ICipherRepository>()
             .GetManyByUserIdAsync(deletingUserId)
             .Returns(ciphers);
@@ -2308,7 +2003,7 @@ public class CipherServiceTests
     [Theory]
     [OrganizationCipherCustomize]
     [BitAutoData]
-    public async Task SoftDeleteManyAsync_WithLimitItemDeletionEnabled_WithManagePermission_SoftDeletesCiphers(
+    public async Task SoftDeleteManyAsync_WithManagePermission_SoftDeletesCiphers(
         Guid deletingUserId, List<CipherDetails> ciphers, User user, SutProvider<CipherService> sutProvider)
     {
         var organizationId = Guid.NewGuid();
@@ -2322,9 +2017,6 @@ public class CipherServiceTests
             cipher.DeletedDate = null;
         }
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.LimitItemDeletion)
-            .Returns(true);
         sutProvider.GetDependency<ICipherRepository>()
             .GetManyByUserIdAsync(deletingUserId)
             .Returns(ciphers);

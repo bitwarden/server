@@ -3,12 +3,13 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 
-public class RequireSsoPolicyValidator : IPolicyValidator
+public class RequireSsoPolicyValidator : IPolicyValidator, IPolicyValidationEvent, IEnforceDependentPoliciesEvent
 {
     private readonly ISsoConfigRepository _ssoConfigRepository;
 
@@ -19,6 +20,11 @@ public class RequireSsoPolicyValidator : IPolicyValidator
 
     public PolicyType Type => PolicyType.RequireSso;
     public IEnumerable<PolicyType> RequiredPolicies => [PolicyType.SingleOrg];
+
+    public async Task<string> ValidateAsync(SavePolicyModel policyRequest, Policy? currentPolicy)
+    {
+        return await ValidateAsync(policyRequest.PolicyUpdate, currentPolicy);
+    }
 
     public async Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
     {

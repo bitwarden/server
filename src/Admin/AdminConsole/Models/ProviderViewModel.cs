@@ -1,9 +1,12 @@
-﻿using Bit.Admin.Billing.Models;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Admin.Billing.Models;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
-using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Providers.Entities;
 
 namespace Bit.Admin.AdminConsole.Models;
 
@@ -19,7 +22,7 @@ public class ProviderViewModel
     {
         Provider = provider;
         UserCount = providerUsers.Count();
-        ProviderAdmins = providerUsers.Where(u => u.Type == ProviderUserType.ProviderAdmin);
+        ProviderUsers = providerUsers;
         ProviderOrganizations = organizations.Where(o => o.ProviderId == provider.Id);
 
         if (Provider.Type == ProviderType.Msp)
@@ -61,7 +64,7 @@ public class ProviderViewModel
 
     public int UserCount { get; set; }
     public Provider Provider { get; set; }
-    public IEnumerable<ProviderUserUserDetails> ProviderAdmins { get; set; }
+    public IEnumerable<ProviderUserUserDetails> ProviderUsers { get; set; }
     public IEnumerable<ProviderOrganizationOrganizationDetails> ProviderOrganizations { get; set; }
     public List<ProviderPlanViewModel> ProviderPlanViewModels { get; set; } = [];
 }

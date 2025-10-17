@@ -1,4 +1,7 @@
-﻿using Bit.Core.Vault.Entities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
 
 namespace Bit.Core.Vault.Services;
@@ -24,7 +27,7 @@ public interface ICipherService
     Task DeleteFolderAsync(Folder folder);
     Task ShareAsync(Cipher originalCipher, Cipher cipher, Guid organizationId, IEnumerable<Guid> collectionIds,
         Guid userId, DateTime? lastKnownRevisionDate);
-    Task ShareManyAsync(IEnumerable<(Cipher cipher, DateTime? lastKnownRevisionDate)> ciphers, Guid organizationId,
+    Task<IEnumerable<CipherDetails>> ShareManyAsync(IEnumerable<(CipherDetails cipher, DateTime? lastKnownRevisionDate)> ciphers, Guid organizationId,
         IEnumerable<Guid> collectionIds, Guid sharingUserId);
     Task SaveCollectionsAsync(Cipher cipher, IEnumerable<Guid> collectionIds, Guid savingUserId, bool orgAdmin);
     Task SoftDeleteAsync(CipherDetails cipherDetails, Guid deletingUserId, bool orgAdmin = false);
@@ -34,4 +37,5 @@ public interface ICipherService
     Task UploadFileForExistingAttachmentAsync(Stream stream, Cipher cipher, CipherAttachment.MetaData attachmentId);
     Task<AttachmentResponseData> GetAttachmentDownloadDataAsync(Cipher cipher, string attachmentId);
     Task<bool> ValidateCipherAttachmentFile(Cipher cipher, CipherAttachment.MetaData attachmentData);
+    Task ValidateBulkCollectionAssignmentAsync(IEnumerable<Guid> collectionIds, IEnumerable<Guid> cipherIds, Guid userId);
 }

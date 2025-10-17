@@ -3,6 +3,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
+using Bit.Infrastructure.EntityFramework.AdminConsole.Repositories.Queries;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using Microsoft.EntityFrameworkCore;
@@ -27,6 +28,29 @@ public class OrganizationIntegrationConfigurationRepository : Repository<Core.Ad
             var query = new OrganizationIntegrationConfigurationDetailsReadManyByEventTypeOrganizationIdIntegrationTypeQuery(
                 organizationId, eventType, integrationType
                 );
+            return await query.Run(dbContext).ToListAsync();
+        }
+    }
+
+    public async Task<List<OrganizationIntegrationConfigurationDetails>> GetAllConfigurationDetailsAsync()
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = new OrganizationIntegrationConfigurationDetailsReadManyQuery();
+            return await query.Run(dbContext).ToListAsync();
+        }
+    }
+
+    public async Task<List<Core.AdminConsole.Entities.OrganizationIntegrationConfiguration>> GetManyByIntegrationAsync(
+        Guid organizationIntegrationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = new OrganizationIntegrationConfigurationReadManyByOrganizationIntegrationIdQuery(
+                organizationIntegrationId
+            );
             return await query.Run(dbContext).ToListAsync();
         }
     }

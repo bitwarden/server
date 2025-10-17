@@ -5,7 +5,7 @@ using Bit.Core.Settings;
 using AspNetCoreRateLimit;
 using Stripe;
 using Bit.Core.Utilities;
-using IdentityModel;
+using Duende.IdentityModel;
 using System.Globalization;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Auth.Models.Request;
@@ -13,7 +13,6 @@ using Bit.Api.KeyManagement.Validators;
 using Bit.Api.Tools.Models.Request;
 using Bit.Api.Vault.Models.Request;
 using Bit.Core.Auth.Entities;
-using Bit.Core.IdentityServer;
 using Bit.SharedWeb.Health;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.OpenApi.Models;
@@ -27,14 +26,16 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
 using Bit.Api.Auth.Models.Request.WebAuthn;
-using Bit.Api.Billing;
-using Bit.Core.AdminConsole.Services.NoopImplementations;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Identity.TokenProviders;
-using Bit.Core.Services;
 using Bit.Core.Tools.ImportFeatures;
-using Bit.Core.Tools.ReportFeatures;
 using Bit.Core.Auth.Models.Api.Request;
+using Bit.Core.Dirt.Reports.ReportFeatures;
+using Bit.Core.Tools.SendFeatures;
+using Bit.Core.Auth.IdentityServer;
+using Bit.Core.Auth.Identity;
+using Bit.Core.Enums;
+
 
 #if !OSS
 using Bit.Commercial.Core.SecretsManager;
@@ -105,46 +106,52 @@ public class Startup
         services.AddCustomIdentityServices(globalSettings);
         services.AddIdentityAuthenticationServices(globalSettings, Environment, config =>
         {
-            config.AddPolicy("Application", policy =>
+            config.AddPolicy(Policies.Application, policy =>
             {
                 policy.RequireAuthenticatedUser();
                 policy.RequireClaim(JwtClaimTypes.AuthenticationMethod, "Application", "external");
                 policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.Api);
             });
-            config.AddPolicy("Web", policy =>
+            config.AddPolicy(Policies.Web, policy =>
             {
                 policy.RequireAuthenticatedUser();
                 policy.RequireClaim(JwtClaimTypes.AuthenticationMethod, "Application", "external");
                 policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.Api);
-                policy.RequireClaim(JwtClaimTypes.ClientId, "web");
+                policy.RequireClaim(JwtClaimTypes.ClientId, BitwardenClient.Web);
             });
-            config.AddPolicy("Push", policy =>
+            config.AddPolicy(Policies.Push, policy =>
             {
                 policy.RequireAuthenticatedUser();
                 policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.ApiPush);
             });
-            config.AddPolicy("Licensing", policy =>
+            config.AddPolicy(Policies.Licensing, policy =>
             {
                 policy.RequireAuthenticatedUser();
                 policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.ApiLicensing);
             });
-            config.AddPolicy("Organization", policy =>
+            config.AddPolicy(Policies.Organization, policy =>
             {
                 policy.RequireAuthenticatedUser();
                 policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.ApiOrganization);
             });
-            config.AddPolicy("Installation", policy =>
+            config.AddPolicy(Policies.Installation, policy =>
             {
                 policy.RequireAuthenticatedUser();
                 policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.ApiInstallation);
             });
-            config.AddPolicy("Secrets", policy =>
+            config.AddPolicy(Policies.Secrets, policy =>
             {
                 policy.RequireAuthenticatedUser();
                 policy.RequireAssertion(ctx => ctx.User.HasClaim(c =>
                     c.Type == JwtClaimTypes.Scope &&
                     (c.Value.Contains(ApiScopes.Api) || c.Value.Contains(ApiScopes.ApiSecrets))
                 ));
+            });
+            config.AddPolicy(Policies.Send, configurePolicy: policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.ApiSendAccess);
+                policy.RequireClaim(Claims.SendAccessClaims.SendId);
             });
         });
 
@@ -185,7 +192,7 @@ public class Startup
         services.AddImportServices();
         services.AddPhishingDomainServices(globalSettings);
 
-        services.AddBillingQueries();
+        services.AddSendServices();
 
         // Authorization Handlers
         services.AddAuthorizationHandlers();
@@ -212,7 +219,7 @@ public class Startup
             config.Conventions.Add(new PublicApiControllersModelConvention());
         });
 
-        services.AddSwagger(globalSettings);
+        services.AddSwagger(globalSettings, Environment);
         Jobs.JobsHostedService.AddJobsServices(services, globalSettings.SelfHosted);
         services.AddHostedService<Jobs.JobsHostedService>();
 
@@ -222,18 +229,9 @@ public class Startup
             services.AddHostedService<Core.HostedServices.ApplicationCacheHostedService>();
         }
 
-        // Slack
-        if (CoreHelpers.SettingHasValue(globalSettings.Slack.ClientId) &&
-            CoreHelpers.SettingHasValue(globalSettings.Slack.ClientSecret) &&
-            CoreHelpers.SettingHasValue(globalSettings.Slack.Scopes))
-        {
-            services.AddHttpClient(SlackService.HttpClientName);
-            services.AddSingleton<ISlackService, SlackService>();
-        }
-        else
-        {
-            services.AddSingleton<ISlackService, NoopSlackService>();
-        }
+        // Add Slack / Teams Services for OAuth API requests - if configured
+        services.AddSlackService(globalSettings);
+        services.AddTeamsService(globalSettings);
     }
 
     public void Configure(

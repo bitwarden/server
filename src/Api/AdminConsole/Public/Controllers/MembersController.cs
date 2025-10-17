@@ -1,8 +1,12 @@
-﻿using System.Net;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Net;
 using Bit.Api.AdminConsole.Public.Models.Request;
 using Bit.Api.AdminConsole.Public.Models.Response;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Context;
@@ -29,6 +33,7 @@ public class MembersController : Controller
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
+    private readonly IResendOrganizationInviteCommand _resendOrganizationInviteCommand;
 
     public MembersController(
         IOrganizationUserRepository organizationUserRepository,
@@ -42,7 +47,8 @@ public class MembersController : Controller
         IPaymentService paymentService,
         IOrganizationRepository organizationRepository,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-        IRemoveOrganizationUserCommand removeOrganizationUserCommand)
+        IRemoveOrganizationUserCommand removeOrganizationUserCommand,
+        IResendOrganizationInviteCommand resendOrganizationInviteCommand)
     {
         _organizationUserRepository = organizationUserRepository;
         _groupRepository = groupRepository;
@@ -56,6 +62,7 @@ public class MembersController : Controller
         _organizationRepository = organizationRepository;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
+        _resendOrganizationInviteCommand = resendOrganizationInviteCommand;
     }
 
     /// <summary>
@@ -177,9 +184,10 @@ public class MembersController : Controller
         {
             return new NotFoundResult();
         }
+        var existingUserType = existingUser.Type;
         var updatedUser = model.ToOrganizationUser(existingUser);
         var associations = model.Collections?.Select(c => c.ToCollectionAccessSelection()).ToList();
-        await _updateOrganizationUserCommand.UpdateUserAsync(updatedUser, null, associations, model.Groups);
+        await _updateOrganizationUserCommand.UpdateUserAsync(updatedUser, existingUserType, null, associations, model.Groups);
         MemberResponseModel response = null;
         if (existingUser.UserId.HasValue)
         {
@@ -256,7 +264,7 @@ public class MembersController : Controller
         {
             return new NotFoundResult();
         }
-        await _organizationService.ResendInviteAsync(_currentContext.OrganizationId.Value, null, id);
+        await _resendOrganizationInviteCommand.ResendInviteAsync(_currentContext.OrganizationId.Value, null, id);
         return new OkResult();
     }
 }

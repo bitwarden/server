@@ -5,6 +5,6 @@
   },
   "msbuild-sdks": {
     "Microsoft.Build.Traversal": "4.1.0",
-    "Microsoft.Build.Sql": "0.1.9-preview"
+    "Microsoft.Build.Sql": "1.0.0"
   }
 }

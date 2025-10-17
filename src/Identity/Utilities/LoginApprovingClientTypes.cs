@@ -2,21 +2,23 @@
 
 namespace Bit.Identity.Utilities;
 
-public static class LoginApprovingClientTypes
+public interface ILoginApprovingClientTypes
 {
-    private static readonly IReadOnlyCollection<ClientType> _clientTypesThatCanApprove;
+    IReadOnlyCollection<ClientType> TypesThatCanApprove { get; }
+}
 
-    static LoginApprovingClientTypes()
+public class LoginApprovingClientTypes : ILoginApprovingClientTypes
+{
+    public LoginApprovingClientTypes()
     {
-        var clientTypes = new List<ClientType>
+        TypesThatCanApprove = new List<ClientType>
         {
             ClientType.Desktop,
             ClientType.Mobile,
             ClientType.Web,
             ClientType.Browser,
         };
-        _clientTypesThatCanApprove = clientTypes.AsReadOnly();
     }
 
-    public static IReadOnlyCollection<ClientType> TypesThatCanApprove => _clientTypesThatCanApprove;
+    public IReadOnlyCollection<ClientType> TypesThatCanApprove { get; }
 }

@@ -34,11 +34,11 @@ public class SendRequestModelTests
             Type = SendType.Text,
         };
 
-        var sendService = Substitute.For<ISendService>();
-        sendService.HashPassword(Arg.Any<string>())
+        var sendAuthorizationService = Substitute.For<ISendAuthorizationService>();
+        sendAuthorizationService.HashPassword(Arg.Any<string>())
             .Returns((info) => $"hashed_{(string)info[0]}");
 
-        var send = sendRequest.ToSend(Guid.NewGuid(), sendService);
+        var send = sendRequest.ToSend(Guid.NewGuid(), sendAuthorizationService);
 
         Assert.Equal(deletionDate, send.DeletionDate);
         Assert.False(send.Disabled);

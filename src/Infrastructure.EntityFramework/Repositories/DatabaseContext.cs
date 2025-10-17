@@ -1,19 +1,21 @@
 ﻿using Bit.Core;
+using Bit.Core.Dirt.Reports.Models.Data;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider;
 using Bit.Infrastructure.EntityFramework.Auth.Models;
 using Bit.Infrastructure.EntityFramework.Billing.Models;
 using Bit.Infrastructure.EntityFramework.Converters;
+using Bit.Infrastructure.EntityFramework.Dirt.Models;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.NotificationCenter.Models;
 using Bit.Infrastructure.EntityFramework.Platform;
 using Bit.Infrastructure.EntityFramework.SecretsManager.Models;
-using Bit.Infrastructure.EntityFramework.Tools.Models;
 using Bit.Infrastructure.EntityFramework.Vault.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using DP = Microsoft.AspNetCore.DataProtection;
+
 
 #nullable enable
 
@@ -61,6 +63,7 @@ public class DatabaseContext : DbContext
     public DbSet<Policy> Policies { get; set; }
     public DbSet<Provider> Providers { get; set; }
     public DbSet<Secret> Secret { get; set; }
+    public DbSet<SecretVersion> SecretVersion { get; set; }
     public DbSet<ServiceAccount> ServiceAccount { get; set; }
     public DbSet<Project> Project { get; set; }
     public DbSet<ProviderUser> ProviderUsers { get; set; }
@@ -80,8 +83,11 @@ public class DatabaseContext : DbContext
     public DbSet<NotificationStatus> NotificationStatuses { get; set; }
     public DbSet<ClientOrganizationMigrationRecord> ClientOrganizationMigrationRecords { get; set; }
     public DbSet<PasswordHealthReportApplication> PasswordHealthReportApplications { get; set; }
+    public DbSet<OrganizationMemberBaseDetail> OrganizationMemberBaseDetails { get; set; }
     public DbSet<SecurityTask> SecurityTasks { get; set; }
     public DbSet<OrganizationInstallation> OrganizationInstallations { get; set; }
+    public DbSet<OrganizationReport> OrganizationReports { get; set; }
+    public DbSet<OrganizationApplication> OrganizationApplications { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -112,6 +118,7 @@ public class DatabaseContext : DbContext
         var eOrganizationConnection = builder.Entity<OrganizationConnection>();
         var eOrganizationDomain = builder.Entity<OrganizationDomain>();
         var aWebAuthnCredential = builder.Entity<WebAuthnCredential>();
+        var eOrganizationMemberBaseDetail = builder.Entity<OrganizationMemberBaseDetail>();
 
         // Shadow property configurations go here
 
@@ -133,6 +140,8 @@ public class DatabaseContext : DbContext
         eCollectionUser.HasKey(cu => new { cu.CollectionId, cu.OrganizationUserId });
         eCollectionGroup.HasKey(cg => new { cg.CollectionId, cg.GroupId });
         eGroupUser.HasKey(gu => new { gu.GroupId, gu.OrganizationUserId });
+
+        eOrganizationMemberBaseDetail.HasNoKey();
 
         var dataProtector = this.GetService<DP.IDataProtectionProvider>().CreateProtector(
             Constants.DatabaseFieldProtectorPurpose);

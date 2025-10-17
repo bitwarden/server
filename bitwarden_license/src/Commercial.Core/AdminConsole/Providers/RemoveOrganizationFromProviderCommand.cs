@@ -1,4 +1,6 @@
-﻿using Bit.Core;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
@@ -7,14 +9,12 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
-using Bit.Core.Billing.Tax.Services;
-using Bit.Core.Billing.Tax.Services.Implementations;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Microsoft.Extensions.DependencyInjection;
 using Stripe;
 
 namespace Bit.Commercial.Core.AdminConsole.Providers;
@@ -24,7 +24,6 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
     private readonly IEventService _eventService;
     private readonly IMailService _mailService;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IOrganizationService _organizationService;
     private readonly IProviderOrganizationRepository _providerOrganizationRepository;
     private readonly IStripeAdapter _stripeAdapter;
     private readonly IFeatureService _featureService;
@@ -32,26 +31,22 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
     private readonly ISubscriberService _subscriberService;
     private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
     private readonly IPricingClient _pricingClient;
-    private readonly IAutomaticTaxStrategy _automaticTaxStrategy;
 
     public RemoveOrganizationFromProviderCommand(
         IEventService eventService,
         IMailService mailService,
         IOrganizationRepository organizationRepository,
-        IOrganizationService organizationService,
         IProviderOrganizationRepository providerOrganizationRepository,
         IStripeAdapter stripeAdapter,
         IFeatureService featureService,
         IProviderBillingService providerBillingService,
         ISubscriberService subscriberService,
         IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
-        IPricingClient pricingClient,
-        [FromKeyedServices(AutomaticTaxFactory.BusinessUse)] IAutomaticTaxStrategy automaticTaxStrategy)
+        IPricingClient pricingClient)
     {
         _eventService = eventService;
         _mailService = mailService;
         _organizationRepository = organizationRepository;
-        _organizationService = organizationService;
         _providerOrganizationRepository = providerOrganizationRepository;
         _stripeAdapter = stripeAdapter;
         _featureService = featureService;
@@ -59,7 +54,6 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         _subscriberService = subscriberService;
         _hasConfirmedOwnersExceptQuery = hasConfirmedOwnersExceptQuery;
         _pricingClient = pricingClient;
-        _automaticTaxStrategy = automaticTaxStrategy;
     }
 
     public async Task RemoveOrganizationFromProvider(
@@ -77,7 +71,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
 
         if (!await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(
                 providerOrganization.OrganizationId,
-                Array.Empty<Guid>(),
+                [],
                 includeProvider: false))
         {
             throw new BadRequestException("Organization must have at least one confirmed owner.");
@@ -102,7 +96,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
     /// <summary>
     /// When a client organization is unlinked from a provider, we have to check if they're Stripe-enabled
     /// and, if they are, we remove their MSP discount and set their Subscription to `send_invoice`. This is because
-    /// the provider's payment method will be removed from their Stripe customer causing ensuing charges to fail. Lastly,
+    /// the provider's payment method will be removed from their Stripe customer, causing ensuing charges to fail. Lastly,
     /// we email the organization owners letting them know they need to add a new payment method.
     /// </summary>
     private async Task ResetOrganizationBillingAsync(
@@ -142,22 +136,13 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
                 Items = [new SubscriptionItemOptions { Price = plan.PasswordManager.StripeSeatPlanId, Quantity = organization.Seats }]
             };
 
-            if (_featureService.IsEnabled(FeatureFlagKeys.PM19147_AutomaticTaxImprovements))
-            {
-                _automaticTaxStrategy.SetCreateOptions(subscriptionCreateOptions, customer);
-            }
-            else
-            {
-                subscriptionCreateOptions.AutomaticTax ??= new SubscriptionAutomaticTaxOptions
-                {
-                    Enabled = true
-                };
-            }
+            subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
 
             var subscription = await _stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
 
             organization.GatewaySubscriptionId = subscription.Id;
             organization.Status = OrganizationStatusType.Created;
+            organization.Enabled = true;
 
             await _providerBillingService.ScaleSeats(provider, organization.PlanType, -organization.Seats ?? 0);
         }
@@ -187,7 +172,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         await _mailService.SendProviderUpdatePaymentMethod(
             organization.Id,
             organization.Name,
-            provider.Name,
+            provider.Name!,
             organizationOwnerEmails);
     }
 }

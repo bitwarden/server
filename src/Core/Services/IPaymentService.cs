@@ -1,10 +1,12 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Tax.Requests;
 using Bit.Core.Billing.Tax.Responses;
 using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.StaticStore;
 
@@ -23,6 +25,14 @@ public interface IPaymentService
         int? newlyPurchasedSecretsManagerSeats,
         int? newlyPurchasedAdditionalSecretsManagerServiceAccounts,
         int newlyPurchasedAdditionalStorage);
+
+    /// <summary>
+    /// Used to update the organization's password manager subscription
+    /// </summary>
+    /// <param name="organization"></param>
+    /// <param name="plan"></param>
+    /// <param name="additionalSeats">New seat total</param>
+    /// <returns></returns>
     Task<string> AdjustSeatsAsync(Organization organization, Plan plan, int additionalSeats);
     Task<string> AdjustSmSeatsAsync(Organization organization, Plan plan, int additionalSeats);
     Task<string> AdjustStorageAsync(IStorableSubscriber storableSubscriber, int additionalStorage, string storagePlanId);
@@ -30,8 +40,6 @@ public interface IPaymentService
     Task<string> AdjustServiceAccountsAsync(Organization organization, Plan plan, int additionalServiceAccounts);
     Task CancelSubscriptionAsync(ISubscriber subscriber, bool endOfPeriod = false);
     Task ReinstateSubscriptionAsync(ISubscriber subscriber);
-    Task<bool> UpdatePaymentMethodAsync(ISubscriber subscriber, PaymentMethodType paymentMethodType,
-        string paymentToken, TaxInfo taxInfo = null);
     Task<bool> CreditAccountAsync(ISubscriber subscriber, decimal creditAmount);
     Task<BillingInfo> GetBillingAsync(ISubscriber subscriber);
     Task<BillingHistoryInfo> GetBillingHistoryAsync(ISubscriber subscriber);

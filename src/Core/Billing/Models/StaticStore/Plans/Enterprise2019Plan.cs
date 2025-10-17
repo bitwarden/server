@@ -26,6 +26,7 @@ public record Enterprise2019Plan : Plan
         Has2fa = true;
         HasApi = true;
         HasSso = true;
+        HasOrganizationDomains = true;
         HasKeyConnector = true;
         HasScim = true;
         HasResetPassword = true;

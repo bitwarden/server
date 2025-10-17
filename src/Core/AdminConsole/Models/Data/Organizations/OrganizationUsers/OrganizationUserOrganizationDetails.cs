@@ -1,4 +1,7 @@
-﻿using System.Text.Json.Serialization;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text.Json.Serialization;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Utilities;
@@ -46,6 +49,7 @@ public class OrganizationUserOrganizationDetails
     public string ProviderName { get; set; }
     public ProviderType? ProviderType { get; set; }
     public string FamilySponsorshipFriendlyName { get; set; }
+    public bool? SsoEnabled { get; set; }
     public string SsoConfig { get; set; }
     public DateTime? FamilySponsorshipLastSyncDate { get; set; }
     public DateTime? FamilySponsorshipValidUntil { get; set; }
@@ -59,6 +63,7 @@ public class OrganizationUserOrganizationDetails
     public bool LimitItemDeletion { get; set; }
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
     public bool UseRiskInsights { get; set; }
+    public bool UseOrganizationDomains { get; set; }
     public bool UseAdminSponsoredFamilies { get; set; }
     public bool? IsAdminInitiated { get; set; }
 }

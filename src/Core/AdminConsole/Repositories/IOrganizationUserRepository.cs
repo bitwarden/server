@@ -18,22 +18,30 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     Task<ICollection<OrganizationUser>> GetManyByUserAsync(Guid userId);
     Task<ICollection<OrganizationUser>> GetManyByOrganizationAsync(Guid organizationId, OrganizationUserType? type);
     Task<int> GetCountByOrganizationAsync(Guid organizationId, string email, bool onlyRegisteredUsers);
-
-    /// <summary>
-    /// Returns the number of occupied seats for an organization.
-    /// Occupied seats are OrganizationUsers that have at least been invited.
-    /// As of https://bitwarden.atlassian.net/browse/PM-17772, a seat is also occupied by a Families for Enterprise sponsorship sent by an
-    /// organization admin, even if the user sent the invitation doesn't have a corresponding OrganizationUser in the Enterprise organization.
-    /// </summary>
-    /// <param name="organizationId">The ID of the organization to get the occupied seat count for.</param>
-    /// <returns>The number of occupied seats for the organization.</returns>
-    Task<int> GetOccupiedSeatCountByOrganizationIdAsync(Guid organizationId);
     Task<ICollection<string>> SelectKnownEmailsAsync(Guid organizationId, IEnumerable<string> emails, bool onlyRegisteredUsers);
     Task<OrganizationUser?> GetByOrganizationAsync(Guid organizationId, Guid userId);
     Task<Tuple<OrganizationUser?, ICollection<CollectionAccessSelection>>> GetByIdWithCollectionsAsync(Guid id);
     Task<OrganizationUserUserDetails?> GetDetailsByIdAsync(Guid id);
+    /// <summary>
+    /// Returns the OrganizationUser and its associated collections (excluding DefaultUserCollections).
+    /// </summary>
+    /// <param name="id">The id of the OrganizationUser</param>
+    /// <returns>A tuple containing the OrganizationUser and its associated collections</returns>
     Task<(OrganizationUserUserDetails? OrganizationUser, ICollection<CollectionAccessSelection> Collections)> GetDetailsByIdWithCollectionsAsync(Guid id);
+    /// <summary>
+    /// Returns the OrganizationUsers and their associated collections (excluding DefaultUserCollections).
+    /// </summary>
+    /// <param name="organizationId">The id of the organization</param>
+    /// <param name="includeGroups">Whether to include groups</param>
+    /// <param name="includeCollections">Whether to include collections</param>
+    /// <returns>A list of OrganizationUserUserDetails</returns>
     Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId, bool includeGroups = false, bool includeCollections = false);
+    /// <inheritdoc cref="GetManyDetailsByOrganizationAsync"/>
+    /// <remarks>
+    /// This method is optimized for performance.
+    /// Reduces database round trips by fetching all data in fewer queries.
+    /// </remarks>
+    Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync_vNext(Guid organizationId, bool includeGroups = false, bool includeCollections = false);
     Task<ICollection<OrganizationUserOrganizationDetails>> GetManyDetailsByUserAsync(Guid userId,
         OrganizationUserStatusType? status = null);
     Task<OrganizationUserOrganizationDetails?> GetDetailsByUserAsync(Guid userId, Guid organizationId,
@@ -68,7 +76,6 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     /// Returns a list of OrganizationUsers with email domains that match one of the Organization's claimed domains.
     /// </summary>
     Task<ICollection<OrganizationUser>> GetManyByOrganizationWithClaimedDomainsAsync(Guid organizationId);
-
     Task RevokeManyByIdAsync(IEnumerable<Guid> organizationUserIds);
 
     /// <summary>
@@ -80,4 +87,13 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     Task<IEnumerable<OrganizationUserUserDetails>> GetManyDetailsByRoleAsync(Guid organizationId, OrganizationUserType role);
 
     Task CreateManyAsync(IEnumerable<CreateOrganizationUser> organizationUserCollection);
+
+    /// <summary>
+    /// It will only confirm if the user is in the `Accepted` state.
+    ///
+    /// This is an idempotent operation.
+    /// </summary>
+    /// <param name="organizationUser">Accepted OrganizationUser to confirm</param>
+    /// <returns>True, if the user was updated. False, if not performed.</returns>
+    Task<bool> ConfirmOrganizationUserAsync(OrganizationUser organizationUser);
 }

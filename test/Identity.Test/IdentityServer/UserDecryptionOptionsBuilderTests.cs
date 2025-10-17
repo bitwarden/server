@@ -1,14 +1,20 @@
-﻿using Bit.Core.Auth.Entities;
+﻿using Bit.Core;
+using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Identity.IdentityServer;
+using Bit.Identity.Test.AutoFixture;
+using Bit.Identity.Utilities;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
+using User = Bit.Core.Entities.User;
 
 namespace Bit.Identity.Test.IdentityServer;
 
@@ -17,14 +23,20 @@ public class UserDecryptionOptionsBuilderTests
     private readonly ICurrentContext _currentContext;
     private readonly IDeviceRepository _deviceRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly ILoginApprovingClientTypes _loginApprovingClientTypes;
     private readonly UserDecryptionOptionsBuilder _builder;
+    private readonly IFeatureService _featureService;
 
     public UserDecryptionOptionsBuilderTests()
     {
         _currentContext = Substitute.For<ICurrentContext>();
         _deviceRepository = Substitute.For<IDeviceRepository>();
         _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
-        _builder = new UserDecryptionOptionsBuilder(_currentContext, _deviceRepository, _organizationUserRepository);
+        _loginApprovingClientTypes = Substitute.For<ILoginApprovingClientTypes>();
+        _featureService = Substitute.For<IFeatureService>();
+        _builder = new UserDecryptionOptionsBuilder(_currentContext, _deviceRepository, _organizationUserRepository, _loginApprovingClientTypes, _featureService);
+        var user = new User();
+        _builder.ForUser(user);
     }
 
     [Theory]
@@ -120,17 +132,17 @@ public class UserDecryptionOptionsBuilderTests
     [BitAutoData(DeviceType.SafariBrowser)]
     [BitAutoData(DeviceType.VivaldiBrowser)]
     [BitAutoData(DeviceType.UnknownBrowser)]
-    // Extension
-    [BitAutoData(DeviceType.ChromeExtension)]
-    [BitAutoData(DeviceType.FirefoxExtension)]
-    [BitAutoData(DeviceType.OperaExtension)]
-    [BitAutoData(DeviceType.EdgeExtension)]
-    [BitAutoData(DeviceType.VivaldiExtension)]
-    [BitAutoData(DeviceType.SafariExtension)]
     public async Task Build_WhenHasLoginApprovingDevice_ShouldApprovingDeviceTrue(
         DeviceType deviceType,
         SsoConfig ssoConfig, SsoConfigurationData configurationData, User user, Device device, Device approvingDevice)
     {
+        _loginApprovingClientTypes.TypesThatCanApprove.Returns(new List<ClientType>
+        {
+            ClientType.Desktop,
+            ClientType.Mobile,
+            ClientType.Web,
+        });
+
         configurationData.MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption;
         ssoConfig.Data = configurationData.Serialize();
         approvingDevice.Type = deviceType;
@@ -142,9 +154,65 @@ public class UserDecryptionOptionsBuilderTests
     }
 
     [Theory]
+    // Desktop
+    [BitAutoData(DeviceType.LinuxDesktop)]
+    [BitAutoData(DeviceType.MacOsDesktop)]
+    [BitAutoData(DeviceType.WindowsDesktop)]
+    [BitAutoData(DeviceType.UWP)]
+    // Mobile
+    [BitAutoData(DeviceType.Android)]
+    [BitAutoData(DeviceType.iOS)]
+    [BitAutoData(DeviceType.AndroidAmazon)]
+    // Web
+    [BitAutoData(DeviceType.ChromeBrowser)]
+    [BitAutoData(DeviceType.FirefoxBrowser)]
+    [BitAutoData(DeviceType.OperaBrowser)]
+    [BitAutoData(DeviceType.EdgeBrowser)]
+    [BitAutoData(DeviceType.IEBrowser)]
+    [BitAutoData(DeviceType.SafariBrowser)]
+    [BitAutoData(DeviceType.VivaldiBrowser)]
+    [BitAutoData(DeviceType.UnknownBrowser)]
+    // Extension
+    [BitAutoData(DeviceType.ChromeExtension)]
+    [BitAutoData(DeviceType.FirefoxExtension)]
+    [BitAutoData(DeviceType.OperaExtension)]
+    [BitAutoData(DeviceType.EdgeExtension)]
+    [BitAutoData(DeviceType.VivaldiExtension)]
+    [BitAutoData(DeviceType.SafariExtension)]
+    public async Task Build_WhenHasLoginApprovingDeviceFeatureFlag_ShouldApprovingDeviceTrue(
+        DeviceType deviceType,
+        SsoConfig ssoConfig, SsoConfigurationData configurationData, User user, Device device, Device approvingDevice)
+    {
+        _loginApprovingClientTypes.TypesThatCanApprove.Returns(new List<ClientType>
+        {
+            ClientType.Desktop,
+            ClientType.Mobile,
+            ClientType.Web,
+            ClientType.Browser,
+        });
+
+        configurationData.MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption;
+        ssoConfig.Data = configurationData.Serialize();
+        approvingDevice.Type = deviceType;
+        _deviceRepository.GetManyByUserIdAsync(user.Id).Returns(new Device[] { approvingDevice });
+
+        var result = await _builder.ForUser(user).WithSso(ssoConfig).WithDevice(device).BuildAsync();
+
+        Assert.True(result.TrustedDeviceOption?.HasLoginApprovingDevice);
+    }
+
+    [Theory]
+    // CLI
     [BitAutoData(DeviceType.WindowsCLI)]
     [BitAutoData(DeviceType.MacOsCLI)]
     [BitAutoData(DeviceType.LinuxCLI)]
+    // Extension
+    [BitAutoData(DeviceType.ChromeExtension)]
+    [BitAutoData(DeviceType.FirefoxExtension)]
+    [BitAutoData(DeviceType.OperaExtension)]
+    [BitAutoData(DeviceType.EdgeExtension)]
+    [BitAutoData(DeviceType.VivaldiExtension)]
+    [BitAutoData(DeviceType.SafariExtension)]
     public async Task Build_WhenHasLoginApprovingDevice_ShouldApprovingDeviceFalse(
         DeviceType deviceType,
         SsoConfig ssoConfig, SsoConfigurationData configurationData, User user, Device device, Device approvingDevice)
@@ -159,19 +227,65 @@ public class UserDecryptionOptionsBuilderTests
         Assert.False(result.TrustedDeviceOption?.HasLoginApprovingDevice);
     }
 
-    [Theory, BitAutoData]
+    /// <summary>
+    /// This logic has been flagged as part of PM-23174.
+    /// When removing the server flag, please also remove this test, and remove the FeatureService
+    /// dependency from this suite and the following test.
+    /// </summary>
+    /// <param name="organizationUserType"></param>
+    /// <param name="ssoConfig"></param>
+    /// <param name="configurationData"></param>
+    /// <param name="organization"></param>
+    /// <param name="organizationUser"></param>
+    /// <param name="user"></param>
+    [Theory]
+    [BitAutoData(OrganizationUserType.Custom)]
     public async Task Build_WhenManageResetPasswordPermissions_ShouldReturnHasManageResetPasswordPermissionTrue(
+        OrganizationUserType organizationUserType,
         SsoConfig ssoConfig,
         SsoConfigurationData configurationData,
-        CurrentContextOrganization organization)
+        CurrentContextOrganization organization,
+        [OrganizationUserWithDefaultPermissions] OrganizationUser organizationUser,
+        User user)
     {
         configurationData.MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption;
         ssoConfig.Data = configurationData.Serialize();
         ssoConfig.OrganizationId = organization.Id;
-        _currentContext.Organizations.Returns(new List<CurrentContextOrganization>(new CurrentContextOrganization[] { organization }));
+        _currentContext.Organizations.Returns([organization]);
         _currentContext.ManageResetPassword(organization.Id).Returns(true);
+        organizationUser.Type = organizationUserType;
+        organizationUser.OrganizationId = organization.Id;
+        organizationUser.UserId = user.Id;
+        organizationUser.SetPermissions(new Permissions() { ManageResetPassword = true });
+        _organizationUserRepository.GetByOrganizationAsync(ssoConfig.OrganizationId, user.Id).Returns(organizationUser);
 
-        var result = await _builder.WithSso(ssoConfig).BuildAsync();
+        var result = await _builder.ForUser(user).WithSso(ssoConfig).BuildAsync();
+
+        Assert.True(result.TrustedDeviceOption?.HasManageResetPasswordPermission);
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.Custom)]
+    public async Task Build_WhenManageResetPasswordPermissions_ShouldFetchUserFromRepositoryAndReturnHasManageResetPasswordPermissionTrue(
+        OrganizationUserType organizationUserType,
+        SsoConfig ssoConfig,
+        SsoConfigurationData configurationData,
+        CurrentContextOrganization organization,
+        [OrganizationUserWithDefaultPermissions] OrganizationUser organizationUser,
+        User user)
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM23174ManageAccountRecoveryPermissionDrivesTheNeedToSetMasterPassword)
+            .Returns(true);
+        configurationData.MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption;
+        ssoConfig.Data = configurationData.Serialize();
+        ssoConfig.OrganizationId = organization.Id;
+        organizationUser.Type = organizationUserType;
+        organizationUser.OrganizationId = organization.Id;
+        organizationUser.UserId = user.Id;
+        organizationUser.SetPermissions(new Permissions() { ManageResetPassword = true });
+        _organizationUserRepository.GetByOrganizationAsync(ssoConfig.OrganizationId, user.Id).Returns(organizationUser);
+
+        var result = await _builder.ForUser(user).WithSso(ssoConfig).BuildAsync();
 
         Assert.True(result.TrustedDeviceOption?.HasManageResetPasswordPermission);
     }
@@ -180,7 +294,7 @@ public class UserDecryptionOptionsBuilderTests
     public async Task Build_WhenIsOwnerInvite_ShouldReturnHasManageResetPasswordPermissionTrue(
         SsoConfig ssoConfig,
         SsoConfigurationData configurationData,
-        OrganizationUser organizationUser,
+        [OrganizationUserWithDefaultPermissions] OrganizationUser organizationUser,
         User user)
     {
         configurationData.MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption;
@@ -197,7 +311,7 @@ public class UserDecryptionOptionsBuilderTests
     public async Task Build_WhenIsAdminInvite_ShouldReturnHasManageResetPasswordPermissionTrue(
         SsoConfig ssoConfig,
         SsoConfigurationData configurationData,
-        OrganizationUser organizationUser,
+        [OrganizationUserWithDefaultPermissions] OrganizationUser organizationUser,
         User user)
     {
         configurationData.MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption;
@@ -214,7 +328,7 @@ public class UserDecryptionOptionsBuilderTests
     public async Task Build_WhenUserHasEnrolledIntoPasswordReset_ShouldReturnHasAdminApprovalTrue(
         SsoConfig ssoConfig,
         SsoConfigurationData configurationData,
-        OrganizationUser organizationUser,
+        [OrganizationUserWithDefaultPermissions] OrganizationUser organizationUser,
         User user)
     {
         configurationData.MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption;
@@ -225,5 +339,33 @@ public class UserDecryptionOptionsBuilderTests
         var result = await _builder.ForUser(user).WithSso(ssoConfig).BuildAsync();
 
         Assert.True(result.TrustedDeviceOption?.HasAdminApproval);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Build_WhenUserHasNoMasterPassword_ShouldReturnNoMasterPasswordUnlock(User user)
+    {
+        user.MasterPassword = null;
+
+        var result = await _builder.ForUser(user).BuildAsync();
+
+        Assert.False(result.HasMasterPassword);
+        Assert.Null(result.MasterPasswordUnlock);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Build_WhenUserHasMasterPassword_ShouldReturnMasterPasswordUnlock(User user)
+    {
+        user.Email = "test@example.COM";
+
+        var result = await _builder.ForUser(user).BuildAsync();
+
+        Assert.True(result.HasMasterPassword);
+        Assert.NotNull(result.MasterPasswordUnlock);
+        Assert.Equal(user.Kdf, result.MasterPasswordUnlock.Kdf.KdfType);
+        Assert.Equal(user.KdfIterations, result.MasterPasswordUnlock.Kdf.Iterations);
+        Assert.Equal(user.KdfMemory, result.MasterPasswordUnlock.Kdf.Memory);
+        Assert.Equal(user.KdfParallelism, result.MasterPasswordUnlock.Kdf.Parallelism);
+        Assert.Equal("test@example.com", result.MasterPasswordUnlock.Salt);
+        Assert.Equal(user.Key, result.MasterPasswordUnlock.MasterKeyEncryptedUserKey);
     }
 }

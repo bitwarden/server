@@ -37,6 +37,7 @@ SELECT
     PO.[ProviderId],
     P.[Name] ProviderName,
     P.[Type] ProviderType,
+    SS.[Enabled] SsoEnabled,
     SS.[Data] SsoConfig,
     OS.[FriendlyName] FamilySponsorshipFriendlyName,
     OS.[LastSyncDate] FamilySponsorshipLastSyncDate,
@@ -50,8 +51,9 @@ SELECT
     O.[LimitCollectionDeletion],
     O.[AllowAdminAccessToAllCollectionItems],
     O.[UseRiskInsights],
-    O.[UseAdminSponsoredFamilies],
     O.[LimitItemDeletion],
+    O.[UseAdminSponsoredFamilies],
+    O.[UseOrganizationDomains],
     OS.[IsAdminInitiated]
 FROM
     [dbo].[OrganizationUser] OU

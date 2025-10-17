@@ -2,13 +2,11 @@
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Response;
-using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -48,7 +46,7 @@ public class OrganizationDomainController : Controller
     }
 
     [HttpGet("{orgId}/domain")]
-    public async Task<ListResponseModel<OrganizationDomainResponseModel>> Get(Guid orgId)
+    public async Task<ListResponseModel<OrganizationDomainResponseModel>> GetAll(Guid orgId)
     {
         await ValidateOrganizationAccessAsync(orgId);
 
@@ -107,7 +105,6 @@ public class OrganizationDomainController : Controller
     }
 
     [HttpDelete("{orgId}/domain/{id}")]
-    [HttpPost("{orgId}/domain/{id}/remove")]
     public async Task RemoveDomain(Guid orgId, Guid id)
     {
         await ValidateOrganizationAccessAsync(orgId);
@@ -119,6 +116,13 @@ public class OrganizationDomainController : Controller
         }
 
         await _deleteOrganizationDomainCommand.DeleteAsync(domain);
+    }
+
+    [HttpPost("{orgId}/domain/{id}/remove")]
+    [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
+    public async Task PostRemoveDomain(Guid orgId, Guid id)
+    {
+        await RemoveDomain(orgId, id);
     }
 
     [AllowAnonymous]
@@ -137,7 +141,6 @@ public class OrganizationDomainController : Controller
 
     [AllowAnonymous]
     [HttpPost("domain/sso/verified")]
-    [RequireFeature(FeatureFlagKeys.VerifiedSsoDomainEndpoint)]
     public async Task<VerifiedOrganizationDomainSsoDetailsResponseModel> GetVerifiedOrgDomainSsoDetailsAsync(
         [FromBody] OrganizationDomainSsoDetailsRequestModel model)
     {

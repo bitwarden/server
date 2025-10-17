@@ -42,6 +42,7 @@ public static class OrganizationLicenseConstants
     public const string ExpirationWithoutGracePeriod = nameof(ExpirationWithoutGracePeriod);
     public const string Trial = nameof(Trial);
     public const string UseAdminSponsoredFamilies = nameof(UseAdminSponsoredFamilies);
+    public const string UseOrganizationDomains = nameof(UseOrganizationDomains);
 }
 
 public static class UserLicenseConstants

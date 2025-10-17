@@ -1,5 +1,8 @@
-﻿using System.Net;
+﻿#nullable enable
+
+using System.Net;
 using System.Text.Json;
+using System.Web;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -257,12 +260,21 @@ public class SlackServiceTests
     public void GetRedirectUrl_ReturnsCorrectUrl()
     {
         var sutProvider = GetSutProvider();
-        var ClientId = sutProvider.GetDependency<GlobalSettings>().Slack.ClientId;
-        var Scopes = sutProvider.GetDependency<GlobalSettings>().Slack.Scopes;
-        var redirectUrl = "https://example.com/callback";
-        var expectedUrl = $"https://slack.com/oauth/v2/authorize?client_id={ClientId}&scope={Scopes}&redirect_uri={redirectUrl}";
-        var result = sutProvider.Sut.GetRedirectUrl(redirectUrl);
-        Assert.Equal(expectedUrl, result);
+        var clientId = sutProvider.GetDependency<GlobalSettings>().Slack.ClientId;
+        var scopes = sutProvider.GetDependency<GlobalSettings>().Slack.Scopes;
+        var callbackUrl = "https://example.com/callback";
+        var state = Guid.NewGuid().ToString();
+        var result = sutProvider.Sut.GetRedirectUrl(callbackUrl, state);
+
+        var uri = new Uri(result);
+        var query = HttpUtility.ParseQueryString(uri.Query);
+
+        Assert.Equal(clientId, query["client_id"]);
+        Assert.Equal(scopes, query["scope"]);
+        Assert.Equal(callbackUrl, query["redirect_uri"]);
+        Assert.Equal(state, query["state"]);
+        Assert.Equal("slack.com", uri.Host);
+        Assert.Equal("/oauth/v2/authorize", uri.AbsolutePath);
     }
 
     [Fact]
@@ -282,6 +294,18 @@ public class SlackServiceTests
         var result = await sutProvider.Sut.ObtainTokenViaOAuth("test-code", "https://example.com/callback");
 
         Assert.Equal("test-access-token", result);
+    }
+
+    [Theory]
+    [InlineData("test-code", "")]
+    [InlineData("", "https://example.com/callback")]
+    [InlineData("", "")]
+    public async Task ObtainTokenViaOAuth_ReturnsEmptyString_WhenCodeOrRedirectUrlIsEmpty(string code, string redirectUrl)
+    {
+        var sutProvider = GetSutProvider();
+        var result = await sutProvider.Sut.ObtainTokenViaOAuth(code, redirectUrl);
+
+        Assert.Equal(string.Empty, result);
     }
 
     [Fact]
