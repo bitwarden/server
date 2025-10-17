@@ -1879,6 +1879,15 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<string>("SecurityState")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("SecurityVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SignedPublicKey")
+                        .HasColumnType("text");
+
                     b.Property<long?>("Storage")
                         .HasColumnType("bigint");
 
@@ -1905,6 +1914,40 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasAnnotation("SqlServer:Clustered", false);
 
                     b.ToTable("User", (string)null);
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.UserSignatureKeyPair", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("RevisionDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<byte>("SignatureAlgorithm")
+                        .HasColumnType("smallint");
+
+                    b.Property<string>("SigningKey")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("VerifyingKey")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.ToTable("UserSignatureKeyPair", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.NotificationCenter.Models.Notification", b =>
@@ -2950,6 +2993,17 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("Organization");
 
                     b.Navigation("Provider");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.UserSignatureKeyPair", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("User");
                 });
