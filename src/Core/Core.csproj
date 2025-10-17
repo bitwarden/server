@@ -21,8 +21,8 @@
 
   <ItemGroup>
     <PackageReference Include="AspNetCoreRateLimit.Redis" Version="2.0.0" />
-    <PackageReference Include="AWSSDK.SimpleEmail" Version="4.0.0.20" />
-    <PackageReference Include="AWSSDK.SQS" Version="4.0.1.1" />
+    <PackageReference Include="AWSSDK.SimpleEmail" Version="4.0.1.3" />
+    <PackageReference Include="AWSSDK.SQS" Version="4.0.1.5" />
     <PackageReference Include="Azure.Data.Tables" Version="12.9.0" />
     <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" Version="1.3.4" />
     <PackageReference Include="Microsoft.AspNetCore.DataProtection" Version="8.0.10" />
@@ -30,14 +30,16 @@
     <PackageReference Include="Azure.Storage.Blobs" Version="12.21.2" />
     <PackageReference Include="Azure.Storage.Queues" Version="12.19.1" />
     <PackageReference Include="BitPay.Light" Version="1.0.1907" />
-    <PackageReference Include="DuoUniversal" Version="1.2.5" />
+    <PackageReference Include="DuoUniversal" Version="1.3.1" />
     <PackageReference Include="DnsClient" Version="1.8.0" />
     <PackageReference Include="Fido2.AspNet" Version="3.0.1" />
     <PackageReference Include="Handlebars.Net" Version="2.1.6" />
-    <PackageReference Include="MailKit" Version="4.13.0" />
+    <PackageReference Include="MailKit" Version="4.14.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.10" />
     <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.52.0" />
     <PackageReference Include="Microsoft.Azure.NotificationHubs" Version="4.2.0" />
+    <PackageReference Include="Microsoft.Bot.Builder" Version="4.23.0" />
+    <PackageReference Include="Microsoft.Bot.Connector" Version="4.23.0" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.2" />
     <PackageReference Include="Microsoft.Extensions.Caching.Cosmos" Version="1.7.0" />
     <PackageReference Include="Microsoft.Extensions.Caching.SqlServer" Version="8.0.10" />
@@ -59,7 +61,7 @@
     <PackageReference Include="Otp.NET" Version="1.4.0" />
     <PackageReference Include="YubicoDotNetClient" Version="1.2.0" />
     <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="8.0.10" />
-    <PackageReference Include="LaunchDarkly.ServerSdk" Version="8.9.1" />
+    <PackageReference Include="LaunchDarkly.ServerSdk" Version="8.10.1" />
     <PackageReference Include="Quartz" Version="3.14.0" />
     <PackageReference Include="Quartz.Extensions.Hosting" Version="3.14.0" />
     <PackageReference Include="Quartz.Extensions.DependencyInjection" Version="3.14.0" />

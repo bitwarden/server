@@ -58,7 +58,7 @@ public class GetProviderWarningsQueryTests
                 Customer = new Customer
                 {
                     TaxIds = new StripeList<TaxId> { Data = [] },
-                    Address = new Address { Country = "US" }
+                    Address = new Address { Country = "CA" }
                 }
             });
 
@@ -90,7 +90,7 @@ public class GetProviderWarningsQueryTests
                 Customer = new Customer
                 {
                     TaxIds = new StripeList<TaxId> { Data = [] },
-                    Address = new Address { Country = "US" }
+                    Address = new Address { Country = "CA" }
                 }
             });
 
@@ -124,7 +124,7 @@ public class GetProviderWarningsQueryTests
                 Customer = new Customer
                 {
                     TaxIds = new StripeList<TaxId> { Data = [] },
-                    Address = new Address { Country = "US" }
+                    Address = new Address { Country = "CA" }
                 }
             });
 
@@ -158,7 +158,7 @@ public class GetProviderWarningsQueryTests
                 Customer = new Customer
                 {
                     TaxIds = new StripeList<TaxId> { Data = [] },
-                    Address = new Address { Country = "US" }
+                    Address = new Address { Country = "CA" }
                 }
             });
 
@@ -191,7 +191,7 @@ public class GetProviderWarningsQueryTests
                 Customer = new Customer
                 {
                     TaxIds = new StripeList<TaxId> { Data = [] },
-                    Address = new Address { Country = "US" }
+                    Address = new Address { Country = "CA" }
                 }
             });
 
@@ -219,7 +219,7 @@ public class GetProviderWarningsQueryTests
                 Customer = new Customer
                 {
                     TaxIds = new StripeList<TaxId> { Data = [] },
-                    Address = new Address { Country = "US" }
+                    Address = new Address { Country = "CA" }
                 }
             });
 
@@ -227,7 +227,7 @@ public class GetProviderWarningsQueryTests
         sutProvider.GetDependency<IStripeAdapter>().TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
             .Returns(new StripeList<Registration>
             {
-                Data = [new Registration { Country = "CA" }]
+                Data = [new Registration { Country = "GB" }]
             });
 
         var response = await sutProvider.Sut.Run(provider);
@@ -252,7 +252,7 @@ public class GetProviderWarningsQueryTests
                 Customer = new Customer
                 {
                     TaxIds = new StripeList<TaxId> { Data = [] },
-                    Address = new Address { Country = "US" }
+                    Address = new Address { Country = "CA" }
                 }
             });
 
@@ -260,7 +260,7 @@ public class GetProviderWarningsQueryTests
         sutProvider.GetDependency<IStripeAdapter>().TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
             .Returns(new StripeList<Registration>
             {
-                Data = [new Registration { Country = "US" }]
+                Data = [new Registration { Country = "CA" }]
             });
 
         var response = await sutProvider.Sut.Run(provider);
@@ -291,7 +291,7 @@ public class GetProviderWarningsQueryTests
                     {
                         Data = [new TaxId { Verification = null }]
                     },
-                    Address = new Address { Country = "US" }
+                    Address = new Address { Country = "CA" }
                 }
             });
 
@@ -299,7 +299,7 @@ public class GetProviderWarningsQueryTests
         sutProvider.GetDependency<IStripeAdapter>().TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
             .Returns(new StripeList<Registration>
             {
-                Data = [new Registration { Country = "US" }]
+                Data = [new Registration { Country = "CA" }]
             });
 
         var response = await sutProvider.Sut.Run(provider);
@@ -333,7 +333,7 @@ public class GetProviderWarningsQueryTests
                             }
                         }]
                     },
-                    Address = new Address { Country = "US" }
+                    Address = new Address { Country = "CA" }
                 }
             });
 
@@ -341,7 +341,7 @@ public class GetProviderWarningsQueryTests
         sutProvider.GetDependency<IStripeAdapter>().TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
             .Returns(new StripeList<Registration>
             {
-                Data = [new Registration { Country = "US" }]
+                Data = [new Registration { Country = "CA" }]
             });
 
         var response = await sutProvider.Sut.Run(provider);
@@ -378,7 +378,7 @@ public class GetProviderWarningsQueryTests
                             }
                         }]
                     },
-                    Address = new Address { Country = "US" }
+                    Address = new Address { Country = "CA" }
                 }
             });
 
@@ -386,7 +386,7 @@ public class GetProviderWarningsQueryTests
         sutProvider.GetDependency<IStripeAdapter>().TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
             .Returns(new StripeList<Registration>
             {
-                Data = [new Registration { Country = "US" }]
+                Data = [new Registration { Country = "CA" }]
             });
 
         var response = await sutProvider.Sut.Run(provider);
@@ -423,7 +423,7 @@ public class GetProviderWarningsQueryTests
                             }
                         }]
                     },
-                    Address = new Address { Country = "US" }
+                    Address = new Address { Country = "CA" }
                 }
             });
 
@@ -431,7 +431,7 @@ public class GetProviderWarningsQueryTests
         sutProvider.GetDependency<IStripeAdapter>().TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
             .Returns(new StripeList<Registration>
             {
-                Data = [new Registration { Country = "US" }]
+                Data = [new Registration { Country = "CA" }]
             });
 
         var response = await sutProvider.Sut.Run(provider);
@@ -500,6 +500,44 @@ public class GetProviderWarningsQueryTests
                 Customer = new Customer
                 {
                     TaxIds = new StripeList<TaxId> { Data = [] },
+                    Address = new Address { Country = "CA" }
+                }
+            });
+
+        sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(true);
+        sutProvider.GetDependency<IStripeAdapter>().TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
+            .Returns(new StripeList<Registration>
+            {
+                Data = [new Registration { Country = "CA" }]
+            });
+
+        var response = await sutProvider.Sut.Run(provider);
+
+        Assert.True(response is
+        {
+            Suspension.Resolution: "add_payment_method",
+            TaxId.Type: "tax_id_missing"
+        });
+        Assert.Equal(cancelAt, response.Suspension.SubscriptionCancelsAt);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_USCustomer_NoTaxIdWarning(
+        Provider provider,
+        SutProvider<GetProviderWarningsQuery> sutProvider)
+    {
+        provider.Enabled = true;
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetSubscription(provider, Arg.Is<SubscriptionGetOptions>(options =>
+                options.Expand.SequenceEqual(_requiredExpansions)
+            ))
+            .Returns(new Subscription
+            {
+                Status = SubscriptionStatus.Active,
+                Customer = new Customer
+                {
+                    TaxIds = new StripeList<TaxId> { Data = [] },
                     Address = new Address { Country = "US" }
                 }
             });
@@ -513,11 +551,6 @@ public class GetProviderWarningsQueryTests
 
         var response = await sutProvider.Sut.Run(provider);
 
-        Assert.True(response is
-        {
-            Suspension.Resolution: "add_payment_method",
-            TaxId.Type: "tax_id_missing"
-        });
-        Assert.Equal(cancelAt, response.Suspension.SubscriptionCancelsAt);
+        Assert.Null(response!.TaxId);
     }
 }

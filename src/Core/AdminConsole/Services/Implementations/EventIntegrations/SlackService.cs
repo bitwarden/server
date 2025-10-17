@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Web;
 using Bit.Core.Models.Slack;
@@ -21,6 +19,7 @@ public class SlackService(
     private readonly string _slackApiBaseUrl = globalSettings.Slack.ApiBaseUrl;
 
     public const string HttpClientName = "SlackServiceHttpClient";
+    private const string _slackOAuthBaseUri = "https://slack.com/oauth/v2/authorize";
 
     public async Task<string> GetChannelIdAsync(string token, string channelName)
     {
@@ -75,13 +74,28 @@ public class SlackService(
         return await OpenDmChannel(token, userId);
     }
 
-    public string GetRedirectUrl(string redirectUrl)
+    public string GetRedirectUrl(string callbackUrl, string state)
     {
-        return $"https://slack.com/oauth/v2/authorize?client_id={_clientId}&scope={_scopes}&redirect_uri={redirectUrl}";
+        var builder = new UriBuilder(_slackOAuthBaseUri);
+        var query = HttpUtility.ParseQueryString(builder.Query);
+
+        query["client_id"] = _clientId;
+        query["scope"] = _scopes;
+        query["redirect_uri"] = callbackUrl;
+        query["state"] = state;
+
+        builder.Query = query.ToString();
+        return builder.ToString();
     }
 
     public async Task<string> ObtainTokenViaOAuth(string code, string redirectUrl)
     {
+        if (string.IsNullOrEmpty(code) || string.IsNullOrWhiteSpace(redirectUrl))
+        {
+            logger.LogError("Error obtaining token via OAuth: Code and/or RedirectUrl were empty");
+            return string.Empty;
+        }
+
         var tokenResponse = await _httpClient.PostAsync($"{_slackApiBaseUrl}/oauth.v2.access",
             new FormUrlEncodedContent(new[]
             {

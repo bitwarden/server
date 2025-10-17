@@ -6,7 +6,9 @@ public enum IntegrationType : int
     Scim = 2,
     Slack = 3,
     Webhook = 4,
-    Hec = 5
+    Hec = 5,
+    Datadog = 6,
+    Teams = 7
 }
 
 public static class IntegrationTypeExtensions
@@ -21,6 +23,10 @@ public static class IntegrationTypeExtensions
                 return "webhook";
             case IntegrationType.Hec:
                 return "hec";
+            case IntegrationType.Datadog:
+                return "datadog";
+            case IntegrationType.Teams:
+                return "teams";
             default:
                 throw new ArgumentOutOfRangeException(nameof(type), $"Unsupported integration type: {type}");
         }

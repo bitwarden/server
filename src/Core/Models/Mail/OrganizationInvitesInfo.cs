@@ -37,7 +37,6 @@ public class OrganizationInvitesInfo
     public bool OrgSsoEnabled { get; }
     public string OrgSsoIdentifier { get; }
     public bool OrgSsoLoginRequiredPolicyEnabled { get; }
-
     public IEnumerable<(OrganizationUser OrgUser, ExpiringToken Token)> OrgUserTokenPairs { get; }
     public Dictionary<Guid, bool> OrgUserHasExistingUserDict { get; }
 

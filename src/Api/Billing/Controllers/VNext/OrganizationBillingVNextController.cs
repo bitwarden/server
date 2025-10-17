@@ -2,11 +2,15 @@
 using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.Billing.Attributes;
 using Bit.Api.Billing.Models.Requests.Payment;
+using Bit.Api.Billing.Models.Requests.Subscriptions;
 using Bit.Api.Billing.Models.Requirements;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Payment.Commands;
 using Bit.Core.Billing.Payment.Queries;
+using Bit.Core.Billing.Subscriptions.Commands;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -22,11 +26,12 @@ public class OrganizationBillingVNextController(
     ICreateBitPayInvoiceForCreditCommand createBitPayInvoiceForCreditCommand,
     IGetBillingAddressQuery getBillingAddressQuery,
     IGetCreditQuery getCreditQuery,
+    IGetOrganizationMetadataQuery getOrganizationMetadataQuery,
     IGetOrganizationWarningsQuery getOrganizationWarningsQuery,
     IGetPaymentMethodQuery getPaymentMethodQuery,
+    IRestartSubscriptionCommand restartSubscriptionCommand,
     IUpdateBillingAddressCommand updateBillingAddressCommand,
-    IUpdatePaymentMethodCommand updatePaymentMethodCommand,
-    IVerifyBankAccountCommand verifyBankAccountCommand) : BaseBillingController
+    IUpdatePaymentMethodCommand updatePaymentMethodCommand) : BaseBillingController
 {
     [Authorize<ManageOrganizationBillingRequirement>]
     [HttpGet("address")]
@@ -97,14 +102,34 @@ public class OrganizationBillingVNextController(
     }
 
     [Authorize<ManageOrganizationBillingRequirement>]
-    [HttpPost("payment-method/verify-bank-account")]
+    [HttpPost("subscription/restart")]
     [InjectOrganization]
-    public async Task<IResult> VerifyBankAccountAsync(
+    public async Task<IResult> RestartSubscriptionAsync(
         [BindNever] Organization organization,
-        [FromBody] VerifyBankAccountRequest request)
+        [FromBody] RestartSubscriptionRequest request)
     {
-        var result = await verifyBankAccountCommand.Run(organization, request.DescriptorCode);
+        var (paymentMethod, billingAddress) = request.ToDomain();
+        var result = await updatePaymentMethodCommand.Run(organization, paymentMethod, null)
+            .AndThenAsync(_ => updateBillingAddressCommand.Run(organization, billingAddress))
+            .AndThenAsync(_ => restartSubscriptionCommand.Run(organization));
         return Handle(result);
+    }
+
+    [Authorize<MemberOrProviderRequirement>]
+    [HttpGet("metadata")]
+    [RequireFeature(FeatureFlagKeys.PM25379_UseNewOrganizationMetadataStructure)]
+    [InjectOrganization]
+    public async Task<IResult> GetMetadataAsync(
+        [BindNever] Organization organization)
+    {
+        var metadata = await getOrganizationMetadataQuery.Run(organization);
+
+        if (metadata == null)
+        {
+            return TypedResults.NotFound();
+        }
+
+        return TypedResults.Ok(metadata);
     }
 
     [Authorize<MemberOrProviderRequirement>]

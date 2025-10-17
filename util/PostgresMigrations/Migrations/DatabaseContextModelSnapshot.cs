@@ -1016,6 +1016,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ApplicationData")
+                        .HasColumnType("text");
+
                     b.Property<string>("ContentEncryptionKey")
                         .IsRequired()
                         .HasColumnType("text");
@@ -1023,14 +1026,17 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTime>("Date")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("ReportData")
                         .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("RevisionDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SummaryData")
                         .HasColumnType("text");
 
                     b.HasKey("Id");
@@ -1281,6 +1287,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<string>("DomainName")
                         .HasColumnType("text");
 
+                    b.Property<Guid?>("GrantedServiceAccountId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("GroupId")
                         .HasColumnType("uuid");
 
@@ -1327,10 +1336,13 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid?>("UserId")
                         .HasColumnType("uuid");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasAnnotation("SqlServer:Clustered", true);
 
                     b.HasIndex("Date", "OrganizationId", "ActingUserId", "CipherId")
-                        .HasAnnotation("SqlServer:Clustered", false);
+                        .HasDatabaseName("IX_Event_DateOrganizationIdUserId")
+                        .HasAnnotation("SqlServer:Clustered", false)
+                        .HasAnnotation("SqlServer:Include", new[] { "ServiceAccountId", "GrantedServiceAccountId" });
 
                     b.ToTable("Event", (string)null);
                 });
@@ -2153,6 +2165,42 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("Secret", (string)null);
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.SecretVersion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("EditorOrganizationUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("EditorServiceAccountId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SecretId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("VersionDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id")
+                        .HasAnnotation("SqlServer:Clustered", true);
+
+                    b.HasIndex("EditorOrganizationUserId")
+                        .HasDatabaseName("IX_SecretVersion_EditorOrganizationUserId");
+
+                    b.HasIndex("EditorServiceAccountId")
+                        .HasDatabaseName("IX_SecretVersion_EditorServiceAccountId");
+
+                    b.HasIndex("SecretId")
+                        .HasDatabaseName("IX_SecretVersion_SecretId");
+
+                    b.ToTable("SecretVersion");
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ServiceAccount", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2183,6 +2231,9 @@ namespace Bit.PostgresMigrations.Migrations
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ArchivedDate")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Attachments")
                         .HasColumnType("text");
@@ -2975,6 +3026,31 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("Organization");
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.SecretVersion", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.OrganizationUser", "EditorOrganizationUser")
+                        .WithMany()
+                        .HasForeignKey("EditorOrganizationUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ServiceAccount", "EditorServiceAccount")
+                        .WithMany()
+                        .HasForeignKey("EditorServiceAccountId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Bit.Infrastructure.EntityFramework.SecretsManager.Models.Secret", "Secret")
+                        .WithMany("SecretVersions")
+                        .HasForeignKey("SecretId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("EditorOrganizationUser");
+
+                    b.Navigation("EditorServiceAccount");
+
+                    b.Navigation("Secret");
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ServiceAccount", b =>
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
@@ -3245,6 +3321,8 @@ namespace Bit.PostgresMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.Secret", b =>
                 {
                     b.Navigation("GroupAccessPolicies");
+
+                    b.Navigation("SecretVersions");
 
                     b.Navigation("ServiceAccountAccessPolicies");
 

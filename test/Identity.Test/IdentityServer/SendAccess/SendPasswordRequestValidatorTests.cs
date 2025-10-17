@@ -1,12 +1,7 @@
-﻿using System.Collections.Specialized;
+﻿using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.UserFeatures.SendAccess;
-using Bit.Core.Enums;
-using Bit.Core.Identity;
-using Bit.Core.IdentityServer;
 using Bit.Core.KeyManagement.Sends;
 using Bit.Core.Tools.Models.Data;
-using Bit.Core.Utilities;
-using Bit.Identity.IdentityServer.Enums;
 using Bit.Identity.IdentityServer.RequestValidators.SendAccess;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -28,7 +23,7 @@ public class SendPasswordRequestValidatorTests
         Guid sendId)
     {
         // Arrange
-        tokenRequest.Raw = CreateValidatedTokenRequest(sendId);
+        tokenRequest.Raw = SendAccessTestUtilities.CreateValidatedTokenRequest(sendId);
 
         var context = new ExtensionGrantValidationContext
         {
@@ -58,7 +53,7 @@ public class SendPasswordRequestValidatorTests
         string clientPasswordHash)
     {
         // Arrange
-        tokenRequest.Raw = CreateValidatedTokenRequest(sendId, clientPasswordHash);
+        tokenRequest.Raw = SendAccessTestUtilities.CreateValidatedTokenRequest(sendId, passwordHash: clientPasswordHash);
 
         var context = new ExtensionGrantValidationContext
         {
@@ -92,7 +87,7 @@ public class SendPasswordRequestValidatorTests
         string clientPasswordHash)
     {
         // Arrange
-        tokenRequest.Raw = CreateValidatedTokenRequest(sendId, clientPasswordHash);
+        tokenRequest.Raw = SendAccessTestUtilities.CreateValidatedTokenRequest(sendId, passwordHash: clientPasswordHash);
 
         var context = new ExtensionGrantValidationContext
         {
@@ -130,7 +125,7 @@ public class SendPasswordRequestValidatorTests
         Guid sendId)
     {
         // Arrange
-        tokenRequest.Raw = CreateValidatedTokenRequest(sendId, string.Empty);
+        tokenRequest.Raw = SendAccessTestUtilities.CreateValidatedTokenRequest(sendId, passwordHash: string.Empty);
 
         var context = new ExtensionGrantValidationContext
         {
@@ -163,7 +158,7 @@ public class SendPasswordRequestValidatorTests
     {
         // Arrange
         var whitespacePassword = "   ";
-        tokenRequest.Raw = CreateValidatedTokenRequest(sendId, whitespacePassword);
+        tokenRequest.Raw = SendAccessTestUtilities.CreateValidatedTokenRequest(sendId, passwordHash: whitespacePassword);
 
         var context = new ExtensionGrantValidationContext
         {
@@ -196,7 +191,7 @@ public class SendPasswordRequestValidatorTests
         // Arrange
         var firstPassword = "first-password";
         var secondPassword = "second-password";
-        tokenRequest.Raw = CreateValidatedTokenRequest(sendId, firstPassword, secondPassword);
+        tokenRequest.Raw = SendAccessTestUtilities.CreateValidatedTokenRequest(sendId, passwordHash: [firstPassword, secondPassword]);
 
         var context = new ExtensionGrantValidationContext
         {
@@ -229,7 +224,7 @@ public class SendPasswordRequestValidatorTests
         string clientPasswordHash)
     {
         // Arrange
-        tokenRequest.Raw = CreateValidatedTokenRequest(sendId, clientPasswordHash);
+        tokenRequest.Raw = SendAccessTestUtilities.CreateValidatedTokenRequest(sendId, passwordHash: clientPasswordHash);
 
         var context = new ExtensionGrantValidationContext
         {
@@ -267,31 +262,5 @@ public class SendPasswordRequestValidatorTests
 
         // Assert
         Assert.NotNull(validator);
-    }
-
-    private static NameValueCollection CreateValidatedTokenRequest(
-        Guid sendId,
-        params string[] passwordHash)
-    {
-        var sendIdBase64 = CoreHelpers.Base64UrlEncode(sendId.ToByteArray());
-
-        var rawRequestParameters = new NameValueCollection
-        {
-            { OidcConstants.TokenRequest.GrantType, CustomGrantTypes.SendAccess },
-            { OidcConstants.TokenRequest.ClientId, BitwardenClient.Send },
-            { OidcConstants.TokenRequest.Scope, ApiScopes.ApiSendAccess },
-            { "device_type", ((int)DeviceType.FirefoxBrowser).ToString() },
-            { SendAccessConstants.TokenRequest.SendId, sendIdBase64 }
-        };
-
-        if (passwordHash != null && passwordHash.Length > 0)
-        {
-            foreach (var hash in passwordHash)
-            {
-                rawRequestParameters.Add(SendAccessConstants.TokenRequest.ClientB64HashedPassword, hash);
-            }
-        }
-
-        return rawRequestParameters;
     }
 }

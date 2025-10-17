@@ -1011,6 +1011,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
 
+                    b.Property<string>("ApplicationData")
+                        .HasColumnType("longtext");
+
                     b.Property<string>("ContentEncryptionKey")
                         .IsRequired()
                         .HasColumnType("longtext");
@@ -1018,14 +1021,17 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<DateTime>("Date")
-                        .HasColumnType("datetime(6)");
-
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("char(36)");
 
                     b.Property<string>("ReportData")
                         .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("RevisionDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("SummaryData")
                         .HasColumnType("longtext");
 
                     b.HasKey("Id");
@@ -1276,6 +1282,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<string>("DomainName")
                         .HasColumnType("longtext");
 
+                    b.Property<Guid?>("GrantedServiceAccountId")
+                        .HasColumnType("char(36)");
+
                     b.Property<Guid?>("GroupId")
                         .HasColumnType("char(36)");
 
@@ -1322,10 +1331,13 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid?>("UserId")
                         .HasColumnType("char(36)");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasAnnotation("SqlServer:Clustered", true);
 
                     b.HasIndex("Date", "OrganizationId", "ActingUserId", "CipherId")
-                        .HasAnnotation("SqlServer:Clustered", false);
+                        .HasDatabaseName("IX_Event_DateOrganizationIdUserId")
+                        .HasAnnotation("SqlServer:Clustered", false)
+                        .HasAnnotation("SqlServer:Include", new[] { "ServiceAccountId", "GrantedServiceAccountId" });
 
                     b.ToTable("Event", (string)null);
                 });
@@ -2147,6 +2159,42 @@ namespace Bit.MySqlMigrations.Migrations
                     b.ToTable("Secret", (string)null);
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.SecretVersion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("EditorOrganizationUserId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("EditorServiceAccountId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid>("SecretId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("VersionDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id")
+                        .HasAnnotation("SqlServer:Clustered", true);
+
+                    b.HasIndex("EditorOrganizationUserId")
+                        .HasDatabaseName("IX_SecretVersion_EditorOrganizationUserId");
+
+                    b.HasIndex("EditorServiceAccountId")
+                        .HasDatabaseName("IX_SecretVersion_EditorServiceAccountId");
+
+                    b.HasIndex("SecretId")
+                        .HasDatabaseName("IX_SecretVersion_SecretId");
+
+                    b.ToTable("SecretVersion");
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ServiceAccount", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2177,6 +2225,9 @@ namespace Bit.MySqlMigrations.Migrations
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
+
+                    b.Property<DateTime?>("ArchivedDate")
+                        .HasColumnType("datetime(6)");
 
                     b.Property<string>("Attachments")
                         .HasColumnType("longtext");
@@ -2969,6 +3020,31 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Navigation("Organization");
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.SecretVersion", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.OrganizationUser", "EditorOrganizationUser")
+                        .WithMany()
+                        .HasForeignKey("EditorOrganizationUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ServiceAccount", "EditorServiceAccount")
+                        .WithMany()
+                        .HasForeignKey("EditorServiceAccountId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Bit.Infrastructure.EntityFramework.SecretsManager.Models.Secret", "Secret")
+                        .WithMany("SecretVersions")
+                        .HasForeignKey("SecretId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("EditorOrganizationUser");
+
+                    b.Navigation("EditorServiceAccount");
+
+                    b.Navigation("Secret");
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ServiceAccount", b =>
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
@@ -3239,6 +3315,8 @@ namespace Bit.MySqlMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.Secret", b =>
                 {
                     b.Navigation("GroupAccessPolicies");
+
+                    b.Navigation("SecretVersions");
 
                     b.Navigation("ServiceAccountAccessPolicies");
 
