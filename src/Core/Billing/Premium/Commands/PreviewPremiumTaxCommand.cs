@@ -1,13 +1,11 @@
 ﻿using Bit.Core.Billing.Commands;
-using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Payment.Models;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using Stripe;
 
 namespace Bit.Core.Billing.Premium.Commands;
-
-using static StripeConstants;
 
 public interface IPreviewPremiumTaxCommand
 {
@@ -18,6 +16,7 @@ public interface IPreviewPremiumTaxCommand
 
 public class PreviewPremiumTaxCommand(
     ILogger<PreviewPremiumTaxCommand> logger,
+    IPricingClient pricingClient,
     IStripeAdapter stripeAdapter) : BaseBillingCommand<PreviewPremiumTaxCommand>(logger), IPreviewPremiumTaxCommand
 {
     public Task<BillingCommandResult<(decimal Tax, decimal Total)>> Run(
@@ -25,6 +24,8 @@ public class PreviewPremiumTaxCommand(
         BillingAddress billingAddress)
         => HandleAsync<(decimal, decimal)>(async () =>
         {
+            var premiumPlan = await pricingClient.GetAvailablePremiumPlan();
+
             var options = new InvoiceCreatePreviewOptions
             {
                 AutomaticTax = new InvoiceAutomaticTaxOptions { Enabled = true },
@@ -41,7 +42,7 @@ public class PreviewPremiumTaxCommand(
                 {
                     Items =
                     [
-                        new InvoiceSubscriptionDetailsItemOptions { Price = Prices.PremiumAnnually, Quantity = 1 }
+                        new InvoiceSubscriptionDetailsItemOptions { Price = premiumPlan.Seat.StripePriceId, Quantity = 1 }
                     ]
                 }
             };
@@ -50,7 +51,7 @@ public class PreviewPremiumTaxCommand(
             {
                 options.SubscriptionDetails.Items.Add(new InvoiceSubscriptionDetailsItemOptions
                 {
-                    Price = Prices.StoragePlanPersonal,
+                    Price = premiumPlan.Storage.StripePriceId,
                     Quantity = additionalStorage
                 });
             }

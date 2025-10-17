@@ -1,8 +1,6 @@
 ﻿using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Pricing.Models;
-using Plan = Bit.Core.Billing.Pricing.Models.Plan;
 
-namespace Bit.Core.Billing.Pricing;
+namespace Bit.Core.Billing.Pricing.Organizations;
 
 public record PlanAdapter : Core.Models.StaticStore.Plan
 {

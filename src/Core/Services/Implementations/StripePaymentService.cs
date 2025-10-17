@@ -8,6 +8,7 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Billing.Premium.Commands;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Tax.Requests;
 using Bit.Core.Billing.Tax.Responses;
@@ -887,11 +888,14 @@ public class StripePaymentService : IPaymentService
         }
     }
 
+    [Obsolete($"Use {nameof(PreviewPremiumTaxCommand)} instead.")]
     public async Task<PreviewInvoiceResponseModel> PreviewInvoiceAsync(
         PreviewIndividualInvoiceRequestBody parameters,
         string gatewayCustomerId,
         string gatewaySubscriptionId)
     {
+        var premiumPlan = await _pricingClient.GetAvailablePremiumPlan();
+
         var options = new InvoiceCreatePreviewOptions
         {
             AutomaticTax = new InvoiceAutomaticTaxOptions
@@ -906,13 +910,13 @@ public class StripePaymentService : IPaymentService
                     new()
                     {
                         Quantity = 1,
-                        Plan = StripeConstants.Prices.PremiumAnnually
+                        Plan = premiumPlan.Seat.StripePriceId
                     },
 
                     new()
                     {
                         Quantity = parameters.PasswordManager.AdditionalStorage,
-                        Plan = "storage-gb-annually"
+                        Plan = premiumPlan.Storage.StripePriceId
                     }
                 ]
             },
