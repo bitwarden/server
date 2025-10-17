@@ -54,6 +54,8 @@ public class AuthenticatorTokenProvider : IUserTwoFactorTokenProvider<User>
 
         var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Authenticator);
         var otp = new Totp(Base32Encoding.ToBytes((string)provider.MetaData["Key"]));
+
+        // TODO: the out var is a timestepMatched; consider logging it.
         var valid = otp.VerifyTotp(token, out _, new VerificationWindow(1, 1));
 
         if (valid)
