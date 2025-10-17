@@ -228,6 +228,7 @@ public static class FeatureFlagKeys
     /* Tools Team */
     public const string DesktopSendUIRefresh = "desktop-send-ui-refresh";
     public const string UseSdkPasswordGenerators = "pm-19976-use-sdk-password-generators";
+    public const string ChromiumImporterWithABE = "pm-25855-chromium-importer-abe";
 
     /* Vault Team */
     public const string PM8851_BrowserOnboardingNudge = "pm-8851-browser-onboarding-nudge";
