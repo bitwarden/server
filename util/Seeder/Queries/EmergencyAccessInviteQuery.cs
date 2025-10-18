@@ -1,18 +1,26 @@
-﻿using Bit.Core.Auth.Enums;
+using System.ComponentModel.DataAnnotations;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Tokens;
 using Bit.Infrastructure.EntityFramework.Repositories;
 
-namespace Bit.Seeder.Recipes;
+namespace Bit.Seeder.Queries;
 
-public class EmergencyAccessInviteRecipe(
+public class EmergencyAccessInviteQuery(
     DatabaseContext db,
     IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> dataProtectorTokenizer)
+    : IQuery<EmergencyAccessInviteQuery.Request>
 {
-    public RecipeResult Seed(string email)
+    public class Request
+    {
+        [Required]
+        public required string Email { get; set; }
+    }
+
+    public object Execute(Request request)
     {
         var invites = db.EmergencyAccesses
-            .Where(ea => ea.Email == email).ToList().Select(ea =>
+            .Where(ea => ea.Email == request.Email).ToList().Select(ea =>
             {
                 var token = dataProtectorTokenizer.Protect(
                     new EmergencyAccessInviteTokenable(ea, hoursTillExpiration: 1)
@@ -20,9 +28,6 @@ public class EmergencyAccessInviteRecipe(
                 return $"/accept-emergency?id={ea.Id}&name=Dummy&email={ea.Email}&token={token}";
             });
 
-        return new RecipeResult
-        {
-            Result = invites,
-        };
+        return invites;
     }
 }

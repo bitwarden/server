@@ -7,9 +7,8 @@ namespace Bit.Seeder.Recipes;
 
 public class OrganizationWithUsersRecipe(DatabaseContext db)
 {
-    public RecipeResult Seed(string name, int users, string domain)
+    public Guid Seed(string name, int users, string domain)
     {
-        var mangleId = Guid.NewGuid();
         var organization = OrganizationSeeder.CreateEnterprise(name, domain, users);
         var user = UserSeeder.CreateUserNoMangle($"admin@{domain}");
         var orgUser = organization.CreateOrganizationUser(user);
@@ -33,14 +32,6 @@ public class OrganizationWithUsersRecipe(DatabaseContext db)
         db.BulkCopy(additionalUsers);
         db.BulkCopy(additionalOrgUsers);
 
-        return new RecipeResult
-        {
-            Result = organization.Id,
-            TrackedEntities = new Dictionary<string, List<Guid>>
-            {
-                ["Organization"] = [organization.Id],
-                ["User"] = [user.Id, .. additionalUsers.Select(u => u.Id)]
-            }
-        };
+        return organization.Id;
     }
 }

@@ -23,4 +23,15 @@ public interface IRecipeService
     /// <exception cref="RecipeExecutionException">Thrown when there's an error destroying the seeded data</exception>
     Task<object?> DestroyRecipe(Guid seedId);
     List<SeededData> GetAllSeededData();
+
+    /// <summary>
+    /// Executes a query with the given query name and arguments.
+    /// Queries are read-only and do not track entities or create seed IDs.
+    /// </summary>
+    /// <param name="queryName">The name of the query (e.g., "EmergencyAccessInviteQuery")</param>
+    /// <param name="arguments">Optional JSON arguments to pass to the query's Execute method</param>
+    /// <returns>The result of the query execution</returns>
+    /// <exception cref="RecipeNotFoundException">Thrown when the query is not found</exception>
+    /// <exception cref="RecipeExecutionException">Thrown when there's an error executing the query</exception>
+    object ExecuteQuery(string queryName, JsonElement? arguments);
 }

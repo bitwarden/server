@@ -22,6 +22,7 @@ builder.Services.AddScoped<Bit.Seeder.Factories.UserSeeder>();
 builder.Services.AddScoped<IRecipeService, RecipeService>();
 builder.Services.AddScoped<MangleId>(_ => new MangleId());
 builder.Services.AddScenes();
+builder.Services.AddQueries();
 
 var app = builder.Build();
 

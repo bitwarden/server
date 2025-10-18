@@ -29,21 +29,16 @@ public class RecipeService(
     {
         var result = ExecuteRecipeMethod(templateName, arguments, "Seed");
 
-        if (result is not RecipeResult recipeResult)
+        if (result.TrackedEntities.Count == 0)
         {
-            return (Result: result, SeedId: null);
-        }
-
-        if (recipeResult.TrackedEntities.Count == 0)
-        {
-            return (Result: recipeResult.Result, SeedId: null);
+            return (Result: result.Result, SeedId: null);
         }
 
         var seededData = new SeededData
         {
             Id = Guid.NewGuid(),
             RecipeName = templateName,
-            Data = JsonSerializer.Serialize(recipeResult.TrackedEntities),
+            Data = JsonSerializer.Serialize(result.TrackedEntities),
             CreationDate = DateTime.UtcNow
         };
 
@@ -53,7 +48,68 @@ public class RecipeService(
         logger.LogInformation("Saved seeded data with ID {SeedId} for scene {RecipeName}",
             seededData.Id, templateName);
 
-        return (Result: recipeResult.Result, SeedId: seededData.Id);
+        return (Result: result.Result, SeedId: seededData.Id);
+    }
+
+    public object ExecuteQuery(string queryName, JsonElement? arguments)
+    {
+        try
+        {
+            var query = serviceProvider.GetKeyedService<IQuery>(queryName)
+                ?? throw new RecipeNotFoundException(queryName);
+
+            var requestType = query.GetRequestType();
+
+            // Deserialize the arguments into the request model
+            object? requestModel;
+            if (arguments == null)
+            {
+                // Try to create an instance with default values
+                try
+                {
+                    requestModel = Activator.CreateInstance(requestType);
+                    if (requestModel == null)
+                    {
+                        throw new RecipeExecutionException(
+                            $"Arguments are required for query '{queryName}'");
+                    }
+                }
+                catch
+                {
+                    throw new RecipeExecutionException(
+                        $"Arguments are required for query '{queryName}'");
+                }
+            }
+            else
+            {
+                try
+                {
+                    requestModel = JsonSerializer.Deserialize(arguments.Value.GetRawText(), requestType, _jsonOptions);
+                    if (requestModel == null)
+                    {
+                        throw new RecipeExecutionException(
+                            $"Failed to deserialize request model for query '{queryName}'");
+                    }
+                }
+                catch (JsonException ex)
+                {
+                    throw new RecipeExecutionException(
+                        $"Failed to deserialize request model for query '{queryName}': {ex.Message}", ex);
+                }
+            }
+
+            var result = query.Execute(requestModel);
+
+            logger.LogInformation("Successfully executed query: {QueryName}", queryName);
+            return result;
+        }
+        catch (Exception ex) when (ex is not RecipeNotFoundException and not RecipeExecutionException)
+        {
+            logger.LogError(ex, "Unexpected error executing query: {QueryName}", queryName);
+            throw new RecipeExecutionException(
+                $"An unexpected error occurred while executing query '{queryName}'",
+                ex.InnerException ?? ex);
+        }
     }
 
     public async Task<object?> DestroyRecipe(Guid seedId)
@@ -110,7 +166,7 @@ public class RecipeService(
         return new { SeedId = seedId, RecipeName = seededData.RecipeName };
     }
 
-    private RecipeResult? ExecuteRecipeMethod(string templateName, JsonElement? arguments, string methodName)
+    private SceneResult ExecuteRecipeMethod(string templateName, JsonElement? arguments, string methodName)
     {
         try
         {

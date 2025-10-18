@@ -21,7 +21,28 @@ public static class ServiceCollectionExtensions
         foreach (var sceneType in sceneTypes)
         {
             services.TryAddScoped(sceneType);
-            services.TryAddKeyedScoped(typeof(IScene), sceneType.Name, (sp, key) => sp.GetRequiredService(sceneType));
+            services.TryAddKeyedScoped(typeof(IScene), sceneType.Name, (sp, _) => sp.GetRequiredService(sceneType));
+        }
+
+        return services;
+    }
+
+    /// <summary>
+    /// Dynamically registers all query types that implement IQuery<TRequest> from the Seeder assembly.
+    /// Queries are registered as keyed scoped services using their class name as the key.
+    /// </summary>
+    public static IServiceCollection AddQueries(this IServiceCollection services)
+    {
+        var seederAssembly = Assembly.Load("Seeder");
+        var queryTypes = seederAssembly.GetTypes()
+            .Where(t => t is { IsClass: true, IsAbstract: false } &&
+                        t.GetInterfaces().Any(i => i.IsGenericType &&
+                                                   i.GetGenericTypeDefinition().Name == "IQuery`1"));
+
+        foreach (var queryType in queryTypes)
+        {
+            services.TryAddScoped(queryType);
+            services.TryAddKeyedScoped(typeof(IQuery), queryType.Name, (sp, _) => sp.GetRequiredService(queryType));
         }
 
         return services;

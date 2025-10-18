@@ -15,14 +15,14 @@ public class SingleUserScene(DatabaseContext db, UserSeeder userSeeder) : IScene
         public bool Premium { get; set; } = false;
     }
 
-    public RecipeResult Seed(Request request)
+    public SceneResult Seed(Request request)
     {
         var user = userSeeder.CreateUser(request.Email, request.EmailVerified, request.Premium);
 
         db.Add(user);
         db.SaveChanges();
 
-        return new RecipeResult
+        return new SceneResult
         {
             Result = userSeeder.GetMangleMap(user, new UserData
             {
