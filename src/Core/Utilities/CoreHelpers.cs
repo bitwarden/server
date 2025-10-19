@@ -644,6 +644,16 @@ public static class CoreHelpers
         {
             return realConnectingIp.ToString();
         }
+        else if (globalSettings.SelfHosted && httpContext.Request.Headers.TryGetValue("X-Forwarded-For", out var xForwardedFor))
+        {
+            // X-Forwarded-For is a de-facto standard
+            // RFC7239 normalizes into the Forwarded header (https://datatracker.ietf.org/doc/rfc7239/)
+            // it may replace the X-Forwarded-For header in the future
+            // Using a library should be more convenient to take benefit of both format and future evolutions
+            //
+            // Security: Considering here that Nginx has sanitized the header and there is no value forged from outside
+            return xForwardedFor.ToString().Split(",")[0];
+        }
 
         return httpContext.Connection?.RemoteIpAddress?.ToString();
     }
