@@ -13,25 +13,11 @@ public class VNextSavePolicyCommand(
     IApplicationCacheService applicationCacheService,
     IEventService eventService,
     IPolicyRepository policyRepository,
-    IEnumerable<IEnforceDependentPoliciesEvent> policyValidationEventHandlers,
+    IEnumerable<IPolicyUpdateEvent> policyUpdateEventHandlers,
     TimeProvider timeProvider,
     IPolicyEventHandlerFactory policyEventHandlerFactory)
     : IVNextSavePolicyCommand
 {
-    private readonly IReadOnlyDictionary<PolicyType, IEnforceDependentPoliciesEvent> _policyValidationEvents = MapToDictionary(policyValidationEventHandlers);
-
-    private static Dictionary<PolicyType, IEnforceDependentPoliciesEvent> MapToDictionary(IEnumerable<IEnforceDependentPoliciesEvent> policyValidationEventHandlers)
-    {
-        var policyValidationEventsDict = new Dictionary<PolicyType, IEnforceDependentPoliciesEvent>();
-        foreach (var policyValidationEvent in policyValidationEventHandlers)
-        {
-            if (!policyValidationEventsDict.TryAdd(policyValidationEvent.Type, policyValidationEvent))
-            {
-                throw new Exception($"Duplicate PolicyValidationEvent for {policyValidationEvent.Type} policy.");
-            }
-        }
-        return policyValidationEventsDict;
-    }
 
     public async Task<Policy> SaveAsync(SavePolicyModel policyRequest)
     {
@@ -112,32 +98,26 @@ public class VNextSavePolicyCommand(
         Policy? currentPolicy,
         Dictionary<PolicyType, Policy> savedPoliciesDict)
     {
-        var result = policyEventHandlerFactory.GetHandler<IEnforceDependentPoliciesEvent>(policyUpdateRequest.Type);
+        var isCurrentlyEnabled = currentPolicy?.Enabled == true;
+        var isBeingEnabled = policyUpdateRequest.Enabled && !isCurrentlyEnabled;
+        var isBeingDisabled = !policyUpdateRequest.Enabled && isCurrentlyEnabled;
 
-        result.Switch(
-            validator =>
-            {
-                var isCurrentlyEnabled = currentPolicy?.Enabled == true;
-
-                switch (policyUpdateRequest.Enabled)
-                {
-                    case true when !isCurrentlyEnabled:
-                        ValidateEnablingRequirements(validator, savedPoliciesDict);
-                        return;
-                    case false when isCurrentlyEnabled:
-                        ValidateDisablingRequirements(validator, policyUpdateRequest.Type, savedPoliciesDict);
-                        break;
-                }
-            },
-            _ => { });
+        if (isBeingEnabled)
+        {
+            ValidateEnablingRequirements(policyUpdateRequest.Type, savedPoliciesDict);
+        }
+        else if (isBeingDisabled)
+        {
+            ValidateDisablingRequirements(policyUpdateRequest.Type, savedPoliciesDict);
+        }
     }
 
     private void ValidateDisablingRequirements(
-        IEnforceDependentPoliciesEvent validator,
         PolicyType policyType,
         Dictionary<PolicyType, Policy> savedPoliciesDict)
     {
-        var dependentPolicyTypes = _policyValidationEvents.Values
+        var dependentPolicyTypes = policyUpdateEventHandlers
+            .OfType<IEnforceDependentPoliciesEvent>()
             .Where(otherValidator => otherValidator.RequiredPolicies.Contains(policyType))
             .Select(otherValidator => otherValidator.Type)
             .Where(otherPolicyType => savedPoliciesDict.TryGetValue(otherPolicyType, out var savedPolicy) &&
@@ -147,24 +127,31 @@ public class VNextSavePolicyCommand(
         switch (dependentPolicyTypes)
         {
             case { Count: 1 }:
-                throw new BadRequestException($"Turn off the {dependentPolicyTypes.First().GetName()} policy because it requires the {validator.Type.GetName()} policy.");
+                throw new BadRequestException($"Turn off the {dependentPolicyTypes.First().GetName()} policy because it requires the {policyType.GetName()} policy.");
             case { Count: > 1 }:
-                throw new BadRequestException($"Turn off all of the policies that require the {validator.Type.GetName()} policy.");
+                throw new BadRequestException($"Turn off all of the policies that require the {policyType.GetName()} policy.");
         }
     }
 
-    private static void ValidateEnablingRequirements(
-        IEnforceDependentPoliciesEvent validator,
+    private void ValidateEnablingRequirements(
+        PolicyType policyType,
         Dictionary<PolicyType, Policy> savedPoliciesDict)
     {
-        var missingRequiredPolicyTypes = validator.RequiredPolicies
-            .Where(requiredPolicyType => savedPoliciesDict.GetValueOrDefault(requiredPolicyType) is not { Enabled: true })
-            .ToList();
+        var result = policyEventHandlerFactory.GetHandler<IEnforceDependentPoliciesEvent>(policyType);
 
-        if (missingRequiredPolicyTypes.Count != 0)
-        {
-            throw new BadRequestException($"Turn on the {missingRequiredPolicyTypes.First().GetName()} policy because it is required for the {validator.Type.GetName()} policy.");
-        }
+        result.Switch(
+            validator =>
+            {
+                var missingRequiredPolicyTypes = validator.RequiredPolicies
+                    .Where(requiredPolicyType => savedPoliciesDict.GetValueOrDefault(requiredPolicyType) is not { Enabled: true })
+                    .ToList();
+
+                if (missingRequiredPolicyTypes.Count != 0)
+                {
+                    throw new BadRequestException($"Turn on the {missingRequiredPolicyTypes.First().GetName()} policy because it is required for the {policyType.GetName()} policy.");
+                }
+            },
+            _ => { /* Policy has no required dependencies */ });
     }
 
     private async Task ExecutePreUpsertSideEffectAsync(
