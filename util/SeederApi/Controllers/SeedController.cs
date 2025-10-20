@@ -5,37 +5,11 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.SeederApi.Controllers
 {
-    [Route("")]
+    [Route("seed")]
     public class SeedController(ILogger<SeedController> logger, IRecipeService recipeService)
         : Controller
     {
-        [HttpPost("/query")]
-        public IActionResult Query([FromBody] SeedRequestModel request)
-        {
-            logger.LogInformation("Executing query: {Query}", request.Template);
-
-            try
-            {
-                var result = recipeService.ExecuteQuery(request.Template, request.Arguments);
-
-                return Json(new { Result = result });
-            }
-            catch (RecipeNotFoundException ex)
-            {
-                return NotFound(new { Error = ex.Message });
-            }
-            catch (RecipeExecutionException ex)
-            {
-                logger.LogError(ex, "Error executing query: {Query}", request.Template);
-                return BadRequest(new
-                {
-                    Error = ex.Message,
-                    Details = ex.InnerException?.Message
-                });
-            }
-        }
-
-        [HttpPost("/seed")]
+        [HttpPost]
         public IActionResult Seed([FromBody] SeedRequestModel request)
         {
             logger.LogInformation("Seeding with template: {Template}", request.Template);
@@ -65,7 +39,7 @@ namespace Bit.SeederApi.Controllers
             }
         }
 
-        [HttpDelete("/seed/batch")]
+        [HttpDelete("batch")]
         public async Task<IActionResult> DeleteBatch([FromBody] List<Guid> seedIds)
         {
             logger.LogInformation("Deleting batch of seeded data with IDs: {SeedIds}", string.Join(", ", seedIds));
@@ -102,7 +76,7 @@ namespace Bit.SeederApi.Controllers
             });
         }
 
-        [HttpDelete("/seed/{seedId}")]
+        [HttpDelete("{seedId}")]
         public async Task<IActionResult> Delete([FromRoute] Guid seedId)
         {
             logger.LogInformation("Deleting seeded data with ID: {SeedId}", seedId);
@@ -125,7 +99,7 @@ namespace Bit.SeederApi.Controllers
         }
 
 
-        [HttpDelete("/seed")]
+        [HttpDelete]
         public async Task<IActionResult> DeleteAll()
         {
             logger.LogInformation("Deleting all seeded data");
