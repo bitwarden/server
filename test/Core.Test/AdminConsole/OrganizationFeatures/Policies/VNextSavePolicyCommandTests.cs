@@ -28,9 +28,10 @@ public class VNextSavePolicyCommandTests
         // Arrange
         var fakePolicyValidationEvent = new FakeSingleOrgValidationEvent();
         fakePolicyValidationEvent.ValidateAsyncMock(Arg.Any<SavePolicyModel>(), Arg.Any<Policy>()).Returns("");
-        var sutProvider = SutProviderFactory(
-            [new FakeSingleOrgDependencyEvent()],
-            [fakePolicyValidationEvent]);
+        var sutProvider = SutProviderFactory([
+            new FakeSingleOrgDependencyEvent(),
+            fakePolicyValidationEvent
+        ]);
 
         var savePolicyModel = new SavePolicyModel(policyUpdate, null, new EmptyMetadataModel());
 
@@ -71,9 +72,10 @@ public class VNextSavePolicyCommandTests
         // Arrange
         var fakePolicyValidationEvent = new FakeSingleOrgValidationEvent();
         fakePolicyValidationEvent.ValidateAsyncMock(Arg.Any<SavePolicyModel>(), Arg.Any<Policy>()).Returns("");
-        var sutProvider = SutProviderFactory(
-            [new FakeSingleOrgDependencyEvent()],
-            [fakePolicyValidationEvent]);
+        var sutProvider = SutProviderFactory([
+            new FakeSingleOrgDependencyEvent(),
+            fakePolicyValidationEvent
+        ]);
 
         var savePolicyModel = new SavePolicyModel(policyUpdate, null, new EmptyMetadataModel());
 
@@ -108,23 +110,6 @@ public class VNextSavePolicyCommandTests
                 p.Type == currentPolicy.Type &&
                 p.CreationDate == currentPolicy.CreationDate &&
                 p.RevisionDate == revisionDate));
-    }
-
-    [Fact]
-    public void Constructor_DuplicatePolicyDependencyEvents_Throws()
-    {
-        // Arrange & Act
-        var exception = Assert.Throws<Exception>(() =>
-            new VNextSavePolicyCommand(
-                Substitute.For<IApplicationCacheService>(),
-                Substitute.For<IEventService>(),
-                Substitute.For<IPolicyRepository>(),
-                [new FakeSingleOrgDependencyEvent(), new FakeSingleOrgDependencyEvent()],
-                Substitute.For<TimeProvider>(),
-                Substitute.For<IPolicyEventHandlerFactory>()));
-
-        // Assert
-        Assert.Contains("Duplicate PolicyValidationEvent for SingleOrg policy", exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -366,9 +351,10 @@ public class VNextSavePolicyCommandTests
         // Arrange
         var fakePolicyValidationEvent = new FakeSingleOrgValidationEvent();
         fakePolicyValidationEvent.ValidateAsyncMock(Arg.Any<SavePolicyModel>(), Arg.Any<Policy>()).Returns("Validation error!");
-        var sutProvider = SutProviderFactory(
-            [new FakeSingleOrgDependencyEvent()],
-            [fakePolicyValidationEvent]);
+        var sutProvider = SutProviderFactory([
+            new FakeSingleOrgDependencyEvent(),
+            fakePolicyValidationEvent
+        ]);
 
         var savePolicyModel = new SavePolicyModel(policyUpdate, null, new EmptyMetadataModel());
 
@@ -392,20 +378,20 @@ public class VNextSavePolicyCommandTests
     }
 
     /// <summary>
-    /// Returns a new SutProvider with the PolicyDependencyEvents registered in the Sut.
+    /// Returns a new SutProvider with the PolicyUpdateEvents registered in the Sut.
     /// </summary>
     private static SutProvider<VNextSavePolicyCommand> SutProviderFactory(
-        IEnumerable<IEnforceDependentPoliciesEvent>? policyDependencyEvents = null,
-        IEnumerable<IPolicyValidationEvent>? policyValidationEvents = null)
+        IEnumerable<IPolicyUpdateEvent>? policyUpdateEvents = null)
     {
         var policyEventHandlerFactory = Substitute.For<IPolicyEventHandlerFactory>();
+        var handlers = policyUpdateEvents ?? [];
 
         // Setup factory to return handlers based on type
         policyEventHandlerFactory.GetHandler<IEnforceDependentPoliciesEvent>(Arg.Any<PolicyType>())
             .Returns(callInfo =>
             {
                 var policyType = callInfo.Arg<PolicyType>();
-                var handler = policyDependencyEvents?.FirstOrDefault(e => e.Type == policyType);
+                var handler = handlers.OfType<IEnforceDependentPoliciesEvent>().FirstOrDefault(e => e.Type == policyType);
                 return handler != null ? OneOf.OneOf<IEnforceDependentPoliciesEvent, None>.FromT0(handler) : OneOf.OneOf<IEnforceDependentPoliciesEvent, None>.FromT1(new None());
             });
 
@@ -413,7 +399,7 @@ public class VNextSavePolicyCommandTests
             .Returns(callInfo =>
             {
                 var policyType = callInfo.Arg<PolicyType>();
-                var handler = policyValidationEvents?.FirstOrDefault(e => e.Type == policyType);
+                var handler = handlers.OfType<IPolicyValidationEvent>().FirstOrDefault(e => e.Type == policyType);
                 return handler != null ? OneOf.OneOf<IPolicyValidationEvent, None>.FromT0(handler) : OneOf.OneOf<IPolicyValidationEvent, None>.FromT1(new None());
             });
 
@@ -425,7 +411,7 @@ public class VNextSavePolicyCommandTests
 
         return new SutProvider<VNextSavePolicyCommand>()
             .WithFakeTimeProvider()
-            .SetDependency(policyDependencyEvents ?? [])
+            .SetDependency(handlers)
             .SetDependency(policyEventHandlerFactory)
             .Create();
     }

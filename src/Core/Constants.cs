@@ -140,6 +140,7 @@ public static class FeatureFlagKeys
     public const string EventBasedOrganizationIntegrations = "event-based-organization-integrations";
     public const string SeparateCustomRolePermissions = "pm-19917-separate-custom-role-permissions";
     public const string CreateDefaultLocation = "pm-19467-create-default-location";
+    public const string AutomaticConfirmUsers = "pm-19934-auto-confirm-organization-users";
     public const string PM23845_VNextApplicationCache = "pm-24957-refactor-memory-application-cache";
 
     /* Auth Team */
@@ -193,6 +194,7 @@ public static class FeatureFlagKeys
     public const string UserkeyRotationV2 = "userkey-rotation-v2";
     public const string SSHKeyItemVaultItem = "ssh-key-vault-item";
     public const string UserSdkForDecryption = "use-sdk-for-decryption";
+    public const string EnrollAeadOnKeyRotation = "enroll-aead-on-key-rotation";
     public const string PM17987_BlockType0 = "pm-17987-block-type-0";
     public const string ForceUpdateKDFSettings = "pm-18021-force-update-kdf-settings";
     public const string UnlockWithMasterPasswordUnlockData = "pm-23246-unlock-with-master-password-unlock-data";
@@ -202,22 +204,15 @@ public static class FeatureFlagKeys
     public const string DisableType0Decryption = "pm-25174-disable-type-0-decryption";
 
     /* Mobile Team */
-    public const string NativeCarouselFlow = "native-carousel-flow";
-    public const string NativeCreateAccountFlow = "native-create-account-flow";
     public const string AndroidImportLoginsFlow = "import-logins-flow";
-    public const string AppReviewPrompt = "app-review-prompt";
     public const string AndroidMutualTls = "mutual-tls";
     public const string SingleTapPasskeyCreation = "single-tap-passkey-creation";
     public const string SingleTapPasskeyAuthentication = "single-tap-passkey-authentication";
-    public const string EnablePMAuthenticatorSync = "enable-pm-bwa-sync";
     public const string PM3503_MobileAnonAddySelfHostAlias = "anon-addy-self-host-alias";
     public const string PM3553_MobileSimpleLoginSelfHostAlias = "simple-login-self-host-alias";
-    public const string EnablePMFlightRecorder = "enable-pm-flight-recorder";
     public const string MobileErrorReporting = "mobile-error-reporting";
     public const string AndroidChromeAutofill = "android-chrome-autofill";
     public const string UserManagedPrivilegedApps = "pm-18970-user-managed-privileged-apps";
-    public const string EnablePMPreloginSettings = "enable-pm-prelogin-settings";
-    public const string AppIntents = "app-intents";
     public const string SendAccess = "pm-19394-send-access-control";
     public const string CxpImportMobile = "cxp-import-mobile";
     public const string CxpExportMobile = "cxp-export-mobile";
@@ -230,6 +225,7 @@ public static class FeatureFlagKeys
     /* Tools Team */
     public const string DesktopSendUIRefresh = "desktop-send-ui-refresh";
     public const string UseSdkPasswordGenerators = "pm-19976-use-sdk-password-generators";
+    public const string ChromiumImporterWithABE = "pm-25855-chromium-importer-abe";
 
     /* Vault Team */
     public const string PM8851_BrowserOnboardingNudge = "pm-8851-browser-onboarding-nudge";
