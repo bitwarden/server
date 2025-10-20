@@ -201,6 +201,7 @@ public static class FeatureFlagKeys
     public const string LinuxBiometricsV2 = "pm-26340-linux-biometrics-v2";
     public const string NoLogoutOnKdfChange = "pm-23995-no-logout-on-kdf-change";
     public const string DisableType0Decryption = "pm-25174-disable-type-0-decryption";
+    public const string ConsolidatedSessionTimeoutComponent = "pm-26056-consolidated-session-timeout-component";
 
     /* Mobile Team */
     public const string AndroidImportLoginsFlow = "import-logins-flow";
