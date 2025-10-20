@@ -136,6 +136,7 @@
         "Azure.Storage.Blobs",
         "Azure.Storage.Queues",
         "LaunchDarkly.ServerSdk",
+        "MessagePack",
         "Microsoft.AspNetCore.Http",
         "Microsoft.AspNetCore.SignalR.Protocols.MessagePack",
         "Microsoft.AspNetCore.SignalR.StackExchangeRedis",
