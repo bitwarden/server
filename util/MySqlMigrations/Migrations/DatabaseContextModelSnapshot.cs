@@ -220,6 +220,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("UseApi")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<bool>("UseAutomaticUserConfirmation")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<bool>("UseCustomPermissions")
                         .HasColumnType("tinyint(1)");
 

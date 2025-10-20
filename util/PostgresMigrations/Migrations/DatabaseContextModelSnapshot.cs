@@ -222,6 +222,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("UseApi")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("UseAutomaticUserConfirmation")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("UseCustomPermissions")
                         .HasColumnType("boolean");
 
