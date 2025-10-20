@@ -474,7 +474,149 @@ public class PreviewOrganizationTaxCommandTests
             options.CustomerDetails.TaxExempt == TaxExempt.None &&
             options.SubscriptionDetails.Items.Count == 1 &&
             options.SubscriptionDetails.Items[0].Price == "2020-families-org-annually" &&
-            options.SubscriptionDetails.Items[0].Quantity == 2 &&
+            options.SubscriptionDetails.Items[0].Quantity == 1 &&
+            options.Coupon == null));
+    }
+
+    [Fact]
+    public async Task Run_OrganizationPlanChange_FamiliesOrganizationToTeams_UsesOrganizationSeats()
+    {
+        var organization = new Organization
+        {
+            Id = Guid.NewGuid(),
+            PlanType = PlanType.FamiliesAnnually,
+            GatewayCustomerId = "cus_test123",
+            GatewaySubscriptionId = "sub_test123",
+            UseSecretsManager = false,
+            Seats = 6
+        };
+
+        var planChange = new OrganizationSubscriptionPlanChange
+        {
+            Tier = ProductTierType.Teams,
+            Cadence = PlanCadenceType.Annually
+        };
+
+        var billingAddress = new BillingAddress
+        {
+            Country = "US",
+            PostalCode = "10012"
+        };
+
+        var currentPlan = new FamiliesPlan();
+        var newPlan = new TeamsPlan(true);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(currentPlan);
+        _pricingClient.GetPlanOrThrow(planChange.PlanType).Returns(newPlan);
+
+        var subscriptionItems = new List<SubscriptionItem>
+        {
+            new() { Price = new Price { Id = "2020-families-org-annually" }, Quantity = 1 }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Items = new StripeList<SubscriptionItem> { Data = subscriptionItems },
+            Customer = new Customer { Discount = null }
+        };
+
+        _stripeAdapter.SubscriptionGetAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+
+        var invoice = new Invoice
+        {
+            Tax = 900,
+            Total = 9900
+        };
+
+        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+
+        var result = await _command.Run(organization, planChange, billingAddress);
+
+        Assert.True(result.IsT0);
+        var (tax, total) = result.AsT0;
+        Assert.Equal(9.00m, tax);
+        Assert.Equal(99.00m, total);
+
+        await _stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.AutomaticTax.Enabled == true &&
+            options.Currency == "usd" &&
+            options.CustomerDetails.Address.Country == "US" &&
+            options.CustomerDetails.Address.PostalCode == "10012" &&
+            options.CustomerDetails.TaxExempt == TaxExempt.None &&
+            options.SubscriptionDetails.Items.Count == 1 &&
+            options.SubscriptionDetails.Items[0].Price == "2023-teams-org-seat-annually" &&
+            options.SubscriptionDetails.Items[0].Quantity == 6 &&
+            options.Coupon == null));
+    }
+
+    [Fact]
+    public async Task Run_OrganizationPlanChange_FamiliesOrganizationToEnterprise_UsesOrganizationSeats()
+    {
+        var organization = new Organization
+        {
+            Id = Guid.NewGuid(),
+            PlanType = PlanType.FamiliesAnnually,
+            GatewayCustomerId = "cus_test123",
+            GatewaySubscriptionId = "sub_test123",
+            UseSecretsManager = false,
+            Seats = 6
+        };
+
+        var planChange = new OrganizationSubscriptionPlanChange
+        {
+            Tier = ProductTierType.Enterprise,
+            Cadence = PlanCadenceType.Annually
+        };
+
+        var billingAddress = new BillingAddress
+        {
+            Country = "US",
+            PostalCode = "10012"
+        };
+
+        var currentPlan = new FamiliesPlan();
+        var newPlan = new EnterprisePlan(true);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(currentPlan);
+        _pricingClient.GetPlanOrThrow(planChange.PlanType).Returns(newPlan);
+
+        var subscriptionItems = new List<SubscriptionItem>
+        {
+            new() { Price = new Price { Id = "2020-families-org-annually" }, Quantity = 1 }
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Items = new StripeList<SubscriptionItem> { Data = subscriptionItems },
+            Customer = new Customer { Discount = null }
+        };
+
+        _stripeAdapter.SubscriptionGetAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+
+        var invoice = new Invoice
+        {
+            Tax = 1200,
+            Total = 13200
+        };
+
+        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+
+        var result = await _command.Run(organization, planChange, billingAddress);
+
+        Assert.True(result.IsT0);
+        var (tax, total) = result.AsT0;
+        Assert.Equal(12.00m, tax);
+        Assert.Equal(132.00m, total);
+
+        await _stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.AutomaticTax.Enabled == true &&
+            options.Currency == "usd" &&
+            options.CustomerDetails.Address.Country == "US" &&
+            options.CustomerDetails.Address.PostalCode == "10012" &&
+            options.CustomerDetails.TaxExempt == TaxExempt.None &&
+            options.SubscriptionDetails.Items.Count == 1 &&
+            options.SubscriptionDetails.Items[0].Price == "2023-enterprise-org-seat-annually" &&
+            options.SubscriptionDetails.Items[0].Quantity == 6 &&
             options.Coupon == null));
     }
 
@@ -956,10 +1098,7 @@ public class PreviewOrganizationTaxCommandTests
             Discount = null,
             TaxIds = new StripeList<TaxId>
             {
-                Data = new List<TaxId>
-                {
-                    new() { Type = "gb_vat", Value = "GB123456789" }
-                }
+                Data = [new TaxId { Type = "gb_vat", Value = "GB123456789" }]
             }
         };
 
@@ -1040,10 +1179,7 @@ public class PreviewOrganizationTaxCommandTests
             },
             TaxIds = new StripeList<TaxId>
             {
-                Data = new List<TaxId>
-                {
-                    new() { Type = TaxIdType.SpanishNIF, Value = "12345678Z" }
-                }
+                Data = [new TaxId { Type = TaxIdType.SpanishNIF, Value = "12345678Z" }]
             }
         };
 

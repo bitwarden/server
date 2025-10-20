@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.KeyManagement.Models.Response;
+﻿namespace Bit.Core.KeyManagement.Models.Api.Response;
 
 public class UserDecryptionResponseModel
 {

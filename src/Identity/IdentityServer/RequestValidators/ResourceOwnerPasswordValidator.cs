@@ -8,6 +8,7 @@ using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -41,7 +42,8 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         ISsoConfigRepository ssoConfigRepository,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
         IPolicyRequirementQuery policyRequirementQuery,
-        IMailService mailService)
+        IMailService mailService,
+        IUserAccountKeysQuery userAccountKeysQuery)
         : base(
             userManager,
             userService,
@@ -59,7 +61,8 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
             userDecryptionOptionsBuilder,
             policyRequirementQuery,
             authRequestRepository,
-            mailService)
+            mailService,
+            userAccountKeysQuery)
     {
         _userManager = userManager;
         _currentContext = currentContext;

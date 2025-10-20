@@ -140,6 +140,7 @@ public static class FeatureFlagKeys
     public const string EventBasedOrganizationIntegrations = "event-based-organization-integrations";
     public const string SeparateCustomRolePermissions = "pm-19917-separate-custom-role-permissions";
     public const string CreateDefaultLocation = "pm-19467-create-default-location";
+    public const string AutomaticConfirmUsers = "pm-19934-auto-confirm-organization-users";
     public const string PM23845_VNextApplicationCache = "pm-24957-refactor-memory-application-cache";
 
     /* Auth Team */
@@ -172,7 +173,6 @@ public static class FeatureFlagKeys
     public const string WindowsDesktopAutotype = "windows-desktop-autotype";
 
     /* Billing Team */
-    public const string AC2101UpdateTrialInitiationEmail = "AC-2101-update-trial-initiation-email";
     public const string TrialPayment = "PM-8163-trial-payment";
     public const string PM17772_AdminInitiatedSponsorships = "pm-17772-admin-initiated-sponsorships";
     public const string UsePricingService = "use-pricing-service";
@@ -183,6 +183,7 @@ public static class FeatureFlagKeys
     public const string PM24996ImplementUpgradeFromFreeDialog = "pm-24996-implement-upgrade-from-free-dialog";
     public const string PM24032_NewNavigationPremiumUpgradeButton = "pm-24032-new-navigation-premium-upgrade-button";
     public const string PM23713_PremiumBadgeOpensNewPremiumUpgradeDialog = "pm-23713-premium-badge-opens-new-premium-upgrade-dialog";
+    public const string PremiumUpgradeNewDesign = "pm-24033-updat-premium-subscription-page";
 
     /* Key Management Team */
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
@@ -192,30 +193,26 @@ public static class FeatureFlagKeys
     public const string UserkeyRotationV2 = "userkey-rotation-v2";
     public const string SSHKeyItemVaultItem = "ssh-key-vault-item";
     public const string UserSdkForDecryption = "use-sdk-for-decryption";
+    public const string EnrollAeadOnKeyRotation = "enroll-aead-on-key-rotation";
     public const string PM17987_BlockType0 = "pm-17987-block-type-0";
     public const string ForceUpdateKDFSettings = "pm-18021-force-update-kdf-settings";
     public const string UnlockWithMasterPasswordUnlockData = "pm-23246-unlock-with-master-password-unlock-data";
     public const string WindowsBiometricsV2 = "pm-25373-windows-biometrics-v2";
+    public const string LinuxBiometricsV2 = "pm-26340-linux-biometrics-v2";
     public const string NoLogoutOnKdfChange = "pm-23995-no-logout-on-kdf-change";
+    public const string DisableType0Decryption = "pm-25174-disable-type-0-decryption";
     public const string ConsolidatedSessionTimeoutComponent = "pm-26056-consolidated-session-timeout-component";
 
     /* Mobile Team */
-    public const string NativeCarouselFlow = "native-carousel-flow";
-    public const string NativeCreateAccountFlow = "native-create-account-flow";
     public const string AndroidImportLoginsFlow = "import-logins-flow";
-    public const string AppReviewPrompt = "app-review-prompt";
     public const string AndroidMutualTls = "mutual-tls";
     public const string SingleTapPasskeyCreation = "single-tap-passkey-creation";
     public const string SingleTapPasskeyAuthentication = "single-tap-passkey-authentication";
-    public const string EnablePMAuthenticatorSync = "enable-pm-bwa-sync";
     public const string PM3503_MobileAnonAddySelfHostAlias = "anon-addy-self-host-alias";
     public const string PM3553_MobileSimpleLoginSelfHostAlias = "simple-login-self-host-alias";
-    public const string EnablePMFlightRecorder = "enable-pm-flight-recorder";
     public const string MobileErrorReporting = "mobile-error-reporting";
     public const string AndroidChromeAutofill = "android-chrome-autofill";
     public const string UserManagedPrivilegedApps = "pm-18970-user-managed-privileged-apps";
-    public const string EnablePMPreloginSettings = "enable-pm-prelogin-settings";
-    public const string AppIntents = "app-intents";
     public const string SendAccess = "pm-19394-send-access-control";
     public const string CxpImportMobile = "cxp-import-mobile";
     public const string CxpExportMobile = "cxp-export-mobile";
@@ -228,13 +225,12 @@ public static class FeatureFlagKeys
     /* Tools Team */
     public const string DesktopSendUIRefresh = "desktop-send-ui-refresh";
     public const string UseSdkPasswordGenerators = "pm-19976-use-sdk-password-generators";
-    public const string UseChromiumImporter = "pm-23982-chromium-importer";
+    public const string ChromiumImporterWithABE = "pm-25855-chromium-importer-abe";
 
     /* Vault Team */
     public const string PM8851_BrowserOnboardingNudge = "pm-8851-browser-onboarding-nudge";
     public const string PM9111ExtensionPersistAddEditForm = "pm-9111-extension-persist-add-edit-form";
     public const string CipherKeyEncryption = "cipher-key-encryption";
-    public const string DesktopCipherForms = "pm-18520-desktop-cipher-forms";
     public const string PM19941MigrateCipherDomainToSdk = "pm-19941-migrate-cipher-domain-to-sdk";
     public const string EndUserNotifications = "pm-10609-end-user-notifications";
     public const string PhishingDetection = "phishing-detection";

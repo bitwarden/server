@@ -38,6 +38,10 @@ public class OrganizationIntegrationConfigurationRequestModel
                 return !string.IsNullOrWhiteSpace(Template) &&
                        Configuration is null &&
                        IsFiltersValid();
+            case IntegrationType.Teams:
+                return !string.IsNullOrWhiteSpace(Template) &&
+                       Configuration is null &&
+                       IsFiltersValid();
             default:
                 return false;
 
