@@ -2,7 +2,7 @@
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
 
-namespace Bit.Core.KeyManagement.Models.Response;
+namespace Bit.Core.KeyManagement.Models.Api.Response;
 
 public class MasterPasswordUnlockResponseModel
 {
