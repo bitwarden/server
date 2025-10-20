@@ -19,6 +19,7 @@
   <ItemGroup>
     <ProjectReference Include="..\SharedWeb\SharedWeb.csproj" />
     <ProjectReference Include="..\Core\Core.csproj" />
+    <ProjectReference Include="..\..\util\Seeder\Seeder.csproj" />
   </ItemGroup>
 
   <Choose>

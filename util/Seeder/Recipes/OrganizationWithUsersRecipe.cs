@@ -7,17 +7,20 @@ namespace Bit.Seeder.Recipes;
 
 public class OrganizationWithUsersRecipe(DatabaseContext db)
 {
-    public Guid Seed(string name, int users, string domain)
+    public Guid Seed(string name, int users, string domain, string? label = null)
     {
-        var organization = OrganizationSeeder.CreateEnterprise(name, domain, users);
-        var user = UserSeeder.CreateUser($"admin@{domain}");
+        var labeledName = label is null ? name : $"{name} [SEED:{label}]";
+        var organization = OrganizationSeeder.CreateEnterprise(labeledName, domain, users);
+        var adminEmail = label is null ? $"admin@{domain}" : $"seed-{label}-admin@{domain}";
+        var user = UserSeeder.CreateUser(adminEmail);
         var orgUser = organization.CreateOrganizationUser(user);
 
         var additionalUsers = new List<User>();
         var additionalOrgUsers = new List<OrganizationUser>();
         for (var i = 0; i < users; i++)
         {
-            var additionalUser = UserSeeder.CreateUser($"user{i}@{domain}");
+            var email = label is null ? $"user{i}@{domain}" : $"seed-{label}-{i}@{domain}";
+            var additionalUser = UserSeeder.CreateUser(email);
             additionalUsers.Add(additionalUser);
             additionalOrgUsers.Add(organization.CreateOrganizationUser(additionalUser));
         }

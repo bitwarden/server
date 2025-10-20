@@ -220,6 +220,9 @@ public class Startup
         });
 
         services.AddSwagger(globalSettings, Environment);
+
+        // DevSeed options
+        services.Configure<Bit.Api.Utilities.DevSeedOptions>(Configuration.GetSection("DevSeed"));
         Jobs.JobsHostedService.AddJobsServices(services, globalSettings.SelfHosted);
         services.AddHostedService<Jobs.JobsHostedService>();
 
@@ -279,6 +282,9 @@ public class Startup
 
         // Add current context
         app.UseMiddleware<CurrentContextMiddleware>();
+
+        // Dev seed middleware - placed after auth headers and before endpoints
+        app.UseMiddleware<Bit.Api.Utilities.DevSeedMiddleware>();
 
         // Add endpoints to the request pipeline.
         app.UseEndpoints(endpoints =>
