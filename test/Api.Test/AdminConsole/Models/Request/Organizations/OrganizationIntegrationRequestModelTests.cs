@@ -58,6 +58,22 @@ public class OrganizationIntegrationRequestModelTests
     }
 
     [Fact]
+    public void Validate_Teams_ReturnsCannotBeCreatedDirectlyError()
+    {
+        var model = new OrganizationIntegrationRequestModel
+        {
+            Type = IntegrationType.Teams,
+            Configuration = null
+        };
+
+        var results = model.Validate(new ValidationContext(model)).ToList();
+
+        Assert.Single(results);
+        Assert.Contains(nameof(model.Type), results[0].MemberNames);
+        Assert.Contains("cannot be created directly", results[0].ErrorMessage);
+    }
+
+    [Fact]
     public void Validate_Webhook_WithNullConfiguration_ReturnsNoErrors()
     {
         var model = new OrganizationIntegrationRequestModel
