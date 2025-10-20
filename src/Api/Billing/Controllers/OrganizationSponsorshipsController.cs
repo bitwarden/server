@@ -89,19 +89,6 @@ public class OrganizationSponsorshipsController : Controller
             throw new BadRequestException("Free Bitwarden Families sponsorship has been disabled by your organization administrator.");
         }
 
-        if (!_featureService.IsEnabled(Bit.Core.FeatureFlagKeys.PM17772_AdminInitiatedSponsorships))
-        {
-            if (model.IsAdminInitiated.GetValueOrDefault())
-            {
-                throw new BadRequestException();
-            }
-
-            if (!string.IsNullOrWhiteSpace(model.Notes))
-            {
-                model.Notes = null;
-            }
-        }
-
         var sponsorship = await _createSponsorshipCommand.CreateSponsorshipAsync(
             sponsoringOrg,
             await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrgId, _currentContext.UserId ?? default),
