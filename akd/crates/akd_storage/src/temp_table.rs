@@ -7,13 +7,10 @@ pub(crate) enum TempTable {
     Azks,
     HistoryTreeNodes,
     Values,
+    RawLabelSearch,
 }
 
 impl TempTable {
-    pub fn for_ids_for(storage_type: &StorageType) -> Self {
-        TempTable::Ids(storage_type.clone())
-    }
-
     pub fn for_ids<St: Storable>() -> Self {
         TempTable::Ids(St::data_type())
     }
@@ -111,6 +108,15 @@ impl TempTable {
                     TEMP_IDS_TABLE
                 ),
             }
+            TempTable::RawLabelSearch => format!(
+                r#"
+                CREATE TABLE {} (
+                    raw_label VARBINARY(256) NOT NULL,
+                    PRIMARY KEY (raw_label)
+                );
+                "#,
+                TEMP_SEARCH_LABELS_TABLE
+            )
         }
     }
 }
@@ -122,6 +128,7 @@ impl ToString for TempTable {
             TempTable::Azks => TEMP_AZKS_TABLE.to_string(),
             TempTable::HistoryTreeNodes => TEMP_HISTORY_TREE_NODES_TABLE.to_string(),
             TempTable::Values => TEMP_VALUES_TABLE.to_string(),
+            TempTable::RawLabelSearch => TEMP_SEARCH_LABELS_TABLE.to_string(),
         }
     }
 }
@@ -137,6 +144,7 @@ impl From<StorageType> for TempTable {
 }
 
 pub(crate) const TEMP_IDS_TABLE: &str = "#akd_temp_ids";
+pub(crate) const TEMP_SEARCH_LABELS_TABLE: &str = "#akd_temp_search_labels";
 pub(crate) const TEMP_AZKS_TABLE: &str = "#akd_temp_azks";
 pub(crate) const TEMP_HISTORY_TREE_NODES_TABLE: &str = "#akd_temp_history_tree_nodes";
 pub(crate) const TEMP_VALUES_TABLE: &str = "#akd_temp_values";

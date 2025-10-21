@@ -6,7 +6,7 @@ pub use pool::ConnectionManager as MsSqlConnectionManager;
 pub use pool::{OnConnectError};
 
 // re-expose tiberius types for convenience
-pub use tiberius::{error::Error as MsDbError, Column, Row, ToSql};
+pub use tiberius::{error::Error as MsDbError, Column, Row, FromSql, ToSql, IntoRow, TokenRow, ColumnData};
 
 // re-expose bb8 types for convenience
 pub type Pool = bb8::Pool<MsSqlConnectionManager>;
