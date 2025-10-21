@@ -15,8 +15,8 @@ internal class ProfileDataRequestContextCustomization : ICustomization
         fixture.Customize<ProfileDataRequestContext>(composer => composer
             .With(o => o.Subject, new ClaimsPrincipal(new ClaimsIdentity([
                 new Claim("sub", Guid.NewGuid().ToString()),
-                  new Claim("name", "Test User"),
-                  new Claim("email", "test@example.com")
+                new Claim("name", "Test User"),
+                new Claim("email", "test@example.com")
             ])))
             .With(o => o.Client, new Client { ClientId = "web" })
             .With(o => o.ValidatedRequest, () => null)
@@ -41,7 +41,7 @@ internal class IsActiveContextCustomization : ICustomization
         fixture.Customize<IsActiveContext>(composer => composer
             .With(o => o.Subject, new ClaimsPrincipal(new ClaimsIdentity([
                 new Claim("sub", Guid.NewGuid().ToString()),
-                  new Claim(Claims.SecurityStamp, "test-security-stamp")
+                new Claim(Claims.SecurityStamp, "test-security-stamp")
             ])))
             .With(o => o.Client, new Client { ClientId = "web" })
             .With(o => o.IsActive, false)
