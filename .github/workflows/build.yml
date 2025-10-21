@@ -267,7 +267,7 @@ jobs:
           for tag in "${tags_array[@]}"; do
             images+=("${tag}@${DIGEST}")
           done
-          cosign sign --yes "${images[@]}"
+          cosign sign --yes ${images[@]}
           echo "images=${images[*]}" >> "$GITHUB_OUTPUT"
 
       - name: Scan Docker image

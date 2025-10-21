@@ -44,8 +44,8 @@ jobs:
             echo "Latest Released Version: $VERSION"
             echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           else
-            echo "Release Version: ${_INPUT_VERSION}"
-            echo "version=${_INPUT_VERSION}" >> "$GITHUB_OUTPUT"
+            echo "Release Version: ${INPUT_VERSION}"
+            echo "version=${INPUT_VERSION}" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Get branch name

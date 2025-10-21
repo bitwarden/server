@@ -122,7 +122,7 @@ jobs:
 
           # sync finalization schema back to dbo, maintaining structure
           rsync -r "$src_dir/" "$dest_dir/"
-          rm -rf "${src_dir}/*"
+          rm -rf "${src_dir}"/*
 
           # Replace any finalization references due to the move
           find ./src/Sql/dbo -name "*.sql" -type f -exec sed -i \
