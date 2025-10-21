@@ -23,7 +23,7 @@
   },
   "dependencies": {
     "mjml": "4.15.3",
-    "mjml-core": "4.15.3"
+    "mjml-core": "4.16.1"
   },
   "devDependencies": {
     "nodemon": "3.1.10",
