@@ -1,0 +1,25 @@
+[package]
+name = "publisher"
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+license-file.workspace = true
+keywords.workspace = true
+
+[dependencies]
+akd_storage = { path = "../akd_storage" }
+tokio-util = {version = "0.7.16", features = ["compat"] }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+async-std = {version =  "1.13.2", features = ["attributes"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+tiberius = { version = "0.12.3", default-features = false, features = ["chrono", "tokio", "rustls"] }
+
+[target.'cfg(not(target_os = "macos"))'.workspace.dependencies]
+tiberius = { version = "0.12.3", features = ["chrono", "tokio"] }
+
+
+[lints]
+workspace = true
