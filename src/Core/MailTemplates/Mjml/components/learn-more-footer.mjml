@@ -1,9 +1,9 @@
 <mj-section border-radius="0px 0px 4px 4px" background-color="#f6f6f6" padding="5px 20px 10px 20px">
   <mj-column width="70%">
     <mj-text line-height="24px">
-      <h3 style="font-size: 20px; margin: 0; line-height: 28px">
+      <p style="font-size: 20px; margin: 0; line-height: 28px; font-weight: bold;">
         Learn more about Bitwarden
-      </h3>
+      </p>
       Find user guides, product documentation, and videos on the
       <a href="https://bitwarden.com/help/" class="link"> Bitwarden Help Center</a>.
     </mj-text>
