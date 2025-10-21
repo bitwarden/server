@@ -108,6 +108,40 @@ public class CurrentContextTests
     }
 
     [Theory, BitAutoData]
+    public async Task BuildAsync_HttpContext_TestXConnectingIP(
+         SutProvider<CurrentContext> sutProvider)
+    {
+        var httpContext = new DefaultHttpContext();
+        var globalSettings = new Core.Settings.GlobalSettings();
+        // Arrange
+        globalSettings.SelfHosted = false;
+        httpContext.Request.Headers["X-Connecting-IP"] = "10.11.12.13";
+
+        // Act
+        await sutProvider.Sut.BuildAsync(httpContext, globalSettings);
+
+        // Assert
+        Assert.Equal("10.11.12.13", sutProvider.Sut.IpAddress);
+    }
+
+    [Theory, BitAutoData]
+    public async Task BuildAsync_HttpContext_TestXForwardedInSelfHosted(
+        SutProvider<CurrentContext> sutProvider)
+    {
+        var httpContext = new DefaultHttpContext();
+        var globalSettings = new Core.Settings.GlobalSettings();
+        // Arrange
+        globalSettings.SelfHosted = true;
+        httpContext.Request.Headers["X-Forwarded-For"] = "1.2.3.4,5.6.7.8";
+
+        // Act
+        await sutProvider.Sut.BuildAsync(httpContext, globalSettings);
+
+        // Assert
+        Assert.Equal("1.2.3.4", sutProvider.Sut.IpAddress);
+    }
+
+    [Theory, BitAutoData]
     public async Task BuildAsync_HttpContext_SetsCloudflareFlags(
         SutProvider<CurrentContext> sutProvider)
     {
