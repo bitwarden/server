@@ -11,6 +11,11 @@
   ],
   packageRules: [
     {
+      groupName: "cargo minor",
+      matchManagers: ["cargo"],
+      matchUpdateTypes: ["minor"],
+    },
+    {
       groupName: "dockerfile minor",
       matchManagers: ["dockerfile"],
       matchUpdateTypes: ["minor"],
