@@ -101,5 +101,4 @@ public class UserSeeder(RustSdkService sdkService, IPasswordHasher<Bit.Core.Enti
 
         return mangleMap;
     }
-
 }
