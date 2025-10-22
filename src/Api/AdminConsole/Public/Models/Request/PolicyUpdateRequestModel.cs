@@ -8,6 +8,8 @@ namespace Bit.Api.AdminConsole.Public.Models.Request;
 
 public class PolicyUpdateRequestModel : PolicyBaseModel
 {
+    public Dictionary<string, object> Metadata { get; set; } = new();
+
     public PolicyUpdate ToPolicyUpdate(Guid organizationId, PolicyType type)
     {
         var serializedData = PolicyDataValidator.ValidateAndSerialize(Data, type);
@@ -20,5 +22,23 @@ public class PolicyUpdateRequestModel : PolicyBaseModel
             Enabled = Enabled.GetValueOrDefault(),
             PerformedBy = new SystemUser(EventSystemUser.PublicApi)
         };
+    }
+
+    public SavePolicyModel ToSavePolicyModel(Guid organizationId, PolicyType type)
+    {
+        var serializedData = PolicyDataValidator.ValidateAndSerialize(Data, type);
+
+        var policyUpdate = new PolicyUpdate
+        {
+            Type = type,
+            OrganizationId = organizationId,
+            Data = serializedData,
+            Enabled = Enabled.GetValueOrDefault()
+        };
+
+        var performedBy = new SystemUser(EventSystemUser.PublicApi);
+        var metadata = PolicyDataValidator.ValidateAndDeserializeMetadata(Metadata, type);
+
+        return new SavePolicyModel(policyUpdate, performedBy, metadata);
     }
 }
