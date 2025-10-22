@@ -14,6 +14,8 @@ using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Models.Api.Response;
+using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Api.Response;
 using Bit.Core.Repositories;
@@ -45,6 +47,7 @@ public abstract class BaseRequestValidator<T> where T : class
     protected IUserService _userService { get; }
     protected IUserDecryptionOptionsBuilder UserDecryptionOptionsBuilder { get; }
     protected IPolicyRequirementQuery PolicyRequirementQuery { get; }
+    protected IUserAccountKeysQuery _accountKeysQuery { get; }
 
     public BaseRequestValidator(
         UserManager<User> userManager,
@@ -63,7 +66,8 @@ public abstract class BaseRequestValidator<T> where T : class
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
         IPolicyRequirementQuery policyRequirementQuery,
         IAuthRequestRepository authRequestRepository,
-        IMailService mailService
+        IMailService mailService,
+        IUserAccountKeysQuery userAccountKeysQuery
         )
     {
         _userManager = userManager;
@@ -83,6 +87,7 @@ public abstract class BaseRequestValidator<T> where T : class
         PolicyRequirementQuery = policyRequirementQuery;
         _authRequestRepository = authRequestRepository;
         _mailService = mailService;
+        _accountKeysQuery = userAccountKeysQuery;
     }
 
     protected async Task ValidateAsync(T context, ValidatedTokenRequest request,
@@ -439,6 +444,8 @@ public abstract class BaseRequestValidator<T> where T : class
         if (!string.IsNullOrWhiteSpace(user.PrivateKey))
         {
             customResponse.Add("PrivateKey", user.PrivateKey);
+            var accountKeys = await _accountKeysQuery.Run(user);
+            customResponse.Add("AccountKeys", new PrivateKeysResponseModel(accountKeys));
         }
 
         if (!string.IsNullOrWhiteSpace(user.Key))

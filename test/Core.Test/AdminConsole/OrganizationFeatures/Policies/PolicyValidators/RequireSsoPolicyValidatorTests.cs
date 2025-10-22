@@ -72,4 +72,66 @@ public class RequireSsoPolicyValidatorTests
         var result = await sutProvider.Sut.ValidateAsync(policyUpdate, policy);
         Assert.True(string.IsNullOrEmpty(result));
     }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_WithSavePolicyModel_DisablingPolicy_KeyConnectorEnabled_ValidationError(
+        [PolicyUpdate(PolicyType.RequireSso, false)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.RequireSso)] Policy policy,
+        SutProvider<RequireSsoPolicyValidator> sutProvider)
+    {
+        policy.OrganizationId = policyUpdate.OrganizationId;
+
+        var ssoConfig = new SsoConfig { Enabled = true };
+        ssoConfig.SetData(new SsoConfigurationData { MemberDecryptionType = MemberDecryptionType.KeyConnector });
+
+        sutProvider.GetDependency<ISsoConfigRepository>()
+            .GetByOrganizationIdAsync(policyUpdate.OrganizationId)
+            .Returns(ssoConfig);
+
+        var savePolicyModel = new SavePolicyModel(policyUpdate, null, new EmptyMetadataModel());
+
+        var result = await sutProvider.Sut.ValidateAsync(savePolicyModel, policy);
+        Assert.Contains("Key Connector is enabled", result, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_WithSavePolicyModel_DisablingPolicy_TdeEnabled_ValidationError(
+        [PolicyUpdate(PolicyType.RequireSso, false)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.RequireSso)] Policy policy,
+        SutProvider<RequireSsoPolicyValidator> sutProvider)
+    {
+        policy.OrganizationId = policyUpdate.OrganizationId;
+
+        var ssoConfig = new SsoConfig { Enabled = true };
+        ssoConfig.SetData(new SsoConfigurationData { MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption });
+
+        sutProvider.GetDependency<ISsoConfigRepository>()
+            .GetByOrganizationIdAsync(policyUpdate.OrganizationId)
+            .Returns(ssoConfig);
+
+        var savePolicyModel = new SavePolicyModel(policyUpdate, null, new EmptyMetadataModel());
+
+        var result = await sutProvider.Sut.ValidateAsync(savePolicyModel, policy);
+        Assert.Contains("Trusted device encryption is on", result, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_WithSavePolicyModel_DisablingPolicy_DecryptionOptionsNotEnabled_Success(
+        [PolicyUpdate(PolicyType.RequireSso, false)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.RequireSso)] Policy policy,
+        SutProvider<RequireSsoPolicyValidator> sutProvider)
+    {
+        policy.OrganizationId = policyUpdate.OrganizationId;
+
+        var ssoConfig = new SsoConfig { Enabled = false };
+
+        sutProvider.GetDependency<ISsoConfigRepository>()
+            .GetByOrganizationIdAsync(policyUpdate.OrganizationId)
+            .Returns(ssoConfig);
+
+        var savePolicyModel = new SavePolicyModel(policyUpdate, null, new EmptyMetadataModel());
+
+        var result = await sutProvider.Sut.ValidateAsync(savePolicyModel, policy);
+        Assert.True(string.IsNullOrEmpty(result));
+    }
 }
