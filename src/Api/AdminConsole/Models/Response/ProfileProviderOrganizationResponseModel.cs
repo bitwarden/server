@@ -52,5 +52,6 @@ public class ProfileProviderOrganizationResponseModel : ProfileOrganizationRespo
         UseRiskInsights = organization.UseRiskInsights;
         UseOrganizationDomains = organization.UseOrganizationDomains;
         UseAdminSponsoredFamilies = organization.UseAdminSponsoredFamilies;
+        UseAutomaticUserConfirmation = organization.UseAutomaticUserConfirmation;
     }
 }

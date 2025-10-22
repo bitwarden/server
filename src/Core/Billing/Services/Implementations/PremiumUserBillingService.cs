@@ -3,6 +3,7 @@
 
 using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Pricing;
@@ -110,7 +111,7 @@ public class PremiumUserBillingService(
                 when subscription.Status == StripeConstants.SubscriptionStatus.Active:
                 {
                     user.Premium = true;
-                    user.PremiumExpirationDate = subscription.CurrentPeriodEnd;
+                    user.PremiumExpirationDate = subscription.GetCurrentPeriodEnd();
                     break;
                 }
         }

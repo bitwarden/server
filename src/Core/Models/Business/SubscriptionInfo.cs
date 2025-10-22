@@ -1,6 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Core.Billing.Extensions;
 using Stripe;
 
 namespace Bit.Core.Models.Business;
@@ -36,8 +37,13 @@ public class SubscriptionInfo
             Status = sub.Status;
             TrialStartDate = sub.TrialStart;
             TrialEndDate = sub.TrialEnd;
-            PeriodStartDate = sub.CurrentPeriodStart;
-            PeriodEndDate = sub.CurrentPeriodEnd;
+            var currentPeriod = sub.GetCurrentPeriod();
+            if (currentPeriod != null)
+            {
+                var (start, end) = currentPeriod.Value;
+                PeriodStartDate = start;
+                PeriodEndDate = end;
+            }
             CancelledDate = sub.CanceledAt;
             CancelAtEndDate = sub.CancelAtPeriodEnd;
             Cancelled = sub.Status == "canceled" || sub.Status == "unpaid" || sub.Status == "incomplete_expired";

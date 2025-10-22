@@ -467,10 +467,9 @@ public class AuthRequestServiceTests
                 Arg.Any<string>(),
                 Arg.Any<string>());
 
-        var expectedLogMessage = "There are no admin emails to send to.";
         sutProvider.GetDependency<ILogger<AuthRequestService>>()
             .Received(1)
-            .LogWarning(expectedLogMessage);
+            .LogWarning("There are no admin emails to send to.");
     }
 
     /// <summary>
