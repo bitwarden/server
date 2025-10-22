@@ -47,28 +47,27 @@ class MjBwIconRow extends BodyComponent {
     }
     return this.renderMJML(
       `
-      <mj-section background-color="#fff" padding="10px 20px">
-        <mj-group>
-          <mj-column width="15%" vertical-align="middle">
+      <mj-section background-color="#fff" padding="10px 10px 10px 10px">
+        <mj-group css-class="mj-bw-icon-row">
+          <mj-column width="15%" vertical-align="top">
             <mj-image
               src="${this.getAttribute("icon-src")}"
               alt="${this.getAttribute("icon-alt")}"
-              width="50px"
-              padding="0"
-              padding-right="10px"
+              width="48px"
+              padding="0px"
               border-radius="8px"
             />
           </mj-column>
-          <mj-column width="85%" vertical-align="middle">
-            <mj-text padding="0" line-height="24px">
+          <mj-column width="85%" vertical-align="top">
+            <mj-text css-class="mj-bw-icon-row-text" padding="5px 10px 0px 10px">
               ` +
         headAnchorElement +
         `
               </mj-text>
-              <mj-text padding="0" line-height="24px">
+              <mj-text css-class="mj-bw-icon-row-text" padding="5px 10px 0px 10px">
                 ${this.getAttribute("text")}
               </mj-text>
-              <mj-text padding="0" line-height="24px">
+              <mj-text css-class="mj-bw-icon-row-text" padding="5px 10px 0px 10px">
               ` +
         footAnchorElement +
         `

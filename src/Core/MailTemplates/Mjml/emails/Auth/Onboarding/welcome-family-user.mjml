@@ -15,9 +15,9 @@
 
     <!-- Main Content -->
     <mj-wrapper padding="5px 20px 10px 20px">
-      <mj-section background-color="#fff" padding="10px 0px">
+      <mj-section background-color="#fff" padding="15px 10px 10px 10px">
         <mj-column>
-          <mj-text font-size="16px" line-height="24px">
+          <mj-text font-size="16px" line-height="24px" padding="10px 15px">
             A <b>{{OrganizationName}}</b> administrator will approve you
             before you can share passwords. While you wait for approval, get
             started with Bitwarden Password Manager:
@@ -28,7 +28,7 @@
         icon-src="https://assets.bitwarden.com/email/v1/icon-browser-extension.png"
         icon-alt="Browser Extension Icon"
         head-url-text="Get the browser extension"
-        head-url="https://get.bitwarden.com"
+        head-url="https://bitwarden.com/download/"
         text="With the Bitwarden extension, you can fill passwords with one click."
       />
       <mj-bw-icon-row

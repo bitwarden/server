@@ -70,10 +70,9 @@ class MjBwHero extends BodyComponent {
             src="${this.getAttribute("img-src")}"
             alt=""
             width="155px"
-            height="155px"
             padding="0px"
             css-class="hide-small-img"
-          />
+            />
         </mj-column>
       </mj-section>
     `,
