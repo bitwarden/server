@@ -38,5 +38,3 @@ public class DevSeedMiddleware
         await _next(context);
     }
 }
-
-
