@@ -137,7 +137,7 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
     /// If set to true, disables Secrets Manager ads for users in the organization
     /// </summary>
     public bool UseDisableSMAdsForUsers { get; set; }
-    
+
     public void SetNewId()
     {
         if (Id == default(Guid))
