@@ -303,8 +303,8 @@ public abstract class BaseRequestValidator<T> where T : class
 
     /// <summary>
     /// Processes the validation schemes sequentially.
-    /// Each validator is responsible for setting error context responses on failure and adding itself to the state's
-    /// CompletedValidators (only) on success.
+    /// Each validator is responsible for setting error context responses on failure and adding itself to the
+    /// validatorContext's CompletedValidationSchemes (only) on success.
     /// </summary>
     /// <param name="validators">The collection of validation schemes as composed in <see cref="DetermineValidationOrder" /></param>
     /// <returns>true if all schemes validated successfully, false if any failed.</returns>

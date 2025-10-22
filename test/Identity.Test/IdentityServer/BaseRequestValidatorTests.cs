@@ -964,6 +964,310 @@ public class BaseRequestValidatorTests
         await _userAccountKeysQuery.Received(1).Run(Arg.Is<User>(u => u.Id == expectedUser.Id));
     }
 
+    /// <summary>
+    /// Tests the core PM-21153 feature: SSO-required users can use recovery codes to disable 2FA,
+    /// but must then authenticate via SSO with a descriptive message about the recovery.
+    /// This test validates:
+    /// 1. Validation order is changed (2FA before SSO) when recovery code is provided
+    /// 2. Recovery code successfully validates and sets TwoFactorRecoveryRequested flag
+    /// 3. SSO validation then fails with recovery-specific message
+    /// 4. User is NOT logged in (must authenticate via IdP)
+    /// </summary>
+    [Theory]
+    [BitAutoData(true)]  // Feature flag ON - new behavior
+    [BitAutoData(false)] // Feature flag OFF - should fail at SSO before 2FA recovery
+    public async Task ValidateAsync_RecoveryCodeForSsoRequiredUser_BlocksWithDescriptiveMessage(
+        bool featureFlagEnabled,
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        CustomValidatorRequestContext requestContext,
+        GrantValidationResult grantResult)
+    {
+        // Arrange
+        SetupRecoveryCodeSupportForSsoRequiredUsersFeatureFlag(featureFlagEnabled);
+        var context = CreateContext(tokenRequest, requestContext, grantResult);
+        var user = requestContext.User;
+
+        // Reset state that AutoFixture may have populated
+        requestContext.TwoFactorRecoveryRequested = false;
+        requestContext.RememberMeRequested = false;
+        requestContext.CompletedValidationSchemes.Clear();
+
+        // 1. Master password is valid
+        _sut.isValid = true;
+
+        // 2. SSO is required (this user is in an org that requires SSO)
+        _policyService.AnyPoliciesApplicableToUserAsync(
+                        Arg.Any<Guid>(), PolicyType.RequireSso, OrganizationUserStatusType.Confirmed)
+                      .Returns(Task.FromResult(true));
+
+        // 3. 2FA is required
+        _twoFactorAuthenticationValidator
+            .RequiresTwoFactorAsync(user, tokenRequest)
+            .Returns(Task.FromResult(new Tuple<bool, Organization>(true, null)));
+
+        // 4. Provide a RECOVERY CODE (this triggers the special validation order)
+        tokenRequest.Raw["TwoFactorProvider"] = ((int)TwoFactorProviderType.RecoveryCode).ToString();
+        tokenRequest.Raw["TwoFactorToken"] = "valid-recovery-code-12345";
+
+        // 5. Recovery code is valid (UserService.RecoverTwoFactorAsync will be called internally)
+        _twoFactorAuthenticationValidator
+            .VerifyTwoFactorAsync(user, null, TwoFactorProviderType.RecoveryCode, "valid-recovery-code-12345")
+            .Returns(Task.FromResult(true));
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert
+        Assert.True(context.GrantResult.IsError, "Authentication should fail - SSO required after recovery");
+
+        var errorResponse = (ErrorResponseModel)context.GrantResult.CustomResponse["ErrorModel"];
+
+        if (featureFlagEnabled)
+        {
+            // NEW BEHAVIOR: Recovery succeeds, then SSO blocks with descriptive message
+            Assert.Equal(
+                "Two-factor recovery has been completed. SSO authentication is required.",
+                errorResponse.Message);
+
+            // Verify recovery was marked
+            Assert.True(requestContext.TwoFactorRecoveryRequested,
+                "TwoFactorRecoveryRequested flag should be set");
+
+            // Verify validation order was correct (2FA completed before SSO check)
+            Assert.Contains("ValidateTwoFactorAsync", requestContext.CompletedValidationSchemes);
+            Assert.DoesNotContain("ValidateSsoAsync", requestContext.CompletedValidationSchemes);
+        }
+        else
+        {
+            // LEGACY BEHAVIOR: SSO blocks BEFORE recovery can happen
+            Assert.Equal(
+                "SSO authentication is required.",
+                errorResponse.Message);
+
+            // Recovery never happened because SSO checked first
+            Assert.False(requestContext.TwoFactorRecoveryRequested,
+                "TwoFactorRecoveryRequested should be false (SSO blocked first)");
+        }
+
+        // In both cases: User is NOT logged in
+        await _eventService.DidNotReceive().LogUserEventAsync(user.Id, EventType.User_LoggedIn);
+    }
+
+    /// <summary>
+    /// Tests that validation order changes when a recovery code is PROVIDED (even if invalid).
+    /// This ensures the RecoveryCodeRequestForSsoRequiredUserScenario() logic is based on
+    /// request structure, not validation outcome. An SSO-required user who provides an
+    /// INVALID recovery code should:
+    /// 1. Have 2FA validated BEFORE SSO (new order)
+    /// 2. Get a 2FA error (invalid token)
+    /// 3. NOT get the recovery-specific SSO message (because recovery didn't complete)
+    /// 4. NOT be logged in
+    /// </summary>
+    [Theory]
+    [BitAutoData(true)]  // Feature flag ON
+    [BitAutoData(false)] // Feature flag OFF
+    public async Task ValidateAsync_InvalidRecoveryCodeForSsoRequiredUser_FailsAt2FA(
+        bool featureFlagEnabled,
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        CustomValidatorRequestContext requestContext,
+        GrantValidationResult grantResult)
+    {
+        // Arrange
+        SetupRecoveryCodeSupportForSsoRequiredUsersFeatureFlag(featureFlagEnabled);
+        var context = CreateContext(tokenRequest, requestContext, grantResult);
+        var user = requestContext.User;
+
+        // Reset state that AutoFixture may have populated
+        requestContext.TwoFactorRecoveryRequested = false;
+        requestContext.RememberMeRequested = false;
+        requestContext.CompletedValidationSchemes.Clear();
+
+        // 1. Master password is valid
+        _sut.isValid = true;
+
+        // 2. SSO is required
+        _policyService.AnyPoliciesApplicableToUserAsync(
+                        Arg.Any<Guid>(), PolicyType.RequireSso, OrganizationUserStatusType.Confirmed)
+                      .Returns(Task.FromResult(true));
+
+        // 3. 2FA is required
+        _twoFactorAuthenticationValidator
+            .RequiresTwoFactorAsync(user, tokenRequest)
+            .Returns(Task.FromResult(new Tuple<bool, Organization>(true, null)));
+
+        // 4. Provide a RECOVERY CODE (triggers validation order change)
+        tokenRequest.Raw["TwoFactorProvider"] = ((int)TwoFactorProviderType.RecoveryCode).ToString();
+        tokenRequest.Raw["TwoFactorToken"] = "INVALID-recovery-code";
+
+        // 5. Recovery code is INVALID
+        _twoFactorAuthenticationValidator
+            .VerifyTwoFactorAsync(user, null, TwoFactorProviderType.RecoveryCode, "INVALID-recovery-code")
+            .Returns(Task.FromResult(false));
+
+        // 6. Setup for failed 2FA email (if feature flag enabled)
+        _featureService.IsEnabled(FeatureFlagKeys.FailedTwoFactorEmail).Returns(true);
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert
+        Assert.True(context.GrantResult.IsError, "Authentication should fail - invalid recovery code");
+
+        var errorResponse = (ErrorResponseModel)context.GrantResult.CustomResponse["ErrorModel"];
+
+        if (featureFlagEnabled)
+        {
+            // NEW BEHAVIOR: 2FA is checked first (due to recovery code request), fails with 2FA error
+            Assert.Equal(
+                "Two-step token is invalid. Try again.",
+                errorResponse.Message);
+
+            // Recovery was attempted but failed - flag should NOT be set
+            Assert.False(requestContext.TwoFactorRecoveryRequested,
+                "TwoFactorRecoveryRequested should be false (recovery failed)");
+
+            // Verify validation stopped at 2FA (SSO never checked)
+            Assert.DoesNotContain("ValidateTwoFactorAsync", requestContext.CompletedValidationSchemes);
+            Assert.DoesNotContain("ValidateSsoAsync", requestContext.CompletedValidationSchemes);
+
+            // Verify failed 2FA email was sent
+            await _mailService.Received(1).SendFailedTwoFactorAttemptEmailAsync(
+                user.Email,
+                TwoFactorProviderType.RecoveryCode,
+                Arg.Any<DateTime>(),
+                Arg.Any<string>());
+
+            // Verify failed login event was logged
+            await _eventService.Received(1).LogUserEventAsync(user.Id, EventType.User_FailedLogIn2fa);
+        }
+        else
+        {
+            // LEGACY BEHAVIOR: SSO is checked first, blocks before 2FA
+            Assert.Equal(
+                "SSO authentication is required.",
+                errorResponse.Message);
+
+            // 2FA validation never happened
+            await _mailService.DidNotReceive().SendFailedTwoFactorAttemptEmailAsync(
+                Arg.Any<string>(),
+                Arg.Any<TwoFactorProviderType>(),
+                Arg.Any<DateTime>(),
+                Arg.Any<string>());
+        }
+
+        // In both cases: User is NOT logged in
+        await _eventService.DidNotReceive().LogUserEventAsync(user.Id, EventType.User_LoggedIn);
+
+        // Verify user failed login count was updated (in new behavior path)
+        if (featureFlagEnabled)
+        {
+            await _userRepository.Received(1).ReplaceAsync(Arg.Is<User>(u =>
+                u.Id == user.Id && u.FailedLoginCount > 0));
+        }
+    }
+
+    /// <summary>
+    /// Tests that non-SSO users can successfully use recovery codes to disable 2FA and log in.
+    /// This validates:
+    /// 1. Validation order changes to 2FA-first when recovery code is provided
+    /// 2. Recovery code validates successfully
+    /// 3. SSO check passes (user not in SSO-required org)
+    /// 4. User successfully logs in
+    /// 5. TwoFactorRecoveryRequested flag is set (for logging/audit purposes)
+    /// This is the "happy path" for recovery code usage.
+    /// </summary>
+    [Theory]
+    [BitAutoData(true)]  // Feature flag ON
+    [BitAutoData(false)] // Feature flag OFF - should also work (SSO not required)
+    public async Task ValidateAsync_RecoveryCodeForNonSsoUser_SuccessfulLogin(
+        bool featureFlagEnabled,
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        CustomValidatorRequestContext requestContext,
+        GrantValidationResult grantResult)
+    {
+        // Arrange
+        SetupRecoveryCodeSupportForSsoRequiredUsersFeatureFlag(featureFlagEnabled);
+        var context = CreateContext(tokenRequest, requestContext, grantResult);
+        var user = requestContext.User;
+
+        // Reset state that AutoFixture may have populated
+        requestContext.TwoFactorRecoveryRequested = false;
+        requestContext.RememberMeRequested = false;
+        requestContext.CompletedValidationSchemes.Clear();
+
+        // 1. Master password is valid
+        _sut.isValid = true;
+
+        // 2. SSO is NOT required (this is a regular user, not in SSO org)
+        _policyService.AnyPoliciesApplicableToUserAsync(
+                        Arg.Any<Guid>(), PolicyType.RequireSso, OrganizationUserStatusType.Confirmed)
+                      .Returns(Task.FromResult(false));
+
+        // 3. 2FA is required
+        _twoFactorAuthenticationValidator
+            .RequiresTwoFactorAsync(user, tokenRequest)
+            .Returns(Task.FromResult(new Tuple<bool, Organization>(true, null)));
+
+        // 4. Provide a RECOVERY CODE
+        tokenRequest.Raw["TwoFactorProvider"] = ((int)TwoFactorProviderType.RecoveryCode).ToString();
+        tokenRequest.Raw["TwoFactorToken"] = "valid-recovery-code-67890";
+
+        // 5. Recovery code is valid
+        _twoFactorAuthenticationValidator
+            .VerifyTwoFactorAsync(user, null, TwoFactorProviderType.RecoveryCode, "valid-recovery-code-67890")
+            .Returns(Task.FromResult(true));
+
+        // 6. Device validation passes
+        _deviceValidator.ValidateRequestDeviceAsync(tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+
+        // 7. User is not legacy
+        _userService.IsLegacyUser(Arg.Any<string>())
+            .Returns(false);
+
+        // 8. Setup user account keys for successful login response
+        _userAccountKeysQuery.Run(Arg.Any<User>()).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData(
+                "test-private-key",
+                "test-public-key"
+            )
+        });
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert
+        Assert.False(context.GrantResult.IsError, "Authentication should succeed for non-SSO user with valid recovery code");
+
+        // Verify user successfully logged in
+        await _eventService.Received(1).LogUserEventAsync(user.Id, EventType.User_LoggedIn);
+
+        // Verify failed login count was reset (successful login)
+        await _userRepository.Received(1).ReplaceAsync(Arg.Is<User>(u =>
+            u.Id == user.Id && u.FailedLoginCount == 0));
+
+        if (featureFlagEnabled)
+        {
+            // NEW BEHAVIOR: Recovery flag should be set for audit purposes
+            Assert.True(requestContext.TwoFactorRecoveryRequested,
+                "TwoFactorRecoveryRequested flag should be set for audit/logging");
+
+            // Verify all validators passed in the recovery order
+            Assert.Contains("ValidateMasterPasswordAsync", requestContext.CompletedValidationSchemes);
+            Assert.Contains("ValidateTwoFactorAsync", requestContext.CompletedValidationSchemes);
+            Assert.Contains("ValidateSsoAsync", requestContext.CompletedValidationSchemes);
+            Assert.Contains("ValidateNewDeviceAsync", requestContext.CompletedValidationSchemes);
+        }
+        else
+        {
+            // LEGACY BEHAVIOR: Recovery flag doesn't exist, but login still succeeds
+            // (SSO check happens before 2FA in legacy, but user is not SSO-required so both pass)
+            Assert.False(requestContext.TwoFactorRecoveryRequested,
+                "TwoFactorRecoveryRequested should be false in legacy mode");
+        }
+    }
+
     private BaseRequestValidationContextFake CreateContext(
         ValidatedTokenRequest tokenRequest,
         CustomValidatorRequestContext requestContext,
