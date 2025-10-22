@@ -52,7 +52,7 @@ public class AzureServiceBusService : IAzureServiceBusService
         await _integrationSender.SendMessageAsync(serviceBusMessage);
     }
 
-    public async Task PublishEventAsync(string body, string organizationId)
+    public async Task PublishEventAsync(string body, string? organizationId)
     {
         var message = new ServiceBusMessage(body)
         {

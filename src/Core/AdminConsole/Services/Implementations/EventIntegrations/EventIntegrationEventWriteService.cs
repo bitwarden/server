@@ -14,7 +14,7 @@ public class EventIntegrationEventWriteService : IEventWriteService, IAsyncDispo
     public async Task CreateAsync(IEvent e)
     {
         var body = JsonSerializer.Serialize(e);
-        await _eventIntegrationPublisher.PublishEventAsync(body: body, organizationId: e.OrganizationId?.ToString() ?? string.Empty);
+        await _eventIntegrationPublisher.PublishEventAsync(body: body, organizationId: e.OrganizationId?.ToString());
     }
 
     public async Task CreateManyAsync(IEnumerable<IEvent> events)
@@ -25,7 +25,7 @@ public class EventIntegrationEventWriteService : IEventWriteService, IAsyncDispo
             return;
         }
 
-        var organizationId = eventList[0].OrganizationId?.ToString() ?? string.Empty;
+        var organizationId = eventList[0].OrganizationId?.ToString();
         var body = JsonSerializer.Serialize(eventList);
         await _eventIntegrationPublisher.PublishEventAsync(body: body, organizationId: organizationId);
     }

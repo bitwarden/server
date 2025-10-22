@@ -122,7 +122,7 @@ public class RabbitMqService : IRabbitMqService
             body: body);
     }
 
-    public async Task PublishEventAsync(string body, string organizationId)
+    public async Task PublishEventAsync(string body, string? organizationId)
     {
         await using var channel = await CreateChannelAsync();
         var properties = new BasicProperties

@@ -6,7 +6,7 @@ public interface IIntegrationMessage
 {
     IntegrationType IntegrationType { get; }
     string MessageId { get; set; }
-    string OrganizationId { get; set; }
+    string? OrganizationId { get; set; }
     int RetryCount { get; }
     DateTime? DelayUntilDate { get; }
     void ApplyRetry(DateTime? handlerDelayUntilDate);
