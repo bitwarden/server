@@ -36,16 +36,15 @@ public class UpcomingInvoiceHandler(
     {
         var invoice = await stripeEventService.GetInvoice(parsedEvent);
 
-        if (string.IsNullOrEmpty(invoice.SubscriptionId))
+        var customer =
+            await stripeFacade.GetCustomer(invoice.CustomerId, new CustomerGetOptions { Expand = ["subscriptions", "tax", "tax_ids"] });
+
+        var subscription = customer.Subscriptions.FirstOrDefault();
+
+        if (subscription == null)
         {
-            logger.LogInformation("Received 'invoice.upcoming' Event with ID '{eventId}' that did not include a Subscription ID", parsedEvent.Id);
             return;
         }
-
-        var subscription = await stripeFacade.GetSubscription(invoice.SubscriptionId, new SubscriptionGetOptions
-        {
-            Expand = ["customer.tax", "customer.tax_ids"]
-        });
 
         var (organizationId, userId, providerId) = stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata);
 
@@ -58,7 +57,7 @@ public class UpcomingInvoiceHandler(
                 return;
             }
 
-            await AlignOrganizationTaxConcernsAsync(organization, subscription, parsedEvent.Id);
+            await AlignOrganizationTaxConcernsAsync(organization, subscription, customer, parsedEvent.Id);
 
             var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
 
@@ -137,7 +136,7 @@ public class UpcomingInvoiceHandler(
                 return;
             }
 
-            await AlignProviderTaxConcernsAsync(provider, subscription, parsedEvent.Id);
+            await AlignProviderTaxConcernsAsync(provider, subscription, customer, parsedEvent.Id);
 
             await SendProviderUpcomingInvoiceEmailsAsync(new List<string> { provider.BillingEmail }, invoice, subscription, providerId.Value);
         }
@@ -199,13 +198,14 @@ public class UpcomingInvoiceHandler(
     private async Task AlignOrganizationTaxConcernsAsync(
         Organization organization,
         Subscription subscription,
+        Customer customer,
         string eventId)
     {
         var nonUSBusinessUse =
             organization.PlanType.GetProductTier() != ProductTierType.Families &&
-            subscription.Customer.Address.Country != Core.Constants.CountryAbbreviations.UnitedStates;
+            customer.Address.Country != Core.Constants.CountryAbbreviations.UnitedStates;
 
-        if (nonUSBusinessUse && subscription.Customer.TaxExempt != StripeConstants.TaxExempt.Reverse)
+        if (nonUSBusinessUse && customer.TaxExempt != StripeConstants.TaxExempt.Reverse)
         {
             try
             {
@@ -246,10 +246,11 @@ public class UpcomingInvoiceHandler(
     private async Task AlignProviderTaxConcernsAsync(
         Provider provider,
         Subscription subscription,
+        Customer customer,
         string eventId)
     {
-        if (subscription.Customer.Address.Country != Core.Constants.CountryAbbreviations.UnitedStates &&
-            subscription.Customer.TaxExempt != StripeConstants.TaxExempt.Reverse)
+        if (customer.Address.Country != Core.Constants.CountryAbbreviations.UnitedStates &&
+            customer.TaxExempt != StripeConstants.TaxExempt.Reverse)
         {
             try
             {
