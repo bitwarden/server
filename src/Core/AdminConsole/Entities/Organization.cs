@@ -129,6 +129,11 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
     /// </summary>
     public bool SyncSeats { get; set; }
 
+    /// <summary>
+    /// If set to true, disables Secrets Manager ads for users in the organization
+    /// </summary>
+    public bool UseDisableSMAdsForUsers { get; set; }
+
     public void SetNewId()
     {
         if (Id == default(Guid))
@@ -328,5 +333,6 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
         UseRiskInsights = license.UseRiskInsights;
         UseOrganizationDomains = license.UseOrganizationDomains;
         UseAdminSponsoredFamilies = license.UseAdminSponsoredFamilies;
+        UseDisableSMAdsForUsers = license.UseDisableSMAdsForUsers;
     }
 }

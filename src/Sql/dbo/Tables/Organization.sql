@@ -59,6 +59,7 @@ CREATE TABLE [dbo].[Organization] (
     [UseOrganizationDomains]        BIT              NOT NULL CONSTRAINT [DF_Organization_UseOrganizationDomains] DEFAULT (0),
     [UseAdminSponsoredFamilies]     BIT              NOT NULL CONSTRAINT [DF_Organization_UseAdminSponsoredFamilies] DEFAULT (0),
     [SyncSeats]                     BIT              NOT NULL CONSTRAINT [DF_Organization_SyncSeats] DEFAULT (0),
+    [UseDisableSMAdsForUsers]          BIT              NOT NULL CONSTRAINT [DF_Organization_UseDisableSMAdsForUsers] DEFAULT (0),
     CONSTRAINT [PK_Organization] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 

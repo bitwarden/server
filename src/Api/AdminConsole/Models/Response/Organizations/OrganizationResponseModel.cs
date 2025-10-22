@@ -70,6 +70,7 @@ public class OrganizationResponseModel : ResponseModel
         UseRiskInsights = organization.UseRiskInsights;
         UseOrganizationDomains = organization.UseOrganizationDomains;
         UseAdminSponsoredFamilies = organization.UseAdminSponsoredFamilies;
+        UseDisableSMAdsForUsers = organization.UseDisableSMAdsForUsers;
     }
 
     public Guid Id { get; set; }
@@ -118,6 +119,7 @@ public class OrganizationResponseModel : ResponseModel
     public bool UseRiskInsights { get; set; }
     public bool UseOrganizationDomains { get; set; }
     public bool UseAdminSponsoredFamilies { get; set; }
+    public bool UseDisableSMAdsForUsers { get; set; }
 }
 
 public class OrganizationSubscriptionResponseModel : OrganizationResponseModel

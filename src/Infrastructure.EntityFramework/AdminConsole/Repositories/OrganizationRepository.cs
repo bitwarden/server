@@ -112,7 +112,8 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 AllowAdminAccessToAllCollectionItems = e.AllowAdminAccessToAllCollectionItems,
                 UseRiskInsights = e.UseRiskInsights,
                 UseOrganizationDomains = e.UseOrganizationDomains,
-                UseAdminSponsoredFamilies = e.UseAdminSponsoredFamilies
+                UseAdminSponsoredFamilies = e.UseAdminSponsoredFamilies,
+                UseDisableSMAdsForUsers = e.UseDisableSMAdsForUsers
             }).ToListAsync();
         }
     }

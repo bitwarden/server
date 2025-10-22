@@ -213,7 +213,8 @@ If you believe you need to change the version for a valid reason, please discuss
             LimitCollectionDeletion = true,
             AllowAdminAccessToAllCollectionItems = true,
             UseOrganizationDomains = true,
-            UseAdminSponsoredFamilies = false
+            UseAdminSponsoredFamilies = false,
+            UseDisableSMAdsForUsers = false
         };
     }
 

@@ -110,6 +110,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<bool>("UseDisableSMAdsForUsers")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<bool>("Enabled")
                         .HasColumnType("tinyint(1)");
 

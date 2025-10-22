@@ -58,7 +58,8 @@ CREATE PROCEDURE [dbo].[Organization_Create]
     @LimitItemDeletion BIT = 0,
     @UseOrganizationDomains BIT = 0,
     @UseAdminSponsoredFamilies BIT = 0,
-    @SyncSeats BIT = 0
+    @SyncSeats BIT = 0,
+    @UseDisableSMAdsForUsers BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -124,7 +125,8 @@ BEGIN
         [LimitItemDeletion],
         [UseOrganizationDomains],
         [UseAdminSponsoredFamilies],
-        [SyncSeats]
+        [SyncSeats],
+        [UseDisableSMAdsForUsers]
     )
     VALUES
     (
@@ -187,6 +189,7 @@ BEGIN
         @LimitItemDeletion,
         @UseOrganizationDomains,
         @UseAdminSponsoredFamilies,
-        @SyncSeats
+        @SyncSeats,
+        @UseDisableSMAdsForUsers
     )
 END
