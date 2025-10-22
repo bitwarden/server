@@ -104,7 +104,7 @@ public class AccountController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> PreValidate(string domainHint)
+    public async Task<IActionResult> PreValidateAsync(string domainHint)
     {
         try
         {
@@ -163,7 +163,7 @@ public class AccountController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> Login(string returnUrl)
+    public async Task<IActionResult> LoginAsync(string returnUrl)
     {
         var context = await _interaction.GetAuthorizationContextAsync(returnUrl);
 
@@ -238,25 +238,32 @@ public class AccountController : Controller
     [HttpGet]
     public async Task<IActionResult> ExternalCallback()
     {
+        // Feature flag (PM-24579): Prevent SSO on existing non-compliant users.
+        // When removing this feature flag, delete this check and always run the enforcement logic below.
+        var preventNonCompliant = _featureService.IsEnabled(FeatureFlagKeys.PM24579_PreventSsoOnExistingNonCompliantUsers);
+
         // Read external identity from the temporary cookie
         var result = await HttpContext.AuthenticateAsync(
             AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
-        if (result?.Succeeded != true)
-        {
-            throw new Exception(_i18nService.T("ExternalAuthenticationError"));
-        }
 
-        // Debugging
-        var externalClaims = result.Principal.Claims.Select(c => $"{c.Type}: {c.Value}");
-        _logger.LogDebug("External claims: {@claims}", externalClaims);
+        if (preventNonCompliant)
+        {
+            if (!result.Succeeded)
+            {
+                throw new Exception(_i18nService.T("ExternalAuthenticationError"));
+            }
+        }
+        else
+        {
+            if (result?.Succeeded != true)
+            {
+                throw new Exception(_i18nService.T("ExternalAuthenticationError"));
+            }
+        }
 
         // See if the user has logged in with this SSO provider before and has already been provisioned.
         // This is signified by the user existing in the User table and the SSOUser table for the SSO provider they're using.
         var (user, provider, providerUserId, claims, ssoConfigData) = await FindUserFromExternalProviderAsync(result);
-
-        // Feature flag (PM-24579): Prevent SSO on existing non-compliant users.
-        // When removing this feature flag, delete this check and always run the enforcement logic below.
-        var preventNonCompliant = _featureService.IsEnabled(FeatureFlagKeys.PM24579_PreventSsoOnExistingNonCompliantUsers);
 
         // Defer organization and membership resolution to when needed (lazy resolution)
         Organization organization = null;
@@ -269,63 +276,37 @@ public class AccountController : Controller
             // If we're manually linking to SSO, the user's external identifier will be passed as query string parameter.
             var userIdentifier = result.Properties.Items.Keys.Contains("user_identifier") ?
                 result.Properties.Items["user_identifier"] : null;
-            var provision = await AutoProvisionUserAsync(
+
+            var (provisionedUser, foundOrganization, foundOrCreatedOrgUser) = await AutoProvisionUserAsync(
                 provider,
                 providerUserId,
                 claims,
                 userIdentifier,
                 ssoConfigData);
-            user = provision.user;
+
+            user = provisionedUser;
+
             // PM-24579: After removing the flag, assign these unconditionally and remove this if block.
             if (preventNonCompliant)
             {
-                organization = provision.foundOrganization;
-                orgUser = provision.foundOrgUser;
+                organization = foundOrganization;
+                orgUser = foundOrCreatedOrgUser;
             }
         }
 
-        // Either the user already authenticated with the SSO provider, or we've just provisioned them.
-        // Either way, we have associated the SSO login with a Bitwarden user.
-        // We will now sign the Bitwarden user in.
-        if (user != null)
+        // Feature-flagged enforcement: block sign-in for revoked/non-compliant org membership
+        // PM-24579: After removing the feature flag, delete if
+        if (preventNonCompliant)
         {
-            // Feature-flagged enforcement: block sign-in for revoked/non-compliant org membership
-            // PM-24579: After removing the feature flag, delete the 'if' and always run the enforcement body.
-            if (preventNonCompliant)
-            {
-                // Lazily resolve organization if not already known
-                if (organization == null)
-                {
-                    if (!Guid.TryParse(provider, out var organizationId))
-                    {
-                        throw new Exception(_i18nService.T("SSOProviderIsNotAnOrgId", provider));
-                    }
+            // Call the guarded here because the user could have been not null in which case we need to retrieve
+            // the organization and orgUser.
+            await GuardedEnsureUserStatusAsync(user, organization, orgUser, provider);
+        }
 
-                    organization = await _organizationRepository.GetByIdAsync(organizationId);
-
-                    if (organization == null)
-                    {
-                        throw new Exception(_i18nService.T("CouldNotFindOrganization", organizationId));
-                    }
-                }
-
-                // Lazily resolve orgUser only when we have an organization and a user
-                orgUser ??= await _organizationUserRepository.GetByOrganizationAsync(organization.Id, user.Id);
-                if (orgUser != null)
-                {
-                    EnsureOrgUserStatusAllowed(
-                        orgUser.Status,
-                        organization.DisplayName(),
-                        allowedStatuses: [OrganizationUserStatusType.Accepted, OrganizationUserStatusType.Confirmed]);
-                }
-                else
-                {
-                    _logger.LogError(
-                        "Organization user not found for user ID: {UserId} and organization ID: {OrganizationId}",
-                        user.Id,
-                        organization?.Id);
-                }
-            }
+        if (preventNonCompliant)
+        {
+            // Same as else block without the if check, it should not be necessary. The user should _always_
+            // be defined at this point either by auto provisioned or they existed to begin with.
 
             // This allows us to collect any additional claims or properties
             // for the specific protocols used and store them in the local auth cookie.
@@ -346,6 +327,35 @@ public class AccountController : Controller
                 AdditionalClaims = additionalLocalClaims.ToArray()
             }, localSignInProps);
         }
+        else
+        {
+            // Either the user already authenticated with the SSO provider, or we've just provisioned them.
+            // Either way, we have associated the SSO login with a Bitwarden user.
+            // We will now sign the Bitwarden user in.
+            if (user != null)
+            {
+                // This allows us to collect any additional claims or properties
+                // for the specific protocols used and store them in the local auth cookie.
+                // this is typically used to store data needed for signout from those protocols.
+                var additionalLocalClaims = new List<Claim>();
+                var localSignInProps = new AuthenticationProperties
+                {
+                    IsPersistent = true,
+                    ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(1)
+                };
+                ProcessLoginCallback(result, additionalLocalClaims, localSignInProps);
+
+                // Issue authentication cookie for user
+                await HttpContext.SignInAsync(new IdentityServerUser(user.Id.ToString())
+                {
+                    DisplayName = user.Email,
+                    IdentityProvider = provider,
+                    AdditionalClaims = additionalLocalClaims.ToArray()
+                }, localSignInProps);
+            }
+        }
+
+
 
         // Delete temporary cookie used during external authentication
         await HttpContext.SignOutAsync(AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
@@ -480,7 +490,7 @@ public class AccountController : Controller
     /// <param name="claims">The claims from the external IdP.</param>
     /// <param name="userIdentifier">The user identifier used for manual SSO linking.</param>
     /// <param name="config">The SSO configuration for the organization.</param>
-    /// <returns>The User to sign in as well as the found organization and org user.</returns>
+    /// <returns>Guaranteed to return the user to sign in as well as the found organization and org user.</returns>
     /// <exception cref="Exception">An exception if the user cannot be provisioned as requested.</exception>
     private async Task<(User user, Organization foundOrganization, OrganizationUser foundOrgUser)> AutoProvisionUserAsync(
         string provider,
@@ -514,11 +524,11 @@ public class AccountController : Controller
         }
         else
         {
-            existingUser = await GetUserFromManualLinkingData(userIdentifier);
+            existingUser = await GetUserFromManualLinkingDataAsync(userIdentifier);
         }
 
         // Try to find the OrganizationUser if it exists.
-        var (organization, orgUser) = await FindOrganizationUser(existingUser, email, orgId);
+        var (organization, orgUser) = await TryToFindOrganizationUserAsync(existingUser, email, orgId);
 
         //----------------------------------------------------
         // Scenario 1: We've found the user in the User table
@@ -542,12 +552,12 @@ public class AccountController : Controller
             EnsureOrgUserStatusAllowed(orgUser.Status, organization.DisplayName(),
                 allowedStatuses: [OrganizationUserStatusType.Accepted, OrganizationUserStatusType.Confirmed]);
 
-
             // Since we're in the auto-provisioning logic, this means that the user exists, but they have not
             // authenticated with the org's SSO provider before now (otherwise we wouldn't be auto-provisioning them).
             // We've verified that the user is Accepted or Confnirmed, so we can create an SsoUser link and proceed
             // with authentication.
-            await CreateSsoUserRecord(providerUserId, existingUser.Id, orgId, orgUser);
+            await CreateSsoUserRecordAsync(providerUserId, existingUser.Id, orgId, orgUser);
+
             return (existingUser, organization, orgUser);
         }
 
@@ -645,12 +655,43 @@ public class AccountController : Controller
         }
 
         // Create the SsoUser record to link the user to the SSO provider.
-        await CreateSsoUserRecord(providerUserId, user.Id, orgId, orgUser);
+        await CreateSsoUserRecordAsync(providerUserId, user.Id, orgId, orgUser);
 
         return (user, organization, orgUser);
     }
 
-    private async Task<User> GetUserFromManualLinkingData(string userIdentifier)
+    private async Task GuardedEnsureUserStatusAsync(User user, Organization organization, OrganizationUser orgUser, string provider)
+    {
+        // Lazily resolve organization if not already known
+        if (organization == null)
+        {
+            if (!Guid.TryParse(provider, out var organizationId))
+            {
+                throw new Exception(_i18nService.T("SSOProviderIsNotAnOrgId", provider));
+            }
+
+            organization = await _organizationRepository.GetByIdAsync(organizationId);
+
+            if (organization == null)
+            {
+                throw new Exception(_i18nService.T("CouldNotFindOrganization", organizationId));
+            }
+        }
+
+        // Use fallback to email if not found by id. Use find OrganizationUser
+        orgUser ??= await _organizationUserRepository.GetByOrganizationAsync(organization.Id, user.Id);
+        if (orgUser != null)
+        {
+            EnsureOrgUserStatusAllowed(orgUser.Status, organization.DisplayName(),
+                allowedStatuses: [OrganizationUserStatusType.Accepted, OrganizationUserStatusType.Confirmed]);
+        }
+        else
+        {
+            throw new Exception(_i18nService.T("CouldNotFindOrganizationUser", user.Id, organization.Id));
+        }
+    }
+
+    private async Task<User> GetUserFromManualLinkingDataAsync(string userIdentifier)
     {
         User user = null;
         var split = userIdentifier.Split(",");
@@ -680,7 +721,7 @@ public class AccountController : Controller
         return user;
     }
 
-    private async Task<(Organization, OrganizationUser)> FindOrganizationUser(User existingUser, string email, Guid orgId)
+    private async Task<(Organization, OrganizationUser)> TryToFindOrganizationUserAsync(User existingUser, string email, Guid orgId)
     {
         OrganizationUser orgUser = null;
         var organization = await _organizationRepository.GetByIdAsync(orgId);
@@ -791,7 +832,7 @@ public class AccountController : Controller
         return null;
     }
 
-    private async Task CreateSsoUserRecord(string providerUserId, Guid userId, Guid orgId, OrganizationUser orgUser)
+    private async Task CreateSsoUserRecordAsync(string providerUserId, Guid userId, Guid orgId, OrganizationUser orgUser)
     {
         // Delete existing SsoUser (if any) - avoids error if providerId has changed and the sso link is stale
         var existingSsoUser = await _ssoUserRepository.GetByUserIdOrganizationIdAsync(orgId, userId);
@@ -833,18 +874,6 @@ public class AccountController : Controller
             localSignInProps.StoreTokens(
                 new[] { new AuthenticationToken { Name = "id_token", Value = idToken } });
         }
-    }
-
-    private async Task<string> GetProviderAsync(string returnUrl)
-    {
-        var context = await _interaction.GetAuthorizationContextAsync(returnUrl);
-        if (context?.IdP != null && await _schemeProvider.GetSchemeAsync(context.IdP) != null)
-        {
-            return context.IdP;
-        }
-        var schemes = await _schemeProvider.GetAllSchemesAsync();
-        var providers = schemes.Select(x => x.Name).ToList();
-        return providers.FirstOrDefault();
     }
 
     private async Task<(string, string, string)> GetLoggedOutDataAsync(string logoutId)

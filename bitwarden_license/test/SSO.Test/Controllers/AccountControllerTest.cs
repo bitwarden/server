@@ -323,6 +323,169 @@ public class AccountControllerTest
     }
 
     [Theory, BitAutoData]
+    public async Task ExternalCallback_PreventNonCompliantTrue_ExistingUser_NoOrgUser_ThrowsCouldNotFindOrganizationUser(
+        SutProvider<AccountController> sutProvider)
+    {
+        // Arrange
+        var orgId = Guid.NewGuid();
+        var providerUserId = "ext-missing-orguser";
+        var user = new User { Id = Guid.NewGuid(), Email = "missing.orguser@example.com" };
+        var organization = new Organization { Id = orgId, Name = "Org" };
+
+        var authResult = BuildSuccessfulExternalAuth(orgId, providerUserId, user.Email!);
+        SetupHttpContextWithAuth(sutProvider, authResult);
+
+        // i18n returns the key so we can assert on message contents
+        sutProvider.GetDependency<II18nService>()
+            .T(Arg.Any<string>(), Arg.Any<object?[]>())
+            .Returns(ci => (string)ci[0]!);
+
+        // SSO config + user link exists, but no org user membership
+        ConfigureSsoAndUser(
+            sutProvider,
+            orgId,
+            providerUserId,
+            user,
+            organization,
+            orgUser: null);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(organization.Id, user.Id).Returns((OrganizationUser?)null);
+
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(true);
+        sutProvider.GetDependency<IIdentityServerInteractionService>()
+            .GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
+
+        // Act + Assert
+        var ex = await Assert.ThrowsAsync<Exception>(() => sutProvider.Sut.ExternalCallback());
+        Assert.Equal("CouldNotFindOrganizationUser", ex.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ExternalCallback_PreventNonCompliantTrue_ExistingUser_OrgUserInvited_ThrowsAcceptInvite(
+        SutProvider<AccountController> sutProvider)
+    {
+        // Arrange
+        var orgId = Guid.NewGuid();
+        var providerUserId = "ext-invited-orguser";
+        var user = new User { Id = Guid.NewGuid(), Email = "invited.orguser@example.com" };
+        var organization = new Organization { Id = orgId, Name = "Org" };
+        var orgUser = new OrganizationUser
+        {
+            OrganizationId = orgId,
+            UserId = user.Id,
+            Status = OrganizationUserStatusType.Invited,
+            Type = OrganizationUserType.User
+        };
+
+        var authResult = BuildSuccessfulExternalAuth(orgId, providerUserId, user.Email!);
+        SetupHttpContextWithAuth(sutProvider, authResult);
+
+        sutProvider.GetDependency<II18nService>()
+            .T(Arg.Any<string>(), Arg.Any<object?[]>())
+            .Returns(ci => (string)ci[0]!);
+
+        ConfigureSsoAndUser(
+            sutProvider,
+            orgId,
+            providerUserId,
+            user,
+            organization,
+            orgUser);
+
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(true);
+        sutProvider.GetDependency<IIdentityServerInteractionService>()
+            .GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
+
+        // Act + Assert
+        var ex = await Assert.ThrowsAsync<Exception>(() => sutProvider.Sut.ExternalCallback());
+        Assert.Equal("AcceptInviteBeforeUsingSSO", ex.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ExternalCallback_PreventNonCompliantTrue_ExistingUser_OrgUserRevoked_ThrowsAccessRevoked(
+        SutProvider<AccountController> sutProvider)
+    {
+        // Arrange
+        var orgId = Guid.NewGuid();
+        var providerUserId = "ext-revoked-orguser";
+        var user = new User { Id = Guid.NewGuid(), Email = "revoked.orguser@example.com" };
+        var organization = new Organization { Id = orgId, Name = "Org" };
+        var orgUser = new OrganizationUser
+        {
+            OrganizationId = orgId,
+            UserId = user.Id,
+            Status = OrganizationUserStatusType.Revoked,
+            Type = OrganizationUserType.User
+        };
+
+        var authResult = BuildSuccessfulExternalAuth(orgId, providerUserId, user.Email!);
+        SetupHttpContextWithAuth(sutProvider, authResult);
+
+        sutProvider.GetDependency<II18nService>()
+            .T(Arg.Any<string>(), Arg.Any<object?[]>())
+            .Returns(ci => (string)ci[0]!);
+
+        ConfigureSsoAndUser(
+            sutProvider,
+            orgId,
+            providerUserId,
+            user,
+            organization,
+            orgUser);
+
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(true);
+        sutProvider.GetDependency<IIdentityServerInteractionService>()
+            .GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
+
+        // Act + Assert
+        var ex = await Assert.ThrowsAsync<Exception>(() => sutProvider.Sut.ExternalCallback());
+        Assert.Equal("OrganizationUserAccessRevoked", ex.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ExternalCallback_PreventNonCompliantTrue_ExistingUser_OrgUserUnknown_ThrowsUnknown(
+        SutProvider<AccountController> sutProvider)
+    {
+        // Arrange
+        var orgId = Guid.NewGuid();
+        var providerUserId = "ext-unknown-orguser";
+        var user = new User { Id = Guid.NewGuid(), Email = "unknown.orguser@example.com" };
+        var organization = new Organization { Id = orgId, Name = "Org" };
+        var unknownStatus = (OrganizationUserStatusType)999;
+        var orgUser = new OrganizationUser
+        {
+            OrganizationId = orgId,
+            UserId = user.Id,
+            Status = unknownStatus,
+            Type = OrganizationUserType.User
+        };
+
+        var authResult = BuildSuccessfulExternalAuth(orgId, providerUserId, user.Email!);
+        SetupHttpContextWithAuth(sutProvider, authResult);
+
+        sutProvider.GetDependency<II18nService>()
+            .T(Arg.Any<string>(), Arg.Any<object?[]>())
+            .Returns(ci => (string)ci[0]!);
+
+        ConfigureSsoAndUser(
+            sutProvider,
+            orgId,
+            providerUserId,
+            user,
+            organization,
+            orgUser);
+
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(true);
+        sutProvider.GetDependency<IIdentityServerInteractionService>()
+            .GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
+
+        // Act + Assert
+        var ex = await Assert.ThrowsAsync<Exception>(() => sutProvider.Sut.ExternalCallback());
+        Assert.Equal("OrganizationUserUnknownStatus", ex.Message);
+    }
+
+    [Theory, BitAutoData]
     public async Task ExternalCallback_WithExistingUserAndAcceptedMembership_RedirectsToReturnUrl(
         SutProvider<AccountController> sutProvider)
     {
@@ -436,8 +599,8 @@ public class AccountControllerTest
             Type = OrganizationUserType.User
         };
 
-        var authResult = BuildSuccessfulExternalAuth(orgId, providerUserId, user.Email!);
-        var authService = SetupHttpContextWithAuth(sutProvider, authResult);
+        var authResult = BuildSuccessfulExternalAuth(orgId, providerUserId, user.Email);
+        SetupHttpContextWithAuth(sutProvider, authResult);
 
         ConfigureSsoAndUser(
             sutProvider,
