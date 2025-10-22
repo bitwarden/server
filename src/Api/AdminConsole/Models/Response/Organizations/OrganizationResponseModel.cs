@@ -70,6 +70,7 @@ public class OrganizationResponseModel : ResponseModel
         UseRiskInsights = organization.UseRiskInsights;
         UseOrganizationDomains = organization.UseOrganizationDomains;
         UseAdminSponsoredFamilies = organization.UseAdminSponsoredFamilies;
+        UseAutomaticUserConfirmation = organization.UseAutomaticUserConfirmation;
         UseDisableSMAdsForUsers = organization.UseDisableSMAdsForUsers;
     }
 
@@ -119,6 +120,7 @@ public class OrganizationResponseModel : ResponseModel
     public bool UseRiskInsights { get; set; }
     public bool UseOrganizationDomains { get; set; }
     public bool UseAdminSponsoredFamilies { get; set; }
+    public bool UseAutomaticUserConfirmation { get; set; }
     public bool UseDisableSMAdsForUsers { get; set; }
 }
 

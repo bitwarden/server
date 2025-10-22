@@ -129,11 +129,15 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
     /// </summary>
     public bool SyncSeats { get; set; }
 
+    /// If set to true,  user accounts created within the organization are automatically confirmed without requiring additional verification steps.
+    /// </summary>
+    public bool UseAutomaticUserConfirmation { get; set; }
+
     /// <summary>
     /// If set to true, disables Secrets Manager ads for users in the organization
     /// </summary>
     public bool UseDisableSMAdsForUsers { get; set; }
-
+    
     public void SetNewId()
     {
         if (Id == default(Guid))

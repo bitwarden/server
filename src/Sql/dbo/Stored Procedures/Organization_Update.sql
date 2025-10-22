@@ -59,6 +59,7 @@ CREATE PROCEDURE [dbo].[Organization_Update]
     @UseOrganizationDomains BIT = 0,
     @UseAdminSponsoredFamilies BIT = 0,
     @SyncSeats BIT = 0,
+    @UseAutomaticUserConfirmation BIT = 0,
     @UseDisableSMAdsForUsers BIT = 0
 AS
 BEGIN
@@ -126,7 +127,8 @@ BEGIN
         [UseOrganizationDomains] = @UseOrganizationDomains,
         [UseAdminSponsoredFamilies] = @UseAdminSponsoredFamilies,
         [SyncSeats] = @SyncSeats,
+        [UseAutomaticUserConfirmation] = @UseAutomaticUserConfirmation,
         [UseDisableSMAdsForUsers] = @UseDisableSMAdsForUsers
     WHERE
-        [Id] = @Id
+        [Id] = @Id;
 END

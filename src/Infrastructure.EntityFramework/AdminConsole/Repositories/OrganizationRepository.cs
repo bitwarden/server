@@ -113,6 +113,7 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 UseRiskInsights = e.UseRiskInsights,
                 UseOrganizationDomains = e.UseOrganizationDomains,
                 UseAdminSponsoredFamilies = e.UseAdminSponsoredFamilies,
+                UseAutomaticUserConfirmation = e.UseAutomaticUserConfirmation,
                 UseDisableSMAdsForUsers = e.UseDisableSMAdsForUsers
             }).ToListAsync();
         }
@@ -374,11 +375,6 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                     select organization;
 
         return await query.ToArrayAsync();
-    }
-
-    public Task EnableCollectionEnhancements(Guid organizationId)
-    {
-        throw new NotImplementedException("Collection enhancements migration is not yet supported for Entity Framework.");
     }
 
     public async Task<OrganizationSeatCounts> GetOccupiedSeatCountByOrganizationIdAsync(Guid organizationId)
