@@ -245,6 +245,7 @@ public static class FeatureFlagKeys
 
     /* DIRT Team */
     public const string PM22887_RiskInsightsActivityTab = "pm-22887-risk-insights-activity-tab";
+    public const string EventManagementForDataDogAndCrowdStrike = "event-management-for-datadog-and-crowdstrike";
 
     public static List<string> GetAllKeys()
     {
