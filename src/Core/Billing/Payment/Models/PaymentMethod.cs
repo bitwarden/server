@@ -15,53 +15,45 @@ public class PaymentMethod(OneOf<TokenizedPaymentMethod, NonTokenizedPaymentMeth
 
 internal class PaymentMethodJsonConverter : JsonConverter<PaymentMethod>
 {
-    private static readonly string _typePropertyName = "type";
-
     public override PaymentMethod Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         var element = JsonElement.ParseValue(ref reader);
 
-        if (!element.TryGetProperty(options.PropertyNamingPolicy?.ConvertName(_typePropertyName) ?? _typePropertyName, out var typeProperty))
+        if (!element.TryGetProperty("type", out var typeProperty))
         {
-            throw new JsonException(
-                $"Failed to deserialize {nameof(PaymentMethod)}: missing '{_typePropertyName}' property");
+            throw new JsonException("PaymentMethod requires a 'type' property");
         }
 
         var type = typeProperty.GetString();
 
-        // Check if it's a tokenized or non-tokenized type based on the type string
         if (type?.StartsWith("tokenized_", StringComparison.OrdinalIgnoreCase) == true)
         {
-            var paymentMethodType = type.Substring("tokenized_".Length);
-            if (Enum.TryParse<TokenizablePaymentMethodType>(paymentMethodType, true, out var tokenizedType))
+            // Remove the "tokenized_" prefix from the type name and slice the string to get the enum value
+            var enumTypeName = type["tokenized_".Length..];
+            if (Enum.TryParse<TokenizablePaymentMethodType>(enumTypeName, true, out var tokenizedType))
             {
                 var token = element.TryGetProperty("token", out var tokenProperty) ? tokenProperty.GetString() : null;
-
                 if (string.IsNullOrEmpty(token))
                 {
-                    throw new JsonException($"Failed to deserialize tokenized payment method: missing or empty 'token' property");
+                    throw new JsonException("TokenizedPaymentMethod requires a 'token' property");
                 }
-
-                return new TokenizedPaymentMethod
-                {
-                    Type = tokenizedType,
-                    Token = token
-                };
+                return new TokenizedPaymentMethod { Type = tokenizedType, Token = token };
             }
+            throw new JsonException($"Invalid tokenized payment method type: {enumTypeName}");
         }
-        else if (type?.StartsWith("non_tokenized_", StringComparison.OrdinalIgnoreCase) == true)
+
+        if (type?.StartsWith("non_tokenized_", StringComparison.OrdinalIgnoreCase) == true)
         {
-            var paymentMethodType = type.Substring("non_tokenized_".Length);
-            if (Enum.TryParse<NonTokenizablePaymentMethodType>(paymentMethodType, true, out var nonTokenizedType))
+            // Remove the "non_tokenized_" prefix from the type name and slice the string to get the enum value
+            var enumTypeName = type["non_tokenized_".Length..];
+            if (Enum.TryParse<NonTokenizablePaymentMethodType>(enumTypeName, true, out var nonTokenizedType))
             {
-                return new NonTokenizedPaymentMethod
-                {
-                    Type = nonTokenizedType
-                };
+                return new NonTokenizedPaymentMethod { Type = nonTokenizedType };
             }
+            throw new JsonException($"Invalid non-tokenized payment method type: {enumTypeName}");
         }
 
-        throw new JsonException($"Failed to deserialize {nameof(PaymentMethod)}: invalid '{_typePropertyName}' value - '{type}'");
+        throw new JsonException($"Unknown payment method type: {type}");
     }
 
     public override void Write(Utf8JsonWriter writer, PaymentMethod value, JsonSerializerOptions options)
