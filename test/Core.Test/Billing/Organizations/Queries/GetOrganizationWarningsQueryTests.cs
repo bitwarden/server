@@ -272,7 +272,16 @@ public class GetOrganizationWarningsQueryTests
                 CollectionMethod = CollectionMethod.SendInvoice,
                 Customer = new Customer(),
                 Status = SubscriptionStatus.Active,
-                CurrentPeriodEnd = now.AddDays(10),
+                Items = new StripeList<SubscriptionItem>
+                {
+                    Data =
+                    [
+                        new SubscriptionItem
+                        {
+                            CurrentPeriodEnd = now.AddDays(10)
+                        }
+                    ]
+                },
                 TestClock = new TestClock
                 {
                     FrozenTime = now

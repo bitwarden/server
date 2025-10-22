@@ -24,6 +24,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Duende.IdentityServer.Validation;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Testing;
 using Microsoft.Extensions.Options;
 using NSubstitute;
 using Xunit;
@@ -42,7 +43,7 @@ public class BaseRequestValidatorTests
     private readonly IDeviceValidator _deviceValidator;
     private readonly ITwoFactorAuthenticationValidator _twoFactorAuthenticationValidator;
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly ILogger<BaseRequestValidatorTests> _logger;
+    private readonly FakeLogger<BaseRequestValidatorTests> _logger;
     private readonly ICurrentContext _currentContext;
     private readonly GlobalSettings _globalSettings;
     private readonly IUserRepository _userRepository;
@@ -65,7 +66,7 @@ public class BaseRequestValidatorTests
         _deviceValidator = Substitute.For<IDeviceValidator>();
         _twoFactorAuthenticationValidator = Substitute.For<ITwoFactorAuthenticationValidator>();
         _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
-        _logger = Substitute.For<ILogger<BaseRequestValidatorTests>>();
+        _logger = new FakeLogger<BaseRequestValidatorTests>();
         _currentContext = Substitute.For<ICurrentContext>();
         _globalSettings = Substitute.For<GlobalSettings>();
         _userRepository = Substitute.For<IUserRepository>();
@@ -120,7 +121,8 @@ public class BaseRequestValidatorTests
         await _sut.ValidateAsync(context);
 
         // Assert
-        _logger.Received(1).LogWarning(Constants.BypassFiltersEventId, "Failed login attempt. ");
+        var logs = _logger.Collector.GetSnapshot(true);
+        Assert.Contains(logs, l => l.Level == LogLevel.Warning && l.Message == "Failed login attempt. Is2FARequest: False IpAddress: ");
         var errorResponse = (ErrorResponseModel)context.GrantResult.CustomResponse["ErrorModel"];
         Assert.Equal("Username or password is incorrect. Try again.", errorResponse.Message);
     }
@@ -356,7 +358,7 @@ public class BaseRequestValidatorTests
         // 1 -> initial validation passes
         _sut.isValid = true;
 
-        // 2 -> enable the FailedTwoFactorEmail feature flag  
+        // 2 -> enable the FailedTwoFactorEmail feature flag
         _featureService.IsEnabled(FeatureFlagKeys.FailedTwoFactorEmail).Returns(true);
 
         // 3 -> set up 2FA as required

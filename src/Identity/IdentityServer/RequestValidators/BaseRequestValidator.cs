@@ -268,8 +268,7 @@ public abstract class BaseRequestValidator<T> where T : class
         if (_globalSettings.SelfHosted)
         {
             _logger.LogWarning(Constants.BypassFiltersEventId,
-                string.Format("Failed login attempt{0}{1}", twoFactorRequest ? ", 2FA invalid." : ".",
-                    $" {CurrentContext.IpAddress}"));
+                "Failed login attempt. Is2FARequest: {Is2FARequest} IpAddress: {IpAddress}", twoFactorRequest, CurrentContext.IpAddress);
         }
 
         await Task.Delay(2000); // Delay for brute force.
@@ -299,7 +298,7 @@ public abstract class BaseRequestValidator<T> where T : class
                     formattedMessage = "Failed login attempt.";
                     break;
             }
-            _logger.LogWarning(Constants.BypassFiltersEventId, formattedMessage);
+            _logger.LogWarning(Constants.BypassFiltersEventId, "{FailedLoginMessage}", formattedMessage);
         }
         await Task.Delay(2000); // Delay for brute force.
     }
