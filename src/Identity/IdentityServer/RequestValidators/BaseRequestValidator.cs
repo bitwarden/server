@@ -413,7 +413,7 @@ public abstract class BaseRequestValidator<T> where T : class
         {
             var resultDict = await _twoFactorAuthenticationValidator
                 .BuildTwoFactorResultAsync(validatorContext.User, twoFactorOrganization);
-            if (resultDict.Count < 1)
+            if (resultDict == null)
             {
                 await BuildErrorResultAsync("No two-step providers enabled.", false, context, validatorContext.User);
                 return false;
