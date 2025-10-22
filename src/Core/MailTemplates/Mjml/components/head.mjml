@@ -4,7 +4,7 @@
     font-size="16px"
   />
   <mj-button background-color="#175ddc" />
-  <mj-text color="#333" />
+  <mj-text color="#1B2029" />
   <mj-body background-color="#e6e9ef" width="660px" />
 </mj-attributes>
 <mj-style inline="inline">
@@ -21,4 +21,10 @@
   .border-fix > table > tbody > tr > td {
     border-radius: 3px;
   }
+</mj-style>
+
+<!-- Responsive icon visibility -->
+<mj-style>
+@media only screen and
+  (max-width: 480px) { .hide-small-img { display: none !important; } .send-bubble { padding-left: 20px; padding-right: 20px; width: 90% !important; } }
 </mj-style>
