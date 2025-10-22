@@ -1,5 +1,6 @@
 ﻿using Bit.Billing.Constants;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Services;
 using Event = Stripe.Event;
 namespace Bit.Billing.Services.Implementations;
@@ -50,11 +51,11 @@ public class SubscriptionDeletedHandler : ISubscriptionDeletedHandler
                 return;
             }
 
-            await _organizationDisableCommand.DisableAsync(organizationId.Value, subscription.CurrentPeriodEnd);
+            await _organizationDisableCommand.DisableAsync(organizationId.Value, subscription.GetCurrentPeriodEnd());
         }
         else if (userId.HasValue)
         {
-            await _userService.DisablePremiumAsync(userId.Value, subscription.CurrentPeriodEnd);
+            await _userService.DisablePremiumAsync(userId.Value, subscription.GetCurrentPeriodEnd());
         }
     }
 }

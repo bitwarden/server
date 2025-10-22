@@ -2,6 +2,7 @@
 using Bit.Billing.Services;
 using Bit.Billing.Services.Implementations;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Services;
 using NSubstitute;
 using Stripe;
@@ -38,7 +39,13 @@ public class SubscriptionDeletedHandlerTests
         var subscription = new Subscription
         {
             Status = "active",
-            CurrentPeriodEnd = DateTime.UtcNow.AddDays(30),
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem { CurrentPeriodEnd = DateTime.UtcNow.AddDays(30) }
+                ]
+            },
             Metadata = new Dictionary<string, string>()
         };
 
@@ -63,11 +70,14 @@ public class SubscriptionDeletedHandlerTests
         var subscription = new Subscription
         {
             Status = StripeSubscriptionStatus.Canceled,
-            CurrentPeriodEnd = DateTime.UtcNow.AddDays(30),
-            Metadata = new Dictionary<string, string>
+            Items = new StripeList<SubscriptionItem>
             {
-                { "organizationId", organizationId.ToString() }
-            }
+                Data =
+                [
+                    new SubscriptionItem { CurrentPeriodEnd = DateTime.UtcNow.AddDays(30) }
+                ]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } }
         };
 
         _stripeEventService.GetSubscription(stripeEvent, true).Returns(subscription);
@@ -79,7 +89,7 @@ public class SubscriptionDeletedHandlerTests
 
         // Assert
         await _organizationDisableCommand.Received(1)
-            .DisableAsync(organizationId, subscription.CurrentPeriodEnd);
+            .DisableAsync(organizationId, subscription.GetCurrentPeriodEnd());
     }
 
     [Fact]
@@ -91,11 +101,14 @@ public class SubscriptionDeletedHandlerTests
         var subscription = new Subscription
         {
             Status = StripeSubscriptionStatus.Canceled,
-            CurrentPeriodEnd = DateTime.UtcNow.AddDays(30),
-            Metadata = new Dictionary<string, string>
+            Items = new StripeList<SubscriptionItem>
             {
-                { "userId", userId.ToString() }
-            }
+                Data =
+                [
+                    new SubscriptionItem { CurrentPeriodEnd = DateTime.UtcNow.AddDays(30) }
+                ]
+            },
+            Metadata = new Dictionary<string, string> { { "userId", userId.ToString() } }
         };
 
         _stripeEventService.GetSubscription(stripeEvent, true).Returns(subscription);
@@ -107,7 +120,7 @@ public class SubscriptionDeletedHandlerTests
 
         // Assert
         await _userService.Received(1)
-            .DisablePremiumAsync(userId, subscription.CurrentPeriodEnd);
+            .DisablePremiumAsync(userId, subscription.GetCurrentPeriodEnd());
     }
 
     [Fact]
@@ -119,11 +132,14 @@ public class SubscriptionDeletedHandlerTests
         var subscription = new Subscription
         {
             Status = StripeSubscriptionStatus.Canceled,
-            CurrentPeriodEnd = DateTime.UtcNow.AddDays(30),
-            Metadata = new Dictionary<string, string>
+            Items = new StripeList<SubscriptionItem>
             {
-                { "organizationId", organizationId.ToString() }
+                Data =
+                [
+                    new SubscriptionItem { CurrentPeriodEnd = DateTime.UtcNow.AddDays(30) }
+                ]
             },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
             CancellationDetails = new SubscriptionCancellationDetails
             {
                 Comment = "Cancelled as part of provider migration to Consolidated Billing"
@@ -151,11 +167,14 @@ public class SubscriptionDeletedHandlerTests
         var subscription = new Subscription
         {
             Status = StripeSubscriptionStatus.Canceled,
-            CurrentPeriodEnd = DateTime.UtcNow.AddDays(30),
-            Metadata = new Dictionary<string, string>
+            Items = new StripeList<SubscriptionItem>
             {
-                { "organizationId", organizationId.ToString() }
+                Data =
+                [
+                    new SubscriptionItem { CurrentPeriodEnd = DateTime.UtcNow.AddDays(30) }
+                ]
             },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
             CancellationDetails = new SubscriptionCancellationDetails
             {
                 Comment = "Organization was added to Provider"

@@ -1,7 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.Net.Http.Headers;
 using System.Reflection;
 using System.Text;
@@ -35,7 +32,7 @@ public class FreshdeskController : Controller
         GlobalSettings globalSettings,
         IHttpClientFactory httpClientFactory)
     {
-        _billingSettings = billingSettings?.Value;
+        _billingSettings = billingSettings?.Value ?? throw new ArgumentNullException(nameof(billingSettings));
         _userRepository = userRepository;
         _organizationRepository = organizationRepository;
         _logger = logger;
@@ -101,7 +98,8 @@ public class FreshdeskController : Controller
                         customFields[_billingSettings.FreshDesk.OrgFieldName] += $"\n{orgNote}";
                     }
 
-                    var planName = GetAttribute<DisplayAttribute>(org.PlanType).Name.Split(" ").FirstOrDefault();
+                    var displayAttribute = GetAttribute<DisplayAttribute>(org.PlanType);
+                    var planName = displayAttribute?.Name?.Split(" ").FirstOrDefault();
                     if (!string.IsNullOrWhiteSpace(planName))
                     {
                         tags.Add(string.Format("Org: {0}", planName));
@@ -159,28 +157,22 @@ public class FreshdeskController : Controller
             return Ok();
         }
 
-        // create the onyx `answer-with-citation` request
-        var onyxRequestModel = new OnyxAnswerWithCitationRequestModel(model.TicketDescriptionText, _billingSettings.Onyx.PersonaId);
-        var onyxRequest = new HttpRequestMessage(HttpMethod.Post,
-                            string.Format("{0}/query/answer-with-citation", _billingSettings.Onyx.BaseUrl))
-        {
-            Content = JsonContent.Create(onyxRequestModel, mediaType: new MediaTypeHeaderValue("application/json")),
-        };
-        var (_, onyxJsonResponse) = await CallOnyxApi<OnyxAnswerWithCitationResponseModel>(onyxRequest);
+        // Get response from Onyx AI
+        var (onyxRequest, onyxResponse) = await GetAnswerFromOnyx(model);
 
         // the CallOnyxApi will return a null if we have an error response
-        if (onyxJsonResponse?.Answer == null || !string.IsNullOrEmpty(onyxJsonResponse?.ErrorMsg))
+        if (onyxResponse?.Answer == null || !string.IsNullOrEmpty(onyxResponse?.ErrorMsg))
         {
             _logger.LogWarning("Error getting answer from Onyx AI. Freshdesk model: {model}\r\n Onyx query {query}\r\nresponse: {response}. ",
                     JsonSerializer.Serialize(model),
-                    JsonSerializer.Serialize(onyxRequestModel),
-                    JsonSerializer.Serialize(onyxJsonResponse));
+                    JsonSerializer.Serialize(onyxRequest),
+                    JsonSerializer.Serialize(onyxResponse));
 
             return Ok(); // return ok so we don't retry
         }
 
         // add the answer as a note to the ticket
-        await AddAnswerNoteToTicketAsync(onyxJsonResponse.Answer, model.TicketId);
+        await AddAnswerNoteToTicketAsync(onyxResponse?.Answer ?? string.Empty, model.TicketId);
 
         return Ok();
     }
@@ -206,27 +198,21 @@ public class FreshdeskController : Controller
         }
 
         // create the onyx `answer-with-citation` request
-        var onyxRequestModel = new OnyxAnswerWithCitationRequestModel(model.TicketDescriptionText, _billingSettings.Onyx.PersonaId);
-        var onyxRequest = new HttpRequestMessage(HttpMethod.Post,
-                            string.Format("{0}/query/answer-with-citation", _billingSettings.Onyx.BaseUrl))
-        {
-            Content = JsonContent.Create(onyxRequestModel, mediaType: new MediaTypeHeaderValue("application/json")),
-        };
-        var (_, onyxJsonResponse) = await CallOnyxApi<OnyxAnswerWithCitationResponseModel>(onyxRequest);
+        var (onyxRequest, onyxResponse) = await GetAnswerFromOnyx(model);
 
         // the CallOnyxApi will return a null if we have an error response
-        if (onyxJsonResponse?.Answer == null || !string.IsNullOrEmpty(onyxJsonResponse?.ErrorMsg))
+        if (onyxResponse?.Answer == null || !string.IsNullOrEmpty(onyxResponse?.ErrorMsg))
         {
             _logger.LogWarning("Error getting answer from Onyx AI. Freshdesk model: {model}\r\n Onyx query {query}\r\nresponse: {response}. ",
                     JsonSerializer.Serialize(model),
-                    JsonSerializer.Serialize(onyxRequestModel),
-                    JsonSerializer.Serialize(onyxJsonResponse));
+                    JsonSerializer.Serialize(onyxRequest),
+                    JsonSerializer.Serialize(onyxResponse));
 
             return Ok(); // return ok so we don't retry
         }
 
         // add the reply to the ticket
-        await AddReplyToTicketAsync(onyxJsonResponse.Answer, model.TicketId);
+        await AddReplyToTicketAsync(onyxResponse?.Answer ?? string.Empty, model.TicketId);
 
         return Ok();
     }
@@ -356,7 +342,32 @@ public class FreshdeskController : Controller
         return await CallFreshdeskApiAsync(request, retriedCount++);
     }
 
-    private async Task<(HttpResponseMessage, T)> CallOnyxApi<T>(HttpRequestMessage request)
+    async Task<(OnyxRequestModel onyxRequest, OnyxResponseModel onyxResponse)> GetAnswerFromOnyx(FreshdeskOnyxAiWebhookModel model)
+    {
+        // TODO: remove the use of the deprecated answer-with-citation models after we are sure
+        if (_billingSettings.Onyx.UseAnswerWithCitationModels)
+        {
+            var onyxRequest = new OnyxAnswerWithCitationRequestModel(model.TicketDescriptionText, _billingSettings.Onyx);
+            var onyxAnswerWithCitationRequest = new HttpRequestMessage(HttpMethod.Post,
+                                string.Format("{0}/query/answer-with-citation", _billingSettings.Onyx.BaseUrl))
+            {
+                Content = JsonContent.Create(onyxRequest, mediaType: new MediaTypeHeaderValue("application/json")),
+            };
+            var onyxResponse = await CallOnyxApi<OnyxResponseModel>(onyxAnswerWithCitationRequest);
+            return (onyxRequest, onyxResponse);
+        }
+
+        var request = new OnyxSendMessageSimpleApiRequestModel(model.TicketDescriptionText, _billingSettings.Onyx);
+        var onyxSimpleRequest = new HttpRequestMessage(HttpMethod.Post,
+                            string.Format("{0}{1}", _billingSettings.Onyx.BaseUrl, _billingSettings.Onyx.Path))
+        {
+            Content = JsonContent.Create(request, mediaType: new MediaTypeHeaderValue("application/json")),
+        };
+        var onyxSimpleResponse = await CallOnyxApi<OnyxResponseModel>(onyxSimpleRequest);
+        return (request, onyxSimpleResponse);
+    }
+
+    private async Task<T> CallOnyxApi<T>(HttpRequestMessage request) where T : class, new()
     {
         var httpClient = _httpClientFactory.CreateClient("OnyxApi");
         var response = await httpClient.SendAsync(request);
@@ -365,7 +376,7 @@ public class FreshdeskController : Controller
         {
             _logger.LogError("Error calling Onyx AI API. Status code: {0}. Response {1}",
                 response.StatusCode, JsonSerializer.Serialize(response));
-            return (null, default);
+            return new T();
         }
         var responseStr = await response.Content.ReadAsStringAsync();
         var responseJson = JsonSerializer.Deserialize<T>(responseStr, options: new JsonSerializerOptions
@@ -373,11 +384,12 @@ public class FreshdeskController : Controller
             PropertyNameCaseInsensitive = true,
         });
 
-        return (response, responseJson);
+        return responseJson ?? new T();
     }
 
-    private TAttribute GetAttribute<TAttribute>(Enum enumValue) where TAttribute : Attribute
+    private TAttribute? GetAttribute<TAttribute>(Enum enumValue) where TAttribute : Attribute
     {
-        return enumValue.GetType().GetMember(enumValue.ToString()).First().GetCustomAttribute<TAttribute>();
+        var memberInfo = enumValue.GetType().GetMember(enumValue.ToString()).FirstOrDefault();
+        return memberInfo != null ? memberInfo.GetCustomAttribute<TAttribute>() : null;
     }
 }

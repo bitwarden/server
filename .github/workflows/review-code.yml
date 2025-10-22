@@ -84,16 +84,18 @@ jobs:
 
       - name: Review with Claude Code
         if: steps.check_changes.outputs.vault_team_changes == 'true'
-        uses: anthropics/claude-code-action@a5528eec7426a4f0c9c1ac96018daa53ebd05bc4 # v1.0.7
+        uses: anthropics/claude-code-action@ac1a3207f3f00b4a37e2f3a6f0935733c7c64651 # v1.0.11
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           track_progress: true
+          use_sticky_comment: true
           prompt: |
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.pull_request.number }}
             TITLE: ${{ github.event.pull_request.title }}
             BODY: ${{ github.event.pull_request.body }}
             AUTHOR: ${{ github.event.pull_request.user.login }}
+            COMMIT: ${{ github.event.pull_request.head.sha }}
 
             Please review this pull request with a focus on:
             - Code quality and best practices
@@ -103,7 +105,20 @@ jobs:
 
             Note: The PR branch is already checked out in the current working directory.
 
-            Provide detailed feedback using inline comments for specific issues.
+            Provide a comprehensive review including:
+            - Summary of changes since last review
+            - Critical issues found (be thorough)
+            - Suggested improvements (be thorough)
+            - Good practices observed (be concise - list only the most notable items without elaboration)
+            - Action items for the author
+            - Leverage collapsible <details> sections where appropriate for lengthy explanations or code snippets to enhance human readability
+
+            When reviewing subsequent commits:
+            - Track status of previously identified issues (fixed/unfixed/reopened)
+            - Identify NEW problems introduced since last review
+            - Note if fixes introduced new issues
+
+            IMPORTANT: Be comprehensive about issues and improvements. For good practices, be brief - just note what was done well without explaining why or praising excessively.
 
           claude_args: |
-            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
+            --allowedTools "mcp__github_comment__update_claude_comment,mcp__github_inline_comment__create_inline_comment,Bash(gh pr diff:*),Bash(gh pr view:*)"
