@@ -74,6 +74,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Organization_Create]
     @UseOrganizationDomains BIT = 0,
     @UseAdminSponsoredFamilies BIT = 0,
     @SyncSeats BIT = 0,
+    @UseAutomaticUserConfirmation BIT = 0,
     @UseDisableSMAdsForUsers BIT = 0
 AS
 BEGIN
@@ -141,6 +142,7 @@ BEGIN
         [UseOrganizationDomains],
         [UseAdminSponsoredFamilies],
         [SyncSeats],
+        [UseAutomaticUserConfirmation],
         [UseDisableSMAdsForUsers]
     )
     VALUES
@@ -205,6 +207,7 @@ BEGIN
             @UseOrganizationDomains,
             @UseAdminSponsoredFamilies,
             @SyncSeats,
+            @UseAutomaticUserConfirmation,
             @UseDisableSMAdsForUsers
         )
 END
@@ -271,6 +274,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Organization_Update]
     @UseOrganizationDomains BIT = 0,
     @UseAdminSponsoredFamilies BIT = 0,
     @SyncSeats BIT = 0,
+    @UseAutomaticUserConfirmation BIT = 0,
     @UseDisableSMAdsForUsers BIT = 0
 AS
 BEGIN
@@ -338,6 +342,7 @@ BEGIN
         [UseOrganizationDomains] = @UseOrganizationDomains,
         [UseAdminSponsoredFamilies] = @UseAdminSponsoredFamilies,
         [SyncSeats] = @SyncSeats,
+        [UseAutomaticUserConfirmation] = @UseAutomaticUserConfirmation,
         [UseDisableSMAdsForUsers] = @UseDisableSMAdsForUsers
     WHERE
         [Id] = @Id
