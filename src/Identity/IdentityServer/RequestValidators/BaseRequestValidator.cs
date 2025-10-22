@@ -23,7 +23,6 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
-using Bit.Identity.Models;
 using Duende.IdentityServer.Validation;
 using Microsoft.AspNetCore.Identity;
 
@@ -98,14 +97,14 @@ public abstract class BaseRequestValidator<T> where T : class
         if (FeatureService.IsEnabled(FeatureFlagKeys.RecoveryCodeSupportForSsoRequiredUsers))
         {
             var validators = DetermineValidationOrder(context, request, validatorContext);
-            var result = await ProcessValidatorsAsync(validators);
-            if (!result.validationSuccessful)
+            var allValidationSchemesSuccessful = await ProcessValidatorsAsync(validators);
+            if (!allValidationSchemesSuccessful)
             {
                 // Each validation task is responsible for setting its own non-success status, if applicable.
                 return;
             }
             await BuildSuccessResultAsync(validatorContext.User, context, validatorContext.Device,
-                result.state.RememberMeRequested);
+                validatorContext.RememberMeRequested);
         }
         else
         {
@@ -241,23 +240,30 @@ public abstract class BaseRequestValidator<T> where T : class
 
     protected abstract Task<bool> ValidateContextAsync(T context, CustomValidatorRequestContext validatorContext);
 
-    private Func<BaseRequestValidationState, Task<bool>>[] DetermineValidationOrder(T context, ValidatedTokenRequest request,
+    /// <summary>
+    /// Composer for validation schemes.
+    /// </summary>
+    /// <param name="context">The current request context.</param>
+    /// <param name="request"><see cref="Duende.IdentityServer.Validation.ValidatedTokenRequest" /></param>
+    /// <param name="validatorContext"><see cref="Bit.Identity.IdentityServer.CustomValidatorRequestContext" /></param>
+    /// <returns>A composed array of validation scheme delegates to evaluate in order.</returns>
+    private Func<Task<bool>>[] DetermineValidationOrder(T context, ValidatedTokenRequest request,
         CustomValidatorRequestContext validatorContext)
     {
-        // Support valid requests to recover 2FA (with account code) for users who require SSO
-        // by organization membership.
-        // This requires an evaluation of 2FA validity in front of SSO, and an opportunity for the 2FA
-        // validation to perform the recovery based on the request.
         if (RecoveryCodeRequestForSsoRequiredUserScenario())
         {
+            // Support valid requests to recover 2FA (with account code) for users who require SSO
+            // by organization membership.
+            // This requires an evaluation of 2FA validity in front of SSO, and an opportunity for the 2FA
+            // validation to perform the recovery as part of scheme validation based on the request.
             return
             [
-                (state) => ValidateMasterPasswordAsync(context, validatorContext, state),
-                (state) => ValidateTwoFactorAsync(context, request, validatorContext, state),
-                (state) => ValidateSsoAsync(context, request, validatorContext, state),
-                (state) => ValidateNewDeviceAsync(context, request, validatorContext, state),
-                (state) => ValidateLegacyMigrationAsync(context, request, validatorContext, state),
-                (state) => ValidateAuthRequestAsync(validatorContext, state)
+                () => ValidateMasterPasswordAsync(context, validatorContext),
+                () => ValidateTwoFactorAsync(context, request, validatorContext),
+                () => ValidateSsoAsync(context, request, validatorContext),
+                () => ValidateNewDeviceAsync(context, request, validatorContext),
+                () => ValidateLegacyMigrationAsync(context, request, validatorContext),
+                () => ValidateAuthRequestAsync(validatorContext)
             ];
         }
         else
@@ -265,12 +271,12 @@ public abstract class BaseRequestValidator<T> where T : class
             // The typical validation scenario.
             return
             [
-                (state) => ValidateMasterPasswordAsync(context, validatorContext, state),
-                (state) => ValidateSsoAsync(context, request, validatorContext, state),
-                (state) => ValidateTwoFactorAsync(context, request, validatorContext, state),
-                (state) => ValidateNewDeviceAsync(context, request, validatorContext, state),
-                (state) => ValidateLegacyMigrationAsync(context, request, validatorContext, state),
-                (state) => ValidateAuthRequestAsync(validatorContext, state)
+                () => ValidateMasterPasswordAsync(context, validatorContext),
+                () => ValidateSsoAsync(context, request, validatorContext),
+                () => ValidateTwoFactorAsync(context, request, validatorContext),
+                () => ValidateNewDeviceAsync(context, request, validatorContext),
+                () => ValidateLegacyMigrationAsync(context, request, validatorContext),
+                () => ValidateAuthRequestAsync(validatorContext)
             ];
         }
 
@@ -279,7 +285,8 @@ public abstract class BaseRequestValidator<T> where T : class
             var twoFactorProvider = request.Raw["TwoFactorProvider"];
             var twoFactorToken = request.Raw["TwoFactorToken"];
 
-            // Both provider and token must be present
+            // Both provider and token must be present;
+            // Validity of the token for a given provider will be evaluated by the TwoFactorAuthenticationValidator.
             if (string.IsNullOrWhiteSpace(twoFactorProvider) || string.IsNullOrWhiteSpace(twoFactorToken))
             {
                 return false;
@@ -295,38 +302,38 @@ public abstract class BaseRequestValidator<T> where T : class
     }
 
     /// <summary>
-    /// Processes the validation scenarios sequentially.
+    /// Processes the validation schemes sequentially.
     /// Each validator is responsible for setting error context responses on failure and adding itself to the state's
     /// CompletedValidators (only) on success.
     /// </summary>
-    /// <param name="validators"></param>
-    /// <returns></returns>
-    private static async Task<(bool validationSuccessful, BaseRequestValidationState state)> ProcessValidatorsAsync(params Func<BaseRequestValidationState, Task<bool>>[] validators)
+    /// <param name="validators">The collection of validation schemes as composed in <see cref="DetermineValidationOrder" /></param>
+    /// <returns>true if all schemes validated successfully, false if any failed.</returns>
+    private static async Task<bool> ProcessValidatorsAsync(params Func<Task<bool>>[] validators)
     {
-        var state = new BaseRequestValidationState();
-
         foreach (var validator in validators)
         {
-            if (!await validator(state))
+            if (!await validator())
             {
-                return (false, state);
+                return false;
             }
         }
 
-        return (true, state);
+        return true;
     }
 
     /// <summary>
-    /// Validate the user's Master Password hash.
+    /// Validates the user's Master Password hash.
     /// </summary>
-    /// <returns>A continueValidation flag.</returns>
-    private async Task<bool> ValidateMasterPasswordAsync(T context, CustomValidatorRequestContext validatorContext, BaseRequestValidationState state)
+    /// <param name="context">The current request context.</param>
+    /// <param name="validatorContext"><see cref="Bit.Identity.IdentityServer.CustomValidatorRequestContext" /></param>
+    /// <returns>true if the scheme successfully passed validation, otherwise false</returns>
+    private async Task<bool> ValidateMasterPasswordAsync(T context, CustomValidatorRequestContext validatorContext)
     {
         var valid = await ValidateContextAsync(context, validatorContext);
         var user = validatorContext.User;
         if (valid)
         {
-            state.CompletedValidators.Add(nameof(ValidateMasterPasswordAsync));
+            validatorContext.CompletedValidationSchemes.Add(nameof(ValidateMasterPasswordAsync));
             return true;
         }
 
@@ -337,30 +344,29 @@ public abstract class BaseRequestValidator<T> where T : class
     }
 
     /// <summary>
-    /// Validates whether the user belongs to an organization which requires Single Sign-On (SSO).
+    /// Validates the user's organization-enforced Single Sign-on (SSO) requirement.
     /// </summary>
-    /// <param name="context"></param>
-    /// <param name="request"></param>
-    /// <param name="validatorContext"></param>
-    /// <param name="state"></param>
-    /// <returns>A continueValidation flag.</returns>
+    /// <param name="context">The current request context.</param>
+    /// <param name="request"><see cref="Duende.IdentityServer.Validation.ValidatedTokenRequest" /></param>
+    /// <param name="validatorContext"><see cref="Bit.Identity.IdentityServer.CustomValidatorRequestContext" /></param>
+    /// <returns>true if the scheme successfully passed validation, otherwise false</returns>
     private async Task<bool> ValidateSsoAsync(T context, ValidatedTokenRequest request,
-        CustomValidatorRequestContext validatorContext, BaseRequestValidationState state)
+        CustomValidatorRequestContext validatorContext)
     {
         validatorContext.SsoRequired = await RequireSsoLoginAsync(validatorContext.User, request.GrantType);
         if (!validatorContext.SsoRequired)
         {
-            state.CompletedValidators.Add(nameof(ValidateSsoAsync));
+            validatorContext.CompletedValidationSchemes.Add(nameof(ValidateSsoAsync));
             return true;
         }
 
-        // Individual (non-SSO) users requesting 2FA recovery can be safely fast-forwarded through login, and are
-        // presented with their 2FA management area as a reminder to re-evaluate their 2FA posture after recovery.
-        // SSO users cannot be assumed to be authenticated, and must be returned to the login screen after recovery
-        // to authenticate with their IdP. We will send a descriptive message in these cases so clients can give the
-        // appropriate feedback.
-        if (state.CompletedValidators.Contains(nameof(ValidateTwoFactorAsync)) &&
-            state.TwoFactorRecoveryRequested)
+        // Users without SSO requirement requesting 2FA recovery will be fast-forwarded through login and are
+        // presented with their 2FA management area as a reminder to re-evaluate their 2FA posture after recovery and
+        // review their new recovery token if desired.
+        // SSO users cannot be assumed to be authenticated, and must prove authentication with their IdP after recovery.
+        // We will send a descriptive message in these cases so clients can give the appropriate feedback.
+        if (validatorContext.CompletedValidationSchemes.Contains(nameof(ValidateTwoFactorAsync)) &&
+            validatorContext.TwoFactorRecoveryRequested)
         {
             SetSsoResult(context, new Dictionary<string, object>
             {
@@ -378,22 +384,21 @@ public abstract class BaseRequestValidator<T> where T : class
     }
 
     /// <summary>
-    /// Validates whether the user requires Multi-Factor Authentication (2FA) and if so, its validity.
+    /// Validates the user's Multi-Factor Authentication (2FA) scheme.
     /// </summary>
-    /// <param name="context"></param>
-    /// <param name="request"></param>
-    /// <param name="validatorContext"></param>
-    /// <param name="state"></param>
-    /// <returns>A continueValidation flag.</returns>
+    /// <param name="context">The current request context.</param>
+    /// <param name="request"><see cref="Duende.IdentityServer.Validation.ValidatedTokenRequest" /></param>
+    /// <param name="validatorContext"><see cref="Bit.Identity.IdentityServer.CustomValidatorRequestContext" /></param>
+    /// <returns>true if the scheme successfully passed validation, otherwise false</returns>
     private async Task<bool> ValidateTwoFactorAsync(T context, ValidatedTokenRequest request,
-        CustomValidatorRequestContext validatorContext, BaseRequestValidationState state)
+        CustomValidatorRequestContext validatorContext)
     {
         (validatorContext.TwoFactorRequired, var twoFactorOrganization) =
             await _twoFactorAuthenticationValidator.RequiresTwoFactorAsync(validatorContext.User, request);
 
         if (!validatorContext.TwoFactorRequired)
         {
-            state.CompletedValidators.Add(nameof(ValidateTwoFactorAsync));
+            validatorContext.CompletedValidationSchemes.Add(nameof(ValidateTwoFactorAsync));
             return true;
         }
 
@@ -449,15 +454,15 @@ public abstract class BaseRequestValidator<T> where T : class
             return false;
         }
 
-        // Given a valid token and a successful two-factor verification, if the provider type is Recovery Code,
+        // 3c. Given a valid token and a successful two-factor verification, if the provider type is Recovery Code,
         // recovery will have been initiated as part of validation. This will be relevant for, e.g., SSO users
         // who are requesting recovery.
         if (twoFactorProviderType == TwoFactorProviderType.RecoveryCode)
         {
-            state.TwoFactorRecoveryRequested = true;
+            validatorContext.TwoFactorRecoveryRequested = true;
         }
 
-        // 3c. When the 2FA authentication is successful, we can check if the user wants a
+        // 3d. When the 2FA authentication is successful, we can check if the user wants a
         // rememberMe token.
         var twoFactorRemember = request.Raw["TwoFactorRemember"] == "1";
         // Check if the user wants a rememberMe token.
@@ -465,28 +470,27 @@ public abstract class BaseRequestValidator<T> where T : class
             // if the 2FA auth was rememberMe do not send another token.
             && twoFactorProviderType != TwoFactorProviderType.Remember)
         {
-            state.RememberMeRequested = true;
+            validatorContext.RememberMeRequested = true;
         }
 
-        state.CompletedValidators.Add(nameof(ValidateTwoFactorAsync));
+        validatorContext.CompletedValidationSchemes.Add(nameof(ValidateTwoFactorAsync));
         return true;
     }
 
     /// <summary>
-    /// Validates whether the user is logging in from a new device.
+    /// Validates whether the user is logging in from a known device.
     /// </summary>
-    /// <param name="context"></param>
-    /// <param name="request"></param>
-    /// <param name="validatorContext"></param>
-    /// <param name="state"></param>
-    /// <returns>A continueValidation flag.</returns>
+    /// <param name="context">The current request context.</param>
+    /// <param name="request"><see cref="Duende.IdentityServer.Validation.ValidatedTokenRequest" /></param>
+    /// <param name="validatorContext"><see cref="Bit.Identity.IdentityServer.CustomValidatorRequestContext" /></param>
+    /// <returns>true if the scheme successfully passed validation, otherwise false</returns>
     private async Task<bool> ValidateNewDeviceAsync(T context, ValidatedTokenRequest request,
-        CustomValidatorRequestContext validatorContext, BaseRequestValidationState state)
+        CustomValidatorRequestContext validatorContext)
     {
         var deviceValid = await _deviceValidator.ValidateRequestDeviceAsync(request, validatorContext);
         if (deviceValid)
         {
-            state.CompletedValidators.Add(nameof(ValidateNewDeviceAsync));
+            validatorContext.CompletedValidationSchemes.Add(nameof(ValidateNewDeviceAsync));
             return true;
         }
 
@@ -496,19 +500,19 @@ public abstract class BaseRequestValidator<T> where T : class
     }
 
     /// <summary>
-    /// Validates whether the user should be denied access and sent to the Web client for Legacy migration.
+    /// Validates whether the user should be denied access on a given non-Web client and sent to the Web client
+    /// for Legacy migration.
     /// </summary>
-    /// <param name="context"></param>
-    /// <param name="request"></param>
-    /// <param name="validatorContext"></param>
-    /// <param name="state"></param>
-    /// <returns>A continueValidation flag.</returns>
+    /// <param name="context">The current request context.</param>
+    /// <param name="request"><see cref="Duende.IdentityServer.Validation.ValidatedTokenRequest" /></param>
+    /// <param name="validatorContext"><see cref="Bit.Identity.IdentityServer.CustomValidatorRequestContext" /></param>
+    /// <returns>true if the scheme successfully passed validation, otherwise false</returns>
     private async Task<bool> ValidateLegacyMigrationAsync(T context, ValidatedTokenRequest request,
-        CustomValidatorRequestContext validatorContext, BaseRequestValidationState state)
+        CustomValidatorRequestContext validatorContext)
     {
         if (!UserService.IsLegacyUser(validatorContext.User) || request.ClientId == "web")
         {
-            state.CompletedValidators.Add(nameof(ValidateLegacyMigrationAsync));
+            validatorContext.CompletedValidationSchemes.Add(nameof(ValidateLegacyMigrationAsync));
             return true;
         }
 
@@ -519,10 +523,9 @@ public abstract class BaseRequestValidator<T> where T : class
     /// <summary>
     /// Validates and updates the auth request's timestamp.
     /// </summary>
-    /// <param name="validatorContext"></param>
-    /// <param name="state"></param>
-    /// <returns>A continueValidation flag.</returns>
-    private async Task<bool> ValidateAuthRequestAsync(CustomValidatorRequestContext validatorContext, BaseRequestValidationState state)
+    /// <param name="validatorContext"><see cref="Bit.Identity.IdentityServer.CustomValidatorRequestContext" /></param>
+    /// <returns>true on evaluation and/or completed update of the AuthRequest</returns>
+    private async Task<bool> ValidateAuthRequestAsync(CustomValidatorRequestContext validatorContext)
     {
         // TODO: PM-24324 - This should be its own validator at some point.
         if (validatorContext.ValidatedAuthRequest != null)
@@ -531,7 +534,7 @@ public abstract class BaseRequestValidator<T> where T : class
             await _authRequestRepository.ReplaceAsync(validatorContext.ValidatedAuthRequest);
         }
 
-        state.CompletedValidators.Add(nameof(ValidateAuthRequestAsync));
+        validatorContext.CompletedValidationSchemes.Add(nameof(ValidateAuthRequestAsync));
         return true;
     }
 
