@@ -19,6 +19,9 @@ public class UriMatchDefaultPolicyValidatorTests
     }
 
     [Fact]
+
+    // Test that the RequiredPolicies property returns exactly one policy (SingleOrg) as a prerequisite
+    // for enabling the UriMatchDefaults policy, ensuring proper policy dependency enforcement
     public void RequiredPolicies_ReturnsSingleOrgPolicy()
     {
         var requiredPolicies = _validator.RequiredPolicies.ToList();
@@ -75,6 +78,6 @@ public class UriMatchDefaultPolicyValidatorTests
         var task = _validator.OnSaveSideEffectsAsync(policyUpdate, null);
 
         Assert.True(task.IsCompletedSuccessfully);
-        await task; // Should not throw
+        await task;
     }
 }
