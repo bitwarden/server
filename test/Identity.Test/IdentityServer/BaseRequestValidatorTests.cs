@@ -100,19 +100,30 @@ public class BaseRequestValidatorTests
             _userAccountKeysQuery);
     }
 
+    private void SetupRecoveryCodeSupportForSsoRequiredUsersFeatureFlag(bool recoveryCodeSupportEnabled)
+    {
+        _featureService
+            .IsEnabled(FeatureFlagKeys.RecoveryCodeSupportForSsoRequiredUsers)
+            .Returns(recoveryCodeSupportEnabled);
+    }
+
     /* Logic path
      * ValidateAsync -> UpdateFailedAuthDetailsAsync -> _mailService.SendFailedLoginAttemptsEmailAsync
      *            |-> BuildErrorResultAsync -> _eventService.LogUserEventAsync
      *                       (self hosted) |-> _logger.LogWarning()
      *                                     |-> SetErrorResult
      */
-    [Theory, BitAutoData]
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
     public async Task ValidateAsync_ContextNotValid_SelfHosted_ShouldBuildErrorResult_ShouldLogWarning(
+        bool featureFlagValue,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         CustomValidatorRequestContext requestContext,
         GrantValidationResult grantResult)
     {
         // Arrange
+        SetupRecoveryCodeSupportForSsoRequiredUsersFeatureFlag(featureFlagValue);
         var context = CreateContext(tokenRequest, requestContext, grantResult);
         _globalSettings.SelfHosted = true;
         _sut.isValid = false;
@@ -122,18 +133,23 @@ public class BaseRequestValidatorTests
 
         // Assert
         var logs = _logger.Collector.GetSnapshot(true);
-        Assert.Contains(logs, l => l.Level == LogLevel.Warning && l.Message == "Failed login attempt. Is2FARequest: False IpAddress: ");
+        Assert.Contains(logs,
+            l => l.Level == LogLevel.Warning && l.Message == "Failed login attempt. Is2FARequest: False IpAddress: ");
         var errorResponse = (ErrorResponseModel)context.GrantResult.CustomResponse["ErrorModel"];
         Assert.Equal("Username or password is incorrect. Try again.", errorResponse.Message);
     }
 
-    [Theory, BitAutoData]
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
     public async Task ValidateAsync_DeviceNotValidated_ShouldLogError(
+        bool featureFlagValue,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         CustomValidatorRequestContext requestContext,
         GrantValidationResult grantResult)
     {
         // Arrange
+        SetupRecoveryCodeSupportForSsoRequiredUsersFeatureFlag(featureFlagValue);
         var context = CreateContext(tokenRequest, requestContext, grantResult);
         // 1 -> to pass
         _sut.isValid = true;
@@ -141,14 +157,15 @@ public class BaseRequestValidatorTests
         // 2 -> will result to false with no extra configuration
         // 3 -> set two factor to be false
         _twoFactorAuthenticationValidator
-                .RequiresTwoFactorAsync(Arg.Any<User>(), tokenRequest)
-                .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
+            .RequiresTwoFactorAsync(Arg.Any<User>(), tokenRequest)
+            .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
 
         // 4 -> set up device validator to fail
         requestContext.KnownDevice = false;
         tokenRequest.GrantType = "password";
-        _deviceValidator.ValidateRequestDeviceAsync(Arg.Any<ValidatedTokenRequest>(), Arg.Any<CustomValidatorRequestContext>())
-                         .Returns(Task.FromResult(false));
+        _deviceValidator
+            .ValidateRequestDeviceAsync(Arg.Any<ValidatedTokenRequest>(), Arg.Any<CustomValidatorRequestContext>())
+            .Returns(Task.FromResult(false));
 
         // 5 -> not legacy user
         _userService.IsLegacyUser(Arg.Any<string>())
@@ -163,13 +180,17 @@ public class BaseRequestValidatorTests
             .LogUserEventAsync(context.CustomValidatorRequestContext.User.Id, EventType.User_FailedLogIn);
     }
 
-    [Theory, BitAutoData]
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
     public async Task ValidateAsync_DeviceValidated_ShouldSucceed(
+        bool featureFlagValue,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         CustomValidatorRequestContext requestContext,
         GrantValidationResult grantResult)
     {
         // Arrange
+        SetupRecoveryCodeSupportForSsoRequiredUsersFeatureFlag(featureFlagValue);
         var context = CreateContext(tokenRequest, requestContext, grantResult);
         // 1 -> to pass
         _sut.isValid = true;
@@ -177,12 +198,13 @@ public class BaseRequestValidatorTests
         // 2 -> will result to false with no extra configuration
         // 3 -> set two factor to be false
         _twoFactorAuthenticationValidator
-                .RequiresTwoFactorAsync(Arg.Any<User>(), tokenRequest)
-                .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
+            .RequiresTwoFactorAsync(Arg.Any<User>(), tokenRequest)
+            .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
 
         // 4 -> set up device validator to pass
-        _deviceValidator.ValidateRequestDeviceAsync(Arg.Any<ValidatedTokenRequest>(), Arg.Any<CustomValidatorRequestContext>())
-                         .Returns(Task.FromResult(true));
+        _deviceValidator
+            .ValidateRequestDeviceAsync(Arg.Any<ValidatedTokenRequest>(), Arg.Any<CustomValidatorRequestContext>())
+            .Returns(Task.FromResult(true));
 
         // 5 -> not legacy user
         _userService.IsLegacyUser(Arg.Any<string>())
@@ -202,13 +224,17 @@ public class BaseRequestValidatorTests
         Assert.False(context.GrantResult.IsError);
     }
 
-    [Theory, BitAutoData]
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
     public async Task ValidateAsync_ValidatedAuthRequest_ConsumedOnSuccess(
+        bool featureFlagValue,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         CustomValidatorRequestContext requestContext,
         GrantValidationResult grantResult)
     {
         // Arrange
+        SetupRecoveryCodeSupportForSsoRequiredUsersFeatureFlag(featureFlagValue);
         var context = CreateContext(tokenRequest, requestContext, grantResult);
         // 1 -> to pass
         _sut.isValid = true;
@@ -235,7 +261,8 @@ public class BaseRequestValidatorTests
             .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
 
         // 4 -> set up device validator to pass
-        _deviceValidator.ValidateRequestDeviceAsync(Arg.Any<ValidatedTokenRequest>(), Arg.Any<CustomValidatorRequestContext>())
+        _deviceValidator
+            .ValidateRequestDeviceAsync(Arg.Any<ValidatedTokenRequest>(), Arg.Any<CustomValidatorRequestContext>())
             .Returns(Task.FromResult(true));
 
         // 5 -> not legacy user
@@ -260,13 +287,17 @@ public class BaseRequestValidatorTests
             ar.AuthenticationDate.HasValue));
     }
 
-    [Theory, BitAutoData]
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
     public async Task ValidateAsync_ValidatedAuthRequest_NotConsumed_When2faRequired(
+        bool featureFlagValue,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         CustomValidatorRequestContext requestContext,
         GrantValidationResult grantResult)
     {
         // Arrange
+        SetupRecoveryCodeSupportForSsoRequiredUsersFeatureFlag(featureFlagValue);
         var context = CreateContext(tokenRequest, requestContext, grantResult);
         // 1 -> to pass
         _sut.isValid = true;
@@ -302,13 +333,17 @@ public class BaseRequestValidatorTests
         await _authRequestRepository.DidNotReceive().ReplaceAsync(Arg.Any<AuthRequest>());
     }
 
-    [Theory, BitAutoData]
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
     public async Task ValidateAsync_TwoFactorTokenInvalid_ShouldSendFailedTwoFactorEmail(
+        bool featureFlagValue,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         CustomValidatorRequestContext requestContext,
         GrantValidationResult grantResult)
     {
         // Arrange
+        SetupRecoveryCodeSupportForSsoRequiredUsersFeatureFlag(featureFlagValue);
         var context = CreateContext(tokenRequest, requestContext, grantResult);
         var user = requestContext.User;
 
@@ -345,13 +380,17 @@ public class BaseRequestValidatorTests
                 Arg.Any<string>());
     }
 
-    [Theory, BitAutoData]
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
     public async Task ValidateAsync_TwoFactorRememberTokenExpired_ShouldNotSendFailedTwoFactorEmail(
+        bool featureFlagValue,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         CustomValidatorRequestContext requestContext,
         GrantValidationResult grantResult)
     {
         // Arrange
+        SetupRecoveryCodeSupportForSsoRequiredUsersFeatureFlag(featureFlagValue);
         var context = CreateContext(tokenRequest, requestContext, grantResult);
         var user = requestContext.User;
 
@@ -391,28 +430,34 @@ public class BaseRequestValidatorTests
         // Assert
         // Verify that the failed 2FA email was NOT sent for remember token expiration
         await _mailService.DidNotReceive()
-            .SendFailedTwoFactorAttemptEmailAsync(Arg.Any<string>(), Arg.Any<TwoFactorProviderType>(), Arg.Any<DateTime>(), Arg.Any<string>());
+            .SendFailedTwoFactorAttemptEmailAsync(Arg.Any<string>(), Arg.Any<TwoFactorProviderType>(),
+                Arg.Any<DateTime>(), Arg.Any<string>());
     }
 
     // Test grantTypes that require SSO when a user is in an organization that requires it
     [Theory]
-    [BitAutoData("password")]
-    [BitAutoData("webauthn")]
-    [BitAutoData("refresh_token")]
+    [BitAutoData("password", true)]
+    [BitAutoData("password", false)]
+    [BitAutoData("webauthn", true)]
+    [BitAutoData("webauthn", false)]
+    [BitAutoData("refresh_token", true)]
+    [BitAutoData("refresh_token", false)]
     public async Task ValidateAsync_GrantTypes_OrgSsoRequiredTrue_ShouldSetSsoResult(
         string grantType,
+        bool featureFlagValue,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         CustomValidatorRequestContext requestContext,
         GrantValidationResult grantResult)
     {
         // Arrange
+        SetupRecoveryCodeSupportForSsoRequiredUsersFeatureFlag(featureFlagValue);
         var context = CreateContext(tokenRequest, requestContext, grantResult);
         _sut.isValid = true;
 
         context.ValidatedTokenRequest.GrantType = grantType;
         _policyService.AnyPoliciesApplicableToUserAsync(
-                        Arg.Any<Guid>(), PolicyType.RequireSso, OrganizationUserStatusType.Confirmed)
-                      .Returns(Task.FromResult(true));
+                Arg.Any<Guid>(), PolicyType.RequireSso, OrganizationUserStatusType.Confirmed)
+            .Returns(Task.FromResult(true));
 
         // Act
         await _sut.ValidateAsync(context);
@@ -425,16 +470,21 @@ public class BaseRequestValidatorTests
 
     // Test grantTypes with RequireSsoPolicyRequirement when feature flag is enabled
     [Theory]
-    [BitAutoData("password")]
-    [BitAutoData("webauthn")]
-    [BitAutoData("refresh_token")]
+    [BitAutoData("password", true)]
+    [BitAutoData("password", false)]
+    [BitAutoData("webauthn", true)]
+    [BitAutoData("webauthn", false)]
+    [BitAutoData("refresh_token", true)]
+    [BitAutoData("refresh_token", false)]
     public async Task ValidateAsync_GrantTypes_WithPolicyRequirementsEnabled_OrgSsoRequiredTrue_ShouldSetSsoResult(
         string grantType,
+        bool featureFlagValue,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         CustomValidatorRequestContext requestContext,
         GrantValidationResult grantResult)
     {
         // Arrange
+        SetupRecoveryCodeSupportForSsoRequiredUsersFeatureFlag(featureFlagValue);
         _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
         var context = CreateContext(tokenRequest, requestContext, grantResult);
         _sut.isValid = true;
@@ -449,23 +499,28 @@ public class BaseRequestValidatorTests
 
         // Assert
         await _policyService.DidNotReceive().AnyPoliciesApplicableToUserAsync(
-                Arg.Any<Guid>(), PolicyType.RequireSso, OrganizationUserStatusType.Confirmed);
+            Arg.Any<Guid>(), PolicyType.RequireSso, OrganizationUserStatusType.Confirmed);
         Assert.True(context.GrantResult.IsError);
         var errorResponse = (ErrorResponseModel)context.GrantResult.CustomResponse["ErrorModel"];
         Assert.Equal("SSO authentication is required.", errorResponse.Message);
     }
 
     [Theory]
-    [BitAutoData("password")]
-    [BitAutoData("webauthn")]
-    [BitAutoData("refresh_token")]
+    [BitAutoData("password", true)]
+    [BitAutoData("password", false)]
+    [BitAutoData("webauthn", true)]
+    [BitAutoData("webauthn", false)]
+    [BitAutoData("refresh_token", true)]
+    [BitAutoData("refresh_token", false)]
     public async Task ValidateAsync_GrantTypes_WithPolicyRequirementsEnabled_OrgSsoRequiredFalse_ShouldSucceed(
         string grantType,
+        bool featureFlagValue,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         CustomValidatorRequestContext requestContext,
         GrantValidationResult grantResult)
     {
         // Arrange
+        SetupRecoveryCodeSupportForSsoRequiredUsersFeatureFlag(featureFlagValue);
         _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
         var context = CreateContext(tokenRequest, requestContext, grantResult);
         _sut.isValid = true;
@@ -500,24 +555,29 @@ public class BaseRequestValidatorTests
     // Test grantTypes where SSO would be required but the user is not in an
     // organization that requires it
     [Theory]
-    [BitAutoData("password")]
-    [BitAutoData("webauthn")]
-    [BitAutoData("refresh_token")]
+    [BitAutoData("password", true)]
+    [BitAutoData("password", false)]
+    [BitAutoData("webauthn", true)]
+    [BitAutoData("webauthn", false)]
+    [BitAutoData("refresh_token", true)]
+    [BitAutoData("refresh_token", false)]
     public async Task ValidateAsync_GrantTypes_OrgSsoRequiredFalse_ShouldSucceed(
         string grantType,
+        bool featureFlagValue,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         CustomValidatorRequestContext requestContext,
         GrantValidationResult grantResult)
     {
         // Arrange
+        SetupRecoveryCodeSupportForSsoRequiredUsersFeatureFlag(featureFlagValue);
         var context = CreateContext(tokenRequest, requestContext, grantResult);
         _sut.isValid = true;
 
         context.ValidatedTokenRequest.GrantType = grantType;
 
         _policyService.AnyPoliciesApplicableToUserAsync(
-                        Arg.Any<Guid>(), PolicyType.RequireSso, OrganizationUserStatusType.Confirmed)
-                      .Returns(Task.FromResult(false));
+                Arg.Any<Guid>(), PolicyType.RequireSso, OrganizationUserStatusType.Confirmed)
+            .Returns(Task.FromResult(false));
         _twoFactorAuthenticationValidator.RequiresTwoFactorAsync(requestContext.User, tokenRequest)
             .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
         _deviceValidator.ValidateRequestDeviceAsync(tokenRequest, requestContext)
@@ -540,20 +600,23 @@ public class BaseRequestValidatorTests
         await _userRepository.Received(1).ReplaceAsync(Arg.Any<User>());
 
         Assert.False(context.GrantResult.IsError);
-
     }
 
     // Test the grantTypes where SSO is in progress or not relevant
     [Theory]
-    [BitAutoData("authorization_code")]
-    [BitAutoData("client_credentials")]
+    [BitAutoData("authorization_code", true)]
+    [BitAutoData("authorization_code", false)]
+    [BitAutoData("client_credentials", true)]
+    [BitAutoData("client_credentials", false)]
     public async Task ValidateAsync_GrantTypes_SsoRequiredFalse_ShouldSucceed(
         string grantType,
+        bool featureFlagValue,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         CustomValidatorRequestContext requestContext,
         GrantValidationResult grantResult)
     {
         // Arrange
+        SetupRecoveryCodeSupportForSsoRequiredUsersFeatureFlag(featureFlagValue);
         var context = CreateContext(tokenRequest, requestContext, grantResult);
         _sut.isValid = true;
 
@@ -577,7 +640,7 @@ public class BaseRequestValidatorTests
 
         // Assert
         await _policyService.DidNotReceive().AnyPoliciesApplicableToUserAsync(
-                Arg.Any<Guid>(), PolicyType.RequireSso, OrganizationUserStatusType.Confirmed);
+            Arg.Any<Guid>(), PolicyType.RequireSso, OrganizationUserStatusType.Confirmed);
         await _eventService.Received(1).LogUserEventAsync(
             context.CustomValidatorRequestContext.User.Id, EventType.User_LoggedIn);
         await _userRepository.Received(1).ReplaceAsync(Arg.Any<User>());
@@ -588,13 +651,17 @@ public class BaseRequestValidatorTests
     /* Logic Path
      * ValidateAsync -> UserService.IsLegacyUser -> FailAuthForLegacyUserAsync
      */
-    [Theory, BitAutoData]
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
     public async Task ValidateAsync_IsLegacyUser_FailAuthForLegacyUserAsync(
+        bool featureFlagValue,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         CustomValidatorRequestContext requestContext,
         GrantValidationResult grantResult)
     {
         // Arrange
+        SetupRecoveryCodeSupportForSsoRequiredUsersFeatureFlag(featureFlagValue);
         var context = CreateContext(tokenRequest, requestContext, grantResult);
         var user = context.CustomValidatorRequestContext.User;
         user.Key = null;
@@ -613,21 +680,27 @@ public class BaseRequestValidatorTests
         // Assert
         Assert.True(context.GrantResult.IsError);
         var errorResponse = (ErrorResponseModel)context.GrantResult.CustomResponse["ErrorModel"];
-        var expectedMessage = "Legacy encryption without a userkey is no longer supported. To recover your account, please contact support";
+        var expectedMessage =
+            "Legacy encryption without a userkey is no longer supported. To recover your account, please contact support";
         Assert.Equal(expectedMessage, errorResponse.Message);
     }
 
-    [Theory, BitAutoData]
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
     public async Task ValidateAsync_CustomResponse_NoMasterPassword_ShouldSetUserDecryptionOptions(
+        bool featureFlagValue,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         CustomValidatorRequestContext requestContext,
         GrantValidationResult grantResult)
     {
         // Arrange
+        SetupRecoveryCodeSupportForSsoRequiredUsersFeatureFlag(featureFlagValue);
         _userDecryptionOptionsBuilder.ForUser(Arg.Any<User>()).Returns(_userDecryptionOptionsBuilder);
         _userDecryptionOptionsBuilder.WithDevice(Arg.Any<Device>()).Returns(_userDecryptionOptionsBuilder);
         _userDecryptionOptionsBuilder.WithSso(Arg.Any<SsoConfig>()).Returns(_userDecryptionOptionsBuilder);
-        _userDecryptionOptionsBuilder.WithWebAuthnLoginCredential(Arg.Any<WebAuthnCredential>()).Returns(_userDecryptionOptionsBuilder);
+        _userDecryptionOptionsBuilder.WithWebAuthnLoginCredential(Arg.Any<WebAuthnCredential>())
+            .Returns(_userDecryptionOptionsBuilder);
         _userDecryptionOptionsBuilder.BuildAsync().Returns(Task.FromResult(new UserDecryptionOptions
         {
             HasMasterPassword = false,
@@ -663,19 +736,24 @@ public class BaseRequestValidatorTests
     }
 
     [Theory]
-    [BitAutoData(KdfType.PBKDF2_SHA256, 654_321, null, null)]
-    [BitAutoData(KdfType.Argon2id, 11, 128, 5)]
+    [BitAutoData(true, KdfType.PBKDF2_SHA256, 654_321, null, null)]
+    [BitAutoData(false, KdfType.PBKDF2_SHA256, 654_321, null, null)]
+    [BitAutoData(true, KdfType.Argon2id, 11, 128, 5)]
+    [BitAutoData(false, KdfType.Argon2id, 11, 128, 5)]
     public async Task ValidateAsync_CustomResponse_MasterPassword_ShouldSetUserDecryptionOptions(
+        bool featureFlagValue,
         KdfType kdfType, int kdfIterations, int? kdfMemory, int? kdfParallelism,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         CustomValidatorRequestContext requestContext,
         GrantValidationResult grantResult)
     {
         // Arrange
+        SetupRecoveryCodeSupportForSsoRequiredUsersFeatureFlag(featureFlagValue);
         _userDecryptionOptionsBuilder.ForUser(Arg.Any<User>()).Returns(_userDecryptionOptionsBuilder);
         _userDecryptionOptionsBuilder.WithDevice(Arg.Any<Device>()).Returns(_userDecryptionOptionsBuilder);
         _userDecryptionOptionsBuilder.WithSso(Arg.Any<SsoConfig>()).Returns(_userDecryptionOptionsBuilder);
-        _userDecryptionOptionsBuilder.WithWebAuthnLoginCredential(Arg.Any<WebAuthnCredential>()).Returns(_userDecryptionOptionsBuilder);
+        _userDecryptionOptionsBuilder.WithWebAuthnLoginCredential(Arg.Any<WebAuthnCredential>())
+            .Returns(_userDecryptionOptionsBuilder);
         _userDecryptionOptionsBuilder.BuildAsync().Returns(Task.FromResult(new UserDecryptionOptions
         {
             HasMasterPassword = true,
@@ -728,13 +806,17 @@ public class BaseRequestValidatorTests
         Assert.Equal("test@example.com", userDecryptionOptions.MasterPasswordUnlock.Salt);
     }
 
-    [Theory, BitAutoData]
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
     public async Task ValidateAsync_CustomResponse_ShouldIncludeAccountKeys(
+        bool featureFlagValue,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         CustomValidatorRequestContext requestContext,
         GrantValidationResult grantResult)
     {
         // Arrange
+        SetupRecoveryCodeSupportForSsoRequiredUsersFeatureFlag(featureFlagValue);
         var mockAccountKeys = new UserAccountKeysData
         {
             PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData(
@@ -747,11 +829,7 @@ public class BaseRequestValidatorTests
                 "test-wrapped-signing-key",
                 "test-verifying-key"
             ),
-            SecurityStateData = new SecurityStateData
-            {
-                SecurityState = "test-security-state",
-                SecurityVersion = 2
-            }
+            SecurityStateData = new SecurityStateData { SecurityState = "test-security-state", SecurityVersion = 2 }
         };
 
         _userAccountKeysQuery.Run(Arg.Any<User>()).Returns(mockAccountKeys);
@@ -759,7 +837,8 @@ public class BaseRequestValidatorTests
         _userDecryptionOptionsBuilder.ForUser(Arg.Any<User>()).Returns(_userDecryptionOptionsBuilder);
         _userDecryptionOptionsBuilder.WithDevice(Arg.Any<Device>()).Returns(_userDecryptionOptionsBuilder);
         _userDecryptionOptionsBuilder.WithSso(Arg.Any<SsoConfig>()).Returns(_userDecryptionOptionsBuilder);
-        _userDecryptionOptionsBuilder.WithWebAuthnLoginCredential(Arg.Any<WebAuthnCredential>()).Returns(_userDecryptionOptionsBuilder);
+        _userDecryptionOptionsBuilder.WithWebAuthnLoginCredential(Arg.Any<WebAuthnCredential>())
+            .Returns(_userDecryptionOptionsBuilder);
         _userDecryptionOptionsBuilder.BuildAsync().Returns(Task.FromResult(new UserDecryptionOptions
         {
             HasMasterPassword = true,
@@ -808,13 +887,18 @@ public class BaseRequestValidatorTests
         Assert.Equal("test-security-state", accountKeysResponse.SecurityState.SecurityState);
         Assert.Equal(2, accountKeysResponse.SecurityState.SecurityVersion);
     }
-    [Theory, BitAutoData]
+
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
     public async Task ValidateAsync_CustomResponse_AccountKeysQuery_SkippedWhenPrivateKeyIsNull(
-           [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
-           CustomValidatorRequestContext requestContext,
-           GrantValidationResult grantResult)
+        bool featureFlagValue,
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        CustomValidatorRequestContext requestContext,
+        GrantValidationResult grantResult)
     {
         // Arrange
+        SetupRecoveryCodeSupportForSsoRequiredUsersFeatureFlag(featureFlagValue);
         requestContext.User.PrivateKey = null;
 
         var context = CreateContext(tokenRequest, requestContext, grantResult);
@@ -833,13 +917,18 @@ public class BaseRequestValidatorTests
         // Verify that the account keys query wasn't called.
         await _userAccountKeysQuery.Received(0).Run(Arg.Any<User>());
     }
-    [Theory, BitAutoData]
+
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
     public async Task ValidateAsync_CustomResponse_AccountKeysQuery_CalledWithCorrectUser(
+        bool featureFlagValue,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         CustomValidatorRequestContext requestContext,
         GrantValidationResult grantResult)
     {
         // Arrange
+        SetupRecoveryCodeSupportForSsoRequiredUsersFeatureFlag(featureFlagValue);
         var expectedUser = requestContext.User;
 
         _userAccountKeysQuery.Run(Arg.Any<User>()).Returns(new UserAccountKeysData
@@ -853,7 +942,8 @@ public class BaseRequestValidatorTests
         _userDecryptionOptionsBuilder.ForUser(Arg.Any<User>()).Returns(_userDecryptionOptionsBuilder);
         _userDecryptionOptionsBuilder.WithDevice(Arg.Any<Device>()).Returns(_userDecryptionOptionsBuilder);
         _userDecryptionOptionsBuilder.WithSso(Arg.Any<SsoConfig>()).Returns(_userDecryptionOptionsBuilder);
-        _userDecryptionOptionsBuilder.WithWebAuthnLoginCredential(Arg.Any<WebAuthnCredential>()).Returns(_userDecryptionOptionsBuilder);
+        _userDecryptionOptionsBuilder.WithWebAuthnLoginCredential(Arg.Any<WebAuthnCredential>())
+            .Returns(_userDecryptionOptionsBuilder);
         _userDecryptionOptionsBuilder.BuildAsync().Returns(Task.FromResult(new UserDecryptionOptions()));
 
         var context = CreateContext(tokenRequest, requestContext, grantResult);
