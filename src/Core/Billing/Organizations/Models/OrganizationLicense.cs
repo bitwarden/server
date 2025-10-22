@@ -229,7 +229,7 @@ public class OrganizationLicense : ILicense
                     !p.Name.Equals(nameof(UseRiskInsights)) &&
                     !p.Name.Equals(nameof(UseAdminSponsoredFamilies)) &&
                     !p.Name.Equals(nameof(UseOrganizationDomains)) &&
-                    !p.Name.Equals(nameof(UseAutomaticUserConfirmation))) &&
+                    !p.Name.Equals(nameof(UseAutomaticUserConfirmation)) &&
                     !p.Name.Equals(nameof(UseDisableSMAdsForUsers)))
                 .OrderBy(p => p.Name)
                 .Select(p => $"{p.Name}:{Core.Utilities.CoreHelpers.FormatLicenseSignatureValue(p.GetValue(this, null))}")
@@ -426,7 +426,7 @@ public class OrganizationLicense : ILicense
         var useAdminSponsoredFamilies = claimsPrincipal.GetValue<bool>(nameof(UseAdminSponsoredFamilies));
         var useOrganizationDomains = claimsPrincipal.GetValue<bool>(nameof(UseOrganizationDomains));
         var useAutomaticUserConfirmation = claimsPrincipal.GetValue<bool>(nameof(UseAutomaticUserConfirmation));
-        var UseDisableSMAdsForUsers = claimsPrincipal.GetValue<bool>(nameof(UseDisableSMAdsForUsers));
+        var useDisableSMAdsForUsers = claimsPrincipal.GetValue<bool>(nameof(UseDisableSMAdsForUsers));
 
         return issued <= DateTime.UtcNow &&
                expires >= DateTime.UtcNow &&
@@ -457,8 +457,8 @@ public class OrganizationLicense : ILicense
                smServiceAccounts == organization.SmServiceAccounts &&
                useAdminSponsoredFamilies == organization.UseAdminSponsoredFamilies &&
                useOrganizationDomains == organization.UseOrganizationDomains &&
-               useAutomaticUserConfirmation == organization.UseAutomaticUserConfirmation;
-        UseDisableSMAdsForUsers == organization.UseDisableSMAdsForUsers;
+               useAutomaticUserConfirmation == organization.UseAutomaticUserConfirmation &&
+               useDisableSMAdsForUsers == organization.UseDisableSMAdsForUsers;
 
     }
 
