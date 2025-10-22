@@ -18,7 +18,7 @@
       <mj-section background-color="#fff">
         <mj-column padding="0px">
           <mj-text> Your verification code is: </mj-text>
-          <mj-text font-size="32px"> <b>{{OtpCode}}</b> </mj-text>
+          <mj-text font-size="32px"> <b>{{Token}}</b> </mj-text>
           <mj-spacer height="20px" />
           <mj-text>
             This code expires in {{Expiry}} minutes. After that, you'll need to
