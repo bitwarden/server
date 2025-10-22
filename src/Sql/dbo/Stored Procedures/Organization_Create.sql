@@ -59,7 +59,7 @@ CREATE PROCEDURE [dbo].[Organization_Create]
     @UseOrganizationDomains BIT = 0,
     @UseAdminSponsoredFamilies BIT = 0,
     @SyncSeats BIT = 0,
-    @UseAutomaticUserConfirmation BIT = 0
+    @UseAutomaticUserConfirmation BIT = 0,
     @UseDisableSMAdsForUsers BIT = 0
 AS
 BEGIN
@@ -127,6 +127,7 @@ BEGIN
         [UseOrganizationDomains],
         [UseAdminSponsoredFamilies],
         [SyncSeats],
+        [UseAutomaticUserConfirmation],
         [UseDisableSMAdsForUsers]
     )
     VALUES
@@ -191,72 +192,7 @@ BEGIN
         @UseOrganizationDomains,
         @UseAdminSponsoredFamilies,
         @SyncSeats,
+        @UseAutomaticUserConfirmation,
         @UseDisableSMAdsForUsers
-    )
-        [UseAutomaticUserConfirmation]
-    )
-    VALUES
-        (
-            @Id,
-            @Identifier,
-            @Name,
-            @BusinessName,
-            @BusinessAddress1,
-            @BusinessAddress2,
-            @BusinessAddress3,
-            @BusinessCountry,
-            @BusinessTaxNumber,
-            @BillingEmail,
-            @Plan,
-            @PlanType,
-            @Seats,
-            @MaxCollections,
-            @UsePolicies,
-            @UseSso,
-            @UseGroups,
-            @UseDirectory,
-            @UseEvents,
-            @UseTotp,
-            @Use2fa,
-            @UseApi,
-            @UseResetPassword,
-            @SelfHost,
-            @UsersGetPremium,
-            @Storage,
-            @MaxStorageGb,
-            @Gateway,
-            @GatewayCustomerId,
-            @GatewaySubscriptionId,
-            @ReferenceData,
-            @Enabled,
-            @LicenseKey,
-            @PublicKey,
-            @PrivateKey,
-            @TwoFactorProviders,
-            @ExpirationDate,
-            @CreationDate,
-            @RevisionDate,
-            @OwnersNotifiedOfAutoscaling,
-            @MaxAutoscaleSeats,
-            @UseKeyConnector,
-            @UseScim,
-            @UseCustomPermissions,
-            @UseSecretsManager,
-            @Status,
-            @UsePasswordManager,
-            @SmSeats,
-            @SmServiceAccounts,
-            @MaxAutoscaleSmSeats,
-            @MaxAutoscaleSmServiceAccounts,
-            @SecretsManagerBeta,
-            @LimitCollectionCreation,
-            @LimitCollectionDeletion,
-            @AllowAdminAccessToAllCollectionItems,
-            @UseRiskInsights,
-            @LimitItemDeletion,
-            @UseOrganizationDomains,
-            @UseAdminSponsoredFamilies,
-            @SyncSeats,
-            @UseAutomaticUserConfirmation
-        );
+    );
 END
