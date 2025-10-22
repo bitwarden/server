@@ -286,7 +286,6 @@ public class AccountController : Controller
 
             user = provisionedUser;
 
-            // PM-24579: After removing the flag, assign these unconditionally and remove this if block.
             if (preventNonCompliant)
             {
                 organization = foundOrganization;
@@ -294,8 +293,6 @@ public class AccountController : Controller
             }
         }
 
-        // Feature-flagged enforcement: block sign-in for revoked/non-compliant org membership
-        // PM-24579: After removing the feature flag, delete if
         if (preventNonCompliant)
         {
             // Call the guarded here because the user could have been not null in which case we need to retrieve
