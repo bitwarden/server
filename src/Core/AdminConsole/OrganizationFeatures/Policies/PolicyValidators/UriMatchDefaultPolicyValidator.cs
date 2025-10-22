@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 
@@ -11,5 +9,5 @@ public class UriMatchDefaultPolicyValidator : IPolicyValidator
     public PolicyType Type => PolicyType.UriMatchDefaults;
     public IEnumerable<PolicyType> RequiredPolicies => [PolicyType.SingleOrg];
     public Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult("");
-    public Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult(0);
+    public Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.CompletedTask;
 }
