@@ -129,6 +129,7 @@ public class ProviderUserRepositoryTests
         Assert.Equal(expectedOrganization.UseRiskInsights, actual.UseRiskInsights);
         Assert.Equal(expectedOrganization.UseOrganizationDomains, actual.UseOrganizationDomains);
         Assert.Equal(expectedOrganization.UseAdminSponsoredFamilies, actual.UseAdminSponsoredFamilies);
+        Assert.Equal(expectedOrganization.UseAutomaticUserConfirmation, actual.UseAutomaticUserConfirmation);
 
         // Provider-specific properties
         Assert.Equal(expectedProvider.Id, actual.ProviderId);

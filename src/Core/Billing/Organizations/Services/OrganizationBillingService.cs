@@ -45,19 +45,14 @@ public class OrganizationBillingService(
             ? await CreateCustomerAsync(organization, customerSetup, subscriptionSetup.PlanType)
             : await GetCustomerWhileEnsuringCorrectTaxExemptionAsync(organization, subscriptionSetup);
 
-        var subscription = await CreateSubscriptionAsync(organization, customer, subscriptionSetup);
+        var subscription = await CreateSubscriptionAsync(organization, customer, subscriptionSetup, customerSetup?.Coupon);
 
         if (subscription.Status is StripeConstants.SubscriptionStatus.Trialing or StripeConstants.SubscriptionStatus.Active)
         {
             organization.Enabled = true;
-            organization.ExpirationDate = subscription.CurrentPeriodEnd;
+            organization.ExpirationDate = subscription.GetCurrentPeriodEnd();
+            await organizationRepository.ReplaceAsync(organization);
         }
-
-        organization.Gateway = GatewayType.Stripe;
-        organization.GatewayCustomerId = customer.Id;
-        organization.GatewaySubscriptionId = subscription.Id;
-
-        await organizationRepository.ReplaceAsync(organization);
     }
 
     public async Task<OrganizationMetadata?> GetMetadata(Guid organizationId)
@@ -192,7 +187,6 @@ public class OrganizationBillingService(
 
         var customerCreateOptions = new CustomerCreateOptions
         {
-            Coupon = customerSetup.Coupon,
             Description = organization.DisplayBusinessName(),
             Email = organization.BillingEmail,
             Expand = ["tax", "tax_ids"],
@@ -255,8 +249,6 @@ public class OrganizationBillingService(
                 ValidateLocation = StripeConstants.ValidateTaxLocationTiming.Immediately
             };
 
-
-
             if (planType.GetProductTier() is not ProductTierType.Free and not ProductTierType.Families &&
                 customerSetup.TaxInformation.Country != Core.Constants.CountryAbbreviations.UnitedStates)
             {
@@ -280,7 +272,7 @@ public class OrganizationBillingService(
 
                 customerCreateOptions.TaxIdData =
                 [
-                    new() { Type = taxIdType, Value = customerSetup.TaxInformation.TaxId }
+                    new CustomerTaxIdDataOptions { Type = taxIdType, Value = customerSetup.TaxInformation.TaxId }
                 ];
 
                 if (taxIdType == StripeConstants.TaxIdType.SpanishNIF)
@@ -335,7 +327,13 @@ public class OrganizationBillingService(
 
         try
         {
-            return await stripeAdapter.CustomerCreateAsync(customerCreateOptions);
+            var customer = await stripeAdapter.CustomerCreateAsync(customerCreateOptions);
+
+            organization.Gateway = GatewayType.Stripe;
+            organization.GatewayCustomerId = customer.Id;
+            await organizationRepository.ReplaceAsync(organization);
+
+            return customer;
         }
         catch (StripeException stripeException) when (stripeException.StripeError?.Code ==
                                                       StripeConstants.ErrorCodes.CustomerTaxLocationInvalid)
@@ -382,7 +380,8 @@ public class OrganizationBillingService(
     private async Task<Subscription> CreateSubscriptionAsync(
         Organization organization,
         Customer customer,
-        SubscriptionSetup subscriptionSetup)
+        SubscriptionSetup subscriptionSetup,
+        string? coupon)
     {
         var plan = await pricingClient.GetPlanOrThrow(subscriptionSetup.PlanType);
 
@@ -445,6 +444,7 @@ public class OrganizationBillingService(
         {
             CollectionMethod = StripeConstants.CollectionMethod.ChargeAutomatically,
             Customer = customer.Id,
+            Discounts = !string.IsNullOrEmpty(coupon) ? [new SubscriptionDiscountOptions { Coupon = coupon }] : null,
             Items = subscriptionItemOptionsList,
             Metadata = new Dictionary<string, string>
             {
@@ -460,8 +460,9 @@ public class OrganizationBillingService(
 
         var hasPaymentMethod = await hasPaymentMethodQuery.Run(organization);
 
-        // Only set trial_settings.end_behavior.missing_payment_method to "cancel" if there is no payment method
-        if (!hasPaymentMethod)
+        // Only set trial_settings.end_behavior.missing_payment_method to "cancel"
+        // if there is no payment method AND there's an actual trial period
+        if (!hasPaymentMethod && subscriptionCreateOptions.TrialPeriodDays > 0)
         {
             subscriptionCreateOptions.TrialSettings = new SubscriptionTrialSettingsOptions
             {
@@ -476,7 +477,13 @@ public class OrganizationBillingService(
         {
             subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
         }
-        return await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
+
+        var subscription = await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
+
+        organization.GatewaySubscriptionId = subscription.Id;
+        await organizationRepository.ReplaceAsync(organization);
+
+        return subscription;
     }
 
     private async Task<Customer> GetCustomerWhileEnsuringCorrectTaxExemptionAsync(

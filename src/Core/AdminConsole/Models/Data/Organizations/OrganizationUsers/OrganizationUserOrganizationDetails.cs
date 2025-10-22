@@ -64,4 +64,5 @@ public class OrganizationUserOrganizationDetails : IProfileOrganizationDetails
     public bool UseOrganizationDomains { get; set; }
     public bool UseAdminSponsoredFamilies { get; set; }
     public bool? IsAdminInitiated { get; set; }
+    public bool UseAutomaticUserConfirmation { get; set; }
 }

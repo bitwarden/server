@@ -58,6 +58,7 @@ public class ProviderUserOrganizationDetailsViewQuery : IQuery<ProviderUserOrgan
             ProviderType = x.p.Type,
             UseOrganizationDomains = x.o.UseOrganizationDomains,
             UseAdminSponsoredFamilies = x.o.UseAdminSponsoredFamilies,
+            UseAutomaticUserConfirmation = x.o.UseAutomaticUserConfirmation,
             SsoEnabled = x.ss.Enabled,
             SsoConfig = x.ss.Data,
         });

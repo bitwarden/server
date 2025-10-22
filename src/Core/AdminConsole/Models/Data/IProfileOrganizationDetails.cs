@@ -52,4 +52,5 @@ public interface IProfileOrganizationDetails
     bool LimitItemDeletion { get; set; }
     bool UseAdminSponsoredFamilies { get; set; }
     bool UseOrganizationDomains { get; set; }
+    bool UseAutomaticUserConfirmation { get; set; }
 }

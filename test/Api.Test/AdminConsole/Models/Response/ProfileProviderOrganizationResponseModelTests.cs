@@ -47,6 +47,7 @@ public class ProfileProviderOrganizationResponseModelTests
             UseRiskInsights = organization.UseRiskInsights,
             UseOrganizationDomains = organization.UseOrganizationDomains,
             UseAdminSponsoredFamilies = organization.UseAdminSponsoredFamilies,
+            UseAutomaticUserConfirmation = organization.UseAutomaticUserConfirmation,
             SelfHost = organization.SelfHost,
             Seats = organization.Seats,
             MaxCollections = organization.MaxCollections,
@@ -99,6 +100,7 @@ public class ProfileProviderOrganizationResponseModelTests
         Assert.Equal(organization.UseRiskInsights, result.UseRiskInsights);
         Assert.Equal(organization.UseOrganizationDomains, result.UseOrganizationDomains);
         Assert.Equal(organization.UseAdminSponsoredFamilies, result.UseAdminSponsoredFamilies);
+        Assert.Equal(organization.UseAutomaticUserConfirmation, result.UseAutomaticUserConfirmation);
         Assert.Equal(organization.SelfHost, result.SelfHost);
         Assert.Equal(organization.Seats, result.Seats);
         Assert.Equal(organization.MaxCollections, result.MaxCollections);

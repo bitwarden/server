@@ -45,6 +45,7 @@ public abstract class BaseProfileOrganizationResponseModel : ResponseModel
         UseRiskInsights = organizationDetails.UseRiskInsights;
         UseOrganizationDomains = organizationDetails.UseOrganizationDomains;
         UseAdminSponsoredFamilies = organizationDetails.UseAdminSponsoredFamilies;
+        UseAutomaticUserConfirmation = organizationDetails.UseAutomaticUserConfirmation;
         UseSecretsManager = organizationDetails.UseSecretsManager;
         UsePasswordManager = organizationDetails.UsePasswordManager;
         SelfHost = organizationDetails.SelfHost;
@@ -97,6 +98,7 @@ public abstract class BaseProfileOrganizationResponseModel : ResponseModel
     public bool UseRiskInsights { get; set; }
     public bool UseOrganizationDomains { get; set; }
     public bool UseAdminSponsoredFamilies { get; set; }
+    public bool UseAutomaticUserConfirmation { get; set; }
     public bool SelfHost { get; set; }
     public int? Seats { get; set; }
     public short? MaxCollections { get; set; }

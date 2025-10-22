@@ -42,6 +42,7 @@ SELECT
     P.[Type] ProviderType,
     O.[LimitItemDeletion],
     O.[UseOrganizationDomains],
+    O.[UseAutomaticUserConfirmation],
     SS.[Enabled] SsoEnabled,
     SS.[Data] SsoConfig
 FROM

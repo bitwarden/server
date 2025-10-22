@@ -50,6 +50,7 @@ public class ProviderUserOrganizationDetails : IProfileOrganizationDetails
     public bool UseOrganizationDomains { get; set; }
     public bool UseAdminSponsoredFamilies { get; set; }
     public ProviderType? ProviderType { get; set; }
+    public bool UseAutomaticUserConfirmation { get; set; }
     public bool? SsoEnabled { get; set; }
     public string? SsoConfig { get; set; }
     public string? SsoExternalId { get; set; }
