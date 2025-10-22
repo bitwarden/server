@@ -11,7 +11,6 @@ public class UriMatchDefaultPolicyValidatorTests
     private readonly UriMatchDefaultPolicyValidator _validator = new();
 
     [Fact]
-
     // Test that the Type property returns the correct PolicyType for this validator
     public void Type_ReturnsUriMatchDefaults()
     {
@@ -19,7 +18,6 @@ public class UriMatchDefaultPolicyValidatorTests
     }
 
     [Fact]
-
     // Test that the RequiredPolicies property returns exactly one policy (SingleOrg) as a prerequisite
     // for enabling the UriMatchDefaults policy, ensuring proper policy dependency enforcement
     public void RequiredPolicies_ReturnsSingleOrgPolicy()
@@ -31,7 +29,6 @@ public class UriMatchDefaultPolicyValidatorTests
     }
 
     [Fact]
-
     // Happy path test for ValidateAsync, returns empty string indicating no validation errors
     public async Task ValidateAsync_ReturnsEmptyString()
     {
@@ -43,7 +40,6 @@ public class UriMatchDefaultPolicyValidatorTests
     }
 
     [Fact]
-
     // Test that ValidateAsync handles the case where no existing policy exists (null currentPolicy)
     // and still returns an empty string, indicating no validation errors for a new policy
     public async Task ValidateAsync_WithNullCurrentPolicy_ReturnsEmptyString()
@@ -55,7 +51,6 @@ public class UriMatchDefaultPolicyValidatorTests
     }
 
     [Fact]
-
     // Test that OnSaveSideEffectsAsync completes successfully without performing any side effects
     // when both policyUpdate and currentPolicy are provided, verifying the method returns Task.CompletedTask
     public async Task OnSaveSideEffectsAsync_CompletesSuccessfully()
@@ -69,7 +64,6 @@ public class UriMatchDefaultPolicyValidatorTests
     }
 
     [Fact]
-
     // Test that OnSaveSideEffectsAsync handles the null currentPolicy scenario (new policy creation)
     // and completes successfully without throwing exceptions or performing side effects
     public async Task OnSaveSideEffectsAsync_WithNullCurrentPolicy_CompletesSuccessfully()
