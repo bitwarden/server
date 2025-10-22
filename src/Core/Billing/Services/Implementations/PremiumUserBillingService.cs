@@ -6,6 +6,7 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -30,7 +31,8 @@ public class PremiumUserBillingService(
     ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService,
-    IUserRepository userRepository) : IPremiumUserBillingService
+    IUserRepository userRepository,
+    IPricingClient pricingClient) : IPremiumUserBillingService
 {
     public async Task Credit(User user, decimal amount)
     {
@@ -301,11 +303,13 @@ public class PremiumUserBillingService(
         Customer customer,
         int? storage)
     {
+        var premiumPlan = await pricingClient.GetAvailablePremiumPlan();
+
         var subscriptionItemOptionsList = new List<SubscriptionItemOptions>
         {
             new ()
             {
-                Price = StripeConstants.Prices.PremiumAnnually,
+                Price = premiumPlan.Seat.StripePriceId,
                 Quantity = 1
             }
         };
@@ -314,7 +318,7 @@ public class PremiumUserBillingService(
         {
             subscriptionItemOptionsList.Add(new SubscriptionItemOptions
             {
-                Price = StripeConstants.Prices.StoragePlanPersonal,
+                Price = premiumPlan.Storage.StripePriceId,
                 Quantity = storage
             });
         }

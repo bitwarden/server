@@ -1,23 +1,38 @@
 ﻿using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Premium.Commands;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Stripe;
 using Xunit;
 using static Bit.Core.Billing.Constants.StripeConstants;
+using PremiumPlan = Bit.Core.Billing.Pricing.Premium.Plan;
+using PremiumPurchasable = Bit.Core.Billing.Pricing.Premium.Purchasable;
 
 namespace Bit.Core.Test.Billing.Premium.Commands;
 
 public class PreviewPremiumTaxCommandTests
 {
     private readonly ILogger<PreviewPremiumTaxCommand> _logger = Substitute.For<ILogger<PreviewPremiumTaxCommand>>();
+    private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
     private readonly PreviewPremiumTaxCommand _command;
 
     public PreviewPremiumTaxCommandTests()
     {
-        _command = new PreviewPremiumTaxCommand(_logger, _stripeAdapter);
+        // Setup default premium plan with standard pricing
+        var premiumPlan = new PremiumPlan
+        {
+            Name = "Premium",
+            Available = true,
+            LegacyYear = null,
+            Seat = new PremiumPurchasable { Price = 10M, StripePriceId = Prices.PremiumAnnually },
+            Storage = new PremiumPurchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
+        };
+        _pricingClient.GetAvailablePremiumPlan().Returns(premiumPlan);
+
+        _command = new PreviewPremiumTaxCommand(_logger, _pricingClient, _stripeAdapter);
     }
 
     [Fact]
