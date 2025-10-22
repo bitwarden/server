@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using Bit.Core;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Services;
@@ -61,7 +62,7 @@ public class SendEmailOtpRequestValidator(
             {
                 return BuildErrorResult(SendAccessConstants.EmailOtpValidatorResults.OtpGenerationFailed);
             }
-            if (featureService.IsEnabled("mjml-based-email-templates"))
+            if (featureService.IsEnabled(FeatureFlagKeys.MJMLBasedEmailTemplates))
             {
                 await mailService.SendSendEmailOtpEmailv2Async(
                     email,
