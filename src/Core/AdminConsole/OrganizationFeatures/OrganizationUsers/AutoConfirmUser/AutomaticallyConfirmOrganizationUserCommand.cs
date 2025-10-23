@@ -3,6 +3,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimed
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
@@ -17,6 +18,9 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
     IEventService eventService,
     IMailService mailService,
     IUserRepository userRepository,
+    IPushRegistrationService pushRegistrationService,
+    IDeviceRepository deviceRepository,
+    IPushNotificationService pushNotificationService,
     ILogger<AutomaticallyConfirmOrganizationUserCommand> logger) : IAutomaticallyConfirmOrganizationUserCommand
 {
     public async Task<CommandResult> AutomaticallyConfirmOrganizationUserAsync(AutomaticallyConfirmOrganizationUserRequest request)
@@ -33,18 +37,35 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
 
         var successfulConfirmation = await organizationUserRepository.ConfirmOrganizationUserAsync(organizationUser);
 
-        if (successfulConfirmation)
-        {
-            var eventResult = await LogOrganizationUserConfirmedEventAsync(result.Request);
-            if (eventResult.IsError) return eventResult.AsError;
+        if (!successfulConfirmation) return new None();
 
-            var emailResult = await SendConfirmedOrganizationUserEmailAsync(result.Request);
-            if (emailResult.IsError) return emailResult.AsError;
+        var eventResult = await LogOrganizationUserConfirmedEventAsync(result.Request);
+        if (eventResult.IsError) return eventResult.AsError;
 
-            // Device Recovation
-        }
+        var emailResult = await SendConfirmedOrganizationUserEmailAsync(result.Request);
+        if (emailResult.IsError) return emailResult.AsError;
+
+        var deviceDeletionResult = await DeleteDeviceRegistrationAsync(result.Request);
+        if (deviceDeletionResult.IsError) return deviceDeletionResult.AsError;
+
+        var pushSyncKeysResult = await PushSyncOrganizationKeysAsync(result.Request);
+        if (pushSyncKeysResult.IsError) return pushSyncKeysResult.AsError;
 
         return new None();
+    }
+
+    private async Task<CommandResult> PushSyncOrganizationKeysAsync(AutomaticallyConfirmOrganizationUserRequestData request)
+    {
+        try
+        {
+            await pushNotificationService.PushSyncOrgKeysAsync(request.UserId);
+            return new None();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to push organization keys.");
+            return new FailedToPushOrganizationSyncKeys();
+        }
     }
 
     private async Task<CommandResult> LogOrganizationUserConfirmedEventAsync(
@@ -69,9 +90,7 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
     {
         try
         {
-            if (!request.OrganizationUser.UserId.HasValue) return new UserNotFoundError();
-
-            var user = await userRepository.GetByIdAsync(request.OrganizationUser.UserId.Value);
+            var user = await userRepository.GetByIdAsync(request.UserId);
 
             if (user is null) return new UserNotFoundError();
 
@@ -88,12 +107,32 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
         }
     }
 
+    private async Task<CommandResult> DeleteDeviceRegistrationAsync(
+        AutomaticallyConfirmOrganizationUserRequestData request)
+    {
+        try
+        {
+            var devices = (await deviceRepository.GetManyByUserIdAsync(request.UserId))
+                    .Where(d => !string.IsNullOrWhiteSpace(d.PushToken))
+                    .Select(d => d.Id.ToString());
+
+            await pushRegistrationService.DeleteUserRegistrationOrganizationAsync(devices, request.Organization.Id.ToString());
+            return new None();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to delete device registration.");
+            return new FailedToDeleteDeviceRegistration();
+        }
+    }
+
     private async Task<CommandResult<AutomaticallyConfirmOrganizationUserRequestData>> RetrieveDataAsync(
         AutomaticallyConfirmOrganizationUserRequest request)
     {
         var organizationUser = await GetOrganizationUserAsync(request.OrganizationUserId);
 
         if (organizationUser.IsError) return organizationUser.AsError;
+        if (organizationUser.AsSuccess.UserId is null) return new UserNotFoundError();
 
         var organization = await GetOrganizationAsync(request.OrganizationId);
 
@@ -110,14 +149,14 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
         };
     }
 
-    private async Task<DeleteClaimedAccount.CommandResult<OrganizationUser>> GetOrganizationUserAsync(Guid organizationUserId)
+    private async Task<CommandResult<OrganizationUser>> GetOrganizationUserAsync(Guid organizationUserId)
     {
         var organizationUser = await organizationUserRepository.GetByIdAsync(organizationUserId);
 
         return organizationUser is not null ? organizationUser : new UserNotFoundError();
     }
 
-    private async Task<DeleteClaimedAccount.CommandResult<Organization>> GetOrganizationAsync(Guid organizationId)
+    private async Task<CommandResult<Organization>> GetOrganizationAsync(Guid organizationId)
     {
         var organization = await organizationRepository.GetByIdAsync(organizationId);
 

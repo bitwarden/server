@@ -19,6 +19,8 @@ public record AutomaticallyConfirmOrganizationUserRequestData
 {
     public required OrganizationUser OrganizationUser { get; init; }
 
+    public Guid UserId => OrganizationUser.UserId ?? throw new ArgumentNullException(nameof(OrganizationUser.UserId));
+
     public required Organization Organization { get; init; }
 
     public required IActingUser PerformedBy { get; init; }
