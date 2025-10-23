@@ -1,9 +1,11 @@
 ﻿using Bit.Billing.Constants;
+using Bit.Billing.Jobs;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Services;
+using Quartz;
 using Event = Stripe.Event;
 namespace Bit.Billing.Services.Implementations;
 
@@ -15,7 +17,7 @@ public class SubscriptionDeletedHandler : ISubscriptionDeletedHandler
     private readonly IOrganizationDisableCommand _organizationDisableCommand;
     private readonly IProviderRepository _providerRepository;
     private readonly IProviderService _providerService;
-    private readonly IProviderOrganizationRepository _providerOrganizationRepository;
+    private readonly ISchedulerFactory _schedulerFactory;
 
     public SubscriptionDeletedHandler(
         IStripeEventService stripeEventService,
@@ -24,7 +26,7 @@ public class SubscriptionDeletedHandler : ISubscriptionDeletedHandler
         IOrganizationDisableCommand organizationDisableCommand,
         IProviderRepository providerRepository,
         IProviderService providerService,
-        IProviderOrganizationRepository providerOrganizationRepository)
+        ISchedulerFactory schedulerFactory)
     {
         _stripeEventService = stripeEventService;
         _userService = userService;
@@ -32,7 +34,7 @@ public class SubscriptionDeletedHandler : ISubscriptionDeletedHandler
         _organizationDisableCommand = organizationDisableCommand;
         _providerRepository = providerRepository;
         _providerService = providerService;
-        _providerOrganizationRepository = providerOrganizationRepository;
+        _schedulerFactory = schedulerFactory;
     }
 
     /// <summary>
@@ -72,22 +74,30 @@ public class SubscriptionDeletedHandler : ISubscriptionDeletedHandler
                 provider.Enabled = false;
                 await _providerService.UpdateAsync(provider);
 
-                // Disable all client organizations associated with this provider
-                var providerOrganizations = await _providerOrganizationRepository.GetManyDetailsByProviderAsync(providerId.Value);
-                if (providerOrganizations != null)
-                {
-                    foreach (var providerOrganization in providerOrganizations)
-                    {
-                        await _organizationDisableCommand.DisableAsync(
-                            providerOrganization.OrganizationId,
-                            subscription.GetCurrentPeriodEnd());
-                    }
-                }
+                await QueueProviderOrganizationDisableJobAsync(providerId.Value, subscription.GetCurrentPeriodEnd());
             }
         }
         else if (userId.HasValue)
         {
             await _userService.DisablePremiumAsync(userId.Value, subscription.GetCurrentPeriodEnd());
         }
+    }
+
+    private async Task QueueProviderOrganizationDisableJobAsync(Guid providerId, DateTime? expirationDate)
+    {
+        var scheduler = await _schedulerFactory.GetScheduler();
+
+        var job = JobBuilder.Create<ProviderOrganizationDisableJob>()
+            .WithIdentity($"disable-provider-orgs-{providerId}", "provider-management")
+            .UsingJobData("providerId", providerId.ToString())
+            .UsingJobData("expirationDate", expirationDate?.ToString("O"))
+            .Build();
+
+        var trigger = TriggerBuilder.Create()
+            .WithIdentity($"disable-trigger-{providerId}", "provider-management")
+            .StartNow()
+            .Build();
+
+        await scheduler.ScheduleJob(job, trigger);
     }
 }

@@ -1,14 +1,15 @@
 ﻿using Bit.Billing.Constants;
+using Bit.Billing.Jobs;
 using Bit.Billing.Services;
 using Bit.Billing.Services.Implementations;
 using Bit.Core.AdminConsole.Entities.Provider;
-using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Services;
 using NSubstitute;
+using Quartz;
 using Stripe;
 using Xunit;
 
@@ -22,7 +23,8 @@ public class SubscriptionDeletedHandlerTests
     private readonly IOrganizationDisableCommand _organizationDisableCommand;
     private readonly IProviderRepository _providerRepository;
     private readonly IProviderService _providerService;
-    private readonly IProviderOrganizationRepository _providerOrganizationRepository;
+    private readonly ISchedulerFactory _schedulerFactory;
+    private readonly IScheduler _scheduler;
     private readonly SubscriptionDeletedHandler _sut;
 
     public SubscriptionDeletedHandlerTests()
@@ -33,7 +35,9 @@ public class SubscriptionDeletedHandlerTests
         _organizationDisableCommand = Substitute.For<IOrganizationDisableCommand>();
         _providerRepository = Substitute.For<IProviderRepository>();
         _providerService = Substitute.For<IProviderService>();
-        _providerOrganizationRepository = Substitute.For<IProviderOrganizationRepository>();
+        _schedulerFactory = Substitute.For<ISchedulerFactory>();
+        _scheduler = Substitute.For<IScheduler>();
+        _schedulerFactory.GetScheduler().Returns(_scheduler);
         _sut = new SubscriptionDeletedHandler(
             _stripeEventService,
             _userService,
@@ -41,7 +45,7 @@ public class SubscriptionDeletedHandlerTests
             _organizationDisableCommand,
             _providerRepository,
             _providerService,
-            _providerOrganizationRepository);
+            _schedulerFactory);
     }
 
     [Fact]
@@ -208,7 +212,7 @@ public class SubscriptionDeletedHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_ProviderSubscriptionCanceled_DisablesProvider()
+    public async Task HandleAsync_ProviderSubscriptionCanceled_DisablesProviderAndQueuesJob()
     {
         // Arrange
         var stripeEvent = new Event();
@@ -242,6 +246,9 @@ public class SubscriptionDeletedHandlerTests
         // Assert
         Assert.False(provider.Enabled);
         await _providerService.Received(1).UpdateAsync(provider);
+        await _scheduler.Received(1).ScheduleJob(
+            Arg.Is<IJobDetail>(j => j.JobType == typeof(ProviderOrganizationDisableJob)),
+            Arg.Any<ITrigger>());
     }
 
     [Fact]
@@ -273,16 +280,16 @@ public class SubscriptionDeletedHandlerTests
 
         // Assert
         await _providerService.DidNotReceiveWithAnyArgs().UpdateAsync(default);
+        await _scheduler.DidNotReceiveWithAnyArgs().ScheduleJob(default, default);
     }
 
     [Fact]
-    public async Task HandleAsync_ProviderSubscriptionCanceled_DisablesClientOrganizations()
+    public async Task HandleAsync_ProviderSubscriptionCanceled_QueuesJobWithCorrectParameters()
     {
         // Arrange
         var stripeEvent = new Event();
         var providerId = Guid.NewGuid();
-        var org1Id = Guid.NewGuid();
-        var org2Id = Guid.NewGuid();
+        var expirationDate = DateTime.UtcNow.AddDays(30);
         var provider = new Provider
         {
             Id = providerId,
@@ -295,23 +302,16 @@ public class SubscriptionDeletedHandlerTests
             {
                 Data =
                 [
-                    new SubscriptionItem { CurrentPeriodEnd = DateTime.UtcNow.AddDays(30) }
+                    new SubscriptionItem { CurrentPeriodEnd = expirationDate }
                 ]
             },
             Metadata = new Dictionary<string, string> { { "providerId", providerId.ToString() } }
-        };
-
-        var providerOrganizations = new List<ProviderOrganizationOrganizationDetails>
-        {
-            new() { OrganizationId = org1Id },
-            new() { OrganizationId = org2Id }
         };
 
         _stripeEventService.GetSubscription(stripeEvent, true).Returns(subscription);
         _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
             .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, null, providerId));
         _providerRepository.GetByIdAsync(providerId).Returns(provider);
-        _providerOrganizationRepository.GetManyDetailsByProviderAsync(providerId).Returns(providerOrganizations);
 
         // Act
         await _sut.HandleAsync(stripeEvent);
@@ -319,7 +319,11 @@ public class SubscriptionDeletedHandlerTests
         // Assert
         Assert.False(provider.Enabled);
         await _providerService.Received(1).UpdateAsync(provider);
-        await _organizationDisableCommand.Received(1).DisableAsync(org1Id, subscription.GetCurrentPeriodEnd());
-        await _organizationDisableCommand.Received(1).DisableAsync(org2Id, subscription.GetCurrentPeriodEnd());
+        await _scheduler.Received(1).ScheduleJob(
+            Arg.Is<IJobDetail>(j =>
+                j.JobType == typeof(ProviderOrganizationDisableJob) &&
+                j.JobDataMap.GetString("providerId") == providerId.ToString() &&
+                j.JobDataMap.GetString("expirationDate") == expirationDate.ToString("O")),
+            Arg.Is<ITrigger>(t => t.Key.Name == $"disable-trigger-{providerId}"));
     }
 }
