@@ -233,6 +233,8 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains("minLength", content); // Verify field name is in error message
     }
 
     [Fact]
@@ -306,6 +308,8 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains("minComplexity", content); // Verify field name is in error message
     }
 
     [Fact]
