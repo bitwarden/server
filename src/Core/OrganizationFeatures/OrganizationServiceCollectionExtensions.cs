@@ -135,6 +135,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IUpdateOrganizationUserGroupsCommand, UpdateOrganizationUserGroupsCommand>();
         services.AddScoped<IConfirmOrganizationUserCommand, ConfirmOrganizationUserCommand>();
         services.AddScoped<IAutomaticallyConfirmOrganizationUserCommand, AutomaticallyConfirmOrganizationUserCommand>();
+        services.AddScoped<IAutomaticallyConfirmOrganizationUsersValidator, AutomaticallyConfirmOrganizationUsersValidator>();
 
         services.AddScoped<IDeleteClaimedOrganizationUserAccountCommand, DeleteClaimedOrganizationUserAccountCommand>();
         services.AddScoped<IDeleteClaimedOrganizationUserAccountValidator, DeleteClaimedOrganizationUserAccountValidator>();
