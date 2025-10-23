@@ -74,6 +74,7 @@ public class DatabaseContext : DbContext
     public DbSet<TaxRate> TaxRates { get; set; }
     public DbSet<Transaction> Transactions { get; set; }
     public DbSet<User> Users { get; set; }
+    public DbSet<UserSignatureKeyPair> UserSignatureKeyPairs { get; set; }
     public DbSet<AuthRequest> AuthRequests { get; set; }
     public DbSet<OrganizationDomain> OrganizationDomains { get; set; }
     public DbSet<WebAuthnCredential> WebAuthnCredentials { get; set; }
