@@ -452,6 +452,25 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
         return acceptedUsers;
     }
 
+    private async Task<List<OrganizationUser>> CreatedUsersAsync(
+        IEnumerable<(string email, OrganizationUserType userType, OrganizationUserStatusType status)> newUsers)
+    {
+        var acceptedUsers = new List<OrganizationUser>();
+
+        foreach (var (email, userType, status) in newUsers)
+        {
+            await _factory.LoginWithNewAccount(email);
+
+            var acceptedOrgUser = await OrganizationTestHelpers.CreateUserAsync(
+                _factory, _organization.Id, email,
+                userType, userStatusType: status);
+
+            acceptedUsers.Add(acceptedOrgUser);
+        }
+
+        return acceptedUsers;
+    }
+
     private async Task VerifyDefaultCollectionCountAsync(OrganizationUser orgUser, int expectedCount)
     {
         var collectionRepository = _factory.GetService<ICollectionRepository>();
@@ -473,5 +492,50 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
             Assert.Equal(OrganizationUserStatusType.Confirmed, confirmedUser.Status);
             Assert.Equal(acceptedOrganizationUsers[i].key, confirmedUser.Key);
         }
+    }
+
+    [Fact]
+    public async Task AutoConfirm_WithValidUser_ReturnsSuccess()
+    {
+        await OrganizationTestHelpers.EnableOrganizationDataOwnershipPolicyAsync(_factory, _organization.Id);
+
+        var acceptedOrgUser = (await CreateAcceptedUsersAsync([("test1@bitwarden.com", OrganizationUserType.User)])).First();
+
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var confirmModel = new OrganizationUserConfirmRequestModel
+        {
+            Key = "test-key",
+            DefaultUserCollectionName = _mockEncryptedString
+        };
+        var confirmResponse = await _client.PostAsJsonAsync($"organizations/{_organization.Id}/users/{acceptedOrgUser.Id}/auto-confirm", confirmModel);
+
+        Assert.Equal(HttpStatusCode.OK, confirmResponse.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(OrganizationUserType.User)]
+    [InlineData(OrganizationUserType.Custom)]
+    public async Task AutoConfirm_WithoutManageUsersPermission_ReturnsForbiddenResponse(
+        OrganizationUserType organizationUserType)
+    {
+        var (userEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
+            _organization.Id, organizationUserType, new Permissions { ManageUsers = false });
+
+        await _loginHelper.LoginAsync(userEmail);
+
+        var acceptedOrgUserEmail = $"auto-confirm-test-{Guid.NewGuid()}@bitwarden.com";
+        var acceptedOrgUser = (await CreateAcceptedUsersAsync([(acceptedOrgUserEmail, OrganizationUserType.User)])).First();
+
+        var confirmModel = new OrganizationUserConfirmRequestModel
+        {
+            Key = "test-key",
+            DefaultUserCollectionName = _mockEncryptedString
+        };
+
+        var confirmResponse = await _client.PostAsJsonAsync(
+            $"organizations/{_organization.Id}/users/{acceptedOrgUser.Id}/auto-confirm",
+                confirmModel);
+        Assert.Equal(HttpStatusCode.Forbidden, confirmResponse.StatusCode);
     }
 }
