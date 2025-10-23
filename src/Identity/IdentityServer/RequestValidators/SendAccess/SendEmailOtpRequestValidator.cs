@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using Bit.Core;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Services;
@@ -10,6 +11,7 @@ using Duende.IdentityServer.Validation;
 namespace Bit.Identity.IdentityServer.RequestValidators.SendAccess;
 
 public class SendEmailOtpRequestValidator(
+    IFeatureService featureService,
     IOtpTokenProvider<DefaultOtpTokenProviderOptions> otpTokenProvider,
     IMailService mailService) : ISendAuthenticationMethodValidator<EmailOtp>
 {
@@ -60,11 +62,20 @@ public class SendEmailOtpRequestValidator(
             {
                 return BuildErrorResult(SendAccessConstants.EmailOtpValidatorResults.OtpGenerationFailed);
             }
-
-            await mailService.SendSendEmailOtpEmailAsync(
-                email,
-                token,
-                string.Format(SendAccessConstants.OtpEmail.Subject, token));
+            if (featureService.IsEnabled(FeatureFlagKeys.MJMLBasedEmailTemplates))
+            {
+                await mailService.SendSendEmailOtpEmailv2Async(
+                    email,
+                    token,
+                    string.Format(SendAccessConstants.OtpEmail.Subject, token));
+            }
+            else
+            {
+                await mailService.SendSendEmailOtpEmailAsync(
+                    email,
+                    token,
+                    string.Format(SendAccessConstants.OtpEmail.Subject, token));
+            }
             return BuildErrorResult(SendAccessConstants.EmailOtpValidatorResults.EmailOtpSent);
         }
 
