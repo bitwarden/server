@@ -6,7 +6,16 @@ CREATE PROCEDURE [dbo].[OrganizationReport_Create]
    @ContentEncryptionKey VARCHAR(MAX),
    @SummaryData NVARCHAR(MAX),
    @ApplicationData NVARCHAR(MAX),
-   @RevisionDate DATETIME2(7)
+   @RevisionDate DATETIME2(7),
+   @ApplicationCount INT,
+   @CriticalApplicationCount INT,
+   @ApplicationAtRiskCount INT,
+   @CriticalApplicationAtRiskCount INT,
+   @PasswordAtRiskCount INT,
+   @CriticalPasswordAtRiskCount INT,
+   @MemberAtRiskCount INT,
+   @CriticalMemberAtRiskCount INT,
+   @CriticalMemberCount INT
 AS
 BEGIN
    SET NOCOUNT ON;
@@ -20,7 +29,16 @@ INSERT INTO [dbo].[OrganizationReport](
     [ContentEncryptionKey],
     [SummaryData],
     [ApplicationData],
-    [RevisionDate]
+    [RevisionDate],
+    [ApplicationCount],
+    [CriticalApplicationCount],
+    [ApplicationAtRiskCount],
+    [CriticalApplicationAtRiskCount],
+    [PasswordAtRiskCount],
+    [CriticalPasswordAtRiskCount],
+    [MemberAtRiskCount],
+    [CriticalMemberAtRiskCount],
+    [CriticalMemberCount]
 )
 VALUES (
     @Id,
@@ -30,6 +48,15 @@ VALUES (
     @ContentEncryptionKey,
     @SummaryData,
     @ApplicationData,
-    @RevisionDate
+    @RevisionDate,
+    @ApplicationCount,
+    @CriticalApplicationCount,
+    @ApplicationAtRiskCount,
+    @CriticalApplicationAtRiskCount,
+    @PasswordAtRiskCount,
+    @CriticalPasswordAtRiskCount,
+    @MemberAtRiskCount,
+    @CriticalMemberAtRiskCount,
+    @CriticalMemberCount
     );
 END
