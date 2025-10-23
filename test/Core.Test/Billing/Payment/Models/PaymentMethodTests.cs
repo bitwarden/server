@@ -6,11 +6,42 @@ namespace Bit.Core.Test.Billing.Payment.Models;
 
 public class PaymentMethodTests
 {
-    [Fact]
-    public void Read_ShouldDeserializeTokenizedPaymentMethod_WhenTypeIsTokenized()
+    [Theory]
+    [InlineData("{\"cardNumber\":\"1234\"}")]
+    [InlineData("{\"type\":\"unknown_type\",\"data\":\"value\"}")]
+    [InlineData("{\"type\":\"invalid\",\"token\":\"test-token\"}")]
+    [InlineData("{\"type\":\"invalid\"}")]
+    public void Read_ShouldThrowJsonException_OnInvalidOrMissingType(string json)
     {
         // Arrange
-        var json = "{\"type\":\"tokenized_card\",\"token\":\"test-token\"}";
+        var options = new JsonSerializerOptions { Converters = { new PaymentMethodJsonConverter() } };
+
+        // Act & Assert
+        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<PaymentMethod>(json, options));
+    }
+
+    [Theory]
+    [InlineData("{\"type\":\"card\"}")]
+    [InlineData("{\"type\":\"card\",\"token\":\"\"}")]
+    [InlineData("{\"type\":\"card\",\"token\":null}")]
+    public void Read_ShouldThrowJsonException_OnInvalidTokenizedPaymentMethodToken(string json)
+    {
+        // Arrange
+        var options = new JsonSerializerOptions { Converters = { new PaymentMethodJsonConverter() } };
+
+        // Act & Assert
+        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<PaymentMethod>(json, options));
+    }
+
+    // Tokenized payment method deserialization
+    [Theory]
+    [InlineData("bankAccount", TokenizablePaymentMethodType.BankAccount)]
+    [InlineData("card", TokenizablePaymentMethodType.Card)]
+    [InlineData("payPal", TokenizablePaymentMethodType.PayPal)]
+    public void Read_ShouldDeserializeTokenizedPaymentMethods(string typeString, TokenizablePaymentMethodType expectedType)
+    {
+        // Arrange
+        var json = $"{{\"type\":\"{typeString}\",\"token\":\"test-token\"}}";
         var options = new JsonSerializerOptions { Converters = { new PaymentMethodJsonConverter() } };
 
         // Act
@@ -18,13 +49,17 @@ public class PaymentMethodTests
 
         // Assert
         Assert.True(result.IsTokenized);
+        Assert.Equal(expectedType, result.AsT0.Type);
+        Assert.Equal("test-token", result.AsT0.Token);
     }
 
-    [Fact]
-    public void Read_ShouldDeserializeNonTokenizedPaymentMethod_WhenTypeIsNonTokenized()
+    // Non-tokenized payment method deserialization
+    [Theory]
+    [InlineData("accountcredit", NonTokenizablePaymentMethodType.AccountCredit)]
+    public void Read_ShouldDeserializeNonTokenizedPaymentMethods(string typeString, NonTokenizablePaymentMethodType expectedType)
     {
         // Arrange
-        var json = "{\"type\":\"non_tokenized_accountcredit\"}";
+        var json = $"{{\"type\":\"{typeString}\"}}";
         var options = new JsonSerializerOptions { Converters = { new PaymentMethodJsonConverter() } };
 
         // Act
@@ -32,38 +67,21 @@ public class PaymentMethodTests
 
         // Assert
         Assert.True(result.IsNonTokenized);
+        Assert.Equal(expectedType, result.AsT1.Type);
     }
 
-    [Fact]
-    public void Read_ShouldThrowJsonException_WhenTypeIsMissing()
-    {
-        // Arrange
-        var json = "{\"cardNumber\":\"1234\"}";
-        var options = new JsonSerializerOptions { Converters = { new PaymentMethodJsonConverter() } };
-
-        // Act & Assert
-        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<PaymentMethod>(json, options));
-    }
-
-    [Fact]
-    public void Read_ShouldThrowJsonException_WhenTypeIsUnknown()
-    {
-        // Arrange
-        var json = "{\"type\":\"unknown_type\",\"data\":\"value\"}";
-        var options = new JsonSerializerOptions { Converters = { new PaymentMethodJsonConverter() } };
-
-        // Act & Assert
-        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<PaymentMethod>(json, options));
-    }
-
-    [Fact]
-    public void Write_ShouldSerializeTokenizedPaymentMethod()
+    // Tokenized payment method serialization
+    [Theory]
+    [InlineData(TokenizablePaymentMethodType.BankAccount, "bankaccount")]
+    [InlineData(TokenizablePaymentMethodType.Card, "card")]
+    [InlineData(TokenizablePaymentMethodType.PayPal, "paypal")]
+    public void Write_ShouldSerializeTokenizedPaymentMethods(TokenizablePaymentMethodType type, string expectedTypeString)
     {
         // Arrange
         var paymentMethod = new PaymentMethod(new TokenizedPaymentMethod
         {
-            Type = TokenizablePaymentMethodType.Card,
-            Token = "test_token"
+            Type = type,
+            Token = "test-token"
         });
         var options = new JsonSerializerOptions { Converters = { new PaymentMethodJsonConverter() } };
 
@@ -71,77 +89,24 @@ public class PaymentMethodTests
         var json = JsonSerializer.Serialize(paymentMethod, options);
 
         // Assert
-        Assert.Contains("\"type\":\"tokenized_card\"", json);
-        Assert.Contains("\"token\":\"test_token\"", json);
+        Assert.Contains($"\"type\":\"{expectedTypeString}\"", json);
+        Assert.Contains("\"token\":\"test-token\"", json);
     }
 
-    [Fact]
-    public void Write_ShouldSerializeNonTokenizedPaymentMethod()
+    // Non-tokenized payment method serialization
+    [Theory]
+    [InlineData(NonTokenizablePaymentMethodType.AccountCredit, "accountcredit")]
+    public void Write_ShouldSerializeNonTokenizedPaymentMethods(NonTokenizablePaymentMethodType type, string expectedTypeString)
     {
         // Arrange
-        var paymentMethod =
-            new PaymentMethod(new NonTokenizedPaymentMethod { Type = NonTokenizablePaymentMethodType.AccountCredit });
+        var paymentMethod = new PaymentMethod(new NonTokenizedPaymentMethod { Type = type });
         var options = new JsonSerializerOptions { Converters = { new PaymentMethodJsonConverter() } };
 
         // Act
         var json = JsonSerializer.Serialize(paymentMethod, options);
 
         // Assert
-        Assert.Contains("\"type\":\"non_tokenized_accountcredit\"", json);
-    }
-
-    [Fact]
-    public void Read_ShouldThrowJsonException_WhenTokenizedPaymentMethodMissingToken()
-    {
-        // Arrange
-        var json = "{\"type\":\"tokenized_card\"}";
-        var options = new JsonSerializerOptions { Converters = { new PaymentMethodJsonConverter() } };
-
-        // Act & Assert
-        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<PaymentMethod>(json, options));
-    }
-
-    [Fact]
-    public void Read_ShouldThrowJsonException_WhenTokenizedPaymentMethodEmptyToken()
-    {
-        // Arrange
-        var json = "{\"type\":\"tokenized_card\",\"token\":\"\"}";
-        var options = new JsonSerializerOptions { Converters = { new PaymentMethodJsonConverter() } };
-
-        // Act & Assert
-        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<PaymentMethod>(json, options));
-    }
-
-    [Fact]
-    public void Read_ShouldThrowJsonException_WhenTokenizedPaymentMethodContainsNullToken()
-    {
-        // Arrange
-        var json = "{\"type\":\"tokenized_card\",\"token\":null}";
-        var options = new JsonSerializerOptions { Converters = { new PaymentMethodJsonConverter() } };
-
-        // Act & Assert
-        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<PaymentMethod>(json, options));
-    }
-
-    [Fact]
-    public void Read_ShouldThrowJsonException_WhenInvalidTokenizedPaymentMethodType()
-    {
-        // Arrange
-        var json = "{\"type\":\"tokenized_invalid\",\"token\":\"test-token\"}";
-        var options = new JsonSerializerOptions { Converters = { new PaymentMethodJsonConverter() } };
-
-        // Act & Assert
-        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<PaymentMethod>(json, options));
-    }
-
-    [Fact]
-    public void Read_ShouldThrowJsonException_WhenInvalidNonTokenizedPaymentMethodType()
-    {
-        // Arrange
-        var json = "{\"type\":\"non_tokenized_invalid\"}";
-        var options = new JsonSerializerOptions { Converters = { new PaymentMethodJsonConverter() } };
-
-        // Act & Assert
-        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<PaymentMethod>(json, options));
+        Assert.Contains($"\"type\":\"{expectedTypeString}\"", json);
+        Assert.DoesNotContain("token", json);
     }
 }
