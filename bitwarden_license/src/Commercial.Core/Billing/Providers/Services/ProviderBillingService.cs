@@ -481,7 +481,6 @@ public class ProviderBillingService(
                 City = billingAddress.City,
                 State = billingAddress.State
             },
-            Coupon = !string.IsNullOrEmpty(provider.DiscountId) ? provider.DiscountId : null,
             Description = provider.DisplayBusinessName(),
             Email = provider.BillingEmail,
             InvoiceSettings = new CustomerInvoiceSettingsOptions
@@ -663,6 +662,7 @@ public class ProviderBillingService(
                     : CollectionMethod.SendInvoice,
             Customer = customer.Id,
             DaysUntilDue = usePaymentMethod ? null : 30,
+            Discounts = !string.IsNullOrEmpty(provider.DiscountId) ? [new SubscriptionDiscountOptions { Coupon = provider.DiscountId }] : null,
             Items = subscriptionItemOptionsList,
             Metadata = new Dictionary<string, string> { { "providerId", provider.Id.ToString() } },
             OffSession = true,
@@ -670,7 +670,6 @@ public class ProviderBillingService(
             TrialPeriodDays = trialPeriodDays,
             AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
         };
-
 
         try
         {

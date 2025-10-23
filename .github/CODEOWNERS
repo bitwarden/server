@@ -96,6 +96,9 @@ src/Admin/Views/Tools @bitwarden/team-billing-dev
 # The PushType enum is expected to be editted by anyone without need for Platform review
 src/Core/Platform/Push/PushType.cs
 
+# SDK
+util/RustSdk @bitwarden/team-sdk-sme
+
 # Multiple owners - DO NOT REMOVE (BRE)
 **/packages.lock.json
 Directory.Build.props

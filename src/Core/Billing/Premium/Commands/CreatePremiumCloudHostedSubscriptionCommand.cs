@@ -1,7 +1,9 @@
 ﻿using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Payment.Models;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -49,7 +51,8 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
     ISubscriberService subscriberService,
     IUserService userService,
     IPushNotificationService pushNotificationService,
-    ILogger<CreatePremiumCloudHostedSubscriptionCommand> logger)
+    ILogger<CreatePremiumCloudHostedSubscriptionCommand> logger,
+    IPricingClient pricingClient)
     : BaseBillingCommand<CreatePremiumCloudHostedSubscriptionCommand>(logger), ICreatePremiumCloudHostedSubscriptionCommand
 {
     private static readonly List<string> _expand = ["tax"];
@@ -87,7 +90,7 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
                 when subscription.Status == StripeConstants.SubscriptionStatus.Active:
                 {
                     user.Premium = true;
-                    user.PremiumExpirationDate = subscription.CurrentPeriodEnd;
+                    user.PremiumExpirationDate = subscription.GetCurrentPeriodEnd();
                     break;
                 }
         }
@@ -254,11 +257,13 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
         Customer customer,
         int? storage)
     {
+        var premiumPlan = await pricingClient.GetAvailablePremiumPlan();
+
         var subscriptionItemOptionsList = new List<SubscriptionItemOptions>
         {
             new ()
             {
-                Price = StripeConstants.Prices.PremiumAnnually,
+                Price = premiumPlan.Seat.StripePriceId,
                 Quantity = 1
             }
         };
@@ -267,7 +272,7 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
         {
             subscriptionItemOptionsList.Add(new SubscriptionItemOptions
             {
-                Price = StripeConstants.Prices.StoragePlanPersonal,
+                Price = premiumPlan.Storage.StripePriceId,
                 Quantity = storage
             });
         }
