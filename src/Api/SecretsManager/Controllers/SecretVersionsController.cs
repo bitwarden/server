@@ -171,8 +171,6 @@ public class SecretVersionsController : Controller
         secret.RevisionDate = DateTime.UtcNow;
 
         var updatedSecret = await _secretRepository.UpdateAsync(secret);
-        //TODO add new secret version record?
-        //TODO add an event log that this happened.
 
         return new SecretResponseModel(updatedSecret, true, true);
     }
