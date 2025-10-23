@@ -75,7 +75,13 @@ public class PreviewOrganizationTaxCommand(
                             Quantity = purchase.SecretsManager.Seats
                         }
                     ]);
-                    options.Coupon = CouponIDs.SecretsManagerStandalone;
+                    options.Discounts =
+                    [
+                        new InvoiceDiscountOptions
+                        {
+                            Coupon = CouponIDs.SecretsManagerStandalone
+                        }
+                    ];
                     break;
 
                 default:
@@ -180,7 +186,10 @@ public class PreviewOrganizationTaxCommand(
 
                 if (subscription.Customer.Discount != null)
                 {
-                    options.Coupon = subscription.Customer.Discount.Coupon.Id;
+                    options.Discounts =
+                    [
+                        new InvoiceDiscountOptions { Coupon = subscription.Customer.Discount.Coupon.Id }
+                    ];
                 }
 
                 var currentPlan = await pricingClient.GetPlanOrThrow(organization.PlanType);
@@ -277,7 +286,10 @@ public class PreviewOrganizationTaxCommand(
 
             if (subscription.Customer.Discount != null)
             {
-                options.Coupon = subscription.Customer.Discount.Coupon.Id;
+                options.Discounts =
+                [
+                    new InvoiceDiscountOptions { Coupon = subscription.Customer.Discount.Coupon.Id }
+                ];
             }
 
             var currentPlan = await pricingClient.GetPlanOrThrow(organization.PlanType);
@@ -329,7 +341,7 @@ public class PreviewOrganizationTaxCommand(
         });
 
     private static (decimal, decimal) GetAmounts(Invoice invoice) => (
-        Convert.ToDecimal(invoice.Tax) / 100,
+        Convert.ToDecimal(invoice.TotalTaxes.Sum(invoiceTotalTax => invoiceTotalTax.Amount)) / 100,
         Convert.ToDecimal(invoice.Total) / 100);
 
     private static InvoiceCreatePreviewOptions GetBaseOptions(

@@ -154,6 +154,7 @@ public static class FeatureFlagKeys
     public const string DisableAlternateLoginMethods = "pm-22110-disable-alternate-login-methods";
     public const string PM23174ManageAccountRecoveryPermissionDrivesTheNeedToSetMasterPassword =
         "pm-23174-manage-account-recovery-permission-drives-the-need-to-set-master-password";
+    public const string MJMLBasedEmailTemplates = "mjml-based-email-templates";
 
     /* Autofill Team */
     public const string IdpAutoSubmitLogin = "idp-auto-submit-login";
@@ -161,6 +162,7 @@ public static class FeatureFlagKeys
     public const string InlineMenuFieldQualification = "inline-menu-field-qualification";
     public const string InlineMenuPositioningImprovements = "inline-menu-positioning-improvements";
     public const string SSHAgent = "ssh-agent";
+    public const string SSHAgentV2 = "ssh-agent-v2";
     public const string SSHVersionCheckQAOverride = "ssh-version-check-qa-override";
     public const string GenerateIdentityFillScriptRefactor = "generate-identity-fill-script-refactor";
     public const string DelayFido2PageScriptInitWithinMv2 = "delay-fido2-page-script-init-within-mv2";
@@ -184,6 +186,7 @@ public static class FeatureFlagKeys
     public const string PM24032_NewNavigationPremiumUpgradeButton = "pm-24032-new-navigation-premium-upgrade-button";
     public const string PM23713_PremiumBadgeOpensNewPremiumUpgradeDialog = "pm-23713-premium-badge-opens-new-premium-upgrade-dialog";
     public const string PremiumUpgradeNewDesign = "pm-24033-updat-premium-subscription-page";
+    public const string PM26793_FetchPremiumPriceFromPricingService = "pm-26793-fetch-premium-price-from-pricing-service";
 
     /* Key Management Team */
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
@@ -244,6 +247,7 @@ public static class FeatureFlagKeys
 
     /* DIRT Team */
     public const string PM22887_RiskInsightsActivityTab = "pm-22887-risk-insights-activity-tab";
+    public const string EventManagementForDataDogAndCrowdStrike = "event-management-for-datadog-and-crowdstrike";
 
     public static List<string> GetAllKeys()
     {

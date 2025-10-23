@@ -42,9 +42,10 @@ public static class PolicyDataValidator
 
             return json;
         }
-        catch
+        catch (JsonException ex)
         {
-            throw new BadRequestException($"Invalid data for {policyType} policy.");
+            var fieldInfo = !string.IsNullOrEmpty(ex.Path) ? $": field '{ex.Path}' has invalid type" : "";
+            throw new BadRequestException($"Invalid data for {policyType} policy{fieldInfo}.");
         }
     }
 
