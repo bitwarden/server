@@ -34,6 +34,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 2
+          persist-credentials: false
 
       - name: Check for file changes
         id: check-changes
@@ -43,9 +44,9 @@ jobs:
           for file in $MODIFIED_FILES
           do
             if [[ $file == *"${{ matrix.path }}"* ]]; then
-              echo "changes_detected=true" >> $GITHUB_OUTPUT
+              echo "changes_detected=true" >> "$GITHUB_OUTPUT"
               break
-            else echo "changes_detected=false" >> $GITHUB_OUTPUT
+            else echo "changes_detected=false" >> "$GITHUB_OUTPUT"
             fi
           done
 

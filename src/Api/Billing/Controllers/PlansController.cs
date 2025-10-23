@@ -3,7 +3,7 @@ using Bit.Core.Billing.Pricing;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Bit.Api.Controllers;
+namespace Bit.Api.Billing.Controllers;
 
 [Route("plans")]
 [Authorize("Web")]
@@ -17,5 +17,12 @@ public class PlansController(
         var plans = await pricingClient.ListPlans();
         var responses = plans.Select(plan => new PlanResponseModel(plan));
         return new ListResponseModel<PlanResponseModel>(responses);
+    }
+
+    [HttpGet("premium")]
+    public async Task<IResult> GetPremiumPlanAsync()
+    {
+        var premiumPlan = await pricingClient.GetAvailablePremiumPlan();
+        return TypedResults.Ok(premiumPlan);
     }
 }
