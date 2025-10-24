@@ -26,13 +26,13 @@ internal class AssertWebAuthnLoginCredentialCommand : IAssertWebAuthnLoginCreden
     {
         if (!GuidUtilities.TryParseBytes(assertionResponse.Response.UserHandle, out var userId))
         {
-            throw new BadRequestException("Invalid credential.");
+            ThrowInvalidCredentialException();
         }
 
         var user = await _userRepository.GetByIdAsync(userId);
         if (user == null)
         {
-            throw new BadRequestException("Invalid credential.");
+            ThrowInvalidCredentialException();
         }
 
         var userCredentials = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
@@ -40,14 +40,23 @@ internal class AssertWebAuthnLoginCredentialCommand : IAssertWebAuthnLoginCreden
         var credential = userCredentials.FirstOrDefault(c => c.CredentialId == assertedCredentialId);
         if (credential == null)
         {
-            throw new BadRequestException("Invalid credential.");
+            ThrowInvalidCredentialException();
         }
 
         // Always return true, since we've already filtered the credentials after user id
         IsUserHandleOwnerOfCredentialIdAsync callback = (args, cancellationToken) => Task.FromResult(true);
         var credentialPublicKey = CoreHelpers.Base64UrlDecode(credential.PublicKey);
-        var assertionVerificationResult = await _fido2.MakeAssertionAsync(
-            assertionResponse, options, credentialPublicKey, (uint)credential.Counter, callback);
+
+        Fido2NetLib.Objects.AssertionVerificationResult assertionVerificationResult = null;
+        try
+        {
+            assertionVerificationResult = await _fido2.MakeAssertionAsync(
+                assertionResponse, options, credentialPublicKey, (uint)credential.Counter, callback);
+        }
+        catch (Fido2VerificationException)
+        {
+            ThrowInvalidCredentialException();
+        }
 
         // Update SignatureCounter
         credential.Counter = (int)assertionVerificationResult.Counter;
@@ -55,9 +64,14 @@ internal class AssertWebAuthnLoginCredentialCommand : IAssertWebAuthnLoginCreden
 
         if (assertionVerificationResult.Status != "ok")
         {
-            throw new BadRequestException("Invalid credential.");
+            ThrowInvalidCredentialException();
         }
 
         return (user, credential);
+    }
+
+    private void ThrowInvalidCredentialException()
+    {
+        throw new BadRequestException("Invalid credential.");
     }
 }
