@@ -88,7 +88,13 @@ public class RestartSubscriptionCommandTests
         var newSubscription = new Subscription
         {
             Id = "sub_new",
-            CurrentPeriodEnd = currentPeriodEnd
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem { CurrentPeriodEnd = currentPeriodEnd }
+                ]
+            }
         };
 
         _subscriberService.GetSubscription(organization).Returns(existingSubscription);
@@ -138,7 +144,13 @@ public class RestartSubscriptionCommandTests
         var newSubscription = new Subscription
         {
             Id = "sub_new",
-            CurrentPeriodEnd = DateTime.UtcNow.AddMonths(1)
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem { CurrentPeriodEnd = DateTime.UtcNow.AddMonths(1) }
+                ]
+            }
         };
 
         _subscriberService.GetSubscription(provider).Returns(existingSubscription);
@@ -177,7 +189,13 @@ public class RestartSubscriptionCommandTests
         var newSubscription = new Subscription
         {
             Id = "sub_new",
-            CurrentPeriodEnd = currentPeriodEnd
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem { CurrentPeriodEnd = currentPeriodEnd }
+                ]
+            }
         };
 
         _subscriberService.GetSubscription(user).Returns(existingSubscription);
