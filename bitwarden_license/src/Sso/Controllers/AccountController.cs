@@ -723,14 +723,17 @@ public class AccountController : Controller
     }
 
     /// <summary>
-    /// This will try to retrieve the organization user.
+    /// This will try to retrieve the organization user. If there is no org user it will return a null value.
+    /// Throws on not being able to find the organization.
     /// </summary>
-    /// <param name="user"></param>
-    /// <param name="organizationId"></param>
-    /// <param name="emailToUseForInvitedUsers"></param>
-    /// <param name="organization"></param>
-    /// <returns></returns>
-    /// <exception cref="Exception"></exception>
+    /// <param name="user">User used to retrieve from the org user join table.</param>
+    /// <param name="organizationId">Organization id from the provider data.</param>
+    /// <param name="emailToUseForInvitedUsers">Email to use as a fallback in case of an invited user not in the Users
+    /// table yet.</param>
+    /// <param name="organization">Organization so that we can optimize the number of calls to the database. If we provided
+    /// the database hit will be skipped.</param>
+    /// <returns>Guaranteed to return organization and optional org user.</returns>
+    /// <exception cref="Exception">Throws if there is no found organization.</exception>
     private async Task<(Organization, OrganizationUser)> TryToFindOrganizationUserAsync(
         User user,
         Guid organizationId,
