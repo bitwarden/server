@@ -28,7 +28,8 @@ BEGIN
         [LimitItemDeletion],
         [UseOrganizationDomains],
         [UseAdminSponsoredFamilies],
-        [UseAutomaticUserConfirmation]
+        [UseAutomaticUserConfirmation],
+        [UseDisableSMAdsForUsers]
     FROM
         [dbo].[Organization]
 END
