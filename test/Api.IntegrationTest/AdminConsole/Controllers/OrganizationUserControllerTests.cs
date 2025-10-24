@@ -33,6 +33,10 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
             featureService
                 .IsEnabled(FeatureFlagKeys.CreateDefaultLocation)
                 .Returns(true);
+
+            featureService
+                .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+                .Returns(true);
         });
         _client = _factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
@@ -452,25 +456,6 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
         return acceptedUsers;
     }
 
-    private async Task<List<OrganizationUser>> CreatedUsersAsync(
-        IEnumerable<(string email, OrganizationUserType userType, OrganizationUserStatusType status)> newUsers)
-    {
-        var acceptedUsers = new List<OrganizationUser>();
-
-        foreach (var (email, userType, status) in newUsers)
-        {
-            await _factory.LoginWithNewAccount(email);
-
-            var acceptedOrgUser = await OrganizationTestHelpers.CreateUserAsync(
-                _factory, _organization.Id, email,
-                userType, userStatusType: status);
-
-            acceptedUsers.Add(acceptedOrgUser);
-        }
-
-        return acceptedUsers;
-    }
-
     private async Task VerifyDefaultCollectionCountAsync(OrganizationUser orgUser, int expectedCount)
     {
         var collectionRepository = _factory.GetService<ICollectionRepository>();
@@ -497,7 +482,7 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
     [Fact]
     public async Task AutoConfirm_WithValidUser_ReturnsSuccess()
     {
-        await OrganizationTestHelpers.EnableOrganizationDataOwnershipPolicyAsync(_factory, _organization.Id);
+        await OrganizationTestHelpers.EnableOrganizationAutoConfirmPolicyAsync(_factory, _organization.Id);
 
         var acceptedOrgUser = (await CreateAcceptedUsersAsync([("test1@bitwarden.com", OrganizationUserType.User)])).First();
 
@@ -519,6 +504,7 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
     public async Task AutoConfirm_WithoutManageUsersPermission_ReturnsForbiddenResponse(
         OrganizationUserType organizationUserType)
     {
+        await OrganizationTestHelpers.EnableOrganizationAutoConfirmPolicyAsync(_factory, _organization.Id);
         var (userEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
             _organization.Id, organizationUserType, new Permissions { ManageUsers = false });
 
