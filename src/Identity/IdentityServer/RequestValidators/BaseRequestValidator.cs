@@ -364,13 +364,14 @@ public abstract class BaseRequestValidator<T> where T : class
         // presented with their 2FA management area as a reminder to re-evaluate their 2FA posture after recovery and
         // review their new recovery token if desired.
         // SSO users cannot be assumed to be authenticated, and must prove authentication with their IdP after recovery.
-        // We will send a descriptive message in these cases so clients can give the appropriate feedback.
+        // We will send a descriptive message in these cases so clients can give the appropriate feedback, and redirect
+        // to /login.
         if (validatorContext.CompletedValidationSchemes.Contains(nameof(ValidateTwoFactorAsync)) &&
             validatorContext.TwoFactorRecoveryRequested)
         {
             SetSsoResult(context, new Dictionary<string, object>
             {
-                { "ErrorModel", new ErrorResponseModel("Two-factor recovery has been completed. SSO authentication is required.") }
+                { "ErrorModel", new ErrorResponseModel("Two-factor recovery has been performed. SSO authentication is required.") }
             });
             return false;
         }
@@ -455,8 +456,8 @@ public abstract class BaseRequestValidator<T> where T : class
         }
 
         // 3c. Given a valid token and a successful two-factor verification, if the provider type is Recovery Code,
-        // recovery will have been initiated as part of validation. This will be relevant for, e.g., SSO users
-        // who are requesting recovery.
+        // recovery will have been performed as part of 2FA validation. This will be relevant for, e.g., SSO users
+        // who are requesting recovery, but who will still need to log in after 2FA recovery.
         if (twoFactorProviderType == TwoFactorProviderType.RecoveryCode)
         {
             validatorContext.TwoFactorRecoveryRequested = true;
