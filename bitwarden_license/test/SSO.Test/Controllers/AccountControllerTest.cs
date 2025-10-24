@@ -135,6 +135,7 @@ public class AccountControllerTest
         if (organization != null && orgUser != null)
         {
             organizationUserRepository.GetByOrganizationAsync(organization.Id, user.Id).Returns(orgUser);
+            organizationUserRepository.GetManyByUserAsync(user.Id).Returns([orgUser]);
         }
     }
 
@@ -632,7 +633,8 @@ public class AccountControllerTest
         var userGetBySso = userRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IUserRepository.GetBySsoUserAsync));
         var userGetByEmail = userRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IUserRepository.GetByEmailAsync));
         var orgGet = organizationRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IOrganizationRepository.GetByIdAsync));
-        var orgUserGetByOrg = organizationUserRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IOrganizationUserRepository.GetByOrganizationAsync));
+        var orgUserGetByOrg = organizationUserRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IOrganizationUserRepository.GetByOrganizationAsync))
+            + organizationUserRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IOrganizationUserRepository.GetManyByUserAsync));
         var orgUserGetByEmail = organizationUserRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IOrganizationUserRepository.GetByOrganizationEmailAsync));
 
         _output.WriteLine($"GetBySsoUserAsync: {userGetBySso}");
@@ -720,6 +722,9 @@ public class AccountControllerTest
     /// <summary>
     /// PM-24579: Permanent test, remove the True in PreventNonCompliantTrue and remove the configure for the feature
     /// flag.
+    ///
+    /// This test will trigger both the GetByOrganizationAsync and the fallback attempt to get by email
+    /// GetByOrganizationEmailAsync.
     /// </summary>
     [Theory, BitAutoData]
     public async Task ExternalCallback_PreventNonCompliantTrue_ExistingUser_NoOrgUser_MeasureLookups(
@@ -768,7 +773,8 @@ public class AccountControllerTest
         var userGetBySso = userRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IUserRepository.GetBySsoUserAsync));
         var userGetByEmail = userRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IUserRepository.GetByEmailAsync));
         var orgGet = organizationRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IOrganizationRepository.GetByIdAsync));
-        var orgUserGetByOrg = organizationUserRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IOrganizationUserRepository.GetByOrganizationAsync));
+        var orgUserGetByOrg = organizationUserRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IOrganizationUserRepository.GetByOrganizationAsync))
+            + organizationUserRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IOrganizationUserRepository.GetManyByUserAsync));
         var orgUserGetByEmail = organizationUserRepository.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(IOrganizationUserRepository.GetByOrganizationEmailAsync));
 
         _output.WriteLine($"GetBySsoUserAsync: {userGetBySso}");
@@ -782,7 +788,7 @@ public class AccountControllerTest
         Assert.Equal(0, userGetByEmail);
         Assert.Equal(1, orgGet);
         Assert.Equal(1, orgUserGetByOrg);
-        Assert.Equal(0, orgUserGetByEmail);
+        Assert.Equal(1, orgUserGetByEmail);
     }
 
     /// <summary>

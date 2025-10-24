@@ -239,7 +239,6 @@ public class AccountController : Controller
     public async Task<IActionResult> ExternalCallback()
     {
         // Feature flag (PM-24579): Prevent SSO on existing non-compliant users.
-        // When removing this feature flag, delete this check and always run the enforcement logic below.
         var preventNonCompliant = _featureService.IsEnabled(FeatureFlagKeys.PM24579_PreventSsoOnExistingNonCompliantUsers);
 
         // Read external identity from the temporary cookie
@@ -297,13 +296,15 @@ public class AccountController : Controller
         {
             // Call the guarded here because the user could have been not null in which case we need to retrieve
             // the organization and orgUser.
-            await GuardedEnsureUserStatusAsync(user, organization, orgUser, provider);
+            var fallbackEmailFromClaimForInvitedUser = GetEmailAddress(claims, ssoConfigData.GetAdditionalEmailClaimTypes());
+            await GuardedEnsureUserStatusAsync(user, organization, orgUser, provider, fallbackEmailFromClaimForInvitedUser);
         }
 
         if (preventNonCompliant)
         {
             // Same as else block without the if check, it should not be necessary. The user should _always_
             // be defined at this point either by auto provisioned or they existed to begin with.
+            // PM-24579 When removing the feature flag, delete the above comment block.
 
             // This allows us to collect any additional claims or properties
             // for the specific protocols used and store them in the local auth cookie.
@@ -352,8 +353,6 @@ public class AccountController : Controller
             }
         }
 
-
-
         // Delete temporary cookie used during external authentication
         await HttpContext.SignOutAsync(AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
 
@@ -378,7 +377,7 @@ public class AccountController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> Logout(string logoutId)
+    public async Task<IActionResult> LogoutAsync(string logoutId)
     {
         // Build a model so the logged out page knows what to display
         var (updatedLogoutId, redirectUri, externalAuthenticationScheme) = await GetLoggedOutDataAsync(logoutId);
@@ -525,7 +524,7 @@ public class AccountController : Controller
         }
 
         // Try to find the OrganizationUser if it exists.
-        var (organization, orgUser) = await TryToFindOrganizationUserAsync(existingUser, email, orgId);
+        var (organization, orgUser) = await TryToFindOrganizationUserAsync(existingUser, orgId, email);
 
         //----------------------------------------------------
         // Scenario 1: We've found the user in the User table
@@ -657,16 +656,21 @@ public class AccountController : Controller
         return (user, organization, orgUser);
     }
 
-    private async Task GuardedEnsureUserStatusAsync(User user, Organization organization, OrganizationUser orgUser, string provider)
+    private async Task GuardedEnsureUserStatusAsync(
+        User user,
+        Organization organization,
+        OrganizationUser orgUser,
+        string provider,
+        string emailToUserForInvitedUsers)
     {
+        if (!Guid.TryParse(provider, out var organizationId))
+        {
+            throw new Exception(_i18nService.T("SSOProviderIsNotAnOrgId", provider));
+        }
+
         // Lazily resolve organization if not already known
         if (organization == null)
         {
-            if (!Guid.TryParse(provider, out var organizationId))
-            {
-                throw new Exception(_i18nService.T("SSOProviderIsNotAnOrgId", provider));
-            }
-
             organization = await _organizationRepository.GetByIdAsync(organizationId);
 
             if (organization == null)
@@ -675,8 +679,8 @@ public class AccountController : Controller
             }
         }
 
-        // Use fallback to email if not found by id. Use find OrganizationUser
-        orgUser ??= await _organizationUserRepository.GetByOrganizationAsync(organization.Id, user.Id);
+        // Lazily load the org user if we do not already have it provided.
+        orgUser ??= (await TryToFindOrganizationUserAsync(user, organizationId, emailToUserForInvitedUsers, organization)).Item2;
         if (orgUser != null)
         {
             EnsureOrgUserStatusAllowed(orgUser.Status, organization.DisplayName(),
@@ -718,26 +722,40 @@ public class AccountController : Controller
         return user;
     }
 
-    private async Task<(Organization, OrganizationUser)> TryToFindOrganizationUserAsync(User existingUser, string email, Guid orgId)
+    /// <summary>
+    /// This will try to retrieve the organization user.
+    /// </summary>
+    /// <param name="user"></param>
+    /// <param name="organizationId"></param>
+    /// <param name="emailToUseForInvitedUsers"></param>
+    /// <param name="organization"></param>
+    /// <returns></returns>
+    /// <exception cref="Exception"></exception>
+    private async Task<(Organization, OrganizationUser)> TryToFindOrganizationUserAsync(
+        User user,
+        Guid organizationId,
+        string emailToUseForInvitedUsers,
+        Organization organization = null)
     {
         OrganizationUser orgUser = null;
-        var organization = await _organizationRepository.GetByIdAsync(orgId);
+        // Reduce calls to the database by checking if we have an organization we can already provide.
+        organization ??= await _organizationRepository.GetByIdAsync(organizationId);
         if (organization == null)
         {
-            throw new Exception(_i18nService.T("CouldNotFindOrganization", orgId));
+            throw new Exception(_i18nService.T("CouldNotFindOrganization", organizationId));
         }
 
         // Try to find OrgUser via existing User Id.
         // This covers any OrganizationUser state after they have accepted an invite.
-        if (existingUser != null)
+        if (user != null)
         {
-            var orgUsersByUserId = await _organizationUserRepository.GetManyByUserAsync(existingUser.Id);
-            orgUser = orgUsersByUserId.SingleOrDefault(u => u.OrganizationId == orgId);
+            var orgUsersByUserId = await _organizationUserRepository.GetManyByUserAsync(user.Id);
+            orgUser = orgUsersByUserId.SingleOrDefault(u => u.OrganizationId == organizationId);
         }
 
         // If no Org User found by Existing User Id - search all the organization's users via email.
         // This covers users who are Invited but haven't accepted their invite yet.
-        orgUser ??= await _organizationUserRepository.GetByOrganizationEmailAsync(orgId, email);
+        orgUser ??= await _organizationUserRepository.GetByOrganizationEmailAsync(organizationId, emailToUseForInvitedUsers);
 
         return (organization, orgUser);
     }
