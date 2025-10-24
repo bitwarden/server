@@ -1026,7 +1026,7 @@ public class BaseRequestValidatorTests
         {
             // NEW BEHAVIOR: Recovery succeeds, then SSO blocks with descriptive message
             Assert.Equal(
-                "Two-factor recovery has been completed. SSO authentication is required.",
+                "Two-factor recovery has been performed. SSO authentication is required.",
                 errorResponse.Message);
 
             // Verify recovery was marked
