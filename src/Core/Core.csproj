@@ -17,6 +17,7 @@
     <EmbeddedResource Include="licensing.cer" />
     <EmbeddedResource Include="licensing_dev.cer" />
     <EmbeddedResource Include="MailTemplates\Handlebars\**\*.hbs" />
+    <EmbeddedResource Include="MailTemplates\Mjml\Handlebars\**\*.hbs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -72,7 +73,7 @@
     <PackageReference Include="System.Text.Json" Version="8.0.5" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="8.0.1" />
   </ItemGroup>
-  
+
   <ItemGroup>
     <Folder Include="Resources\" />
     <Folder Include="Properties\" />
