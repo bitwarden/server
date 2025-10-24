@@ -110,3 +110,6 @@ You are also able to reference other more static MJML templates in your MJML fil
   <mj-include path="../../components/learn-more-footer.mjml" />
 </mj-wrapper>
 ```
+
+#### `head.mjml`
+Always include the `head.mjml` file in your MJML templates as it contains shared styling and formatting that ensures consistency across all email implementations.
