@@ -1,7 +1,9 @@
 ﻿using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Payment.Models;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -14,6 +16,7 @@ using Microsoft.Extensions.Logging;
 using OneOf.Types;
 using Stripe;
 using Customer = Stripe.Customer;
+using PaymentMethod = Bit.Core.Billing.Payment.Models.PaymentMethod;
 using Subscription = Stripe.Subscription;
 
 namespace Bit.Core.Billing.Premium.Commands;
@@ -36,7 +39,7 @@ public interface ICreatePremiumCloudHostedSubscriptionCommand
     /// <returns>A billing command result indicating success or failure with appropriate error details.</returns>
     Task<BillingCommandResult<None>> Run(
         User user,
-        TokenizedPaymentMethod paymentMethod,
+        PaymentMethod paymentMethod,
         BillingAddress billingAddress,
         short additionalStorageGb);
 }
@@ -49,7 +52,8 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
     ISubscriberService subscriberService,
     IUserService userService,
     IPushNotificationService pushNotificationService,
-    ILogger<CreatePremiumCloudHostedSubscriptionCommand> logger)
+    ILogger<CreatePremiumCloudHostedSubscriptionCommand> logger,
+    IPricingClient pricingClient)
     : BaseBillingCommand<CreatePremiumCloudHostedSubscriptionCommand>(logger), ICreatePremiumCloudHostedSubscriptionCommand
 {
     private static readonly List<string> _expand = ["tax"];
@@ -57,7 +61,7 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
 
     public Task<BillingCommandResult<None>> Run(
         User user,
-        TokenizedPaymentMethod paymentMethod,
+        PaymentMethod paymentMethod,
         BillingAddress billingAddress,
         short additionalStorageGb) => HandleAsync<None>(async () =>
     {
@@ -71,6 +75,7 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
             return new BadRequest("Additional storage must be greater than 0.");
         }
 
+        // Note: A customer will already exist if the customer has purchased account credits.
         var customer = string.IsNullOrEmpty(user.GatewayCustomerId)
             ? await CreateCustomerAsync(user, paymentMethod, billingAddress)
             : await subscriberService.GetCustomerOrThrow(user, new CustomerGetOptions { Expand = _expand });
@@ -79,18 +84,31 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
 
         var subscription = await CreateSubscriptionAsync(user.Id, customer, additionalStorageGb > 0 ? additionalStorageGb : null);
 
-        switch (paymentMethod)
-        {
-            case { Type: TokenizablePaymentMethodType.PayPal }
-                when subscription.Status == StripeConstants.SubscriptionStatus.Incomplete:
-            case { Type: not TokenizablePaymentMethodType.PayPal }
-                when subscription.Status == StripeConstants.SubscriptionStatus.Active:
+        paymentMethod.Switch(
+            tokenized =>
+            {
+                // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
+                switch (tokenized)
+                {
+                    case { Type: TokenizablePaymentMethodType.PayPal }
+                        when subscription.Status == StripeConstants.SubscriptionStatus.Incomplete:
+                    case { Type: not TokenizablePaymentMethodType.PayPal }
+                        when subscription.Status == StripeConstants.SubscriptionStatus.Active:
+                        {
+                            user.Premium = true;
+                            user.PremiumExpirationDate = subscription.GetCurrentPeriodEnd();
+                            break;
+                        }
+                }
+            },
+            nonTokenized =>
+            {
+                if (subscription.Status == StripeConstants.SubscriptionStatus.Active)
                 {
                     user.Premium = true;
-                    user.PremiumExpirationDate = subscription.CurrentPeriodEnd;
-                    break;
+                    user.PremiumExpirationDate = subscription.GetCurrentPeriodEnd();
                 }
-        }
+            });
 
         user.Gateway = GatewayType.Stripe;
         user.GatewayCustomerId = customer.Id;
@@ -106,9 +124,15 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
     });
 
     private async Task<Customer> CreateCustomerAsync(User user,
-        TokenizedPaymentMethod paymentMethod,
+        PaymentMethod paymentMethod,
         BillingAddress billingAddress)
     {
+        if (paymentMethod.IsNonTokenized)
+        {
+            _logger.LogError("Cannot create customer for user ({UserID}) using non-tokenized payment method. The customer should already exist", user.Id);
+            throw new BillingException();
+        }
+
         var subscriberName = user.SubscriberName();
         var customerCreateOptions = new CustomerCreateOptions
         {
@@ -150,13 +174,14 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
 
         var braintreeCustomerId = "";
 
+        // We have checked that the payment method is tokenized, so we can safely cast it.
         // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
-        switch (paymentMethod.Type)
+        switch (paymentMethod.AsT0.Type)
         {
             case TokenizablePaymentMethodType.BankAccount:
                 {
                     var setupIntent =
-                        (await stripeAdapter.SetupIntentList(new SetupIntentListOptions { PaymentMethod = paymentMethod.Token }))
+                        (await stripeAdapter.SetupIntentList(new SetupIntentListOptions { PaymentMethod = paymentMethod.AsT0.Token }))
                         .FirstOrDefault();
 
                     if (setupIntent == null)
@@ -170,19 +195,19 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
                 }
             case TokenizablePaymentMethodType.Card:
                 {
-                    customerCreateOptions.PaymentMethod = paymentMethod.Token;
-                    customerCreateOptions.InvoiceSettings.DefaultPaymentMethod = paymentMethod.Token;
+                    customerCreateOptions.PaymentMethod = paymentMethod.AsT0.Token;
+                    customerCreateOptions.InvoiceSettings.DefaultPaymentMethod = paymentMethod.AsT0.Token;
                     break;
                 }
             case TokenizablePaymentMethodType.PayPal:
                 {
-                    braintreeCustomerId = await subscriberService.CreateBraintreeCustomer(user, paymentMethod.Token);
+                    braintreeCustomerId = await subscriberService.CreateBraintreeCustomer(user, paymentMethod.AsT0.Token);
                     customerCreateOptions.Metadata[BraintreeCustomerIdKey] = braintreeCustomerId;
                     break;
                 }
             default:
                 {
-                    _logger.LogError("Cannot create customer for user ({UserID}) using payment method type ({PaymentMethodType}) as it is not supported", user.Id, paymentMethod.Type.ToString());
+                    _logger.LogError("Cannot create customer for user ({UserID}) using payment method type ({PaymentMethodType}) as it is not supported", user.Id, paymentMethod.AsT0.Type.ToString());
                     throw new BillingException();
                 }
         }
@@ -200,18 +225,21 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
         async Task Revert()
         {
             // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
-            switch (paymentMethod.Type)
+            if (paymentMethod.IsTokenized)
             {
-                case TokenizablePaymentMethodType.BankAccount:
-                    {
-                        await setupIntentCache.RemoveSetupIntentForSubscriber(user.Id);
-                        break;
-                    }
-                case TokenizablePaymentMethodType.PayPal when !string.IsNullOrEmpty(braintreeCustomerId):
-                    {
-                        await braintreeGateway.Customer.DeleteAsync(braintreeCustomerId);
-                        break;
-                    }
+                switch (paymentMethod.AsT0.Type)
+                {
+                    case TokenizablePaymentMethodType.BankAccount:
+                        {
+                            await setupIntentCache.RemoveSetupIntentForSubscriber(user.Id);
+                            break;
+                        }
+                    case TokenizablePaymentMethodType.PayPal when !string.IsNullOrEmpty(braintreeCustomerId):
+                        {
+                            await braintreeGateway.Customer.DeleteAsync(braintreeCustomerId);
+                            break;
+                        }
+                }
             }
         }
     }
@@ -254,11 +282,13 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
         Customer customer,
         int? storage)
     {
+        var premiumPlan = await pricingClient.GetAvailablePremiumPlan();
+
         var subscriptionItemOptionsList = new List<SubscriptionItemOptions>
         {
             new ()
             {
-                Price = StripeConstants.Prices.PremiumAnnually,
+                Price = premiumPlan.Seat.StripePriceId,
                 Quantity = 1
             }
         };
@@ -267,7 +297,7 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
         {
             subscriptionItemOptionsList.Add(new SubscriptionItemOptions
             {
-                Price = StripeConstants.Prices.StoragePlanPersonal,
+                Price = premiumPlan.Storage.StripePriceId,
                 Quantity = storage
             });
         }

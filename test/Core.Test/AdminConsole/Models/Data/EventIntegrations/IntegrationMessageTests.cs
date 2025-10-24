@@ -8,6 +8,7 @@ namespace Bit.Core.Test.Models.Data.EventIntegrations;
 public class IntegrationMessageTests
 {
     private const string _messageId = "TestMessageId";
+    private const string _organizationId = "TestOrganizationId";
 
     [Fact]
     public void ApplyRetry_IncrementsRetryCountAndSetsDelayUntilDate()
@@ -16,6 +17,7 @@ public class IntegrationMessageTests
         {
             Configuration = new WebhookIntegrationConfigurationDetails(new Uri("https://localhost"), "Bearer", "AUTH-TOKEN"),
             MessageId = _messageId,
+            OrganizationId = _organizationId,
             RetryCount = 2,
             RenderedTemplate = string.Empty,
             DelayUntilDate = null
@@ -36,6 +38,7 @@ public class IntegrationMessageTests
         {
             Configuration = new WebhookIntegrationConfigurationDetails(new Uri("https://localhost"), "Bearer", "AUTH-TOKEN"),
             MessageId = _messageId,
+            OrganizationId = _organizationId,
             RenderedTemplate = "This is the message",
             IntegrationType = IntegrationType.Webhook,
             RetryCount = 2,
@@ -48,6 +51,7 @@ public class IntegrationMessageTests
         Assert.NotNull(result);
         Assert.Equal(message.Configuration, result.Configuration);
         Assert.Equal(message.MessageId, result.MessageId);
+        Assert.Equal(message.OrganizationId, result.OrganizationId);
         Assert.Equal(message.RenderedTemplate, result.RenderedTemplate);
         Assert.Equal(message.IntegrationType, result.IntegrationType);
         Assert.Equal(message.RetryCount, result.RetryCount);
@@ -67,6 +71,7 @@ public class IntegrationMessageTests
         var message = new IntegrationMessage
         {
             MessageId = _messageId,
+            OrganizationId = _organizationId,
             RenderedTemplate = "This is the message",
             IntegrationType = IntegrationType.Webhook,
             RetryCount = 2,
@@ -77,6 +82,7 @@ public class IntegrationMessageTests
         var result = JsonSerializer.Deserialize<IntegrationMessage>(json);
 
         Assert.Equal(message.MessageId, result.MessageId);
+        Assert.Equal(message.OrganizationId, result.OrganizationId);
         Assert.Equal(message.RenderedTemplate, result.RenderedTemplate);
         Assert.Equal(message.IntegrationType, result.IntegrationType);
         Assert.Equal(message.RetryCount, result.RetryCount);

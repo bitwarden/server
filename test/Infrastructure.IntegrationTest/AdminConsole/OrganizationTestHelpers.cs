@@ -69,6 +69,42 @@ public static class OrganizationTestHelpers
             Type = OrganizationUserType.Owner
         });
 
+    public static Task<OrganizationUser> CreateAcceptedTestOrganizationUserAsync(
+        this IOrganizationUserRepository organizationUserRepository,
+        Organization organization,
+        User user)
+        => organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = user.Id,
+            Status = OrganizationUserStatusType.Accepted,
+            Type = OrganizationUserType.Owner
+        });
+
+    public static Task<OrganizationUser> CreateRevokedTestOrganizationUserAsync(
+        this IOrganizationUserRepository organizationUserRepository,
+        Organization organization,
+        User user)
+        => organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = user.Id,
+            Status = OrganizationUserStatusType.Revoked,
+            Type = OrganizationUserType.Owner
+        });
+
+    public static Task<OrganizationUser> CreateConfirmedTestOrganizationUserAsync(
+        this IOrganizationUserRepository organizationUserRepository,
+        Organization organization,
+        User user)
+        => organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = user.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.Owner
+        });
+
     public static Task<Group> CreateTestGroupAsync(
         this IGroupRepository groupRepository,
         Organization organization,
@@ -81,9 +117,9 @@ public static class OrganizationTestHelpers
         this ICollectionRepository collectionRepository,
         Organization organization,
         string identifier = "test")
-    => collectionRepository.CreateAsync(new Collection
-    {
-        OrganizationId = organization.Id,
-        Name = $"{identifier} {Guid.NewGuid()}"
-    });
+        => collectionRepository.CreateAsync(new Collection
+        {
+            OrganizationId = organization.Id,
+            Name = $"{identifier} {Guid.NewGuid()}"
+        });
 }
