@@ -113,7 +113,7 @@ public class CipherService : ICipherService
         }
         else
         {
-            ValidateCipherLastKnownRevisionDateAsync(cipher, lastKnownRevisionDate);
+            ValidateCipherLastKnownRevisionDate(cipher, lastKnownRevisionDate);
             cipher.RevisionDate = DateTime.UtcNow;
             await _cipherRepository.ReplaceAsync(cipher);
             await _eventService.LogCipherEventAsync(cipher, Bit.Core.Enums.EventType.Cipher_Updated);
@@ -168,7 +168,7 @@ public class CipherService : ICipherService
         }
         else
         {
-            ValidateCipherLastKnownRevisionDateAsync(cipher, lastKnownRevisionDate);
+            ValidateCipherLastKnownRevisionDate(cipher, lastKnownRevisionDate);
             cipher.RevisionDate = DateTime.UtcNow;
             await ValidateChangeInCollectionsAsync(cipher, collectionIds, savingUserId);
             await ValidateViewPasswordUserAsync(cipher);
@@ -180,8 +180,9 @@ public class CipherService : ICipherService
         }
     }
 
-    public async Task UploadFileForExistingAttachmentAsync(Stream stream, Cipher cipher, CipherAttachment.MetaData attachment)
+    public async Task UploadFileForExistingAttachmentAsync(Stream stream, Cipher cipher, CipherAttachment.MetaData attachment, DateTime? lastKnownRevisionDate = null)
     {
+        ValidateCipherLastKnownRevisionDate(cipher, lastKnownRevisionDate);
         if (attachment == null)
         {
             throw new BadRequestException("Cipher attachment does not exist");
@@ -196,8 +197,9 @@ public class CipherService : ICipherService
     }
 
     public async Task<(string attachmentId, string uploadUrl)> CreateAttachmentForDelayedUploadAsync(Cipher cipher,
-        string key, string fileName, long fileSize, bool adminRequest, Guid savingUserId)
+        string key, string fileName, long fileSize, bool adminRequest, Guid savingUserId, DateTime? lastKnownRevisionDate = null)
     {
+        ValidateCipherLastKnownRevisionDate(cipher, lastKnownRevisionDate);
         await ValidateCipherEditForAttachmentAsync(cipher, savingUserId, adminRequest, fileSize);
 
         var attachmentId = Utilities.CoreHelpers.SecureRandomString(32, upper: false, special: false);
@@ -232,8 +234,9 @@ public class CipherService : ICipherService
     }
 
     public async Task CreateAttachmentAsync(Cipher cipher, Stream stream, string fileName, string key,
-        long requestLength, Guid savingUserId, bool orgAdmin = false)
+        long requestLength, Guid savingUserId, bool orgAdmin = false, DateTime? lastKnownRevisionDate = null)
     {
+        ValidateCipherLastKnownRevisionDate(cipher, lastKnownRevisionDate);
         await ValidateCipherEditForAttachmentAsync(cipher, savingUserId, orgAdmin, requestLength);
 
         var attachmentId = Utilities.CoreHelpers.SecureRandomString(32, upper: false, special: false);
@@ -284,10 +287,11 @@ public class CipherService : ICipherService
     }
 
     public async Task CreateAttachmentShareAsync(Cipher cipher, Stream stream, string fileName, string key,
-        long requestLength, string attachmentId, Guid organizationId)
+        long requestLength, string attachmentId, Guid organizationId, DateTime? lastKnownRevisionDate = null)
     {
         try
         {
+            ValidateCipherLastKnownRevisionDate(cipher, lastKnownRevisionDate);
             if (requestLength < 1)
             {
                 throw new BadRequestException("No data to attach.");
@@ -859,7 +863,7 @@ public class CipherService : ICipherService
         return NormalCipherPermissions.CanRestore(user, cipher, organizationAbility);
     }
 
-    private void ValidateCipherLastKnownRevisionDateAsync(Cipher cipher, DateTime? lastKnownRevisionDate)
+    private void ValidateCipherLastKnownRevisionDate(Cipher cipher, DateTime? lastKnownRevisionDate)
     {
         if (cipher.Id == default || !lastKnownRevisionDate.HasValue)
         {
@@ -1007,7 +1011,7 @@ public class CipherService : ICipherService
             throw new BadRequestException("Not enough storage available for this organization.");
         }
 
-        ValidateCipherLastKnownRevisionDateAsync(cipher, lastKnownRevisionDate);
+        ValidateCipherLastKnownRevisionDate(cipher, lastKnownRevisionDate);
     }
 
     private async Task ValidateViewPasswordUserAsync(Cipher cipher)

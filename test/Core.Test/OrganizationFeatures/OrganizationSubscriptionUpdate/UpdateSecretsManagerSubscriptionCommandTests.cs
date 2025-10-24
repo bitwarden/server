@@ -278,21 +278,27 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
         // Arrange
-        const int seatCount = 10;
-        var existingSeatCount = 9;
-
         // Make sure Password Manager seats is greater or equal to Secrets Manager seats
-        organization.Seats = seatCount;
+        const int initialSeatCount = 9;
+        const int maxSeatCount = 20;
+        // This represents the total number of users allowed in the organization.
+        organization.Seats = maxSeatCount;
+        // This represents the number of Secrets Manager users allowed in the organization.
+        organization.SmSeats = initialSeatCount;
+        // This represents the upper limit of Secrets Manager seats that can be automatically scaled.
+        organization.MaxAutoscaleSmSeats = maxSeatCount;
+
+        organization.PlanType = PlanType.EnterpriseAnnually;
         var plan = StaticStore.GetPlan(organization.PlanType);
 
         var update = new SecretsManagerSubscriptionUpdate(organization, plan, false)
         {
-            SmSeats = seatCount,
-            MaxAutoscaleSmSeats = seatCount
+            SmSeats = 8,
+            MaxAutoscaleSmSeats = maxSeatCount
         };
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id)
-            .Returns(existingSeatCount);
+            .Returns(5);
 
         // Act
         await sutProvider.Sut.UpdateSubscriptionAsync(update);
@@ -316,21 +322,29 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
         // Arrange
-        const int seatCount = 10;
-        const int existingSeatCount = 10;
-        var ownerDetailsList = new List<OrganizationUserUserDetails> { new() { Email = "owner@example.com" } };
+        const int initialSeatCount = 5;
+        const int maxSeatCount = 10;
 
-        // The amount of seats for users in an organization
+        // This represents the total number of users allowed in the organization.
+        organization.Seats = maxSeatCount;
+        // This represents the number of Secrets Manager users allowed in the organization.
+        organization.SmSeats = initialSeatCount;
+        // This represents the upper limit of Secrets Manager seats that can be automatically scaled.
+        organization.MaxAutoscaleSmSeats = maxSeatCount;
+
+        var ownerDetailsList = new List<OrganizationUserUserDetails> { new() { Email = "owner@example.com" } };
+        organization.PlanType = PlanType.EnterpriseAnnually;
         var plan = StaticStore.GetPlan(organization.PlanType);
+
         var update = new SecretsManagerSubscriptionUpdate(organization, plan, false)
         {
-            SmSeats = seatCount,
-            MaxAutoscaleSmSeats = seatCount
+            SmSeats = maxSeatCount,
+            MaxAutoscaleSmSeats = maxSeatCount
         };
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id)
-            .Returns(existingSeatCount);
+            .Returns(maxSeatCount);
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetManyByMinimumRoleAsync(organization.Id, OrganizationUserType.Owner)
             .Returns(ownerDetailsList);
@@ -340,15 +354,14 @@ public class UpdateSecretsManagerSubscriptionCommandTests
 
         // Assert
 
-        // Currently being called once each for different validation methods
         await sutProvider.GetDependency<IOrganizationUserRepository>()
-            .Received(2)
+            .Received(1)
             .GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id);
 
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
             .SendSecretsManagerMaxSeatLimitReachedEmailAsync(Arg.Is(organization),
-                Arg.Is(seatCount),
+                Arg.Is(maxSeatCount),
                 Arg.Is<IEnumerable<string>>(emails => emails.Contains(ownerDetailsList[0].Email)));
     }
 

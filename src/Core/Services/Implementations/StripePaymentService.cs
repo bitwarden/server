@@ -8,6 +8,7 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Billing.Premium.Commands;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Tax.Requests;
 using Bit.Core.Billing.Tax.Responses;
@@ -896,11 +897,14 @@ public class StripePaymentService : IPaymentService
         }
     }
 
+    [Obsolete($"Use {nameof(PreviewPremiumTaxCommand)} instead.")]
     public async Task<PreviewInvoiceResponseModel> PreviewInvoiceAsync(
         PreviewIndividualInvoiceRequestBody parameters,
         string gatewayCustomerId,
         string gatewaySubscriptionId)
     {
+        var premiumPlan = await _pricingClient.GetAvailablePremiumPlan();
+
         var options = new InvoiceCreatePreviewOptions
         {
             AutomaticTax = new InvoiceAutomaticTaxOptions { Enabled = true, },
@@ -909,8 +913,17 @@ public class StripePaymentService : IPaymentService
             {
                 Items =
                 [
-                    new InvoiceSubscriptionDetailsItemOptions { Quantity = 1, Plan = StripeConstants.Prices.PremiumAnnually },
-                    new InvoiceSubscriptionDetailsItemOptions { Quantity = parameters.PasswordManager.AdditionalStorage, Plan = StripeConstants.Prices.StoragePlanPersonal }
+                    new InvoiceSubscriptionDetailsItemOptions
+                    {
+                        Quantity = 1,
+                        Plan = premiumPlan.Seat.StripePriceId
+                    },
+
+                    new InvoiceSubscriptionDetailsItemOptions
+                    {
+                        Quantity = parameters.PasswordManager.AdditionalStorage,
+                        Plan = premiumPlan.Storage.StripePriceId
+                    }
                 ]
             },
             CustomerDetails = new InvoiceCustomerDetailsOptions
@@ -1028,7 +1041,7 @@ public class StripePaymentService : IPaymentService
             {
                 Items =
                 [
-                    new()
+                    new InvoiceSubscriptionDetailsItemOptions
                     {
                         Quantity = parameters.PasswordManager.AdditionalStorage,
                         Plan = plan.PasswordManager.StripeStoragePlanId
@@ -1049,7 +1062,7 @@ public class StripePaymentService : IPaymentService
         {
             var sponsoredPlan = Utilities.StaticStore.GetSponsoredPlan(parameters.PasswordManager.SponsoredPlan.Value);
             options.SubscriptionDetails.Items.Add(
-                new() { Quantity = 1, Plan = sponsoredPlan.StripePlanId }
+                new InvoiceSubscriptionDetailsItemOptions { Quantity = 1, Plan = sponsoredPlan.StripePlanId }
             );
         }
         else
@@ -1057,13 +1070,13 @@ public class StripePaymentService : IPaymentService
             if (plan.PasswordManager.HasAdditionalSeatsOption)
             {
                 options.SubscriptionDetails.Items.Add(
-                    new() { Quantity = parameters.PasswordManager.Seats, Plan = plan.PasswordManager.StripeSeatPlanId }
+                    new InvoiceSubscriptionDetailsItemOptions { Quantity = parameters.PasswordManager.Seats, Plan = plan.PasswordManager.StripeSeatPlanId }
                 );
             }
             else
             {
                 options.SubscriptionDetails.Items.Add(
-                    new() { Quantity = 1, Plan = plan.PasswordManager.StripePlanId }
+                    new InvoiceSubscriptionDetailsItemOptions { Quantity = 1, Plan = plan.PasswordManager.StripePlanId }
                 );
             }
 
@@ -1071,7 +1084,7 @@ public class StripePaymentService : IPaymentService
             {
                 if (plan.SecretsManager.HasAdditionalSeatsOption)
                 {
-                    options.SubscriptionDetails.Items.Add(new()
+                    options.SubscriptionDetails.Items.Add(new InvoiceSubscriptionDetailsItemOptions
                     {
                         Quantity = parameters.SecretsManager?.Seats ?? 0,
                         Plan = plan.SecretsManager.StripeSeatPlanId
@@ -1080,7 +1093,7 @@ public class StripePaymentService : IPaymentService
 
                 if (plan.SecretsManager.HasAdditionalServiceAccountOption)
                 {
-                    options.SubscriptionDetails.Items.Add(new()
+                    options.SubscriptionDetails.Items.Add(new InvoiceSubscriptionDetailsItemOptions
                     {
                         Quantity = parameters.SecretsManager?.AdditionalMachineAccounts ?? 0,
                         Plan = plan.SecretsManager.StripeServiceAccountPlanId

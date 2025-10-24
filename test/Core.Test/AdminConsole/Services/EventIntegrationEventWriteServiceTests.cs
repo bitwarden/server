@@ -22,18 +22,20 @@ public class EventIntegrationEventWriteServiceTests
     [Theory, BitAutoData]
     public async Task CreateAsync_EventPublishedToEventQueue(EventMessage eventMessage)
     {
-        var expected = JsonSerializer.Serialize(eventMessage);
         await Subject.CreateAsync(eventMessage);
         await _eventIntegrationPublisher.Received(1).PublishEventAsync(
-            Arg.Is<string>(body => AssertJsonStringsMatch(eventMessage, body)));
+            body: Arg.Is<string>(body => AssertJsonStringsMatch(eventMessage, body)),
+            organizationId: Arg.Is<string>(orgId => eventMessage.OrganizationId.ToString().Equals(orgId)));
     }
 
     [Theory, BitAutoData]
     public async Task CreateManyAsync_EventsPublishedToEventQueue(IEnumerable<EventMessage> eventMessages)
     {
+        var eventMessage = eventMessages.First();
         await Subject.CreateManyAsync(eventMessages);
         await _eventIntegrationPublisher.Received(1).PublishEventAsync(
-            Arg.Is<string>(body => AssertJsonStringsMatch(eventMessages, body)));
+            body: Arg.Is<string>(body => AssertJsonStringsMatch(eventMessages, body)),
+            organizationId: Arg.Is<string>(orgId => eventMessage.OrganizationId.ToString().Equals(orgId)));
     }
 
     private static bool AssertJsonStringsMatch(EventMessage expected, string body)

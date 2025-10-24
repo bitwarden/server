@@ -2,7 +2,7 @@
 using System.Text.Json.Serialization;
 using OneOf;
 
-namespace Bit.Core.Billing.Pricing.Models;
+namespace Bit.Core.Billing.Pricing.Organizations;
 
 [JsonConverter(typeof(PurchasableJsonConverter))]
 public class Purchasable(OneOf<Free, Packaged, Scalable> input) : OneOfBase<Free, Packaged, Scalable>(input)
