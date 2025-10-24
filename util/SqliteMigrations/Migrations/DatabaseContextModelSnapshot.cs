@@ -1003,6 +1003,12 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("ApplicationAtRiskCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("ApplicationCount")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("ApplicationData")
                         .HasColumnType("TEXT");
 
@@ -1013,8 +1019,29 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("CriticalApplicationAtRiskCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("CriticalApplicationCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("CriticalMemberAtRiskCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("CriticalMemberCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("CriticalPasswordAtRiskCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("MemberAtRiskCount")
+                        .HasColumnType("INTEGER");
+
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("TEXT");
+
+                    b.Property<int?>("PasswordAtRiskCount")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("ReportData")
                         .IsRequired()

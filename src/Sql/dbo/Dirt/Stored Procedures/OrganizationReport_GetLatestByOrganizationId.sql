@@ -12,7 +12,16 @@ BEGIN
         [ContentEncryptionKey],
         [SummaryData],
         [ApplicationData],
-        [RevisionDate]
+        [RevisionDate],
+        [ApplicationCount],
+        [CriticalApplicationCount],
+        [ApplicationAtRiskCount],
+        [CriticalApplicationAtRiskCount],
+        [PasswordAtRiskCount],
+        [CriticalPasswordAtRiskCount],
+        [MemberAtRiskCount],
+        [CriticalMemberAtRiskCount],
+        [CriticalMemberCount]
     FROM [dbo].[OrganizationReportView]
     WHERE [OrganizationId] = @OrganizationId
     ORDER BY [RevisionDate] DESC
