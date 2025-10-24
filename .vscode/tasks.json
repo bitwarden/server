@@ -51,7 +51,7 @@
                 "buildSso",
                 "buildIcons",
                 "buildBilling",
-                "buildNotifications",
+                "buildNotifications"
             ],
         },
         {
@@ -177,6 +177,23 @@
             "args": [
                 "build",
                 "${workspaceFolder}/src/Api/Api.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "buildSeederAPI",
+            "hide": true,
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "${workspaceFolder}/util/SeederApi/SeederApi.csproj",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],

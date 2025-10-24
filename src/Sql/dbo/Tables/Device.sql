@@ -12,7 +12,7 @@
     [EncryptedPrivateKey] VARCHAR (MAX)    NULL,
     [Active]              BIT              NOT NULL CONSTRAINT [DF_Device_Active] DEFAULT (1),
     CONSTRAINT [PK_Device] PRIMARY KEY CLUSTERED ([Id] ASC),
-    CONSTRAINT [FK_Device_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id])
+    CONSTRAINT [FK_Device_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id]) ON DELETE CASCADE
 );
 
 GO
