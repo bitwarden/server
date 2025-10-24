@@ -20,7 +20,7 @@ const flags = {
 // Use __dirname to get absolute paths relative to the script location
 const config = {
   inputDir: path.join(__dirname, "emails"),
-  outputDir: path.join(__dirname, "out"),
+  outputDir: flags.hbs ? path.join(__dirname, "Handlebars") : path.join(__dirname, "out"),
   minify: flags.minify,
   validationLevel: "strict",
   hbsOutput: flags.hbs,

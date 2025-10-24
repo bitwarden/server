@@ -32,7 +32,10 @@ namespace Bit.Core.Services;
 
 public class HandlebarsMailService : IMailService
 {
-    private const string Namespace = "Bit.Core.MailTemplates.Handlebars";
+    // This namespace is the legacy name space when we only utilized handlebars processes to render email templates.
+    private const string _handlebarsTemplateNamespace = "Bit.Core.MailTemplates.Handlebars";
+    // This namespace is for mjml compiled emails, allowing for better email client rendering while still able to use handlebars for content.
+    private const string _mjmlTemplateNamespace = "Bit.Core.MailTemplates.Mjml.Handlebars";
     private const string _utcTimeZoneDisplay = "UTC";
     private const string FailedTwoFactorAttemptCacheKeyFormat = "FailedTwoFactorAttemptEmail_{0}";
 
@@ -224,7 +227,7 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendSendEmailOtpEmailv2Async(string email, string token, string subject)
+    public async Task SendMJMLSendEmailOtpEmailAsync(string email, string token, string subject)
     {
         var message = CreateDefaultMessage(subject, email);
         var requestDateTime = DateTime.UtcNow;
@@ -238,7 +241,7 @@ public class HandlebarsMailService : IMailService
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName,
         };
-        await AddMessageContentAsync(message, "Auth.SendAccessEmailOtpEmailv2", model);
+        await AddMessageContentAsync(message, $"{_mjmlTemplateNamespace}.Auth.send-email-otp", model);
         message.MetaData.Add("SendGridBypassListManagement", true);
         // TODO - PM-25380 change to string constant
         message.Category = "SendEmailOtp";
@@ -740,7 +743,12 @@ public class HandlebarsMailService : IMailService
         }
 
         var assembly = typeof(HandlebarsMailService).GetTypeInfo().Assembly;
-        var fullTemplateName = $"{Namespace}.{templateName}.hbs";
+
+        var mjmlTemplate = templateName.StartsWith(_mjmlTemplateNamespace);
+
+        // MJML templateName already includes the full namespace path
+        var fullTemplateName = mjmlTemplate ? $"{templateName}.hbs" : $"{_handlebarsTemplateNamespace}.{templateName}.hbs";
+
         if (!assembly.GetManifestResourceNames().Any(f => f == fullTemplateName))
         {
             return null;

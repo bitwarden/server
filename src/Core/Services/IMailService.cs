@@ -41,7 +41,7 @@ public interface IMailService
     /// <param name="token">Otp code token</param>
     /// <param name="subject">subject line of the email</param>
     /// <returns>Task</returns>
-    Task SendSendEmailOtpEmailv2Async(string email, string token, string subject);
+    Task SendMJMLSendEmailOtpEmailAsync(string email, string token, string subject);
     Task SendFailedTwoFactorAttemptEmailAsync(string email, TwoFactorProviderType type, DateTime utcNow, string ip);
     Task SendNoMasterPasswordHintEmailAsync(string email);
     Task SendMasterPasswordHintEmailAsync(string email, string hint);
