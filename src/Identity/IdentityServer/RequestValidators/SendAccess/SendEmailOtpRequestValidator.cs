@@ -64,7 +64,7 @@ public class SendEmailOtpRequestValidator(
             }
             if (featureService.IsEnabled(FeatureFlagKeys.MJMLBasedEmailTemplates))
             {
-                await mailService.SendSendEmailOtpEmailv2Async(
+                await mailService.SendMJMLSendEmailOtpEmailAsync(
                     email,
                     token,
                     string.Format(SendAccessConstants.OtpEmail.Subject, token));
