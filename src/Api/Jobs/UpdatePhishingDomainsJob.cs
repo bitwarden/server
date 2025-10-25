@@ -1,6 +1,6 @@
 ﻿using Bit.Core;
 using Bit.Core.Jobs;
-using Bit.Core.PhishingDomainFeatures.Interfaces;
+using Bit.Core.Dirt.PhishingDomainFeatures.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;

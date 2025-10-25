@@ -1,8 +1,8 @@
-﻿using Bit.Core.PhishingDomainFeatures.Interfaces;
+﻿using Bit.Core.Dirt.PhishingDomainFeatures.Interfaces;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 
-namespace Bit.Core.PhishingDomainFeatures;
+namespace Bit.Core.Dirt.PhishingDomainFeatures;
 
 /// <summary>
 /// Implementation of ICloudPhishingDomainQuery for cloud environments
