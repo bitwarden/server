@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.Repositories;
+﻿namespace Bit.Core.Dirt.Repositories;
 
 public interface IPhishingDomainRepository
 {
