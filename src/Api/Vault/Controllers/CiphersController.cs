@@ -249,7 +249,7 @@ public class CiphersController : Controller
     }
 
     [HttpPut("{id}")]
-    public async Task<CipherResponseModel> Put(Guid id, [FromBody] CipherRequestModel model)
+    public async Task<ActionResult<CipherResponseModel>> Put(Guid id, [FromBody] CipherRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         var cipher = await GetByIdAsync(id, user.Id);
@@ -279,25 +279,32 @@ public class CiphersController : Controller
                 "then try again.");
         }
 
-        await _cipherService.SaveDetailsAsync(model.ToCipherDetails(cipher), user.Id, model.LastKnownRevisionDate, collectionIds);
+        try
+        {
+            await _cipherService.SaveDetailsAsync(model.ToCipherDetails(cipher), user.Id, model.LastKnownRevisionDate, collectionIds);
 
-        var response = new CipherResponseModel(
-            cipher,
-            user,
-            await _applicationCacheService.GetOrganizationAbilitiesAsync(),
-            _globalSettings);
-        return response;
+            var response = new CipherResponseModel(
+                cipher,
+                user,
+                await _applicationCacheService.GetOrganizationAbilitiesAsync(),
+                _globalSettings);
+            return Ok(response);
+        }
+        catch (SyncConflictException ex)
+        {
+            return await BuildConflictResponseAsync(ex, user);
+        }
     }
 
     [HttpPost("{id}")]
     [Obsolete("This endpoint is deprecated. Use PUT method instead.")]
-    public async Task<CipherResponseModel> PostPut(Guid id, [FromBody] CipherRequestModel model)
+    public Task<ActionResult<CipherResponseModel>> PostPut(Guid id, [FromBody] CipherRequestModel model)
     {
-        return await Put(id, model);
+        return Put(id, model);
     }
 
     [HttpPut("{id}/admin")]
-    public async Task<CipherMiniResponseModel> PutAdmin(Guid id, [FromBody] CipherRequestModel model)
+    public async Task<ActionResult<CipherMiniResponseModel>> PutAdmin(Guid id, [FromBody] CipherRequestModel model)
     {
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(id);
@@ -323,17 +330,24 @@ public class CiphersController : Controller
         var collectionIds = (await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, id)).Select(c => c.CollectionId).ToList();
         // object cannot be a descendant of CipherDetails, so let's clone it.
         var cipherClone = model.ToCipher(cipher).Clone();
-        await _cipherService.SaveAsync(cipherClone, userId, model.LastKnownRevisionDate, collectionIds, true, false);
+        try
+        {
+            await _cipherService.SaveAsync(cipherClone, userId, model.LastKnownRevisionDate, collectionIds, true, false);
 
-        var response = new CipherMiniResponseModel(cipherClone, _globalSettings, cipher.OrganizationUseTotp);
-        return response;
+            var response = new CipherMiniResponseModel(cipherClone, _globalSettings, cipher.OrganizationUseTotp);
+            return Ok(response);
+        }
+        catch (SyncConflictException ex)
+        {
+            return await BuildAdminConflictResponseAsync(ex);
+        }
     }
 
     [HttpPost("{id}/admin")]
     [Obsolete("This endpoint is deprecated. Use PUT method instead.")]
-    public async Task<CipherMiniResponseModel> PostPutAdmin(Guid id, [FromBody] CipherRequestModel model)
+    public Task<ActionResult<CipherMiniResponseModel>> PostPutAdmin(Guid id, [FromBody] CipherRequestModel model)
     {
-        return await PutAdmin(id, model);
+        return PutAdmin(id, model);
     }
 
     [HttpGet("organization-details")]
@@ -712,30 +726,37 @@ public class CiphersController : Controller
     }
 
     [HttpPut("{id}/partial")]
-    public async Task<CipherResponseModel> PutPartial(Guid id, [FromBody] CipherPartialRequestModel model)
+    public async Task<ActionResult<CipherResponseModel>> PutPartial(Guid id, [FromBody] CipherPartialRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         var folderId = string.IsNullOrWhiteSpace(model.FolderId) ? null : (Guid?)new Guid(model.FolderId);
-        await _cipherRepository.UpdatePartialAsync(id, user.Id, folderId, model.Favorite);
+        try
+        {
+            await _cipherRepository.UpdatePartialAsync(id, user.Id, folderId, model.Favorite);
 
-        var cipher = await GetByIdAsync(id, user.Id);
-        var response = new CipherResponseModel(
-            cipher,
-            user,
-            await _applicationCacheService.GetOrganizationAbilitiesAsync(),
-            _globalSettings);
-        return response;
+            var cipher = await GetByIdAsync(id, user.Id);
+            var response = new CipherResponseModel(
+                cipher,
+                user,
+                await _applicationCacheService.GetOrganizationAbilitiesAsync(),
+                _globalSettings);
+            return Ok(response);
+        }
+        catch (SyncConflictException ex)
+        {
+            return await BuildConflictResponseAsync(ex, user);
+        }
     }
 
     [HttpPost("{id}/partial")]
     [Obsolete("This endpoint is deprecated. Use PUT method instead.")]
-    public async Task<CipherResponseModel> PostPartial(Guid id, [FromBody] CipherPartialRequestModel model)
+    public Task<ActionResult<CipherResponseModel>> PostPartial(Guid id, [FromBody] CipherPartialRequestModel model)
     {
-        return await PutPartial(id, model);
+        return PutPartial(id, model);
     }
 
     [HttpPut("{id}/share")]
-    public async Task<CipherResponseModel> PutShare(Guid id, [FromBody] CipherShareRequestModel model)
+    public async Task<ActionResult<CipherResponseModel>> PutShare(Guid id, [FromBody] CipherShareRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         var cipher = await _cipherRepository.GetByIdAsync(id);
@@ -763,23 +784,30 @@ public class CiphersController : Controller
         ValidateClientVersionForFido2CredentialSupport(cipher);
 
         var original = cipher.Clone();
-        await _cipherService.ShareAsync(original, model.Cipher.ToCipher(cipher), new Guid(model.Cipher.OrganizationId),
-            model.CollectionIds.Select(c => new Guid(c)), user.Id, model.Cipher.LastKnownRevisionDate);
+        try
+        {
+            await _cipherService.ShareAsync(original, model.Cipher.ToCipher(cipher), new Guid(model.Cipher.OrganizationId),
+                model.CollectionIds.Select(c => new Guid(c)), user.Id, model.Cipher.LastKnownRevisionDate);
 
-        var sharedCipher = await GetByIdAsync(id, user.Id);
-        var response = new CipherResponseModel(
-            sharedCipher,
-            user,
-            await _applicationCacheService.GetOrganizationAbilitiesAsync(),
-            _globalSettings);
-        return response;
+            var sharedCipher = await GetByIdAsync(id, user.Id);
+            var response = new CipherResponseModel(
+                sharedCipher,
+                user,
+                await _applicationCacheService.GetOrganizationAbilitiesAsync(),
+                _globalSettings);
+            return Ok(response);
+        }
+        catch (SyncConflictException ex)
+        {
+            return await BuildConflictResponseAsync(ex, user);
+        }
     }
 
     [HttpPost("{id}/share")]
     [Obsolete("This endpoint is deprecated. Use PUT method instead.")]
-    public async Task<CipherResponseModel> PostShare(Guid id, [FromBody] CipherShareRequestModel model)
+    public Task<ActionResult<CipherResponseModel>> PostShare(Guid id, [FromBody] CipherShareRequestModel model)
     {
-        return await PutShare(id, model);
+        return PutShare(id, model);
     }
 
     [HttpPut("{id}/collections")]
@@ -1640,6 +1668,37 @@ public class CiphersController : Controller
     private async Task<CipherDetails> GetByIdAsync(Guid cipherId, Guid userId)
     {
         return await _cipherRepository.GetByIdAsync(cipherId, userId);
+    }
+
+    private async Task<ActionResult<CipherResponseModel>> BuildConflictResponseAsync(SyncConflictException exception, User user)
+    {
+        var serverCipher = await _cipherRepository.GetByIdAsync(exception.ServerCipher.Id, user.Id);
+        if (serverCipher == null)
+        {
+            return Conflict();
+        }
+
+        var conflictResponse = new CipherResponseModel(
+            serverCipher,
+            user,
+            await _applicationCacheService.GetOrganizationAbilitiesAsync(),
+            _globalSettings);
+        return Conflict(conflictResponse);
+    }
+
+    private async Task<ActionResult<CipherMiniResponseModel>> BuildAdminConflictResponseAsync(SyncConflictException exception)
+    {
+        var serverCipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(exception.ServerCipher.Id);
+        if (serverCipher == null)
+        {
+            return Conflict();
+        }
+
+        var response = new CipherMiniResponseModel(
+            serverCipher,
+            _globalSettings,
+            serverCipher.OrganizationUseTotp);
+        return Conflict(response);
     }
 
     private DateTime? GetLastKnownRevisionDateFromForm()

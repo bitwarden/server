@@ -35,10 +35,20 @@ public class CipherServiceTests
     [Theory, BitAutoData]
     public async Task SaveAsync_WrongRevisionDate_Throws(SutProvider<CipherService> sutProvider, Cipher cipher)
     {
+        cipher.Id = cipher.Id == Guid.Empty ? Guid.NewGuid() : cipher.Id;
+        cipher.UserId ??= Guid.NewGuid();
+
+        var existingCipher = cipher.Clone();
         var lastKnownRevisionDate = cipher.RevisionDate.AddDays(-1);
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipher.Id)
+            .Returns(existingCipher);
+
+        var exception = await Assert.ThrowsAsync<SyncConflictException>(
             () => sutProvider.Sut.SaveAsync(cipher, cipher.UserId.Value, lastKnownRevisionDate));
+
+        Assert.Equal(existingCipher.Id, exception.ServerCipher.Id);
         Assert.Contains("out of date", exception.Message);
     }
 
@@ -46,10 +56,35 @@ public class CipherServiceTests
     public async Task SaveDetailsAsync_WrongRevisionDate_Throws(SutProvider<CipherService> sutProvider,
         CipherDetails cipherDetails)
     {
+        cipherDetails.Id = cipherDetails.Id == Guid.Empty ? Guid.NewGuid() : cipherDetails.Id;
+        cipherDetails.UserId ??= Guid.NewGuid();
+
+        var existingCipher = new Cipher
+        {
+            Id = cipherDetails.Id,
+            UserId = cipherDetails.UserId,
+            OrganizationId = cipherDetails.OrganizationId,
+            RevisionDate = cipherDetails.RevisionDate,
+            CreationDate = cipherDetails.CreationDate,
+            Data = cipherDetails.Data,
+            Favorites = cipherDetails.Favorites,
+            Folders = cipherDetails.Folders,
+            Attachments = cipherDetails.Attachments,
+            Type = cipherDetails.Type,
+            Key = cipherDetails.Key,
+            Reprompt = cipherDetails.Reprompt,
+            ArchivedDate = cipherDetails.ArchivedDate,
+            DeletedDate = cipherDetails.DeletedDate
+        };
         var lastKnownRevisionDate = cipherDetails.RevisionDate.AddDays(-1);
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipherDetails.Id)
+            .Returns(existingCipher);
+
+        var exception = await Assert.ThrowsAsync<SyncConflictException>(
             () => sutProvider.Sut.SaveDetailsAsync(cipherDetails, cipherDetails.UserId.Value, lastKnownRevisionDate));
+        Assert.Equal(existingCipher.Id, exception.ServerCipher.Id);
         Assert.Contains("out of date", exception.Message);
     }
 
@@ -65,7 +100,7 @@ public class CipherServiceTests
             [Guid.NewGuid().ToString()] = new CipherAttachment.MetaData { }
         });
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
+        var exception = await Assert.ThrowsAsync<SyncConflictException>(
             () => sutProvider.Sut.ShareAsync(cipher, cipher, organization.Id, collectionIds, cipher.UserId.Value,
             lastKnownRevisionDate));
         Assert.Contains("out of date", exception.Message);
@@ -84,7 +119,7 @@ public class CipherServiceTests
 
         var cipherInfos = ciphers.Select(c => (c, (DateTime?)c.RevisionDate.AddDays(-1)));
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
+        var exception = await Assert.ThrowsAsync<SyncConflictException>(
             () => sutProvider.Sut.ShareManyAsync(cipherInfos, organizationId, collectionIds, ciphers.First().UserId.Value));
         Assert.Contains("out of date", exception.Message);
     }
@@ -96,9 +131,46 @@ public class CipherServiceTests
         SutProvider<CipherService> sutProvider, Cipher cipher)
     {
         var lastKnownRevisionDate = string.IsNullOrEmpty(revisionDateString) ? (DateTime?)null : cipher.RevisionDate;
+        cipher.Id = cipher.Id == Guid.Empty ? Guid.NewGuid() : cipher.Id;
+        cipher.UserId ??= Guid.NewGuid();
+
+        var existingCipher = cipher.Clone();
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipher.Id)
+            .Returns(existingCipher);
 
         await sutProvider.Sut.SaveAsync(cipher, cipher.UserId.Value, lastKnownRevisionDate);
         await sutProvider.GetDependency<ICipherRepository>().Received(1).ReplaceAsync(cipher);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveAsync_Update_CreatesHistorySnapshot(
+        SutProvider<CipherService> sutProvider,
+        Cipher cipher)
+    {
+        cipher.Id = cipher.Id == Guid.Empty ? Guid.NewGuid() : cipher.Id;
+        cipher.UserId ??= Guid.NewGuid();
+        cipher.Data = "{\"name\":\"local\"}";
+        var lastKnownRevisionDate = cipher.RevisionDate;
+
+        var existingCipher = cipher.Clone();
+        existingCipher.Data = "{\"name\":\"server\"}";
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipher.Id)
+            .Returns(existingCipher);
+        sutProvider.GetDependency<ICipherRepository>()
+            .ReplaceAsync(cipher)
+            .Returns(Task.CompletedTask);
+
+        await sutProvider.Sut.SaveAsync(cipher, cipher.UserId.Value, lastKnownRevisionDate);
+
+        await sutProvider.GetDependency<ICipherHistoryRepository>().Received(1)
+            .CreateAsync(Arg.Is<CipherHistory>(h =>
+                h.CipherId == existingCipher.Id &&
+                h.Data == existingCipher.Data &&
+                h.UserId == existingCipher.UserId));
     }
 
     [Theory]
@@ -108,9 +180,78 @@ public class CipherServiceTests
         SutProvider<CipherService> sutProvider, CipherDetails cipherDetails)
     {
         var lastKnownRevisionDate = string.IsNullOrEmpty(revisionDateString) ? (DateTime?)null : cipherDetails.RevisionDate;
+        cipherDetails.Id = cipherDetails.Id == Guid.Empty ? Guid.NewGuid() : cipherDetails.Id;
+        cipherDetails.UserId ??= Guid.NewGuid();
+        cipherDetails.OrganizationId = null;
+
+        var existingCipher = new Cipher
+        {
+            Id = cipherDetails.Id,
+            UserId = cipherDetails.UserId,
+            OrganizationId = cipherDetails.OrganizationId,
+            RevisionDate = cipherDetails.RevisionDate,
+            CreationDate = cipherDetails.CreationDate,
+            Data = cipherDetails.Data,
+            Favorites = cipherDetails.Favorites,
+            Folders = cipherDetails.Folders,
+            Attachments = cipherDetails.Attachments,
+            Type = cipherDetails.Type,
+            Key = cipherDetails.Key,
+            Reprompt = cipherDetails.Reprompt,
+            ArchivedDate = cipherDetails.ArchivedDate,
+            DeletedDate = cipherDetails.DeletedDate
+        };
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipherDetails.Id)
+            .Returns(existingCipher);
 
         await sutProvider.Sut.SaveDetailsAsync(cipherDetails, cipherDetails.UserId.Value, lastKnownRevisionDate);
         await sutProvider.GetDependency<ICipherRepository>().Received(1).ReplaceAsync(cipherDetails);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveDetailsAsync_Update_CreatesHistorySnapshot(
+        SutProvider<CipherService> sutProvider,
+        CipherDetails cipherDetails)
+    {
+        cipherDetails.Id = cipherDetails.Id == Guid.Empty ? Guid.NewGuid() : cipherDetails.Id;
+        cipherDetails.UserId ??= Guid.NewGuid();
+        cipherDetails.OrganizationId = null;
+        cipherDetails.Data = "{\"name\":\"local\"}";
+        var lastKnownRevisionDate = cipherDetails.RevisionDate;
+
+        var existingCipher = new Cipher
+        {
+            Id = cipherDetails.Id,
+            UserId = cipherDetails.UserId,
+            OrganizationId = cipherDetails.OrganizationId,
+            RevisionDate = cipherDetails.RevisionDate,
+            CreationDate = cipherDetails.CreationDate,
+            Data = "{\"name\":\"server\"}",
+            Favorites = cipherDetails.Favorites,
+            Folders = cipherDetails.Folders,
+            Attachments = cipherDetails.Attachments,
+            Type = cipherDetails.Type,
+            Key = cipherDetails.Key,
+            Reprompt = cipherDetails.Reprompt,
+            ArchivedDate = cipherDetails.ArchivedDate,
+            DeletedDate = cipherDetails.DeletedDate
+        };
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipherDetails.Id)
+            .Returns(existingCipher);
+        sutProvider.GetDependency<ICipherRepository>()
+            .ReplaceAsync(cipherDetails)
+            .Returns(Task.CompletedTask);
+
+        await sutProvider.Sut.SaveDetailsAsync(cipherDetails, cipherDetails.UserId.Value, lastKnownRevisionDate);
+
+        await sutProvider.GetDependency<ICipherHistoryRepository>().Received(1)
+            .CreateAsync(Arg.Is<CipherHistory>(h =>
+                h.CipherId == existingCipher.Id &&
+                h.Data == existingCipher.Data));
     }
 
     [Theory, BitAutoData]
@@ -121,7 +262,7 @@ public class CipherServiceTests
         var fileName = "test.txt";
         var key = "test-key";
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
+        var exception = await Assert.ThrowsAsync<SyncConflictException>(
             () => sutProvider.Sut.CreateAttachmentAsync(cipher, stream, fileName, key, 100, savingUserId, false, lastKnownRevisionDate));
         Assert.Contains("out of date", exception.Message);
     }
@@ -181,7 +322,7 @@ public class CipherServiceTests
         var fileName = "test.txt";
         var fileSize = 100L;
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
+        var exception = await Assert.ThrowsAsync<SyncConflictException>(
             () => sutProvider.Sut.CreateAttachmentForDelayedUploadAsync(cipher, key, fileName, fileSize, false, savingUserId, lastKnownRevisionDate));
         Assert.Contains("out of date", exception.Message);
     }
@@ -239,7 +380,7 @@ public class CipherServiceTests
             Key = "test-key"
         };
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
+        var exception = await Assert.ThrowsAsync<SyncConflictException>(
             () => sutProvider.Sut.UploadFileForExistingAttachmentAsync(stream, cipher, attachment, lastKnownRevisionDate));
         Assert.Contains("out of date", exception.Message);
     }
@@ -295,7 +436,7 @@ public class CipherServiceTests
         var key = "test-key";
         var attachmentId = "attachment-id";
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
+        var exception = await Assert.ThrowsAsync<SyncConflictException>(
             () => sutProvider.Sut.CreateAttachmentShareAsync(cipher, stream, fileName, key, 100, attachmentId, organizationId, lastKnownRevisionDate));
         Assert.Contains("out of date", exception.Message);
     }

@@ -27,6 +27,7 @@ public class CipherService : ICipherService
     public const long MAX_FILE_SIZE = Constants.FileSize501mb;
     public const string MAX_FILE_SIZE_READABLE = "500 MB";
     private readonly ICipherRepository _cipherRepository;
+    private readonly ICipherHistoryRepository _cipherHistoryRepository;
     private readonly IFolderRepository _folderRepository;
     private readonly ICollectionRepository _collectionRepository;
     private readonly IUserRepository _userRepository;
@@ -47,6 +48,7 @@ public class CipherService : ICipherService
 
     public CipherService(
         ICipherRepository cipherRepository,
+        ICipherHistoryRepository cipherHistoryRepository,
         IFolderRepository folderRepository,
         ICollectionRepository collectionRepository,
         IUserRepository userRepository,
@@ -65,6 +67,7 @@ public class CipherService : ICipherService
         IFeatureService featureService)
     {
         _cipherRepository = cipherRepository;
+        _cipherHistoryRepository = cipherHistoryRepository;
         _folderRepository = folderRepository;
         _collectionRepository = collectionRepository;
         _userRepository = userRepository;
@@ -113,8 +116,9 @@ public class CipherService : ICipherService
         }
         else
         {
-            ValidateCipherLastKnownRevisionDate(cipher, lastKnownRevisionDate);
+            var existingCipher = await EnsureCipherRevisionIsCurrentAsync(cipher.Id, lastKnownRevisionDate);
             cipher.RevisionDate = DateTime.UtcNow;
+            await RecordCipherHistoryAsync(existingCipher);
             await _cipherRepository.ReplaceAsync(cipher);
             await _eventService.LogCipherEventAsync(cipher, Bit.Core.Enums.EventType.Cipher_Updated);
 
@@ -168,10 +172,11 @@ public class CipherService : ICipherService
         }
         else
         {
-            ValidateCipherLastKnownRevisionDate(cipher, lastKnownRevisionDate);
-            cipher.RevisionDate = DateTime.UtcNow;
+            var existingCipher = await EnsureCipherRevisionIsCurrentAsync(cipher.Id, lastKnownRevisionDate);
             await ValidateChangeInCollectionsAsync(cipher, collectionIds, savingUserId);
             await ValidateViewPasswordUserAsync(cipher);
+            await RecordCipherHistoryAsync(existingCipher);
+            cipher.RevisionDate = DateTime.UtcNow;
             await _cipherRepository.ReplaceAsync(cipher);
             await _eventService.LogCipherEventAsync(cipher, Bit.Core.Enums.EventType.Cipher_Updated);
 
@@ -182,7 +187,7 @@ public class CipherService : ICipherService
 
     public async Task UploadFileForExistingAttachmentAsync(Stream stream, Cipher cipher, CipherAttachment.MetaData attachment, DateTime? lastKnownRevisionDate = null)
     {
-        ValidateCipherLastKnownRevisionDate(cipher, lastKnownRevisionDate);
+        await EnsureCipherRevisionIsCurrentAsync(cipher.Id, lastKnownRevisionDate, cipher.Clone());
         if (attachment == null)
         {
             throw new BadRequestException("Cipher attachment does not exist");
@@ -199,7 +204,7 @@ public class CipherService : ICipherService
     public async Task<(string attachmentId, string uploadUrl)> CreateAttachmentForDelayedUploadAsync(Cipher cipher,
         string key, string fileName, long fileSize, bool adminRequest, Guid savingUserId, DateTime? lastKnownRevisionDate = null)
     {
-        ValidateCipherLastKnownRevisionDate(cipher, lastKnownRevisionDate);
+        var existingCipher = await EnsureCipherRevisionIsCurrentAsync(cipher.Id, lastKnownRevisionDate, cipher.Clone());
         await ValidateCipherEditForAttachmentAsync(cipher, savingUserId, adminRequest, fileSize);
 
         var attachmentId = Utilities.CoreHelpers.SecureRandomString(32, upper: false, special: false);
@@ -226,6 +231,7 @@ public class CipherService : ICipherService
 
         // Update the revision date when an attachment is added
         cipher.RevisionDate = DateTime.UtcNow;
+        await RecordCipherHistoryAsync(existingCipher);
         await _cipherRepository.ReplaceAsync((CipherDetails)cipher);
 
         await _pushService.PushSyncCipherUpdateAsync(cipher, null);
@@ -236,7 +242,7 @@ public class CipherService : ICipherService
     public async Task CreateAttachmentAsync(Cipher cipher, Stream stream, string fileName, string key,
         long requestLength, Guid savingUserId, bool orgAdmin = false, DateTime? lastKnownRevisionDate = null)
     {
-        ValidateCipherLastKnownRevisionDate(cipher, lastKnownRevisionDate);
+        var existingCipher = await EnsureCipherRevisionIsCurrentAsync(cipher.Id, lastKnownRevisionDate, cipher.Clone());
         await ValidateCipherEditForAttachmentAsync(cipher, savingUserId, orgAdmin, requestLength);
 
         var attachmentId = Utilities.CoreHelpers.SecureRandomString(32, upper: false, special: false);
@@ -280,6 +286,7 @@ public class CipherService : ICipherService
 
         // Update the revision date when an attachment is added
         cipher.RevisionDate = DateTime.UtcNow;
+        await RecordCipherHistoryAsync(existingCipher);
         await _cipherRepository.ReplaceAsync((CipherDetails)cipher);
 
         // push
@@ -291,7 +298,7 @@ public class CipherService : ICipherService
     {
         try
         {
-            ValidateCipherLastKnownRevisionDate(cipher, lastKnownRevisionDate);
+            await EnsureCipherRevisionIsCurrentAsync(cipher.Id, lastKnownRevisionDate, cipher.Clone());
             if (requestLength < 1)
             {
                 throw new BadRequestException("No data to attach.");
@@ -863,19 +870,55 @@ public class CipherService : ICipherService
         return NormalCipherPermissions.CanRestore(user, cipher, organizationAbility);
     }
 
-    private void ValidateCipherLastKnownRevisionDate(Cipher cipher, DateTime? lastKnownRevisionDate)
+    private async Task<Cipher> EnsureCipherRevisionIsCurrentAsync(Guid cipherId, DateTime? lastKnownRevisionDate, Cipher cipherSnapshot = null)
     {
-        if (cipher.Id == default || !lastKnownRevisionDate.HasValue)
+        if (cipherId == default)
+        {
+            return cipherSnapshot;
+        }
+
+        var existingCipher = cipherSnapshot ?? await _cipherRepository.GetByIdAsync(cipherId);
+        if (existingCipher == null)
+        {
+            throw new NotFoundException();
+        }
+
+        if (lastKnownRevisionDate.HasValue &&
+            (existingCipher.RevisionDate - lastKnownRevisionDate.Value).Duration() > TimeSpan.FromSeconds(1))
+        {
+            throw new SyncConflictException(existingCipher);
+        }
+
+        return existingCipher;
+    }
+
+    private async Task RecordCipherHistoryAsync(Cipher cipher)
+    {
+        if (cipher == null || cipher.Id == default)
         {
             return;
         }
 
-        if ((cipher.RevisionDate - lastKnownRevisionDate.Value).Duration() > TimeSpan.FromSeconds(1))
+        var history = new CipherHistory
         {
-            throw new BadRequestException(
-                "The cipher you are updating is out of date. Please save your work, sync your vault, and try again."
-            );
-        }
+            CipherId = cipher.Id,
+            UserId = cipher.UserId,
+            OrganizationId = cipher.OrganizationId,
+            Type = cipher.Type,
+            Data = cipher.Data,
+            Favorites = cipher.Favorites,
+            Folders = cipher.Folders,
+            Attachments = cipher.Attachments,
+            CreationDate = cipher.CreationDate,
+            RevisionDate = cipher.RevisionDate,
+            DeletedDate = cipher.DeletedDate,
+            Reprompt = cipher.Reprompt,
+            Key = cipher.Key,
+            ArchivedDate = cipher.ArchivedDate,
+            HistoryDate = DateTime.UtcNow
+        };
+
+        await _cipherHistoryRepository.CreateAsync(history);
     }
 
     private async Task<DeleteAttachmentResponseData> DeleteAttachmentAsync(Cipher cipher, CipherAttachment.MetaData attachmentData, bool orgAdmin)
@@ -885,6 +928,7 @@ public class CipherService : ICipherService
             return null;
         }
 
+        var existingCipher = cipher.Clone();
         await _cipherRepository.DeleteAttachmentAsync(cipher.Id, attachmentData.AttachmentId);
         cipher.DeleteAttachment(attachmentData.AttachmentId);
         await _attachmentStorageService.DeleteAttachmentAsync(cipher.Id, attachmentData);
@@ -892,6 +936,7 @@ public class CipherService : ICipherService
 
         // Update the revision date when an attachment is deleted
         cipher.RevisionDate = DateTime.UtcNow;
+        await RecordCipherHistoryAsync(existingCipher);
         if (orgAdmin)
         {
             await _cipherRepository.ReplaceAsync(cipher);
@@ -1011,7 +1056,7 @@ public class CipherService : ICipherService
             throw new BadRequestException("Not enough storage available for this organization.");
         }
 
-        ValidateCipherLastKnownRevisionDate(cipher, lastKnownRevisionDate);
+        await EnsureCipherRevisionIsCurrentAsync(cipher.Id, lastKnownRevisionDate, cipher.Clone());
     }
 
     private async Task ValidateViewPasswordUserAsync(Cipher cipher)
