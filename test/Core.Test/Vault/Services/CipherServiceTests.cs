@@ -1051,6 +1051,85 @@ public class CipherServiceTests
             Arg.Is<IEnumerable<Cipher>>(arg => !arg.Except(ciphers).Any()));
     }
 
+    [Theory, BitAutoData]
+    public async Task RestoreFromHistoryAsync_WithValidHistory_RestoresCipher(
+        SutProvider<CipherService> sutProvider,
+        CipherDetails cipher,
+        CipherHistory history,
+        CipherDetails updatedCipher)
+    {
+        cipher.Id = cipher.Id == Guid.Empty ? Guid.NewGuid() : cipher.Id;
+        cipher.UserId ??= Guid.NewGuid();
+        cipher.OrganizationId = null;
+        var restoringUserId = cipher.UserId.Value;
+        var currentData = "{\"current\":\"data\"}";
+        cipher.Data = currentData;
+        history.CipherId = cipher.Id;
+        history.UserId = cipher.UserId;
+        history.OrganizationId = cipher.OrganizationId;
+        history.Data = "{\"history\":\"data\"}";
+        history.Type = cipher.Type;
+
+        updatedCipher.Id = cipher.Id;
+        updatedCipher.UserId = cipher.UserId;
+        updatedCipher.OrganizationId = cipher.OrganizationId;
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .ReplaceAsync(cipher)
+            .Returns(Task.CompletedTask);
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipher.Id, restoringUserId)
+            .Returns(updatedCipher);
+
+        sutProvider.GetDependency<IEventService>()
+            .LogCipherEventAsync(cipher, EventType.Cipher_Updated)
+            .Returns(Task.CompletedTask);
+
+        sutProvider.GetDependency<IPushNotificationService>()
+            .PushSyncCipherUpdateAsync(cipher, Arg.Any<IEnumerable<Guid>>())
+            .Returns(Task.CompletedTask);
+
+        sutProvider.GetDependency<ICipherHistoryRepository>()
+            .CreateAsync(Arg.Any<CipherHistory>())
+            .Returns(Task.FromResult(history));
+
+        var result = await sutProvider.Sut.RestoreFromHistoryAsync(cipher, history, restoringUserId);
+
+        Assert.Equal(history.Data, cipher.Data);
+        await sutProvider.GetDependency<ICipherHistoryRepository>().Received(1)
+            .CreateAsync(Arg.Is<CipherHistory>(h => h.CipherId == cipher.Id && h.Data == currentData));
+        await sutProvider.GetDependency<ICipherRepository>().Received(1)
+            .ReplaceAsync(cipher);
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1)
+            .PushSyncCipherUpdateAsync(cipher, null);
+        Assert.Equal(updatedCipher, result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreFromHistoryAsync_WithoutEditPermission_ThrowsBadRequest(
+        SutProvider<CipherService> sutProvider,
+        CipherDetails cipher,
+        CipherHistory history,
+        Guid restoringUserId)
+    {
+        cipher.Id = cipher.Id == Guid.Empty ? Guid.NewGuid() : cipher.Id;
+        cipher.UserId = Guid.NewGuid();
+        cipher.OrganizationId = Guid.NewGuid();
+        history.CipherId = cipher.Id;
+        history.OrganizationId = cipher.OrganizationId;
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetCanEditByIdAsync(restoringUserId, cipher.Id)
+            .Returns(false);
+
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.RestoreFromHistoryAsync(cipher, history, restoringUserId));
+
+        await sutProvider.GetDependency<ICipherRepository>().DidNotReceive()
+            .ReplaceAsync(Arg.Any<CipherDetails>());
+    }
+
     [Theory]
     [BitAutoData]
     public async Task RestoreAsync_UpdatesUserCipher(Guid restoringUserId, CipherDetails cipher, SutProvider<CipherService> sutProvider)

@@ -53,6 +53,7 @@ public class CiphersController : Controller
     private readonly IArchiveCiphersCommand _archiveCiphersCommand;
     private readonly IUnarchiveCiphersCommand _unarchiveCiphersCommand;
     private readonly IFeatureService _featureService;
+    private readonly ICipherHistoryRepository _cipherHistoryRepository;
 
     public CiphersController(
         ICipherRepository cipherRepository,
@@ -69,7 +70,8 @@ public class CiphersController : Controller
         ICollectionRepository collectionRepository,
         IArchiveCiphersCommand archiveCiphersCommand,
         IUnarchiveCiphersCommand unarchiveCiphersCommand,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        ICipherHistoryRepository cipherHistoryRepository)
     {
         _cipherRepository = cipherRepository;
         _collectionCipherRepository = collectionCipherRepository;
@@ -86,6 +88,7 @@ public class CiphersController : Controller
         _archiveCiphersCommand = archiveCiphersCommand;
         _unarchiveCiphersCommand = unarchiveCiphersCommand;
         _featureService = featureService;
+        _cipherHistoryRepository = cipherHistoryRepository;
     }
 
     [HttpGet("{id}")]
@@ -132,6 +135,58 @@ public class CiphersController : Controller
         var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
         var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(user.Id, id);
         return new CipherDetailsResponseModel(cipher, user, organizationAbilities, _globalSettings, collectionCiphers);
+    }
+
+    [HttpGet("{id}/history")]
+    public async Task<ListResponseModel<CipherHistoryResponseModel>> GetHistory(Guid id)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        var cipher = await GetByIdAsync(id, user.Id);
+        if (cipher == null)
+        {
+            throw new NotFoundException();
+        }
+
+        var historyItems = await _cipherHistoryRepository.GetManyByCipherIdAsync(id) ?? [];
+        var responses = historyItems.Select(history => new CipherHistoryResponseModel(history));
+        return new ListResponseModel<CipherHistoryResponseModel>(responses);
+    }
+
+    [HttpPost("{id}/history/{historyId}/restore")]
+    public async Task<CipherResponseModel> RestoreFromHistory(Guid id, Guid historyId)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        var cipher = await GetByIdAsync(id, user.Id);
+        if (cipher == null)
+        {
+            throw new NotFoundException();
+        }
+
+        var history = await _cipherHistoryRepository.GetByIdAsync(historyId);
+        if (history == null || history.CipherId != id)
+        {
+            throw new NotFoundException();
+        }
+
+        if (cipher.OrganizationId.HasValue)
+        {
+            if (history.OrganizationId != cipher.OrganizationId)
+            {
+                throw new NotFoundException();
+            }
+        }
+        else
+        {
+            if (history.OrganizationId.HasValue || history.UserId != cipher.UserId)
+            {
+                throw new NotFoundException();
+            }
+        }
+
+        var restoredCipher = await _cipherService.RestoreFromHistoryAsync(cipher, history, user.Id);
+        var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+
+        return new CipherResponseModel(restoredCipher, user, organizationAbilities, _globalSettings);
     }
 
     [HttpGet("{id}/full-details")]

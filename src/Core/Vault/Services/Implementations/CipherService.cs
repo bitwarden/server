@@ -791,6 +791,47 @@ public class CipherService : ICipherService
         await _pushService.PushSyncCipherUpdateAsync(cipherDetails, null);
     }
 
+    public async Task<CipherDetails> RestoreFromHistoryAsync(CipherDetails cipher, CipherHistory history, Guid restoringUserId)
+    {
+        if (cipher == null)
+        {
+            throw new ArgumentNullException(nameof(cipher));
+        }
+
+        if (history == null)
+        {
+            throw new ArgumentNullException(nameof(history));
+        }
+
+        if (!await UserCanEditAsync(cipher, restoringUserId))
+        {
+            throw new BadRequestException("You do not have permissions to edit this.");
+        }
+
+        var existingCipherSnapshot = cipher.Clone();
+        await RecordCipherHistoryAsync(existingCipherSnapshot);
+
+        cipher.Type = history.Type;
+        cipher.Data = history.Data;
+        cipher.Favorites = history.Favorites;
+        cipher.Folders = history.Folders;
+        cipher.Attachments = history.Attachments;
+        cipher.Reprompt = history.Reprompt;
+        cipher.Key = history.Key;
+        cipher.ArchivedDate = history.ArchivedDate;
+        cipher.CreationDate = history.CreationDate;
+        cipher.DeletedDate = history.DeletedDate;
+        cipher.RevisionDate = DateTime.UtcNow;
+
+        await _cipherRepository.ReplaceAsync(cipher);
+        await _eventService.LogCipherEventAsync(cipher, EventType.Cipher_Updated);
+
+        await _pushService.PushSyncCipherUpdateAsync(cipher, null);
+
+        var updatedCipher = await _cipherRepository.GetByIdAsync(cipher.Id, restoringUserId);
+        return updatedCipher;
+    }
+
     public async Task<ICollection<CipherOrganizationDetails>> RestoreManyAsync(IEnumerable<Guid> cipherIds, Guid restoringUserId, Guid? organizationId = null, bool orgAdmin = false)
     {
         if (cipherIds == null || !cipherIds.Any())

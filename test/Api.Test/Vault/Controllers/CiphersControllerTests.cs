@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -169,6 +170,130 @@ public class CiphersControllerTests
         var conflict = Assert.IsType<ConflictObjectResult>(result.Result);
         var response = Assert.IsType<CipherResponseModel>(conflict.Value);
         Assert.Equal(serverCipher.Id, response.Id);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetHistory_ReturnsHistoryItems(
+        User user,
+        CipherDetails cipher,
+        List<CipherHistory> historyItems,
+        SutProvider<CiphersController> sutProvider)
+    {
+        var cipherId = Guid.NewGuid();
+        cipher.Id = cipherId;
+        cipher.UserId = user.Id;
+        cipher.OrganizationId = null;
+
+        historyItems ??= new List<CipherHistory>();
+        foreach (var item in historyItems)
+        {
+            item.CipherId = cipherId;
+            item.UserId = user.Id;
+            item.OrganizationId = null;
+        }
+
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipherId, user.Id)
+            .Returns(cipher);
+
+        sutProvider.GetDependency<ICipherHistoryRepository>()
+            .GetManyByCipherIdAsync(cipherId)
+            .Returns(historyItems);
+
+        var response = await sutProvider.Sut.GetHistory(cipherId);
+
+        Assert.Equal(historyItems.Count, response.Data.Count());
+        await sutProvider.GetDependency<ICipherHistoryRepository>().Received(1)
+            .GetManyByCipherIdAsync(cipherId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreFromHistory_ReturnsUpdatedCipher(
+        User user,
+        CipherDetails cipher,
+        CipherHistory history,
+        CipherDetails restoredCipher,
+        SutProvider<CiphersController> sutProvider)
+    {
+        var cipherId = Guid.NewGuid();
+        var historyId = Guid.NewGuid();
+        cipher.Id = cipherId;
+        cipher.UserId = user.Id;
+        cipher.OrganizationId = null;
+        history.Id = historyId;
+        history.CipherId = cipherId;
+        history.UserId = user.Id;
+        history.OrganizationId = null;
+        restoredCipher.Id = cipherId;
+        restoredCipher.UserId = user.Id;
+        restoredCipher.OrganizationId = null;
+        restoredCipher.Type = history.Type;
+        restoredCipher.Data = "{}";
+        history.Data = "{}";
+        cipher.Type = history.Type;
+        cipher.Data = "{}";
+
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipherId, user.Id)
+            .Returns(cipher);
+
+        sutProvider.GetDependency<ICipherHistoryRepository>()
+            .GetByIdAsync(historyId)
+            .Returns(history);
+
+        sutProvider.GetDependency<ICipherService>()
+            .RestoreFromHistoryAsync(cipher, history, user.Id)
+            .Returns(restoredCipher);
+
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilitiesAsync()
+            .Returns(new Dictionary<Guid, OrganizationAbility>());
+
+        var response = await sutProvider.Sut.RestoreFromHistory(cipherId, historyId);
+
+        Assert.Equal(restoredCipher.Id, response.Id);
+        await sutProvider.GetDependency<ICipherService>().Received(1)
+            .RestoreFromHistoryAsync(cipher, history, user.Id);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreFromHistory_WhenHistoryDoesNotMatchCipher_ThrowsNotFound(
+        User user,
+        CipherDetails cipher,
+        CipherHistory history,
+        SutProvider<CiphersController> sutProvider)
+    {
+        var cipherId = Guid.NewGuid();
+        var historyId = Guid.NewGuid();
+        cipher.Id = cipherId;
+        cipher.UserId = user.Id;
+        cipher.OrganizationId = null;
+        history.Id = historyId;
+        history.CipherId = Guid.NewGuid();
+        history.OrganizationId = null;
+
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipherId, user.Id)
+            .Returns(cipher);
+
+        sutProvider.GetDependency<ICipherHistoryRepository>()
+            .GetByIdAsync(historyId)
+            .Returns(history);
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.RestoreFromHistory(cipherId, historyId));
     }
 
     [Theory, BitAutoData]
