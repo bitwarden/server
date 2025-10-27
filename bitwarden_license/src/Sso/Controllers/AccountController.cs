@@ -297,12 +297,9 @@ public class AccountController : Controller
 
         if (preventOrgUserLoginIfStatusInvalid)
         {
-            await PreventOrgUserLoginIfStatusInvalidAsync(organization, provider, orgUser, user);
-        }
-
-        if (preventOrgUserLoginIfStatusInvalid)
-        {
             if (user == null) throw new Exception(_i18nService.T("UserShouldBeFound"));
+
+            await PreventOrgUserLoginIfStatusInvalidAsync(organization, provider, orgUser, user);
 
             // This allows us to collect any additional claims or properties
             // for the specific protocols used and store them in the local auth cookie.
@@ -689,7 +686,7 @@ public class AccountController : Controller
         }
         else
         {
-            throw new Exception(_i18nService.T("CouldNotFindOrganizationUser", user?.Id, organization.Id));
+            throw new Exception(_i18nService.T("CouldNotFindOrganizationUser", user.Id, organization.Id));
         }
     }
 
