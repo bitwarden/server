@@ -1,12 +1,11 @@
 ﻿using Bit.Core.Models.Mail;
 using Bit.Core.Services;
 
-namespace Bit.Core.Platform.Services;
+namespace Bit.Core.Platform.Mailer;
 
 #nullable enable
 
-public class Mailer(IMailRenderer renderer, IMailDeliveryService mailDeliveryService)
-    : IMailer
+public class Mailer(IMailRenderer renderer, IMailDeliveryService mailDeliveryService) : IMailer
 {
     public async Task SendEmail<T>(BaseMail<T> message) where T : BaseMailView
     {

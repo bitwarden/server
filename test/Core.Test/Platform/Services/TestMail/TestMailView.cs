@@ -1,4 +1,4 @@
-﻿using Bit.Core.Platform.Services;
+﻿using Bit.Core.Platform.Mailer;
 
 namespace Bit.Core.Test.Platform.Services.TestMail;
 

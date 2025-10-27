@@ -2,7 +2,7 @@
 using System.Reflection;
 using HandlebarsDotNet;
 
-namespace Bit.Core.Platform.Services;
+namespace Bit.Core.Platform.Mailer;
 
 public class HandlebarMailRenderer : IMailRenderer
 {

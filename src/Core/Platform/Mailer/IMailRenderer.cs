@@ -1,5 +1,5 @@
 ﻿#nullable enable
-namespace Bit.Core.Platform.Services;
+namespace Bit.Core.Platform.Mailer;
 
 public interface IMailRenderer
 {

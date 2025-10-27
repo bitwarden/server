@@ -37,6 +37,7 @@ using Bit.Core.KeyManagement;
 using Bit.Core.NotificationCenter;
 using Bit.Core.OrganizationFeatures;
 using Bit.Core.Platform;
+using Bit.Core.Platform.Mailer;
 using Bit.Core.Platform.Push;
 using Bit.Core.Platform.PushRegistration.Internal;
 using Bit.Core.Repositories;
@@ -239,8 +240,11 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPaymentService, StripePaymentService>();
         services.AddScoped<IPaymentHistoryService, PaymentHistoryService>();
         services.AddScoped<ITwoFactorEmailService, TwoFactorEmailService>();
+        // Legacy mailer service
         services.AddSingleton<IStripeSyncService, StripeSyncService>();
         services.AddSingleton<IMailService, HandlebarsMailService>();
+        // Modern mailers
+        services.AddMailer();
         services.AddSingleton<ILicensingService, LicensingService>();
         services.AddSingleton<ILookupClient>(_ =>
         {
