@@ -43,7 +43,7 @@ public abstract class BaseMail<TView> where TView : BaseMailView
 /// Each MailView consists of two body parts: a text part and an HTML part and the filename must be
 /// relative to the viewmodel and match the following pattern:
 /// - `{ClassName}.html.hbs` for the HTML part
-/// - `{ClassName}.txt.hbs` for the text part
+/// - `{ClassName}.text.hbs` for the text part
 /// </summary>
 public abstract class BaseMailView
 {
