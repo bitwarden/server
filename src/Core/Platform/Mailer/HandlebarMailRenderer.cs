@@ -8,21 +8,14 @@ namespace Bit.Core.Platform.Mailer;
 public class HandlebarMailRenderer : IMailRenderer
 {
     /// <summary>
-    /// This field holds the handlebars instance.
-    ///
-    /// This should never be used directly, rather use the GetHandlebars() method to ensure that it is initialized properly.
+    /// Lazy-initialized Handlebars instance. Thread-safe and ensures initialization occurs only once.
     /// </summary>
-    private IHandlebars? _handlebars;
+    private readonly Lazy<Task<IHandlebars>> _handlebarsTask = new(InitializeHandlebarsAsync);
 
     /// <summary>
-    /// This task is used to ensure that the handlebars instance is initialized only once.
+    /// Helper function that returns the handlebar instance.
     /// </summary>
-    private Task<IHandlebars>? _initTask;
-    /// <summary>
-    /// This lock is used to ensure that the handlebars instance is initialized only once,
-    /// even if multiple threads call GetHandlebars() at the same time.
-    /// </summary>
-    private readonly object _initLock = new();
+    private Task<IHandlebars> GetHandlebars() => _handlebarsTask.Value;
 
     /// <summary>
     /// This dictionary is used to cache compiled templates in a thread-safe manner.
@@ -65,26 +58,7 @@ public class HandlebarMailRenderer : IMailRenderer
         return await sr.ReadToEndAsync();
     }
 
-    /// <summary>
-    /// Helper function that returns the handlebar instance, initializing it if necessary.
-    ///
-    /// Protects against initializing the same instance multiple times in parallel.
-    /// </summary>
-    private Task<IHandlebars> GetHandlebars()
-    {
-        if (_handlebars != null)
-        {
-            return Task.FromResult(_handlebars);
-        }
-
-        lock (_initLock)
-        {
-            _initTask ??= InitializeHandlebarsAsync();
-            return _initTask;
-        }
-    }
-
-    private async Task<IHandlebars> InitializeHandlebarsAsync()
+    private static async Task<IHandlebars> InitializeHandlebarsAsync()
     {
         var handlebars = Handlebars.Create();
 
@@ -93,7 +67,6 @@ public class HandlebarMailRenderer : IMailRenderer
         var layoutSource = await ReadSourceAsync(assembly, "Bit.Core.MailTemplates.Handlebars.Layouts.Full.html.hbs");
         handlebars.RegisterTemplate("FullHtmlLayout", layoutSource);
 
-        _handlebars = handlebars;
         return handlebars;
     }
 }
