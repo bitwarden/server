@@ -591,29 +591,29 @@ public class AccountController : Controller
         //--------------------------------------------------
         // Scenarios 2 and 3: We need to register a new user
         //--------------------------------------------------
-        var user = new User
+        var newUser = new User
         {
             Name = name,
             Email = email,
             EmailVerified = emailVerified,
             ApiKey = CoreHelpers.SecureRandomString(30)
         };
-        await _registerUserCommand.RegisterUser(user);
+        await _registerUserCommand.RegisterUser(newUser);
 
         // If the organization has 2fa policy enabled, make sure to default jit user 2fa to email
         var twoFactorPolicy =
             await _policyRepository.GetByOrganizationIdTypeAsync(organization.Id, PolicyType.TwoFactorAuthentication);
         if (twoFactorPolicy != null && twoFactorPolicy.Enabled)
         {
-            user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
+            newUser.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
             {
                 [TwoFactorProviderType.Email] = new TwoFactorProvider
                 {
-                    MetaData = new Dictionary<string, object> { ["Email"] = user.Email.ToLowerInvariant() },
+                    MetaData = new Dictionary<string, object> { ["Email"] = newUser.Email.ToLowerInvariant() },
                     Enabled = true
                 }
             });
-            await _userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.Email);
+            await _userService.UpdateTwoFactorProviderAsync(newUser, TwoFactorProviderType.Email);
         }
 
         //-----------------------------------------------------------------
@@ -626,7 +626,7 @@ public class AccountController : Controller
             orgUser = new OrganizationUser
             {
                 OrganizationId = organization.Id,
-                UserId = user.Id,
+                UserId = newUser.Id,
                 Type = OrganizationUserType.User,
                 Status = OrganizationUserStatusType.Invited
             };
@@ -640,14 +640,14 @@ public class AccountController : Controller
         //-----------------------------------------------------------------
         else
         {
-            orgUser.UserId = user.Id;
+            orgUser.UserId = newUser.Id;
             await _organizationUserRepository.ReplaceAsync(orgUser);
         }
 
         // Create the SsoUser record to link the user to the SSO provider.
-        await CreateSsoUserRecordAsync(providerUserId, user.Id, organization.Id, orgUser);
+        await CreateSsoUserRecordAsync(providerUserId, newUser.Id, organization.Id, orgUser);
 
-        return (user, organization, orgUser);
+        return (newUser, organization, orgUser);
     }
 
     /// <summary>
