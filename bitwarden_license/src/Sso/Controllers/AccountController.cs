@@ -498,7 +498,7 @@ public class AccountController : Controller
         )
     {
         var name = GetName(claims, ssoConfigData.GetAdditionalNameClaimTypes());
-        var email = TryGetEmailAddressAsync(claims, ssoConfigData, providerUserId);
+        var email = TryGetEmailAddress(claims, ssoConfigData, providerUserId);
 
         User existingUser = null;
         if (string.IsNullOrWhiteSpace(userIdentifier))
@@ -941,7 +941,7 @@ public class AccountController : Controller
      * Tries to get a user's email from the claims and SSO configuration data or the provider user id if
      * the claims email extraction returns null.
      */
-    private string TryGetEmailAddressAsync(
+    private string TryGetEmailAddress(
         IEnumerable<Claim> claims,
         SsoConfigurationData config,
         string providerUserId)
