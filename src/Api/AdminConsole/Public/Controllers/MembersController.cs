@@ -115,19 +115,18 @@ public class MembersController : Controller
     /// </summary>
     /// <remarks>
     /// Returns a list of your organization's members.
-    /// Member objects listed in this call do not include information about their associated collections.
+    /// Member objects listed in this call include information about their associated collections.
     /// </remarks>
     [HttpGet]
     [ProducesResponseType(typeof(ListResponseModel<MemberResponseModel>), (int)HttpStatusCode.OK)]
     public async Task<IActionResult> List()
     {
-        var organizationUserUserDetails = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(_currentContext.OrganizationId.Value);
-        // TODO: Get all CollectionUser associations for the organization and marry them up here for the response.
+        var organizationUserUserDetails = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(_currentContext.OrganizationId.Value, includeCollections: true);
 
         var orgUsersTwoFactorIsEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(organizationUserUserDetails);
         var memberResponses = organizationUserUserDetails.Select(u =>
         {
-            return new MemberResponseModel(u, orgUsersTwoFactorIsEnabled.FirstOrDefault(tuple => tuple.user == u).twoFactorIsEnabled, null);
+            return new MemberResponseModel(u, orgUsersTwoFactorIsEnabled.FirstOrDefault(tuple => tuple.user == u).twoFactorIsEnabled, u.Collections);
         });
         var response = new ListResponseModel<MemberResponseModel>(memberResponses);
         return new JsonResult(response);
