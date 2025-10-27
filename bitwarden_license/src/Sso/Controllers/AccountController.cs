@@ -543,8 +543,7 @@ public class AccountController : Controller
                 throw new Exception(_i18nService.T("UserAlreadyExistsInviteProcess"));
             }
 
-            EnsureOrgUserStatusAllowed(orgUser.Status, organization.DisplayName(),
-                allowedStatuses: [OrganizationUserStatusType.Accepted, OrganizationUserStatusType.Confirmed]);
+            EnsureOrgUserStatusAllowed(orgUser.Status, organization.DisplayName());
 
             // Since we're in the auto-provisioning logic, this means that the user exists, but they have not
             // authenticated with the org's SSO provider before now (otherwise we wouldn't be auto-provisioning them).
@@ -660,15 +659,20 @@ public class AccountController : Controller
     }
 
     /// <summary>
-    /// Prevents an Organization user from logging in if in an invalid status like revoked or invited.
+    /// Validates an organization user is allowed to log in via SSO and blocks invalid statuses.
+    /// Lazily resolves the organization and organization user if not provided.
     /// </summary>
-    /// <param name="organization">TODO</param>
-    /// <param name="provider">TODO</param>
-    /// <param name="orgUser">TODO</param>
-    /// <param name="user">Either an existing user that has logged in before or a newly provisioned user</param>
-    /// <exception cref="Exception">TODO</exception>
-    private async Task PreventOrgUserLoginIfStatusInvalidAsync(Organization organization, string provider,
-        OrganizationUser orgUser, User user)
+    /// <param name="organization">The target organization; if null, resolved from provider.</param>
+    /// <param name="provider">The SSO scheme provider value (organization id as a GUID string).</param>
+    /// <param name="orgUser">The organization-user record; if null, looked up by user/org or user email for invited users.</param>
+    /// <param name="user">The user attempting to sign in (existing or newly provisioned).</param>
+    /// <exception cref="Exception">Thrown if the organization cannot be resolved from provider;
+    /// the organization user cannot be found; or the organization user status is not allowed.</exception>
+    private async Task PreventOrgUserLoginIfStatusInvalidAsync(
+        Organization organization,
+        string provider,
+        OrganizationUser orgUser,
+        User user)
     {
         // Lazily get organization if not already known
         organization ??= await TryGetOrganizationByProviderAsync(provider);
@@ -681,8 +685,7 @@ public class AccountController : Controller
 
         if (orgUser != null)
         {
-            EnsureOrgUserStatusAllowed(orgUser.Status, organization.DisplayName(),
-                allowedStatuses: [OrganizationUserStatusType.Accepted, OrganizationUserStatusType.Confirmed]);
+            EnsureOrgUserStatusAllowed(orgUser.Status, organization.DisplayName());
         }
         else
         {
@@ -779,9 +782,12 @@ public class AccountController : Controller
 
     private void EnsureOrgUserStatusAllowed(
         OrganizationUserStatusType status,
-        string organizationDisplayName,
-        params OrganizationUserStatusType[] allowedStatuses)
+        string organizationDisplayName)
     {
+        // The only permissible org user statuses allowed.
+        OrganizationUserStatusType[] allowedStatuses =
+            [OrganizationUserStatusType.Accepted, OrganizationUserStatusType.Confirmed];
+
         // if this status is one of the allowed ones, just return
         if (allowedStatuses.Contains(status))
         {
