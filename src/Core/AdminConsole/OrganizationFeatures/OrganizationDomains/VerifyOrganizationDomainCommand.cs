@@ -146,7 +146,7 @@ public class VerifyOrganizationDomainCommand(
 
         if (featureService.IsEnabled(FeatureFlagKeys.PolicyValidatorsRefactor))
         {
-            var savePolicyModel = new SavePolicyModel(policyUpdate, actingUser, new EmptyMetadataModel());
+            var savePolicyModel = new SavePolicyModel(policyUpdate, actingUser);
             await vNextSavePolicyCommand.SaveAsync(savePolicyModel);
         }
         else
