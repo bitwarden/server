@@ -29,37 +29,30 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
 
         if (requestData.IsError) return requestData.AsError;
 
-        var result = await validator.ValidateAsync(requestData.AsSuccess);
+        var validatedData = await validator.ValidateAsync(requestData.AsSuccess);
 
-        if (result.IsError) return result.AsError;
+        if (validatedData.IsError) return validatedData.AsError;
 
-        var organizationUser = result.Request.OrganizationUser;
+        var validatedRequest = validatedData.Request;
 
-        var successfulConfirmation = await organizationUserRepository.ConfirmOrganizationUserAsync(organizationUser);
+        var successfulConfirmation = await organizationUserRepository.ConfirmOrganizationUserAsync(validatedRequest.OrganizationUser);
 
         if (!successfulConfirmation) return new None();
 
-        var eventResult = await LogOrganizationUserConfirmedEventAsync(result.Request);
-        if (eventResult.IsError) return eventResult.AsError;
-
-        var emailResult = await SendConfirmedOrganizationUserEmailAsync(result.Request);
-        if (emailResult.IsError) return emailResult.AsError;
-
-        var deviceDeletionResult = await DeleteDeviceRegistrationAsync(result.Request);
-        if (deviceDeletionResult.IsError) return deviceDeletionResult.AsError;
-
-        var pushSyncKeysResult = await PushSyncOrganizationKeysAsync(result.Request);
-        if (pushSyncKeysResult.IsError) return pushSyncKeysResult.AsError;
-
-        return new None();
+        return await validatedRequest.ToCommandResultAsync()
+           .MapAsync(LogOrganizationUserConfirmedEventAsync)
+           .MapAsync(SendConfirmedOrganizationUserEmailAsync)
+           .MapAsync(DeleteDeviceRegistrationAsync)
+           .MapAsync(PushSyncOrganizationKeysAsync)
+           .ToResultAsync();
     }
 
-    private async Task<CommandResult> PushSyncOrganizationKeysAsync(AutomaticallyConfirmOrganizationUserRequestData request)
+    private async Task<CommandResult<AutomaticallyConfirmOrganizationUserRequestData>> PushSyncOrganizationKeysAsync(AutomaticallyConfirmOrganizationUserRequestData request)
     {
         try
         {
             await pushNotificationService.PushSyncOrgKeysAsync(request.UserId);
-            return new None();
+            return request;
         }
         catch (Exception ex)
         {
@@ -68,7 +61,7 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
         }
     }
 
-    private async Task<CommandResult> LogOrganizationUserConfirmedEventAsync(
+    private async Task<CommandResult<AutomaticallyConfirmOrganizationUserRequestData>> LogOrganizationUserConfirmedEventAsync(
         AutomaticallyConfirmOrganizationUserRequestData request)
     {
         try
@@ -76,7 +69,7 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
             await eventService.LogOrganizationUserEventAsync(request.OrganizationUser,
                 EventType.OrganizationUser_AutomaticallyConfirmed,
                 request.PerformedOn.UtcDateTime);
-            return new None();
+            return request;
         }
         catch (Exception ex)
         {
@@ -85,7 +78,7 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
         }
     }
 
-    private async Task<CommandResult> SendConfirmedOrganizationUserEmailAsync(
+    private async Task<CommandResult<AutomaticallyConfirmOrganizationUserRequestData>> SendConfirmedOrganizationUserEmailAsync(
         AutomaticallyConfirmOrganizationUserRequestData request)
     {
         try
@@ -98,7 +91,7 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
                 user.Email,
                 request.OrganizationUser.AccessSecretsManager);
 
-            return new None();
+            return request;
         }
         catch (Exception ex)
         {
@@ -107,7 +100,7 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
         }
     }
 
-    private async Task<CommandResult> DeleteDeviceRegistrationAsync(
+    private async Task<CommandResult<AutomaticallyConfirmOrganizationUserRequestData>> DeleteDeviceRegistrationAsync(
         AutomaticallyConfirmOrganizationUserRequestData request)
     {
         try
@@ -117,7 +110,7 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
                     .Select(d => d.Id.ToString());
 
             await pushRegistrationService.DeleteUserRegistrationOrganizationAsync(devices, request.Organization.Id.ToString());
-            return new None();
+            return request;
         }
         catch (Exception ex)
         {

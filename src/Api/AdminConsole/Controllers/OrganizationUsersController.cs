@@ -702,9 +702,13 @@ public class OrganizationUsersController : Controller
 
     [Authorize<ManageUsersRequirement>]
     [HttpPost("{id:guid}/auto-confirm")]
-    [RequireFeature(FeatureFlagKeys.AutomaticConfirmUsers)]
     public async Task AutomaticallyConfirmOrganizationUserAsync(Guid orgId, Guid id, [FromBody] OrganizationUserConfirmRequestModel model)
     {
+        if (!_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
+        {
+            throw new NotFoundException();
+        }
+
         var userId = _userService.GetProperUserId(User);
 
         if (userId is null || userId.Value == Guid.Empty)

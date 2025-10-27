@@ -8,8 +8,6 @@ public class AutomaticallyConfirmOrganizationUsersValidator : IAutomaticallyConf
     public Task<ValidationResult<AutomaticallyConfirmOrganizationUserRequestData>> ValidateAsync(
         AutomaticallyConfirmOrganizationUserRequestData request)
     {
-
-
         // joining user must be accepted
         // joining user match org
         // joining user must have user record
@@ -22,6 +20,6 @@ public class AutomaticallyConfirmOrganizationUsersValidator : IAutomaticallyConf
 
         // this includes single org and two factor - maybe more
 
-        return Task.FromResult(Invalid(request, new InvalidUserStatusError()));
+        return Task.FromResult(Valid(request));
     }
 }
