@@ -29,7 +29,7 @@ public class HandlebarMailRenderer : IMailRenderer
     /// </summary>
     private readonly ConcurrentDictionary<string, HandlebarsTemplate<object, object>> _templateCache = new();
 
-    public async Task<(string html, string? txt)> RenderAsync(BaseMailView model)
+    public async Task<(string html, string txt)> RenderAsync(BaseMailView model)
     {
         var html = await CompileTemplateAsync(model, "html");
         var txt = await CompileTemplateAsync(model, "txt");
