@@ -20,7 +20,7 @@ public class HandlebarMailRenderer : IMailRenderer
     /// <summary>
     /// This dictionary is used to cache compiled templates in a thread-safe manner.
     /// </summary>
-    private readonly ConcurrentDictionary<string, HandlebarsTemplate<object, object>> _templateCache = new();
+    private readonly ConcurrentDictionary<string, Lazy<Task<HandlebarsTemplate<object, object>>>> _templateCache = new();
 
     public async Task<(string html, string txt)> RenderAsync(BaseMailView model)
     {
@@ -32,18 +32,26 @@ public class HandlebarMailRenderer : IMailRenderer
 
     private async Task<string> CompileTemplateAsync(BaseMailView model, string type)
     {
-        var handlebars = await GetHandlebars();
-
         var templateName = $"{model.GetType().FullName}.{type}.hbs";
+        var assembly = model.GetType().Assembly;
 
-        var template = _templateCache.GetOrAdd(templateName, _ =>
-        {
-            var assembly = model.GetType().Assembly;
-            var source = ReadSourceAsync(assembly, templateName).GetAwaiter().GetResult();
-            return handlebars.Compile(source);
-        });
+        // GetOrAdd is atomic - only one Lazy will be stored per templateName.
+        // The Lazy with ExecutionAndPublication ensures the compilation happens exactly once.
+        var lazyTemplate = _templateCache.GetOrAdd(
+            templateName,
+            key => new Lazy<Task<HandlebarsTemplate<object, object>>>(
+                () => CompileTemplateInternalAsync(assembly, key),
+                LazyThreadSafetyMode.ExecutionAndPublication));
 
+        var template = await lazyTemplate.Value;
         return template(model);
+    }
+
+    private async Task<HandlebarsTemplate<object, object>> CompileTemplateInternalAsync(Assembly assembly, string templateName)
+    {
+        var source = await ReadSourceAsync(assembly, templateName);
+        var handlebars = await GetHandlebars();
+        return handlebars.Compile(source);
     }
 
     private static async Task<string> ReadSourceAsync(Assembly assembly, string template)
