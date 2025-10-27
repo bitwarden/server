@@ -3,7 +3,7 @@
 #nullable enable
 
 /// <summary>
-///
+/// Generic mailer interface for sending email messages.
 /// </summary>
 public interface IMailer
 {
