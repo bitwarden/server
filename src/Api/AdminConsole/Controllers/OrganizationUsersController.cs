@@ -701,7 +701,7 @@ public class OrganizationUsersController : Controller
 
 
     [Authorize<ManageUsersRequirement>]
-    [HttpPost("{id:guid}/auto-confirm")]
+    [HttpPost("{id}/auto-confirm")]
     public async Task AutomaticallyConfirmOrganizationUserAsync(Guid orgId, Guid id, [FromBody] OrganizationUserConfirmRequestModel model)
     {
         if (!_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
