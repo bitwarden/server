@@ -24,6 +24,7 @@ public class Mailer(IMailRenderer renderer, IMailDeliveryService mailDeliverySer
             MetaData = metadata,
             HtmlContent = content.html,
             TextContent = content.txt,
+            Category = message.Category,
         };
 
         await mailDeliveryService.SendEmailAsync(mailMessage);
