@@ -27,7 +27,7 @@ public abstract class BaseMail<TView> where TView : BaseMailView
     public string? Category { get; }
 
     /// <summary>
-    /// Allows you to override ignore the suppression list for this email.
+    /// Allows you to override and ignore the suppression list for this email.
     ///
     /// Warning: This should be used with caution, valid reasons are primarily account recovery, email OTP.
     /// </summary>
