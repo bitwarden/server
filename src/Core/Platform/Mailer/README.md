@@ -12,7 +12,7 @@ The Mailer system consists of four main components:
 3. **BaseMailView** - Abstract base class for email template view models
 4. **IMailRenderer** - Internal interface for rendering templates (implemented by `HandlebarMailRenderer`)
 
-## How It Works
+## How To Use
 
 1. Define a view model that inherits from `BaseMailView` with properties for template data
 2. Create Handlebars templates (`.html.hbs` and `.text.hbs`) as embedded resources, preferably using the MJML pipeline,
