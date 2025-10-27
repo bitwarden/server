@@ -543,7 +543,7 @@ public class AccountController : Controller
                 throw new Exception(_i18nService.T("UserAlreadyExistsInviteProcess"));
             }
 
-            EnsureOrgUserStatusAllowed(orgUser.Status, organization.DisplayName());
+            EnsureAcceptedOrConfirmedOrgUserStatus(orgUser.Status, organization.DisplayName());
 
             // Since we're in the auto-provisioning logic, this means that the user exists, but they have not
             // authenticated with the org's SSO provider before now (otherwise we wouldn't be auto-provisioning them).
@@ -685,7 +685,7 @@ public class AccountController : Controller
 
         if (orgUser != null)
         {
-            EnsureOrgUserStatusAllowed(orgUser.Status, organization.DisplayName());
+            EnsureAcceptedOrConfirmedOrgUserStatus(orgUser.Status, organization.DisplayName());
         }
         else
         {
@@ -780,7 +780,7 @@ public class AccountController : Controller
         return orgUser;
     }
 
-    private void EnsureOrgUserStatusAllowed(
+    private void EnsureAcceptedOrConfirmedOrgUserStatus(
         OrganizationUserStatusType status,
         string organizationDisplayName)
     {
