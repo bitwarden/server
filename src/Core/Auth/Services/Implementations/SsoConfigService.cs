@@ -100,9 +100,9 @@ public class SsoConfigService : ISsoConfigService
             if (_featureService.IsEnabled(FeatureFlagKeys.PolicyValidatorsRefactor))
             {
                 var performedBy = new SystemUser(EventSystemUser.Unknown);
-                await _vNextSavePolicyCommand.SaveAsync(new SavePolicyModel(singleOrgPolicy, performedBy, new EmptyMetadataModel()));
-                await _vNextSavePolicyCommand.SaveAsync(new SavePolicyModel(resetPasswordPolicy, performedBy, new EmptyMetadataModel()));
-                await _vNextSavePolicyCommand.SaveAsync(new SavePolicyModel(requireSsoPolicy, performedBy, new EmptyMetadataModel()));
+                await _vNextSavePolicyCommand.SaveAsync(new SavePolicyModel(singleOrgPolicy, performedBy));
+                await _vNextSavePolicyCommand.SaveAsync(new SavePolicyModel(resetPasswordPolicy, performedBy));
+                await _vNextSavePolicyCommand.SaveAsync(new SavePolicyModel(requireSsoPolicy, performedBy));
             }
             else
             {

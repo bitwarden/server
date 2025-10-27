@@ -88,7 +88,7 @@ public class RequireSsoPolicyValidatorTests
             .GetByOrganizationIdAsync(policyUpdate.OrganizationId)
             .Returns(ssoConfig);
 
-        var savePolicyModel = new SavePolicyModel(policyUpdate, null, new EmptyMetadataModel());
+        var savePolicyModel = new SavePolicyModel(policyUpdate);
 
         var result = await sutProvider.Sut.ValidateAsync(savePolicyModel, policy);
         Assert.Contains("Key Connector is enabled", result, StringComparison.OrdinalIgnoreCase);
@@ -109,7 +109,7 @@ public class RequireSsoPolicyValidatorTests
             .GetByOrganizationIdAsync(policyUpdate.OrganizationId)
             .Returns(ssoConfig);
 
-        var savePolicyModel = new SavePolicyModel(policyUpdate, null, new EmptyMetadataModel());
+        var savePolicyModel = new SavePolicyModel(policyUpdate);
 
         var result = await sutProvider.Sut.ValidateAsync(savePolicyModel, policy);
         Assert.Contains("Trusted device encryption is on", result, StringComparison.OrdinalIgnoreCase);
@@ -129,7 +129,7 @@ public class RequireSsoPolicyValidatorTests
             .GetByOrganizationIdAsync(policyUpdate.OrganizationId)
             .Returns(ssoConfig);
 
-        var savePolicyModel = new SavePolicyModel(policyUpdate, null, new EmptyMetadataModel());
+        var savePolicyModel = new SavePolicyModel(policyUpdate);
 
         var result = await sutProvider.Sut.ValidateAsync(savePolicyModel, policy);
         Assert.True(string.IsNullOrEmpty(result));

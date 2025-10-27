@@ -169,7 +169,7 @@ public class TwoFactorAuthenticationPolicyValidatorTests
                 (orgUserDetailUserWithout2Fa, false),
             });
 
-        var savePolicyModel = new SavePolicyModel(policyUpdate, null, new EmptyMetadataModel());
+        var savePolicyModel = new SavePolicyModel(policyUpdate);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.ExecutePreUpsertSideEffectAsync(savePolicyModel, policy));
@@ -228,7 +228,7 @@ public class TwoFactorAuthenticationPolicyValidatorTests
             .RevokeNonCompliantOrganizationUsersAsync(Arg.Any<RevokeOrganizationUsersRequest>())
             .Returns(new CommandResult());
 
-        var savePolicyModel = new SavePolicyModel(policyUpdate, null, new EmptyMetadataModel());
+        var savePolicyModel = new SavePolicyModel(policyUpdate);
 
         // Act
         await sutProvider.Sut.ExecutePreUpsertSideEffectAsync(savePolicyModel, policy);
