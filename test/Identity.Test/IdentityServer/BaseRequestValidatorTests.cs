@@ -990,7 +990,6 @@ public class BaseRequestValidatorTests
         // Reset state that AutoFixture may have populated
         requestContext.TwoFactorRecoveryRequested = false;
         requestContext.RememberMeRequested = false;
-        requestContext.CompletedValidationSchemes.Clear();
 
         // 1. Master password is valid
         _sut.isValid = true;
@@ -1032,10 +1031,6 @@ public class BaseRequestValidatorTests
             // Verify recovery was marked
             Assert.True(requestContext.TwoFactorRecoveryRequested,
                 "TwoFactorRecoveryRequested flag should be set");
-
-            // Verify validation order was correct (2FA completed before SSO check)
-            Assert.Contains("ValidateTwoFactorAsync", requestContext.CompletedValidationSchemes);
-            Assert.DoesNotContain("ValidateSsoAsync", requestContext.CompletedValidationSchemes);
         }
         else
         {
@@ -1080,7 +1075,6 @@ public class BaseRequestValidatorTests
         // Reset state that AutoFixture may have populated
         requestContext.TwoFactorRecoveryRequested = false;
         requestContext.RememberMeRequested = false;
-        requestContext.CompletedValidationSchemes.Clear();
 
         // 1. Master password is valid
         _sut.isValid = true;
@@ -1125,10 +1119,6 @@ public class BaseRequestValidatorTests
             // Recovery was attempted but failed - flag should NOT be set
             Assert.False(requestContext.TwoFactorRecoveryRequested,
                 "TwoFactorRecoveryRequested should be false (recovery failed)");
-
-            // Verify validation stopped at 2FA (SSO never checked)
-            Assert.DoesNotContain("ValidateTwoFactorAsync", requestContext.CompletedValidationSchemes);
-            Assert.DoesNotContain("ValidateSsoAsync", requestContext.CompletedValidationSchemes);
 
             // Verify failed 2FA email was sent
             await _mailService.Received(1).SendFailedTwoFactorAttemptEmailAsync(
@@ -1193,7 +1183,6 @@ public class BaseRequestValidatorTests
         // Reset state that AutoFixture may have populated
         requestContext.TwoFactorRecoveryRequested = false;
         requestContext.RememberMeRequested = false;
-        requestContext.CompletedValidationSchemes.Clear();
 
         // 1. Master password is valid
         _sut.isValid = true;
@@ -1252,12 +1241,6 @@ public class BaseRequestValidatorTests
             // NEW BEHAVIOR: Recovery flag should be set for audit purposes
             Assert.True(requestContext.TwoFactorRecoveryRequested,
                 "TwoFactorRecoveryRequested flag should be set for audit/logging");
-
-            // Verify all validators passed in the recovery order
-            Assert.Contains("ValidateMasterPasswordAsync", requestContext.CompletedValidationSchemes);
-            Assert.Contains("ValidateTwoFactorAsync", requestContext.CompletedValidationSchemes);
-            Assert.Contains("ValidateSsoAsync", requestContext.CompletedValidationSchemes);
-            Assert.Contains("ValidateNewDeviceAsync", requestContext.CompletedValidationSchemes);
         }
         else
         {
