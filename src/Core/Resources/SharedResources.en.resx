@@ -508,6 +508,9 @@
   <data name="UserIdAndTokenMismatch" xml:space="preserve">
     <value>Supplied userId and token did not match.</value>
   </data>
+  <data name="UserShouldBeFound" xml:space="preserve">
+    <value>User should have been defined by this point.</value>
+  </data>
   <data name="CouldNotFindOrganization" xml:space="preserve">
     <value>Could not find organization for '{0}'</value>
   </data>

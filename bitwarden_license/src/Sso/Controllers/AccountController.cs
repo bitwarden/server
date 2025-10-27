@@ -302,9 +302,7 @@ public class AccountController : Controller
 
         if (preventOrgUserLoginIfStatusInvalid)
         {
-            // Same as else block without the if check, it should not be necessary. The user should _always_
-            // be defined at this point either by auto provisioned or they existed to begin with.
-            // PM-24579 When removing the feature flag, delete the above comment block.
+            if (user == null) throw new Exception(_i18nService.T("UserShouldBeFound"));
 
             // This allows us to collect any additional claims or properties
             // for the specific protocols used and store them in the local auth cookie.
@@ -523,7 +521,7 @@ public class AccountController : Controller
         // Try to find the org (we error if we can't find an org)
         var organization = await TryGetOrganizationByProviderAsync(provider);
 
-        // Try to find an org user (null org user possible here)
+        // Try to find an org user (null org user possible and valid here)
         var orgUser = await TryGetOrganizationUserByUserAndOrgOrEmail(existingUser, organization.Id, email);
 
         //----------------------------------------------------
@@ -643,6 +641,7 @@ public class AccountController : Controller
             };
             await _organizationUserRepository.CreateAsync(orgUser);
         }
+
         //-----------------------------------------------------------------
         // Scenario 3: There is already an existing OrganizationUser
         // That was established through an invitation. We just need to
