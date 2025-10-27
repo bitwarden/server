@@ -1,5 +1,6 @@
 mod migrate;
 pub use migrate::{Migration, MigrationError, run_pending_migrations};
+pub const TABLE_MIGRATIONS: &str = "__migrations";
 
 mod pool;
 pub use pool::ConnectionManager as MsSqlConnectionManager;

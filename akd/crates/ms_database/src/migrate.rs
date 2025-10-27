@@ -1,6 +1,7 @@
 use tiberius::{error};
 
 use crate::pool::ManagedConnection;
+use crate::TABLE_MIGRATIONS;
 
 type Result<T> = std::result::Result<T, MigrationError>;
 
@@ -25,27 +26,26 @@ pub(crate) async fn pending_migrations(conn: &mut ManagedConnection, all_migrati
     Ok(pending)
 }
 
-const CREATE_MIGRATIONS_TABLE_SQL: &str = r#"
-IF OBJECT_ID('dbo.__migrations') IS NULL
-BEGIN
-    CREATE TABLE dbo.__migrations (
-        version VARCHAR(50) PRIMARY KEY,
-        run_on DATETIME NOT NULL DEFAULT GETDATE()
-    );
-END
-"#;
-
 async fn ensure_migrations_table_exists(conn: &mut ManagedConnection) -> Result<()> {
+    let create_migrations_table = format!(
+        "IF OBJECT_ID('dbo.{TABLE_MIGRATIONS}') IS NULL
+        BEGIN
+            CREATE TABLE dbo.{TABLE_MIGRATIONS} (
+                version VARCHAR(50) PRIMARY KEY,
+                run_on DATETIME NOT NULL DEFAULT GETDATE()
+            );
+        END"
+    );
     // create the migrations table if it doesn't exist
-    conn.simple_query(CREATE_MIGRATIONS_TABLE_SQL).await?;
+    conn.simple_query(&create_migrations_table).await?;
 
     Ok(())
 }
 
-const READ_APPLIED_MIGRATIONS: &str = "SELECT version FROM dbo.__migrations ORDER BY version";
 
 async fn read_applied_migrations(conn: &mut ManagedConnection) -> Result<Vec<String>> {
-    let applied = conn.query(READ_APPLIED_MIGRATIONS, &[])
+    let read_applied_migrations = format!("SELECT version FROM dbo.{TABLE_MIGRATIONS} ORDER BY version");
+    let applied = conn.query(&read_applied_migrations, &[])
         .await?
         .into_first_result()
         .await?
@@ -55,10 +55,9 @@ async fn read_applied_migrations(conn: &mut ManagedConnection) -> Result<Vec<Str
     Ok(applied)
 }
 
-const RECORD_MIGRATION_SQL: &str = "INSERT INTO dbo.__migrations (version) VALUES (@P1)";
-
 async fn record_migration(conn: &mut ManagedConnection, migration: &Migration) -> Result<()> {
-    conn.execute(RECORD_MIGRATION_SQL, &[&migration.name]).await?;
+    let record_migration_sql = format!("INSERT INTO dbo.{TABLE_MIGRATIONS} (version) VALUES (@P1)");
+    conn.execute(&record_migration_sql, &[&migration.name]).await?;
     Ok(())
 }
 

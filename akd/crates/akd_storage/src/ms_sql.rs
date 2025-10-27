@@ -1,5 +1,6 @@
 use std::{cmp::Ordering, collections::HashMap, sync::Arc};
 
+use crate::migrations::{TABLE_AZKS, TABLE_HISTORY_TREE_NODES, TABLE_MIGRATIONS, TABLE_VALUES};
 use akd::{
     errors::StorageError,
     storage::{
@@ -10,6 +11,7 @@ use akd::{
 };
 use async_trait::async_trait;
 use ms_database::{IntoRow, MsSqlConnectionManager, Pool, PooledConnection};
+use tracing::{debug, error, info, instrument, trace, warn};
 
 use crate::{
     migrations::MIGRATIONS,
@@ -48,6 +50,7 @@ impl MsSqlBuilder {
     }
 }
 
+#[derive(Clone)]
 pub struct MsSql {
     pool: Arc<Pool>,
 }
@@ -57,67 +60,133 @@ impl MsSql {
         MsSqlBuilder::new(connection_string)
     }
 
+    #[instrument(skip(connection_string), fields(pool_size))]
     pub async fn new(connection_string: String, pool_size: u32) -> Result<Self, StorageError> {
+        info!(pool_size, "Creating MS SQL storage");
         let connection_manager = MsSqlConnectionManager::new(connection_string);
         let pool = Pool::builder()
             .max_size(pool_size)
             .build(connection_manager)
             .await
-            .map_err(|e| StorageError::Connection(format!("Failed to create DB pool: {}", e)))?;
+            .map_err(|e| {
+                error!(error = %e, "Failed to create DB pool");
+                StorageError::Connection(format!("Failed to create DB pool: {}", e))
+            })?;
 
+        info!("Successfully created MS SQL storage connection pool");
         Ok(Self {
             pool: Arc::new(pool),
         })
     }
 
+    #[instrument(skip(self))]
     pub async fn migrate(&self) -> Result<(), StorageError> {
+        info!("Running database migrations");
         let mut conn = self.pool.get().await.map_err(|e| {
+            error!(error = %e, "Failed to get DB connection for migrations");
             StorageError::Connection(format!("Failed to get DB connection for migrations: {}", e))
         })?;
 
         ms_database::run_pending_migrations(&mut conn, MIGRATIONS)
             .await
-            .map_err(|e| StorageError::Connection(format!("Failed to run migrations: {}", e)))?;
+            .map_err(|e| {
+                error!(error = %e, "Failed to run migrations");
+                StorageError::Connection(format!("Failed to run migrations: {}", e))
+            })?;
+        info!("Successfully completed database migrations");
         Ok(())
     }
 
-    async fn get_connection(&self) -> Result<PooledConnection<'_>, StorageError> {
-        self.pool
-            .get()
-            .await
-            .map_err(|e| StorageError::Connection(format!("Failed to get DB connection: {}", e)))
+    pub async fn drop(&self) -> Result<(), StorageError> {
+        info!("Dropping all AKD tables");
+        let mut conn = self.pool.get().await.map_err(|e| {
+            error!(error = %e, "Failed to get DB connection for dropping tables");
+            StorageError::Connection(format!(
+                "Failed to get DB connection for dropping tables: {}",
+                e
+            ))
+        })?;
+
+        let drop_all = format!(
+            r#"
+            DROP TABLE IF EXISTS {TABLE_AZKS};
+            DROP TABLE IF EXISTS {TABLE_HISTORY_TREE_NODES};
+            DROP TABLE IF EXISTS {TABLE_VALUES};
+            DROP TABLE IF EXISTS {TABLE_MIGRATIONS};"#
+        );
+
+        conn.simple_query(&drop_all).await.map_err(|e| {
+            error!(error = ?e, sql = drop_all, "Failed to execute drop for all tables");
+            StorageError::Other(format!("Failed to drop AKD tables: {}", e))
+        })?;
+
+        info!("Successfully dropped all AKD tables");
+        Ok(())
     }
 
+    #[instrument(skip(self), level = "trace")]
+    async fn get_connection(&self) -> Result<PooledConnection<'_>, StorageError> {
+        trace!("Acquiring database connection from pool");
+        self.pool.get().await.map_err(|e| {
+            error!(error = %e, "Failed to get DB connection");
+            StorageError::Connection(format!("Failed to get DB connection: {}", e))
+        })
+    }
+
+    #[instrument(skip(self, statement), level = "debug")]
     async fn execute_statement(&self, statement: &Statement) -> Result<(), StorageError> {
+        debug!("Executing SQL statement");
+        trace!(sql = statement.sql(), "SQL");
         let mut conn = self.get_connection().await?;
         self.execute_statement_on_connection(statement, &mut conn)
             .await
     }
 
+    #[instrument(skip(self, statement, conn), level = "debug")]
     async fn execute_statement_on_connection(
         &self,
         statement: &Statement,
         conn: &mut PooledConnection<'_>,
     ) -> Result<(), StorageError> {
+        trace!("Executing statement on connection");
         conn.execute(statement.sql(), &statement.params())
             .await
-            .map_err(|e| StorageError::Other(format!("Failed to execute statement: {}", e)))?;
+            .map_err(|e| {
+                error!(error = %e, "Failed to execute statement");
+                StorageError::Other(format!("Failed to execute statement: {}", e))
+            })?;
+        debug!("Statement executed successfully");
         Ok(())
     }
 }
 
 #[async_trait]
 impl Database for MsSql {
+    #[instrument(skip(self, record), level = "debug")]
     async fn set(&self, record: DbRecord) -> Result<(), StorageError> {
+        debug!(
+            record_type = {
+                match &record {
+                    DbRecord::Azks(_) => "Azks",
+                    DbRecord::TreeNode(_) => "TreeNode",
+                    DbRecord::ValueState(_) => "ValueState",
+                }
+            },
+            "Setting single record"
+        );
         let statement = record.set_statement()?;
         self.execute_statement(&statement).await
     }
 
+    #[instrument(skip(self, records, _state), fields(record_count = records.len()), level = "info")]
     async fn batch_set(
         &self,
         records: Vec<DbRecord>,
         _state: DbSetState, // TODO: unused in mysql example, but may be needed later
     ) -> Result<(), StorageError> {
+        let total_records = records.len();
+        info!(total_records, "Starting batch_set operation");
+
         // Generate groups by type
         let mut groups = HashMap::new();
         for record in records {
@@ -137,17 +206,27 @@ impl Database for MsSql {
             }
         }
 
+        debug!(group_count = groups.len(), "Records grouped by type");
+        for (storage_type, group) in &groups {
+            debug!(storage_type = ?storage_type, record_count = group.len(), "Group details");
+        }
+
         // Execute each group in batches
         let mut conn = self.get_connection().await?;
         // Start transaction
-        conn.simple_query("BEGIN TRANSACTION")
-            .await
-            .map_err(|e| StorageError::Transaction(format!("Failed to begin transaction: {e}")))?;
+        info!("Beginning transaction for batch_set");
+        conn.simple_query("BEGIN TRANSACTION").await.map_err(|e| {
+            error!(error = %e, "Failed to begin transaction");
+            StorageError::Transaction(format!("Failed to begin transaction: {e}"))
+        })?;
         let result = async {
             for (storage_type, mut record_group) in groups.into_iter() {
                 if record_group.is_empty() {
+                    debug!(storage_type = ?storage_type, "Skipping empty group");
                     continue;
                 }
+
+                info!(storage_type = ?storage_type, record_count = record_group.len(), "Processing batch");
 
                 // Sort the records to match db-layer sorting
                 record_group.sort_by(|a, b| match &a {
@@ -175,37 +254,50 @@ impl Database for MsSql {
 
                 // Create temp table
                 let table: TempTable = storage_type.into();
+                debug!(table_name = %table, "Creating temp table");
                 conn.simple_query(&table.create()).await.map_err(|e| {
+                    error!(error = ?e, ?storage_type, "Failed to create temp table");
                     StorageError::Other(format!("Failed to create temp table: {e}"))
                 })?;
 
                 // Create bulk insert
                 let table_name = &table.to_string();
+                debug!(table_name, ?storage_type, "Starting bulk insert");
                 let mut bulk = conn.bulk_insert(table_name).await.map_err(|e| {
+                    error!(error = ?e, ?storage_type, "Failed to start bulk insert");
                     StorageError::Other(format!("Failed to start bulk insert: {e}"))
                 })?;
 
                 for record in &record_group {
                     let row = record.into_row()?;
                     bulk.send(row).await.map_err(|e| {
+                        error!(error = ?e, ?storage_type, "Failed to add row to bulk insert");
                         StorageError::Other(format!("Failed to add row to bulk insert: {e}"))
                     })?;
                 }
 
+                debug!(row_count = record_group.len(), "Finalizing bulk insert");
                 bulk.finalize().await.map_err(|e| {
+                    error!(error = ?e, "Failed to finalize bulk insert");
                     StorageError::Other(format!("Failed to finalize bulk insert: {e}"))
                 })?;
 
                 // Set values from temp table to main table
+                debug!("Merging temp table data into main table");
                 let sql = <DbRecord as MsSqlStorable>::set_batch_statement(&storage_type);
+                trace!(sql, "Batch merge SQL");
                 conn.simple_query(&sql).await.map_err(|e| {
+                    error!(error = %e, "Failed to execute batch set statement");
                     StorageError::Other(format!("Failed to execute batch set statement: {e}"))
                 })?;
 
                 // Delete the temp table
-                conn.simple_query(&table.drop())
-                    .await
-                    .map_err(|e| StorageError::Other(format!("Failed to drop temp table: {e}")))?;
+                debug!("Dropping temp table");
+                conn.simple_query(&table.drop()).await.map_err(|e| {
+                    error!(error = %e, "Failed to drop temp table");
+                    StorageError::Other(format!("Failed to drop temp table: {e}"))
+                })?;
+                info!(storage_type = ?storage_type, "Successfully processed batch");
             }
 
             Ok::<(), StorageError>(())
@@ -213,15 +305,21 @@ impl Database for MsSql {
 
         match result.await {
             Ok(_) => {
+                info!("Committing transaction");
                 conn.simple_query("COMMIT").await.map_err(|e| {
+                    error!(error = %e, "Failed to commit transaction");
                     StorageError::Transaction(format!("Failed to commit transaction: {e}"))
                 })?;
+                info!(total_records, "batch_set completed successfully");
                 Ok(())
             }
             Err(e) => {
+                warn!(error = %e, "batch_set failed, rolling back transaction");
                 conn.simple_query("ROLLBACK").await.map_err(|e| {
+                    error!(error = %e, "Failed to roll back transaction");
                     StorageError::Transaction(format!("Failed to roll back transaction: {e}"))
                 })?;
+                error!(error = %e, "batch_set rolled back");
                 Err(StorageError::Other(format!(
                     "Failed to batch set records: {}",
                     e
@@ -230,23 +328,32 @@ impl Database for MsSql {
         }
     }
 
+    #[instrument(skip(self, id), fields(storage_type = ?St::data_type()), level = "debug")]
     async fn get<St: Storable>(&self, id: &St::StorageKey) -> Result<DbRecord, StorageError> {
+        let data_type = St::data_type();
+        debug!(?data_type, "Getting single record");
         let mut conn = self.get_connection().await?;
         let statement = DbRecord::get_statement::<St>(id)?;
+        trace!(sql = statement.sql(), "Get SQL");
 
         let query_stream = conn
             .query(statement.sql(), &statement.params())
             .await
-            .map_err(|e| StorageError::Other(format!("Failed to execute query: {e}")))?;
+            .map_err(|e| {
+                error!(error = %e, ?id, ?data_type, sql = statement.sql(), "Failed to execute query");
+                StorageError::Other(format!("Failed to execute query: {e}"))
+            })?;
 
-        let row = query_stream
-            .into_row()
-            .await
-            .map_err(|e| StorageError::Other(format!("Failed to fetch row: {e}")))?;
+        let row = query_stream.into_row().await.map_err(|e| {
+            error!(error = %e, ?id, ?data_type, "Failed to fetch row");
+            StorageError::Other(format!("Failed to fetch row: {e}"))
+        })?;
 
         if let Some(row) = row {
+            debug!(?id, ?data_type, "Record found");
             DbRecord::from_row::<St>(&row)
         } else {
+            debug!(?id, ?data_type, "Record not found");
             Err(StorageError::NotFound(format!(
                 "{:?} {:?} not found",
                 St::data_type(),
@@ -255,17 +362,21 @@ impl Database for MsSql {
         }
     }
 
+    #[instrument(skip(self, ids), fields(storage_type = ?St::data_type(), id_count = ids.len()), level = "debug")]
     async fn batch_get<St: Storable>(
         &self,
         ids: &[St::StorageKey],
     ) -> Result<Vec<DbRecord>, StorageError> {
         if ids.is_empty() {
+            debug!("batch_get called with empty ids, returning empty vector");
             return Ok(vec![]);
         }
 
+        debug!(id_count = ids.len(), "Starting batch_get");
+
         let temp_table = TempTable::for_ids::<St>();
-        if temp_table.can_create() {
-            // AZKs does not support batch get, so we just return empty vec
+        if !temp_table.can_create() {
+            warn!(storage_type = ?St::data_type(), "Cannot create temp table, batch get not supported");
             return Ok(Vec::new());
         }
         let create_temp_table = temp_table.create();
@@ -274,15 +385,19 @@ impl Database for MsSql {
         let mut conn = self.get_connection().await?;
 
         // Begin a transaction
-        conn.simple_query("BEGIN TRANSACTION")
-            .await
-            .map_err(|e| StorageError::Transaction(format!("Failed to begin transaction: {e}")))?;
+        debug!("Beginning transaction for batch_get");
+        conn.simple_query("BEGIN TRANSACTION").await.map_err(|e| {
+            error!(error = %e, "Failed to begin transaction");
+            StorageError::Transaction(format!("Failed to begin transaction: {e}"))
+        })?;
 
         let result = async {
             // Use bulk_insert to insert all the ids into a temporary table
-            conn.simple_query(&create_temp_table)
-                .await
-                .map_err(|e| StorageError::Other(format!("Failed to create temp table: {e}")))?;
+            debug!("Creating temp table for batch_get");
+            conn.simple_query(&create_temp_table).await.map_err(|e| {
+                error!(error = %e, "Failed to create temp table");
+                StorageError::Other(format!("Failed to create temp table: {e}"))
+            })?;
             let mut bulk = conn
                 .bulk_insert(&temp_table_name)
                 .await
@@ -297,40 +412,57 @@ impl Database for MsSql {
                 .map_err(|e| StorageError::Other(format!("Failed to finalize bulk insert: {e}")))?;
 
             // Read rows matching the ids from the temporary table
+            debug!("Querying batch records from temp table");
             let get_sql = DbRecord::get_batch_statement::<St>();
+            trace!(sql = get_sql, "Batch get SQL");
             let query_stream = conn.simple_query(&get_sql).await.map_err(|e| {
+                error!(error = %e, "Failed to execute batch get query");
                 StorageError::Other(format!("Failed to execute batch get query: {e}"))
             })?;
             let mut records = Vec::new();
             {
-                let rows = query_stream
-                    .into_first_result()
-                    .await
-                    .map_err(|e| StorageError::Other(format!("Failed to fetch rows: {e}")))?;
+                let rows = query_stream.into_first_result().await.map_err(|e| {
+                    error!(error = %e, "Failed to fetch rows");
+                    StorageError::Other(format!("Failed to fetch rows: {e}"))
+                })?;
                 for row in rows {
                     let record = DbRecord::from_row::<St>(&row)?;
                     records.push(record);
                 }
             }
+            debug!(
+                record_count = records.len(),
+                "Retrieved records from batch_get"
+            );
 
+            debug!("Dropping temp table");
             let drop_temp_table = temp_table.drop();
-            conn.simple_query(&drop_temp_table)
-                .await
-                .map_err(|e| StorageError::Other(format!("Failed to drop temp table: {e}")))?;
+            conn.simple_query(&drop_temp_table).await.map_err(|e| {
+                error!(error = %e, "Failed to drop temp table");
+                StorageError::Other(format!("Failed to drop temp table: {e}"))
+            })?;
 
-            Ok::<Vec<DbRecord>, StorageError>(vec![])
+            Ok::<Vec<DbRecord>, StorageError>(records)
         };
 
         // Commit or rollback the transaction
         match result.await {
             Ok(records) => {
+                debug!("Committing batch_get transaction");
                 conn.simple_query("COMMIT").await.map_err(|e| {
+                    error!(error = %e, "Failed to commit transaction");
                     StorageError::Transaction(format!("Failed to commit transaction: {e}"))
                 })?;
+                info!(
+                    record_count = records.len(),
+                    "batch_get completed successfully"
+                );
                 Ok(records)
             }
             Err(e) => {
+                warn!(error = %e, "batch_get failed, rolling back");
                 conn.simple_query("ROLLBACK").await.map_err(|e| {
+                    error!(error = %e, "Failed to rollback transaction");
                     StorageError::Transaction(format!("Failed to rollback transaction: {e}"))
                 })?;
                 Err(e)
@@ -340,23 +472,28 @@ impl Database for MsSql {
 
     // Note: user and username here is the raw_label. The assumption is this is a single key for a single user, but that's
     // too restrictive for what we want, so generalize the name a bit.
+    #[instrument(skip(self, raw_label), level = "debug")]
     async fn get_user_data(&self, raw_label: &AkdLabel) -> Result<types::KeyData, StorageError> {
         // Note: don't log raw_label or data as it may contain sensitive information, such as PII.
+        debug!("Getting all data for label (raw_label not logged for privacy)");
 
         let result = async {
             let mut conn = self.get_connection().await?;
 
             let statement = values::get_all(raw_label);
 
+            trace!(sql = statement.sql(), "Query SQL");
             let query_stream = conn
                 .query(statement.sql(), &statement.params())
                 .await
                 .map_err(|e| {
+                    error!(error = %e, "Failed to execute query for label");
                     StorageError::Other(format!("Failed to execute query for label: {e}"))
                 })?;
             let mut states = Vec::new();
             {
                 let rows = query_stream.into_first_result().await.map_err(|e| {
+                    error!(error = %e, "Failed to fetch rows for label");
                     StorageError::Other(format!("Failed to fetch rows for label: {e}"))
                 })?;
                 for row in rows {
@@ -364,54 +501,70 @@ impl Database for MsSql {
                     states.push(record);
                 }
             }
+            debug!(state_count = states.len(), "Retrieved states for label");
             let key_data = KeyData { states };
 
             Ok::<KeyData, StorageError>(key_data)
         };
 
         match result.await {
-            Ok(data) => Ok(data),
-            Err(e) => Err(StorageError::Other(format!(
-                "Failed to get all data for label: {}",
-                e
-            ))),
+            Ok(data) => {
+                info!("get_user_data completed successfully");
+                Ok(data)
+            }
+            Err(e) => {
+                error!(error = %e, "Failed to get all data for label");
+                Err(StorageError::Other(format!(
+                    "Failed to get all data for label: {}",
+                    e
+                )))
+            }
         }
     }
 
     // Note: user and username here is the raw_label. The assumption is this is a single key for a single user, but that's
     // too restrictive for what we want, so generalize the name a bit.
+    #[instrument(skip(self, raw_label), fields(flag = ?flag), level = "debug")]
     async fn get_user_state(
         &self,
         raw_label: &AkdLabel,
         flag: types::ValueStateRetrievalFlag,
     ) -> Result<types::ValueState, StorageError> {
+        debug!(?flag, "Getting raw label with flag");
         let statement = values::get_by_flag(raw_label, flag);
         let mut conn = self.get_connection().await?;
+        trace!(sql = statement.sql(), "Query SQL");
         let query_stream = conn
             .query(statement.sql(), &statement.params())
             .await
-            .map_err(|e| StorageError::Other(format!("Failed to execute query: {e}")))?;
-        let row = query_stream
-            .into_row()
-            .await
-            .map_err(|e| StorageError::Other(format!("Failed to fetch first result row: {e}")))?;
+            .map_err(|e| {
+                error!(error = ?e, "Failed to execute query");
+                StorageError::Other(format!("Failed to execute query: {e}"))
+            })?;
+        let row = query_stream.into_row().await.map_err(|e| {
+            error!(error = %e, "Failed to fetch first result row");
+            StorageError::Other(format!("Failed to fetch first result row: {e}"))
+        })?;
         if let Some(row) = row {
+            debug!("Raw label found");
             statement.parse(&row)
         } else {
+            debug!("Raw label not found");
             Err(StorageError::NotFound(format!(
-                "ValueState for label {:?} not found",
-                raw_label
+                "ValueState for label not found"
             )))
         }
     }
 
     // Note: user and username here is the raw_label. The assumption is this is a single key for a single user, but that's
     // too restrictive for what we want, so generalize the name a bit.
+    #[instrument(skip(self, raw_labels), fields(label_count = raw_labels.len(), flag = ?flag), level = "debug")]
     async fn get_user_state_versions(
         &self,
         raw_labels: &[AkdLabel],
         flag: types::ValueStateRetrievalFlag,
     ) -> Result<HashMap<AkdLabel, (u64, AkdValue)>, StorageError> {
+        info!(label_count = raw_labels.len(), flag = ?flag, "Getting user state versions");
         let mut conn = self.get_connection().await?;
 
         let temp_table = TempTable::RawLabelSearch;
@@ -419,14 +572,17 @@ impl Database for MsSql {
         let temp_table_name = &temp_table.to_string();
 
         // Begin a transaction
-        conn.simple_query("BEGIN TRANSACTION")
-            .await
-            .map_err(|e| StorageError::Transaction(format!("Failed to begin transaction: {e}")))?;
+        debug!("Beginning transaction for get_user_state_versions");
+        conn.simple_query("BEGIN TRANSACTION").await.map_err(|e| {
+            error!(error = %e, "Failed to begin transaction");
+            StorageError::Transaction(format!("Failed to begin transaction: {e}"))
+        })?;
 
         let result = async {
-            conn.simple_query(&create_temp_table)
-                .await
-                .map_err(|e| StorageError::Other(format!("Failed to create temp table: {e}")))?;
+            conn.simple_query(&create_temp_table).await.map_err(|e| {
+                error!(error = %e, "Failed to create temp table");
+                StorageError::Other(format!("Failed to create temp table: {e}"))
+            })?;
 
             // Use bulk_insert to insert all the raw_labels into a temporary table
             let mut bulk = conn

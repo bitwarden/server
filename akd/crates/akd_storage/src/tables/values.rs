@@ -4,10 +4,12 @@ use akd::{
     AkdLabel, AkdValue,
 };
 use ms_database::Row;
+use tracing::{debug};
 
-use crate::{migrations::TABLE_VALUES, ms_sql_storable::{QueryStatement, Statement}, sql_params::SqlParams};
+use crate::{migrations::TABLE_VALUES, ms_sql_storable::QueryStatement, sql_params::SqlParams};
 
 pub fn get_all(raw_label: &AkdLabel) -> QueryStatement<ValueState> {
+    debug!("Building get_all query for label (label not logged for privacy)");
     let mut params = SqlParams::new();
     // the raw vector is the key for value storage
     params.add("raw_label", Box::new(raw_label.0.clone()));
@@ -26,6 +28,7 @@ pub fn get_all(raw_label: &AkdLabel) -> QueryStatement<ValueState> {
 }
 
 pub fn get_by_flag(raw_label: &AkdLabel, flag: ValueStateRetrievalFlag) -> QueryStatement<ValueState> {
+    debug!(?flag, "Building get_by_flag query with flag");
     let mut params = SqlParams::new();
     params.add("raw_label", Box::new(raw_label.0.clone()));
 
@@ -144,7 +147,7 @@ pub(crate) fn from_row(row: &Row) -> Result<ValueState, StorageError> {
     let node_label_val: &[u8] = row
         .get("node_label_val")
         .ok_or_else(|| StorageError::Other("node_label_val is NULL or missing".to_string()))?;
-    let node_label_len: i64 = row
+    let node_label_len: i32 = row
         .get("node_label_len")
         .ok_or_else(|| StorageError::Other("node_label_len is NULL or missing".to_string()))?;
     let data: &[u8] = row

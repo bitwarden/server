@@ -8,6 +8,7 @@ use akd::{
     NodeLabel,
 };
 use ms_database::{ColumnData, IntoRow, Row, ToSql, TokenRow};
+use tracing::debug;
 
 use crate::{migrations::{
     TABLE_AZKS, TABLE_HISTORY_TREE_NODES, TABLE_VALUES
@@ -55,6 +56,7 @@ pub(crate) struct Statement {
 
 impl Statement {
     pub fn new(sql: String, params: SqlParams) -> Self {
+        debug!(sql, ?params, "Constructed SQL Statement");
         Self { sql, params }
     }
 
@@ -113,8 +115,15 @@ pub(crate) trait MsSqlStorable {
 
 impl MsSqlStorable for DbRecord {
     fn set_statement(&self) -> Result<Statement, StorageError> {
+        let record_type = match &self {
+            DbRecord::Azks(_) => "Azks",
+            DbRecord::TreeNode(_) => "TreeNode",
+            DbRecord::ValueState(_) => "ValueState",
+        };
+        debug!(record_type, "Generating set statement");
         match &self {
             DbRecord::Azks(azks) => {
+                debug!(epoch = azks.latest_epoch, num_nodes = azks.num_nodes, "Building AZKS set statement");
                 let mut params = SqlParams::new();
                 params.add("key", Box::new(1u8)); // constant key
                                                   // TODO: Fixup as conversions
@@ -123,19 +132,17 @@ impl MsSqlStorable for DbRecord {
 
                 let sql = format!(
                     r#"
-                    MERGE INTO dbo.{TABLE_AZKS} AS target
+                    MERGE INTO dbo.{TABLE_AZKS} AS t
                     USING (SELECT {}) AS source
-                    ON target.[key] = source.[key]
+                    ON t.[key] = source.[key]
                     WHEN MATCHED THEN
                         UPDATE SET {}
-                            target.[epoch] = source.[epoch],
-                            target.[num_nodes] = source.[num_nodes]
                     WHEN NOT MATCHED THEN
                         INSERT ({})
                         VALUES ({});
                 "#,
                     params.keys_as_columns().join(", "),
-                    params.set_columns_equal("target.", "source.").join(", "),
+                    params.set_columns_equal_except("t.", "source.", vec!["key"]).join(", "),
                     params.columns().join(", "),
                     params.keys().join(", ")
                 );
@@ -246,9 +253,9 @@ impl MsSqlStorable for DbRecord {
 
                 let sql = format!(
                     r#"
-                    MERGE INTO dbo.{TABLE_HISTORY_TREE_NODES} AS target
+                    MERGE INTO dbo.{TABLE_HISTORY_TREE_NODES} AS t
                     USING (SELECT {}) AS source
-                    ON target.label_len = source.label_len AND target.label_val = source.label_val
+                    ON t.label_len = source.label_len AND t.label_val = source.label_val
                     WHEN MATCHED THEN
                         UPDATE SET {}
                     WHEN NOT MATCHED THEN
@@ -258,7 +265,7 @@ impl MsSqlStorable for DbRecord {
                     params.keys_as_columns().join(", "),
                     params
                         .set_columns_equal_except(
-                            "target.",
+                            "t.",
                             "source.",
                             vec!["label_len", "label_val"]
                         )
@@ -297,13 +304,13 @@ impl MsSqlStorable for DbRecord {
         match storage_type {
             StorageType::Azks => format!(
                 r#"
-                MERGE INTO dbo.{TABLE_AZKS} AS target
+                MERGE INTO dbo.{TABLE_AZKS} AS t
                 USING {} AS source
-                ON target.[key] = source.[key]
+                ON t.[key] = source.[key]
                 WHEN MATCHED THEN
                     UPDATE SET 
-                        target.[epoch] = source.[epoch],
-                        target.[num_nodes] = source.[num_nodes]
+                        t.[epoch] = source.[epoch],
+                        t.[num_nodes] = source.[num_nodes]
                 WHEN NOT MATCHED THEN
                     INSERT ([key], [epoch], [num_nodes])
                     VALUES (source.[key], source.[epoch], source.[num_nodes]);
@@ -312,31 +319,31 @@ impl MsSqlStorable for DbRecord {
             ),
             StorageType::TreeNode => format!(
                 r#"
-                MERGE INTO dbo.{TABLE_HISTORY_TREE_NODES} AS target
+                MERGE INTO dbo.{TABLE_HISTORY_TREE_NODES} AS t
                 USING {} AS source
-                ON target.label_len = source.label_len AND target.label_val = source.label_val
+                ON t.label_len = source.label_len AND t.label_val = source.label_val
                 WHEN MATCHED THEN
                     UPDATE SET 
-                        target.last_epoch = source.last_epoch,
-                        target.least_descendant_ep = source.least_descendant_ep,
-                        target.parent_label_len = source.parent_label_len,
-                        target.parent_label_val = source.parent_label_val,
-                        target.node_type = source.node_type,
-                        target.left_child_len = source.left_child_len,
-                        target.left_child_label_val = source.left_child_label_val,
-                        target.right_child_len = source.right_child_len,
-                        target.right_child_label_val = source.right_child_label_val,
-                        target.hash = source.hash,
-                        target.p_last_epoch = source.p_last_epoch,
-                        target.p_least_descendant_ep = source.p_least_descendant_ep,
-                        target.p_parent_label_len = source.p_parent_label_len,
-                        target.p_parent_label_val = source.p_parent_label_val,
-                        target.p_node_type = source.p_node_type,
-                        target.p_left_child_len = source.p_left_child_len,
-                        target.p_left_child_label_val = source.p_left_child_label_val,
-                        target.p_right_child_len = source.p_right_child_len,
-                        target.p_right_child_label_val = source.p_right_child_label_val,
-                        target.p_hash = source.p_hash
+                        t.last_epoch = source.last_epoch,
+                        t.least_descendant_ep = source.least_descendant_ep,
+                        t.parent_label_len = source.parent_label_len,
+                        t.parent_label_val = source.parent_label_val,
+                        t.node_type = source.node_type,
+                        t.left_child_len = source.left_child_len,
+                        t.left_child_label_val = source.left_child_label_val,
+                        t.right_child_len = source.right_child_len,
+                        t.right_child_label_val = source.right_child_label_val,
+                        t.hash = source.hash,
+                        t.p_last_epoch = source.p_last_epoch,
+                        t.p_least_descendant_ep = source.p_least_descendant_ep,
+                        t.p_parent_label_len = source.p_parent_label_len,
+                        t.p_parent_label_val = source.p_parent_label_val,
+                        t.p_node_type = source.p_node_type,
+                        t.p_left_child_len = source.p_left_child_len,
+                        t.p_left_child_label_val = source.p_left_child_label_val,
+                        t.p_right_child_len = source.p_right_child_len,
+                        t.p_right_child_label_val = source.p_right_child_label_val,
+                        t.p_hash = source.p_hash
                 WHEN NOT MATCHED THEN
                     INSERT (
                         label_len
@@ -391,15 +398,15 @@ impl MsSqlStorable for DbRecord {
             ),
             StorageType::ValueState => format!(
                 r#"
-                    MERGE INTO dbo.{TABLE_VALUES} AS target
+                    MERGE INTO dbo.{TABLE_VALUES} AS t
                     USING {} AS source
-                    ON target.raw_label = source.raw_label AND target.epoch = source.epoch
+                    ON t.raw_label = source.raw_label AND t.epoch = source.epoch
                     WHEN MATCHED THEN
                         UPDATE SET 
-                            target.[version] = source.[version],
-                            target.node_label_val = source.node_label_val,
-                            target.node_label_len = source.node_label_len,
-                            target.[data] = source.[data]
+                            t.[version] = source.[version],
+                            t.node_label_val = source.node_label_val,
+                            t.node_label_len = source.node_label_len,
+                            t.[data] = source.[data]
                     WHEN NOT MATCHED THEN
                         INSERT (raw_label, epoch, [version], node_label_val, node_label_len, [data])
                         VALUES (source.raw_label, source.epoch, source.[version], source.node_label_val, source.node_label_len, source.[data]);
@@ -415,7 +422,7 @@ impl MsSqlStorable for DbRecord {
             StorageType::Azks => {
                 format!(
                     r#"
-                    SELECT {} from dbo.{} LIMIT 1;
+                    SELECT TOP(1) {} from dbo.{};
                     "#,
                     SELECT_AZKS_DATA.join(", "),
                     TABLE_AZKS
@@ -770,7 +777,7 @@ impl MsSqlStorable for DbRecord {
                     state.epoch as i64,
                     state.version as i64,
                     state.label.label_val.to_vec(),
-                    state.label.label_len as i64,
+                    state.label.label_len as i32,
                     state.value.0.clone(),
                 )
                     .into_row();

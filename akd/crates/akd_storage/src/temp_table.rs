@@ -1,13 +1,24 @@
-use std::str::FromStr;
-
 use akd::storage::{types::StorageType, Storable};
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum TempTable {
     Ids(StorageType),
     Azks,
     HistoryTreeNodes,
     Values,
     RawLabelSearch,
+}
+
+impl std::fmt::Display for TempTable {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TempTable::Ids(_) => write!(f, "{}", TEMP_IDS_TABLE),
+            TempTable::Azks => write!(f, "{}", TEMP_AZKS_TABLE),
+            TempTable::HistoryTreeNodes => write!(f, "{}", TEMP_HISTORY_TREE_NODES_TABLE),
+            TempTable::Values => write!(f, "{}", TEMP_VALUES_TABLE),
+            TempTable::RawLabelSearch => write!(f, "{}", TEMP_SEARCH_LABELS_TABLE),
+        }
+    }
 }
 
 impl TempTable {
@@ -117,18 +128,6 @@ impl TempTable {
                 "#,
                 TEMP_SEARCH_LABELS_TABLE
             )
-        }
-    }
-}
-
-impl ToString for TempTable {
-    fn to_string(&self) -> String {
-        match self {
-            TempTable::Ids(_) => TEMP_IDS_TABLE.to_string(),
-            TempTable::Azks => TEMP_AZKS_TABLE.to_string(),
-            TempTable::HistoryTreeNodes => TEMP_HISTORY_TREE_NODES_TABLE.to_string(),
-            TempTable::Values => TEMP_VALUES_TABLE.to_string(),
-            TempTable::RawLabelSearch => TEMP_SEARCH_LABELS_TABLE.to_string(),
         }
     }
 }
