@@ -10,7 +10,7 @@ public class HandlebarMailRenderer : IMailRenderer
     /// <summary>
     /// Lazy-initialized Handlebars instance. Thread-safe and ensures initialization occurs only once.
     /// </summary>
-    private readonly Lazy<Task<IHandlebars>> _handlebarsTask = new(InitializeHandlebarsAsync);
+    private readonly Lazy<Task<IHandlebars>> _handlebarsTask = new(InitializeHandlebarsAsync, LazyThreadSafetyMode.ExecutionAndPublication);
 
     /// <summary>
     /// Helper function that returns the handlebar instance.
@@ -25,7 +25,7 @@ public class HandlebarMailRenderer : IMailRenderer
     public async Task<(string html, string txt)> RenderAsync(BaseMailView model)
     {
         var html = await CompileTemplateAsync(model, "html");
-        var txt = await CompileTemplateAsync(model, "txt");
+        var txt = await CompileTemplateAsync(model, "text");
 
         return (html, txt);
     }

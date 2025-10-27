@@ -15,7 +15,7 @@ The Mailer system consists of four main components:
 ## How It Works
 
 1. Define a view model that inherits from `BaseMailView` with properties for template data
-2. Create Handlebars templates (`.html.hbs` and `.txt.hbs`) as embedded resources, preferably using the MJML pipeline,
+2. Create Handlebars templates (`.html.hbs` and `.text.hbs`) as embedded resources, preferably using the MJML pipeline,
    `/src/Core/MailTemplates/Mjml`.
 3. Define an email class that inherits from `BaseMail<TView>` with metadata like subject
 4. Use `IMailer.SendEmail()` to render and send the email
@@ -59,7 +59,7 @@ directly next to the `ViewClass` and match the name of the view.
 <p><small>&copy; {{ CurrentYear }} Bitwarden Inc.</small></p>
 ```
 
-**WelcomeEmailView.txt.hbs** (plain text version):
+**WelcomeEmailView.text.hbs** (plain text version):
 
 ```handlebars
 Welcome, {{ UserName }}!
@@ -167,12 +167,12 @@ All view models inherit from `BaseMailView`, which provides:
 Templates must follow this naming convention:
 
 - HTML template: `{ViewModelFullName}.html.hbs`
-- Text template: `{ViewModelFullName}.txt.hbs`
+- Text template: `{ViewModelFullName}.text.hbs`
 
 For example, if your view model is `Bit.Core.Auth.Models.Mail.VerifyEmailView`, the templates must be:
 
 - `Bit.Core.Auth.Models.Mail.VerifyEmailView.html.hbs`
-- `Bit.Core.Auth.Models.Mail.VerifyEmailView.txt.hbs`
+- `Bit.Core.Auth.Models.Mail.VerifyEmailView.text.hbs`
 
 ## Dependency Injection
 
