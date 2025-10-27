@@ -76,14 +76,13 @@ public class AccountControllerTest
 
     private static void InvokeEnsureOrgUserStatusAllowed(
         AccountController controller,
-        OrganizationUserStatusType status,
-        params OrganizationUserStatusType[] allowed)
+        OrganizationUserStatusType status)
     {
         var method = typeof(AccountController).GetMethod(
-            "EnsureOrgUserStatusAllowed",
+            "EnsureAcceptedOrConfirmedOrgUserStatus",
             BindingFlags.Instance | BindingFlags.NonPublic);
         Assert.NotNull(method);
-        method.Invoke(controller, [status, "Org", allowed]);
+        method.Invoke(controller, [status, "Org"]);
     }
 
     private static AuthenticateResult BuildSuccessfulExternalAuth(Guid orgId, string providerUserId, string email)
@@ -253,11 +252,9 @@ public class AccountControllerTest
 
         // Act
         var ex1 = Record.Exception(() =>
-            InvokeEnsureOrgUserStatusAllowed(sutProvider.Sut, OrganizationUserStatusType.Accepted,
-                OrganizationUserStatusType.Accepted, OrganizationUserStatusType.Confirmed));
+            InvokeEnsureOrgUserStatusAllowed(sutProvider.Sut, OrganizationUserStatusType.Accepted));
         var ex2 = Record.Exception(() =>
-            InvokeEnsureOrgUserStatusAllowed(sutProvider.Sut, OrganizationUserStatusType.Confirmed,
-                OrganizationUserStatusType.Accepted, OrganizationUserStatusType.Confirmed));
+            InvokeEnsureOrgUserStatusAllowed(sutProvider.Sut, OrganizationUserStatusType.Confirmed));
 
         // Assert
         Assert.Null(ex1);
@@ -275,8 +272,7 @@ public class AccountControllerTest
 
         // Act
         var ex = Assert.Throws<TargetInvocationException>(() =>
-            InvokeEnsureOrgUserStatusAllowed(sutProvider.Sut, OrganizationUserStatusType.Invited,
-                OrganizationUserStatusType.Accepted, OrganizationUserStatusType.Confirmed));
+            InvokeEnsureOrgUserStatusAllowed(sutProvider.Sut, OrganizationUserStatusType.Invited));
 
         // Assert
         Assert.IsType<Exception>(ex.InnerException);
@@ -294,8 +290,7 @@ public class AccountControllerTest
 
         // Act
         var ex = Assert.Throws<TargetInvocationException>(() =>
-            InvokeEnsureOrgUserStatusAllowed(sutProvider.Sut, OrganizationUserStatusType.Revoked,
-                OrganizationUserStatusType.Accepted, OrganizationUserStatusType.Confirmed));
+            InvokeEnsureOrgUserStatusAllowed(sutProvider.Sut, OrganizationUserStatusType.Revoked));
 
         // Assert
         Assert.IsType<Exception>(ex.InnerException);
@@ -315,8 +310,7 @@ public class AccountControllerTest
 
         // Act
         var ex = Assert.Throws<TargetInvocationException>(() =>
-            InvokeEnsureOrgUserStatusAllowed(sutProvider.Sut, unknown,
-                OrganizationUserStatusType.Accepted, OrganizationUserStatusType.Confirmed));
+            InvokeEnsureOrgUserStatusAllowed(sutProvider.Sut, unknown));
 
         // Assert
         Assert.IsType<Exception>(ex.InnerException);
