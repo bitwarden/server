@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Platform.Mailer;
 
-namespace Bit.Core.Test.Platform.Services.TestMail;
+namespace Bit.Core.Test.Platform.Mailer.TestMail;
 
 public class TestMailView : BaseMailView
 {

@@ -1,4 +1,5 @@
 ﻿#nullable enable
+using System.Collections.Concurrent;
 using System.Reflection;
 using HandlebarsDotNet;
 
@@ -24,9 +25,9 @@ public class HandlebarMailRenderer : IMailRenderer
     private readonly object _initLock = new();
 
     /// <summary>
-    /// This dictionary is used to cache compiled templates.
+    /// This dictionary is used to cache compiled templates in a thread-safe manner.
     /// </summary>
-    private readonly Dictionary<string, HandlebarsTemplate<object, object>> _templateCache = new();
+    private readonly ConcurrentDictionary<string, HandlebarsTemplate<object, object>> _templateCache = new();
 
     public async Task<(string html, string? txt)> RenderAsync(BaseMailView model)
     {
@@ -42,13 +43,12 @@ public class HandlebarMailRenderer : IMailRenderer
 
         var templateName = $"{model.GetType().FullName}.{type}.hbs";
 
-        if (!_templateCache.TryGetValue(templateName, out var template))
+        var template = _templateCache.GetOrAdd(templateName, _ =>
         {
             var assembly = model.GetType().Assembly;
-            var source = await ReadSourceAsync(assembly, templateName);
-            template = handlebars.Compile(source);
-            _templateCache.Add(templateName, template);
-        }
+            var source = ReadSourceAsync(assembly, templateName).GetAwaiter().GetResult();
+            return handlebars.Compile(source);
+        });
 
         return template(model);
     }

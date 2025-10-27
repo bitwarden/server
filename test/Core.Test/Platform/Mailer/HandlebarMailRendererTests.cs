@@ -1,8 +1,8 @@
 ﻿using Bit.Core.Platform.Mailer;
-using Bit.Core.Test.Platform.Services.TestMail;
+using Bit.Core.Test.Platform.Mailer.TestMail;
 using Xunit;
 
-namespace Bit.Core.Test.Platform.Services;
+namespace Bit.Core.Test.Platform.Mailer;
 
 public class HandlebarMailRendererTests
 {

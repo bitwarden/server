@@ -1,11 +1,11 @@
 ﻿using Bit.Core.Models.Mail;
 using Bit.Core.Platform.Mailer;
 using Bit.Core.Services;
-using Bit.Core.Test.Platform.Services.TestMail;
+using Bit.Core.Test.Platform.Mailer.TestMail;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.Platform.Services;
+namespace Bit.Core.Test.Platform.Mailer;
 
 public class MailerTest
 {
@@ -13,7 +13,7 @@ public class MailerTest
     public async Task SendEmailAsync()
     {
         var deliveryService = Substitute.For<IMailDeliveryService>();
-        var mailer = new Mailer(new HandlebarMailRenderer(), deliveryService);
+        var mailer = new Core.Platform.Mailer.Mailer(new HandlebarMailRenderer(), deliveryService);
 
         var mail = new TestMail.TestMail()
         {
