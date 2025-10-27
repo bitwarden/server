@@ -1,7 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using System.Net;
+﻿using System.Net;
 using Bit.Api.AdminConsole.Public.Models.Request;
 using Bit.Api.AdminConsole.Public.Models.Response;
 using Bit.Api.Models.Public.Response;
@@ -115,7 +112,7 @@ public class MembersController : Controller
     [ProducesResponseType(typeof(ListResponseModel<MemberResponseModel>), (int)HttpStatusCode.OK)]
     public async Task<IActionResult> List()
     {
-        var organizationUserUserDetails = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(_currentContext.OrganizationId.Value, includeCollections: true);
+        var organizationUserUserDetails = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(_currentContext.OrganizationId!.Value, includeCollections: true);
 
         var orgUsersTwoFactorIsEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(organizationUserUserDetails);
         var memberResponses = organizationUserUserDetails.Select(u =>
@@ -151,7 +148,7 @@ public class MembersController : Controller
 
         invite.AccessSecretsManager = hasStandaloneSecretsManager;
 
-        var user = await _organizationService.InviteUserAsync(_currentContext.OrganizationId.Value, null,
+        var user = await _organizationService.InviteUserAsync(_currentContext.OrganizationId!.Value, null,
             systemUser: null, invite, model.ExternalId);
         var response = new MemberResponseModel(user, invite.Collections);
         return new JsonResult(response);
@@ -181,12 +178,12 @@ public class MembersController : Controller
         var updatedUser = model.ToOrganizationUser(existingUser);
         var associations = model.Collections?.Select(c => c.ToCollectionAccessSelection()).ToList();
         await _updateOrganizationUserCommand.UpdateUserAsync(updatedUser, existingUserType, null, associations, model.Groups);
-        MemberResponseModel response = null;
+        MemberResponseModel response;
         if (existingUser.UserId.HasValue)
         {
             var existingUserDetails = await _organizationUserRepository.GetDetailsByIdAsync(id);
-            response = new MemberResponseModel(existingUserDetails,
-                await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(existingUserDetails), associations);
+            response = new MemberResponseModel(existingUserDetails!,
+                await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(existingUserDetails!), associations);
         }
         else
         {
@@ -235,7 +232,7 @@ public class MembersController : Controller
         {
             return new NotFoundResult();
         }
-        await _removeOrganizationUserCommand.RemoveUserAsync(_currentContext.OrganizationId.Value, id, null);
+        await _removeOrganizationUserCommand.RemoveUserAsync(_currentContext.OrganizationId!.Value, id, null);
         return new OkResult();
     }
 
@@ -257,7 +254,7 @@ public class MembersController : Controller
         {
             return new NotFoundResult();
         }
-        await _resendOrganizationInviteCommand.ResendInviteAsync(_currentContext.OrganizationId.Value, null, id);
+        await _resendOrganizationInviteCommand.ResendInviteAsync(_currentContext.OrganizationId!.Value, null, id);
         return new OkResult();
     }
 }
