@@ -13,3 +13,4 @@ public record UserToConfirmIsAnAdminOrOwnerOfAnotherFreeOrganization() : Error("
 public record UserDoesNotHaveTwoFactorEnabled() : Error("User does not have two-step login enabled.");
 public record OrganizationEnforcesSingleOrgPolicy() : Error("Cannot confirm this member to the organization until they leave or remove all other organizations");
 public record OtherOrganizationEnforcesSingleOrgPolicy() : Error("Cannot confirm this member to the organization because they are in another organization which forbids it.");
+public record FailedToCreateDefaultCollection() : Error("Failed to create default collection for user");
