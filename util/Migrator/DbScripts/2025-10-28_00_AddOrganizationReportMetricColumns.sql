@@ -41,50 +41,50 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-INSERT INTO [dbo].[OrganizationReport](
-    [Id],
-    [OrganizationId],
-    [ReportData],
-    [CreationDate],
-    [ContentEncryptionKey],
-    [SummaryData],
-    [ApplicationData],
-    [RevisionDate],
-    [ApplicationCount],
-    [ApplicationAtRiskCount],
-    [CriticalApplicationCount],
-    [CriticalApplicationAtRiskCount],
-    [MemberCount],
-    [MemberAtRiskCount],
-    [CriticalMemberCount],
-    [CriticalMemberAtRiskCount],
-    [PasswordCount],
-    [PasswordAtRiskCount],
-    [CriticalPasswordCount],
-    [CriticalPasswordAtRiskCount]
-)
-VALUES (
-    @Id,
-    @OrganizationId,
-    @ReportData,
-    @CreationDate,
-    @ContentEncryptionKey,
-    @SummaryData,
-    @ApplicationData,
-    @RevisionDate,
-    @ApplicationCount,
-    @ApplicationAtRiskCount,
-    @CriticalApplicationCount,
-    @CriticalApplicationAtRiskCount,
-    @MemberCount,
-    @MemberAtRiskCount,
-    @CriticalMemberCount,
-    @CriticalMemberAtRiskCount,
-    @PasswordCount,
-    @PasswordAtRiskCount,
-    @CriticalPasswordCount,
-    @CriticalPasswordAtRiskCount
-    );
+    INSERT INTO [dbo].[OrganizationReport](
+        [Id],
+        [OrganizationId],
+        [ReportData],
+        [CreationDate],
+        [ContentEncryptionKey],
+        [SummaryData],
+        [ApplicationData],
+        [RevisionDate],
+        [ApplicationCount],
+        [ApplicationAtRiskCount],
+        [CriticalApplicationCount],
+        [CriticalApplicationAtRiskCount],
+        [MemberCount],
+        [MemberAtRiskCount],
+        [CriticalMemberCount],
+        [CriticalMemberAtRiskCount],
+        [PasswordCount],
+        [PasswordAtRiskCount],
+        [CriticalPasswordCount],
+        [CriticalPasswordAtRiskCount]
+    )
+    VALUES (
+        @Id,
+        @OrganizationId,
+        @ReportData,
+        @CreationDate,
+        @ContentEncryptionKey,
+        @SummaryData,
+        @ApplicationData,
+        @RevisionDate,
+        @ApplicationCount,
+        @ApplicationAtRiskCount,
+        @CriticalApplicationCount,
+        @CriticalApplicationAtRiskCount,
+        @MemberCount,
+        @MemberAtRiskCount,
+        @CriticalMemberCount,
+        @CriticalMemberAtRiskCount,
+        @PasswordCount,
+        @PasswordAtRiskCount,
+        @CriticalPasswordCount,
+        @CriticalPasswordAtRiskCount
+        );
 END
 GO
 
@@ -137,19 +137,13 @@ WHERE [Id] = @Id;
 END;
 GO
 
-IF OBJECT_ID('dbo.OrganizationReportView') IS NOT NULL
-BEGIN
-DROP VIEW [dbo].[OrganizationReportView];
-END
-GO
-
-CREATE VIEW [dbo].[OrganizationReportView]
+CREATE OR ALTER VIEW [dbo].[OrganizationReportView]
 AS
-SELECT
-    *
-FROM
-    [dbo].[OrganizationReport]
-    GO
+    SELECT
+        *
+    FROM
+        [dbo].[OrganizationReport]
+GO
 
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_GetLatestByOrganizationId]
 @OrganizationId UNIQUEIDENTIFIER
@@ -157,30 +151,11 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-SELECT TOP 1
-    [Id],
-        [OrganizationId],
-        [ReportData],
-        [CreationDate],
-        [ContentEncryptionKey],
-        [SummaryData],
-        [ApplicationData],
-        [RevisionDate],
-        [ApplicationCount],
-        [ApplicationAtRiskCount],
-        [CriticalApplicationCount],
-        [CriticalApplicationAtRiskCount],
-        [MemberCount],
-        [MemberAtRiskCount],
-        [CriticalMemberCount],
-        [CriticalMemberAtRiskCount],
-        [PasswordCount],
-        [PasswordAtRiskCount],
-        [CriticalPasswordCount],
-        [CriticalPasswordAtRiskCount]
-FROM [dbo].[OrganizationReportView]
-WHERE [OrganizationId] = @OrganizationId
-ORDER BY [RevisionDate] DESC
+    SELECT TOP 1
+        *
+    FROM [dbo].[OrganizationReportView]
+    WHERE [OrganizationId] = @OrganizationId
+    ORDER BY [RevisionDate] DESC
 END
 GO
 
