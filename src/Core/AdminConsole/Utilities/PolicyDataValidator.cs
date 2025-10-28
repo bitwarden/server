@@ -73,7 +73,7 @@ public static class PolicyDataValidator
                 _ => new EmptyMetadataModel()
             };
         }
-        catch
+        catch (JsonException)
         {
             return new EmptyMetadataModel();
         }
