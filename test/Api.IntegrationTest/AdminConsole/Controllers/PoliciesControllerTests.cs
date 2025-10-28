@@ -363,7 +363,6 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         var policyType = PolicyType.SingleOrg;
         var request = new PolicyRequestModel
         {
-            Type = policyType,
             Enabled = true,
             Data = null
         };
@@ -385,7 +384,6 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         {
             Policy = new PolicyRequestModel
             {
-                Type = policyType,
                 Enabled = true,
                 Data = null
             },
