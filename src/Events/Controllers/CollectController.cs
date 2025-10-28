@@ -121,6 +121,11 @@ public class CollectController : Controller
                     }
 
                     var organization = await _organizationRepository.GetByIdAsync(eventModel.OrganizationId.Value);
+                    if (organization == null)
+                    {
+                        continue;
+                    }
+
                     await _eventService.LogOrganizationEventAsync(organization, eventModel.Type, eventModel.Date);
                     break;
 
