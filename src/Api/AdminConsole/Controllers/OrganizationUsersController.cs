@@ -509,6 +509,7 @@ public class OrganizationUsersController : Controller
         return TypedResults.BadRequest(ModelState);
     }
 
+#nullable enable
     private async Task<IResult> PutResetPasswordNew(Guid orgId, Guid id, OrganizationUserResetPasswordRequestModel model)
     {
         var targetOrganizationUser = await _organizationUserRepository.GetByIdAsync(id);
@@ -537,6 +538,7 @@ public class OrganizationUsersController : Controller
         await Task.Delay(2000);
         return TypedResults.BadRequest(ModelState);
     }
+#nullable restore
 
     [HttpDelete("{id}")]
     [Authorize<ManageUsersRequirement>]
