@@ -11,7 +11,7 @@ public class PolicyRequestModel
 {
     [Required]
     public bool? Enabled { get; set; }
-    public Dictionary<string, object> Data { get; set; } = new();
+    public Dictionary<string, object>? Data { get; set; }
 
     public async Task<PolicyUpdate> ToPolicyUpdateAsync(Guid organizationId, PolicyType type, ICurrentContext currentContext)
     {

@@ -12,7 +12,7 @@ public class SavePolicyRequest
     [Required]
     public PolicyRequestModel Policy { get; set; } = null!;
 
-    public Dictionary<string, object> Metadata { get; set; } = new();
+    public Dictionary<string, object>? Metadata { get; set; }
 
     public async Task<SavePolicyModel> ToSavePolicyModelAsync(Guid organizationId, PolicyType type, ICurrentContext currentContext)
     {
