@@ -47,11 +47,11 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
 
         return await validatedRequest.ToCommandResultAsync()
             .MapAsync(CreateDefaultCollectionsAsync)
-           .MapAsync(LogOrganizationUserConfirmedEventAsync)
-           .MapAsync(SendConfirmedOrganizationUserEmailAsync)
-           .MapAsync(DeleteDeviceRegistrationAsync)
-           .MapAsync(PushSyncOrganizationKeysAsync)
-           .ToResultAsync();
+            .MapAsync(LogOrganizationUserConfirmedEventAsync)
+            .MapAsync(SendConfirmedOrganizationUserEmailAsync)
+            .MapAsync(DeleteDeviceRegistrationAsync)
+            .MapAsync(PushSyncOrganizationKeysAsync)
+            .ToResultAsync();
     }
 
     private async Task<CommandResult<AutomaticallyConfirmOrganizationUserRequestData>> CreateDefaultCollectionsAsync(
