@@ -16,6 +16,7 @@ public class IntegrationHandlerTests
         {
             Configuration = new WebhookIntegrationConfigurationDetails(new Uri("https://localhost"), "Bearer", "AUTH-TOKEN"),
             MessageId = "TestMessageId",
+            OrganizationId = "TestOrganizationId",
             IntegrationType = IntegrationType.Webhook,
             RenderedTemplate = "Template",
             DelayUntilDate = null,
@@ -25,6 +26,8 @@ public class IntegrationHandlerTests
         var result = await sut.HandleAsync(expected.ToJson());
         var typedResult = Assert.IsType<IntegrationMessage<WebhookIntegrationConfigurationDetails>>(result.Message);
 
+        Assert.Equal(expected.MessageId, typedResult.MessageId);
+        Assert.Equal(expected.OrganizationId, typedResult.OrganizationId);
         Assert.Equal(expected.Configuration, typedResult.Configuration);
         Assert.Equal(expected.RenderedTemplate, typedResult.RenderedTemplate);
         Assert.Equal(expected.IntegrationType, typedResult.IntegrationType);
