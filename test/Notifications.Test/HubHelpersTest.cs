@@ -8,6 +8,7 @@ using Bit.Notifications;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.SignalR;
+using NSubstitute;
 
 namespace Notifications.Test;
 
