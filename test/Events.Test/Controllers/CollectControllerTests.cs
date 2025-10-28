@@ -21,8 +21,6 @@ public class CollectControllerTests
     private readonly IEventService _eventService;
     private readonly ICipherRepository _cipherRepository;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IFeatureService _featureService;
-    private readonly IApplicationCacheService _applicationCacheService;
 
     public CollectControllerTests()
     {
@@ -30,16 +28,12 @@ public class CollectControllerTests
         _eventService = Substitute.For<IEventService>();
         _cipherRepository = Substitute.For<ICipherRepository>();
         _organizationRepository = Substitute.For<IOrganizationRepository>();
-        _featureService = Substitute.For<IFeatureService>();
-        _applicationCacheService = Substitute.For<IApplicationCacheService>();
 
         _sut = new CollectController(
             _currentContext,
             _eventService,
             _cipherRepository,
-            _organizationRepository,
-            _featureService,
-            _applicationCacheService
+            _organizationRepository
         );
     }
 

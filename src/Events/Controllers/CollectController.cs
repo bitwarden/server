@@ -21,23 +21,17 @@ public class CollectController : Controller
     private readonly IEventService _eventService;
     private readonly ICipherRepository _cipherRepository;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IFeatureService _featureService;
-    private readonly IApplicationCacheService _applicationCacheService;
 
     public CollectController(
         ICurrentContext currentContext,
         IEventService eventService,
         ICipherRepository cipherRepository,
-        IOrganizationRepository organizationRepository,
-        IFeatureService featureService,
-        IApplicationCacheService applicationCacheService)
+        IOrganizationRepository organizationRepository)
     {
         _currentContext = currentContext;
         _eventService = eventService;
         _cipherRepository = cipherRepository;
         _organizationRepository = organizationRepository;
-        _featureService = featureService;
-        _applicationCacheService = applicationCacheService;
     }
 
     [HttpPost]
