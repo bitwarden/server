@@ -61,7 +61,7 @@ INSERT INTO [dbo].[OrganizationReport](
     [PasswordCount],
     [PasswordAtRiskCount],
     [CriticalPasswordCount],
-[CriticalPasswordAtRiskCount]
+    [CriticalPasswordAtRiskCount]
 )
 VALUES (
     @Id,
