@@ -452,7 +452,8 @@ public class ProfileServiceTests
         user.SecurityStamp = securityStamp;
 
         context.Subject = new ClaimsPrincipal(new ClaimsIdentity([
-            new Claim("sub", user.Id.ToString()), new Claim(Claims.SecurityStamp, securityStamp)
+            new Claim("sub", user.Id.ToString()),
+            new Claim(Claims.SecurityStamp, securityStamp)
         ]));
 
         _userService.GetUserByPrincipalAsync(context.Subject).Returns(user);
@@ -486,7 +487,8 @@ public class ProfileServiceTests
         user.SecurityStamp = "current-security-stamp";
 
         context.Subject = new ClaimsPrincipal(new ClaimsIdentity([
-            new Claim("sub", user.Id.ToString()), new Claim(Claims.SecurityStamp, "old-security-stamp")
+            new Claim("sub", user.Id.ToString()),
+            new Claim(Claims.SecurityStamp, "old-security-stamp")
         ]));
 
         _userService.GetUserByPrincipalAsync(context.Subject).Returns(user);
@@ -517,7 +519,8 @@ public class ProfileServiceTests
         user.SecurityStamp = "current-stamp";
 
         context.Subject = new ClaimsPrincipal(new ClaimsIdentity([
-            new Claim("sub", user.Id.ToString()), new Claim(Claims.SecurityStamp, claimStamp)
+            new Claim("sub", user.Id.ToString()),
+            new Claim(Claims.SecurityStamp, claimStamp)
         ]));
 
         _userService.GetUserByPrincipalAsync(context.Subject).Returns(user);
@@ -546,7 +549,8 @@ public class ProfileServiceTests
     {
         context.Client.ClientId = client;
         context.Subject = new ClaimsPrincipal(new ClaimsIdentity([
-            new Claim("sub", user.Id.ToString()), new Claim("email", user.Email)
+            new Claim("sub", user.Id.ToString()),
+            new Claim("email", user.Email)
         ]));
 
         _userService.GetUserByPrincipalAsync(context.Subject).Returns(user);
