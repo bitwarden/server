@@ -155,6 +155,7 @@ public static class FeatureFlagKeys
     public const string PM23174ManageAccountRecoveryPermissionDrivesTheNeedToSetMasterPassword =
         "pm-23174-manage-account-recovery-permission-drives-the-need-to-set-master-password";
     public const string MJMLBasedEmailTemplates = "mjml-based-email-templates";
+    public const string MjmlWelcomeEmailTemplates = "mjml-welcome-email-templates";
 
     /* Autofill Team */
     public const string IdpAutoSubmitLogin = "idp-auto-submit-login";
