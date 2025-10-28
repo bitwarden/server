@@ -1,8 +1,27 @@
 ﻿using System.Reflection;
 using System.Security.Claims;
+using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Models.Data;
+using Bit.Core.Auth.Repositories;
+using Bit.Core.Entities;
+using Bit.Core.Enums;
+using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Sso.Controllers;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Duende.IdentityModel;
+using Duende.IdentityServer.Configuration;
+using Duende.IdentityServer.Models;
+using Duende.IdentityServer.Services;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
+using NSubstitute;
+using Xunit.Abstractions;
 using AuthenticationOptions = Duende.IdentityServer.Configuration.AuthenticationOptions;
 
 namespace Bit.SSO.Test.Controllers;
