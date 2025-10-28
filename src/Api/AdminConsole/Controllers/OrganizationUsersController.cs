@@ -478,12 +478,11 @@ public class OrganizationUsersController : Controller
 
     [HttpPut("{id}/reset-password")]
     [Authorize<ManageAccountRecoveryRequirement>]
-    public async Task PutResetPassword(Guid orgId, Guid id, [FromBody] OrganizationUserResetPasswordRequestModel model)
+    public async Task<IResult> PutResetPassword(Guid orgId, Guid id, [FromBody] OrganizationUserResetPasswordRequestModel model)
     {
         if (_featureService.IsEnabled(FeatureFlagKeys.AccountRecoveryCommand))
         {
-            await PutResetPasswordNew(orgId, id, model);
-            return;
+            return await PutResetPasswordNew(orgId, id, model);
         }
 
         // Get the users role, since provider users aren't a member of the organization we use the owner check
@@ -492,13 +491,13 @@ public class OrganizationUsersController : Controller
             : _currentContext.Organizations?.FirstOrDefault(o => o.Id == orgId)?.Type;
         if (orgUserType == null)
         {
-            throw new NotFoundException();
+            return TypedResults.NotFound();
         }
 
         var result = await _userService.AdminResetPasswordAsync(orgUserType.Value, orgId, id, model.NewMasterPasswordHash, model.Key);
         if (result.Succeeded)
         {
-            return;
+            return TypedResults.Ok();
         }
 
         foreach (var error in result.Errors)
@@ -507,29 +506,27 @@ public class OrganizationUsersController : Controller
         }
 
         await Task.Delay(2000);
-        throw new BadRequestException(ModelState);
+        return TypedResults.BadRequest(ModelState);
     }
 
-    private async Task PutResetPasswordNew(Guid orgId, Guid id, OrganizationUserResetPasswordRequestModel model)
+    private async Task<IResult> PutResetPasswordNew(Guid orgId, Guid id, OrganizationUserResetPasswordRequestModel model)
     {
         var targetOrganizationUser = await _organizationUserRepository.GetByIdAsync(id);
         if (targetOrganizationUser == null || targetOrganizationUser.OrganizationId != orgId)
         {
-            throw new NotFoundException();
+            return TypedResults.NotFound();
         }
 
         var authorizationResult = await _authorizationService.AuthorizeAsync(User, targetOrganizationUser, new RecoverAccountAuthorizationRequirement());
         if (!authorizationResult.Succeeded)
         {
-            var failureReason = authorizationResult.Failure?.FailureReasons.FirstOrDefault()?.Message ??
-                               "You do not have permission to reset this user's master password";
-            throw new NotFoundException(failureReason);
+            return TypedResults.BadRequest(new ErrorResponseModel("You do not have permission to reset this user's master password"));
         }
 
         var result = await _adminRecoverAccountCommand.RecoverAccountAsync(orgId, targetOrganizationUser, model.NewMasterPasswordHash, model.Key);
         if (result.Succeeded)
         {
-            return;
+            return TypedResults.Ok();
         }
 
         foreach (var error in result.Errors)
@@ -538,7 +535,7 @@ public class OrganizationUsersController : Controller
         }
 
         await Task.Delay(2000);
-        throw new BadRequestException(ModelState);
+        return TypedResults.BadRequest(ModelState);
     }
 
     [HttpDelete("{id}")]
