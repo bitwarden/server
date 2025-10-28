@@ -125,8 +125,8 @@ impl MsSqlStorable for DbRecord {
             DbRecord::Azks(azks) => {
                 debug!(epoch = azks.latest_epoch, num_nodes = azks.num_nodes, "Building AZKS set statement");
                 let mut params = SqlParams::new();
-                params.add("key", Box::new(1u8)); // constant key
-                                                  // TODO: Fixup as conversions
+                params.add("akd_key", Box::new(1i16)); // constant key
+                // TODO: Fixup as conversions
                 params.add("epoch", Box::new(azks.latest_epoch as i64));
                 params.add("num_nodes", Box::new(azks.num_nodes as i64));
 
@@ -134,7 +134,7 @@ impl MsSqlStorable for DbRecord {
                     r#"
                     MERGE INTO dbo.{TABLE_AZKS} AS t
                     USING (SELECT {}) AS source
-                    ON t.[key] = source.[key]
+                    ON t.akd_key = source.akd_key
                     WHEN MATCHED THEN
                         UPDATE SET {}
                     WHEN NOT MATCHED THEN
@@ -142,7 +142,7 @@ impl MsSqlStorable for DbRecord {
                         VALUES ({});
                 "#,
                     params.keys_as_columns().join(", "),
-                    params.set_columns_equal_except("t.", "source.", vec!["key"]).join(", "),
+                    params.set_columns_equal_except("t.", "source.", vec!["akd_key"]).join(", "),
                     params.columns().join(", "),
                     params.keys().join(", ")
                 );
@@ -306,14 +306,14 @@ impl MsSqlStorable for DbRecord {
                 r#"
                 MERGE INTO dbo.{TABLE_AZKS} AS t
                 USING {} AS source
-                ON t.[key] = source.[key]
+                ON t.[akd_key] = source.[akd_key]
                 WHEN MATCHED THEN
                     UPDATE SET 
                         t.[epoch] = source.[epoch],
                         t.[num_nodes] = source.[num_nodes]
                 WHEN NOT MATCHED THEN
-                    INSERT ([key], [epoch], [num_nodes])
-                    VALUES (source.[key], source.[epoch], source.[num_nodes]);
+                    INSERT ([akd_key], [epoch], [num_nodes])
+                    VALUES (source.[akd_key], source.[epoch], source.[num_nodes]);
                 "#,
                 TempTable::Azks.to_string()
             ),
@@ -581,7 +581,7 @@ impl MsSqlStorable for DbRecord {
                 let left_child_len: Option<i32> = row.get("left_child_len");
                 let left_child_label_val: Option<&[u8]> = row.get("left_child_label_val");
                 let right_child_len: Option<i32> = row.get("right_child_len");
-                let right_child_label_val: Option<&[u8]> = row.get("right_child_len");
+                let right_child_label_val: Option<&[u8]> = row.get("right_child_label_val");
                 let hash: &[u8] = row
                     .get("hash")
                     .ok_or_else(|| StorageError::Other("hash is NULL or missing".to_string()))?;
@@ -674,7 +674,7 @@ impl MsSqlStorable for DbRecord {
         match &self {
             DbRecord::Azks(azks) => {
                 let row = (
-                    1u8, // constant key
+                    1i16, // constant key
                     azks.latest_epoch as i64,
                     azks.num_nodes as i64,
                 )

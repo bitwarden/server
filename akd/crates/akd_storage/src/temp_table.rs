@@ -44,17 +44,16 @@ impl TempTable {
         match self {
             TempTable::Azks => format!(
                 r#"
-                CREATE TABLE {} (
-                    [key] SMALLINT NOT NULL PRIMARY KEY,
+                CREATE TABLE {TEMP_AZKS_TABLE} (
+                    [akd_key] SMALLINT NOT NULL PRIMARY KEY,
                     [epoch] BIGINT NOT NULL,
                     [num_nodes] BIGINT NOT NULL
                 );
-                "#,
-                TEMP_AZKS_TABLE
+                "#
             ),
             TempTable::HistoryTreeNodes => format!(
                 r#"
-                CREATE TABLE {} (
+                CREATE TABLE {TEMP_HISTORY_TREE_NODES_TABLE} (
                     label_len INT NOT NULL CHECK (label_len >= 0),
                     label_val VARBINARY(32) NOT NULL,
                     last_epoch BIGINT NOT NULL CHECK (last_epoch >= 0),
@@ -79,12 +78,11 @@ impl TempTable {
                     p_hash VARBINARY(32) NULL,
                     PRIMARY KEY (label_len, label_val)
                 );
-                "#,
-                TEMP_AZKS_TABLE
+                "#
             ),
             TempTable::Values => format!(
                 r#"
-                CREATE TABLE {} (
+                CREATE TABLE {TEMP_VALUES_TABLE} (
                     raw_label VARBINARY(256) NOT NULL,
                     epoch BIGINT NOT NULL CHECK (epoch >= 0),
                     [version] BIGINT NOT NULL CHECK ([version] >= 0),
@@ -93,40 +91,36 @@ impl TempTable {
                     [data] VARBINARY(2000) NULL,
                     PRIMARY KEY (raw_label, epoch)
                 );
-                "#,
-                TEMP_VALUES_TABLE
+                "#
             ),
             TempTable::Ids(storage_type) => match storage_type {
                 StorageType::Azks => panic!("TempTable::Ids should not be created for Azks"),
                 StorageType::TreeNode => format!(
                     r#"
-                    CREATE TABLE {} (
+                    CREATE TABLE {TEMP_IDS_TABLE} (
                         label_len INT NOT NULL,
                         label_val VARBINARY(32) NOT NULL,
                         PRIMARY KEY (label_len, label_val)
                     );
-                    "#,
-                    TEMP_IDS_TABLE
+                    "#
                 ),
                 StorageType::ValueState => format!(
                     r#"
-                    CREATE TABLE {} (
+                    CREATE TABLE {TEMP_IDS_TABLE} (
                         raw_label VARBINARY(256) NOT NULL,
                         epoch BIGINT NOT NULL,
                         PRIMARY KEY (raw_label, epoch)
                     );
-                    "#,
-                    TEMP_IDS_TABLE
+                    "#
                 ),
             }
             TempTable::RawLabelSearch => format!(
                 r#"
-                CREATE TABLE {} (
+                CREATE TABLE {TEMP_SEARCH_LABELS_TABLE} (
                     raw_label VARBINARY(256) NOT NULL,
                     PRIMARY KEY (raw_label)
                 );
-                "#,
-                TEMP_SEARCH_LABELS_TABLE
+                "#
             )
         }
     }
