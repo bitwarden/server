@@ -173,7 +173,7 @@ impl MsSqlStorable for DbRecord {
                     Box::new(node.latest_node.left_child.map(|lc| lc.label_len as i32)),
                 );
                 params.add(
-                    "left_child_val",
+                    "left_child_label_val",
                     Box::new(node.latest_node.left_child.map(|lc| lc.label_val.to_vec())),
                 );
                 params.add(
@@ -181,7 +181,7 @@ impl MsSqlStorable for DbRecord {
                     Box::new(node.latest_node.right_child.map(|rc| rc.label_len as i32)),
                 );
                 params.add(
-                    "right_child_val",
+                    "right_child_label_val",
                     Box::new(node.latest_node.right_child.map(|rc| rc.label_val.to_vec())),
                 );
                 params.add("[hash]", Box::new(node.latest_node.hash.0.to_vec()));
@@ -223,7 +223,7 @@ impl MsSqlStorable for DbRecord {
                     ),
                 );
                 params.add(
-                    "p_left_child_val",
+                    "p_left_child_label_val",
                     Box::new(
                         node.previous_node
                             .clone()
@@ -239,7 +239,7 @@ impl MsSqlStorable for DbRecord {
                     ),
                 );
                 params.add(
-                    "p_right_child_val",
+                    "p_right_child_label_val",
                     Box::new(
                         node.previous_node
                             .clone()
