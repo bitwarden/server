@@ -52,6 +52,7 @@ public static class PolicyServiceCollectionExtensions
         services.AddScoped<IPolicyUpdateEvent, MaximumVaultTimeoutPolicyValidator>();
         services.AddScoped<IPolicyUpdateEvent, FreeFamiliesForEnterprisePolicyValidator>();
         services.AddScoped<IPolicyUpdateEvent, OrganizationDataOwnershipPolicyValidator>();
+        services.AddScoped<IPolicyUpdateEvent, UriMatchDefaultPolicyValidator>();
     }
 
     private static void AddPolicyRequirements(this IServiceCollection services)
