@@ -166,7 +166,7 @@ public class AccountController : Controller
 
         if (context == null) throw new Exception(_i18nService.T("AuthorizationContextMissing"));
 
-        if (context.Parameters.AllKeys.Contains("domain_hint") ||
+        if (!context.Parameters.AllKeys.Contains("domain_hint") ||
             string.IsNullOrWhiteSpace(context.Parameters["domain_hint"]))
         {
             throw new Exception(_i18nService.T("NoDomainHintProvided"));

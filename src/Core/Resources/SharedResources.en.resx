@@ -512,13 +512,13 @@
     <value>User should have been defined by this point.</value>
   </data>
   <data name="NoEmailFoundWhenFallingBackToEmailForOrgUserLookup" xml:space="preserve">
-    <value>Tried to use email as a fallback when searrching for org user, but there was no email found in claims.</value>
+    <value>Tried to use email as a fallback when searching for org user, but there was no email found in claims.</value>
   </data>
   <data name="NoEmailFoundWhenMarkingDomainAsVerified" xml:space="preserve">
     <value>While trying to auto provision the user there was no email to use to get the domain of to mark the email as verified.</value>
   </data>
   <data name="NoDomainHintFromAuthorizationContext" xml:space="preserve">
-    <value>Could not find a domain_hint value from hte authorization context.</value>
+    <value>Could not find a domain_hint value from the authorization context.</value>
   </data>
   <data name="NoProviderOnAuthenticateResult" xml:space="preserve">
     <value>No provider found in the scheme property of the authenticate result.</value>
