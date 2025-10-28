@@ -94,9 +94,6 @@ public class Startup
         services.AddMemoryCache();
         services.AddDistributedCache(globalSettings);
 
-        // BitPay
-        services.AddSingleton<BitPayClient>();
-
         if (!globalSettings.SelfHosted)
         {
             services.AddIpRateLimiting(globalSettings);
@@ -326,6 +323,6 @@ public class Startup
         }
 
         // Log startup
-        logger.LogInformation(Constants.BypassFiltersEventId, globalSettings.ProjectName + " started.");
+        logger.LogInformation(Constants.BypassFiltersEventId, "{Project} started.", globalSettings.ProjectName);
     }
 }

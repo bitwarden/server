@@ -1,124 +1,20 @@
-name: Review code
+name: Code Review
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, ready_for_review]
 
 permissions: {}
 
 jobs:
   review:
     name: Review
-    runs-on: ubuntu-24.04
+    uses: bitwarden/gh-actions/.github/workflows/_review-code.yml@main
+    secrets:
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
     permissions:
       contents: read
       id-token: write
       pull-requests: write
-
-    steps:
-      - name: Check out repo
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-
-      - name: Check for Vault team changes
-        id: check_changes
-        run: |
-          # Ensure we have the base branch
-          git fetch origin ${{ github.base_ref }}
-
-          echo "Comparing changes between origin/${{ github.base_ref }} and HEAD"
-          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
-
-          if [ -z "$CHANGED_FILES" ]; then
-            echo "Zero files changed"
-            echo "vault_team_changes=false" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          # Handle variations in spacing and multiple teams
-          VAULT_PATTERNS=$(grep -E "@bitwarden/team-vault-dev(\s|$)" .github/CODEOWNERS 2>/dev/null | awk '{print $1}')
-
-          if [ -z "$VAULT_PATTERNS" ]; then
-            echo "⚠️ No patterns found for @bitwarden/team-vault-dev in CODEOWNERS"
-            echo "vault_team_changes=false" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          vault_team_changes=false
-          for pattern in $VAULT_PATTERNS; do
-            echo "Checking pattern: $pattern"
-
-            # Handle **/directory patterns
-            if [[ "$pattern" == "**/"* ]]; then
-              # Remove the **/ prefix
-              dir_pattern="${pattern#\*\*/}"
-              # Check if any file contains this directory in its path
-              if echo "$CHANGED_FILES" | grep -qE "(^|/)${dir_pattern}(/|$)"; then
-                vault_team_changes=true
-                echo "✅ Found files matching pattern: $pattern"
-                echo "$CHANGED_FILES" | grep -E "(^|/)${dir_pattern}(/|$)" | sed 's/^/  - /'
-                break
-              fi
-            else
-              # Handle other patterns (shouldn't happen based on your CODEOWNERS)
-              if echo "$CHANGED_FILES" | grep -q "$pattern"; then
-                vault_team_changes=true
-                echo "✅ Found files matching pattern: $pattern"
-                echo "$CHANGED_FILES" | grep "$pattern" | sed 's/^/  - /'
-                break
-              fi
-            fi
-          done
-
-          echo "vault_team_changes=$vault_team_changes" >> $GITHUB_OUTPUT
-
-          if [ "$vault_team_changes" = "true" ]; then
-            echo ""
-            echo "✅ Vault team changes detected - proceeding with review"
-          else
-            echo ""
-            echo "❌  No Vault team changes detected - skipping review"
-          fi
-
-      - name: Review with Claude Code
-        if: steps.check_changes.outputs.vault_team_changes == 'true'
-        uses: anthropics/claude-code-action@ac1a3207f3f00b4a37e2f3a6f0935733c7c64651 # v1.0.11
-        with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          track_progress: true
-          use_sticky_comment: true
-          prompt: |
-            REPO: ${{ github.repository }}
-            PR NUMBER: ${{ github.event.pull_request.number }}
-            TITLE: ${{ github.event.pull_request.title }}
-            BODY: ${{ github.event.pull_request.body }}
-            AUTHOR: ${{ github.event.pull_request.user.login }}
-            COMMIT: ${{ github.event.pull_request.head.sha }}
-
-            Please review this pull request with a focus on:
-            - Code quality and best practices
-            - Potential bugs or issues
-            - Security implications
-            - Performance considerations
-
-            Note: The PR branch is already checked out in the current working directory.
-
-            Provide a comprehensive review including:
-            - Summary of changes since last review
-            - Critical issues found (be thorough)
-            - Suggested improvements (be thorough)
-            - Good practices observed (be concise - list only the most notable items without elaboration)
-            - Action items for the author
-            - Leverage collapsible <details> sections where appropriate for lengthy explanations or code snippets to enhance human readability
-
-            When reviewing subsequent commits:
-            - Track status of previously identified issues (fixed/unfixed/reopened)
-            - Identify NEW problems introduced since last review
-            - Note if fixes introduced new issues
-
-            IMPORTANT: Be comprehensive about issues and improvements. For good practices, be brief - just note what was done well without explaining why or praising excessively.
-
-          claude_args: |
-            --allowedTools "mcp__github_comment__update_claude_comment,mcp__github_inline_comment__create_inline_comment,Bash(gh pr diff:*),Bash(gh pr view:*)"
