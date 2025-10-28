@@ -1,0 +1,27 @@
+[package]
+name = "akd_test_utility"
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+license-file.workspace = true
+keywords.workspace = true
+
+[[bin]]
+name = "akd-test-utility"
+path = "src/main.rs"
+
+[dependencies]
+akd = "0.11.0"
+akd_storage = { path = "../akd_storage" }
+anyhow = "1"
+async-trait = "0.1"
+clap = { version = "4", features = ["derive"] }
+hex = "0.4"
+owo-colors = "4"
+rand = "0.8"
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber = { workspace = true, features = ["env-filter", "fmt", "ansi"] }
+
+[lints]
+workspace = true

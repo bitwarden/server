@@ -5,7 +5,7 @@ use tokio_util::compat::TokioAsyncWriteCompatExt;
 
 use bb8::ManageConnection;
 use tiberius::{Client, Config};
-use tracing::{info, instrument, trace};
+use tracing::{debug, instrument, info};
 
 #[derive(thiserror::Error, Debug)]
 pub enum OnConnectError {
@@ -62,37 +62,41 @@ pub struct ManagedConnection(Client<Stream>);
 
 // Transparently forward methods to the inner Client
 impl ManagedConnection {
+    #[instrument(skip(self, params), level = "debug")]
     pub async fn execute(
         &mut self,
         sql: &str,
         params: &[&(dyn tiberius::ToSql)],
     ) -> Result<tiberius::ExecuteResult, tiberius::error::Error> {
-        trace!(%sql, "Executing SQL");
+        debug!("Executing command");
         self.0.execute(sql, params).await
     }
 
+    #[instrument(skip(self, params), level = "debug")]
     pub async fn query<'a>(
         &'a mut self,
         sql: &str,
         params: &[&(dyn tiberius::ToSql)],
     ) -> Result<tiberius::QueryStream<'a>, tiberius::error::Error> {
-        trace!(%sql, "Querying SQL");
+        debug!("Executing query");
         self.0.query(sql, params).await
     }
 
+    #[instrument(skip(self), level = "debug")]
     pub async fn simple_query<'a>(
         &'a mut self,
         sql: &str,
     ) -> Result<tiberius::QueryStream<'a>, tiberius::error::Error> {
-        trace!(%sql, "Simple querying SQL");
+        debug!("Executing simple query");
         self.0.simple_query(sql).await
     }
 
+    #[instrument(skip(self), level = "debug")]
     pub async fn bulk_insert<'a>(
         &'a mut self,
         table: &'a str,
     ) -> Result<tiberius::BulkLoadRequest<'a, Stream>, tiberius::error::Error> {
-        trace!(%table, "Starting bulk insert");
+        debug!(%table, "Starting bulk insert");
         self.0.bulk_insert(&table).await
     }
 
@@ -103,7 +107,7 @@ impl ManagedConnection {
             .await?
             .into_first_result()
             .await?;
-        info!(?row, "Ping response");
+        debug!(?row, "Ping response");
         let value = row[0].get(0).expect("value is present");
         Ok(value)
     }
