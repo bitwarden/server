@@ -1,4 +1,5 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
+// NOTE: This file is partially migrated to nullable reference types. Remove inline #nullable directives when addressing the FIXME.
 #nullable disable
 
 using Bit.Api.AdminConsole.Authorization;
@@ -538,7 +539,7 @@ public class OrganizationUsersController : Controller
         await Task.Delay(2000);
         return TypedResults.BadRequest(ModelState);
     }
-#nullable restore
+#nullable disable
 
     [HttpDelete("{id}")]
     [Authorize<ManageUsersRequirement>]
