@@ -19,6 +19,7 @@
     "build:hbs": "node ./build.js --hbs",
     "build:minify": "node ./build.js --hbs --minify",
     "build:watch": "nodemon ./build.js --watch emails --watch components --ext mjml,js",
+    "build:watch:hbs": "nodemon ./build.js --hbs --watch emails --watch components --ext mjml,js",
     "prettier": "prettier --cache --write ."
   },
   "dependencies": {
