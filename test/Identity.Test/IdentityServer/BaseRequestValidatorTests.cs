@@ -119,7 +119,7 @@ public class BaseRequestValidatorTests
     public async Task ValidateAsync_ContextNotValid_SelfHosted_ShouldBuildErrorResult_ShouldLogWarning(
         bool featureFlagValue,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
-        CustomValidatorRequestContext requestContext,
+        [AuthFixtures.CustomValidatorRequestContext] CustomValidatorRequestContext requestContext,
         GrantValidationResult grantResult)
     {
         // Arrange
@@ -145,7 +145,7 @@ public class BaseRequestValidatorTests
     public async Task ValidateAsync_DeviceNotValidated_ShouldLogError(
         bool featureFlagValue,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
-        CustomValidatorRequestContext requestContext,
+        [AuthFixtures.CustomValidatorRequestContext] CustomValidatorRequestContext requestContext,
         GrantValidationResult grantResult)
     {
         // Arrange
@@ -186,7 +186,7 @@ public class BaseRequestValidatorTests
     public async Task ValidateAsync_DeviceValidated_ShouldSucceed(
         bool featureFlagValue,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
-        CustomValidatorRequestContext requestContext,
+        [AuthFixtures.CustomValidatorRequestContext] CustomValidatorRequestContext requestContext,
         GrantValidationResult grantResult)
     {
         // Arrange
@@ -230,7 +230,7 @@ public class BaseRequestValidatorTests
     public async Task ValidateAsync_ValidatedAuthRequest_ConsumedOnSuccess(
         bool featureFlagValue,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
-        CustomValidatorRequestContext requestContext,
+        [AuthFixtures.CustomValidatorRequestContext] CustomValidatorRequestContext requestContext,
         GrantValidationResult grantResult)
     {
         // Arrange
@@ -293,7 +293,7 @@ public class BaseRequestValidatorTests
     public async Task ValidateAsync_ValidatedAuthRequest_NotConsumed_When2faRequired(
         bool featureFlagValue,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
-        CustomValidatorRequestContext requestContext,
+        [AuthFixtures.CustomValidatorRequestContext] CustomValidatorRequestContext requestContext,
         GrantValidationResult grantResult)
     {
         // Arrange
@@ -339,7 +339,7 @@ public class BaseRequestValidatorTests
     public async Task ValidateAsync_TwoFactorTokenInvalid_ShouldSendFailedTwoFactorEmail(
         bool featureFlagValue,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
-        CustomValidatorRequestContext requestContext,
+        [AuthFixtures.CustomValidatorRequestContext] CustomValidatorRequestContext requestContext,
         GrantValidationResult grantResult)
     {
         // Arrange
@@ -386,7 +386,7 @@ public class BaseRequestValidatorTests
     public async Task ValidateAsync_TwoFactorRememberTokenExpired_ShouldNotSendFailedTwoFactorEmail(
         bool featureFlagValue,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
-        CustomValidatorRequestContext requestContext,
+        [AuthFixtures.CustomValidatorRequestContext] CustomValidatorRequestContext requestContext,
         GrantValidationResult grantResult)
     {
         // Arrange
@@ -446,7 +446,7 @@ public class BaseRequestValidatorTests
         string grantType,
         bool featureFlagValue,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
-        CustomValidatorRequestContext requestContext,
+        [AuthFixtures.CustomValidatorRequestContext] CustomValidatorRequestContext requestContext,
         GrantValidationResult grantResult)
     {
         // Arrange
@@ -480,7 +480,7 @@ public class BaseRequestValidatorTests
         string grantType,
         bool featureFlagValue,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
-        CustomValidatorRequestContext requestContext,
+        [AuthFixtures.CustomValidatorRequestContext] CustomValidatorRequestContext requestContext,
         GrantValidationResult grantResult)
     {
         // Arrange
@@ -516,7 +516,7 @@ public class BaseRequestValidatorTests
         string grantType,
         bool featureFlagValue,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
-        CustomValidatorRequestContext requestContext,
+        [AuthFixtures.CustomValidatorRequestContext] CustomValidatorRequestContext requestContext,
         GrantValidationResult grantResult)
     {
         // Arrange
@@ -565,7 +565,7 @@ public class BaseRequestValidatorTests
         string grantType,
         bool featureFlagValue,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
-        CustomValidatorRequestContext requestContext,
+        [AuthFixtures.CustomValidatorRequestContext] CustomValidatorRequestContext requestContext,
         GrantValidationResult grantResult)
     {
         // Arrange
@@ -612,7 +612,7 @@ public class BaseRequestValidatorTests
         string grantType,
         bool featureFlagValue,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
-        CustomValidatorRequestContext requestContext,
+        [AuthFixtures.CustomValidatorRequestContext] CustomValidatorRequestContext requestContext,
         GrantValidationResult grantResult)
     {
         // Arrange
@@ -657,7 +657,7 @@ public class BaseRequestValidatorTests
     public async Task ValidateAsync_IsLegacyUser_FailAuthForLegacyUserAsync(
         bool featureFlagValue,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
-        CustomValidatorRequestContext requestContext,
+        [AuthFixtures.CustomValidatorRequestContext] CustomValidatorRequestContext requestContext,
         GrantValidationResult grantResult)
     {
         // Arrange
@@ -691,7 +691,7 @@ public class BaseRequestValidatorTests
     public async Task ValidateAsync_CustomResponse_NoMasterPassword_ShouldSetUserDecryptionOptions(
         bool featureFlagValue,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
-        CustomValidatorRequestContext requestContext,
+        [AuthFixtures.CustomValidatorRequestContext] CustomValidatorRequestContext requestContext,
         GrantValidationResult grantResult)
     {
         // Arrange
@@ -744,7 +744,7 @@ public class BaseRequestValidatorTests
         bool featureFlagValue,
         KdfType kdfType, int kdfIterations, int? kdfMemory, int? kdfParallelism,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
-        CustomValidatorRequestContext requestContext,
+        [AuthFixtures.CustomValidatorRequestContext] CustomValidatorRequestContext requestContext,
         GrantValidationResult grantResult)
     {
         // Arrange
@@ -812,7 +812,7 @@ public class BaseRequestValidatorTests
     public async Task ValidateAsync_CustomResponse_ShouldIncludeAccountKeys(
         bool featureFlagValue,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
-        CustomValidatorRequestContext requestContext,
+        [AuthFixtures.CustomValidatorRequestContext] CustomValidatorRequestContext requestContext,
         GrantValidationResult grantResult)
     {
         // Arrange
@@ -894,7 +894,7 @@ public class BaseRequestValidatorTests
     public async Task ValidateAsync_CustomResponse_AccountKeysQuery_SkippedWhenPrivateKeyIsNull(
         bool featureFlagValue,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
-        CustomValidatorRequestContext requestContext,
+        [AuthFixtures.CustomValidatorRequestContext] CustomValidatorRequestContext requestContext,
         GrantValidationResult grantResult)
     {
         // Arrange
@@ -924,7 +924,7 @@ public class BaseRequestValidatorTests
     public async Task ValidateAsync_CustomResponse_AccountKeysQuery_CalledWithCorrectUser(
         bool featureFlagValue,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
-        CustomValidatorRequestContext requestContext,
+        [AuthFixtures.CustomValidatorRequestContext] CustomValidatorRequestContext requestContext,
         GrantValidationResult grantResult)
     {
         // Arrange
@@ -979,7 +979,7 @@ public class BaseRequestValidatorTests
     public async Task ValidateAsync_RecoveryCodeForSsoRequiredUser_BlocksWithDescriptiveMessage(
         bool featureFlagEnabled,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
-        CustomValidatorRequestContext requestContext,
+        [AuthFixtures.CustomValidatorRequestContext] CustomValidatorRequestContext requestContext,
         GrantValidationResult grantResult)
     {
         // Arrange
@@ -1059,22 +1059,18 @@ public class BaseRequestValidatorTests
     /// 4. NOT be logged in
     /// </summary>
     [Theory]
-    [BitAutoData(true)]  // Feature flag ON
-    [BitAutoData(false)] // Feature flag OFF
+    [BitAutoData(true)]
+    [BitAutoData(false)]
     public async Task ValidateAsync_InvalidRecoveryCodeForSsoRequiredUser_FailsAt2FA(
         bool featureFlagEnabled,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
-        CustomValidatorRequestContext requestContext,
+        [AuthFixtures.CustomValidatorRequestContext] CustomValidatorRequestContext requestContext,
         GrantValidationResult grantResult)
     {
         // Arrange
         SetupRecoveryCodeSupportForSsoRequiredUsersFeatureFlag(featureFlagEnabled);
         var context = CreateContext(tokenRequest, requestContext, grantResult);
         var user = requestContext.User;
-
-        // Reset state that AutoFixture may have populated
-        requestContext.TwoFactorRecoveryRequested = false;
-        requestContext.RememberMeRequested = false;
 
         // 1. Master password is valid
         _sut.isValid = true;
@@ -1167,22 +1163,18 @@ public class BaseRequestValidatorTests
     /// This is the "happy path" for recovery code usage.
     /// </summary>
     [Theory]
-    [BitAutoData(true)]  // Feature flag ON
-    [BitAutoData(false)] // Feature flag OFF - should also work (SSO not required)
+    [BitAutoData(true)]
+    [BitAutoData(false)]
     public async Task ValidateAsync_RecoveryCodeForNonSsoUser_SuccessfulLogin(
         bool featureFlagEnabled,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
-        CustomValidatorRequestContext requestContext,
+        [AuthFixtures.CustomValidatorRequestContext] CustomValidatorRequestContext requestContext,
         GrantValidationResult grantResult)
     {
         // Arrange
         SetupRecoveryCodeSupportForSsoRequiredUsersFeatureFlag(featureFlagEnabled);
         var context = CreateContext(tokenRequest, requestContext, grantResult);
         var user = requestContext.User;
-
-        // Reset state that AutoFixture may have populated
-        requestContext.TwoFactorRecoveryRequested = false;
-        requestContext.RememberMeRequested = false;
 
         // 1. Master password is valid
         _sut.isValid = true;
