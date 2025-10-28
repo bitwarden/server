@@ -1,6 +1,5 @@
-﻿#nullable enable
-
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
+using Bit.Core.Exceptions;
 
 namespace Bit.Core.KeyManagement.Models.Data;
 
@@ -14,7 +13,7 @@ public class MasterPasswordUnlockData
     {
         if (user.GetMasterPasswordSalt() != Salt)
         {
-            throw new ArgumentException("Invalid master password salt.");
+            throw new BadRequestException("Invalid master password salt.");
         }
     }
 }

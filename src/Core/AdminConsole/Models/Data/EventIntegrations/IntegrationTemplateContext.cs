@@ -23,7 +23,17 @@ public class IntegrationTemplateContext(EventMessage eventMessage)
     public Guid? CollectionId => Event.CollectionId;
     public Guid? GroupId => Event.GroupId;
     public Guid? PolicyId => Event.PolicyId;
+    public Guid? IdempotencyId => Event.IdempotencyId;
+    public Guid? ProviderId => Event.ProviderId;
+    public Guid? ProviderUserId => Event.ProviderUserId;
+    public Guid? ProviderOrganizationId => Event.ProviderOrganizationId;
+    public Guid? InstallationId => Event.InstallationId;
+    public Guid? SecretId => Event.SecretId;
+    public Guid? ProjectId => Event.ProjectId;
+    public Guid? ServiceAccountId => Event.ServiceAccountId;
+    public Guid? GrantedServiceAccountId => Event.GrantedServiceAccountId;
 
+    public string DateIso8601 => Date.ToString("o");
     public string EventMessage => JsonSerializer.Serialize(Event);
 
     public User? User { get; set; }
