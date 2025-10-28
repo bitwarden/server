@@ -510,7 +510,7 @@ public class OrganizationUsersController : Controller
     }
 
 #nullable enable
-    private async Task<IResult> PutResetPasswordNew(Guid orgId, Guid id, OrganizationUserResetPasswordRequestModel model)
+    private async Task<IResult> PutResetPasswordNew(Guid orgId, Guid id, [FromBody] OrganizationUserResetPasswordRequestModel model)
     {
         var targetOrganizationUser = await _organizationUserRepository.GetByIdAsync(id);
         if (targetOrganizationUser == null || targetOrganizationUser.OrganizationId != orgId)
