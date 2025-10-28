@@ -697,4 +697,7 @@
   <data name="SsoInvalidIdentifierError" xml:space="preserve">
     <value>Invalid SSO identifier</value>
   </data>
+  <data name="AuthorizationContextMissing" xml:space="preserve">
+    <value>Authorization context was not found for this request.</value>
+  </data>
 </root>

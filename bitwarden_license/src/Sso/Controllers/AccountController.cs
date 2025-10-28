@@ -164,7 +164,9 @@ public class AccountController : Controller
     {
         var context = await _interaction.GetAuthorizationContextAsync(returnUrl);
 
-        if (context!.Parameters.AllKeys.Contains("domain_hint") ||
+        if (context == null) throw new Exception(_i18nService.T("AuthorizationContextMissing"));
+
+        if (context.Parameters.AllKeys.Contains("domain_hint") ||
             string.IsNullOrWhiteSpace(context.Parameters["domain_hint"]))
         {
             throw new Exception(_i18nService.T("NoDomainHintProvided"));
@@ -271,9 +273,10 @@ public class AccountController : Controller
         if (user == null)
         {
             // If we're manually linking to SSO, the user's external identifier will be passed as query string parameter.
-            string? userIdentifier = result.Properties!.Items.Keys.Contains("user_identifier")
-                ? result.Properties.Items["user_identifier"]
-                : null;
+            string? userIdentifier =
+                result.Properties?.Items != null && result.Properties.Items.ContainsKey("user_identifier")
+                    ? result.Properties.Items["user_identifier"]
+                    : null;
 
             var (provisionedUser, foundOrganization, foundOrCreatedOrgUser) =
                 await AutoProvisionUserAsync(
@@ -351,7 +354,13 @@ public class AccountController : Controller
         await HttpContext.SignOutAsync(AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
 
         // Retrieve return URL
-        var returnUrl = result.Properties!.Items["return_url"] ?? "~/";
+        var returnUrl = "~/";
+        if (result.Properties?.Items != null
+            && result.Properties.Items.TryGetValue("return_url", out var storedReturnUrl)
+            && !string.IsNullOrWhiteSpace(storedReturnUrl))
+        {
+            returnUrl = storedReturnUrl;
+        }
 
         // Check if external login is in the context of an OIDC request
         var context = await _interaction.GetAuthorizationContextAsync(returnUrl);
@@ -580,7 +589,7 @@ public class AccountController : Controller
 
         // If the email domain is verified, we can mark the email as verified
         var emailVerified = false;
-        var emailDomain = CoreHelpers.GetEmailDomain(email ?? throw new Exception(_i18nService.T("")));
+        var emailDomain = CoreHelpers.GetEmailDomain(email ?? throw new Exception(_i18nService.T("NoEmailFoundWhenMarkingDomainAsVerified")));
         if (!string.IsNullOrWhiteSpace(emailDomain))
         {
             var organizationDomain =
