@@ -1050,13 +1050,22 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<int?>("CriticalPasswordAtRiskCount")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("CriticalPasswordCount")
+                        .HasColumnType("integer");
+
                     b.Property<int?>("MemberAtRiskCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("MemberCount")
                         .HasColumnType("integer");
 
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid");
 
                     b.Property<int?>("PasswordAtRiskCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("PasswordCount")
                         .HasColumnType("integer");
 
                     b.Property<string>("ReportData")

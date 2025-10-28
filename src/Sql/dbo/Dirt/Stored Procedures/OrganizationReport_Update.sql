@@ -7,15 +7,18 @@ CREATE PROCEDURE [dbo].[OrganizationReport_Update]
     @SummaryData NVARCHAR(MAX),
     @ApplicationData NVARCHAR(MAX),
     @RevisionDate DATETIME2(7),
-    @ApplicationCount INT,
-    @CriticalApplicationCount INT,
-    @ApplicationAtRiskCount INT,
-    @CriticalApplicationAtRiskCount INT,
-    @PasswordAtRiskCount INT,
-    @CriticalPasswordAtRiskCount INT,
-    @MemberAtRiskCount INT,
-    @CriticalMemberAtRiskCount INT,
-    @CriticalMemberCount INT
+    @ApplicationCount INT = NULL,
+    @ApplicationAtRiskCount INT = NULL,
+    @CriticalApplicationCount INT = NULL,
+    @CriticalApplicationAtRiskCount INT = NULL,
+    @MemberCount INT = NULL,
+    @MemberAtRiskCount INT = NULL,
+    @CriticalMemberCount INT = NULL,
+    @CriticalMemberAtRiskCount INT = NULL,
+    @PasswordCount INT = NULL,
+    @PasswordAtRiskCount INT = NULL,
+    @CriticalPasswordCount INT = NULL,
+    @CriticalPasswordAtRiskCount INT = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -29,13 +32,16 @@ BEGIN
         [ApplicationData] = @ApplicationData,
         [RevisionDate] = @RevisionDate,
         [ApplicationCount] = @ApplicationCount,
-        [CriticalApplicationCount] = @CriticalApplicationCount,
         [ApplicationAtRiskCount] = @ApplicationAtRiskCount,
+        [CriticalApplicationCount] = @CriticalApplicationCount,
         [CriticalApplicationAtRiskCount] = @CriticalApplicationAtRiskCount,
-        [PasswordAtRiskCount] = @PasswordAtRiskCount,
-        [CriticalPasswordAtRiskCount] = @CriticalPasswordAtRiskCount,
+        [MemberCount] = @MemberCount,
         [MemberAtRiskCount] = @MemberAtRiskCount,
+        [CriticalMemberCount] = @CriticalMemberCount,
         [CriticalMemberAtRiskCount] = @CriticalMemberAtRiskCount,
-        [CriticalMemberCount] = @CriticalMemberCount
+        [PasswordCount] = @PasswordCount,
+        [PasswordAtRiskCount] = @PasswordAtRiskCount,
+        [CriticalPasswordCount] = @CriticalPasswordCount,
+        [CriticalPasswordAtRiskCount] = @CriticalPasswordAtRiskCount
     WHERE [Id] = @Id;
 END;

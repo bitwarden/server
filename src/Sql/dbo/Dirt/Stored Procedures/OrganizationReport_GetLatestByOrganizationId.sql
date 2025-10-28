@@ -14,14 +14,17 @@ BEGIN
         [ApplicationData],
         [RevisionDate],
         [ApplicationCount],
-        [CriticalApplicationCount],
         [ApplicationAtRiskCount],
+        [CriticalApplicationCount],
         [CriticalApplicationAtRiskCount],
-        [PasswordAtRiskCount],
-        [CriticalPasswordAtRiskCount],
+        [MemberCount],
         [MemberAtRiskCount],
+        [CriticalMemberCount],
         [CriticalMemberAtRiskCount],
-        [CriticalMemberCount]
+        [PasswordCount],
+        [PasswordAtRiskCount],
+        [CriticalPasswordCount],
+        [CriticalPasswordAtRiskCount]
     FROM [dbo].[OrganizationReportView]
     WHERE [OrganizationId] = @OrganizationId
     ORDER BY [RevisionDate] DESC

@@ -1045,13 +1045,22 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<int?>("CriticalPasswordAtRiskCount")
                         .HasColumnType("int");
 
+                    b.Property<int?>("CriticalPasswordCount")
+                        .HasColumnType("int");
+
                     b.Property<int?>("MemberAtRiskCount")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("MemberCount")
                         .HasColumnType("int");
 
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("char(36)");
 
                     b.Property<int?>("PasswordAtRiskCount")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PasswordCount")
                         .HasColumnType("int");
 
                     b.Property<string>("ReportData")

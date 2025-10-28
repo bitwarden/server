@@ -7,15 +7,18 @@ CREATE PROCEDURE [dbo].[OrganizationReport_Create]
    @SummaryData NVARCHAR(MAX),
    @ApplicationData NVARCHAR(MAX),
    @RevisionDate DATETIME2(7),
-   @ApplicationCount INT,
-   @CriticalApplicationCount INT,
-   @ApplicationAtRiskCount INT,
-   @CriticalApplicationAtRiskCount INT,
-   @PasswordAtRiskCount INT,
-   @CriticalPasswordAtRiskCount INT,
-   @MemberAtRiskCount INT,
-   @CriticalMemberAtRiskCount INT,
-   @CriticalMemberCount INT
+   @ApplicationCount INT = NULL,
+   @ApplicationAtRiskCount INT = NULL,
+   @CriticalApplicationCount INT = NULL,
+   @CriticalApplicationAtRiskCount INT = NULL,
+   @MemberCount INT = NULL,
+   @MemberAtRiskCount INT = NULL,
+   @CriticalMemberCount INT = NULL,
+   @CriticalMemberAtRiskCount INT = NULL,
+   @PasswordCount INT = NULL,
+   @PasswordAtRiskCount INT = NULL,
+   @CriticalPasswordCount INT = NULL,
+   @CriticalPasswordAtRiskCount INT = NULL
 AS
 BEGIN
    SET NOCOUNT ON;
@@ -31,14 +34,17 @@ INSERT INTO [dbo].[OrganizationReport](
     [ApplicationData],
     [RevisionDate],
     [ApplicationCount],
-    [CriticalApplicationCount],
     [ApplicationAtRiskCount],
+    [CriticalApplicationCount],
     [CriticalApplicationAtRiskCount],
-    [PasswordAtRiskCount],
-    [CriticalPasswordAtRiskCount],
+    [MemberCount],
     [MemberAtRiskCount],
+    [CriticalMemberCount],
     [CriticalMemberAtRiskCount],
-    [CriticalMemberCount]
+    [PasswordCount],
+    [PasswordAtRiskCount],
+    [CriticalPasswordCount],
+    [CriticalPasswordAtRiskCount]
 )
 VALUES (
     @Id,
@@ -50,13 +56,16 @@ VALUES (
     @ApplicationData,
     @RevisionDate,
     @ApplicationCount,
-    @CriticalApplicationCount,
     @ApplicationAtRiskCount,
+    @CriticalApplicationCount,
     @CriticalApplicationAtRiskCount,
-    @PasswordAtRiskCount,
-    @CriticalPasswordAtRiskCount,
+    @MemberCount,
     @MemberAtRiskCount,
+    @CriticalMemberCount,
     @CriticalMemberAtRiskCount,
-    @CriticalMemberCount
+    @PasswordCount,
+    @PasswordAtRiskCount,
+    @CriticalPasswordCount,
+    @CriticalPasswordAtRiskCount
     );
 END

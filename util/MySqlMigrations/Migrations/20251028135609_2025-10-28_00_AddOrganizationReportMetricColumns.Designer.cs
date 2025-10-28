@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.MySqlMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20251023115233_2025-10-23_00_AddOrganizationReportMetricColumns")]
-    partial class _20251023_00_AddOrganizationReportMetricColumns
+    [Migration("20251028135609_2025-10-28_00_AddOrganizationReportMetricColumns")]
+    partial class _20251028_00_AddOrganizationReportMetricColumns
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1048,13 +1048,22 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<int?>("CriticalPasswordAtRiskCount")
                         .HasColumnType("int");
 
+                    b.Property<int?>("CriticalPasswordCount")
+                        .HasColumnType("int");
+
                     b.Property<int?>("MemberAtRiskCount")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("MemberCount")
                         .HasColumnType("int");
 
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("char(36)");
 
                     b.Property<int?>("PasswordAtRiskCount")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PasswordCount")
                         .HasColumnType("int");
 
                     b.Property<string>("ReportData")

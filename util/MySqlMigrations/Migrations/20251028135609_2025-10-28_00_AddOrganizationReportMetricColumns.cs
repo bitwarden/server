@@ -2,10 +2,10 @@
 
 #nullable disable
 
-namespace Bit.SqliteMigrations.Migrations;
+namespace Bit.MySqlMigrations.Migrations;
 
 /// <inheritdoc />
-public partial class _20251023_00_AddOrganizationReportMetricColumns : Migration
+public partial class _20251028_00_AddOrganizationReportMetricColumns : Migration
 {
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
@@ -13,55 +13,73 @@ public partial class _20251023_00_AddOrganizationReportMetricColumns : Migration
         migrationBuilder.AddColumn<int>(
             name: "ApplicationAtRiskCount",
             table: "OrganizationReport",
-            type: "INTEGER",
+            type: "int",
             nullable: true);
 
         migrationBuilder.AddColumn<int>(
             name: "ApplicationCount",
             table: "OrganizationReport",
-            type: "INTEGER",
+            type: "int",
             nullable: true);
 
         migrationBuilder.AddColumn<int>(
             name: "CriticalApplicationAtRiskCount",
             table: "OrganizationReport",
-            type: "INTEGER",
+            type: "int",
             nullable: true);
 
         migrationBuilder.AddColumn<int>(
             name: "CriticalApplicationCount",
             table: "OrganizationReport",
-            type: "INTEGER",
+            type: "int",
             nullable: true);
 
         migrationBuilder.AddColumn<int>(
             name: "CriticalMemberAtRiskCount",
             table: "OrganizationReport",
-            type: "INTEGER",
+            type: "int",
             nullable: true);
 
         migrationBuilder.AddColumn<int>(
             name: "CriticalMemberCount",
             table: "OrganizationReport",
-            type: "INTEGER",
+            type: "int",
             nullable: true);
 
         migrationBuilder.AddColumn<int>(
             name: "CriticalPasswordAtRiskCount",
             table: "OrganizationReport",
-            type: "INTEGER",
+            type: "int",
+            nullable: true);
+
+        migrationBuilder.AddColumn<int>(
+            name: "CriticalPasswordCount",
+            table: "OrganizationReport",
+            type: "int",
             nullable: true);
 
         migrationBuilder.AddColumn<int>(
             name: "MemberAtRiskCount",
             table: "OrganizationReport",
-            type: "INTEGER",
+            type: "int",
+            nullable: true);
+
+        migrationBuilder.AddColumn<int>(
+            name: "MemberCount",
+            table: "OrganizationReport",
+            type: "int",
             nullable: true);
 
         migrationBuilder.AddColumn<int>(
             name: "PasswordAtRiskCount",
             table: "OrganizationReport",
-            type: "INTEGER",
+            type: "int",
+            nullable: true);
+
+        migrationBuilder.AddColumn<int>(
+            name: "PasswordCount",
+            table: "OrganizationReport",
+            type: "int",
             nullable: true);
     }
 
@@ -97,11 +115,23 @@ public partial class _20251023_00_AddOrganizationReportMetricColumns : Migration
             table: "OrganizationReport");
 
         migrationBuilder.DropColumn(
+            name: "CriticalPasswordCount",
+            table: "OrganizationReport");
+
+        migrationBuilder.DropColumn(
             name: "MemberAtRiskCount",
             table: "OrganizationReport");
 
         migrationBuilder.DropColumn(
+            name: "MemberCount",
+            table: "OrganizationReport");
+
+        migrationBuilder.DropColumn(
             name: "PasswordAtRiskCount",
+            table: "OrganizationReport");
+
+        migrationBuilder.DropColumn(
+            name: "PasswordCount",
             table: "OrganizationReport");
     }
 }

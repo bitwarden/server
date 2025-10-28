@@ -1034,13 +1034,22 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<int?>("CriticalPasswordAtRiskCount")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int?>("CriticalPasswordCount")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int?>("MemberAtRiskCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("MemberCount")
                         .HasColumnType("INTEGER");
 
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("TEXT");
 
                     b.Property<int?>("PasswordAtRiskCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("PasswordCount")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("ReportData")
