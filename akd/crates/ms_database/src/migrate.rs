@@ -1,4 +1,5 @@
 use tiberius::{error};
+use tracing::{debug, info, instrument, warn};
 
 use crate::pool::ManagedConnection;
 use crate::TABLE_MIGRATIONS;
@@ -55,12 +56,15 @@ async fn read_applied_migrations(conn: &mut ManagedConnection) -> Result<Vec<Str
     Ok(applied)
 }
 
+#[instrument(skip(conn, migration), fields(migration_name = migration.name), level = "debug")]
 async fn record_migration(conn: &mut ManagedConnection, migration: &Migration) -> Result<()> {
+    debug!("Recording migration");
     let record_migration_sql = format!("INSERT INTO dbo.{TABLE_MIGRATIONS} (version) VALUES (@P1)");
     conn.execute(&record_migration_sql, &[&migration.name]).await?;
     Ok(())
 }
 
+#[instrument(skip(conn, migration), fields(migration_name = migration.name))]
 pub(crate) async fn run_migration(migration: &Migration, conn: &mut ManagedConnection) -> Result<()> {
     if migration.run_in_transaction {
         conn.simple_query("BEGIN TRANSACTION").await?;
@@ -73,10 +77,12 @@ pub(crate) async fn run_migration(migration: &Migration, conn: &mut ManagedConne
 
         match result {
             Ok(_) => {
+                info!("Committing migration");
                 conn.simple_query("COMMIT").await?;
                 Ok(())
             }
             Err(e) => {
+                warn!(error = ?e, "Rolling back migration due to error");
                 conn.simple_query("ROLLBACK").await?;
                 Err(e)
             }
@@ -91,6 +97,7 @@ pub(crate) async fn run_migration(migration: &Migration, conn: &mut ManagedConne
 pub async fn run_pending_migrations(conn: &mut ManagedConnection, all_migrations: &[Migration]) -> Result<()> {
     ensure_migrations_table_exists(conn).await?;
     let pending = pending_migrations(conn, all_migrations).await?;
+    info!(num_pending = pending.len(), "Running pending migrations");
     for migration in pending {
         run_migration(&migration, conn).await?;
     }
