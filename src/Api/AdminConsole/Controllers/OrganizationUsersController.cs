@@ -482,7 +482,7 @@ public class OrganizationUsersController : Controller
     {
         if (_featureService.IsEnabled(FeatureFlagKeys.AccountRecoveryCommand))
         {
-            await PutResetPasswordvNext(orgId, id, model);
+            await PutResetPasswordNew(orgId, id, model);
             return;
         }
 
@@ -510,7 +510,7 @@ public class OrganizationUsersController : Controller
         throw new BadRequestException(ModelState);
     }
 
-    public async Task PutResetPasswordvNext(Guid orgId, Guid id, [FromBody] OrganizationUserResetPasswordRequestModel model)
+    private async Task PutResetPasswordNew(Guid orgId, Guid id, OrganizationUserResetPasswordRequestModel model)
     {
         var targetOrganizationUser = await _organizationUserRepository.GetByIdAsync(id);
         if (targetOrganizationUser == null || targetOrganizationUser.OrganizationId != orgId)
