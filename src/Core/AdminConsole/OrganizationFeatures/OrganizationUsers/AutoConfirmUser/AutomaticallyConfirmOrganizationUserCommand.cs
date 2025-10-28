@@ -40,6 +40,7 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
         if (!successfulConfirmation) return new None();
 
         return await validatedRequest.ToCommandResultAsync()
+           // create default collections if required
            .MapAsync(LogOrganizationUserConfirmedEventAsync)
            .MapAsync(SendConfirmedOrganizationUserEmailAsync)
            .MapAsync(DeleteDeviceRegistrationAsync)
