@@ -285,6 +285,10 @@ public class SyncControllerTests
         providerUserRepository
             .GetManyDetailsByUserAsync(user.Id, ProviderUserStatusType.Confirmed).Returns(providerUserDetails);
 
+        foreach (var p in providerUserOrganizationDetails)
+        {
+            p.SsoConfig = null;
+        }
         providerUserRepository
             .GetManyOrganizationDetailsByUserAsync(user.Id, ProviderUserStatusType.Confirmed)
             .Returns(providerUserOrganizationDetails);

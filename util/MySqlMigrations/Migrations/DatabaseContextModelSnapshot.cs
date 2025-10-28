@@ -1017,6 +1017,12 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
 
+                    b.Property<int?>("ApplicationAtRiskCount")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ApplicationCount")
+                        .HasColumnType("int");
+
                     b.Property<string>("ApplicationData")
                         .HasColumnType("longtext");
 
@@ -1027,8 +1033,38 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<int?>("CriticalApplicationAtRiskCount")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("CriticalApplicationCount")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("CriticalMemberAtRiskCount")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("CriticalMemberCount")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("CriticalPasswordAtRiskCount")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("CriticalPasswordCount")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("MemberAtRiskCount")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("MemberCount")
+                        .HasColumnType("int");
+
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("char(36)");
+
+                    b.Property<int?>("PasswordAtRiskCount")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PasswordCount")
+                        .HasColumnType("int");
 
                     b.Property<string>("ReportData")
                         .IsRequired()
