@@ -162,7 +162,7 @@ public class SingleOrgPolicyValidatorTests
             .GetByOrganizationIdAsync(policyUpdate.OrganizationId)
             .Returns(ssoConfig);
 
-        var savePolicyModel = new SavePolicyModel(policyUpdate, null, new EmptyMetadataModel());
+        var savePolicyModel = new SavePolicyModel(policyUpdate);
 
         var result = await sutProvider.Sut.ValidateAsync(savePolicyModel, policy);
         Assert.Contains("Key Connector is enabled", result, StringComparison.OrdinalIgnoreCase);
@@ -186,7 +186,7 @@ public class SingleOrgPolicyValidatorTests
             .HasVerifiedDomainsAsync(policyUpdate.OrganizationId)
             .Returns(false);
 
-        var savePolicyModel = new SavePolicyModel(policyUpdate, null, new EmptyMetadataModel());
+        var savePolicyModel = new SavePolicyModel(policyUpdate);
 
         var result = await sutProvider.Sut.ValidateAsync(savePolicyModel, policy);
         Assert.True(string.IsNullOrEmpty(result));
@@ -256,7 +256,7 @@ public class SingleOrgPolicyValidatorTests
             .RevokeNonCompliantOrganizationUsersAsync(Arg.Any<RevokeOrganizationUsersRequest>())
             .Returns(new CommandResult());
 
-        var savePolicyModel = new SavePolicyModel(policyUpdate, null, new EmptyMetadataModel());
+        var savePolicyModel = new SavePolicyModel(policyUpdate);
 
         await sutProvider.Sut.ExecutePreUpsertSideEffectAsync(savePolicyModel, policy);
 
