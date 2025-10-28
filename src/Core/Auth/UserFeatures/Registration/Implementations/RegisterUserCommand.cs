@@ -1,7 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using Bit.Core.AdminConsole.Enums;
+﻿using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
@@ -77,6 +74,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         var result = await _userService.CreateUserAsync(user);
         if (result == IdentityResult.Success)
         {
+            // TODO organization user being auto provisioned
             await _mailService.SendWelcomeEmailAsync(user);
         }
 
@@ -102,10 +100,10 @@ public class RegisterUserCommand : IRegisterUserCommand
             var sentWelcomeEmail = false;
             if (!string.IsNullOrEmpty(user.ReferenceData))
             {
-                var referenceData = JsonConvert.DeserializeObject<Dictionary<string, object>>(user.ReferenceData);
+                var referenceData = JsonConvert.DeserializeObject<Dictionary<string, object>>(user.ReferenceData) ?? [];
                 if (referenceData.TryGetValue("initiationPath", out var value))
                 {
-                    var initiationPath = value.ToString();
+                    var initiationPath = value.ToString() ?? string.Empty;
                     await SendAppropriateWelcomeEmailAsync(user, initiationPath);
                     sentWelcomeEmail = true;
                     if (!string.IsNullOrEmpty(initiationPath))
@@ -115,6 +113,7 @@ public class RegisterUserCommand : IRegisterUserCommand
                 }
             }
 
+            // TODO: Organization Invite
             if (!sentWelcomeEmail)
             {
                 await _mailService.SendWelcomeEmailAsync(user);
@@ -226,6 +225,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         }
         else
         {
+            // TODO is this still correct?
             await _mailService.SendWelcomeEmailAsync(user);
         }
     }
@@ -245,6 +245,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         var result = await _userService.CreateUserAsync(user, masterPasswordHash);
         if (result == IdentityResult.Success)
         {
+            // TODO: email verification token? what flow is this?
             await _mailService.SendWelcomeEmailAsync(user);
         }
 
@@ -263,6 +264,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         var result = await _userService.CreateUserAsync(user, masterPasswordHash);
         if (result == IdentityResult.Success)
         {
+            // TODO Is this just Welcome Family?
             await _mailService.SendWelcomeEmailAsync(user);
         }
 
@@ -283,6 +285,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         var result = await _userService.CreateUserAsync(user, masterPasswordHash);
         if (result == IdentityResult.Success)
         {
+            // TODO: accepting emergency access seems like a normal user thing so standard welcome email should be fine.
             await _mailService.SendWelcomeEmailAsync(user);
         }
 
@@ -301,6 +304,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         var result = await _userService.CreateUserAsync(user, masterPasswordHash);
         if (result == IdentityResult.Success)
         {
+            // todo: provider invite token
             await _mailService.SendWelcomeEmailAsync(user);
         }
 
