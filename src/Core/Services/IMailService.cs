@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations;
@@ -29,6 +30,16 @@ public interface IMailService
     Task SendChangeEmailEmailAsync(string newEmailAddress, string token);
     Task SendTwoFactorEmailAsync(string email, string accountEmail, string token, string deviceIp, string deviceType, TwoFactorEmailPurpose purpose);
     Task SendSendEmailOtpEmailAsync(string email, string token, string subject);
+    /// <summary>
+    /// <see cref="DefaultOtpTokenProviderOptions"/> has a default expiry of 5 minutes so we set the expiry to that value int he view model.
+    /// Sends OTP code token to the specified email address.
+    /// will replace <see cref="SendSendEmailOtpEmailAsync"/> when MJML templates are fully accepted.
+    /// </summary>
+    /// <param name="email">Email address to send the OTP to</param>
+    /// <param name="token">Otp code token</param>
+    /// <param name="subject">subject line of the email</param>
+    /// <returns>Task</returns>
+    Task SendSendEmailOtpEmailv2Async(string email, string token, string subject);
     Task SendFailedTwoFactorAttemptEmailAsync(string email, TwoFactorProviderType type, DateTime utcNow, string ip);
     Task SendNoMasterPasswordHintEmailAsync(string email);
     Task SendMasterPasswordHintEmailAsync(string email, string hint);

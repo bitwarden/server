@@ -7,6 +7,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
@@ -17,7 +18,7 @@ using Bit.Core.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 
-public class SingleOrgPolicyValidator : IPolicyValidator
+public class SingleOrgPolicyValidator : IPolicyValidator, IPolicyValidationEvent, IOnPolicyPreUpdateEvent
 {
     public PolicyType Type => PolicyType.SingleOrg;
     private const string OrganizationNotFoundErrorMessage = "Organization not found.";
@@ -56,6 +57,16 @@ public class SingleOrgPolicyValidator : IPolicyValidator
     }
 
     public IEnumerable<PolicyType> RequiredPolicies => [];
+
+    public async Task<string> ValidateAsync(SavePolicyModel policyRequest, Policy? currentPolicy)
+    {
+        return await ValidateAsync(policyRequest.PolicyUpdate, currentPolicy);
+    }
+
+    public async Task ExecutePreUpsertSideEffectAsync(SavePolicyModel policyRequest, Policy? currentPolicy)
+    {
+        await OnSaveSideEffectsAsync(policyRequest.PolicyUpdate, currentPolicy);
+    }
 
     public async Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
     {

@@ -57,6 +57,7 @@ public class EventIntegrationHandler<T>(
                 {
                     IntegrationType = integrationType,
                     MessageId = messageId.ToString(),
+                    OrganizationId = organizationId.ToString(),
                     Configuration = config,
                     RenderedTemplate = renderedTemplate,
                     RetryCount = 0,
