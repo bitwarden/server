@@ -102,7 +102,11 @@ public class PricingClient(
     {
         var premiumPlans = await ListPremiumPlans();
 
-        var availablePlan = premiumPlans.FirstOrDefault(premiumPlan => premiumPlan.Available);
+        var milestone2Feature = featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2);
+
+        var availablePlan = milestone2Feature ?
+            premiumPlans.FirstOrDefault(premiumPlan => premiumPlan.Available) :
+            premiumPlans.FirstOrDefault(premiumPlan => !premiumPlan.Available);
 
         return availablePlan ?? throw new NotFoundException("Could not find available premium plan");
     }
@@ -165,7 +169,7 @@ public class PricingClient(
     private static PremiumPlan CurrentPremiumPlan => new()
     {
         Name = "Premium",
-        Available = true,
+        Available = false,
         LegacyYear = null,
         Seat = new Purchasable { Price = 10M, StripePriceId = StripeConstants.Prices.PremiumAnnually },
         Storage = new Purchasable { Price = 4M, StripePriceId = StripeConstants.Prices.StoragePlanPersonal }
