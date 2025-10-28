@@ -420,8 +420,13 @@ public class AccountController : Controller
     /// </summary>
     private async Task<(User? user, string provider, string providerUserId, List<Claim> claims, SsoConfigurationData ssoConfigData)> FindUserFromExternalProviderAsync(AuthenticateResult result)
     {
-        var provider = result.Properties!.Items["scheme"];
-        var orgId = new Guid(provider ?? throw new Exception(_i18nService.T("NoProviderOnAuthenticateResult")));
+        if (result.Properties?.Items == null ||
+            !result.Properties.Items.TryGetValue("scheme", out var provider) ||
+            string.IsNullOrWhiteSpace(provider))
+        {
+            throw new Exception(_i18nService.T("NoProviderOnAuthenticateResult"));
+        }
+        var orgId = new Guid(provider);
         var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(orgId);
         if (ssoConfig == null || !ssoConfig.Enabled)
         {
@@ -589,6 +594,7 @@ public class AccountController : Controller
 
         // If the email domain is verified, we can mark the email as verified
         var emailVerified = false;
+        // We cannot reach this code with email currently being null so there is no way to provoke this exception.
         var emailDomain = CoreHelpers.GetEmailDomain(email ?? throw new Exception(_i18nService.T("NoEmailFoundWhenMarkingDomainAsVerified")));
         if (!string.IsNullOrWhiteSpace(emailDomain))
         {

@@ -36,6 +36,116 @@ public class AccountControllerTest
         _output = output;
     }
 
+    [Theory, BitAutoData]
+    public async Task LoginAsync_WhenAuthorizationContextIsNull_ThrowsAuthorizationContextMissing(
+        SutProvider<AccountController> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<II18nService>()
+            .T(Arg.Any<string>(), Arg.Any<object?[]>())
+            .Returns(ci => (string)ci[0]!);
+
+        sutProvider.GetDependency<IIdentityServerInteractionService>()
+            .GetAuthorizationContextAsync(Arg.Any<string>())
+            .Returns((AuthorizationRequest?)null);
+
+        // Act + Assert
+        var ex = await Assert.ThrowsAsync<Exception>(() => sutProvider.Sut.LoginAsync("~/"));
+        Assert.Equal("AuthorizationContextMissing", ex.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task LoginAsync_WhenDomainHintMissingOrNull_ThrowsNoDomainHintProvided(
+        SutProvider<AccountController> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<II18nService>()
+            .T(Arg.Any<string>(), Arg.Any<object?[]>())
+            .Returns(ci => (string)ci[0]!);
+
+        var ctx = (AuthorizationRequest)Activator.CreateInstance(typeof(AuthorizationRequest), nonPublic: true)!;
+        // Ensure parameters start empty
+        ctx.Parameters.Clear();
+        // domain_hint missing entirely triggers NoDomainHintProvided
+        sutProvider.GetDependency<IIdentityServerInteractionService>()
+            .GetAuthorizationContextAsync(Arg.Any<string>())
+            .Returns(ctx);
+
+        // Act + Assert
+        var ex1 = await Assert.ThrowsAsync<Exception>(() => sutProvider.Sut.LoginAsync("~/"));
+        Assert.Equal("NoDomainHintProvided", ex1.Message);
+
+        // Now add the key but null value to also trigger NoDomainHintProvided
+        ctx.Parameters.Add("domain_hint", null);
+        var ex2 = await Assert.ThrowsAsync<Exception>(() => sutProvider.Sut.LoginAsync("~/"));
+        Assert.Equal("NoDomainHintProvided", ex2.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ExternalCallback_WhenSchemePropertyMissing_ThrowsNoProviderOnAuthenticateResult(
+        SutProvider<AccountController> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<II18nService>()
+            .T(Arg.Any<string>(), Arg.Any<object?[]>())
+            .Returns(ci => (string)ci[0]!);
+
+        // Build auth result without the required "scheme" property
+        var claims = new[]
+        {
+            new Claim(JwtClaimTypes.Subject, "provider-user"),
+            new Claim(JwtClaimTypes.Email, "user@example.com")
+        };
+        var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, "External"));
+        var properties = new AuthenticationProperties
+        {
+            Items =
+            {
+                ["return_url"] = "~/",
+                ["state"] = "state"
+            }
+        };
+        var ticket = new AuthenticationTicket(principal, properties, AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
+        var authResult = AuthenticateResult.Success(ticket);
+        SetupHttpContextWithAuth(sutProvider, authResult);
+
+        // Feature flag on/off does not matter; it fails before org lookup
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(true);
+
+        // Act + Assert
+        var ex = await Assert.ThrowsAsync<Exception>(() => sutProvider.Sut.ExternalCallback());
+        Assert.Equal("NoProviderOnAuthenticateResult", ex.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task TryGetOrganizationUserByUserAndOrgOrEmail_EmailNull_Throws(
+        SutProvider<AccountController> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<II18nService>()
+            .T(Arg.Any<string>(), Arg.Any<object?[]>())
+            .Returns(ci => (string)ci[0]!);
+
+        var orgId = Guid.NewGuid();
+        var existingUser = new User { Id = Guid.NewGuid(), Email = "ignored@example.com" };
+
+        var method = typeof(AccountController).GetMethod(
+            "TryGetOrganizationUserByUserAndOrgOrEmail",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(method);
+
+        // Act
+        var task = (Task<OrganizationUser?>)method.Invoke(sutProvider.Sut, [
+            existingUser,
+            orgId,
+            null
+        ])!;
+
+        // Assert
+        var ex = await Assert.ThrowsAsync<Exception>(async () => await task);
+        Assert.Equal("NoEmailFoundWhenFallingBackToEmailForOrgUserLookup", ex.Message);
+    }
+
     private static IAuthenticationService SetupHttpContextWithAuth(
         SutProvider<AccountController> sutProvider,
         AuthenticateResult authResult,
