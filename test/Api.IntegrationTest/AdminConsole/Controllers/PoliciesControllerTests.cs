@@ -363,4 +363,48 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
+
+    [Fact]
+    public async Task Put_PolicyWithNullData_Success()
+    {
+        // Arrange
+        var policyType = PolicyType.SingleOrg;
+        var request = new PolicyRequestModel
+        {
+            Type = policyType,
+            Enabled = true,
+            Data = null
+        };
+
+        // Act
+        var response = await _client.PutAsync($"/organizations/{_organization.Id}/policies/{policyType}",
+            JsonContent.Create(request));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PutVNext_PolicyWithNullData_Success()
+    {
+        // Arrange
+        var policyType = PolicyType.TwoFactorAuthentication;
+        var request = new SavePolicyRequest
+        {
+            Policy = new PolicyRequestModel
+            {
+                Type = policyType,
+                Enabled = true,
+                Data = null
+            },
+            Metadata = null
+        };
+
+        // Act
+        var response = await _client.PutAsync($"/organizations/{_organization.Id}/policies/{policyType}/vnext",
+            JsonContent.Create(request));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
 }

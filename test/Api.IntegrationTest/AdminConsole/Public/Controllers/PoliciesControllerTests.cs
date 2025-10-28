@@ -224,4 +224,22 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
+
+    [Fact]
+    public async Task Put_PolicyWithNullData_Success()
+    {
+        // Arrange
+        var policyType = PolicyType.DisableSend;
+        var request = new PolicyUpdateRequestModel
+        {
+            Enabled = true,
+            Data = null
+        };
+
+        // Act
+        var response = await _client.PutAsync($"/public/policies/{policyType}", JsonContent.Create(request));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
 }
