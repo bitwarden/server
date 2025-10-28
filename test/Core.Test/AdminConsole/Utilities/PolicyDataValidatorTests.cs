@@ -50,9 +50,9 @@ public class PolicyDataValidatorTests
     [Fact]
     public void ValidateAndDeserializeMetadata_ValidMetadata_ReturnsModel()
     {
-        var metadata = new Dictionary<string, object> { { "minLength", 2 } };
+        var metadata = new Dictionary<string, object> { { "defaultUserCollectionName", "collection name" } };
 
-        var result = PolicyDataValidator.ValidateAndDeserializeMetadata(metadata, PolicyType.MasterPassword);
+        var result = PolicyDataValidator.ValidateAndDeserializeMetadata(metadata, PolicyType.OrganizationDataOwnership);
 
         Assert.IsType<OrganizationModelOwnershipPolicyModel>(result);
     }
