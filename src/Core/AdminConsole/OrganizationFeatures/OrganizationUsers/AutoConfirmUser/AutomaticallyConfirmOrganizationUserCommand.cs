@@ -168,7 +168,6 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
         var organizationUser = await GetOrganizationUserAsync(request.OrganizationUserId);
 
         if (organizationUser.IsError) return organizationUser.AsError;
-        if (organizationUser.AsSuccess.UserId is null) return new UserNotFoundError();
 
         var organization = await GetOrganizationAsync(request.OrganizationId);
 
@@ -189,7 +188,7 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
     {
         var organizationUser = await organizationUserRepository.GetByIdAsync(organizationUserId);
 
-        return organizationUser is not null ? organizationUser : new UserNotFoundError();
+        return organizationUser is { UserId: not null } ? organizationUser : new UserNotFoundError();
     }
 
     private async Task<CommandResult<Organization>> GetOrganizationAsync(Guid organizationId)

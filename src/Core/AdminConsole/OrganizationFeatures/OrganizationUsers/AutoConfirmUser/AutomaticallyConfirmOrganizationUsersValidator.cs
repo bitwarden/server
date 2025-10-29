@@ -46,8 +46,8 @@ public class AutomaticallyConfirmOrganizationUsersValidator(
             ? Valid(request)
             : Invalid(request, new UserToConfirmIsAnAdminOrOwnerOfAnotherFreeOrganization());
 
-    private async Task<ValidationResult<AutomaticallyConfirmOrganizationUserRequestData>> OrganizationUserConformsToOrganizationPoliciesAsync(
-            AutomaticallyConfirmOrganizationUserRequestData request)
+    private async Task<ValidationResult<AutomaticallyConfirmOrganizationUserRequestData>>
+        OrganizationUserConformsToOrganizationPoliciesAsync(AutomaticallyConfirmOrganizationUserRequestData request)
     {
         return await OrganizationUserConformsToTwoFactorRequiredPolicyAsync(request)
             .ThenAsync(OrganizationUserConformsToSingleOrgPolicyAsync);

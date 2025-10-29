@@ -702,18 +702,20 @@ public class OrganizationUsersController : Controller
 
     [Authorize<ManageUsersRequirement>]
     [HttpPost("{id}/auto-confirm")]
-    public async Task AutomaticallyConfirmOrganizationUserAsync(Guid orgId, Guid id, [FromBody] OrganizationUserConfirmRequestModel model)
+    public async Task<IActionResult> AutomaticallyConfirmOrganizationUserAsync([FromRoute] Guid orgId,
+        [FromRoute] Guid id,
+        [FromBody] OrganizationUserConfirmRequestModel model)
     {
         if (!_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
         {
-            throw new NotFoundException();
+            return NotFound();
         }
 
         var userId = _userService.GetProperUserId(User);
 
         if (userId is null || userId.Value == Guid.Empty)
         {
-            throw new UnauthorizedAccessException();
+            return Unauthorized();
         }
 
         var result = await _automaticallyConfirmOrganizationUserCommand.AutomaticallyConfirmOrganizationUserAsync(
@@ -729,14 +731,22 @@ public class OrganizationUsersController : Controller
 
         if (result is { IsError: true })
         {
-            switch (result.AsError)
+            return result.AsError switch
             {
-                case OrganizationNotFound organizationNotFound:
-                    throw new NotFoundException(organizationNotFound.Message);
-                case UserNotFoundError userNotFoundError:
-                    throw new NotFoundException(userNotFoundError.Message);
-            }
+                NotFoundError notFound => NotFound(notFound.Message),
+                BadRequestError badRequest => BadRequest(badRequest.Message),
+                InternalError internalError => Problem(
+                    detail: internalError.Message,
+                    statusCode: StatusCodes.Status500InternalServerError,
+                    title: "An unexpected error occurred. Please try again or contact support."),
+                _ => Problem(
+                    detail: result.AsError.Message,
+                    statusCode: StatusCodes.Status500InternalServerError,
+                    title: "An unexpected error occurred")
+            };
         }
+
+        return Ok();
     }
 
     private async Task RestoreOrRevokeUserAsync(
