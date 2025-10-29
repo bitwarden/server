@@ -1,5 +1,5 @@
 ﻿using Bit.Core.Models.Mail;
-using Bit.Core.Services;
+using Bit.Core.Services.Mail.Delivery;
 
 namespace Bit.Core.Platform.Mailer;
 

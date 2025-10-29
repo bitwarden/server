@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Models.Mail;
 using Bit.Core.Platform.Mailer;
-using Bit.Core.Services;
+using Bit.Core.Services.Mail.Delivery;
 using Bit.Core.Test.Platform.Mailer.TestMail;
 using NSubstitute;
 using Xunit;
