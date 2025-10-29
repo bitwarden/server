@@ -23,8 +23,8 @@ using Subscription = Stripe.Subscription;
 
 namespace Bit.Core.Billing.Premium.Commands;
 
-using static Utilities;
 using static StripeConstants;
+using static Utilities;
 
 /// <summary>
 /// Creates a premium subscription for a cloud-hosted user with Stripe payment processing.
@@ -82,18 +82,24 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
 
         Customer? customer;
 
-        // New subscription for a new customer
+        /*
+         * For a new customer purchasing a new subscription, we attach the payment method while creating the customer.
+         */
         if (string.IsNullOrEmpty(user.GatewayCustomerId))
         {
             customer = await CreateCustomerAsync(user, paymentMethod, billingAddress);
         }
-        // New subscription for customer who previously purchased account credit
+        /*
+         * An existing customer without a payment method starting a new subscription indicates a user who previously
+         * purchased account credit but chose to use a tokenizable payment method to pay for the subscription. In this case,
+         * we need to add the payment method to their customer first. If the incoming payment method is account credit,
+         * we can just go straight to fetching the customer since there's no payment method to apply.
+         */
         else if (paymentMethod.IsTokenized && !await hasPaymentMethodQuery.Run(user))
         {
             await updatePaymentMethodCommand.Run(user, paymentMethod.AsTokenized, billingAddress);
-            customer = await subscriberService.GetCustomer(user, new CustomerGetOptions { Expand = _expand });
+            customer = await subscriberService.GetCustomerOrThrow(user, new CustomerGetOptions { Expand = _expand });
         }
-        // New subscription for customer who previously purchased premium
         else
         {
             customer = await subscriberService.GetCustomerOrThrow(user, new CustomerGetOptions { Expand = _expand });
@@ -249,15 +255,15 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
             switch (tokenizedPaymentMethod.Type)
             {
                 case TokenizablePaymentMethodType.BankAccount:
-                {
-                    await setupIntentCache.RemoveSetupIntentForSubscriber(user.Id);
-                    break;
-                }
+                    {
+                        await setupIntentCache.RemoveSetupIntentForSubscriber(user.Id);
+                        break;
+                    }
                 case TokenizablePaymentMethodType.PayPal when !string.IsNullOrEmpty(braintreeCustomerId):
-                {
-                    await braintreeGateway.Customer.DeleteAsync(braintreeCustomerId);
-                    break;
-                }
+                    {
+                        await braintreeGateway.Customer.DeleteAsync(braintreeCustomerId);
+                        break;
+                    }
             }
         }
     }

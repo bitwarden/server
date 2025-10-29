@@ -1,6 +1,5 @@
 ﻿using Bit.Core.Billing;
 using Bit.Core.Billing.Caches;
-using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Payment.Commands;
@@ -17,7 +16,6 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Braintree;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
-using OneOf.Types;
 using Stripe;
 using Xunit;
 using Address = Stripe.Address;
@@ -416,7 +414,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         _hasPaymentMethodQuery.Run(Arg.Any<User>()).Returns(false);
         _updatePaymentMethodCommand.Run(Arg.Any<User>(), Arg.Any<TokenizedPaymentMethod>(), Arg.Any<BillingAddress>())
             .Returns(mockMaskedPaymentMethod);
-        _subscriberService.GetCustomer(Arg.Any<User>(), Arg.Any<CustomerGetOptions>()).Returns(mockCustomer);
+        _subscriberService.GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>()).Returns(mockCustomer);
         _stripeAdapter.SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(mockSubscription);
         _stripeAdapter.InvoiceUpdateAsync(Arg.Any<string>(), Arg.Any<InvoiceUpdateOptions>()).Returns(mockInvoice);
 
@@ -427,9 +425,8 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         Assert.True(result.IsT0);
         // Verify that update payment method was called (new behavior for credit purchase case)
         await _updatePaymentMethodCommand.Received(1).Run(user, paymentMethod, billingAddress);
-        // Verify GetCustomer was called (not GetCustomerOrThrow)
-        await _subscriberService.Received(1).GetCustomer(user, Arg.Any<CustomerGetOptions>());
-        await _subscriberService.DidNotReceive().GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>());
+        // Verify GetCustomerOrThrow was called after updating payment method
+        await _subscriberService.Received(1).GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>());
         // Verify no new customer was created
         await _stripeAdapter.DidNotReceive().CustomerCreateAsync(Arg.Any<CustomerCreateOptions>());
         // Verify subscription was created
