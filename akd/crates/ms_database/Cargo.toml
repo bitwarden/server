@@ -21,6 +21,5 @@ tiberius = { version = "0.12.3", default-features = false, features = ["chrono",
 [target.'cfg(not(target_os = "macos"))'.workspace.dependencies]
 tiberius = { version = "0.12.3", features = ["chrono", "tokio"] }
 
-
 [lints]
 workspace = true

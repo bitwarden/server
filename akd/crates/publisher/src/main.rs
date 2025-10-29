@@ -1,5 +1,3 @@
-use tracing::{info, trace};
-
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt()

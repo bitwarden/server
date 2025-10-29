@@ -71,14 +71,6 @@ impl SqlParams {
             .collect()
     }
 
-    pub fn keys_except_columns(&self, excludes: Vec<&str>) -> Vec<String> {
-        self.params
-            .iter()
-            .filter(|p| !excludes.contains(&p.column.as_str()))
-            .map(|p| p.key.clone())
-            .collect()
-    }
-
     pub fn key_for(&self, column: &str) -> Option<String> {
         self.params
             .iter()
@@ -90,28 +82,6 @@ impl SqlParams {
         self.params
             .iter()
             .map(|p| p.column())
-            .collect()
-    }
-
-    pub fn columns_except(&self, excludes: Vec<&str>) -> Vec<String> {
-        self.params
-            .iter()
-            .filter(|p| !excludes.contains(&p.column.as_str()))
-            .map(|p| p.column())
-            .collect()
-    }
-
-    pub fn columns_prefix_with(&self, prefix: &str) -> Vec<String> {
-        self.params
-            .iter()
-            .map(|p| format!("{}{}", prefix, p.column()))
-            .collect()
-    }
-
-    pub fn set_columns_equal(&self, assign_prefix: &str, source_prefix: &str) -> Vec<String> {
-        self.params
-            .iter()
-            .map(|p| format!("{}{} = {}{}", assign_prefix, p.column(), source_prefix, p.column()))
             .collect()
     }
 
@@ -133,60 +103,5 @@ impl SqlParams {
             .iter()
             .map(|b| b.data.as_ref() as &(dyn ToSql))
             .collect()
-    }
-}
-
-pub struct VecStringBuilder<'a> {
-    strings: Vec<String>,
-    ops: Vec<StringBuilderOperation<'a>>,
-}
-
-enum StringBuilderOperation<'a> {
-    StringOperation(Box<dyn Fn(String) -> String + 'a>),
-    VectorOperation(Box<dyn Fn(Vec<String>) -> Vec<String> + 'a>),
-}
-
-impl<'a> VecStringBuilder<'a> {
-    pub fn new(strings: Vec<String>) -> Self {
-        Self {
-            strings,
-            ops: Vec::new(),
-        }
-    }
-
-    pub fn map<F>(&mut self, op: F)
-    where
-        F: Fn(String) -> String + 'static,
-    {
-        self.ops.push(StringBuilderOperation::StringOperation(Box::new(op)));
-    }
-
-    pub fn build(self) -> Vec<String> {
-        let mut result = self.strings;
-        for op in self.ops {
-            match op {
-                StringBuilderOperation::StringOperation(f) => {
-                    result = result.into_iter().map(f.as_ref()).collect();
-                }
-                StringBuilderOperation::VectorOperation(f) => {
-                    result = f(result);
-                }
-            }
-        }
-        result
-    }
-
-    pub fn join(self, sep: &str) -> String {
-        self.build().join(sep)
-    }
-
-    pub fn except(&mut self, excludes: Vec<&'a str>) {
-        self.ops.push(StringBuilderOperation::VectorOperation(Box::new(
-            move |vec: Vec<String>| {
-                vec.into_iter()
-                    .filter(|s| !excludes.contains(&s.as_str()))
-                    .collect()
-            },
-        )));
     }
 }
