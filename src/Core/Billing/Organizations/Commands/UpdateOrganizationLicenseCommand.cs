@@ -1,5 +1,7 @@
 ﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Licenses;
+using Bit.Core.Billing.Licenses.Extensions;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Exceptions;
@@ -50,6 +52,14 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
         if (!canUse)
         {
             throw new BadRequestException(exception);
+        }
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
+        {
+            var useAutomaticUserConfirmation = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UseAutomaticUserConfirmation);
+
+            selfHostedOrganization.UseAutomaticUserConfirmation = useAutomaticUserConfirmation;
+            license.UseAutomaticUserConfirmation = useAutomaticUserConfirmation;
         }
 
         await WriteLicenseFileAsync(selfHostedOrganization, license);
