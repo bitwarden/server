@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using Bit.SeederApi.Models.Requests;
 using Bit.SeederApi.Models.Response;
 using Xunit;
@@ -40,11 +40,12 @@ public class SeedControllerTests : IClassFixture<SeederApiApplicationFactory>, I
         });
 
         response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<SeedResponseModel>();
+        var result = await response.Content.ReadFromJsonAsync<SceneResponseModel>();
 
         Assert.NotNull(result);
         Assert.NotEqual(Guid.Empty, result.SeedId);
-        Assert.NotNull(result.Result);
+        Assert.NotNull(result.MangleMap);
+        Assert.Null(result.Result);
     }
 
     [Fact]
@@ -83,7 +84,7 @@ public class SeedControllerTests : IClassFixture<SeederApiApplicationFactory>, I
         });
 
         seedResponse.EnsureSuccessStatusCode();
-        var seedResult = await seedResponse.Content.ReadFromJsonAsync<SeedResponseModel>();
+        var seedResult = await seedResponse.Content.ReadFromJsonAsync<SceneResponseModel>();
         Assert.NotNull(seedResult);
 
         var deleteResponse = await _client.DeleteAsync($"/seed/{seedResult.SeedId}");
@@ -117,7 +118,7 @@ public class SeedControllerTests : IClassFixture<SeederApiApplicationFactory>, I
             });
 
             seedResponse.EnsureSuccessStatusCode();
-            var seedResult = await seedResponse.Content.ReadFromJsonAsync<SeedResponseModel>();
+            var seedResult = await seedResponse.Content.ReadFromJsonAsync<SceneResponseModel>();
             Assert.NotNull(seedResult);
             Assert.NotNull(seedResult.SeedId);
             seedIds.Add(seedResult.SeedId.Value);
@@ -149,7 +150,7 @@ public class SeedControllerTests : IClassFixture<SeederApiApplicationFactory>, I
         });
 
         seedResponse.EnsureSuccessStatusCode();
-        var seedResult = await seedResponse.Content.ReadFromJsonAsync<SeedResponseModel>();
+        var seedResult = await seedResponse.Content.ReadFromJsonAsync<SceneResponseModel>();
         Assert.NotNull(seedResult);
 
         // Try to delete with mix of valid and invalid IDs

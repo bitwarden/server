@@ -1,5 +1,4 @@
-using System.ComponentModel.DataAnnotations;
-using Bit.Core.Enums;
+﻿using System.ComponentModel.DataAnnotations;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Seeder.Factories;
 
@@ -22,23 +21,19 @@ public class SingleUserScene(DatabaseContext db, UserSeeder userSeeder) : IScene
         db.Add(user);
         db.SaveChanges();
 
-        return new SceneResult
+        return new SceneResult(mangleMap: userSeeder.GetMangleMap(user, new UserData
         {
-            Result = userSeeder.GetMangleMap(user, new UserData
-            {
-                Email = request.Email,
-                Id = Guid.Parse("00000000-0000-0000-0000-000000000001"),
-                Key = "seeded_key",
-                PublicKey = "seeded_public_key",
-                PrivateKey = "seeded_private_key",
-                ApiKey = "seeded_api_key",
-                Kdf = KdfType.PBKDF2_SHA256,
-                KdfIterations = 600_000,
-            }),
-            TrackedEntities = new Dictionary<string, List<Guid>>
-            {
-                ["User"] = [user.Id]
-            }
-        };
+            Email = request.Email,
+            Id = user.Id,
+            Key = user.Key,
+            PublicKey = user.PublicKey,
+            PrivateKey = user.PrivateKey,
+            ApiKey = user.ApiKey,
+            Kdf = user.Kdf,
+            KdfIterations = user.KdfIterations,
+        }), trackedEntities: new Dictionary<string, List<Guid>>
+        {
+            ["User"] = [user.Id]
+        });
     }
 }

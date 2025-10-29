@@ -1,9 +1,10 @@
 ﻿using System.Text.Json;
 using Bit.Infrastructure.EntityFramework.Models;
+using Bit.SeederApi.Models.Response;
 
 namespace Bit.SeederApi.Services;
 
-public interface IRecipeService
+public interface ISeedService
 {
     /// <summary>
     /// Executes a scene with the given template name and arguments.
@@ -13,7 +14,7 @@ public interface IRecipeService
     /// <returns>A tuple containing the result and optional seed ID for tracked entities</returns>
     /// <exception cref="RecipeNotFoundException">Thrown when the scene template is not found</exception>
     /// <exception cref="RecipeExecutionException">Thrown when there's an error executing the scene</exception>
-    (object? Result, Guid? SeedId) ExecuteRecipe(string templateName, JsonElement? arguments);
+    SceneResponseModel ExecuteScene(string templateName, JsonElement? arguments);
 
     /// <summary>
     /// Destroys data created by a scene using the seeded data ID.

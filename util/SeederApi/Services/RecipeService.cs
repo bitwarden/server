@@ -3,16 +3,17 @@ using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Seeder;
+using Bit.SeederApi.Models.Response;
 
 namespace Bit.SeederApi.Services;
 
-public class RecipeService(
+public class SeedService(
     DatabaseContext databaseContext,
-    ILogger<RecipeService> logger,
+    ILogger<SeedService> logger,
     IServiceProvider serviceProvider,
     IUserRepository userRepository,
     IOrganizationRepository organizationRepository)
-    : IRecipeService
+    : ISeedService
 {
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
@@ -25,13 +26,13 @@ public class RecipeService(
         return databaseContext.SeededData.ToList();
     }
 
-    public (object? Result, Guid? SeedId) ExecuteRecipe(string templateName, JsonElement? arguments)
+    public SceneResponseModel ExecuteScene(string templateName, JsonElement? arguments)
     {
-        var result = ExecuteRecipeMethod(templateName, arguments, "Seed");
+        var result = ExecuteSceneMethod(templateName, arguments, "Seed");
 
         if (result.TrackedEntities.Count == 0)
         {
-            return (Result: result.Result, SeedId: null);
+            return SceneResponseModel.FromSceneResult(result, seedId: null);
         }
 
         var seededData = new SeededData
@@ -48,7 +49,7 @@ public class RecipeService(
         logger.LogInformation("Saved seeded data with ID {SeedId} for scene {RecipeName}",
             seededData.Id, templateName);
 
-        return (Result: result.Result, SeedId: seededData.Id);
+        return SceneResponseModel.FromSceneResult(result, seededData.Id);
     }
 
     public object ExecuteQuery(string queryName, JsonElement? arguments)
@@ -166,7 +167,7 @@ public class RecipeService(
         return new { SeedId = seedId, RecipeName = seededData.RecipeName };
     }
 
-    private SceneResult ExecuteRecipeMethod(string templateName, JsonElement? arguments, string methodName)
+    private SceneResult<object?> ExecuteSceneMethod(string templateName, JsonElement? arguments, string methodName)
     {
         try
         {

@@ -1,5 +1,4 @@
-using System.ComponentModel.DataAnnotations;
-using Bit.Core.Auth.Enums;
+﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Tokens;
 using Bit.Infrastructure.EntityFramework.Repositories;
@@ -9,7 +8,7 @@ namespace Bit.Seeder.Queries;
 public class EmergencyAccessInviteQuery(
     DatabaseContext db,
     IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> dataProtectorTokenizer)
-    : IQuery<EmergencyAccessInviteQuery.Request>
+    : IQuery<EmergencyAccessInviteQuery.Request, IEnumerable<string>>
 {
     public class Request
     {
@@ -17,7 +16,7 @@ public class EmergencyAccessInviteQuery(
         public required string Email { get; set; }
     }
 
-    public object Execute(Request request)
+    public IEnumerable<string> Execute(Request request)
     {
         var invites = db.EmergencyAccesses
             .Where(ea => ea.Email == request.Email).ToList().Select(ea =>

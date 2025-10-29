@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using Bit.Seeder;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -12,11 +12,15 @@ public static class ServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddScenes(this IServiceCollection services)
     {
+        var iSceneType1 = typeof(IScene<>);
+        var iSceneType2 = typeof(IScene<,>);
+        var isIScene = (Type t) => t == iSceneType1 || t == iSceneType2;
+
         var seederAssembly = Assembly.Load("Seeder");
         var sceneTypes = seederAssembly.GetTypes()
             .Where(t => t is { IsClass: true, IsAbstract: false } &&
                         t.GetInterfaces().Any(i => i.IsGenericType &&
-                                                   i.GetGenericTypeDefinition().Name == "IScene`1"));
+                                                   isIScene(i.GetGenericTypeDefinition())));
 
         foreach (var sceneType in sceneTypes)
         {
@@ -33,11 +37,12 @@ public static class ServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddQueries(this IServiceCollection services)
     {
+        var iQueryType = typeof(IQuery<,>);
         var seederAssembly = Assembly.Load("Seeder");
         var queryTypes = seederAssembly.GetTypes()
             .Where(t => t is { IsClass: true, IsAbstract: false } &&
                         t.GetInterfaces().Any(i => i.IsGenericType &&
-                                                   i.GetGenericTypeDefinition().Name == "IQuery`1"));
+                                                   i.GetGenericTypeDefinition() == iQueryType));
 
         foreach (var queryType in queryTypes)
         {

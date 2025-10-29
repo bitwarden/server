@@ -1,7 +1,20 @@
-﻿namespace Bit.SeederApi.Models.Response;
+﻿using Bit.Seeder;
 
-public class SeedResponseModel
+namespace Bit.SeederApi.Models.Response;
+
+public class SceneResponseModel
 {
-    public Guid? SeedId { get; set; }
-    public object? Result { get; set; }
+    public required Guid? SeedId { get; init; }
+    public required Dictionary<string, string?>? MangleMap { get; init; }
+    public required object? Result { get; init; }
+
+    public static SceneResponseModel FromSceneResult<T>(SceneResult<T> sceneResult, Guid? seedId)
+    {
+        return new SceneResponseModel
+        {
+            Result = sceneResult.Result,
+            MangleMap = sceneResult.MangleMap,
+            SeedId = seedId
+        };
+    }
 }
