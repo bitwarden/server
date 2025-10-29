@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Dirt.Entities;
+using Bit.Core.Dirt.Reports.Models.Data;
 using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
 using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 using Bit.Core.Dirt.Repositories;
@@ -54,6 +55,9 @@ public class UpdateOrganizationReportApplicationDataCommand : IUpdateOrganizatio
             }
 
             var updatedReport = await _organizationReportRepo.UpdateApplicationDataAsync(request.OrganizationId, request.Id, request.ApplicationData);
+
+            var metrics = OrganizationReportMetricsData.from(request.OrganizationId, request.Metrics);
+            await _organizationReportRepo.UpdateMetricsAsync(request.OrganizationId, request.Id, metrics);
 
             _logger.LogInformation(Constants.BypassFiltersEventId, "Successfully updated organization report application data {reportId} for organization {organizationId}",
                 request.Id, request.OrganizationId);

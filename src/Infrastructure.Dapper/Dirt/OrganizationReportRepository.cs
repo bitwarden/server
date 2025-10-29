@@ -4,6 +4,7 @@
 using System.Data;
 using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Models.Data;
+using Bit.Core.Dirt.Reports.Models.Data;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper.Repositories;
@@ -172,5 +173,33 @@ public class OrganizationReportRepository : Repository<OrganizationReport, Guid>
                 new { Id = reportId },
                 commandType: CommandType.StoredProcedure);
         }
+    }
+
+    public async Task UpdateMetricsAsync(Guid organizationId, Guid reportId, OrganizationReportMetricsData metrics)
+    {
+        using var connection = new SqlConnection(ConnectionString);
+        var parameters = new
+        {
+            OrganizationId = organizationId,
+            Id = reportId,
+            ApplicationCount = metrics.ApplicationCount,
+            ApplicationAtRiskCount = metrics.ApplicationAtRiskCount,
+            CriticalApplicationCount = metrics.CriticalApplicationCount,
+            CriticalApplicationAtRiskCount = metrics.CriticalApplicationAtRiskCount,
+            MemberCount = metrics.MemberCount,
+            MemberAtRiskCount = metrics.MemberAtRiskCount,
+            CriticalMemberCount = metrics.CriticalMemberCount,
+            CriticalMemberAtRiskCount = metrics.CriticalMemberAtRiskCount,
+            PasswordCount = metrics.PasswordCount,
+            PasswordAtRiskCount = metrics.PasswordAtRiskCount,
+            CriticalPasswordCount = metrics.CriticalPasswordCount,
+            CriticalPasswordAtRiskCount = metrics.CriticalPasswordAtRiskCount,
+            RevisionDate = DateTime.UtcNow
+        };
+
+        await connection.ExecuteAsync(
+            $"[{Schema}].[OrganizationReport_UpdateMetrics]",
+            parameters,
+            commandType: CommandType.StoredProcedure);
     }
 }

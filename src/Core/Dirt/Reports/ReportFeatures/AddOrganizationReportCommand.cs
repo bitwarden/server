@@ -43,6 +43,18 @@ public class AddOrganizationReportCommand : IAddOrganizationReportCommand
             ContentEncryptionKey = request.ContentEncryptionKey,
             SummaryData = request.SummaryData,
             ApplicationData = request.ApplicationData,
+            ApplicationCount = request.Metrics.ApplicationCount,
+            ApplicationAtRiskCount = request.Metrics.ApplicationAtRiskCount,
+            CriticalApplicationCount = request.Metrics.CriticalApplicationCount,
+            CriticalApplicationAtRiskCount = request.Metrics.CriticalApplicationAtRiskCount,
+            MemberCount = request.Metrics.MemberCount,
+            MemberAtRiskCount = request.Metrics.MemberAtRiskCount,
+            CriticalMemberCount = request.Metrics.CriticalMemberCount,
+            CriticalMemberAtRiskCount = request.Metrics.CriticalMemberAtRiskCount,
+            PasswordCount = request.Metrics.PasswordCount,
+            PasswordAtRiskCount = request.Metrics.PasswordAtRiskCount,
+            CriticalPasswordCount = request.Metrics.CriticalPasswordCount,
+            CriticalPasswordAtRiskCount = request.Metrics.CriticalPasswordAtRiskCount,
             RevisionDate = DateTime.UtcNow
         };
 
