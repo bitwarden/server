@@ -101,13 +101,7 @@ public class PricingClient(
     public async Task<PremiumPlan> GetAvailablePremiumPlan()
     {
         var premiumPlans = await ListPremiumPlans();
-
-        var milestone2Feature = featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2);
-
-        var availablePlan = milestone2Feature ?
-            premiumPlans.FirstOrDefault(premiumPlan => premiumPlan.Available) :
-            premiumPlans.FirstOrDefault(premiumPlan => !premiumPlan.Available);
-
+        var availablePlan = premiumPlans.FirstOrDefault(premiumPlan => premiumPlan.Available);
         return availablePlan ?? throw new NotFoundException("Could not find available premium plan");
     }
 
@@ -127,7 +121,9 @@ public class PricingClient(
             return [CurrentPremiumPlan];
         }
 
-        var response = await httpClient.GetAsync("plans/premium");
+        var milestone2Feature = featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2);
+
+        var response = await httpClient.GetAsync($"plans/premium?milestone2={milestone2Feature}");
 
         if (response.IsSuccessStatusCode)
         {
@@ -169,7 +165,7 @@ public class PricingClient(
     private static PremiumPlan CurrentPremiumPlan => new()
     {
         Name = "Premium",
-        Available = false,
+        Available = true,
         LegacyYear = null,
         Seat = new Purchasable { Price = 10M, StripePriceId = StripeConstants.Prices.PremiumAnnually },
         Storage = new Purchasable { Price = 4M, StripePriceId = StripeConstants.Prices.StoragePlanPersonal }
