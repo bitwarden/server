@@ -151,6 +151,7 @@ public static class FeatureFlagKeys
     public const string ChangeExistingPasswordRefactor = "pm-16117-change-existing-password-refactor";
     public const string Otp6Digits = "pm-18612-otp-6-digits";
     public const string FailedTwoFactorEmail = "pm-24425-send-2fa-failed-email";
+    public const string PM24579_PreventSsoOnExistingNonCompliantUsers = "pm-24579-prevent-sso-on-existing-non-compliant-users";
     public const string DisableAlternateLoginMethods = "pm-22110-disable-alternate-login-methods";
     public const string PM23174ManageAccountRecoveryPermissionDrivesTheNeedToSetMasterPassword =
         "pm-23174-manage-account-recovery-permission-drives-the-need-to-set-master-password";
@@ -176,7 +177,6 @@ public static class FeatureFlagKeys
 
     /* Billing Team */
     public const string TrialPayment = "PM-8163-trial-payment";
-    public const string PM17772_AdminInitiatedSponsorships = "pm-17772-admin-initiated-sponsorships";
     public const string UsePricingService = "use-pricing-service";
     public const string PM19422_AllowAutomaticTaxUpdates = "pm-19422-allow-automatic-tax-updates";
     public const string PM21821_ProviderPortalTakeover = "pm-21821-provider-portal-takeover";
@@ -187,6 +187,7 @@ public static class FeatureFlagKeys
     public const string PM23713_PremiumBadgeOpensNewPremiumUpgradeDialog = "pm-23713-premium-badge-opens-new-premium-upgrade-dialog";
     public const string PremiumUpgradeNewDesign = "pm-24033-updat-premium-subscription-page";
     public const string PM26793_FetchPremiumPriceFromPricingService = "pm-26793-fetch-premium-price-from-pricing-service";
+    public const string PM23341_Milestone_2 = "pm-23341-milestone-2";
 
     /* Key Management Team */
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
@@ -241,6 +242,8 @@ public static class FeatureFlagKeys
     public const string PM22134SdkCipherListView = "pm-22134-sdk-cipher-list-view";
     public const string PM19315EndUserActivationMvp = "pm-19315-end-user-activation-mvp";
     public const string PM22136_SdkCipherEncryption = "pm-22136-sdk-cipher-encryption";
+    public const string PM23904_RiskInsightsForPremium = "pm-23904-risk-insights-for-premium";
+    public const string PM25083_AutofillConfirmFromSearch = "pm-25083-autofill-confirm-from-search";
 
     /* Innovation Team */
     public const string ArchiveVaultItems = "pm-19148-innovation-archive";
