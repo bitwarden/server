@@ -71,7 +71,7 @@ public class SlackService(
     public async Task<string> GetDmChannelByEmailAsync(string token, string email)
     {
         var userId = await GetUserIdByEmailAsync(token, email);
-        return await OpenDmChannel(token, userId);
+        return await OpenDmChannelAsync(token, userId);
     }
 
     public string GetRedirectUrl(string callbackUrl, string state)
@@ -97,13 +97,12 @@ public class SlackService(
         }
 
         var tokenResponse = await _httpClient.PostAsync($"{_slackApiBaseUrl}/oauth.v2.access",
-            new FormUrlEncodedContent(new[]
-            {
+            new FormUrlEncodedContent([
                 new KeyValuePair<string, string>("client_id", _clientId),
                 new KeyValuePair<string, string>("client_secret", _clientSecret),
                 new KeyValuePair<string, string>("code", code),
                 new KeyValuePair<string, string>("redirect_uri", redirectUrl)
-            }));
+            ]));
 
         SlackOAuthResponse? result;
         try
@@ -144,7 +143,15 @@ public class SlackService(
         var request = new HttpRequestMessage(HttpMethod.Get, $"{_slackApiBaseUrl}/users.lookupByEmail?email={email}");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var response = await _httpClient.SendAsync(request);
-        var result = await response.Content.ReadFromJsonAsync<SlackUserResponse>();
+        SlackUserResponse? result;
+        try
+        {
+            result = await response.Content.ReadFromJsonAsync<SlackUserResponse>();
+        }
+        catch
+        {
+            result = null;
+        }
 
         if (result is null)
         {
@@ -160,7 +167,7 @@ public class SlackService(
         return result.User.Id;
     }
 
-    private async Task<string> OpenDmChannel(string token, string userId)
+    private async Task<string> OpenDmChannelAsync(string token, string userId)
     {
         if (string.IsNullOrEmpty(userId))
             return string.Empty;
@@ -170,7 +177,15 @@ public class SlackService(
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         request.Content = payload;
         var response = await _httpClient.SendAsync(request);
-        var result = await response.Content.ReadFromJsonAsync<SlackDmResponse>();
+        SlackDmResponse? result;
+        try
+        {
+            result = await response.Content.ReadFromJsonAsync<SlackDmResponse>();
+        }
+        catch
+        {
+            result = null;
+        }
 
         if (result is null)
         {

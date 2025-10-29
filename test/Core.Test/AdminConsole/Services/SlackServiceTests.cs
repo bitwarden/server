@@ -236,6 +236,32 @@ public class SlackServiceTests
     }
 
     [Fact]
+    public async Task GetDmChannelByEmailAsync_ApiErrorUnparsableDmResponse_ReturnsEmptyString()
+    {
+        var sutProvider = GetSutProvider();
+        var email = "user@example.com";
+        var userId = "U12345";
+
+        var userResponse = new
+        {
+            ok = true,
+            user = new { id = userId }
+        };
+
+        _handler.When($"https://slack.com/api/users.lookupByEmail?email={email}")
+            .RespondWith(HttpStatusCode.OK)
+            .WithContent(new StringContent(JsonSerializer.Serialize(userResponse)));
+
+        _handler.When("https://slack.com/api/conversations.open")
+            .RespondWith(HttpStatusCode.OK)
+            .WithContent(new StringContent("NOT JSON"));
+
+        var result = await sutProvider.Sut.GetDmChannelByEmailAsync(_token, email);
+
+        Assert.Equal(string.Empty, result);
+    }
+
+    [Fact]
     public async Task GetDmChannelByEmailAsync_ApiErrorUserResponse_ReturnsEmptyString()
     {
         var sutProvider = GetSutProvider();
@@ -250,6 +276,21 @@ public class SlackServiceTests
         _handler.When($"https://slack.com/api/users.lookupByEmail?email={email}")
             .RespondWith(HttpStatusCode.OK)
             .WithContent(new StringContent(JsonSerializer.Serialize(userResponse)));
+
+        var result = await sutProvider.Sut.GetDmChannelByEmailAsync(_token, email);
+
+        Assert.Equal(string.Empty, result);
+    }
+
+    [Fact]
+    public async Task GetDmChannelByEmailAsync_ApiErrorUnparsableUserResponse_ReturnsEmptyString()
+    {
+        var sutProvider = GetSutProvider();
+        var email = "user@example.com";
+
+        _handler.When($"https://slack.com/api/users.lookupByEmail?email={email}")
+            .RespondWith(HttpStatusCode.OK)
+            .WithContent(new StringContent("Not JSON"));
 
         var result = await sutProvider.Sut.GetDmChannelByEmailAsync(_token, email);
 
