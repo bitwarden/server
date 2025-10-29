@@ -101,7 +101,9 @@ public class PricingClient(
     public async Task<PremiumPlan> GetAvailablePremiumPlan()
     {
         var premiumPlans = await ListPremiumPlans();
+
         var availablePlan = premiumPlans.FirstOrDefault(premiumPlan => premiumPlan.Available);
+
         return availablePlan ?? throw new NotFoundException("Could not find available premium plan");
     }
 
