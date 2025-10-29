@@ -62,6 +62,8 @@ public static class OrganizationFactory
             UseAdminSponsoredFamilies =
             claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UseAdminSponsoredFamilies),
             UseAutomaticUserConfirmation = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UseAutomaticUserConfirmation),
+            UseDisableSMAdsForUsers =
+                claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UseDisableSMAdsForUsers),
         };
 
     public static Organization Create(

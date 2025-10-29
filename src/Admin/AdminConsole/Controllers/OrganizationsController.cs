@@ -473,6 +473,7 @@ public class OrganizationsController : Controller
             organization.UseOrganizationDomains = model.UseOrganizationDomains;
             organization.UseAdminSponsoredFamilies = model.UseAdminSponsoredFamilies;
             organization.UseAutomaticUserConfirmation = model.UseAutomaticUserConfirmation;
+            organization.UseDisableSMAdsForUsers = model.UseDisableSMAdsForUsers;
 
             //secrets
             organization.SmSeats = model.SmSeats;
