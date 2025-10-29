@@ -3,22 +3,6 @@
     "Namespaces": [
       {
         "Name": "sbemulatorns",
-        "Queues": [
-          {
-            "Name": "queue.1",
-            "Properties": {
-              "DeadLetteringOnMessageExpiration": false,
-              "DefaultMessageTimeToLive": "PT1H",
-              "DuplicateDetectionHistoryTimeWindow": "PT20S",
-              "ForwardDeadLetteredMessagesTo": "",
-              "ForwardTo": "",
-              "LockDuration": "PT1M",
-              "MaxDeliveryCount": 3,
-              "RequiresDuplicateDetection": false,
-              "RequiresSession": false
-            }
-          }
-        ],
         "Topics": [
           {
             "Name": "event-logging",
@@ -34,6 +18,12 @@
               },
               {
                 "Name": "events-hec-subscription"
+              },
+              {
+                "Name": "events-datadog-subscription"
+              },
+              {
+                "Name": "events-teams-subscription"
               }
             ]
           },
@@ -77,6 +67,34 @@
                       "FilterType": "Correlation",
                       "CorrelationFilter": {
                         "Label": "hec"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "Name": "integration-datadog-subscription",
+                "Rules": [
+                  {
+                    "Name": "datadog-integration-filter",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "datadog"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "Name": "integration-teams-subscription",
+                "Rules": [
+                  {
+                    "Name": "teams-integration-filter",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "teams"
                       }
                     }
                   }

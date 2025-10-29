@@ -55,19 +55,6 @@ public class SelfHostedOrganizationSponsorshipsController : Controller
     [HttpPost("{sponsoringOrgId}/families-for-enterprise")]
     public async Task CreateSponsorship(Guid sponsoringOrgId, [FromBody] OrganizationSponsorshipCreateRequestModel model)
     {
-        if (!_featureService.IsEnabled(Bit.Core.FeatureFlagKeys.PM17772_AdminInitiatedSponsorships))
-        {
-            if (model.IsAdminInitiated.GetValueOrDefault())
-            {
-                throw new BadRequestException();
-            }
-
-            if (!string.IsNullOrWhiteSpace(model.Notes))
-            {
-                model.Notes = null;
-            }
-        }
-
         await _offerSponsorshipCommand.CreateSponsorshipAsync(
             await _organizationRepository.GetByIdAsync(sponsoringOrgId),
             await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrgId, _currentContext.UserId ?? default),
@@ -79,7 +66,6 @@ public class SelfHostedOrganizationSponsorshipsController : Controller
     }
 
     [HttpDelete("{sponsoringOrgId}")]
-    [HttpPost("{sponsoringOrgId}/delete")]
     public async Task RevokeSponsorship(Guid sponsoringOrgId)
     {
         var orgUser = await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrgId, _currentContext.UserId ?? default);
@@ -93,6 +79,13 @@ public class SelfHostedOrganizationSponsorshipsController : Controller
             .GetBySponsoringOrganizationUserIdAsync(orgUser.Id);
 
         await _revokeSponsorshipCommand.RevokeSponsorshipAsync(existingOrgSponsorship);
+    }
+
+    [HttpPost("{sponsoringOrgId}/delete")]
+    [Obsolete("This endpoint is deprecated. Use DELETE /{sponsoringOrgId} instead.")]
+    public async Task PostRevokeSponsorship(Guid sponsoringOrgId)
+    {
+        await RevokeSponsorship(sponsoringOrgId);
     }
 
     [HttpDelete("{sponsoringOrgId}/{sponsoredFriendlyName}/revoke")]

@@ -89,19 +89,6 @@ public class OrganizationSponsorshipsController : Controller
             throw new BadRequestException("Free Bitwarden Families sponsorship has been disabled by your organization administrator.");
         }
 
-        if (!_featureService.IsEnabled(Bit.Core.FeatureFlagKeys.PM17772_AdminInitiatedSponsorships))
-        {
-            if (model.IsAdminInitiated.GetValueOrDefault())
-            {
-                throw new BadRequestException();
-            }
-
-            if (!string.IsNullOrWhiteSpace(model.Notes))
-            {
-                model.Notes = null;
-            }
-        }
-
         var sponsorship = await _createSponsorshipCommand.CreateSponsorshipAsync(
             sponsoringOrg,
             await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrgId, _currentContext.UserId ?? default),
@@ -208,7 +195,6 @@ public class OrganizationSponsorshipsController : Controller
 
     [Authorize("Application")]
     [HttpDelete("{sponsoringOrganizationId}")]
-    [HttpPost("{sponsoringOrganizationId}/delete")]
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task RevokeSponsorship(Guid sponsoringOrganizationId)
     {
@@ -223,6 +209,15 @@ public class OrganizationSponsorshipsController : Controller
             .GetBySponsoringOrganizationUserIdAsync(orgUser.Id);
 
         await _revokeSponsorshipCommand.RevokeSponsorshipAsync(existingOrgSponsorship);
+    }
+
+    [Authorize("Application")]
+    [HttpPost("{sponsoringOrganizationId}/delete")]
+    [Obsolete("This endpoint is deprecated. Use DELETE /{sponsoringOrganizationId} instead.")]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public async Task PostRevokeSponsorship(Guid sponsoringOrganizationId)
+    {
+        await RevokeSponsorship(sponsoringOrganizationId);
     }
 
     [Authorize("Application")]
@@ -241,7 +236,6 @@ public class OrganizationSponsorshipsController : Controller
 
     [Authorize("Application")]
     [HttpDelete("sponsored/{sponsoredOrgId}")]
-    [HttpPost("sponsored/{sponsoredOrgId}/remove")]
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task RemoveSponsorship(Guid sponsoredOrgId)
     {
@@ -255,6 +249,15 @@ public class OrganizationSponsorshipsController : Controller
             .GetBySponsoredOrganizationIdAsync(sponsoredOrgId);
 
         await _removeSponsorshipCommand.RemoveSponsorshipAsync(existingOrgSponsorship);
+    }
+
+    [Authorize("Application")]
+    [HttpPost("sponsored/{sponsoredOrgId}/remove")]
+    [Obsolete("This endpoint is deprecated. Use DELETE /sponsored/{sponsoredOrgId} instead.")]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public async Task PostRemoveSponsorship(Guid sponsoredOrgId)
+    {
+        await RemoveSponsorship(sponsoredOrgId);
     }
 
     [HttpGet("{sponsoringOrgId}/sync-status")]

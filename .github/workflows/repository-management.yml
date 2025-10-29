@@ -22,7 +22,9 @@ on:
         required: false
         type: string
 
-permissions: {}
+permissions:
+  pull-requests: write
+  contents: write
 
 jobs:
   setup:
@@ -44,7 +46,7 @@ jobs:
             BRANCH="hotfix-rc"
           fi
 
-          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
 
   bump_version:
     name: Bump Version
@@ -82,7 +84,7 @@ jobs:
           version: ${{ inputs.version_number_override }}
 
       - name: Generate GH App token
-        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1.12.0
+        uses: actions/create-github-app-token@a8d616148505b5069dccd32f177bb87d7f39123b # v2.1.1
         id: app-token
         with:
           app-id: ${{ steps.get-kv-secrets.outputs.BW-GHAPP-ID }}
@@ -93,6 +95,7 @@ jobs:
         with:
           ref: main
           token: ${{ steps.app-token.outputs.token }}
+          persist-credentials: true
 
       - name: Configure Git
         run: |
@@ -108,7 +111,7 @@ jobs:
         id: current-version
         run: |
           CURRENT_VERSION=$(xmllint -xpath "/Project/PropertyGroup/Version/text()" Directory.Build.props)
-          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "version=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Verify input version
         if: ${{ inputs.version_number_override != '' }}
@@ -118,16 +121,15 @@ jobs:
         run: |
           # Error if version has not changed.
           if [[ "$NEW_VERSION" == "$CURRENT_VERSION" ]]; then
-            echo "Specified override version is the same as the current version." >> $GITHUB_STEP_SUMMARY
+            echo "Specified override version is the same as the current version." >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
 
           # Check if version is newer.
-          printf '%s\n' "${CURRENT_VERSION}" "${NEW_VERSION}" | sort -C -V
-          if [ $? -eq 0 ]; then
+          if printf '%s\n' "${CURRENT_VERSION}" "${NEW_VERSION}" | sort -C -V; then
             echo "Version is newer than the current version."
           else
-            echo "Version is older than the current version." >> $GITHUB_STEP_SUMMARY
+            echo "Version is older than the current version." >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
 
@@ -158,15 +160,20 @@ jobs:
         id: set-final-version-output
         env:
           VERSION: ${{ inputs.version_number_override }}
+          BUMP_VERSION_OVERRIDE_OUTCOME: ${{ steps.bump-version-override.outcome }}
+          BUMP_VERSION_AUTOMATIC_OUTCOME: ${{ steps.bump-version-automatic.outcome }}
+          CALCULATE_NEXT_VERSION: ${{ steps.calculate-next-version.outputs.version }}
         run: |
-          if [[ "${{ steps.bump-version-override.outcome }}" = "success" ]]; then
-            echo "version=$VERSION" >> $GITHUB_OUTPUT
-          elif [[ "${{ steps.bump-version-automatic.outcome }}" = "success" ]]; then
-            echo "version=${{ steps.calculate-next-version.outputs.version }}" >> $GITHUB_OUTPUT
+          if [[ "${BUMP_VERSION_OVERRIDE_OUTCOME}" = "success" ]]; then
+            echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          elif [[ "${BUMP_VERSION_AUTOMATIC_OUTCOME}" = "success" ]]; then
+            echo "version=${CALCULATE_NEXT_VERSION}" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Commit files
-        run: git commit -m "Bumped version to ${{ steps.set-final-version-output.outputs.version }}" -a
+        env:
+          FINAL_VERSION: ${{ steps.set-final-version-output.outputs.version }}
+        run: git commit -m "Bumped version to $FINAL_VERSION" -a
 
       - name: Push changes
         run: git push
@@ -200,7 +207,7 @@ jobs:
         uses: bitwarden/gh-actions/azure-logout@main
 
       - name: Generate GH App token
-        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1.12.0
+        uses: actions/create-github-app-token@a8d616148505b5069dccd32f177bb87d7f39123b # v2.1.1
         id: app-token
         with:
           app-id: ${{ steps.get-kv-secrets.outputs.BW-GHAPP-ID }}
@@ -211,13 +218,15 @@ jobs:
         with:
           ref: ${{ inputs.target_ref }}
           token: ${{ steps.app-token.outputs.token }}
+          persist-credentials: true
+          fetch-depth: 0
 
       - name: Check if ${{ needs.setup.outputs.branch }} branch exists
         env:
           BRANCH_NAME: ${{ needs.setup.outputs.branch }}
         run: |
-          if [[ $(git ls-remote --heads origin $BRANCH_NAME) ]]; then
-            echo "$BRANCH_NAME already exists! Please delete $BRANCH_NAME before running again." >> $GITHUB_STEP_SUMMARY
+          if [[ $(git ls-remote --heads origin "$BRANCH_NAME") ]]; then
+            echo "$BRANCH_NAME already exists! Please delete $BRANCH_NAME before running again." >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
 
@@ -225,11 +234,16 @@ jobs:
         env:
           BRANCH_NAME: ${{ needs.setup.outputs.branch }}
         run: |
-          git switch --quiet --create $BRANCH_NAME
-          git push --quiet --set-upstream origin $BRANCH_NAME
+          git switch --quiet --create "$BRANCH_NAME"
+          git push --quiet --set-upstream origin "$BRANCH_NAME"
 
   move_edd_db_scripts:
     name: Move EDD database scripts
     needs: cut_branch
+    permissions:
+      actions: read
+      contents: write
+      id-token: write
+      pull-requests: write
     uses: ./.github/workflows/_move_edd_db_scripts.yml
     secrets: inherit

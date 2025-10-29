@@ -3,7 +3,6 @@
 
 using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
-using Bit.Commercial.Core.Billing.Providers.Services;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Models;
@@ -133,7 +132,7 @@ public class ProviderBillingController(
         }
 
         var subscription = await stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId,
-            new SubscriptionGetOptions { Expand = ["customer.tax_ids", "test_clock"] });
+            new SubscriptionGetOptions { Expand = ["customer.tax_ids", "discounts", "test_clock"] });
 
         var providerPlans = await providerPlanRepository.GetByProviderId(provider.Id);
 

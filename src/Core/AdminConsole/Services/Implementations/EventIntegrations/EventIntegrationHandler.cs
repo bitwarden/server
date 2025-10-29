@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using System.Text.Json;
+﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.Enums;
@@ -59,6 +57,7 @@ public class EventIntegrationHandler<T>(
                 {
                     IntegrationType = integrationType,
                     MessageId = messageId.ToString(),
+                    OrganizationId = organizationId.ToString(),
                     Configuration = config,
                     RenderedTemplate = renderedTemplate,
                     RetryCount = 0,

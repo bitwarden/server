@@ -39,7 +39,7 @@ public class EventRepository : IEventRepository
         DateTime startDate, DateTime endDate, PageOptions pageOptions)
     {
         return await GetManyAsync($"OrganizationId={secret.OrganizationId}",
-            $"SecretId={secret.Id}__Date={{0}}", startDate, endDate, pageOptions); ;
+            $"SecretId={secret.Id}__Date={{0}}", startDate, endDate, pageOptions);
     }
 
     public async Task<PagedResult<IEvent>> GetManyByProjectAsync(Project project,
@@ -77,12 +77,18 @@ public class EventRepository : IEventRepository
         return await GetManyAsync(partitionKey, $"CipherId={cipher.Id}__Date={{0}}", startDate, endDate, pageOptions);
     }
 
-    public async Task<PagedResult<IEvent>> GetManyByOrganizationServiceAccountAsync(Guid organizationId,
-        Guid serviceAccountId, DateTime startDate, DateTime endDate, PageOptions pageOptions)
+    public async Task<PagedResult<IEvent>> GetManyByOrganizationServiceAccountAsync(
+        Guid organizationId,
+        Guid serviceAccountId,
+        DateTime startDate,
+        DateTime endDate,
+        PageOptions pageOptions)
     {
+        return await GetManyServiceAccountAsync(
+               $"OrganizationId={organizationId}",
+               serviceAccountId.ToString(),
+               startDate, endDate, pageOptions);
 
-        return await GetManyAsync($"OrganizationId={organizationId}",
-            $"ServiceAccountId={serviceAccountId}__Date={{0}}", startDate, endDate, pageOptions);
     }
 
     public async Task CreateAsync(IEvent e)
@@ -141,6 +147,40 @@ public class EventRepository : IEventRepository
         }
     }
 
+    public async Task<PagedResult<IEvent>> GetManyServiceAccountAsync(
+        string partitionKey,
+        string serviceAccountId,
+        DateTime startDate,
+        DateTime endDate,
+        PageOptions pageOptions)
+    {
+        var start = CoreHelpers.DateTimeToTableStorageKey(startDate);
+        var end = CoreHelpers.DateTimeToTableStorageKey(endDate);
+        var filter = MakeFilterForServiceAccount(partitionKey, serviceAccountId, startDate, endDate);
+
+        var result = new PagedResult<IEvent>();
+        var query = _tableClient.QueryAsync<AzureEvent>(filter, pageOptions.PageSize);
+
+        await using (var enumerator = query.AsPages(pageOptions.ContinuationToken,
+            pageOptions.PageSize).GetAsyncEnumerator())
+        {
+            if (await enumerator.MoveNextAsync())
+            {
+                result.ContinuationToken = enumerator.Current.ContinuationToken;
+
+                var events = enumerator.Current.Values
+                    .Select(e => e.ToEventTableEntity())
+                    .ToList();
+
+                events = events.OrderByDescending(e => e.Date).ToList();
+
+                result.Data.AddRange(events);
+            }
+        }
+
+        return result;
+    }
+
     public async Task<PagedResult<IEvent>> GetManyAsync(string partitionKey, string rowKey,
         DateTime startDate, DateTime endDate, PageOptions pageOptions)
     {
@@ -172,4 +212,27 @@ public class EventRepository : IEventRepository
     {
         return $"PartitionKey eq '{partitionKey}' and RowKey le '{rowStart}' and RowKey ge '{rowEnd}'";
     }
+
+    private string MakeFilterForServiceAccount(
+        string partitionKey,
+        string machineAccountId,
+        DateTime startDate,
+        DateTime endDate)
+    {
+        var start = CoreHelpers.DateTimeToTableStorageKey(startDate);
+        var end = CoreHelpers.DateTimeToTableStorageKey(endDate);
+
+        var rowKey1Start = $"ServiceAccountId={machineAccountId}__Date={start}";
+        var rowKey1End = $"ServiceAccountId={machineAccountId}__Date={end}";
+
+        var rowKey2Start = $"GrantedServiceAccountId={machineAccountId}__Date={start}";
+        var rowKey2End = $"GrantedServiceAccountId={machineAccountId}__Date={end}";
+
+        var left = $"PartitionKey eq '{partitionKey}' and RowKey le '{rowKey1Start}' and RowKey ge '{rowKey1End}'";
+        var right = $"PartitionKey eq '{partitionKey}' and RowKey le '{rowKey2Start}' and RowKey ge '{rowKey2End}'";
+
+        return $"({left}) or ({right})";
+    }
+
+
 }

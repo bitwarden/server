@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using System.Text.Json;
+﻿using System.Text.Json;
 using Bit.Core.Enums;
 
 namespace Bit.Core.AdminConsole.Models.Data.EventIntegrations;
@@ -9,6 +7,7 @@ public class IntegrationMessage : IIntegrationMessage
 {
     public IntegrationType IntegrationType { get; set; }
     public required string MessageId { get; set; }
+    public string? OrganizationId { get; set; }
     public required string RenderedTemplate { get; set; }
     public int RetryCount { get; set; } = 0;
     public DateTime? DelayUntilDate { get; set; }

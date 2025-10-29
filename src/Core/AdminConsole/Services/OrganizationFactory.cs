@@ -23,7 +23,7 @@ public static class OrganizationFactory
             PlanType = claimsPrincipal.GetValue<PlanType>(OrganizationLicenseConstants.PlanType),
             Seats = claimsPrincipal.GetValue<int?>(OrganizationLicenseConstants.Seats),
             MaxCollections = claimsPrincipal.GetValue<short?>(OrganizationLicenseConstants.MaxCollections),
-            MaxStorageGb = 10240,
+            MaxStorageGb = Constants.SelfHostedMaxStorageGb,
             UsePolicies = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UsePolicies),
             UseSso = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UseSso),
             UseKeyConnector = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UseKeyConnector),
@@ -61,6 +61,7 @@ public static class OrganizationFactory
             claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UseOrganizationDomains),
             UseAdminSponsoredFamilies =
             claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UseAdminSponsoredFamilies),
+            UseAutomaticUserConfirmation = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UseAutomaticUserConfirmation),
         };
 
     public static Organization Create(
@@ -75,7 +76,7 @@ public static class OrganizationFactory
             PlanType = license.PlanType,
             Seats = license.Seats,
             MaxCollections = license.MaxCollections,
-            MaxStorageGb = 10240,
+            MaxStorageGb = Constants.SelfHostedMaxStorageGb,
             UsePolicies = license.UsePolicies,
             UseSso = license.UseSso,
             UseKeyConnector = license.UseKeyConnector,

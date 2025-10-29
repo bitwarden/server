@@ -389,28 +389,13 @@
     <value>If SAML Binding Type is set to artifact, identity provider resolution service URL is required.</value>
   </data>
   <data name="IdpSingleSignOnServiceUrlValidationError" xml:space="preserve">
-    <value>If Identity Provider Entity ID is not a URL, single sign on service URL is required.</value>
+    <value>Single sign on service URL is required.</value>
   </data>
   <data name="InvalidSchemeConfigurationError" xml:space="preserve">
     <value>The configured authentication scheme is not valid: "{0}"</value>
   </data>
-  <data name="NoSchemeOrHandlerForSsoConfigurationFoundError" xml:space="preserve">
-    <value>No scheme or handler for this SSO configuration found.</value>
-  </data>
-  <data name="SsoNotEnabledForOrganizationError" xml:space="preserve">
-    <value>SSO is not yet enabled for this organization.</value>
-  </data>
-  <data name="SsoConfigurationNotFoundForOrganizationError" xml:space="preserve">
-    <value>No SSO configuration exists for this organization.</value>
-  </data>
-  <data name="SsoNotAllowedForOrganizationError" xml:space="preserve">
-    <value>SSO is not allowed for this organization.</value>
-  </data>
   <data name="OrganizationNotFoundByIdentifierError" xml:space="preserve">
     <value>Organization not found from identifier.</value>
-  </data>
-  <data name="NoOrganizationIdentifierProvidedError" xml:space="preserve">
-    <value>No organization identifier provided.</value>
   </data>
   <data name="InvalidAuthenticationOptionsForSaml2SchemeError" xml:space="preserve">
     <value>Invalid authentication options provided to SAML2 scheme.</value>
@@ -523,8 +508,14 @@
   <data name="UserIdAndTokenMismatch" xml:space="preserve">
     <value>Supplied userId and token did not match.</value>
   </data>
+  <data name="UserShouldBeFound" xml:space="preserve">
+    <value>User should have been defined by this point.</value>
+  </data>
   <data name="CouldNotFindOrganization" xml:space="preserve">
     <value>Could not find organization for '{0}'</value>
+  </data>
+  <data name="CouldNotFindOrganizationUser" xml:space="preserve">
+    <value>Could not find organization user for user '{0}' organization '{1}'</value>
   </data>
   <data name="NoSeatsAvailable" xml:space="preserve">
     <value>No seats available for organization, '{0}'</value>
@@ -690,5 +681,8 @@
   </data>
   <data name="InvalidSsoRedirectToken" xml:space="preserve">
     <value>Single sign on redirect token is invalid or expired.</value>
+  </data>
+  <data name="SsoInvalidIdentifierError" xml:space="preserve">
+    <value>Invalid SSO identifier</value>
   </data>
 </root>

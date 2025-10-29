@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Services;
@@ -112,6 +113,242 @@ public class CipherServiceTests
         await sutProvider.GetDependency<ICipherRepository>().Received(1).ReplaceAsync(cipherDetails);
     }
 
+    [Theory, BitAutoData]
+    public async Task CreateAttachmentAsync_WrongRevisionDate_Throws(SutProvider<CipherService> sutProvider, Cipher cipher, Guid savingUserId)
+    {
+        var lastKnownRevisionDate = cipher.RevisionDate.AddDays(-1);
+        var stream = new MemoryStream();
+        var fileName = "test.txt";
+        var key = "test-key";
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.CreateAttachmentAsync(cipher, stream, fileName, key, 100, savingUserId, false, lastKnownRevisionDate));
+        Assert.Contains("out of date", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData("")]
+    [BitAutoData("Correct Time")]
+    public async Task CreateAttachmentAsync_CorrectRevisionDate_DoesNotThrow(string revisionDateString,
+        SutProvider<CipherService> sutProvider, CipherDetails cipher, Guid savingUserId)
+    {
+        var lastKnownRevisionDate = string.IsNullOrEmpty(revisionDateString) ? (DateTime?)null : cipher.RevisionDate;
+        var stream = new MemoryStream(new byte[100]);
+        var fileName = "test.txt";
+        var key = "test-key";
+
+        // Setup cipher with user ownership
+        cipher.UserId = savingUserId;
+        cipher.OrganizationId = null;
+
+        // Mock user storage and premium access
+        var user = new User { Id = savingUserId, MaxStorageGb = 1 };
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByIdAsync(savingUserId)
+            .Returns(user);
+
+        sutProvider.GetDependency<IUserService>()
+            .CanAccessPremium(user)
+            .Returns(true);
+
+        sutProvider.GetDependency<IAttachmentStorageService>()
+            .UploadNewAttachmentAsync(Arg.Any<Stream>(), cipher, Arg.Any<CipherAttachment.MetaData>())
+            .Returns(Task.CompletedTask);
+
+        sutProvider.GetDependency<IAttachmentStorageService>()
+            .ValidateFileAsync(cipher, Arg.Any<CipherAttachment.MetaData>(), Arg.Any<long>())
+            .Returns((true, 100L));
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .UpdateAttachmentAsync(Arg.Any<CipherAttachment>())
+            .Returns(Task.CompletedTask);
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .ReplaceAsync(Arg.Any<CipherDetails>())
+            .Returns(Task.CompletedTask);
+
+        await sutProvider.Sut.CreateAttachmentAsync(cipher, stream, fileName, key, 100, savingUserId, false, lastKnownRevisionDate);
+
+        await sutProvider.GetDependency<IAttachmentStorageService>().Received(1)
+            .UploadNewAttachmentAsync(Arg.Any<Stream>(), cipher, Arg.Any<CipherAttachment.MetaData>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateAttachmentForDelayedUploadAsync_WrongRevisionDate_Throws(SutProvider<CipherService> sutProvider, Cipher cipher, Guid savingUserId)
+    {
+        var lastKnownRevisionDate = cipher.RevisionDate.AddDays(-1);
+        var key = "test-key";
+        var fileName = "test.txt";
+        var fileSize = 100L;
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.CreateAttachmentForDelayedUploadAsync(cipher, key, fileName, fileSize, false, savingUserId, lastKnownRevisionDate));
+        Assert.Contains("out of date", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData("")]
+    [BitAutoData("Correct Time")]
+    public async Task CreateAttachmentForDelayedUploadAsync_CorrectRevisionDate_DoesNotThrow(string revisionDateString,
+        SutProvider<CipherService> sutProvider, CipherDetails cipher, Guid savingUserId)
+    {
+        var lastKnownRevisionDate = string.IsNullOrEmpty(revisionDateString) ? (DateTime?)null : cipher.RevisionDate;
+        var key = "test-key";
+        var fileName = "test.txt";
+        var fileSize = 100L;
+
+        // Setup cipher with user ownership
+        cipher.UserId = savingUserId;
+        cipher.OrganizationId = null;
+
+        // Mock user storage and premium access
+        var user = new User { Id = savingUserId, MaxStorageGb = 1 };
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByIdAsync(savingUserId)
+            .Returns(user);
+
+        sutProvider.GetDependency<IUserService>()
+            .CanAccessPremium(user)
+            .Returns(true);
+
+        sutProvider.GetDependency<IAttachmentStorageService>()
+            .GetAttachmentUploadUrlAsync(cipher, Arg.Any<CipherAttachment.MetaData>())
+            .Returns("https://example.com/upload");
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .UpdateAttachmentAsync(Arg.Any<CipherAttachment>())
+            .Returns(Task.CompletedTask);
+
+        var result = await sutProvider.Sut.CreateAttachmentForDelayedUploadAsync(cipher, key, fileName, fileSize, false, savingUserId, lastKnownRevisionDate);
+
+        Assert.NotNull(result.attachmentId);
+        Assert.NotNull(result.uploadUrl);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UploadFileForExistingAttachmentAsync_WrongRevisionDate_Throws(SutProvider<CipherService> sutProvider,
+        Cipher cipher)
+    {
+        var lastKnownRevisionDate = cipher.RevisionDate.AddDays(-1);
+        var stream = new MemoryStream();
+        var attachment = new CipherAttachment.MetaData
+        {
+            AttachmentId = "test-attachment-id",
+            Size = 100,
+            FileName = "test.txt",
+            Key = "test-key"
+        };
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.UploadFileForExistingAttachmentAsync(stream, cipher, attachment, lastKnownRevisionDate));
+        Assert.Contains("out of date", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData("")]
+    [BitAutoData("Correct Time")]
+    public async Task UploadFileForExistingAttachmentAsync_CorrectRevisionDate_DoesNotThrow(string revisionDateString,
+        SutProvider<CipherService> sutProvider, CipherDetails cipher)
+    {
+        var lastKnownRevisionDate = string.IsNullOrEmpty(revisionDateString) ? (DateTime?)null : cipher.RevisionDate;
+        var stream = new MemoryStream(new byte[100]);
+        var attachmentId = "test-attachment-id";
+        var attachment = new CipherAttachment.MetaData
+        {
+            AttachmentId = attachmentId,
+            Size = 100,
+            FileName = "test.txt",
+            Key = "test-key"
+        };
+
+        // Set the attachment on the cipher so ValidateCipherAttachmentFile can find it
+        cipher.SetAttachments(new Dictionary<string, CipherAttachment.MetaData>
+        {
+            [attachmentId] = attachment
+        });
+
+        sutProvider.GetDependency<IAttachmentStorageService>()
+            .UploadNewAttachmentAsync(stream, cipher, attachment)
+            .Returns(Task.CompletedTask);
+
+        sutProvider.GetDependency<IAttachmentStorageService>()
+            .ValidateFileAsync(cipher, attachment, Arg.Any<long>())
+            .Returns((true, 100L));
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .UpdateAttachmentAsync(Arg.Any<CipherAttachment>())
+            .Returns(Task.CompletedTask);
+
+        await sutProvider.Sut.UploadFileForExistingAttachmentAsync(stream, cipher, attachment, lastKnownRevisionDate);
+
+        await sutProvider.GetDependency<IAttachmentStorageService>().Received(1)
+            .UploadNewAttachmentAsync(stream, cipher, attachment);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateAttachmentShareAsync_WrongRevisionDate_Throws(SutProvider<CipherService> sutProvider,
+        Cipher cipher, Guid organizationId)
+    {
+        var lastKnownRevisionDate = cipher.RevisionDate.AddDays(-1);
+        var stream = new MemoryStream();
+        var fileName = "test.txt";
+        var key = "test-key";
+        var attachmentId = "attachment-id";
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.CreateAttachmentShareAsync(cipher, stream, fileName, key, 100, attachmentId, organizationId, lastKnownRevisionDate));
+        Assert.Contains("out of date", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData("")]
+    [BitAutoData("Correct Time")]
+    public async Task CreateAttachmentShareAsync_CorrectRevisionDate_DoesNotThrow(string revisionDateString,
+        SutProvider<CipherService> sutProvider, CipherDetails cipher, Guid organizationId)
+    {
+        var lastKnownRevisionDate = string.IsNullOrEmpty(revisionDateString) ? (DateTime?)null : cipher.RevisionDate;
+        var stream = new MemoryStream(new byte[100]);
+        var fileName = "test.txt";
+        var key = "test-key";
+        var attachmentId = "attachment-id";
+
+        // Setup cipher with existing attachment (no TempMetadata)
+        cipher.OrganizationId = null;
+        cipher.SetAttachments(new Dictionary<string, CipherAttachment.MetaData>
+        {
+            [attachmentId] = new CipherAttachment.MetaData
+            {
+                AttachmentId = attachmentId,
+                Size = 100,
+                FileName = "existing.txt",
+                Key = "existing-key"
+            }
+        });
+
+        // Mock organization
+        var organization = new Organization
+        {
+            Id = organizationId,
+            MaxStorageGb = 1
+        };
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organizationId)
+            .Returns(organization);
+
+        sutProvider.GetDependency<IAttachmentStorageService>()
+            .UploadShareAttachmentAsync(stream, cipher.Id, organizationId, Arg.Any<CipherAttachment.MetaData>())
+            .Returns(Task.CompletedTask);
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .UpdateAttachmentAsync(Arg.Any<CipherAttachment>())
+            .Returns(Task.CompletedTask);
+
+        await sutProvider.Sut.CreateAttachmentShareAsync(cipher, stream, fileName, key, 100, attachmentId, organizationId, lastKnownRevisionDate);
+
+        await sutProvider.GetDependency<IAttachmentStorageService>().Received(1)
+            .UploadShareAttachmentAsync(stream, cipher.Id, organizationId, Arg.Any<CipherAttachment.MetaData>());
+    }
+
     [Theory]
     [BitAutoData]
     public async Task SaveDetailsAsync_PersonalVault_WithOrganizationDataOwnershipPolicyEnabled_Throws(
@@ -173,7 +410,7 @@ public class CipherServiceTests
             .GetAsync<OrganizationDataOwnershipPolicyRequirement>(savingUserId)
             .Returns(new OrganizationDataOwnershipPolicyRequirement(
                 OrganizationDataOwnershipState.Enabled,
-                [Guid.NewGuid()]));
+                [new PolicyDetails()]));
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveDetailsAsync(cipher, savingUserId, null));

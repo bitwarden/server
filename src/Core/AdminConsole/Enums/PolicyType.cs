@@ -18,6 +18,9 @@ public enum PolicyType : byte
     FreeFamiliesSponsorshipPolicy = 13,
     RemoveUnlockWithPin = 14,
     RestrictedItemTypesPolicy = 15,
+    UriMatchDefaults = 16,
+    AutotypeDefaultSetting = 17,
+    AutomaticUserConfirmation = 18,
 }
 
 public static class PolicyTypeExtensions
@@ -46,6 +49,9 @@ public static class PolicyTypeExtensions
             PolicyType.FreeFamiliesSponsorshipPolicy => "Remove Free Bitwarden Families sponsorship",
             PolicyType.RemoveUnlockWithPin => "Remove unlock with PIN",
             PolicyType.RestrictedItemTypesPolicy => "Restricted item types",
+            PolicyType.UriMatchDefaults => "URI match defaults",
+            PolicyType.AutotypeDefaultSetting => "Autotype default setting",
+            PolicyType.AutomaticUserConfirmation => "Automatically confirm invited users",
         };
     }
 }
