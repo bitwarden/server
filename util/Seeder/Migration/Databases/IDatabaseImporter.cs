@@ -85,6 +85,30 @@ public interface IDatabaseImporter : IDisposable
     bool EnableForeignKeys();
 
     /// <summary>
+    /// Checks if this importer supports optimized bulk copy operations.
+    /// </summary>
+    /// <returns>True if bulk copy is supported and should be preferred over row-by-row import.</returns>
+    bool SupportsBulkCopy();
+
+    /// <summary>
+    /// Imports data into a table using database-specific bulk copy operations for optimal performance.
+    /// This method uses native bulk import mechanisms like PostgreSQL COPY, SQL Server SqlBulkCopy,
+    /// or multi-row INSERT statements for databases that support them.
+    /// </summary>
+    /// <param name="tableName">Name of the target table.</param>
+    /// <param name="columns">List of column names in the data.</param>
+    /// <param name="data">Data rows to import.</param>
+    /// <returns>True if bulk import was successful, false otherwise.</returns>
+    /// <remarks>
+    /// This method is significantly faster than ImportData() for large datasets (10-100x speedup).
+    /// If this method returns false, the caller should fall back to ImportData().
+    /// </remarks>
+    bool ImportDataBulk(
+        string tableName,
+        List<string> columns,
+        List<object[]> data);
+
+    /// <summary>
     /// Tests the connection to the database.
     /// </summary>
     /// <returns>True if connection test was successful, false otherwise.</returns>

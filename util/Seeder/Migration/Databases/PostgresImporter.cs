@@ -1,4 +1,5 @@
 using Npgsql;
+using NpgsqlTypes;
 using Bit.Seeder.Migration.Models;
 using Microsoft.Extensions.Logging;
 
@@ -523,6 +524,236 @@ public class PostgresImporter(DatabaseConfig config, ILogger<PostgresImporter> l
 
             return value;
         }).ToArray();
+    }
+
+    public bool SupportsBulkCopy()
+    {
+        return true; // PostgreSQL COPY is highly optimized
+    }
+
+    public bool ImportDataBulk(
+        string tableName,
+        List<string> columns,
+        List<object[]> data)
+    {
+        if (_connection == null)
+            throw new InvalidOperationException("Not connected to database");
+
+        if (data.Count == 0)
+        {
+            _logger.LogWarning("No data to import for table {TableName}", tableName);
+            return true;
+        }
+
+        try
+        {
+            // Get the actual table name with correct casing
+            var actualTableName = GetActualTableName(tableName);
+            if (actualTableName == null)
+            {
+                _logger.LogError("Table {TableName} not found in database", tableName);
+                return false;
+            }
+
+            var actualColumns = GetTableColumns(tableName);
+            if (actualColumns.Count == 0)
+            {
+                _logger.LogError("Could not retrieve columns for table {TableName}", tableName);
+                return false;
+            }
+
+            // Get column types from the database
+            var columnTypes = GetTableColumnTypes(tableName);
+
+            // Filter columns - use case-insensitive comparison
+            var validColumnIndices = new List<int>();
+            var validColumns = new List<string>();
+            var validColumnTypes = new List<string>();
+
+            // Create a case-insensitive lookup of actual columns
+            var actualColumnsLookup = actualColumns.ToDictionary(c => c, c => c, StringComparer.OrdinalIgnoreCase);
+
+            for (int i = 0; i < columns.Count; i++)
+            {
+                if (actualColumnsLookup.TryGetValue(columns[i], out var actualColumnName))
+                {
+                    validColumnIndices.Add(i);
+                    validColumns.Add(actualColumnName);
+                    validColumnTypes.Add(columnTypes.GetValueOrDefault(actualColumnName, "text"));
+                }
+                else
+                {
+                    _logger.LogDebug("Column '{Column}' from CSV not found in table {TableName}", columns[i], tableName);
+                }
+            }
+
+            if (validColumns.Count == 0)
+            {
+                _logger.LogError("No valid columns found for table {TableName}", tableName);
+                return false;
+            }
+
+            var filteredData = data.Select(row =>
+                validColumnIndices.Select(i => i < row.Length ? row[i] : null).ToArray()
+            ).ToList();
+
+            _logger.LogInformation("Bulk importing {Count} rows into {TableName} using PostgreSQL COPY", filteredData.Count, tableName);
+
+            // Use PostgreSQL's COPY command for binary import (fastest method)
+            var quotedColumns = validColumns.Select(col => $"\"{col}\"");
+            var copyCommand = $"COPY \"{actualTableName}\" ({string.Join(", ", quotedColumns)}) FROM STDIN (FORMAT BINARY)";
+
+            using var writer = _connection.BeginBinaryImport(copyCommand);
+
+            foreach (var row in filteredData)
+            {
+                writer.StartRow();
+
+                var preparedRow = PrepareRowForInsert(row, validColumns);
+                for (int i = 0; i < preparedRow.Length; i++)
+                {
+                    var value = preparedRow[i];
+
+                    if (value == null || value == DBNull.Value)
+                    {
+                        writer.WriteNull();
+                    }
+                    else
+                    {
+                        // Write with appropriate type based on column type
+                        var colType = validColumnTypes[i];
+                        WriteValueForCopy(writer, value, colType);
+                    }
+                }
+            }
+
+            var rowsImported = writer.Complete();
+            _logger.LogInformation("Successfully bulk imported {RowsImported} rows into {TableName}", rowsImported, tableName);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Error during bulk import into {TableName}: {Message}", tableName, ex.Message);
+            _logger.LogError("Stack trace: {StackTrace}", ex.StackTrace);
+            if (ex.InnerException != null)
+            {
+                _logger.LogError("Inner exception: {Message}", ex.InnerException.Message);
+            }
+            return false;
+        }
+    }
+
+    private void WriteValueForCopy(Npgsql.NpgsqlBinaryImporter writer, object value, string columnType)
+    {
+        // Handle type-specific writing for PostgreSQL COPY
+        switch (columnType.ToLower())
+        {
+            case "uuid":
+                if (value is string strGuid && Guid.TryParse(strGuid, out var guid))
+                    writer.Write(guid, NpgsqlDbType.Uuid);
+                else if (value is Guid g)
+                    writer.Write(g, NpgsqlDbType.Uuid);
+                else
+                    writer.Write(value.ToString()!, NpgsqlDbType.Uuid);
+                break;
+
+            case "boolean":
+                if (value is bool b)
+                    writer.Write(b);
+                else if (value is string strBool)
+                    writer.Write(strBool.Equals("true", StringComparison.OrdinalIgnoreCase) || strBool == "1");
+                else
+                    writer.Write(Convert.ToBoolean(value));
+                break;
+
+            case "smallint":
+                writer.Write(Convert.ToInt16(value));
+                break;
+
+            case "integer":
+                writer.Write(Convert.ToInt32(value));
+                break;
+
+            case "bigint":
+                writer.Write(Convert.ToInt64(value));
+                break;
+
+            case "real":
+                writer.Write(Convert.ToSingle(value));
+                break;
+
+            case "double precision":
+                writer.Write(Convert.ToDouble(value));
+                break;
+
+            case "numeric":
+            case "decimal":
+                writer.Write(Convert.ToDecimal(value));
+                break;
+
+            case "timestamp without time zone":
+            case "timestamp":
+                if (value is DateTime dt)
+                {
+                    // For timestamp without time zone, we can use the value as-is
+                    // But if it's Unspecified, treat it as if it's in the local context
+                    var timestampValue = dt.Kind == DateTimeKind.Unspecified
+                        ? DateTime.SpecifyKind(dt, DateTimeKind.Utc)
+                        : dt;
+                    writer.Write(timestampValue, NpgsqlDbType.Timestamp);
+                }
+                else if (value is string strDt && DateTime.TryParse(strDt, out var parsedDt))
+                {
+                    var timestampValue = DateTime.SpecifyKind(parsedDt, DateTimeKind.Utc);
+                    writer.Write(timestampValue, NpgsqlDbType.Timestamp);
+                }
+                else
+                    writer.Write(value.ToString()!);
+                break;
+
+            case "timestamp with time zone":
+            case "timestamptz":
+                if (value is DateTime dtz)
+                {
+                    // PostgreSQL timestamptz requires UTC DateTimes
+                    var utcValue = dtz.Kind == DateTimeKind.Unspecified
+                        ? DateTime.SpecifyKind(dtz, DateTimeKind.Utc)
+                        : dtz.Kind == DateTimeKind.Local
+                            ? dtz.ToUniversalTime()
+                            : dtz;
+                    writer.Write(utcValue, NpgsqlDbType.TimestampTz);
+                }
+                else if (value is string strDtz && DateTime.TryParse(strDtz, out var parsedDtz))
+                {
+                    // Parsed DateTimes are Unspecified, treat as UTC
+                    var utcValue = DateTime.SpecifyKind(parsedDtz, DateTimeKind.Utc);
+                    writer.Write(utcValue, NpgsqlDbType.TimestampTz);
+                }
+                else
+                    writer.Write(value.ToString()!);
+                break;
+
+            case "date":
+                if (value is DateTime date)
+                    writer.Write(date, NpgsqlDbType.Date);
+                else if (value is string strDate && DateTime.TryParse(strDate, out var parsedDate))
+                    writer.Write(parsedDate, NpgsqlDbType.Date);
+                else
+                    writer.Write(value.ToString()!);
+                break;
+
+            case "bytea":
+                if (value is byte[] bytes)
+                    writer.Write(bytes);
+                else
+                    writer.Write(value.ToString()!);
+                break;
+
+            default:
+                // Text and all other types
+                writer.Write(value.ToString()!);
+                break;
+        }
     }
 
     public bool TestConnection()

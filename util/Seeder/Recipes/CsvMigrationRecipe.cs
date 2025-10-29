@@ -302,8 +302,26 @@ public class CsvMigrationRecipe(MigrationConfig config, ILoggerFactory loggerFac
                         }
                     }
 
-                    var effectiveBatchSize = batchSize ?? _config.BatchSize;
-                    var success = importer.ImportData(destTableName, columns, data, effectiveBatchSize);
+                    // Try bulk copy first for better performance, fall back to row-by-row if needed
+                    bool success;
+                    if (importer.SupportsBulkCopy())
+                    {
+                        _logger.LogInformation("Using optimized bulk copy for {TableName}", tableName);
+                        success = importer.ImportDataBulk(destTableName, columns, data);
+
+                        if (!success)
+                        {
+                            _logger.LogWarning("Bulk copy failed for {TableName}, falling back to standard import", tableName);
+                            var effectiveBatchSize = batchSize ?? _config.BatchSize;
+                            success = importer.ImportData(destTableName, columns, data, effectiveBatchSize);
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogInformation("Using standard import for {TableName}", tableName);
+                        var effectiveBatchSize = batchSize ?? _config.BatchSize;
+                        success = importer.ImportData(destTableName, columns, data, effectiveBatchSize);
+                    }
 
                     if (success)
                     {

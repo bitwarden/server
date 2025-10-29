@@ -415,6 +415,23 @@ public class SqliteImporter(DatabaseConfig config, ILogger<SqliteImporter> logge
         }).ToArray();
     }
 
+    public bool SupportsBulkCopy()
+    {
+        // SQLite performs better with the original row-by-row INSERT approach
+        // Multi-row INSERT causes performance degradation for SQLite
+        return false;
+    }
+
+    public bool ImportDataBulk(
+        string tableName,
+        List<string> columns,
+        List<object[]> data)
+    {
+        // Not implemented for SQLite - use standard ImportData instead
+        _logger.LogWarning("Bulk copy not supported for SQLite, use standard import");
+        return false;
+    }
+
     public bool TestConnection()
     {
         try

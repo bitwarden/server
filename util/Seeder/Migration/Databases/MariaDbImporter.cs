@@ -412,6 +412,151 @@ public class MariaDbImporter(DatabaseConfig config, ILogger<MariaDbImporter> log
         }).ToArray();
     }
 
+    public bool SupportsBulkCopy()
+    {
+        return true; // MariaDB multi-row INSERT is optimized
+    }
+
+    public bool ImportDataBulk(
+        string tableName,
+        List<string> columns,
+        List<object[]> data)
+    {
+        if (_connection == null)
+            throw new InvalidOperationException("Not connected to database");
+
+        if (data.Count == 0)
+        {
+            _logger.LogWarning("No data to import for table {TableName}", tableName);
+            return true;
+        }
+
+        try
+        {
+            var actualColumns = GetTableColumns(tableName);
+            if (actualColumns.Count == 0)
+            {
+                _logger.LogError("Could not retrieve columns for table {TableName}", tableName);
+                return false;
+            }
+
+            // Filter columns
+            var validColumnIndices = new List<int>();
+            var validColumns = new List<string>();
+
+            for (int i = 0; i < columns.Count; i++)
+            {
+                if (actualColumns.Contains(columns[i]))
+                {
+                    validColumnIndices.Add(i);
+                    validColumns.Add(columns[i]);
+                }
+            }
+
+            if (validColumns.Count == 0)
+            {
+                _logger.LogError("No valid columns found for table {TableName}", tableName);
+                return false;
+            }
+
+            var filteredData = data.Select(row =>
+                validColumnIndices.Select(i => i < row.Length ? row[i] : null).ToArray()
+            ).ToList();
+
+            _logger.LogInformation("Bulk importing {Count} rows into {TableName} using multi-row INSERT", filteredData.Count, tableName);
+
+            // Use multi-row INSERT for better performance
+            // INSERT INTO table (col1, col2) VALUES (val1, val2), (val3, val4), ...
+            // MariaDB can handle up to max_allowed_packet size, we'll use 1000 rows per batch
+            const int rowsPerBatch = 1000;
+            var totalImported = 0;
+
+            for (int i = 0; i < filteredData.Count; i += rowsPerBatch)
+            {
+                var batch = filteredData.Skip(i).Take(rowsPerBatch).ToList();
+
+                using var transaction = _connection.BeginTransaction();
+                try
+                {
+                    // Build multi-row INSERT statement
+                    var quotedColumns = validColumns.Select(col => $"`{col}`").ToList();
+                    var columnPart = $"INSERT INTO `{tableName}` ({string.Join(", ", quotedColumns)}) VALUES ";
+
+                    var valueSets = new List<string>();
+                    var allParameters = new List<(string name, object value)>();
+                    var paramIndex = 0;
+
+                    foreach (var row in batch)
+                    {
+                        var preparedRow = PrepareRowForInsert(row, validColumns);
+                        var rowParams = new List<string>();
+
+                        for (int p = 0; p < preparedRow.Length; p++)
+                        {
+                            var paramName = $"@p{paramIndex}";
+                            rowParams.Add(paramName);
+                            allParameters.Add((paramName, preparedRow[p] ?? DBNull.Value));
+                            paramIndex++;
+                        }
+
+                        valueSets.Add($"({string.Join(", ", rowParams)})");
+                    }
+
+                    var fullInsertSql = columnPart + string.Join(", ", valueSets);
+
+                    using var command = new MySqlCommand(fullInsertSql, _connection, transaction);
+
+                    // Add all parameters
+                    foreach (var (name, value) in allParameters)
+                    {
+                        if (value is string strValue)
+                        {
+                            var param = new MySqlConnector.MySqlParameter
+                            {
+                                ParameterName = name,
+                                MySqlDbType = MySqlConnector.MySqlDbType.LongText,
+                                Value = strValue,
+                                Size = strValue.Length
+                            };
+                            command.Parameters.Add(param);
+                        }
+                        else
+                        {
+                            command.Parameters.AddWithValue(name, value);
+                        }
+                    }
+
+                    command.ExecuteNonQuery();
+                    transaction.Commit();
+                    totalImported += batch.Count;
+
+                    if (filteredData.Count > 1000)
+                    {
+                        _logger.LogDebug("Batch: {BatchCount} rows ({TotalImported}/{FilteredDataCount} total)", batch.Count, totalImported, filteredData.Count);
+                    }
+                }
+                catch
+                {
+                    transaction.Rollback();
+                    throw;
+                }
+            }
+
+            _logger.LogInformation("Successfully bulk imported {TotalImported} rows into {TableName}", totalImported, tableName);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Error during bulk import into {TableName}: {Message}", tableName, ex.Message);
+            _logger.LogError("Stack trace: {StackTrace}", ex.StackTrace);
+            if (ex.InnerException != null)
+            {
+                _logger.LogError("Inner exception: {Message}", ex.InnerException.Message);
+            }
+            return false;
+        }
+    }
+
     public bool TestConnection()
     {
         try

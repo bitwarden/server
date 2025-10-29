@@ -81,6 +81,37 @@ public class SqlServerImporter(DatabaseConfig config, ILogger<SqlServerImporter>
         }
     }
 
+    private Dictionary<string, string> GetTableColumnTypes(string tableName)
+    {
+        if (_connection == null)
+            throw new InvalidOperationException("Not connected to database");
+
+        try
+        {
+            var query = @"
+                SELECT COLUMN_NAME, DATA_TYPE
+                FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_NAME = @TableName";
+
+            using var command = new SqlCommand(query, _connection);
+            command.Parameters.AddWithValue("@TableName", tableName);
+
+            var columnTypes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                columnTypes[reader.GetString(0)] = reader.GetString(1);
+            }
+
+            return columnTypes;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Error getting column types for table {TableName}: {Message}", tableName, ex.Message);
+            return new Dictionary<string, string>();
+        }
+    }
+
     public bool TableExists(string tableName)
     {
         if (_connection == null)
@@ -593,6 +624,18 @@ public class SqlServerImporter(DatabaseConfig config, ILogger<SqlServerImporter>
         return preparedRow;
     }
 
+    private object[] PrepareRowForInsertWithTypes(object?[] row, List<string> columnTypes)
+    {
+        var preparedRow = new object[row.Length];
+
+        for (int i = 0; i < row.Length; i++)
+        {
+            preparedRow[i] = ConvertValueForSqlServerWithType(row[i], columnTypes[i]);
+        }
+
+        return preparedRow;
+    }
+
     private object ConvertValueForSqlServer(object? value)
     {
         if (value == null || value == DBNull.Value)
@@ -642,6 +685,197 @@ public class SqlServerImporter(DatabaseConfig config, ILogger<SqlServerImporter>
         }
 
         return value;
+    }
+
+    private object ConvertValueForSqlServerWithType(object? value, string columnType)
+    {
+        if (value == null || value == DBNull.Value)
+            return DBNull.Value;
+
+        // Handle string conversions
+        if (value is string strValue)
+        {
+            // Only convert truly empty strings to DBNull, not whitespace
+            // This preserves JSON strings and other data that might have whitespace
+            if (strValue.Length == 0)
+                return DBNull.Value;
+
+            // Handle GUID values - SqlBulkCopy requires actual Guid objects for UNIQUEIDENTIFIER columns
+            // But NOT for NVARCHAR columns that happen to contain GUID strings
+            if (columnType.Equals("uniqueidentifier", StringComparison.OrdinalIgnoreCase))
+            {
+                if (Guid.TryParse(strValue, out var guidValue))
+                {
+                    return guidValue;
+                }
+            }
+
+            // Handle boolean-like values
+            if (strValue.Equals("true", StringComparison.OrdinalIgnoreCase))
+                return 1;
+            if (strValue.Equals("false", StringComparison.OrdinalIgnoreCase))
+                return 0;
+
+            // Handle datetime values - SQL Server DATETIME supports 3 decimal places
+            if (DateTimeHelper.IsLikelyIsoDateTime(strValue))
+            {
+                try
+                {
+                    // Remove timezone if present
+                    var datetimePart = strValue.Contains('+') || strValue.EndsWith('Z') || strValue.Contains('T')
+                        ? DateTimeHelper.RemoveTimezone(strValue) ?? strValue
+                        : strValue;
+
+                    // Handle microseconds - SQL Server DATETIME precision is 3.33ms, so truncate to 3 digits
+                    if (datetimePart.Contains('.'))
+                    {
+                        var parts = datetimePart.Split('.');
+                        if (parts.Length == 2 && parts[1].Length > 3)
+                        {
+                            datetimePart = $"{parts[0]}.{parts[1][..3]}";
+                        }
+                    }
+
+                    return datetimePart;
+                }
+                catch
+                {
+                    // If conversion fails, return original value
+                }
+            }
+        }
+
+        return value;
+    }
+
+    public bool SupportsBulkCopy()
+    {
+        return true; // SQL Server SqlBulkCopy is highly optimized
+    }
+
+    public bool ImportDataBulk(
+        string tableName,
+        List<string> columns,
+        List<object[]> data)
+    {
+        if (_connection == null)
+            throw new InvalidOperationException("Not connected to database");
+
+        if (data.Count == 0)
+        {
+            _logger.LogWarning("No data to import for table {TableName}", tableName);
+            return true;
+        }
+
+        try
+        {
+            // Get actual table columns from SQL Server
+            var actualColumns = GetTableColumns(tableName);
+            if (actualColumns.Count == 0)
+            {
+                _logger.LogError("Could not retrieve columns for table {TableName}", tableName);
+                return false;
+            }
+
+            // Filter columns and data
+            var validColumnIndices = new List<int>();
+            var validColumns = new List<string>();
+            var missingColumns = new List<string>();
+
+            for (int i = 0; i < columns.Count; i++)
+            {
+                if (actualColumns.Contains(columns[i]))
+                {
+                    validColumnIndices.Add(i);
+                    validColumns.Add(columns[i]);
+                }
+                else
+                {
+                    missingColumns.Add(columns[i]);
+                }
+            }
+
+            if (missingColumns.Count > 0)
+            {
+                _logger.LogWarning("Skipping columns that don't exist in {TableName}: {Columns}", tableName, string.Join(", ", missingColumns));
+            }
+
+            if (validColumns.Count == 0)
+            {
+                _logger.LogError("No valid columns found for table {TableName}", tableName);
+                return false;
+            }
+
+            // Get column types for proper data conversion
+            var columnTypes = GetTableColumnTypes(tableName);
+            var validColumnTypes = validColumns.Select(col =>
+                columnTypes.GetValueOrDefault(col, "nvarchar")).ToList();
+
+            // Filter data to only include valid columns
+            var filteredData = data.Select(row =>
+                validColumnIndices.Select(i => i < row.Length ? row[i] : null).ToArray()
+            ).ToList();
+
+            // Check if table has identity columns
+            var identityColumns = GetIdentityColumns(tableName);
+            var identityColumnsInData = validColumns.Intersect(identityColumns).ToList();
+            var needsIdentityInsert = identityColumnsInData.Count > 0;
+
+            if (needsIdentityInsert)
+            {
+                _logger.LogInformation("Table {TableName} has identity columns in import data: {Columns}", tableName, string.Join(", ", identityColumnsInData));
+            }
+
+            _logger.LogInformation("Bulk importing {Count} rows into {TableName} using SqlBulkCopy", filteredData.Count, tableName);
+
+            // Use SqlBulkCopy for high-performance import
+            // When importing identity columns, we need SqlBulkCopyOptions.KeepIdentity
+            var bulkCopyOptions = needsIdentityInsert
+                ? SqlBulkCopyOptions.KeepIdentity
+                : SqlBulkCopyOptions.Default;
+
+            using var bulkCopy = new SqlBulkCopy(_connection, bulkCopyOptions, null)
+            {
+                DestinationTableName = $"[{tableName}]",
+                BatchSize = 10000,
+                BulkCopyTimeout = 600 // 10 minutes
+            };
+
+            // Map columns
+            foreach (var column in validColumns)
+            {
+                bulkCopy.ColumnMappings.Add(column, column);
+            }
+
+            // Create DataTable
+            var dataTable = new DataTable();
+            foreach (var column in validColumns)
+            {
+                dataTable.Columns.Add(column, typeof(object));
+            }
+
+            // Add rows with data type conversion based on actual column types
+            foreach (var row in filteredData)
+            {
+                var preparedRow = PrepareRowForInsertWithTypes(row, validColumnTypes);
+                dataTable.Rows.Add(preparedRow);
+            }
+
+            bulkCopy.WriteToServer(dataTable);
+            _logger.LogInformation("Successfully bulk imported {Count} rows into {TableName}", filteredData.Count, tableName);
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Error during bulk import into {TableName}: {Message}", tableName, ex.Message);
+            _logger.LogError("Stack trace: {StackTrace}", ex.StackTrace);
+            if (ex.InnerException != null)
+            {
+                _logger.LogError("Inner exception: {Message}", ex.InnerException.Message);
+            }
+            return false;
+        }
     }
 
     public bool TestConnection()
