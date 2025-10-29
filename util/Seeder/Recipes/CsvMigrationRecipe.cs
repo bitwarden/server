@@ -212,7 +212,7 @@ public class CsvMigrationRecipe(MigrationConfig config, ILoggerFactory loggerFac
                 return false;
             }
 
-            dynamic? importer = CreateImporter(dbType, destConfig);
+            IDatabaseImporter? importer = CreateImporter(dbType, destConfig);
             if (importer == null)
             {
                 _logger.LogError("Failed to create importer for {DbType}", dbType);
@@ -354,7 +354,7 @@ public class CsvMigrationRecipe(MigrationConfig config, ILoggerFactory loggerFac
                 return false;
             }
 
-            dynamic? importer = CreateImporter(dbType, destConfig);
+            IDatabaseImporter? importer = CreateImporter(dbType, destConfig);
             if (importer == null)
             {
                 _logger.LogError("Failed to create importer for {DbType}", dbType);
@@ -453,7 +453,7 @@ public class CsvMigrationRecipe(MigrationConfig config, ILoggerFactory loggerFac
                 return false;
             }
 
-            dynamic? importer = CreateImporter(dbType, destConfig);
+            IDatabaseImporter? importer = CreateImporter(dbType, destConfig);
             if (importer == null)
             {
                 _logger.LogError("Failed to create importer for {DbType}", dbType);
@@ -481,7 +481,7 @@ public class CsvMigrationRecipe(MigrationConfig config, ILoggerFactory loggerFac
         }
     }
 
-    private dynamic? CreateImporter(string dbType, DatabaseConfig config) =>
+    private IDatabaseImporter? CreateImporter(string dbType, DatabaseConfig config) =>
         dbType.ToLower() switch
         {
             "postgres" or "postgresql" => new PostgresImporter(config, _loggerFactory.CreateLogger<PostgresImporter>()),

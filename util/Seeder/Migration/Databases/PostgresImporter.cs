@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Bit.Seeder.Migration.Databases;
 
-public class PostgresImporter(DatabaseConfig config, ILogger<PostgresImporter> logger) : IDisposable
+public class PostgresImporter(DatabaseConfig config, ILogger<PostgresImporter> logger) : IDatabaseImporter
 {
     private readonly ILogger<PostgresImporter> _logger = logger;
     private readonly string _host = config.Host;

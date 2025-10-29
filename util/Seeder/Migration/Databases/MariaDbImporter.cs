@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Bit.Seeder.Migration.Databases;
 
-public class MariaDbImporter(DatabaseConfig config, ILogger<MariaDbImporter> logger) : IDisposable
+public class MariaDbImporter(DatabaseConfig config, ILogger<MariaDbImporter> logger) : IDatabaseImporter
 {
     private readonly ILogger<MariaDbImporter> _logger = logger;
     private readonly string _host = config.Host;

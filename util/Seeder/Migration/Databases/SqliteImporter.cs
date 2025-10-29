@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Bit.Seeder.Migration.Databases;
 
-public class SqliteImporter(DatabaseConfig config, ILogger<SqliteImporter> logger) : IDisposable
+public class SqliteImporter(DatabaseConfig config, ILogger<SqliteImporter> logger) : IDatabaseImporter
 {
     private readonly ILogger<SqliteImporter> _logger = logger;
     private readonly string _databasePath = config.Database;

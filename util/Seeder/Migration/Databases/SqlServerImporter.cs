@@ -6,7 +6,7 @@ using System.Data;
 
 namespace Bit.Seeder.Migration.Databases;
 
-public class SqlServerImporter(DatabaseConfig config, ILogger<SqlServerImporter> logger) : IDisposable
+public class SqlServerImporter(DatabaseConfig config, ILogger<SqlServerImporter> logger) : IDatabaseImporter
 {
     private readonly ILogger<SqlServerImporter> _logger = logger;
     private readonly string _host = config.Host;
