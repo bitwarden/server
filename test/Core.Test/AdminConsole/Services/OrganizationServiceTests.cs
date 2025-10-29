@@ -1330,6 +1330,109 @@ public class OrganizationServiceTests
             .GetByIdAsync(organizationId);
     }
 
+    [Theory]
+    [OrganizationInviteCustomize(InviteeUserType = OrganizationUserType.User,
+        InvitorUserType = OrganizationUserType.Owner), OrganizationCustomize, BitAutoData]
+    public async Task InviteUsers_WhenSeatCountIncreasesAndOwnersNotNotified_SendsAutoscaledEmailOnce(
+        Organization organization,
+        OrganizationUser invitor,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        OrganizationUserInvite invite,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        // Arrange
+        sutProvider.SetDependency(_orgUserInviteTokenDataFactory, "orgUserInviteTokenDataFactory");
+        sutProvider.Create();
+
+        organization.Seats = 1;
+        organization.SmSeats = 0;
+        organization.OwnersNotifiedOfAutoscaling = null;
+        organization.GatewayCustomerId = "customer_id";
+        organization.GatewaySubscriptionId = "subscription_id";
+        invite.Emails = invite.Emails.Take(1);
+        invite.AccessSecretsManager = false;
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IOrganizationRepository>().GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Sponsored = 0, Users = 1 });
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByMinimumRoleAsync(organization.Id, OrganizationUserType.Owner)
+            .ReturnsForAnyArgs([new OrganizationUserUserDetails { Id = owner.Id, Email = owner.Email }]);
+        sutProvider.GetDependency<IOrganizationUserRepository>().SelectKnownEmailsAsync(organization.Id, Arg.Any<IEnumerable<string>>(), false)
+            .Returns(Array.Empty<string>());
+        sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(organization.Id).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(true);
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(organization.Id, Arg.Any<IEnumerable<Guid>>(), Arg.Any<bool>()).Returns(true);
+        sutProvider.GetDependency<ICountNewSmSeatsRequiredQuery>()
+            .CountNewSmSeatsRequiredAsync(organization.Id, Arg.Any<int>()).Returns(0);
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType).Returns(StaticStore.GetPlan(organization.PlanType));
+        sutProvider.GetDependency<IPaymentService>().AdjustSeatsAsync(Arg.Any<Organization>(), Arg.Any<Bit.Core.Models.StaticStore.Plan>(), Arg.Any<int>())
+            .Returns(Task.FromResult<string>(null));
+        sutProvider.GetDependency<IGlobalSettings>().SelfHosted.Returns(false);
+        SetupOrgUserRepositoryCreateManyAsyncMock(sutProvider.GetDependency<IOrganizationUserRepository>());
+
+        // Act
+        await sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, systemUser: null, invites: [(invite, null)]);
+
+        // Assert
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendOrganizationAutoscaledEmailAsync(
+                Arg.Is<Organization>(o => o.Id == organization.Id),
+                initialSeatCount: 1,
+                Arg.Is<IEnumerable<string>>(emails => emails.Contains(owner.Email)));
+        await sutProvider.GetDependency<IOrganizationRepository>()
+            .Received(1)
+            .UpsertAsync(
+                Arg.Is<Organization>(o => o.Id == organization.Id && o.OwnersNotifiedOfAutoscaling.HasValue));
+    }
+
+    [Theory]
+    [OrganizationInviteCustomize(InviteeUserType = OrganizationUserType.User,
+        InvitorUserType = OrganizationUserType.Owner), OrganizationCustomize, BitAutoData]
+    public async Task InviteUsers_WhenOwnersAlreadyNotified_DoesNotSendAutoscaleEmail(
+        Organization organization,
+        OrganizationUser invitor,
+        OrganizationUserInvite invite,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        // Arrange
+        sutProvider.SetDependency(_orgUserInviteTokenDataFactory, "orgUserInviteTokenDataFactory");
+        sutProvider.Create();
+
+        organization.Seats = 1;
+        organization.SmSeats = 0;
+        organization.OwnersNotifiedOfAutoscaling = DateTime.UtcNow.AddDays(-1);
+        organization.GatewayCustomerId = "customer_id";
+        organization.GatewaySubscriptionId = "subscription_id";
+        invite.Emails = invite.Emails.Take(1);
+        invite.AccessSecretsManager = false;
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IOrganizationRepository>().GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Sponsored = 0, Users = 1 });
+        sutProvider.GetDependency<IOrganizationUserRepository>().SelectKnownEmailsAsync(organization.Id, Arg.Any<IEnumerable<string>>(), false)
+            .Returns(Array.Empty<string>());
+        sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(organization.Id).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(true);
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(organization.Id, Arg.Any<IEnumerable<Guid>>(), Arg.Any<bool>()).Returns(true);
+        sutProvider.GetDependency<ICountNewSmSeatsRequiredQuery>()
+            .CountNewSmSeatsRequiredAsync(organization.Id, Arg.Any<int>()).Returns(0);
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType).Returns(StaticStore.GetPlan(organization.PlanType));
+        sutProvider.GetDependency<IPaymentService>().AdjustSeatsAsync(Arg.Any<Organization>(), Arg.Any<Bit.Core.Models.StaticStore.Plan>(), Arg.Any<int>())
+            .Returns(Task.FromResult<string>(null));
+        sutProvider.GetDependency<IGlobalSettings>().SelfHosted.Returns(false);
+        SetupOrgUserRepositoryCreateManyAsyncMock(sutProvider.GetDependency<IOrganizationUserRepository>());
+
+        // Act
+        await sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, systemUser: null, invites: [(invite, null)]);
+
+        // Assert
+        await sutProvider.GetDependency<IMailService>().DidNotReceive().SendOrganizationAutoscaledEmailAsync(
+            Arg.Any<Organization>(), Arg.Any<int>(), Arg.Any<IEnumerable<string>>());
+    }
+
     // Must set real guids in order for dictionary of guids to not throw aggregate exceptions
     private void SetupOrgUserRepositoryCreateManyAsyncMock(IOrganizationUserRepository organizationUserRepository)
     {
