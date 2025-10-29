@@ -177,7 +177,6 @@ public static class FeatureFlagKeys
 
     /* Billing Team */
     public const string TrialPayment = "PM-8163-trial-payment";
-    public const string PM17772_AdminInitiatedSponsorships = "pm-17772-admin-initiated-sponsorships";
     public const string UsePricingService = "use-pricing-service";
     public const string PM19422_AllowAutomaticTaxUpdates = "pm-19422-allow-automatic-tax-updates";
     public const string PM21821_ProviderPortalTakeover = "pm-21821-provider-portal-takeover";
@@ -243,6 +242,7 @@ public static class FeatureFlagKeys
     public const string PM19315EndUserActivationMvp = "pm-19315-end-user-activation-mvp";
     public const string PM22136_SdkCipherEncryption = "pm-22136-sdk-cipher-encryption";
     public const string PM23904_RiskInsightsForPremium = "pm-23904-risk-insights-for-premium";
+    public const string PM25083_AutofillConfirmFromSearch = "pm-25083-autofill-confirm-from-search";
 
     /* Innovation Team */
     public const string ArchiveVaultItems = "pm-19148-innovation-archive";
