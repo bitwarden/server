@@ -62,7 +62,7 @@ public class OrganizationReportsController : Controller
         }
 
         var latestReport = await _getOrganizationReportQuery.GetLatestOrganizationReportAsync(organizationId);
-        var response = new OrganizationReportResponseModel(latestReport);
+        var response = latestReport == null ? null : new OrganizationReportResponseModel(latestReport);
 
         return Ok(response);
     }
@@ -104,8 +104,8 @@ public class OrganizationReportsController : Controller
         }
 
         var report = await _addOrganizationReportCommand.AddOrganizationReportAsync(request);
-        var response = new OrganizationReportResponseModel(report);
-        return Ok(report);
+        var response = report == null ? null : new OrganizationReportResponseModel(report);
+        return Ok(response);
     }
 
     [HttpPatch("{organizationId}/{reportId}")]
