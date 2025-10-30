@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Models.Request.Organizations;
@@ -533,7 +534,10 @@ public class OrganizationUsersControllerTests
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.AccountRecoveryCommand).Returns(true);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns(organizationUser);
         sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), organizationUser, Arg.Any<IAuthorizationRequirement>())
+            .AuthorizeAsync(
+                Arg.Any<ClaimsPrincipal>(),
+                organizationUser,
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(x => x.SingleOrDefault() is RecoverAccountAuthorizationRequirement))
             .Returns(AuthorizationResult.Failed());
 
         var result = await sutProvider.Sut.PutResetPassword(orgId, orgUserId, model);
@@ -551,7 +555,10 @@ public class OrganizationUsersControllerTests
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.AccountRecoveryCommand).Returns(true);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns(organizationUser);
         sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), organizationUser, Arg.Any<IAuthorizationRequirement>())
+            .AuthorizeAsync(
+                Arg.Any<ClaimsPrincipal>(),
+                organizationUser,
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(x => x.SingleOrDefault() is RecoverAccountAuthorizationRequirement))
             .Returns(AuthorizationResult.Success());
         sutProvider.GetDependency<IAdminRecoverAccountCommand>()
             .RecoverAccountAsync(orgId, organizationUser, model.NewMasterPasswordHash, model.Key)
@@ -574,7 +581,10 @@ public class OrganizationUsersControllerTests
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.AccountRecoveryCommand).Returns(true);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns(organizationUser);
         sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), organizationUser, Arg.Any<IAuthorizationRequirement>())
+            .AuthorizeAsync(
+                Arg.Any<ClaimsPrincipal>(),
+                organizationUser,
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(x => x.SingleOrDefault() is RecoverAccountAuthorizationRequirement))
             .Returns(AuthorizationResult.Success());
         sutProvider.GetDependency<IAdminRecoverAccountCommand>()
             .RecoverAccountAsync(orgId, organizationUser, model.NewMasterPasswordHash, model.Key)
