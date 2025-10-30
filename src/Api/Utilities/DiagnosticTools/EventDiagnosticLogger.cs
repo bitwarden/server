@@ -1,32 +1,30 @@
 ﻿using Bit.Api.Models.Public.Request;
 using Bit.Api.Models.Public.Response;
+using Bit.Core;
 using Bit.Core.Services;
 
 namespace Bit.Api.Utilities.DiagnosticTools;
 
 public static class EventDiagnosticLogger
 {
-
     public static void LogAggregateData(
         this ILogger logger,
-        IFeatureService _featureService,
+        IFeatureService featureService,
         Guid organizationId,
         PagedListResponseModel<EventResponseModel> data, EventFilterRequestModel request)
     {
-
         try
         {
-
-            if (_featureService.IsEnabled(organizationId))
+            if (!featureService.IsEnabled(FeatureFlagKeys.EventDiagnosticLogging))
             {
-
+                return;
             }
+
 
             var recordCount = data.Data.Count();
             var oldestRecordDate = data.Data.FirstOrDefault()?.Date;
             var newestRecordDate = data.Data.LastOrDefault()?.Date;
             var hasMore = !string.IsNullOrEmpty(data.ContinuationToken);
-
 
             logger.LogInformation(
                 "Events query for Organization {OrgId}. Returned {Count} events, oldest record {oldestRecord}, newest record {newestRecord} HasMore: {HasMore}, " +
@@ -49,21 +47,27 @@ public static class EventDiagnosticLogger
 
     public static void LogAggregateData(
         this ILogger logger,
-        IFeatureService _featureService,
+        IFeatureService featureService,
         Guid organizationId,
         string continuationToken,
         IEnumerable<Bit.Api.Models.Response.EventResponseModel> data,
         DateTime? queryStart = null,
         DateTime? queryEnd = null)
     {
-        var list = data.ToList();
-        var recordCount = list.Count;
-        var oldestRecordDate = list.FirstOrDefault()?.Date;
-        var newestRecordDate = list.LastOrDefault()?.Date;
-        var hasMore = !string.IsNullOrEmpty(continuationToken);
 
         try
         {
+            if (!featureService.IsEnabled(FeatureFlagKeys.EventDiagnosticLogging))
+            {
+                return;
+            }
+
+            var list = data.ToList();
+            var recordCount = list.Count;
+            var oldestRecordDate = list.FirstOrDefault()?.Date;
+            var newestRecordDate = list.LastOrDefault()?.Date;
+            var hasMore = !string.IsNullOrEmpty(continuationToken);
+
             logger.LogInformation(
                 "Events query for Organization {OrgId}. Returned {Count} events, oldest record {oldestRecord}, newest record {newestRecord} HasMore: {HasMore}, " +
                 "Request Filters: Start={queryStart}, End={End}",
