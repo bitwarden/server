@@ -55,19 +55,6 @@ public class SelfHostedOrganizationSponsorshipsController : Controller
     [HttpPost("{sponsoringOrgId}/families-for-enterprise")]
     public async Task CreateSponsorship(Guid sponsoringOrgId, [FromBody] OrganizationSponsorshipCreateRequestModel model)
     {
-        if (!_featureService.IsEnabled(Bit.Core.FeatureFlagKeys.PM17772_AdminInitiatedSponsorships))
-        {
-            if (model.IsAdminInitiated.GetValueOrDefault())
-            {
-                throw new BadRequestException();
-            }
-
-            if (!string.IsNullOrWhiteSpace(model.Notes))
-            {
-                model.Notes = null;
-            }
-        }
-
         await _offerSponsorshipCommand.CreateSponsorshipAsync(
             await _organizationRepository.GetByIdAsync(sponsoringOrgId),
             await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrgId, _currentContext.UserId ?? default),
