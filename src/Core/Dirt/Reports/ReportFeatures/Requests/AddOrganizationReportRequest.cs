@@ -3,13 +3,13 @@
 public class AddOrganizationReportRequest
 {
     public Guid OrganizationId { get; set; }
-    public required string ReportData { get; set; }
+    public string? ReportData { get; set; }
 
-    public required string ContentEncryptionKey { get; set; }
+    public string? ContentEncryptionKey { get; set; }
 
-    public required string SummaryData { get; set; }
+    public string? SummaryData { get; set; }
 
-    public required string ApplicationData { get; set; }
+    public string? ApplicationData { get; set; }
 
     public OrganizationReportMetricsRequest Metrics { get; set; } = new OrganizationReportMetricsRequest();
 }

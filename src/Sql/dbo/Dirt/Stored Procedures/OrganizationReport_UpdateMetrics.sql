@@ -1,6 +1,5 @@
 CREATE PROCEDURE [dbo].[OrganizationReport_UpdateMetrics]
     @Id UNIQUEIDENTIFIER,
-    @OrganizationId UNIQUEIDENTIFIER,
     @ApplicationCount INT,
     @ApplicationAtRiskCount INT,
     @CriticalApplicationCount INT,
@@ -35,5 +34,5 @@ BEGIN
         RevisionDate = @RevisionDate
     WHERE 
         Id = @Id
-        AND OrganizationId = @OrganizationId
+        
 END

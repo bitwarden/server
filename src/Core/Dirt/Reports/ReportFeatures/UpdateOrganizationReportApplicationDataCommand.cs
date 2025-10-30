@@ -55,14 +55,13 @@ public class UpdateOrganizationReportApplicationDataCommand : IUpdateOrganizatio
             }
 
             var metrics = OrganizationReportMetricsData.From(request.OrganizationId, request.Metrics);
-            await _organizationReportRepo.UpdateMetricsAsync(request.OrganizationId, request.Id, metrics);
+            await _organizationReportRepo.UpdateMetricsAsync(request.Id, metrics);
 
             var updatedReport = await _organizationReportRepo.UpdateApplicationDataAsync(request.OrganizationId, request.Id, request.ApplicationData);
 
             _logger.LogInformation(Constants.BypassFiltersEventId, "Successfully updated organization report application data {reportId} for organization {organizationId}",
                 request.Id, request.OrganizationId);
 
-            // intentional: we don't want to return the metrics data here
             return updatedReport;
         }
         catch (Exception ex) when (!(ex is BadRequestException || ex is NotFoundException))

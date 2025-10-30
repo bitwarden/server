@@ -186,14 +186,14 @@ public class OrganizationReportRepository :
         }
     }
 
-    public Task<int> UpdateMetricsAsync(Guid organizationId, Guid reportId, OrganizationReportMetricsData metrics)
+    public Task UpdateMetricsAsync(Guid reportId, OrganizationReportMetricsData metrics)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
 
             return dbContext.OrganizationReports
-                .Where(p => p.Id == reportId && p.OrganizationId == organizationId)
+                .Where(p => p.Id == reportId)
                 .UpdateAsync(p => new Models.OrganizationReport
                 {
                     ApplicationCount = metrics.ApplicationCount,

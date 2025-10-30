@@ -6,13 +6,13 @@ public class OrganizationReportResponseModel
 {
     public Guid Id { get; set; }
     public Guid OrganizationId { get; set; }
-    public string ReportData { get; set; } = string.Empty;
-    public string ContentEncryptionKey { get; set; } = string.Empty;
-    public string SummaryData { get; set; } = string.Empty;
-    public string ApplicationData { get; set; } = string.Empty;
-    public int PasswordCount { get; set; } = 0;
-    public int PasswordAtRiskCount { get; set; } = 0;
-    public int MemberCount { get; set; } = 0;
+    public string? ReportData { get; set; }
+    public string? ContentEncryptionKey { get; set; }
+    public string? SummaryData { get; set; }
+    public string? ApplicationData { get; set; }
+    public int PasswordCount { get; set; }
+    public int PasswordAtRiskCount { get; set; }
+    public int MemberCount { get; set; }
     public DateTime? CreationDate { get; set; } = null;
     public DateTime? RevisionDate { get; set; } = null;
 
@@ -27,8 +27,8 @@ public class OrganizationReportResponseModel
         OrganizationId = organizationReport.OrganizationId;
         ReportData = organizationReport.ReportData;
         ContentEncryptionKey = organizationReport.ContentEncryptionKey;
-        SummaryData = organizationReport.SummaryData ?? string.Empty;
-        ApplicationData = organizationReport.ApplicationData ?? string.Empty;
+        SummaryData = organizationReport.SummaryData;
+        ApplicationData = organizationReport.ApplicationData;
         PasswordCount = organizationReport.PasswordCount ?? 0;
         PasswordAtRiskCount = organizationReport.PasswordAtRiskCount ?? 0;
         MemberCount = organizationReport.MemberCount ?? 0;

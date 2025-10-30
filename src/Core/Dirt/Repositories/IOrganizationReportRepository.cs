@@ -24,6 +24,6 @@ public interface IOrganizationReportRepository : IRepository<OrganizationReport,
     Task<OrganizationReport> UpdateApplicationDataAsync(Guid orgId, Guid reportId, string applicationData);
 
     // Metrics methods
-    Task<int> UpdateMetricsAsync(Guid organizationId, Guid reportId, OrganizationReportMetricsData metrics);
+    Task UpdateMetricsAsync(Guid reportId, OrganizationReportMetricsData metrics);
 }
 

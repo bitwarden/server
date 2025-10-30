@@ -175,12 +175,11 @@ public class OrganizationReportRepository : Repository<OrganizationReport, Guid>
         }
     }
 
-    public async Task<int> UpdateMetricsAsync(Guid organizationId, Guid reportId, OrganizationReportMetricsData metrics)
+    public async Task UpdateMetricsAsync(Guid reportId, OrganizationReportMetricsData metrics)
     {
         using var connection = new SqlConnection(ConnectionString);
         var parameters = new
         {
-            OrganizationId = organizationId,
             Id = reportId,
             ApplicationCount = metrics.ApplicationCount,
             ApplicationAtRiskCount = metrics.ApplicationAtRiskCount,
@@ -197,7 +196,7 @@ public class OrganizationReportRepository : Repository<OrganizationReport, Guid>
             RevisionDate = DateTime.UtcNow
         };
 
-        return await connection.ExecuteAsync(
+        await connection.ExecuteAsync(
             $"[{Schema}].[OrganizationReport_UpdateMetrics]",
             parameters,
             commandType: CommandType.StoredProcedure);

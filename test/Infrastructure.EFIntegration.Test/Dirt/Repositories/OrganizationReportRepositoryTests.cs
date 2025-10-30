@@ -514,7 +514,7 @@ public class OrganizationReportRepositoryTests
         };
 
         // Act
-        var rowsAffected = await sqlOrganizationReportRepo.UpdateMetricsAsync(org.Id, report.Id, metrics);
+        await sqlOrganizationReportRepo.UpdateMetricsAsync(report.Id, metrics);
         var updatedReport = await sqlOrganizationReportRepo.GetByIdAsync(report.Id);
 
         // Assert

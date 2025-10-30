@@ -4,6 +4,6 @@ public class UpdateOrganizationReportApplicationDataRequest
 {
     public Guid Id { get; set; }
     public Guid OrganizationId { get; set; }
-    public required string ApplicationData { get; set; }
+    public string ApplicationData { get; set; } = string.Empty;
     public OrganizationReportMetricsRequest Metrics { get; set; } = new OrganizationReportMetricsRequest();
 }
