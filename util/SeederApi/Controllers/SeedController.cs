@@ -1,4 +1,5 @@
 ﻿using Bit.SeederApi.Models.Requests;
+using Bit.SeederApi.Models.Response;
 using Bit.SeederApi.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -15,7 +16,7 @@ public class SeedController(ILogger<SeedController> logger, ISeedService recipeS
 
         try
         {
-            var response = recipeService.ExecuteScene(request.Template, request.Arguments);
+            SceneResponseModel response = recipeService.ExecuteScene(request.Template, request.Arguments);
 
             return Json(response);
         }
