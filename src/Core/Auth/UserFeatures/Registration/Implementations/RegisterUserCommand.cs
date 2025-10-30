@@ -3,6 +3,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -34,6 +35,7 @@ public class RegisterUserCommand : IRegisterUserCommand
     private readonly IValidateRedemptionTokenCommand _validateRedemptionTokenCommand;
 
     private readonly IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> _emergencyAccessInviteTokenDataFactory;
+    private readonly IFeatureService _featureService;
 
     private readonly string _disabledUserRegistrationExceptionMsg = "Open registration has been disabled by the system administrator.";
 
@@ -47,7 +49,8 @@ public class RegisterUserCommand : IRegisterUserCommand
         IUserService userService,
         IMailService mailService,
         IValidateRedemptionTokenCommand validateRedemptionTokenCommand,
-        IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> emergencyAccessInviteTokenDataFactory
+        IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> emergencyAccessInviteTokenDataFactory,
+        IFeatureService featureService
         )
     {
         _globalSettings = globalSettings;
@@ -66,6 +69,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         _emergencyAccessInviteTokenDataFactory = emergencyAccessInviteTokenDataFactory;
 
         _providerServiceDataProtector = dataProtectionProvider.CreateProtector("ProviderServiceDataProtector");
+        _featureService = featureService;
     }
 
 
@@ -84,7 +88,7 @@ public class RegisterUserCommand : IRegisterUserCommand
     public async Task<IdentityResult> RegisterUserViaOrganizationInviteToken(User user, string masterPasswordHash,
         string orgInviteToken, Guid? orgUserId)
     {
-        ValidateOrgInviteToken(orgInviteToken, orgUserId, user);
+        TryValidateOrgInviteToken(orgInviteToken, orgUserId, user, out var organizationWelcomeEmailDetails);
         await SetUserEmail2FaIfOrgPolicyEnabledAsync(orgUserId, user);
 
         user.ApiKey = CoreHelpers.SecureRandomString(30);
@@ -104,7 +108,7 @@ public class RegisterUserCommand : IRegisterUserCommand
                 if (referenceData.TryGetValue("initiationPath", out var value))
                 {
                     var initiationPath = value.ToString() ?? string.Empty;
-                    await SendAppropriateWelcomeEmailAsync(user, initiationPath);
+                    await SendAppropriateWelcomeEmailAsync(user, initiationPath, organizationWelcomeEmailDetails);
                     sentWelcomeEmail = true;
                     if (!string.IsNullOrEmpty(initiationPath))
                     {
@@ -113,30 +117,36 @@ public class RegisterUserCommand : IRegisterUserCommand
                 }
             }
 
-            // TODO: Organization Invite
             if (!sentWelcomeEmail)
             {
-                await _mailService.SendWelcomeEmailAsync(user);
+                if (_featureService.IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates))
+                {
+                    await SendWelcomeEmailAsync(user, organizationWelcomeEmailDetails);
+                }
+                else
+                {
+                    await _mailService.SendWelcomeEmailAsync(user);
+                }
             }
         }
 
         return result;
     }
 
-    private void ValidateOrgInviteToken(string orgInviteToken, Guid? orgUserId, User user)
+    private void TryValidateOrgInviteToken(string orgInviteToken, Guid? orgUserId, User user, out OrganizationWelcomeEmailDetails? organizationWelcomeEmailDetails)
     {
+        organizationWelcomeEmailDetails = null; // Initialize the out parameter
         var orgInviteTokenProvided = !string.IsNullOrWhiteSpace(orgInviteToken);
 
         if (orgInviteTokenProvided && orgUserId.HasValue)
         {
             // We have token data so validate it
-            if (IsOrgInviteTokenValid(orgInviteToken, orgUserId.Value, user.Email))
+            if (IsOrgInviteTokenValid(orgInviteToken, orgUserId.Value, user.Email, out organizationWelcomeEmailDetails))
             {
                 return;
             }
 
             // Token data is invalid
-
             if (_globalSettings.DisableUserRegistration)
             {
                 throw new BadRequestException(_disabledUserRegistrationExceptionMsg);
@@ -146,7 +156,6 @@ public class RegisterUserCommand : IRegisterUserCommand
         }
 
         // no token data or missing token data
-
         // Throw if open registration is disabled and there isn't an org invite token or an org user id
         // as you can't register without them.
         if (_globalSettings.DisableUserRegistration)
@@ -170,11 +179,26 @@ public class RegisterUserCommand : IRegisterUserCommand
         // If both orgInviteToken && orgUserId are missing, then proceed with open registration
     }
 
-    private bool IsOrgInviteTokenValid(string orgInviteToken, Guid orgUserId, string userEmail)
+    /// <summary>
+    /// Validates the org invite token using the new tokenable logic first, then falls back to the old token validation logic for backwards compatibility.
+    /// Will set the out parameter organizationWelcomeEmailDetails if the new token is valid. If the token is invalid then no welcome email needs to be sent
+    /// so the out parameter is set to null.
+    /// </summary>
+    /// <param name="orgInviteToken">Invite token</param>
+    /// <param name="orgUserId">Inviting Organization UserId</param>
+    /// <param name="userEmail">User email</param>
+    /// <param name="organizationWelcomeEmailDetails">Metadata used to populate the Welcome email if the token is not valid will be set to null.</param>
+    /// <returns>true if the token is valid false otherwise</returns>
+    private bool IsOrgInviteTokenValid(string orgInviteToken, Guid orgUserId, string userEmail, out OrganizationWelcomeEmailDetails? organizationWelcomeEmailDetails)
     {
+        _orgUserInviteTokenDataFactory.TryUnprotect(orgInviteToken, out var decryptedToken);
         // TODO: PM-4142 - remove old token validation logic once 3 releases of backwards compatibility are complete
-        var newOrgInviteTokenValid = OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
-            _orgUserInviteTokenDataFactory, orgInviteToken, orgUserId, userEmail);
+        var newOrgInviteTokenValid = decryptedToken.TokenIsValid(orgUserId, userEmail);
+        organizationWelcomeEmailDetails = newOrgInviteTokenValid ? new OrganizationWelcomeEmailDetails
+        {
+            OrganizationDisplayName = decryptedToken.OrgDisplayName,
+            PlanType = decryptedToken.PlanType
+        } : null;
 
         return newOrgInviteTokenValid || CoreHelpers.UserInviteTokenIsValid(
             _organizationServiceDataProtector, orgInviteToken, userEmail, orgUserId, _globalSettings);
@@ -215,7 +239,7 @@ public class RegisterUserCommand : IRegisterUserCommand
     }
 
 
-    private async Task SendAppropriateWelcomeEmailAsync(User user, string initiationPath)
+    private async Task SendAppropriateWelcomeEmailAsync(User user, string initiationPath, OrganizationWelcomeEmailDetails? organizationDisplayName)
     {
         var isFromMarketingWebsite = initiationPath.Contains("Secrets Manager trial");
 
@@ -225,17 +249,21 @@ public class RegisterUserCommand : IRegisterUserCommand
         }
         else
         {
-            // TODO is this still correct?
-            await _mailService.SendWelcomeEmailAsync(user);
+            if (_featureService.IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates))
+            {
+                await SendWelcomeEmailAsync(user, organizationDisplayName);
+            }
+            else
+            {
+                await _mailService.SendWelcomeEmailAsync(user);
+            }
         }
     }
 
     public async Task<IdentityResult> RegisterUserViaEmailVerificationToken(User user, string masterPasswordHash,
         string emailVerificationToken)
     {
-
         ValidateOpenRegistrationAllowed();
-
         var tokenable = ValidateRegistrationEmailVerificationTokenable(emailVerificationToken, user.Email);
 
         user.EmailVerified = true;
@@ -245,8 +273,14 @@ public class RegisterUserCommand : IRegisterUserCommand
         var result = await _userService.CreateUserAsync(user, masterPasswordHash);
         if (result == IdentityResult.Success)
         {
-            // TODO: email verification token? what flow is this?
-            await _mailService.SendWelcomeEmailAsync(user);
+            if (_featureService.IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates))
+            {
+                await SendWelcomeEmailAsync(user);
+            }
+            else
+            {
+                await _mailService.SendWelcomeEmailAsync(user);
+            }
         }
 
         return result;
@@ -264,8 +298,14 @@ public class RegisterUserCommand : IRegisterUserCommand
         var result = await _userService.CreateUserAsync(user, masterPasswordHash);
         if (result == IdentityResult.Success)
         {
-            // TODO Is this just Welcome Family?
-            await _mailService.SendWelcomeEmailAsync(user);
+            if (_featureService.IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates))
+            {
+                await SendWelcomeEmailAsync(user);
+            }
+            else
+            {
+                await _mailService.SendWelcomeEmailAsync(user);
+            }
         }
 
         return result;
@@ -285,8 +325,14 @@ public class RegisterUserCommand : IRegisterUserCommand
         var result = await _userService.CreateUserAsync(user, masterPasswordHash);
         if (result == IdentityResult.Success)
         {
-            // TODO: accepting emergency access seems like a normal user thing so standard welcome email should be fine.
-            await _mailService.SendWelcomeEmailAsync(user);
+            if (_featureService.IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates))
+            {
+                await SendWelcomeEmailAsync(user);
+            }
+            else
+            {
+                await _mailService.SendWelcomeEmailAsync(user);
+            }
         }
 
         return result;
@@ -304,8 +350,14 @@ public class RegisterUserCommand : IRegisterUserCommand
         var result = await _userService.CreateUserAsync(user, masterPasswordHash);
         if (result == IdentityResult.Success)
         {
-            // todo: provider invite token
-            await _mailService.SendWelcomeEmailAsync(user);
+            if (_featureService.IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates))
+            {
+                await SendWelcomeEmailAsync(user);
+            }
+            else
+            {
+                await _mailService.SendWelcomeEmailAsync(user);
+            }
         }
 
         return result;
@@ -360,5 +412,48 @@ public class RegisterUserCommand : IRegisterUserCommand
         }
 
         return tokenable;
+    }
+
+    /// <summary>
+    /// We send different welcome emails depending on whether the user is joining a free/family or an enterprise organization. If information to populate the
+    /// email isn't present we send the standard individual welcome email.
+    /// </summary>
+    /// <param name="user">Target user for the email</param>
+    /// <param name="organizationWelcomeEmailDetails">this value is nullable</param>
+    /// <returns></returns>
+    private async Task SendWelcomeEmailAsync(User user, OrganizationWelcomeEmailDetails? organizationWelcomeEmailDetails = null)
+    {
+        // Most emails are probably for non organization users so we default to that experience
+        if (organizationWelcomeEmailDetails == null)
+        {
+            await _mailService.SendIndividualUserWelcomeEmailAsync(user);
+        }
+        // We need to make sure that the organization email has the correct data to display otherwise we just send the standard welcome email
+        else if (!string.IsNullOrEmpty(organizationWelcomeEmailDetails.OrganizationDisplayName))
+        {
+            // If the organization is Free or Families plan, send families welcome email
+            if (organizationWelcomeEmailDetails.PlanType == PlanType.FamiliesAnnually
+                || organizationWelcomeEmailDetails.PlanType == PlanType.FamiliesAnnually2019
+                || organizationWelcomeEmailDetails.PlanType == PlanType.Free)
+            {
+                await _mailService.SendFamiliesUserWelcomeEmailAsync(user, organizationWelcomeEmailDetails.OrganizationDisplayName);
+            }
+            else
+            {
+                await _mailService.SendOrganizationUserWelcomeEmailAsync(user, organizationWelcomeEmailDetails.OrganizationDisplayName);
+            }
+        }
+        // If the organization data isn't present send the standard welcome email
+        else
+        {
+            await _mailService.SendIndividualUserWelcomeEmailAsync(user);
+        }
+    }
+
+    private class OrganizationWelcomeEmailDetails
+    {
+        public string? OrganizationDisplayName { get; set; } = string.Empty;
+        public PlanType PlanType { get; set; }
+        public string? InitiationPath { get; set; } = string.Empty;
     }
 }
