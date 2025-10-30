@@ -4,9 +4,12 @@
 using System.Net;
 using Bit.Api.Models.Public.Request;
 using Bit.Api.Models.Public.Response;
+using Bit.Api.Utilities.DiagnosticTools;
+using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Vault.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -20,15 +23,21 @@ public class EventsController : Controller
     private readonly IEventRepository _eventRepository;
     private readonly ICipherRepository _cipherRepository;
     private readonly ICurrentContext _currentContext;
+    private readonly ILogger<EventsController> _logger;
+    private readonly IFeatureService _featureService;
 
     public EventsController(
         IEventRepository eventRepository,
         ICipherRepository cipherRepository,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        ILogger<EventsController> logger,
+        IFeatureService featureService)
     {
         _eventRepository = eventRepository;
         _cipherRepository = cipherRepository;
         _currentContext = currentContext;
+        _logger = logger;
+        _featureService = featureService;
     }
 
     /// <summary>
@@ -69,6 +78,12 @@ public class EventsController : Controller
 
         var eventResponses = result.Data.Select(e => new EventResponseModel(e));
         var response = new PagedListResponseModel<EventResponseModel>(eventResponses, result.ContinuationToken);
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.EventDiagnosticLogging))
+        {
+            _logger.LogAggregateData(_currentContext.OrganizationId!.Value, response, request);
+        }
+
         return new JsonResult(response);
     }
 }
