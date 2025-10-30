@@ -434,6 +434,47 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
+    public async Task SendIndividualUserWelcomeEmailAsync(User user)
+    {
+        var message = CreateDefaultMessage("Welcome to Bitwarden!", user.Email);
+        var model = new BaseMailModel
+        {
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            SiteName = _globalSettings.SiteName
+        };
+        await AddMessageContentAsync(message, "Auth.MJML.Onboarding.welcome-free-user", model);
+        message.Category = "Welcome";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
+    public async Task SendOrganizationUserWelcomeEmailAsync(User user, string organizationName)
+    {
+        var message = CreateDefaultMessage("Welcome to Bitwarden!", user.Email);
+        var model = new OrganizationWelcomeEmailViewModel
+        {
+            OrganizationName = organizationName,
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            SiteName = _globalSettings.SiteName
+        };
+        await AddMessageContentAsync(message, "Auth.MJML.Onboarding.welcome-org-user", model);
+        message.Category = "Welcome";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
+    public async Task SendFamiliesUserWelcomeEmailAsync(User user, string familyOrganizationName)
+    {
+        var message = CreateDefaultMessage("Welcome to Bitwarden!", user.Email);
+        var model = new OrganizationWelcomeEmailViewModel
+        {
+            OrganizationName = familyOrganizationName,
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            SiteName = _globalSettings.SiteName
+        };
+        await AddMessageContentAsync(message, "Auth.MJML.Onboarding.welcome-family-user", model);
+        message.Category = "Welcome";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
     public async Task SendTrialInitiationEmailAsync(string userEmail)
     {
         var message = CreateDefaultMessage("Welcome to Bitwarden; 3 steps to get started!", userEmail);
