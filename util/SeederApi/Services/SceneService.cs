@@ -7,13 +7,13 @@ using Bit.SeederApi.Models.Response;
 
 namespace Bit.SeederApi.Services;
 
-public class SeedService(
+public class SceneService(
     DatabaseContext databaseContext,
-    ILogger<SeedService> logger,
+    ILogger<SceneService> logger,
     IServiceProvider serviceProvider,
     IUserRepository userRepository,
     IOrganizationRepository organizationRepository)
-    : ISeedService
+    : ISceneService
 {
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
@@ -46,7 +46,7 @@ public class SeedService(
         databaseContext.Add(seededData);
         databaseContext.SaveChanges();
 
-        logger.LogInformation("Saved seeded data with ID {SeedId} for scene {RecipeName}",
+        logger.LogInformation("Saved seeded data with ID {SeedId} for scene {SceneName}",
             seededData.Id, templateName);
 
         return SceneResponseModel.FromSceneResult(result, seededData.Id);
@@ -57,7 +57,7 @@ public class SeedService(
         try
         {
             var query = serviceProvider.GetKeyedService<IQuery>(queryName)
-                ?? throw new RecipeNotFoundException(queryName);
+                ?? throw new SceneNotFoundException(queryName);
 
             var requestType = query.GetRequestType();
 
@@ -71,13 +71,13 @@ public class SeedService(
                     requestModel = Activator.CreateInstance(requestType);
                     if (requestModel == null)
                     {
-                        throw new RecipeExecutionException(
+                        throw new SceneExecutionException(
                             $"Arguments are required for query '{queryName}'");
                     }
                 }
                 catch
                 {
-                    throw new RecipeExecutionException(
+                    throw new SceneExecutionException(
                         $"Arguments are required for query '{queryName}'");
                 }
             }
@@ -88,13 +88,13 @@ public class SeedService(
                     requestModel = JsonSerializer.Deserialize(arguments.Value.GetRawText(), requestType, _jsonOptions);
                     if (requestModel == null)
                     {
-                        throw new RecipeExecutionException(
+                        throw new SceneExecutionException(
                             $"Failed to deserialize request model for query '{queryName}'");
                     }
                 }
                 catch (JsonException ex)
                 {
-                    throw new RecipeExecutionException(
+                    throw new SceneExecutionException(
                         $"Failed to deserialize request model for query '{queryName}': {ex.Message}", ex);
                 }
             }
@@ -104,16 +104,16 @@ public class SeedService(
             logger.LogInformation("Successfully executed query: {QueryName}", queryName);
             return result;
         }
-        catch (Exception ex) when (ex is not RecipeNotFoundException and not RecipeExecutionException)
+        catch (Exception ex) when (ex is not SceneNotFoundException and not SceneExecutionException)
         {
             logger.LogError(ex, "Unexpected error executing query: {QueryName}", queryName);
-            throw new RecipeExecutionException(
+            throw new SceneExecutionException(
                 $"An unexpected error occurred while executing query '{queryName}'",
                 ex.InnerException ?? ex);
         }
     }
 
-    public async Task<object?> DestroyRecipe(Guid seedId)
+    public async Task<object?> DestroyScene(Guid seedId)
     {
         var seededData = databaseContext.SeededData.FirstOrDefault(s => s.Id == seedId);
         if (seededData == null)
@@ -125,7 +125,7 @@ public class SeedService(
         var trackedEntities = JsonSerializer.Deserialize<Dictionary<string, List<Guid>>>(seededData.Data);
         if (trackedEntities == null)
         {
-            throw new RecipeExecutionException($"Failed to deserialize tracked entities for seed ID {seedId}");
+            throw new SceneExecutionException($"Failed to deserialize tracked entities for seed ID {seedId}");
         }
 
         // Delete in reverse order to respect foreign key constraints
@@ -152,7 +152,7 @@ public class SeedService(
             }
             if (aggregateException.InnerExceptions.Count > 0)
             {
-                throw new RecipeExecutionException(
+                throw new SceneExecutionException(
                     $"One or more errors occurred while deleting organizations for seed ID {seedId}",
                     aggregateException);
             }
@@ -161,10 +161,10 @@ public class SeedService(
         databaseContext.Remove(seededData);
         databaseContext.SaveChanges();
 
-        logger.LogInformation("Successfully destroyed seeded data with ID {SeedId} for scene {RecipeName}",
+        logger.LogInformation("Successfully destroyed seeded data with ID {SeedId} for scene {SceneName}",
             seedId, seededData.RecipeName);
 
-        return new { SeedId = seedId, RecipeName = seededData.RecipeName };
+        return new { SeedId = seedId, SceneName = seededData.RecipeName };
     }
 
     private SceneResult<object?> ExecuteSceneMethod(string templateName, JsonElement? arguments, string methodName)
@@ -172,7 +172,7 @@ public class SeedService(
         try
         {
             var scene = serviceProvider.GetKeyedService<IScene>(templateName)
-                ?? throw new RecipeNotFoundException(templateName);
+                ?? throw new SceneNotFoundException(templateName);
 
             var requestType = scene.GetRequestType();
 
@@ -186,13 +186,13 @@ public class SeedService(
                     requestModel = Activator.CreateInstance(requestType);
                     if (requestModel == null)
                     {
-                        throw new RecipeExecutionException(
+                        throw new SceneExecutionException(
                             $"Arguments are required for scene '{templateName}'");
                     }
                 }
                 catch
                 {
-                    throw new RecipeExecutionException(
+                    throw new SceneExecutionException(
                         $"Arguments are required for scene '{templateName}'");
                 }
             }
@@ -203,13 +203,13 @@ public class SeedService(
                     requestModel = JsonSerializer.Deserialize(arguments.Value.GetRawText(), requestType, _jsonOptions);
                     if (requestModel == null)
                     {
-                        throw new RecipeExecutionException(
+                        throw new SceneExecutionException(
                             $"Failed to deserialize request model for scene '{templateName}'");
                     }
                 }
                 catch (JsonException ex)
                 {
-                    throw new RecipeExecutionException(
+                    throw new SceneExecutionException(
                         $"Failed to deserialize request model for scene '{templateName}': {ex.Message}", ex);
                 }
             }
@@ -219,10 +219,10 @@ public class SeedService(
             logger.LogInformation("Successfully executed {MethodName} on scene: {TemplateName}", methodName, templateName);
             return result;
         }
-        catch (Exception ex) when (ex is not RecipeNotFoundException and not RecipeExecutionException)
+        catch (Exception ex) when (ex is not SceneNotFoundException and not SceneExecutionException)
         {
             logger.LogError(ex, "Unexpected error executing {MethodName} on scene: {TemplateName}", methodName, templateName);
-            throw new RecipeExecutionException(
+            throw new SceneExecutionException(
                 $"An unexpected error occurred while executing {methodName} on scene '{templateName}'",
                 ex.InnerException ?? ex);
         }

@@ -19,7 +19,7 @@ builder.Services.AddScoped<Microsoft.AspNetCore.Identity.IPasswordHasher<Bit.Cor
 // Seeder services
 builder.Services.AddSingleton<Bit.RustSDK.RustSdkService>();
 builder.Services.AddScoped<Bit.Seeder.Factories.UserSeeder>();
-builder.Services.AddScoped<ISeedService, SeedService>();
+builder.Services.AddScoped<ISceneService, SceneService>();
 builder.Services.AddScoped<MangleId>(_ => new MangleId());
 builder.Services.AddScenes();
 builder.Services.AddQueries();

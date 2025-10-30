@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Bit.SeederApi.Controllers;
 
 [Route("query")]
-public class QueryController(ILogger<QueryController> logger, ISeedService recipeService)
+public class QueryController(ILogger<QueryController> logger, IQueryService queryService)
     : Controller
 {
     [HttpPost]
@@ -15,15 +15,15 @@ public class QueryController(ILogger<QueryController> logger, ISeedService recip
 
         try
         {
-            var result = recipeService.ExecuteQuery(request.Template, request.Arguments);
+            var result = queryService.ExecuteQuery(request.Template, request.Arguments);
 
-            return Json(new { Result = result });
+            return Json(result);
         }
-        catch (RecipeNotFoundException ex)
+        catch (SceneNotFoundException ex)
         {
             return NotFound(new { Error = ex.Message });
         }
-        catch (RecipeExecutionException ex)
+        catch (SceneExecutionException ex)
         {
             logger.LogError(ex, "Error executing query: {Query}", request.Template);
             return BadRequest(new

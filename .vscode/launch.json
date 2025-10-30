@@ -70,6 +70,28 @@
             "stopAll": true
         },
         {
+            "name": "Full Server with Seeder API",
+            "configurations": [
+                "run-Admin",
+                "run-API",
+                "run-Events",
+                "run-EventsProcessor",
+                "run-Identity",
+                "run-Sso",
+                "run-Icons",
+                "run-Billing",
+                "run-Notifications",
+                "run-SeederAPI"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "AA_compounds",
+                "order": 6
+            },
+            "preLaunchTask": "buildFullServerWithSeederApi",
+            "stopAll": true
+        },
+        {
             "name": "Self Host: Bit",
             "configurations": [
                 "run-Admin-SelfHost",

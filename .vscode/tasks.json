@@ -55,6 +55,22 @@
             ],
         },
         {
+            "label": "buildFullServerWithSeederApi",
+            "hide": true,
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "buildAdmin",
+                "buildAPI",
+                "buildEventsProcessor",
+                "buildIdentity",
+                "buildSso",
+                "buildIcons",
+                "buildBilling",
+                "buildNotifications",
+                "buildSeederAPI"
+            ],
+        },
+        {
             "label": "buildSelfHostBit",
             "hide": true,
             "dependsOrder": "sequence",

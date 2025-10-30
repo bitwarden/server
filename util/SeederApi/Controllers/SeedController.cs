@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Bit.SeederApi.Controllers;
 
 [Route("seed")]
-public class SeedController(ILogger<SeedController> logger, ISeedService recipeService)
+public class SeedController(ILogger<SeedController> logger, ISceneService sceneService)
     : Controller
 {
     [HttpPost]
@@ -16,15 +16,15 @@ public class SeedController(ILogger<SeedController> logger, ISeedService recipeS
 
         try
         {
-            SceneResponseModel response = recipeService.ExecuteScene(request.Template, request.Arguments);
+            SceneResponseModel response = sceneService.ExecuteScene(request.Template, request.Arguments);
 
             return Json(response);
         }
-        catch (RecipeNotFoundException ex)
+        catch (SceneNotFoundException ex)
         {
             return NotFound(new { Error = ex.Message });
         }
-        catch (RecipeExecutionException ex)
+        catch (SceneExecutionException ex)
         {
             logger.LogError(ex, "Error executing scene: {Template}", request.Template);
             return BadRequest(new
@@ -48,7 +48,7 @@ public class SeedController(ILogger<SeedController> logger, ISeedService recipeS
             {
                 try
                 {
-                    await recipeService.DestroyRecipe(seedId);
+                    await sceneService.DestroyScene(seedId);
                 }
                 catch (Exception ex)
                 {
@@ -79,11 +79,11 @@ public class SeedController(ILogger<SeedController> logger, ISeedService recipeS
 
         try
         {
-            var result = await recipeService.DestroyRecipe(seedId);
+            var result = await sceneService.DestroyScene(seedId);
 
             return Json(result);
         }
-        catch (RecipeExecutionException ex)
+        catch (SceneExecutionException ex)
         {
             logger.LogError(ex, "Error deleting seeded data: {SeedId}", seedId);
             return BadRequest(new
@@ -101,7 +101,7 @@ public class SeedController(ILogger<SeedController> logger, ISeedService recipeS
         logger.LogInformation("Deleting all seeded data");
 
         // Pull all Seeded Data ids
-        var seededData = recipeService.GetAllSeededData();
+        var seededData = sceneService.GetAllSeededData();
 
         var aggregateException = new AggregateException();
 
@@ -111,7 +111,7 @@ public class SeedController(ILogger<SeedController> logger, ISeedService recipeS
             {
                 try
                 {
-                    await recipeService.DestroyRecipe(sd.Id);
+                    await sceneService.DestroyScene(sd.Id);
                 }
                 catch (Exception ex)
                 {
