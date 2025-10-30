@@ -22,7 +22,8 @@ public class SendOrganizationInvitesCommand(
     IPolicyRepository policyRepository,
     IOrgUserInviteTokenableFactory orgUserInviteTokenableFactory,
     IDataProtectorTokenFactory<OrgUserInviteTokenable> dataProtectorTokenFactory,
-    IMailService mailService) : ISendOrganizationInvitesCommand
+    IMailService mailService,
+    IFeatureService featureService) : ISendOrganizationInvitesCommand
 {
     public async Task SendInvitesAsync(SendInvitesRequest request)
     {
@@ -64,7 +65,15 @@ public class SendOrganizationInvitesCommand(
         // create helper function to create expiring tokens
         (OrganizationUser, ExpiringToken) MakeOrgUserExpiringTokenPair(OrganizationUser orgUser)
         {
-            var orgUserInviteTokenable = orgUserInviteTokenableFactory.CreateToken(orgUser);
+            OrgUserInviteTokenable orgUserInviteTokenable = null;
+            if (featureService.IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates))
+            {
+                orgUserInviteTokenable = orgUserInviteTokenableFactory.CreateToken(orgUser, organization.DisplayName(), organization.PlanType);
+            }
+            else
+            {
+                orgUserInviteTokenable = orgUserInviteTokenableFactory.CreateToken(orgUser);
+            }
             var protectedToken = dataProtectorTokenFactory.Protect(orgUserInviteTokenable);
             return (orgUser, new ExpiringToken(protectedToken, orgUserInviteTokenable.ExpirationDate));
         }
