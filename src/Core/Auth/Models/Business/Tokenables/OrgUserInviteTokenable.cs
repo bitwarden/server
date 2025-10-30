@@ -1,9 +1,8 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Tokens;
+using Bit.Core.Utilities;
 
 namespace Bit.Core.Auth.Models.Business.Tokenables;
 
@@ -26,7 +25,9 @@ public class OrgUserInviteTokenable : ExpiringTokenable
 
     public string Identifier { get; set; } = TokenIdentifier;
     public Guid OrgUserId { get; set; }
-    public string OrgUserEmail { get; set; }
+    public string? OrgUserEmail { get; set; }
+    public string? OrgDisplayName { get; set; }
+    public PlanType PlanType { get; set; }
 
     [JsonConstructor]
     public OrgUserInviteTokenable()
@@ -38,6 +39,14 @@ public class OrgUserInviteTokenable : ExpiringTokenable
     {
         OrgUserId = orgUser?.Id ?? default;
         OrgUserEmail = orgUser?.Email;
+    }
+
+    public OrgUserInviteTokenable(OrganizationUser orgUser, string OrganizationDisplayName, PlanType planType) : this()
+    {
+        OrgUserId = orgUser?.Id ?? default;
+        OrgUserEmail = orgUser?.Email;
+        OrgDisplayName = OrganizationDisplayName;
+        PlanType = planType;
     }
 
     public bool TokenIsValid(OrganizationUser orgUser)
