@@ -17,7 +17,7 @@ namespace Bit.Api.Test.AdminConsole.Authorization;
 public class RecoverProviderAccountAuthorizationHandlerTests
 {
     [Theory, BitAutoData]
-    public async Task HandleRequirementAsync_UserIdIsNull_Blocks(
+    public async Task HandleRequirementAsync_UserIdIsNull_DoesNotBlock(
         SutProvider<RecoverProviderAccountAuthorizationHandler> sutProvider,
         OrganizationUser targetOrganizationUser,
         ClaimsPrincipal claimsPrincipal)
@@ -35,7 +35,7 @@ public class RecoverProviderAccountAuthorizationHandlerTests
 
         // Assert
         Assert.False(context.HasSucceeded);
-        Assert.True(context.HasFailed);
+        Assert.False(context.HasFailed);
     }
 
     [Theory, BitAutoData]

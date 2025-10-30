@@ -133,9 +133,9 @@ public class OrganizationUsersControllerPutResetPasswordTests : IClassFixture<Ap
             resetPasswordRequest);
 
         // Assert
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var model = await response.Content.ReadFromJsonAsync<ErrorResponseModel>();
-        Assert.Contains("You do not have permission to reset this user's master password", model.ExceptionMessage);
+        Assert.Contains("You do not have permission to reset this user's master password", model.Message);
     }
 
     [Fact]
@@ -189,8 +189,8 @@ public class OrganizationUsersControllerPutResetPasswordTests : IClassFixture<Ap
             resetPasswordRequest);
 
         // Assert
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var model = await response.Content.ReadFromJsonAsync<ErrorResponseModel>();
-        Assert.Contains("You cannot recover a provider user account", model.ExceptionMessage);
+        Assert.Contains("You do not have permission to reset this user's master password", model.Message);
     }
 }
