@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Dirt.Entities;
-using Bit.Core.Dirt.Reports.Models.Data;
 using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
 using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 using Bit.Core.Dirt.Repositories;
@@ -53,9 +52,6 @@ public class UpdateOrganizationReportApplicationDataCommand : IUpdateOrganizatio
                     request.Id, request.OrganizationId);
                 throw new BadRequestException("Organization report does not belong to the specified organization");
             }
-
-            var metrics = OrganizationReportMetricsData.From(request.OrganizationId, request.Metrics);
-            await _organizationReportRepo.UpdateMetricsAsync(request.Id, metrics);
 
             var updatedReport = await _organizationReportRepo.UpdateApplicationDataAsync(request.OrganizationId, request.Id, request.ApplicationData ?? string.Empty);
 

@@ -186,7 +186,6 @@ public class OrganizationReportsController : Controller
         {
             throw new BadRequestException("Report ID in the request body must match the route parameter");
         }
-
         var updatedReport = await _updateOrganizationReportSummaryCommand.UpdateOrganizationReportSummaryAsync(request);
         var response = new OrganizationReportResponseModel(updatedReport);
 
