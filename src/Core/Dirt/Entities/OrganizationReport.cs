@@ -9,9 +9,9 @@ public class OrganizationReport : ITableObject<Guid>
 {
     public Guid Id { get; set; }
     public Guid OrganizationId { get; set; }
-    public string? ReportData { get; set; }
+    public string ReportData { get; set; } = string.Empty;
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
-    public string? ContentEncryptionKey { get; set; }
+    public string ContentEncryptionKey { get; set; } = string.Empty;
     public string? SummaryData { get; set; }
     public string? ApplicationData { get; set; }
     public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
