@@ -98,8 +98,8 @@ public class HandlebarMailRenderer : IMailRenderer
             var baseDirectory = Path.GetFullPath(_globalSettings.MailTemplateDirectory);
 
             // Ensure the resolved path is within the configured directory
-            if (!diskPath.StartsWith(baseDirectory + Path.DirectorySeparatorChar) &&
-                diskPath != baseDirectory)
+            if (!diskPath.StartsWith(baseDirectory + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) &&
+                !diskPath.Equals(baseDirectory, StringComparison.OrdinalIgnoreCase))
             {
                 _logger.LogWarning("Template path traversal attempt detected: {Template}", template);
                 return null;
