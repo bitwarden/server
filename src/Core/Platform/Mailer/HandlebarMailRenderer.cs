@@ -94,9 +94,18 @@ public class HandlebarMailRenderer : IMailRenderer
 
         try
         {
-            var diskPath = $"{_globalSettings.MailTemplateDirectory}/{template}";
-            var directory = Path.GetDirectoryName(diskPath);
-            if (Directory.Exists(directory) && File.Exists(diskPath))
+            var diskPath = Path.GetFullPath(Path.Combine(_globalSettings.MailTemplateDirectory, template));
+            var baseDirectory = Path.GetFullPath(_globalSettings.MailTemplateDirectory);
+
+            // Ensure the resolved path is within the configured directory
+            if (!diskPath.StartsWith(baseDirectory + Path.DirectorySeparatorChar) &&
+                diskPath != baseDirectory)
+            {
+                _logger.LogWarning("Template path traversal attempt detected: {Template}", template);
+                return null;
+            }
+
+            if (File.Exists(diskPath))
             {
                 var fileContents = await File.ReadAllTextAsync(diskPath);
                 return fileContents;
@@ -104,7 +113,7 @@ public class HandlebarMailRenderer : IMailRenderer
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Failed to read mail template from disk");
+            _logger.LogError(e, "Failed to read mail template from disk: {TemplateName}", template);
         }
 
         return null;
