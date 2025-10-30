@@ -128,14 +128,25 @@ public class SlackService(
         return result.AccessToken;
     }
 
-    public async Task SendSlackMessageByChannelIdAsync(string token, string message, string channelId)
+    public async Task<SlackSendMessageResponse?> SendSlackMessageByChannelIdAsync(string token, string message,
+        string channelId)
     {
         var payload = JsonContent.Create(new { channel = channelId, text = message });
         var request = new HttpRequestMessage(HttpMethod.Post, $"{_slackApiBaseUrl}/chat.postMessage");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         request.Content = payload;
 
-        await _httpClient.SendAsync(request);
+        var response = await _httpClient.SendAsync(request);
+
+        try
+        {
+            return await response.Content.ReadFromJsonAsync<SlackSendMessageResponse>();
+        }
+        catch
+        {
+            logger.LogError("Error parsing Slack message response: invalid JSON");
+            return null;
+        }
     }
 
     private async Task<string> GetUserIdByEmailAsync(string token, string email)

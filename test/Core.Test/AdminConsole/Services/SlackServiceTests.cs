@@ -147,6 +147,27 @@ public class SlackServiceTests
     }
 
     [Fact]
+    public async Task GetChannelIdAsync_NoChannelFound_ReturnsEmptyResult()
+    {
+        var emptyResponse = JsonSerializer.Serialize(
+            new
+            {
+                ok = true,
+                channels = Array.Empty<string>(),
+                response_metadata = new { next_cursor = "" }
+            });
+
+        _handler.When(HttpMethod.Get)
+            .RespondWith(HttpStatusCode.OK)
+            .WithContent(new StringContent(emptyResponse));
+
+        var sutProvider = GetSutProvider();
+        var result = await sutProvider.Sut.GetChannelIdAsync(_token, "general");
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
     public async Task GetChannelIdAsync_ReturnsCorrectChannelId()
     {
         var sutProvider = GetSutProvider();
@@ -270,7 +291,7 @@ public class SlackServiceTests
         var userResponse = new
         {
             ok = false,
-            error = "An error occured"
+            error = "An error occurred"
         };
 
         _handler.When($"https://slack.com/api/users.lookupByEmail?email={email}")
@@ -382,18 +403,29 @@ public class SlackServiceTests
     }
 
     [Fact]
-    public async Task SendSlackMessageByChannelId_Sends_Correct_Message()
+    public async Task SendSlackMessageByChannelId_Success_ReturnsSuccessfulResponse()
     {
         var sutProvider = GetSutProvider();
         var channelId = "C12345";
         var message = "Hello, Slack!";
 
+        var jsonResponse = JsonSerializer.Serialize(new
+        {
+            ok = true,
+            channel = channelId,
+        });
+
         _handler.When(HttpMethod.Post)
             .RespondWith(HttpStatusCode.OK)
-            .WithContent(new StringContent(string.Empty));
+            .WithContent(new StringContent(jsonResponse));
 
-        await sutProvider.Sut.SendSlackMessageByChannelIdAsync(_token, message, channelId);
+        var result = await sutProvider.Sut.SendSlackMessageByChannelIdAsync(_token, message, channelId);
 
+        // Response was parsed correctly
+        Assert.NotNull(result);
+        Assert.True(result.Ok);
+
+        // Request was sent correctly
         Assert.Single(_handler.CapturedRequests);
         var request = _handler.CapturedRequests[0];
         Assert.NotNull(request);
@@ -405,5 +437,63 @@ public class SlackServiceTests
         var json = JsonDocument.Parse(returned);
         Assert.Equal(message, json.RootElement.GetProperty("text").GetString() ?? string.Empty);
         Assert.Equal(channelId, json.RootElement.GetProperty("channel").GetString() ?? string.Empty);
+    }
+
+    [Fact]
+    public async Task SendSlackMessageByChannelId_Failure_ReturnsErrorResponse()
+    {
+        var sutProvider = GetSutProvider();
+        var channelId = "C12345";
+        var message = "Hello, Slack!";
+
+        var jsonResponse = JsonSerializer.Serialize(new
+        {
+            ok = false,
+            channel = channelId,
+            error = "error"
+        });
+
+        _handler.When(HttpMethod.Post)
+            .RespondWith(HttpStatusCode.OK)
+            .WithContent(new StringContent(jsonResponse));
+
+        var result = await sutProvider.Sut.SendSlackMessageByChannelIdAsync(_token, message, channelId);
+
+        // Response was parsed correctly
+        Assert.NotNull(result);
+        Assert.False(result.Ok);
+        Assert.NotNull(result.Error);
+    }
+
+    [Fact]
+    public async Task SendSlackMessageByChannelIdAsync_InvalidJson_ReturnsNull()
+    {
+        var sutProvider = GetSutProvider();
+        var channelId = "C12345";
+        var message = "Hello world!";
+
+        _handler.When(HttpMethod.Post)
+            .RespondWith(HttpStatusCode.OK)
+            .WithContent(new StringContent("Not JSON"));
+
+        var result = await sutProvider.Sut.SendSlackMessageByChannelIdAsync(_token, message, channelId);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task SendSlackMessageByChannelIdAsync_HttpServerError_ReturnsNull()
+    {
+        var sutProvider = GetSutProvider();
+        var channelId = "C12345";
+        var message = "Hello world!";
+
+        _handler.When(HttpMethod.Post)
+            .RespondWith(HttpStatusCode.InternalServerError)
+            .WithContent(new StringContent(string.Empty));
+
+        var result = await sutProvider.Sut.SendSlackMessageByChannelIdAsync(_token, message, channelId);
+
+        Assert.Null(result);
     }
 }
