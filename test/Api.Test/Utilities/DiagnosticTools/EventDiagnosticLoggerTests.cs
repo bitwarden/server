@@ -57,17 +57,10 @@ public class EventDiagnosticLoggerTests
         var featureService = Substitute.For<IFeatureService>();
         featureService.IsEnabled(FeatureFlagKeys.EventDiagnosticLogging).Returns(false);
 
-        var ev = Substitute.For<IEvent>();
-        ev.Date.Returns(DateTime.UtcNow);
-
-        var eventResponses = new List<EventResponseModel>
-        {
-            new EventResponseModel(ev)
-        };
-        var response = new PagedListResponseModel<EventResponseModel>(eventResponses, "token");
+        PagedListResponseModel<EventResponseModel> dummy = null;
 
         // Act
-        logger.LogAggregateData(featureService, organizationId, response, request);
+        logger.LogAggregateData(featureService, organizationId, dummy, request);
 
         // Assert
         logger.DidNotReceive().Log(
@@ -114,26 +107,16 @@ public class EventDiagnosticLoggerTests
     }
 
     [Theory, BitAutoData]
-    public void LogAggregateData_AdminConsoleApi_FeatureFlagDisabled_DoesNotLog(
-        Guid organizationId,
-        DateTime start,
-        DateTime end)
+    public void LogAggregateData_AdminConsoleApi_FeatureFlagDisabled_DoesNotLog(Guid organizationId)
     {
         // Arrange
         var logger = Substitute.For<ILogger>();
         var featureService = Substitute.For<IFeatureService>();
         featureService.IsEnabled(FeatureFlagKeys.EventDiagnosticLogging).Returns(false);
 
-        var ev = Substitute.For<IEvent>();
-        ev.Date.Returns(DateTime.UtcNow);
-
-        var eventResponses = new List<Bit.Api.Models.Response.EventResponseModel>
-        {
-            new Bit.Api.Models.Response.EventResponseModel(ev)
-        };
 
         // Act
-        logger.LogAggregateData(featureService, organizationId, "token", eventResponses, start, end);
+        logger.LogAggregateData(featureService, organizationId, "token", null, null, null);
 
         // Assert
         logger.DidNotReceive().Log(
