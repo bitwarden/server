@@ -65,10 +65,10 @@ public class CollectionsController : Controller
     [ProducesResponseType(typeof(ListResponseModel<CollectionResponseModel>), (int)HttpStatusCode.OK)]
     public async Task<IActionResult> List()
     {
-        var collections = await _collectionRepository.GetManySharedCollectionsByOrganizationIdAsync(
+        var collections = await _collectionRepository.GetManyByOrganizationIdWithAccessAsync(
             _currentContext.OrganizationId.Value);
-        // TODO: Get all CollectionGroup associations for the organization and marry them up here for the response.
-        var collectionResponses = collections.Select(c => new CollectionResponseModel(c, null));
+        // TODO: Do we need to filter out DefaultUserCollection types here like we do in Get above?
+        var collectionResponses = collections.Select(c => new CollectionResponseModel(c.Item1, c.Item2.Groups));
         var response = new ListResponseModel<CollectionResponseModel>(collectionResponses);
         return new JsonResult(response);
     }
