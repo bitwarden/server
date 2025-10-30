@@ -34,6 +34,6 @@ BEGIN
         CriticalPasswordAtRiskCount = @CriticalPasswordAtRiskCount,
         RevisionDate = @RevisionDate
     WHERE 
-        ID = @Id
+        Id = @Id
         AND OrganizationId = @OrganizationId
 END

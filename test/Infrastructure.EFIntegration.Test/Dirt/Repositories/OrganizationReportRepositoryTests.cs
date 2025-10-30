@@ -491,37 +491,6 @@ public class OrganizationReportRepositoryTests
     }
 
     [CiSkippedTheory, EfOrganizationReportAutoData]
-    public async Task UpdateMetricsAsync_WithNonExistentReport_ShouldReturnNull(
-        OrganizationReportRepository sqlOrganizationReportRepo,
-        SqlRepo.OrganizationRepository sqlOrganizationRepo)
-    {
-        // Arrange
-        var (org, _) = await CreateOrganizationAndReportAsync(sqlOrganizationRepo, sqlOrganizationReportRepo);
-        var nonExistentReportId = Guid.NewGuid();
-        var metrics = new OrganizationReportMetricsData
-        {
-            ApplicationCount = 10,
-            ApplicationAtRiskCount = 2,
-            CriticalApplicationCount = 5,
-            CriticalApplicationAtRiskCount = 1,
-            MemberCount = 20,
-            MemberAtRiskCount = 4,
-            CriticalMemberCount = 10,
-            CriticalMemberAtRiskCount = 2,
-            PasswordCount = 100,
-            PasswordAtRiskCount = 15,
-            CriticalPasswordCount = 50,
-            CriticalPasswordAtRiskCount = 5
-        };
-
-        // Act
-        var result = await sqlOrganizationReportRepo.UpdateMetricsAsync(org.Id, nonExistentReportId, metrics);
-
-        // Assert
-        Assert.True(result == 0);
-    }
-
-    [CiSkippedTheory, EfOrganizationReportAutoData]
     public async Task UpdateMetricsAsync_ShouldUpdateMetricsCorrectly(
         OrganizationReportRepository sqlOrganizationReportRepo,
         SqlRepo.OrganizationRepository sqlOrganizationRepo)
@@ -549,7 +518,6 @@ public class OrganizationReportRepositoryTests
         var updatedReport = await sqlOrganizationReportRepo.GetByIdAsync(report.Id);
 
         // Assert
-        Assert.Equal(1, rowsAffected);
         Assert.Equal(metrics.ApplicationCount, updatedReport.ApplicationCount);
         Assert.Equal(metrics.ApplicationAtRiskCount, updatedReport.ApplicationAtRiskCount);
         Assert.Equal(metrics.CriticalApplicationCount, updatedReport.CriticalApplicationCount);

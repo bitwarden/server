@@ -186,7 +186,7 @@ public class OrganizationReportRepository :
         }
     }
 
-    public Task UpdateMetricsAsync(Guid organizationId, Guid reportId, OrganizationReportMetricsData metrics)
+    public Task<int> UpdateMetricsAsync(Guid organizationId, Guid reportId, OrganizationReportMetricsData metrics)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
