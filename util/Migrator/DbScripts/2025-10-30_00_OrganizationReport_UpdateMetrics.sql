@@ -17,22 +17,23 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    UPDATE dbo.OrganizationReport 
+    UPDATE 
+        [dbo].[OrganizationReport]
     SET
-        ApplicationCount = @ApplicationCount,
-        ApplicationAtRiskCount = @ApplicationAtRiskCount,
-        CriticalApplicationCount = @CriticalApplicationCount,
-        CriticalApplicationAtRiskCount = @CriticalApplicationAtRiskCount,
-        MemberCount = @MemberCount,
-        MemberAtRiskCount = @MemberAtRiskCount,
-        CriticalMemberCount = @CriticalMemberCount,
-        CriticalMemberAtRiskCount = @CriticalMemberAtRiskCount,
-        PasswordCount = @PasswordCount,
-        PasswordAtRiskCount = @PasswordAtRiskCount,
-        CriticalPasswordCount = @CriticalPasswordCount,
-        CriticalPasswordAtRiskCount = @CriticalPasswordAtRiskCount,
-        RevisionDate = @RevisionDate
+        [ApplicationCount] = @ApplicationCount,
+        [ApplicationAtRiskCount] = @ApplicationAtRiskCount,
+        [CriticalApplicationCount] = @CriticalApplicationCount,
+        [CriticalApplicationAtRiskCount] = @CriticalApplicationAtRiskCount,
+        [MemberCount] = @MemberCount,
+        [MemberAtRiskCount] = @MemberAtRiskCount,
+        [CriticalMemberCount] = @CriticalMemberCount,
+        [CriticalMemberAtRiskCount] = @CriticalMemberAtRiskCount,
+        [PasswordCount] = @PasswordCount,
+        [PasswordAtRiskCount] = @PasswordAtRiskCount,
+        [CriticalPasswordCount] = @CriticalPasswordCount,
+        [CriticalPasswordAtRiskCount] = @CriticalPasswordAtRiskCount,
+        [RevisionDate] = @RevisionDate
     WHERE 
-        Id = @Id
-        
+        [Id] = @Id
+
 END
