@@ -11,5 +11,5 @@ public class AddOrganizationReportRequest
 
     public string? ApplicationData { get; set; }
 
-    public OrganizationReportMetricsRequest Metrics { get; set; } = new OrganizationReportMetricsRequest();
+    public OrganizationReportMetricsRequest? Metrics { get; set; }
 }

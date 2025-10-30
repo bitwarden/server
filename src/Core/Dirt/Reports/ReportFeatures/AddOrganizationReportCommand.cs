@@ -35,6 +35,8 @@ public class AddOrganizationReportCommand : IAddOrganizationReportCommand
             throw new BadRequestException(errorMessage);
         }
 
+        var requestMetrics = request.Metrics ?? new OrganizationReportMetricsRequest();
+
         var organizationReport = new OrganizationReport
         {
             OrganizationId = request.OrganizationId,
@@ -43,18 +45,18 @@ public class AddOrganizationReportCommand : IAddOrganizationReportCommand
             ContentEncryptionKey = request.ContentEncryptionKey ?? string.Empty,
             SummaryData = request.SummaryData,
             ApplicationData = request.ApplicationData,
-            ApplicationCount = request.Metrics.ApplicationCount,
-            ApplicationAtRiskCount = request.Metrics.ApplicationAtRiskCount,
-            CriticalApplicationCount = request.Metrics.CriticalApplicationCount,
-            CriticalApplicationAtRiskCount = request.Metrics.CriticalApplicationAtRiskCount,
-            MemberCount = request.Metrics.MemberCount,
-            MemberAtRiskCount = request.Metrics.MemberAtRiskCount,
-            CriticalMemberCount = request.Metrics.CriticalMemberCount,
-            CriticalMemberAtRiskCount = request.Metrics.CriticalMemberAtRiskCount,
-            PasswordCount = request.Metrics.PasswordCount,
-            PasswordAtRiskCount = request.Metrics.PasswordAtRiskCount,
-            CriticalPasswordCount = request.Metrics.CriticalPasswordCount,
-            CriticalPasswordAtRiskCount = request.Metrics.CriticalPasswordAtRiskCount,
+            ApplicationCount = requestMetrics.ApplicationCount,
+            ApplicationAtRiskCount = requestMetrics.ApplicationAtRiskCount,
+            CriticalApplicationCount = requestMetrics.CriticalApplicationCount,
+            CriticalApplicationAtRiskCount = requestMetrics.CriticalApplicationAtRiskCount,
+            MemberCount = requestMetrics.MemberCount,
+            MemberAtRiskCount = requestMetrics.MemberAtRiskCount,
+            CriticalMemberCount = requestMetrics.CriticalMemberCount,
+            CriticalMemberAtRiskCount = requestMetrics.CriticalMemberAtRiskCount,
+            PasswordCount = requestMetrics.PasswordCount,
+            PasswordAtRiskCount = requestMetrics.PasswordAtRiskCount,
+            CriticalPasswordCount = requestMetrics.CriticalPasswordCount,
+            CriticalPasswordAtRiskCount = requestMetrics.CriticalPasswordAtRiskCount,
             RevisionDate = DateTime.UtcNow
         };
 

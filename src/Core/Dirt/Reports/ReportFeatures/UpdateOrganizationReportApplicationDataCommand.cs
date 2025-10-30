@@ -57,7 +57,7 @@ public class UpdateOrganizationReportApplicationDataCommand : IUpdateOrganizatio
             var metrics = OrganizationReportMetricsData.From(request.OrganizationId, request.Metrics);
             await _organizationReportRepo.UpdateMetricsAsync(request.Id, metrics);
 
-            var updatedReport = await _organizationReportRepo.UpdateApplicationDataAsync(request.OrganizationId, request.Id, request.ApplicationData);
+            var updatedReport = await _organizationReportRepo.UpdateApplicationDataAsync(request.OrganizationId, request.Id, request.ApplicationData ?? string.Empty);
 
             _logger.LogInformation(Constants.BypassFiltersEventId, "Successfully updated organization report application data {reportId} for organization {organizationId}",
                 request.Id, request.OrganizationId);

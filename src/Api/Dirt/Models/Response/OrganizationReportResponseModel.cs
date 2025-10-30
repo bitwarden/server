@@ -10,9 +10,9 @@ public class OrganizationReportResponseModel
     public string? ContentEncryptionKey { get; set; }
     public string? SummaryData { get; set; }
     public string? ApplicationData { get; set; }
-    public int PasswordCount { get; set; }
-    public int PasswordAtRiskCount { get; set; }
-    public int MemberCount { get; set; }
+    public int? PasswordCount { get; set; }
+    public int? PasswordAtRiskCount { get; set; }
+    public int? MemberCount { get; set; }
     public DateTime? CreationDate { get; set; } = null;
     public DateTime? RevisionDate { get; set; } = null;
 
@@ -29,9 +29,9 @@ public class OrganizationReportResponseModel
         ContentEncryptionKey = organizationReport.ContentEncryptionKey;
         SummaryData = organizationReport.SummaryData;
         ApplicationData = organizationReport.ApplicationData;
-        PasswordCount = organizationReport.PasswordCount ?? 0;
-        PasswordAtRiskCount = organizationReport.PasswordAtRiskCount ?? 0;
-        MemberCount = organizationReport.MemberCount ?? 0;
+        PasswordCount = organizationReport.PasswordCount;
+        PasswordAtRiskCount = organizationReport.PasswordAtRiskCount;
+        MemberCount = organizationReport.MemberCount;
         CreationDate = organizationReport.CreationDate;
         RevisionDate = organizationReport.RevisionDate;
     }
