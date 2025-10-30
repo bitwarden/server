@@ -1,4 +1,5 @@
-﻿using Bit.Core.Context;
+﻿using Bit.Api.Dirt.Models.Response;
+using Bit.Core.Context;
 using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
 using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 using Bit.Core.Exceptions;
@@ -61,9 +62,9 @@ public class OrganizationReportsController : Controller
         }
 
         var latestReport = await _getOrganizationReportQuery.GetLatestOrganizationReportAsync(organizationId);
-        // var response = new OrganizationReportResponseModel(latestReport);
+        var response = new OrganizationReportResponseModel(latestReport);
 
-        return Ok(latestReport);
+        return Ok(response);
     }
 
     [HttpGet("{organizationId}/{reportId}")]
@@ -103,7 +104,7 @@ public class OrganizationReportsController : Controller
         }
 
         var report = await _addOrganizationReportCommand.AddOrganizationReportAsync(request);
-        // var response = new OrganizationReportResponseModel(report);
+        var response = new OrganizationReportResponseModel(report);
         return Ok(report);
     }
 
@@ -121,8 +122,8 @@ public class OrganizationReportsController : Controller
         }
 
         var updatedReport = await _updateOrganizationReportCommand.UpdateOrganizationReportAsync(request);
-        // var response = new OrganizationReportResponseModel(updatedReport);
-        return Ok(updatedReport);
+        var response = new OrganizationReportResponseModel(updatedReport);
+        return Ok(response);
     }
 
     #endregion
@@ -187,9 +188,9 @@ public class OrganizationReportsController : Controller
         }
 
         var updatedReport = await _updateOrganizationReportSummaryCommand.UpdateOrganizationReportSummaryAsync(request);
-        // var response = new OrganizationReportResponseModel(updatedReport);
+        var response = new OrganizationReportResponseModel(updatedReport);
 
-        return Ok(updatedReport);
+        return Ok(response);
     }
     #endregion
 
@@ -232,9 +233,9 @@ public class OrganizationReportsController : Controller
         }
 
         var updatedReport = await _updateOrganizationReportDataCommand.UpdateOrganizationReportDataAsync(request);
-        // var response = new OrganizationReportResponseModel(updatedReport);
+        var response = new OrganizationReportResponseModel(updatedReport);
 
-        return Ok(updatedReport);
+        return Ok(response);
     }
 
     #endregion
@@ -287,9 +288,9 @@ public class OrganizationReportsController : Controller
             }
 
             var updatedReport = await _updateOrganizationReportApplicationDataCommand.UpdateOrganizationReportApplicationDataAsync(request);
-            // var response = new OrganizationReportResponseModel(updatedReport);
+            var response = new OrganizationReportResponseModel(updatedReport);
 
-            return Ok(updatedReport);
+            return Ok(response);
         }
         catch (Exception ex) when (!(ex is BadRequestException || ex is NotFoundException))
         {

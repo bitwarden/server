@@ -18,12 +18,20 @@ public class OrganizationReportResponseModel
 
     public OrganizationReportResponseModel(OrganizationReport organizationReport)
     {
+        if (organizationReport == null)
+        {
+            return;
+        }
+
         Id = organizationReport.Id;
         OrganizationId = organizationReport.OrganizationId;
         ReportData = organizationReport.ReportData;
         ContentEncryptionKey = organizationReport.ContentEncryptionKey;
         SummaryData = organizationReport.SummaryData ?? string.Empty;
         ApplicationData = organizationReport.ApplicationData ?? string.Empty;
+        PasswordCount = organizationReport.PasswordCount ?? 0;
+        PasswordAtRiskCount = organizationReport.PasswordAtRiskCount ?? 0;
+        MemberCount = organizationReport.MemberCount ?? 0;
         CreationDate = organizationReport.CreationDate;
         RevisionDate = organizationReport.RevisionDate;
     }
