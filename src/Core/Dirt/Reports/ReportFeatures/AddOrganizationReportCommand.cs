@@ -38,9 +38,9 @@ public class AddOrganizationReportCommand : IAddOrganizationReportCommand
         var organizationReport = new OrganizationReport
         {
             OrganizationId = request.OrganizationId,
-            ReportData = request.ReportData,
+            ReportData = request.ReportData ?? string.Empty,
             CreationDate = DateTime.UtcNow,
-            ContentEncryptionKey = request.ContentEncryptionKey,
+            ContentEncryptionKey = request.ContentEncryptionKey ?? string.Empty,
             SummaryData = request.SummaryData,
             ApplicationData = request.ApplicationData,
             ApplicationCount = request.Metrics.ApplicationCount,
