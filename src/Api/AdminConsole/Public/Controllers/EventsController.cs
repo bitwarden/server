@@ -5,7 +5,6 @@ using System.Net;
 using Bit.Api.Models.Public.Request;
 using Bit.Api.Models.Public.Response;
 using Bit.Api.Utilities.DiagnosticTools;
-using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
@@ -79,11 +78,7 @@ public class EventsController : Controller
         var eventResponses = result.Data.Select(e => new EventResponseModel(e));
         var response = new PagedListResponseModel<EventResponseModel>(eventResponses, result.ContinuationToken);
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.EventDiagnosticLogging))
-        {
-            _logger.LogAggregateData(_currentContext.OrganizationId!.Value, response, request);
-        }
-
+        _logger.LogAggregateData(_featureService, _currentContext.OrganizationId!.Value, response, request);
         return new JsonResult(response);
     }
 }

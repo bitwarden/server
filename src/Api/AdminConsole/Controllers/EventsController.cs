@@ -4,7 +4,6 @@
 using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
 using Bit.Api.Utilities.DiagnosticTools;
-using Bit.Core;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -122,10 +121,7 @@ public class EventsController : Controller
             new PageOptions { ContinuationToken = continuationToken });
         var responses = result.Data.Select(e => new EventResponseModel(e));
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.EventDiagnosticLogging))
-        {
-            _logger.LogAggregateData(orgId, continuationToken, responses, start, end);
-        }
+        _logger.LogAggregateData(_featureService, orgId, continuationToken, responses, start, end);
 
         return new ListResponseModel<EventResponseModel>(responses, result.ContinuationToken);
     }

@@ -1,20 +1,33 @@
 ﻿using Bit.Api.Models.Public.Request;
 using Bit.Api.Models.Public.Response;
+using Bit.Core.Services;
 
 namespace Bit.Api.Utilities.DiagnosticTools;
 
 public static class EventDiagnosticLogger
 {
 
-    public static void LogAggregateData(this ILogger logger, Guid organizationId, PagedListResponseModel<EventResponseModel> data, EventFilterRequestModel request)
+    public static void LogAggregateData(
+        this ILogger logger,
+        IFeatureService _featureService,
+        Guid organizationId,
+        PagedListResponseModel<EventResponseModel> data, EventFilterRequestModel request)
     {
-        var recordCount = data.Data.Count();
-        var oldestRecordDate = data.Data.FirstOrDefault()?.Date;
-        var newestRecordDate = data.Data.LastOrDefault()?.Date;
-        var hasMore = !string.IsNullOrEmpty(data.ContinuationToken);
 
         try
         {
+
+            if (_featureService.IsEnabled(organizationId))
+            {
+
+            }
+
+            var recordCount = data.Data.Count();
+            var oldestRecordDate = data.Data.FirstOrDefault()?.Date;
+            var newestRecordDate = data.Data.LastOrDefault()?.Date;
+            var hasMore = !string.IsNullOrEmpty(data.ContinuationToken);
+
+
             logger.LogInformation(
                 "Events query for Organization {OrgId}. Returned {Count} events, oldest record {oldestRecord}, newest record {newestRecord} HasMore: {HasMore}, " +
                 "Request Filters: Start={Start}, End={End}, ActingUserId={ActingUserId}, ItemId={ItemId},",
@@ -36,6 +49,7 @@ public static class EventDiagnosticLogger
 
     public static void LogAggregateData(
         this ILogger logger,
+        IFeatureService _featureService,
         Guid organizationId,
         string continuationToken,
         IEnumerable<Bit.Api.Models.Response.EventResponseModel> data,
