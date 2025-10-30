@@ -10,6 +10,7 @@ namespace Bit.Api.AdminConsole.Authorization;
 /// This prevents privilege escalation from a client organization to a provider via account recovery.
 /// This handler does not positively authorize an action, it only disallows it in this case.
 /// </summary>
+/// <seealso cref="RecoverMemberAccountAuthorizationHandler"/>
 public class RecoverProviderAccountAuthorizationHandler(
     ICurrentContext currentContext,
     IProviderUserRepository providerUserRepository)
@@ -21,20 +22,20 @@ public class RecoverProviderAccountAuthorizationHandler(
     {
         if (!targetOrganizationUser.UserId.HasValue)
         {
-            // Cannot recover an OrganizationUser that is not linked to a User.
-            // This should be checked as part of the command validation, but it's also required
-            // for this logic to work properly, so we'll fail here if not set.
-            context.Fail();
+            // If an OrganizationUser is not linked to a User then it can't be linked to a Provider either.
+            // This is invalid but does not pose a privilege escalation risk. Return early and let the command
+            // handle the invalid input.
             return;
         }
 
         var targetUserProviderUsers =
             await providerUserRepository.GetManyByUserAsync(targetOrganizationUser.UserId.Value);
 
+        // If the target user belongs to any provider that the current user is not a member of,
+        // deny the action to prevent privilege escalation from organization to provider.
         if (targetUserProviderUsers.Any(providerUser => !currentContext.ProviderUser(providerUser.ProviderId)))
         {
-            var failureReason = new AuthorizationFailureReason(this, "You cannot recover a provider user account.");
-            context.Fail(failureReason);
+            context.Fail();
         }
     }
 }

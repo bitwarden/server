@@ -483,6 +483,7 @@ public class OrganizationUsersController : Controller
     {
         if (_featureService.IsEnabled(FeatureFlagKeys.AccountRecoveryCommand))
         {
+            // TODO: remove legacy implementation after feature flag is enabled.
             return await PutResetPasswordNew(orgId, id, model);
         }
 
@@ -511,6 +512,7 @@ public class OrganizationUsersController : Controller
     }
 
 #nullable enable
+    // TODO: make sure the route and authorize attributes are maintained when the legacy implementation is removed.
     private async Task<IResult> PutResetPasswordNew(Guid orgId, Guid id, [FromBody] OrganizationUserResetPasswordRequestModel model)
     {
         var targetOrganizationUser = await _organizationUserRepository.GetByIdAsync(id);
@@ -522,6 +524,8 @@ public class OrganizationUsersController : Controller
         var authorizationResult = await _authorizationService.AuthorizeAsync(User, targetOrganizationUser, new RecoverAccountAuthorizationRequirement());
         if (!authorizationResult.Succeeded)
         {
+            // Return an informative error to show in the UI.
+            // The Authorize attribute already prevents enumeration by users outside the organization, so this can be specific.
             return TypedResults.BadRequest(new ErrorResponseModel("You do not have permission to reset this user's master password"));
         }
 

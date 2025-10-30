@@ -17,6 +17,7 @@ public class RecoverAccountAuthorizationRequirement : IAuthorizationRequirement;
 /// <summary>
 /// Authorizes members and providers to recover a target OrganizationUser's account.
 /// </summary>
+/// <seealso cref="RecoverProviderAccountAuthorizationHandler"/>
 public class RecoverMemberAccountAuthorizationHandler(
     IOrganizationContext organizationContext)
     : AuthorizationHandler<RecoverAccountAuthorizationRequirement, OrganizationUser>
