@@ -54,13 +54,11 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
             throw new BadRequestException(exception);
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
-        {
-            var useAutomaticUserConfirmation = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UseAutomaticUserConfirmation);
+        var useAutomaticUserConfirmation = claimsPrincipal?
+            .GetValue<bool>(OrganizationLicenseConstants.UseAutomaticUserConfirmation) ?? false;
 
-            selfHostedOrganization.UseAutomaticUserConfirmation = useAutomaticUserConfirmation;
-            license.UseAutomaticUserConfirmation = useAutomaticUserConfirmation;
-        }
+        selfHostedOrganization.UseAutomaticUserConfirmation = useAutomaticUserConfirmation;
+        license.UseAutomaticUserConfirmation = useAutomaticUserConfirmation;
 
         await WriteLicenseFileAsync(selfHostedOrganization, license);
         await UpdateOrganizationAsync(selfHostedOrganization, license);
