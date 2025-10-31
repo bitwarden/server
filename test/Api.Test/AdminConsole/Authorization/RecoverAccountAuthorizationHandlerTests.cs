@@ -278,7 +278,8 @@ public class RecoverAccountAuthorizationHandlerTests
     {
         var currentContextOrganization = new CurrentContextOrganization
         {
-            Id = targetOrganizationUser.OrganizationId, Type = OrganizationUserType.Owner
+            Id = targetOrganizationUser.OrganizationId,
+            Type = OrganizationUserType.Owner
         };
 
         sutProvider.GetDependency<IOrganizationContext>()
