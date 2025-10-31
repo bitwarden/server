@@ -19,11 +19,11 @@ public static class EventDiagnosticLogger
             {
                 return;
             }
+
             var orderedRecords = data.Data.OrderBy(e => e.Date).ToList();
             var recordCount = orderedRecords.Count;
             var newestRecordDate = orderedRecords.LastOrDefault()?.Date.ToString("o");
             var oldestRecordDate = orderedRecords.FirstOrDefault()?.Date.ToString("o"); ;
-
             var hasMore = !string.IsNullOrEmpty(data.ContinuationToken);
 
             logger.LogInformation(
@@ -62,22 +62,22 @@ public static class EventDiagnosticLogger
                 return;
             }
 
-            var list = data.ToList();
-            var recordCount = list.Count;
-            var oldestRecordDate = list.FirstOrDefault()?.Date.ToString("o");
-            var newestRecordDate = list.LastOrDefault()?.Date.ToString("o");
+            var orderedRecords = data.OrderBy(e => e.Date).ToList();
+            var recordCount = orderedRecords.Count;
+            var newestRecordDate = orderedRecords.LastOrDefault()?.Date.ToString("o");
+            var oldestRecordDate = orderedRecords.FirstOrDefault()?.Date.ToString("o"); ;
             var hasMore = !string.IsNullOrEmpty(continuationToken);
 
             logger.LogInformation(
-                "Events query for Organization:{OrgId}. Event count:{Count} oldest record:{oldestRecord} newest record:{newestRecord} HasMore:{HasMore} " +
+                "Events query for Organization:{OrgId}. Event count:{Count} newest record:{newestRecord}  oldest record:{oldestRecord} HasMore:{HasMore} " +
                 "Request Filters Start:{QueryStart} End:{QueryEnd}",
                 organizationId,
                 recordCount,
-                oldestRecordDate,
                 newestRecordDate,
+                oldestRecordDate,
                 hasMore,
-                queryStart,
-                queryEnd);
+                queryStart?.ToString("o"),
+                queryEnd?.ToString("o"));
         }
         catch (Exception exception)
         {

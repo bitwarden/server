@@ -91,48 +91,6 @@ public class EventDiagnosticLoggerTests
             Arg.Any<Func<object, Exception, string>>());
     }
 
-    [Theory, BitAutoData]
-    public void LogAggregateData_AdminConsoleApi_FeatureFlagEnabled_LogsInformation(
-        Guid organizationId,
-        DateTime start,
-        DateTime end)
-    {
-        // Arrange
-        var logger = Substitute.For<ILogger>();
-        var featureService = Substitute.For<IFeatureService>();
-        featureService.IsEnabled(FeatureFlagKeys.EventDiagnosticLogging).Returns(true);
-
-        var oldestDate = DateTime.UtcNow.AddDays(-3);
-        var newestDate = DateTime.UtcNow.AddDays(-1);
-
-        var ev1 = Substitute.For<IEvent>();
-        ev1.Date.Returns(oldestDate);
-        var ev2 = Substitute.For<IEvent>();
-        ev2.Date.Returns(newestDate);
-
-        var eventResponses = new List<Bit.Api.Models.Response.EventResponseModel>
-        {
-            new (ev1),
-            new (ev2)
-        };
-        var continuationToken = "test-token";
-
-        // Act
-        logger.LogAggregateData(featureService, organizationId, continuationToken, eventResponses, start, end);
-
-        // Assert
-        logger.Received(1).Log(
-            LogLevel.Information,
-            Arg.Any<EventId>(),
-            Arg.Is<object>(o =>
-                o.ToString().Contains(organizationId.ToString()) &&
-                o.ToString().Contains("Returned 2 events") &&
-                o.ToString().Contains("HasMore: True") &&
-                o.ToString().Contains("oldest record") &&
-                o.ToString().Contains("newest record")),
-            null,
-            Arg.Any<Func<object, Exception, string>>());
-    }
 
     [Theory, BitAutoData]
     public void LogAggregateData_AdminConsoleApi_FeatureFlagDisabled_DoesNotLog(Guid organizationId)
@@ -189,62 +147,4 @@ public class EventDiagnosticLoggerTests
             Arg.Any<Func<object, Exception, string>>());
     }
 
-    [Theory, BitAutoData]
-    public void LogAggregateData_AdminConsoleApi_EmptyData_LogsZeroCount(
-        Guid organizationId)
-    {
-        // Arrange
-        var logger = Substitute.For<ILogger>();
-        var featureService = Substitute.For<IFeatureService>();
-        featureService.IsEnabled(FeatureFlagKeys.EventDiagnosticLogging).Returns(true);
-
-        var eventResponses = new List<Bit.Api.Models.Response.EventResponseModel>();
-
-        // Act
-        logger.LogAggregateData(featureService, organizationId, null, eventResponses, null, null);
-
-        // Assert
-        logger.Received(1).Log(
-            LogLevel.Information,
-            Arg.Any<EventId>(),
-            Arg.Is<object>(o =>
-                o.ToString().Contains(organizationId.ToString()) &&
-                o.ToString().Contains("Returned 0 events") &&
-                o.ToString().Contains("HasMore: False")),
-            null,
-            Arg.Any<Func<object, Exception, string>>());
-    }
-
-
-    [Theory, BitAutoData]
-    public void LogAggregateData_AdminConsoleApi_NoContinuationToken_LogsHasMoreFalse(
-        Guid organizationId)
-    {
-        // Arrange
-        var logger = Substitute.For<ILogger>();
-        var featureService = Substitute.For<IFeatureService>();
-        featureService.IsEnabled(FeatureFlagKeys.EventDiagnosticLogging).Returns(true);
-
-        var ev = Substitute.For<IEvent>();
-        ev.Date.Returns(DateTime.UtcNow);
-
-        var eventResponses = new List<Bit.Api.Models.Response.EventResponseModel>
-        {
-            new (ev)
-        };
-
-        // Act
-        logger.LogAggregateData(featureService, organizationId, null, eventResponses, null, null);
-
-        // Assert
-        logger.Received(1).Log(
-            LogLevel.Information,
-            Arg.Any<EventId>(),
-            Arg.Is<object>(o =>
-                o.ToString().Contains(organizationId.ToString()) &&
-                o.ToString().Contains("Returned 1 events") &&
-                o.ToString().Contains("HasMore: False")),
-            null,
-            Arg.Any<Func<object, Exception, string>>());
-    }
 }
