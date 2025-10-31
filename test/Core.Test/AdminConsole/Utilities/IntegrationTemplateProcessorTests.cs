@@ -119,6 +119,25 @@ public class IntegrationTemplateProcessorTests
     }
 
     [Theory]
+    [InlineData("Group name is #GroupName#!")]
+    [InlineData("Group: #GroupName#")]
+    public void TemplateRequiresGroup_ContainingKeys_ReturnsTrue(string template)
+    {
+        var result = IntegrationTemplateProcessor.TemplateRequiresGroup(template);
+        Assert.True(result);
+    }
+
+    [Theory]
+    [InlineData("#GroupId#")]  // This is on the base class, not fetched, so should be false
+    [InlineData("No Group Tokens")]
+    [InlineData("")]
+    public void TemplateRequiresGroup_EmptyInputOrNoMatchingKeys_ReturnsFalse(string template)
+    {
+        var result = IntegrationTemplateProcessor.TemplateRequiresGroup(template);
+        Assert.False(result);
+    }
+
+    [Theory]
     [InlineData("Organization: #OrganizationName#")]
     [InlineData("Welcome to #OrganizationName#")]
     public void TemplateRequiresOrganization_ContainingKeys_ReturnsTrue(string template)
