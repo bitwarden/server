@@ -1,5 +1,6 @@
 ﻿using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 using System.Web;
 using Bit.Core.Models.Slack;
 using Bit.Core.Settings;
@@ -109,8 +110,9 @@ public class SlackService(
         {
             result = await tokenResponse.Content.ReadFromJsonAsync<SlackOAuthResponse>();
         }
-        catch
+        catch (JsonException ex)
         {
+            logger.LogError(ex, "Error parsing SlackOAuthResponse: invalid JSON");
             result = null;
         }
 
@@ -142,9 +144,9 @@ public class SlackService(
         {
             return await response.Content.ReadFromJsonAsync<SlackSendMessageResponse>();
         }
-        catch
+        catch (JsonException ex)
         {
-            logger.LogError("Error parsing Slack message response: invalid JSON");
+            logger.LogError(ex, "Error parsing Slack message response: invalid JSON");
             return null;
         }
     }
@@ -159,8 +161,9 @@ public class SlackService(
         {
             result = await response.Content.ReadFromJsonAsync<SlackUserResponse>();
         }
-        catch
+        catch (JsonException ex)
         {
+            logger.LogError(ex, "Error parsing SlackUserResponse: invalid JSON");
             result = null;
         }
 
@@ -193,8 +196,9 @@ public class SlackService(
         {
             result = await response.Content.ReadFromJsonAsync<SlackDmResponse>();
         }
-        catch
+        catch (JsonException ex)
         {
+            logger.LogError(ex, "Error parsing SlackDmResponse: invalid JSON");
             result = null;
         }
 

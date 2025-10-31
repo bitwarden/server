@@ -6,6 +6,15 @@ public class SlackIntegrationHandler(
     ISlackService slackService)
     : IntegrationHandlerBase<SlackIntegrationConfigurationDetails>
 {
+    private static readonly HashSet<string> _retryableErrors = new(StringComparer.Ordinal)
+        {
+            "internal_error",
+            "message_limit_exceeded",
+            "rate_limited",
+            "ratelimited",
+            "service_unavailable"
+        };
+
     public override async Task<IntegrationHandlerResult> HandleAsync(IntegrationMessage<SlackIntegrationConfigurationDetails> message)
     {
         var slackResponse = await slackService.SendSlackMessageByChannelIdAsync(
@@ -27,14 +36,9 @@ public class SlackIntegrationHandler(
             return new IntegrationHandlerResult(success: true, message: message);
         }
 
-        var result = new IntegrationHandlerResult(success: false, message: message);
-        result.FailureReason = slackResponse.Error;
-        if (slackResponse.Error.Equals("internal_error") ||
-            slackResponse.Error.Equals("message_limit_exceeded") ||
-            slackResponse.Error.Equals("rate_limited") ||
-            slackResponse.Error.Equals("ratelimited") ||
-            slackResponse.Error.Equals("service_unavailable")
-        )
+        var result = new IntegrationHandlerResult(success: false, message: message) { FailureReason = slackResponse.Error };
+
+        if (_retryableErrors.Contains(slackResponse.Error))
         {
             result.Retryable = true;
         }
