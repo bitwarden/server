@@ -425,4 +425,85 @@ public class OrganizationUsersControllerPerformanceTest(ITestOutputHelper testOu
         Assert.True(response.IsSuccessStatusCode);
     }
 
+    [Fact]
+    public async Task DeleteSingleUserAccountAsync()
+    {
+        await using var factory = new SqlServerApiApplicationFactory();
+        var client = factory.CreateClient();
+
+        var db = factory.GetDatabaseContext();
+        var orgSeeder = new OrganizationWithUsersRecipe(db);
+        var domainSeeder = new OrganizationDomainRecipe(db);
+
+        var domain = $"deleteuseraccount.test.{Guid.NewGuid():N}";
+        var orgId = orgSeeder.Seed(
+            name: "Org",
+            domain: domain,
+            users: 2,
+            usersStatus: OrganizationUserStatusType.Confirmed);
+
+        domainSeeder.AddVerifiedDomainToOrganization(orgId, domain);
+
+        var tokens = await factory.LoginAsync($"owner@{domain}", "c55hlJ/cfdvTd4awTXUqow6X3cOQCfGwn11o3HblnPs=");
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
+
+        var userToDelete = db.OrganizationUsers
+            .FirstOrDefault(ou => ou.OrganizationId == orgId && ou.Type == OrganizationUserType.User);
+
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+        var response = await client.DeleteAsync($"/organizations/{orgId}/users/{userToDelete.Id}/delete-account");
+
+        stopwatch.Stop();
+        testOutputHelper.WriteLine($"DELETE /users/{{id}}/delete-account - Request duration: {stopwatch.ElapsedMilliseconds} ms; Status: {response.StatusCode}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(5)]
+    [InlineData(20)]
+    public async Task InviteUsersAsync(int emailCount)
+    {
+        await using var factory = new SqlServerApiApplicationFactory();
+        var client = factory.CreateClient();
+
+        var db = factory.GetDatabaseContext();
+        var orgSeeder = new OrganizationWithUsersRecipe(db);
+        var collectionsSeeder = new CollectionsRecipe(db);
+
+        var domain = $"{Guid.NewGuid():N}.com";
+        var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: 1);
+
+        var orgUserIds = db.OrganizationUsers.Where(ou => ou.OrganizationId == orgId).Select(ou => ou.Id).ToList();
+        var collectionIds = collectionsSeeder.AddToOrganization(orgId, 2, orgUserIds, 0);
+
+        var tokens = await factory.LoginAsync($"owner@{domain}", "c55hlJ/cfdvTd4awTXUqow6X3cOQCfGwn11o3HblnPs=");
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
+
+        var emails = Enumerable.Range(0, emailCount).Select(i => $"{i:D4}@{domain}").ToArray();
+        var inviteRequest = new OrganizationUserInviteRequestModel
+        {
+            Emails = emails,
+            Type = OrganizationUserType.User,
+            AccessSecretsManager = false,
+            Collections = Array.Empty<SelectionReadOnlyRequestModel>(),
+            Groups = Array.Empty<Guid>(),
+            Permissions = null
+        };
+
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+        var requestContent = new StringContent(JsonSerializer.Serialize(inviteRequest), Encoding.UTF8, "application/json");
+        var response = await client.PostAsync($"/organizations/{orgId}/users/invite", requestContent);
+
+        stopwatch.Stop();
+        testOutputHelper.WriteLine($"POST /users/invite - Emails: {emails.Length}; Request duration: {stopwatch.ElapsedMilliseconds} ms; Status: {response.StatusCode}");
+
+        var result = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
 }
