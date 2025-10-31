@@ -442,7 +442,7 @@ public class HandlebarsMailService : IMailService
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName
         };
-        await AddMessageContentAsync(message, "MJML.Auth.Onboarding.welcome-free-user", model);
+        await AddMessageContentAsync(message, "MJML.Auth.Onboarding.welcome-individual-user", model);
         message.Category = "Welcome";
         await _mailDeliveryService.SendEmailAsync(message);
     }
