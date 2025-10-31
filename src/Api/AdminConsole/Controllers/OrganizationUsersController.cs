@@ -526,7 +526,8 @@ public class OrganizationUsersController : Controller
         {
             // Return an informative error to show in the UI.
             // The Authorize attribute already prevents enumeration by users outside the organization, so this can be specific.
-            return TypedResults.BadRequest(new ErrorResponseModel("You do not have permission to reset this user's master password"));
+            var failureReason = authorizationResult.Failure?.FailureReasons.FirstOrDefault()?.Message ?? RecoverAccountAuthorizationHandler.FailureReason;
+            return TypedResults.BadRequest(new ErrorResponseModel(failureReason));
         }
 
         var result = await _adminRecoverAccountCommand.RecoverAccountAsync(orgId, targetOrganizationUser, model.NewMasterPasswordHash, model.Key);

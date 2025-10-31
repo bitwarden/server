@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.Models.Request.Organizations;
@@ -83,7 +84,7 @@ public class OrganizationUsersControllerPutResetPasswordTests : IClassFixture<Ap
     }
 
     [Fact]
-    public async Task PutResetPassword_Success()
+    public async Task PutResetPassword_AsHigherRole_CanRecoverLowerRole()
     {
         // Arrange
         var (ownerEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
@@ -135,7 +136,7 @@ public class OrganizationUsersControllerPutResetPasswordTests : IClassFixture<Ap
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var model = await response.Content.ReadFromJsonAsync<ErrorResponseModel>();
-        Assert.Contains("You do not have permission to reset this user's master password", model.Message);
+        Assert.Contains(RecoverAccountAuthorizationHandler.FailureReason, model.Message);
     }
 
     [Fact]
@@ -191,6 +192,6 @@ public class OrganizationUsersControllerPutResetPasswordTests : IClassFixture<Ap
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var model = await response.Content.ReadFromJsonAsync<ErrorResponseModel>();
-        Assert.Contains("You do not have permission to reset this user's master password", model.Message);
+        Assert.Equal(RecoverAccountAuthorizationHandler.ProviderFailureReason, model.Message);
     }
 }
