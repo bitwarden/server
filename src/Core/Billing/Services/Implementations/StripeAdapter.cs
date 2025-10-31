@@ -64,7 +64,7 @@ public class StripeAdapter : IStripeAdapter
     public Task<Customer> DeleteCustomerAsync(string id) =>
         _customerService.DeleteAsync(id);
 
-    public async Task<List<PaymentMethod>> ListCustomerPaymentMethods(string id,
+    public async Task<List<PaymentMethod>> ListCustomerPaymentMethodsAsync(string id,
         CustomerPaymentMethodListOptions options = null)
     {
         var paymentMethods = await _customerService.ListPaymentMethodsAsync(id, options);

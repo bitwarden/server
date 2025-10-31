@@ -14,7 +14,7 @@ public interface IStripeAdapter
     Task<Customer> GetCustomerAsync(string id, CustomerGetOptions options = null);
     Task<Customer> UpdateCustomerAsync(string id, CustomerUpdateOptions options = null);
     Task<Customer> DeleteCustomerAsync(string id);
-    Task<List<PaymentMethod>> ListCustomerPaymentMethods(string id, CustomerPaymentMethodListOptions options = null);
+    Task<List<PaymentMethod>> ListCustomerPaymentMethodsAsync(string id, CustomerPaymentMethodListOptions options = null);
     Task<CustomerBalanceTransaction> CreateCustomerBalanceTransactionAsync(string customerId,
         CustomerBalanceTransactionCreateOptions options);
     Task<Subscription> CreateSubscriptionAsync(SubscriptionCreateOptions subscriptionCreateOptions);

@@ -1320,7 +1320,7 @@ public class SubscriberServiceTests
         stripeAdapter.ListSetupIntentsAsync(Arg.Is<SetupIntentListOptions>(options => options.PaymentMethod == "TOKEN"))
             .Returns([matchingSetupIntent]);
 
-        stripeAdapter.ListCustomerPaymentMethods(provider.GatewayCustomerId).Returns([
+        stripeAdapter.ListCustomerPaymentMethodsAsync(provider.GatewayCustomerId).Returns([
             new PaymentMethod { Id = "payment_method_1" }
         ]);
 
@@ -1358,7 +1358,7 @@ public class SubscriberServiceTests
                 }
             });
 
-        stripeAdapter.ListCustomerPaymentMethods(provider.GatewayCustomerId).Returns([
+        stripeAdapter.ListCustomerPaymentMethodsAsync(provider.GatewayCustomerId).Returns([
             new PaymentMethod { Id = "payment_method_1" }
         ]);
 

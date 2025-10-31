@@ -2,5 +2,5 @@
 
 public interface IStripeSyncService
 {
-    Task UpdateCustomerEmailAddress(string gatewayCustomerId, string emailAddress);
+    Task UpdateCustomerEmailAddressAsync(string gatewayCustomerId, string emailAddress);
 }

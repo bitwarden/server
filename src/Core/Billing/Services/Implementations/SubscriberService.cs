@@ -1024,7 +1024,7 @@ public class SubscriberService(
             }
         }
 
-        var paymentMethods = await stripeAdapter.ListCustomerPaymentMethods(customer.Id);
+        var paymentMethods = await stripeAdapter.ListCustomerPaymentMethodsAsync(customer.Id);
 
         await Task.WhenAll(paymentMethods.Select(pm => stripeAdapter.DetachPaymentMethodAsync(pm.Id)));
     }

@@ -11,7 +11,7 @@ public class StripeSyncService : IStripeSyncService
         _stripeAdapter = stripeAdapter;
     }
 
-    public async Task UpdateCustomerEmailAddress(string gatewayCustomerId, string emailAddress)
+    public async Task UpdateCustomerEmailAddressAsync(string gatewayCustomerId, string emailAddress)
     {
         if (string.IsNullOrWhiteSpace(gatewayCustomerId))
         {
