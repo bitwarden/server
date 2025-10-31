@@ -170,9 +170,9 @@ dependencies = [
  "async-trait",
  "bitwarden-api-api",
  "bitwarden-api-identity",
- "bitwarden-crypto",
- "bitwarden-encoding",
- "bitwarden-error",
+ "bitwarden-crypto 1.0.0 (git+https://github.com/bitwarden/sdk-internal.git?rev=1461b3ba6bb6e2d0114770eb4572a1398b4789ef)",
+ "bitwarden-encoding 1.0.0 (git+https://github.com/bitwarden/sdk-internal.git?rev=1461b3ba6bb6e2d0114770eb4572a1398b4789ef)",
+ "bitwarden-error 1.0.0 (git+https://github.com/bitwarden/sdk-internal.git?rev=1461b3ba6bb6e2d0114770eb4572a1398b4789ef)",
  "bitwarden-state",
  "bitwarden-uuid",
  "chrono",
@@ -200,8 +200,46 @@ source = "git+https://github.com/bitwarden/sdk-internal.git?rev=1461b3ba6bb6e2d0
 dependencies = [
  "aes",
  "argon2",
- "bitwarden-encoding",
- "bitwarden-error",
+ "bitwarden-encoding 1.0.0 (git+https://github.com/bitwarden/sdk-internal.git?rev=1461b3ba6bb6e2d0114770eb4572a1398b4789ef)",
+ "bitwarden-error 1.0.0 (git+https://github.com/bitwarden/sdk-internal.git?rev=1461b3ba6bb6e2d0114770eb4572a1398b4789ef)",
+ "cbc",
+ "chacha20poly1305",
+ "ciborium",
+ "coset",
+ "ed25519-dalek",
+ "generic-array",
+ "hkdf",
+ "hmac",
+ "num-bigint",
+ "num-traits",
+ "pbkdf2",
+ "rand 0.8.5",
+ "rand_chacha 0.3.1",
+ "rayon",
+ "rsa",
+ "schemars 1.0.4",
+ "serde",
+ "serde_bytes",
+ "serde_repr",
+ "sha1",
+ "sha2",
+ "subtle",
+ "thiserror 1.0.69",
+ "typenum",
+ "uuid",
+ "zeroize",
+ "zeroizing-alloc",
+]
+
+[[package]]
+name = "bitwarden-crypto"
+version = "1.0.0"
+source = "git+https://github.com/bitwarden/sdk-internal.git?rev=21432b51684f9c08c0fdb4febd80cc1d0f575bcd#21432b51684f9c08c0fdb4febd80cc1d0f575bcd"
+dependencies = [
+ "aes",
+ "argon2",
+ "bitwarden-encoding 1.0.0 (git+https://github.com/bitwarden/sdk-internal.git?rev=21432b51684f9c08c0fdb4febd80cc1d0f575bcd)",
+ "bitwarden-error 1.0.0 (git+https://github.com/bitwarden/sdk-internal.git?rev=21432b51684f9c08c0fdb4febd80cc1d0f575bcd)",
  "cbc",
  "chacha20poly1305",
  "ciborium",
@@ -243,11 +281,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitwarden-encoding"
+version = "1.0.0"
+source = "git+https://github.com/bitwarden/sdk-internal.git?rev=21432b51684f9c08c0fdb4febd80cc1d0f575bcd#21432b51684f9c08c0fdb4febd80cc1d0f575bcd"
+dependencies = [
+ "data-encoding",
+ "data-encoding-macro",
+ "serde",
+ "thiserror 1.0.69",
+]
+
+[[package]]
 name = "bitwarden-error"
 version = "1.0.0"
 source = "git+https://github.com/bitwarden/sdk-internal.git?rev=1461b3ba6bb6e2d0114770eb4572a1398b4789ef#1461b3ba6bb6e2d0114770eb4572a1398b4789ef"
 dependencies = [
- "bitwarden-error-macro",
+ "bitwarden-error-macro 1.0.0 (git+https://github.com/bitwarden/sdk-internal.git?rev=1461b3ba6bb6e2d0114770eb4572a1398b4789ef)",
+]
+
+[[package]]
+name = "bitwarden-error"
+version = "1.0.0"
+source = "git+https://github.com/bitwarden/sdk-internal.git?rev=21432b51684f9c08c0fdb4febd80cc1d0f575bcd#21432b51684f9c08c0fdb4febd80cc1d0f575bcd"
+dependencies = [
+ "bitwarden-error-macro 1.0.0 (git+https://github.com/bitwarden/sdk-internal.git?rev=21432b51684f9c08c0fdb4febd80cc1d0f575bcd)",
 ]
 
 [[package]]
@@ -262,12 +319,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitwarden-error-macro"
+version = "1.0.0"
+source = "git+https://github.com/bitwarden/sdk-internal.git?rev=21432b51684f9c08c0fdb4febd80cc1d0f575bcd#21432b51684f9c08c0fdb4febd80cc1d0f575bcd"
+dependencies = [
+ "darling",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "bitwarden-state"
 version = "1.0.0"
 source = "git+https://github.com/bitwarden/sdk-internal.git?rev=1461b3ba6bb6e2d0114770eb4572a1398b4789ef#1461b3ba6bb6e2d0114770eb4572a1398b4789ef"
 dependencies = [
  "async-trait",
- "bitwarden-error",
+ "bitwarden-error 1.0.0 (git+https://github.com/bitwarden/sdk-internal.git?rev=1461b3ba6bb6e2d0114770eb4572a1398b4789ef)",
  "bitwarden-threading",
  "indexed-db",
  "js-sys",
@@ -284,7 +352,7 @@ name = "bitwarden-threading"
 version = "1.0.0"
 source = "git+https://github.com/bitwarden/sdk-internal.git?rev=1461b3ba6bb6e2d0114770eb4572a1398b4789ef#1461b3ba6bb6e2d0114770eb4572a1398b4789ef"
 dependencies = [
- "bitwarden-error",
+ "bitwarden-error 1.0.0 (git+https://github.com/bitwarden/sdk-internal.git?rev=1461b3ba6bb6e2d0114770eb4572a1398b4789ef)",
  "log",
  "serde",
  "thiserror 1.0.69",
@@ -2054,7 +2122,7 @@ version = "0.1.0"
 dependencies = [
  "base64",
  "bitwarden-core",
- "bitwarden-crypto",
+ "bitwarden-crypto 1.0.0 (git+https://github.com/bitwarden/sdk-internal.git?rev=21432b51684f9c08c0fdb4febd80cc1d0f575bcd)",
  "csbindgen",
  "serde",
  "serde_json",
