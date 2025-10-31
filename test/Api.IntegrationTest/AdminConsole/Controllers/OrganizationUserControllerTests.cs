@@ -170,7 +170,7 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
 
         var httpResponse = await _client.DeleteAsync($"organizations/{_organization.Id}/users/{orgUserToDelete.Id}/delete-account");
 
-        Assert.Equal(HttpStatusCode.OK, httpResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, httpResponse.StatusCode);
         Assert.Null(await userRepository.GetByIdAsync(orgUserToDelete.UserId.Value));
         Assert.Null(await organizationUserRepository.GetByIdAsync(orgUserToDelete.Id));
     }
