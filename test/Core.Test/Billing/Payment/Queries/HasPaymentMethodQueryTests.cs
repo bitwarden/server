@@ -57,7 +57,7 @@ public class HasPaymentMethodQueryTests
         _setupIntentCache.GetSetupIntentIdForSubscriber(organization.Id).Returns("seti_123");
 
         _stripeAdapter
-            .SetupIntentGet("seti_123",
+            .GetSetupIntentAsync("seti_123",
                 Arg.Is<SetupIntentGetOptions>(options => options.HasExpansions("payment_method")))
             .Returns(new SetupIntent
             {
@@ -162,7 +162,7 @@ public class HasPaymentMethodQueryTests
         _setupIntentCache.GetSetupIntentIdForSubscriber(organization.Id).Returns("seti_123");
 
         _stripeAdapter
-            .SetupIntentGet("seti_123",
+            .GetSetupIntentAsync("seti_123",
                 Arg.Is<SetupIntentGetOptions>(options => options.HasExpansions("payment_method")))
             .Returns(new SetupIntent
             {
@@ -246,7 +246,7 @@ public class HasPaymentMethodQueryTests
         _setupIntentCache.GetSetupIntentIdForSubscriber(organization.Id).Returns("seti_123");
 
         _stripeAdapter
-            .SetupIntentGet("seti_123",
+            .GetSetupIntentAsync("seti_123",
                 Arg.Is<SetupIntentGetOptions>(options => options.HasExpansions("payment_method")))
             .Returns(new SetupIntent
             {

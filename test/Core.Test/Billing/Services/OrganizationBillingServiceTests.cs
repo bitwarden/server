@@ -176,7 +176,7 @@ public class OrganizationBillingServiceTests
 
         SubscriptionCreateOptions capturedOptions = null;
         sutProvider.GetDependency<IStripeAdapter>()
-            .SubscriptionCreateAsync(Arg.Do<SubscriptionCreateOptions>(options => capturedOptions = options))
+            .CreateSubscriptionAsync(Arg.Do<SubscriptionCreateOptions>(options => capturedOptions = options))
             .Returns(new Subscription
             {
                 Id = "sub_test123",
@@ -193,7 +193,7 @@ public class OrganizationBillingServiceTests
         // Assert
         await sutProvider.GetDependency<IStripeAdapter>()
             .Received(1)
-            .SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>());
+            .CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>());
 
         Assert.NotNull(capturedOptions);
         Assert.Equal(7, capturedOptions.TrialPeriodDays);
@@ -252,7 +252,7 @@ public class OrganizationBillingServiceTests
 
         SubscriptionCreateOptions capturedOptions = null;
         sutProvider.GetDependency<IStripeAdapter>()
-            .SubscriptionCreateAsync(Arg.Do<SubscriptionCreateOptions>(options => capturedOptions = options))
+            .CreateSubscriptionAsync(Arg.Do<SubscriptionCreateOptions>(options => capturedOptions = options))
             .Returns(new Subscription
             {
                 Id = "sub_test123",
@@ -269,7 +269,7 @@ public class OrganizationBillingServiceTests
         // Assert
         await sutProvider.GetDependency<IStripeAdapter>()
             .Received(1)
-            .SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>());
+            .CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>());
 
         Assert.NotNull(capturedOptions);
         Assert.Equal(0, capturedOptions.TrialPeriodDays);
@@ -326,7 +326,7 @@ public class OrganizationBillingServiceTests
 
         SubscriptionCreateOptions capturedOptions = null;
         sutProvider.GetDependency<IStripeAdapter>()
-            .SubscriptionCreateAsync(Arg.Do<SubscriptionCreateOptions>(options => capturedOptions = options))
+            .CreateSubscriptionAsync(Arg.Do<SubscriptionCreateOptions>(options => capturedOptions = options))
             .Returns(new Subscription
             {
                 Id = "sub_test123",
@@ -343,7 +343,7 @@ public class OrganizationBillingServiceTests
         // Assert
         await sutProvider.GetDependency<IStripeAdapter>()
             .Received(1)
-            .SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>());
+            .CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>());
 
         Assert.NotNull(capturedOptions);
         Assert.Equal(7, capturedOptions.TrialPeriodDays);

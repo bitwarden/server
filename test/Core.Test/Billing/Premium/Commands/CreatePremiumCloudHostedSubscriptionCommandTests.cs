@@ -604,8 +604,8 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         var mockInvoice = Substitute.For<Invoice>();
 
         _subscriberService.GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>()).Returns(mockCustomer);
-        _stripeAdapter.SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(mockSubscription);
-        _stripeAdapter.InvoiceUpdateAsync(Arg.Any<string>(), Arg.Any<InvoiceUpdateOptions>()).Returns(mockInvoice);
+        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(mockSubscription);
+        _stripeAdapter.UpdateInvoiceAsync(Arg.Any<string>(), Arg.Any<InvoiceUpdateOptions>()).Returns(mockInvoice);
 
         // Act
         var result = await _command.Run(user, paymentMethod, billingAddress, 0);
@@ -613,7 +613,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         // Assert
         Assert.True(result.IsT0);
         await _subscriberService.Received(1).GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>());
-        await _stripeAdapter.DidNotReceive().CustomerCreateAsync(Arg.Any<CustomerCreateOptions>());
+        await _stripeAdapter.DidNotReceive().CreateCustomerAsync(Arg.Any<CustomerCreateOptions>());
         Assert.True(user.Premium);
         Assert.Equal(mockSubscription.GetCurrentPeriodEnd(), user.PremiumExpirationDate);
     }
@@ -639,8 +639,8 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         Assert.True(result.IsT3); // Assuming T3 is the Unhandled result
         Assert.IsType<BillingException>(result.AsT3.Exception);
         // Verify no customer was created or subscription attempted
-        await _stripeAdapter.DidNotReceive().CustomerCreateAsync(Arg.Any<CustomerCreateOptions>());
-        await _stripeAdapter.DidNotReceive().SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>());
+        await _stripeAdapter.DidNotReceive().CreateCustomerAsync(Arg.Any<CustomerCreateOptions>());
+        await _stripeAdapter.DidNotReceive().CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>());
         await _userService.DidNotReceive().SaveUserAsync(Arg.Any<User>());
     }
 }

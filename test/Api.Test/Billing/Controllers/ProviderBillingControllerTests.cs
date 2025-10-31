@@ -461,13 +461,13 @@ public class ProviderBillingControllerTests
             Status = "active"
         };
 
-        stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId, Arg.Is<SubscriptionGetOptions>(
+        stripeAdapter.GetSubscriptionAsync(provider.GatewaySubscriptionId, Arg.Is<SubscriptionGetOptions>(
             options =>
                 options.Expand.Contains("customer.tax_ids") &&
                 options.Expand.Contains("discounts") &&
                 options.Expand.Contains("test_clock"))).Returns(subscription);
 
-        stripeAdapter.InvoiceSearchAsync(Arg.Is<InvoiceSearchOptions>(
+        stripeAdapter.SearchInvoiceAsync(Arg.Is<InvoiceSearchOptions>(
                 options => options.Query == $"subscription:'{subscription.Id}' status:'open'"))
             .Returns([]);
 
@@ -500,7 +500,7 @@ public class ProviderBillingControllerTests
             var plan = StaticStore.GetPlan(providerPlan.PlanType);
             sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(providerPlan.PlanType).Returns(plan);
             var priceId = ProviderPriceAdapter.GetPriceId(provider, subscription, providerPlan.PlanType);
-            sutProvider.GetDependency<IStripeAdapter>().PriceGetAsync(priceId)
+            sutProvider.GetDependency<IStripeAdapter>().GetPriceAsync(priceId)
                 .Returns(new Price
                 {
                     UnitAmountDecimal = plan.PasswordManager.ProviderPortalSeatPrice * 100

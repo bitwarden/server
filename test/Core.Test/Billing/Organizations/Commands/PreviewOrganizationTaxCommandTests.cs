@@ -522,7 +522,7 @@ public class PreviewOrganizationTaxCommandTests
             Customer = new Customer { Discount = null }
         };
 
-        _stripeAdapter.SubscriptionGetAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+        _stripeAdapter.GetSubscriptionAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
 
         var invoice = new Invoice
         {
@@ -534,7 +534,7 @@ public class PreviewOrganizationTaxCommandTests
             Total = 9900
         };
 
-        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
         var result = await _command.Run(organization, planChange, billingAddress);
 
@@ -543,7 +543,7 @@ public class PreviewOrganizationTaxCommandTests
         Assert.Equal(9.00m, tax);
         Assert.Equal(99.00m, total);
 
-        await _stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
             options.AutomaticTax.Enabled == true &&
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "US" &&
@@ -597,7 +597,7 @@ public class PreviewOrganizationTaxCommandTests
             Customer = new Customer { Discount = null }
         };
 
-        _stripeAdapter.SubscriptionGetAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+        _stripeAdapter.GetSubscriptionAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
 
         var invoice = new Invoice
         {
@@ -609,7 +609,7 @@ public class PreviewOrganizationTaxCommandTests
             Total = 13200
         };
 
-        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
         var result = await _command.Run(organization, planChange, billingAddress);
 
@@ -618,7 +618,7 @@ public class PreviewOrganizationTaxCommandTests
         Assert.Equal(12.00m, tax);
         Assert.Equal(132.00m, total);
 
-        await _stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
             options.AutomaticTax.Enabled == true &&
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "US" &&
