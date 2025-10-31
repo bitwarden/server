@@ -3,6 +3,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimed
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -11,7 +12,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using OneOf.Types;
-using CommandResult = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount.CommandResult;
+using CommandResult = Bit.Core.AdminConsole.Utilities.v2.Results.CommandResult;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 
@@ -86,7 +87,7 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to create default collection for user.");
-            return new FailedToCreateDefaultCollection();
+            return new CommandResult<AutomaticallyConfirmOrganizationUserRequestData>(new FailedToCreateDefaultCollection());
         }
     }
 

@@ -1,10 +1,6 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
+﻿using Bit.Core.AdminConsole.Utilities.v2;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
-
-
-public abstract record BadRequestError(string Message) : Error(Message);
-public abstract record InternalError(string Message) : Error(Message);
 
 public record OrganizationNotFound() : NotFoundError("Invalid organization");
 public record FailedToWriteToEventLog() : InternalError("Failed to write to event log");

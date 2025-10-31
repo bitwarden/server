@@ -1,7 +1,7 @@
 ﻿using OneOf;
 using OneOf.Types;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
+namespace Bit.Core.AdminConsole.Utilities.v2.Validation;
 
 /// <summary>
 /// Represents the result of validating a request.

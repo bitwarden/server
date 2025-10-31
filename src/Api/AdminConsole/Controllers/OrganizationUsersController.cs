@@ -26,7 +26,6 @@ using Bit.Core.Billing.Pricing;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Api;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
@@ -552,14 +551,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
             return TypedResults.Unauthorized();
         }
 
-        var commandResult = await _deleteClaimedOrganizationUserAccountCommand.DeleteUserAsync(orgId, id, currentUserId.Value);
-
-        return commandResult.Result.Match<IResult>(
-            error => error is NotFoundError
-                ? TypedResults.NotFound(new ErrorResponseModel(error.Message))
-                : TypedResults.BadRequest(new ErrorResponseModel(error.Message)),
-            TypedResults.Ok
-        );
+        return Handle(await _deleteClaimedOrganizationUserAccountCommand.DeleteUserAsync(orgId, id, currentUserId.Value));
     }
 
     [HttpPost("{id}/delete-account")]
