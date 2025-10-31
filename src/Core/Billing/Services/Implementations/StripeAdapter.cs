@@ -48,28 +48,20 @@ public class StripeAdapter : IStripeAdapter
     /**************
      ** CUSTOMER **
      **************/
-    public Task<Customer> CreateCustomerAsync(CustomerCreateOptions options)
-    {
-        return _customerService.CreateAsync(options);
-    }
+    public Task<Customer> CreateCustomerAsync(CustomerCreateOptions options) =>
+        _customerService.CreateAsync(options);
 
     public Task CustomerDeleteDiscountAsync(string customerId, CustomerDeleteDiscountOptions options = null) =>
         _customerService.DeleteDiscountAsync(customerId, options);
 
-    public Task<Customer> GetCustomerAsync(string id, CustomerGetOptions options = null)
-    {
-        return _customerService.GetAsync(id, options);
-    }
+    public Task<Customer> GetCustomerAsync(string id, CustomerGetOptions options = null) =>
+        _customerService.GetAsync(id, options);
 
-    public Task<Customer> UpdateCustomerAsync(string id, CustomerUpdateOptions options = null)
-    {
-        return _customerService.UpdateAsync(id, options);
-    }
+    public Task<Customer> UpdateCustomerAsync(string id, CustomerUpdateOptions options = null) =>
+        _customerService.UpdateAsync(id, options);
 
-    public Task<Customer> DeleteCustomerAsync(string id)
-    {
-        return _customerService.DeleteAsync(id);
-    }
+    public Task<Customer> DeleteCustomerAsync(string id) =>
+        _customerService.DeleteAsync(id);
 
     public async Task<List<PaymentMethod>> ListCustomerPaymentMethods(string id,
         CustomerPaymentMethodListOptions options = null)
@@ -79,23 +71,17 @@ public class StripeAdapter : IStripeAdapter
     }
 
     public async Task<CustomerBalanceTransaction> CreateCustomerBalanceTransactionAsync(string customerId,
-        CustomerBalanceTransactionCreateOptions options)
-    {
-        return await _customerBalanceTransactionService.CreateAsync(customerId, options);
-    }
+        CustomerBalanceTransactionCreateOptions options) =>
+        await _customerBalanceTransactionService.CreateAsync(customerId, options);
 
     /******************
      ** SUBSCRIPTION **
      ******************/
-    public Task<Subscription> CreateSubscriptionAsync(SubscriptionCreateOptions options)
-    {
-        return _subscriptionService.CreateAsync(options);
-    }
+    public Task<Subscription> CreateSubscriptionAsync(SubscriptionCreateOptions options) =>
+        _subscriptionService.CreateAsync(options);
 
-    public Task<Subscription> GetSubscriptionAsync(string id, SubscriptionGetOptions options = null)
-    {
-        return _subscriptionService.GetAsync(id, options);
-    }
+    public Task<Subscription> GetSubscriptionAsync(string id, SubscriptionGetOptions options = null) =>
+        _subscriptionService.GetAsync(id, options);
 
     public async Task<Subscription> GetProviderSubscriptionAsync(
         string id,
@@ -112,23 +98,17 @@ public class StripeAdapter : IStripeAdapter
     }
 
     public Task<Subscription> UpdateSubscriptionAsync(string id,
-        SubscriptionUpdateOptions options = null)
-    {
-        return _subscriptionService.UpdateAsync(id, options);
-    }
+        SubscriptionUpdateOptions options = null) =>
+        _subscriptionService.UpdateAsync(id, options);
 
-    public Task<Subscription> CancelSubscriptionAsync(string id, SubscriptionCancelOptions options = null)
-    {
-        return _subscriptionService.CancelAsync(id, options);
-    }
+    public Task<Subscription> CancelSubscriptionAsync(string id, SubscriptionCancelOptions options = null) =>
+        _subscriptionService.CancelAsync(id, options);
 
     /*************
      ** INVOICE **
      *************/
-    public Task<Invoice> GetInvoiceAsync(string id, InvoiceGetOptions options)
-    {
-        return _invoiceService.GetAsync(id, options);
-    }
+    public Task<Invoice> GetInvoiceAsync(string id, InvoiceGetOptions options) =>
+        _invoiceService.GetAsync(id, options);
 
     public async Task<List<Invoice>> ListInvoicesAsync(StripeInvoiceListOptions options)
     {
@@ -149,159 +129,105 @@ public class StripeAdapter : IStripeAdapter
         return invoices;
     }
 
-    public Task<Invoice> CreateInvoicePreviewAsync(InvoiceCreatePreviewOptions options)
-    {
-        return _invoiceService.CreatePreviewAsync(options);
-    }
+    public Task<Invoice> CreateInvoicePreviewAsync(InvoiceCreatePreviewOptions options) =>
+        _invoiceService.CreatePreviewAsync(options);
 
-    public async Task<List<Invoice>> SearchInvoiceAsync(InvoiceSearchOptions options)
-    {
-        return (await _invoiceService.SearchAsync(options)).Data;
-    }
+    public async Task<List<Invoice>> SearchInvoiceAsync(InvoiceSearchOptions options) =>
+        (await _invoiceService.SearchAsync(options)).Data;
 
-    public Task<Invoice> UpdateInvoiceAsync(string id, InvoiceUpdateOptions options)
-    {
-        return _invoiceService.UpdateAsync(id, options);
-    }
+    public Task<Invoice> UpdateInvoiceAsync(string id, InvoiceUpdateOptions options) =>
+        _invoiceService.UpdateAsync(id, options);
 
-    public Task<Invoice> FinalizeInvoiceAsync(string id, InvoiceFinalizeOptions options)
-    {
-        return _invoiceService.FinalizeInvoiceAsync(id, options);
-    }
+    public Task<Invoice> FinalizeInvoiceAsync(string id, InvoiceFinalizeOptions options) =>
+        _invoiceService.FinalizeInvoiceAsync(id, options);
 
-    public Task<Invoice> SendInvoiceAsync(string id, InvoiceSendOptions options)
-    {
-        return _invoiceService.SendInvoiceAsync(id, options);
-    }
+    public Task<Invoice> SendInvoiceAsync(string id, InvoiceSendOptions options) =>
+        _invoiceService.SendInvoiceAsync(id, options);
 
-    public Task<Invoice> PayInvoiceAsync(string id, InvoicePayOptions options = null)
-    {
-        return _invoiceService.PayAsync(id, options);
-    }
+    public Task<Invoice> PayInvoiceAsync(string id, InvoicePayOptions options = null) =>
+        _invoiceService.PayAsync(id, options);
 
-    public Task<Invoice> DeleteInvoiceAsync(string id, InvoiceDeleteOptions options = null)
-    {
-        return _invoiceService.DeleteAsync(id, options);
-    }
+    public Task<Invoice> DeleteInvoiceAsync(string id, InvoiceDeleteOptions options = null) =>
+        _invoiceService.DeleteAsync(id, options);
 
-    public Task<Invoice> VoidInvoiceAsync(string id, InvoiceVoidOptions options = null)
-    {
-        return _invoiceService.VoidInvoiceAsync(id, options);
-    }
+    public Task<Invoice> VoidInvoiceAsync(string id, InvoiceVoidOptions options = null) =>
+        _invoiceService.VoidInvoiceAsync(id, options);
 
     /********************
      ** PAYMENT METHOD **
      ********************/
-    public IEnumerable<PaymentMethod> ListPaymentMethodsAutoPaging(PaymentMethodListOptions options)
-    {
-        return _paymentMethodService.ListAutoPaging(options);
-    }
+    public IEnumerable<PaymentMethod> ListPaymentMethodsAutoPaging(PaymentMethodListOptions options) =>
+        _paymentMethodService.ListAutoPaging(options);
 
     public IAsyncEnumerable<PaymentMethod> ListPaymentMethodsAutoPagingAsync(PaymentMethodListOptions options)
         => _paymentMethodService.ListAutoPagingAsync(options);
 
-    public Task<PaymentMethod> AttachPaymentMethodAsync(string id, PaymentMethodAttachOptions options = null)
-    {
-        return _paymentMethodService.AttachAsync(id, options);
-    }
+    public Task<PaymentMethod> AttachPaymentMethodAsync(string id, PaymentMethodAttachOptions options = null) =>
+        _paymentMethodService.AttachAsync(id, options);
 
-    public Task<PaymentMethod> DetachPaymentMethodAsync(string id, PaymentMethodDetachOptions options = null)
-    {
-        return _paymentMethodService.DetachAsync(id, options);
-    }
+    public Task<PaymentMethod> DetachPaymentMethodAsync(string id, PaymentMethodDetachOptions options = null) =>
+        _paymentMethodService.DetachAsync(id, options);
 
     /************
      ** TAX ID **
      ************/
-    public Task<TaxId> CreateTaxIdAsync(string id, TaxIdCreateOptions options)
-    {
-        return _taxIdService.CreateAsync(id, options);
-    }
+    public Task<TaxId> CreateTaxIdAsync(string id, TaxIdCreateOptions options) =>
+        _taxIdService.CreateAsync(id, options);
 
     public Task<TaxId> DeleteTaxIdAsync(string customerId, string taxIdId,
-        TaxIdDeleteOptions options = null)
-    {
-        return _taxIdService.DeleteAsync(customerId, taxIdId);
-    }
+        TaxIdDeleteOptions options = null) =>
+        _taxIdService.DeleteAsync(customerId, taxIdId);
 
     /******************
      ** BANK ACCOUNT **
      ******************/
-    public Task<BankAccount> CreateBankAccountAsync(string customerId, BankAccountCreateOptions options = null)
-    {
-        return _bankAccountService.CreateAsync(customerId, options);
-    }
+    public Task<BankAccount> CreateBankAccountAsync(string customerId, BankAccountCreateOptions options = null) =>
+        _bankAccountService.CreateAsync(customerId, options);
 
-    public Task<BankAccount> DeleteBankAccountAsync(string customerId, string bankAccount, BankAccountDeleteOptions options = null)
-    {
-        return _bankAccountService.DeleteAsync(customerId, bankAccount, options);
-    }
+    public Task<BankAccount> DeleteBankAccountAsync(string customerId, string bankAccount, BankAccountDeleteOptions options = null) =>
+        _bankAccountService.DeleteAsync(customerId, bankAccount, options);
 
     /***********
      ** PRICE **
      ***********/
-    public async Task<StripeList<Price>> ListPricesAsync(PriceListOptions options = null)
-    {
-        return await _priceService.ListAsync(options);
-    }
+    public async Task<StripeList<Price>> ListPricesAsync(PriceListOptions options = null) =>
+        await _priceService.ListAsync(options);
 
-    public Task<Price> GetPriceAsync(string id, PriceGetOptions options = null)
-    {
-        return _priceService.GetAsync(id, options);
-    }
+    public Task<Price> GetPriceAsync(string id, PriceGetOptions options = null) =>
+        _priceService.GetAsync(id, options);
 
     /******************
      ** SETUP INTENT **
      ******************/
-    public Task<SetupIntent> CreateSetupIntentAsync(SetupIntentCreateOptions options)
-    {
-        return _setupIntentService.CreateAsync(options);
-    }
+    public Task<SetupIntent> CreateSetupIntentAsync(SetupIntentCreateOptions options) =>
+        _setupIntentService.CreateAsync(options);
 
-    public async Task<List<SetupIntent>> ListSetupIntentsAsync(SetupIntentListOptions options)
-    {
-        var setupIntents = await _setupIntentService.ListAsync(options);
+    public async Task<List<SetupIntent>> ListSetupIntentsAsync(SetupIntentListOptions options) =>
+        (await _setupIntentService.ListAsync(options)).Data;
 
-        return setupIntents.Data;
-    }
+    public Task CancelSetupIntentAsync(string id, SetupIntentCancelOptions options = null) =>
+        _setupIntentService.CancelAsync(id, options);
 
-    public Task CancelSetupIntentAsync(string id, SetupIntentCancelOptions options = null)
-    {
-        return _setupIntentService.CancelAsync(id, options);
-    }
+    public Task<SetupIntent> GetSetupIntentAsync(string id, SetupIntentGetOptions options = null) =>
+        _setupIntentService.GetAsync(id, options);
 
-    public Task<SetupIntent> GetSetupIntentAsync(string id, SetupIntentGetOptions options = null)
-    {
-        return _setupIntentService.GetAsync(id, options);
-    }
-
-    public Task VerifySetupIntentMicrodepositsAsync(string id, SetupIntentVerifyMicrodepositsOptions options)
-    {
-        return _setupIntentService.VerifyMicrodepositsAsync(id, options);
-    }
+    public Task VerifySetupIntentMicrodepositsAsync(string id, SetupIntentVerifyMicrodepositsOptions options) =>
+        _setupIntentService.VerifyMicrodepositsAsync(id, options);
 
     /*******************
      ** MISCELLANEOUS **
      *******************/
-    public Task<StripeList<Charge>> ListChargesAsync(ChargeListOptions options)
-    {
-        return _chargeService.ListAsync(options);
-    }
+    public Task<StripeList<Charge>> ListChargesAsync(ChargeListOptions options) =>
+        _chargeService.ListAsync(options);
 
-    public Task<StripeList<Registration>> ListTaxRegistrationsAsync(RegistrationListOptions options = null)
-    {
-        return _taxRegistrationService.ListAsync(options);
-    }
+    public Task<StripeList<Registration>> ListTaxRegistrationsAsync(RegistrationListOptions options = null) =>
+        _taxRegistrationService.ListAsync(options);
 
-    public Task<Refund> CreateRefundAsync(RefundCreateOptions options)
-    {
-        return _refundService.CreateAsync(options);
-    }
+    public Task<Refund> CreateRefundAsync(RefundCreateOptions options) =>
+        _refundService.CreateAsync(options);
 
-    public Task<Card> DeleteCardAsync(string customerId, string cardId, CardDeleteOptions options = null)
-    {
-        return _cardService.DeleteAsync(customerId, cardId, options);
-    }
+    public Task<Card> DeleteCardAsync(string customerId, string cardId, CardDeleteOptions options = null) =>
+        _cardService.DeleteAsync(customerId, cardId, options);
 
     public async Task<List<TestClock>> ListTestClocksAsync()
     {
