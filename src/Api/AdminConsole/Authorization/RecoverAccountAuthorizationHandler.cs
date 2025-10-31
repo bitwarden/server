@@ -30,7 +30,7 @@ public class RecoverAccountAuthorizationHandler(
     : AuthorizationHandler<RecoverAccountAuthorizationRequirement, OrganizationUser>
 {
     public const string FailureReason = "You are not permitted to recover this user's account.";
-    public const string ProviderFailureReason = "You are not permitted to recover a Provider's account.";
+    public const string ProviderFailureReason = "You are not permitted to recover a Provider member's account.";
 
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
         RecoverAccountAuthorizationRequirement requirement,
