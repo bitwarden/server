@@ -1,4 +1,5 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
+
 #nullable disable
 
 using Bit.Core.Models.BitStripe;
@@ -70,9 +71,9 @@ public class StripeAdapter : IStripeAdapter
         return paymentMethods.Data;
     }
 
-    public async Task<CustomerBalanceTransaction> CreateCustomerBalanceTransactionAsync(string customerId,
+    public Task<CustomerBalanceTransaction> CreateCustomerBalanceTransactionAsync(string customerId,
         CustomerBalanceTransactionCreateOptions options) =>
-        await _customerBalanceTransactionService.CreateAsync(customerId, options);
+        _customerBalanceTransactionService.CreateAsync(customerId, options);
 
     /******************
      ** SUBSCRIPTION **
@@ -82,20 +83,6 @@ public class StripeAdapter : IStripeAdapter
 
     public Task<Subscription> GetSubscriptionAsync(string id, SubscriptionGetOptions options = null) =>
         _subscriptionService.GetAsync(id, options);
-
-    public async Task<Subscription> GetProviderSubscriptionAsync(
-        string id,
-        Guid providerId,
-        SubscriptionGetOptions options = null)
-    {
-        var subscription = await _subscriptionService.GetAsync(id, options);
-        if (subscription.Metadata.TryGetValue("providerId", out var value) && value == providerId.ToString())
-        {
-            return subscription;
-        }
-
-        throw new InvalidOperationException("Subscription does not belong to the provider.");
-    }
 
     public Task<Subscription> UpdateSubscriptionAsync(string id,
         SubscriptionUpdateOptions options = null) =>
@@ -190,8 +177,8 @@ public class StripeAdapter : IStripeAdapter
     /***********
      ** PRICE **
      ***********/
-    public async Task<StripeList<Price>> ListPricesAsync(PriceListOptions options = null) =>
-        await _priceService.ListAsync(options);
+    public Task<StripeList<Price>> ListPricesAsync(PriceListOptions options = null) =>
+        _priceService.ListAsync(options);
 
     public Task<Price> GetPriceAsync(string id, PriceGetOptions options = null) =>
         _priceService.GetAsync(id, options);
@@ -232,14 +219,12 @@ public class StripeAdapter : IStripeAdapter
     public async Task<List<TestClock>> ListTestClocksAsync()
     {
         var items = new List<TestClock>();
-        var options = new TestClockListOptions
-        {
-            Limit = 100
-        };
+        var options = new TestClockListOptions { Limit = 100 };
         await foreach (var i in _testClockService.ListAutoPagingAsync(options))
         {
             items.Add(i);
         }
+
         return items;
     }
 }

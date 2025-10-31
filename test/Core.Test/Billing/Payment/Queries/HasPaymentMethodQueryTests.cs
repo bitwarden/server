@@ -3,7 +3,6 @@ using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Services;
-using Bit.Core.Services;
 using Bit.Core.Test.Billing.Extensions;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
