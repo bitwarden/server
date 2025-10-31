@@ -11,7 +11,7 @@ name = "akd-test-utility"
 path = "src/main.rs"
 
 [dependencies]
-akd = "0.11.0"
+akd = { workspace = true }
 akd_storage = { path = "../akd_storage" }
 anyhow = "1"
 async-trait = "0.1"

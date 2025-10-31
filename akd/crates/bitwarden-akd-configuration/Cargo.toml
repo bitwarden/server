@@ -1,0 +1,15 @@
+[package]
+name = "bitwarden-akd-configuration"
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+license-file.workspace = true
+keywords.workspace = true
+
+[dependencies]
+akd = { workspace = true }
+blake3 = "1.8.2"
+uuid = "1.18.1"
+
+[lints]
+workspace = true
