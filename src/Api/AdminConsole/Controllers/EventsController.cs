@@ -121,7 +121,7 @@ public class EventsController : Controller
             new PageOptions { ContinuationToken = continuationToken });
         var responses = result.Data.Select(e => new EventResponseModel(e));
 
-        _logger.LogAggregateData(_featureService, orgId, continuationToken, responses, start, end);
+        _logger.LogAggregateData(_featureService, orgId, responses, continuationToken, start, end);
 
         return new ListResponseModel<EventResponseModel>(responses, result.ContinuationToken);
     }

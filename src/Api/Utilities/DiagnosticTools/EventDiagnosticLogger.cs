@@ -49,8 +49,8 @@ public static class EventDiagnosticLogger
         this ILogger logger,
         IFeatureService featureService,
         Guid organizationId,
-        string continuationToken,
         IEnumerable<Bit.Api.Models.Response.EventResponseModel> data,
+        string? continuationToken,
         DateTime? queryStart = null,
         DateTime? queryEnd = null)
     {
