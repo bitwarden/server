@@ -442,7 +442,7 @@ public class HandlebarsMailService : IMailService
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName
         };
-        await AddMessageContentAsync(message, "Auth.MJML.Onboarding.welcome-free-user", model);
+        await AddMessageContentAsync(message, "MJML.Auth.Onboarding.welcome-free-user", model);
         message.Category = "Welcome";
         await _mailDeliveryService.SendEmailAsync(message);
     }
@@ -456,12 +456,12 @@ public class HandlebarsMailService : IMailService
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName
         };
-        await AddMessageContentAsync(message, "Auth.MJML.Onboarding.welcome-org-user", model);
+        await AddMessageContentAsync(message, "MJML.Auth.Onboarding.welcome-org-user", model);
         message.Category = "Welcome";
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendFamiliesUserWelcomeEmailAsync(User user, string familyOrganizationName)
+    public async Task SendFreeOrgOrFamilyOrgUserWelcomeEmailAsync(User user, string familyOrganizationName)
     {
         var message = CreateDefaultMessage("Welcome to Bitwarden!", user.Email);
         var model = new OrganizationWelcomeEmailViewModel
@@ -470,7 +470,7 @@ public class HandlebarsMailService : IMailService
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName
         };
-        await AddMessageContentAsync(message, "Auth.MJML.Onboarding.welcome-family-user", model);
+        await AddMessageContentAsync(message, "MJML.Auth.Onboarding.welcome-family-user", model);
         message.Category = "Welcome";
         await _mailDeliveryService.SendEmailAsync(message);
     }

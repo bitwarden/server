@@ -436,7 +436,7 @@ public class RegisterUserCommand : IRegisterUserCommand
                 || organizationWelcomeEmailDetails.PlanType == PlanType.FamiliesAnnually2019
                 || organizationWelcomeEmailDetails.PlanType == PlanType.Free)
             {
-                await _mailService.SendFamiliesUserWelcomeEmailAsync(user, organizationWelcomeEmailDetails.OrganizationDisplayName);
+                await _mailService.SendFreeOrgOrFamilyOrgUserWelcomeEmailAsync(user, organizationWelcomeEmailDetails.OrganizationDisplayName);
             }
             else
             {

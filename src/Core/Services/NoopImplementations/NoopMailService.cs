@@ -123,7 +123,7 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendFamiliesUserWelcomeEmailAsync(User user, string familyOrganizationName)
+    public Task SendFreeOrgOrFamilyOrgUserWelcomeEmailAsync(User user, string familyOrganizationName)
     {
         return Task.FromResult(0);
     }

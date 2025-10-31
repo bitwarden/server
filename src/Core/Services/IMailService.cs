@@ -32,12 +32,12 @@ public interface IMailService
     /// <returns>Task</returns>
     Task SendOrganizationUserWelcomeEmailAsync(User user, string organizationName);
     /// <summary>
-    /// Email sent to users who have been confirmed to a families organization.
+    /// Email sent to users who have been confirmed to a free or families organization.
     /// </summary>
     /// <param name="user">The User</param>
     /// <param name="familyOrganizationName">The Families Organization user is being added to</param>
     /// <returns>Task</returns>
-    Task SendFamiliesUserWelcomeEmailAsync(User user, string familyOrganizationName);
+    Task SendFreeOrgOrFamilyOrgUserWelcomeEmailAsync(User user, string familyOrganizationName);
     Task SendVerifyEmailEmailAsync(string email, Guid userId, string token);
     Task SendRegistrationVerificationEmailAsync(string email, string token);
     Task SendTrialInitiationSignupEmailAsync(
