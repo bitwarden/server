@@ -10,7 +10,7 @@ public class OrganizationWithUsersRecipe(DatabaseContext db)
 {
     public Guid Seed(string name, string domain, int users, OrganizationUserStatusType usersStatus = OrganizationUserStatusType.Confirmed)
     {
-        var seats = users + 1;
+        var seats = Math.Max(users + 1, 1000);
         var organization = OrganizationSeeder.CreateEnterprise(name, domain, seats);
         var ownerUser = UserSeeder.CreateUser($"owner@{domain}");
         var ownerOrgUser = organization.CreateOrganizationUser(ownerUser, OrganizationUserType.Owner, OrganizationUserStatusType.Confirmed);
