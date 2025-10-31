@@ -121,6 +121,16 @@ public class EventIntegrationHandlerTests
     }
 
     [Theory, BitAutoData]
+    public async Task HandleEventAsync_NoOrganizationId_DoesNothing(EventMessage eventMessage)
+    {
+        var sutProvider = GetSutProvider(OneConfiguration(_templateBase));
+        eventMessage.OrganizationId = null;
+
+        await sutProvider.Sut.HandleEventAsync(eventMessage);
+        Assert.Empty(_eventIntegrationPublisher.ReceivedCalls());
+    }
+
+    [Theory, BitAutoData]
     public async Task HandleEventAsync_BaseTemplateOneConfiguration_PublishesIntegrationMessage(EventMessage eventMessage)
     {
         var sutProvider = GetSutProvider(OneConfiguration(_templateBase));

@@ -21,6 +21,20 @@ public class IntegrationTemplateContextTests
     }
 
     [Theory, BitAutoData]
+    public void DateIso8601_ReturnsIso8601FormattedDate(EventMessage eventMessage)
+    {
+        var testDate = new DateTime(2025, 10, 27, 13, 30, 0, DateTimeKind.Utc);
+        eventMessage.Date = testDate;
+        var sut = new IntegrationTemplateContext(eventMessage);
+
+        var result = sut.DateIso8601;
+
+        Assert.Equal("2025-10-27T13:30:00.0000000Z", result);
+        // Verify it's valid ISO 8601
+        Assert.True(DateTime.TryParse(result, out _));
+    }
+
+    [Theory, BitAutoData]
     public void UserName_WhenUserIsSet_ReturnsName(EventMessage eventMessage, User user)
     {
         var sut = new IntegrationTemplateContext(eventMessage) { User = user };

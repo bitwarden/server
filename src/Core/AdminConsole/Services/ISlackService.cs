@@ -1,4 +1,6 @@
-﻿namespace Bit.Core.Services;
+﻿using Bit.Core.Models.Slack;
+
+namespace Bit.Core.Services;
 
 /// <summary>Defines operations for interacting with Slack, including OAuth authentication, channel discovery,
 /// and sending messages.</summary>
@@ -54,6 +56,6 @@ public interface ISlackService
     /// <param name="token">A valid Slack OAuth access token.</param>
     /// <param name="message">The message text to send.</param>
     /// <param name="channelId">The channel ID to send the message to.</param>
-    /// <returns>A task that completes when the message has been sent.</returns>
-    Task SendSlackMessageByChannelIdAsync(string token, string message, string channelId);
+    /// <returns>The response from Slack after sending the message.</returns>
+    Task<SlackSendMessageResponse?> SendSlackMessageByChannelIdAsync(string token, string message, string channelId);
 }
