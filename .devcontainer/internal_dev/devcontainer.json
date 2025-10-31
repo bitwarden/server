@@ -9,7 +9,11 @@
   "features": {
     "ghcr.io/devcontainers/features/node:1": {
       "version": "16"
-    }
+    },
+    "ghcr.io/devcontainers/features/rust:1": {
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
   },
   "mounts": [
     {
