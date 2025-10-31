@@ -220,6 +220,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("UseApi")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<bool>("UseAutomaticUserConfirmation")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<bool>("UseCustomPermissions")
                         .HasColumnType("tinyint(1)");
 
@@ -1011,6 +1014,12 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
 
+                    b.Property<int?>("ApplicationAtRiskCount")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ApplicationCount")
+                        .HasColumnType("int");
+
                     b.Property<string>("ApplicationData")
                         .HasColumnType("longtext");
 
@@ -1021,8 +1030,38 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<int?>("CriticalApplicationAtRiskCount")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("CriticalApplicationCount")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("CriticalMemberAtRiskCount")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("CriticalMemberCount")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("CriticalPasswordAtRiskCount")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("CriticalPasswordCount")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("MemberAtRiskCount")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("MemberCount")
+                        .HasColumnType("int");
+
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("char(36)");
+
+                    b.Property<int?>("PasswordAtRiskCount")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PasswordCount")
+                        .HasColumnType("int");
 
                     b.Property<string>("ReportData")
                         .IsRequired()
@@ -1873,6 +1912,15 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("varchar(50)");
 
+                    b.Property<string>("SecurityState")
+                        .HasColumnType("longtext");
+
+                    b.Property<int?>("SecurityVersion")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SignedPublicKey")
+                        .HasColumnType("longtext");
+
                     b.Property<long?>("Storage")
                         .HasColumnType("bigint");
 
@@ -1899,6 +1947,40 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasAnnotation("SqlServer:Clustered", false);
 
                     b.ToTable("User", (string)null);
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.UserSignatureKeyPair", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("RevisionDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<byte>("SignatureAlgorithm")
+                        .HasColumnType("tinyint unsigned");
+
+                    b.Property<string>("SigningKey")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("VerifyingKey")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.ToTable("UserSignatureKeyPair", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.NotificationCenter.Models.Notification", b =>
@@ -2157,6 +2239,42 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasAnnotation("SqlServer:Clustered", false);
 
                     b.ToTable("Secret", (string)null);
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.SecretVersion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("EditorOrganizationUserId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("EditorServiceAccountId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid>("SecretId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("VersionDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id")
+                        .HasAnnotation("SqlServer:Clustered", true);
+
+                    b.HasIndex("EditorOrganizationUserId")
+                        .HasDatabaseName("IX_SecretVersion_EditorOrganizationUserId");
+
+                    b.HasIndex("EditorServiceAccountId")
+                        .HasDatabaseName("IX_SecretVersion_EditorServiceAccountId");
+
+                    b.HasIndex("SecretId")
+                        .HasDatabaseName("IX_SecretVersion_SecretId");
+
+                    b.ToTable("SecretVersion");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ServiceAccount", b =>
@@ -2912,6 +3030,17 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.UserSignatureKeyPair", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.NotificationCenter.Models.Notification", b =>
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
@@ -2982,6 +3111,31 @@ namespace Bit.MySqlMigrations.Migrations
                         .IsRequired();
 
                     b.Navigation("Organization");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.SecretVersion", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.OrganizationUser", "EditorOrganizationUser")
+                        .WithMany()
+                        .HasForeignKey("EditorOrganizationUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ServiceAccount", "EditorServiceAccount")
+                        .WithMany()
+                        .HasForeignKey("EditorServiceAccountId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Bit.Infrastructure.EntityFramework.SecretsManager.Models.Secret", "Secret")
+                        .WithMany("SecretVersions")
+                        .HasForeignKey("SecretId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("EditorOrganizationUser");
+
+                    b.Navigation("EditorServiceAccount");
+
+                    b.Navigation("Secret");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ServiceAccount", b =>
@@ -3254,6 +3408,8 @@ namespace Bit.MySqlMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.Secret", b =>
                 {
                     b.Navigation("GroupAccessPolicies");
+
+                    b.Navigation("SecretVersions");
 
                     b.Navigation("ServiceAccountAccessPolicies");
 

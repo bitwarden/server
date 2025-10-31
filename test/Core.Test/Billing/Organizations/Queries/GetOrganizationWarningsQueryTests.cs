@@ -2,10 +2,10 @@
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Queries;
+using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Test.Common.AutoFixture;
@@ -74,7 +74,7 @@ public class GetOrganizationWarningsQueryTests
             });
 
         sutProvider.GetDependency<ICurrentContext>().EditSubscription(organization.Id).Returns(true);
-        sutProvider.GetDependency<ISetupIntentCache>().GetSetupIntentIdForSubscriber(organization.Id).Returns((string?)null);
+        sutProvider.GetDependency<IHasPaymentMethodQuery>().Run(organization).Returns(false);
 
         var response = await sutProvider.Sut.Run(organization);
 
@@ -85,12 +85,11 @@ public class GetOrganizationWarningsQueryTests
     }
 
     [Theory, BitAutoData]
-    public async Task Run_Has_FreeTrialWarning_WithUnverifiedBankAccount_NoWarning(
+    public async Task Run_Has_FreeTrialWarning_WithPaymentMethod_NoWarning(
         Organization organization,
         SutProvider<GetOrganizationWarningsQuery> sutProvider)
     {
         var now = DateTime.UtcNow;
-        const string setupIntentId = "setup_intent_id";
 
         sutProvider.GetDependency<ISubscriberService>()
             .GetSubscription(organization, Arg.Is<SubscriptionGetOptions>(options =>
@@ -112,20 +111,7 @@ public class GetOrganizationWarningsQueryTests
             });
 
         sutProvider.GetDependency<ICurrentContext>().EditSubscription(organization.Id).Returns(true);
-        sutProvider.GetDependency<ISetupIntentCache>().GetSetupIntentIdForSubscriber(organization.Id).Returns(setupIntentId);
-        sutProvider.GetDependency<IStripeAdapter>().GetSetupIntentAsync(setupIntentId, Arg.Is<SetupIntentGetOptions>(
-            options => options.Expand.Contains("payment_method"))).Returns(new SetupIntent
-            {
-                Status = "requires_action",
-                NextAction = new SetupIntentNextAction
-                {
-                    VerifyWithMicrodeposits = new SetupIntentNextActionVerifyWithMicrodeposits()
-                },
-                PaymentMethod = new PaymentMethod
-                {
-                    UsBankAccount = new PaymentMethodUsBankAccount()
-                }
-            });
+        sutProvider.GetDependency<IHasPaymentMethodQuery>().Run(organization).Returns(true);
 
         var response = await sutProvider.Sut.Run(organization);
 

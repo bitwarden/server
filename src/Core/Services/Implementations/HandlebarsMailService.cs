@@ -26,6 +26,7 @@ using Bit.Core.Vault.Models.Data;
 using Core.Auth.Enums;
 using HandlebarsDotNet;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services;
 
@@ -39,6 +40,7 @@ public class HandlebarsMailService : IMailService
     private readonly IMailDeliveryService _mailDeliveryService;
     private readonly IMailEnqueuingService _mailEnqueuingService;
     private readonly IDistributedCache _distributedCache;
+    private readonly ILogger<HandlebarsMailService> _logger;
     private readonly Dictionary<string, HandlebarsTemplate<object, object>> _templateCache = new();
 
     private bool _registeredHelpersAndPartials = false;
@@ -47,12 +49,14 @@ public class HandlebarsMailService : IMailService
         GlobalSettings globalSettings,
         IMailDeliveryService mailDeliveryService,
         IMailEnqueuingService mailEnqueuingService,
-        IDistributedCache distributedCache)
+        IDistributedCache distributedCache,
+        ILogger<HandlebarsMailService> logger)
     {
         _globalSettings = globalSettings;
         _mailDeliveryService = mailDeliveryService;
         _mailEnqueuingService = mailEnqueuingService;
         _distributedCache = distributedCache;
+        _logger = logger;
     }
 
     public async Task SendVerifyEmailEmailAsync(string email, Guid userId, string token)
@@ -214,6 +218,27 @@ public class HandlebarsMailService : IMailService
             SiteName = _globalSettings.SiteName,
         };
         await AddMessageContentAsync(message, "Auth.SendAccessEmailOtpEmail", model);
+        message.MetaData.Add("SendGridBypassListManagement", true);
+        // TODO - PM-25380 change to string constant
+        message.Category = "SendEmailOtp";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
+    public async Task SendSendEmailOtpEmailv2Async(string email, string token, string subject)
+    {
+        var message = CreateDefaultMessage(subject, email);
+        var requestDateTime = DateTime.UtcNow;
+        var model = new DefaultEmailOtpViewModel
+        {
+            Token = token,
+            Expiry = "5", // This should be configured through the OTPDefaultTokenProviderOptions but for now we will hardcode it to 5 minutes.
+            TheDate = requestDateTime.ToLongDateString(),
+            TheTime = requestDateTime.ToShortTimeString(),
+            TimeZone = _utcTimeZoneDisplay,
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            SiteName = _globalSettings.SiteName,
+        };
+        await AddMessageContentAsync(message, "Auth.SendAccessEmailOtpEmailv2", model);
         message.MetaData.Add("SendGridBypassListManagement", true);
         // TODO - PM-25380 change to string constant
         message.Category = "SendEmailOtp";
@@ -708,6 +733,12 @@ public class HandlebarsMailService : IMailService
 
     private async Task<string?> ReadSourceAsync(string templateName)
     {
+        var diskSource = await ReadSourceFromDiskAsync(templateName);
+        if (!string.IsNullOrWhiteSpace(diskSource))
+        {
+            return diskSource;
+        }
+
         var assembly = typeof(HandlebarsMailService).GetTypeInfo().Assembly;
         var fullTemplateName = $"{Namespace}.{templateName}.hbs";
         if (!assembly.GetManifestResourceNames().Any(f => f == fullTemplateName))
@@ -719,6 +750,42 @@ public class HandlebarsMailService : IMailService
         {
             return await sr.ReadToEndAsync();
         }
+    }
+
+    private async Task<string?> ReadSourceFromDiskAsync(string templateName)
+    {
+        if (!_globalSettings.SelfHosted)
+        {
+            return null;
+        }
+        try
+        {
+            var templateFileSuffix = ".html";
+            if (templateName.EndsWith(".txt"))
+            {
+                templateFileSuffix = ".txt";
+            }
+            else if (!templateName.EndsWith(".html"))
+            {
+                // unexpected suffix
+                return null;
+            }
+            var suffixPosition = templateName.LastIndexOf(templateFileSuffix);
+            var templateNameNoSuffix = templateName.Substring(0, suffixPosition);
+            var templatePathNoSuffix = templateNameNoSuffix.Replace(".", "/");
+            var diskPath = $"{_globalSettings.MailTemplateDirectory}/{templatePathNoSuffix}{templateFileSuffix}.hbs";
+            var directory = Path.GetDirectoryName(diskPath);
+            if (Directory.Exists(directory) && File.Exists(diskPath))
+            {
+                var fileContents = await File.ReadAllTextAsync(diskPath);
+                return fileContents;
+            }
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Failed to read mail template from disk.");
+        }
+        return null;
     }
 
     private async Task RegisterHelpersAndPartialsAsync()

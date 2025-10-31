@@ -94,9 +94,6 @@ public class Startup
         services.AddMemoryCache();
         services.AddDistributedCache(globalSettings);
 
-        // BitPay
-        services.AddSingleton<BitPayClient>();
-
         if (!globalSettings.SelfHosted)
         {
             services.AddIpRateLimiting(globalSettings);
@@ -229,8 +226,9 @@ public class Startup
             services.AddHostedService<Core.HostedServices.ApplicationCacheHostedService>();
         }
 
-        // Add SlackService for OAuth API requests - if configured
+        // Add Slack / Teams Services for OAuth API requests - if configured
         services.AddSlackService(globalSettings);
+        services.AddTeamsService(globalSettings);
     }
 
     public void Configure(
@@ -325,6 +323,6 @@ public class Startup
         }
 
         // Log startup
-        logger.LogInformation(Constants.BypassFiltersEventId, globalSettings.ProjectName + " started.");
+        logger.LogInformation(Constants.BypassFiltersEventId, "{Project} started.", globalSettings.ProjectName);
     }
 }

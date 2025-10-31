@@ -28,9 +28,9 @@ public class ProviderEventService(
             return;
         }
 
-        var invoice = await stripeEventService.GetInvoice(parsedEvent);
+        var invoice = await stripeEventService.GetInvoice(parsedEvent, true, ["discounts"]);
 
-        if (invoice.Parent?.SubscriptionDetails == null)
+        if (invoice.Parent is not { Type: "subscription_details" })
         {
             return;
         }
@@ -73,7 +73,7 @@ public class ProviderEventService(
 
                         var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
 
-                        var totalPercentOff = invoice.Discounts?.Sum(discount => discount.Coupon?.PercentOff ?? 0) ?? 0;
+                        var totalPercentOff = invoice.Discounts?.Sum(discount => discount?.Coupon?.PercentOff ?? 0) ?? 0;
 
                         var discountedPercentage = (100 - totalPercentOff) / 100;
 
@@ -103,7 +103,7 @@ public class ProviderEventService(
 
                         var unassignedSeats = providerPlan.SeatMinimum - clientSeats ?? 0;
 
-                        var totalPercentOff = invoice.Discounts?.Sum(discount => discount.Coupon?.PercentOff ?? 0) ?? 0;
+                        var totalPercentOff = invoice.Discounts?.Sum(discount => discount?.Coupon?.PercentOff ?? 0) ?? 0;
 
                         var discountedPercentage = (100 - totalPercentOff) / 100;
 

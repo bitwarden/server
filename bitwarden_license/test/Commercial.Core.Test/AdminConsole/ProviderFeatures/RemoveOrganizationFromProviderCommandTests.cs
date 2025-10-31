@@ -169,6 +169,8 @@ public class RemoveOrganizationFromProviderCommandTests
 
         await stripeAdapter.Received(1).CustomerDeleteDiscountAsync(organization.GatewayCustomerId);
 
+        await stripeAdapter.Received(1).CustomerDeleteDiscountAsync(organization.GatewayCustomerId);
+
         await stripeAdapter.Received(1).UpdateSubscriptionAsync(organization.GatewaySubscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options =>
                 options.CollectionMethod == StripeConstants.CollectionMethod.SendInvoice &&

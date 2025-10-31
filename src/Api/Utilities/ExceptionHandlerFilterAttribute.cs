@@ -152,7 +152,7 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
         else
         {
             var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<ExceptionHandlerFilterAttribute>>();
-            logger.LogError(0, exception, exception.Message);
+            logger.LogError(0, exception, "Unhandled exception");
             errorMessage = "An unhandled server error has occurred.";
             context.HttpContext.Response.StatusCode = 500;
         }

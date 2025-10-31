@@ -37,9 +37,7 @@ public class OrganizationBillingController(
             return Error.NotFound();
         }
 
-        var response = OrganizationMetadataResponse.From(metadata);
-
-        return TypedResults.Ok(response);
+        return TypedResults.Ok(metadata);
     }
 
     [HttpGet("history")]

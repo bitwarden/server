@@ -132,7 +132,7 @@ public class ProviderBillingController(
         }
 
         var subscription = await stripeAdapter.GetSubscriptionAsync(provider.GatewaySubscriptionId,
-            new SubscriptionGetOptions { Expand = ["customer.tax_ids", "test_clock"] });
+            new SubscriptionGetOptions { Expand = ["customer.tax_ids", "discounts", "test_clock"] });
 
         var providerPlans = await providerPlanRepository.GetByProviderId(provider.Id);
 
