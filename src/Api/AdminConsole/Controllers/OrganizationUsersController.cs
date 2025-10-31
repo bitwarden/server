@@ -527,6 +527,7 @@ public class OrganizationUsersController : Controller
             // Return an informative error to show in the UI.
             // The Authorize attribute already prevents enumeration by users outside the organization, so this can be specific.
             var failureReason = authorizationResult.Failure?.FailureReasons.FirstOrDefault()?.Message ?? RecoverAccountAuthorizationHandler.FailureReason;
+            // This should be a 403 Forbidden, but that causes a logout on our client apps so we're using 400 Bad Request instead
             return TypedResults.BadRequest(new ErrorResponseModel(failureReason));
         }
 
