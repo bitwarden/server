@@ -72,6 +72,7 @@ public static class EntityFrameworkServiceCollectionExtensions
         services.AddSingleton<IApiKeyRepository, ApiKeyRepository>();
         services.AddSingleton<IAuthRequestRepository, AuthRequestRepository>();
         services.AddSingleton<ICipherRepository, CipherRepository>();
+        services.AddSingleton<ICipherHistoryRepository, CipherHistoryRepository>();
         services.AddSingleton<ICollectionCipherRepository, CollectionCipherRepository>();
         services.AddSingleton<ICollectionRepository, CollectionRepository>();
         services.AddSingleton<IDeviceRepository, DeviceRepository>();
