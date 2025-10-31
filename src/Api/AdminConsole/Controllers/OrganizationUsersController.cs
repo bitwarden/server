@@ -43,7 +43,7 @@ namespace Bit.Api.AdminConsole.Controllers;
 
 [Route("organizations/{orgId}/users")]
 [Authorize("Application")]
-public class OrganizationUsersController : Controller
+public class OrganizationUsersController : BaseAdminConsoleController
 {
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
@@ -699,26 +699,21 @@ public class OrganizationUsersController : Controller
         await BulkEnableSecretsManagerAsync(orgId, model);
     }
 
-
-    [Authorize<ManageUsersRequirement>]
     [HttpPost("{id}/auto-confirm")]
-    public async Task<IActionResult> AutomaticallyConfirmOrganizationUserAsync([FromRoute] Guid orgId,
+    [Authorize<ManageUsersRequirement>]
+    [RequireFeature(FeatureFlagKeys.AutomaticConfirmUsers)]
+    public async Task<IResult> AutomaticallyConfirmOrganizationUserAsync([FromRoute] Guid orgId,
         [FromRoute] Guid id,
         [FromBody] OrganizationUserConfirmRequestModel model)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
-        {
-            return NotFound();
-        }
-
         var userId = _userService.GetProperUserId(User);
 
         if (userId is null || userId.Value == Guid.Empty)
         {
-            return Unauthorized();
+            return TypedResults.Unauthorized();
         }
 
-        var result = await _automaticallyConfirmOrganizationUserCommand.AutomaticallyConfirmOrganizationUserAsync(
+        return Handle(await _automaticallyConfirmOrganizationUserCommand.AutomaticallyConfirmOrganizationUserAsync(
             new AutomaticallyConfirmOrganizationUserRequest
             {
                 OrganizationId = orgId,
@@ -727,26 +722,7 @@ public class OrganizationUsersController : Controller
                 DefaultUserCollectionName = model.DefaultUserCollectionName,
                 PerformedBy = new StandardUser(userId.Value, await _currentContext.OrganizationOwner(orgId)),
                 PerformedOn = _timeProvider.GetUtcNow()
-            });
-
-        if (result is { IsError: true })
-        {
-            return result.AsError switch
-            {
-                NotFoundError notFound => NotFound(notFound.Message),
-                BadRequestError badRequest => BadRequest(badRequest.Message),
-                InternalError internalError => Problem(
-                    detail: internalError.Message,
-                    statusCode: StatusCodes.Status500InternalServerError,
-                    title: "An unexpected error occurred. Please try again or contact support."),
-                _ => Problem(
-                    detail: result.AsError.Message,
-                    statusCode: StatusCodes.Status500InternalServerError,
-                    title: "An unexpected error occurred")
-            };
-        }
-
-        return Ok();
+            }));
     }
 
     private async Task RestoreOrRevokeUserAsync(
