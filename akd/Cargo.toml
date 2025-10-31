@@ -14,6 +14,7 @@ unused_async = "deny"
 unwrap_used = "deny"
 
 [workspace.dependencies]
+akd = "0.11.0"
 tokio = { version = "1.47.1", features = ["full"] }
 tracing = { version = "0.1.41" }
 tracing-subscriber = {version = "0.3.19" }
