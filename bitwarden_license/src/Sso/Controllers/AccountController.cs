@@ -1,4 +1,7 @@
-﻿using System.Security.Claims;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Security.Claims;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
@@ -263,21 +266,20 @@ public class AccountController : Controller
         var (possibleUserLinkedWithSso, provider, providerUserId, claims, ssoConfigData) = await FindUserFromExternalProviderAsync(result);
 
         // We will look these up as required (lazy resolution) to avoid multiple DB hits.
-        Organization? organization = null;
-        OrganizationUser? orgUser = null;
+        Organization organization = null;
+        OrganizationUser orgUser = null;
 
         // The user has not authenticated with this SSO provider before.
         // They could have an existing Bitwarden account in the User table though.
         if (possibleUserLinkedWithSso == null)
         {
             // If we're manually linking to SSO, the user's external identifier will be passed as query string parameter.
-            string? userIdentifier =
-                result.Properties != null
-                && result.Properties.Items.TryGetValue("user_identifier", out var value)
-                    ? value : null;
+            var userIdentifier = result.Properties.Items.Keys.Contains("user_identifier")
+                ? result.Properties.Items["user_identifier"]
+                : null;
 
             var (provisionedUser, foundOrganization, foundOrCreatedOrgUser) =
-                await AutoProvisionUserAsync(
+                await CreateUserAndOrgUserConditionallyAsync(
                     provider,
                     providerUserId,
                     claims,
@@ -353,7 +355,7 @@ public class AccountController : Controller
         await HttpContext.SignOutAsync(AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
 
         // Retrieve return URL
-        var returnUrl = result.Properties?.Items["return_url"] ?? "~/";
+        var returnUrl = result.Properties.Items["return_url"] ?? "~/";
 
         // Check if external login is in the context of an OIDC request
         var context = await _interaction.GetAuthorizationContextAsync(returnUrl);
@@ -378,7 +380,7 @@ public class AccountController : Controller
         // Build a model so the logged out page knows what to display
         var (updatedLogoutId, redirectUri, externalAuthenticationScheme) = await GetLoggedOutDataAsync(logoutId);
 
-        if (User.Identity is { IsAuthenticated: true })
+        if (User?.Identity.IsAuthenticated == true)
         {
             // Delete local authentication cookie
             await HttpContext.SignOutAsync();
@@ -412,7 +414,7 @@ public class AccountController : Controller
     /// The claims on the external identity are used to determine an `externalId`, and that is used to find the appropriate `SsoUser` and `User` records.
     /// </summary>
     private async Task<(
-        User? possibleSsoUser,
+        User possibleSsoUser,
         string provider,
         string providerUserId,
         IEnumerable<Claim> claims,
@@ -469,12 +471,13 @@ public class AccountController : Controller
         // find external user
         var providerUserId = userIdClaim.Value;
 
-        User? possibleSsoUser = await _userRepository.GetBySsoUserAsync(providerUserId, orgId);
+        var possibleSsoUser = await _userRepository.GetBySsoUserAsync(providerUserId, orgId);
 
         return (possibleSsoUser, provider, providerUserId, claims, ssoConfigData);
     }
 
     /// <summary>
+    /// This function seeks to first establish
     ///
     /// This handles three different scenarios:
     /// 1. Creating an SsoUser link for an existing User and OrganizationUser
@@ -492,18 +495,18 @@ public class AccountController : Controller
     /// <returns>Guaranteed to return the user to sign in as well as the found organization and org user.</returns>
     /// <exception cref="Exception">An exception if the user cannot be provisioned as requested.</exception>
     private async Task<(User user, Organization foundOrganization, OrganizationUser foundOrgUser)>
-        AutoProvisionUserAsync(
+        CreateUserAndOrgUserConditionallyAsync(
             string provider,
             string providerUserId,
             IEnumerable<Claim> claims,
-            string? userIdentifier,
+            string userIdentifier,
             SsoConfigurationData ssoConfigData
         )
     {
         var name = GetName(claims, ssoConfigData.GetAdditionalNameClaimTypes());
-        string? email = TryGetEmailAddress(claims, ssoConfigData, providerUserId);
+        var email = TryGetEmailAddress(claims, ssoConfigData, providerUserId);
 
-        User? existingUser;
+        User existingUser = null;
         if (string.IsNullOrWhiteSpace(userIdentifier))
         {
             if (string.IsNullOrWhiteSpace(email))
@@ -522,7 +525,7 @@ public class AccountController : Controller
         var organization = await TryGetOrganizationByProviderAsync(provider);
 
         // Try to find an org user (null org user possible and valid here)
-        var orgUser = await TryGetOrganizationUserByUserAndOrgOrEmailAsync(existingUser, organization.Id, email);
+        var orgUser = await TryGetOrganizationUserByUserAndOrgOrEmail(existingUser, organization.Id, email);
 
         //----------------------------------------------------
         // Scenario 1: We've found the user in the User table
@@ -686,16 +689,16 @@ public class AccountController : Controller
     /// <exception cref="Exception">Thrown if the organization cannot be resolved from provider;
     /// the organization user cannot be found; or the organization user status is not allowed.</exception>
     private async Task PreventOrgUserLoginIfStatusInvalidAsync(
-        Organization? organization,
+        Organization organization,
         string provider,
-        OrganizationUser? orgUser,
+        OrganizationUser orgUser,
         User user)
     {
         // Lazily get organization if not already known
         organization ??= await TryGetOrganizationByProviderAsync(provider);
 
         // Lazily get the org user if not already known
-        orgUser ??= await TryGetOrganizationUserByUserAndOrgOrEmailAsync(
+        orgUser ??= await TryGetOrganizationUserByUserAndOrgOrEmail(
             user,
             organization.Id,
             user.Email);
@@ -718,9 +721,9 @@ public class AccountController : Controller
         }
     }
 
-    private async Task<User?> GetUserFromManualLinkingDataAsync(string userIdentifier)
+    private async Task<User> GetUserFromManualLinkingDataAsync(string userIdentifier)
     {
-        User? user = null;
+        User user = null;
         var split = userIdentifier.Split(",");
         if (split.Length < 2)
         {
@@ -783,12 +786,12 @@ public class AccountController : Controller
     /// <param name="organizationId">Organization id from the provider data.</param>
     /// <param name="email">Email to use as a fallback in case of an invited user not in the Org Users
     /// table yet.</param>
-    private async Task<OrganizationUser?> TryGetOrganizationUserByUserAndOrgOrEmailAsync(
-        User? user,
+    private async Task<OrganizationUser> TryGetOrganizationUserByUserAndOrgOrEmail(
+        User user,
         Guid organizationId,
-        string? email)
+        string email)
     {
-        OrganizationUser? orgUser = null;
+        OrganizationUser orgUser = null;
 
         // Try to find OrgUser via existing User Id.
         // This covers any OrganizationUser state after they have accepted an invite.
@@ -800,10 +803,7 @@ public class AccountController : Controller
 
         // If no Org User found by Existing User Id - search all the organization's users via email.
         // This covers users who are Invited but haven't accepted their invite yet.
-        if (email != null)
-        {
-            orgUser ??= await _organizationUserRepository.GetByOrganizationEmailAsync(organizationId, email);
-        }
+        orgUser ??= await _organizationUserRepository.GetByOrganizationEmailAsync(organizationId, email);
 
         return orgUser;
     }
@@ -845,7 +845,7 @@ public class AccountController : Controller
         }
     }
 
-    private IActionResult InvalidJson(string errorMessageKey, Exception? ex = null)
+    private IActionResult InvalidJson(string errorMessageKey, Exception ex = null)
     {
         Response.StatusCode = ex == null ? 400 : 500;
         return Json(new ErrorResponseModel(_i18nService.T(errorMessageKey))
@@ -856,7 +856,7 @@ public class AccountController : Controller
         });
     }
 
-    private string? TryGetEmailAddressFromClaims(IEnumerable<Claim> claims, IEnumerable<string> additionalClaimTypes)
+    private string TryGetEmailAddressFromClaims(IEnumerable<Claim> claims, IEnumerable<string> additionalClaimTypes)
     {
         var filteredClaims = claims.Where(c => !string.IsNullOrWhiteSpace(c.Value) && c.Value.Contains("@"));
 
@@ -878,7 +878,7 @@ public class AccountController : Controller
         return null;
     }
 
-    private string? GetName(IEnumerable<Claim> claims, IEnumerable<string> additionalClaimTypes)
+    private string GetName(IEnumerable<Claim> claims, IEnumerable<string> additionalClaimTypes)
     {
         var filteredClaims = claims.Where(c => !string.IsNullOrWhiteSpace(c.Value));
 
@@ -927,14 +927,14 @@ public class AccountController : Controller
     {
         // If the external system sent a session id claim, copy it over
         // so we can use it for single sign-out
-        Claim? sid = externalResult.Principal?.Claims.FirstOrDefault(x => x.Type == JwtClaimTypes.SessionId);
+        var sid = externalResult.Principal.Claims.FirstOrDefault(x => x.Type == JwtClaimTypes.SessionId);
         if (sid != null)
         {
             localClaims.Add(new Claim(JwtClaimTypes.SessionId, sid.Value));
         }
 
         // If the external provider issued an idToken, we'll keep it for signout
-        string? idToken = externalResult.Properties?.GetTokenValue("id_token");
+        var idToken = externalResult.Properties.GetTokenValue("id_token");
         if (idToken != null)
         {
             localSignInProps.StoreTokens(
@@ -942,12 +942,12 @@ public class AccountController : Controller
         }
     }
 
-    private async Task<(string? logoutId, string? PostLogoutRedirectUri, string? externalAuthenticationScheme)> GetLoggedOutDataAsync(string? logoutId)
+    private async Task<(string, string, string)> GetLoggedOutDataAsync(string logoutId)
     {
         // Get context information (client name, post logout redirect URI and iframe for federated signout)
         var logout = await _interaction.GetLogoutContextAsync(logoutId);
-        string? externalAuthenticationScheme = null;
-        if (User.Identity is { IsAuthenticated: true })
+        string externalAuthenticationScheme = null;
+        if (User?.Identity.IsAuthenticated == true)
         {
             var idp = User.FindFirst(JwtClaimTypes.IdentityProvider)?.Value;
             if (idp != null && idp != IdentityServerConstants.LocalIdentityProvider)
@@ -977,12 +977,12 @@ public class AccountController : Controller
      * Tries to get a user's email from the claims and SSO configuration data or the provider user id if
      * the claims email extraction returns null.
      */
-    private string? TryGetEmailAddress(
+    private string TryGetEmailAddress(
         IEnumerable<Claim> claims,
         SsoConfigurationData config,
         string providerUserId)
     {
-        string? email = TryGetEmailAddressFromClaims(claims, config.GetAdditionalEmailClaimTypes());
+        var email = TryGetEmailAddressFromClaims(claims, config.GetAdditionalEmailClaimTypes());
 
         // If email isn't populated from claims and providerUserId has @, assume it is the email.
         if (string.IsNullOrWhiteSpace(email) && providerUserId.Contains("@"))
