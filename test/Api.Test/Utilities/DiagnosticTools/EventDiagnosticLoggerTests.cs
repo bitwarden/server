@@ -14,7 +14,7 @@ namespace Bit.Api.Test.Utilities.DiagnosticTools;
 public class EventDiagnosticLoggerTests
 {
     [Theory, BitAutoData]
-    public void LogAggregateData_PublicApi_FeatureFlagEnabled_LogsInformation(
+    public void LogAggregateData_WithPublicResponse_FeatureFlagEnabled_LogsInformation(
         Guid organizationId)
     {
         // Arrange
@@ -55,17 +55,20 @@ public class EventDiagnosticLoggerTests
             Arg.Is<object>(o =>
                 o.ToString().Contains(organizationId.ToString()) &&
                 o.ToString().Contains($"Event count:{eventResponses.Count}") &&
-                o.ToString().Contains("HasMore:True") &&
+                o.ToString().Contains("Request Filters Start:") &&
+                o.ToString().Contains("End:") &&
                 o.ToString().Contains($"ActingUserId:{request.ActingUserId}") &&
                 o.ToString().Contains($"ItemId:{request.ItemId}") &&
-                o.ToString().Contains($"newest record:{newestEvent.Date:O}"))
+                o.ToString().Contains($"newest record:{newestEvent.Date:O}") &&
+                o.ToString().Contains($"oldest record:{oldestEvent.Date:O}") &&
+                o.ToString().Contains("HasMore:True"))
             ,
             null,
             Arg.Any<Func<object, Exception, string>>());
     }
 
     [Theory, BitAutoData]
-    public void LogAggregateData_PublicApi_FeatureFlagDisabled_DoesNotLog(
+    public void LogAggregateData_WithPublicResponse_FeatureFlagDisabled_DoesNotLog(
         Guid organizationId,
         EventFilterRequestModel request)
     {
@@ -141,7 +144,7 @@ public class EventDiagnosticLoggerTests
 
 
         // Act
-        logger.LogAggregateData(featureService, organizationId, "token", null, null, null);
+        logger.LogAggregateData(featureService, organizationId, null, null, null, null);
 
         // Assert
         logger.DidNotReceive().Log(
@@ -153,15 +156,22 @@ public class EventDiagnosticLoggerTests
     }
 
     [Theory, BitAutoData]
-    public void LogAggregateData_PublicApi_EmptyData_LogsZeroCount(
-        Guid organizationId,
-        EventFilterRequestModel request)
+    public void LogAggregateData_WithPublicResponse_EmptyData_LogsZeroCount(
+        Guid organizationId)
     {
         // Arrange
         var logger = Substitute.For<ILogger>();
         var featureService = Substitute.For<IFeatureService>();
         featureService.IsEnabled(FeatureFlagKeys.EventDiagnosticLogging).Returns(true);
 
+        var request = new EventFilterRequestModel()
+        {
+            Start = null,
+            End = null,
+            ActingUserId = null,
+            ItemId = null,
+            ContinuationToken = null,
+        };
         var response = new PagedListResponseModel<EventResponseModel>(new List<EventResponseModel>(), null);
 
         // Act
@@ -173,8 +183,8 @@ public class EventDiagnosticLoggerTests
             Arg.Any<EventId>(),
             Arg.Is<object>(o =>
                 o.ToString().Contains(organizationId.ToString()) &&
-                o.ToString().Contains("Returned 0 events") &&
-                o.ToString().Contains("HasMore: False")),
+                o.ToString().Contains("Event count:0") &&
+                o.ToString().Contains("HasMore:False")),
             null,
             Arg.Any<Func<object, Exception, string>>());
     }
@@ -205,39 +215,6 @@ public class EventDiagnosticLoggerTests
             Arg.Any<Func<object, Exception, string>>());
     }
 
-    [Theory, BitAutoData]
-    public void LogAggregateData_PublicApi_HasContinuationToken_LogsHasMoreTrue(
-        Guid organizationId,
-        EventFilterRequestModel request)
-    {
-        // Arrange
-        var logger = Substitute.For<ILogger>();
-        var featureService = Substitute.For<IFeatureService>();
-        featureService.IsEnabled(FeatureFlagKeys.EventDiagnosticLogging).Returns(true);
-
-        var ev = Substitute.For<IEvent>();
-        ev.Date.Returns(DateTime.UtcNow);
-
-        var eventResponses = new List<EventResponseModel>
-        {
-            new EventResponseModel(ev)
-        };
-        var response = new PagedListResponseModel<EventResponseModel>(eventResponses, "has-more-token");
-
-        // Act
-        logger.LogAggregateData(featureService, organizationId, response, request);
-
-        // Assert
-        logger.Received(1).Log(
-            LogLevel.Information,
-            Arg.Any<EventId>(),
-            Arg.Is<object>(o =>
-                o.ToString().Contains(organizationId.ToString()) &&
-                o.ToString().Contains("Returned 1 events") &&
-                o.ToString().Contains("HasMore: True")),
-            null,
-            Arg.Any<Func<object, Exception, string>>());
-    }
 
     [Theory, BitAutoData]
     public void LogAggregateData_AdminConsoleApi_NoContinuationToken_LogsHasMoreFalse(
