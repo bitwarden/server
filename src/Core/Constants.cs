@@ -230,6 +230,7 @@ public static class FeatureFlagKeys
     /* Tools Team */
     public const string DesktopSendUIRefresh = "desktop-send-ui-refresh";
     public const string UseSdkPasswordGenerators = "pm-19976-use-sdk-password-generators";
+    public const string UseChromiumImporter = "pm-23982-chromium-importer";
     public const string ChromiumImporterWithABE = "pm-25855-chromium-importer-abe";
 
     /* Vault Team */
@@ -252,6 +253,7 @@ public static class FeatureFlagKeys
     /* DIRT Team */
     public const string PM22887_RiskInsightsActivityTab = "pm-22887-risk-insights-activity-tab";
     public const string EventManagementForDataDogAndCrowdStrike = "event-management-for-datadog-and-crowdstrike";
+    public const string EventDiagnosticLogging = "pm-27666-siem-event-log-debugging";
 
     public static List<string> GetAllKeys()
     {
