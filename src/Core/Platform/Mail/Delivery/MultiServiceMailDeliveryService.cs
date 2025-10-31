@@ -3,7 +3,7 @@ using Bit.Core.Settings;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace Bit.Core.Services;
+namespace Bit.Core.Services.Mail.Delivery;
 
 public class MultiServiceMailDeliveryService : IMailDeliveryService
 {

@@ -20,6 +20,8 @@ using Bit.Core.Models.Mail.Billing;
 using Bit.Core.Models.Mail.FamiliesForEnterprise;
 using Bit.Core.Models.Mail.Provider;
 using Bit.Core.SecretsManager.Models.Mail;
+using Bit.Core.Services.Mail.Delivery;
+using Bit.Core.Services.Mail.Enqueuing;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Models.Data;
@@ -28,7 +30,7 @@ using HandlebarsDotNet;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 
-namespace Bit.Core.Services;
+namespace Bit.Core.Services.Mail;
 
 public class HandlebarsMailService : IMailService
 {
