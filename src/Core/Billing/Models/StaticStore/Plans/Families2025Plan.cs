@@ -3,13 +3,13 @@ using Bit.Core.Models.StaticStore;
 
 namespace Bit.Core.Billing.Models.StaticStore.Plans;
 
-public record FamiliesPlan : Plan
+public record Families2025Plan : Plan
 {
-    public FamiliesPlan()
+    public Families2025Plan()
     {
-        Type = PlanType.FamiliesAnnually;
+        Type = PlanType.FamiliesAnnually2025;
         ProductTier = ProductTierType.Families;
-        Name = "Families";
+        Name = "Families 2025";
         IsAnnual = true;
         NameLocalizationKey = "planNameFamilies";
         DescriptionLocalizationKey = "planDescFamilies";
@@ -23,12 +23,12 @@ public record FamiliesPlan : Plan
         UpgradeSortOrder = 1;
         DisplaySortOrder = 1;
 
-        PasswordManager = new FamiliesPasswordManagerFeatures();
+        PasswordManager = new Families2025PasswordManagerFeatures();
     }
 
-    private record FamiliesPasswordManagerFeatures : PasswordManagerPlanFeatures
+    private record Families2025PasswordManagerFeatures : PasswordManagerPlanFeatures
     {
-        public FamiliesPasswordManagerFeatures()
+        public Families2025PasswordManagerFeatures()
         {
             BaseSeats = 6;
             BaseStorageGb = 1;
@@ -36,7 +36,7 @@ public record FamiliesPlan : Plan
 
             HasAdditionalStorageOption = true;
 
-            StripePlanId = "2026-families-org-annually";
+            StripePlanId = "2020-families-org-annually";
             StripeStoragePlanId = "personal-storage-gb-annually";
             BasePrice = 40;
             AdditionalStoragePricePerGb = 4;

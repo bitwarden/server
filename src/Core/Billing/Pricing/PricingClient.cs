@@ -147,6 +147,7 @@ public class PricingClient(
             PlanType.EnterpriseMonthly2020 => "enterprise-monthly-2020",
             PlanType.EnterpriseMonthly2023 => "enterprise-monthly-2023",
             PlanType.FamiliesAnnually => "families",
+            PlanType.FamiliesAnnually2025 => "families-2025",
             PlanType.FamiliesAnnually2019 => "families-2019",
             PlanType.Free => "free",
             PlanType.TeamsAnnually => "teams-annually",

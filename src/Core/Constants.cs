@@ -187,7 +187,7 @@ public static class FeatureFlagKeys
     public const string PM23713_PremiumBadgeOpensNewPremiumUpgradeDialog = "pm-23713-premium-badge-opens-new-premium-upgrade-dialog";
     public const string PremiumUpgradeNewDesign = "pm-24033-updat-premium-subscription-page";
     public const string PM26793_FetchPremiumPriceFromPricingService = "pm-26793-fetch-premium-price-from-pricing-service";
-    public const string PM24284_Milestone_3 = "pm-24284-milestone-3";
+    public const string PM26462_Milestone_3 = "pm-26462-milestone-3";
 
     /* Key Management Team */
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";

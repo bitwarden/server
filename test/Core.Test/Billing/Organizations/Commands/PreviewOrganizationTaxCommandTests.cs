@@ -257,7 +257,7 @@ public class PreviewOrganizationTaxCommandTests
             options.CustomerDetails.Address.PostalCode == "90210" &&
             options.CustomerDetails.TaxExempt == TaxExempt.None &&
             options.SubscriptionDetails.Items.Count == 1 &&
-            options.SubscriptionDetails.Items[0].Price == "2020-families-org-annually" &&
+            options.SubscriptionDetails.Items[0].Price == "2026-families-org-annually" &&
             options.SubscriptionDetails.Items[0].Quantity == 6 &&
             options.Discounts == null));
     }
@@ -475,7 +475,7 @@ public class PreviewOrganizationTaxCommandTests
             options.CustomerDetails.Address.PostalCode == "K1A 0A6" &&
             options.CustomerDetails.TaxExempt == TaxExempt.None &&
             options.SubscriptionDetails.Items.Count == 1 &&
-            options.SubscriptionDetails.Items[0].Price == "2020-families-org-annually" &&
+            options.SubscriptionDetails.Items[0].Price == "2026-families-org-annually" &&
             options.SubscriptionDetails.Items[0].Quantity == 1 &&
             options.Discounts == null));
     }
@@ -512,7 +512,7 @@ public class PreviewOrganizationTaxCommandTests
 
         var subscriptionItems = new List<SubscriptionItem>
         {
-            new() { Price = new Price { Id = "2020-families-org-annually" }, Quantity = 1 }
+            new() { Price = new Price { Id = "2026-families-org-annually" }, Quantity = 1 }
         };
 
         var subscription = new Subscription
@@ -587,7 +587,7 @@ public class PreviewOrganizationTaxCommandTests
 
         var subscriptionItems = new List<SubscriptionItem>
         {
-            new() { Price = new Price { Id = "2020-families-org-annually" }, Quantity = 1 }
+            new() { Price = new Price { Id = "2026-families-org-annually" }, Quantity = 1 }
         };
 
         var subscription = new Subscription
@@ -1302,7 +1302,7 @@ public class PreviewOrganizationTaxCommandTests
             options.CustomerDetails.TaxExempt == TaxExempt.None &&
             options.SubscriptionDetails.Items.Count == 2 &&
             options.SubscriptionDetails.Items.Any(item =>
-                item.Price == "2020-families-org-annually" && item.Quantity == 6) &&
+                item.Price == "2026-families-org-annually" && item.Quantity == 6) &&
             options.SubscriptionDetails.Items.Any(item =>
                 item.Price == "personal-storage-gb-annually" && item.Quantity == 2) &&
             options.Discounts == null));
