@@ -1,4 +1,4 @@
-namespace Bit.Core.Models.Mail.Auth;
+﻿namespace Bit.Core.Models.Mail.Auth;
 
 public class OrganizationWelcomeEmailViewModel : BaseMailModel
 {

@@ -2,7 +2,6 @@
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Tokens;
-using Bit.Core.Utilities;
 
 namespace Bit.Core.Auth.Models.Business.Tokenables;
 
