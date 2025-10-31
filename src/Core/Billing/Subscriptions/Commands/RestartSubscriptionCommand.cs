@@ -7,7 +7,6 @@ using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using OneOf.Types;
 using Stripe;
 
@@ -53,7 +52,7 @@ public class RestartSubscriptionCommand(
             TrialPeriodDays = 0
         };
 
-        var subscription = await stripeAdapter.SubscriptionCreateAsync(options);
+        var subscription = await stripeAdapter.CreateSubscriptionAsync(options);
         await EnableAsync(subscriber, subscription);
         return new None();
     }

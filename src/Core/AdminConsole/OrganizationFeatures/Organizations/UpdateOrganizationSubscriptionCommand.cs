@@ -1,12 +1,12 @@
 ﻿using Bit.Core.AdminConsole.Models.Data.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
+using Bit.Core.Billing.Services;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 
-public class UpdateOrganizationSubscriptionCommand(IPaymentService paymentService,
+public class UpdateOrganizationSubscriptionCommand(IStripePaymentService paymentService,
     IOrganizationRepository repository,
     TimeProvider timeProvider,
     ILogger<UpdateOrganizationSubscriptionCommand> logger) : IUpdateOrganizationSubscriptionCommand

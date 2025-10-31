@@ -57,7 +57,7 @@ public class UserService : UserManager<User>, IUserService
     private readonly ILicensingService _licenseService;
     private readonly IEventService _eventService;
     private readonly IApplicationCacheService _applicationCacheService;
-    private readonly IPaymentService _paymentService;
+    private readonly IStripePaymentService _paymentService;
     private readonly IPolicyRepository _policyRepository;
     private readonly IPolicyService _policyService;
     private readonly IFido2 _fido2;
@@ -93,7 +93,7 @@ public class UserService : UserManager<User>, IUserService
         ILicensingService licenseService,
         IEventService eventService,
         IApplicationCacheService applicationCacheService,
-        IPaymentService paymentService,
+        IStripePaymentService paymentService,
         IPolicyRepository policyRepository,
         IPolicyService policyService,
         IFido2 fido2,
@@ -534,7 +534,7 @@ public class UserService : UserManager<User>, IUserService
 
             try
             {
-                await _stripeSyncService.UpdateCustomerEmailAddress(user.GatewayCustomerId,
+                await _stripeSyncService.UpdateCustomerEmailAddressAsync(user.GatewayCustomerId,
                     user.BillingEmailAddress());
             }
             catch (Exception ex)
@@ -867,7 +867,7 @@ public class UserService : UserManager<User>, IUserService
         }
 
         string paymentIntentClientSecret = null;
-        IPaymentService paymentService = null;
+        IStripePaymentService paymentService = null;
         if (_globalSettings.SelfHosted)
         {
             if (license == null || !_licenseService.VerifyLicense(license))

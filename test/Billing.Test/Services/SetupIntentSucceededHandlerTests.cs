@@ -4,8 +4,8 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Caches;
+using Bit.Core.Billing.Services;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using NSubstitute;
 using Stripe;
 using Xunit;
@@ -61,7 +61,7 @@ public class SetupIntentSucceededHandlerTests
 
         // Assert
         await _setupIntentCache.DidNotReceiveWithAnyArgs().GetSubscriberIdForSetupIntent(Arg.Any<string>());
-        await _stripeAdapter.DidNotReceiveWithAnyArgs().PaymentMethodAttachAsync(
+        await _stripeAdapter.DidNotReceiveWithAnyArgs().AttachPaymentMethodAsync(
             Arg.Any<string>(), Arg.Any<PaymentMethodAttachOptions>());
         await _pushNotificationAdapter.DidNotReceiveWithAnyArgs().NotifyBankAccountVerifiedAsync(Arg.Any<Organization>());
         await _pushNotificationAdapter.DidNotReceiveWithAnyArgs().NotifyBankAccountVerifiedAsync(Arg.Any<Provider>());
@@ -86,7 +86,7 @@ public class SetupIntentSucceededHandlerTests
         await _handler.HandleAsync(_mockEvent);
 
         // Assert
-        await _stripeAdapter.DidNotReceiveWithAnyArgs().PaymentMethodAttachAsync(
+        await _stripeAdapter.DidNotReceiveWithAnyArgs().AttachPaymentMethodAsync(
             Arg.Any<string>(), Arg.Any<PaymentMethodAttachOptions>());
         await _pushNotificationAdapter.DidNotReceiveWithAnyArgs().NotifyBankAccountVerifiedAsync(Arg.Any<Organization>());
         await _pushNotificationAdapter.DidNotReceiveWithAnyArgs().NotifyBankAccountVerifiedAsync(Arg.Any<Provider>());
@@ -116,7 +116,7 @@ public class SetupIntentSucceededHandlerTests
         await _handler.HandleAsync(_mockEvent);
 
         // Assert
-        await _stripeAdapter.Received(1).PaymentMethodAttachAsync(
+        await _stripeAdapter.Received(1).AttachPaymentMethodAsync(
             "pm_test",
             Arg.Is<PaymentMethodAttachOptions>(o => o.Customer == organization.GatewayCustomerId));
 
@@ -151,7 +151,7 @@ public class SetupIntentSucceededHandlerTests
         await _handler.HandleAsync(_mockEvent);
 
         // Assert
-        await _stripeAdapter.Received(1).PaymentMethodAttachAsync(
+        await _stripeAdapter.Received(1).AttachPaymentMethodAsync(
             "pm_test",
             Arg.Is<PaymentMethodAttachOptions>(o => o.Customer == provider.GatewayCustomerId));
 
@@ -183,7 +183,7 @@ public class SetupIntentSucceededHandlerTests
         await _handler.HandleAsync(_mockEvent);
 
         // Assert
-        await _stripeAdapter.DidNotReceiveWithAnyArgs().PaymentMethodAttachAsync(
+        await _stripeAdapter.DidNotReceiveWithAnyArgs().AttachPaymentMethodAsync(
             Arg.Any<string>(), Arg.Any<PaymentMethodAttachOptions>());
         await _pushNotificationAdapter.DidNotReceiveWithAnyArgs().NotifyBankAccountVerifiedAsync(Arg.Any<Organization>());
         await _pushNotificationAdapter.DidNotReceiveWithAnyArgs().NotifyBankAccountVerifiedAsync(Arg.Any<Provider>());
@@ -216,7 +216,7 @@ public class SetupIntentSucceededHandlerTests
         await _handler.HandleAsync(_mockEvent);
 
         // Assert
-        await _stripeAdapter.DidNotReceiveWithAnyArgs().PaymentMethodAttachAsync(
+        await _stripeAdapter.DidNotReceiveWithAnyArgs().AttachPaymentMethodAsync(
             Arg.Any<string>(), Arg.Any<PaymentMethodAttachOptions>());
         await _pushNotificationAdapter.DidNotReceiveWithAnyArgs().NotifyBankAccountVerifiedAsync(Arg.Any<Organization>());
         await _pushNotificationAdapter.DidNotReceiveWithAnyArgs().NotifyBankAccountVerifiedAsync(Arg.Any<Provider>());

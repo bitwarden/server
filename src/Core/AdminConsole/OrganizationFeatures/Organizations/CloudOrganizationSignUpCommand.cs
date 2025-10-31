@@ -8,6 +8,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -33,7 +34,7 @@ public interface ICloudOrganizationSignUpCommand
 public class CloudOrganizationSignUpCommand(
     IOrganizationUserRepository organizationUserRepository,
     IOrganizationBillingService organizationBillingService,
-    IPaymentService paymentService,
+    IStripePaymentService paymentService,
     IPolicyService policyService,
     IOrganizationRepository organizationRepository,
     IOrganizationApiKeyRepository organizationApiKeyRepository,

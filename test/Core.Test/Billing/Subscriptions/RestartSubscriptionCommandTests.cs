@@ -6,7 +6,6 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Subscriptions.Commands;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using NSubstitute;
 using Stripe;
 using Xunit;
@@ -98,13 +97,13 @@ public class RestartSubscriptionCommandTests
         };
 
         _subscriberService.GetSubscription(organization).Returns(existingSubscription);
-        _stripeAdapter.SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(newSubscription);
+        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(newSubscription);
 
         var result = await _command.Run(organization);
 
         Assert.True(result.IsT0);
 
-        await _stripeAdapter.Received(1).SubscriptionCreateAsync(Arg.Is((SubscriptionCreateOptions options) =>
+        await _stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Is((SubscriptionCreateOptions options) =>
             options.AutomaticTax.Enabled == true &&
             options.CollectionMethod == CollectionMethod.ChargeAutomatically &&
             options.Customer == "cus_123" &&
@@ -154,13 +153,13 @@ public class RestartSubscriptionCommandTests
         };
 
         _subscriberService.GetSubscription(provider).Returns(existingSubscription);
-        _stripeAdapter.SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(newSubscription);
+        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(newSubscription);
 
         var result = await _command.Run(provider);
 
         Assert.True(result.IsT0);
 
-        await _stripeAdapter.Received(1).SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>());
+        await _stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>());
 
         await _providerRepository.Received(1).ReplaceAsync(Arg.Is<Provider>(prov =>
             prov.Id == providerId &&
@@ -199,13 +198,13 @@ public class RestartSubscriptionCommandTests
         };
 
         _subscriberService.GetSubscription(user).Returns(existingSubscription);
-        _stripeAdapter.SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(newSubscription);
+        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(newSubscription);
 
         var result = await _command.Run(user);
 
         Assert.True(result.IsT0);
 
-        await _stripeAdapter.Received(1).SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>());
+        await _stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>());
 
         await _userRepository.Received(1).ReplaceAsync(Arg.Is<User>(u =>
             u.Id == userId &&

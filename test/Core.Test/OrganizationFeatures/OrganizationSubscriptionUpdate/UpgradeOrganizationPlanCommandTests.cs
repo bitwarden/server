@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
@@ -121,7 +122,7 @@ public class UpgradeOrganizationPlanCommandTests
                 Users = 1
             });
         await sutProvider.Sut.UpgradePlanAsync(organization.Id, organizationUpgrade);
-        await sutProvider.GetDependency<IPaymentService>().Received(1).AdjustSubscription(
+        await sutProvider.GetDependency<IStripePaymentService>().Received(1).AdjustSubscription(
             organization,
             StaticStore.GetPlan(planType),
             organizationUpgrade.AdditionalSeats,

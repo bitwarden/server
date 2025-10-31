@@ -30,7 +30,7 @@ public class SelfHostedOrganizationSignUpCommand : ISelfHostedOrganizationSignUp
     private readonly ILicensingService _licensingService;
     private readonly IPolicyService _policyService;
     private readonly IGlobalSettings _globalSettings;
-    private readonly IPaymentService _paymentService;
+    private readonly IStripePaymentService _paymentService;
 
     public SelfHostedOrganizationSignUpCommand(
         IOrganizationRepository organizationRepository,
@@ -44,7 +44,7 @@ public class SelfHostedOrganizationSignUpCommand : ISelfHostedOrganizationSignUp
         ILicensingService licensingService,
         IPolicyService policyService,
         IGlobalSettings globalSettings,
-        IPaymentService paymentService)
+        IStripePaymentService paymentService)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;

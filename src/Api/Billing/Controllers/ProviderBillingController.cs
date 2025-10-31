@@ -44,7 +44,7 @@ public class ProviderBillingController(
             return result;
         }
 
-        var invoices = await stripeAdapter.InvoiceListAsync(new StripeInvoiceListOptions
+        var invoices = await stripeAdapter.ListInvoicesAsync(new StripeInvoiceListOptions
         {
             Customer = provider.GatewayCustomerId
         });
@@ -131,7 +131,7 @@ public class ProviderBillingController(
             return result;
         }
 
-        var subscription = await stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId,
+        var subscription = await stripeAdapter.GetSubscriptionAsync(provider.GatewaySubscriptionId,
             new SubscriptionGetOptions { Expand = ["customer.tax_ids", "discounts", "test_clock"] });
 
         var providerPlans = await providerPlanRepository.GetByProviderId(provider.Id);
@@ -140,7 +140,7 @@ public class ProviderBillingController(
         {
             var plan = await pricingClient.GetPlanOrThrow(providerPlan.PlanType);
             var priceId = ProviderPriceAdapter.GetPriceId(provider, subscription, plan.Type);
-            var price = await stripeAdapter.PriceGetAsync(priceId);
+            var price = await stripeAdapter.GetPriceAsync(priceId);
 
             var unitAmount = price.UnitAmountDecimal.HasValue
                 ? price.UnitAmountDecimal.Value / 100M

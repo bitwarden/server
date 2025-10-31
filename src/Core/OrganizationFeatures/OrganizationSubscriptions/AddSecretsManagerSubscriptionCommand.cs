@@ -3,6 +3,7 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
@@ -12,13 +13,13 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 
 public class AddSecretsManagerSubscriptionCommand : IAddSecretsManagerSubscriptionCommand
 {
-    private readonly IPaymentService _paymentService;
+    private readonly IStripePaymentService _paymentService;
     private readonly IOrganizationService _organizationService;
     private readonly IProviderRepository _providerRepository;
     private readonly IPricingClient _pricingClient;
 
     public AddSecretsManagerSubscriptionCommand(
-        IPaymentService paymentService,
+        IStripePaymentService paymentService,
         IOrganizationService organizationService,
         IProviderRepository providerRepository,
         IPricingClient pricingClient)
