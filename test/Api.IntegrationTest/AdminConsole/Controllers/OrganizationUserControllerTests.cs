@@ -170,7 +170,7 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
 
         var httpResponse = await _client.DeleteAsync($"organizations/{_organization.Id}/users/{orgUserToDelete.Id}/delete-account");
 
-        Assert.Equal(HttpStatusCode.OK, httpResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, httpResponse.StatusCode);
         Assert.Null(await userRepository.GetByIdAsync(orgUserToDelete.UserId.Value));
         Assert.Null(await organizationUserRepository.GetByIdAsync(orgUserToDelete.Id));
     }
@@ -473,5 +473,118 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
             Assert.Equal(OrganizationUserStatusType.Confirmed, confirmedUser.Status);
             Assert.Equal(acceptedOrganizationUsers[i].key, confirmedUser.Key);
         }
+    }
+
+    private static (ApiApplicationFactory factory, HttpClient client, LoginHelper loginHelper) GetAutoConfirmTestFactoryAsync()
+    {
+        var localFactory = new ApiApplicationFactory();
+        localFactory.SubstituteService<IFeatureService>(featureService =>
+        {
+            featureService
+                .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+                .Returns(true);
+        });
+        var localClient = localFactory.CreateClient();
+        var localLoginHelper = new LoginHelper(localFactory, localClient);
+
+        return (localFactory, localClient, localLoginHelper);
+    }
+
+    [Fact]
+    public async Task AutoConfirm_WhenAutoConfirmFlagIsDisabled_ThenShouldReturnNotFound()
+    {
+        var testKey = $"test-key-{Guid.NewGuid()}";
+        var defaultCollectionName = _mockEncryptedString;
+
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var (userEmail, organizationUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
+            _organization.Id, OrganizationUserType.User);
+
+        var result = await _client.PostAsJsonAsync($"organizations/{_organization.Id}/users/{organizationUser.Id}/auto-confirm",
+            new OrganizationUserConfirmRequestModel
+            {
+                Key = testKey,
+                DefaultUserCollectionName = defaultCollectionName
+            });
+
+        Assert.Equal(HttpStatusCode.NotFound, result.StatusCode);
+    }
+
+    [Fact]
+    public async Task AutoConfirm_WhenUserCannotManageOtherUsers_ThenShouldReturnForbidden()
+    {
+        var (factory, client, loginHelper) = GetAutoConfirmTestFactoryAsync();
+
+        var ownerEmail = $"org-user-integration-test-{Guid.NewGuid()}@bitwarden.com";
+        await factory.LoginWithNewAccount(ownerEmail);
+
+        var (organization, _) = await OrganizationTestHelpers.SignUpAsync(factory, plan: PlanType.EnterpriseAnnually2023,
+            ownerEmail: ownerEmail, passwordManagerSeats: 5, paymentMethod: PaymentMethodType.Card);
+
+        var testKey = $"test-key-{Guid.NewGuid()}";
+        var defaultCollectionName = _mockEncryptedString;
+
+        await loginHelper.LoginAsync(ownerEmail);
+
+        var userToConfirmEmail = $"org-user-to-confirm-{Guid.NewGuid()}@bitwarden.com";
+        await factory.LoginWithNewAccount(userToConfirmEmail);
+
+        await loginHelper.LoginAsync(userToConfirmEmail);
+        var organizationUser = await OrganizationTestHelpers.CreateUserAsync(
+            factory,
+            organization.Id,
+            userToConfirmEmail,
+            OrganizationUserType.User,
+            false,
+            new Permissions(),
+            OrganizationUserStatusType.Accepted);
+
+        var result = await client.PostAsJsonAsync($"organizations/{organization.Id}/users/{organizationUser.Id}/auto-confirm",
+            new OrganizationUserConfirmRequestModel
+            {
+                Key = testKey,
+                DefaultUserCollectionName = defaultCollectionName
+            });
+
+        Assert.Equal(HttpStatusCode.Forbidden, result.StatusCode);
+    }
+
+    [Fact]
+    public async Task AutoConfirm_WhenOwnerInvitesValidUser_ThenShouldReturnNoContent()
+    {
+        var (factory, client, loginHelper) = GetAutoConfirmTestFactoryAsync();
+
+        var ownerEmail = $"org-user-integration-test-{Guid.NewGuid()}@bitwarden.com";
+        await factory.LoginWithNewAccount(ownerEmail);
+
+        var (organization, _) = await OrganizationTestHelpers.SignUpAsync(factory, plan: PlanType.EnterpriseAnnually2023,
+            ownerEmail: ownerEmail, passwordManagerSeats: 5, paymentMethod: PaymentMethodType.Card);
+
+        var testKey = $"test-key-{Guid.NewGuid()}";
+        var defaultCollectionName = _mockEncryptedString;
+
+        await loginHelper.LoginAsync(ownerEmail);
+
+        var userToConfirmEmail = $"org-user-to-confirm-{Guid.NewGuid()}@bitwarden.com";
+        await factory.LoginWithNewAccount(userToConfirmEmail);
+
+        var organizationUser = await OrganizationTestHelpers.CreateUserAsync(
+            factory,
+            organization.Id,
+            userToConfirmEmail,
+            OrganizationUserType.User,
+            false,
+            new Permissions(),
+            OrganizationUserStatusType.Accepted);
+
+        var result = await client.PostAsJsonAsync($"organizations/{organization.Id}/users/{organizationUser.Id}/auto-confirm",
+            new OrganizationUserConfirmRequestModel
+            {
+                Key = testKey,
+                DefaultUserCollectionName = defaultCollectionName
+            });
+
+        Assert.Equal(HttpStatusCode.NoContent, result.StatusCode);
     }
 }

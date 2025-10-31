@@ -10,7 +10,9 @@ using Bit.Api.Models.Response;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
@@ -24,7 +26,6 @@ using Bit.Core.Billing.Pricing;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Api;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
@@ -41,7 +42,7 @@ namespace Bit.Api.AdminConsole.Controllers;
 
 [Route("organizations/{orgId}/users")]
 [Authorize("Application")]
-public class OrganizationUsersController : Controller
+public class OrganizationUsersController : BaseAdminConsoleController
 {
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
@@ -66,6 +67,8 @@ public class OrganizationUsersController : Controller
     private readonly IFeatureService _featureService;
     private readonly IPricingClient _pricingClient;
     private readonly IResendOrganizationInviteCommand _resendOrganizationInviteCommand;
+    private readonly IAutomaticallyConfirmOrganizationUserCommand _automaticallyConfirmOrganizationUserCommand;
+    private readonly TimeProvider _timeProvider;
     private readonly IConfirmOrganizationUserCommand _confirmOrganizationUserCommand;
     private readonly IRestoreOrganizationUserCommand _restoreOrganizationUserCommand;
     private readonly IInitPendingOrganizationCommand _initPendingOrganizationCommand;
@@ -97,7 +100,9 @@ public class OrganizationUsersController : Controller
         IRestoreOrganizationUserCommand restoreOrganizationUserCommand,
         IInitPendingOrganizationCommand initPendingOrganizationCommand,
         IRevokeOrganizationUserCommand revokeOrganizationUserCommand,
-        IResendOrganizationInviteCommand resendOrganizationInviteCommand)
+        IResendOrganizationInviteCommand resendOrganizationInviteCommand,
+        IAutomaticallyConfirmOrganizationUserCommand automaticallyConfirmOrganizationUserCommand,
+        TimeProvider timeProvider)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -122,6 +127,8 @@ public class OrganizationUsersController : Controller
         _featureService = featureService;
         _pricingClient = pricingClient;
         _resendOrganizationInviteCommand = resendOrganizationInviteCommand;
+        _automaticallyConfirmOrganizationUserCommand = automaticallyConfirmOrganizationUserCommand;
+        _timeProvider = timeProvider;
         _confirmOrganizationUserCommand = confirmOrganizationUserCommand;
         _restoreOrganizationUserCommand = restoreOrganizationUserCommand;
         _initPendingOrganizationCommand = initPendingOrganizationCommand;
@@ -544,14 +551,7 @@ public class OrganizationUsersController : Controller
             return TypedResults.Unauthorized();
         }
 
-        var commandResult = await _deleteClaimedOrganizationUserAccountCommand.DeleteUserAsync(orgId, id, currentUserId.Value);
-
-        return commandResult.Result.Match<IResult>(
-            error => error is NotFoundError
-                ? TypedResults.NotFound(new ErrorResponseModel(error.Message))
-                : TypedResults.BadRequest(new ErrorResponseModel(error.Message)),
-            TypedResults.Ok
-        );
+        return Handle(await _deleteClaimedOrganizationUserAccountCommand.DeleteUserAsync(orgId, id, currentUserId.Value));
     }
 
     [HttpPost("{id}/delete-account")]
@@ -689,6 +689,32 @@ public class OrganizationUsersController : Controller
         [FromBody] OrganizationUserBulkRequestModel model)
     {
         await BulkEnableSecretsManagerAsync(orgId, model);
+    }
+
+    [HttpPost("{id}/auto-confirm")]
+    [Authorize<ManageUsersRequirement>]
+    [RequireFeature(FeatureFlagKeys.AutomaticConfirmUsers)]
+    public async Task<IResult> AutomaticallyConfirmOrganizationUserAsync([FromRoute] Guid orgId,
+        [FromRoute] Guid id,
+        [FromBody] OrganizationUserConfirmRequestModel model)
+    {
+        var userId = _userService.GetProperUserId(User);
+
+        if (userId is null || userId.Value == Guid.Empty)
+        {
+            return TypedResults.Unauthorized();
+        }
+
+        return Handle(await _automaticallyConfirmOrganizationUserCommand.AutomaticallyConfirmOrganizationUserAsync(
+            new AutomaticallyConfirmOrganizationUserRequest
+            {
+                OrganizationId = orgId,
+                OrganizationUserId = id,
+                Key = model.Key,
+                DefaultUserCollectionName = model.DefaultUserCollectionName,
+                PerformedBy = new StandardUser(userId.Value, await _currentContext.OrganizationOwner(orgId)),
+                PerformedOn = _timeProvider.GetUtcNow()
+            }));
     }
 
     private async Task RestoreOrRevokeUserAsync(
