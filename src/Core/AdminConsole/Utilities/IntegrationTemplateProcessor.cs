@@ -52,6 +52,16 @@ public static partial class IntegrationTemplateProcessor
                || template.Contains("#ActingUserEmail#", StringComparison.Ordinal);
     }
 
+    public static bool TemplateRequiresGroup(string template)
+    {
+        if (string.IsNullOrEmpty(template))
+        {
+            return false;
+        }
+
+        return template.Contains("#GroupName#", StringComparison.Ordinal);
+    }
+
     public static bool TemplateRequiresOrganization(string template)
     {
         if (string.IsNullOrEmpty(template))
