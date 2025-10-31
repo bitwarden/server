@@ -19,23 +19,23 @@ public static class EventDiagnosticLogger
             {
                 return;
             }
+            var orderedRecords = data.Data.OrderBy(e => e.Date).ToList();
+            var recordCount = orderedRecords.Count;
+            var newestRecordDate = orderedRecords.LastOrDefault()?.Date.ToString("o");
+            var oldestRecordDate = orderedRecords.FirstOrDefault()?.Date.ToString("o"); ;
 
-
-            var recordCount = data.Data.Count();
-            var oldestRecordDate = data.Data.FirstOrDefault()?.Date;
-            var newestRecordDate = data.Data.LastOrDefault()?.Date;
             var hasMore = !string.IsNullOrEmpty(data.ContinuationToken);
 
             logger.LogInformation(
-                "Events query for Organization {OrgId}. Returned {Count} events, oldest record {oldestRecord}, newest record {newestRecord} HasMore: {HasMore}, " +
-                "Request Filters: Start={Start}, End={End}, ActingUserId={ActingUserId}, ItemId={ItemId},",
+                "Events query for Organization:{OrgId}. Event count:{Count} newest record:{newestRecord}  oldest record:{oldestRecord} HasMore:{HasMore} " +
+                "Request Filters Start:{QueryStart} End:{QueryEnd} ActingUserId:{ActingUserId} ItemId:{ItemId},",
                 organizationId,
                 recordCount,
-                oldestRecordDate,
                 newestRecordDate,
+                oldestRecordDate,
                 hasMore,
-                request.Start,
-                request.End,
+                request.Start?.ToString("o"),
+                request.End?.ToString("o"),
                 request.ActingUserId,
                 request.ItemId);
         }
@@ -64,13 +64,13 @@ public static class EventDiagnosticLogger
 
             var list = data.ToList();
             var recordCount = list.Count;
-            var oldestRecordDate = list.FirstOrDefault()?.Date;
-            var newestRecordDate = list.LastOrDefault()?.Date;
+            var oldestRecordDate = list.FirstOrDefault()?.Date.ToString("o");
+            var newestRecordDate = list.LastOrDefault()?.Date.ToString("o");
             var hasMore = !string.IsNullOrEmpty(continuationToken);
 
             logger.LogInformation(
-                "Events query for Organization {OrgId}. Returned {Count} events, oldest record {oldestRecord}, newest record {newestRecord} HasMore: {HasMore}, " +
-                "Request Filters: Start={queryStart}, End={End}",
+                "Events query for Organization:{OrgId}. Event count:{Count} oldest record:{oldestRecord} newest record:{newestRecord} HasMore:{HasMore} " +
+                "Request Filters Start:{QueryStart} End:{QueryEnd}",
                 organizationId,
                 recordCount,
                 oldestRecordDate,

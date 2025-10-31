@@ -15,23 +15,33 @@ public class EventDiagnosticLoggerTests
 {
     [Theory, BitAutoData]
     public void LogAggregateData_PublicApi_FeatureFlagEnabled_LogsInformation(
-        Guid organizationId,
-        EventFilterRequestModel request)
+        Guid organizationId)
     {
         // Arrange
         var logger = Substitute.For<ILogger>();
         var featureService = Substitute.For<IFeatureService>();
         featureService.IsEnabled(FeatureFlagKeys.EventDiagnosticLogging).Returns(true);
 
-        var ev1 = Substitute.For<IEvent>();
-        ev1.Date.Returns(DateTime.UtcNow.AddDays(-2));
-        var ev2 = Substitute.For<IEvent>();
-        ev2.Date.Returns(DateTime.UtcNow.AddDays(-1));
+        var request = new EventFilterRequestModel()
+        {
+            Start = DateTime.UtcNow.AddMinutes(-3),
+            End = DateTime.UtcNow,
+            ActingUserId = Guid.NewGuid(),
+            ItemId = Guid.NewGuid(),
+        };
+
+        var newestEvent = Substitute.For<IEvent>();
+        newestEvent.Date.Returns(DateTime.UtcNow);
+        var middleEvent = Substitute.For<IEvent>();
+        middleEvent.Date.Returns(DateTime.UtcNow.AddDays(-1));
+        var oldestEvent = Substitute.For<IEvent>();
+        oldestEvent.Date.Returns(DateTime.UtcNow.AddDays(-2));
 
         var eventResponses = new List<EventResponseModel>
         {
-            new EventResponseModel(ev1),
-            new EventResponseModel(ev2)
+            new (newestEvent),
+            new (middleEvent),
+            new (oldestEvent)
         };
         var response = new PagedListResponseModel<EventResponseModel>(eventResponses, "continuation-token");
 
@@ -42,7 +52,14 @@ public class EventDiagnosticLoggerTests
         logger.Received(1).Log(
             LogLevel.Information,
             Arg.Any<EventId>(),
-            Arg.Is<object>(o => o.ToString().Contains(organizationId.ToString())),
+            Arg.Is<object>(o =>
+                o.ToString().Contains(organizationId.ToString()) &&
+                o.ToString().Contains($"Event count:{eventResponses.Count}") &&
+                o.ToString().Contains("HasMore:True") &&
+                o.ToString().Contains($"ActingUserId:{request.ActingUserId}") &&
+                o.ToString().Contains($"ItemId:{request.ItemId}") &&
+                o.ToString().Contains($"newest record:{newestEvent.Date:O}"))
+            ,
             null,
             Arg.Any<Func<object, Exception, string>>());
     }
@@ -82,15 +99,18 @@ public class EventDiagnosticLoggerTests
         var featureService = Substitute.For<IFeatureService>();
         featureService.IsEnabled(FeatureFlagKeys.EventDiagnosticLogging).Returns(true);
 
+        var oldestDate = DateTime.UtcNow.AddDays(-3);
+        var newestDate = DateTime.UtcNow.AddDays(-1);
+
         var ev1 = Substitute.For<IEvent>();
-        ev1.Date.Returns(DateTime.UtcNow.AddDays(-3));
+        ev1.Date.Returns(oldestDate);
         var ev2 = Substitute.For<IEvent>();
-        ev2.Date.Returns(DateTime.UtcNow.AddDays(-1));
+        ev2.Date.Returns(newestDate);
 
         var eventResponses = new List<Bit.Api.Models.Response.EventResponseModel>
         {
-            new Bit.Api.Models.Response.EventResponseModel(ev1),
-            new Bit.Api.Models.Response.EventResponseModel(ev2)
+            new (ev1),
+            new (ev2)
         };
         var continuationToken = "test-token";
 
@@ -101,7 +121,12 @@ public class EventDiagnosticLoggerTests
         logger.Received(1).Log(
             LogLevel.Information,
             Arg.Any<EventId>(),
-            Arg.Is<object>(o => o.ToString().Contains(organizationId.ToString())),
+            Arg.Is<object>(o =>
+                o.ToString().Contains(organizationId.ToString()) &&
+                o.ToString().Contains("Returned 2 events") &&
+                o.ToString().Contains("HasMore: True") &&
+                o.ToString().Contains("oldest record") &&
+                o.ToString().Contains("newest record")),
             null,
             Arg.Any<Func<object, Exception, string>>());
     }
@@ -146,7 +171,10 @@ public class EventDiagnosticLoggerTests
         logger.Received(1).Log(
             LogLevel.Information,
             Arg.Any<EventId>(),
-            Arg.Any<object>(),
+            Arg.Is<object>(o =>
+                o.ToString().Contains(organizationId.ToString()) &&
+                o.ToString().Contains("Returned 0 events") &&
+                o.ToString().Contains("HasMore: False")),
             null,
             Arg.Any<Func<object, Exception, string>>());
     }
@@ -169,7 +197,10 @@ public class EventDiagnosticLoggerTests
         logger.Received(1).Log(
             LogLevel.Information,
             Arg.Any<EventId>(),
-            Arg.Any<object>(),
+            Arg.Is<object>(o =>
+                o.ToString().Contains(organizationId.ToString()) &&
+                o.ToString().Contains("Returned 0 events") &&
+                o.ToString().Contains("HasMore: False")),
             null,
             Arg.Any<Func<object, Exception, string>>());
     }
@@ -200,7 +231,10 @@ public class EventDiagnosticLoggerTests
         logger.Received(1).Log(
             LogLevel.Information,
             Arg.Any<EventId>(),
-            Arg.Is<object>(o => o.ToString().Contains("HasMore")),
+            Arg.Is<object>(o =>
+                o.ToString().Contains(organizationId.ToString()) &&
+                o.ToString().Contains("Returned 1 events") &&
+                o.ToString().Contains("HasMore: True")),
             null,
             Arg.Any<Func<object, Exception, string>>());
     }
@@ -219,7 +253,7 @@ public class EventDiagnosticLoggerTests
 
         var eventResponses = new List<Bit.Api.Models.Response.EventResponseModel>
         {
-            new Bit.Api.Models.Response.EventResponseModel(ev)
+            new (ev)
         };
 
         // Act
@@ -229,7 +263,10 @@ public class EventDiagnosticLoggerTests
         logger.Received(1).Log(
             LogLevel.Information,
             Arg.Any<EventId>(),
-            Arg.Any<object>(),
+            Arg.Is<object>(o =>
+                o.ToString().Contains(organizationId.ToString()) &&
+                o.ToString().Contains("Returned 1 events") &&
+                o.ToString().Contains("HasMore: False")),
             null,
             Arg.Any<Func<object, Exception, string>>());
     }
