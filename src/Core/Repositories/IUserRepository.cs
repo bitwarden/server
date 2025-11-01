@@ -2,8 +2,6 @@
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 
-#nullable enable
-
 namespace Bit.Core.Repositories;
 
 public interface IUserRepository : IRepository<User, Guid>
