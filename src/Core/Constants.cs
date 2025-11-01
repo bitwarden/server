@@ -156,6 +156,7 @@ public static class FeatureFlagKeys
     public const string DisableAlternateLoginMethods = "pm-22110-disable-alternate-login-methods";
     public const string PM23174ManageAccountRecoveryPermissionDrivesTheNeedToSetMasterPassword =
         "pm-23174-manage-account-recovery-permission-drives-the-need-to-set-master-password";
+    public const string RecoveryCodeSupportForSsoRequiredUsers = "pm-21153-recovery-code-support-for-sso-required";
     public const string MJMLBasedEmailTemplates = "mjml-based-email-templates";
 
     /* Autofill Team */

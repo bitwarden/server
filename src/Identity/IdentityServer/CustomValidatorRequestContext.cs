@@ -27,6 +27,12 @@ public class CustomValidatorRequestContext
     /// </summary>
     public bool TwoFactorRequired { get; set; } = false;
     /// <summary>
+    /// Whether the user has requested recovery of their 2FA methods using their one-time
+    /// recovery code.
+    /// </summary>
+    /// <seealso cref="Bit.Core.Auth.Enums.TwoFactorProviderType"/>
+    public bool TwoFactorRecoveryRequested { get; set; } = false;
+    /// <summary>
     /// This communicates whether or not SSO is required for the user to authenticate.
     /// </summary>
     public bool SsoRequired { get; set; } = false;
@@ -42,10 +48,13 @@ public class CustomValidatorRequestContext
     /// This will be null if the authentication request is successful.
     /// </summary>
     public Dictionary<string, object> CustomResponse { get; set; }
-
     /// <summary>
     /// A validated auth request
     /// <see cref="AuthRequest.IsValidForAuthentication"/>
     /// </summary>
     public AuthRequest ValidatedAuthRequest { get; set; }
+    /// <summary>
+    /// Whether the user has requested a Remember Me token for their current device.
+    /// </summary>
+    public bool RememberMeRequested { get; set; } = false;
 }
