@@ -95,6 +95,8 @@ public class DeviceValidator(
             var validationResult = await HandleNewDeviceVerificationAsync(context.User, request);
             if (validationResult != DeviceValidationResultType.Success)
             {
+                // TODO: extract device validator return NDV required response as public method for injection
+                // and use in _twoFactorAuthenticationValidator?
                 (context.ValidationErrorResult, context.CustomResponse) =
                     BuildDeviceErrorResult(validationResult);
                 if (validationResult == DeviceValidationResultType.NewDeviceVerificationRequired)
