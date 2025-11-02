@@ -1,5 +1,5 @@
 ﻿using Bit.Core.Models.Mail;
-using Bit.Core.Services.Mail.Delivery;
+using Bit.Core.Platform.Mail.Delivery;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;

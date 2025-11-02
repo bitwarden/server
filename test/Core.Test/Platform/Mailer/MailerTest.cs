@@ -1,19 +1,18 @@
 ﻿using Bit.Core.Models.Mail;
-using Bit.Core.Platform.Mailer;
-using Bit.Core.Services.Mail.Delivery;
+using Bit.Core.Platform.Mail.Delivery;
+using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Test.Platform.Mailer.TestMail;
 using NSubstitute;
 using Xunit;
 
 namespace Bit.Core.Test.Platform.Mailer;
-
 public class MailerTest
 {
     [Fact]
     public async Task SendEmailAsync()
     {
         var deliveryService = Substitute.For<IMailDeliveryService>();
-        var mailer = new Core.Platform.Mailer.Mailer(new HandlebarMailRenderer(), deliveryService);
+        var mailer = new Core.Platform.Mail.Mailer.Mailer(new HandlebarMailRenderer(), deliveryService);
 
         var mail = new TestMail.TestMail()
         {

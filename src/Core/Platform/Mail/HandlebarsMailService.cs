@@ -20,8 +20,7 @@ using Bit.Core.Models.Mail.Billing;
 using Bit.Core.Models.Mail.FamiliesForEnterprise;
 using Bit.Core.Models.Mail.Provider;
 using Bit.Core.SecretsManager.Models.Mail;
-using Bit.Core.Services.Mail.Delivery;
-using Bit.Core.Services.Mail.Enqueuing;
+using Bit.Core.Platform.Mail.Delivery;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Models.Data;
@@ -29,9 +28,11 @@ using Core.Auth.Enums;
 using HandlebarsDotNet;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
+using Bit.Core.Platform.Mail.Enqueuing;
 
 namespace Bit.Core.Services.Mail;
 
+[Obsolete("The IMailService has been deprecated in favor of the IMailer. All new emails should be sent with the Mailer.")]
 public class HandlebarsMailService : IMailService
 {
     private const string Namespace = "Bit.Core.MailTemplates.Handlebars";

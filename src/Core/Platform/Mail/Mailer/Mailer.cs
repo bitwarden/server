@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Models.Mail;
-using Bit.Core.Services.Mail.Delivery;
+using Bit.Core.Platform.Mail.Delivery;
 
-namespace Bit.Core.Platform.Mailer;
+namespace Bit.Core.Platform.Mail.Mailer;
 
 #nullable enable
 

@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Models.Mail;
 
-namespace Bit.Core.Services.Mail.Delivery;
+namespace Bit.Core.Platform.Mail.Delivery;
 
 public class NoopMailDeliveryService : IMailDeliveryService
 {

@@ -1,11 +1,11 @@
 ﻿using AspNetCoreRateLimit;
 using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Services;
+using Bit.Core.Platform.Mail.Delivery;
 using Bit.Core.Platform.Push;
 using Bit.Core.Platform.PushRegistration.Internal;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Services.Mail.Delivery;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;

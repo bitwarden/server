@@ -7,7 +7,7 @@ using MailKit.Net.Smtp;
 using Microsoft.Extensions.Logging;
 using MimeKit;
 
-namespace Bit.Core.Services.Mail.Delivery;
+namespace Bit.Core.Platform.Mail.Delivery;
 
 public class MailKitSmtpMailDeliveryService : IMailDeliveryService
 {

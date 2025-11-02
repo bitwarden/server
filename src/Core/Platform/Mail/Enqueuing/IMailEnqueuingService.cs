@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Models.Mail;
 
-namespace Bit.Core.Services.Mail.Enqueuing;
+namespace Bit.Core.Platform.Mail.Enqueuing;
 
 public interface IMailEnqueuingService
 {

@@ -14,6 +14,7 @@ using Core.Auth.Enums;
 
 namespace Bit.Core.Services;
 
+[Obsolete("The IMailService has been deprecated in favor of the IMailer. All new emails should be sent with the Mailer.")]
 public interface IMailService
 {
     Task SendWelcomeEmailAsync(User user);

@@ -1,4 +1,4 @@
-﻿using Bit.Core.Services.Mail.Delivery;
+﻿using Bit.Core.Platform.Mail.Delivery;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
