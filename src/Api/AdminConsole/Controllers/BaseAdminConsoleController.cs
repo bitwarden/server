@@ -7,7 +7,7 @@ namespace Bit.Api.AdminConsole.Controllers;
 
 public abstract class BaseAdminConsoleController : Controller
 {
-    protected static IResult Handle<T>(CommandResult<T> commandResult) =>
+    protected static IResult Handle<T>(CommandResult<T> commandResult, Func<T, IActionResult> resultSelector) =>
         commandResult.Match<IResult>(
             error => error switch
             {
@@ -17,11 +17,11 @@ public abstract class BaseAdminConsoleController : Controller
                     new ErrorResponseModel(internalError.Message),
                     statusCode: StatusCodes.Status500InternalServerError),
                 _ => TypedResults.Json(
-                    new ErrorResponseModel(commandResult.AsError.Message),
+                    new ErrorResponseModel(error.Message),
                     statusCode: StatusCodes.Status500InternalServerError
                 )
             },
-            _ => TypedResults.NoContent()
+            success => Results.Ok(resultSelector(success))
         );
 
     protected static IResult Handle(BulkCommandResult commandResult) =>
@@ -44,7 +44,7 @@ public abstract class BaseAdminConsoleController : Controller
                     new ErrorResponseModel(internalError.Message),
                     statusCode: StatusCodes.Status500InternalServerError),
                 _ => TypedResults.Json(
-                    new ErrorResponseModel(commandResult.AsError.Message),
+                    new ErrorResponseModel(error.Message),
                     statusCode: StatusCodes.Status500InternalServerError
                 )
             },

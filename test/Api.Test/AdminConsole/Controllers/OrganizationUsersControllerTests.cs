@@ -480,7 +480,7 @@ public class OrganizationUsersControllerTests
 
         var result = await sutProvider.Sut.PutResetPassword(orgId, orgUserId, model);
 
-        Assert.IsType<NotFound>(result);
+        Assert.IsType<Microsoft.AspNetCore.Http.HttpResults.NotFound>(result);
     }
 
     [Theory]
@@ -510,7 +510,7 @@ public class OrganizationUsersControllerTests
 
         var result = await sutProvider.Sut.PutResetPassword(orgId, orgUserId, model);
 
-        Assert.IsType<NotFound>(result);
+        Assert.IsType<Microsoft.AspNetCore.Http.HttpResults.NotFound>(result);
     }
 
     [Theory]
@@ -525,7 +525,7 @@ public class OrganizationUsersControllerTests
 
         var result = await sutProvider.Sut.PutResetPassword(orgId, orgUserId, model);
 
-        Assert.IsType<NotFound>(result);
+        Assert.IsType<Microsoft.AspNetCore.Http.HttpResults.NotFound>(result);
     }
 
     [Theory]
