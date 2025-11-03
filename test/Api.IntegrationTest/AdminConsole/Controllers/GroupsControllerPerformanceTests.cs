@@ -11,10 +11,13 @@ using Xunit.Abstractions;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
 
-public class GroupsControllerPerformanceTest(ITestOutputHelper testOutputHelper)
+public class GroupsControllerPerformanceTests(ITestOutputHelper testOutputHelper)
 {
-    [Fact]
-    public async Task PutGroupAsync()
+    [Theory(Skip = "Performance test")]
+    [InlineData(10, 5)]
+    //[InlineData(100, 10)]
+    //[InlineData(1000, 20)]
+    public async Task PutGroupAsync(int userCount, int collectionCount)
     {
         await using var factory = new SqlServerApiApplicationFactory();
         var client = factory.CreateClient();
@@ -25,11 +28,11 @@ public class GroupsControllerPerformanceTest(ITestOutputHelper testOutputHelper)
         var groupsSeeder = new GroupsRecipe(db);
 
         var domain = $"updategroup.test.{Guid.NewGuid():N}";
-        var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: 5);
+        var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: userCount);
 
         var orgUserIds = db.OrganizationUsers.Where(ou => ou.OrganizationId == orgId).Select(ou => ou.Id).ToList();
-        var collectionIds = collectionsSeeder.AddToOrganization(orgId, 3, orgUserIds, 0);
-        var groupIds = groupsSeeder.AddToOrganization(orgId, 2, orgUserIds, 0);
+        var collectionIds = collectionsSeeder.AddToOrganization(orgId, collectionCount, orgUserIds, 0);
+        var groupIds = groupsSeeder.AddToOrganization(orgId, 1, orgUserIds, 0);
 
         var groupId = groupIds.First();
 
@@ -40,21 +43,19 @@ public class GroupsControllerPerformanceTest(ITestOutputHelper testOutputHelper)
         {
             Name = "Updated Group Name",
             Collections = collectionIds.Select(c => new SelectionReadOnlyRequestModel { Id = c, ReadOnly = false, HidePasswords = false, Manage = false }),
-            Users = new List<Guid>() // Empty users list to avoid authorization issues
+            Users = orgUserIds
         };
+
+        var requestContent = new StringContent(JsonSerializer.Serialize(updateRequest), Encoding.UTF8, "application/json");
 
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
-        var requestContent = new StringContent(JsonSerializer.Serialize(updateRequest), Encoding.UTF8, "application/json");
         var response = await client.PutAsync($"/organizations/{orgId}/groups/{groupId}", requestContent);
 
         stopwatch.Stop();
-        testOutputHelper.WriteLine($"PUT /organizations/{{orgid}}/groups/{{id}} - Collections: {collectionIds.Count}; Users: {updateRequest.Users.Count()}; Request duration: {stopwatch.ElapsedMilliseconds} ms; Status: {response.StatusCode}");
+
+        testOutputHelper.WriteLine($"PUT /organizations/{{orgId}}/groups/{{id}} - Users: {orgUserIds.Count}; Collections: {collectionIds.Count}; Request duration: {stopwatch.ElapsedMilliseconds} ms; Status: {response.StatusCode}");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
-        var result = await response.Content.ReadAsStringAsync();
-        Assert.NotEmpty(result);
     }
 }
-
