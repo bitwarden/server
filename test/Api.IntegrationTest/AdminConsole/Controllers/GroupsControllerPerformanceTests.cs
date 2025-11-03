@@ -27,7 +27,7 @@ public class GroupsControllerPerformanceTests(ITestOutputHelper testOutputHelper
         var collectionsSeeder = new CollectionsRecipe(db);
         var groupsSeeder = new GroupsRecipe(db);
 
-        var domain = $"updategroup.test.{Guid.NewGuid():N}";
+        var domain = $"{Guid.NewGuid().ToString("N").Substring(0, 8)}.com";
         var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: userCount);
 
         var orgUserIds = db.OrganizationUsers.Where(ou => ou.OrganizationId == orgId).Select(ou => ou.Id).ToList();
