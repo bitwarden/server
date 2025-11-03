@@ -261,7 +261,7 @@ public class AccountController : Controller
         }
 
         // See if the user has logged in with this SSO provider before and has already been provisioned.
-        // This is signified by the user existing in the User table and the SSOUser table for the SSO provider they're using.
+        // This is signified by the user existing in the User table and the Org User table for the SSO provider they're using.
         var (possibleUserLinkedWithSso, provider, providerUserId, claims, ssoConfigData) = await FindUserFromExternalProviderAsync(result);
 
         // We will look these up as required (lazy resolution) to avoid multiple DB hits.
@@ -298,10 +298,10 @@ public class AccountController : Controller
 
         if (preventOrgUserLoginIfStatusInvalid)
         {
-            if (possibleUserLinkedWithSso == null) throw new Exception(_i18nService.T("UserShouldBeFound"));
-            User guaranteedSsoUser = possibleUserLinkedWithSso;
+            User guaranteedUserWithOrgUser = possibleUserLinkedWithSso
+                                     ?? throw new Exception(_i18nService.T("UserShouldBeFound"));
 
-            await PreventOrgUserLoginIfStatusInvalidAsync(organization, provider, orgUser, guaranteedSsoUser);
+            await PreventOrgUserLoginIfStatusInvalidAsync(organization, provider, orgUser, guaranteedUserWithOrgUser);
 
             // This allows us to collect any additional claims or properties
             // for the specific protocols used and store them in the local auth cookie.
@@ -316,9 +316,9 @@ public class AccountController : Controller
 
             // Issue authentication cookie for user
             await HttpContext.SignInAsync(
-                new IdentityServerUser(guaranteedSsoUser.Id.ToString())
+                new IdentityServerUser(guaranteedUserWithOrgUser.Id.ToString())
                 {
-                    DisplayName = guaranteedSsoUser.Email,
+                    DisplayName = guaranteedUserWithOrgUser.Email,
                     IdentityProvider = provider,
                     AdditionalClaims = additionalLocalClaims.ToArray()
                 }, localSignInProps);
@@ -515,7 +515,7 @@ public class AccountController : Controller
         var name = GetName(claims, ssoConfigData.GetAdditionalNameClaimTypes());
         var email = TryGetEmailAddress(claims, ssoConfigData, providerUserId);
 
-        User? possibleExisingUser;
+        User? possibleExistingUser;
         if (string.IsNullOrWhiteSpace(userIdentifier))
         {
             if (string.IsNullOrWhiteSpace(email))
@@ -523,25 +523,25 @@ public class AccountController : Controller
                 throw new Exception(_i18nService.T("CannotFindEmailClaim"));
             }
 
-            possibleExisingUser = await _userRepository.GetByEmailAsync(email);
+            possibleExistingUser = await _userRepository.GetByEmailAsync(email);
         }
         else
         {
-            possibleExisingUser = await GetUserFromManualLinkingDataAsync(userIdentifier);
+            possibleExistingUser = await GetUserFromManualLinkingDataAsync(userIdentifier);
         }
 
         // Find the org (we error if we can't find an org because no org is not valid)
         var organization = await GetOrganizationByProviderAsync(provider);
 
         // Try to find an org user (null org user possible and valid here)
-        var possibleOrgUser = await GetOrganizationUserByUserAndOrgOrEmailAsync(possibleExisingUser, organization.Id, email);
+        var possibleOrgUser = await GetOrganizationUserByUserAndOrgIdOrEmailAsync(possibleExistingUser, organization.Id, email);
 
         //----------------------------------------------------
         // Scenario 1: We've found the user in the User table
         //----------------------------------------------------
-        if (possibleExisingUser != null)
+        if (possibleExistingUser != null)
         {
-            if (possibleExisingUser.UsesKeyConnector &&
+            if (possibleExistingUser.UsesKeyConnector &&
                 (possibleOrgUser == null || possibleOrgUser.Status == OrganizationUserStatusType.Invited))
             {
                 throw new Exception(_i18nService.T("UserAlreadyExistsKeyConnector"));
@@ -578,9 +578,9 @@ public class AccountController : Controller
             // authenticated with the org's SSO provider before now (otherwise we wouldn't be auto-provisioning them).
             // We've verified that the user is Accepted or Confnirmed, so we can create an SsoUser link and proceed
             // with authentication.
-            await CreateSsoUserRecordAsync(providerUserId, possibleExisingUser.Id, organization.Id, possibleOrgUser);
+            await CreateSsoUserRecordAsync(providerUserId, possibleExistingUser.Id, organization.Id, possibleOrgUser);
 
-            return (possibleExisingUser, organization, possibleOrgUser);
+            return (possibleExistingUser, organization, possibleOrgUser);
         }
 
         // Before any user creation - if Org User doesn't exist at this point - make sure there are enough seats to add one
@@ -712,7 +712,7 @@ public class AccountController : Controller
         organization ??= await GetOrganizationByProviderAsync(provider);
 
         // Lazily get the org user if not already known
-        orgUser ??= await GetOrganizationUserByUserAndOrgOrEmailAsync(
+        orgUser ??= await GetOrganizationUserByUserAndOrgIdOrEmailAsync(
             user,
             organization.Id,
             user.Email);
@@ -800,7 +800,7 @@ public class AccountController : Controller
     /// <param name="organizationId">Organization id from the provider data.</param>
     /// <param name="email">Email to use as a fallback in case of an invited user not in the Org Users
     /// table yet.</param>
-    private async Task<OrganizationUser?> GetOrganizationUserByUserAndOrgOrEmailAsync(
+    private async Task<OrganizationUser?> GetOrganizationUserByUserAndOrgIdOrEmailAsync(
         User? user,
         Guid organizationId,
         string? email)
