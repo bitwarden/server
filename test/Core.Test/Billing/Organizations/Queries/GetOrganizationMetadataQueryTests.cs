@@ -8,7 +8,6 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -172,7 +171,7 @@ public class GetOrganizationMetadataQueryTests
 
         sutProvider.GetDependency<IPricingClient>()
             .GetPlanOrThrow(organization.PlanType)
-            .Returns(StaticStore.GetPlan(organization.PlanType));
+            .Returns(MockPlans.GetPlan(organization.PlanType));
 
         var result = await sutProvider.Sut.Run(organization);
 
@@ -227,7 +226,7 @@ public class GetOrganizationMetadataQueryTests
 
         sutProvider.GetDependency<IPricingClient>()
             .GetPlanOrThrow(organization.PlanType)
-            .Returns(StaticStore.GetPlan(organization.PlanType));
+            .Returns(MockPlans.GetPlan(organization.PlanType));
 
         var result = await sutProvider.Sut.Run(organization);
 
@@ -292,7 +291,7 @@ public class GetOrganizationMetadataQueryTests
 
         sutProvider.GetDependency<IPricingClient>()
             .GetPlanOrThrow(organization.PlanType)
-            .Returns(StaticStore.GetPlan(organization.PlanType));
+            .Returns(MockPlans.GetPlan(organization.PlanType));
 
         var result = await sutProvider.Sut.Run(organization);
 
@@ -358,7 +357,7 @@ public class GetOrganizationMetadataQueryTests
 
         sutProvider.GetDependency<IPricingClient>()
             .GetPlanOrThrow(organization.PlanType)
-            .Returns(StaticStore.GetPlan(organization.PlanType));
+            .Returns(MockPlans.GetPlan(organization.PlanType));
 
         var result = await sutProvider.Sut.Run(organization);
 

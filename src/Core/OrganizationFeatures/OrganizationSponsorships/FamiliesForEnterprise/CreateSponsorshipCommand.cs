@@ -1,5 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Models;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -7,7 +9,6 @@ using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise;
 
@@ -34,7 +35,9 @@ public class CreateSponsorshipCommand(
             throw new BadRequestException("Cannot offer a Families Organization Sponsorship to yourself. Choose a different email.");
         }
 
-        var requiredSponsoringProductType = StaticStore.GetSponsoredPlan(sponsorshipType)?.SponsoringProductTierType;
+        var requiredSponsoringProductType = sponsorshipType == PlanSponsorshipType.FamiliesForEnterprise
+            ? SponsoredPlans.FamiliesForEnterprise.SponsoringProductTierType
+            : (ProductTierType?)null;
         var sponsoringOrgProductTier = sponsoringOrganization.PlanType.GetProductTier();
 
         if (requiredSponsoringProductType == null ||
