@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.IntegrationTest.Factories;
+using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.Models.Request;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -32,7 +33,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var collectionsSeeder = new CollectionsRecipe(db);
         var groupsSeeder = new GroupsRecipe(db);
 
-        var domain = $"{Guid.NewGuid().ToString("N").Substring(0, 8)}.com";
+        var domain = OrganizationTestHelpers.GenerateRandomDomain();
 
         var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: seats);
 
@@ -69,7 +70,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var collectionsSeeder = new CollectionsRecipe(db);
         var groupsSeeder = new GroupsRecipe(db);
 
-        var domain = $"{Guid.NewGuid().ToString("N").Substring(0, 8)}.com";
+        var domain = OrganizationTestHelpers.GenerateRandomDomain();
         var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: seats);
 
         var orgUserIds = db.OrganizationUsers.Select(ou => ou.Id).ToList();
@@ -103,7 +104,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var orgSeeder = new OrganizationWithUsersRecipe(db);
         var groupsSeeder = new GroupsRecipe(db);
 
-        var domain = $"{Guid.NewGuid().ToString("N").Substring(0, 8)}.com";
+        var domain = OrganizationTestHelpers.GenerateRandomDomain();
         var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: 1);
 
         var orgUserId = db.OrganizationUsers.Select(ou => ou.Id).FirstOrDefault();
@@ -135,7 +136,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var db = factory.GetDatabaseContext();
         var orgSeeder = new OrganizationWithUsersRecipe(db);
 
-        var domain = $"{Guid.NewGuid().ToString("N").Substring(0, 8)}.com";
+        var domain = OrganizationTestHelpers.GenerateRandomDomain();
         var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: 1);
 
         var orgUserId = db.OrganizationUsers.Select(ou => ou.Id).FirstOrDefault();
@@ -169,7 +170,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var db = factory.GetDatabaseContext();
         var orgSeeder = new OrganizationWithUsersRecipe(db);
 
-        var domain = $"{Guid.NewGuid().ToString("N").Substring(0, 8)}.com";
+        var domain = OrganizationTestHelpers.GenerateRandomDomain();
         var orgId = orgSeeder.Seed(
             name: "Org",
             domain: domain,
@@ -218,7 +219,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var db = factory.GetDatabaseContext();
         var orgSeeder = new OrganizationWithUsersRecipe(db);
 
-        var domain = $"{Guid.NewGuid().ToString("N").Substring(0, 8)}.com";
+        var domain = OrganizationTestHelpers.GenerateRandomDomain();
         var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: userCount);
 
         var tokens = await factory.LoginAsync($"owner@{domain}", "c55hlJ/cfdvTd4awTXUqow6X3cOQCfGwn11o3HblnPs=");
@@ -259,7 +260,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var db = factory.GetDatabaseContext();
         var orgSeeder = new OrganizationWithUsersRecipe(db);
 
-        var domain = $"{Guid.NewGuid().ToString("N").Substring(0, 8)}.com";
+        var domain = OrganizationTestHelpers.GenerateRandomDomain();
         var orgId = orgSeeder.Seed(
             name: "Org",
             domain: domain,
@@ -304,7 +305,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var db = factory.GetDatabaseContext();
         var orgSeeder = new OrganizationWithUsersRecipe(db);
 
-        var domain = $"{Guid.NewGuid().ToString("N").Substring(0, 8)}.com";
+        var domain = OrganizationTestHelpers.GenerateRandomDomain();
         var orgId = orgSeeder.Seed(
             name: "Org",
             domain: domain,
@@ -350,7 +351,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var orgSeeder = new OrganizationWithUsersRecipe(db);
         var domainSeeder = new OrganizationDomainRecipe(db);
 
-        var domain = $"{Guid.NewGuid().ToString("N").Substring(0, 8)}.com";
+        var domain = OrganizationTestHelpers.GenerateRandomDomain();
 
         var orgId = orgSeeder.Seed(
             name: "Org",
@@ -397,7 +398,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var collectionsSeeder = new CollectionsRecipe(db);
         var groupsSeeder = new GroupsRecipe(db);
 
-        var domain = $"{Guid.NewGuid().ToString("N").Substring(0, 8)}.com";
+        var domain = OrganizationTestHelpers.GenerateRandomDomain();
         var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: 1);
 
         var orgUserIds = db.OrganizationUsers.Where(ou => ou.OrganizationId == orgId).Select(ou => ou.Id).ToList();
@@ -446,7 +447,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var db = factory.GetDatabaseContext();
         var orgSeeder = new OrganizationWithUsersRecipe(db);
 
-        var domain = $"{Guid.NewGuid().ToString("N").Substring(0, 8)}.com";
+        var domain = OrganizationTestHelpers.GenerateRandomDomain();
         var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: userCount);
 
         var tokens = await factory.LoginAsync($"owner@{domain}", "c55hlJ/cfdvTd4awTXUqow6X3cOQCfGwn11o3HblnPs=");
@@ -485,7 +486,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var orgSeeder = new OrganizationWithUsersRecipe(db);
         var domainSeeder = new OrganizationDomainRecipe(db);
 
-        var domain = $"{Guid.NewGuid().ToString("N").Substring(0, 8)}.com";
+        var domain = OrganizationTestHelpers.GenerateRandomDomain();
         var orgId = orgSeeder.Seed(
             name: "Org",
             domain: domain,
@@ -527,7 +528,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var orgSeeder = new OrganizationWithUsersRecipe(db);
         var collectionsSeeder = new CollectionsRecipe(db);
 
-        var domain = $"{Guid.NewGuid().ToString("N").Substring(0, 8)}.com";
+        var domain = OrganizationTestHelpers.GenerateRandomDomain();
         var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: 1);
 
         var orgUserIds = db.OrganizationUsers.Where(ou => ou.OrganizationId == orgId).Select(ou => ou.Id).ToList();
@@ -575,7 +576,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var db = factory.GetDatabaseContext();
         var orgSeeder = new OrganizationWithUsersRecipe(db);
 
-        var domain = $"{Guid.NewGuid().ToString("N").Substring(0, 8)}.com";
+        var domain = OrganizationTestHelpers.GenerateRandomDomain();
         var orgId = orgSeeder.Seed(
             name: "Org",
             domain: domain,

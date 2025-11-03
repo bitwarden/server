@@ -5,6 +5,7 @@ using System.Text.Json;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.IntegrationTest.Factories;
+using Bit.Api.IntegrationTest.Helpers;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Tokens;
@@ -33,7 +34,7 @@ public class OrganizationsControllerPerformanceTests(ITestOutputHelper testOutpu
         var collectionsSeeder = new CollectionsRecipe(db);
         var groupsSeeder = new GroupsRecipe(db);
 
-        var domain = $"{Guid.NewGuid().ToString("N").Substring(0, 8)}.com";
+        var domain = OrganizationTestHelpers.GenerateRandomDomain();
         var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: userCount);
 
         var orgUserIds = db.OrganizationUsers.Where(ou => ou.OrganizationId == orgId).Select(ou => ou.Id).ToList();
@@ -82,7 +83,7 @@ public class OrganizationsControllerPerformanceTests(ITestOutputHelper testOutpu
         var collectionsSeeder = new CollectionsRecipe(db);
         var groupsSeeder = new GroupsRecipe(db);
 
-        var domain = $"{Guid.NewGuid().ToString("N").Substring(0, 8)}.com";
+        var domain = OrganizationTestHelpers.GenerateRandomDomain();
         var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: userCount);
 
         var orgUserIds = db.OrganizationUsers.Where(ou => ou.OrganizationId == orgId).Select(ou => ou.Id).ToList();
@@ -123,7 +124,7 @@ public class OrganizationsControllerPerformanceTests(ITestOutputHelper testOutpu
         await using var factory = new SqlServerApiApplicationFactory();
         var client = factory.CreateClient();
 
-        var email = $"user@{Guid.NewGuid().ToString("N").Substring(0, 8)}.com";
+        var email = $"user@{OrganizationTestHelpers.GenerateRandomDomain()}";
         var masterPasswordHash = "c55hlJ/cfdvTd4awTXUqow6X3cOQCfGwn11o3HblnPs=";
 
         await factory.LoginWithNewAccount(email, masterPasswordHash);

@@ -171,6 +171,15 @@ public static class OrganizationTestHelpers
     }
 
     /// <summary>
+    /// Generates a unique random domain name for testing purposes.
+    /// </summary>
+    /// <returns>A domain string like "a1b2c3d4.com"</returns>
+    public static string GenerateRandomDomain()
+    {
+        return $"{Guid.NewGuid().ToString("N").Substring(0, 8)}.com";
+    }
+
+    /// <summary>
     /// Creates a user account without a Master Password and adds them as a member to the specified organization.
     /// </summary>
     public static async Task<(User User, OrganizationUser OrganizationUser)> CreateUserWithoutMasterPasswordAsync(ApiApplicationFactory factory, string email, Guid organizationId)
