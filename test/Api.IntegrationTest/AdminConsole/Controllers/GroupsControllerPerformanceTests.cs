@@ -13,11 +13,14 @@ namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
 
 public class GroupsControllerPerformanceTests(ITestOutputHelper testOutputHelper)
 {
+    /// <summary>
+    /// Tests PUT /organizations/{orgId}/groups/{id}
+    /// </summary>
     [Theory(Skip = "Performance test")]
     [InlineData(10, 5)]
     //[InlineData(100, 10)]
     //[InlineData(1000, 20)]
-    public async Task PutGroupAsync(int userCount, int collectionCount)
+    public async Task UpdateGroup_WithUsersAndCollections(int userCount, int collectionCount)
     {
         await using var factory = new SqlServerApiApplicationFactory();
         var client = factory.CreateClient();

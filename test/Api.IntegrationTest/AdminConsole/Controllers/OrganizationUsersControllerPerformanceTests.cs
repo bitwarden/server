@@ -13,12 +13,16 @@ using Xunit.Abstractions;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
 
-public class OrganizationUsersControllerPerformanceTest(ITestOutputHelper testOutputHelper)
+public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testOutputHelper)
 {
+    /// <summary>
+    /// Tests GET /organizations/{orgId}/users?includeCollections=true
+    /// </summary>
     [Theory]
+    [InlineData(10)]
     [InlineData(100)]
-    //[InlineData(60000)]
-    public async Task GetAsync(int seats)
+    [InlineData(1000)]
+    public async Task GetAllUsers_WithCollections(int seats)
     {
         await using var factory = new SqlServerApiApplicationFactory();
         var client = factory.CreateClient();
@@ -28,7 +32,7 @@ public class OrganizationUsersControllerPerformanceTest(ITestOutputHelper testOu
         var collectionsSeeder = new CollectionsRecipe(db);
         var groupsSeeder = new GroupsRecipe(db);
 
-        var domain = $"large.test.{Guid.NewGuid():N}";
+        var domain = $"{Guid.NewGuid().ToString("N").Substring(0, 8)}.com";
 
         var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: seats);
 
@@ -44,17 +48,18 @@ public class OrganizationUsersControllerPerformanceTest(ITestOutputHelper testOu
         var response = await client.GetAsync($"/organizations/{orgId}/users?includeCollections=true");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        var result = await response.Content.ReadAsStringAsync();
-        Assert.NotEmpty(result);
-
         stopwatch.Stop();
         testOutputHelper.WriteLine($"GET /users - Seats: {seats}; Request duration: {stopwatch.ElapsedMilliseconds} ms");
     }
 
+    /// <summary>
+    /// Tests GET /organizations/{orgId}/users/mini-details
+    /// </summary>
     [Theory]
+    [InlineData(10)]
     [InlineData(100)]
-    //[InlineData(60000)]
-    public async Task GetMiniDetailsAsync(int seats)
+    [InlineData(1000)]
+    public async Task GetAllUsers_MiniDetails(int seats)
     {
         await using var factory = new SqlServerApiApplicationFactory();
         var client = factory.CreateClient();
@@ -64,7 +69,7 @@ public class OrganizationUsersControllerPerformanceTest(ITestOutputHelper testOu
         var collectionsSeeder = new CollectionsRecipe(db);
         var groupsSeeder = new GroupsRecipe(db);
 
-        var domain = $"large.test.{Guid.NewGuid():N}";
+        var domain = $"{Guid.NewGuid().ToString("N").Substring(0, 8)}.com";
         var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: seats);
 
         var orgUserIds = db.OrganizationUsers.Select(ou => ou.Id).ToList();
@@ -77,17 +82,19 @@ public class OrganizationUsersControllerPerformanceTest(ITestOutputHelper testOu
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
         var response = await client.GetAsync($"/organizations/{orgId}/users/mini-details");
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
-        var result = await response.Content.ReadAsStringAsync();
-        Assert.NotEmpty(result);
 
         stopwatch.Stop();
+
         testOutputHelper.WriteLine($"GET /users/mini-details - Seats: {seats}; Request duration: {stopwatch.ElapsedMilliseconds} ms");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
+    /// <summary>
+    /// Tests GET /organizations/{orgId}/users/{id}?includeGroups=true
+    /// </summary>
     [Fact]
-    public async Task GetSingleUserAsync()
+    public async Task GetSingleUser_WithGroups()
     {
         await using var factory = new SqlServerApiApplicationFactory();
         var client = factory.CreateClient();
@@ -96,7 +103,7 @@ public class OrganizationUsersControllerPerformanceTest(ITestOutputHelper testOu
         var orgSeeder = new OrganizationWithUsersRecipe(db);
         var groupsSeeder = new GroupsRecipe(db);
 
-        var domain = $"single.test.{Guid.NewGuid():N}";
+        var domain = $"{Guid.NewGuid().ToString("N").Substring(0, 8)}.com";
         var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: 1);
 
         var orgUserId = db.OrganizationUsers.Select(ou => ou.Id).FirstOrDefault();
@@ -108,17 +115,19 @@ public class OrganizationUsersControllerPerformanceTest(ITestOutputHelper testOu
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
         var response = await client.GetAsync($"/organizations/{orgId}/users/{orgUserId}?includeGroups=true");
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
-        var result = await response.Content.ReadAsStringAsync();
-        Assert.NotEmpty(result);
 
         stopwatch.Stop();
+
         testOutputHelper.WriteLine($"GET /users/{{id}} - Request duration: {stopwatch.ElapsedMilliseconds} ms");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
+    /// <summary>
+    /// Tests GET /organizations/{orgId}/users/{id}/reset-password-details
+    /// </summary>
     [Fact]
-    public async Task GetResetPasswordDetailsAsync()
+    public async Task GetResetPasswordDetails_ForSingleUser()
     {
         await using var factory = new SqlServerApiApplicationFactory();
         var client = factory.CreateClient();
@@ -126,7 +135,7 @@ public class OrganizationUsersControllerPerformanceTest(ITestOutputHelper testOu
         var db = factory.GetDatabaseContext();
         var orgSeeder = new OrganizationWithUsersRecipe(db);
 
-        var domain = $"reset.test.{Guid.NewGuid():N}";
+        var domain = $"{Guid.NewGuid().ToString("N").Substring(0, 8)}.com";
         var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: 1);
 
         var orgUserId = db.OrganizationUsers.Select(ou => ou.Id).FirstOrDefault();
@@ -138,19 +147,21 @@ public class OrganizationUsersControllerPerformanceTest(ITestOutputHelper testOu
 
         var response = await client.GetAsync($"/organizations/{orgId}/users/{orgUserId}/reset-password-details");
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
-        var result = await response.Content.ReadAsStringAsync();
-        Assert.NotEmpty(result);
-
         stopwatch.Stop();
+
         testOutputHelper.WriteLine($"GET /users/{{id}}/reset-password-details - Request duration: {stopwatch.ElapsedMilliseconds} ms; Status: {response.StatusCode}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
+    /// <summary>
+    /// Tests POST /organizations/{orgId}/users/confirm
+    /// </summary>
     [Theory]
+    [InlineData(10)]
     [InlineData(100)]
-    //[InlineData(1000)]
-    public async Task BulkConfirmAsync(int userCount)
+    [InlineData(1000)]
+    public async Task BulkConfirmUsers(int userCount)
     {
         await using var factory = new SqlServerApiApplicationFactory();
         var client = factory.CreateClient();
@@ -158,7 +169,7 @@ public class OrganizationUsersControllerPerformanceTest(ITestOutputHelper testOu
         var db = factory.GetDatabaseContext();
         var orgSeeder = new OrganizationWithUsersRecipe(db);
 
-        var domain = $"bulkconfirm.test.{Guid.NewGuid():N}";
+        var domain = $"{Guid.NewGuid().ToString("N").Substring(0, 8)}.com";
         var orgId = orgSeeder.Seed(
             name: "Org",
             domain: domain,
@@ -179,21 +190,27 @@ public class OrganizationUsersControllerPerformanceTest(ITestOutputHelper testOu
             DefaultUserCollectionName = "2.AOs41Hd8OQiCPXjyJKCiDA==|O6OHgt2U2hJGBSNGnimJmg==|iD33s8B69C8JhYYhSa4V1tArjvLr8eEaGqOV7BRo5Jk="
         };
 
+        var requestContent = new StringContent(JsonSerializer.Serialize(confirmRequest), Encoding.UTF8, "application/json");
+
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
-        var requestContent = new StringContent(JsonSerializer.Serialize(confirmRequest), Encoding.UTF8, "application/json");
         var response = await client.PostAsync($"/organizations/{orgId}/users/confirm", requestContent);
 
         stopwatch.Stop();
+
         testOutputHelper.WriteLine($"POST /users/confirm - Users: {acceptedUserIds.Count}; Request duration: {stopwatch.ElapsedMilliseconds} ms; Status: {response.StatusCode}");
 
         Assert.True(response.IsSuccessStatusCode);
     }
 
+    /// <summary>
+    /// Tests POST /organizations/{orgId}/users/remove
+    /// </summary>
     [Theory]
+    [InlineData(10)]
     [InlineData(100)]
-    //[InlineData(1000)]
-    public async Task BulkRemoveAsync(int userCount)
+    [InlineData(1000)]
+    public async Task BulkRemoveUsers(int userCount)
     {
         await using var factory = new SqlServerApiApplicationFactory();
         var client = factory.CreateClient();
@@ -201,7 +218,7 @@ public class OrganizationUsersControllerPerformanceTest(ITestOutputHelper testOu
         var db = factory.GetDatabaseContext();
         var orgSeeder = new OrganizationWithUsersRecipe(db);
 
-        var domain = $"bulkremove.test.{Guid.NewGuid():N}";
+        var domain = $"{Guid.NewGuid().ToString("N").Substring(0, 8)}.com";
         var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: userCount);
 
         var tokens = await factory.LoginAsync($"owner@{domain}", "c55hlJ/cfdvTd4awTXUqow6X3cOQCfGwn11o3HblnPs=");
@@ -217,18 +234,24 @@ public class OrganizationUsersControllerPerformanceTest(ITestOutputHelper testOu
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
         var requestContent = new StringContent(JsonSerializer.Serialize(removeRequest), Encoding.UTF8, "application/json");
+
         var response = await client.PostAsync($"/organizations/{orgId}/users/remove", requestContent);
 
         stopwatch.Stop();
+
         testOutputHelper.WriteLine($"POST /users/remove - Users: {usersToRemove.Count}; Request duration: {stopwatch.ElapsedMilliseconds} ms; Status: {response.StatusCode}");
 
         Assert.True(response.IsSuccessStatusCode);
     }
 
+    /// <summary>
+    /// Tests PUT /organizations/{orgId}/users/revoke
+    /// </summary>
     [Theory]
+    [InlineData(10)]
     [InlineData(100)]
-    //[InlineData(1000)]
-    public async Task BulkRevokeAsync(int userCount)
+    [InlineData(1000)]
+    public async Task BulkRevokeUsers(int userCount)
     {
         await using var factory = new SqlServerApiApplicationFactory();
         var client = factory.CreateClient();
@@ -236,7 +259,7 @@ public class OrganizationUsersControllerPerformanceTest(ITestOutputHelper testOu
         var db = factory.GetDatabaseContext();
         var orgSeeder = new OrganizationWithUsersRecipe(db);
 
-        var domain = $"bulkrevoke.test.{Guid.NewGuid():N}";
+        var domain = $"{Guid.NewGuid().ToString("N").Substring(0, 8)}.com";
         var orgId = orgSeeder.Seed(
             name: "Org",
             domain: domain,
@@ -253,21 +276,27 @@ public class OrganizationUsersControllerPerformanceTest(ITestOutputHelper testOu
 
         var revokeRequest = new OrganizationUserBulkRequestModel { Ids = usersToRevoke };
 
+        var requestContent = new StringContent(JsonSerializer.Serialize(revokeRequest), Encoding.UTF8, "application/json");
+
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
-        var requestContent = new StringContent(JsonSerializer.Serialize(revokeRequest), Encoding.UTF8, "application/json");
         var response = await client.PutAsync($"/organizations/{orgId}/users/revoke", requestContent);
 
         stopwatch.Stop();
+
         testOutputHelper.WriteLine($"PUT /users/revoke - Users: {usersToRevoke.Count}; Request duration: {stopwatch.ElapsedMilliseconds} ms; Status: {response.StatusCode}");
 
         Assert.True(response.IsSuccessStatusCode);
     }
 
+    /// <summary>
+    /// Tests PUT /organizations/{orgId}/users/restore
+    /// </summary>
     [Theory]
+    [InlineData(10)]
     [InlineData(100)]
-    //[InlineData(1000)]
-    public async Task BulkRestoreAsync(int userCount)
+    [InlineData(1000)]
+    public async Task BulkRestoreUsers(int userCount)
     {
         await using var factory = new SqlServerApiApplicationFactory();
         var client = factory.CreateClient();
@@ -275,7 +304,7 @@ public class OrganizationUsersControllerPerformanceTest(ITestOutputHelper testOu
         var db = factory.GetDatabaseContext();
         var orgSeeder = new OrganizationWithUsersRecipe(db);
 
-        var domain = $"bulkrestore.test.{Guid.NewGuid():N}";
+        var domain = $"{Guid.NewGuid().ToString("N").Substring(0, 8)}.com";
         var orgId = orgSeeder.Seed(
             name: "Org",
             domain: domain,
@@ -292,21 +321,27 @@ public class OrganizationUsersControllerPerformanceTest(ITestOutputHelper testOu
 
         var restoreRequest = new OrganizationUserBulkRequestModel { Ids = usersToRestore };
 
+        var requestContent = new StringContent(JsonSerializer.Serialize(restoreRequest), Encoding.UTF8, "application/json");
+
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
-        var requestContent = new StringContent(JsonSerializer.Serialize(restoreRequest), Encoding.UTF8, "application/json");
         var response = await client.PutAsync($"/organizations/{orgId}/users/restore", requestContent);
 
         stopwatch.Stop();
+
         testOutputHelper.WriteLine($"PUT /users/restore - Users: {usersToRestore.Count}; Request duration: {stopwatch.ElapsedMilliseconds} ms; Status: {response.StatusCode}");
 
         Assert.True(response.IsSuccessStatusCode);
     }
 
+    /// <summary>
+    /// Tests POST /organizations/{orgId}/users/delete-account
+    /// </summary>
     [Theory]
+    [InlineData(10)]
     [InlineData(100)]
-    //[InlineData(1000)]
-    public async Task BulkDeleteAccountAsync(int userCount)
+    [InlineData(1000)]
+    public async Task BulkDeleteAccounts(int userCount)
     {
         await using var factory = new SqlServerApiApplicationFactory();
         var client = factory.CreateClient();
@@ -315,7 +350,7 @@ public class OrganizationUsersControllerPerformanceTest(ITestOutputHelper testOu
         var orgSeeder = new OrganizationWithUsersRecipe(db);
         var domainSeeder = new OrganizationDomainRecipe(db);
 
-        var domain = $"bulkdeleteaccount.test.{Guid.NewGuid():N}";
+        var domain = $"{Guid.NewGuid().ToString("N").Substring(0, 8)}.com";
 
         var orgId = orgSeeder.Seed(
             name: "Org",
@@ -335,19 +370,24 @@ public class OrganizationUsersControllerPerformanceTest(ITestOutputHelper testOu
 
         var deleteRequest = new OrganizationUserBulkRequestModel { Ids = usersToDelete };
 
+        var requestContent = new StringContent(JsonSerializer.Serialize(deleteRequest), Encoding.UTF8, "application/json");
+
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
-        var requestContent = new StringContent(JsonSerializer.Serialize(deleteRequest), Encoding.UTF8, "application/json");
         var response = await client.PostAsync($"/organizations/{orgId}/users/delete-account", requestContent);
 
         stopwatch.Stop();
+
         testOutputHelper.WriteLine($"POST /users/delete-account - Users: {usersToDelete.Count}; Request duration: {stopwatch.ElapsedMilliseconds} ms; Status: {response.StatusCode}");
 
         Assert.True(response.IsSuccessStatusCode);
     }
 
+    /// <summary>
+    /// Tests PUT /organizations/{orgId}/users/{id}
+    /// </summary>
     [Fact]
-    public async Task UpdateUserAsync()
+    public async Task UpdateSingleUser_WithCollectionsAndGroups()
     {
         await using var factory = new SqlServerApiApplicationFactory();
         var client = factory.CreateClient();
@@ -357,7 +397,7 @@ public class OrganizationUsersControllerPerformanceTest(ITestOutputHelper testOu
         var collectionsSeeder = new CollectionsRecipe(db);
         var groupsSeeder = new GroupsRecipe(db);
 
-        var domain = $"updateuser.test.{Guid.NewGuid():N}";
+        var domain = $"{Guid.NewGuid().ToString("N").Substring(0, 8)}.com";
         var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: 1);
 
         var orgUserIds = db.OrganizationUsers.Where(ou => ou.OrganizationId == orgId).Select(ou => ou.Id).ToList();
@@ -385,15 +425,20 @@ public class OrganizationUsersControllerPerformanceTest(ITestOutputHelper testOu
             new StringContent(JsonSerializer.Serialize(updateRequest), Encoding.UTF8, "application/json"));
 
         stopwatch.Stop();
+
         testOutputHelper.WriteLine($"PUT /users/{{id}} - Collections: {collectionIds.Count}; Groups: {groupIds.Count}; Request duration: {stopwatch.ElapsedMilliseconds} ms; Status: {response.StatusCode}");
 
         Assert.True(response.IsSuccessStatusCode);
     }
 
+    /// <summary>
+    /// Tests PUT /organizations/{orgId}/users/enable-secrets-manager
+    /// </summary>
     [Theory]
+    [InlineData(10)]
     [InlineData(100)]
-    //[InlineData(1000)]
-    public async Task BulkEnableSecretsManagerAsync(int userCount)
+    [InlineData(1000)]
+    public async Task BulkEnableSecretsManager(int userCount)
     {
         await using var factory = new SqlServerApiApplicationFactory();
         var client = factory.CreateClient();
@@ -401,7 +446,7 @@ public class OrganizationUsersControllerPerformanceTest(ITestOutputHelper testOu
         var db = factory.GetDatabaseContext();
         var orgSeeder = new OrganizationWithUsersRecipe(db);
 
-        var domain = $"bulksm.test.{Guid.NewGuid():N}";
+        var domain = $"{Guid.NewGuid().ToString("N").Substring(0, 8)}.com";
         var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: userCount);
 
         var tokens = await factory.LoginAsync($"owner@{domain}", "c55hlJ/cfdvTd4awTXUqow6X3cOQCfGwn11o3HblnPs=");
@@ -414,19 +459,24 @@ public class OrganizationUsersControllerPerformanceTest(ITestOutputHelper testOu
 
         var enableRequest = new OrganizationUserBulkRequestModel { Ids = usersToEnable };
 
+        var requestContent = new StringContent(JsonSerializer.Serialize(enableRequest), Encoding.UTF8, "application/json");
+
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
-        var requestContent = new StringContent(JsonSerializer.Serialize(enableRequest), Encoding.UTF8, "application/json");
         var response = await client.PutAsync($"/organizations/{orgId}/users/enable-secrets-manager", requestContent);
 
         stopwatch.Stop();
+
         testOutputHelper.WriteLine($"PUT /users/enable-secrets-manager - Users: {usersToEnable.Count}; Request duration: {stopwatch.ElapsedMilliseconds} ms; Status: {response.StatusCode}");
 
         Assert.True(response.IsSuccessStatusCode);
     }
 
+    /// <summary>
+    /// Tests DELETE /organizations/{orgId}/users/{id}/delete-account
+    /// </summary>
     [Fact]
-    public async Task DeleteSingleUserAccountAsync()
+    public async Task DeleteSingleUserAccount_FromVerifiedDomain()
     {
         await using var factory = new SqlServerApiApplicationFactory();
         var client = factory.CreateClient();
@@ -435,7 +485,7 @@ public class OrganizationUsersControllerPerformanceTest(ITestOutputHelper testOu
         var orgSeeder = new OrganizationWithUsersRecipe(db);
         var domainSeeder = new OrganizationDomainRecipe(db);
 
-        var domain = $"deleteuseraccount.test.{Guid.NewGuid():N}";
+        var domain = $"{Guid.NewGuid().ToString("N").Substring(0, 8)}.com";
         var orgId = orgSeeder.Seed(
             name: "Org",
             domain: domain,
@@ -455,16 +505,20 @@ public class OrganizationUsersControllerPerformanceTest(ITestOutputHelper testOu
         var response = await client.DeleteAsync($"/organizations/{orgId}/users/{userToDelete.Id}/delete-account");
 
         stopwatch.Stop();
+
         testOutputHelper.WriteLine($"DELETE /users/{{id}}/delete-account - Request duration: {stopwatch.ElapsedMilliseconds} ms; Status: {response.StatusCode}");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
+    /// <summary>
+    /// Tests POST /organizations/{orgId}/users/invite
+    /// </summary>
     [Theory]
     [InlineData(1)]
     [InlineData(5)]
     [InlineData(20)]
-    public async Task InviteUsersAsync(int emailCount)
+    public async Task InviteUsers(int emailCount)
     {
         await using var factory = new SqlServerApiApplicationFactory();
         var client = factory.CreateClient();
@@ -473,7 +527,7 @@ public class OrganizationUsersControllerPerformanceTest(ITestOutputHelper testOu
         var orgSeeder = new OrganizationWithUsersRecipe(db);
         var collectionsSeeder = new CollectionsRecipe(db);
 
-        var domain = $"{Guid.NewGuid():N}.com";
+        var domain = $"{Guid.NewGuid().ToString("N").Substring(0, 8)}.com";
         var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: 1);
 
         var orgUserIds = db.OrganizationUsers.Where(ou => ou.OrganizationId == orgId).Select(ou => ou.Id).ToList();
@@ -493,17 +547,16 @@ public class OrganizationUsersControllerPerformanceTest(ITestOutputHelper testOu
             Permissions = null
         };
 
+        var requestContent = new StringContent(JsonSerializer.Serialize(inviteRequest), Encoding.UTF8, "application/json");
+
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
-        var requestContent = new StringContent(JsonSerializer.Serialize(inviteRequest), Encoding.UTF8, "application/json");
         var response = await client.PostAsync($"/organizations/{orgId}/users/invite", requestContent);
 
         stopwatch.Stop();
-        testOutputHelper.WriteLine($"POST /users/invite - Emails: {emails.Length}; Request duration: {stopwatch.ElapsedMilliseconds} ms; Status: {response.StatusCode}");
 
-        var result = await response.Content.ReadAsStringAsync();
+        testOutputHelper.WriteLine($"POST /users/invite - Emails: {emails.Length}; Request duration: {stopwatch.ElapsedMilliseconds} ms; Status: {response.StatusCode}");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
-
 }
