@@ -9,7 +9,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
-using Bit.Core.Utilities;
+using Bit.Core.Test.Billing;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.DataProtection;
@@ -25,7 +25,7 @@ public class OrganizationCustomization : ICustomization
     {
         var organizationId = Guid.NewGuid();
         var maxCollections = (short)new Random().Next(10, short.MaxValue);
-        var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == PlanType);
+        var plan = MockPlans.Plans.FirstOrDefault(p => p.Type == PlanType);
         var seats = (short)new Random().Next(plan.PasswordManager.BaseSeats, plan.PasswordManager.MaxSeats ?? short.MaxValue);
         var smSeats = plan.SupportsSecretsManager
             ? (short?)new Random().Next(plan.SecretsManager.BaseSeats, plan.SecretsManager.MaxSeats ?? short.MaxValue)
@@ -77,7 +77,7 @@ internal class PaidOrganization : ICustomization
     public PlanType CheckedPlanType { get; set; }
     public void Customize(IFixture fixture)
     {
-        var validUpgradePlans = StaticStore.Plans.Where(p => p.Type != PlanType.Free && p.LegacyYear == null).OrderBy(p => p.UpgradeSortOrder).Select(p => p.Type).ToList();
+        var validUpgradePlans = MockPlans.Plans.Where(p => p.Type != PlanType.Free && p.LegacyYear == null).OrderBy(p => p.UpgradeSortOrder).Select(p => p.Type).ToList();
         var lowestActivePaidPlan = validUpgradePlans.First();
         CheckedPlanType = CheckedPlanType.Equals(PlanType.Free) ? lowestActivePaidPlan : CheckedPlanType;
         validUpgradePlans.Remove(lowestActivePaidPlan);
@@ -105,7 +105,7 @@ internal class FreeOrganizationUpgrade : ICustomization
             .With(o => o.PlanType, PlanType.Free));
 
         var plansToIgnore = new List<PlanType> { PlanType.Free, PlanType.Custom };
-        var selectedPlan = StaticStore.Plans.Last(p => !plansToIgnore.Contains(p.Type) && !p.Disabled);
+        var selectedPlan = MockPlans.Plans.Last(p => !plansToIgnore.Contains(p.Type) && !p.Disabled);
 
         fixture.Customize<OrganizationUpgrade>(composer => composer
             .With(ou => ou.Plan, selectedPlan.Type)
@@ -153,7 +153,7 @@ public class SecretsManagerOrganizationCustomization : ICustomization
             .With(o => o.Id, organizationId)
             .With(o => o.UseSecretsManager, true)
             .With(o => o.PlanType, planType)
-            .With(o => o.Plan, StaticStore.GetPlan(planType).Name)
+            .With(o => o.Plan, MockPlans.GetPlan(planType).Name)
             .With(o => o.MaxAutoscaleSmSeats, (int?)null)
             .With(o => o.MaxAutoscaleSmServiceAccounts, (int?)null));
     }
