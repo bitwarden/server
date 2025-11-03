@@ -34,17 +34,26 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
     {
         var requestData = await RetrieveDataAsync(request);
 
-        if (requestData.IsError) return requestData.AsError;
+        if (requestData.IsError)
+        {
+            return requestData.AsError;
+        }
 
         var validatedData = await validator.ValidateAsync(requestData.AsSuccess);
 
-        if (validatedData.IsError) return validatedData.AsError;
+        if (validatedData.IsError)
+        {
+            return validatedData.AsError;
+        }
 
         var validatedRequest = validatedData.Request;
 
         var successfulConfirmation = await organizationUserRepository.ConfirmOrganizationUserAsync(validatedRequest.OrganizationUser);
 
-        if (!successfulConfirmation) return new None();
+        if (!successfulConfirmation)
+        {
+            return new None();
+        }
 
         return await validatedRequest.ToCommandResultAsync()
             .MapAsync(CreateDefaultCollectionsAsync)
