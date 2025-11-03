@@ -336,7 +336,7 @@ public abstract class BaseRequestValidator<T> where T : class
             return true;
         }
 
-        await UpdateFailedAuthDetailsAsync(user);
+        await _userService.UpdateFailedAuthenticationDetailsAsync(user);
 
         await BuildErrorResultAsync("Username or password is incorrect. Try again.", false, context, user);
         return false;
@@ -447,7 +447,7 @@ public abstract class BaseRequestValidator<T> where T : class
             else
             {
                 await SendFailedTwoFactorEmail(validatorContext.User, twoFactorProviderType);
-                await UpdateFailedAuthDetailsAsync(validatorContext.User);
+                await _userService.UpdateFailedAuthenticationDetailsAsync(validatorContext.User);
                 await BuildErrorResultAsync("Two-step token is invalid. Try again.", true, context,
                     validatorContext.User);
             }
