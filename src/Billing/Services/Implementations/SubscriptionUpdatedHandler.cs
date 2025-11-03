@@ -5,6 +5,8 @@ using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
@@ -82,12 +84,14 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         var subscription = await _stripeEventService.GetSubscription(parsedEvent, true, ["customer", "discounts", "latest_invoice", "test_clock"]);
         var (organizationId, userId, providerId) = _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata);
 
+        var currentPeriodEnd = subscription.GetCurrentPeriodEnd();
+
         switch (subscription.Status)
         {
             case StripeSubscriptionStatus.Unpaid or StripeSubscriptionStatus.IncompleteExpired
                 when organizationId.HasValue:
                 {
-                    await _organizationDisableCommand.DisableAsync(organizationId.Value, subscription.CurrentPeriodEnd);
+                    await _organizationDisableCommand.DisableAsync(organizationId.Value, currentPeriodEnd);
                     if (subscription.Status == StripeSubscriptionStatus.Unpaid &&
                         subscription.LatestInvoice is { BillingReason: "subscription_cycle" or "subscription_create" })
                     {
@@ -114,7 +118,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                         await VoidOpenInvoices(subscription.Id);
                     }
 
-                    await _userService.DisablePremiumAsync(userId.Value, subscription.CurrentPeriodEnd);
+                    await _userService.DisablePremiumAsync(userId.Value, currentPeriodEnd);
 
                     break;
                 }
@@ -154,7 +158,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 {
                     if (userId.HasValue)
                     {
-                        await _userService.EnablePremiumAsync(userId.Value, subscription.CurrentPeriodEnd);
+                        await _userService.EnablePremiumAsync(userId.Value, currentPeriodEnd);
                     }
                     break;
                 }
@@ -162,17 +166,17 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
         if (organizationId.HasValue)
         {
-            await _organizationService.UpdateExpirationDateAsync(organizationId.Value, subscription.CurrentPeriodEnd);
-            if (_stripeEventUtilityService.IsSponsoredSubscription(subscription))
+            await _organizationService.UpdateExpirationDateAsync(organizationId.Value, currentPeriodEnd);
+            if (_stripeEventUtilityService.IsSponsoredSubscription(subscription) && currentPeriodEnd.HasValue)
             {
-                await _organizationSponsorshipRenewCommand.UpdateExpirationDateAsync(organizationId.Value, subscription.CurrentPeriodEnd);
+                await _organizationSponsorshipRenewCommand.UpdateExpirationDateAsync(organizationId.Value, currentPeriodEnd.Value);
             }
 
             await RemovePasswordManagerCouponIfRemovingSecretsManagerTrialAsync(parsedEvent, subscription);
         }
         else if (userId.HasValue)
         {
-            await _userService.UpdatePremiumExpirationAsync(userId.Value, subscription.CurrentPeriodEnd);
+            await _userService.UpdatePremiumExpirationAsync(userId.Value, currentPeriodEnd);
         }
     }
 
@@ -280,9 +284,8 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             ?.Coupon
             ?.Id == "sm-standalone";
 
-        var subscriptionHasSecretsManagerTrial = subscription.Discount
-            ?.Coupon
-            ?.Id == "sm-standalone";
+        var subscriptionHasSecretsManagerTrial = subscription.Discounts.Select(discount => discount.Coupon.Id)
+            .Contains(StripeConstants.CouponIDs.SecretsManagerStandalone);
 
         if (customerHasSecretsManagerTrial)
         {

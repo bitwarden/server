@@ -7,10 +7,7 @@ public class BillingSettings
 {
     public virtual string JobsKey { get; set; }
     public virtual string StripeWebhookKey { get; set; }
-    public virtual string StripeWebhookSecret { get; set; }
-    public virtual string StripeWebhookSecret20231016 { get; set; }
-    public virtual string StripeWebhookSecret20240620 { get; set; }
-    public virtual string BitPayWebhookKey { get; set; }
+    public virtual string StripeWebhookSecret20250827Basil { get; set; }
     public virtual string AppleWebhookKey { get; set; }
     public virtual FreshDeskSettings FreshDesk { get; set; } = new FreshDeskSettings();
     public virtual string FreshsalesApiKey { get; set; }
@@ -44,6 +41,15 @@ public class BillingSettings
     {
         public virtual string ApiKey { get; set; }
         public virtual string BaseUrl { get; set; }
+        public virtual string Path { get; set; }
         public virtual int PersonaId { get; set; }
+        public virtual bool UseAnswerWithCitationModels { get; set; } = true;
+
+        public virtual SearchSettings SearchSettings { get; set; } = new SearchSettings();
+    }
+    public class SearchSettings
+    {
+        public virtual string RunSearch { get; set; } = "auto"; // "always", "never", "auto"
+        public virtual bool RealTime { get; set; } = true;
     }
 }

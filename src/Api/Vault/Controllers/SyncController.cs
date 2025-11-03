@@ -12,6 +12,8 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Models.Data;
+using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -44,6 +46,7 @@ public class SyncController : Controller
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IWebAuthnCredentialRepository _webAuthnCredentialRepository;
+    private readonly IUserAccountKeysQuery _userAccountKeysQuery;
 
     public SyncController(
         IUserService userService,
@@ -60,7 +63,8 @@ public class SyncController : Controller
         IFeatureService featureService,
         IApplicationCacheService applicationCacheService,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-        IWebAuthnCredentialRepository webAuthnCredentialRepository)
+        IWebAuthnCredentialRepository webAuthnCredentialRepository,
+        IUserAccountKeysQuery userAccountKeysQuery)
     {
         _userService = userService;
         _folderRepository = folderRepository;
@@ -77,6 +81,7 @@ public class SyncController : Controller
         _applicationCacheService = applicationCacheService;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _webAuthnCredentialRepository = webAuthnCredentialRepository;
+        _userAccountKeysQuery = userAccountKeysQuery;
     }
 
     [HttpGet("")]
@@ -121,7 +126,14 @@ public class SyncController : Controller
         var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
         var webAuthnCredentials = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
 
-        var response = new SyncResponseModel(_globalSettings, user, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationAbilities,
+        UserAccountKeysData userAccountKeys = null;
+        // JIT TDE users and some broken/old users may not have a private key.
+        if (!string.IsNullOrWhiteSpace(user.PrivateKey))
+        {
+            userAccountKeys = await _userAccountKeysQuery.Run(user);
+        }
+
+        var response = new SyncResponseModel(_globalSettings, user, userAccountKeys, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationAbilities,
             organizationIdsClaimingActiveUser, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,
             folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains, policies, sends, webAuthnCredentials);
         return response;

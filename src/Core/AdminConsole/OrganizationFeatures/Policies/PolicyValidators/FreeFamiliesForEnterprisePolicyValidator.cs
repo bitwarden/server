@@ -3,6 +3,7 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 
@@ -12,10 +13,15 @@ public class FreeFamiliesForEnterprisePolicyValidator(
     IOrganizationSponsorshipRepository organizationSponsorshipRepository,
     IMailService mailService,
     IOrganizationRepository organizationRepository)
-    : IPolicyValidator
+    : IPolicyValidator, IOnPolicyPreUpdateEvent
 {
     public PolicyType Type => PolicyType.FreeFamiliesSponsorshipPolicy;
     public IEnumerable<PolicyType> RequiredPolicies => [];
+
+    public async Task ExecutePreUpsertSideEffectAsync(SavePolicyModel policyRequest, Policy? currentPolicy)
+    {
+        await OnSaveSideEffectsAsync(policyRequest.PolicyUpdate, currentPolicy);
+    }
 
     public async Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
     {

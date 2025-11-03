@@ -222,6 +222,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("UseApi")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("UseAutomaticUserConfirmation")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("UseCustomPermissions")
                         .HasColumnType("boolean");
 
@@ -1016,6 +1019,12 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<int?>("ApplicationAtRiskCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("ApplicationCount")
+                        .HasColumnType("integer");
+
                     b.Property<string>("ApplicationData")
                         .HasColumnType("text");
 
@@ -1026,8 +1035,38 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int?>("CriticalApplicationAtRiskCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("CriticalApplicationCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("CriticalMemberAtRiskCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("CriticalMemberCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("CriticalPasswordAtRiskCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("CriticalPasswordCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("MemberAtRiskCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("MemberCount")
+                        .HasColumnType("integer");
+
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid");
+
+                    b.Property<int?>("PasswordAtRiskCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("PasswordCount")
+                        .HasColumnType("integer");
 
                     b.Property<string>("ReportData")
                         .IsRequired()
@@ -1879,6 +1918,15 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<string>("SecurityState")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("SecurityVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SignedPublicKey")
+                        .HasColumnType("text");
+
                     b.Property<long?>("Storage")
                         .HasColumnType("bigint");
 
@@ -1905,6 +1953,40 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasAnnotation("SqlServer:Clustered", false);
 
                     b.ToTable("User", (string)null);
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.UserSignatureKeyPair", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("RevisionDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<byte>("SignatureAlgorithm")
+                        .HasColumnType("smallint");
+
+                    b.Property<string>("SigningKey")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("VerifyingKey")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.ToTable("UserSignatureKeyPair", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.NotificationCenter.Models.Notification", b =>
@@ -2163,6 +2245,42 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasAnnotation("SqlServer:Clustered", false);
 
                     b.ToTable("Secret", (string)null);
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.SecretVersion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("EditorOrganizationUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("EditorServiceAccountId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SecretId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("VersionDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id")
+                        .HasAnnotation("SqlServer:Clustered", true);
+
+                    b.HasIndex("EditorOrganizationUserId")
+                        .HasDatabaseName("IX_SecretVersion_EditorOrganizationUserId");
+
+                    b.HasIndex("EditorServiceAccountId")
+                        .HasDatabaseName("IX_SecretVersion_EditorServiceAccountId");
+
+                    b.HasIndex("SecretId")
+                        .HasDatabaseName("IX_SecretVersion_SecretId");
+
+                    b.ToTable("SecretVersion");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ServiceAccount", b =>
@@ -2918,6 +3036,17 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.UserSignatureKeyPair", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.NotificationCenter.Models.Notification", b =>
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
@@ -2988,6 +3117,31 @@ namespace Bit.PostgresMigrations.Migrations
                         .IsRequired();
 
                     b.Navigation("Organization");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.SecretVersion", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.OrganizationUser", "EditorOrganizationUser")
+                        .WithMany()
+                        .HasForeignKey("EditorOrganizationUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ServiceAccount", "EditorServiceAccount")
+                        .WithMany()
+                        .HasForeignKey("EditorServiceAccountId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Bit.Infrastructure.EntityFramework.SecretsManager.Models.Secret", "Secret")
+                        .WithMany("SecretVersions")
+                        .HasForeignKey("SecretId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("EditorOrganizationUser");
+
+                    b.Navigation("EditorServiceAccount");
+
+                    b.Navigation("Secret");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ServiceAccount", b =>
@@ -3260,6 +3414,8 @@ namespace Bit.PostgresMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.Secret", b =>
                 {
                     b.Navigation("GroupAccessPolicies");
+
+                    b.Navigation("SecretVersions");
 
                     b.Navigation("ServiceAccountAccessPolicies");
 

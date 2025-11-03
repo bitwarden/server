@@ -10,7 +10,8 @@ using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Entities;
-using Bit.Core.KeyManagement.Models.Response;
+using Bit.Core.KeyManagement.Models.Api.Response;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
@@ -27,6 +28,7 @@ public class SyncResponseModel() : ResponseModel("sync")
     public SyncResponseModel(
         GlobalSettings globalSettings,
         User user,
+        UserAccountKeysData userAccountKeysData,
         bool userTwoFactorEnabled,
         bool userHasPremiumFromOrganization,
         IDictionary<Guid, OrganizationAbility> organizationAbilities,
@@ -44,7 +46,7 @@ public class SyncResponseModel() : ResponseModel("sync")
         IEnumerable<WebAuthnCredential> webAuthnCredentials)
         : this()
     {
-        Profile = new ProfileResponseModel(user, organizationUserDetails, providerUserDetails,
+        Profile = new ProfileResponseModel(user, userAccountKeysData, organizationUserDetails, providerUserDetails,
             providerUserOrganizationDetails, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationIdsClaimingingUser);
         Folders = folders.Select(f => new FolderResponseModel(f));
         Ciphers = ciphers.Select(cipher =>

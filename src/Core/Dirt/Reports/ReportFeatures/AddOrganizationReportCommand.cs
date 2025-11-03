@@ -35,14 +35,28 @@ public class AddOrganizationReportCommand : IAddOrganizationReportCommand
             throw new BadRequestException(errorMessage);
         }
 
+        var requestMetrics = request.Metrics ?? new OrganizationReportMetricsRequest();
+
         var organizationReport = new OrganizationReport
         {
             OrganizationId = request.OrganizationId,
-            ReportData = request.ReportData,
+            ReportData = request.ReportData ?? string.Empty,
             CreationDate = DateTime.UtcNow,
-            ContentEncryptionKey = request.ContentEncryptionKey,
+            ContentEncryptionKey = request.ContentEncryptionKey ?? string.Empty,
             SummaryData = request.SummaryData,
             ApplicationData = request.ApplicationData,
+            ApplicationCount = requestMetrics.ApplicationCount,
+            ApplicationAtRiskCount = requestMetrics.ApplicationAtRiskCount,
+            CriticalApplicationCount = requestMetrics.CriticalApplicationCount,
+            CriticalApplicationAtRiskCount = requestMetrics.CriticalApplicationAtRiskCount,
+            MemberCount = requestMetrics.MemberCount,
+            MemberAtRiskCount = requestMetrics.MemberAtRiskCount,
+            CriticalMemberCount = requestMetrics.CriticalMemberCount,
+            CriticalMemberAtRiskCount = requestMetrics.CriticalMemberAtRiskCount,
+            PasswordCount = requestMetrics.PasswordCount,
+            PasswordAtRiskCount = requestMetrics.PasswordAtRiskCount,
+            CriticalPasswordCount = requestMetrics.CriticalPasswordCount,
+            CriticalPasswordAtRiskCount = requestMetrics.CriticalPasswordAtRiskCount,
             RevisionDate = DateTime.UtcNow
         };
 
