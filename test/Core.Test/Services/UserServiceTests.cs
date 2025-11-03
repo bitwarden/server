@@ -582,6 +582,125 @@ public class UserServiceTests
         Assert.NotNull(user.TwoFactorProviders);
     }
 
+    [Theory, BitAutoData]
+    public async Task UpdateFailedAuthenticationDetailsAsync_NullUser_DoesNothing(
+        SutProvider<UserService> sutProvider)
+    {
+        // Act
+        await sutProvider.Sut.UpdateFailedAuthenticationDetailsAsync(null);
+
+        // Assert
+        await sutProvider.GetDependency<IUserRepository>()
+            .DidNotReceive()
+            .ReplaceAsync(Arg.Any<User>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateFailedAuthenticationDetailsAsync_ValidUser_IncrementsFailedLoginCount(
+        SutProvider<UserService> sutProvider, User user)
+    {
+        // Arrange
+        var initialFailedLoginCount = user.FailedLoginCount;
+        var initialLastFailedLoginDate = user.LastFailedLoginDate;
+
+        // Act
+        await sutProvider.Sut.UpdateFailedAuthenticationDetailsAsync(user);
+
+        // Assert
+        Assert.Equal(initialFailedLoginCount + 1, user.FailedLoginCount);
+        Assert.NotNull(user.LastFailedLoginDate);
+        Assert.NotEqual(initialLastFailedLoginDate, user.LastFailedLoginDate);
+        await sutProvider.GetDependency<IUserRepository>()
+            .Received(1)
+            .ReplaceAsync(Arg.Is<User>(u =>
+                u.Id == user.Id &&
+                u.FailedLoginCount == initialFailedLoginCount + 1));
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateFailedAuthenticationDetailsAsync_MultipleFailures_IncrementsCorrectly(
+        SutProvider<UserService> sutProvider, User user)
+    {
+        // Arrange
+        user.FailedLoginCount = 3;
+        var expectedCount = 4;
+
+        // Act
+        await sutProvider.Sut.UpdateFailedAuthenticationDetailsAsync(user);
+
+        // Assert
+        Assert.Equal(expectedCount, user.FailedLoginCount);
+        await sutProvider.GetDependency<IUserRepository>()
+            .Received(1)
+            .ReplaceAsync(user);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResetFailedAuthenticationDetailsAsync_NullUser_DoesNothing(
+        SutProvider<UserService> sutProvider)
+    {
+        // Act
+        await sutProvider.Sut.ResetFailedAuthenticationDetailsAsync(null);
+
+        // Assert
+        await sutProvider.GetDependency<IUserRepository>()
+            .DidNotReceive()
+            .ReplaceAsync(Arg.Any<User>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResetFailedAuthenticationDetailsAsync_UserWithZeroFailedLogins_DoesNothing(
+        SutProvider<UserService> sutProvider, User user)
+    {
+        // Arrange
+        user.FailedLoginCount = 0;
+
+        // Act
+        await sutProvider.Sut.ResetFailedAuthenticationDetailsAsync(user);
+
+        // Assert
+        await sutProvider.GetDependency<IUserRepository>()
+            .DidNotReceive()
+            .ReplaceAsync(Arg.Any<User>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResetFailedAuthenticationDetailsAsync_UserWithFailedLogins_ResetsToZero(
+        SutProvider<UserService> sutProvider, User user)
+    {
+        // Arrange
+        user.FailedLoginCount = 5;
+        var initialRevisionDate = user.RevisionDate;
+
+        // Act
+        await sutProvider.Sut.ResetFailedAuthenticationDetailsAsync(user);
+
+        // Assert
+        Assert.Equal(0, user.FailedLoginCount);
+        Assert.NotEqual(initialRevisionDate, user.RevisionDate);
+        await sutProvider.GetDependency<IUserRepository>()
+            .Received(1)
+            .ReplaceAsync(Arg.Is<User>(u =>
+                u.Id == user.Id &&
+                u.FailedLoginCount == 0));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResetFailedAuthenticationDetailsAsync_UpdatesRevisionDate(
+        SutProvider<UserService> sutProvider, User user)
+    {
+        // Arrange
+        user.FailedLoginCount = 3;
+        var beforeReset = DateTime.UtcNow;
+
+        // Act
+        await sutProvider.Sut.ResetFailedAuthenticationDetailsAsync(user);
+
+        // Assert
+        Assert.True(user.RevisionDate >= beforeReset);
+        Assert.True(user.RevisionDate <= DateTime.UtcNow);
+    }
+
     private static void SetupUserAndDevice(User user,
         bool shouldHavePassword)
     {
