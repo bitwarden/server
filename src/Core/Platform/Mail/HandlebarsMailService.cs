@@ -32,7 +32,7 @@ using Bit.Core.Platform.Mail.Enqueuing;
 
 namespace Bit.Core.Services.Mail;
 
-[Obsolete("The IMailService has been deprecated in favor of the IMailer. All new emails should be sent with the Mailer.")]
+[Obsolete("The IMailService has been deprecated in favor of the IMailer. All new emails should be sent with an IMailer implementation.")]
 public class HandlebarsMailService : IMailService
 {
     private const string Namespace = "Bit.Core.MailTemplates.Handlebars";
