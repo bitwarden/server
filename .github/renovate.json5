@@ -42,9 +42,8 @@
       dependencyDashboardApproval: false,
     },
     {
-      // Disable dependencies for sdk-internal as we will manually update this when needed
       matchSourceUrls: ["https://github.com/bitwarden/sdk-internal"],
-      enabled: false
+      groupName: "sdk-internal"
     },
     {
       matchManagers: ["dockerfile", "docker-compose"],
