@@ -22,6 +22,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Test.Billing;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -140,7 +141,7 @@ public class ProviderBillingServiceTests
             .Returns(existingPlan);
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(existingPlan.PlanType)
-            .Returns(StaticStore.GetPlan(existingPlan.PlanType));
+            .Returns(MockPlans.GetPlan(existingPlan.PlanType));
 
         sutProvider.GetDependency<ISubscriberService>().GetSubscriptionOrThrow(provider)
             .Returns(new Subscription
@@ -155,7 +156,7 @@ public class ProviderBillingServiceTests
                             Id = "si_ent_annual",
                             Price = new Price
                             {
-                                Id = StaticStore.GetPlan(PlanType.EnterpriseAnnually).PasswordManager
+                                Id = MockPlans.GetPlan(PlanType.EnterpriseAnnually).PasswordManager
                                     .StripeProviderPortalSeatPlanId
                             },
                             Quantity = 10
@@ -168,7 +169,7 @@ public class ProviderBillingServiceTests
             new ChangeProviderPlanCommand(provider, providerPlanId, PlanType.EnterpriseMonthly);
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(command.NewPlan)
-            .Returns(StaticStore.GetPlan(command.NewPlan));
+            .Returns(MockPlans.GetPlan(command.NewPlan));
 
         // Act
         await sutProvider.Sut.ChangePlan(command);
@@ -185,7 +186,7 @@ public class ProviderBillingServiceTests
                 Arg.Is<SubscriptionUpdateOptions>(p =>
                     p.Items.Count(si => si.Id == "si_ent_annual" && si.Deleted == true) == 1));
 
-        var newPlanCfg = StaticStore.GetPlan(command.NewPlan);
+        var newPlanCfg = MockPlans.GetPlan(command.NewPlan);
         await stripeAdapter.Received(1)
             .SubscriptionUpdateAsync(
                 Arg.Is(provider.GatewaySubscriptionId),
@@ -491,7 +492,7 @@ public class ProviderBillingServiceTests
         foreach (var plan in providerPlans)
         {
             sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(plan.PlanType)
-                .Returns(StaticStore.GetPlan(plan.PlanType));
+                .Returns(MockPlans.GetPlan(plan.PlanType));
         }
 
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id).Returns(providerPlans);
@@ -514,7 +515,7 @@ public class ProviderBillingServiceTests
         sutProvider.GetDependency<ISubscriberService>().GetSubscriptionOrThrow(provider).Returns(subscription);
 
         // 50 seats currently assigned with a seat minimum of 100
-        var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
+        var teamsMonthlyPlan = MockPlans.GetPlan(PlanType.TeamsMonthly);
 
         sutProvider.GetDependency<IProviderOrganizationRepository>().GetManyDetailsByProviderAsync(provider.Id).Returns(
         [
@@ -573,7 +574,7 @@ public class ProviderBillingServiceTests
         foreach (var plan in providerPlans)
         {
             sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(plan.PlanType)
-                .Returns(StaticStore.GetPlan(plan.PlanType));
+                .Returns(MockPlans.GetPlan(plan.PlanType));
         }
 
         var providerPlan = providerPlans.First();
@@ -598,7 +599,7 @@ public class ProviderBillingServiceTests
         sutProvider.GetDependency<ISubscriberService>().GetSubscriptionOrThrow(provider).Returns(subscription);
 
         // 95 seats currently assigned with a seat minimum of 100
-        var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
+        var teamsMonthlyPlan = MockPlans.GetPlan(PlanType.TeamsMonthly);
 
         sutProvider.GetDependency<IProviderOrganizationRepository>().GetManyDetailsByProviderAsync(provider.Id).Returns(
         [
@@ -661,7 +662,7 @@ public class ProviderBillingServiceTests
         foreach (var plan in providerPlans)
         {
             sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(plan.PlanType)
-                .Returns(StaticStore.GetPlan(plan.PlanType));
+                .Returns(MockPlans.GetPlan(plan.PlanType));
         }
 
         var providerPlan = providerPlans.First();
@@ -686,7 +687,7 @@ public class ProviderBillingServiceTests
         sutProvider.GetDependency<ISubscriberService>().GetSubscriptionOrThrow(provider).Returns(subscription);
 
         // 110 seats currently assigned with a seat minimum of 100
-        var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
+        var teamsMonthlyPlan = MockPlans.GetPlan(PlanType.TeamsMonthly);
 
         sutProvider.GetDependency<IProviderOrganizationRepository>().GetManyDetailsByProviderAsync(provider.Id).Returns(
         [
@@ -749,7 +750,7 @@ public class ProviderBillingServiceTests
         foreach (var plan in providerPlans)
         {
             sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(plan.PlanType)
-                .Returns(StaticStore.GetPlan(plan.PlanType));
+                .Returns(MockPlans.GetPlan(plan.PlanType));
         }
 
         var providerPlan = providerPlans.First();
@@ -774,7 +775,7 @@ public class ProviderBillingServiceTests
         sutProvider.GetDependency<ISubscriberService>().GetSubscriptionOrThrow(provider).Returns(subscription);
 
         // 110 seats currently assigned with a seat minimum of 100
-        var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
+        var teamsMonthlyPlan = MockPlans.GetPlan(PlanType.TeamsMonthly);
 
         sutProvider.GetDependency<IProviderOrganizationRepository>().GetManyDetailsByProviderAsync(provider.Id).Returns(
         [
@@ -827,13 +828,13 @@ public class ProviderBillingServiceTests
             }
         ]);
 
-        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(planType).Returns(StaticStore.GetPlan(planType));
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(planType).Returns(MockPlans.GetPlan(planType));
 
         sutProvider.GetDependency<IProviderOrganizationRepository>().GetManyDetailsByProviderAsync(provider.Id).Returns(
         [
             new ProviderOrganizationOrganizationDetails
             {
-                Plan = StaticStore.GetPlan(planType).Name,
+                Plan = MockPlans.GetPlan(planType).Name,
                 Status = OrganizationStatusType.Managed,
                 Seats = 5
             }
@@ -865,13 +866,13 @@ public class ProviderBillingServiceTests
             }
         ]);
 
-        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(planType).Returns(StaticStore.GetPlan(planType));
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(planType).Returns(MockPlans.GetPlan(planType));
 
         sutProvider.GetDependency<IProviderOrganizationRepository>().GetManyDetailsByProviderAsync(provider.Id).Returns(
         [
             new ProviderOrganizationOrganizationDetails
             {
-                Plan = StaticStore.GetPlan(planType).Name,
+                Plan = MockPlans.GetPlan(planType).Name,
                 Status = OrganizationStatusType.Managed,
                 Seats = 15
             }
@@ -1238,7 +1239,7 @@ public class ProviderBillingServiceTests
             .Returns(providerPlans);
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(PlanType.EnterpriseMonthly)
-            .Returns(StaticStore.GetPlan(PlanType.EnterpriseMonthly));
+            .Returns(MockPlans.GetPlan(PlanType.EnterpriseMonthly));
 
         await ThrowsBillingExceptionAsync(() => sutProvider.Sut.SetupSubscription(provider));
 
@@ -1266,7 +1267,7 @@ public class ProviderBillingServiceTests
             .Returns(providerPlans);
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(PlanType.TeamsMonthly)
-            .Returns(StaticStore.GetPlan(PlanType.TeamsMonthly));
+            .Returns(MockPlans.GetPlan(PlanType.TeamsMonthly));
 
         await ThrowsBillingExceptionAsync(() => sutProvider.Sut.SetupSubscription(provider));
 
@@ -1317,7 +1318,7 @@ public class ProviderBillingServiceTests
         foreach (var plan in providerPlans)
         {
             sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(plan.PlanType)
-                .Returns(StaticStore.GetPlan(plan.PlanType));
+                .Returns(MockPlans.GetPlan(plan.PlanType));
         }
 
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id)
@@ -1373,7 +1374,7 @@ public class ProviderBillingServiceTests
         foreach (var plan in providerPlans)
         {
             sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(plan.PlanType)
-                .Returns(StaticStore.GetPlan(plan.PlanType));
+                .Returns(MockPlans.GetPlan(plan.PlanType));
         }
 
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id)
@@ -1449,7 +1450,7 @@ public class ProviderBillingServiceTests
         foreach (var plan in providerPlans)
         {
             sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(plan.PlanType)
-                .Returns(StaticStore.GetPlan(plan.PlanType));
+                .Returns(MockPlans.GetPlan(plan.PlanType));
         }
 
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id)
@@ -1525,7 +1526,7 @@ public class ProviderBillingServiceTests
         foreach (var plan in providerPlans)
         {
             sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(plan.PlanType)
-                .Returns(StaticStore.GetPlan(plan.PlanType));
+                .Returns(MockPlans.GetPlan(plan.PlanType));
         }
 
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id)
@@ -1626,7 +1627,7 @@ public class ProviderBillingServiceTests
         foreach (var plan in providerPlans)
         {
             sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(plan.PlanType)
-                .Returns(StaticStore.GetPlan(plan.PlanType));
+                .Returns(MockPlans.GetPlan(plan.PlanType));
         }
 
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id)
@@ -1704,7 +1705,7 @@ public class ProviderBillingServiceTests
         foreach (var plan in providerPlans)
         {
             sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(plan.PlanType)
-                .Returns(StaticStore.GetPlan(plan.PlanType));
+                .Returns(MockPlans.GetPlan(plan.PlanType));
         }
 
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id)
@@ -1772,8 +1773,8 @@ public class ProviderBillingServiceTests
         const string enterpriseLineItemId = "enterprise_line_item_id";
         const string teamsLineItemId = "teams_line_item_id";
 
-        var enterprisePriceId = StaticStore.GetPlan(PlanType.EnterpriseMonthly).PasswordManager.StripeProviderPortalSeatPlanId;
-        var teamsPriceId = StaticStore.GetPlan(PlanType.TeamsMonthly).PasswordManager.StripeProviderPortalSeatPlanId;
+        var enterprisePriceId = MockPlans.GetPlan(PlanType.EnterpriseMonthly).PasswordManager.StripeProviderPortalSeatPlanId;
+        var teamsPriceId = MockPlans.GetPlan(PlanType.TeamsMonthly).PasswordManager.StripeProviderPortalSeatPlanId;
 
         var subscription = new Subscription
         {
@@ -1806,7 +1807,7 @@ public class ProviderBillingServiceTests
         foreach (var plan in providerPlans)
         {
             sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(plan.PlanType)
-                .Returns(StaticStore.GetPlan(plan.PlanType));
+                .Returns(MockPlans.GetPlan(plan.PlanType));
         }
 
         providerPlanRepository.GetByProviderId(provider.Id).Returns(providerPlans);
@@ -1852,8 +1853,8 @@ public class ProviderBillingServiceTests
         const string enterpriseLineItemId = "enterprise_line_item_id";
         const string teamsLineItemId = "teams_line_item_id";
 
-        var enterprisePriceId = StaticStore.GetPlan(PlanType.EnterpriseMonthly).PasswordManager.StripeProviderPortalSeatPlanId;
-        var teamsPriceId = StaticStore.GetPlan(PlanType.TeamsMonthly).PasswordManager.StripeProviderPortalSeatPlanId;
+        var enterprisePriceId = MockPlans.GetPlan(PlanType.EnterpriseMonthly).PasswordManager.StripeProviderPortalSeatPlanId;
+        var teamsPriceId = MockPlans.GetPlan(PlanType.TeamsMonthly).PasswordManager.StripeProviderPortalSeatPlanId;
 
         var subscription = new Subscription
         {
@@ -1886,7 +1887,7 @@ public class ProviderBillingServiceTests
         foreach (var plan in providerPlans)
         {
             sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(plan.PlanType)
-                .Returns(StaticStore.GetPlan(plan.PlanType));
+                .Returns(MockPlans.GetPlan(plan.PlanType));
         }
 
         providerPlanRepository.GetByProviderId(provider.Id).Returns(providerPlans);
@@ -1932,8 +1933,8 @@ public class ProviderBillingServiceTests
         const string enterpriseLineItemId = "enterprise_line_item_id";
         const string teamsLineItemId = "teams_line_item_id";
 
-        var enterprisePriceId = StaticStore.GetPlan(PlanType.EnterpriseMonthly).PasswordManager.StripeProviderPortalSeatPlanId;
-        var teamsPriceId = StaticStore.GetPlan(PlanType.TeamsMonthly).PasswordManager.StripeProviderPortalSeatPlanId;
+        var enterprisePriceId = MockPlans.GetPlan(PlanType.EnterpriseMonthly).PasswordManager.StripeProviderPortalSeatPlanId;
+        var teamsPriceId = MockPlans.GetPlan(PlanType.TeamsMonthly).PasswordManager.StripeProviderPortalSeatPlanId;
 
         var subscription = new Subscription
         {
@@ -1966,7 +1967,7 @@ public class ProviderBillingServiceTests
         foreach (var plan in providerPlans)
         {
             sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(plan.PlanType)
-                .Returns(StaticStore.GetPlan(plan.PlanType));
+                .Returns(MockPlans.GetPlan(plan.PlanType));
         }
 
         providerPlanRepository.GetByProviderId(provider.Id).Returns(providerPlans);
@@ -2006,8 +2007,8 @@ public class ProviderBillingServiceTests
         const string enterpriseLineItemId = "enterprise_line_item_id";
         const string teamsLineItemId = "teams_line_item_id";
 
-        var enterprisePriceId = StaticStore.GetPlan(PlanType.EnterpriseMonthly).PasswordManager.StripeProviderPortalSeatPlanId;
-        var teamsPriceId = StaticStore.GetPlan(PlanType.TeamsMonthly).PasswordManager.StripeProviderPortalSeatPlanId;
+        var enterprisePriceId = MockPlans.GetPlan(PlanType.EnterpriseMonthly).PasswordManager.StripeProviderPortalSeatPlanId;
+        var teamsPriceId = MockPlans.GetPlan(PlanType.TeamsMonthly).PasswordManager.StripeProviderPortalSeatPlanId;
 
         var subscription = new Subscription
         {
@@ -2040,7 +2041,7 @@ public class ProviderBillingServiceTests
         foreach (var plan in providerPlans)
         {
             sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(plan.PlanType)
-                .Returns(StaticStore.GetPlan(plan.PlanType));
+                .Returns(MockPlans.GetPlan(plan.PlanType));
         }
 
         providerPlanRepository.GetByProviderId(provider.Id).Returns(providerPlans);
@@ -2086,8 +2087,8 @@ public class ProviderBillingServiceTests
         const string enterpriseLineItemId = "enterprise_line_item_id";
         const string teamsLineItemId = "teams_line_item_id";
 
-        var enterprisePriceId = StaticStore.GetPlan(PlanType.EnterpriseMonthly).PasswordManager.StripeProviderPortalSeatPlanId;
-        var teamsPriceId = StaticStore.GetPlan(PlanType.TeamsMonthly).PasswordManager.StripeProviderPortalSeatPlanId;
+        var enterprisePriceId = MockPlans.GetPlan(PlanType.EnterpriseMonthly).PasswordManager.StripeProviderPortalSeatPlanId;
+        var teamsPriceId = MockPlans.GetPlan(PlanType.TeamsMonthly).PasswordManager.StripeProviderPortalSeatPlanId;
 
         var subscription = new Subscription
         {
@@ -2120,7 +2121,7 @@ public class ProviderBillingServiceTests
         foreach (var plan in providerPlans)
         {
             sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(plan.PlanType)
-                .Returns(StaticStore.GetPlan(plan.PlanType));
+                .Returns(MockPlans.GetPlan(plan.PlanType));
         }
 
         providerPlanRepository.GetByProviderId(provider.Id).Returns(providerPlans);

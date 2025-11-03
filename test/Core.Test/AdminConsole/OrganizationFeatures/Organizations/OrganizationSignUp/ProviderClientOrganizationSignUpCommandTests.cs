@@ -11,6 +11,7 @@ using Bit.Core.Models.StaticStore;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
+using Bit.Core.Test.Billing;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -36,7 +37,7 @@ public class ProviderClientOrganizationSignUpCommandTests
         signup.AdditionalSeats = 15;
         signup.CollectionName = collectionName;
 
-        var plan = StaticStore.GetPlan(signup.Plan);
+        var plan = MockPlans.GetPlan(signup.Plan);
         sutProvider.GetDependency<IPricingClient>()
             .GetPlanOrThrow(signup.Plan)
             .Returns(plan);
@@ -112,7 +113,7 @@ public class ProviderClientOrganizationSignUpCommandTests
         signup.Plan = PlanType.TeamsMonthly;
         signup.AdditionalSeats = -5;
 
-        var plan = StaticStore.GetPlan(signup.Plan);
+        var plan = MockPlans.GetPlan(signup.Plan);
         sutProvider.GetDependency<IPricingClient>()
             .GetPlanOrThrow(signup.Plan)
             .Returns(plan);
@@ -132,7 +133,7 @@ public class ProviderClientOrganizationSignUpCommandTests
     {
         signup.Plan = planType;
 
-        var plan = StaticStore.GetPlan(signup.Plan);
+        var plan = MockPlans.GetPlan(signup.Plan);
         sutProvider.GetDependency<IPricingClient>()
             .GetPlanOrThrow(signup.Plan)
             .Returns(plan);

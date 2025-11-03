@@ -12,8 +12,7 @@ public interface IPricingClient
 {
     // TODO: Rename with Organization focus.
     /// <summary>
-    /// Retrieve a Bitwarden plan by its <paramref name="planType"/>. If the feature flag 'use-pricing-service' is enabled,
-    /// this will trigger a request to the Bitwarden Pricing Service. Otherwise, it will use the existing <see cref="StaticStore"/>.
+    /// Retrieve a Bitwarden plan by its <paramref name="planType"/> from the Bitwarden Pricing Service.
     /// </summary>
     /// <param name="planType">The type of plan to retrieve.</param>
     /// <returns>A Bitwarden <see cref="Plan"/> record or null in the case the plan could not be found or the method was executed from a self-hosted instance.</returns>
@@ -22,8 +21,7 @@ public interface IPricingClient
 
     // TODO: Rename with Organization focus.
     /// <summary>
-    /// Retrieve a Bitwarden plan by its <paramref name="planType"/>. If the feature flag 'use-pricing-service' is enabled,
-    /// this will trigger a request to the Bitwarden Pricing Service. Otherwise, it will use the existing <see cref="StaticStore"/>.
+    /// Retrieve a Bitwarden plan by its <paramref name="planType"/> from the Bitwarden Pricing Service.
     /// </summary>
     /// <param name="planType">The type of plan to retrieve.</param>
     /// <returns>A Bitwarden <see cref="Plan"/> record.</returns>
@@ -33,8 +31,7 @@ public interface IPricingClient
 
     // TODO: Rename with Organization focus.
     /// <summary>
-    /// Retrieve all the Bitwarden plans. If the feature flag 'use-pricing-service' is enabled,
-    /// this will trigger a request to the Bitwarden Pricing Service. Otherwise, it will use the existing <see cref="StaticStore"/>.
+    /// Retrieve all the Bitwarden plans from the Bitwarden Pricing Service.
     /// </summary>
     /// <returns>A list of Bitwarden <see cref="Plan"/> records or an empty list in the case the method is executed from a self-hosted instance.</returns>
     /// <exception cref="BillingException">Thrown when the request to the Pricing Service fails unexpectedly.</exception>

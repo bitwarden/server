@@ -172,7 +172,7 @@ public class GetOrganizationMetadataQueryTests
 
         sutProvider.GetDependency<IPricingClient>()
             .GetPlanOrThrow(organization.PlanType)
-            .Returns(StaticStore.GetPlan(organization.PlanType));
+            .Returns(MockPlans.GetPlan(organization.PlanType));
 
         var result = await sutProvider.Sut.Run(organization);
 
@@ -227,7 +227,7 @@ public class GetOrganizationMetadataQueryTests
 
         sutProvider.GetDependency<IPricingClient>()
             .GetPlanOrThrow(organization.PlanType)
-            .Returns(StaticStore.GetPlan(organization.PlanType));
+            .Returns(MockPlans.GetPlan(organization.PlanType));
 
         var result = await sutProvider.Sut.Run(organization);
 
@@ -292,7 +292,7 @@ public class GetOrganizationMetadataQueryTests
 
         sutProvider.GetDependency<IPricingClient>()
             .GetPlanOrThrow(organization.PlanType)
-            .Returns(StaticStore.GetPlan(organization.PlanType));
+            .Returns(MockPlans.GetPlan(organization.PlanType));
 
         var result = await sutProvider.Sut.Run(organization);
 
@@ -358,7 +358,7 @@ public class GetOrganizationMetadataQueryTests
 
         sutProvider.GetDependency<IPricingClient>()
             .GetPlanOrThrow(organization.PlanType)
-            .Returns(StaticStore.GetPlan(organization.PlanType));
+            .Returns(MockPlans.GetPlan(organization.PlanType));
 
         var result = await sutProvider.Sut.Run(organization);
 

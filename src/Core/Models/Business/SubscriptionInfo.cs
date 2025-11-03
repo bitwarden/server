@@ -2,6 +2,7 @@
 #nullable disable
 
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Models;
 using Stripe;
 
 namespace Bit.Core.Models.Business;
@@ -90,7 +91,7 @@ public class SubscriptionInfo
                 }
 
                 Quantity = (int)item.Quantity;
-                SponsoredSubscriptionItem = Utilities.StaticStore.SponsoredPlans.Any(p => p.StripePlanId == item.Plan.Id);
+                SponsoredSubscriptionItem = item.Plan.Id == SponsoredPlans.FamiliesForEnterprise.StripePlanId;
             }
 
             public bool AddonSubscriptionItem { get; set; }

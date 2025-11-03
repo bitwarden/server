@@ -28,13 +28,6 @@ public class PricingClient(
             return null;
         }
 
-        var usePricingService = featureService.IsEnabled(FeatureFlagKeys.UsePricingService);
-
-        if (!usePricingService)
-        {
-            return StaticStore.GetPlan(planType);
-        }
-
         var lookupKey = GetLookupKey(planType);
 
         if (lookupKey == null)
@@ -77,13 +70,6 @@ public class PricingClient(
             return [];
         }
 
-        var usePricingService = featureService.IsEnabled(FeatureFlagKeys.UsePricingService);
-
-        if (!usePricingService)
-        {
-            return StaticStore.Plans.ToList();
-        }
-
         var response = await httpClient.GetAsync("plans/organization");
 
         if (response.IsSuccessStatusCode)
@@ -114,11 +100,10 @@ public class PricingClient(
             return [];
         }
 
-        var usePricingService = featureService.IsEnabled(FeatureFlagKeys.UsePricingService);
         var fetchPremiumPriceFromPricingService =
             featureService.IsEnabled(FeatureFlagKeys.PM26793_FetchPremiumPriceFromPricingService);
 
-        if (!usePricingService || !fetchPremiumPriceFromPricingService)
+        if (!fetchPremiumPriceFromPricingService)
         {
             return [CurrentPremiumPlan];
         }

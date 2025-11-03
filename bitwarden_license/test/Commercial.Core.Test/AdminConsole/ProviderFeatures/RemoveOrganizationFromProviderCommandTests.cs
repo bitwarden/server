@@ -13,6 +13,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Test.Billing;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -207,7 +208,7 @@ public class RemoveOrganizationFromProviderCommandTests
 
         organization.PlanType = PlanType.TeamsMonthly;
 
-        var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
+        var teamsMonthlyPlan = MockPlans.GetPlan(PlanType.TeamsMonthly);
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(PlanType.TeamsMonthly).Returns(teamsMonthlyPlan);
 
@@ -296,7 +297,7 @@ public class RemoveOrganizationFromProviderCommandTests
 
         organization.PlanType = PlanType.TeamsMonthly;
 
-        var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
+        var teamsMonthlyPlan = MockPlans.GetPlan(PlanType.TeamsMonthly);
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(PlanType.TeamsMonthly).Returns(teamsMonthlyPlan);
 
@@ -416,7 +417,7 @@ public class RemoveOrganizationFromProviderCommandTests
         organization.PlanType = PlanType.TeamsMonthly;
         organization.Enabled = false; // Start with a disabled organization
 
-        var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
+        var teamsMonthlyPlan = MockPlans.GetPlan(PlanType.TeamsMonthly);
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(PlanType.TeamsMonthly).Returns(teamsMonthlyPlan);
 
