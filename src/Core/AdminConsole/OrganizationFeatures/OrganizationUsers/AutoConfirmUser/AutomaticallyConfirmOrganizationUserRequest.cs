@@ -15,7 +15,7 @@ public record AutomaticallyConfirmOrganizationUserRequest
     public required DateTimeOffset PerformedOn { get; init; }
 }
 
-public record AutomaticallyConfirmOrganizationUserRequestData
+public record AutomaticallyConfirmOrganizationUserValidationRequest
 {
     public required OrganizationUser OrganizationUser { get; init; }
 

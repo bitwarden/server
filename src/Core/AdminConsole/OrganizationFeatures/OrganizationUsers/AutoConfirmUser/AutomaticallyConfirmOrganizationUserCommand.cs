@@ -64,8 +64,8 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
             .ToResultAsync();
     }
 
-    private async Task<CommandResult<AutomaticallyConfirmOrganizationUserRequestData>> CreateDefaultCollectionsAsync(
-        AutomaticallyConfirmOrganizationUserRequestData request)
+    private async Task<CommandResult<AutomaticallyConfirmOrganizationUserValidationRequest>> CreateDefaultCollectionsAsync(
+        AutomaticallyConfirmOrganizationUserValidationRequest request)
     {
         try
         {
@@ -96,11 +96,11 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to create default collection for user.");
-            return new CommandResult<AutomaticallyConfirmOrganizationUserRequestData>(new FailedToCreateDefaultCollection());
+            return new CommandResult<AutomaticallyConfirmOrganizationUserValidationRequest>(new FailedToCreateDefaultCollection());
         }
     }
 
-    private async Task<CommandResult<AutomaticallyConfirmOrganizationUserRequestData>> PushSyncOrganizationKeysAsync(AutomaticallyConfirmOrganizationUserRequestData request)
+    private async Task<CommandResult<AutomaticallyConfirmOrganizationUserValidationRequest>> PushSyncOrganizationKeysAsync(AutomaticallyConfirmOrganizationUserValidationRequest request)
     {
         try
         {
@@ -114,8 +114,8 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
         }
     }
 
-    private async Task<CommandResult<AutomaticallyConfirmOrganizationUserRequestData>> LogOrganizationUserConfirmedEventAsync(
-        AutomaticallyConfirmOrganizationUserRequestData request)
+    private async Task<CommandResult<AutomaticallyConfirmOrganizationUserValidationRequest>> LogOrganizationUserConfirmedEventAsync(
+        AutomaticallyConfirmOrganizationUserValidationRequest request)
     {
         try
         {
@@ -131,8 +131,8 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
         }
     }
 
-    private async Task<CommandResult<AutomaticallyConfirmOrganizationUserRequestData>> SendConfirmedOrganizationUserEmailAsync(
-        AutomaticallyConfirmOrganizationUserRequestData request)
+    private async Task<CommandResult<AutomaticallyConfirmOrganizationUserValidationRequest>> SendConfirmedOrganizationUserEmailAsync(
+        AutomaticallyConfirmOrganizationUserValidationRequest request)
     {
         try
         {
@@ -153,8 +153,8 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
         }
     }
 
-    private async Task<CommandResult<AutomaticallyConfirmOrganizationUserRequestData>> DeleteDeviceRegistrationAsync(
-        AutomaticallyConfirmOrganizationUserRequestData request)
+    private async Task<CommandResult<AutomaticallyConfirmOrganizationUserValidationRequest>> DeleteDeviceRegistrationAsync(
+        AutomaticallyConfirmOrganizationUserValidationRequest request)
     {
         try
         {
@@ -172,7 +172,7 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
         }
     }
 
-    private async Task<CommandResult<AutomaticallyConfirmOrganizationUserRequestData>> RetrieveDataAsync(
+    private async Task<CommandResult<AutomaticallyConfirmOrganizationUserValidationRequest>> RetrieveDataAsync(
         AutomaticallyConfirmOrganizationUserRequest request)
     {
         var organizationUser = await GetOrganizationUserAsync(request.OrganizationUserId);
@@ -183,7 +183,7 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
 
         if (organization.IsError) return organization.AsError;
 
-        return new AutomaticallyConfirmOrganizationUserRequestData
+        return new AutomaticallyConfirmOrganizationUserValidationRequest
         {
             OrganizationUser = organizationUser.AsSuccess,
             Organization = organization.AsSuccess,

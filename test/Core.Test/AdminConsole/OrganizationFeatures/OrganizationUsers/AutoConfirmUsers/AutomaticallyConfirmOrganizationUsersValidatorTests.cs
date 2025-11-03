@@ -37,7 +37,7 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
         organizationUser.OrganizationId = organization.Id;
         organization.PlanType = PlanType.EnterpriseAnnually;
 
-        var request = new AutomaticallyConfirmOrganizationUserRequestData
+        var request = new AutomaticallyConfirmOrganizationUserValidationRequest
         {
             OrganizationUser = organizationUser,
             Organization = organization,
@@ -79,7 +79,7 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
         organizationUser.UserId = userId;
         organizationUser.OrganizationId = organization.Id;
 
-        var request = new AutomaticallyConfirmOrganizationUserRequestData
+        var request = new AutomaticallyConfirmOrganizationUserValidationRequest
         {
             OrganizationUser = organizationUser,
             Organization = organization,
@@ -109,7 +109,7 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
         organizationUser.UserId = userId;
         organizationUser.OrganizationId = Guid.NewGuid(); // Different from organization.Id
 
-        var request = new AutomaticallyConfirmOrganizationUserRequestData
+        var request = new AutomaticallyConfirmOrganizationUserValidationRequest
         {
             OrganizationUser = organizationUser,
             Organization = organization,
@@ -139,7 +139,7 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
         organizationUser.UserId = userId;
         organizationUser.OrganizationId = organization.Id;
 
-        var request = new AutomaticallyConfirmOrganizationUserRequestData
+        var request = new AutomaticallyConfirmOrganizationUserValidationRequest
         {
             OrganizationUser = organizationUser,
             Organization = organization,
@@ -173,7 +173,7 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
         organizationUser.UserId = userId;
         organizationUser.OrganizationId = organization.Id;
 
-        var request = new AutomaticallyConfirmOrganizationUserRequestData
+        var request = new AutomaticallyConfirmOrganizationUserValidationRequest
         {
             OrganizationUser = organizationUser,
             Organization = organization,
@@ -226,7 +226,7 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
         organizationUser.UserId = userId;
         organizationUser.OrganizationId = organization.Id;
 
-        var request = new AutomaticallyConfirmOrganizationUserRequestData
+        var request = new AutomaticallyConfirmOrganizationUserValidationRequest
         {
             OrganizationUser = organizationUser,
             Organization = organization,
@@ -268,7 +268,7 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
         organizationUser.UserId = userId;
         organizationUser.OrganizationId = organization.Id;
 
-        var request = new AutomaticallyConfirmOrganizationUserRequestData
+        var request = new AutomaticallyConfirmOrganizationUserValidationRequest
         {
             OrganizationUser = organizationUser,
             Organization = organization,
@@ -326,7 +326,7 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
         organizationUser.UserId = userId;
         organizationUser.OrganizationId = organization.Id;
 
-        var request = new AutomaticallyConfirmOrganizationUserRequestData
+        var request = new AutomaticallyConfirmOrganizationUserValidationRequest
         {
             OrganizationUser = organizationUser,
             Organization = organization,
@@ -383,7 +383,7 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
         organizationUser.UserId = userId;
         organizationUser.OrganizationId = organization.Id;
 
-        var request = new AutomaticallyConfirmOrganizationUserRequestData
+        var request = new AutomaticallyConfirmOrganizationUserValidationRequest
         {
             OrganizationUser = organizationUser,
             Organization = organization,
@@ -425,7 +425,7 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
         organizationUser.UserId = userId;
         organizationUser.OrganizationId = organization.Id;
 
-        var request = new AutomaticallyConfirmOrganizationUserRequestData
+        var request = new AutomaticallyConfirmOrganizationUserValidationRequest
         {
             OrganizationUser = organizationUser,
             Organization = organization,

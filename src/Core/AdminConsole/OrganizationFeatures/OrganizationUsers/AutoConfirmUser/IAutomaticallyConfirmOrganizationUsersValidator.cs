@@ -4,6 +4,6 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfi
 
 public interface IAutomaticallyConfirmOrganizationUsersValidator
 {
-    Task<ValidationResult<AutomaticallyConfirmOrganizationUserRequestData>> ValidateAsync(
-        AutomaticallyConfirmOrganizationUserRequestData request);
+    Task<ValidationResult<AutomaticallyConfirmOrganizationUserValidationRequest>> ValidateAsync(
+        AutomaticallyConfirmOrganizationUserValidationRequest request);
 }

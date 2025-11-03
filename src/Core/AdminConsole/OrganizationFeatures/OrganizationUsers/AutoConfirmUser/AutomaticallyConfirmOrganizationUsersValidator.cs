@@ -20,8 +20,8 @@ public class AutomaticallyConfirmOrganizationUsersValidator(
     IPolicyRequirementQuery policyRequirementQuery
     ) : IAutomaticallyConfirmOrganizationUsersValidator
 {
-    public async Task<ValidationResult<AutomaticallyConfirmOrganizationUserRequestData>> ValidateAsync(
-        AutomaticallyConfirmOrganizationUserRequestData request)
+    public async Task<ValidationResult<AutomaticallyConfirmOrganizationUserValidationRequest>> ValidateAsync(
+        AutomaticallyConfirmOrganizationUserValidationRequest request)
     {
         var orgUser = request.OrganizationUser;
 
@@ -39,22 +39,22 @@ public class AutomaticallyConfirmOrganizationUsersValidator(
             .ThenAsync(OrganizationUserConformsToOrganizationPoliciesAsync);
     }
 
-    private async Task<ValidationResult<AutomaticallyConfirmOrganizationUserRequestData>> OrganizationUserOwnershipValidationAsync(
-        AutomaticallyConfirmOrganizationUserRequestData request) =>
+    private async Task<ValidationResult<AutomaticallyConfirmOrganizationUserValidationRequest>> OrganizationUserOwnershipValidationAsync(
+        AutomaticallyConfirmOrganizationUserValidationRequest request) =>
         request.Organization.PlanType is not PlanType.Free
         || await organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(request.UserId) == 0
             ? Valid(request)
             : Invalid(request, new UserToConfirmIsAnAdminOrOwnerOfAnotherFreeOrganization());
 
-    private async Task<ValidationResult<AutomaticallyConfirmOrganizationUserRequestData>>
-        OrganizationUserConformsToOrganizationPoliciesAsync(AutomaticallyConfirmOrganizationUserRequestData request)
+    private async Task<ValidationResult<AutomaticallyConfirmOrganizationUserValidationRequest>>
+        OrganizationUserConformsToOrganizationPoliciesAsync(AutomaticallyConfirmOrganizationUserValidationRequest request)
     {
         return await OrganizationUserConformsToTwoFactorRequiredPolicyAsync(request)
             .ThenAsync(OrganizationUserConformsToSingleOrgPolicyAsync);
     }
 
-    private async Task<ValidationResult<AutomaticallyConfirmOrganizationUserRequestData>> OrganizationUserConformsToTwoFactorRequiredPolicyAsync(
-            AutomaticallyConfirmOrganizationUserRequestData request)
+    private async Task<ValidationResult<AutomaticallyConfirmOrganizationUserValidationRequest>> OrganizationUserConformsToTwoFactorRequiredPolicyAsync(
+            AutomaticallyConfirmOrganizationUserValidationRequest request)
     {
         if ((await twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync([request.UserId]))
             .Any(x => x.userId == request.UserId && x.twoFactorIsEnabled))
@@ -77,8 +77,8 @@ public class AutomaticallyConfirmOrganizationUsersValidator(
                 : Valid(request);
     }
 
-    private async Task<ValidationResult<AutomaticallyConfirmOrganizationUserRequestData>> OrganizationUserConformsToSingleOrgPolicyAsync(
-            AutomaticallyConfirmOrganizationUserRequestData request)
+    private async Task<ValidationResult<AutomaticallyConfirmOrganizationUserValidationRequest>> OrganizationUserConformsToSingleOrgPolicyAsync(
+            AutomaticallyConfirmOrganizationUserValidationRequest request)
     {
         var allOrganizationUsersForUser = await organizationUserRepository.GetManyByUserAsync(request.UserId);
 
