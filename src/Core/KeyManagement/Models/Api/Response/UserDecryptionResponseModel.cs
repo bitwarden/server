@@ -1,4 +1,4 @@
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 using Bit.Core.Auth.Models.Api.Response;
 
 namespace Bit.Core.KeyManagement.Models.Api.Response;
