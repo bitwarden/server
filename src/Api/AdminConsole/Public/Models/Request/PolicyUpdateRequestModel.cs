@@ -8,7 +8,7 @@ namespace Bit.Api.AdminConsole.Public.Models.Request;
 
 public class PolicyUpdateRequestModel : PolicyBaseModel
 {
-    public Dictionary<string, object> Metadata { get; set; } = new();
+    public Dictionary<string, object>? Metadata { get; set; }
 
     public PolicyUpdate ToPolicyUpdate(Guid organizationId, PolicyType type)
     {
