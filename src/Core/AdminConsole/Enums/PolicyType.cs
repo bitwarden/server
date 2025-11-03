@@ -45,7 +45,7 @@ public static class PolicyTypeExtensions
             PolicyType.MaximumVaultTimeout => "Vault timeout",
             PolicyType.DisablePersonalVaultExport => "Remove individual vault export",
             PolicyType.ActivateAutofill => "Active auto-fill",
-            PolicyType.AutomaticAppLogIn => "Automatically log in users for allowed applications",
+            PolicyType.AutomaticAppLogIn => "Automatic login with SSO",
             PolicyType.FreeFamiliesSponsorshipPolicy => "Remove Free Bitwarden Families sponsorship",
             PolicyType.RemoveUnlockWithPin => "Remove unlock with PIN",
             PolicyType.RestrictedItemTypesPolicy => "Restricted item types",
