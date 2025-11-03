@@ -3,6 +3,7 @@
 
 using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
+using Bit.Api.Utilities.DiagnosticTools;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -31,10 +32,11 @@ public class EventsController : Controller
     private readonly ISecretRepository _secretRepository;
     private readonly IProjectRepository _projectRepository;
     private readonly IServiceAccountRepository _serviceAccountRepository;
+    private readonly ILogger<EventsController> _logger;
+    private readonly IFeatureService _featureService;
 
 
-    public EventsController(
-        IUserService userService,
+    public EventsController(IUserService userService,
         ICipherRepository cipherRepository,
         IOrganizationUserRepository organizationUserRepository,
         IProviderUserRepository providerUserRepository,
@@ -42,7 +44,9 @@ public class EventsController : Controller
         ICurrentContext currentContext,
         ISecretRepository secretRepository,
         IProjectRepository projectRepository,
-        IServiceAccountRepository serviceAccountRepository)
+        IServiceAccountRepository serviceAccountRepository,
+        ILogger<EventsController> logger,
+        IFeatureService featureService)
     {
         _userService = userService;
         _cipherRepository = cipherRepository;
@@ -53,6 +57,8 @@ public class EventsController : Controller
         _secretRepository = secretRepository;
         _projectRepository = projectRepository;
         _serviceAccountRepository = serviceAccountRepository;
+        _logger = logger;
+        _featureService = featureService;
     }
 
     [HttpGet("")]
@@ -114,6 +120,9 @@ public class EventsController : Controller
         var result = await _eventRepository.GetManyByOrganizationAsync(orgId, dateRange.Item1, dateRange.Item2,
             new PageOptions { ContinuationToken = continuationToken });
         var responses = result.Data.Select(e => new EventResponseModel(e));
+
+        _logger.LogAggregateData(_featureService, orgId, responses, continuationToken, start, end);
+
         return new ListResponseModel<EventResponseModel>(responses, result.ContinuationToken);
     }
 
