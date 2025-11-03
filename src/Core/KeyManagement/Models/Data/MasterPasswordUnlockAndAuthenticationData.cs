@@ -13,6 +13,9 @@ public class MasterPasswordUnlockAndAuthenticationData
 
     public required string Email { get; set; }
     public required string MasterKeyAuthenticationHash { get; set; }
+    ///<summary>
+    ///Also known as "MasterKeyWrappedUserKey"
+    ///</summary>
     public required string MasterKeyEncryptedUserKey { get; set; }
     public string? MasterPasswordHint { get; set; }
 

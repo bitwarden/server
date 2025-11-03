@@ -7,6 +7,9 @@ namespace Bit.Core.KeyManagement.Models.Api.Response;
 public class MasterPasswordUnlockResponseModel
 {
     public required MasterPasswordUnlockKdfResponseModel Kdf { get; init; }
+    ///<summary>
+    ///Also known as "MasterKeyWrappedUserKey"
+    ///</summary>
     [EncryptedString] public required string MasterKeyEncryptedUserKey { get; init; }
     [StringLength(256)] public required string Salt { get; init; }
 }
