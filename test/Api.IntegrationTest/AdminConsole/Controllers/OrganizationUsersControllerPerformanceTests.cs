@@ -559,4 +559,49 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
+
+    /// <summary>
+    /// Tests POST /organizations/{orgId}/users/reinvite
+    /// </summary>
+    [Theory(Skip = "Performance test")]
+    [InlineData(10)]
+    //[InlineData(100)]
+    //[InlineData(1000)]
+    public async Task BulkReinviteUsers(int userCount)
+    {
+        await using var factory = new SqlServerApiApplicationFactory();
+        var client = factory.CreateClient();
+
+        var db = factory.GetDatabaseContext();
+        var orgSeeder = new OrganizationWithUsersRecipe(db);
+
+        var domain = $"{Guid.NewGuid().ToString("N").Substring(0, 8)}.com";
+        var orgId = orgSeeder.Seed(
+            name: "Org",
+            domain: domain,
+            users: userCount,
+            usersStatus: OrganizationUserStatusType.Invited);
+
+        var tokens = await factory.LoginAsync($"owner@{domain}", "c55hlJ/cfdvTd4awTXUqow6X3cOQCfGwn11o3HblnPs=");
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
+
+        var usersToReinvite = db.OrganizationUsers
+            .Where(ou => ou.OrganizationId == orgId && ou.Status == OrganizationUserStatusType.Invited)
+            .Select(ou => ou.Id)
+            .ToList();
+
+        var reinviteRequest = new OrganizationUserBulkRequestModel { Ids = usersToReinvite };
+
+        var requestContent = new StringContent(JsonSerializer.Serialize(reinviteRequest), Encoding.UTF8, "application/json");
+
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+        var response = await client.PostAsync($"/organizations/{orgId}/users/reinvite", requestContent);
+
+        stopwatch.Stop();
+
+        testOutputHelper.WriteLine($"POST /users/reinvite - Users: {usersToReinvite.Count}; Request duration: {stopwatch.ElapsedMilliseconds} ms; Status: {response.StatusCode}");
+
+        Assert.True(response.IsSuccessStatusCode);
+    }
 }
