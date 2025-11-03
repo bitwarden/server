@@ -51,9 +51,6 @@ public class Startup
         // Repositories
         services.AddDatabaseRepositories(globalSettings);
 
-        // BitPay Client
-        services.AddSingleton<BitPayClient>();
-
         // PayPal IPN Client
         services.AddHttpClient<IPayPalIPNClient, PayPalIPNClient>();
 

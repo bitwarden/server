@@ -3,22 +3,21 @@
 
 using Bit.Api.Auth.Models.Response;
 using Bit.Api.Models.Response;
-using Bit.Core;
 using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Models.Api.Request.AuthRequest;
 using Bit.Core.Auth.Services;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Auth.Controllers;
 
 [Route("auth-requests")]
-[Authorize("Application")]
+[Authorize(Policies.Application)]
 public class AuthRequestsController(
     IUserService userService,
     IAuthRequestRepository authRequestRepository,
@@ -54,7 +53,6 @@ public class AuthRequestsController(
     }
 
     [HttpGet("pending")]
-    [RequireFeature(FeatureFlagKeys.BrowserExtensionLoginApproval)]
     public async Task<ListResponseModel<PendingAuthRequestResponseModel>> GetPendingAuthRequestsAsync()
     {
         var userId = _userService.GetProperUserId(User).Value;

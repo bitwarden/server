@@ -14,10 +14,10 @@ using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
-using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Models.Sales;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Context;
@@ -72,6 +72,7 @@ public class UserService : UserManager<User>, IUserService
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IDistributedCache _distributedCache;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
+    private readonly IPricingClient _pricingClient;
 
     public UserService(
         IUserRepository userRepository,
@@ -106,7 +107,8 @@ public class UserService : UserManager<User>, IUserService
         IRevokeNonCompliantOrganizationUserCommand revokeNonCompliantOrganizationUserCommand,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IDistributedCache distributedCache,
-        IPolicyRequirementQuery policyRequirementQuery)
+        IPolicyRequirementQuery policyRequirementQuery,
+        IPricingClient pricingClient)
         : base(
               store,
               optionsAccessor,
@@ -146,6 +148,7 @@ public class UserService : UserManager<User>, IUserService
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _distributedCache = distributedCache;
         _policyRequirementQuery = policyRequirementQuery;
+        _pricingClient = pricingClient;
     }
 
     public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -777,39 +780,6 @@ public class UserService : UserManager<User>, IUserService
         return IdentityResult.Success;
     }
 
-    public async Task<IdentityResult> ChangeKdfAsync(User user, string masterPassword, string newMasterPassword,
-        string key, KdfType kdf, int kdfIterations, int? kdfMemory, int? kdfParallelism)
-    {
-        if (user == null)
-        {
-            throw new ArgumentNullException(nameof(user));
-        }
-
-        if (await CheckPasswordAsync(user, masterPassword))
-        {
-            var result = await UpdatePasswordHash(user, newMasterPassword);
-            if (!result.Succeeded)
-            {
-                return result;
-            }
-
-            var now = DateTime.UtcNow;
-            user.RevisionDate = user.AccountRevisionDate = now;
-            user.LastKdfChangeDate = now;
-            user.Key = key;
-            user.Kdf = kdf;
-            user.KdfIterations = kdfIterations;
-            user.KdfMemory = kdfMemory;
-            user.KdfParallelism = kdfParallelism;
-            await _userRepository.ReplaceAsync(user);
-            await _pushService.PushLogOutAsync(user.Id);
-            return IdentityResult.Success;
-        }
-
-        Logger.LogWarning("Change KDF failed for user {userId}.", user.Id);
-        return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
-    }
-
     public async Task<IdentityResult> RefreshSecurityStampAsync(User user, string secret)
     {
         if (user == null)
@@ -1005,8 +975,9 @@ public class UserService : UserManager<User>, IUserService
             throw new BadRequestException("Not a premium user.");
         }
 
-        var secret = await BillingHelpers.AdjustStorageAsync(_paymentService, user, storageAdjustmentGb,
-            StripeConstants.Prices.StoragePlanPersonal);
+        var premiumPlan = await _pricingClient.GetAvailablePremiumPlan();
+
+        var secret = await BillingHelpers.AdjustStorageAsync(_paymentService, user, storageAdjustmentGb, premiumPlan.Storage.StripePriceId);
         await SaveUserAsync(user);
         return secret;
     }
