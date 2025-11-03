@@ -10,7 +10,6 @@ using Bit.Core.Models.Data;
 using Bit.Core.Models.StaticStore;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
 using Bit.Core.Test.Billing;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;

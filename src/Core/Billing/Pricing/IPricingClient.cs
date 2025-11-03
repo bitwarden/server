@@ -1,7 +1,6 @@
 ﻿using Bit.Core.Billing.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.StaticStore;
-using Bit.Core.Utilities;
 
 namespace Bit.Core.Billing.Pricing;
 

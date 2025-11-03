@@ -6,7 +6,6 @@ using Bit.Core.Billing.Pricing.Organizations;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Billing.Pricing;
