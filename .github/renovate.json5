@@ -43,7 +43,7 @@
     },
     {
       matchSourceUrls: ["https://github.com/bitwarden/sdk-internal"],
-      groupName: "sdk-internal"
+      groupName: "sdk-internal",
     },
     {
       matchManagers: ["dockerfile", "docker-compose"],
