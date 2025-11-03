@@ -1,11 +1,13 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Models;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
 
@@ -50,7 +52,9 @@ public class SetUpSponsorshipCommand : ISetUpSponsorshipCommand
         }
 
         // Check org to sponsor's product type
-        var requiredSponsoredProductType = StaticStore.GetSponsoredPlan(sponsorship.PlanSponsorshipType.Value)?.SponsoredProductTierType;
+        var requiredSponsoredProductType = sponsorship.PlanSponsorshipType == PlanSponsorshipType.FamiliesForEnterprise
+            ? SponsoredPlans.FamiliesForEnterprise.SponsoredProductTierType
+            : (ProductTierType?)null;
         var sponsoredOrganizationProductTier = sponsoredOrganization.PlanType.GetProductTier();
 
         if (requiredSponsoredProductType == null ||

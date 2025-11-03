@@ -10,7 +10,6 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -31,10 +30,10 @@ public class OrganizationBillingServiceTests
         SutProvider<OrganizationBillingService> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(organization);
-        sutProvider.GetDependency<IPricingClient>().ListPlans().Returns(StaticStore.Plans.ToList());
+        sutProvider.GetDependency<IPricingClient>().ListPlans().Returns(MockPlans.Plans.ToList());
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType)
-            .Returns(StaticStore.GetPlan(organization.PlanType));
+            .Returns(MockPlans.GetPlan(organization.PlanType));
 
         var subscriberService = sutProvider.GetDependency<ISubscriberService>();
         var organizationSeatCount = new OrganizationSeatCounts { Users = 1, Sponsored = 0 };
@@ -96,10 +95,10 @@ public class OrganizationBillingServiceTests
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(organization);
 
-        sutProvider.GetDependency<IPricingClient>().ListPlans().Returns(StaticStore.Plans.ToList());
+        sutProvider.GetDependency<IPricingClient>().ListPlans().Returns(MockPlans.Plans.ToList());
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType)
-            .Returns(StaticStore.GetPlan(organization.PlanType));
+            .Returns(MockPlans.GetPlan(organization.PlanType));
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
@@ -132,7 +131,7 @@ public class OrganizationBillingServiceTests
         SutProvider<OrganizationBillingService> sutProvider)
     {
         // Arrange
-        var plan = StaticStore.GetPlan(PlanType.TeamsAnnually);
+        var plan = MockPlans.GetPlan(PlanType.TeamsAnnually);
         organization.PlanType = PlanType.TeamsAnnually;
         organization.GatewayCustomerId = "cus_test123";
         organization.GatewaySubscriptionId = null;
@@ -208,7 +207,7 @@ public class OrganizationBillingServiceTests
         SutProvider<OrganizationBillingService> sutProvider)
     {
         // Arrange
-        var plan = StaticStore.GetPlan(PlanType.TeamsAnnually);
+        var plan = MockPlans.GetPlan(PlanType.TeamsAnnually);
         organization.PlanType = PlanType.TeamsAnnually;
         organization.GatewayCustomerId = "cus_test123";
         organization.GatewaySubscriptionId = null;
@@ -282,7 +281,7 @@ public class OrganizationBillingServiceTests
         SutProvider<OrganizationBillingService> sutProvider)
     {
         // Arrange
-        var plan = StaticStore.GetPlan(PlanType.TeamsAnnually);
+        var plan = MockPlans.GetPlan(PlanType.TeamsAnnually);
         organization.PlanType = PlanType.TeamsAnnually;
         organization.GatewayCustomerId = "cus_test123";
         organization.GatewaySubscriptionId = null;

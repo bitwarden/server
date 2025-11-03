@@ -66,8 +66,8 @@ public class StripePaymentService : IPaymentService
         bool applySponsorship)
     {
         var existingPlan = await _pricingClient.GetPlanOrThrow(org.PlanType);
-        var sponsoredPlan = sponsorship?.PlanSponsorshipType != null
-            ? Utilities.StaticStore.GetSponsoredPlan(sponsorship.PlanSponsorshipType.Value)
+        var sponsoredPlan = sponsorship?.PlanSponsorshipType == PlanSponsorshipType.FamiliesForEnterprise
+            ? SponsoredPlans.FamiliesForEnterprise
             : null;
         var subscriptionUpdate =
             new SponsorOrganizationSubscriptionUpdate(existingPlan, sponsoredPlan, applySponsorship);
@@ -1060,10 +1060,15 @@ public class StripePaymentService : IPaymentService
 
         if (isSponsored)
         {
-            var sponsoredPlan = Utilities.StaticStore.GetSponsoredPlan(parameters.PasswordManager.SponsoredPlan.Value);
-            options.SubscriptionDetails.Items.Add(
-                new InvoiceSubscriptionDetailsItemOptions { Quantity = 1, Plan = sponsoredPlan.StripePlanId }
-            );
+            var sponsoredPlan = parameters.PasswordManager.SponsoredPlan == PlanSponsorshipType.FamiliesForEnterprise
+                ? SponsoredPlans.FamiliesForEnterprise
+                : null;
+            if (sponsoredPlan != null)
+            {
+                options.SubscriptionDetails.Items.Add(
+                    new InvoiceSubscriptionDetailsItemOptions { Quantity = 1, Plan = sponsoredPlan.StripePlanId }
+                );
+            }
         }
         else
         {
