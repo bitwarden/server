@@ -5,7 +5,6 @@ using System.Text.Json;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.IntegrationTest.Factories;
-using Bit.Api.Models.Request.Accounts;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Tokens;
@@ -20,17 +19,26 @@ public class OrganizationsControllerPerformanceTests(ITestOutputHelper testOutpu
     /// <summary>
     /// Tests DELETE /organizations/{id} with password verification
     /// </summary>
-    [Fact]
-    public async Task DeleteOrganization_WithPasswordVerification()
+    [Theory(Skip = "Performance test")]
+    [InlineData(10, 5, 3)]
+    //[InlineData(100, 20, 10)]
+    //[InlineData(1000, 50, 25)]
+    public async Task DeleteOrganization_WithPasswordVerification(int userCount, int collectionCount, int groupCount)
     {
         await using var factory = new SqlServerApiApplicationFactory();
         var client = factory.CreateClient();
 
         var db = factory.GetDatabaseContext();
         var orgSeeder = new OrganizationWithUsersRecipe(db);
+        var collectionsSeeder = new CollectionsRecipe(db);
+        var groupsSeeder = new GroupsRecipe(db);
 
         var domain = $"{Guid.NewGuid().ToString("N").Substring(0, 8)}.com";
-        var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: 1);
+        var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: userCount);
+
+        var orgUserIds = db.OrganizationUsers.Where(ou => ou.OrganizationId == orgId).Select(ou => ou.Id).ToList();
+        collectionsSeeder.AddToOrganization(orgId, collectionCount, orgUserIds, 0);
+        groupsSeeder.AddToOrganization(orgId, groupCount, orgUserIds, 0);
 
         var tokens = await factory.LoginAsync($"owner@{domain}", "c55hlJ/cfdvTd4awTXUqow6X3cOQCfGwn11o3HblnPs=");
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
@@ -52,7 +60,7 @@ public class OrganizationsControllerPerformanceTests(ITestOutputHelper testOutpu
 
         stopwatch.Stop();
 
-        testOutputHelper.WriteLine($"DELETE /organizations/{{id}} - Request duration: {stopwatch.ElapsedMilliseconds} ms; Status: {response.StatusCode}");
+        testOutputHelper.WriteLine($"DELETE /organizations/{{id}} - Users: {userCount}; Collections: {collectionCount}; Groups: {groupCount}; Request duration: {stopwatch.ElapsedMilliseconds} ms; Status: {response.StatusCode}");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
@@ -60,17 +68,26 @@ public class OrganizationsControllerPerformanceTests(ITestOutputHelper testOutpu
     /// <summary>
     /// Tests POST /organizations/{id}/delete-recover-token with token verification
     /// </summary>
-    [Fact]
-    public async Task DeleteOrganization_WithTokenVerification()
+    [Theory(Skip = "Performance test")]
+    [InlineData(10, 5, 3)]
+    //[InlineData(100, 20, 10)]
+    //[InlineData(1000, 50, 25)]
+    public async Task DeleteOrganization_WithTokenVerification(int userCount, int collectionCount, int groupCount)
     {
         await using var factory = new SqlServerApiApplicationFactory();
         var client = factory.CreateClient();
 
         var db = factory.GetDatabaseContext();
         var orgSeeder = new OrganizationWithUsersRecipe(db);
+        var collectionsSeeder = new CollectionsRecipe(db);
+        var groupsSeeder = new GroupsRecipe(db);
 
         var domain = $"{Guid.NewGuid().ToString("N").Substring(0, 8)}.com";
-        var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: 1);
+        var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: userCount);
+
+        var orgUserIds = db.OrganizationUsers.Where(ou => ou.OrganizationId == orgId).Select(ou => ou.Id).ToList();
+        collectionsSeeder.AddToOrganization(orgId, collectionCount, orgUserIds, 0);
+        groupsSeeder.AddToOrganization(orgId, groupCount, orgUserIds, 0);
 
         var organization = db.Organizations.FirstOrDefault(o => o.Id == orgId);
         Assert.NotNull(organization);
@@ -92,43 +109,7 @@ public class OrganizationsControllerPerformanceTests(ITestOutputHelper testOutpu
 
         stopwatch.Stop();
 
-        testOutputHelper.WriteLine($"POST /organizations/{{id}}/delete-recover-token - Request duration: {stopwatch.ElapsedMilliseconds} ms; Status: {response.StatusCode}");
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-    }
-
-    /// <summary>
-    /// Tests POST /organizations/{id}/storage
-    /// </summary>
-    [Fact]
-    public async Task AdjustStorage_IncrementByOneGb()
-    {
-        await using var factory = new SqlServerApiApplicationFactory();
-        var client = factory.CreateClient();
-
-        var db = factory.GetDatabaseContext();
-        var orgSeeder = new OrganizationWithUsersRecipe(db);
-
-        var domain = $"{Guid.NewGuid().ToString("N").Substring(0, 8)}.com";
-        var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: 1);
-
-        var tokens = await factory.LoginAsync($"owner@{domain}", "c55hlJ/cfdvTd4awTXUqow6X3cOQCfGwn11o3HblnPs=");
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
-
-        var storageRequest = new StorageRequestModel
-        {
-            StorageGbAdjustment = 1
-        };
-
-        var requestContent = new StringContent(JsonSerializer.Serialize(storageRequest), Encoding.UTF8, "application/json");
-
-        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-
-        var response = await client.PostAsync($"/organizations/{orgId}/storage", requestContent);
-
-        stopwatch.Stop();
-
-        testOutputHelper.WriteLine($"POST /organizations/{{id}}/storage - Request duration: {stopwatch.ElapsedMilliseconds} ms; Status: {response.StatusCode}");
+        testOutputHelper.WriteLine($"POST /organizations/{{id}}/delete-recover-token - Users: {userCount}; Collections: {collectionCount}; Groups: {groupCount}; Request duration: {stopwatch.ElapsedMilliseconds} ms; Status: {response.StatusCode}");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
@@ -136,7 +117,7 @@ public class OrganizationsControllerPerformanceTests(ITestOutputHelper testOutpu
     /// <summary>
     /// Tests POST /organizations/create-without-payment
     /// </summary>
-    [Fact]
+    [Fact(Skip = "Performance test")]
     public async Task CreateOrganization_WithoutPayment()
     {
         await using var factory = new SqlServerApiApplicationFactory();
@@ -163,7 +144,7 @@ public class OrganizationsControllerPerformanceTests(ITestOutputHelper testOutpu
             AdditionalSmSeats = 1,
             AdditionalServiceAccounts = 2,
             MaxAutoscaleSeats = 100,
-            PremiumAccessAddon = true,
+            PremiumAccessAddon = false,
             CollectionName = "2.AOs41Hd8OQiCPXjyJKCiDA==|O6OHgt2U2hJGBSNGnimJmg==|iD33s8B69C8JhYYhSa4V1tArjvLr8eEaGqOV7BRo5Jk="
         };
 

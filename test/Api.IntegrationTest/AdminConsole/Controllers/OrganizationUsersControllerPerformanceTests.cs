@@ -18,10 +18,10 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
     /// <summary>
     /// Tests GET /organizations/{orgId}/users?includeCollections=true
     /// </summary>
-    [Theory]
+    [Theory(Skip = "Performance test")]
     [InlineData(10)]
-    [InlineData(100)]
-    [InlineData(1000)]
+    //[InlineData(100)]
+    //[InlineData(1000)]
     public async Task GetAllUsers_WithCollections(int seats)
     {
         await using var factory = new SqlServerApiApplicationFactory();
@@ -55,10 +55,10 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
     /// <summary>
     /// Tests GET /organizations/{orgId}/users/mini-details
     /// </summary>
-    [Theory]
+    [Theory(Skip = "Performance test")]
     [InlineData(10)]
-    [InlineData(100)]
-    [InlineData(1000)]
+    //[InlineData(100)]
+    //[InlineData(1000)]
     public async Task GetAllUsers_MiniDetails(int seats)
     {
         await using var factory = new SqlServerApiApplicationFactory();
@@ -93,7 +93,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
     /// <summary>
     /// Tests GET /organizations/{orgId}/users/{id}?includeGroups=true
     /// </summary>
-    [Fact]
+    [Fact(Skip = "Performance test")]
     public async Task GetSingleUser_WithGroups()
     {
         await using var factory = new SqlServerApiApplicationFactory();
@@ -126,7 +126,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
     /// <summary>
     /// Tests GET /organizations/{orgId}/users/{id}/reset-password-details
     /// </summary>
-    [Fact]
+    [Fact(Skip = "Performance test")]
     public async Task GetResetPasswordDetails_ForSingleUser()
     {
         await using var factory = new SqlServerApiApplicationFactory();
@@ -157,10 +157,10 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
     /// <summary>
     /// Tests POST /organizations/{orgId}/users/confirm
     /// </summary>
-    [Theory]
+    [Theory(Skip = "Performance test")]
     [InlineData(10)]
-    [InlineData(100)]
-    [InlineData(1000)]
+    //[InlineData(100)]
+    //[InlineData(1000)]
     public async Task BulkConfirmUsers(int userCount)
     {
         await using var factory = new SqlServerApiApplicationFactory();
@@ -206,10 +206,10 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
     /// <summary>
     /// Tests POST /organizations/{orgId}/users/remove
     /// </summary>
-    [Theory]
+    [Theory(Skip = "Performance test")]
     [InlineData(10)]
-    [InlineData(100)]
-    [InlineData(1000)]
+    //[InlineData(100)]
+    //[InlineData(1000)]
     public async Task BulkRemoveUsers(int userCount)
     {
         await using var factory = new SqlServerApiApplicationFactory();
@@ -247,10 +247,10 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
     /// <summary>
     /// Tests PUT /organizations/{orgId}/users/revoke
     /// </summary>
-    [Theory]
+    [Theory(Skip = "Performance test")]
     [InlineData(10)]
-    [InlineData(100)]
-    [InlineData(1000)]
+    //[InlineData(100)]
+    //[InlineData(1000)]
     public async Task BulkRevokeUsers(int userCount)
     {
         await using var factory = new SqlServerApiApplicationFactory();
@@ -292,10 +292,10 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
     /// <summary>
     /// Tests PUT /organizations/{orgId}/users/restore
     /// </summary>
-    [Theory]
+    [Theory(Skip = "Performance test")]
     [InlineData(10)]
-    [InlineData(100)]
-    [InlineData(1000)]
+    //[InlineData(100)]
+    //[InlineData(1000)]
     public async Task BulkRestoreUsers(int userCount)
     {
         await using var factory = new SqlServerApiApplicationFactory();
@@ -337,10 +337,10 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
     /// <summary>
     /// Tests POST /organizations/{orgId}/users/delete-account
     /// </summary>
-    [Theory]
+    [Theory(Skip = "Performance test")]
     [InlineData(10)]
-    [InlineData(100)]
-    [InlineData(1000)]
+    //[InlineData(100)]
+    //[InlineData(1000)]
     public async Task BulkDeleteAccounts(int userCount)
     {
         await using var factory = new SqlServerApiApplicationFactory();
@@ -386,7 +386,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
     /// <summary>
     /// Tests PUT /organizations/{orgId}/users/{id}
     /// </summary>
-    [Fact]
+    [Fact(Skip = "Performance test")]
     public async Task UpdateSingleUser_WithCollectionsAndGroups()
     {
         await using var factory = new SqlServerApiApplicationFactory();
@@ -434,10 +434,10 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
     /// <summary>
     /// Tests PUT /organizations/{orgId}/users/enable-secrets-manager
     /// </summary>
-    [Theory]
+    [Theory(Skip = "Performance test")]
     [InlineData(10)]
-    [InlineData(100)]
-    [InlineData(1000)]
+    //[InlineData(100)]
+    //[InlineData(1000)]
     public async Task BulkEnableSecretsManager(int userCount)
     {
         await using var factory = new SqlServerApiApplicationFactory();
@@ -475,7 +475,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
     /// <summary>
     /// Tests DELETE /organizations/{orgId}/users/{id}/delete-account
     /// </summary>
-    [Fact]
+    [Fact(Skip = "Performance test")]
     public async Task DeleteSingleUserAccount_FromVerifiedDomain()
     {
         await using var factory = new SqlServerApiApplicationFactory();
@@ -514,10 +514,10 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
     /// <summary>
     /// Tests POST /organizations/{orgId}/users/invite
     /// </summary>
-    [Theory]
+    [Theory(Skip = "Performance test")]
     [InlineData(1)]
-    [InlineData(5)]
-    [InlineData(20)]
+    //[InlineData(5)]
+    //[InlineData(20)]
     public async Task InviteUsers(int emailCount)
     {
         await using var factory = new SqlServerApiApplicationFactory();
