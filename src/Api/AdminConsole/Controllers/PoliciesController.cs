@@ -208,7 +208,6 @@ public class PoliciesController : Controller
         return new PolicyResponseModel(policy);
     }
 
-
     [HttpPut("{type}/vnext")]
     [RequireFeatureAttribute(FeatureFlagKeys.CreateDefaultLocation)]
     [Authorize<ManagePoliciesRequirement>]
@@ -220,5 +219,4 @@ public class PoliciesController : Controller
 
         return new PolicyResponseModel(policy);
     }
-
 }
