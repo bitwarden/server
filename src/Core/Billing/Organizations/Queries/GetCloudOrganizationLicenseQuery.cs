@@ -22,14 +22,14 @@ public interface IGetCloudOrganizationLicenseQuery
 public class GetCloudOrganizationLicenseQuery : IGetCloudOrganizationLicenseQuery
 {
     private readonly IInstallationRepository _installationRepository;
-    private readonly IPaymentService _paymentService;
+    private readonly IStripePaymentService _paymentService;
     private readonly ILicensingService _licensingService;
     private readonly IProviderRepository _providerRepository;
     private readonly IFeatureService _featureService;
 
     public GetCloudOrganizationLicenseQuery(
         IInstallationRepository installationRepository,
-        IPaymentService paymentService,
+        IStripePaymentService paymentService,
         ILicensingService licensingService,
         IProviderRepository providerRepository,
         IFeatureService featureService)

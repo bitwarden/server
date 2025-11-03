@@ -2,16 +2,17 @@
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models.StaticStore.Plans;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Services.Implementations;
 using Bit.Core.Billing.Tax.Requests;
 using Bit.Core.Enums;
-using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Stripe;
 using Xunit;
 
-namespace Bit.Core.Test.Services;
+namespace Bit.Core.Test.Billing.Services;
 
 [SutProviderCustomize]
 public class StripePaymentServiceTests
@@ -39,7 +40,7 @@ public class StripePaymentServiceTests
         };
 
         sutProvider.GetDependency<IStripeAdapter>()
-            .InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(p =>
+            .CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(p =>
                 p.Currency == "usd" &&
                 p.SubscriptionDetails.Items.Any(x =>
                     x.Plan == familiesPlan.PasswordManager.StripePlanId &&
@@ -83,7 +84,7 @@ public class StripePaymentServiceTests
         };
 
         sutProvider.GetDependency<IStripeAdapter>()
-            .InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(p =>
+            .CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(p =>
                 p.Currency == "usd" &&
                 p.SubscriptionDetails.Items.Any(x =>
                     x.Plan == familiesPlan.PasswordManager.StripePlanId &&
@@ -123,7 +124,7 @@ public class StripePaymentServiceTests
         };
 
         sutProvider.GetDependency<IStripeAdapter>()
-            .InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(p =>
+            .CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(p =>
                 p.Currency == "usd" &&
                 p.SubscriptionDetails.Items.Any(x =>
                     x.Plan == "2021-family-for-enterprise-annually" &&
@@ -163,7 +164,7 @@ public class StripePaymentServiceTests
         };
 
         sutProvider.GetDependency<IStripeAdapter>()
-            .InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(p =>
+            .CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(p =>
                 p.Currency == "usd" &&
                 p.SubscriptionDetails.Items.Any(x =>
                     x.Plan == "2021-family-for-enterprise-annually" &&
@@ -205,7 +206,7 @@ public class StripePaymentServiceTests
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         stripeAdapter
-            .InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
             .Returns(new Invoice
             {
                 TotalExcludingTax = 400,
@@ -217,7 +218,7 @@ public class StripePaymentServiceTests
         await sutProvider.Sut.PreviewInvoiceAsync(parameters, null, null);
 
         // Assert
-        await stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+        await stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
             options.AutomaticTax.Enabled == true
         ));
     }
@@ -247,7 +248,7 @@ public class StripePaymentServiceTests
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         stripeAdapter
-            .InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
             .Returns(new Invoice
             {
                 TotalExcludingTax = 400,
@@ -259,7 +260,7 @@ public class StripePaymentServiceTests
         await sutProvider.Sut.PreviewInvoiceAsync(parameters, null, null);
 
         // Assert
-        await stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+        await stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
             options.AutomaticTax.Enabled == true
         ));
     }
@@ -289,7 +290,7 @@ public class StripePaymentServiceTests
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         stripeAdapter
-            .InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
             .Returns(new Invoice
             {
                 TotalExcludingTax = 400,
@@ -301,7 +302,7 @@ public class StripePaymentServiceTests
         await sutProvider.Sut.PreviewInvoiceAsync(parameters, null, null);
 
         // Assert
-        await stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+        await stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
             options.AutomaticTax.Enabled == true
         ));
     }
@@ -331,7 +332,7 @@ public class StripePaymentServiceTests
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         stripeAdapter
-            .InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
             .Returns(new Invoice
             {
                 TotalExcludingTax = 400,
@@ -343,7 +344,7 @@ public class StripePaymentServiceTests
         await sutProvider.Sut.PreviewInvoiceAsync(parameters, null, null);
 
         // Assert
-        await stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+        await stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
             options.AutomaticTax.Enabled == true
         ));
     }
@@ -373,7 +374,7 @@ public class StripePaymentServiceTests
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         stripeAdapter
-            .InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
             .Returns(new Invoice
             {
                 TotalExcludingTax = 400,
@@ -385,7 +386,7 @@ public class StripePaymentServiceTests
         await sutProvider.Sut.PreviewInvoiceAsync(parameters, null, null);
 
         // Assert
-        await stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+        await stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
             options.CustomerDetails.TaxExempt == null
         ));
     }
@@ -415,7 +416,7 @@ public class StripePaymentServiceTests
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         stripeAdapter
-            .InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
             .Returns(new Invoice
             {
                 TotalExcludingTax = 400,
@@ -427,7 +428,7 @@ public class StripePaymentServiceTests
         await sutProvider.Sut.PreviewInvoiceAsync(parameters, null, null);
 
         // Assert
-        await stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+        await stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
             options.CustomerDetails.TaxExempt == null
         ));
     }
@@ -457,7 +458,7 @@ public class StripePaymentServiceTests
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         stripeAdapter
-            .InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
             .Returns(new Invoice
             {
                 TotalExcludingTax = 400,
@@ -469,7 +470,7 @@ public class StripePaymentServiceTests
         await sutProvider.Sut.PreviewInvoiceAsync(parameters, null, null);
 
         // Assert
-        await stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+        await stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
             options.CustomerDetails.TaxExempt == null
         ));
     }
@@ -499,7 +500,7 @@ public class StripePaymentServiceTests
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         stripeAdapter
-            .InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
             .Returns(new Invoice
             {
                 TotalExcludingTax = 400,
@@ -511,7 +512,7 @@ public class StripePaymentServiceTests
         await sutProvider.Sut.PreviewInvoiceAsync(parameters, null, null);
 
         // Assert
-        await stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+        await stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
             options.CustomerDetails.TaxExempt == StripeConstants.TaxExempt.Reverse
         ));
     }

@@ -3,7 +3,6 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
-using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -63,7 +62,7 @@ public class GetProviderWarningsQueryTests
             });
 
         sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(true);
-        sutProvider.GetDependency<IStripeAdapter>().TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
+        sutProvider.GetDependency<IStripeAdapter>().ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
             .Returns(new StripeList<Registration> { Data = [] });
 
         var response = await sutProvider.Sut.Run(provider);
@@ -95,7 +94,7 @@ public class GetProviderWarningsQueryTests
             });
 
         sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(true);
-        sutProvider.GetDependency<IStripeAdapter>().TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
+        sutProvider.GetDependency<IStripeAdapter>().ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
             .Returns(new StripeList<Registration> { Data = [] });
 
         var response = await sutProvider.Sut.Run(provider);
@@ -129,7 +128,7 @@ public class GetProviderWarningsQueryTests
             });
 
         sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(false);
-        sutProvider.GetDependency<IStripeAdapter>().TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
+        sutProvider.GetDependency<IStripeAdapter>().ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
             .Returns(new StripeList<Registration> { Data = [] });
 
         var response = await sutProvider.Sut.Run(provider);
@@ -163,7 +162,7 @@ public class GetProviderWarningsQueryTests
             });
 
         sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(true);
-        sutProvider.GetDependency<IStripeAdapter>().TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
+        sutProvider.GetDependency<IStripeAdapter>().ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
             .Returns(new StripeList<Registration> { Data = [] });
 
         var response = await sutProvider.Sut.Run(provider);
@@ -224,7 +223,7 @@ public class GetProviderWarningsQueryTests
             });
 
         sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(true);
-        sutProvider.GetDependency<IStripeAdapter>().TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
+        sutProvider.GetDependency<IStripeAdapter>().ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
             .Returns(new StripeList<Registration>
             {
                 Data = [new Registration { Country = "GB" }]
@@ -257,7 +256,7 @@ public class GetProviderWarningsQueryTests
             });
 
         sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(true);
-        sutProvider.GetDependency<IStripeAdapter>().TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
+        sutProvider.GetDependency<IStripeAdapter>().ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
             .Returns(new StripeList<Registration>
             {
                 Data = [new Registration { Country = "CA" }]
@@ -296,7 +295,7 @@ public class GetProviderWarningsQueryTests
             });
 
         sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(true);
-        sutProvider.GetDependency<IStripeAdapter>().TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
+        sutProvider.GetDependency<IStripeAdapter>().ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
             .Returns(new StripeList<Registration>
             {
                 Data = [new Registration { Country = "CA" }]
@@ -338,7 +337,7 @@ public class GetProviderWarningsQueryTests
             });
 
         sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(true);
-        sutProvider.GetDependency<IStripeAdapter>().TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
+        sutProvider.GetDependency<IStripeAdapter>().ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
             .Returns(new StripeList<Registration>
             {
                 Data = [new Registration { Country = "CA" }]
@@ -383,7 +382,7 @@ public class GetProviderWarningsQueryTests
             });
 
         sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(true);
-        sutProvider.GetDependency<IStripeAdapter>().TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
+        sutProvider.GetDependency<IStripeAdapter>().ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
             .Returns(new StripeList<Registration>
             {
                 Data = [new Registration { Country = "CA" }]
@@ -428,7 +427,7 @@ public class GetProviderWarningsQueryTests
             });
 
         sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(true);
-        sutProvider.GetDependency<IStripeAdapter>().TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
+        sutProvider.GetDependency<IStripeAdapter>().ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
             .Returns(new StripeList<Registration>
             {
                 Data = [new Registration { Country = "CA" }]
@@ -461,7 +460,7 @@ public class GetProviderWarningsQueryTests
             });
 
         sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(true);
-        sutProvider.GetDependency<IStripeAdapter>().TaxRegistrationsListAsync(Arg.Is<RegistrationListOptions>(opt => opt.Status == TaxRegistrationStatus.Active))
+        sutProvider.GetDependency<IStripeAdapter>().ListTaxRegistrationsAsync(Arg.Is<RegistrationListOptions>(opt => opt.Status == TaxRegistrationStatus.Active))
             .Returns(new StripeList<Registration>
             {
                 Data = [
@@ -470,7 +469,7 @@ public class GetProviderWarningsQueryTests
                     new Registration { Country = "FR" }
                 ]
             });
-        sutProvider.GetDependency<IStripeAdapter>().TaxRegistrationsListAsync(Arg.Is<RegistrationListOptions>(opt => opt.Status == TaxRegistrationStatus.Scheduled))
+        sutProvider.GetDependency<IStripeAdapter>().ListTaxRegistrationsAsync(Arg.Is<RegistrationListOptions>(opt => opt.Status == TaxRegistrationStatus.Scheduled))
             .Returns(new StripeList<Registration> { Data = [] });
 
         var response = await sutProvider.Sut.Run(provider);
@@ -505,7 +504,7 @@ public class GetProviderWarningsQueryTests
             });
 
         sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(true);
-        sutProvider.GetDependency<IStripeAdapter>().TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
+        sutProvider.GetDependency<IStripeAdapter>().ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
             .Returns(new StripeList<Registration>
             {
                 Data = [new Registration { Country = "CA" }]
@@ -543,7 +542,7 @@ public class GetProviderWarningsQueryTests
             });
 
         sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(true);
-        sutProvider.GetDependency<IStripeAdapter>().TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
+        sutProvider.GetDependency<IStripeAdapter>().ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
             .Returns(new StripeList<Registration>
             {
                 Data = [new Registration { Country = "US" }]

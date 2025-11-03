@@ -101,7 +101,7 @@ public class BusinessUnitConverter(
         providerUser.Status = ProviderUserStatusType.Confirmed;
 
         // Stripe requires that we clear all the custom fields from the invoice settings if we want to replace them.
-        await stripeAdapter.CustomerUpdateAsync(subscription.CustomerId, new CustomerUpdateOptions
+        await stripeAdapter.UpdateCustomerAsync(subscription.CustomerId, new CustomerUpdateOptions
         {
             InvoiceSettings = new CustomerInvoiceSettingsOptions
             {
@@ -116,7 +116,7 @@ public class BusinessUnitConverter(
             ["convertedFrom"] = organization.Id.ToString()
         };
 
-        var updateCustomer = stripeAdapter.CustomerUpdateAsync(subscription.CustomerId, new CustomerUpdateOptions
+        var updateCustomer = stripeAdapter.UpdateCustomerAsync(subscription.CustomerId, new CustomerUpdateOptions
         {
             InvoiceSettings = new CustomerInvoiceSettingsOptions
             {
@@ -148,7 +148,7 @@ public class BusinessUnitConverter(
 
         // Replace the existing password manager price with the new business unit price.
         var updateSubscription =
-            stripeAdapter.SubscriptionUpdateAsync(subscription.Id,
+            stripeAdapter.UpdateSubscriptionAsync(subscription.Id,
                 new SubscriptionUpdateOptions
                 {
                     Items = [
