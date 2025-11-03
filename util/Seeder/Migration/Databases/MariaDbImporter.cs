@@ -312,12 +312,34 @@ public class MariaDbImporter(DatabaseConfig config, ILogger<MariaDbImporter> log
 
         try
         {
-            _logger.LogInformation("Disabling foreign key constraints");
-            var query = "SET FOREIGN_KEY_CHECKS = 0";
-            using var command = new MySqlCommand(query, _connection);
-            command.ExecuteNonQuery();
+            _logger.LogInformation("Disabling foreign key constraints and unique checks for faster inserts");
 
-            _logger.LogInformation("Foreign key constraints disabled");
+            // Disable foreign key checks
+            using (var command = new MySqlCommand("SET FOREIGN_KEY_CHECKS = 0", _connection))
+            {
+                command.ExecuteNonQuery();
+            }
+
+            // Disable unique constraint checks - this is a major performance boost
+            using (var command = new MySqlCommand("SET unique_checks = 0", _connection))
+            {
+                command.ExecuteNonQuery();
+            }
+
+            // Try to set InnoDB auto-increment lock mode to fastest setting (requires SUPER privilege)
+            // This is optional - if it fails, we'll just log a warning and continue
+            try
+            {
+                using var command = new MySqlCommand("SET GLOBAL innodb_autoinc_lock_mode = 2", _connection);
+                command.ExecuteNonQuery();
+                _logger.LogInformation("Set innodb_autoinc_lock_mode to 2 for faster auto-increment handling");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug("Could not set innodb_autoinc_lock_mode (requires SUPER privilege): {Message}", ex.Message);
+            }
+
+            _logger.LogInformation("Foreign key constraints and unique checks disabled");
             return true;
         }
         catch (Exception ex)
@@ -334,12 +356,21 @@ public class MariaDbImporter(DatabaseConfig config, ILogger<MariaDbImporter> log
 
         try
         {
-            _logger.LogInformation("Re-enabling foreign key constraints");
-            var query = "SET FOREIGN_KEY_CHECKS = 1";
-            using var command = new MySqlCommand(query, _connection);
-            command.ExecuteNonQuery();
+            _logger.LogInformation("Re-enabling foreign key constraints and unique checks");
 
-            _logger.LogInformation("Foreign key constraints re-enabled");
+            // Re-enable foreign key checks
+            using (var command = new MySqlCommand("SET FOREIGN_KEY_CHECKS = 1", _connection))
+            {
+                command.ExecuteNonQuery();
+            }
+
+            // Re-enable unique constraint checks
+            using (var command = new MySqlCommand("SET unique_checks = 1", _connection))
+            {
+                command.ExecuteNonQuery();
+            }
+
+            _logger.LogInformation("Foreign key constraints and unique checks re-enabled");
             return true;
         }
         catch (Exception ex)
@@ -467,8 +498,8 @@ public class MariaDbImporter(DatabaseConfig config, ILogger<MariaDbImporter> log
 
             // Use multi-row INSERT for better performance
             // INSERT INTO table (col1, col2) VALUES (val1, val2), (val3, val4), ...
-            // MariaDB can handle up to max_allowed_packet size, we'll use 1000 rows per batch
-            const int rowsPerBatch = 1000;
+            // MariaDB can handle up to max_allowed_packet size, we'll use 5000 rows per batch
+            const int rowsPerBatch = 5000;
             var totalImported = 0;
 
             for (int i = 0; i < filteredData.Count; i += rowsPerBatch)
@@ -505,6 +536,7 @@ public class MariaDbImporter(DatabaseConfig config, ILogger<MariaDbImporter> log
                     var fullInsertSql = columnPart + string.Join(", ", valueSets);
 
                     using var command = new MySqlCommand(fullInsertSql, _connection, transaction);
+                    command.CommandTimeout = 300; // 5 minutes timeout for large batches
 
                     // Add all parameters
                     foreach (var (name, value) in allParameters)
@@ -535,9 +567,22 @@ public class MariaDbImporter(DatabaseConfig config, ILogger<MariaDbImporter> log
                         _logger.LogDebug("Batch: {BatchCount} rows ({TotalImported}/{FilteredDataCount} total)", batch.Count, totalImported, filteredData.Count);
                     }
                 }
-                catch
+                catch (Exception batchEx)
                 {
-                    transaction.Rollback();
+                    _logger.LogError("Batch import error for {TableName}: {Message}", tableName, batchEx.Message);
+
+                    try
+                    {
+                        if (_connection?.State == System.Data.ConnectionState.Open)
+                        {
+                            transaction.Rollback();
+                        }
+                    }
+                    catch (Exception rollbackEx)
+                    {
+                        _logger.LogWarning("Could not rollback transaction (connection may be closed): {Message}", rollbackEx.Message);
+                    }
+
                     throw;
                 }
             }
