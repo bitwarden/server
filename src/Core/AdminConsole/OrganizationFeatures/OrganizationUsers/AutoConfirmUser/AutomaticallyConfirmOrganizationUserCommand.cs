@@ -52,7 +52,7 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
 
         if (!successfulConfirmation)
         {
-            return new None();
+            return new None(); // Operation is idempotent. If this is false, then the user is already confirmed.
         }
 
         return await validatedRequest.ToCommandResultAsync()
