@@ -46,7 +46,6 @@ public class BaseRequestValidatorTests
     private readonly FakeLogger<BaseRequestValidatorTests> _logger;
     private readonly ICurrentContext _currentContext;
     private readonly GlobalSettings _globalSettings;
-    private readonly IUserRepository _userRepository;
     private readonly IPolicyService _policyService;
     private readonly IFeatureService _featureService;
     private readonly ISsoConfigRepository _ssoConfigRepository;
@@ -69,7 +68,6 @@ public class BaseRequestValidatorTests
         _logger = new FakeLogger<BaseRequestValidatorTests>();
         _currentContext = Substitute.For<ICurrentContext>();
         _globalSettings = Substitute.For<GlobalSettings>();
-        _userRepository = Substitute.For<IUserRepository>();
         _policyService = Substitute.For<IPolicyService>();
         _featureService = Substitute.For<IFeatureService>();
         _ssoConfigRepository = Substitute.For<ISsoConfigRepository>();
@@ -89,7 +87,6 @@ public class BaseRequestValidatorTests
             _logger,
             _currentContext,
             _globalSettings,
-            _userRepository,
             _policyService,
             _featureService,
             _ssoConfigRepository,
@@ -549,7 +546,7 @@ public class BaseRequestValidatorTests
         Assert.False(context.GrantResult.IsError);
         await _eventService.Received(1).LogUserEventAsync(
             context.CustomValidatorRequestContext.User.Id, EventType.User_LoggedIn);
-        await _userRepository.Received(1).ReplaceAsync(Arg.Any<User>());
+        await _userService.Received(1).ResetFailedAuthenticationDetailsAsync(Arg.Any<User>());
     }
 
     // Test grantTypes where SSO would be required but the user is not in an
@@ -597,7 +594,7 @@ public class BaseRequestValidatorTests
         // Assert
         await _eventService.Received(1).LogUserEventAsync(
             context.CustomValidatorRequestContext.User.Id, EventType.User_LoggedIn);
-        await _userRepository.Received(1).ReplaceAsync(Arg.Any<User>());
+        await _userService.Received(1).ResetFailedAuthenticationDetailsAsync(Arg.Any<User>());
 
         Assert.False(context.GrantResult.IsError);
     }
@@ -643,7 +640,7 @@ public class BaseRequestValidatorTests
             Arg.Any<Guid>(), PolicyType.RequireSso, OrganizationUserStatusType.Confirmed);
         await _eventService.Received(1).LogUserEventAsync(
             context.CustomValidatorRequestContext.User.Id, EventType.User_LoggedIn);
-        await _userRepository.Received(1).ReplaceAsync(Arg.Any<User>());
+        await _userService.Received(1).ResetFailedAuthenticationDetailsAsync(Arg.Any<User>());
 
         Assert.False(context.GrantResult.IsError);
     }
@@ -1147,7 +1144,7 @@ public class BaseRequestValidatorTests
         // Verify user failed login count was updated (in new behavior path)
         if (featureFlagEnabled)
         {
-            await _userRepository.Received(1).ReplaceAsync(Arg.Is<User>(u =>
+            await _userService.Received(1).UpdateFailedAuthenticationDetailsAsync(Arg.Is<User>(u =>
                 u.Id == user.Id && u.FailedLoginCount > 0));
         }
     }
@@ -1225,8 +1222,8 @@ public class BaseRequestValidatorTests
         await _eventService.Received(1).LogUserEventAsync(user.Id, EventType.User_LoggedIn);
 
         // Verify failed login count was reset (successful login)
-        await _userRepository.Received(1).ReplaceAsync(Arg.Is<User>(u =>
-            u.Id == user.Id && u.FailedLoginCount == 0));
+        await _userService.Received(1).ResetFailedAuthenticationDetailsAsync(Arg.Is<User>(u =>
+            u.Id == user.Id));
 
         if (featureFlagEnabled)
         {
