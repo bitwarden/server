@@ -265,4 +265,116 @@ public class HandlebarsMailServiceTests
         // Assert
         await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Any<MailMessage>());
     }
+
+    [Fact]
+    public async Task SendIndividualUserWelcomeEmailAsync_SendsCorrectEmail()
+    {
+        // Arrange
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "test@example.com"
+        };
+
+        // Act
+        await _sut.SendIndividualUserWelcomeEmailAsync(user);
+
+        // Assert
+        await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m =>
+            m.MetaData != null &&
+            m.ToEmails.Contains("test@example.com") &&
+            m.Subject == "Welcome to Bitwarden!" &&
+            m.Category == "Welcome"));
+    }
+
+    [Fact]
+    public async Task SendOrganizationUserWelcomeEmailAsync_SendsCorrectEmailWithOrganizationName()
+    {
+        // Arrange
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "user@company.com"
+        };
+        var organizationName = "Bitwarden Corp";
+
+        // Act
+        await _sut.SendOrganizationUserWelcomeEmailAsync(user, organizationName);
+
+        // Assert
+        await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m =>
+            m.MetaData != null &&
+            m.ToEmails.Contains("user@company.com") &&
+            m.Subject == "Welcome to Bitwarden!" &&
+            m.HtmlContent.Contains("Bitwarden Corp") &&
+            m.Category == "Welcome"));
+    }
+
+    [Fact]
+    public async Task SendFreeOrgOrFamilyOrgUserWelcomeEmailAsync_SendsCorrectEmailWithFamilyTemplate()
+    {
+        // Arrange
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "family@example.com"
+        };
+        var familyOrganizationName = "Smith Family";
+
+        // Act
+        await _sut.SendFreeOrgOrFamilyOrgUserWelcomeEmailAsync(user, familyOrganizationName);
+
+        // Assert
+        await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m =>
+            m.MetaData != null &&
+            m.ToEmails.Contains("family@example.com") &&
+            m.Subject == "Welcome to Bitwarden!" &&
+            m.HtmlContent.Contains("Smith Family") &&
+            m.Category == "Welcome"));
+    }
+
+    [Theory]
+    [InlineData("Acme Corp", "Acme Corp")]
+    [InlineData("Org with <script>alert('xss')</script>", "Org with alert('xss')")]
+    [InlineData("Company & Associates", "Company &amp; Associates")]
+    [InlineData("Test \"Quoted\" Org", "Test &quot;Quoted&quot; Org")]
+    public async Task SendOrganizationUserWelcomeEmailAsync_SanitizesOrganizationNameForEmail(string inputOrgName, string expectedSanitized)
+    {
+        // Arrange
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "test@example.com"
+        };
+
+        // Act
+        await _sut.SendOrganizationUserWelcomeEmailAsync(user, inputOrgName);
+
+        // Assert
+        await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m =>
+            m.HtmlContent.Contains(expectedSanitized) &&
+            !m.HtmlContent.Contains("<script>") && // Ensure script tags are removed
+            m.Category == "Welcome"));
+    }
+
+    [Theory]
+    [InlineData("test@example.com")]
+    [InlineData("user+tag@domain.co.uk")]
+    [InlineData("admin@organization.org")]
+    public async Task SendIndividualUserWelcomeEmailAsync_HandlesVariousEmailFormats(string email)
+    {
+        // Arrange
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = email
+        };
+
+        // Act
+        await _sut.SendIndividualUserWelcomeEmailAsync(user);
+
+        // Assert
+        await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m =>
+            m.ToEmails.Contains(email)));
+    }
 }

@@ -452,7 +452,7 @@ public class HandlebarsMailService : IMailService
         var message = CreateDefaultMessage("Welcome to Bitwarden!", user.Email);
         var model = new OrganizationWelcomeEmailViewModel
         {
-            OrganizationName = organizationName,
+            OrganizationName = CoreHelpers.SanitizeForEmail(organizationName, false),
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName
         };
@@ -466,7 +466,7 @@ public class HandlebarsMailService : IMailService
         var message = CreateDefaultMessage("Welcome to Bitwarden!", user.Email);
         var model = new OrganizationWelcomeEmailViewModel
         {
-            OrganizationName = familyOrganizationName,
+            OrganizationName = CoreHelpers.SanitizeForEmail(familyOrganizationName, false),
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName
         };
