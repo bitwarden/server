@@ -183,7 +183,7 @@ public abstract class BaseRequestValidator<T> where T : class
                         await SendFailedTwoFactorEmail(user, twoFactorProviderType);
                         await _userService.UpdateFailedAuthenticationDetailsAsync(user);
 
-                    await BuildErrorResultAsync("Two-step token is invalid. Try again.", true, context, user);
+                        await BuildErrorResultAsync("Two-step token is invalid. Try again.", true, context, user);
                     }
 
                     return;
