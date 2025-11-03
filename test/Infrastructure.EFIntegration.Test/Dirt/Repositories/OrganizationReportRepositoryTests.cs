@@ -1,6 +1,7 @@
 ﻿using AutoFixture;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Dirt.Entities;
+using Bit.Core.Dirt.Reports.Models.Data;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Repositories;
 using Bit.Core.Test.AutoFixture.Attributes;
@@ -488,6 +489,49 @@ public class OrganizationReportRepositoryTests
         // Assert
         Assert.Null(result);
     }
+
+    [CiSkippedTheory, EfOrganizationReportAutoData]
+    public async Task UpdateMetricsAsync_ShouldUpdateMetricsCorrectly(
+        OrganizationReportRepository sqlOrganizationReportRepo,
+        SqlRepo.OrganizationRepository sqlOrganizationRepo)
+    {
+        // Arrange
+        var (org, report) = await CreateOrganizationAndReportAsync(sqlOrganizationRepo, sqlOrganizationReportRepo);
+        var metrics = new OrganizationReportMetricsData
+        {
+            ApplicationCount = 10,
+            ApplicationAtRiskCount = 2,
+            CriticalApplicationCount = 5,
+            CriticalApplicationAtRiskCount = 1,
+            MemberCount = 20,
+            MemberAtRiskCount = 4,
+            CriticalMemberCount = 10,
+            CriticalMemberAtRiskCount = 2,
+            PasswordCount = 100,
+            PasswordAtRiskCount = 15,
+            CriticalPasswordCount = 50,
+            CriticalPasswordAtRiskCount = 5
+        };
+
+        // Act
+        await sqlOrganizationReportRepo.UpdateMetricsAsync(report.Id, metrics);
+        var updatedReport = await sqlOrganizationReportRepo.GetByIdAsync(report.Id);
+
+        // Assert
+        Assert.Equal(metrics.ApplicationCount, updatedReport.ApplicationCount);
+        Assert.Equal(metrics.ApplicationAtRiskCount, updatedReport.ApplicationAtRiskCount);
+        Assert.Equal(metrics.CriticalApplicationCount, updatedReport.CriticalApplicationCount);
+        Assert.Equal(metrics.CriticalApplicationAtRiskCount, updatedReport.CriticalApplicationAtRiskCount);
+        Assert.Equal(metrics.MemberCount, updatedReport.MemberCount);
+        Assert.Equal(metrics.MemberAtRiskCount, updatedReport.MemberAtRiskCount);
+        Assert.Equal(metrics.CriticalMemberCount, updatedReport.CriticalMemberCount);
+        Assert.Equal(metrics.CriticalMemberAtRiskCount, updatedReport.CriticalMemberAtRiskCount);
+        Assert.Equal(metrics.PasswordCount, updatedReport.PasswordCount);
+        Assert.Equal(metrics.PasswordAtRiskCount, updatedReport.PasswordAtRiskCount);
+        Assert.Equal(metrics.CriticalPasswordCount, updatedReport.CriticalPasswordCount);
+        Assert.Equal(metrics.CriticalPasswordAtRiskCount, updatedReport.CriticalPasswordAtRiskCount);
+    }
+
 
     private async Task<(Organization, OrganizationReport)> CreateOrganizationAndReportAsync(
         IOrganizationRepository orgRepo,
