@@ -19,8 +19,9 @@ using Bit.Core.Models.Mail.Auth;
 using Bit.Core.Models.Mail.Billing;
 using Bit.Core.Models.Mail.FamiliesForEnterprise;
 using Bit.Core.Models.Mail.Provider;
-using Bit.Core.SecretsManager.Models.Mail;
 using Bit.Core.Platform.Mail.Delivery;
+using Bit.Core.Platform.Mail.Enqueuing;
+using Bit.Core.SecretsManager.Models.Mail;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Models.Data;
@@ -28,7 +29,6 @@ using Core.Auth.Enums;
 using HandlebarsDotNet;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
-using Bit.Core.Platform.Mail.Enqueuing;
 
 namespace Bit.Core.Services.Mail;
 
