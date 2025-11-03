@@ -83,6 +83,7 @@ public class IntegrationTemplateProcessorTests
     [Theory]
     [InlineData("User name is #UserName#")]
     [InlineData("Email: #UserEmail#")]
+    [InlineData("User type = #UserType#")]
     public void TemplateRequiresUser_ContainingKeys_ReturnsTrue(string template)
     {
         var result = IntegrationTemplateProcessor.TemplateRequiresUser(template);
@@ -102,6 +103,7 @@ public class IntegrationTemplateProcessorTests
     [Theory]
     [InlineData("Acting user is #ActingUserName#")]
     [InlineData("Acting user's email is #ActingUserEmail#")]
+    [InlineData("Acting user's type is #ActingUserType#")]
     public void TemplateRequiresActingUser_ContainingKeys_ReturnsTrue(string template)
     {
         var result = IntegrationTemplateProcessor.TemplateRequiresActingUser(template);
