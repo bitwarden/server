@@ -21,6 +21,8 @@ mod temp_table;
 pub mod akd_storage_config;
 pub mod db_config;
 
+/// Enum to represent different database types supported by the storage layer.
+/// Each variant is cheap to clone for reuse across threads.
 #[derive(Debug, Clone)]
 pub enum DatabaseType {
     MsSql(MsSql),

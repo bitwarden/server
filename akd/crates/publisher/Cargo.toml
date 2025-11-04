@@ -7,7 +7,10 @@ license-file.workspace = true
 keywords.workspace = true
 
 [dependencies]
-akd_storage = { path = "../akd_storage" }
+akd = { workspace = true }
+akd_storage = { workspace = true}
+bitwarden-akd-configuration = { workspace = true}
+common = { workspace = true }
 tokio-util = {version = "0.7.16", features = ["compat"] }
 tokio = { workspace = true }
 tracing = { workspace = true }

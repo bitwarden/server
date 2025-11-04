@@ -27,6 +27,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "aio"
+version = "0.1.0"
+dependencies = [
+ "akd_storage",
+ "common",
+ "publisher",
+ "reader",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "akd"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1476,8 +1489,11 @@ dependencies = [
 name = "publisher"
 version = "0.1.0"
 dependencies = [
+ "akd",
  "akd_storage",
  "async-std",
+ "bitwarden-akd-configuration",
+ "common",
  "tiberius",
  "tokio",
  "tokio-util",
@@ -1528,6 +1544,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c"
 dependencies = [
  "getrandom 0.2.16",
+]
+
+[[package]]
+name = "reader"
+version = "0.1.0"
+dependencies = [
+ "akd",
+ "akd_storage",
+ "bitwarden-akd-configuration",
+ "common",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]

@@ -1,9 +1,10 @@
-//! The Publisher crate is responsible for tracking insert requests into the AKD and performing them as batches on a schedule.
-//! Write permissions are needed to the underlying data stores.
-//! There should only be one instance of this running at a time for a given AKD.
+//! The Reader crate is responsible for handling read requests to the AKD. It requires only read permissions to the
+//! underlying data stores, and can be horizontally scaled as needed.
 
+use akd::ecvrf::VRFKeyStorage;
 use akd_storage::db_config::DbConfig;
-use publisher::{start_web_server, start_write_job};
+use common::VrfStorageType;
+use reader::start;
 use tracing::info;
 
 #[tokio::main]
@@ -24,23 +25,14 @@ async fn main() {
         .connect()
         .await
         .expect("Failed to connect to database");
-    let vrf = common::VrfStorageType::HardCodedAkdVRF;
+    let vrf = VrfStorageType::HardCodedAkdVRF;
 
-    let write_job_handle = {
-        let db = db.clone();
-        tokio::spawn(async move {
-            start_write_job(db, vrf).await;
-        })
-    };
     let web_server_handle = tokio::spawn(async move {
-        start_web_server(db).await;
+        start(db, vrf).await;
     });
 
     // Wait for both services to complete
     tokio::select! {
-        _ = write_job_handle => {
-            info!("Write job completed");
-        }
         _ = web_server_handle => {
             info!("Web service completed");
         }

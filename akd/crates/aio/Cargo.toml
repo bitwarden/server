@@ -1,0 +1,19 @@
+[package]
+name = "aio"
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+license-file.workspace = true
+keywords.workspace = true
+
+[dependencies]
+akd_storage = { workspace = true }
+common = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+tokio = { workspace = true }
+publisher = { path = "../publisher" }
+reader = { path = "../reader" }
+
+[lints]
+workspace = true

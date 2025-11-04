@@ -9,7 +9,7 @@ keywords.workspace = true
 [dependencies]
 akd = "0.11.0"
 async-trait = { workspace = true }
-akd_storage = { path = "../akd_storage" }
+akd_storage = { workspace = true}
 config = { workspace = true }
 serde = { workspace = true }
 thiserror = "2.0.17"

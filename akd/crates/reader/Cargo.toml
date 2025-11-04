@@ -1,0 +1,19 @@
+[package]
+name = "reader"
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+license-file.workspace = true
+keywords.workspace = true
+
+[dependencies]
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+akd = { workspace = true }
+akd_storage = { workspace = true}
+bitwarden-akd-configuration = { workspace = true}
+common = { workspace = true}
+
+[lints]
+workspace = true
