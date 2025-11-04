@@ -3,8 +3,7 @@ using System.Collections.Concurrent;
 using System.Reflection;
 using HandlebarsDotNet;
 
-namespace Bit.Core.Platform.Mailer;
-
+namespace Bit.Core.Platform.Mail.Mailer;
 public class HandlebarMailRenderer : IMailRenderer
 {
     /// <summary>
