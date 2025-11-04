@@ -54,7 +54,7 @@ public class SavePolicyRequestTests
     }
 
     [Theory, BitAutoData]
-    public async Task ToSavePolicyModelAsync_WithNullData_HandlesCorrectly(
+    public async Task ToSavePolicyModelAsync_WithEmptyData_HandlesCorrectly(
         Guid organizationId,
         Guid userId)
     {
@@ -68,10 +68,8 @@ public class SavePolicyRequestTests
             Policy = new PolicyRequestModel
             {
                 Type = PolicyType.SingleOrg,
-                Enabled = false,
-                Data = null
-            },
-            Metadata = null
+                Enabled = false
+            }
         };
 
         // Act
@@ -100,10 +98,8 @@ public class SavePolicyRequestTests
             Policy = new PolicyRequestModel
             {
                 Type = PolicyType.SingleOrg,
-                Enabled = false,
-                Data = null
-            },
-            Metadata = null
+                Enabled = false
+            }
         };
 
         // Act
@@ -133,8 +129,7 @@ public class SavePolicyRequestTests
             Policy = new PolicyRequestModel
             {
                 Type = PolicyType.OrganizationDataOwnership,
-                Enabled = true,
-                Data = null
+                Enabled = true
             },
             Metadata = new Dictionary<string, object>
             {
@@ -152,7 +147,7 @@ public class SavePolicyRequestTests
     }
 
     [Theory, BitAutoData]
-    public async Task ToSavePolicyModelAsync_OrganizationDataOwnership_WithNullMetadata_ReturnsEmptyMetadata(
+    public async Task ToSavePolicyModelAsync_OrganizationDataOwnership_WithEmptyMetadata_ReturnsEmptyMetadata(
         Guid organizationId,
         Guid userId)
     {
@@ -166,10 +161,8 @@ public class SavePolicyRequestTests
             Policy = new PolicyRequestModel
             {
                 Type = PolicyType.OrganizationDataOwnership,
-                Enabled = true,
-                Data = null
-            },
-            Metadata = null
+                Enabled = true
+            }
         };
 
         // Act
@@ -246,8 +239,7 @@ public class SavePolicyRequestTests
             Policy = new PolicyRequestModel
             {
                 Type = PolicyType.MaximumVaultTimeout,
-                Enabled = true,
-                Data = null
+                Enabled = true
             },
             Metadata = new Dictionary<string, object>
             {
@@ -280,8 +272,7 @@ public class SavePolicyRequestTests
             Policy = new PolicyRequestModel
             {
                 Type = PolicyType.OrganizationDataOwnership,
-                Enabled = true,
-                Data = null
+                Enabled = true
             },
             Metadata = errorDictionary
         };
