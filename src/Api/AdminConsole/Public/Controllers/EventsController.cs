@@ -84,8 +84,7 @@ public class EventsController : Controller
                 secret = new Core.SecretsManager.Entities.Secret { Id = request.SecretId.Value, OrganizationId = organizationId };
             }
 
-
-            if (secret.OrganizationId == organizationId && _currentContext.AccessSecretsManager(organizationId))
+            if (secret.OrganizationId == organizationId)
             {
                 result = await _eventRepository.GetManyBySecretAsync(
                     secret, dateRange.Item1, dateRange.Item2,
@@ -99,7 +98,7 @@ public class EventsController : Controller
         else if (request.ProjectId.HasValue)
         {
             var project = await _projectRepository.GetByIdAsync(request.ProjectId.Value);
-            if (project != null && project.OrganizationId == organizationId && _currentContext.AccessSecretsManager(organizationId))
+            if (project != null && project.OrganizationId == organizationId)
             {
                 result = await _eventRepository.GetManyByProjectAsync(
                     project, dateRange.Item1, dateRange.Item2,
