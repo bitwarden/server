@@ -1,5 +1,5 @@
 [package]
-name = "akd_storage"
+name = "common"
 edition.workspace = true
 version.workspace = true
 authors.workspace = true
@@ -8,8 +8,9 @@ keywords.workspace = true
 
 [dependencies]
 akd = "0.11.0"
-async-trait = { workspace = true}
-ms_database = { path = "../ms_database" }
+async-trait = { workspace = true }
+akd_storage = { path = "../akd_storage" }
+config = { workspace = true }
 serde = { workspace = true }
 thiserror = "2.0.17"
 tracing.workspace = true

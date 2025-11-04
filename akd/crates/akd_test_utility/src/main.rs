@@ -1,6 +1,8 @@
 use akd::ecvrf::HardCodedAkdVRF;
 use akd::storage::StorageManager;
 use akd::Directory;
+use akd_storage::DatabaseType;
+use akd_storage::db_config::DbConfig;
 use anyhow::{Context, Result};
 use clap::{Parser, ValueEnum};
 use commands::Command;
@@ -149,12 +151,9 @@ async fn main() -> Result<()> {
 
     // Create database connection
     info!("Connecting to MS SQL database");
-    let db = akd_storage::ms_sql::MsSql::builder(connection_string)
-        .pool_size(args.pool_size)
-        .build()
-        .await
-        .context("Failed to create MS SQL database connection")?;
-
+    let config = DbConfig::MsSql { connection_string, pool_size: args.pool_size };
+    let db = config.connect().await.context("Failed to connect to database")?;
+    
     // Handle pre-processing modes
     if let Some(()) = pre_process_mode(&args, &db).await? {
         return Ok(());
@@ -180,22 +179,22 @@ async fn main() -> Result<()> {
 // Process modes that run before creating the directory
 async fn pre_process_mode(
     args: &CliArgs,
-    db: &akd_storage::ms_sql::MsSql,
+    db: &DatabaseType,
 ) -> Result<Option<()>> {
-    match &args.mode {
-        Some(Mode::Drop) => {
+    match (db, &args.mode) {
+        (DatabaseType::MsSql(db), Some(Mode::Drop)) => {
             info!("Dropping database tables");
             db.drop().await.context("Failed to drop tables")?;
             info!("Tables dropped successfully");
             return Ok(Some(()));
         }
-        Some(Mode::Migrate) => {
+        (DatabaseType::MsSql(db), Some(Mode::Migrate)) => {
             info!("Running database migrations");
             db.migrate().await.context("Failed to run migrations")?;
             info!("Migrations completed successfully");
             return Ok(Some(()));
         }
-        Some(Mode::Clean) => {
+        (DatabaseType::MsSql(db), Some(Mode::Clean)) => {
             info!("Cleaning database (drop + migrate)");
             db.drop().await.context("Failed to drop tables")?;
             info!("Tables dropped");
@@ -211,7 +210,7 @@ async fn pre_process_mode(
 async fn process_mode(
     args: &CliArgs,
     tx: &Sender<directory_host::Rpc>,
-    db: &akd_storage::ms_sql::MsSql,
+    db: &DatabaseType,
 ) -> Result<()> {
     if let Some(mode) = &args.mode {
         match mode {
@@ -250,7 +249,7 @@ async fn process_mode(
     Ok(())
 }
 
-async fn bench_db_insert(num_users: u64, db: &akd_storage::ms_sql::MsSql) -> Result<()> {
+async fn bench_db_insert(num_users: u64, db: &DatabaseType) -> Result<()> {
     use owo_colors::OwoColorize;
 
     println!("{}", "======= Benchmark operation requested =======".cyan());
@@ -480,7 +479,7 @@ async fn bench_lookup(
 async fn repl_loop(
     args: &CliArgs,
     tx: &Sender<directory_host::Rpc>,
-    db: &akd_storage::ms_sql::MsSql,
+    db: &DatabaseType,
 ) -> Result<()> {
     loop {
         println!("Please enter a command");
@@ -490,19 +489,19 @@ async fn repl_loop(
         let mut line = String::new();
         stdin().read_line(&mut line)?;
 
-        match Command::parse(&mut line) {
-            Command::Unknown(other) => {
+        match (db, Command::parse(&mut line)) {
+            (_, Command::Unknown(other)) => {
                 println!("Input '{}' is not supported, enter 'help' for the help menu", other)
             }
-            Command::InvalidArgs(message) => println!("Invalid arguments: {}", message),
-            Command::Exit => {
+            (_,Command::InvalidArgs(message)) => println!("Invalid arguments: {}", message),
+            (_, Command::Exit) => {
                 info!("Exiting...");
                 break;
             }
-            Command::Help => {
+            (_, Command::Help) => {
                 Command::print_help_menu();
             }
-            Command::Clean => {
+            (DatabaseType::MsSql(db), Command::Clean) => {
                 println!("Cleaning the database (drop + migrate)...");
                 match db.drop().await {
                     Ok(_) => {
@@ -521,14 +520,10 @@ async fn repl_loop(
                     }
                 }
             }
-            Command::Info => {
-                use owo_colors::OwoColorize;
-                println!("{}", "===== Auditable Key Directory Information =====".cyan());
-                println!("      Connected to MS SQL database");
-                println!("      Connection pool size: {}", args.pool_size);
-                println!();
+            (_, Command::Clean) => {
+                println!("Clean command is only supported for MS SQL databases");
             }
-            Command::Directory(cmd) => {
+            (_, Command::Directory(cmd)) => {
                 let (rpc_tx, rpc_rx) = tokio::sync::oneshot::channel();
                 let rpc = directory_host::Rpc(cmd, Some(rpc_tx));
 

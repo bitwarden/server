@@ -5,7 +5,6 @@ pub(crate) enum Command {
     Help,
     Exit,
     Clean,
-    Info,
     Directory(DirectoryCommand),
     InvalidArgs(String),
     Unknown(String),
@@ -25,7 +24,6 @@ impl Command {
             "exit" | "x" => Command::Exit,
             "help" | "?" => Command::Help,
             "clean" => Command::Clean,
-            "info" => Command::Info,
             cmd => Command::handle_dir_cmd(cmd, parts, text),
         }
     }

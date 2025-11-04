@@ -14,7 +14,7 @@ path = "src/main.rs"
 akd = { workspace = true }
 akd_storage = { path = "../akd_storage" }
 anyhow = "1"
-async-trait = "0.1"
+async-trait = { workspace = true }
 clap = { version = "4", features = ["derive"] }
 hex = "0.4"
 owo-colors = "4"

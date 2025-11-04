@@ -15,6 +15,9 @@ unwrap_used = "deny"
 
 [workspace.dependencies]
 akd = "0.11.0"
+async-trait = "0.1.89"
+config = "0.15.18"
+serde = { version = "1.0.228", features = ["derive"] }
 tokio = { version = "1.47.1", features = ["full"] }
 tracing = { version = "0.1.41" }
 tracing-subscriber = {version = "0.3.19" }

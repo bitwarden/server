@@ -50,7 +50,7 @@ impl MsSqlBuilder {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct MsSql {
     pool: Arc<Pool>,
 }
