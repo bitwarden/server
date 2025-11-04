@@ -56,12 +56,13 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
         }
 
         return await validatedRequest.ToCommandResultAsync()
-            .MapAsync(CreateDefaultCollectionsAsync)
-            .MapAsync(LogOrganizationUserConfirmedEventAsync)
-            .MapAsync(SendConfirmedOrganizationUserEmailAsync)
-            .MapAsync(DeleteDeviceRegistrationAsync)
-            .MapAsync(PushSyncOrganizationKeysAsync)
-            .ToResultAsync();
+            .ApplyAsync([
+                CreateDefaultCollectionsAsync,
+                LogOrganizationUserConfirmedEventAsync,
+                SendConfirmedOrganizationUserEmailAsync,
+                DeleteDeviceRegistrationAsync,
+                PushSyncOrganizationKeysAsync
+            ]).FoldAsync();
     }
 
     private async Task<CommandResult<AutomaticallyConfirmOrganizationUserValidationRequest>> CreateDefaultCollectionsAsync(
@@ -69,10 +70,7 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
     {
         try
         {
-            if (!featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation)
-                || string.IsNullOrWhiteSpace(request.DefaultUserCollectionName)
-                || !(await policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(request.UserId))
-                    .RequiresDefaultCollectionOnConfirm(request.Organization.Id))
+            if (!await ShouldCreateDefaultCollectionAsync(request))
             {
                 return request;
             }
@@ -99,6 +97,19 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
             return new CommandResult<AutomaticallyConfirmOrganizationUserValidationRequest>(new FailedToCreateDefaultCollection());
         }
     }
+
+    /// <summary>
+    /// Determines whether a default collection should be created for an organization user during the confirmation process.
+    /// </summary>
+    /// <param name="request">
+    /// The validation request containing information about the user, organization, and collection settings.
+    /// </param>
+    /// <returns>The result is a boolean value indicating whether a default collection should be created.</returns>
+    private async Task<bool> ShouldCreateDefaultCollectionAsync(AutomaticallyConfirmOrganizationUserValidationRequest request) =>
+        !featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation)
+        || string.IsNullOrWhiteSpace(request.DefaultUserCollectionName)
+        || !(await policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(request.UserId))
+            .RequiresDefaultCollectionOnConfirm(request.Organization.Id);
 
     private async Task<CommandResult<AutomaticallyConfirmOrganizationUserValidationRequest>> PushSyncOrganizationKeysAsync(AutomaticallyConfirmOrganizationUserValidationRequest request)
     {

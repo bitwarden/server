@@ -19,6 +19,19 @@ public interface IAutomaticallyConfirmOrganizationUserCommand
     /// Automatically confirms the organization user based on the provided request data.
     /// </summary>
     /// <param name="request">The request containing necessary information to confirm the organization user.</param>
+    /// <remarks>
+    /// This action has side effects. The side effects are
+    /// <ul>
+    ///   <li>Creating an event log entry.</li>
+    ///   <li>Syncing organization keys with the user.</li>
+    ///   <li>Deleting any registered user devices for the organization.</li>
+    ///   <li>Sending an email to the confirmed user.</li>
+    ///   <li>Creating the default collection if applicable.</li>
+    /// </ul>
+    ///
+    /// Each of these actions is performed independently of each other and not guaranteed to be performed in any order.
+    /// Errors will be reported back for the actions that failed in a consolidated error message.
+    /// </remarks>
     /// <returns>
     /// The result of the command. If there was an error, the result will contain a typed error describing the problem
     /// that occurred.
