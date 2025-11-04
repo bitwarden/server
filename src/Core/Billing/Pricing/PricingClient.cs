@@ -137,7 +137,7 @@ public class PricingClient(
             message: $"Request to the Pricing Service failed with status {response.StatusCode}");
     }
 
-    private static string? GetLookupKey(PlanType planType)
+    private string? GetLookupKey(PlanType planType)
         => planType switch
         {
             PlanType.EnterpriseAnnually => "enterprise-annually",
@@ -149,7 +149,10 @@ public class PricingClient(
             PlanType.EnterpriseMonthly2020 => "enterprise-monthly-2020",
             PlanType.EnterpriseMonthly2023 => "enterprise-monthly-2023",
             PlanType.FamiliesAnnually => "families",
-            PlanType.FamiliesAnnually2025 => "families-2025",
+            PlanType.FamiliesAnnually2025 =>
+                featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3)
+                    ? "families-2025"
+                    : "families",
             PlanType.FamiliesAnnually2019 => "families-2019",
             PlanType.Free => "free",
             PlanType.TeamsAnnually => "teams-annually",
