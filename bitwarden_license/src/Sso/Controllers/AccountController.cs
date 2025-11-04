@@ -557,9 +557,12 @@ public class AccountController : Controller
              * ----------------------------------------------------
              *              Critical Code Check Here
              *
-             * We want to ensure that a user is not in the Invited
-             * state explicitly because if we don't confirm this
-             * here we have an authentication bypass.
+             * We want to ensure a user is not in the invited state
+             * explicitly. User's in the invited state should not
+             * be able to authenticate via SSO.
+             *
+             * See internal doc called "Added Context for SSO Login
+             * Flows" for further details.
              * ----------------------------------------------------
              */
             EnsureUserNotInInvited(possibleOrgUser.Status, organization.DisplayName());
