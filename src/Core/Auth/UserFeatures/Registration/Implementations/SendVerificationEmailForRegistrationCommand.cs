@@ -21,19 +21,22 @@ public class SendVerificationEmailForRegistrationCommand : ISendVerificationEmai
     private readonly IMailService _mailService;
     private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _tokenDataFactory;
     private readonly IFeatureService _featureService;
+    private readonly IOrganizationDomainRepository _organizationDomainRepository;
 
     public SendVerificationEmailForRegistrationCommand(
         IUserRepository userRepository,
         GlobalSettings globalSettings,
         IMailService mailService,
         IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> tokenDataFactory,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        IOrganizationDomainRepository organizationDomainRepository)
     {
         _userRepository = userRepository;
         _globalSettings = globalSettings;
         _mailService = mailService;
         _tokenDataFactory = tokenDataFactory;
         _featureService = featureService;
+        _organizationDomainRepository = organizationDomainRepository;
 
     }
 
@@ -47,6 +50,13 @@ public class SendVerificationEmailForRegistrationCommand : ISendVerificationEmai
         if (string.IsNullOrWhiteSpace(email))
         {
             throw new ArgumentNullException(nameof(email));
+        }
+
+        // Check if the email domain is blocked by an organization policy
+        var emailDomain = new System.Net.Mail.MailAddress(email).Host;
+        if (await _organizationDomainRepository.HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(emailDomain))
+        {
+            throw new BadRequestException("This email address is claimed by an organization using Bitwarden.");
         }
 
         // Check to see if the user already exists
