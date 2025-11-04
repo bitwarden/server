@@ -50,7 +50,7 @@ public class PricingClient(
             var plan = await response.Content.ReadFromJsonAsync<Plan>();
             return plan == null
                 ? throw new BillingException(message: "Deserialization of Pricing Service response resulted in null")
-                : new PlanAdapter(plan);
+                : new PlanAdapter(PreProcessFamiliesPreMigrationPlan(plan));
         }
 
         if (response.StatusCode == HttpStatusCode.NotFound)
@@ -91,7 +91,7 @@ public class PricingClient(
             var plans = await response.Content.ReadFromJsonAsync<List<Plan>>();
             return plans == null
                 ? throw new BillingException(message: "Deserialization of Pricing Service response resulted in null")
-                : plans.Select(OrganizationPlan (plan) => new PlanAdapter(plan)).ToList();
+                : plans.Select(OrganizationPlan (plan) => new PlanAdapter(PreProcessFamiliesPreMigrationPlan(plan))).ToList();
         }
 
         throw new BillingException(
@@ -167,6 +167,20 @@ public class PricingClient(
             PlanType.TeamsStarter2023 => "teams-starter-2023",
             _ => null
         };
+
+    /// <summary>
+    /// Safeguard used until the feature flag is enabled. Pricing service will return the
+    /// 2025PreMigration plan with "families" lookup key. When that is detected and the FF
+    /// is still disabled, set the lookup key to families-2025 so PlanAdapter will assign
+    /// the correct plan.
+    /// </summary>
+    /// <param name="plan">The plan to preprocess</param>
+    private Plan PreProcessFamiliesPreMigrationPlan(Plan plan)
+    {
+        if (plan.LookupKey == "families" && !featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3))
+            plan.LookupKey = "families-2025";
+        return plan;
+    }
 
     private static PremiumPlan CurrentPremiumPlan => new()
     {
