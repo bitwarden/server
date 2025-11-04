@@ -25,6 +25,7 @@ public class RegisterUserCommand : IRegisterUserCommand
     private readonly IGlobalSettings _globalSettings;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IPolicyRepository _policyRepository;
+    private readonly IOrganizationDomainRepository _organizationDomainRepository;
 
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _registrationEmailVerificationTokenDataFactory;
@@ -44,6 +45,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         IGlobalSettings globalSettings,
         IOrganizationUserRepository organizationUserRepository,
         IPolicyRepository policyRepository,
+        IOrganizationDomainRepository organizationDomainRepository,
         IDataProtectionProvider dataProtectionProvider,
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
         IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> registrationEmailVerificationTokenDataFactory,
@@ -56,6 +58,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         _globalSettings = globalSettings;
         _organizationUserRepository = organizationUserRepository;
         _policyRepository = policyRepository;
+        _organizationDomainRepository = organizationDomainRepository;
 
         _organizationServiceDataProtector = dataProtectionProvider.CreateProtector(
             "OrganizationServiceDataProtector");
@@ -74,6 +77,8 @@ public class RegisterUserCommand : IRegisterUserCommand
 
     public async Task<IdentityResult> RegisterUser(User user)
     {
+        await ValidateEmailDomainNotBlockedAsync(user.Email);
+
         var result = await _userService.CreateUserAsync(user);
         if (result == IdentityResult.Success)
         {
@@ -235,6 +240,7 @@ public class RegisterUserCommand : IRegisterUserCommand
     {
 
         ValidateOpenRegistrationAllowed();
+        await ValidateEmailDomainNotBlockedAsync(user.Email);
 
         var tokenable = ValidateRegistrationEmailVerificationTokenable(emailVerificationToken, user.Email);
 
@@ -255,6 +261,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         string orgSponsoredFreeFamilyPlanInviteToken)
     {
         ValidateOpenRegistrationAllowed();
+        await ValidateEmailDomainNotBlockedAsync(user.Email);
         await ValidateOrgSponsoredFreeFamilyPlanInviteToken(orgSponsoredFreeFamilyPlanInviteToken, user.Email);
 
         user.EmailVerified = true;
@@ -275,6 +282,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         string acceptEmergencyAccessInviteToken, Guid acceptEmergencyAccessId)
     {
         ValidateOpenRegistrationAllowed();
+        await ValidateEmailDomainNotBlockedAsync(user.Email);
         ValidateAcceptEmergencyAccessInviteToken(acceptEmergencyAccessInviteToken, acceptEmergencyAccessId, user.Email);
 
         user.EmailVerified = true;
@@ -293,6 +301,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         string providerInviteToken, Guid providerUserId)
     {
         ValidateOpenRegistrationAllowed();
+        await ValidateEmailDomainNotBlockedAsync(user.Email);
         ValidateProviderInviteToken(providerInviteToken, providerUserId, user.Email);
 
         user.EmailVerified = true;
@@ -356,5 +365,15 @@ public class RegisterUserCommand : IRegisterUserCommand
         }
 
         return tokenable;
+    }
+
+    private async Task ValidateEmailDomainNotBlockedAsync(string email)
+    {
+        var emailDomain = new System.Net.Mail.MailAddress(email).Host;
+
+        if (await _organizationDomainRepository.HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(emailDomain))
+        {
+            throw new BadRequestException("This email address is claimed by an organization using Bitwarden.");
+        }
     }
 }

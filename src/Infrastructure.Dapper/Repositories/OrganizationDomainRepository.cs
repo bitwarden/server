@@ -148,4 +148,16 @@ public class OrganizationDomainRepository : Repository<OrganizationDomain, Guid>
                 commandType: CommandType.StoredProcedure) > 0;
         }
     }
+
+    public async Task<bool> HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(string domainName)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        var result = await connection.QueryFirstOrDefaultAsync<bool>(
+            $"[{Schema}].[OrganizationDomain_HasVerifiedDomainWithBlockPolicy]",
+            new { DomainName = domainName },
+            commandType: CommandType.StoredProcedure);
+
+        return result;
+    }
 }
