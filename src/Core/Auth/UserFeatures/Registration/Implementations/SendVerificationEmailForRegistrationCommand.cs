@@ -53,10 +53,13 @@ public class SendVerificationEmailForRegistrationCommand : ISendVerificationEmai
         }
 
         // Check if the email domain is blocked by an organization policy
-        var emailDomain = new System.Net.Mail.MailAddress(email).Host;
-        if (await _organizationDomainRepository.HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(emailDomain))
+        if (_featureService.IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation))
         {
-            throw new BadRequestException("This email address is claimed by an organization using Bitwarden.");
+            var emailDomain = new System.Net.Mail.MailAddress(email).Host;
+            if (await _organizationDomainRepository.HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(emailDomain))
+            {
+                throw new BadRequestException("This email address is claimed by an organization using Bitwarden.");
+            }
         }
 
         // Check to see if the user already exists

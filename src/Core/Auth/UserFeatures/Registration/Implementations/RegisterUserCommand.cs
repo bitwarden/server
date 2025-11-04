@@ -26,6 +26,7 @@ public class RegisterUserCommand : IRegisterUserCommand
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IPolicyRepository _policyRepository;
     private readonly IOrganizationDomainRepository _organizationDomainRepository;
+    private readonly IFeatureService _featureService;
 
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _registrationEmailVerificationTokenDataFactory;
@@ -46,6 +47,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         IOrganizationUserRepository organizationUserRepository,
         IPolicyRepository policyRepository,
         IOrganizationDomainRepository organizationDomainRepository,
+        IFeatureService featureService,
         IDataProtectionProvider dataProtectionProvider,
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
         IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> registrationEmailVerificationTokenDataFactory,
@@ -59,6 +61,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         _organizationUserRepository = organizationUserRepository;
         _policyRepository = policyRepository;
         _organizationDomainRepository = organizationDomainRepository;
+        _featureService = featureService;
 
         _organizationServiceDataProtector = dataProtectionProvider.CreateProtector(
             "OrganizationServiceDataProtector");
@@ -369,6 +372,12 @@ public class RegisterUserCommand : IRegisterUserCommand
 
     private async Task ValidateEmailDomainNotBlockedAsync(string email)
     {
+        // Only check if feature flag is enabled
+        if (!_featureService.IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation))
+        {
+            return;
+        }
+
         var emailDomain = new System.Net.Mail.MailAddress(email).Host;
 
         if (await _organizationDomainRepository.HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(emailDomain))

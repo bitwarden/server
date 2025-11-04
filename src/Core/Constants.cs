@@ -143,6 +143,7 @@ public static class FeatureFlagKeys
     public const string AutomaticConfirmUsers = "pm-19934-auto-confirm-organization-users";
     public const string PM23845_VNextApplicationCache = "pm-24957-refactor-memory-application-cache";
     public const string AccountRecoveryCommand = "pm-25581-prevent-provider-account-recovery";
+    public const string BlockClaimedDomainAccountCreation = "block-claimed-domain-account-creation";
 
     /* Auth Team */
     public const string TwoFactorExtensionDataPersistence = "pm-9115-two-factor-extension-data-persistence";
