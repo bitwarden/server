@@ -69,6 +69,7 @@ public interface IMailService
         DateTime dueDate,
         List<string> items,
         bool mentionInvoices);
+    Task SendUpdatedInvoiceUpcoming(IEnumerable<string> emails);
     Task SendProviderInvoiceUpcoming(
         IEnumerable<string> emails,
         decimal amount,
