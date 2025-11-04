@@ -211,4 +211,200 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         }
     }
 
+    [Fact]
+    public async Task Put_MasterPasswordPolicy_InvalidDataType_ReturnsBadRequest()
+    {
+        // Arrange
+        var policyType = PolicyType.MasterPassword;
+        var request = new PolicyRequestModel
+        {
+            Type = policyType,
+            Enabled = true,
+            Data = new Dictionary<string, object>
+            {
+                { "minLength", "not a number" }, // Wrong type - should be int
+                { "requireUpper", true }
+            }
+        };
+
+        // Act
+        var response = await _client.PutAsync($"/organizations/{_organization.Id}/policies/{policyType}",
+            JsonContent.Create(request));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains("minLength", content); // Verify field name is in error message
+    }
+
+    [Fact]
+    public async Task Put_SendOptionsPolicy_InvalidDataType_ReturnsBadRequest()
+    {
+        // Arrange
+        var policyType = PolicyType.SendOptions;
+        var request = new PolicyRequestModel
+        {
+            Type = policyType,
+            Enabled = true,
+            Data = new Dictionary<string, object>
+            {
+                { "disableHideEmail", "not a boolean" } // Wrong type - should be bool
+            }
+        };
+
+        // Act
+        var response = await _client.PutAsync($"/organizations/{_organization.Id}/policies/{policyType}",
+            JsonContent.Create(request));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Put_ResetPasswordPolicy_InvalidDataType_ReturnsBadRequest()
+    {
+        // Arrange
+        var policyType = PolicyType.ResetPassword;
+        var request = new PolicyRequestModel
+        {
+            Type = policyType,
+            Enabled = true,
+            Data = new Dictionary<string, object>
+            {
+                { "autoEnrollEnabled", 123 } // Wrong type - should be bool
+            }
+        };
+
+        // Act
+        var response = await _client.PutAsync($"/organizations/{_organization.Id}/policies/{policyType}",
+            JsonContent.Create(request));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PutVNext_MasterPasswordPolicy_InvalidDataType_ReturnsBadRequest()
+    {
+        // Arrange
+        var policyType = PolicyType.MasterPassword;
+        var request = new SavePolicyRequest
+        {
+            Policy = new PolicyRequestModel
+            {
+                Type = policyType,
+                Enabled = true,
+                Data = new Dictionary<string, object>
+                {
+                    { "minComplexity", "not a number" }, // Wrong type - should be int
+                    { "minLength", 12 }
+                }
+            }
+        };
+
+        // Act
+        var response = await _client.PutAsync($"/organizations/{_organization.Id}/policies/{policyType}/vnext",
+            JsonContent.Create(request));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains("minComplexity", content); // Verify field name is in error message
+    }
+
+    [Fact]
+    public async Task PutVNext_SendOptionsPolicy_InvalidDataType_ReturnsBadRequest()
+    {
+        // Arrange
+        var policyType = PolicyType.SendOptions;
+        var request = new SavePolicyRequest
+        {
+            Policy = new PolicyRequestModel
+            {
+                Type = policyType,
+                Enabled = true,
+                Data = new Dictionary<string, object>
+                {
+                    { "disableHideEmail", "not a boolean" } // Wrong type - should be bool
+                }
+            }
+        };
+
+        // Act
+        var response = await _client.PutAsync($"/organizations/{_organization.Id}/policies/{policyType}/vnext",
+            JsonContent.Create(request));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PutVNext_ResetPasswordPolicy_InvalidDataType_ReturnsBadRequest()
+    {
+        // Arrange
+        var policyType = PolicyType.ResetPassword;
+        var request = new SavePolicyRequest
+        {
+            Policy = new PolicyRequestModel
+            {
+                Type = policyType,
+                Enabled = true,
+                Data = new Dictionary<string, object>
+                {
+                    { "autoEnrollEnabled", 123 } // Wrong type - should be bool
+                }
+            }
+        };
+
+        // Act
+        var response = await _client.PutAsync($"/organizations/{_organization.Id}/policies/{policyType}/vnext",
+            JsonContent.Create(request));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Put_PolicyWithNullData_Success()
+    {
+        // Arrange
+        var policyType = PolicyType.SingleOrg;
+        var request = new PolicyRequestModel
+        {
+            Type = policyType,
+            Enabled = true,
+            Data = null
+        };
+
+        // Act
+        var response = await _client.PutAsync($"/organizations/{_organization.Id}/policies/{policyType}",
+            JsonContent.Create(request));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PutVNext_PolicyWithNullData_Success()
+    {
+        // Arrange
+        var policyType = PolicyType.TwoFactorAuthentication;
+        var request = new SavePolicyRequest
+        {
+            Policy = new PolicyRequestModel
+            {
+                Type = policyType,
+                Enabled = true,
+                Data = null
+            },
+            Metadata = null
+        };
+
+        // Act
+        var response = await _client.PutAsync($"/organizations/{_organization.Id}/policies/{policyType}/vnext",
+            JsonContent.Create(request));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
 }
