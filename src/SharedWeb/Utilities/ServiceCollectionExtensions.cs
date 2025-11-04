@@ -521,42 +521,31 @@ public static class ServiceCollectionExtensions
 
     public static IServiceCollection AddEventWriteServices(this IServiceCollection services, GlobalSettings globalSettings)
     {
-        if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Events.ConnectionString))
+        if (!globalSettings.SelfHosted)
         {
-            services.TryAddKeyedSingleton<IEventWriteService, AzureQueueEventWriteService>("storage");
-
-            if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.ConnectionString) &&
-                CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.EventTopicName))
+            if (IsAzureServiceBusEnabled(globalSettings))
             {
                 services.TryAddSingleton<IEventIntegrationPublisher, AzureServiceBusService>();
-                services.TryAddKeyedSingleton<IEventWriteService, EventIntegrationEventWriteService>("broadcast");
+                services.TryAddSingleton<IEventWriteService, EventIntegrationEventWriteService>();
             }
             else
             {
-                services.TryAddKeyedSingleton<IEventWriteService, NoopEventWriteService>("broadcast");
-            }
-        }
-        else if (globalSettings.SelfHosted)
-        {
-            services.TryAddKeyedSingleton<IEventWriteService, RepositoryEventWriteService>("storage");
-
-            if (IsRabbitMqEnabled(globalSettings))
-            {
-                services.TryAddSingleton<IEventIntegrationPublisher, RabbitMqService>();
-                services.TryAddKeyedSingleton<IEventWriteService, EventIntegrationEventWriteService>("broadcast");
-            }
-            else
-            {
-                services.TryAddKeyedSingleton<IEventWriteService, NoopEventWriteService>("broadcast");
+                services.TryAddSingleton<IEventWriteService, NoopEventWriteService>();
             }
         }
         else
         {
-            services.TryAddKeyedSingleton<IEventWriteService, NoopEventWriteService>("storage");
-            services.TryAddKeyedSingleton<IEventWriteService, NoopEventWriteService>("broadcast");
+            if (IsRabbitMqEnabled(globalSettings))
+            {
+                services.TryAddSingleton<IEventIntegrationPublisher, RabbitMqService>();
+                services.TryAddSingleton<IEventWriteService, EventIntegrationEventWriteService>();
+            }
+            else
+            {
+                services.TryAddSingleton<IEventWriteService, RepositoryEventWriteService>();
+            }
         }
 
-        services.TryAddScoped<IEventWriteService, EventRouteService>();
         return services;
     }
 
