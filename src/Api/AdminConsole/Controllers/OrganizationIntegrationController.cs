@@ -6,8 +6,6 @@ using Bit.Core.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-#nullable enable
-
 namespace Bit.Api.AdminConsole.Controllers;
 
 [Route("organizations/{organizationId:guid}/integrations")]
