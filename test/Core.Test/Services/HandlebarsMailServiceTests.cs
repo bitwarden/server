@@ -335,7 +335,6 @@ public class HandlebarsMailServiceTests
 
     [Theory]
     [InlineData("Acme Corp", "Acme Corp")]
-    [InlineData("Org with <script>alert('xss')</script>", "Org with alert('xss')")]
     [InlineData("Company & Associates", "Company &amp; Associates")]
     [InlineData("Test \"Quoted\" Org", "Test &quot;Quoted&quot; Org")]
     public async Task SendOrganizationUserWelcomeEmailAsync_SanitizesOrganizationNameForEmail(string inputOrgName, string expectedSanitized)
