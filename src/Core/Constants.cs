@@ -142,7 +142,7 @@ public static class FeatureFlagKeys
     public const string CreateDefaultLocation = "pm-19467-create-default-location";
     public const string AutomaticConfirmUsers = "pm-19934-auto-confirm-organization-users";
     public const string PM23845_VNextApplicationCache = "pm-24957-refactor-memory-application-cache";
-    public const string AccountRecoveryCommand = "pm-24192-account-recovery-command";
+    public const string AccountRecoveryCommand = "pm-25581-prevent-provider-account-recovery";
     public const string PolicyValidatorsRefactor = "pm-26423-refactor-policy-side-effects";
 
     /* Auth Team */
@@ -157,6 +157,7 @@ public static class FeatureFlagKeys
     public const string DisableAlternateLoginMethods = "pm-22110-disable-alternate-login-methods";
     public const string PM23174ManageAccountRecoveryPermissionDrivesTheNeedToSetMasterPassword =
         "pm-23174-manage-account-recovery-permission-drives-the-need-to-set-master-password";
+    public const string RecoveryCodeSupportForSsoRequiredUsers = "pm-21153-recovery-code-support-for-sso-required";
     public const string MJMLBasedEmailTemplates = "mjml-based-email-templates";
 
     /* Autofill Team */
