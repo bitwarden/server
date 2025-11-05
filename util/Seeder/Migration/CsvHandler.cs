@@ -290,7 +290,7 @@ public class CsvHandler(CsvSettings settings, ILogger<CsvHandler> logger)
 
             if (string.IsNullOrEmpty(value))
             {
-                processedRow[i] = null!;
+                processedRow[i] = DBNull.Value;
             }
             else if (specialColumns.Contains(colName))
             {

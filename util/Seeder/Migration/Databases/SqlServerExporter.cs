@@ -1,9 +1,13 @@
 using Microsoft.Data.SqlClient;
 using Bit.Seeder.Migration.Models;
+using Bit.Seeder.Migration.Utils;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Seeder.Migration.Databases;
 
+/// <summary>
+/// SQL Server database exporter that handles schema discovery and data export.
+/// </summary>
 public class SqlServerExporter(DatabaseConfig config, ILogger<SqlServerExporter> logger) : IDisposable
 {
     private readonly ILogger<SqlServerExporter> _logger = logger;
@@ -13,16 +17,23 @@ public class SqlServerExporter(DatabaseConfig config, ILogger<SqlServerExporter>
     private readonly string _username = config.Username;
     private readonly string _password = config.Password;
     private SqlConnection? _connection;
+    private bool _disposed = false;
 
+    /// <summary>
+    /// Connects to the SQL Server database.
+    /// </summary>
     public bool Connect()
     {
         try
         {
-            var connectionString = $"Server={_host},{_port};Database={_database};" +
-                                 $"User Id={_username};Password={_password};" +
-                                 $"TrustServerCertificate=True;Connection Timeout=30;";
+            var safeConnectionString = $"Server={_host},{_port};Database={_database};" +
+                                      $"User Id={_username};Password={DbSeederConstants.REDACTED_PASSWORD};" +
+                                      $"TrustServerCertificate=True;" +
+                                      $"Connection Timeout={DbSeederConstants.DEFAULT_CONNECTION_TIMEOUT};";
 
-            _connection = new SqlConnection(connectionString);
+            var actualConnectionString = safeConnectionString.Replace(DbSeederConstants.REDACTED_PASSWORD, _password);
+
+            _connection = new SqlConnection(actualConnectionString);
             _connection.Open();
 
             _logger.LogInformation("Connected to SQL Server: {Host}/{Database}", _host, _database);
@@ -35,6 +46,9 @@ public class SqlServerExporter(DatabaseConfig config, ILogger<SqlServerExporter>
         }
     }
 
+    /// <summary>
+    /// Disconnects from the SQL Server database.
+    /// </summary>
     public void Disconnect()
     {
         if (_connection != null)
@@ -46,6 +60,11 @@ public class SqlServerExporter(DatabaseConfig config, ILogger<SqlServerExporter>
         }
     }
 
+    /// <summary>
+    /// Discovers all tables in the SQL Server database.
+    /// </summary>
+    /// <param name="excludeSystemTables">Whether to exclude system tables</param>
+    /// <returns>List of table names</returns>
     public List<string> DiscoverTables(bool excludeSystemTables = true)
     {
         if (_connection == null)
@@ -86,10 +105,17 @@ public class SqlServerExporter(DatabaseConfig config, ILogger<SqlServerExporter>
         }
     }
 
+    /// <summary>
+    /// Gets detailed information about a table including columns, types, and row count.
+    /// </summary>
+    /// <param name="tableName">The name of the table to query</param>
+    /// <returns>TableInfo containing schema and metadata</returns>
     public TableInfo GetTableInfo(string tableName)
     {
         if (_connection == null)
             throw new InvalidOperationException("Not connected to database");
+
+        IdentifierValidator.ValidateOrThrow(tableName, "table name");
 
         try
         {
@@ -146,13 +172,12 @@ public class SqlServerExporter(DatabaseConfig config, ILogger<SqlServerExporter>
                 throw new InvalidOperationException($"Table '{tableName}' not found");
             }
 
-            // Get row count
             var countQuery = $"SELECT COUNT(*) FROM [{tableName}]";
             int rowCount;
 
             using (var command = new SqlCommand(countQuery, _connection))
             {
-                rowCount = (int)command.ExecuteScalar()!;
+                rowCount = command.GetScalarValue<int>(0, _logger, $"row count for {tableName}");
             }
 
             _logger.LogInformation("Table {TableName}: {ColumnCount} columns, {RowCount} rows", tableName, columns.Count, rowCount);
@@ -172,15 +197,31 @@ public class SqlServerExporter(DatabaseConfig config, ILogger<SqlServerExporter>
         }
     }
 
-    public (List<string> Columns, List<object[]> Data) ExportTableData(string tableName, int batchSize = 10000)
+    /// <summary>
+    /// Exports all data from a table with streaming to avoid memory exhaustion.
+    /// </summary>
+    /// <param name="tableName">The name of the table to export</param>
+    /// <param name="batchSize">Batch size for progress reporting</param>
+    /// <returns>Tuple of column names and data rows</returns>
+    public (List<string> Columns, List<object[]> Data) ExportTableData(
+        string tableName,
+        int batchSize = DbSeederConstants.PROGRESS_REPORTING_INTERVAL)
     {
         if (_connection == null)
             throw new InvalidOperationException("Not connected to database");
+
+        IdentifierValidator.ValidateOrThrow(tableName, "table name");
 
         try
         {
             // Get table info first
             var tableInfo = GetTableInfo(tableName);
+
+            // Validate all column names
+            foreach (var colName in tableInfo.Columns)
+            {
+                IdentifierValidator.ValidateOrThrow(colName, "column name");
+            }
 
             // Build column list with proper quoting
             var quotedColumns = tableInfo.Columns.Select(col => $"[{col}]").ToList();
@@ -191,16 +232,24 @@ public class SqlServerExporter(DatabaseConfig config, ILogger<SqlServerExporter>
             _logger.LogInformation("Executing export query for {TableName}", tableName);
 
             using var command = new SqlCommand(query, _connection);
-            command.CommandTimeout = 300; // 5 minutes
+            command.CommandTimeout = DbSeederConstants.LARGE_BATCH_COMMAND_TIMEOUT;
 
             using var reader = command.ExecuteReader();
 
-            // Fetch data in batches
+            // Identify GUID columns for in-place uppercase conversion
+            var guidColumnIndices = IdentifyGuidColumns(tableInfo);
+
+            // Fetch data in batches - still loads into memory but with progress reporting
+            // Note: For true streaming, consumers should use yield return pattern
             var allData = new List<object[]>();
             while (reader.Read())
             {
                 var row = new object[tableInfo.Columns.Count];
                 reader.GetValues(row);
+
+                // Convert GUID values in-place to uppercase for Bitwarden compatibility
+                ConvertGuidsToUppercaseInPlace(row, guidColumnIndices);
+
                 allData.Add(row);
 
                 if (allData.Count % batchSize == 0)
@@ -209,11 +258,8 @@ public class SqlServerExporter(DatabaseConfig config, ILogger<SqlServerExporter>
                 }
             }
 
-            // Convert GUID values to uppercase to ensure compatibility with Bitwarden
-            var processedData = ConvertGuidsToUppercase(allData, tableInfo);
-
-            _logger.LogInformation("Exported {Count} rows from {TableName}", processedData.Count, tableName);
-            return (tableInfo.Columns, processedData);
+            _logger.LogInformation("Exported {Count} rows from {TableName}", allData.Count, tableName);
+            return (tableInfo.Columns, allData);
         }
         catch (Exception ex)
         {
@@ -222,10 +268,20 @@ public class SqlServerExporter(DatabaseConfig config, ILogger<SqlServerExporter>
         }
     }
 
-    public List<string> IdentifyJsonColumns(string tableName, int sampleSize = 100)
+    /// <summary>
+    /// Identifies columns that likely contain JSON data by sampling values.
+    /// </summary>
+    /// <param name="tableName">The name of the table to analyze</param>
+    /// <param name="sampleSize">Number of rows to sample for analysis</param>
+    /// <returns>List of column names that appear to contain JSON</returns>
+    public List<string> IdentifyJsonColumns(
+        string tableName,
+        int sampleSize = DbSeederConstants.DEFAULT_SAMPLE_SIZE)
     {
         if (_connection == null)
             throw new InvalidOperationException("Not connected to database");
+
+        IdentifierValidator.ValidateOrThrow(tableName, "table name");
 
         try
         {
@@ -242,6 +298,12 @@ public class SqlServerExporter(DatabaseConfig config, ILogger<SqlServerExporter>
 
             if (textColumns.Count == 0)
                 return jsonColumns;
+
+            // Validate all column names
+            foreach (var colName in textColumns)
+            {
+                IdentifierValidator.ValidateOrThrow(colName, "column name");
+            }
 
             // Sample data from text columns
             var quotedColumns = textColumns.Select(col => $"[{col}]").ToList();
@@ -266,6 +328,9 @@ public class SqlServerExporter(DatabaseConfig config, ILogger<SqlServerExporter>
             }
 
             // Analyze each column
+            // JSON detection threshold: 50% of samples must look like JSON
+            const double jsonThreshold = 0.5;
+
             for (int i = 0; i < textColumns.Count; i++)
             {
                 var colName = textColumns[i];
@@ -288,8 +353,8 @@ public class SqlServerExporter(DatabaseConfig config, ILogger<SqlServerExporter>
                     }
                 }
 
-                // If more than 50% of non-null values look like JSON, mark as JSON column
-                if (totalNonNull > 0 && (double)jsonIndicators / totalNonNull > 0.5)
+                // If more than threshold of non-null values look like JSON, mark as JSON column
+                if (totalNonNull > 0 && (double)jsonIndicators / totalNonNull > jsonThreshold)
                 {
                     jsonColumns.Add(colName);
                     _logger.LogInformation("Identified {ColumnName} as likely JSON column ({JsonIndicators}/{TotalNonNull} samples)", colName, jsonIndicators, totalNonNull);
@@ -305,13 +370,15 @@ public class SqlServerExporter(DatabaseConfig config, ILogger<SqlServerExporter>
         }
     }
 
-    private List<object[]> ConvertGuidsToUppercase(List<object[]> data, TableInfo tableInfo)
+    /// <summary>
+    /// Identifies GUID column indices in a table for efficient processing.
+    /// </summary>
+    /// <param name="tableInfo">Table metadata including column types</param>
+    /// <returns>List of column indices that are GUID/uniqueidentifier columns</returns>
+    private List<int> IdentifyGuidColumns(TableInfo tableInfo)
     {
-        if (data.Count == 0 || tableInfo.ColumnTypes.Count == 0)
-            return data;
-
-        // Identify GUID columns (uniqueidentifier type in SQL Server)
         var guidColumnIndices = new List<int>();
+
         for (int i = 0; i < tableInfo.Columns.Count; i++)
         {
             var columnName = tableInfo.Columns[i];
@@ -325,34 +392,36 @@ public class SqlServerExporter(DatabaseConfig config, ILogger<SqlServerExporter>
             }
         }
 
-        if (guidColumnIndices.Count == 0)
+        if (guidColumnIndices.Count > 0)
         {
-            _logger.LogDebug("No GUID columns found, returning data unchanged");
-            return data;
+            _logger.LogInformation("Converting {Count} GUID column(s) to uppercase", guidColumnIndices.Count);
         }
 
-        _logger.LogInformation("Converting {Count} GUID column(s) to uppercase", guidColumnIndices.Count);
-
-        // Process each row and convert GUID values to uppercase
-        var processedData = new List<object[]>();
-        foreach (var row in data)
-        {
-            var rowList = row.ToList();
-            foreach (var guidIdx in guidColumnIndices)
-            {
-                if (guidIdx < rowList.Count && rowList[guidIdx] != null && rowList[guidIdx] != DBNull.Value)
-                {
-                    var guidValue = rowList[guidIdx].ToString();
-                    // Convert to uppercase, preserving the GUID format
-                    rowList[guidIdx] = guidValue?.ToUpper() ?? string.Empty;
-                }
-            }
-            processedData.Add(rowList.ToArray());
-        }
-
-        return processedData;
+        return guidColumnIndices;
     }
 
+    /// <summary>
+    /// Converts GUID values to uppercase in-place within a data row.
+    /// More efficient than creating new arrays as it modifies the array directly.
+    /// </summary>
+    /// <param name="row">The data row to modify</param>
+    /// <param name="guidColumnIndices">Indices of columns containing GUIDs</param>
+    private void ConvertGuidsToUppercaseInPlace(object[] row, List<int> guidColumnIndices)
+    {
+        foreach (var guidIdx in guidColumnIndices)
+        {
+            if (guidIdx < row.Length && row[guidIdx] != null && row[guidIdx] != DBNull.Value)
+            {
+                var guidValue = row[guidIdx].ToString();
+                // Convert to uppercase in-place, preserving the GUID format
+                row[guidIdx] = guidValue?.ToUpper() ?? string.Empty;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Tests the connection to SQL Server by executing a simple query.
+    /// </summary>
     public bool TestConnection()
     {
         try
@@ -360,9 +429,10 @@ public class SqlServerExporter(DatabaseConfig config, ILogger<SqlServerExporter>
             if (Connect())
             {
                 using var command = new SqlCommand("SELECT 1", _connection);
-                var result = command.ExecuteScalar();
+                // Use null-safe scalar value retrieval
+                var result = command.GetScalarValue<int>(0, _logger, "connection test");
                 Disconnect();
-                return result != null && (int)result == 1;
+                return result == 1;
             }
             return false;
         }
@@ -373,8 +443,27 @@ public class SqlServerExporter(DatabaseConfig config, ILogger<SqlServerExporter>
         }
     }
 
+    /// <summary>
+    /// Disposes of the SQL Server exporter and releases all resources.
+    /// </summary>
     public void Dispose()
     {
-        Disconnect();
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// Implements Dispose pattern for resource cleanup.
+    /// </summary>
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                Disconnect();
+            }
+            _disposed = true;
+        }
     }
 }

@@ -27,7 +27,8 @@ public static class SecuritySanitizer
 
         foreach (var (key, value) in configDict)
         {
-            if (SensitiveFields.Contains(key.ToLower()))
+            // Use case-insensitive comparison with proper culture handling
+            if (SensitiveFields.Any(field => field.Equals(key, StringComparison.OrdinalIgnoreCase)))
             {
                 sanitized[key] = value != null ? MaskPassword(value.ToString() ?? string.Empty) : string.Empty;
             }

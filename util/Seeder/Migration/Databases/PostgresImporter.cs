@@ -1,10 +1,14 @@
 using Npgsql;
 using NpgsqlTypes;
 using Bit.Seeder.Migration.Models;
+using Bit.Seeder.Migration.Utils;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Seeder.Migration.Databases;
 
+/// <summary>
+/// PostgreSQL database importer that handles schema creation, data import, and constraint management.
+/// </summary>
 public class PostgresImporter(DatabaseConfig config, ILogger<PostgresImporter> logger) : IDatabaseImporter
 {
     private readonly ILogger<PostgresImporter> _logger = logger;
@@ -14,16 +18,22 @@ public class PostgresImporter(DatabaseConfig config, ILogger<PostgresImporter> l
     private readonly string _username = config.Username;
     private readonly string _password = config.Password;
     private NpgsqlConnection? _connection;
+    private bool _disposed = false;
 
+    /// <summary>
+    /// Connects to the PostgreSQL database.
+    /// </summary>
     public bool Connect()
     {
         try
         {
-            var connectionString = $"Host={_host};Port={_port};Database={_database};" +
-                                 $"Username={_username};Password={_password};" +
-                                 $"Timeout=30;CommandTimeout=30;";
+            var safeConnectionString = $"Host={_host};Port={_port};Database={_database};" +
+                                      $"Username={_username};Password={DbSeederConstants.REDACTED_PASSWORD};" +
+                                      $"Timeout={DbSeederConstants.DEFAULT_CONNECTION_TIMEOUT};CommandTimeout={DbSeederConstants.DEFAULT_COMMAND_TIMEOUT};";
 
-            _connection = new NpgsqlConnection(connectionString);
+            var actualConnectionString = safeConnectionString.Replace(DbSeederConstants.REDACTED_PASSWORD, _password);
+
+            _connection = new NpgsqlConnection(actualConnectionString);
             _connection.Open();
 
             _logger.LogInformation("Connected to PostgreSQL: {Host}:{Port}/{Database}", _host, _port, _database);
@@ -47,6 +57,9 @@ public class PostgresImporter(DatabaseConfig config, ILogger<PostgresImporter> l
         }
     }
 
+    /// <summary>
+    /// Creates a table from the provided schema definition.
+    /// </summary>
     public bool CreateTableFromSchema(
         string tableName,
         List<string> columns,
@@ -58,12 +71,16 @@ public class PostgresImporter(DatabaseConfig config, ILogger<PostgresImporter> l
         if (_connection == null)
             throw new InvalidOperationException("Not connected to database");
 
+        IdentifierValidator.ValidateOrThrow(tableName, "table name");
+
         try
         {
             // Convert SQL Server types to PostgreSQL types
             var pgColumns = new List<string>();
             foreach (var colName in columns)
             {
+                IdentifierValidator.ValidateOrThrow(colName, "column name");
+
                 var sqlServerType = columnTypes.GetValueOrDefault(colName, "VARCHAR(MAX)");
                 var pgType = ConvertSqlServerTypeToPostgreSQL(sqlServerType, specialColumns.Contains(colName));
                 pgColumns.Add($"\"{colName}\" {pgType}");
@@ -185,14 +202,19 @@ public class PostgresImporter(DatabaseConfig config, ILogger<PostgresImporter> l
         }
     }
 
+    /// <summary>
+    /// Imports data into a table using batch INSERT statements.
+    /// </summary>
     public bool ImportData(
         string tableName,
         List<string> columns,
         List<object[]> data,
-        int batchSize = 1000)
+        int batchSize = DbSeederConstants.DEFAULT_BATCH_SIZE)
     {
         if (_connection == null)
             throw new InvalidOperationException("Not connected to database");
+
+        IdentifierValidator.ValidateOrThrow(tableName, "table name");
 
         if (data.Count == 0)
         {
@@ -209,6 +231,8 @@ public class PostgresImporter(DatabaseConfig config, ILogger<PostgresImporter> l
                 _logger.LogError("Table {TableName} not found in database", tableName);
                 return false;
             }
+
+            IdentifierValidator.ValidateOrThrow(actualTableName, "actual table name");
 
             var actualColumns = GetTableColumns(tableName);
             if (actualColumns.Count == 0)
@@ -319,14 +343,14 @@ public class PostgresImporter(DatabaseConfig config, ILogger<PostgresImporter> l
                     transaction.Commit();
                     totalImported += batch.Count;
 
-                    if (filteredData.Count > 1000)
+                    if (filteredData.Count > DbSeederConstants.LOGGING_THRESHOLD)
                     {
                         _logger.LogDebug("Batch: {BatchCount} rows ({TotalImported}/{FilteredDataCount} total)", batch.Count, totalImported, filteredData.Count);
                     }
                 }
                 catch
                 {
-                    transaction.Rollback();
+                    transaction.SafeRollback(_connection, _logger, tableName);
                     throw;
                 }
             }
@@ -346,10 +370,15 @@ public class PostgresImporter(DatabaseConfig config, ILogger<PostgresImporter> l
         }
     }
 
+    /// <summary>
+    /// Checks if a table exists in the database.
+    /// </summary>
     public bool TableExists(string tableName)
     {
         if (_connection == null)
             throw new InvalidOperationException("Not connected to database");
+
+        IdentifierValidator.ValidateOrThrow(tableName, "table name");
 
         try
         {
@@ -362,7 +391,7 @@ public class PostgresImporter(DatabaseConfig config, ILogger<PostgresImporter> l
             using var command = new NpgsqlCommand(query, _connection);
             command.Parameters.AddWithValue("tableName", tableName);
 
-            return (bool)command.ExecuteScalar()!;
+            return command.GetScalarValue<bool>(false, _logger, $"table existence check for {tableName}");
         }
         catch (Exception ex)
         {
@@ -756,6 +785,9 @@ public class PostgresImporter(DatabaseConfig config, ILogger<PostgresImporter> l
         }
     }
 
+    /// <summary>
+    /// Tests the connection to PostgreSQL by executing a simple query.
+    /// </summary>
     public bool TestConnection()
     {
         try
@@ -763,9 +795,9 @@ public class PostgresImporter(DatabaseConfig config, ILogger<PostgresImporter> l
             if (Connect())
             {
                 using var command = new NpgsqlCommand("SELECT 1", _connection);
-                var result = command.ExecuteScalar();
+                var result = command.GetScalarValue<int>(0, _logger, "connection test");
                 Disconnect();
-                return result != null && (int)result == 1;
+                return result == 1;
             }
             return false;
         }
@@ -776,8 +808,27 @@ public class PostgresImporter(DatabaseConfig config, ILogger<PostgresImporter> l
         }
     }
 
+    /// <summary>
+    /// Disposes of the PostgreSQL importer and releases all resources.
+    /// </summary>
     public void Dispose()
     {
-        Disconnect();
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// Implements Dispose pattern for resource cleanup.
+    /// </summary>
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                Disconnect();
+            }
+            _disposed = true;
+        }
     }
 }

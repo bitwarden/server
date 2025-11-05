@@ -5,6 +5,9 @@ using Microsoft.Extensions.Logging;
 
 namespace Bit.Seeder.Migration.Databases;
 
+/// <summary>
+/// MariaDB database importer that handles schema creation, data import, and foreign key management.
+/// </summary>
 public class MariaDbImporter(DatabaseConfig config, ILogger<MariaDbImporter> logger) : IDatabaseImporter
 {
     private readonly ILogger<MariaDbImporter> _logger = logger;
@@ -14,16 +17,24 @@ public class MariaDbImporter(DatabaseConfig config, ILogger<MariaDbImporter> log
     private readonly string _username = config.Username;
     private readonly string _password = config.Password;
     private MySqlConnection? _connection;
+    private bool _disposed = false;
 
+    /// <summary>
+    /// Connects to the MariaDB database.
+    /// </summary>
     public bool Connect()
     {
         try
         {
-            var connectionString = $"Server={_host};Port={_port};Database={_database};" +
-                                 $"Uid={_username};Pwd={_password};" +
-                                 $"ConnectionTimeout=30;CharSet=utf8mb4;AllowLoadLocalInfile=true;MaxPoolSize=100;";
+            // Build connection string with redacted password for safe logging
+            var safeConnectionString = $"Server={_host};Port={_port};Database={_database};" +
+                                      $"Uid={_username};Pwd={DbSeederConstants.REDACTED_PASSWORD};" +
+                                      $"ConnectionTimeout={DbSeederConstants.DEFAULT_CONNECTION_TIMEOUT};" +
+                                      $"CharSet=utf8mb4;AllowLoadLocalInfile=false;MaxPoolSize={DbSeederConstants.DEFAULT_MAX_POOL_SIZE};";
 
-            _connection = new MySqlConnection(connectionString);
+            var actualConnectionString = safeConnectionString.Replace(DbSeederConstants.REDACTED_PASSWORD, _password);
+
+            _connection = new MySqlConnection(actualConnectionString);
             _connection.Open();
 
             _logger.LogInformation("Connected to MariaDB: {Host}:{Port}/{Database}", _host, _port, _database);
@@ -47,6 +58,9 @@ public class MariaDbImporter(DatabaseConfig config, ILogger<MariaDbImporter> log
         }
     }
 
+    /// <summary>
+    /// Creates a table in MariaDB from the provided schema definition.
+    /// </summary>
     public bool CreateTableFromSchema(
         string tableName,
         List<string> columns,
@@ -58,11 +72,15 @@ public class MariaDbImporter(DatabaseConfig config, ILogger<MariaDbImporter> log
         if (_connection == null)
             throw new InvalidOperationException("Not connected to database");
 
+        IdentifierValidator.ValidateOrThrow(tableName, "table name");
+
         try
         {
             var mariaColumns = new List<string>();
             foreach (var colName in columns)
             {
+                IdentifierValidator.ValidateOrThrow(colName, "column name");
+
                 var sqlServerType = columnTypes.GetValueOrDefault(colName, "VARCHAR(MAX)");
                 var mariaType = ConvertSqlServerTypeToMariaDB(sqlServerType, specialColumns.Contains(colName));
                 mariaColumns.Add($"`{colName}` {mariaType}");
@@ -122,14 +140,19 @@ public class MariaDbImporter(DatabaseConfig config, ILogger<MariaDbImporter> log
         }
     }
 
+    /// <summary>
+    /// Imports data into a MariaDB table using batched INSERT statements.
+    /// </summary>
     public bool ImportData(
         string tableName,
         List<string> columns,
         List<object[]> data,
-        int batchSize = 1000)
+        int batchSize = DbSeederConstants.DEFAULT_BATCH_SIZE)
     {
         if (_connection == null)
             throw new InvalidOperationException("Not connected to database");
+
+        IdentifierValidator.ValidateOrThrow(tableName, "table name");
 
         if (data.Count == 0)
         {
@@ -146,7 +169,6 @@ public class MariaDbImporter(DatabaseConfig config, ILogger<MariaDbImporter> log
                 return false;
             }
 
-            // Filter columns
             var validColumnIndices = new List<int>();
             var validColumns = new List<string>();
 
@@ -154,6 +176,7 @@ public class MariaDbImporter(DatabaseConfig config, ILogger<MariaDbImporter> log
             {
                 if (actualColumns.Contains(columns[i]))
                 {
+                    IdentifierValidator.ValidateOrThrow(columns[i], "column name");
                     validColumnIndices.Add(i);
                     validColumns.Add(columns[i]);
                 }
@@ -217,14 +240,15 @@ public class MariaDbImporter(DatabaseConfig config, ILogger<MariaDbImporter> log
                     transaction.Commit();
                     totalImported += batch.Count;
 
-                    if (filteredData.Count > 1000)
+                    if (filteredData.Count > DbSeederConstants.LOGGING_THRESHOLD)
                     {
                         _logger.LogDebug("Batch: {BatchCount} rows ({TotalImported}/{FilteredDataCount} total)", batch.Count, totalImported, filteredData.Count);
                     }
                 }
-                catch
+                catch (Exception batchEx)
                 {
-                    transaction.Rollback();
+                    _logger.LogError("Batch import error for {TableName}: {Message}", tableName, batchEx.Message);
+                    transaction.SafeRollback(_connection, _logger, tableName);
                     throw;
                 }
             }
@@ -239,10 +263,15 @@ public class MariaDbImporter(DatabaseConfig config, ILogger<MariaDbImporter> log
         }
     }
 
+    /// <summary>
+    /// Checks if a table exists in the MariaDB database.
+    /// </summary>
     public bool TableExists(string tableName)
     {
         if (_connection == null)
             throw new InvalidOperationException("Not connected to database");
+
+        IdentifierValidator.ValidateOrThrow(tableName, "table name");
 
         try
         {
@@ -255,7 +284,7 @@ public class MariaDbImporter(DatabaseConfig config, ILogger<MariaDbImporter> log
             command.Parameters.AddWithValue("@database", _database);
             command.Parameters.AddWithValue("@tableName", tableName);
 
-            var count = Convert.ToInt32(command.ExecuteScalar());
+            var count = command.GetScalarValue<int>(0, _logger, $"table existence check for {tableName}");
             return count > 0;
         }
         catch (Exception ex)
@@ -265,17 +294,22 @@ public class MariaDbImporter(DatabaseConfig config, ILogger<MariaDbImporter> log
         }
     }
 
+    /// <summary>
+    /// Gets the row count for a specific table.
+    /// </summary>
     public int GetTableRowCount(string tableName)
     {
         if (_connection == null)
             throw new InvalidOperationException("Not connected to database");
+
+        IdentifierValidator.ValidateOrThrow(tableName, "table name");
 
         try
         {
             var query = $"SELECT COUNT(*) FROM `{tableName}`";
             using var command = new MySqlCommand(query, _connection);
 
-            return Convert.ToInt32(command.ExecuteScalar());
+            return command.GetScalarValue<int>(0, _logger, $"row count for {tableName}");
         }
         catch (Exception ex)
         {
@@ -284,10 +318,15 @@ public class MariaDbImporter(DatabaseConfig config, ILogger<MariaDbImporter> log
         }
     }
 
+    /// <summary>
+    /// Drops a table from the MariaDB database.
+    /// </summary>
     public bool DropTable(string tableName)
     {
         if (_connection == null)
             throw new InvalidOperationException("Not connected to database");
+
+        IdentifierValidator.ValidateOrThrow(tableName, "table name");
 
         try
         {
@@ -448,6 +487,9 @@ public class MariaDbImporter(DatabaseConfig config, ILogger<MariaDbImporter> log
         return true; // MariaDB multi-row INSERT is optimized
     }
 
+    /// <summary>
+    /// Imports data using optimized multi-row INSERT statements for better performance.
+    /// </summary>
     public bool ImportDataBulk(
         string tableName,
         List<string> columns,
@@ -455,6 +497,8 @@ public class MariaDbImporter(DatabaseConfig config, ILogger<MariaDbImporter> log
     {
         if (_connection == null)
             throw new InvalidOperationException("Not connected to database");
+
+        IdentifierValidator.ValidateOrThrow(tableName, "table name");
 
         if (data.Count == 0)
         {
@@ -471,7 +515,6 @@ public class MariaDbImporter(DatabaseConfig config, ILogger<MariaDbImporter> log
                 return false;
             }
 
-            // Filter columns
             var validColumnIndices = new List<int>();
             var validColumns = new List<string>();
 
@@ -479,6 +522,7 @@ public class MariaDbImporter(DatabaseConfig config, ILogger<MariaDbImporter> log
             {
                 if (actualColumns.Contains(columns[i]))
                 {
+                    IdentifierValidator.ValidateOrThrow(columns[i], "column name");
                     validColumnIndices.Add(i);
                     validColumns.Add(columns[i]);
                 }
@@ -496,10 +540,7 @@ public class MariaDbImporter(DatabaseConfig config, ILogger<MariaDbImporter> log
 
             _logger.LogInformation("Bulk importing {Count} rows into {TableName} using multi-row INSERT", filteredData.Count, tableName);
 
-            // Use multi-row INSERT for better performance
-            // INSERT INTO table (col1, col2) VALUES (val1, val2), (val3, val4), ...
-            // MariaDB can handle up to max_allowed_packet size, we'll use 5000 rows per batch
-            const int rowsPerBatch = 5000;
+            const int rowsPerBatch = DbSeederConstants.LARGE_BATCH_SIZE;
             var totalImported = 0;
 
             for (int i = 0; i < filteredData.Count; i += rowsPerBatch)
@@ -536,7 +577,7 @@ public class MariaDbImporter(DatabaseConfig config, ILogger<MariaDbImporter> log
                     var fullInsertSql = columnPart + string.Join(", ", valueSets);
 
                     using var command = new MySqlCommand(fullInsertSql, _connection, transaction);
-                    command.CommandTimeout = 300; // 5 minutes timeout for large batches
+                    command.CommandTimeout = DbSeederConstants.LARGE_BATCH_COMMAND_TIMEOUT;
 
                     // Add all parameters
                     foreach (var (name, value) in allParameters)
@@ -562,7 +603,7 @@ public class MariaDbImporter(DatabaseConfig config, ILogger<MariaDbImporter> log
                     transaction.Commit();
                     totalImported += batch.Count;
 
-                    if (filteredData.Count > 1000)
+                    if (filteredData.Count > DbSeederConstants.LOGGING_THRESHOLD)
                     {
                         _logger.LogDebug("Batch: {BatchCount} rows ({TotalImported}/{FilteredDataCount} total)", batch.Count, totalImported, filteredData.Count);
                     }
@@ -570,19 +611,7 @@ public class MariaDbImporter(DatabaseConfig config, ILogger<MariaDbImporter> log
                 catch (Exception batchEx)
                 {
                     _logger.LogError("Batch import error for {TableName}: {Message}", tableName, batchEx.Message);
-
-                    try
-                    {
-                        if (_connection?.State == System.Data.ConnectionState.Open)
-                        {
-                            transaction.Rollback();
-                        }
-                    }
-                    catch (Exception rollbackEx)
-                    {
-                        _logger.LogWarning("Could not rollback transaction (connection may be closed): {Message}", rollbackEx.Message);
-                    }
-
+                    transaction.SafeRollback(_connection, _logger, tableName);
                     throw;
                 }
             }
@@ -602,6 +631,9 @@ public class MariaDbImporter(DatabaseConfig config, ILogger<MariaDbImporter> log
         }
     }
 
+    /// <summary>
+    /// Tests the connection to MariaDB by executing a simple query.
+    /// </summary>
     public bool TestConnection()
     {
         try
@@ -609,9 +641,9 @@ public class MariaDbImporter(DatabaseConfig config, ILogger<MariaDbImporter> log
             if (Connect())
             {
                 using var command = new MySqlCommand("SELECT 1", _connection);
-                var result = command.ExecuteScalar();
+                var result = command.GetScalarValue<int>(0, _logger, "connection test");
                 Disconnect();
-                return result != null && Convert.ToInt32(result) == 1;
+                return result == 1;
             }
             return false;
         }
@@ -622,8 +654,27 @@ public class MariaDbImporter(DatabaseConfig config, ILogger<MariaDbImporter> log
         }
     }
 
+    /// <summary>
+    /// Disposes of the MariaDB importer and releases all resources.
+    /// </summary>
     public void Dispose()
     {
-        Disconnect();
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// Implements Dispose pattern for resource cleanup.
+    /// </summary>
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                Disconnect();
+            }
+            _disposed = true;
+        }
     }
 }

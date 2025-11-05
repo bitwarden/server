@@ -6,6 +6,9 @@ using System.Data;
 
 namespace Bit.Seeder.Migration.Databases;
 
+/// <summary>
+/// SQL Server database importer that handles schema creation, data import, and constraint management.
+/// </summary>
 public class SqlServerImporter(DatabaseConfig config, ILogger<SqlServerImporter> logger) : IDatabaseImporter
 {
     private readonly ILogger<SqlServerImporter> _logger = logger;
@@ -15,17 +18,24 @@ public class SqlServerImporter(DatabaseConfig config, ILogger<SqlServerImporter>
     private readonly string _username = config.Username;
     private readonly string _password = config.Password;
     private SqlConnection? _connection;
+    private bool _disposed = false;
     private const string _trackingTableName = "[dbo].[_MigrationDisabledConstraint]";
 
+    /// <summary>
+    /// Connects to the SQL Server database.
+    /// </summary>
     public bool Connect()
     {
         try
         {
-            var connectionString = $"Server={_host},{_port};Database={_database};" +
-                                 $"User Id={_username};Password={_password};" +
-                                 $"TrustServerCertificate=True;Connection Timeout=30;";
+            var safeConnectionString = $"Server={_host},{_port};Database={_database};" +
+                                      $"User Id={_username};Password={DbSeederConstants.REDACTED_PASSWORD};" +
+                                      $"TrustServerCertificate=True;" +
+                                      $"Connection Timeout={DbSeederConstants.DEFAULT_CONNECTION_TIMEOUT};";
 
-            _connection = new SqlConnection(connectionString);
+            var actualConnectionString = safeConnectionString.Replace(DbSeederConstants.REDACTED_PASSWORD, _password);
+
+            _connection = new SqlConnection(actualConnectionString);
             _connection.Open();
 
             _logger.LogInformation("Connected to SQL Server: {Host}/{Database}", _host, _database);
@@ -38,6 +48,9 @@ public class SqlServerImporter(DatabaseConfig config, ILogger<SqlServerImporter>
         }
     }
 
+    /// <summary>
+    /// Disconnects from the SQL Server database.
+    /// </summary>
     public void Disconnect()
     {
         if (_connection != null)
@@ -49,10 +62,15 @@ public class SqlServerImporter(DatabaseConfig config, ILogger<SqlServerImporter>
         }
     }
 
+    /// <summary>
+    /// Gets the list of columns for a table.
+    /// </summary>
     public List<string> GetTableColumns(string tableName)
     {
         if (_connection == null)
             throw new InvalidOperationException("Not connected to database");
+
+        IdentifierValidator.ValidateOrThrow(tableName, "table name");
 
         try
         {
@@ -81,10 +99,15 @@ public class SqlServerImporter(DatabaseConfig config, ILogger<SqlServerImporter>
         }
     }
 
+    /// <summary>
+    /// Gets the column types for a table.
+    /// </summary>
     private Dictionary<string, string> GetTableColumnTypes(string tableName)
     {
         if (_connection == null)
             throw new InvalidOperationException("Not connected to database");
+
+        IdentifierValidator.ValidateOrThrow(tableName, "table name");
 
         try
         {
@@ -112,10 +135,15 @@ public class SqlServerImporter(DatabaseConfig config, ILogger<SqlServerImporter>
         }
     }
 
+    /// <summary>
+    /// Checks if a table exists in the database.
+    /// </summary>
     public bool TableExists(string tableName)
     {
         if (_connection == null)
             throw new InvalidOperationException("Not connected to database");
+
+        IdentifierValidator.ValidateOrThrow(tableName, "table name");
 
         try
         {
@@ -127,7 +155,7 @@ public class SqlServerImporter(DatabaseConfig config, ILogger<SqlServerImporter>
             using var command = new SqlCommand(query, _connection);
             command.Parameters.AddWithValue("@TableName", tableName);
 
-            var count = (int)command.ExecuteScalar()!;
+            var count = command.GetScalarValue<int>(0, _logger, $"table existence check for {tableName}");
             return count > 0;
         }
         catch (Exception ex)
@@ -137,17 +165,22 @@ public class SqlServerImporter(DatabaseConfig config, ILogger<SqlServerImporter>
         }
     }
 
+    /// <summary>
+    /// Gets the row count for a specific table.
+    /// </summary>
     public int GetTableRowCount(string tableName)
     {
         if (_connection == null)
             throw new InvalidOperationException("Not connected to database");
+
+        IdentifierValidator.ValidateOrThrow(tableName, "table name");
 
         try
         {
             var query = $"SELECT COUNT(*) FROM [{tableName}]";
             using var command = new SqlCommand(query, _connection);
 
-            var count = (int)command.ExecuteScalar()!;
+            var count = command.GetScalarValue<int>(0, _logger, $"row count for {tableName}");
             _logger.LogDebug("Row count for {TableName}: {Count}", tableName, count);
             return count;
         }
@@ -158,10 +191,15 @@ public class SqlServerImporter(DatabaseConfig config, ILogger<SqlServerImporter>
         }
     }
 
+    /// <summary>
+    /// Drops a table from the database.
+    /// </summary>
     public bool DropTable(string tableName)
     {
         if (_connection == null)
             throw new InvalidOperationException("Not connected to database");
+
+        IdentifierValidator.ValidateOrThrow(tableName, "table name");
 
         try
         {
@@ -200,6 +238,9 @@ public class SqlServerImporter(DatabaseConfig config, ILogger<SqlServerImporter>
         }
     }
 
+    /// <summary>
+    /// Gets the list of constraints that need to be re-enabled from the tracking table.
+    /// </summary>
     private List<(string Schema, string Table, string Constraint)> GetConstraintsToReEnable()
     {
         if (_connection == null)
@@ -212,7 +253,9 @@ public class SqlServerImporter(DatabaseConfig config, ILogger<SqlServerImporter>
             // Check if tracking table exists
             var checkSql = "SELECT COUNT(*) FROM sys.tables WHERE name = '_MigrationDisabledConstraint' AND schema_id = SCHEMA_ID('dbo')";
             using var checkCommand = new SqlCommand(checkSql, _connection);
-            var tableExists = (int)checkCommand.ExecuteScalar()! > 0;
+
+            var count = checkCommand.GetScalarValue<int>(0, _logger, "tracking table existence check");
+            var tableExists = count > 0;
 
             if (!tableExists)
             {
@@ -248,6 +291,9 @@ public class SqlServerImporter(DatabaseConfig config, ILogger<SqlServerImporter>
         return constraints;
     }
 
+    /// <summary>
+    /// Disables all foreign key constraints and tracks them for re-enabling.
+    /// </summary>
     public bool DisableForeignKeys()
     {
         if (_connection == null)
@@ -261,7 +307,8 @@ public class SqlServerImporter(DatabaseConfig config, ILogger<SqlServerImporter>
             var checkSql = "SELECT COUNT(*) FROM sys.tables WHERE name = '_MigrationDisabledConstraint' AND schema_id = SCHEMA_ID('dbo')";
             using (var checkCommand = new SqlCommand(checkSql, _connection))
             {
-                var tableExists = (int)checkCommand.ExecuteScalar()! > 0;
+                var count = checkCommand.GetScalarValue<int>(0, _logger, "tracking table existence check");
+                var tableExists = count > 0;
 
                 if (tableExists)
                 {
@@ -366,6 +413,11 @@ public class SqlServerImporter(DatabaseConfig config, ILogger<SqlServerImporter>
                 {
                     try
                     {
+                        // Validate identifiers to prevent SQL injection
+                        IdentifierValidator.ValidateOrThrow(schema, "schema name");
+                        IdentifierValidator.ValidateOrThrow(table, "table name");
+                        IdentifierValidator.ValidateOrThrow(constraint, "constraint name");
+
                         // Disable the constraint
                         var disableSql = $"ALTER TABLE [{schema}].[{table}] NOCHECK CONSTRAINT [{constraint}]";
                         using var disableCommand = new SqlCommand(disableSql, _connection, transaction);
@@ -401,7 +453,8 @@ public class SqlServerImporter(DatabaseConfig config, ILogger<SqlServerImporter>
             {
                 // If anything fails, rollback the transaction
                 // This ensures the tracking table doesn't exist with incomplete data
-                transaction.Rollback();
+                // Safely rollback transaction, preserving original exception
+                transaction.SafeRollback(_connection, _logger, "foreign key constraint disabling");
                 throw;
             }
         }
@@ -412,6 +465,9 @@ public class SqlServerImporter(DatabaseConfig config, ILogger<SqlServerImporter>
         }
     }
 
+    /// <summary>
+    /// Re-enables all foreign key constraints that were disabled.
+    /// </summary>
     public bool EnableForeignKeys()
     {
         if (_connection == null)
@@ -437,6 +493,10 @@ public class SqlServerImporter(DatabaseConfig config, ILogger<SqlServerImporter>
             {
                 try
                 {
+                    IdentifierValidator.ValidateOrThrow(schema, "schema name");
+                    IdentifierValidator.ValidateOrThrow(table, "table name");
+                    IdentifierValidator.ValidateOrThrow(constraint, "constraint name");
+
                     var enableSql = $"ALTER TABLE [{schema}].[{table}] CHECK CONSTRAINT [{constraint}]";
                     using var command = new SqlCommand(enableSql, _connection);
                     command.ExecuteNonQuery();
@@ -464,6 +524,9 @@ public class SqlServerImporter(DatabaseConfig config, ILogger<SqlServerImporter>
         }
     }
 
+    /// <summary>
+    /// Creates a table from the provided schema definition.
+    /// </summary>
     public bool CreateTableFromSchema(
         string tableName,
         List<string> columns,
@@ -475,12 +538,16 @@ public class SqlServerImporter(DatabaseConfig config, ILogger<SqlServerImporter>
         if (_connection == null)
             throw new InvalidOperationException("Not connected to database");
 
+        IdentifierValidator.ValidateOrThrow(tableName, "table name");
+
         try
         {
             // Build column definitions
             var sqlServerColumns = new List<string>();
             foreach (var colName in columns)
             {
+                IdentifierValidator.ValidateOrThrow(colName, "column name");
+
                 var colType = columnTypes.GetValueOrDefault(colName, "NVARCHAR(MAX)");
 
                 // If it's a special JSON column, ensure it's a large text type
@@ -516,10 +583,15 @@ public class SqlServerImporter(DatabaseConfig config, ILogger<SqlServerImporter>
         }
     }
 
+    /// <summary>
+    /// Gets the list of identity columns for a table.
+    /// </summary>
     public List<string> GetIdentityColumns(string tableName)
     {
         if (_connection == null)
             throw new InvalidOperationException("Not connected to database");
+
+        IdentifierValidator.ValidateOrThrow(tableName, "table name");
 
         try
         {
@@ -548,10 +620,15 @@ public class SqlServerImporter(DatabaseConfig config, ILogger<SqlServerImporter>
         }
     }
 
+    /// <summary>
+    /// Enables IDENTITY_INSERT for a table to allow explicit identity values.
+    /// </summary>
     public bool EnableIdentityInsert(string tableName)
     {
         if (_connection == null)
             throw new InvalidOperationException("Not connected to database");
+
+        IdentifierValidator.ValidateOrThrow(tableName, "table name");
 
         try
         {
@@ -569,10 +646,15 @@ public class SqlServerImporter(DatabaseConfig config, ILogger<SqlServerImporter>
         }
     }
 
+    /// <summary>
+    /// Disables IDENTITY_INSERT for a table.
+    /// </summary>
     public bool DisableIdentityInsert(string tableName)
     {
         if (_connection == null)
             throw new InvalidOperationException("Not connected to database");
+
+        IdentifierValidator.ValidateOrThrow(tableName, "table name");
 
         try
         {
@@ -590,14 +672,19 @@ public class SqlServerImporter(DatabaseConfig config, ILogger<SqlServerImporter>
         }
     }
 
+    /// <summary>
+    /// Imports data into a table using batch insert statements.
+    /// </summary>
     public bool ImportData(
         string tableName,
         List<string> columns,
         List<object[]> data,
-        int batchSize = 1000)
+        int batchSize = DbSeederConstants.DEFAULT_BATCH_SIZE)
     {
         if (_connection == null)
             throw new InvalidOperationException("Not connected to database");
+
+        IdentifierValidator.ValidateOrThrow(tableName, "table name");
 
         if (data.Count == 0)
         {
@@ -624,6 +711,8 @@ public class SqlServerImporter(DatabaseConfig config, ILogger<SqlServerImporter>
             {
                 if (actualColumns.Contains(columns[i]))
                 {
+                    IdentifierValidator.ValidateOrThrow(columns[i], "column name");
+
                     validColumnIndices.Add(i);
                     validColumns.Add(columns[i]);
                 }
@@ -689,7 +778,6 @@ public class SqlServerImporter(DatabaseConfig config, ILogger<SqlServerImporter>
                 }
             }
 
-            // Validate that data was actually inserted
             var actualCount = GetTableRowCount(tableName);
             _logger.LogInformation("Post-import validation for {TableName}: imported {TotalImported}, table contains {ActualCount}", tableName, totalImported, actualCount);
 
@@ -708,15 +796,20 @@ public class SqlServerImporter(DatabaseConfig config, ILogger<SqlServerImporter>
         }
     }
 
+    /// <summary>
+    /// Imports data using SqlBulkCopy for high performance.
+    /// </summary>
     private int UseSqlBulkCopy(string tableName, List<string> columns, List<object?[]> data)
     {
+        IdentifierValidator.ValidateOrThrow(tableName, "table name");
+
         try
         {
             using var bulkCopy = new SqlBulkCopy(_connection!)
             {
                 DestinationTableName = $"[{tableName}]",
-                BatchSize = 10000,
-                BulkCopyTimeout = 600 // 10 minutes
+                BatchSize = DbSeederConstants.PROGRESS_REPORTING_INTERVAL,
+                BulkCopyTimeout = DbSeederConstants.LARGE_BATCH_COMMAND_TIMEOUT
             };
 
             // Map columns
@@ -747,12 +840,22 @@ public class SqlServerImporter(DatabaseConfig config, ILogger<SqlServerImporter>
         catch (Exception ex)
         {
             _logger.LogWarning("SqlBulkCopy failed: {Message}, falling back to batch insert", ex.Message);
-            return FastBatchImport(tableName, columns, data, 1000);
+            return FastBatchImport(tableName, columns, data, DbSeederConstants.DEFAULT_BATCH_SIZE);
         }
     }
 
+    /// <summary>
+    /// Imports data using fast batch INSERT statements with transactions.
+    /// </summary>
     private int FastBatchImport(string tableName, List<string> columns, List<object?[]> data, int batchSize)
     {
+        IdentifierValidator.ValidateOrThrow(tableName, "table name");
+
+        foreach (var column in columns)
+        {
+            IdentifierValidator.ValidateOrThrow(column, "column name");
+        }
+
         var quotedColumns = columns.Select(col => $"[{col}]").ToList();
         var placeholders = string.Join(", ", columns.Select((_, i) => $"@p{i}"));
         var insertSql = $"INSERT INTO [{tableName}] ({string.Join(", ", quotedColumns)}) VALUES ({placeholders})";
@@ -782,14 +885,15 @@ public class SqlServerImporter(DatabaseConfig config, ILogger<SqlServerImporter>
                 transaction.Commit();
                 totalImported += batch.Count;
 
-                if (data.Count > 1000)
+                if (data.Count > DbSeederConstants.LOGGING_THRESHOLD)
                 {
                     _logger.LogDebug("Batch: {BatchCount} rows ({TotalImported}/{DataCount} total, {Percentage:F1}%)", batch.Count, totalImported, data.Count, (totalImported / (double)data.Count * 100));
                 }
             }
             catch
             {
-                transaction.Rollback();
+                // Safely rollback transaction, preserving original exception
+                transaction.SafeRollback(_connection, _logger, tableName);
                 throw;
             }
         }
@@ -938,6 +1042,9 @@ public class SqlServerImporter(DatabaseConfig config, ILogger<SqlServerImporter>
         return true; // SQL Server SqlBulkCopy is highly optimized
     }
 
+    /// <summary>
+    /// Imports data using SqlBulkCopy for high-performance bulk loading.
+    /// </summary>
     public bool ImportDataBulk(
         string tableName,
         List<string> columns,
@@ -945,6 +1052,8 @@ public class SqlServerImporter(DatabaseConfig config, ILogger<SqlServerImporter>
     {
         if (_connection == null)
             throw new InvalidOperationException("Not connected to database");
+
+        IdentifierValidator.ValidateOrThrow(tableName, "table name");
 
         if (data.Count == 0)
         {
@@ -971,6 +1080,8 @@ public class SqlServerImporter(DatabaseConfig config, ILogger<SqlServerImporter>
             {
                 if (actualColumns.Contains(columns[i]))
                 {
+                    IdentifierValidator.ValidateOrThrow(columns[i], "column name");
+
                     validColumnIndices.Add(i);
                     validColumns.Add(columns[i]);
                 }
@@ -1022,8 +1133,8 @@ public class SqlServerImporter(DatabaseConfig config, ILogger<SqlServerImporter>
             using var bulkCopy = new SqlBulkCopy(_connection, bulkCopyOptions, null)
             {
                 DestinationTableName = $"[{tableName}]",
-                BatchSize = 10000,
-                BulkCopyTimeout = 600 // 10 minutes
+                BatchSize = DbSeederConstants.PROGRESS_REPORTING_INTERVAL,
+                BulkCopyTimeout = DbSeederConstants.LARGE_BATCH_COMMAND_TIMEOUT
             };
 
             // Map columns
@@ -1063,6 +1174,9 @@ public class SqlServerImporter(DatabaseConfig config, ILogger<SqlServerImporter>
         }
     }
 
+    /// <summary>
+    /// Tests the connection to SQL Server by executing a simple query.
+    /// </summary>
     public bool TestConnection()
     {
         try
@@ -1070,9 +1184,9 @@ public class SqlServerImporter(DatabaseConfig config, ILogger<SqlServerImporter>
             if (Connect())
             {
                 using var command = new SqlCommand("SELECT 1", _connection);
-                var result = command.ExecuteScalar();
+                var result = command.GetScalarValue<int>(0, _logger, "connection test");
                 Disconnect();
-                return result != null && (int)result == 1;
+                return result == 1;
             }
             return false;
         }
@@ -1083,8 +1197,27 @@ public class SqlServerImporter(DatabaseConfig config, ILogger<SqlServerImporter>
         }
     }
 
+    /// <summary>
+    /// Disposes of the SQL Server importer and releases all resources.
+    /// </summary>
     public void Dispose()
     {
-        Disconnect();
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// Implements Dispose pattern for resource cleanup.
+    /// </summary>
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                Disconnect();
+            }
+            _disposed = true;
+        }
     }
 }

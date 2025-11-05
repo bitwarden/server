@@ -5,11 +5,15 @@ using Microsoft.Extensions.Logging;
 
 namespace Bit.Seeder.Migration.Databases;
 
+/// <summary>
+/// SQLite database importer that handles schema creation and data import.
+/// </summary>
 public class SqliteImporter(DatabaseConfig config, ILogger<SqliteImporter> logger) : IDatabaseImporter
 {
     private readonly ILogger<SqliteImporter> _logger = logger;
     private readonly string _databasePath = config.Database;
     private SqliteConnection? _connection;
+    private bool _disposed = false;
 
     public bool Connect()
     {
@@ -74,6 +78,9 @@ public class SqliteImporter(DatabaseConfig config, ILogger<SqliteImporter> logge
         }
     }
 
+    /// <summary>
+    /// Creates a table from the provided schema definition.
+    /// </summary>
     public bool CreateTableFromSchema(
         string tableName,
         List<string> columns,
@@ -85,11 +92,17 @@ public class SqliteImporter(DatabaseConfig config, ILogger<SqliteImporter> logge
         if (_connection == null)
             throw new InvalidOperationException("Not connected to database");
 
+        // Validate table name to prevent SQL injection
+        IdentifierValidator.ValidateOrThrow(tableName, "table name");
+
         try
         {
             var sqliteColumns = new List<string>();
             foreach (var colName in columns)
             {
+                // Validate each column name to prevent SQL injection
+                IdentifierValidator.ValidateOrThrow(colName, "column name");
+
                 var sqlServerType = columnTypes.GetValueOrDefault(colName, "VARCHAR(MAX)");
                 var sqliteType = ConvertSqlServerTypeToSQLite(sqlServerType, specialColumns.Contains(colName));
                 sqliteColumns.Add($"\"{colName}\" {sqliteType}");
@@ -116,10 +129,16 @@ public class SqliteImporter(DatabaseConfig config, ILogger<SqliteImporter> logge
         }
     }
 
+    /// <summary>
+    /// Gets the list of columns for a table.
+    /// </summary>
     public List<string> GetTableColumns(string tableName)
     {
         if (_connection == null)
             throw new InvalidOperationException("Not connected to database");
+
+        // Validate table name to prevent SQL injection
+        IdentifierValidator.ValidateOrThrow(tableName, "table name");
 
         try
         {
@@ -142,14 +161,20 @@ public class SqliteImporter(DatabaseConfig config, ILogger<SqliteImporter> logge
         }
     }
 
+    /// <summary>
+    /// Imports data into a table using batch INSERT statements.
+    /// </summary>
     public bool ImportData(
         string tableName,
         List<string> columns,
         List<object[]> data,
-        int batchSize = 1000)
+        int batchSize = DbSeederConstants.DEFAULT_BATCH_SIZE)
     {
         if (_connection == null)
             throw new InvalidOperationException("Not connected to database");
+
+        // Validate table name to prevent SQL injection
+        IdentifierValidator.ValidateOrThrow(tableName, "table name");
 
         if (data.Count == 0)
         {
@@ -174,6 +199,9 @@ public class SqliteImporter(DatabaseConfig config, ILogger<SqliteImporter> logge
             {
                 if (actualColumns.Contains(columns[i]))
                 {
+                    // Validate column name to prevent SQL injection
+                    IdentifierValidator.ValidateOrThrow(columns[i], "column name");
+
                     validColumnIndices.Add(i);
                     validColumns.Add(columns[i]);
                 }
@@ -231,7 +259,7 @@ public class SqliteImporter(DatabaseConfig config, ILogger<SqliteImporter> logge
 
                     totalImported += batch.Count;
 
-                    if (filteredData.Count > 1000)
+                    if (filteredData.Count > DbSeederConstants.LOGGING_THRESHOLD)
                     {
                         _logger.LogDebug("Batch: {BatchCount} rows ({TotalImported}/{FilteredDataCount} total)", batch.Count, totalImported, filteredData.Count);
                     }
@@ -244,7 +272,8 @@ public class SqliteImporter(DatabaseConfig config, ILogger<SqliteImporter> logge
             }
             catch
             {
-                transaction.Rollback();
+                // Safely rollback transaction, preserving original exception
+                transaction.SafeRollback(_connection, _logger, tableName);
                 throw;
             }
         }
@@ -255,10 +284,16 @@ public class SqliteImporter(DatabaseConfig config, ILogger<SqliteImporter> logge
         }
     }
 
+    /// <summary>
+    /// Checks if a table exists in the database.
+    /// </summary>
     public bool TableExists(string tableName)
     {
         if (_connection == null)
             throw new InvalidOperationException("Not connected to database");
+
+        // Validate table name to prevent SQL injection
+        IdentifierValidator.ValidateOrThrow(tableName, "table name");
 
         try
         {
@@ -266,7 +301,8 @@ public class SqliteImporter(DatabaseConfig config, ILogger<SqliteImporter> logge
             using var command = new SqliteCommand(query, _connection);
             command.Parameters.AddWithValue("@tableName", tableName);
 
-            var count = Convert.ToInt64(command.ExecuteScalar());
+            // Use null-safe scalar value retrieval
+            var count = command.GetScalarValue<long>(0, _logger, $"table existence check for {tableName}");
             return count > 0;
         }
         catch (Exception ex)
@@ -276,17 +312,24 @@ public class SqliteImporter(DatabaseConfig config, ILogger<SqliteImporter> logge
         }
     }
 
+    /// <summary>
+    /// Gets the row count for a specific table.
+    /// </summary>
     public int GetTableRowCount(string tableName)
     {
         if (_connection == null)
             throw new InvalidOperationException("Not connected to database");
+
+        // Validate table name to prevent SQL injection
+        IdentifierValidator.ValidateOrThrow(tableName, "table name");
 
         try
         {
             var query = $"SELECT COUNT(*) FROM \"{tableName}\"";
             using var command = new SqliteCommand(query, _connection);
 
-            return Convert.ToInt32(command.ExecuteScalar());
+            // Use null-safe scalar value retrieval
+            return command.GetScalarValue<int>(0, _logger, $"row count for {tableName}");
         }
         catch (Exception ex)
         {
@@ -295,10 +338,16 @@ public class SqliteImporter(DatabaseConfig config, ILogger<SqliteImporter> logge
         }
     }
 
+    /// <summary>
+    /// Drops a table from the database.
+    /// </summary>
     public bool DropTable(string tableName)
     {
         if (_connection == null)
             throw new InvalidOperationException("Not connected to database");
+
+        // Validate table name to prevent SQL injection
+        IdentifierValidator.ValidateOrThrow(tableName, "table name");
 
         try
         {
@@ -432,6 +481,9 @@ public class SqliteImporter(DatabaseConfig config, ILogger<SqliteImporter> logge
         return false;
     }
 
+    /// <summary>
+    /// Tests the connection to SQLite by executing a simple query.
+    /// </summary>
     public bool TestConnection()
     {
         try
@@ -439,9 +491,10 @@ public class SqliteImporter(DatabaseConfig config, ILogger<SqliteImporter> logge
             if (Connect())
             {
                 using var command = new SqliteCommand("SELECT 1", _connection);
-                var result = command.ExecuteScalar();
+                // Use null-safe scalar value retrieval
+                var result = command.GetScalarValue<int>(0, _logger, "connection test");
                 Disconnect();
-                return result != null && Convert.ToInt32(result) == 1;
+                return result == 1;
             }
             return false;
         }
@@ -452,8 +505,29 @@ public class SqliteImporter(DatabaseConfig config, ILogger<SqliteImporter> logge
         }
     }
 
+    /// <summary>
+    /// Disposes of the SQLite importer and releases all resources.
+    /// </summary>
     public void Dispose()
     {
-        Disconnect();
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// Protected implementation of Dispose pattern.
+    /// </summary>
+    /// <param name="disposing">True if called from Dispose(), false if called from finalizer</param>
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                // Dispose managed resources
+                Disconnect();
+            }
+            _disposed = true;
+        }
     }
 }
