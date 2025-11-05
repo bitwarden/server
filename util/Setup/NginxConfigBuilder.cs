@@ -113,10 +113,12 @@ public class NginxConfigBuilder
             }
             else
             {
-                SslCiphers = "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:" +
-                    "ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:" +
-                    "ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:" +
-                    "ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256";
+                // Cipher list is Mozilla's "intermediate" list, See:
+                //     https://mozilla.github.io/server-side-tls/ssl-config-generator/
+                SslCiphers = "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:" +
+                    "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:" +
+                    "ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:" +
+                    "DHE-RSA-CHACHA20-POLY1305;";
             }
 
             if (!string.IsNullOrWhiteSpace(context.Config.SslVersions))
@@ -125,7 +127,16 @@ public class NginxConfigBuilder
             }
             else
             {
-                SslProtocols = "TLSv1.2";
+                // Also based on Mozilla's Intermediate list
+                SslProtocols = "TLSv1.2 TLSv1.3";
+            }
+            if (!string.IsNullOrWhiteSpace(context.Config.SslCurves)) {
+                SslCurves = context.Config.SslCurves
+            } else {
+                // Also based on Mozilla's Intermediate list with one addition, the X25519MLKEM768 curve
+                // for post quantum cryptography, X25519MLKEM768 has been adopted by most broswers at this
+                // time. See https://blog.cloudflare.com/pq-2025/ for an in depth explanation.
+                SslCurves = "X25519:X25519MLKEM768:prime256v1:secp384r1"
             }
         }
 
@@ -140,6 +151,7 @@ public class NginxConfigBuilder
         public string DiffieHellmanPath { get; set; }
         public string SslCiphers { get; set; }
         public string SslProtocols { get; set; }
+        public string SslCurves { get; set; }
         public string ContentSecurityPolicy { get; set; }
         public List<string> RealIps { get; set; }
     }
