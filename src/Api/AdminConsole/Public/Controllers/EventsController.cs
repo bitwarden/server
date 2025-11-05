@@ -2,6 +2,7 @@
 using System.Net;
 using Bit.Api.Models.Public.Request;
 using Bit.Api.Models.Public.Response;
+using Bit.Api.Utilities.DiagnosticTools;
 using Bit.Core.Context;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
@@ -23,6 +24,8 @@ public class EventsController : Controller
     private readonly ISecretRepository _secretRepository;
     private readonly IProjectRepository _projectRepository;
     private readonly IUserService _userService;
+    private readonly ILogger<EventsController> _logger;
+    private readonly IFeatureService _featureService;
 
     public EventsController(
         IEventRepository eventRepository,
@@ -31,6 +34,8 @@ public class EventsController : Controller
         ISecretRepository secretRepository,
         IProjectRepository projectRepository,
         IUserService userService)
+        ILogger<EventsController> logger,
+        IFeatureService featureService)
     {
         _eventRepository = eventRepository;
         _cipherRepository = cipherRepository;
@@ -38,6 +43,8 @@ public class EventsController : Controller
         _secretRepository = secretRepository;
         _projectRepository = projectRepository;
         _userService = userService;
+        _logger = logger;
+        _featureService = featureService;
     }
 
     /// <summary>
@@ -118,6 +125,9 @@ public class EventsController : Controller
 
         var eventResponses = result.Data.Select(e => new EventResponseModel(e));
         var response = new PagedListResponseModel<EventResponseModel>(eventResponses, result.ContinuationToken ?? "");
+
+        _logger.LogAggregateData(_featureService, _currentContext.OrganizationId!.Value, response, request);
+
         return new JsonResult(response);
     }
 }

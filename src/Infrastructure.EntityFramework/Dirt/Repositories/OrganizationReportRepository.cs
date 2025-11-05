@@ -4,6 +4,7 @@
 using AutoMapper;
 using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Models.Data;
+using Bit.Core.Dirt.Reports.Models.Data;
 using Bit.Core.Dirt.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using LinqToDB;
@@ -182,6 +183,33 @@ public class OrganizationReportRepository :
                 .FirstOrDefaultAsync();
 
             return Mapper.Map<OrganizationReport>(updatedReport);
+        }
+    }
+
+    public Task UpdateMetricsAsync(Guid reportId, OrganizationReportMetricsData metrics)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+
+            return dbContext.OrganizationReports
+                .Where(p => p.Id == reportId)
+                .UpdateAsync(p => new Models.OrganizationReport
+                {
+                    ApplicationCount = metrics.ApplicationCount,
+                    ApplicationAtRiskCount = metrics.ApplicationAtRiskCount,
+                    CriticalApplicationCount = metrics.CriticalApplicationCount,
+                    CriticalApplicationAtRiskCount = metrics.CriticalApplicationAtRiskCount,
+                    MemberCount = metrics.MemberCount,
+                    MemberAtRiskCount = metrics.MemberAtRiskCount,
+                    CriticalMemberCount = metrics.CriticalMemberCount,
+                    CriticalMemberAtRiskCount = metrics.CriticalMemberAtRiskCount,
+                    PasswordCount = metrics.PasswordCount,
+                    PasswordAtRiskCount = metrics.PasswordAtRiskCount,
+                    CriticalPasswordCount = metrics.CriticalPasswordCount,
+                    CriticalPasswordAtRiskCount = metrics.CriticalPasswordAtRiskCount,
+                    RevisionDate = DateTime.UtcNow
+                });
         }
     }
 }
