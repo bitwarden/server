@@ -586,7 +586,7 @@ public class AccountController : Controller
             // authenticated with the org's SSO provider before now (otherwise we wouldn't be auto-provisioning them).
             // We've verified that the user is Accepted or Confnirmed, so we can create an SsoUser link and proceed
             // with authentication.
-            await CreateSsoUserRecordAsync(providerUserId, guaranteedOrgUser.Id, organization.Id, guaranteedOrgUser);
+            await CreateSsoUserRecordAsync(providerUserId, guaranteedOrgUser.UserId!.Value, organization.Id, guaranteedOrgUser);
 
             return (possibleExistingUser, organization, guaranteedOrgUser);
         }

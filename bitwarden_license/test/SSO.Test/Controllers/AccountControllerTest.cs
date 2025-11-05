@@ -857,7 +857,7 @@ public class AccountControllerTest
     }
 
     [Theory, BitAutoData]
-    public async Task AutoProvisionUserAsync_WithExistingAcceptedUser_CreatesSsoLinkAndReturnsUser(
+    public async Task CreateUserAndOrgUserConditionallyAsync_WithExistingAcceptedUser_CreatesSsoLinkAndReturnsUser(
         SutProvider<AccountController> sutProvider)
     {
         // Arrange
