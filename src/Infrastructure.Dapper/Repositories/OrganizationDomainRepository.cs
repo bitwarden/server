@@ -149,13 +149,13 @@ public class OrganizationDomainRepository : Repository<OrganizationDomain, Guid>
         }
     }
 
-    public async Task<bool> HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(string domainName)
+    public async Task<bool> HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(string domainName, Guid? excludeOrganizationId = null)
     {
         await using var connection = new SqlConnection(ConnectionString);
 
         var result = await connection.QueryFirstOrDefaultAsync<bool>(
             $"[{Schema}].[OrganizationDomain_HasVerifiedDomainWithBlockPolicy]",
-            new { DomainName = domainName },
+            new { DomainName = domainName, ExcludeOrganizationId = excludeOrganizationId },
             commandType: CommandType.StoredProcedure);
 
         return result;

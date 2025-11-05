@@ -251,4 +251,26 @@ public class SendVerificationEmailForRegistrationCommandTests
         // Assert
         Assert.Equal(mockedToken, result);
     }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SendVerificationEmailForRegistrationCommand_InvalidEmailFormat_ThrowsBadRequestException(
+        SutProvider<SendVerificationEmailForRegistrationCommand> sutProvider,
+        string name, bool receiveMarketingEmails)
+    {
+        // Arrange
+        var email = "invalid-email-format";
+
+        sutProvider.GetDependency<GlobalSettings>()
+            .DisableUserRegistration = false;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
+            .Returns(true);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.Run(email, name, receiveMarketingEmails));
+        Assert.Equal("Invalid email address format.", exception.Message);
+    }
 }

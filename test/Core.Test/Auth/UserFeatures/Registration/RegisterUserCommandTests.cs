@@ -168,7 +168,7 @@ public class RegisterUserCommandTests
 
         // Assert
         await sutProvider.GetDependency<IOrganizationUserRepository>()
-            .Received(1)
+            .Received(2)
             .GetByIdAsync(orgUserId);
 
         await sutProvider.GetDependency<IPolicyRepository>()
@@ -311,6 +311,97 @@ public class RegisterUserCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.RegisterUserViaOrganizationInviteToken(user, masterPasswordHash, orgInviteToken, orgUserId));
         Assert.Equal(expectedErrorMessage, exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaOrganizationInviteToken_BlockedDomainFromDifferentOrg_ThrowsBadRequestException(
+        SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, OrganizationUser orgUser, string orgInviteToken, Guid orgUserId)
+    {
+        // Arrange
+        user.Email = "user@blocked-domain.com";
+        orgUser.Email = user.Email;
+        orgUser.Id = orgUserId;
+        var blockingOrganizationId = Guid.NewGuid(); // Different org that has the domain blocked
+        orgUser.OrganizationId = Guid.NewGuid(); // The org they're trying to join
+
+        var orgInviteTokenable = new OrgUserInviteTokenable(orgUser);
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<OrgUserInviteTokenable>>()
+            .TryUnprotect(orgInviteToken, out Arg.Any<OrgUserInviteTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = orgInviteTokenable;
+                return true;
+            });
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(orgUserId)
+            .Returns(orgUser);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
+            .Returns(true);
+
+        // Mock the new overload that excludes the organization - it should return true (domain IS blocked by another org)
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("blocked-domain.com", orgUser.OrganizationId)
+            .Returns(true);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.RegisterUserViaOrganizationInviteToken(user, masterPasswordHash, orgInviteToken, orgUserId));
+        Assert.Equal("This email address is claimed by an organization using Bitwarden.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaOrganizationInviteToken_BlockedDomainFromSameOrg_Succeeds(
+        SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, OrganizationUser orgUser, string orgInviteToken, Guid orgUserId)
+    {
+        // Arrange
+        user.Email = "user@company-domain.com";
+        user.ReferenceData = null;
+        orgUser.Email = user.Email;
+        orgUser.Id = orgUserId;
+        // The organization owns the domain and is trying to invite the user
+        orgUser.OrganizationId = Guid.NewGuid();
+
+        var orgInviteTokenable = new OrgUserInviteTokenable(orgUser);
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<OrgUserInviteTokenable>>()
+            .TryUnprotect(orgInviteToken, out Arg.Any<OrgUserInviteTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = orgInviteTokenable;
+                return true;
+            });
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(orgUserId)
+            .Returns(orgUser);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
+            .Returns(true);
+
+        // Mock the new overload - it should return false (domain is NOT blocked by OTHER orgs)
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("company-domain.com", orgUser.OrganizationId)
+            .Returns(false);
+
+        sutProvider.GetDependency<IUserService>()
+            .CreateUserAsync(user, masterPasswordHash)
+            .Returns(IdentityResult.Success);
+
+        // Act
+        var result = await sutProvider.Sut.RegisterUserViaOrganizationInviteToken(user, masterPasswordHash, orgInviteToken, orgUserId);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        await sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .Received(1)
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("company-domain.com", orgUser.OrganizationId);
     }
 
     // -----------------------------------------------------------------------------------------------
@@ -902,6 +993,55 @@ public class RegisterUserCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.RegisterUserViaProviderInviteToken(user, masterPasswordHash, base64EncodedProviderInvToken, providerUserId));
         Assert.Equal("This email address is claimed by an organization using Bitwarden.", exception.Message);
+    }
+
+    // -----------------------------------------------------------------------------------------------
+    // Invalid email format tests
+    // -----------------------------------------------------------------------------------------------
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUser_InvalidEmailFormat_ThrowsBadRequestException(
+        SutProvider<RegisterUserCommand> sutProvider, User user)
+    {
+        // Arrange
+        user.Email = "invalid-email-format";
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
+            .Returns(true);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.RegisterUser(user));
+        Assert.Equal("Invalid email address format.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaEmailVerificationToken_InvalidEmailFormat_ThrowsBadRequestException(
+        SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash,
+        string emailVerificationToken, bool receiveMarketingMaterials)
+    {
+        // Arrange
+        user.Email = "invalid-email-format";
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
+            .Returns(true);
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>()
+            .TryUnprotect(emailVerificationToken, out Arg.Any<RegistrationEmailVerificationTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = new RegistrationEmailVerificationTokenable(user.Email, user.Name, receiveMarketingMaterials);
+                return true;
+            });
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.RegisterUserViaEmailVerificationToken(user, masterPasswordHash, emailVerificationToken));
+        Assert.Equal("Invalid email address format.", exception.Message);
     }
 
 

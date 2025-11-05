@@ -95,6 +95,19 @@ public class RegisterUserCommand : IRegisterUserCommand
         string orgInviteToken, Guid? orgUserId)
     {
         ValidateOrgInviteToken(orgInviteToken, orgUserId, user);
+
+        // Get the organization ID if we have an orgUserId, so we can exclude it from domain blocking
+        Guid? organizationId = null;
+        if (orgUserId.HasValue)
+        {
+            var orgUser = await _organizationUserRepository.GetByIdAsync(orgUserId.Value);
+            if (orgUser != null)
+            {
+                organizationId = orgUser.OrganizationId;
+            }
+        }
+
+        await ValidateEmailDomainNotBlockedAsync(user.Email, organizationId);
         await SetUserEmail2FaIfOrgPolicyEnabledAsync(orgUserId, user);
 
         user.ApiKey = CoreHelpers.SecureRandomString(30);
@@ -370,7 +383,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         return tokenable;
     }
 
-    private async Task ValidateEmailDomainNotBlockedAsync(string email)
+    private async Task ValidateEmailDomainNotBlockedAsync(string email, Guid? excludeOrganizationId = null)
     {
         // Only check if feature flag is enabled
         if (!_featureService.IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation))
@@ -378,9 +391,19 @@ public class RegisterUserCommand : IRegisterUserCommand
             return;
         }
 
-        var emailDomain = new System.Net.Mail.MailAddress(email).Host;
+        string emailDomain;
+        try
+        {
+            emailDomain = new System.Net.Mail.MailAddress(email).Host;
+        }
+        catch (FormatException)
+        {
+            throw new BadRequestException("Invalid email address format.");
+        }
 
-        if (await _organizationDomainRepository.HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(emailDomain))
+        var isDomainBlocked = await _organizationDomainRepository.HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(
+            emailDomain, excludeOrganizationId);
+        if (isDomainBlocked)
         {
             throw new BadRequestException("This email address is claimed by an organization using Bitwarden.");
         }
