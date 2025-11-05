@@ -37,7 +37,13 @@ public class UpdateOrganizationCommandTests
             .GetByOrganizationIdAsync(organization.Id)
             .Returns((Provider)null);
 
-        var request = new UpdateOrganizationRequest(organization, name, businessName, billingEmail);
+        var request = new UpdateOrganizationRequest
+        {
+            Organization = organization,
+            Name = name,
+            BusinessName = businessName,
+            BillingEmail = billingEmail
+        };
 
         // Act
         await sutProvider.Sut.UpdateAsync(request);
@@ -78,11 +84,13 @@ public class UpdateOrganizationCommandTests
             .GetByOrganizationIdAsync(organization.Id)
             .Returns((Provider)null);
 
-        var request = new UpdateOrganizationRequest(
-            organization,
-            newName,
-            organization.BusinessName,
-            organization.BillingEmail);
+        var request = new UpdateOrganizationRequest
+        {
+            Organization = organization,
+            Name = newName,
+            BusinessName = organization.BusinessName,
+            BillingEmail = organization.BillingEmail
+        };
 
         // Act
         await sutProvider.Sut.UpdateAsync(request);
@@ -117,11 +125,13 @@ public class UpdateOrganizationCommandTests
             .GetByOrganizationIdAsync(organization.Id)
             .Returns((Provider)null);
 
-        var request = new UpdateOrganizationRequest(
-            organization,
-            organization.Name,
-            organization.BusinessName,
-            newBillingEmail);
+        var request = new UpdateOrganizationRequest
+        {
+            Organization = organization,
+            Name = organization.Name,
+            BusinessName = organization.BusinessName,
+            BillingEmail = newBillingEmail
+        };
 
         // Act
         await sutProvider.Sut.UpdateAsync(request);
@@ -155,7 +165,13 @@ public class UpdateOrganizationCommandTests
             .GetByOrganizationIdAsync(organization.Id)
             .Returns(provider);
 
-        var request = new UpdateOrganizationRequest(organization, name, businessName, newBillingEmail);
+        var request = new UpdateOrganizationRequest
+        {
+            Organization = organization,
+            Name = name,
+            BusinessName = businessName,
+            BillingEmail = newBillingEmail
+        };
 
         // Act
         await sutProvider.Sut.UpdateAsync(request);
@@ -192,11 +208,13 @@ public class UpdateOrganizationCommandTests
             .GetByOrganizationIdAsync(organization.Id)
             .Returns(provider);
 
-        var request = new UpdateOrganizationRequest(
-            organization,
-            newName,
-            organization.BusinessName,
-            "new@example.com"); // This will be ignored due to provider
+        var request = new UpdateOrganizationRequest
+        {
+            Organization = organization,
+            Name = newName,
+            BusinessName = organization.BusinessName,
+            BillingEmail = "new@example.com" // This will be ignored due to provider
+        };
 
         // Act
         await sutProvider.Sut.UpdateAsync(request);
@@ -228,11 +246,13 @@ public class UpdateOrganizationCommandTests
             .GetByOrganizationIdAsync(organization.Id)
             .Returns((Provider)null);
 
-        var request = new UpdateOrganizationRequest(
-            organization,
-            longName,
-            organization.BusinessName,
-            organization.BillingEmail);
+        var request = new UpdateOrganizationRequest
+        {
+            Organization = organization,
+            Name = longName,
+            BusinessName = organization.BusinessName,
+            BillingEmail = organization.BillingEmail
+        };
 
         // Act
         await sutProvider.Sut.UpdateAsync(request);
@@ -270,11 +290,13 @@ public class UpdateOrganizationCommandTests
             .GetByIdentifierAsync(organization.Identifier!)
             .Returns(existingOrganization);
 
-        var request = new UpdateOrganizationRequest(
-            organization,
-            "New Name",
-            organization.BusinessName,
-            organization.BillingEmail);
+        var request = new UpdateOrganizationRequest
+        {
+            Organization = organization,
+            Name = "New Name",
+            BusinessName = organization.BusinessName,
+            BillingEmail = organization.BillingEmail
+        };
 
         // Act/Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateAsync(request));
@@ -301,11 +323,13 @@ public class UpdateOrganizationCommandTests
             .GetByIdentifierAsync(organization.Identifier!)
             .Returns(organization);
 
-        var request = new UpdateOrganizationRequest(
-            organization,
-            "New Name",
-            organization.BusinessName,
-            organization.BillingEmail);
+        var request = new UpdateOrganizationRequest
+        {
+            Organization = organization,
+            Name = "New Name",
+            BusinessName = organization.BusinessName,
+            BillingEmail = organization.BillingEmail
+        };
 
         // Act
         await sutProvider.Sut.UpdateAsync(request);
@@ -334,11 +358,13 @@ public class UpdateOrganizationCommandTests
             .GetByOrganizationIdAsync(organization.Id)
             .Returns((Provider)null);
 
-        var request = new UpdateOrganizationRequest(
-            organization,
-            "New Name",
-            organization.BusinessName,
-            organization.BillingEmail);
+        var request = new UpdateOrganizationRequest
+        {
+            Organization = organization,
+            Name = "New Name",
+            BusinessName = organization.BusinessName,
+            BillingEmail = organization.BillingEmail
+        };
 
         // Act
         await sutProvider.Sut.UpdateAsync(request);
@@ -370,11 +396,13 @@ public class UpdateOrganizationCommandTests
             .GetByOrganizationIdAsync(organization.Id)
             .Returns((Provider)null);
 
-        var request = new UpdateOrganizationRequest(
-            organization,
-            "New Name",
-            organization.BusinessName,
-            organization.BillingEmail);
+        var request = new UpdateOrganizationRequest
+        {
+            Organization = organization,
+            Name = "New Name",
+            BusinessName = organization.BusinessName,
+            BillingEmail = organization.BillingEmail
+        };
 
         // Act
         await sutProvider.Sut.UpdateAsync(request);
@@ -408,11 +436,13 @@ public class UpdateOrganizationCommandTests
             .GetByOrganizationIdAsync(organization.Id)
             .Returns((Provider)null);
 
-        var request = new UpdateOrganizationRequest(
-            organization,
-            "New Name",
-            organization.BusinessName,
-            organization.BillingEmail);
+        var request = new UpdateOrganizationRequest
+        {
+            Organization = organization,
+            Name = "New Name",
+            BusinessName = organization.BusinessName,
+            BillingEmail = organization.BillingEmail
+        };
 
         // Act
         await sutProvider.Sut.UpdateAsync(request);
@@ -446,11 +476,13 @@ public class UpdateOrganizationCommandTests
             .GetByOrganizationIdAsync(organization.Id)
             .Returns((Provider)null);
 
-        var request = new UpdateOrganizationRequest(
-            organization,
-            "New Name",
-            organization.BusinessName,
-            organization.BillingEmail);
+        var request = new UpdateOrganizationRequest
+        {
+            Organization = organization,
+            Name = "New Name",
+            BusinessName = organization.BusinessName,
+            BillingEmail = organization.BillingEmail
+        };
 
         // Act
         await sutProvider.Sut.UpdateAsync(request);
@@ -485,13 +517,15 @@ public class UpdateOrganizationCommandTests
             .GetByOrganizationIdAsync(organization.Id)
             .Returns((Provider)null);
 
-        var request = new UpdateOrganizationRequest(
-            organization,
-            organization.Name,
-            organization.BusinessName,
-            organization.BillingEmail,
-            publicKey,
-            encryptedPrivateKey);
+        var request = new UpdateOrganizationRequest
+        {
+            Organization = organization,
+            Name = organization.Name,
+            BusinessName = organization.BusinessName,
+            BillingEmail = organization.BillingEmail,
+            PublicKey = publicKey,
+            EncryptedPrivateKey = encryptedPrivateKey
+        };
 
         // Act
         await sutProvider.Sut.UpdateAsync(request);
@@ -526,13 +560,15 @@ public class UpdateOrganizationCommandTests
             .GetByOrganizationIdAsync(organization.Id)
             .Returns((Provider)null);
 
-        var request = new UpdateOrganizationRequest(
-            organization,
-            organization.Name,
-            organization.BusinessName,
-            organization.BillingEmail,
-            newPublicKey,
-            newEncryptedPrivateKey);
+        var request = new UpdateOrganizationRequest
+        {
+            Organization = organization,
+            Name = organization.Name,
+            BusinessName = organization.BusinessName,
+            BillingEmail = organization.BillingEmail,
+            PublicKey = newPublicKey,
+            EncryptedPrivateKey = newEncryptedPrivateKey
+        };
 
         // Act
         await sutProvider.Sut.UpdateAsync(request);
@@ -566,13 +602,15 @@ public class UpdateOrganizationCommandTests
             .GetByOrganizationIdAsync(organization.Id)
             .Returns((Provider)null);
 
-        var request = new UpdateOrganizationRequest(
-            organization,
-            organization.Name,
-            organization.BusinessName,
-            organization.BillingEmail,
-            publicKey,
-            null);
+        var request = new UpdateOrganizationRequest
+        {
+            Organization = organization,
+            Name = organization.Name,
+            BusinessName = organization.BusinessName,
+            BillingEmail = organization.BillingEmail,
+            PublicKey = publicKey,
+            EncryptedPrivateKey = null
+        };
 
         // Act
         await sutProvider.Sut.UpdateAsync(request);

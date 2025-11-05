@@ -238,14 +238,15 @@ public class OrganizationsController : Controller
         [BindNever] Organization organization,
         [FromBody] OrganizationUpdateRequestModel model)
     {
-        var request = new UpdateOrganizationRequest(
-            organization,
-            model.Name,
-            model.BusinessName,
-            model.BillingEmail,
-            model.Keys?.PublicKey,
-            model.Keys?.EncryptedPrivateKey
-        );
+        var request = new UpdateOrganizationRequest
+        {
+            Organization = organization,
+            Name = model.Name,
+            BusinessName = model.BusinessName,
+            BillingEmail = model.BillingEmail,
+            PublicKey = model.Keys?.PublicKey,
+            EncryptedPrivateKey = model.Keys?.EncryptedPrivateKey
+        };
 
         await _updateOrganizationCommand.UpdateAsync(request);
 

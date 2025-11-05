@@ -13,20 +13,38 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 /// <summary>
 /// Request model for updating an organization.
 /// </summary>
-/// <param name="Organization">The organization to update.</param>
-/// <param name="Name">The organization name.</param>
-/// <param name="BusinessName">The business name.</param>
-/// <param name="BillingEmail">The billing email address.</param>
-/// <param name="PublicKey">The organization's public key (optional, only set if not already present).</param>
-/// <param name="EncryptedPrivateKey">The organization's encrypted private key (optional, only set if not already present).</param>
-public record UpdateOrganizationRequest(
-    Organization Organization,
-    string Name,
-    string? BusinessName,
-    string BillingEmail,
-    string? PublicKey = null,
-    string? EncryptedPrivateKey = null
-);
+public record UpdateOrganizationRequest
+{
+    /// <summary>
+    /// The organization to update.
+    /// </summary>
+    public required Organization Organization { get; init; }
+
+    /// <summary>
+    /// The new organization name to apply.
+    /// </summary>
+    public required string Name { get; init; }
+
+    /// <summary>
+    /// The new business name to apply.
+    /// </summary>
+    public string? BusinessName { get; init; }
+
+    /// <summary>
+    /// The new billing email address to apply (ignored if organization is managed by a provider).
+    /// </summary>
+    public required string BillingEmail { get; init; }
+
+    /// <summary>
+    /// The organization's public key to set (optional, only set if not already present on the organization).
+    /// </summary>
+    public string? PublicKey { get; init; }
+
+    /// <summary>
+    /// The organization's encrypted private key to set (optional, only set if not already present on the organization).
+    /// </summary>
+    public string? EncryptedPrivateKey { get; init; }
+}
 
 public class UpdateOrganizationCommand(
     IProviderRepository providerRepository,
