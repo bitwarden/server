@@ -30,7 +30,8 @@ public class AzureServiceBusService : IAzureServiceBusService
         var serviceBusMessage = new ServiceBusMessage(json)
         {
             Subject = message.IntegrationType.ToRoutingKey(),
-            MessageId = message.MessageId
+            MessageId = message.MessageId,
+            PartitionKey = message.OrganizationId
         };
 
         await _integrationSender.SendMessageAsync(serviceBusMessage);
@@ -44,18 +45,20 @@ public class AzureServiceBusService : IAzureServiceBusService
         {
             Subject = message.IntegrationType.ToRoutingKey(),
             ScheduledEnqueueTime = message.DelayUntilDate ?? DateTime.UtcNow,
-            MessageId = message.MessageId
+            MessageId = message.MessageId,
+            PartitionKey = message.OrganizationId
         };
 
         await _integrationSender.SendMessageAsync(serviceBusMessage);
     }
 
-    public async Task PublishEventAsync(string body)
+    public async Task PublishEventAsync(string body, string? organizationId)
     {
         var message = new ServiceBusMessage(body)
         {
             ContentType = "application/json",
-            MessageId = Guid.NewGuid().ToString()
+            MessageId = Guid.NewGuid().ToString(),
+            PartitionKey = organizationId
         };
 
         await _eventSender.SendMessageAsync(message);
