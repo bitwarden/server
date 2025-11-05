@@ -2,6 +2,8 @@
 #nullable disable
 
 using System.Text.Json;
+using Bit.Api.AdminConsole.Authorization;
+using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
@@ -70,6 +72,7 @@ public class OrganizationsController : Controller
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IPricingClient _pricingClient;
     private readonly IOrganizationUpdateKeysCommand _organizationUpdateKeysCommand;
+    private readonly IUpdateOrganizationCommand _updateOrganizationCommand;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -94,7 +97,8 @@ public class OrganizationsController : Controller
         IOrganizationDeleteCommand organizationDeleteCommand,
         IPolicyRequirementQuery policyRequirementQuery,
         IPricingClient pricingClient,
-        IOrganizationUpdateKeysCommand organizationUpdateKeysCommand)
+        IOrganizationUpdateKeysCommand organizationUpdateKeysCommand,
+        IUpdateOrganizationCommand updateOrganizationCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -119,6 +123,7 @@ public class OrganizationsController : Controller
         _policyRequirementQuery = policyRequirementQuery;
         _pricingClient = pricingClient;
         _organizationUpdateKeysCommand = organizationUpdateKeysCommand;
+        _updateOrganizationCommand = updateOrganizationCommand;
     }
 
     [HttpGet("{id}")]
@@ -224,36 +229,29 @@ public class OrganizationsController : Controller
         return new OrganizationResponseModel(result.Organization, plan);
     }
 
-    [HttpPut("{id}")]
-    public async Task<OrganizationResponseModel> Put(string id, [FromBody] OrganizationUpdateRequestModel model)
+    [HttpPut("{organizationId:guid}")]
+    [Authorize<OwnerOrProviderRequirement>]
+    public async Task<OrganizationResponseModel> Put(Guid organizationId, [FromBody] OrganizationUpdateRequestModel model)
     {
-        var orgIdGuid = new Guid(id);
+        var request = new UpdateOrganizationRequest(
+            organizationId,
+            model.Name,
+            model.BusinessName,
+            model.BillingEmail,
+            model.Keys?.PublicKey,
+            model.Keys?.EncryptedPrivateKey
+        );
 
-        var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
-        if (organization == null)
-        {
-            throw new NotFoundException();
-        }
+        await _updateOrganizationCommand.UpdateAsync(request);
 
-        var updateBilling = ShouldUpdateBilling(model, organization);
-
-        var hasRequiredPermissions = updateBilling
-            ? await _currentContext.EditSubscription(orgIdGuid)
-            : await _currentContext.OrganizationOwner(orgIdGuid);
-
-        if (!hasRequiredPermissions)
-        {
-            throw new NotFoundException();
-        }
-
-        await _organizationService.UpdateAsync(model.ToOrganization(organization, _globalSettings), updateBilling);
+        var organization = await _organizationRepository.GetByIdAsync(organizationId);
         var plan = await _pricingClient.GetPlan(organization.PlanType);
         return new OrganizationResponseModel(organization, plan);
     }
 
     [HttpPost("{id}")]
     [Obsolete("This endpoint is deprecated. Use PUT method instead")]
-    public async Task<OrganizationResponseModel> PostPut(string id, [FromBody] OrganizationUpdateRequestModel model)
+    public async Task<OrganizationResponseModel> PostPut(Guid id, [FromBody] OrganizationUpdateRequestModel model)
     {
         return await Put(id, model);
     }
@@ -587,12 +585,5 @@ public class OrganizationsController : Controller
         }
 
         return organization.PlanType;
-    }
-
-    private bool ShouldUpdateBilling(OrganizationUpdateRequestModel model, Organization organization)
-    {
-        var organizationNameChanged = model.Name != organization.Name;
-        var billingEmailChanged = model.BillingEmail != organization.BillingEmail;
-        return !_globalSettings.SelfHosted && (organizationNameChanged || billingEmailChanged);
     }
 }
