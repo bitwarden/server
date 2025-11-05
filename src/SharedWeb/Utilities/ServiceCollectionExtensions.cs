@@ -114,6 +114,10 @@ public static class ServiceCollectionExtensions
             services.AddKeyedSingleton<IGrantRepository, Core.Auth.Repositories.Cosmos.GrantRepository>("cosmos");
         }
 
+        // Include PlayIdService for tracking Play Ids in repositories
+        services.AddScoped<IPlayIdService, PlayIdService>();
+
+
         return provider;
     }
 
@@ -638,6 +642,7 @@ public static class ServiceCollectionExtensions
         IWebHostEnvironment env, GlobalSettings globalSettings)
     {
         app.UseMiddleware<RequestLoggingMiddleware>();
+        app.UseMiddleware<PlayIdMiddleware>();
     }
 
     public static void UseForwardedHeaders(this IApplicationBuilder app, IGlobalSettings globalSettings)

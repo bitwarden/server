@@ -57,6 +57,7 @@ public class DatabaseContext : DbContext
     public DbSet<OrganizationApiKey> OrganizationApiKeys { get; set; }
     public DbSet<OrganizationSponsorship> OrganizationSponsorships { get; set; }
     public DbSet<OrganizationConnection> OrganizationConnections { get; set; }
+    public DbSet<PlayData> PlayData { get; set; }
     public DbSet<OrganizationIntegration> OrganizationIntegrations { get; set; }
     public DbSet<OrganizationIntegrationConfiguration> OrganizationIntegrationConfigurations { get; set; }
     public DbSet<OrganizationUser> OrganizationUsers { get; set; }
