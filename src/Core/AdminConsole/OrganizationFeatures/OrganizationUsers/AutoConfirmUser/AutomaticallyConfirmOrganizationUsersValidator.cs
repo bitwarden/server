@@ -1,43 +1,47 @@
-﻿using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpers;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 
 public class AutomaticallyConfirmOrganizationUsersValidator(
     IOrganizationUserRepository organizationUserRepository,
-    IFeatureService featureService,
     ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-    IPolicyService policyService,
     IPolicyRequirementQuery policyRequirementQuery
     ) : IAutomaticallyConfirmOrganizationUsersValidator
 {
     public async Task<ValidationResult<AutomaticallyConfirmOrganizationUserValidationRequest>> ValidateAsync(
-        AutomaticallyConfirmOrganizationUserValidationRequest request)
-    {
-        var orgUser = request.OrganizationUser;
+        AutomaticallyConfirmOrganizationUserValidationRequest request) =>
+        await OrganizationUserIsAccepted(request)
+            .Then(OrganizationUserBelongsToOrganization)
+            .Then(OrganizationUserIsNotOfTypeUser)
+            .ThenAsync(OrganizationUserOwnershipValidationAsync)
+            .ThenAsync(OrganizationUserConformsToTwoFactorRequiredPolicyAsync)
+            .ThenAsync(OrganizationUserConformsToSingleOrgPolicyAsync);
 
-        if (orgUser.Status != OrganizationUserStatusType.Accepted)
-        {
-            return Invalid(request, new UserIsNotAccepted());
-        }
+    private static ValidationResult<AutomaticallyConfirmOrganizationUserValidationRequest> OrganizationUserIsNotOfTypeUser(
+            AutomaticallyConfirmOrganizationUserValidationRequest request) =>
+        request.OrganizationUser is { Type: OrganizationUserType.User }
+            ? Valid(request)
+            : Invalid(request, new UserIsNotUserType());
 
-        if (orgUser.OrganizationId != request.Organization.Id)
-        {
-            return Invalid(request, new OrganizationUserIdIsInvalid());
-        }
+    private static ValidationResult<AutomaticallyConfirmOrganizationUserValidationRequest> OrganizationUserIsAccepted(
+        AutomaticallyConfirmOrganizationUserValidationRequest request) =>
+        request.OrganizationUser is { Status: OrganizationUserStatusType.Accepted }
+            ? Valid(request)
+            : Invalid(request, new UserIsNotAccepted());
 
-        return await OrganizationUserOwnershipValidationAsync(request)
-            .ThenAsync(OrganizationUserConformsToOrganizationPoliciesAsync);
-    }
+
+    private static ValidationResult<AutomaticallyConfirmOrganizationUserValidationRequest> OrganizationUserBelongsToOrganization(
+            AutomaticallyConfirmOrganizationUserValidationRequest request) =>
+        request.OrganizationUser.OrganizationId == request.Organization.Id
+            ? Valid(request)
+            : Invalid(request, new OrganizationUserIdIsInvalid());
 
     private async Task<ValidationResult<AutomaticallyConfirmOrganizationUserValidationRequest>> OrganizationUserOwnershipValidationAsync(
         AutomaticallyConfirmOrganizationUserValidationRequest request) =>
@@ -46,13 +50,6 @@ public class AutomaticallyConfirmOrganizationUsersValidator(
             ? Valid(request)
             : Invalid(request, new UserToConfirmIsAnAdminOrOwnerOfAnotherFreeOrganization());
 
-    private async Task<ValidationResult<AutomaticallyConfirmOrganizationUserValidationRequest>>
-        OrganizationUserConformsToOrganizationPoliciesAsync(AutomaticallyConfirmOrganizationUserValidationRequest request)
-    {
-        return await OrganizationUserConformsToTwoFactorRequiredPolicyAsync(request)
-            .ThenAsync(OrganizationUserConformsToSingleOrgPolicyAsync);
-    }
-
     private async Task<ValidationResult<AutomaticallyConfirmOrganizationUserValidationRequest>> OrganizationUserConformsToTwoFactorRequiredPolicyAsync(
             AutomaticallyConfirmOrganizationUserValidationRequest request)
     {
@@ -60,15 +57,6 @@ public class AutomaticallyConfirmOrganizationUsersValidator(
             .Any(x => x.userId == request.UserId && x.twoFactorIsEnabled))
         {
             return Valid(request);
-        }
-
-        if (!featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
-        {
-            return (await policyService.GetPoliciesApplicableToUserAsync(request.UserId,
-                    PolicyType.TwoFactorAuthentication))
-                .Any(p => p.OrganizationId == request.Organization.Id)
-                    ? Invalid(request, new UserDoesNotHaveTwoFactorEnabled())
-                    : Valid(request);
         }
 
         return (await policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(request.UserId))
@@ -85,22 +73,6 @@ public class AutomaticallyConfirmOrganizationUsersValidator(
         if (allOrganizationUsersForUser.Count == 1)
         {
             return Valid(request);
-        }
-
-        if (!featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
-        {
-            var organizationsWithSingleOrgPoliciesForUser =
-                await policyService.GetPoliciesApplicableToUserAsync(request.UserId, PolicyType.SingleOrg);
-
-            if (organizationsWithSingleOrgPoliciesForUser.Any(ou => ou.OrganizationId == request.Organization.Id))
-            {
-                return Invalid(request, new OrganizationEnforcesSingleOrgPolicy());
-            }
-
-            if (organizationsWithSingleOrgPoliciesForUser.Any(ou => ou.OrganizationId != request.Organization.Id))
-            {
-                return Invalid(request, new OtherOrganizationEnforcesSingleOrgPolicy());
-            }
         }
 
         var policyRequirement = await policyRequirementQuery.GetAsync<SingleOrganizationPolicyRequirement>(request.UserId);

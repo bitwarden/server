@@ -106,9 +106,9 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
     /// </param>
     /// <returns>The result is a boolean value indicating whether a default collection should be created.</returns>
     private async Task<bool> ShouldCreateDefaultCollectionAsync(AutomaticallyConfirmOrganizationUserValidationRequest request) =>
-        !featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation)
-        || string.IsNullOrWhiteSpace(request.DefaultUserCollectionName)
-        || !(await policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(request.UserId))
+        featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation)
+        && !string.IsNullOrWhiteSpace(request.DefaultUserCollectionName)
+        && (await policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(request.UserId))
             .RequiresDefaultCollectionOnConfirm(request.Organization.Id);
 
     private async Task<CommandResult<AutomaticallyConfirmOrganizationUserValidationRequest>> PushSyncOrganizationKeysAsync(AutomaticallyConfirmOrganizationUserValidationRequest request)

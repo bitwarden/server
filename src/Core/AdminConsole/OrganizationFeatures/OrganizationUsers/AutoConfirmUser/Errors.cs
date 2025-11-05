@@ -7,6 +7,7 @@ public record FailedToWriteToEventLog() : InternalError("Failed to write to even
 public record FailedToSendConfirmedUserEmail() : InternalError("Failed to send confirmed user email");
 public record FailedToDeleteDeviceRegistration() : InternalError("Failed to delete device registration");
 public record FailedToPushOrganizationSyncKeys() : InternalError("Failed to push organization sync keys");
+public record UserIsNotUserType() : BadRequestError("Only organization users with the User can be automatically confirmed");
 public record UserIsNotAccepted() : BadRequestError("Cannot confirm user that has not accepted the invitation.");
 public record OrganizationUserIdIsInvalid() : BadRequestError("Invalid organization user id.");
 public record UserToConfirmIsAnAdminOrOwnerOfAnotherFreeOrganization() : BadRequestError("User to confirm is an admin or owner of another free organization.");
