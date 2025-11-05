@@ -10,7 +10,7 @@ public class CookieController : ControllerBase
     [HttpGet("test")]
     public IActionResult GetTestCookie()
     {
-        var cookieValue = Request.Cookies["AWSELBAuthSessionCookie"];
+        var cookieValue = Request.Cookies["BWSessionCookie"];
 
         if (string.IsNullOrEmpty(cookieValue))
         {
