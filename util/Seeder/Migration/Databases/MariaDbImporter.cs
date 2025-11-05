@@ -128,7 +128,12 @@ public class MariaDbImporter(DatabaseConfig config, ILogger<MariaDbImporter> log
             using var reader = command.ExecuteReader();
             while (reader.Read())
             {
-                columns.Add(reader.GetString(0));
+                var colName = reader.GetString(0);
+
+                // Validate column name immediately to prevent second-order SQL injection
+                IdentifierValidator.ValidateOrThrow(colName, "column name");
+
+                columns.Add(colName);
             }
 
             return columns;

@@ -127,7 +127,12 @@ public class PostgresImporter(DatabaseConfig config, ILogger<PostgresImporter> l
             using var reader = command.ExecuteReader();
             if (reader.Read())
             {
-                return reader.GetString(0);
+                var actualTableName = reader.GetString(0);
+
+                // Validate table name immediately to prevent second-order SQL injection
+                IdentifierValidator.ValidateOrThrow(actualTableName, "table name");
+
+                return actualTableName;
             }
 
             return null;
@@ -159,7 +164,12 @@ public class PostgresImporter(DatabaseConfig config, ILogger<PostgresImporter> l
             using var reader = command.ExecuteReader();
             while (reader.Read())
             {
-                columns.Add(reader.GetString(0));
+                var colName = reader.GetString(0);
+
+                // Validate column name immediately to prevent second-order SQL injection
+                IdentifierValidator.ValidateOrThrow(colName, "column name");
+
+                columns.Add(colName);
             }
 
             return columns;
@@ -190,7 +200,12 @@ public class PostgresImporter(DatabaseConfig config, ILogger<PostgresImporter> l
             using var reader = command.ExecuteReader();
             while (reader.Read())
             {
-                columnTypes[reader.GetString(0)] = reader.GetString(1);
+                var colName = reader.GetString(0);
+
+                // Validate column name immediately to prevent second-order SQL injection
+                IdentifierValidator.ValidateOrThrow(colName, "column name");
+
+                columnTypes[colName] = reader.GetString(1);
             }
 
             return columnTypes;

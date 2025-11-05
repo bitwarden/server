@@ -92,7 +92,12 @@ public class SqlServerExporter(DatabaseConfig config, ILogger<SqlServerExporter>
             var tables = new List<string>();
             while (reader.Read())
             {
-                tables.Add(reader.GetString(0));
+                var tableName = reader.GetString(0);
+
+                // Validate table name immediately to prevent second-order SQL injection
+                IdentifierValidator.ValidateOrThrow(tableName, "table name");
+
+                tables.Add(tableName);
             }
 
             _logger.LogInformation("Discovered {Count} tables: {Tables}", tables.Count, string.Join(", ", tables));
@@ -143,6 +148,10 @@ public class SqlServerExporter(DatabaseConfig config, ILogger<SqlServerExporter>
                 while (reader.Read())
                 {
                     var colName = reader.GetString(0);
+
+                    // Validate column name immediately to prevent second-order SQL injection
+                    IdentifierValidator.ValidateOrThrow(colName, "column name");
+
                     var dataType = reader.GetString(1);
                     var isNullable = reader.GetString(2);
                     var maxLength = reader.IsDBNull(3) ? (int?)null : reader.GetInt32(3);

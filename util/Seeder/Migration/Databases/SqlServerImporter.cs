@@ -87,7 +87,12 @@ public class SqlServerImporter(DatabaseConfig config, ILogger<SqlServerImporter>
             using var reader = command.ExecuteReader();
             while (reader.Read())
             {
-                columns.Add(reader.GetString(0));
+                var colName = reader.GetString(0);
+
+                // Validate column name immediately to prevent second-order SQL injection
+                IdentifierValidator.ValidateOrThrow(colName, "column name");
+
+                columns.Add(colName);
             }
 
             return columns;
@@ -123,7 +128,12 @@ public class SqlServerImporter(DatabaseConfig config, ILogger<SqlServerImporter>
             using var reader = command.ExecuteReader();
             while (reader.Read())
             {
-                columnTypes[reader.GetString(0)] = reader.GetString(1);
+                var colName = reader.GetString(0);
+
+                // Validate column name immediately to prevent second-order SQL injection
+                IdentifierValidator.ValidateOrThrow(colName, "column name");
+
+                columnTypes[colName] = reader.GetString(1);
             }
 
             return columnTypes;
@@ -274,11 +284,16 @@ public class SqlServerImporter(DatabaseConfig config, ILogger<SqlServerImporter>
 
             while (reader.Read())
             {
-                constraints.Add((
-                    reader.GetString(0),
-                    reader.GetString(1),
-                    reader.GetString(2)
-                ));
+                var schema = reader.GetString(0);
+                var table = reader.GetString(1);
+                var constraint = reader.GetString(2);
+
+                // Validate all identifiers immediately to prevent second-order SQL injection
+                IdentifierValidator.ValidateOrThrow(schema, "schema name");
+                IdentifierValidator.ValidateOrThrow(table, "table name");
+                IdentifierValidator.ValidateOrThrow(constraint, "constraint name");
+
+                constraints.Add((schema, table, constraint));
             }
 
             _logger.LogDebug("Found {Count} constraints to re-enable from tracking table", constraints.Count);
@@ -399,11 +414,16 @@ public class SqlServerImporter(DatabaseConfig config, ILogger<SqlServerImporter>
                 {
                     while (reader.Read())
                     {
-                        constraints.Add((
-                            reader.GetString(0),
-                            reader.GetString(1),
-                            reader.GetString(2)
-                        ));
+                        var schema = reader.GetString(0);
+                        var table = reader.GetString(1);
+                        var constraint = reader.GetString(2);
+
+                        // Validate all identifiers immediately to prevent second-order SQL injection
+                        IdentifierValidator.ValidateOrThrow(schema, "schema name");
+                        IdentifierValidator.ValidateOrThrow(table, "table name");
+                        IdentifierValidator.ValidateOrThrow(constraint, "constraint name");
+
+                        constraints.Add((schema, table, constraint));
                     }
                 }
 
