@@ -11,7 +11,7 @@ namespace Bit.Api.Models.Response;
 
 public class SubscriptionResponseModel : ResponseModel
 {
-    public SubscriptionResponseModel(User user, SubscriptionInfo subscription, UserLicense license)
+    public SubscriptionResponseModel(User user, SubscriptionInfo subscription, UserLicense license, bool includeDiscount = false)
         : base("subscription")
     {
         Subscription = subscription.Subscription != null ? new BillingSubscription(subscription.Subscription) : null;
@@ -22,6 +22,10 @@ public class SubscriptionResponseModel : ResponseModel
         MaxStorageGb = user.MaxStorageGb;
         License = license;
         Expiration = License.Expires;
+
+        CustomerDiscount = includeDiscount && subscription.CustomerDiscount != null
+            ? new BillingCustomerDiscount(subscription.CustomerDiscount)
+            : null;
     }
 
     public SubscriptionResponseModel(User user, UserLicense license = null)
@@ -36,6 +40,7 @@ public class SubscriptionResponseModel : ResponseModel
         {
             License = license;
         }
+        CustomerDiscount = null;
     }
 
     public string StorageName { get; set; }
@@ -43,6 +48,7 @@ public class SubscriptionResponseModel : ResponseModel
     public short? MaxStorageGb { get; set; }
     public BillingSubscriptionUpcomingInvoice UpcomingInvoice { get; set; }
     public BillingSubscription Subscription { get; set; }
+    public BillingCustomerDiscount CustomerDiscount { get; set; }
     public UserLicense License { get; set; }
     public DateTime? Expiration { get; set; }
 }
@@ -52,6 +58,7 @@ public class BillingCustomerDiscount(SubscriptionInfo.BillingCustomerDiscount di
     public string Id { get; } = discount.Id;
     public bool Active { get; } = discount.Active;
     public decimal? PercentOff { get; } = discount.PercentOff;
+    public decimal? AmountOff { get; } = discount.AmountOff;
     public List<string> AppliesTo { get; } = discount.AppliesTo;
 }
 

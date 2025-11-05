@@ -4,6 +4,7 @@ using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
+using Bit.Core;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Business;
@@ -24,7 +25,8 @@ namespace Bit.Api.Billing.Controllers;
 public class AccountsController(
     IUserService userService,
     ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-    IUserAccountKeysQuery userAccountKeysQuery) : Controller
+    IUserAccountKeysQuery userAccountKeysQuery,
+    IFeatureService featureService) : Controller
 {
     [HttpPost("premium")]
     public async Task<PaymentResponseModel> PostPremiumAsync(
@@ -84,11 +86,13 @@ public class AccountsController(
             throw new UnauthorizedAccessException();
         }
 
+        var includeDiscount = featureService.IsEnabled(FeatureFlagKeys.Milestone_2_flag);
+
         if (!globalSettings.SelfHosted && user.Gateway != null)
         {
             var subscriptionInfo = await paymentService.GetSubscriptionAsync(user);
             var license = await userService.GenerateLicenseAsync(user, subscriptionInfo);
-            return new SubscriptionResponseModel(user, subscriptionInfo, license);
+            return new SubscriptionResponseModel(user, subscriptionInfo, license, includeDiscount);
         }
         else if (!globalSettings.SelfHosted)
         {

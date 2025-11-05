@@ -20,13 +20,19 @@ public class SubscriptionInfo
         {
             Id = discount.Coupon?.Id;
             Active = discount.End == null;
-            PercentOff = discount.Coupon?.PercentOff;
+            PercentOff = discount.Coupon?.PercentOff.HasValue == true
+                ? discount.Coupon.PercentOff.Value
+                : null;
+            AmountOff = discount.Coupon?.AmountOff.HasValue == true
+                ? discount.Coupon.AmountOff.Value / 100M
+                : null;
             AppliesTo = discount.Coupon?.AppliesTo?.Products ?? [];
         }
 
         public string Id { get; set; }
         public bool Active { get; set; }
         public decimal? PercentOff { get; set; }
+        public decimal? AmountOff { get; set; }
         public List<string> AppliesTo { get; set; }
     }
 
