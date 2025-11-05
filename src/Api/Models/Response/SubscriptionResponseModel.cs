@@ -1,6 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Core;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Entities;
 using Bit.Core.Models.Api;
@@ -11,6 +12,14 @@ namespace Bit.Api.Models.Response;
 
 public class SubscriptionResponseModel : ResponseModel
 {
+
+    /// <param name="user"></param>
+    /// <param name="subscription"></param>
+    /// <param name="license"></param>
+    /// <param name="includeDiscount">
+    /// Whether to include discount information in the response.
+    /// Should be true when the Milestone_2_flag feature is enabled.
+    /// </param>
     public SubscriptionResponseModel(User user, SubscriptionInfo subscription, UserLicense license, bool includeDiscount = false)
         : base("subscription")
     {
@@ -23,7 +32,12 @@ public class SubscriptionResponseModel : ResponseModel
         License = license;
         Expiration = License.Expires;
 
-        CustomerDiscount = includeDiscount && subscription.CustomerDiscount != null
+        // Only display the premium discount (cm3nHfO1) on the premium subscription page.
+        // This is for UI display only and does not affect Stripe's automatic discount application.
+        // Other discounts still apply in Stripe billing, just not shown in this response.
+        CustomerDiscount = includeDiscount &&
+                          subscription.CustomerDiscount != null &&
+                          subscription.CustomerDiscount.Id == Constants.PremiumDiscountCouponId
             ? new BillingCustomerDiscount(subscription.CustomerDiscount)
             : null;
     }
@@ -48,6 +62,11 @@ public class SubscriptionResponseModel : ResponseModel
     public short? MaxStorageGb { get; set; }
     public BillingSubscriptionUpcomingInvoice UpcomingInvoice { get; set; }
     public BillingSubscription Subscription { get; set; }
+    /// <summary>
+    /// Customer discount information from Stripe. Null when the feature flag is disabled,
+    /// when there is no active discount, or for self-hosted instances.
+    /// Controlled by feature flag: Milestone_2_flag
+    /// </summary>
     public BillingCustomerDiscount CustomerDiscount { get; set; }
     public UserLicense License { get; set; }
     public DateTime? Expiration { get; set; }

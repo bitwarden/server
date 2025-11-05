@@ -8,6 +8,7 @@ namespace Bit.Core.Models.Business;
 
 public class SubscriptionInfo
 {
+    // TODO: Remove #nullable disable and update BillingCustomerDiscount to use nullable reference types per ADR-0024
     public BillingCustomerDiscount CustomerDiscount { get; set; }
     public BillingSubscription Subscription { get; set; }
     public BillingUpcomingInvoice UpcomingInvoice { get; set; }
@@ -20,9 +21,7 @@ public class SubscriptionInfo
         {
             Id = discount.Coupon?.Id;
             Active = discount.End == null;
-            PercentOff = discount.Coupon?.PercentOff.HasValue == true
-                ? discount.Coupon.PercentOff.Value
-                : null;
+            PercentOff = discount.Coupon?.PercentOff;
             AmountOff = discount.Coupon?.AmountOff.HasValue == true
                 ? discount.Coupon.AmountOff.Value / 100M
                 : null;

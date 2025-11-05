@@ -59,6 +59,13 @@ public static class Constants
     public const string AlwaysInvoice = "always_invoice";
 
     /// <summary>
+    /// Stripe coupon ID for the premium discount to be displayed on the premium subscription page.
+    /// This is used for filtering which discount to show in the UI and does not affect Stripe's
+    /// automatic discount application.
+    /// </summary>
+    public const string PremiumDiscountCouponId = "cm3nHfO1";
+
+    /// <summary>
     /// Used primarily to determine whether a customer's business is inside or outside the United States
     /// for billing purposes.
     /// </summary>
