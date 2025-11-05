@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.Platform.Mailer;
+﻿namespace Bit.Core.Platform.Mail.Mailer;
 
 #nullable enable
 
