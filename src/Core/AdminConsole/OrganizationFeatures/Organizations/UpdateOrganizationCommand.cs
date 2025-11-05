@@ -61,11 +61,8 @@ public class UpdateOrganizationCommand(
         var originalName = organization.Name;
         var originalBillingEmail = organization.BillingEmail;
 
-        // Check if organization is managed by a provider
-        var provider = await providerRepository.GetByOrganizationIdAsync(organization.Id);
-
         // Apply updates to organization
-        ApplyUpdatesToOrganization(organization, request, provider);
+        await ApplyUpdatesToOrganizationAsync(request);
 
         if (!string.IsNullOrWhiteSpace(organization.Identifier))
         {
@@ -82,12 +79,14 @@ public class UpdateOrganizationCommand(
         await UpdateBillingIfRequiredAsync(organization, originalName, originalBillingEmail);
     }
 
-    private static void ApplyUpdatesToOrganization(Organization organization, UpdateOrganizationRequest request, Provider? provider)
+    private async Task ApplyUpdatesToOrganizationAsync(UpdateOrganizationRequest request)
     {
+        var organization = request.Organization;
         organization.Name = request.Name;
         organization.BusinessName = request.BusinessName;
 
         // Only update billing email if NOT managed by a provider
+        var provider = await providerRepository.GetByOrganizationIdAsync(organization.Id);
         if (provider == null)
         {
             organization.BillingEmail = request.BillingEmail?.ToLowerInvariant()?.Trim()!;
