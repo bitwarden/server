@@ -13,6 +13,7 @@ using Core.Auth.Enums;
 
 namespace Bit.Core.Services;
 
+[Obsolete("The IMailService has been deprecated in favor of the IMailer. All new emails should be sent with an IMailer implementation.")]
 public class NoopMailService : IMailService
 {
     public Task SendChangeEmailAlreadyExistsEmailAsync(string fromEmail, string toEmail)
@@ -235,7 +236,7 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendAdminResetPasswordEmailAsync(string email, string userName, string orgName)
+    public Task SendAdminResetPasswordEmailAsync(string email, string? userName, string orgName)
     {
         return Task.FromResult(0);
     }

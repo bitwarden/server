@@ -19,6 +19,8 @@ using Bit.Core.Models.Mail.Auth;
 using Bit.Core.Models.Mail.Billing;
 using Bit.Core.Models.Mail.FamiliesForEnterprise;
 using Bit.Core.Models.Mail.Provider;
+using Bit.Core.Platform.Mail.Delivery;
+using Bit.Core.Platform.Mail.Enqueuing;
 using Bit.Core.SecretsManager.Models.Mail;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -28,8 +30,9 @@ using HandlebarsDotNet;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 
-namespace Bit.Core.Services;
+namespace Bit.Core.Services.Mail;
 
+[Obsolete("The IMailService has been deprecated in favor of the IMailer. All new emails should be sent with an IMailer implementation.")]
 public class HandlebarsMailService : IMailService
 {
     private const string Namespace = "Bit.Core.MailTemplates.Handlebars";
@@ -715,7 +718,7 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendAdminResetPasswordEmailAsync(string email, string userName, string orgName)
+    public async Task SendAdminResetPasswordEmailAsync(string email, string? userName, string orgName)
     {
         var message = CreateDefaultMessage("Your admin has initiated account recovery", email);
         var model = new AdminResetPasswordViewModel()
