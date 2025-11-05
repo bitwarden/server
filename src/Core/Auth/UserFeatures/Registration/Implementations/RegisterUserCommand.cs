@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Enums;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
@@ -80,8 +81,23 @@ public class RegisterUserCommand : IRegisterUserCommand
         var result = await _userService.CreateUserAsync(user);
         if (result == IdentityResult.Success)
         {
-            // TODO organization user being auto provisioned
             await _mailService.SendWelcomeEmailAsync(user);
+        }
+
+        return result;
+    }
+
+    public async Task<IdentityResult> RegisterSSOAutoProvisionedUserAsync(User user, Organization organization)
+    {
+        var result = await _userService.CreateUserAsync(user);
+        if (result == IdentityResult.Success)
+        {
+            var organizationWelcomeEmailDetails = new OrganizationWelcomeEmailDetails
+            {
+                OrganizationDisplayName = organization.DisplayName(),
+                PlanType = organization.PlanType
+            };
+            await SendWelcomeEmailAsync(user, organizationWelcomeEmailDetails);
         }
 
         return result;
@@ -446,6 +462,5 @@ public class RegisterUserCommand : IRegisterUserCommand
     {
         public string? OrganizationDisplayName { get; set; } = string.Empty;
         public PlanType PlanType { get; set; }
-        public string? InitiationPath { get; set; } = string.Empty;
     }
 }

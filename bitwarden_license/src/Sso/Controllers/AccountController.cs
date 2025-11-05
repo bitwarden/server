@@ -603,7 +603,14 @@ public class AccountController : Controller
             EmailVerified = emailVerified,
             ApiKey = CoreHelpers.SecureRandomString(30)
         };
-        await _registerUserCommand.RegisterUser(user);
+        if (_featureService.IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates))
+        {
+            await _registerUserCommand.RegisterSSOAutoProvisionedUserAsync(user, organization);
+        }
+        else
+        {
+            await _registerUserCommand.RegisterUser(user);
+        }
 
         // If the organization has 2fa policy enabled, make sure to default jit user 2fa to email
         var twoFactorPolicy =
