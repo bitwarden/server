@@ -545,7 +545,9 @@ public class AccountController : Controller
         //----------------------------------------------------
         if (possibleExistingUser != null)
         {
-            if (possibleExistingUser.UsesKeyConnector &&
+            User guaranteedExistingUser = possibleExistingUser;
+
+            if (guaranteedExistingUser.UsesKeyConnector &&
                 (possibleOrgUser == null || possibleOrgUser.Status == OrganizationUserStatusType.Invited))
             {
                 throw new Exception(_i18nService.T("UserAlreadyExistsKeyConnector"));
@@ -586,9 +588,9 @@ public class AccountController : Controller
             // authenticated with the org's SSO provider before now (otherwise we wouldn't be auto-provisioning them).
             // We've verified that the user is Accepted or Confnirmed, so we can create an SsoUser link and proceed
             // with authentication.
-            await CreateSsoUserRecordAsync(providerUserId, guaranteedOrgUser.UserId!.Value, organization.Id, guaranteedOrgUser);
+            await CreateSsoUserRecordAsync(providerUserId, guaranteedExistingUser.Id, organization.Id, guaranteedOrgUser);
 
-            return (possibleExistingUser, organization, guaranteedOrgUser);
+            return (guaranteedExistingUser, organization, guaranteedOrgUser);
         }
 
         // Before any user creation - if Org User doesn't exist at this point - make sure there are enough seats to add one
