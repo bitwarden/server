@@ -421,7 +421,7 @@ public class AutomaticallyConfirmUsersCommandTests
 
         // Assert
         Assert.True(result.IsError);
-        Assert.IsType<AggregateInternalError>(result.AsError);
+        Assert.IsType<FailedToCreateDefaultCollection>(result.AsError);
         Assert.Contains("Failed to create default collection for user", result.AsError.Message);
 
         sutProvider.GetDependency<ILogger<AutomaticallyConfirmOrganizationUserCommand>>()
@@ -476,8 +476,8 @@ public class AutomaticallyConfirmUsersCommandTests
 
         // Assert
         Assert.True(result.IsError);
-        var aggregateError = Assert.IsType<AggregateInternalError>(result.AsError);
-        Assert.Contains("Failed to write to event log", aggregateError.Message);
+        var error = Assert.IsType<FailedToWriteToEventLog>(result.AsError);
+        Assert.Contains("Failed to write to event log", error.Message);
 
         sutProvider.GetDependency<ILogger<AutomaticallyConfirmOrganizationUserCommand>>()
             .Received(1)
@@ -531,8 +531,8 @@ public class AutomaticallyConfirmUsersCommandTests
 
         // Assert
         Assert.True(result.IsError);
-        var aggregateError = Assert.IsType<AggregateInternalError>(result.AsError);
-        Assert.Contains("Failed to send confirmed", aggregateError.Message);
+        var error = Assert.IsType<FailedToSendConfirmedUserEmail>(result.AsError);
+        Assert.Contains("Failed to send confirmed", error.Message);
 
         sutProvider.GetDependency<ILogger<AutomaticallyConfirmOrganizationUserCommand>>()
             .Received(1)
@@ -586,8 +586,8 @@ public class AutomaticallyConfirmUsersCommandTests
 
         // Assert
         Assert.True(result.IsError);
-        var aggregateError = Assert.IsType<AggregateNotFoundError>(result.AsError);
-        Assert.Contains("Invalid user", aggregateError.Message);
+        var error = Assert.IsType<UserNotFoundError>(result.AsError);
+        Assert.Contains("Invalid user", error.Message);
     }
 
     [Theory]
@@ -639,8 +639,8 @@ public class AutomaticallyConfirmUsersCommandTests
 
         // Assert
         Assert.True(result.IsError);
-        var aggregateError = Assert.IsType<AggregateInternalError>(result.AsError);
-        Assert.Contains("Failed to delete device registration", aggregateError.Message);
+        var error = Assert.IsType<FailedToDeleteDeviceRegistration>(result.AsError);
+        Assert.Contains("Failed to delete device registration", error.Message);
 
         sutProvider.GetDependency<ILogger<AutomaticallyConfirmOrganizationUserCommand>>()
             .Received(1)
@@ -694,8 +694,8 @@ public class AutomaticallyConfirmUsersCommandTests
 
         // Assert
         Assert.True(result.IsError);
-        var aggregateError = Assert.IsType<AggregateInternalError>(result.AsError);
-        Assert.Contains("Failed to push organization", aggregateError.Message);
+        var error = Assert.IsType<FailedToPushOrganizationSyncKeys>(result.AsError);
+        Assert.Contains("Failed to push organization", error.Message);
 
         sutProvider.GetDependency<ILogger<AutomaticallyConfirmOrganizationUserCommand>>()
             .Received(1)

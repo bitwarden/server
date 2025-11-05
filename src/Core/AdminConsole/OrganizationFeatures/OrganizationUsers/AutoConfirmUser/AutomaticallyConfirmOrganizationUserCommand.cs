@@ -62,7 +62,9 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
                 SendConfirmedOrganizationUserEmailAsync,
                 DeleteDeviceRegistrationAsync,
                 PushSyncOrganizationKeysAsync
-            ]).FoldAsync();
+            ])
+            .ToSingleResultAsync()
+            .ToResultAsync();
     }
 
     private async Task<CommandResult<AutomaticallyConfirmOrganizationUserValidationRequest>> CreateDefaultCollectionsAsync(

@@ -138,21 +138,42 @@ public static class CommandResultFunctions
     public static bool AnyError<T>(this AggregateCommandResult<T> aggregate) =>
         aggregate.Results.Any(r => r.IsError);
 
-    public static async Task<CommandResult> FoldAsync<T>(
+    /// <summary>
+    /// Converts an AggregateCommandResult to a single CommandResult.
+    /// Returns the single error if there's only one, otherwise folds multiple errors.
+    /// </summary>
+    public static async Task<CommandResult> ToSingleResultAsync(
+        this Task<AggregateCommandResult> aggregateTask,
+        string separator = "; ")
+    {
+        var aggregate = await aggregateTask;
+        var errors = aggregate.Results.Where(r => r.IsError).ToArray();
+
+        return errors switch
+        {
+            [] => new None(),
+            [var single] => single,
+            _ => errors.Select(e => e.AsError).ToArray().Fold(separator)
+        };
+    }
+
+    /// <summary>
+    /// Converts an AggregateCommandResult to a single CommandResult.
+    /// Returns the single error if there's only one, otherwise folds multiple errors.
+    /// </summary>
+    public static async Task<CommandResult<T>> ToSingleResultAsync<T>(
         this Task<AggregateCommandResult<T>> aggregateTask,
         string separator = "; ")
     {
         var aggregate = await aggregateTask;
+        var (errors, successes) = aggregate.Partition();
+        var errorArray = errors.ToArray();
 
-        if (aggregate.AllSuccess())
+        return errorArray switch
         {
-            return new None();
-        }
-
-        return aggregate.Results
-            .Where(r => r.IsError)
-            .Select(e => e.AsError)
-            .ToArray()
-            .Fold(separator);
+            [] => successes.First(),
+            [var single] => single,
+            _ => errorArray.Fold(separator)
+        };
     }
 }
