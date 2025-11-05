@@ -404,6 +404,47 @@ public class RegisterUserCommandTests
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("company-domain.com", orgUser.OrganizationId);
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaOrganizationInviteToken_WithValidTokenButNullOrgUser_ThrowsBadRequestException(
+        SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, OrganizationUser orgUser, string orgInviteToken, Guid orgUserId)
+    {
+        // Arrange
+        user.Email = "user@example.com";
+        orgUser.Email = user.Email;
+        orgUser.Id = orgUserId;
+
+        var orgInviteTokenable = new OrgUserInviteTokenable(orgUser);
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<OrgUserInviteTokenable>>()
+            .TryUnprotect(orgInviteToken, out Arg.Any<OrgUserInviteTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = orgInviteTokenable;
+                return true;
+            });
+
+        // Mock GetByIdAsync to return null - simulating a deleted or non-existent organization user
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(orgUserId)
+            .Returns((OrganizationUser)null);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.RegisterUserViaOrganizationInviteToken(user, masterPasswordHash, orgInviteToken, orgUserId));
+        Assert.Equal("Invalid organization user invitation.", exception.Message);
+
+        // Verify that GetByIdAsync was called
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .GetByIdAsync(orgUserId);
+
+        // Verify that user creation was never attempted
+        await sutProvider.GetDependency<IUserService>()
+            .DidNotReceive()
+            .CreateUserAsync(Arg.Any<User>(), Arg.Any<string>());
+    }
+
     // -----------------------------------------------------------------------------------------------
     // RegisterUserViaEmailVerificationToken tests
     // -----------------------------------------------------------------------------------------------

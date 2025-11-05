@@ -614,50 +614,6 @@ public class OrganizationDomainRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task HasVerifiedDomainWithBlockClaimedDomainPolicyAsync_CaseInsensitive_ReturnsTrue(
-        IOrganizationRepository organizationRepository,
-        IOrganizationDomainRepository organizationDomainRepository,
-        IPolicyRepository policyRepository)
-    {
-        // Arrange
-        var id = Guid.NewGuid();
-        var domainName = $"test-{id}.example.com";
-
-        var organization = await organizationRepository.CreateAsync(new Organization
-        {
-            Name = $"Test Org {id}",
-            BillingEmail = $"test+{id}@example.com",
-            Plan = "Test",
-            PrivateKey = "privatekey",
-            Enabled = true
-        });
-
-        var organizationDomain = new OrganizationDomain
-        {
-            OrganizationId = organization.Id,
-            DomainName = domainName.ToLower(),  // Store in lowercase
-            Txt = "btw+12345"
-        };
-        organizationDomain.SetNextRunDate(1);
-        organizationDomain.SetVerifiedDate();
-        await organizationDomainRepository.CreateAsync(organizationDomain);
-
-        var policy = new Policy
-        {
-            OrganizationId = organization.Id,
-            Type = PolicyType.BlockClaimedDomainAccountCreation,
-            Enabled = true
-        };
-        await policyRepository.CreateAsync(policy);
-
-        // Act - Query with uppercase version
-        var result = await organizationDomainRepository.HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(domainName.ToUpper());
-
-        // Assert
-        Assert.True(result);
-    }
-
-    [DatabaseTheory, DatabaseData]
     public async Task HasVerifiedDomainWithBlockClaimedDomainPolicyAsync_ExcludeOrganization_WhenSameOrg_ReturnsFalse(
         IOrganizationRepository organizationRepository,
         IOrganizationDomainRepository organizationDomainRepository,

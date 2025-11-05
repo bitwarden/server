@@ -5,6 +5,8 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
+using Bit.Core.Utilities;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Auth.UserFeatures.Registration.Implementations;
 
@@ -15,7 +17,7 @@ namespace Bit.Core.Auth.UserFeatures.Registration.Implementations;
 /// </summary>
 public class SendVerificationEmailForRegistrationCommand : ISendVerificationEmailForRegistrationCommand
 {
-
+    private readonly ILogger<SendVerificationEmailForRegistrationCommand> _logger;
     private readonly IUserRepository _userRepository;
     private readonly GlobalSettings _globalSettings;
     private readonly IMailService _mailService;
@@ -24,6 +26,7 @@ public class SendVerificationEmailForRegistrationCommand : ISendVerificationEmai
     private readonly IOrganizationDomainRepository _organizationDomainRepository;
 
     public SendVerificationEmailForRegistrationCommand(
+        ILogger<SendVerificationEmailForRegistrationCommand> logger,
         IUserRepository userRepository,
         GlobalSettings globalSettings,
         IMailService mailService,
@@ -31,6 +34,7 @@ public class SendVerificationEmailForRegistrationCommand : ISendVerificationEmai
         IFeatureService featureService,
         IOrganizationDomainRepository organizationDomainRepository)
     {
+        _logger = logger;
         _userRepository = userRepository;
         _globalSettings = globalSettings;
         _mailService = mailService;
@@ -55,18 +59,13 @@ public class SendVerificationEmailForRegistrationCommand : ISendVerificationEmai
         // Check if the email domain is blocked by an organization policy
         if (_featureService.IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation))
         {
-            string emailDomain;
-            try
-            {
-                emailDomain = new System.Net.Mail.MailAddress(email).Host;
-            }
-            catch (FormatException)
-            {
-                throw new BadRequestException("Invalid email address format.");
-            }
+            var emailDomain = EmailValidation.GetDomain(email);
 
             if (await _organizationDomainRepository.HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(emailDomain))
             {
+                _logger.LogInformation(
+                    "User registration email verification blocked by domain claim policy. Domain: {Domain}",
+                    emailDomain);
                 throw new BadRequestException("This email address is claimed by an organization using Bitwarden.");
             }
         }

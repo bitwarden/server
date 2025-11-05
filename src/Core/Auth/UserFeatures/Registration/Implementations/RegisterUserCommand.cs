@@ -16,12 +16,14 @@ using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
 namespace Bit.Core.Auth.UserFeatures.Registration.Implementations;
 
 public class RegisterUserCommand : IRegisterUserCommand
 {
+    private readonly ILogger<RegisterUserCommand> _logger;
     private readonly IGlobalSettings _globalSettings;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IPolicyRepository _policyRepository;
@@ -43,6 +45,7 @@ public class RegisterUserCommand : IRegisterUserCommand
     private readonly string _disabledUserRegistrationExceptionMsg = "Open registration has been disabled by the system administrator.";
 
     public RegisterUserCommand(
+        ILogger<RegisterUserCommand> logger,
         IGlobalSettings globalSettings,
         IOrganizationUserRepository organizationUserRepository,
         IPolicyRepository policyRepository,
@@ -57,6 +60,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> emergencyAccessInviteTokenDataFactory
         )
     {
+        _logger = logger;
         _globalSettings = globalSettings;
         _organizationUserRepository = organizationUserRepository;
         _policyRepository = policyRepository;
@@ -101,10 +105,11 @@ public class RegisterUserCommand : IRegisterUserCommand
         if (orgUserId.HasValue)
         {
             var orgUser = await _organizationUserRepository.GetByIdAsync(orgUserId.Value);
-            if (orgUser != null)
+            if (orgUser == null)
             {
-                organizationId = orgUser.OrganizationId;
+                throw new BadRequestException("Invalid organization user invitation.");
             }
+            organizationId = orgUser.OrganizationId;
         }
 
         await ValidateEmailDomainNotBlockedAsync(user.Email, organizationId);
@@ -391,20 +396,16 @@ public class RegisterUserCommand : IRegisterUserCommand
             return;
         }
 
-        string emailDomain;
-        try
-        {
-            emailDomain = new System.Net.Mail.MailAddress(email).Host;
-        }
-        catch (FormatException)
-        {
-            throw new BadRequestException("Invalid email address format.");
-        }
+        var emailDomain = EmailValidation.GetDomain(email);
 
         var isDomainBlocked = await _organizationDomainRepository.HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(
             emailDomain, excludeOrganizationId);
         if (isDomainBlocked)
         {
+            _logger.LogInformation(
+                "User registration blocked by domain claim policy. Domain: {Domain}, ExcludedOrgId: {ExcludedOrgId}",
+                emailDomain,
+                excludeOrganizationId);
             throw new BadRequestException("This email address is claimed by an organization using Bitwarden.");
         }
     }

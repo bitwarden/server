@@ -15,7 +15,7 @@ BEGIN
             ON OD.OrganizationId = O.Id
         INNER JOIN [dbo].[Policy] P
             ON O.Id = P.OrganizationId
-        WHERE LOWER(OD.DomainName) = LOWER(@DomainName)
+        WHERE OD.DomainName = @DomainName
             AND OD.VerifiedDate IS NOT NULL
             AND O.Enabled = 1
             AND (@ExcludeOrganizationId IS NULL OR O.Id != @ExcludeOrganizationId)

@@ -185,7 +185,7 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
         var query = from od in dbContext.OrganizationDomains
                     join o in dbContext.Organizations on od.OrganizationId equals o.Id
                     join p in dbContext.Policies on o.Id equals p.OrganizationId
-                    where od.DomainName.ToLower() == domainName.ToLower()
+                    where od.DomainName == domainName
                         && od.VerifiedDate != null
                         && o.Enabled
                         && (!excludeOrganizationId.HasValue || o.Id != excludeOrganizationId.Value)
