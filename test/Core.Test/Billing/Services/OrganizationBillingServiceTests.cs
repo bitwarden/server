@@ -38,28 +38,29 @@ public class OrganizationBillingServiceTests
 
         var subscriberService = sutProvider.GetDependency<ISubscriberService>();
         var organizationSeatCount = new OrganizationSeatCounts { Users = 1, Sponsored = 0 };
-        var customer = new Customer
-        {
-            Discount = new Discount
-            {
-                Coupon = new Coupon
-                {
-                    Id = StripeConstants.CouponIDs.SecretsManagerStandalone,
-                    AppliesTo = new CouponAppliesTo
-                    {
-                        Products = ["product_id"]
-                    }
-                }
-            }
-        };
+        var customer = new Customer();
 
         subscriberService
-            .GetCustomer(organization, Arg.Is<CustomerGetOptions>(options =>
-                options.Expand.Contains("discount.coupon.applies_to")))
+            .GetCustomer(organization)
             .Returns(customer);
 
-        subscriberService.GetSubscription(organization).Returns(new Subscription
+        subscriberService.GetSubscription(organization, Arg.Is<SubscriptionGetOptions>(options =>
+            options.Expand.Contains("discounts.coupon.applies_to"))).Returns(new Subscription
         {
+            Discounts =
+            [
+                new Discount
+                {
+                    Coupon = new Coupon
+                    {
+                        Id = StripeConstants.CouponIDs.SecretsManagerStandalone,
+                        AppliesTo = new CouponAppliesTo
+                        {
+                            Products = ["product_id"]
+                        }
+                    }
+                }
+            ],
             Items = new StripeList<SubscriptionItem>
             {
                 Data =
@@ -109,11 +110,12 @@ public class OrganizationBillingServiceTests
 
         // Set up subscriber service to return null for customer
         subscriberService
-            .GetCustomer(organization, Arg.Is<CustomerGetOptions>(options => options.Expand.FirstOrDefault() == "discount.coupon.applies_to"))
+            .GetCustomer(organization)
             .Returns((Customer)null);
 
         // Set up subscriber service to return null for subscription
-        subscriberService.GetSubscription(organization).Returns((Subscription)null);
+        subscriberService.GetSubscription(organization, Arg.Is<SubscriptionGetOptions>(options =>
+            options.Expand.Contains("discounts.coupon.applies_to"))).Returns((Subscription)null);
 
         var metadata = await sutProvider.Sut.GetMetadata(organizationId);
 
