@@ -1,17 +1,15 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
 using Bit.Test.Common.AutoFixture;
@@ -183,11 +181,10 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
             DefaultUserCollectionName = "test-collection"
         };
 
-        var twoFactorPolicyDetails = new OrganizationUserPolicyDetails
+        var twoFactorPolicyDetails = new PolicyDetails
         {
             OrganizationId = organization.Id,
-            PolicyType = PolicyType.TwoFactorAuthentication,
-            PolicyEnabled = true
+            PolicyType = PolicyType.TwoFactorAuthentication
         };
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -198,13 +195,9 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
             .TwoFactorIsEnabledAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns([(userId, false)]);
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PolicyRequirements)
-            .Returns(false);
-
-        sutProvider.GetDependency<IPolicyService>()
-            .GetPoliciesApplicableToUserAsync(userId, PolicyType.TwoFactorAuthentication)
-            .Returns([twoFactorPolicyDetails]);
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<RequireTwoFactorPolicyRequirement>(userId)
+            .Returns(new RequireTwoFactorPolicyRequirement([twoFactorPolicyDetails]));
 
         // Act
         var result = await sutProvider.Sut.ValidateAsync(request);
@@ -278,11 +271,10 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
             DefaultUserCollectionName = "test-collection"
         };
 
-        var singleOrgPolicyDetails = new OrganizationUserPolicyDetails
+        var singleOrgPolicyDetails = new PolicyDetails
         {
             OrganizationId = organization.Id,
-            PolicyType = PolicyType.SingleOrg,
-            PolicyEnabled = true
+            PolicyType = PolicyType.SingleOrg
         };
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -297,13 +289,9 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
             .GetManyByUserAsync(userId)
             .Returns([organizationUser, otherOrgUser]);
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PolicyRequirements)
-            .Returns(false);
-
-        sutProvider.GetDependency<IPolicyService>()
-            .GetPoliciesApplicableToUserAsync(userId, PolicyType.SingleOrg)
-            .Returns([singleOrgPolicyDetails]);
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<SingleOrganizationPolicyRequirement>(userId)
+            .Returns(new SingleOrganizationPolicyRequirement([singleOrgPolicyDetails]));
 
         // Act
         var result = await sutProvider.Sut.ValidateAsync(request);
@@ -336,11 +324,11 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
             DefaultUserCollectionName = "test-collection"
         };
 
-        var singleOrgPolicyDetails = new OrganizationUserPolicyDetails
+        var otherOrgId = Guid.NewGuid(); // Different org
+        var singleOrgPolicyDetails = new PolicyDetails
         {
-            OrganizationId = Guid.NewGuid(), // Different org
+            OrganizationId = otherOrgId,
             PolicyType = PolicyType.SingleOrg,
-            PolicyEnabled = true
         };
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -355,13 +343,9 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
             .GetManyByUserAsync(userId)
             .Returns([organizationUser, otherOrgUser]);
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PolicyRequirements)
-            .Returns(false);
-
-        sutProvider.GetDependency<IPolicyService>()
-            .GetPoliciesApplicableToUserAsync(userId, PolicyType.SingleOrg)
-            .Returns([singleOrgPolicyDetails]);
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<SingleOrganizationPolicyRequirement>(userId)
+            .Returns(new SingleOrganizationPolicyRequirement([singleOrgPolicyDetails]));
 
         // Act
         var result = await sutProvider.Sut.ValidateAsync(request);
@@ -447,20 +431,9 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
             .GetManyByUserAsync(userId)
             .Returns([organizationUser, otherOrgUser]);
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PolicyRequirements)
-            .Returns(false);
-
-        sutProvider.GetDependency<IPolicyService>()
-            .GetPoliciesApplicableToUserAsync(userId, PolicyType.SingleOrg)
-            .Returns([]);
-
-        // Create a real instance with no policies
-        var policyRequirement = new SingleOrganizationPolicyRequirement([]);
-
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(userId)
-            .Returns(policyRequirement);
+            .Returns(new SingleOrganizationPolicyRequirement([]));
 
         // Act
         var result = await sutProvider.Sut.ValidateAsync(request);
