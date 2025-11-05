@@ -16,11 +16,11 @@ public class SubscriptionResponseModel : ResponseModel
     /// <param name="user"></param>
     /// <param name="subscription"></param>
     /// <param name="license"></param>
-    /// <param name="includeDiscount">
+    /// <param name="milestone2Feature">
     /// Whether to include discount information in the response.
-    /// Should be true when the Milestone_2_flag feature is enabled.
+    /// Should be true when the PM23341_Milestone_2 feature is enabled.
     /// </param>
-    public SubscriptionResponseModel(User user, SubscriptionInfo subscription, UserLicense license, bool includeDiscount = false)
+    public SubscriptionResponseModel(User user, SubscriptionInfo subscription, UserLicense license, bool milestone2Feature = false)
         : base("subscription")
     {
         Subscription = subscription.Subscription != null ? new BillingSubscription(subscription.Subscription) : null;
@@ -35,7 +35,7 @@ public class SubscriptionResponseModel : ResponseModel
         // Only display the premium discount (cm3nHfO1) on the premium subscription page.
         // This is for UI display only and does not affect Stripe's automatic discount application.
         // Other discounts still apply in Stripe billing, just not shown in this response.
-        CustomerDiscount = includeDiscount &&
+        CustomerDiscount = milestone2Feature &&
                           subscription.CustomerDiscount != null &&
                           subscription.CustomerDiscount.Id == Constants.PremiumDiscountCouponId
             ? new BillingCustomerDiscount(subscription.CustomerDiscount)
@@ -65,7 +65,7 @@ public class SubscriptionResponseModel : ResponseModel
     /// <summary>
     /// Customer discount information from Stripe. Null when the feature flag is disabled,
     /// when there is no active discount, or for self-hosted instances.
-    /// Controlled by feature flag: Milestone_2_flag
+    /// Controlled by feature flag: PM23341_Milestone_2
     /// </summary>
     public BillingCustomerDiscount CustomerDiscount { get; set; }
     public UserLicense License { get; set; }

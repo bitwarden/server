@@ -86,13 +86,13 @@ public class AccountsController(
             throw new UnauthorizedAccessException();
         }
 
-        var includeDiscount = featureService.IsEnabled(FeatureFlagKeys.Milestone_2_flag);
+        var milestone2Feature = featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2);
 
         if (!globalSettings.SelfHosted && user.Gateway != null)
         {
             var subscriptionInfo = await paymentService.GetSubscriptionAsync(user);
             var license = await userService.GenerateLicenseAsync(user, subscriptionInfo);
-            return new SubscriptionResponseModel(user, subscriptionInfo, license, includeDiscount);
+            return new SubscriptionResponseModel(user, subscriptionInfo, license, milestone2Feature);
         }
         else if (!globalSettings.SelfHosted)
         {

@@ -74,7 +74,7 @@ public class AccountsControllerTests : IDisposable
             HttpContext = new DefaultHttpContext { User = claimsPrincipal }
         };
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
-        _featureService.IsEnabled(FeatureFlagKeys.Milestone_2_flag).Returns(true);
+        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
         _paymentService.GetSubscriptionAsync(user).Returns(subscriptionInfo);
         _userService.GenerateLicenseAsync(user, subscriptionInfo).Returns(license);
 
@@ -113,7 +113,7 @@ public class AccountsControllerTests : IDisposable
             HttpContext = new DefaultHttpContext { User = claimsPrincipal }
         };
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
-        _featureService.IsEnabled(FeatureFlagKeys.Milestone_2_flag).Returns(false);
+        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(false);
         _paymentService.GetSubscriptionAsync(user).Returns(subscriptionInfo);
         _userService.GenerateLicenseAsync(user, subscriptionInfo).Returns(license);
 
@@ -150,7 +150,7 @@ public class AccountsControllerTests : IDisposable
             HttpContext = new DefaultHttpContext { User = claimsPrincipal }
         };
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
-        _featureService.IsEnabled(FeatureFlagKeys.Milestone_2_flag).Returns(true);
+        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
         _paymentService.GetSubscriptionAsync(user).Returns(subscriptionInfo);
         _userService.GenerateLicenseAsync(user, subscriptionInfo).Returns(license);
 
