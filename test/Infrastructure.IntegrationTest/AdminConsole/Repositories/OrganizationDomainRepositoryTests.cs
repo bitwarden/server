@@ -411,6 +411,7 @@ public class OrganizationDomainRepositoryTests
             DomainName = domainName,
             Txt = "btw+12345"
         };
+        organizationDomain.SetNextRunDate(1);
         organizationDomain.SetVerifiedDate();
         await organizationDomainRepository.CreateAsync(organizationDomain);
 
@@ -454,6 +455,7 @@ public class OrganizationDomainRepositoryTests
             DomainName = domainName,
             Txt = "btw+12345"
         };
+        organizationDomain.SetNextRunDate(1);
         // Do not verify the domain
         await organizationDomainRepository.CreateAsync(organizationDomain);
 
@@ -497,6 +499,7 @@ public class OrganizationDomainRepositoryTests
             DomainName = domainName,
             Txt = "btw+12345"
         };
+        organizationDomain.SetNextRunDate(1);
         organizationDomain.SetVerifiedDate();
         await organizationDomainRepository.CreateAsync(organizationDomain);
 
@@ -540,6 +543,7 @@ public class OrganizationDomainRepositoryTests
             DomainName = domainName,
             Txt = "btw+12345"
         };
+        organizationDomain.SetNextRunDate(1);
         organizationDomain.SetVerifiedDate();
         await organizationDomainRepository.CreateAsync(organizationDomain);
 
@@ -582,6 +586,7 @@ public class OrganizationDomainRepositoryTests
             DomainName = domainName,
             Txt = "btw+12345"
         };
+        organizationDomain.SetNextRunDate(1);
         organizationDomain.SetVerifiedDate();
         await organizationDomainRepository.CreateAsync(organizationDomain);
 
