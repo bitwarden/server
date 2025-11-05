@@ -46,8 +46,8 @@ public class OrganizationBillingServiceTests
 
         subscriberService.GetSubscription(organization, Arg.Is<SubscriptionGetOptions>(options =>
             options.Expand.Contains("discounts.coupon.applies_to"))).Returns(new Subscription
-        {
-            Discounts =
+            {
+                Discounts =
             [
                 new Discount
                 {
@@ -61,9 +61,9 @@ public class OrganizationBillingServiceTests
                     }
                 }
             ],
-            Items = new StripeList<SubscriptionItem>
-            {
-                Data =
+                Items = new StripeList<SubscriptionItem>
+                {
+                    Data =
                 [
                     new SubscriptionItem
                     {
@@ -73,8 +73,8 @@ public class OrganizationBillingServiceTests
                         }
                     }
                 ]
-            }
-        });
+                }
+            });
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
