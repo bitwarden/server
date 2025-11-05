@@ -93,10 +93,6 @@ public class OrganizationsControllerTests : IClassFixture<ApiApplicationFactory>
         var response = await _client.PutAsJsonAsync($"/organizations/{_organization.Id}", updateRequest);
 
         // Assert
-        // This test SHOULD pass (expected behavior) but FAILS due to the bug
-        // Expected: Organization owners should be able to rename their organization regardless of provider type
-        // Actual: Returns 404 Not Found because changing the organization name is currently classed as a subscription
-        // update which requires provider permissions if a provider is linked.
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         // Verify the organization name was actually updated

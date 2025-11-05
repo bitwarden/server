@@ -78,7 +78,7 @@ public class UpdateOrganizationCommand(
         var provider = await providerRepository.GetByOrganizationIdAsync(organization.Id);
         if (provider == null)
         {
-            organization.BillingEmail = request.BillingEmail?.ToLowerInvariant()?.Trim()!;
+            organization.BillingEmail = request.BillingEmail.ToLowerInvariant().Trim();
         }
 
         // Update keys if provided and not already set
