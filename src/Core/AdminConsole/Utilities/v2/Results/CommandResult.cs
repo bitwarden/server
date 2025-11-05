@@ -118,12 +118,6 @@ public static class CommandResultFunctions
                 error => error,
                 success => mapper(success))));
 
-    public static TResult Fold<T, TResult>(
-        this AggregateCommandResult<T> aggregate,
-        TResult seed,
-        Func<TResult, CommandResult<T>, TResult> folder) =>
-        aggregate.Results.Aggregate(seed, folder);
-
     public static (IEnumerable<Error> Errors, IEnumerable<T> Successes) Partition<T>(
         this AggregateCommandResult<T> aggregate) =>
         aggregate.Results.Aggregate(
@@ -131,12 +125,6 @@ public static class CommandResultFunctions
             (acc, result) => result.Match(
                 error => (acc.Errors.Append(error), acc.Successes),
                 success => (acc.Errors, acc.Successes.Append(success))));
-
-    public static bool AllSuccess<T>(this AggregateCommandResult<T> aggregate) =>
-        aggregate.Results.All(r => r.IsSuccess);
-
-    public static bool AnyError<T>(this AggregateCommandResult<T> aggregate) =>
-        aggregate.Results.Any(r => r.IsError);
 
     /// <summary>
     /// Converts an AggregateCommandResult to a single CommandResult.
