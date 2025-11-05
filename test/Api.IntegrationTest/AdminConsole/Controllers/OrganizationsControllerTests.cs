@@ -3,11 +3,8 @@ using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Xunit;
@@ -82,7 +79,7 @@ public class OrganizationsControllerTests : IClassFixture<ApiApplicationFactory>
     {
         // Arrange - Create provider and link to organization
         // The active user is ONLY an org owner, NOT a provider user
-        await LinkOrganizationToProviderAsync(providerType);
+        await ProviderTestHelpers.CreateProviderAndLinkToOrganizationAsync(_factory, _organization.Id, providerType);
         await _loginHelper.LoginAsync(_ownerEmail);
 
         var updateRequest = new OrganizationUpdateRequestModel
@@ -107,33 +104,5 @@ public class OrganizationsControllerTests : IClassFixture<ApiApplicationFactory>
         var updatedOrg = await organizationRepository.GetByIdAsync(_organization.Id);
         Assert.NotNull(updatedOrg);
         Assert.Equal($"{providerType} Provider Updated Name", updatedOrg.Name);
-    }
-
-    /// <summary>
-    /// Helper method to link the organization to a provider.
-    /// This does NOT make any organization users into provider users.
-    /// </summary>
-    private async Task LinkOrganizationToProviderAsync(ProviderType providerType)
-    {
-        // Create the provider
-        var providerRepository = _factory.GetService<IProviderRepository>();
-        var provider = await providerRepository.CreateAsync(new Provider
-        {
-            Name = $"Test {providerType} Provider",
-            BusinessName = $"Test {providerType} Provider Business",
-            BillingEmail = $"provider-{providerType.ToString().ToLower()}@example.com",
-            Type = providerType,
-            Status = ProviderStatusType.Created,
-            Enabled = true
-        });
-
-        // Link the provider to the organization
-        var providerOrganizationRepository = _factory.GetService<IProviderOrganizationRepository>();
-        await providerOrganizationRepository.CreateAsync(new ProviderOrganization
-        {
-            ProviderId = provider.Id,
-            OrganizationId = _organization.Id,
-            Key = "test-key"
-        });
     }
 }
