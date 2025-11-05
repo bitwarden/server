@@ -5,6 +5,7 @@ using System.Text.Json;
 using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
+using Bit.Api.Billing.Attributes;
 using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Auth.Models.Request.Accounts;
@@ -42,6 +43,7 @@ using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace Bit.Api.AdminConsole.Controllers;
 
@@ -231,10 +233,13 @@ public class OrganizationsController : Controller
 
     [HttpPut("{organizationId:guid}")]
     [Authorize<OwnerOrProviderRequirement>]
-    public async Task<OrganizationResponseModel> Put(Guid organizationId, [FromBody] OrganizationUpdateRequestModel model)
+    [InjectOrganization]
+    public async Task<OrganizationResponseModel> Put(
+        [BindNever] Organization organization,
+        [FromBody] OrganizationUpdateRequestModel model)
     {
         var request = new UpdateOrganizationRequest(
-            organizationId,
+            organization,
             model.Name,
             model.BusinessName,
             model.BillingEmail,
@@ -244,16 +249,19 @@ public class OrganizationsController : Controller
 
         await _updateOrganizationCommand.UpdateAsync(request);
 
-        var organization = await _organizationRepository.GetByIdAsync(organizationId);
         var plan = await _pricingClient.GetPlan(organization.PlanType);
         return new OrganizationResponseModel(organization, plan);
     }
 
-    [HttpPost("{id}")]
+    [HttpPost("{organizationId:guid}")]
     [Obsolete("This endpoint is deprecated. Use PUT method instead")]
-    public async Task<OrganizationResponseModel> PostPut(Guid id, [FromBody] OrganizationUpdateRequestModel model)
+    [Authorize<OwnerOrProviderRequirement>]
+    [InjectOrganization]
+    public async Task<OrganizationResponseModel> PostPut(
+        [BindNever] Organization organization,
+        [FromBody] OrganizationUpdateRequestModel model)
     {
-        return await Put(id, model);
+        return await Put(organization, model);
     }
 
     [HttpPost("{id}/storage")]

@@ -13,14 +13,14 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 /// <summary>
 /// Request model for updating an organization.
 /// </summary>
-/// <param name="OrganizationId">The ID of the organization to update.</param>
+/// <param name="Organization">The organization to update.</param>
 /// <param name="Name">The organization name.</param>
 /// <param name="BusinessName">The business name.</param>
 /// <param name="BillingEmail">The billing email address.</param>
 /// <param name="PublicKey">The organization's public key (optional, only set if not already present).</param>
 /// <param name="EncryptedPrivateKey">The organization's encrypted private key (optional, only set if not already present).</param>
 public record UpdateOrganizationRequest(
-    Guid OrganizationId,
+    Organization Organization,
     string Name,
     string? BusinessName,
     string BillingEmail,
@@ -29,31 +29,22 @@ public record UpdateOrganizationRequest(
 );
 
 public class UpdateOrganizationCommand(
-    IOrganizationRepository organizationRepository,
     IProviderRepository providerRepository,
+    IOrganizationRepository organizationRepository,
     IStripeAdapter stripeAdapter,
     IOrganizationService organizationService
 ) : IUpdateOrganizationCommand
 {
     public async Task UpdateAsync(UpdateOrganizationRequest request)
     {
-        if (request.OrganizationId == default(Guid))
-        {
-            throw new ApplicationException("Cannot create org this way. Call SignUpAsync.");
-        }
-
-        var organization = await organizationRepository.GetByIdAsync(request.OrganizationId);
-        if (organization == null)
-        {
-            throw new NotFoundException();
-        }
+        var organization = request.Organization;
 
         // Store original values for comparison
         var originalName = organization.Name;
         var originalBillingEmail = organization.BillingEmail;
 
         // Check if organization is managed by a provider
-        var provider = await providerRepository.GetByOrganizationIdAsync(request.OrganizationId);
+        var provider = await providerRepository.GetByOrganizationIdAsync(organization.Id);
 
         // Apply updates to organization
         ApplyUpdatesToOrganization(organization, request, provider);
