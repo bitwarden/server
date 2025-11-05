@@ -1,4 +1,4 @@
-﻿using Bit.Core.Platform.Mailer;
+﻿using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Test.Platform.Mailer.TestMail;
 using Xunit;
 
