@@ -4,7 +4,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Models.Data;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 
@@ -23,7 +22,6 @@ public class OrganizationUpdateRequestModel
     [Required]
     [StringLength(256)]
     public string BillingEmail { get; set; }
-    public Permissions Permissions { get; set; }
     public OrganizationKeysRequestModel Keys { get; set; }
 
     public virtual Organization ToOrganization(Organization existingOrganization, GlobalSettings globalSettings)

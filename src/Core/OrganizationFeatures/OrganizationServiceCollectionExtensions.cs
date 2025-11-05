@@ -86,6 +86,7 @@ public static class OrganizationServiceCollectionExtensions
     private static void AddOrganizationUpdateCommands(this IServiceCollection services)
     {
         services.AddScoped<IOrganizationUpdateKeysCommand, OrganizationUpdateKeysCommand>();
+        services.AddScoped<IUpdateOrganizationCommand, UpdateOrganizationCommand>();
     }
 
     private static void AddOrganizationEnableCommands(this IServiceCollection services) =>
