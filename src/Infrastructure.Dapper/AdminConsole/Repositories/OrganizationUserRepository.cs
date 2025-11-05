@@ -687,16 +687,20 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         return rowCount > 0;
     }
 
-    public async Task<OrganizationUserUserDetails?> GetDetailsByOrganizationUserAsync(Guid organizationId, Guid userId)
+    public async Task<OrganizationUserUserDetails?> GetDetailsByOrganizationIdUserIdAsync(Guid organizationId, Guid userId)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
-            var results = await connection.QueryAsync<OrganizationUserUserDetails>(
-                "[dbo].[OrganizationUserUserDetails_ReadByOrganizationId]",
-                new { OrganizationId = organizationId },
+            var result = await connection.QuerySingleOrDefaultAsync<OrganizationUserUserDetails>(
+                "[dbo].[OrganizationUserUserDetails_ReadByOrganizationIdUserId]",
+                new
+                {
+                    OrganizationId = organizationId,
+                    UserId = userId
+                },
                 commandType: CommandType.StoredProcedure);
 
-            return results.FirstOrDefault(u => u.UserId == userId);
+            return result;
         }
     }
 }

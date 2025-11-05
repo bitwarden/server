@@ -103,7 +103,7 @@ public class EventIntegrationHandler<T>(
 
         if (IntegrationTemplateProcessor.TemplateRequiresUser(template) && eventMessage.UserId.HasValue)
         {
-            context.User = await organizationUserRepository.GetDetailsByOrganizationUserAsync(
+            context.User = await organizationUserRepository.GetDetailsByOrganizationIdUserIdAsync(
                 organizationId: organizationId,
                 userId: eventMessage.UserId.Value
             );
@@ -111,7 +111,7 @@ public class EventIntegrationHandler<T>(
 
         if (IntegrationTemplateProcessor.TemplateRequiresActingUser(template) && eventMessage.ActingUserId.HasValue)
         {
-            context.ActingUser = await organizationUserRepository.GetDetailsByOrganizationUserAsync(
+            context.ActingUser = await organizationUserRepository.GetDetailsByOrganizationIdUserIdAsync(
                 organizationId: organizationId,
                 userId: eventMessage.ActingUserId.Value
             );

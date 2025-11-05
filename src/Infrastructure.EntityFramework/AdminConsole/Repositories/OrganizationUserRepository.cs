@@ -963,7 +963,9 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
     }
 
-    public async Task<OrganizationUserUserDetails> GetDetailsByOrganizationUserAsync(Guid organizationId, Guid userId)
+#nullable enable
+
+    public async Task<OrganizationUserUserDetails?> GetDetailsByOrganizationIdUserIdAsync(Guid organizationId, Guid userId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -973,6 +975,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             return entity;
         }
     }
+#nullable disable
 
 
 }

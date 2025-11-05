@@ -1,0 +1,18 @@
+CREATE PROCEDURE [dbo].[OrganizationUserUserDetails_ReadByOrganizationIdUserId]
+    @OrganizationId UNIQUEIDENTIFIER,
+    @UserId UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+SELECT
+    TOP 1 *
+FROM
+    [dbo].[OrganizationUserUserDetailsView]
+WHERE
+    [OrganizationId] = @OrganizationId
+AND
+    [UserId] = @UserId
+END
+go
+

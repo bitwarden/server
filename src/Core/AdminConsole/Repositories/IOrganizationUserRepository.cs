@@ -106,5 +106,5 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     /// <remarks>
     /// Similar to GetByOrganizationAsync, but returns the user details.
     /// </remarks>
-    Task<OrganizationUserUserDetails?> GetDetailsByOrganizationUserAsync(Guid organizationId, Guid userId);
+    Task<OrganizationUserUserDetails?> GetDetailsByOrganizationIdUserIdAsync(Guid organizationId, Guid userId);
 }
