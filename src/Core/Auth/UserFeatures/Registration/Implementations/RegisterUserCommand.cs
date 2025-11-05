@@ -403,9 +403,9 @@ public class RegisterUserCommand : IRegisterUserCommand
         else if (!string.IsNullOrEmpty(organizationWelcomeEmailDetails.OrganizationDisplayName))
         {
             // If the organization is Free or Families plan, send families welcome email
-            if (organizationWelcomeEmailDetails.PlanType == PlanType.FamiliesAnnually
-                || organizationWelcomeEmailDetails.PlanType == PlanType.FamiliesAnnually2019
-                || organizationWelcomeEmailDetails.PlanType == PlanType.Free)
+            if (organizationWelcomeEmailDetails.PlanType is PlanType.FamiliesAnnually
+                or PlanType.FamiliesAnnually2019
+                or PlanType.Free)
             {
                 await _mailService.SendFreeOrgOrFamilyOrgUserWelcomeEmailAsync(user, organizationWelcomeEmailDetails.OrganizationDisplayName);
             }
