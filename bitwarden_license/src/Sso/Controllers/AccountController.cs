@@ -551,13 +551,7 @@ public class AccountController : Controller
                 throw new Exception(_i18nService.T("UserAlreadyExistsKeyConnector"));
             }
 
-            if (possibleOrgUser == null)
-            {
-                // Org User is not created - no invite has been sent
-                throw new Exception(_i18nService.T("UserAlreadyExistsInviteProcess"));
-            }
-
-            OrganizationUser guaranteedOrgUser = possibleOrgUser;
+            OrganizationUser guaranteedOrgUser = possibleOrgUser ?? throw new Exception(_i18nService.T("UserAlreadyExistsInviteProcess"));
 
             /*
              * ----------------------------------------------------
