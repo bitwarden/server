@@ -686,4 +686,17 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
 
         return rowCount > 0;
     }
+
+    public async Task<OrganizationUserUserDetails?> GetDetailsByOrganizationUserAsync(Guid organizationId, Guid userId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<OrganizationUserUserDetails>(
+                "[dbo].[OrganizationUserUserDetails_ReadByOrganizationId]",
+                new { OrganizationId = organizationId },
+                commandType: CommandType.StoredProcedure);
+
+            return results.FirstOrDefault(u => u.UserId == userId);
+        }
+    }
 }

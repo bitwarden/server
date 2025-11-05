@@ -103,20 +103,18 @@ public class EventIntegrationHandler<T>(
 
         if (IntegrationTemplateProcessor.TemplateRequiresUser(template) && eventMessage.UserId.HasValue)
         {
-            var orgUser = await organizationUserRepository.GetByOrganizationAsync(organizationId: organizationId, userId: eventMessage.UserId.Value);
-            if (orgUser is not null)
-            {
-                context.User = await organizationUserRepository.GetDetailsByIdAsync(orgUser.Id);
-            }
+            context.User = await organizationUserRepository.GetDetailsByOrganizationUserAsync(
+                organizationId: organizationId,
+                userId: eventMessage.UserId.Value
+            );
         }
 
         if (IntegrationTemplateProcessor.TemplateRequiresActingUser(template) && eventMessage.ActingUserId.HasValue)
         {
-            var orgUser = await organizationUserRepository.GetByOrganizationAsync(organizationId: organizationId, userId: eventMessage.ActingUserId.Value);
-            if (orgUser is not null)
-            {
-                context.ActingUser = await organizationUserRepository.GetDetailsByIdAsync(orgUser.Id);
-            }
+            context.ActingUser = await organizationUserRepository.GetDetailsByOrganizationUserAsync(
+                organizationId: organizationId,
+                userId: eventMessage.ActingUserId.Value
+            );
         }
 
         if (IntegrationTemplateProcessor.TemplateRequiresOrganization(template))
