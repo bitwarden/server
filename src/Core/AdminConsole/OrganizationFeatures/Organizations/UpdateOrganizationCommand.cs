@@ -3,8 +3,6 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Enums;
-using Bit.Core.Exceptions;
-using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Stripe;
 
@@ -16,7 +14,8 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 public record UpdateOrganizationRequest
 {
     /// <summary>
-    /// The organization to update.
+    /// The organization to update. This should be unchanged - any properties to be updated should be
+    /// separate properties on this request model.
     /// </summary>
     public required Organization Organization { get; init; }
 
@@ -48,7 +47,6 @@ public record UpdateOrganizationRequest
 
 public class UpdateOrganizationCommand(
     IProviderRepository providerRepository,
-    IOrganizationRepository organizationRepository,
     IStripeAdapter stripeAdapter,
     IOrganizationService organizationService
 ) : IUpdateOrganizationCommand
@@ -63,15 +61,6 @@ public class UpdateOrganizationCommand(
 
         // Apply updates to organization
         await ApplyUpdatesToOrganizationAsync(request);
-
-        if (!string.IsNullOrWhiteSpace(organization.Identifier))
-        {
-            var orgById = await organizationRepository.GetByIdentifierAsync(organization.Identifier);
-            if (orgById != null && orgById.Id != organization.Id)
-            {
-                throw new BadRequestException("Identifier already in use by another organization.");
-            }
-        }
 
         await organizationService.ReplaceAndUpdateCacheAsync(organization, EventType.Organization_Updated);
 
