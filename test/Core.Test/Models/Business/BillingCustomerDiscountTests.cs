@@ -9,7 +9,7 @@ public class BillingCustomerDiscountTests
 {
     [Theory]
     [BitAutoData]
-    public void Constructor_WithPercentageDiscount_SetsIdActivePercentOffAndAppliesTo(string couponId)
+    public void Constructor_PercentageDiscount_SetsIdActivePercentOffAndAppliesTo(string couponId)
     {
         // Arrange
         var discount = new Discount
@@ -43,7 +43,7 @@ public class BillingCustomerDiscountTests
 
     [Theory]
     [BitAutoData]
-    public void Constructor_WithAmountDiscount_ConvertsFromCentsToDollars(string couponId)
+    public void Constructor_AmountDiscount_ConvertsFromCentsToDollars(string couponId)
     {
         // Arrange - Stripe sends 1400 cents for $14.00
         var discount = new Discount
@@ -75,7 +75,7 @@ public class BillingCustomerDiscountTests
 
     [Theory]
     [BitAutoData]
-    public void Constructor_WithInactiveDiscount_SetsActiveToFalse(string couponId)
+    public void Constructor_InactiveDiscount_SetsActiveToFalse(string couponId)
     {
         // Arrange
         var discount = new Discount
@@ -98,7 +98,7 @@ public class BillingCustomerDiscountTests
     }
 
     [Fact]
-    public void Constructor_WithNullCoupon_SetsDiscountPropertiesToNull()
+    public void Constructor_NullCoupon_SetsDiscountPropertiesToNull()
     {
         // Arrange
         var discount = new Discount
@@ -120,7 +120,7 @@ public class BillingCustomerDiscountTests
 
     [Theory]
     [BitAutoData]
-    public void Constructor_WithNullAmountOff_SetsAmountOffToNull(string couponId)
+    public void Constructor_NullAmountOff_SetsAmountOffToNull(string couponId)
     {
         // Arrange
         var discount = new Discount
@@ -143,7 +143,7 @@ public class BillingCustomerDiscountTests
 
     [Theory]
     [BitAutoData]
-    public void Constructor_WithZeroAmountOff_ConvertsCorrectly(string couponId)
+    public void Constructor_ZeroAmountOff_ConvertsCorrectly(string couponId)
     {
         // Arrange
         var discount = new Discount
@@ -165,7 +165,7 @@ public class BillingCustomerDiscountTests
 
     [Theory]
     [BitAutoData]
-    public void Constructor_WithLargeAmountOff_ConvertsCorrectly(string couponId)
+    public void Constructor_LargeAmountOff_ConvertsCorrectly(string couponId)
     {
         // Arrange - $100.00 discount
         var discount = new Discount
@@ -187,7 +187,7 @@ public class BillingCustomerDiscountTests
 
     [Theory]
     [BitAutoData]
-    public void Constructor_WithSmallAmountOff_ConvertsCorrectly(string couponId)
+    public void Constructor_SmallAmountOff_ConvertsCorrectly(string couponId)
     {
         // Arrange - $0.50 discount
         var discount = new Discount
@@ -209,7 +209,7 @@ public class BillingCustomerDiscountTests
 
     [Theory]
     [BitAutoData]
-    public void Constructor_WithBothDiscountTypes_SetsPercentOffAndAmountOff(string couponId)
+    public void Constructor_BothDiscountTypes_SetsPercentOffAndAmountOff(string couponId)
     {
         // Arrange - Coupon with both percentage and amount (edge case)
         var discount = new Discount

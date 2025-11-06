@@ -12,7 +12,7 @@ public class SubscriptionResponseModelTests
 {
     [Theory]
     [BitAutoData]
-    public void Constructor_WithIncludeDiscountTrue_AndMatchingCouponId_ReturnsDiscount(
+    public void Constructor_IncludeDiscountTrueMatchingCouponId_ReturnsDiscount(
         User user,
         UserLicense license)
     {
@@ -44,7 +44,7 @@ public class SubscriptionResponseModelTests
 
     [Theory]
     [BitAutoData]
-    public void Constructor_WithIncludeDiscountTrue_AndNonMatchingCouponId_ReturnsNull(
+    public void Constructor_IncludeDiscountTrueNonMatchingCouponId_ReturnsNull(
         User user,
         UserLicense license)
     {
@@ -70,7 +70,7 @@ public class SubscriptionResponseModelTests
 
     [Theory]
     [BitAutoData]
-    public void Constructor_WithIncludeDiscountFalse_AndMatchingCouponId_ReturnsNull(
+    public void Constructor_IncludeDiscountFalseMatchingCouponId_ReturnsNull(
         User user,
         UserLicense license)
     {
@@ -96,7 +96,7 @@ public class SubscriptionResponseModelTests
 
     [Theory]
     [BitAutoData]
-    public void Constructor_WithNullCustomerDiscount_ReturnsNull(
+    public void Constructor_NullCustomerDiscount_ReturnsNull(
         User user,
         UserLicense license)
     {
@@ -115,7 +115,7 @@ public class SubscriptionResponseModelTests
 
     [Theory]
     [BitAutoData]
-    public void Constructor_WithAmountOffDiscount_AndMatchingCouponId_ReturnsDiscount(
+    public void Constructor_AmountOffDiscountMatchingCouponId_ReturnsDiscount(
         User user,
         UserLicense license)
     {
@@ -144,7 +144,7 @@ public class SubscriptionResponseModelTests
 
     [Theory]
     [BitAutoData]
-    public void Constructor_DefaultIncludeDiscount_ReturnsNull(
+    public void Constructor_DefaultIncludeDiscountParameter_ReturnsNull(
         User user,
         UserLicense license)
     {
@@ -168,7 +168,7 @@ public class SubscriptionResponseModelTests
 
     [Theory]
     [BitAutoData]
-    public void Constructor_WithNullDiscountId_AndFeatureFlagTrue_ReturnsNull(
+    public void Constructor_NullDiscountIdIncludeDiscountTrue_ReturnsNull(
         User user,
         UserLicense license)
     {
@@ -194,7 +194,7 @@ public class SubscriptionResponseModelTests
 
     [Theory]
     [BitAutoData]
-    public void Constructor_WithMatchingCouponId_ButInactiveDiscount_ReturnsNull(
+    public void Constructor_MatchingCouponIdInactiveDiscount_ReturnsNull(
         User user,
         UserLicense license)
     {
@@ -215,6 +215,73 @@ public class SubscriptionResponseModelTests
         var result = new SubscriptionResponseModel(user, subscriptionInfo, license, includeDiscount: true);
 
         // Assert
+        Assert.Null(result.CustomerDiscount);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void Constructor_UserOnly_SetsBasicProperties(User user)
+    {
+        // Arrange
+        user.Storage = 5368709120; // 5 GB in bytes
+        user.MaxStorageGb = (short)10;
+        user.PremiumExpirationDate = DateTime.UtcNow.AddMonths(12);
+
+        // Act
+        var result = new SubscriptionResponseModel(user);
+
+        // Assert
+        Assert.NotNull(result.StorageName);
+        Assert.Equal(5.0, result.StorageGb);
+        Assert.Equal((short)10, result.MaxStorageGb);
+        Assert.Equal(user.PremiumExpirationDate, result.Expiration);
+        Assert.Null(result.License);
+        Assert.Null(result.CustomerDiscount);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void Constructor_UserAndLicense_IncludesLicense(User user, UserLicense license)
+    {
+        // Arrange
+        user.Storage = 1073741824; // 1 GB in bytes
+        user.MaxStorageGb = (short)5;
+
+        // Act
+        var result = new SubscriptionResponseModel(user, license);
+
+        // Assert
+        Assert.NotNull(result.License);
+        Assert.Equal(license, result.License);
+        Assert.Equal(1.0, result.StorageGb);
+        Assert.Null(result.CustomerDiscount);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void Constructor_NullStorage_SetsStorageToZero(User user)
+    {
+        // Arrange
+        user.Storage = null;
+
+        // Act
+        var result = new SubscriptionResponseModel(user);
+
+        // Assert
+        Assert.Null(result.StorageName);
+        Assert.Equal(0, result.StorageGb);
+        Assert.Null(result.CustomerDiscount);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void Constructor_NullLicense_ExcludesLicense(User user)
+    {
+        // Act
+        var result = new SubscriptionResponseModel(user, null);
+
+        // Assert
+        Assert.Null(result.License);
         Assert.Null(result.CustomerDiscount);
     }
 }
