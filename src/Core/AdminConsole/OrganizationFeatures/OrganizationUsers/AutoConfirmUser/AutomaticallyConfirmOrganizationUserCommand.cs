@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Models.Data.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
@@ -55,16 +56,15 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
             return new None(); // Operation is idempotent. If this is false, then the user is already confirmed.
         }
 
-        return await validatedRequest.ToCommandResultAsync()
-            .ApplyAsync([
-                CreateDefaultCollectionsAsync,
-                LogOrganizationUserConfirmedEventAsync,
-                SendConfirmedOrganizationUserEmailAsync,
-                DeleteDeviceRegistrationAsync,
-                PushSyncOrganizationKeysAsync
-            ])
-            .ToSingleResultAsync()
-            .ToResultAsync();
+        _ = await validatedRequest.ApplyAsync([
+            CreateDefaultCollectionsAsync,
+            LogOrganizationUserConfirmedEventAsync,
+            SendConfirmedOrganizationUserEmailAsync,
+            DeleteDeviceRegistrationAsync,
+            PushSyncOrganizationKeysAsync
+        ]);
+
+        return new None(); // Operation is idempotent. If this is false, then the user is already confirmed.
     }
 
     private async Task<CommandResult<AutomaticallyConfirmOrganizationUserValidationRequest>> CreateDefaultCollectionsAsync(
@@ -110,14 +110,14 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
     private async Task<bool> ShouldCreateDefaultCollectionAsync(AutomaticallyConfirmOrganizationUserValidationRequest request) =>
         featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation)
         && !string.IsNullOrWhiteSpace(request.DefaultUserCollectionName)
-        && (await policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(request.UserId))
+        && (await policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(request.OrganizationUser.UserId))
             .RequiresDefaultCollectionOnConfirm(request.Organization.Id);
 
     private async Task<CommandResult<AutomaticallyConfirmOrganizationUserValidationRequest>> PushSyncOrganizationKeysAsync(AutomaticallyConfirmOrganizationUserValidationRequest request)
     {
         try
         {
-            await pushNotificationService.PushSyncOrgKeysAsync(request.UserId);
+            await pushNotificationService.PushSyncOrgKeysAsync(request.OrganizationUser.UserId);
             return request;
         }
         catch (Exception ex)
@@ -149,7 +149,7 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
     {
         try
         {
-            var user = await userRepository.GetByIdAsync(request.UserId);
+            var user = await userRepository.GetByIdAsync(request.OrganizationUser.UserId);
 
             if (user is null) return new UserNotFoundError();
 
@@ -171,7 +171,7 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
     {
         try
         {
-            var devices = (await deviceRepository.GetManyByUserIdAsync(request.UserId))
+            var devices = (await deviceRepository.GetManyByUserIdAsync(request.OrganizationUser.UserId))
                     .Where(d => !string.IsNullOrWhiteSpace(d.PushToken))
                     .Select(d => d.Id.ToString());
 
@@ -207,11 +207,13 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
         };
     }
 
-    private async Task<CommandResult<OrganizationUser>> GetOrganizationUserAsync(Guid organizationUserId)
+    private async Task<CommandResult<AcceptedOrganizationUser>> GetOrganizationUserAsync(Guid organizationUserId)
     {
         var organizationUser = await organizationUserRepository.GetByIdAsync(organizationUserId);
 
-        return organizationUser is { UserId: not null } ? organizationUser : new UserNotFoundError();
+        return organizationUser is { UserId: not null }
+            ? new AcceptedOrganizationUser(organizationUser)
+            : new UserNotFoundError();
     }
 
     private async Task<CommandResult<Organization>> GetOrganizationAsync(Guid organizationId)

@@ -84,6 +84,11 @@ public static class CommandResultFunctions
             async success => new AggregateCommandResult<TOut>(
                 await Task.WhenAll(nextFunctions.Select(f => f(success)))));
 
+    public static async Task<AggregateCommandResult<T>> ApplyAsync<T>(
+        this T value,
+        IEnumerable<Func<T, Task<CommandResult<T>>>> functions) =>
+        new(await Task.WhenAll(functions.Select(f => f(value))));
+
     public static async Task<AggregateCommandResult> TraverseAsync<T>(
         this IEnumerable<T> items,
         Func<T, Task<CommandResult>> func) =>

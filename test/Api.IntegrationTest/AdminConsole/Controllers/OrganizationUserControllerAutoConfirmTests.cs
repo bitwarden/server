@@ -164,8 +164,7 @@ public class OrganizationUserControllerAutoConfirmTests : IClassFixture<ApiAppli
         _loginHelper = new LoginHelper(_factory, _client);
     }
 
-    private const string _mockEncryptedString =
-        "2.AOs41Hd8OQiCPXjyJKCiDA==|O6OHgt2U2hJGBSNGnimJmg==|iD33s8B69C8JhYYhSa4V1tArjvLr8eEaGqOV7BRo5Jk=";
+    private const string _mockEncryptedString = "2.AOs41Hd8OQiCPXjyJKCiDA==|O6OHgt2U2hJGBSNGnimJmg==|iD33s8B69C8JhYYhSa4V1tArjvLr8eEaGqOV7BRo5Jk=";
 
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;

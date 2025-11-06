@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.Models.Data.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
@@ -270,7 +271,8 @@ public class AutomaticallyConfirmUsersCommandTests
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
-            .ConfirmOrganizationUserAsync(organizationUser);
+            .ConfirmOrganizationUserAsync(Arg.Is<AcceptedOrganizationUser>(x =>
+                x.Id == organizationUser.Id && x.Key == request.Key)); ;
 
         // Verify no side effects occurred
         await sutProvider.GetDependency<IEventService>()
@@ -312,7 +314,7 @@ public class AutomaticallyConfirmUsersCommandTests
         SetupPolicyRequirementMock(sutProvider, user.Id, organization.Id, true); // Policy requires collection
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .ConfirmOrganizationUserAsync(organizationUser)
+            .ConfirmOrganizationUserAsync(Arg.Is<AcceptedOrganizationUser>(o => o.Id == organizationUser.Id && o.Key == request.Key))
             .Returns(true);
 
         // Act
@@ -380,7 +382,7 @@ public class AutomaticallyConfirmUsersCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task AutomaticallyConfirmOrganizationUserAsync_WhenCreateDefaultCollectionFails_ReturnsError(
+    public async Task AutomaticallyConfirmOrganizationUserAsync_WhenCreateDefaultCollectionFails_LogsErrorButReturnsSuccess(
         SutProvider<AutomaticallyConfirmOrganizationUserCommand> sutProvider,
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
@@ -408,7 +410,7 @@ public class AutomaticallyConfirmUsersCommandTests
         SetupPolicyRequirementMock(sutProvider, user.Id, organization.Id, true);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .ConfirmOrganizationUserAsync(organizationUser)
+            .ConfirmOrganizationUserAsync(Arg.Is<AcceptedOrganizationUser>(o => o.Id == organizationUser.Id && o.Key == request.Key))
             .Returns(true);
 
         var collectionException = new Exception("Collection creation failed");
@@ -419,10 +421,8 @@ public class AutomaticallyConfirmUsersCommandTests
         // Act
         var result = await sutProvider.Sut.AutomaticallyConfirmOrganizationUserAsync(request);
 
-        // Assert
-        Assert.True(result.IsError);
-        Assert.IsType<FailedToCreateDefaultCollection>(result.AsError);
-        Assert.Contains("Failed to create default collection for user", result.AsError.Message);
+        // Assert - side effects are fire-and-forget, so command returns success even if collection creation fails
+        Assert.True(result.IsSuccess);
 
         sutProvider.GetDependency<ILogger<AutomaticallyConfirmOrganizationUserCommand>>()
             .Received(1)
@@ -436,7 +436,7 @@ public class AutomaticallyConfirmUsersCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task AutomaticallyConfirmOrganizationUserAsync_WhenEventLogFails_ReturnsError(
+    public async Task AutomaticallyConfirmOrganizationUserAsync_WhenEventLogFails_LogsErrorButReturnsSuccess(
         SutProvider<AutomaticallyConfirmOrganizationUserCommand> sutProvider,
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
@@ -463,21 +463,19 @@ public class AutomaticallyConfirmUsersCommandTests
         SetupFeatureServiceMock(sutProvider, false);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .ConfirmOrganizationUserAsync(organizationUser)
+            .ConfirmOrganizationUserAsync(Arg.Is<AcceptedOrganizationUser>(o => o.Id == organizationUser.Id && o.Key == request.Key))
             .Returns(true);
 
         var eventException = new Exception("Event logging failed");
         sutProvider.GetDependency<IEventService>()
-            .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_AutomaticallyConfirmed, Arg.Any<DateTime?>())
+            .LogOrganizationUserEventAsync(Arg.Any<OrganizationUser>(), EventType.OrganizationUser_AutomaticallyConfirmed, Arg.Any<DateTime?>())
             .ThrowsAsync(eventException);
 
         // Act
         var result = await sutProvider.Sut.AutomaticallyConfirmOrganizationUserAsync(request);
 
-        // Assert
-        Assert.True(result.IsError);
-        var error = Assert.IsType<FailedToWriteToEventLog>(result.AsError);
-        Assert.Contains("Failed to write to event log", error.Message);
+        // Assert - side effects are fire-and-forget, so command returns success even if event log fails
+        Assert.True(result.IsSuccess);
 
         sutProvider.GetDependency<ILogger<AutomaticallyConfirmOrganizationUserCommand>>()
             .Received(1)
@@ -491,7 +489,7 @@ public class AutomaticallyConfirmUsersCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task AutomaticallyConfirmOrganizationUserAsync_WhenSendEmailFails_ReturnsError(
+    public async Task AutomaticallyConfirmOrganizationUserAsync_WhenSendEmailFails_LogsErrorButReturnsSuccess(
         SutProvider<AutomaticallyConfirmOrganizationUserCommand> sutProvider,
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
@@ -518,7 +516,7 @@ public class AutomaticallyConfirmUsersCommandTests
         SetupFeatureServiceMock(sutProvider, false);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .ConfirmOrganizationUserAsync(organizationUser)
+            .ConfirmOrganizationUserAsync(Arg.Is<AcceptedOrganizationUser>(o => o.Id == organizationUser.Id && o.Key == request.Key))
             .Returns(true);
 
         var emailException = new Exception("Email sending failed");
@@ -529,10 +527,8 @@ public class AutomaticallyConfirmUsersCommandTests
         // Act
         var result = await sutProvider.Sut.AutomaticallyConfirmOrganizationUserAsync(request);
 
-        // Assert
-        Assert.True(result.IsError);
-        var error = Assert.IsType<FailedToSendConfirmedUserEmail>(result.AsError);
-        Assert.Contains("Failed to send confirmed", error.Message);
+        // Assert - side effects are fire-and-forget, so command returns success even if email fails
+        Assert.True(result.IsSuccess);
 
         sutProvider.GetDependency<ILogger<AutomaticallyConfirmOrganizationUserCommand>>()
             .Received(1)
@@ -546,7 +542,7 @@ public class AutomaticallyConfirmUsersCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task AutomaticallyConfirmOrganizationUserAsync_WhenUserNotFoundForEmail_ReturnsUserNotFoundError(
+    public async Task AutomaticallyConfirmOrganizationUserAsync_WhenUserNotFoundForEmail_LogsErrorButReturnsSuccess(
         SutProvider<AutomaticallyConfirmOrganizationUserCommand> sutProvider,
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
@@ -584,15 +580,13 @@ public class AutomaticallyConfirmUsersCommandTests
         // Act
         var result = await sutProvider.Sut.AutomaticallyConfirmOrganizationUserAsync(request);
 
-        // Assert
-        Assert.True(result.IsError);
-        var error = Assert.IsType<UserNotFoundError>(result.AsError);
-        Assert.Contains("Invalid user", error.Message);
+        // Assert - side effects are fire-and-forget, so command returns success even if user not found for email
+        Assert.True(result.IsSuccess);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task AutomaticallyConfirmOrganizationUserAsync_WhenDeleteDeviceRegistrationFails_ReturnsError(
+    public async Task AutomaticallyConfirmOrganizationUserAsync_WhenDeleteDeviceRegistrationFails_LogsErrorButReturnsSuccess(
         SutProvider<AutomaticallyConfirmOrganizationUserCommand> sutProvider,
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
@@ -622,7 +616,7 @@ public class AutomaticallyConfirmUsersCommandTests
         SetupFeatureServiceMock(sutProvider, false);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .ConfirmOrganizationUserAsync(organizationUser)
+            .ConfirmOrganizationUserAsync(Arg.Is<AcceptedOrganizationUser>(o => o.Id == organizationUser.Id && o.Key == request.Key))
             .Returns(true);
 
         sutProvider.GetDependency<IDeviceRepository>()
@@ -637,10 +631,8 @@ public class AutomaticallyConfirmUsersCommandTests
         // Act
         var result = await sutProvider.Sut.AutomaticallyConfirmOrganizationUserAsync(request);
 
-        // Assert
-        Assert.True(result.IsError);
-        var error = Assert.IsType<FailedToDeleteDeviceRegistration>(result.AsError);
-        Assert.Contains("Failed to delete device registration", error.Message);
+        // Assert - side effects are fire-and-forget, so command returns success even if device registration deletion fails
+        Assert.True(result.IsSuccess);
 
         sutProvider.GetDependency<ILogger<AutomaticallyConfirmOrganizationUserCommand>>()
             .Received(1)
@@ -654,7 +646,7 @@ public class AutomaticallyConfirmUsersCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task AutomaticallyConfirmOrganizationUserAsync_WhenPushSyncOrgKeysFails_ReturnsError(
+    public async Task AutomaticallyConfirmOrganizationUserAsync_WhenPushSyncOrgKeysFails_LogsErrorButReturnsSuccess(
         SutProvider<AutomaticallyConfirmOrganizationUserCommand> sutProvider,
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
@@ -681,7 +673,7 @@ public class AutomaticallyConfirmUsersCommandTests
         SetupFeatureServiceMock(sutProvider, false);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .ConfirmOrganizationUserAsync(organizationUser)
+            .ConfirmOrganizationUserAsync(Arg.Is<AcceptedOrganizationUser>(o => o.Id == organizationUser.Id && o.Key == request.Key))
             .Returns(true);
 
         var pushException = new Exception("Push sync failed");
@@ -692,10 +684,8 @@ public class AutomaticallyConfirmUsersCommandTests
         // Act
         var result = await sutProvider.Sut.AutomaticallyConfirmOrganizationUserAsync(request);
 
-        // Assert
-        Assert.True(result.IsError);
-        var error = Assert.IsType<FailedToPushOrganizationSyncKeys>(result.AsError);
-        Assert.Contains("Failed to push organization", error.Message);
+        // Assert - side effects are fire-and-forget, so command returns success even if push sync fails
+        Assert.True(result.IsSuccess);
 
         sutProvider.GetDependency<ILogger<AutomaticallyConfirmOrganizationUserCommand>>()
             .Received(1)
@@ -742,7 +732,7 @@ public class AutomaticallyConfirmUsersCommandTests
         SetupFeatureServiceMock(sutProvider, false);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .ConfirmOrganizationUserAsync(organizationUser)
+            .ConfirmOrganizationUserAsync(Arg.Is<AcceptedOrganizationUser>(o => o.Id == organizationUser.Id && o.Key == request.Key))
             .Returns(true);
 
         sutProvider.GetDependency<IDeviceRepository>()
@@ -796,7 +786,7 @@ public class AutomaticallyConfirmUsersCommandTests
     {
         var validationRequest = new AutomaticallyConfirmOrganizationUserValidationRequest
         {
-            OrganizationUser = organizationUser,
+            OrganizationUser = new AcceptedOrganizationUser(organizationUser, originalRequest.Key),
             Organization = organization,
             PerformedBy = originalRequest.PerformedBy,
             Key = originalRequest.Key,

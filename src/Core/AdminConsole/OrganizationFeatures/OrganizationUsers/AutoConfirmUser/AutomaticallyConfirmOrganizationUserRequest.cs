@@ -1,6 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Data;
-using Bit.Core.Entities;
+using Bit.Core.AdminConsole.Models.Data.OrganizationUsers;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 
@@ -17,9 +17,7 @@ public record AutomaticallyConfirmOrganizationUserRequest
 
 public record AutomaticallyConfirmOrganizationUserValidationRequest
 {
-    public required OrganizationUser OrganizationUser { get; init; }
-
-    public Guid UserId => OrganizationUser.UserId ?? throw new ArgumentNullException(nameof(OrganizationUser.UserId));
+    public required AcceptedOrganizationUser OrganizationUser { get; init; }
 
     public required Organization Organization { get; init; }
 
@@ -29,5 +27,4 @@ public record AutomaticallyConfirmOrganizationUserValidationRequest
     public required string Key { get; init; }
 
     public required string DefaultUserCollectionName { get; init; }
-
 }

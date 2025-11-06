@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.Models.Data.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
@@ -37,7 +38,7 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
 
         var request = new AutomaticallyConfirmOrganizationUserValidationRequest
         {
-            OrganizationUser = organizationUser,
+            OrganizationUser = new AcceptedOrganizationUser(organizationUser, "test-key"),
             Organization = organization,
             PerformedBy = Substitute.For<IActingUser>(),
             PerformedOn = DateTimeOffset.UtcNow,
@@ -79,7 +80,7 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
 
         var request = new AutomaticallyConfirmOrganizationUserValidationRequest
         {
-            OrganizationUser = organizationUser,
+            OrganizationUser = new AcceptedOrganizationUser(organizationUser, "test-key"),
             Organization = organization,
             PerformedBy = Substitute.For<IActingUser>(),
             PerformedOn = DateTimeOffset.UtcNow,
@@ -109,7 +110,7 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
 
         var request = new AutomaticallyConfirmOrganizationUserValidationRequest
         {
-            OrganizationUser = organizationUser,
+            OrganizationUser = new AcceptedOrganizationUser(organizationUser, "test-key"),
             Organization = organization,
             PerformedBy = Substitute.For<IActingUser>(),
             PerformedOn = DateTimeOffset.UtcNow,
@@ -139,7 +140,7 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
 
         var request = new AutomaticallyConfirmOrganizationUserValidationRequest
         {
-            OrganizationUser = organizationUser,
+            OrganizationUser = new AcceptedOrganizationUser(organizationUser, "test-key"),
             Organization = organization,
             PerformedBy = Substitute.For<IActingUser>(),
             PerformedOn = DateTimeOffset.UtcNow,
@@ -173,7 +174,7 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
 
         var request = new AutomaticallyConfirmOrganizationUserValidationRequest
         {
-            OrganizationUser = organizationUser,
+            OrganizationUser = new AcceptedOrganizationUser(organizationUser, "test-key"),
             Organization = organization,
             PerformedBy = Substitute.For<IActingUser>(),
             PerformedOn = DateTimeOffset.UtcNow,
@@ -221,7 +222,7 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
 
         var request = new AutomaticallyConfirmOrganizationUserValidationRequest
         {
-            OrganizationUser = organizationUser,
+            OrganizationUser = new AcceptedOrganizationUser(organizationUser, "test-key"),
             Organization = organization,
             PerformedBy = Substitute.For<IActingUser>(),
             PerformedOn = DateTimeOffset.UtcNow,
@@ -263,7 +264,7 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
 
         var request = new AutomaticallyConfirmOrganizationUserValidationRequest
         {
-            OrganizationUser = organizationUser,
+            OrganizationUser = new AcceptedOrganizationUser(organizationUser, "test-key"),
             Organization = organization,
             PerformedBy = Substitute.For<IActingUser>(),
             PerformedOn = DateTimeOffset.UtcNow,
@@ -316,7 +317,7 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
 
         var request = new AutomaticallyConfirmOrganizationUserValidationRequest
         {
-            OrganizationUser = organizationUser,
+            OrganizationUser = new AcceptedOrganizationUser(organizationUser, "test-key"),
             Organization = organization,
             PerformedBy = Substitute.For<IActingUser>(),
             PerformedOn = DateTimeOffset.UtcNow,
@@ -369,7 +370,7 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
 
         var request = new AutomaticallyConfirmOrganizationUserValidationRequest
         {
-            OrganizationUser = organizationUser,
+            OrganizationUser = new AcceptedOrganizationUser(organizationUser, "test-key"),
             Organization = organization,
             PerformedBy = Substitute.For<IActingUser>(),
             PerformedOn = DateTimeOffset.UtcNow,
@@ -411,7 +412,7 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
 
         var request = new AutomaticallyConfirmOrganizationUserValidationRequest
         {
-            OrganizationUser = organizationUser,
+            OrganizationUser = new AcceptedOrganizationUser(organizationUser, "test-key"),
             Organization = organization,
             PerformedBy = Substitute.For<IActingUser>(),
             PerformedOn = DateTimeOffset.UtcNow,
