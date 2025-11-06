@@ -44,7 +44,7 @@ public static class OrganizationLicenseConstants
     public const string UseAdminSponsoredFamilies = nameof(UseAdminSponsoredFamilies);
     public const string UseOrganizationDomains = nameof(UseOrganizationDomains);
     public const string UseAutomaticUserConfirmation = nameof(UseAutomaticUserConfirmation);
-    public const string UseDisableSMAdsForUsers = nameof(UseDisableSMAdsForUsers);
+    public const string UseDisableSmAdsForUsers = nameof(UseDisableSmAdsForUsers);
 }
 
 public static class UserLicenseConstants

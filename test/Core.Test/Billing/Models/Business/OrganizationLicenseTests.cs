@@ -214,7 +214,7 @@ If you believe you need to change the version for a valid reason, please discuss
             AllowAdminAccessToAllCollectionItems = true,
             UseOrganizationDomains = true,
             UseAdminSponsoredFamilies = false,
-            UseDisableSMAdsForUsers = false
+            UseDisableSmAdsForUsers = false
         };
     }
 
@@ -259,5 +259,35 @@ If you believe you need to change the version for a valid reason, please discuss
         mockService.SignLicense(Arg.Any<ILicense>())
             .Returns([0x00, 0x01, 0x02, 0x03]); // Dummy signature for hash testing
         return mockService;
+    }
+
+    /// <summary>
+    /// Verifies that UseDisableSmAdsForUsers claim is properly generated in the license Token
+    /// and that VerifyData correctly validates the claim.
+    /// </summary>
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
+    public void OrganizationLicense_UseDisableSmAdsForUsers_ClaimGenerationAndValidation(bool useDisableSmAdsForUsers, ClaimsPrincipal claimsPrincipal)
+    {
+        // Arrange
+        var organization = CreateDeterministicOrganization();
+        organization.UseDisableSmAdsForUsers = useDisableSmAdsForUsers;
+
+        var subscriptionInfo = CreateDeterministicSubscriptionInfo();
+        var installationId = new Guid("78900000-0000-0000-0000-000000000123");
+        var mockLicensingService = CreateMockLicensingService();
+
+        var license = new OrganizationLicense(organization, subscriptionInfo, installationId, mockLicensingService);
+        license.Expires = DateTime.MaxValue; // Prevent expiration during test
+
+        var globalSettings = Substitute.For<IGlobalSettings>();
+        globalSettings.Installation.Returns(new GlobalSettings.InstallationSettings
+        {
+            Id = installationId
+        });
+
+        // Act & Assert - Verify VerifyData passes with the UseDisableSmAdsForUsers value
+        Assert.True(license.VerifyData(organization, claimsPrincipal, globalSettings));
     }
 }

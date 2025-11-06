@@ -107,7 +107,7 @@ public class OrganizationEditModel : OrganizationViewModel
         MaxAutoscaleSmServiceAccounts = org.MaxAutoscaleSmServiceAccounts;
         UseOrganizationDomains = org.UseOrganizationDomains;
         UseAutomaticUserConfirmation = org.UseAutomaticUserConfirmation;
-        UseDisableSMAdsForUsers = org.UseDisableSMAdsForUsers;
+        UseDisableSmAdsForUsers = org.UseDisableSmAdsForUsers;
 
         _plans = plans;
     }
@@ -195,7 +195,7 @@ public class OrganizationEditModel : OrganizationViewModel
     [Display(Name = "Use Organization Domains")]
     public bool UseOrganizationDomains { get; set; }
     [Display(Name = "Disable SM Ads For Users")]
-    public bool UseDisableSMAdsForUsers { get; set; }
+    public bool UseDisableSmAdsForUsers { get; set; }
 
     [Display(Name = "Automatic User Confirmation")]
     public bool UseAutomaticUserConfirmation { get; set; }
@@ -330,7 +330,7 @@ public class OrganizationEditModel : OrganizationViewModel
         existingOrganization.SmServiceAccounts = SmServiceAccounts;
         existingOrganization.MaxAutoscaleSmServiceAccounts = MaxAutoscaleSmServiceAccounts;
         existingOrganization.UseOrganizationDomains = UseOrganizationDomains;
-        existingOrganization.UseDisableSMAdsForUsers = UseDisableSMAdsForUsers;
+        existingOrganization.UseDisableSmAdsForUsers = UseDisableSmAdsForUsers;
         return existingOrganization;
     }
 }

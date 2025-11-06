@@ -98,21 +98,21 @@ public class OrganizationTests
     }
 
     [Fact]
-    public void UseDisableSMAdsForUsers_DefaultValue_IsFalse()
+    public void UseDisableSmAdsForUsers_DefaultValue_IsFalse()
     {
         var organization = new Organization();
 
-        Assert.False(organization.UseDisableSMAdsForUsers);
+        Assert.False(organization.UseDisableSmAdsForUsers);
     }
 
     [Fact]
-    public void UseDisableSMAdsForUsers_CanBeSetToTrue()
+    public void UseDisableSmAdsForUsers_CanBeSetToTrue()
     {
         var organization = new Organization
         {
-            UseDisableSMAdsForUsers = true
+            UseDisableSmAdsForUsers = true
         };
 
-        Assert.True(organization.UseDisableSMAdsForUsers);
+        Assert.True(organization.UseDisableSmAdsForUsers);
     }
 }

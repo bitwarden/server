@@ -2,15 +2,19 @@
 IF NOT EXISTS (SELECT 1
            FROM INFORMATION_SCHEMA.COLUMNS
            WHERE TABLE_NAME = 'Organization'
-             AND COLUMN_NAME = 'UseDisableSMAdsForUsers')
+             AND COLUMN_NAME = 'UseDisableSmAdsForUsers')
     BEGIN
         ALTER TABLE [dbo].[Organization]
-            ADD [UseDisableSMAdsForUsers] BIT NOT NULL CONSTRAINT [DF_Organization_UseDisableSMAdsForUsers] DEFAULT 0;
+            ADD [UseDisableSmAdsForUsers] BIT NOT NULL CONSTRAINT [DF_Organization_UseDisableSmAdsForUsers] DEFAULT 0;
     END
 GO
 
--- Refresh view
+-- Refresh views
+EXEC sp_refreshview N'[dbo].[OrganizationCipherDetailsCollectionsView]';
+EXEC sp_refreshview N'[dbo].[OrganizationUserOrganizationDetailsView]';
 EXEC sp_refreshsqlmodule N'[dbo].[OrganizationView]';
+EXEC sp_refreshview N'[dbo].[ProviderOrganizationOrganizationDetailsView]';
+EXEC sp_refreshview N'[dbo].[ProviderUserProviderOrganizationDetailsView]';
 GO
 
 CREATE OR ALTER PROCEDURE [dbo].[Organization_Create]
@@ -75,7 +79,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Organization_Create]
     @UseAdminSponsoredFamilies BIT = 0,
     @SyncSeats BIT = 0,
     @UseAutomaticUserConfirmation BIT = 0,
-    @UseDisableSMAdsForUsers BIT = 0
+    @UseDisableSmAdsForUsers BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -143,7 +147,7 @@ BEGIN
         [UseAdminSponsoredFamilies],
         [SyncSeats],
         [UseAutomaticUserConfirmation],
-        [UseDisableSMAdsForUsers]
+        [UseDisableSmAdsForUsers]
     )
     VALUES
         (
@@ -208,7 +212,7 @@ BEGIN
             @UseAdminSponsoredFamilies,
             @SyncSeats,
             @UseAutomaticUserConfirmation,
-            @UseDisableSMAdsForUsers
+            @UseDisableSmAdsForUsers
         )
 END
 GO
@@ -275,7 +279,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Organization_Update]
     @UseAdminSponsoredFamilies BIT = 0,
     @SyncSeats BIT = 0,
     @UseAutomaticUserConfirmation BIT = 0,
-    @UseDisableSMAdsForUsers BIT = 0
+    @UseDisableSmAdsForUsers BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -343,7 +347,7 @@ BEGIN
         [UseAdminSponsoredFamilies] = @UseAdminSponsoredFamilies,
         [SyncSeats] = @SyncSeats,
         [UseAutomaticUserConfirmation] = @UseAutomaticUserConfirmation,
-        [UseDisableSMAdsForUsers] = @UseDisableSMAdsForUsers
+        [UseDisableSmAdsForUsers] = @UseDisableSmAdsForUsers
     WHERE
         [Id] = @Id
 END
@@ -380,7 +384,7 @@ BEGIN
         [UseOrganizationDomains],
         [UseAdminSponsoredFamilies],
         [UseAutomaticUserConfirmation],
-        [UseDisableSMAdsForUsers]
+        [UseDisableSmAdsForUsers]
     FROM
         [dbo].[Organization]
 END

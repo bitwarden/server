@@ -108,7 +108,7 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("TEXT");
 
-                    b.Property<bool>("UseDisableSMAdsForUsers")
+                    b.Property<bool>("UseDisableSmAdsForUsers")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("Enabled")

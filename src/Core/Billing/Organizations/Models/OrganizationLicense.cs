@@ -154,7 +154,7 @@ public class OrganizationLicense : ILicense
     public bool UseOrganizationDomains { get; set; }
     public bool UseAdminSponsoredFamilies { get; set; }
     public bool UseAutomaticUserConfirmation { get; set; }
-    public bool UseDisableSMAdsForUsers { get; set; }
+    public bool UseDisableSmAdsForUsers { get; set; }
     public string Hash { get; set; }
     public string Signature { get; set; }
     public string Token { get; set; }
@@ -230,7 +230,7 @@ public class OrganizationLicense : ILicense
                     !p.Name.Equals(nameof(UseAdminSponsoredFamilies)) &&
                     !p.Name.Equals(nameof(UseOrganizationDomains)) &&
                     !p.Name.Equals(nameof(UseAutomaticUserConfirmation)) &&
-                    !p.Name.Equals(nameof(UseDisableSMAdsForUsers)))
+                    !p.Name.Equals(nameof(UseDisableSmAdsForUsers)))
                 .OrderBy(p => p.Name)
                 .Select(p => $"{p.Name}:{Core.Utilities.CoreHelpers.FormatLicenseSignatureValue(p.GetValue(this, null))}")
                 .Aggregate((c, n) => $"{c}|{n}");
@@ -426,7 +426,7 @@ public class OrganizationLicense : ILicense
         var useAdminSponsoredFamilies = claimsPrincipal.GetValue<bool>(nameof(UseAdminSponsoredFamilies));
         var useOrganizationDomains = claimsPrincipal.GetValue<bool>(nameof(UseOrganizationDomains));
         var useAutomaticUserConfirmation = claimsPrincipal.GetValue<bool>(nameof(UseAutomaticUserConfirmation));
-        var useDisableSMAdsForUsers = claimsPrincipal.GetValue<bool>(nameof(UseDisableSMAdsForUsers));
+        var useDisableSmAdsForUsers = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UseDisableSmAdsForUsers);
 
         return issued <= DateTime.UtcNow &&
                expires >= DateTime.UtcNow &&
@@ -458,7 +458,7 @@ public class OrganizationLicense : ILicense
                useAdminSponsoredFamilies == organization.UseAdminSponsoredFamilies &&
                useOrganizationDomains == organization.UseOrganizationDomains &&
                useAutomaticUserConfirmation == organization.UseAutomaticUserConfirmation &&
-               useDisableSMAdsForUsers == organization.UseDisableSMAdsForUsers;
+               useDisableSMAdsForUsers == organization.UseDisableSmAdsForUsers;
 
     }
 

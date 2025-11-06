@@ -60,7 +60,7 @@ CREATE PROCEDURE [dbo].[Organization_Update]
     @UseAdminSponsoredFamilies BIT = 0,
     @SyncSeats BIT = 0,
     @UseAutomaticUserConfirmation BIT = 0,
-    @UseDisableSMAdsForUsers BIT = 0
+    @UseDisableSmAdsForUsers BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -128,7 +128,7 @@ BEGIN
         [UseAdminSponsoredFamilies] = @UseAdminSponsoredFamilies,
         [SyncSeats] = @SyncSeats,
         [UseAutomaticUserConfirmation] = @UseAutomaticUserConfirmation,
-        [UseDisableSMAdsForUsers] = @UseDisableSMAdsForUsers
+        [UseDisableSmAdsForUsers] = @UseDisableSmAdsForUsers
     WHERE
         [Id] = @Id;
 END

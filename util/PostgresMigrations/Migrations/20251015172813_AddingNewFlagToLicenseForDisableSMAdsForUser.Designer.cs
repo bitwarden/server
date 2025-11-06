@@ -114,7 +114,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<bool>("UseDisableSMAdsForUsers")
+                    b.Property<bool>("UseDisableSmAdsForUsers")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("Enabled")

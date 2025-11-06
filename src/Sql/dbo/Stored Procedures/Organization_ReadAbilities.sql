@@ -29,7 +29,7 @@ BEGIN
         [UseOrganizationDomains],
         [UseAdminSponsoredFamilies],
         [UseAutomaticUserConfirmation],
-        [UseDisableSMAdsForUsers]
+        [UseDisableSmAdsForUsers]
     FROM
         [dbo].[Organization]
 END
