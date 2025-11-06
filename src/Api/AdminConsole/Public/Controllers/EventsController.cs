@@ -33,7 +33,7 @@ public class EventsController : Controller
         ICurrentContext currentContext,
         ISecretRepository secretRepository,
         IProjectRepository projectRepository,
-        IUserService userService)
+        IUserService userService,
         ILogger<EventsController> logger,
         IFeatureService featureService)
     {
