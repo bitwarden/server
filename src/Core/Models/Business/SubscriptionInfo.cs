@@ -10,8 +10,16 @@ public class SubscriptionInfo
     /// <summary>
     /// Converts Stripe's minor currency units (cents) to major currency units (dollars).
     /// Stripe stores monetary amounts in the smallest currency unit (e.g., cents for USD).
+    /// <para>
     /// NOTE: This assumes USD (2 decimal places). Multi-currency support would require
     /// currency-specific divisors (e.g., JPY uses 1, KWD uses 1000).
+    /// </para>
+    /// <para>
+    /// This is intentionally scoped to Milestone 2 and USD-only.
+    /// If Stripe ever returns non-USD amounts, this will need to be updated to handle
+    /// currency-specific divisors. Consider adding currency parameter support when
+    /// multi-currency support is required.
+    /// </para>
     /// </summary>
     private const decimal StripeMinorUnitDivisor = 100M;
 

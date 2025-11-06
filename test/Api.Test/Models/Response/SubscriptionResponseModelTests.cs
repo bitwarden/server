@@ -4,6 +4,7 @@ using Bit.Core.Billing.Models.Business;
 using Bit.Core.Entities;
 using Bit.Core.Models.Business;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Stripe;
 using Xunit;
 
 namespace Bit.Api.Test.Models.Response;
@@ -315,5 +316,85 @@ public class SubscriptionResponseModelTests
         Assert.Equal(20.00m, result.CustomerDiscount.AmountOff);
         Assert.NotNull(result.CustomerDiscount.AppliesTo);
         Assert.Single(result.CustomerDiscount.AppliesTo);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void Constructor_WithSubscriptionAndInvoice_MapsAllProperties(
+        User user,
+        UserLicense license)
+    {
+        // Arrange - Test with Subscription, UpcomingInvoice, and CustomerDiscount
+        var stripeSubscription = new Subscription
+        {
+            Id = "sub_test123",
+            Status = "active",
+            CollectionMethod = "charge_automatically"
+        };
+
+        var stripeInvoice = new Invoice
+        {
+            AmountDue = 1500, // 1500 cents = $15.00
+            Created = DateTime.UtcNow.AddDays(7)
+        };
+
+        var subscriptionInfo = new SubscriptionInfo
+        {
+            Subscription = new SubscriptionInfo.BillingSubscription(stripeSubscription),
+            UpcomingInvoice = new SubscriptionInfo.BillingUpcomingInvoice(stripeInvoice),
+            CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount
+            {
+                Id = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount,
+                Active = true,
+                PercentOff = 20m,
+                AmountOff = null,
+                AppliesTo = new List<string> { "prod_premium" }
+            }
+        };
+
+        // Act
+        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, includeDiscount: true);
+
+        // Assert - Verify all properties are mapped correctly
+        Assert.NotNull(result.Subscription);
+        Assert.Equal("active", result.Subscription.Status);
+        Assert.Equal(14, result.Subscription.GracePeriod); // charge_automatically = 14 days
+
+        Assert.NotNull(result.UpcomingInvoice);
+        Assert.Equal(15.00m, result.UpcomingInvoice.Amount);
+        Assert.NotNull(result.UpcomingInvoice.Date);
+
+        Assert.NotNull(result.CustomerDiscount);
+        Assert.Equal(StripeConstants.CouponIDs.Milestone2SubscriptionDiscount, result.CustomerDiscount.Id);
+        Assert.True(result.CustomerDiscount.Active);
+        Assert.Equal(20m, result.CustomerDiscount.PercentOff);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void Constructor_WithNullSubscriptionAndInvoice_HandlesNullsGracefully(
+        User user,
+        UserLicense license)
+    {
+        // Arrange - Test with null Subscription and UpcomingInvoice
+        var subscriptionInfo = new SubscriptionInfo
+        {
+            Subscription = null,
+            UpcomingInvoice = null,
+            CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount
+            {
+                Id = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount,
+                Active = true,
+                PercentOff = 20m
+            }
+        };
+
+        // Act
+        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, includeDiscount: true);
+
+        // Assert - Null Subscription and UpcomingInvoice should be handled gracefully
+        Assert.Null(result.Subscription);
+        Assert.Null(result.UpcomingInvoice);
+        Assert.NotNull(result.CustomerDiscount);
     }
 }
