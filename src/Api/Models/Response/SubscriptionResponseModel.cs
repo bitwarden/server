@@ -1,7 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using Bit.Core.Billing.Constants;
+﻿using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Entities;
 using Bit.Core.Models.Api;
@@ -13,9 +10,9 @@ namespace Bit.Api.Models.Response;
 public class SubscriptionResponseModel : ResponseModel
 {
 
-    /// <param name="user"></param>
-    /// <param name="subscription"></param>
-    /// <param name="license"></param>
+    /// <param name="user">The user entity containing storage and premium subscription information</param>
+    /// <param name="subscription">Subscription information retrieved from the payment provider (Stripe/Braintree)</param>
+    /// <param name="license">The user's license containing expiration and feature entitlements</param>
     /// <param name="milestone2Feature">
     /// Whether to include discount information in the response.
     /// Should be true when the PM23341_Milestone_2 feature is enabled.
@@ -42,7 +39,7 @@ public class SubscriptionResponseModel : ResponseModel
             : null;
     }
 
-    public SubscriptionResponseModel(User user, UserLicense license = null)
+    public SubscriptionResponseModel(User user, UserLicense? license = null)
         : base("subscription")
     {
         StorageName = user.Storage.HasValue ? CoreHelpers.ReadableBytesSize(user.Storage.Value) : null;
@@ -57,24 +54,24 @@ public class SubscriptionResponseModel : ResponseModel
         CustomerDiscount = null;
     }
 
-    public string StorageName { get; set; }
+    public string? StorageName { get; set; }
     public double? StorageGb { get; set; }
     public short? MaxStorageGb { get; set; }
-    public BillingSubscriptionUpcomingInvoice UpcomingInvoice { get; set; }
-    public BillingSubscription Subscription { get; set; }
+    public BillingSubscriptionUpcomingInvoice? UpcomingInvoice { get; set; }
+    public BillingSubscription? Subscription { get; set; }
     /// <summary>
     /// Customer discount information from Stripe. Null when the feature flag is disabled,
     /// when there is no active discount, or for self-hosted instances.
     /// Controlled by feature flag: PM23341_Milestone_2
     /// </summary>
-    public BillingCustomerDiscount CustomerDiscount { get; set; }
-    public UserLicense License { get; set; }
+    public BillingCustomerDiscount? CustomerDiscount { get; set; }
+    public UserLicense? License { get; set; }
     public DateTime? Expiration { get; set; }
 }
 
 public class BillingCustomerDiscount(SubscriptionInfo.BillingCustomerDiscount discount)
 {
-    public string Id { get; } = discount.Id;
+    public string? Id { get; } = discount.Id;
     public bool Active { get; } = discount.Active;
     public decimal? PercentOff { get; } = discount.PercentOff;
     public decimal? AmountOff { get; } = discount.AmountOff;
@@ -109,10 +106,10 @@ public class BillingSubscription
     public DateTime? PeriodEndDate { get; set; }
     public DateTime? CancelledDate { get; set; }
     public bool CancelAtEndDate { get; set; }
-    public string Status { get; set; }
+    public string? Status { get; set; }
     public bool Cancelled { get; set; }
     public IEnumerable<BillingSubscriptionItem> Items { get; set; } = new List<BillingSubscriptionItem>();
-    public string CollectionMethod { get; set; }
+    public string? CollectionMethod { get; set; }
     public DateTime? SuspensionDate { get; set; }
     public DateTime? UnpaidPeriodEndDate { get; set; }
     public int? GracePeriod { get; set; }
@@ -130,11 +127,11 @@ public class BillingSubscription
             AddonSubscriptionItem = item.AddonSubscriptionItem;
         }
 
-        public string ProductId { get; set; }
-        public string Name { get; set; }
+        public string? ProductId { get; set; }
+        public string? Name { get; set; }
         public decimal Amount { get; set; }
         public int Quantity { get; set; }
-        public string Interval { get; set; }
+        public string? Interval { get; set; }
         public bool SponsoredSubscriptionItem { get; set; }
         public bool AddonSubscriptionItem { get; set; }
     }

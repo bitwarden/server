@@ -186,4 +186,27 @@ public class AccountsControllerTests : IDisposable
         Assert.Null(result.CustomerDiscount);
         await _paymentService.DidNotReceive().GetSubscriptionAsync(Arg.Any<User>());
     }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_WhenNoGateway_ExcludesDiscount(User user, UserLicense license)
+    {
+        // Arrange
+        user.Gateway = null; // No gateway configured
+        var claimsPrincipal = new ClaimsPrincipal(new ClaimsIdentity());
+        _sut.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = claimsPrincipal }
+        };
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        _userService.GenerateLicenseAsync(user).Returns(license);
+
+        // Act
+        var result = await _sut.GetSubscriptionAsync(_globalSettings, _paymentService);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Null(result.CustomerDiscount); // Should be null when no gateway
+        await _paymentService.DidNotReceive().GetSubscriptionAsync(Arg.Any<User>());
+    }
 }
