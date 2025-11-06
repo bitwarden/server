@@ -327,6 +327,7 @@ public class AccountController : Controller
         }
         else
         {
+            // PM-24579: remove this else block with feature flag removal.
             // Either the user already authenticated with the SSO provider, or we've just provisioned them.
             // Either way, we have associated the SSO login with a Bitwarden user.
             // We will now sign the Bitwarden user in.
