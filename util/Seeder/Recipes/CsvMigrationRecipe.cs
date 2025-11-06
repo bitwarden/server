@@ -24,7 +24,6 @@ public class CsvMigrationRecipe(MigrationConfig config, ILoggerFactory loggerFac
 
     // Separator constants for logging
     private const string Separator = "================================================================================";
-    private const string ShortSeparator = "----------------------------------------";
 
     public bool StartSshTunnel(bool force = false)
     {
