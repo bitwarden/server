@@ -123,7 +123,9 @@ public class PricingClient(
             return [CurrentPremiumPlan];
         }
 
-        var response = await httpClient.GetAsync("plans/premium");
+        var milestone2Feature = featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2);
+
+        var response = await httpClient.GetAsync($"plans/premium?milestone2={milestone2Feature}");
 
         if (response.IsSuccessStatusCode)
         {
