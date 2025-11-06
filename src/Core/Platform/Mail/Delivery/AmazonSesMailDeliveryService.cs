@@ -9,7 +9,7 @@ using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace Bit.Core.Services;
+namespace Bit.Core.Platform.Mail.Delivery;
 
 public class AmazonSesMailDeliveryService : IMailDeliveryService, IDisposable
 {
