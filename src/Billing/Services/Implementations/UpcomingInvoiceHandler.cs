@@ -11,7 +11,9 @@ using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Entities;
+using Bit.Core.Models.Mail.UpdatedInvoiceIncoming;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
+using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Stripe;
@@ -32,6 +34,7 @@ public class UpcomingInvoiceHandler(
     IStripeEventUtilityService stripeEventUtilityService,
     IUserRepository userRepository,
     IValidateSponsorshipCommand validateSponsorshipCommand,
+    IMailer mailer,
     IFeatureService featureService)
     : IUpcomingInvoiceHandler
 {
@@ -208,7 +211,12 @@ public class UpcomingInvoiceHandler(
     private async Task SendUpdatedUpcomingInvoiceEmailsAsync(IEnumerable<string> emails)
     {
         var validEmails = emails.Where(e => !string.IsNullOrEmpty(e));
-        await mailService.SendUpdatedInvoiceUpcoming(validEmails);
+        var updatedUpcomingEmail = new UpdatedInvoiceUpcomingMail
+        {
+            ToEmails = validEmails,
+            View = new UpdatedInvoiceUpcomingView()
+        };
+        await mailer.SendEmail(updatedUpcomingEmail);
     }
 
     private async Task SendProviderUpcomingInvoiceEmailsAsync(IEnumerable<string> emails, Invoice invoice,
