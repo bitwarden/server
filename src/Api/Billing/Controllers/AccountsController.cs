@@ -86,10 +86,10 @@ public class AccountsController(
             throw new UnauthorizedAccessException();
         }
 
-        var includeDiscount = featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2);
-
+        // Only cloud-hosted users with payment gateways have subscription and discount information
         if (!globalSettings.SelfHosted && user.Gateway != null)
         {
+            var includeDiscount = featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2);
             var subscriptionInfo = await paymentService.GetSubscriptionAsync(user);
             var license = await userService.GenerateLicenseAsync(user, subscriptionInfo);
             return new SubscriptionResponseModel(user, subscriptionInfo, license, includeDiscount);

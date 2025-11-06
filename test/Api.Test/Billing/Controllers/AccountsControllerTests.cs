@@ -23,6 +23,8 @@ namespace Bit.Api.Test.Billing.Controllers;
 [SubscriptionInfoCustomize]
 public class AccountsControllerTests : IDisposable
 {
+    private const string TestMilestone2CouponId = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount;
+
     private readonly IUserService _userService;
     private readonly IFeatureService _featureService;
     private readonly IPaymentService _paymentService;
@@ -63,7 +65,7 @@ public class AccountsControllerTests : IDisposable
         // Arrange
         subscriptionInfo.CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount
         {
-            Id = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount,
+            Id = TestMilestone2CouponId,
             Active = true,
             PercentOff = 20m,
             AmountOff = null,
@@ -102,7 +104,7 @@ public class AccountsControllerTests : IDisposable
         // Arrange
         subscriptionInfo.CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount
         {
-            Id = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount,
+            Id = TestMilestone2CouponId,
             Active = true,
             PercentOff = 20m,
             AmountOff = null,
@@ -221,7 +223,7 @@ public class AccountsControllerTests : IDisposable
         // Arrange
         subscriptionInfo.CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount
         {
-            Id = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount,
+            Id = TestMilestone2CouponId,
             Active = false, // Inactive discount
             PercentOff = 20m,
             AmountOff = null,
@@ -259,7 +261,7 @@ public class AccountsControllerTests : IDisposable
         {
             Coupon = new Coupon
             {
-                Id = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount,
+                Id = TestMilestone2CouponId,
                 PercentOff = 25m,
                 AmountOff = 1400, // 1400 cents = $14.00
                 AppliesTo = new CouponAppliesTo
@@ -323,7 +325,7 @@ public class AccountsControllerTests : IDisposable
         {
             Coupon = new Coupon
             {
-                Id = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount,
+                Id = TestMilestone2CouponId,
                 PercentOff = 20m
             },
             End = null

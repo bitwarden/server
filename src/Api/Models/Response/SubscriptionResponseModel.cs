@@ -79,12 +79,41 @@ public class SubscriptionResponseModel : ResponseModel
     public DateTime? Expiration { get; set; }
 }
 
+/// <summary>
+/// Customer discount information from Stripe billing.
+/// </summary>
 public class BillingCustomerDiscount(SubscriptionInfo.BillingCustomerDiscount discount)
 {
+    /// <summary>
+    /// The Stripe coupon ID (e.g., "cm3nHfO1").
+    /// </summary>
     public string? Id { get; } = discount.Id;
+
+    /// <summary>
+    /// Whether the discount is currently active.
+    /// A discount is active when it has no end date (applies indefinitely to future renewals).
+    /// </summary>
     public bool Active { get; } = discount.Active;
+
+    /// <summary>
+    /// Percentage discount applied to the subscription (e.g., 20.0 for 20% off).
+    /// Null if this is an amount-based discount.
+    /// </summary>
     public decimal? PercentOff { get; } = discount.PercentOff;
+
+    /// <summary>
+    /// Fixed amount discount in USD (e.g., 14.00 for $14 off).
+    /// Converted from Stripe's cent-based values (1400 cents → $14.00).
+    /// Null if this is a percentage-based discount.
+    /// Note: Stripe stores amounts in the smallest currency unit. This value is always in USD.
+    /// </summary>
     public decimal? AmountOff { get; } = discount.AmountOff;
+
+    /// <summary>
+    /// List of Stripe product IDs that this discount applies to (e.g., ["prod_premium", "prod_families"]).
+    /// Null indicates the discount applies to all products with no restrictions.
+    /// Empty list indicates a discount restricted to zero products (edge case).
+    /// </summary>
     public List<string>? AppliesTo { get; } = discount.AppliesTo;
 }
 

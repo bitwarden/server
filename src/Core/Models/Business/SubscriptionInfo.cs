@@ -24,9 +24,7 @@ public class SubscriptionInfo
             Id = discount.Coupon?.Id;
             Active = discount.End == null;
             PercentOff = discount.Coupon?.PercentOff;
-            AmountOff = discount.Coupon?.AmountOff.HasValue == true
-                        ? discount.Coupon.AmountOff.Value / StripeMinorUnitDivisor
-                        : null;
+            AmountOff = discount.Coupon?.AmountOff / StripeMinorUnitDivisor;
             AppliesTo = discount.Coupon?.AppliesTo?.Products;
         }
 

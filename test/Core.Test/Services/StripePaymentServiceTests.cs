@@ -3,6 +3,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models.StaticStore.Plans;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Tax.Requests;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
@@ -514,5 +515,251 @@ public class StripePaymentServiceTests
         await stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
             options.CustomerDetails.TaxExempt == StripeConstants.TaxExempt.Reverse
         ));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_WithCustomerDiscount_ReturnsDiscountFromCustomer(
+        SutProvider<StripePaymentService> sutProvider,
+        User subscriber)
+    {
+        // Arrange
+        subscriber.Gateway = GatewayType.Stripe;
+        subscriber.GatewayCustomerId = "cus_test123";
+        subscriber.GatewaySubscriptionId = "sub_test123";
+
+        var customerDiscount = new Discount
+        {
+            Coupon = new Coupon
+            {
+                Id = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount,
+                PercentOff = 20m,
+                AmountOff = 1400
+            },
+            End = null
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Customer = new Customer
+            {
+                Discount = customerDiscount
+            },
+            Discounts = new List<Discount>() // Empty list
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .SubscriptionGetAsync(
+                subscriber.GatewaySubscriptionId,
+                Arg.Is<SubscriptionGetOptions>(o => o.Expand.Contains("customer") && o.Expand.Contains("discounts")))
+            .Returns(subscription);
+
+        // Act
+        var result = await sutProvider.Sut.GetSubscriptionAsync(subscriber);
+
+        // Assert
+        Assert.NotNull(result.CustomerDiscount);
+        Assert.Equal(StripeConstants.CouponIDs.Milestone2SubscriptionDiscount, result.CustomerDiscount.Id);
+        Assert.Equal(20m, result.CustomerDiscount.PercentOff);
+        Assert.Equal(14.00m, result.CustomerDiscount.AmountOff); // Converted from cents
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_WithoutCustomerDiscount_FallsBackToSubscriptionDiscounts(
+        SutProvider<StripePaymentService> sutProvider,
+        User subscriber)
+    {
+        // Arrange
+        subscriber.Gateway = GatewayType.Stripe;
+        subscriber.GatewayCustomerId = "cus_test123";
+        subscriber.GatewaySubscriptionId = "sub_test123";
+
+        var subscriptionDiscount = new Discount
+        {
+            Coupon = new Coupon
+            {
+                Id = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount,
+                PercentOff = 15m,
+                AmountOff = null
+            },
+            End = null
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Customer = new Customer
+            {
+                Discount = null // No customer discount
+            },
+            Discounts = new List<Discount> { subscriptionDiscount }
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .SubscriptionGetAsync(
+                subscriber.GatewaySubscriptionId,
+                Arg.Is<SubscriptionGetOptions>(o => o.Expand.Contains("customer") && o.Expand.Contains("discounts")))
+            .Returns(subscription);
+
+        // Act
+        var result = await sutProvider.Sut.GetSubscriptionAsync(subscriber);
+
+        // Assert - Should use subscription discount as fallback
+        Assert.NotNull(result.CustomerDiscount);
+        Assert.Equal(StripeConstants.CouponIDs.Milestone2SubscriptionDiscount, result.CustomerDiscount.Id);
+        Assert.Equal(15m, result.CustomerDiscount.PercentOff);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_WithBothDiscounts_PrefersCustomerDiscount(
+        SutProvider<StripePaymentService> sutProvider,
+        User subscriber)
+    {
+        // Arrange
+        subscriber.Gateway = GatewayType.Stripe;
+        subscriber.GatewayCustomerId = "cus_test123";
+        subscriber.GatewaySubscriptionId = "sub_test123";
+
+        var customerDiscount = new Discount
+        {
+            Coupon = new Coupon
+            {
+                Id = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount,
+                PercentOff = 25m
+            },
+            End = null
+        };
+
+        var subscriptionDiscount = new Discount
+        {
+            Coupon = new Coupon
+            {
+                Id = "different-coupon-id",
+                PercentOff = 10m
+            },
+            End = null
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Customer = new Customer
+            {
+                Discount = customerDiscount // Should prefer this
+            },
+            Discounts = new List<Discount> { subscriptionDiscount }
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .SubscriptionGetAsync(
+                subscriber.GatewaySubscriptionId,
+                Arg.Is<SubscriptionGetOptions>(o => o.Expand.Contains("customer") && o.Expand.Contains("discounts")))
+            .Returns(subscription);
+
+        // Act
+        var result = await sutProvider.Sut.GetSubscriptionAsync(subscriber);
+
+        // Assert - Should prefer customer discount over subscription discount
+        Assert.NotNull(result.CustomerDiscount);
+        Assert.Equal(StripeConstants.CouponIDs.Milestone2SubscriptionDiscount, result.CustomerDiscount.Id);
+        Assert.Equal(25m, result.CustomerDiscount.PercentOff);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_WithNoDiscounts_ReturnsNullDiscount(
+        SutProvider<StripePaymentService> sutProvider,
+        User subscriber)
+    {
+        // Arrange
+        subscriber.Gateway = GatewayType.Stripe;
+        subscriber.GatewayCustomerId = "cus_test123";
+        subscriber.GatewaySubscriptionId = "sub_test123";
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Customer = new Customer
+            {
+                Discount = null
+            },
+            Discounts = new List<Discount>() // Empty list, no discounts
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .SubscriptionGetAsync(
+                subscriber.GatewaySubscriptionId,
+                Arg.Is<SubscriptionGetOptions>(o => o.Expand.Contains("customer") && o.Expand.Contains("discounts")))
+            .Returns(subscription);
+
+        // Act
+        var result = await sutProvider.Sut.GetSubscriptionAsync(subscriber);
+
+        // Assert
+        Assert.Null(result.CustomerDiscount);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_VerifiesCorrectExpandOptions(
+        SutProvider<StripePaymentService> sutProvider,
+        User subscriber)
+    {
+        // Arrange
+        subscriber.Gateway = GatewayType.Stripe;
+        subscriber.GatewayCustomerId = "cus_test123";
+        subscriber.GatewaySubscriptionId = "sub_test123";
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Customer = new Customer { Discount = null },
+            Discounts = new List<Discount>() // Empty list
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter
+            .SubscriptionGetAsync(
+                Arg.Any<string>(),
+                Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        // Act
+        await sutProvider.Sut.GetSubscriptionAsync(subscriber);
+
+        // Assert - Verify expand options are correct
+        await stripeAdapter.Received(1).SubscriptionGetAsync(
+            subscriber.GatewaySubscriptionId,
+            Arg.Is<SubscriptionGetOptions>(o =>
+                o.Expand.Contains("customer") &&
+                o.Expand.Contains("discounts") &&
+                o.Expand.Contains("test_clock")));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_WithEmptyGatewaySubscriptionId_ReturnsEmptySubscriptionInfo(
+        SutProvider<StripePaymentService> sutProvider,
+        User subscriber)
+    {
+        // Arrange
+        subscriber.GatewaySubscriptionId = null;
+
+        // Act
+        var result = await sutProvider.Sut.GetSubscriptionAsync(subscriber);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Null(result.Subscription);
+        Assert.Null(result.CustomerDiscount);
+        Assert.Null(result.UpcomingInvoice);
+
+        // Verify no Stripe API calls were made
+        await sutProvider.GetDependency<IStripeAdapter>()
+            .DidNotReceive()
+            .SubscriptionGetAsync(Arg.Any<string>(), Arg.Any<SubscriptionGetOptions>());
     }
 }

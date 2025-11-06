@@ -315,4 +315,183 @@ public class BillingCustomerDiscountTests
         Assert.Null(result.AmountOff);
         Assert.Null(result.AppliesTo);
     }
+
+    [Theory]
+    [BitAutoData]
+    public void Constructor_WithFutureEndDate_SetsActiveToFalse(string couponId)
+    {
+        // Arrange - Discount expires in the future
+        var discount = new Discount
+        {
+            Coupon = new Coupon
+            {
+                Id = couponId,
+                PercentOff = 20m
+            },
+            End = DateTime.UtcNow.AddDays(30) // Expires in 30 days
+        };
+
+        // Act
+        var result = new SubscriptionInfo.BillingCustomerDiscount(discount);
+
+        // Assert
+        Assert.False(result.Active); // Should be inactive because End is not null
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void Constructor_WithPastEndDate_SetsActiveToFalse(string couponId)
+    {
+        // Arrange - Discount already expired
+        var discount = new Discount
+        {
+            Coupon = new Coupon
+            {
+                Id = couponId,
+                PercentOff = 20m
+            },
+            End = DateTime.UtcNow.AddDays(-30) // Expired 30 days ago
+        };
+
+        // Act
+        var result = new SubscriptionInfo.BillingCustomerDiscount(discount);
+
+        // Assert
+        Assert.False(result.Active); // Should be inactive because End is not null
+    }
+
+    [Fact]
+    public void Constructor_WithNullCouponId_SetsIdToNull()
+    {
+        // Arrange
+        var discount = new Discount
+        {
+            Coupon = new Coupon
+            {
+                Id = null,
+                PercentOff = 20m
+            },
+            End = null
+        };
+
+        // Act
+        var result = new SubscriptionInfo.BillingCustomerDiscount(discount);
+
+        // Assert
+        Assert.Null(result.Id);
+        Assert.True(result.Active);
+        Assert.Equal(20m, result.PercentOff);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void Constructor_WithNullPercentOff_SetsPercentOffToNull(string couponId)
+    {
+        // Arrange
+        var discount = new Discount
+        {
+            Coupon = new Coupon
+            {
+                Id = couponId,
+                PercentOff = null,
+                AmountOff = 1000
+            },
+            End = null
+        };
+
+        // Act
+        var result = new SubscriptionInfo.BillingCustomerDiscount(discount);
+
+        // Assert
+        Assert.Null(result.PercentOff);
+        Assert.Equal(10.00m, result.AmountOff);
+    }
+
+    [Fact]
+    public void Constructor_WithCompleteStripeDiscount_MapsAllProperties()
+    {
+        // Arrange - Comprehensive test with all Stripe Discount properties set
+        var discount = new Discount
+        {
+            Coupon = new Coupon
+            {
+                Id = "premium_discount_2024",
+                PercentOff = 25m,
+                AmountOff = 1500, // $15.00
+                AppliesTo = new CouponAppliesTo
+                {
+                    Products = new List<string> { "prod_premium", "prod_family", "prod_teams" }
+                }
+            },
+            End = null // Active
+        };
+
+        // Act
+        var result = new SubscriptionInfo.BillingCustomerDiscount(discount);
+
+        // Assert - Verify all properties mapped correctly
+        Assert.Equal("premium_discount_2024", result.Id);
+        Assert.True(result.Active);
+        Assert.Equal(25m, result.PercentOff);
+        Assert.Equal(15.00m, result.AmountOff);
+        Assert.NotNull(result.AppliesTo);
+        Assert.Equal(3, result.AppliesTo.Count);
+        Assert.Contains("prod_premium", result.AppliesTo);
+        Assert.Contains("prod_family", result.AppliesTo);
+        Assert.Contains("prod_teams", result.AppliesTo);
+    }
+
+    [Fact]
+    public void Constructor_WithMinimalStripeDiscount_HandlesNullsGracefully()
+    {
+        // Arrange - Minimal Stripe Discount with most properties null
+        var discount = new Discount
+        {
+            Coupon = new Coupon
+            {
+                Id = null,
+                PercentOff = null,
+                AmountOff = null,
+                AppliesTo = null
+            },
+            End = DateTime.UtcNow.AddDays(10) // Has end date
+        };
+
+        // Act
+        var result = new SubscriptionInfo.BillingCustomerDiscount(discount);
+
+        // Assert - Should handle all nulls gracefully
+        Assert.Null(result.Id);
+        Assert.False(result.Active);
+        Assert.Null(result.PercentOff);
+        Assert.Null(result.AmountOff);
+        Assert.Null(result.AppliesTo);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void Constructor_WithEmptyProductsList_PreservesEmptyList(string couponId)
+    {
+        // Arrange
+        var discount = new Discount
+        {
+            Coupon = new Coupon
+            {
+                Id = couponId,
+                PercentOff = 10m,
+                AppliesTo = new CouponAppliesTo
+                {
+                    Products = new List<string>() // Empty but not null
+                }
+            },
+            End = null
+        };
+
+        // Act
+        var result = new SubscriptionInfo.BillingCustomerDiscount(discount);
+
+        // Assert
+        Assert.NotNull(result.AppliesTo);
+        Assert.Empty(result.AppliesTo);
+    }
 }
