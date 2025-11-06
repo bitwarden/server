@@ -143,8 +143,6 @@ public class NoopMailService : IMailService
         List<string> items,
         bool mentionInvoices) => Task.FromResult(0);
 
-    public Task SendUpdatedInvoiceUpcoming(IEnumerable<string> emails) => Task.FromResult(0);
-
     public Task SendProviderInvoiceUpcoming(
         IEnumerable<string> emails,
         decimal amount,

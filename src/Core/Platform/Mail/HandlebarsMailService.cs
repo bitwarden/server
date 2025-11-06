@@ -519,18 +519,6 @@ public class HandlebarsMailService : IMailService
         message.Category = "InvoiceUpcoming";
         await _mailDeliveryService.SendEmailAsync(message);
     }
-    public async Task SendUpdatedInvoiceUpcoming(IEnumerable<string> emails)
-    {
-        var message = CreateDefaultMessage("Your Subscription Will Renew Soon", emails);
-        var model = new UpdatedInvoiceUpcomingViewModel
-        {
-            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
-            SiteName = _globalSettings.SiteName,
-        };
-        await AddMessageContentAsync(message, "UpdatedInvoiceUpcoming", model);
-        message.Category = "InvoiceUpcoming";
-        await _mailDeliveryService.SendEmailAsync(message);
-    }
 
     public async Task SendProviderInvoiceUpcoming(
         IEnumerable<string> emails,
