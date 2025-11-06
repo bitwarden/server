@@ -704,6 +704,131 @@ public class StripePaymentServiceTests
 
     [Theory]
     [BitAutoData]
+    public async Task GetSubscriptionAsync_WithMultipleSubscriptionDiscounts_SelectsFirstDiscount(
+        SutProvider<StripePaymentService> sutProvider,
+        User subscriber)
+    {
+        // Arrange - Multiple subscription-level discounts, no customer discount
+        subscriber.Gateway = GatewayType.Stripe;
+        subscriber.GatewayCustomerId = "cus_test123";
+        subscriber.GatewaySubscriptionId = "sub_test123";
+
+        var firstDiscount = new Discount
+        {
+            Coupon = new Coupon
+            {
+                Id = "coupon-10-percent",
+                PercentOff = 10m
+            },
+            End = null
+        };
+
+        var secondDiscount = new Discount
+        {
+            Coupon = new Coupon
+            {
+                Id = "coupon-20-percent",
+                PercentOff = 20m
+            },
+            End = null
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Customer = new Customer
+            {
+                Discount = null // No customer discount
+            },
+            // Multiple subscription discounts - FirstOrDefault() should select the first one
+            Discounts = new List<Discount> { firstDiscount, secondDiscount }
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .SubscriptionGetAsync(
+                subscriber.GatewaySubscriptionId,
+                Arg.Is<SubscriptionGetOptions>(o => o.Expand.Contains("customer") && o.Expand.Contains("discounts")))
+            .Returns(subscription);
+
+        // Act
+        var result = await sutProvider.Sut.GetSubscriptionAsync(subscriber);
+
+        // Assert - Should select the first discount from the list (FirstOrDefault() behavior)
+        Assert.NotNull(result.CustomerDiscount);
+        Assert.Equal("coupon-10-percent", result.CustomerDiscount.Id);
+        Assert.Equal(10m, result.CustomerDiscount.PercentOff);
+        // Verify the second discount was not selected
+        Assert.NotEqual("coupon-20-percent", result.CustomerDiscount.Id);
+        Assert.NotEqual(20m, result.CustomerDiscount.PercentOff);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_WithNullCustomer_HandlesGracefully(
+        SutProvider<StripePaymentService> sutProvider,
+        User subscriber)
+    {
+        // Arrange - Subscription with null Customer (defensive null check scenario)
+        subscriber.Gateway = GatewayType.Stripe;
+        subscriber.GatewayCustomerId = "cus_test123";
+        subscriber.GatewaySubscriptionId = "sub_test123";
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Customer = null, // Customer not expanded or null
+            Discounts = new List<Discount>() // Empty discounts
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .SubscriptionGetAsync(
+                subscriber.GatewaySubscriptionId,
+                Arg.Is<SubscriptionGetOptions>(o => o.Expand.Contains("customer") && o.Expand.Contains("discounts")))
+            .Returns(subscription);
+
+        // Act
+        var result = await sutProvider.Sut.GetSubscriptionAsync(subscriber);
+
+        // Assert - Should handle null Customer gracefully without throwing NullReferenceException
+        Assert.Null(result.CustomerDiscount);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_WithNullDiscounts_HandlesGracefully(
+        SutProvider<StripePaymentService> sutProvider,
+        User subscriber)
+    {
+        // Arrange - Subscription with null Discounts (defensive null check scenario)
+        subscriber.Gateway = GatewayType.Stripe;
+        subscriber.GatewayCustomerId = "cus_test123";
+        subscriber.GatewaySubscriptionId = "sub_test123";
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Customer = new Customer
+            {
+                Discount = null // No customer discount
+            },
+            Discounts = null // Discounts not expanded or null
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .SubscriptionGetAsync(
+                subscriber.GatewaySubscriptionId,
+                Arg.Is<SubscriptionGetOptions>(o => o.Expand.Contains("customer") && o.Expand.Contains("discounts")))
+            .Returns(subscription);
+
+        // Act
+        var result = await sutProvider.Sut.GetSubscriptionAsync(subscriber);
+
+        // Assert - Should handle null Discounts gracefully without throwing NullReferenceException
+        Assert.Null(result.CustomerDiscount);
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task GetSubscriptionAsync_VerifiesCorrectExpandOptions(
         SutProvider<StripePaymentService> sutProvider,
         User subscriber)

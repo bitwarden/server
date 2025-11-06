@@ -9,7 +9,7 @@ public class SubscriptionInfo
 {
     /// <summary>
     /// Converts Stripe's minor currency units (cents) to major currency units (dollars).
-    /// Currently assumes USD (100 cents = $1). Multi-currency support requires currency-specific divisors.
+    /// IMPORTANT: Only supports USD. All Bitwarden subscriptions are USD-only.
     /// </summary>
     private const decimal StripeMinorUnitDivisor = 100M;
 
@@ -47,9 +47,8 @@ public class SubscriptionInfo
             Active = discount.End == null;
             PercentOff = discount.Coupon?.PercentOff;
             AmountOff = ConvertFromStripeMinorUnits(discount.Coupon?.AmountOff);
-            AppliesTo = discount.Coupon?.AppliesTo?.Products is List<string> products
-                ? products.AsReadOnly()
-                : discount.Coupon?.AppliesTo?.Products;
+            // Stripe's CouponAppliesTo.Products is already IReadOnlyList<string>, so no conversion needed
+            AppliesTo = discount.Coupon?.AppliesTo?.Products;
         }
 
         /// <summary>
