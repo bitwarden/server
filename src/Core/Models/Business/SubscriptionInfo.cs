@@ -10,8 +10,20 @@ public class SubscriptionInfo
     /// <summary>
     /// Converts Stripe's minor currency units (cents) to major currency units (dollars).
     /// Stripe stores monetary amounts in the smallest currency unit (e.g., cents for USD).
+    /// NOTE: This assumes USD (2 decimal places). Multi-currency support would require
+    /// currency-specific divisors (e.g., JPY uses 1, KWD uses 1000).
     /// </summary>
     private const decimal StripeMinorUnitDivisor = 100M;
+
+    /// <summary>
+    /// Converts Stripe's minor currency units (cents) to major currency units (dollars).
+    /// </summary>
+    /// <param name="amountInCents">The amount in Stripe's minor currency units (e.g., cents for USD).</param>
+    /// <returns>The amount in major currency units (e.g., dollars for USD).</returns>
+    private static decimal ConvertFromStripeMinorUnits(long? amountInCents)
+    {
+        return amountInCents.GetValueOrDefault() / StripeMinorUnitDivisor;
+    }
 
     public BillingCustomerDiscount? CustomerDiscount { get; set; }
     public BillingSubscription? Subscription { get; set; }
@@ -33,12 +45,14 @@ public class SubscriptionInfo
             Id = discount.Coupon?.Id;
             Active = discount.End == null;
             PercentOff = discount.Coupon?.PercentOff;
-            AmountOff = discount.Coupon?.AmountOff / StripeMinorUnitDivisor;
+            AmountOff = ConvertFromStripeMinorUnits(discount.Coupon?.AmountOff);
             AppliesTo = discount.Coupon?.AppliesTo?.Products;
         }
 
         /// <summary>
         /// The Stripe coupon ID (e.g., "cm3nHfO1").
+        /// Note: Only specific coupon IDs are displayed in the UI based on feature flag configuration,
+        /// though Stripe may apply additional discounts that are not shown.
         /// </summary>
         public string? Id { get; set; }
 
@@ -126,7 +140,7 @@ public class SubscriptionInfo
                 {
                     ProductId = item.Plan.ProductId;
                     Name = item.Plan.Nickname;
-                    Amount = item.Plan.Amount.GetValueOrDefault() / StripeMinorUnitDivisor;
+                    Amount = ConvertFromStripeMinorUnits(item.Plan.Amount);
                     Interval = item.Plan.Interval;
 
                     if (item.Metadata != null)
@@ -155,7 +169,7 @@ public class SubscriptionInfo
 
         public BillingUpcomingInvoice(Invoice inv)
         {
-            Amount = inv.AmountDue / StripeMinorUnitDivisor;
+            Amount = ConvertFromStripeMinorUnits(inv.AmountDue);
             Date = inv.Created;
         }
 

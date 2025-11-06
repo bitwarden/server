@@ -89,6 +89,9 @@ public class AccountsController(
         // Only cloud-hosted users with payment gateways have subscription and discount information
         if (!globalSettings.SelfHosted && user.Gateway != null)
         {
+            // Note: PM23341_Milestone_2 is the feature flag for the overall Milestone 2 initiative (PM-23341).
+            // This specific implementation (PM-26682) adds discount display functionality as part of that initiative.
+            // The feature flag controls the broader Milestone 2 feature set, not just this specific task.
             var includeDiscount = featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2);
             var subscriptionInfo = await paymentService.GetSubscriptionAsync(user);
             var license = await userService.GenerateLicenseAsync(user, subscriptionInfo);

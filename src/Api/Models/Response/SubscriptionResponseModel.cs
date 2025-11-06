@@ -53,7 +53,6 @@ public class SubscriptionResponseModel : ResponseModel
         {
             License = license;
         }
-        CustomerDiscount = null;
     }
 
     public string? StorageName { get; set; }
@@ -87,7 +86,7 @@ public class BillingCustomerDiscount(SubscriptionInfo.BillingCustomerDiscount di
     /// <summary>
     /// The Stripe coupon ID (e.g., "cm3nHfO1").
     /// </summary>
-    public string? Id { get; } = discount.Id;
+    public string? Id { get; } = discount?.Id ?? throw new ArgumentNullException(nameof(discount));
 
     /// <summary>
     /// Whether the discount is currently active.

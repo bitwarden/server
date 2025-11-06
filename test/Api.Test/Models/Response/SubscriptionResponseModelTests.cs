@@ -284,4 +284,36 @@ public class SubscriptionResponseModelTests
         Assert.Null(result.License);
         Assert.Null(result.CustomerDiscount);
     }
+
+    [Theory]
+    [BitAutoData]
+    public void Constructor_BothPercentOffAndAmountOffPresent_HandlesEdgeCase(
+        User user,
+        UserLicense license)
+    {
+        // Arrange - Edge case: Both PercentOff and AmountOff present
+        // This tests the scenario where Stripe coupon has both discount types
+        var subscriptionInfo = new SubscriptionInfo
+        {
+            CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount
+            {
+                Id = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount,
+                Active = true,
+                PercentOff = 25m,
+                AmountOff = 20.00m, // Already converted from cents
+                AppliesTo = new List<string> { "prod_premium" }
+            }
+        };
+
+        // Act
+        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, includeDiscount: true);
+
+        // Assert - Both values should be preserved
+        Assert.NotNull(result.CustomerDiscount);
+        Assert.Equal(StripeConstants.CouponIDs.Milestone2SubscriptionDiscount, result.CustomerDiscount.Id);
+        Assert.Equal(25m, result.CustomerDiscount.PercentOff);
+        Assert.Equal(20.00m, result.CustomerDiscount.AmountOff);
+        Assert.NotNull(result.CustomerDiscount.AppliesTo);
+        Assert.Single(result.CustomerDiscount.AppliesTo);
+    }
 }

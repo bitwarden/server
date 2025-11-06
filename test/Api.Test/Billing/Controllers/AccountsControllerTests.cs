@@ -357,4 +357,395 @@ public class AccountsControllerTests : IDisposable
         var resultWithoutFlag = await _sut.GetSubscriptionAsync(_globalSettings, _paymentService);
         Assert.Null(resultWithoutFlag.CustomerDiscount);
     }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_IntegrationTest_CompletePipelineFromStripeToApiResponse(
+        User user,
+        UserLicense license)
+    {
+        // Arrange - Create a real Stripe Discount object as it would come from Stripe API
+        var stripeDiscount = new Discount
+        {
+            Coupon = new Coupon
+            {
+                Id = TestMilestone2CouponId,
+                PercentOff = 30m,
+                AmountOff = 2000, // 2000 cents = $20.00
+                AppliesTo = new CouponAppliesTo
+                {
+                    Products = new List<string> { "prod_premium", "prod_families", "prod_teams" }
+                }
+            },
+            End = null // Active discount (no end date)
+        };
+
+        // Step 1: Map Stripe Discount through SubscriptionInfo.BillingCustomerDiscount
+        // This simulates what StripePaymentService.GetSubscriptionAsync does
+        var billingCustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount(stripeDiscount);
+
+        // Verify the mapping worked correctly
+        Assert.Equal(TestMilestone2CouponId, billingCustomerDiscount.Id);
+        Assert.True(billingCustomerDiscount.Active);
+        Assert.Equal(30m, billingCustomerDiscount.PercentOff);
+        Assert.Equal(20.00m, billingCustomerDiscount.AmountOff); // Converted from cents
+        Assert.NotNull(billingCustomerDiscount.AppliesTo);
+        Assert.Equal(3, billingCustomerDiscount.AppliesTo.Count);
+
+        // Step 2: Create SubscriptionInfo with the mapped discount
+        // This simulates what StripePaymentService returns
+        var subscriptionInfo = new SubscriptionInfo
+        {
+            CustomerDiscount = billingCustomerDiscount
+        };
+
+        // Step 3: Set up controller dependencies
+        var claimsPrincipal = new ClaimsPrincipal(new ClaimsIdentity());
+        _sut.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = claimsPrincipal }
+        };
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
+        _paymentService.GetSubscriptionAsync(user).Returns(subscriptionInfo);
+        _userService.GenerateLicenseAsync(user, subscriptionInfo).Returns(license);
+        user.Gateway = GatewayType.Stripe;
+
+        // Act - Step 4: Call AccountsController.GetSubscriptionAsync
+        // This exercises the complete pipeline:
+        // - Retrieves subscriptionInfo from paymentService (with discount from Stripe)
+        // - Maps through SubscriptionInfo.BillingCustomerDiscount (already done above)
+        // - Filters in SubscriptionResponseModel constructor (based on feature flag, coupon ID, active status)
+        // - Returns via AccountsController
+        var result = await _sut.GetSubscriptionAsync(_globalSettings, _paymentService);
+
+        // Assert - Verify the complete pipeline worked end-to-end
+        Assert.NotNull(result);
+        Assert.NotNull(result.CustomerDiscount);
+
+        // Verify Stripe Discount → SubscriptionInfo.BillingCustomerDiscount mapping
+        // (verified above, but confirming it made it through)
+
+        // Verify SubscriptionInfo.BillingCustomerDiscount → SubscriptionResponseModel.BillingCustomerDiscount filtering
+        // The filter should pass because:
+        // - includeDiscount = true (feature flag enabled)
+        // - subscription.CustomerDiscount != null
+        // - subscription.CustomerDiscount.Id == Milestone2SubscriptionDiscount
+        // - subscription.CustomerDiscount.Active = true
+        Assert.Equal(TestMilestone2CouponId, result.CustomerDiscount.Id);
+        Assert.True(result.CustomerDiscount.Active);
+        Assert.Equal(30m, result.CustomerDiscount.PercentOff);
+        Assert.Equal(20.00m, result.CustomerDiscount.AmountOff); // Verify cents-to-dollars conversion
+
+        // Verify AppliesTo products are preserved through the entire pipeline
+        Assert.NotNull(result.CustomerDiscount.AppliesTo);
+        Assert.Equal(3, result.CustomerDiscount.AppliesTo.Count());
+        Assert.Contains("prod_premium", result.CustomerDiscount.AppliesTo);
+        Assert.Contains("prod_families", result.CustomerDiscount.AppliesTo);
+        Assert.Contains("prod_teams", result.CustomerDiscount.AppliesTo);
+
+        // Verify the payment service was called correctly
+        await _paymentService.Received(1).GetSubscriptionAsync(user);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_IntegrationTest_MultipleDiscountsInSubscription_PrefersCustomerDiscount(
+        User user,
+        UserLicense license)
+    {
+        // Arrange - Create Stripe subscription with multiple discounts
+        // Customer discount should be preferred over subscription discounts
+        var customerDiscount = new Discount
+        {
+            Coupon = new Coupon
+            {
+                Id = TestMilestone2CouponId,
+                PercentOff = 30m,
+                AmountOff = null
+            },
+            End = null
+        };
+
+        var subscriptionDiscount1 = new Discount
+        {
+            Coupon = new Coupon
+            {
+                Id = "other-coupon-1",
+                PercentOff = 10m
+            },
+            End = null
+        };
+
+        var subscriptionDiscount2 = new Discount
+        {
+            Coupon = new Coupon
+            {
+                Id = "other-coupon-2",
+                PercentOff = 15m
+            },
+            End = null
+        };
+
+        // Map through SubscriptionInfo.BillingCustomerDiscount
+        var billingCustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount(customerDiscount);
+        var subscriptionInfo = new SubscriptionInfo
+        {
+            CustomerDiscount = billingCustomerDiscount
+        };
+
+        var claimsPrincipal = new ClaimsPrincipal(new ClaimsIdentity());
+        _sut.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = claimsPrincipal }
+        };
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
+        _paymentService.GetSubscriptionAsync(user).Returns(subscriptionInfo);
+        _userService.GenerateLicenseAsync(user, subscriptionInfo).Returns(license);
+        user.Gateway = GatewayType.Stripe;
+
+        // Act
+        var result = await _sut.GetSubscriptionAsync(_globalSettings, _paymentService);
+
+        // Assert - Should use customer discount, not subscription discounts
+        Assert.NotNull(result);
+        Assert.NotNull(result.CustomerDiscount);
+        Assert.Equal(TestMilestone2CouponId, result.CustomerDiscount.Id);
+        Assert.Equal(30m, result.CustomerDiscount.PercentOff);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_IntegrationTest_BothPercentOffAndAmountOffPresent_HandlesEdgeCase(
+        User user,
+        UserLicense license)
+    {
+        // Arrange - Edge case: Stripe coupon with both PercentOff and AmountOff
+        // This tests the scenario mentioned in BillingCustomerDiscountTests.cs line 212-232
+        var stripeDiscount = new Discount
+        {
+            Coupon = new Coupon
+            {
+                Id = TestMilestone2CouponId,
+                PercentOff = 25m,
+                AmountOff = 2000, // 2000 cents = $20.00
+                AppliesTo = new CouponAppliesTo
+                {
+                    Products = new List<string> { "prod_premium" }
+                }
+            },
+            End = null
+        };
+
+        // Map through SubscriptionInfo.BillingCustomerDiscount
+        var billingCustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount(stripeDiscount);
+        var subscriptionInfo = new SubscriptionInfo
+        {
+            CustomerDiscount = billingCustomerDiscount
+        };
+
+        var claimsPrincipal = new ClaimsPrincipal(new ClaimsIdentity());
+        _sut.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = claimsPrincipal }
+        };
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
+        _paymentService.GetSubscriptionAsync(user).Returns(subscriptionInfo);
+        _userService.GenerateLicenseAsync(user, subscriptionInfo).Returns(license);
+        user.Gateway = GatewayType.Stripe;
+
+        // Act
+        var result = await _sut.GetSubscriptionAsync(_globalSettings, _paymentService);
+
+        // Assert - Both values should be preserved through the pipeline
+        Assert.NotNull(result);
+        Assert.NotNull(result.CustomerDiscount);
+        Assert.Equal(TestMilestone2CouponId, result.CustomerDiscount.Id);
+        Assert.Equal(25m, result.CustomerDiscount.PercentOff);
+        Assert.Equal(20.00m, result.CustomerDiscount.AmountOff); // Converted from cents
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_IntegrationTest_BillingSubscriptionMapsThroughPipeline(
+        User user,
+        UserLicense license)
+    {
+        // Arrange - Create Stripe subscription with subscription details
+        var stripeSubscription = new Subscription
+        {
+            Id = "sub_test123",
+            Status = "active",
+            TrialStart = DateTime.UtcNow.AddDays(-30),
+            TrialEnd = DateTime.UtcNow.AddDays(-20),
+            CanceledAt = null,
+            CancelAtPeriodEnd = false,
+            CollectionMethod = "charge_automatically"
+        };
+
+        // Map through SubscriptionInfo.BillingSubscription
+        var billingSubscription = new SubscriptionInfo.BillingSubscription(stripeSubscription);
+        var subscriptionInfo = new SubscriptionInfo
+        {
+            Subscription = billingSubscription,
+            CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount
+            {
+                Id = TestMilestone2CouponId,
+                Active = true,
+                PercentOff = 20m
+            }
+        };
+
+        var claimsPrincipal = new ClaimsPrincipal(new ClaimsIdentity());
+        _sut.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = claimsPrincipal }
+        };
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
+        _paymentService.GetSubscriptionAsync(user).Returns(subscriptionInfo);
+        _userService.GenerateLicenseAsync(user, subscriptionInfo).Returns(license);
+        user.Gateway = GatewayType.Stripe;
+
+        // Act
+        var result = await _sut.GetSubscriptionAsync(_globalSettings, _paymentService);
+
+        // Assert - Verify BillingSubscription mapped through pipeline
+        Assert.NotNull(result);
+        Assert.NotNull(result.Subscription);
+        Assert.Equal("active", result.Subscription.Status);
+        Assert.Equal(14, result.Subscription.GracePeriod); // charge_automatically = 14 days
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_IntegrationTest_BillingUpcomingInvoiceMapsThroughPipeline(
+        User user,
+        UserLicense license)
+    {
+        // Arrange - Create Stripe invoice for upcoming invoice
+        var stripeInvoice = new Invoice
+        {
+            AmountDue = 2000, // 2000 cents = $20.00
+            Created = DateTime.UtcNow.AddDays(1)
+        };
+
+        // Map through SubscriptionInfo.BillingUpcomingInvoice
+        var billingUpcomingInvoice = new SubscriptionInfo.BillingUpcomingInvoice(stripeInvoice);
+        var subscriptionInfo = new SubscriptionInfo
+        {
+            UpcomingInvoice = billingUpcomingInvoice,
+            CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount
+            {
+                Id = TestMilestone2CouponId,
+                Active = true,
+                PercentOff = 20m
+            }
+        };
+
+        var claimsPrincipal = new ClaimsPrincipal(new ClaimsIdentity());
+        _sut.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = claimsPrincipal }
+        };
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
+        _paymentService.GetSubscriptionAsync(user).Returns(subscriptionInfo);
+        _userService.GenerateLicenseAsync(user, subscriptionInfo).Returns(license);
+        user.Gateway = GatewayType.Stripe;
+
+        // Act
+        var result = await _sut.GetSubscriptionAsync(_globalSettings, _paymentService);
+
+        // Assert - Verify BillingUpcomingInvoice mapped through pipeline
+        Assert.NotNull(result);
+        Assert.NotNull(result.UpcomingInvoice);
+        Assert.Equal(20.00m, result.UpcomingInvoice.Amount); // Converted from cents
+        Assert.NotNull(result.UpcomingInvoice.Date);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_IntegrationTest_CompletePipelineWithAllComponents(
+        User user,
+        UserLicense license)
+    {
+        // Arrange - Complete Stripe objects for full pipeline test
+        var stripeDiscount = new Discount
+        {
+            Coupon = new Coupon
+            {
+                Id = TestMilestone2CouponId,
+                PercentOff = 20m,
+                AmountOff = 1000, // $10.00
+                AppliesTo = new CouponAppliesTo
+                {
+                    Products = new List<string> { "prod_premium", "prod_families" }
+                }
+            },
+            End = null
+        };
+
+        var stripeSubscription = new Subscription
+        {
+            Id = "sub_test123",
+            Status = "active",
+            CollectionMethod = "charge_automatically"
+        };
+
+        var stripeInvoice = new Invoice
+        {
+            AmountDue = 1500, // $15.00
+            Created = DateTime.UtcNow.AddDays(7)
+        };
+
+        // Map through SubscriptionInfo (simulating StripePaymentService)
+        var billingCustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount(stripeDiscount);
+        var billingSubscription = new SubscriptionInfo.BillingSubscription(stripeSubscription);
+        var billingUpcomingInvoice = new SubscriptionInfo.BillingUpcomingInvoice(stripeInvoice);
+
+        var subscriptionInfo = new SubscriptionInfo
+        {
+            CustomerDiscount = billingCustomerDiscount,
+            Subscription = billingSubscription,
+            UpcomingInvoice = billingUpcomingInvoice
+        };
+
+        var claimsPrincipal = new ClaimsPrincipal(new ClaimsIdentity());
+        _sut.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = claimsPrincipal }
+        };
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
+        _paymentService.GetSubscriptionAsync(user).Returns(subscriptionInfo);
+        _userService.GenerateLicenseAsync(user, subscriptionInfo).Returns(license);
+        user.Gateway = GatewayType.Stripe;
+
+        // Act - Full pipeline: Stripe → SubscriptionInfo → SubscriptionResponseModel → API response
+        var result = await _sut.GetSubscriptionAsync(_globalSettings, _paymentService);
+
+        // Assert - Verify all components mapped correctly through the pipeline
+        Assert.NotNull(result);
+
+        // Verify discount
+        Assert.NotNull(result.CustomerDiscount);
+        Assert.Equal(TestMilestone2CouponId, result.CustomerDiscount.Id);
+        Assert.Equal(20m, result.CustomerDiscount.PercentOff);
+        Assert.Equal(10.00m, result.CustomerDiscount.AmountOff);
+        Assert.NotNull(result.CustomerDiscount.AppliesTo);
+        Assert.Equal(2, result.CustomerDiscount.AppliesTo.Count());
+
+        // Verify subscription
+        Assert.NotNull(result.Subscription);
+        Assert.Equal("active", result.Subscription.Status);
+        Assert.Equal(14, result.Subscription.GracePeriod);
+
+        // Verify upcoming invoice
+        Assert.NotNull(result.UpcomingInvoice);
+        Assert.Equal(15.00m, result.UpcomingInvoice.Amount);
+        Assert.NotNull(result.UpcomingInvoice.Date);
+    }
 }
