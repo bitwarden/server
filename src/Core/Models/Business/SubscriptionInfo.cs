@@ -27,14 +27,14 @@ public class SubscriptionInfo
             AmountOff = discount.Coupon?.AmountOff.HasValue == true
                         ? discount.Coupon.AmountOff.Value / StripeMinorUnitDivisor
                         : null;
-            AppliesTo = discount.Coupon?.AppliesTo?.Products ?? [];
+            AppliesTo = discount.Coupon?.AppliesTo?.Products;
         }
 
         public string? Id { get; set; }
         public bool Active { get; set; }
         public decimal? PercentOff { get; set; }
         public decimal? AmountOff { get; set; }
-        public List<string> AppliesTo { get; set; } = [];
+        public List<string>? AppliesTo { get; set; }
     }
 
     public class BillingSubscription

@@ -38,6 +38,7 @@ public class SubscriptionResponseModelTests
         Assert.True(result.CustomerDiscount.Active);
         Assert.Equal(20m, result.CustomerDiscount.PercentOff);
         Assert.Null(result.CustomerDiscount.AmountOff);
+        Assert.NotNull(result.CustomerDiscount.AppliesTo);
         Assert.Single(result.CustomerDiscount.AppliesTo);
     }
 

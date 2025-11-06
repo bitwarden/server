@@ -35,6 +35,7 @@ public class BillingCustomerDiscountTests
         Assert.True(result.Active);
         Assert.Equal(25.5m, result.PercentOff);
         Assert.Null(result.AmountOff);
+        Assert.NotNull(result.AppliesTo);
         Assert.Equal(2, result.AppliesTo.Count);
         Assert.Contains("product1", result.AppliesTo);
         Assert.Contains("product2", result.AppliesTo);
@@ -68,6 +69,7 @@ public class BillingCustomerDiscountTests
         Assert.True(result.Active);
         Assert.Null(result.PercentOff);
         Assert.Equal(14.00m, result.AmountOff); // Converted to dollars
+        Assert.NotNull(result.AppliesTo);
         Assert.Empty(result.AppliesTo);
     }
 
@@ -113,7 +115,7 @@ public class BillingCustomerDiscountTests
         Assert.True(result.Active);
         Assert.Null(result.PercentOff);
         Assert.Null(result.AmountOff);
-        Assert.Empty(result.AppliesTo);
+        Assert.Null(result.AppliesTo);
     }
 
     [Theory]
@@ -231,7 +233,7 @@ public class BillingCustomerDiscountTests
 
     [Theory]
     [BitAutoData]
-    public void Constructor_WithNullAppliesTo_InitializesEmptyList(string couponId)
+    public void Constructor_WithNullAppliesTo_SetsAppliesToNull(string couponId)
     {
         // Arrange
         var discount = new Discount
@@ -249,13 +251,12 @@ public class BillingCustomerDiscountTests
         var result = new SubscriptionInfo.BillingCustomerDiscount(discount);
 
         // Assert
-        Assert.NotNull(result.AppliesTo);
-        Assert.Empty(result.AppliesTo);
+        Assert.Null(result.AppliesTo);
     }
 
     [Theory]
     [BitAutoData]
-    public void Constructor_WithNullProductsList_InitializesEmptyList(string couponId)
+    public void Constructor_WithNullProductsList_SetsAppliesToNull(string couponId)
     {
         // Arrange
         var discount = new Discount
@@ -276,8 +277,7 @@ public class BillingCustomerDiscountTests
         var result = new SubscriptionInfo.BillingCustomerDiscount(discount);
 
         // Assert
-        Assert.NotNull(result.AppliesTo);
-        Assert.Empty(result.AppliesTo);
+        Assert.Null(result.AppliesTo);
     }
 
     [Theory]
@@ -313,7 +313,6 @@ public class BillingCustomerDiscountTests
         Assert.False(result.Active);
         Assert.Null(result.PercentOff);
         Assert.Null(result.AmountOff);
-        Assert.NotNull(result.AppliesTo);
-        Assert.Empty(result.AppliesTo);
+        Assert.Null(result.AppliesTo);
     }
 }

@@ -209,4 +209,41 @@ public class AccountsControllerTests : IDisposable
         Assert.Null(result.CustomerDiscount); // Should be null when no gateway
         await _paymentService.DidNotReceive().GetSubscriptionAsync(Arg.Any<User>());
     }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_WithInactiveDiscount_ExcludesDiscount(
+        User user,
+        SubscriptionInfo subscriptionInfo,
+        UserLicense license)
+    {
+        // Arrange
+        subscriptionInfo.CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount
+        {
+            Id = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount,
+            Active = false, // Inactive discount
+            PercentOff = 20m,
+            AmountOff = null,
+            AppliesTo = new List<string> { "product1" }
+        };
+
+        var claimsPrincipal = new ClaimsPrincipal(new ClaimsIdentity());
+        _sut.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = claimsPrincipal }
+        };
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
+        _paymentService.GetSubscriptionAsync(user).Returns(subscriptionInfo);
+        _userService.GenerateLicenseAsync(user, subscriptionInfo).Returns(license);
+
+        user.Gateway = GatewayType.Stripe; // User has payment gateway
+
+        // Act
+        var result = await _sut.GetSubscriptionAsync(_globalSettings, _paymentService);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Null(result.CustomerDiscount); // Should be null when discount is inactive
+    }
 }

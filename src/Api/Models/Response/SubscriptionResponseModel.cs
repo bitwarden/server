@@ -63,11 +63,16 @@ public class SubscriptionResponseModel : ResponseModel
     public BillingSubscription? Subscription { get; set; }
     /// <summary>
     /// Customer discount information from Stripe for the Milestone 2 subscription discount.
+    /// Only displays the premium discount (cm3nHfO1) on the premium subscription page for UI purposes.
+    /// This is for display only and does not affect Stripe's automatic discount application.
+    /// Other discounts still apply in Stripe billing but are not shown in this response.
+    /// <para>
     /// Null when:
     /// - The PM23341_Milestone_2 feature flag is disabled
     /// - There is no active discount
     /// - The discount coupon ID doesn't match the Milestone 2 coupon (cm3nHfO1)
     /// - The instance is self-hosted
+    /// </para>
     /// </summary>
     public BillingCustomerDiscount? CustomerDiscount { get; set; }
     public UserLicense? License { get; set; }
@@ -80,7 +85,7 @@ public class BillingCustomerDiscount(SubscriptionInfo.BillingCustomerDiscount di
     public bool Active { get; } = discount.Active;
     public decimal? PercentOff { get; } = discount.PercentOff;
     public decimal? AmountOff { get; } = discount.AmountOff;
-    public List<string> AppliesTo { get; } = discount.AppliesTo;
+    public List<string>? AppliesTo { get; } = discount.AppliesTo;
 }
 
 public class BillingSubscription
