@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
@@ -14,6 +12,7 @@ using Core.Auth.Enums;
 
 namespace Bit.Core.Services;
 
+[Obsolete("The IMailService has been deprecated in favor of the IMailer. All new emails should be sent with an IMailer implementation.")]
 public interface IMailService
 {
     Task SendWelcomeEmailAsync(User user);
@@ -92,7 +91,7 @@ public interface IMailService
     Task SendEmergencyAccessRecoveryReminder(EmergencyAccess emergencyAccess, string initiatingName, string email);
     Task SendEmergencyAccessRecoveryTimedOut(EmergencyAccess ea, string initiatingName, string email);
     Task SendEnqueuedMailMessageAsync(IMailQueueMessage queueMessage);
-    Task SendAdminResetPasswordEmailAsync(string email, string userName, string orgName);
+    Task SendAdminResetPasswordEmailAsync(string email, string? userName, string orgName);
     Task SendProviderSetupInviteEmailAsync(Provider provider, string token, string email);
     Task SendBusinessUnitConversionInviteAsync(Organization organization, string token, string email);
     Task SendProviderInviteEmailAsync(string providerName, ProviderUser providerUser, string token, string email);
