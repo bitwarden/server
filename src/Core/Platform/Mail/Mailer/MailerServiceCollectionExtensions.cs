@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace Bit.Core.Platform.Mailer;
+namespace Bit.Core.Platform.Mail.Mailer;
 
 #nullable enable
 
