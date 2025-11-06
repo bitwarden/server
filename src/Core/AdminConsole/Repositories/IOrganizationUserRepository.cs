@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -95,5 +96,5 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     /// </summary>
     /// <param name="organizationUser">Accepted OrganizationUser to confirm</param>
     /// <returns>True, if the user was updated. False, if not performed.</returns>
-    Task<bool> ConfirmOrganizationUserAsync(OrganizationUser organizationUser);
+    Task<bool> ConfirmOrganizationUserAsync(AcceptedOrganizationUser organizationUser);
 }

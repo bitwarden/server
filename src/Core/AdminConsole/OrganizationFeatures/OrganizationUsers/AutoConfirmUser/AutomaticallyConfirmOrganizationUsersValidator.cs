@@ -17,8 +17,7 @@ public class AutomaticallyConfirmOrganizationUsersValidator(
 {
     public async Task<ValidationResult<AutomaticallyConfirmOrganizationUserValidationRequest>> ValidateAsync(
         AutomaticallyConfirmOrganizationUserValidationRequest request) =>
-        await OrganizationUserIsAccepted(request)
-            .Then(OrganizationUserBelongsToOrganization)
+        await OrganizationUserBelongsToOrganization(request)
             .Then(OrganizationUserIsNotOfTypeUser)
             .ThenAsync(OrganizationUserOwnershipValidationAsync)
             .ThenAsync(OrganizationUserConformsToTwoFactorRequiredPolicyAsync)
@@ -29,13 +28,6 @@ public class AutomaticallyConfirmOrganizationUsersValidator(
         request.OrganizationUser is { Type: OrganizationUserType.User }
             ? Valid(request)
             : Invalid(request, new UserIsNotUserType());
-
-    private static ValidationResult<AutomaticallyConfirmOrganizationUserValidationRequest> OrganizationUserIsAccepted(
-        AutomaticallyConfirmOrganizationUserValidationRequest request) =>
-        request.OrganizationUser is { Status: OrganizationUserStatusType.Accepted }
-            ? Valid(request)
-            : Invalid(request, new UserIsNotAccepted());
-
 
     private static ValidationResult<AutomaticallyConfirmOrganizationUserValidationRequest> OrganizationUserBelongsToOrganization(
             AutomaticallyConfirmOrganizationUserValidationRequest request) =>

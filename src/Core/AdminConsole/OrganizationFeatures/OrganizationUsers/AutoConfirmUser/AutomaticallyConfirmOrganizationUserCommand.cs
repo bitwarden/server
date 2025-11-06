@@ -188,7 +188,7 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
     private async Task<CommandResult<AutomaticallyConfirmOrganizationUserValidationRequest>> RetrieveDataAsync(
         AutomaticallyConfirmOrganizationUserRequest request)
     {
-        var organizationUser = await GetOrganizationUserAsync(request.OrganizationUserId);
+        var organizationUser = await GetOrganizationUserAsync(request);
 
         if (organizationUser.IsError) return organizationUser.AsError;
 
@@ -201,19 +201,21 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
             OrganizationUser = organizationUser.AsSuccess,
             Organization = organization.AsSuccess,
             PerformedBy = request.PerformedBy,
-            Key = request.Key,
             DefaultUserCollectionName = request.DefaultUserCollectionName,
             PerformedOn = request.PerformedOn
         };
     }
 
-    private async Task<CommandResult<AcceptedOrganizationUser>> GetOrganizationUserAsync(Guid organizationUserId)
+    private async Task<CommandResult<AcceptedOrganizationUser>> GetOrganizationUserAsync(AutomaticallyConfirmOrganizationUserRequest request)
     {
-        var organizationUser = await organizationUserRepository.GetByIdAsync(organizationUserId);
+        var organizationUser = await organizationUserRepository.GetByIdAsync(request.OrganizationUserId);
 
-        return organizationUser is { UserId: not null }
-            ? new AcceptedOrganizationUser(organizationUser)
-            : new UserNotFoundError();
+        return organizationUser switch
+        {
+            null or { UserId: null } => new UserNotFoundError(),
+            { Status: not OrganizationUserStatusType.Accepted } => new UserIsNotAccepted(),
+            _ => new AcceptedOrganizationUser(organizationUser, request.Key)
+        };
     }
 
     private async Task<CommandResult<Organization>> GetOrganizationAsync(Guid organizationId)

@@ -3,6 +3,7 @@
 
 using AutoMapper;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -943,7 +944,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         await dbContext.SaveChangesAsync();
     }
 
-    public async Task<bool> ConfirmOrganizationUserAsync(Core.Entities.OrganizationUser organizationUser)
+    public async Task<bool> ConfirmOrganizationUserAsync(AcceptedOrganizationUser organizationUser)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         await using var dbContext = GetDatabaseContext(scope);

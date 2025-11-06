@@ -57,7 +57,7 @@ public class AutomaticallyConfirmUsersCommandTests
         SetupFeatureServiceMock(sutProvider, false);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .ConfirmOrganizationUserAsync(organizationUser)
+            .ConfirmOrganizationUserAsync(Arg.Is<AcceptedOrganizationUser>(o => o.Id == organizationUser.Id && o.Key == request.Key))
             .Returns(true);
 
         // Act
@@ -68,9 +68,9 @@ public class AutomaticallyConfirmUsersCommandTests
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
-            .ConfirmOrganizationUserAsync(organizationUser);
+            .ConfirmOrganizationUserAsync(Arg.Is<AcceptedOrganizationUser>(o => o.Id == organizationUser.Id && o.Key == request.Key));
 
-        await AssertSuccessfulOperationsAsync(sutProvider, organizationUser, organization, user);
+        await AssertSuccessfulOperationsAsync(sutProvider, organizationUser, organization, user, key);
     }
 
     [Theory]
@@ -107,7 +107,7 @@ public class AutomaticallyConfirmUsersCommandTests
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceive()
-            .ConfirmOrganizationUserAsync(Arg.Any<OrganizationUser>());
+            .ConfirmOrganizationUserAsync(Arg.Any<AcceptedOrganizationUser>());
     }
 
     [Theory]
@@ -146,14 +146,14 @@ public class AutomaticallyConfirmUsersCommandTests
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceive()
-            .ConfirmOrganizationUserAsync(Arg.Any<OrganizationUser>());
+            .ConfirmOrganizationUserAsync(Arg.Any<AcceptedOrganizationUser>());
     }
 
     [Theory]
     [BitAutoData]
     public async Task AutomaticallyConfirmOrganizationUserAsync_WithInvalidOrganizationId_ReturnsOrganizationNotFoundError(
         SutProvider<AutomaticallyConfirmOrganizationUserCommand> sutProvider,
-        [OrganizationUser] OrganizationUser organizationUser,
+        [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
         User user,
         Guid performingUserId,
         string key,
@@ -188,7 +188,7 @@ public class AutomaticallyConfirmUsersCommandTests
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceive()
-            .ConfirmOrganizationUserAsync(Arg.Any<OrganizationUser>());
+            .ConfirmOrganizationUserAsync(Arg.Any<AcceptedOrganizationUser>());
     }
 
     [Theory]
@@ -196,7 +196,7 @@ public class AutomaticallyConfirmUsersCommandTests
     public async Task AutomaticallyConfirmOrganizationUserAsync_WithValidationError_ReturnsValidationError(
         SutProvider<AutomaticallyConfirmOrganizationUserCommand> sutProvider,
         Organization organization,
-        [OrganizationUser(OrganizationUserStatusType.Invited)] OrganizationUser organizationUser,
+        [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
         User user,
         Guid performingUserId,
         string key,
@@ -204,7 +204,7 @@ public class AutomaticallyConfirmUsersCommandTests
     {
         // Arrange
         organizationUser.UserId = user.Id;
-        organizationUser.OrganizationId = organization.Id;
+        organizationUser.OrganizationId = Guid.NewGuid(); // User belongs to another organization
         var request = new AutomaticallyConfirmOrganizationUserRequest
         {
             OrganizationUserId = organizationUser.Id,
@@ -216,18 +216,18 @@ public class AutomaticallyConfirmUsersCommandTests
         };
 
         SetupRepositoryMocks(sutProvider, organizationUser, organization, user);
-        SetupValidatorMock(sutProvider, organizationUser, organization, request, false, new UserIsNotAccepted());
+        SetupValidatorMock(sutProvider, organizationUser, organization, request, false, new OrganizationUserIdIsInvalid());
 
         // Act
         var result = await sutProvider.Sut.AutomaticallyConfirmOrganizationUserAsync(request);
 
         // Assert
         Assert.True(result.IsError);
-        Assert.IsType<UserIsNotAccepted>(result.AsError);
+        Assert.IsType<OrganizationUserIdIsInvalid>(result.AsError);
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceive()
-            .ConfirmOrganizationUserAsync(Arg.Any<OrganizationUser>());
+            .ConfirmOrganizationUserAsync(Arg.Any<AcceptedOrganizationUser>());
     }
 
     [Theory]
@@ -260,7 +260,7 @@ public class AutomaticallyConfirmUsersCommandTests
 
         // Return false to indicate user is already confirmed
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .ConfirmOrganizationUserAsync(organizationUser)
+            .ConfirmOrganizationUserAsync(Arg.Is<AcceptedOrganizationUser>(x => x.Id == organizationUser.Id && x.Key == request.Key))
             .Returns(false);
 
         // Act
@@ -277,7 +277,7 @@ public class AutomaticallyConfirmUsersCommandTests
         // Verify no side effects occurred
         await sutProvider.GetDependency<IEventService>()
             .DidNotReceive()
-            .LogOrganizationUserEventAsync(Arg.Any<OrganizationUser>(), Arg.Any<EventType>(), Arg.Any<DateTime?>());
+            .LogOrganizationUserEventAsync(Arg.Any<AcceptedOrganizationUser>(), Arg.Any<EventType>(), Arg.Any<DateTime?>());
 
         await sutProvider.GetDependency<IPushNotificationService>()
             .DidNotReceive()
@@ -314,7 +314,8 @@ public class AutomaticallyConfirmUsersCommandTests
         SetupPolicyRequirementMock(sutProvider, user.Id, organization.Id, true); // Policy requires collection
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .ConfirmOrganizationUserAsync(Arg.Is<AcceptedOrganizationUser>(o => o.Id == organizationUser.Id && o.Key == request.Key))
+            .ConfirmOrganizationUserAsync(
+                Arg.Is<AcceptedOrganizationUser>(o => o.Id == organizationUser.Id && o.Key == request.Key))
             .Returns(true);
 
         // Act
@@ -366,7 +367,8 @@ public class AutomaticallyConfirmUsersCommandTests
         SetupPolicyRequirementMock(sutProvider, user.Id, organization.Id, false); // Policy doesn't require
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .ConfirmOrganizationUserAsync(organizationUser)
+            .ConfirmOrganizationUserAsync(
+                Arg.Is<AcceptedOrganizationUser>(o => o.Id == organizationUser.Id && o.Key == request.Key))
             .Returns(true);
 
         // Act
@@ -410,7 +412,8 @@ public class AutomaticallyConfirmUsersCommandTests
         SetupPolicyRequirementMock(sutProvider, user.Id, organization.Id, true);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .ConfirmOrganizationUserAsync(Arg.Is<AcceptedOrganizationUser>(o => o.Id == organizationUser.Id && o.Key == request.Key))
+            .ConfirmOrganizationUserAsync(
+                Arg.Is<AcceptedOrganizationUser>(o => o.Id == organizationUser.Id && o.Key == request.Key))
             .Returns(true);
 
         var collectionException = new Exception("Collection creation failed");
@@ -569,7 +572,8 @@ public class AutomaticallyConfirmUsersCommandTests
         SetupFeatureServiceMock(sutProvider, false);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .ConfirmOrganizationUserAsync(organizationUser)
+            .ConfirmOrganizationUserAsync(
+                Arg.Is<AcceptedOrganizationUser>(o => o.Id == organizationUser.Id && o.Key == request.Key))
             .Returns(true);
 
         // Return null when retrieving user for email
@@ -789,7 +793,6 @@ public class AutomaticallyConfirmUsersCommandTests
             OrganizationUser = new AcceptedOrganizationUser(organizationUser, originalRequest.Key),
             Organization = organization,
             PerformedBy = originalRequest.PerformedBy,
-            Key = originalRequest.Key,
             DefaultUserCollectionName = originalRequest.DefaultUserCollectionName,
             PerformedOn = originalRequest.PerformedOn
         };
@@ -835,12 +838,13 @@ public class AutomaticallyConfirmUsersCommandTests
         SutProvider<AutomaticallyConfirmOrganizationUserCommand> sutProvider,
         OrganizationUser organizationUser,
         Organization organization,
-        User user)
+        User user,
+        string key)
     {
         await sutProvider.GetDependency<IEventService>()
             .Received(1)
             .LogOrganizationUserEventAsync(
-                organizationUser,
+                Arg.Is<AcceptedOrganizationUser>(x => x.Id == organizationUser.Id),
                 EventType.OrganizationUser_AutomaticallyConfirmed,
                 Arg.Any<DateTime?>());
 

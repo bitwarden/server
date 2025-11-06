@@ -2,6 +2,7 @@
 using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.Utilities.DebuggingInstruments;
 using Bit.Core.Entities;
@@ -671,7 +672,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             commandType: CommandType.StoredProcedure);
     }
 
-    public async Task<bool> ConfirmOrganizationUserAsync(OrganizationUser organizationUser)
+    public async Task<bool> ConfirmOrganizationUserAsync(AcceptedOrganizationUser organizationUser)
     {
         await using var connection = new SqlConnection(_marsConnectionString);
 

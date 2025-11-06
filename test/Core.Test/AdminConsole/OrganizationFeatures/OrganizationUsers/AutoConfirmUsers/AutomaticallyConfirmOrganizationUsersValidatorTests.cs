@@ -42,7 +42,6 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
             Organization = organization,
             PerformedBy = Substitute.For<IActingUser>(),
             PerformedOn = DateTimeOffset.UtcNow,
-            Key = "test-key",
             DefaultUserCollectionName = "test-collection"
         };
 
@@ -68,36 +67,6 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
 
     [Theory]
     [BitAutoData]
-    public async Task ValidateAsync_WithInvitedUser_ReturnsUserIsNotAcceptedError(
-        SutProvider<AutomaticallyConfirmOrganizationUsersValidator> sutProvider,
-        Organization organization,
-        [OrganizationUser(OrganizationUserStatusType.Invited)] OrganizationUser organizationUser,
-        Guid userId)
-    {
-        // Arrange
-        organizationUser.UserId = userId;
-        organizationUser.OrganizationId = organization.Id;
-
-        var request = new AutomaticallyConfirmOrganizationUserValidationRequest
-        {
-            OrganizationUser = new AcceptedOrganizationUser(organizationUser, "test-key"),
-            Organization = organization,
-            PerformedBy = Substitute.For<IActingUser>(),
-            PerformedOn = DateTimeOffset.UtcNow,
-            Key = "test-key",
-            DefaultUserCollectionName = "test-collection"
-        };
-
-        // Act
-        var result = await sutProvider.Sut.ValidateAsync(request);
-
-        // Assert
-        Assert.True(result.IsError);
-        Assert.IsType<UserIsNotAccepted>(result.AsError);
-    }
-
-    [Theory]
-    [BitAutoData]
     public async Task ValidateAsync_WithMismatchedOrganizationId_ReturnsOrganizationUserIdIsInvalidError(
         SutProvider<AutomaticallyConfirmOrganizationUsersValidator> sutProvider,
         Organization organization,
@@ -114,7 +83,6 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
             Organization = organization,
             PerformedBy = Substitute.For<IActingUser>(),
             PerformedOn = DateTimeOffset.UtcNow,
-            Key = "test-key",
             DefaultUserCollectionName = "test-collection"
         };
 
@@ -144,7 +112,6 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
             Organization = organization,
             PerformedBy = Substitute.For<IActingUser>(),
             PerformedOn = DateTimeOffset.UtcNow,
-            Key = "test-key",
             DefaultUserCollectionName = "test-collection"
         };
 
@@ -178,7 +145,6 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
             Organization = organization,
             PerformedBy = Substitute.For<IActingUser>(),
             PerformedOn = DateTimeOffset.UtcNow,
-            Key = "test-key",
             DefaultUserCollectionName = "test-collection"
         };
 
@@ -226,7 +192,6 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
             Organization = organization,
             PerformedBy = Substitute.For<IActingUser>(),
             PerformedOn = DateTimeOffset.UtcNow,
-            Key = "test-key",
             DefaultUserCollectionName = "test-collection"
         };
 
@@ -268,7 +233,6 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
             Organization = organization,
             PerformedBy = Substitute.For<IActingUser>(),
             PerformedOn = DateTimeOffset.UtcNow,
-            Key = "test-key",
             DefaultUserCollectionName = "test-collection"
         };
 
@@ -321,7 +285,6 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
             Organization = organization,
             PerformedBy = Substitute.For<IActingUser>(),
             PerformedOn = DateTimeOffset.UtcNow,
-            Key = "test-key",
             DefaultUserCollectionName = "test-collection"
         };
 
@@ -374,7 +337,6 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
             Organization = organization,
             PerformedBy = Substitute.For<IActingUser>(),
             PerformedOn = DateTimeOffset.UtcNow,
-            Key = "test-key",
             DefaultUserCollectionName = "test-collection"
         };
 
@@ -416,7 +378,6 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
             Organization = organization,
             PerformedBy = Substitute.For<IActingUser>(),
             PerformedOn = DateTimeOffset.UtcNow,
-            Key = "test-key",
             DefaultUserCollectionName = "test-collection"
         };
 
