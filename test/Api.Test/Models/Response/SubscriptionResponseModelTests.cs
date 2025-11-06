@@ -30,7 +30,7 @@ public class SubscriptionResponseModelTests
         };
 
         // Act
-        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, milestone2Feature: true);
+        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, includeDiscount: true);
 
         // Assert
         Assert.NotNull(result.CustomerDiscount);
@@ -61,7 +61,7 @@ public class SubscriptionResponseModelTests
         };
 
         // Act
-        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, milestone2Feature: true);
+        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, includeDiscount: true);
 
         // Assert
         Assert.Null(result.CustomerDiscount);
@@ -87,7 +87,7 @@ public class SubscriptionResponseModelTests
         };
 
         // Act
-        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, milestone2Feature: false);
+        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, includeDiscount: false);
 
         // Assert - Should be null because includeDiscount is false
         Assert.Null(result.CustomerDiscount);
@@ -106,7 +106,7 @@ public class SubscriptionResponseModelTests
         };
 
         // Act
-        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, milestone2Feature: true);
+        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, includeDiscount: true);
 
         // Assert
         Assert.Null(result.CustomerDiscount);
@@ -132,7 +132,7 @@ public class SubscriptionResponseModelTests
         };
 
         // Act
-        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, milestone2Feature: true);
+        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, includeDiscount: true);
 
         // Assert
         Assert.NotNull(result.CustomerDiscount);
@@ -160,6 +160,58 @@ public class SubscriptionResponseModelTests
 
         // Act - Using default parameter (includeDiscount defaults to false)
         var result = new SubscriptionResponseModel(user, subscriptionInfo, license);
+
+        // Assert
+        Assert.Null(result.CustomerDiscount);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void Constructor_WithNullDiscountId_AndFeatureFlagTrue_ReturnsNull(
+        User user,
+        UserLicense license)
+    {
+        // Arrange
+        var subscriptionInfo = new SubscriptionInfo
+        {
+            CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount
+            {
+                Id = null, // Null discount ID
+                Active = true,
+                PercentOff = 20m,
+                AmountOff = null,
+                AppliesTo = new List<string> { "product1" }
+            }
+        };
+
+        // Act
+        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, includeDiscount: true);
+
+        // Assert
+        Assert.Null(result.CustomerDiscount);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void Constructor_WithMatchingCouponId_ButInactiveDiscount_ReturnsNull(
+        User user,
+        UserLicense license)
+    {
+        // Arrange
+        var subscriptionInfo = new SubscriptionInfo
+        {
+            CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount
+            {
+                Id = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount, // Matching coupon ID
+                Active = false, // Inactive discount
+                PercentOff = 20m,
+                AmountOff = null,
+                AppliesTo = new List<string> { "product1" }
+            }
+        };
+
+        // Act
+        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, includeDiscount: true);
 
         // Assert
         Assert.Null(result.CustomerDiscount);

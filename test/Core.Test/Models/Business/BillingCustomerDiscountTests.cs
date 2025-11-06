@@ -313,6 +313,7 @@ public class BillingCustomerDiscountTests
         Assert.False(result.Active);
         Assert.Null(result.PercentOff);
         Assert.Null(result.AmountOff);
-        Assert.Null(result.AppliesTo);
+        Assert.NotNull(result.AppliesTo);
+        Assert.Empty(result.AppliesTo);
     }
 }

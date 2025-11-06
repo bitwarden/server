@@ -13,11 +13,11 @@ public class SubscriptionResponseModel : ResponseModel
     /// <param name="user">The user entity containing storage and premium subscription information</param>
     /// <param name="subscription">Subscription information retrieved from the payment provider (Stripe/Braintree)</param>
     /// <param name="license">The user's license containing expiration and feature entitlements</param>
-    /// <param name="milestone2Feature">
+    /// <param name="includeDiscount">
     /// Whether to include discount information in the response.
     /// Should be true when the PM23341_Milestone_2 feature is enabled.
     /// </param>
-    public SubscriptionResponseModel(User user, SubscriptionInfo subscription, UserLicense license, bool milestone2Feature = false)
+    public SubscriptionResponseModel(User user, SubscriptionInfo subscription, UserLicense license, bool includeDiscount = false)
         : base("subscription")
     {
         Subscription = subscription.Subscription != null ? new BillingSubscription(subscription.Subscription) : null;
@@ -32,9 +32,11 @@ public class SubscriptionResponseModel : ResponseModel
         // Only display the premium discount (cm3nHfO1) on the premium subscription page.
         // This is for UI display only and does not affect Stripe's automatic discount application.
         // Other discounts still apply in Stripe billing, just not shown in this response.
-        CustomerDiscount = milestone2Feature &&
-                          subscription.CustomerDiscount != null &&
-                          subscription.CustomerDiscount.Id == StripeConstants.CouponIDs.Milestone2SubscriptionDiscount
+        CustomerDiscount = includeDiscount &&
+                        subscription.CustomerDiscount != null &&
+                        subscription.CustomerDiscount.Id != null &&
+                        subscription.CustomerDiscount.Id == StripeConstants.CouponIDs.Milestone2SubscriptionDiscount &&
+                        subscription.CustomerDiscount.Active
             ? new BillingCustomerDiscount(subscription.CustomerDiscount)
             : null;
     }
@@ -60,9 +62,12 @@ public class SubscriptionResponseModel : ResponseModel
     public BillingSubscriptionUpcomingInvoice? UpcomingInvoice { get; set; }
     public BillingSubscription? Subscription { get; set; }
     /// <summary>
-    /// Customer discount information from Stripe. Null when the feature flag is disabled,
-    /// when there is no active discount, or for self-hosted instances.
-    /// Controlled by feature flag: PM23341_Milestone_2
+    /// Customer discount information from Stripe for the Milestone 2 subscription discount.
+    /// Null when:
+    /// - The PM23341_Milestone_2 feature flag is disabled
+    /// - There is no active discount
+    /// - The discount coupon ID doesn't match the Milestone 2 coupon (cm3nHfO1)
+    /// - The instance is self-hosted
     /// </summary>
     public BillingCustomerDiscount? CustomerDiscount { get; set; }
     public UserLicense? License { get; set; }

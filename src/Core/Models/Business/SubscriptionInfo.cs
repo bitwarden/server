@@ -5,6 +5,12 @@ namespace Bit.Core.Models.Business;
 
 public class SubscriptionInfo
 {
+    /// <summary>
+    /// Converts Stripe's minor currency units (cents) to major currency units (dollars).
+    /// Stripe stores monetary amounts in the smallest currency unit (e.g., cents for USD).
+    /// </summary>
+    private const decimal StripeMinorUnitDivisor = 100M;
+
     public BillingCustomerDiscount? CustomerDiscount { get; set; }
     public BillingSubscription? Subscription { get; set; }
     public BillingUpcomingInvoice? UpcomingInvoice { get; set; }
@@ -18,7 +24,9 @@ public class SubscriptionInfo
             Id = discount.Coupon?.Id;
             Active = discount.End == null;
             PercentOff = discount.Coupon?.PercentOff;
-            AmountOff = discount.Coupon?.AmountOff / 100M;
+            AmountOff = discount.Coupon?.AmountOff.HasValue == true
+                        ? discount.Coupon.AmountOff.Value / StripeMinorUnitDivisor
+                        : null;
             AppliesTo = discount.Coupon?.AppliesTo?.Products ?? [];
         }
 
@@ -79,7 +87,7 @@ public class SubscriptionInfo
                 {
                     ProductId = item.Plan.ProductId;
                     Name = item.Plan.Nickname;
-                    Amount = item.Plan.Amount.GetValueOrDefault() / 100M;
+                    Amount = item.Plan.Amount.GetValueOrDefault() / StripeMinorUnitDivisor;
                     Interval = item.Plan.Interval;
 
                     if (item.Metadata != null)
@@ -108,7 +116,7 @@ public class SubscriptionInfo
 
         public BillingUpcomingInvoice(Invoice inv)
         {
-            Amount = inv.AmountDue / 100M;
+            Amount = inv.AmountDue / StripeMinorUnitDivisor;
             Date = inv.Created;
         }
 
