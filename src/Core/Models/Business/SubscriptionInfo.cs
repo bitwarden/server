@@ -57,7 +57,9 @@ public class SubscriptionInfo
             Active = discount.End == null;
             PercentOff = discount.Coupon?.PercentOff;
             AmountOff = ConvertFromStripeMinorUnits(discount.Coupon?.AmountOff);
-            AppliesTo = discount.Coupon?.AppliesTo?.Products;
+            AppliesTo = discount.Coupon?.AppliesTo?.Products is List<string> products
+                ? products.AsReadOnly()
+                : discount.Coupon?.AppliesTo?.Products;
         }
 
         /// <summary>
@@ -68,23 +70,9 @@ public class SubscriptionInfo
         public string? Id { get; set; }
 
         /// <summary>
-        /// Whether the discount is a recurring/perpetual discount with no expiration date.
-        /// <para>
-        /// This property is true only when the discount has no end date (discount.End == null),
-        /// meaning it applies indefinitely to all future renewals. This is a product decision
-        /// for Milestone 2 to only display perpetual discounts in the UI.
-        /// </para>
-        /// <para>
-        /// Note: This does NOT indicate whether the discount is "currently active" in the billing sense.
-        /// A discount with a future end date (e.g., End = DateTime.UtcNow.AddDays(30)) is functionally
-        /// active and will be applied by Stripe to the next renewal, but this property will be false
-        /// because it has an expiration date. Only discounts with End == null (perpetual/recurring)
-        /// will have Active = true.
-        /// </para>
-        /// <para>
-        /// This is intentional for Milestone 2 implementation - only perpetual discounts are shown
-        /// in the UI, even though Stripe may apply other discounts that are not displayed.
-        /// </para>
+        /// True only for perpetual/recurring discounts (End == null).
+        /// False for any discount with an expiration date, even if not yet expired.
+        /// Product decision for Milestone 2: only show perpetual discounts in UI.
         /// </summary>
         public bool Active { get; set; }
 
@@ -103,10 +91,13 @@ public class SubscriptionInfo
 
         /// <summary>
         /// List of Stripe product IDs that this discount applies to (e.g., ["prod_premium", "prod_families"]).
-        /// Null indicates the discount applies to all products with no restrictions.
-        /// Empty list indicates a discount restricted to zero products (edge case).
+        /// <para>
+        /// Null: discount applies to all products with no restrictions (AppliesTo not specified in Stripe).
+        /// Empty list: discount restricted to zero products (edge case - AppliesTo.Products = [] in Stripe).
+        /// Non-empty list: discount applies only to the specified product IDs.
+        /// </para>
         /// </summary>
-        public List<string>? AppliesTo { get; set; }
+        public IReadOnlyList<string>? AppliesTo { get; set; }
     }
 
     public class BillingSubscription

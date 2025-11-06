@@ -119,10 +119,13 @@ public class BillingCustomerDiscount
 
     /// <summary>
     /// List of Stripe product IDs that this discount applies to (e.g., ["prod_premium", "prod_families"]).
-    /// Null indicates the discount applies to all products with no restrictions.
-    /// Empty list indicates a discount restricted to zero products (edge case).
+    /// <para>
+    /// Null: discount applies to all products with no restrictions (AppliesTo not specified in Stripe).
+    /// Empty list: discount restricted to zero products (edge case - AppliesTo.Products = [] in Stripe).
+    /// Non-empty list: discount applies only to the specified product IDs.
+    /// </para>
     /// </summary>
-    public List<string>? AppliesTo { get; }
+    public IReadOnlyList<string>? AppliesTo { get; }
 
     /// <summary>
     /// Creates a BillingCustomerDiscount from a SubscriptionInfo.BillingCustomerDiscount.

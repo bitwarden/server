@@ -748,4 +748,53 @@ public class AccountsControllerTests : IDisposable
         Assert.Equal(15.00m, result.UpcomingInvoice.Amount);
         Assert.NotNull(result.UpcomingInvoice.Date);
     }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_SelfHosted_WithDiscountFlagEnabled_NeverIncludesDiscount(User user)
+    {
+        // Arrange - Self-hosted user with discount flag enabled (should still return null)
+        var selfHostedSettings = new GlobalSettings { SelfHosted = true };
+        var claimsPrincipal = new ClaimsPrincipal(new ClaimsIdentity());
+        _sut.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = claimsPrincipal }
+        };
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true); // Flag enabled
+
+        // Act
+        var result = await _sut.GetSubscriptionAsync(selfHostedSettings, _paymentService);
+
+        // Assert - Should never include discount for self-hosted, even with flag enabled
+        Assert.NotNull(result);
+        Assert.Null(result.CustomerDiscount);
+        await _paymentService.DidNotReceive().GetSubscriptionAsync(Arg.Any<User>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_NullGateway_WithDiscountFlagEnabled_NeverIncludesDiscount(
+        User user,
+        UserLicense license)
+    {
+        // Arrange - User with null gateway and discount flag enabled (should still return null)
+        user.Gateway = null; // No gateway configured
+        var claimsPrincipal = new ClaimsPrincipal(new ClaimsIdentity());
+        _sut.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = claimsPrincipal }
+        };
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        _userService.GenerateLicenseAsync(user).Returns(license);
+        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true); // Flag enabled
+
+        // Act
+        var result = await _sut.GetSubscriptionAsync(_globalSettings, _paymentService);
+
+        // Assert - Should never include discount when no gateway, even with flag enabled
+        Assert.NotNull(result);
+        Assert.Null(result.CustomerDiscount);
+        await _paymentService.DidNotReceive().GetSubscriptionAsync(Arg.Any<User>());
+    }
 }
