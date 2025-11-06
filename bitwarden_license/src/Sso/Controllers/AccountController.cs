@@ -603,6 +603,13 @@ public class AccountController : Controller
             EmailVerified = emailVerified,
             ApiKey = CoreHelpers.SecureRandomString(30)
         };
+
+        /*
+            The feature flag is checked here so that we can send the new MJML welcome email templates.
+            The other organization invites flows have an OrganizationUser allowing the RegisterUserCommand the ability
+            to fetch the Organization. The old method RegisterUser(User) here does not have that context, so we need
+            to use a new method RegisterSSOAutoProvisionedUserAsync(User, Organization) to send the correct email.
+        */
         if (_featureService.IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates))
         {
             await _registerUserCommand.RegisterSSOAutoProvisionedUserAsync(user, organization);
