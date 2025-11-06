@@ -12,11 +12,11 @@ public static class AuthorizationHandlerCollectionExtensions
         services.TryAddScoped<IOrganizationContext, OrganizationContext>();
 
         services.TryAddEnumerable([
-                ServiceDescriptor.Scoped<IAuthorizationHandler, BulkCollectionAuthorizationHandler>(),
-                ServiceDescriptor.Scoped<IAuthorizationHandler, CollectionAuthorizationHandler>(),
-                ServiceDescriptor.Scoped<IAuthorizationHandler, GroupAuthorizationHandler>(),
-                ServiceDescriptor.Scoped<IAuthorizationHandler, OrganizationRequirementHandler>(),
-                ServiceDescriptor.Scoped<IAuthorizationHandler, RecoverAccountAuthorizationHandler>(),
-            ]);
+            ServiceDescriptor.Scoped<IAuthorizationHandler, BulkCollectionAuthorizationHandler>(),
+            ServiceDescriptor.Scoped<IAuthorizationHandler, CollectionAuthorizationHandler>(),
+            ServiceDescriptor.Scoped<IAuthorizationHandler, GroupAuthorizationHandler>(),
+            ServiceDescriptor.Scoped<IAuthorizationHandler, OrganizationRequirementHandler>(),
+            ServiceDescriptor.Scoped<IAuthorizationHandler, RecoverAccountAuthorizationHandler>(),
+        ]);
     }
 }
