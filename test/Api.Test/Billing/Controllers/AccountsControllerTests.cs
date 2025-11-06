@@ -428,7 +428,7 @@ public class AccountsControllerTests : IDisposable
 
         // Verify SubscriptionInfo.BillingCustomerDiscount → SubscriptionResponseModel.BillingCustomerDiscount filtering
         // The filter should pass because:
-        // - includeDiscount = true (feature flag enabled)
+        // - includeMilestone2Discount = true (feature flag enabled)
         // - subscription.CustomerDiscount != null
         // - subscription.CustomerDiscount.Id == Milestone2SubscriptionDiscount
         // - subscription.CustomerDiscount.Active = true

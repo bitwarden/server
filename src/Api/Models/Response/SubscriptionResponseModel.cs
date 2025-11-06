@@ -13,11 +13,11 @@ public class SubscriptionResponseModel : ResponseModel
     /// <param name="user">The user entity containing storage and premium subscription information</param>
     /// <param name="subscription">Subscription information retrieved from the payment provider (Stripe/Braintree)</param>
     /// <param name="license">The user's license containing expiration and feature entitlements</param>
-    /// <param name="includeDiscount">
+    /// <param name="includeMilestone2Discount">
     /// Whether to include discount information in the response.
     /// Should be true when the PM23341_Milestone_2 feature is enabled.
     /// </param>
-    public SubscriptionResponseModel(User user, SubscriptionInfo subscription, UserLicense license, bool includeDiscount = false)
+    public SubscriptionResponseModel(User user, SubscriptionInfo subscription, UserLicense license, bool includeMilestone2Discount = false)
         : base("subscription")
     {
         Subscription = subscription.Subscription != null ? new BillingSubscription(subscription.Subscription) : null;
@@ -29,10 +29,8 @@ public class SubscriptionResponseModel : ResponseModel
         License = license;
         Expiration = License.Expires;
 
-        // Only display the premium discount (cm3nHfO1) on the premium subscription page.
-        // This is for UI display only and does not affect Stripe's automatic discount application.
-        // Other discounts still apply in Stripe billing, just not shown in this response.
-        CustomerDiscount = includeDiscount &&
+        // Only display the Milestone 2 subscription discount on the subscription page.
+        CustomerDiscount = includeMilestone2Discount &&
                         subscription.CustomerDiscount != null &&
                         subscription.CustomerDiscount.Id != null &&
                         subscription.CustomerDiscount.Id == StripeConstants.CouponIDs.Milestone2SubscriptionDiscount &&
@@ -62,9 +60,9 @@ public class SubscriptionResponseModel : ResponseModel
     public BillingSubscription? Subscription { get; set; }
     /// <summary>
     /// Customer discount information from Stripe for the Milestone 2 subscription discount.
-    /// Only displays the premium discount (cm3nHfO1) on the premium subscription page for UI purposes.
-    /// This is for display only and does not affect Stripe's automatic discount application.
-    /// Other discounts still apply in Stripe billing but are not shown in this response.
+    /// Only includes the specific Milestone 2 coupon (cm3nHfO1) when it's a perpetual discount (no expiration).
+    /// This is for display purposes only and does not affect Stripe's automatic discount application.
+    /// Other discounts may still apply in Stripe billing but are not included in this response.
     /// <para>
     /// Null when:
     /// - The PM23341_Milestone_2 feature flag is disabled

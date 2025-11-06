@@ -13,7 +13,7 @@ public class SubscriptionResponseModelTests
 {
     [Theory]
     [BitAutoData]
-    public void Constructor_IncludeDiscountTrueMatchingCouponId_ReturnsDiscount(
+    public void Constructor_IncludeMilestone2DiscountTrueMatchingCouponId_ReturnsDiscount(
         User user,
         UserLicense license)
     {
@@ -31,7 +31,7 @@ public class SubscriptionResponseModelTests
         };
 
         // Act
-        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, includeDiscount: true);
+        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, includeMilestone2Discount: true);
 
         // Assert
         Assert.NotNull(result.CustomerDiscount);
@@ -45,7 +45,7 @@ public class SubscriptionResponseModelTests
 
     [Theory]
     [BitAutoData]
-    public void Constructor_IncludeDiscountTrueNonMatchingCouponId_ReturnsNull(
+    public void Constructor_IncludeMilestone2DiscountTrueNonMatchingCouponId_ReturnsNull(
         User user,
         UserLicense license)
     {
@@ -63,7 +63,7 @@ public class SubscriptionResponseModelTests
         };
 
         // Act
-        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, includeDiscount: true);
+        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, includeMilestone2Discount: true);
 
         // Assert
         Assert.Null(result.CustomerDiscount);
@@ -71,7 +71,7 @@ public class SubscriptionResponseModelTests
 
     [Theory]
     [BitAutoData]
-    public void Constructor_IncludeDiscountFalseMatchingCouponId_ReturnsNull(
+    public void Constructor_IncludeMilestone2DiscountFalseMatchingCouponId_ReturnsNull(
         User user,
         UserLicense license)
     {
@@ -89,9 +89,9 @@ public class SubscriptionResponseModelTests
         };
 
         // Act
-        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, includeDiscount: false);
+        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, includeMilestone2Discount: false);
 
-        // Assert - Should be null because includeDiscount is false
+        // Assert - Should be null because includeMilestone2Discount is false
         Assert.Null(result.CustomerDiscount);
     }
 
@@ -108,7 +108,7 @@ public class SubscriptionResponseModelTests
         };
 
         // Act
-        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, includeDiscount: true);
+        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, includeMilestone2Discount: true);
 
         // Assert
         Assert.Null(result.CustomerDiscount);
@@ -134,7 +134,7 @@ public class SubscriptionResponseModelTests
         };
 
         // Act
-        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, includeDiscount: true);
+        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, includeMilestone2Discount: true);
 
         // Assert
         Assert.NotNull(result.CustomerDiscount);
@@ -145,7 +145,7 @@ public class SubscriptionResponseModelTests
 
     [Theory]
     [BitAutoData]
-    public void Constructor_DefaultIncludeDiscountParameter_ReturnsNull(
+    public void Constructor_DefaultIncludeMilestone2DiscountParameter_ReturnsNull(
         User user,
         UserLicense license)
     {
@@ -160,7 +160,7 @@ public class SubscriptionResponseModelTests
             }
         };
 
-        // Act - Using default parameter (includeDiscount defaults to false)
+        // Act - Using default parameter (includeMilestone2Discount defaults to false)
         var result = new SubscriptionResponseModel(user, subscriptionInfo, license);
 
         // Assert
@@ -169,7 +169,7 @@ public class SubscriptionResponseModelTests
 
     [Theory]
     [BitAutoData]
-    public void Constructor_NullDiscountIdIncludeDiscountTrue_ReturnsNull(
+    public void Constructor_NullDiscountIdIncludeMilestone2DiscountTrue_ReturnsNull(
         User user,
         UserLicense license)
     {
@@ -187,7 +187,7 @@ public class SubscriptionResponseModelTests
         };
 
         // Act
-        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, includeDiscount: true);
+        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, includeMilestone2Discount: true);
 
         // Assert
         Assert.Null(result.CustomerDiscount);
@@ -213,7 +213,7 @@ public class SubscriptionResponseModelTests
         };
 
         // Act
-        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, includeDiscount: true);
+        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, includeMilestone2Discount: true);
 
         // Assert
         Assert.Null(result.CustomerDiscount);
@@ -307,7 +307,7 @@ public class SubscriptionResponseModelTests
         };
 
         // Act
-        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, includeDiscount: true);
+        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, includeMilestone2Discount: true);
 
         // Assert - Both values should be preserved
         Assert.NotNull(result.CustomerDiscount);
@@ -353,7 +353,7 @@ public class SubscriptionResponseModelTests
         };
 
         // Act
-        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, includeDiscount: true);
+        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, includeMilestone2Discount: true);
 
         // Assert - Verify all properties are mapped correctly
         Assert.NotNull(result.Subscription);
@@ -390,7 +390,7 @@ public class SubscriptionResponseModelTests
         };
 
         // Act
-        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, includeDiscount: true);
+        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, includeMilestone2Discount: true);
 
         // Assert - Null Subscription and UpcomingInvoice should be handled gracefully
         Assert.Null(result.Subscription);

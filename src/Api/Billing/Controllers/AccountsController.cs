@@ -94,10 +94,10 @@ public class AccountsController(
                 // Note: PM23341_Milestone_2 is the feature flag for the overall Milestone 2 initiative (PM-23341).
                 // This specific implementation (PM-26682) adds discount display functionality as part of that initiative.
                 // The feature flag controls the broader Milestone 2 feature set, not just this specific task.
-                var includeDiscount = featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2);
+                var includeMilestone2Discount = featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2);
                 var subscriptionInfo = await paymentService.GetSubscriptionAsync(user);
                 var license = await userService.GenerateLicenseAsync(user, subscriptionInfo);
-                return new SubscriptionResponseModel(user, subscriptionInfo, license, includeDiscount);
+                return new SubscriptionResponseModel(user, subscriptionInfo, license, includeMilestone2Discount);
             }
             else
             {
