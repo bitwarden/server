@@ -11,7 +11,9 @@ using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Pricing.Premium;
 using Bit.Core.Entities;
+using Bit.Core.Models.Mail.UpdatedInvoiceIncoming;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
+using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
@@ -39,6 +41,7 @@ public class UpcomingInvoiceHandlerTests
     private readonly IStripeEventUtilityService _stripeEventUtilityService;
     private readonly IUserRepository _userRepository;
     private readonly IValidateSponsorshipCommand _validateSponsorshipCommand;
+    private readonly IMailer _mailer;
     private readonly IFeatureService _featureService;
 
     private readonly UpcomingInvoiceHandler _sut;
@@ -61,6 +64,7 @@ public class UpcomingInvoiceHandlerTests
         _stripeEventUtilityService = Substitute.For<IStripeEventUtilityService>();
         _userRepository = Substitute.For<IUserRepository>();
         _validateSponsorshipCommand = Substitute.For<IValidateSponsorshipCommand>();
+        _mailer = Substitute.For<IMailer>();
         _featureService = Substitute.For<IFeatureService>();
 
         _sut = new UpcomingInvoiceHandler(
@@ -75,6 +79,7 @@ public class UpcomingInvoiceHandlerTests
             _stripeEventUtilityService,
             _userRepository,
             _validateSponsorshipCommand,
+            _mailer,
             _featureService);
     }
 
@@ -176,7 +181,6 @@ public class UpcomingInvoiceHandlerTests
             Arg.Is<DateTime>(dueDate => dueDate == invoice.NextPaymentAttempt.Value),
             Arg.Is<List<string>>(items => items.Count == invoice.Lines.Data.Count),
             Arg.Is<bool>(b => b == true));
-
     }
 
     [Fact]
@@ -267,8 +271,10 @@ public class UpcomingInvoiceHandlerTests
                 o.Items[0].Price == priceId));
 
         // Verify the updated invoice email was sent
-        await _mailService.Received(1).SendUpdatedInvoiceUpcoming(
-            Arg.Is<IEnumerable<string>>(e => e.Contains("user@example.com")));
+        await _mailer.Received(1).SendEmail(
+            Arg.Is<UpdatedInvoiceUpcomingMail>(email =>
+                email.ToEmails.Contains("user@example.com") &&
+                email.Subject == "Your Subscription Will Renew Soon"));
     }
 
     [Fact]
@@ -352,11 +358,11 @@ public class UpcomingInvoiceHandlerTests
             Arg.Is<DateTime>(dueDate => dueDate == invoice.NextPaymentAttempt.Value),
             Arg.Is<List<string>>(items => items.Count == invoice.Lines.Data.Count),
             Arg.Is<bool>(b => b == true));
-
     }
 
     [Fact]
-    public async Task HandleAsync_WhenOrganizationHasSponsorship_ButInvalidSponsorship_RetrievesUpdatedInvoice_SendsEmail()
+    public async Task
+        HandleAsync_WhenOrganizationHasSponsorship_ButInvalidSponsorship_RetrievesUpdatedInvoice_SendsEmail()
     {
         // Arrange
         var parsedEvent = new Event { Id = "evt_123" };
@@ -377,7 +383,7 @@ public class UpcomingInvoiceHandlerTests
             Items = new StripeList<SubscriptionItem>
             {
                 Data =
-                [new SubscriptionItem { Price = new Price { Id = "2021-family-for-enterprise-annually" } }]
+                    [new SubscriptionItem { Price = new Price { Id = "2021-family-for-enterprise-annually" } }]
             },
             AutomaticTax = new SubscriptionAutomaticTax { Enabled = false },
             Customer = new Customer { Id = "cus_123" },
@@ -447,7 +453,6 @@ public class UpcomingInvoiceHandlerTests
             Arg.Is<DateTime>(dueDate => dueDate == invoice.NextPaymentAttempt.Value),
             Arg.Is<List<string>>(items => items.Count == invoice.Lines.Data.Count),
             Arg.Is<bool>(b => b == true));
-
     }
 
     [Fact]
@@ -472,7 +477,7 @@ public class UpcomingInvoiceHandlerTests
             Items = new StripeList<SubscriptionItem>
             {
                 Data =
-                [new SubscriptionItem { Price = new Price { Id = "enterprise-annually" } }]
+                    [new SubscriptionItem { Price = new Price { Id = "enterprise-annually" } }]
             },
             AutomaticTax = new SubscriptionAutomaticTax { Enabled = false },
             Customer = new Customer { Id = "cus_123" },
@@ -702,10 +707,10 @@ public class UpcomingInvoiceHandlerTests
             Arg.Any<Func<object, Exception, string>>());
 
         // Verify that email was still sent despite the exception
-        await _mailService
-            .Received(1)
-            .SendUpdatedInvoiceUpcoming(
-                Arg.Is<IEnumerable<string>>(e => e.Contains("user@example.com")));
+        await _mailer.Received(1).SendEmail(
+            Arg.Is<UpdatedInvoiceUpcomingMail>(email =>
+                email.ToEmails.Contains("user@example.com") &&
+                email.Subject == "Your Subscription Will Renew Soon"));
     }
 
     [Fact]
@@ -878,8 +883,7 @@ public class UpcomingInvoiceHandlerTests
             Arg.Any<List<string>>(),
             Arg.Any<bool>());
 
-        await _mailService.DidNotReceive().SendUpdatedInvoiceUpcoming(
-            Arg.Any<IEnumerable<string>>());
+        await _mailer.DidNotReceive().SendEmail(Arg.Any<UpdatedInvoiceUpcomingMail>());
     }
 
     [Fact]
