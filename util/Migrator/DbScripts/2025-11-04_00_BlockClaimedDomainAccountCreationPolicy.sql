@@ -4,13 +4,7 @@
 -- The optional @ExcludeOrganizationId parameter allows excluding a specific organization from the check,
 -- enabling users to join the organization that owns their email domain.
 
-IF OBJECT_ID('[dbo].[OrganizationDomain_HasVerifiedDomainWithBlockPolicy]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[OrganizationDomain_HasVerifiedDomainWithBlockPolicy]
-END
-GO
-
-CREATE PROCEDURE [dbo].[OrganizationDomain_HasVerifiedDomainWithBlockPolicy]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationDomain_HasVerifiedDomainWithBlockPolicy]
     @DomainName NVARCHAR(255),
     @ExcludeOrganizationId UNIQUEIDENTIFIER = NULL
 AS
