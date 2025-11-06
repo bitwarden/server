@@ -2,6 +2,7 @@
 using Bit.Api.Billing.Controllers;
 using Bit.Core;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -61,7 +62,7 @@ public class AccountsControllerTests : IDisposable
         // Arrange
         subscriptionInfo.CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount
         {
-            Id = Constants.PremiumDiscountCouponId,
+            Id = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount,
             Active = true,
             PercentOff = 20m,
             AmountOff = null,
@@ -86,7 +87,7 @@ public class AccountsControllerTests : IDisposable
         // Assert
         Assert.NotNull(result);
         Assert.NotNull(result.CustomerDiscount);
-        Assert.Equal(Constants.PremiumDiscountCouponId, result.CustomerDiscount.Id);
+        Assert.Equal(StripeConstants.CouponIDs.Milestone2SubscriptionDiscount, result.CustomerDiscount.Id);
         Assert.Equal(20m, result.CustomerDiscount.PercentOff);
     }
 
@@ -100,7 +101,7 @@ public class AccountsControllerTests : IDisposable
         // Arrange
         subscriptionInfo.CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount
         {
-            Id = Constants.PremiumDiscountCouponId,
+            Id = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount,
             Active = true,
             PercentOff = 20m,
             AmountOff = null,

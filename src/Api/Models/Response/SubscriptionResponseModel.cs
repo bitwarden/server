@@ -1,7 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
-using Bit.Core;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Entities;
 using Bit.Core.Models.Api;
@@ -37,7 +37,7 @@ public class SubscriptionResponseModel : ResponseModel
         // Other discounts still apply in Stripe billing, just not shown in this response.
         CustomerDiscount = milestone2Feature &&
                           subscription.CustomerDiscount != null &&
-                          subscription.CustomerDiscount.Id == Constants.PremiumDiscountCouponId
+                          subscription.CustomerDiscount.Id == StripeConstants.CouponIDs.Milestone2SubscriptionDiscount
             ? new BillingCustomerDiscount(subscription.CustomerDiscount)
             : null;
     }
