@@ -426,7 +426,7 @@ public class OrganizationLicense : ILicense
         var useAdminSponsoredFamilies = claimsPrincipal.GetValue<bool>(nameof(UseAdminSponsoredFamilies));
         var useOrganizationDomains = claimsPrincipal.GetValue<bool>(nameof(UseOrganizationDomains));
         var useAutomaticUserConfirmation = claimsPrincipal.GetValue<bool>(nameof(UseAutomaticUserConfirmation));
-        var useDisableSmAdsForUsers = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UseDisableSmAdsForUsers);
+        var useDisableSmAdsForUsers = claimsPrincipal.GetValue<bool>(nameof(UseDisableSmAdsForUsers));
 
         return issued <= DateTime.UtcNow &&
                expires >= DateTime.UtcNow &&
@@ -458,7 +458,7 @@ public class OrganizationLicense : ILicense
                useAdminSponsoredFamilies == organization.UseAdminSponsoredFamilies &&
                useOrganizationDomains == organization.UseOrganizationDomains &&
                useAutomaticUserConfirmation == organization.UseAutomaticUserConfirmation &&
-               useDisableSMAdsForUsers == organization.UseDisableSmAdsForUsers;
+               useDisableSmAdsForUsers == organization.UseDisableSmAdsForUsers;
 
     }
 
