@@ -17,12 +17,13 @@ public class SubscriptionInfo
 
     /// <summary>
     /// Converts Stripe's minor currency units (cents) to major currency units (dollars).
+    /// Preserves null semantics to distinguish between "no amount" (null) and "zero amount" (0.00m).
     /// </summary>
     /// <param name="amountInCents">The amount in Stripe's minor currency units (e.g., cents for USD).</param>
-    /// <returns>The amount in major currency units (e.g., dollars for USD).</returns>
-    private static decimal ConvertFromStripeMinorUnits(long? amountInCents)
+    /// <returns>The amount in major currency units (e.g., dollars for USD), or null if the input is null.</returns>
+    private static decimal? ConvertFromStripeMinorUnits(long? amountInCents)
     {
-        return amountInCents.GetValueOrDefault() / StripeMinorUnitDivisor;
+        return amountInCents.HasValue ? amountInCents.Value / StripeMinorUnitDivisor : null;
     }
 
     public BillingCustomerDiscount? CustomerDiscount { get; set; }
@@ -43,6 +44,8 @@ public class SubscriptionInfo
         public BillingCustomerDiscount(Discount discount)
         {
             Id = discount.Coupon?.Id;
+            // Active = true only for perpetual/recurring discounts (no end date)
+            // This is intentional for Milestone 2 - only perpetual discounts are shown in UI
             Active = discount.End == null;
             PercentOff = discount.Coupon?.PercentOff;
             AmountOff = ConvertFromStripeMinorUnits(discount.Coupon?.AmountOff);
@@ -57,14 +60,22 @@ public class SubscriptionInfo
         public string? Id { get; set; }
 
         /// <summary>
-        /// Whether the discount is currently active.
-        /// A discount is considered active when it has no end date (discount.End == null),
-        /// meaning it applies indefinitely to future renewals.
+        /// Whether the discount is a recurring/perpetual discount with no expiration date.
         /// <para>
-        /// Note: This does not distinguish between future expiration dates (still active, will expire)
-        /// and past expiration dates (already expired). Any discount with an End date set
-        /// (regardless of whether it's in the future or past) is considered inactive.
-        /// This is intentional for Milestone 2 implementation.
+        /// This property is true only when the discount has no end date (discount.End == null),
+        /// meaning it applies indefinitely to all future renewals. This is a product decision
+        /// for Milestone 2 to only display perpetual discounts in the UI.
+        /// </para>
+        /// <para>
+        /// Note: This does NOT indicate whether the discount is "currently active" in the billing sense.
+        /// A discount with a future end date (e.g., End = DateTime.UtcNow.AddDays(30)) is functionally
+        /// active and will be applied by Stripe to the next renewal, but this property will be false
+        /// because it has an expiration date. Only discounts with End == null (perpetual/recurring)
+        /// will have Active = true.
+        /// </para>
+        /// <para>
+        /// This is intentional for Milestone 2 implementation - only perpetual discounts are shown
+        /// in the UI, even though Stripe may apply other discounts that are not displayed.
         /// </para>
         /// </summary>
         public bool Active { get; set; }
@@ -140,7 +151,7 @@ public class SubscriptionInfo
                 {
                     ProductId = item.Plan.ProductId;
                     Name = item.Plan.Nickname;
-                    Amount = ConvertFromStripeMinorUnits(item.Plan.Amount);
+                    Amount = ConvertFromStripeMinorUnits(item.Plan.Amount) ?? 0;
                     Interval = item.Plan.Interval;
 
                     if (item.Metadata != null)
@@ -169,7 +180,7 @@ public class SubscriptionInfo
 
         public BillingUpcomingInvoice(Invoice inv)
         {
-            Amount = ConvertFromStripeMinorUnits(inv.AmountDue);
+            Amount = ConvertFromStripeMinorUnits(inv.AmountDue) ?? 0;
             Date = inv.Created;
         }
 
