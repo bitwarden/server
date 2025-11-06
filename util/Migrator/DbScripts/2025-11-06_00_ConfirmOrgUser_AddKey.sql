@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[OrganizationUser_ConfirmById]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_ConfirmById]
     @Id UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
     @RevisionDate DATETIME2(7),
