@@ -11,7 +11,9 @@ public class PaymentMethod(OneOf<TokenizedPaymentMethod, NonTokenizedPaymentMeth
     public static implicit operator PaymentMethod(TokenizedPaymentMethod tokenized) => new(tokenized);
     public static implicit operator PaymentMethod(NonTokenizedPaymentMethod nonTokenized) => new(nonTokenized);
     public bool IsTokenized => IsT0;
+    public TokenizedPaymentMethod AsTokenized => AsT0;
     public bool IsNonTokenized => IsT1;
+    public NonTokenizedPaymentMethod AsNonTokenized => AsT1;
 }
 
 internal class PaymentMethodJsonConverter : JsonConverter<PaymentMethod>
