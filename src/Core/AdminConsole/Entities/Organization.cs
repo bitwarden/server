@@ -333,5 +333,6 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
         UseRiskInsights = license.UseRiskInsights;
         UseOrganizationDomains = license.UseOrganizationDomains;
         UseAdminSponsoredFamilies = license.UseAdminSponsoredFamilies;
+        UseAutomaticUserConfirmation = license.UseAutomaticUserConfirmation;
     }
 }

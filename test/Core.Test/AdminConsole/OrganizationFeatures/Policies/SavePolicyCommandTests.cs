@@ -288,7 +288,7 @@ public class SavePolicyCommandTests
     {
         // Arrange
         var sutProvider = SutProviderFactory();
-        var savePolicyModel = new SavePolicyModel(policyUpdate, null, new EmptyMetadataModel());
+        var savePolicyModel = new SavePolicyModel(policyUpdate);
 
         currentPolicy.OrganizationId = policyUpdate.OrganizationId;
         sutProvider.GetDependency<IPolicyRepository>()
@@ -332,7 +332,7 @@ public class SavePolicyCommandTests
 
 
         var sutProvider = SutProviderFactory();
-        var savePolicyModel = new SavePolicyModel(policyUpdate, null, new EmptyMetadataModel());
+        var savePolicyModel = new SavePolicyModel(policyUpdate);
 
         sutProvider.GetDependency<IPolicyRepository>()
             .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, policyUpdate.Type)

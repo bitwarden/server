@@ -5,8 +5,7 @@ using Bit.Core.Settings;
 using HandlebarsDotNet;
 using Microsoft.Extensions.Logging;
 
-namespace Bit.Core.Platform.Mailer;
-
+namespace Bit.Core.Platform.Mail.Mailer;
 public class HandlebarMailRenderer : IMailRenderer
 {
     /// <summary>
