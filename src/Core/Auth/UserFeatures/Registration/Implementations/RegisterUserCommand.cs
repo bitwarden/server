@@ -75,7 +75,6 @@ public class RegisterUserCommand : IRegisterUserCommand
         _featureService = featureService;
     }
 
-
     public async Task<IdentityResult> RegisterUser(User user)
     {
         var result = await _userService.CreateUserAsync(user);
@@ -92,12 +91,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         var result = await _userService.CreateUserAsync(user);
         if (result == IdentityResult.Success)
         {
-            var organizationWelcomeEmailDetails = new OrganizationWelcomeEmailDetails
-            {
-                OrganizationDisplayName = organization.DisplayName(),
-                PlanType = organization.PlanType
-            };
-            await SendWelcomeEmailAsync(user, organizationWelcomeEmailDetails);
+            await SendWelcomeEmailAsync(user, organization);
         }
 
         return result;
@@ -117,7 +111,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         }
 
         var result = await _userService.CreateUserAsync(user, masterPasswordHash);
-        var organizationWelcomeEmailDetails = await GetOrganizationWelcomeEmailDetailsAsync(orgUserId ?? Guid.Empty, orgUser);
+        var organization = await GetOrganizationUserOrganization(orgUserId ?? Guid.Empty, orgUser);
         if (result == IdentityResult.Success)
         {
             var sentWelcomeEmail = false;
@@ -127,7 +121,7 @@ public class RegisterUserCommand : IRegisterUserCommand
                 if (referenceData.TryGetValue("initiationPath", out var value))
                 {
                     var initiationPath = value.ToString() ?? string.Empty;
-                    await SendAppropriateWelcomeEmailAsync(user, initiationPath, organizationWelcomeEmailDetails);
+                    await SendAppropriateWelcomeEmailAsync(user, initiationPath, organization);
                     sentWelcomeEmail = true;
                     if (!string.IsNullOrEmpty(initiationPath))
                     {
@@ -138,7 +132,7 @@ public class RegisterUserCommand : IRegisterUserCommand
 
             if (!sentWelcomeEmail)
             {
-                await SendWelcomeEmailAsync(user, organizationWelcomeEmailDetails);
+                await SendWelcomeEmailAsync(user, organization);
             }
         }
 
@@ -253,7 +247,7 @@ public class RegisterUserCommand : IRegisterUserCommand
     }
 
 
-    private async Task SendAppropriateWelcomeEmailAsync(User user, string initiationPath, OrganizationWelcomeEmailDetails? organizationDisplayName)
+    private async Task SendAppropriateWelcomeEmailAsync(User user, string initiationPath, Organization? organization)
     {
         var isFromMarketingWebsite = initiationPath.Contains("Secrets Manager trial");
 
@@ -263,7 +257,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         }
         else
         {
-            await SendWelcomeEmailAsync(user, organizationDisplayName);
+            await SendWelcomeEmailAsync(user, organization);
         }
     }
 
@@ -398,9 +392,9 @@ public class RegisterUserCommand : IRegisterUserCommand
     /// email isn't present we send the standard individual welcome email.
     /// </summary>
     /// <param name="user">Target user for the email</param>
-    /// <param name="organizationWelcomeEmailDetails">this value is nullable</param>
+    /// <param name="organization">this value is nullable</param>
     /// <returns></returns>
-    private async Task SendWelcomeEmailAsync(User user, OrganizationWelcomeEmailDetails? organizationWelcomeEmailDetails = null)
+    private async Task SendWelcomeEmailAsync(User user, Organization? organization = null)
     {
         // Check if feature is enabled
         if (!_featureService.IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates))
@@ -410,23 +404,23 @@ public class RegisterUserCommand : IRegisterUserCommand
         }
 
         // Most emails are probably for non organization users so we default to that experience
-        if (organizationWelcomeEmailDetails == null)
+        if (organization == null)
         {
             await _mailService.SendIndividualUserWelcomeEmailAsync(user);
         }
         // We need to make sure that the organization email has the correct data to display otherwise we just send the standard welcome email
-        else if (!string.IsNullOrEmpty(organizationWelcomeEmailDetails.OrganizationDisplayName))
+        else if (!string.IsNullOrEmpty(organization.DisplayName()))
         {
             // If the organization is Free or Families plan, send families welcome email
-            if (organizationWelcomeEmailDetails.PlanType is PlanType.FamiliesAnnually
+            if (organization.PlanType is PlanType.FamiliesAnnually
                 or PlanType.FamiliesAnnually2019
                 or PlanType.Free)
             {
-                await _mailService.SendFreeOrgOrFamilyOrgUserWelcomeEmailAsync(user, organizationWelcomeEmailDetails.OrganizationDisplayName);
+                await _mailService.SendFreeOrgOrFamilyOrgUserWelcomeEmailAsync(user, organization.DisplayName());
             }
             else
             {
-                await _mailService.SendOrganizationUserWelcomeEmailAsync(user, organizationWelcomeEmailDetails.OrganizationDisplayName);
+                await _mailService.SendOrganizationUserWelcomeEmailAsync(user, organization.DisplayName());
             }
         }
         // If the organization data isn't present send the standard welcome email
@@ -436,7 +430,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         }
     }
 
-    private async Task<OrganizationWelcomeEmailDetails?> GetOrganizationWelcomeEmailDetailsAsync(Guid orgUserId, OrganizationUser? orgUser = null)
+    private async Task<Organization?> GetOrganizationUserOrganization(Guid orgUserId, OrganizationUser? orgUser = null)
     {
         var organizationUser = orgUser ?? await _organizationUserRepository.GetByIdAsync(orgUserId);
         if (organizationUser == null)
@@ -444,22 +438,6 @@ public class RegisterUserCommand : IRegisterUserCommand
             return null;
         }
 
-        var organization = await _organizationRepository.GetByIdAsync(organizationUser.OrganizationId);
-        if (organization == null)
-        {
-            return null;
-        }
-
-        return new OrganizationWelcomeEmailDetails
-        {
-            OrganizationDisplayName = organization.DisplayName(),
-            PlanType = organization.PlanType
-        };
-    }
-
-    private class OrganizationWelcomeEmailDetails
-    {
-        public string? OrganizationDisplayName { get; set; }
-        public PlanType PlanType { get; set; }
+        return await _organizationRepository.GetByIdAsync(organizationUser.OrganizationId);
     }
 }
