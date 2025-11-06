@@ -9,7 +9,7 @@ public class BillingCustomerDiscountTests
 {
     [Theory]
     [BitAutoData]
-    public void Constructor_WithPercentageDiscount_SetsPropertiesCorrectly(string couponId)
+    public void Constructor_WithPercentageDiscount_SetsIdActivePercentOffAndAppliesTo(string couponId)
     {
         // Arrange
         var discount = new Discount
@@ -98,7 +98,7 @@ public class BillingCustomerDiscountTests
     }
 
     [Fact]
-    public void Constructor_WithNullCoupon_SetsNullProperties()
+    public void Constructor_WithNullCoupon_SetsDiscountPropertiesToNull()
     {
         // Arrange
         var discount = new Discount
@@ -209,7 +209,7 @@ public class BillingCustomerDiscountTests
 
     [Theory]
     [BitAutoData]
-    public void Constructor_WithBothDiscountTypes_IncludesBoth(string couponId)
+    public void Constructor_WithBothDiscountTypes_SetsPercentOffAndAmountOff(string couponId)
     {
         // Arrange - Coupon with both percentage and amount (edge case)
         var discount = new Discount
@@ -303,7 +303,7 @@ public class BillingCustomerDiscountTests
     }
 
     [Fact]
-    public void Constructor_DefaultConstructor_InitializesWithDefaults()
+    public void Constructor_DefaultConstructor_InitializesAllPropertiesToNullOrFalse()
     {
         // Act
         var result = new SubscriptionInfo.BillingCustomerDiscount();

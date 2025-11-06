@@ -15,6 +15,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NSubstitute;
+using Stripe;
 using Xunit;
 
 namespace Bit.Api.Test.Billing.Controllers;
@@ -245,5 +246,113 @@ public class AccountsControllerTests : IDisposable
         // Assert
         Assert.NotNull(result);
         Assert.Null(result.CustomerDiscount); // Should be null when discount is inactive
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_FullPipeline_ConvertsStripeDiscountToApiResponse(
+        User user,
+        UserLicense license)
+    {
+        // Arrange - Create a Stripe Discount object with real structure
+        var stripeDiscount = new Discount
+        {
+            Coupon = new Coupon
+            {
+                Id = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount,
+                PercentOff = 25m,
+                AmountOff = 1400, // 1400 cents = $14.00
+                AppliesTo = new CouponAppliesTo
+                {
+                    Products = new List<string> { "prod_premium", "prod_families" }
+                }
+            },
+            End = null // Active discount
+        };
+
+        // Convert Stripe Discount to BillingCustomerDiscount (simulating what StripePaymentService does)
+        var billingDiscount = new SubscriptionInfo.BillingCustomerDiscount(stripeDiscount);
+
+        var subscriptionInfo = new SubscriptionInfo
+        {
+            CustomerDiscount = billingDiscount
+        };
+
+        var claimsPrincipal = new ClaimsPrincipal(new ClaimsIdentity());
+        _sut.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = claimsPrincipal }
+        };
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
+        _paymentService.GetSubscriptionAsync(user).Returns(subscriptionInfo);
+        _userService.GenerateLicenseAsync(user, subscriptionInfo).Returns(license);
+
+        user.Gateway = GatewayType.Stripe;
+
+        // Act
+        var result = await _sut.GetSubscriptionAsync(_globalSettings, _paymentService);
+
+        // Assert - Verify full pipeline conversion
+        Assert.NotNull(result);
+        Assert.NotNull(result.CustomerDiscount);
+
+        // Verify Stripe data correctly converted to API response
+        Assert.Equal(StripeConstants.CouponIDs.Milestone2SubscriptionDiscount, result.CustomerDiscount.Id);
+        Assert.True(result.CustomerDiscount.Active);
+        Assert.Equal(25m, result.CustomerDiscount.PercentOff);
+
+        // Verify cents-to-dollars conversion (1400 cents -> $14.00)
+        Assert.Equal(14.00m, result.CustomerDiscount.AmountOff);
+
+        // Verify AppliesTo products are preserved
+        Assert.NotNull(result.CustomerDiscount.AppliesTo);
+        Assert.Equal(2, result.CustomerDiscount.AppliesTo.Count());
+        Assert.Contains("prod_premium", result.CustomerDiscount.AppliesTo);
+        Assert.Contains("prod_families", result.CustomerDiscount.AppliesTo);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_FullPipeline_WithFeatureFlagToggle_ControlsVisibility(
+        User user,
+        UserLicense license)
+    {
+        // Arrange - Create Stripe Discount
+        var stripeDiscount = new Discount
+        {
+            Coupon = new Coupon
+            {
+                Id = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount,
+                PercentOff = 20m
+            },
+            End = null
+        };
+
+        var billingDiscount = new SubscriptionInfo.BillingCustomerDiscount(stripeDiscount);
+        var subscriptionInfo = new SubscriptionInfo
+        {
+            CustomerDiscount = billingDiscount
+        };
+
+        var claimsPrincipal = new ClaimsPrincipal(new ClaimsIdentity());
+        _sut.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = claimsPrincipal }
+        };
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        _paymentService.GetSubscriptionAsync(user).Returns(subscriptionInfo);
+        _userService.GenerateLicenseAsync(user, subscriptionInfo).Returns(license);
+        user.Gateway = GatewayType.Stripe;
+
+        // Act & Assert - Feature flag ENABLED
+        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
+        var resultWithFlag = await _sut.GetSubscriptionAsync(_globalSettings, _paymentService);
+        Assert.NotNull(resultWithFlag.CustomerDiscount);
+
+        // Act & Assert - Feature flag DISABLED
+        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(false);
+        var resultWithoutFlag = await _sut.GetSubscriptionAsync(_globalSettings, _paymentService);
+        Assert.Null(resultWithoutFlag.CustomerDiscount);
     }
 }
