@@ -459,7 +459,7 @@ public class RegisterUserCommand : IRegisterUserCommand
 
     private class OrganizationWelcomeEmailDetails
     {
-        public string? OrganizationDisplayName { get; set; } = string.Empty;
+        public string? OrganizationDisplayName { get; set; }
         public PlanType PlanType { get; set; }
     }
 }
