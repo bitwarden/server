@@ -126,7 +126,7 @@ public class EventsController : Controller
         var eventResponses = result.Data.Select(e => new EventResponseModel(e));
         var response = new PagedListResponseModel<EventResponseModel>(eventResponses, result.ContinuationToken ?? "");
 
-        _logger.LogAggregateData(_featureService, _currentContext.OrganizationId!.Value, response, request);
+        _logger.LogAggregateData(_featureService, organizationId, response, request);
 
         return new JsonResult(response);
     }
