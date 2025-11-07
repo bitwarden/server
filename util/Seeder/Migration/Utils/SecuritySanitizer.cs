@@ -1,4 +1,4 @@
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 
 namespace Bit.Seeder.Migration.Utils;
 
@@ -6,8 +6,16 @@ public static class SecuritySanitizer
 {
     private static readonly string[] SensitiveFields =
     [
-        "password", "passwd", "pwd", "secret", "key", "token",
-        "api_key", "auth_token", "access_token", "private_key"
+        "password",
+        "passwd",
+        "pwd",
+        "secret",
+        "key",
+        "token",
+        "api_key",
+        "auth_token",
+        "access_token",
+        "private_key"
     ];
 
     public static string MaskPassword(string password)

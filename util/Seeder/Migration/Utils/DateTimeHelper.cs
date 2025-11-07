@@ -1,4 +1,4 @@
-namespace Bit.Seeder.Migration.Utils;
+﻿namespace Bit.Seeder.Migration.Utils;
 
 public static class DateTimeHelper
 {

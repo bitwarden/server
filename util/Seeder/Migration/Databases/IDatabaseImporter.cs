@@ -1,4 +1,4 @@
-namespace Bit.Seeder.Migration.Databases;
+﻿namespace Bit.Seeder.Migration.Databases;
 
 /// <summary>
 /// Interface for database importers that migrate data from SQL Server to various database systems.

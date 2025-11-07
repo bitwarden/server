@@ -1,4 +1,4 @@
-namespace Bit.Seeder.Migration.Models;
+﻿namespace Bit.Seeder.Migration.Models;
 
 public class DatabaseConfig
 {

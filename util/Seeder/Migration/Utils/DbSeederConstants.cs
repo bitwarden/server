@@ -1,4 +1,4 @@
-namespace Bit.Seeder.Migration.Utils;
+﻿namespace Bit.Seeder.Migration.Utils;
 
 /// <summary>
 /// Constants used throughout the DbSeeder utility for database operations.

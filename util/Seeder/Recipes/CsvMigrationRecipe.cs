@@ -1,4 +1,4 @@
-using Bit.Seeder.Migration;
+﻿using Bit.Seeder.Migration;
 using Bit.Seeder.Migration.Databases;
 using Bit.Seeder.Migration.Models;
 using Bit.Seeder.Migration.Reporters;

@@ -1,8 +1,8 @@
-using Microsoft.Data.SqlClient;
+﻿using System.Data;
 using Bit.Seeder.Migration.Models;
 using Bit.Seeder.Migration.Utils;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
-using System.Data;
 
 namespace Bit.Seeder.Migration.Databases;
 

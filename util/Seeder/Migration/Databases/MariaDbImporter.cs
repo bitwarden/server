@@ -1,7 +1,7 @@
-using MySqlConnector;
-using Bit.Seeder.Migration.Models;
+﻿using Bit.Seeder.Migration.Models;
 using Bit.Seeder.Migration.Utils;
 using Microsoft.Extensions.Logging;
+using MySqlConnector;
 
 namespace Bit.Seeder.Migration.Databases;
 

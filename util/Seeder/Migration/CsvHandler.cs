@@ -1,10 +1,10 @@
+﻿using System.Globalization;
+using System.Text;
+using Bit.Seeder.Migration.Models;
 using CsvHelper;
 using CsvHelper.Configuration;
-using Bit.Seeder.Migration.Models;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using System.Globalization;
-using System.Text;
 
 namespace Bit.Seeder.Migration;
 

@@ -1,8 +1,8 @@
-using Npgsql;
-using NpgsqlTypes;
-using Bit.Seeder.Migration.Models;
+﻿using Bit.Seeder.Migration.Models;
 using Bit.Seeder.Migration.Utils;
 using Microsoft.Extensions.Logging;
+using Npgsql;
+using NpgsqlTypes;
 
 namespace Bit.Seeder.Migration.Databases;
 

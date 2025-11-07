@@ -1,4 +1,4 @@
-using Bit.Seeder.Migration.Models;
+﻿using Bit.Seeder.Migration.Models;
 using Microsoft.Extensions.Configuration;
 
 namespace Bit.DbSeederUtility;
