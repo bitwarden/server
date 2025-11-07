@@ -950,46 +950,43 @@ public static class ServiceCollectionExtensions
         services.AddHostedService(provider => provider.GetRequiredService<IntegrationConfigurationDetailsCacheService>());
         services.TryAddSingleton<IIntegrationFilterService, IntegrationFilterService>();
         services.TryAddKeyedSingleton<IEventWriteService, RepositoryEventWriteService>("persistent");
+
+        services.TryAddKeyedSingleton<IMemoryCache>(
+            "UserCache",
+            new MemoryCache(new MemoryCacheOptions() { SizeLimit = globalSettings.EventLogging.UserCacheMaxEntries })
+        );
         services.TryAddSingleton<IOrganizationUserUserDetailsCache>(provider =>
         {
-            var memoryCache = new MemoryCache(new MemoryCacheOptions()
-            {
-                SizeLimit = globalSettings.EventLogging.UserCacheMaxEntries
-            });
-
             return new OrganizationUserUserDetailsCache(
-                memoryCache: memoryCache,
+                memoryCache: provider.GetRequiredKeyedService<IMemoryCache>("UserCache"),
                 cacheEntryTtl: TimeSpan.FromMinutes(globalSettings.EventLogging.UserCacheTtlMinutes),
                 userRepository: provider.GetRequiredService<IOrganizationUserRepository>()
             );
         });
+        services.TryAddKeyedSingleton<IMemoryCache>(
+            "GroupCache",
+            new MemoryCache(new MemoryCacheOptions() { SizeLimit = globalSettings.EventLogging.GroupCacheMaxEntries })
+        );
         services.TryAddSingleton<IGroupCache>(provider =>
         {
-            var memoryCache = new MemoryCache(new MemoryCacheOptions()
-            {
-                SizeLimit = globalSettings.EventLogging.GroupCacheMaxEntries
-            });
-
             return new GroupCache(
-                memoryCache: memoryCache,
+                memoryCache: provider.GetRequiredKeyedService<IMemoryCache>("GroupCache"),
                 cacheEntryTtl: TimeSpan.FromMinutes(globalSettings.EventLogging.GroupCacheTtlMinutes),
                 groupRepository: provider.GetRequiredService<IGroupRepository>()
             );
         });
+        services.TryAddKeyedSingleton<IMemoryCache>(
+            "OrganizationCache",
+            new MemoryCache(new MemoryCacheOptions() { SizeLimit = globalSettings.EventLogging.OrganizationCacheMaxEntries })
+        );
         services.TryAddSingleton<IOrganizationCache>(provider =>
         {
-            var memoryCache = new MemoryCache(new MemoryCacheOptions()
-            {
-                SizeLimit = globalSettings.EventLogging.OrganizationCacheMaxEntries
-            });
-
             return new OrganizationCache(
-                memoryCache: memoryCache,
+                memoryCache: provider.GetRequiredKeyedService<IMemoryCache>("OrganizationCache"),
                 cacheEntryTtl: TimeSpan.FromMinutes(globalSettings.EventLogging.OrganizationCacheTtlMinutes),
                 organizationRepository: provider.GetRequiredService<IOrganizationRepository>()
             );
         });
-
 
         // Add services in support of handlers
         services.AddSlackService(globalSettings);

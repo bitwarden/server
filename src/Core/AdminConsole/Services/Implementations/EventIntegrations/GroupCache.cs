@@ -1,6 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.AdminConsole.Services;
 using Microsoft.Extensions.Caching.Memory;
 
 namespace Bit.Core.Services;
