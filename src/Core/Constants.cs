@@ -138,11 +138,16 @@ public static class FeatureFlagKeys
     public const string PolicyRequirements = "pm-14439-policy-requirements";
     public const string ScimInviteUserOptimization = "pm-16811-optimize-invite-user-flow-to-fail-fast";
     public const string EventBasedOrganizationIntegrations = "event-based-organization-integrations";
-    public const string SeparateCustomRolePermissions = "pm-19917-separate-custom-role-permissions";
     public const string CreateDefaultLocation = "pm-19467-create-default-location";
     public const string AutomaticConfirmUsers = "pm-19934-auto-confirm-organization-users";
     public const string PM23845_VNextApplicationCache = "pm-24957-refactor-memory-application-cache";
     public const string AccountRecoveryCommand = "pm-25581-prevent-provider-account-recovery";
+    public const string PolicyValidatorsRefactor = "pm-26423-refactor-policy-side-effects";
+
+    /* Architecture */
+    public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";
+    public const string DesktopMigrationMilestone2 = "desktop-ui-migration-milestone-2";
+    public const string DesktopMigrationMilestone3 = "desktop-ui-migration-milestone-3";
 
     /* Auth Team */
     public const string TwoFactorExtensionDataPersistence = "pm-9115-two-factor-extension-data-persistence";
