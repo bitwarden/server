@@ -74,17 +74,6 @@ public class AccountControllerTest
         return resolvedAuthService;
     }
 
-    private static void InvokeEnsureOrgUserStatusAllowed(
-        AccountController controller,
-        OrganizationUserStatusType status)
-    {
-        var method = typeof(AccountController).GetMethod(
-            "EnsureAcceptedOrConfirmedOrgUserStatus",
-            BindingFlags.Instance | BindingFlags.NonPublic);
-        Assert.NotNull(method);
-        method.Invoke(controller, [status, "Org"]);
-    }
-
     private static AuthenticateResult BuildSuccessfulExternalAuth(Guid orgId, string providerUserId, string email)
     {
         var claims = new[]
@@ -242,82 +231,6 @@ public class AccountControllerTest
     }
 
     [Theory, BitAutoData]
-    public void EnsureOrgUserStatusAllowed_AllowsAcceptedAndConfirmed(
-        SutProvider<AccountController> sutProvider)
-    {
-        // Arrange
-        sutProvider.GetDependency<II18nService>()
-            .T(Arg.Any<string>(), Arg.Any<object?[]>())
-            .Returns(ci => (string)ci[0]!);
-
-        // Act
-        var ex1 = Record.Exception(() =>
-            InvokeEnsureOrgUserStatusAllowed(sutProvider.Sut, OrganizationUserStatusType.Accepted));
-        var ex2 = Record.Exception(() =>
-            InvokeEnsureOrgUserStatusAllowed(sutProvider.Sut, OrganizationUserStatusType.Confirmed));
-
-        // Assert
-        Assert.Null(ex1);
-        Assert.Null(ex2);
-    }
-
-    [Theory, BitAutoData]
-    public void EnsureOrgUserStatusAllowed_Invited_ThrowsAcceptInvite(
-        SutProvider<AccountController> sutProvider)
-    {
-        // Arrange
-        sutProvider.GetDependency<II18nService>()
-            .T(Arg.Any<string>(), Arg.Any<object?[]>())
-            .Returns(ci => (string)ci[0]!);
-
-        // Act
-        var ex = Assert.Throws<TargetInvocationException>(() =>
-            InvokeEnsureOrgUserStatusAllowed(sutProvider.Sut, OrganizationUserStatusType.Invited));
-
-        // Assert
-        Assert.IsType<Exception>(ex.InnerException);
-        Assert.Equal("AcceptInviteBeforeUsingSSO", ex.InnerException!.Message);
-    }
-
-    [Theory, BitAutoData]
-    public void EnsureOrgUserStatusAllowed_Revoked_ThrowsAccessRevoked(
-        SutProvider<AccountController> sutProvider)
-    {
-        // Arrange
-        sutProvider.GetDependency<II18nService>()
-            .T(Arg.Any<string>(), Arg.Any<object?[]>())
-            .Returns(ci => (string)ci[0]!);
-
-        // Act
-        var ex = Assert.Throws<TargetInvocationException>(() =>
-            InvokeEnsureOrgUserStatusAllowed(sutProvider.Sut, OrganizationUserStatusType.Revoked));
-
-        // Assert
-        Assert.IsType<Exception>(ex.InnerException);
-        Assert.Equal("OrganizationUserAccessRevoked", ex.InnerException!.Message);
-    }
-
-    [Theory, BitAutoData]
-    public void EnsureOrgUserStatusAllowed_UnknownStatus_ThrowsUnknown(
-        SutProvider<AccountController> sutProvider)
-    {
-        // Arrange
-        sutProvider.GetDependency<II18nService>()
-            .T(Arg.Any<string>(), Arg.Any<object?[]>())
-            .Returns(ci => (string)ci[0]!);
-
-        var unknown = (OrganizationUserStatusType)999;
-
-        // Act
-        var ex = Assert.Throws<TargetInvocationException>(() =>
-            InvokeEnsureOrgUserStatusAllowed(sutProvider.Sut, unknown));
-
-        // Assert
-        Assert.IsType<Exception>(ex.InnerException);
-        Assert.Equal("OrganizationUserUnknownStatus", ex.InnerException!.Message);
-    }
-
-    [Theory, BitAutoData]
     public async Task ExternalCallback_PreventNonCompliantTrue_ExistingUser_NoOrgUser_ThrowsCouldNotFindOrganizationUser(
         SutProvider<AccountController> sutProvider)
     {
@@ -357,7 +270,7 @@ public class AccountControllerTest
     }
 
     [Theory, BitAutoData]
-    public async Task ExternalCallback_PreventNonCompliantTrue_ExistingUser_OrgUserInvited_ThrowsAcceptInvite(
+    public async Task ExternalCallback_PreventNonCompliantTrue_ExistingUser_OrgUserInvited_AllowsLogin(
         SutProvider<AccountController> sutProvider)
     {
         // Arrange
@@ -374,7 +287,7 @@ public class AccountControllerTest
         };
 
         var authResult = BuildSuccessfulExternalAuth(orgId, providerUserId, user.Email!);
-        SetupHttpContextWithAuth(sutProvider, authResult);
+        var authService = SetupHttpContextWithAuth(sutProvider, authResult);
 
         sutProvider.GetDependency<II18nService>()
             .T(Arg.Any<string>(), Arg.Any<object?[]>())
@@ -392,9 +305,23 @@ public class AccountControllerTest
         sutProvider.GetDependency<IIdentityServerInteractionService>()
             .GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
 
-        // Act + Assert
-        var ex = await Assert.ThrowsAsync<Exception>(() => sutProvider.Sut.ExternalCallback());
-        Assert.Equal("AcceptInviteBeforeUsingSSO", ex.Message);
+        // Act
+        var result = await sutProvider.Sut.ExternalCallback();
+
+        // Assert
+        var redirect = Assert.IsType<RedirectResult>(result);
+        Assert.Equal("~/", redirect.Url);
+
+        await authService.Received().SignInAsync(
+            Arg.Any<HttpContext>(),
+            Arg.Any<string?>(),
+            Arg.Any<ClaimsPrincipal>(),
+            Arg.Any<AuthenticationProperties>());
+
+        await authService.Received().SignOutAsync(
+            Arg.Any<HttpContext>(),
+            AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme,
+            Arg.Any<AuthenticationProperties>());
     }
 
     [Theory, BitAutoData]
@@ -930,13 +857,13 @@ public class AccountControllerTest
     }
 
     [Theory, BitAutoData]
-    public async Task AutoProvisionUserAsync_WithExistingAcceptedUser_CreatesSsoLinkAndReturnsUser(
+    public async Task CreateUserAndOrgUserConditionallyAsync_WithExistingAcceptedUser_CreatesSsoLinkAndReturnsUser(
         SutProvider<AccountController> sutProvider)
     {
         // Arrange
         var orgId = Guid.NewGuid();
-        var providerUserId = "ext-456";
-        var email = "jit@example.com";
+        var providerUserId = "provider-user-id";
+        var email = "user@example.com";
         var existingUser = new User { Id = Guid.NewGuid(), Email = email };
         var organization = new Organization { Id = orgId, Name = "Org" };
         var orgUser = new OrganizationUser
@@ -965,12 +892,12 @@ public class AccountControllerTest
         var config = new SsoConfigurationData();
 
         var method = typeof(AccountController).GetMethod(
-            "AutoProvisionUserAsync",
+            "CreateUserAndOrgUserConditionallyAsync",
             BindingFlags.Instance | BindingFlags.NonPublic);
         Assert.NotNull(method);
 
         // Act
-        var task = (Task<(User user, Organization organization, OrganizationUser orgUser)>)method!.Invoke(sutProvider.Sut, new object[]
+        var task = (Task<(User user, Organization organization, OrganizationUser orgUser)>)method.Invoke(sutProvider.Sut, new object[]
         {
             orgId.ToString(),
             providerUserId,
@@ -990,6 +917,61 @@ public class AccountControllerTest
         await sutProvider.GetDependency<Core.Services.IEventService>().Received().LogOrganizationUserEventAsync(
             orgUser,
             EventType.OrganizationUser_FirstSsoLogin);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateUserAndOrgUserConditionallyAsync_WithExistingInvitedUser_ThrowsAcceptInviteBeforeUsingSSO(
+        SutProvider<AccountController> sutProvider)
+    {
+        // Arrange
+        var orgId = Guid.NewGuid();
+        var providerUserId = "provider-user-id";
+        var email = "user@example.com";
+        var existingUser = new User { Id = Guid.NewGuid(), Email = email, UsesKeyConnector = false };
+        var organization = new Organization { Id = orgId, Name = "Org" };
+        var orgUser = new OrganizationUser
+        {
+            OrganizationId = orgId,
+            UserId = existingUser.Id,
+            Status = OrganizationUserStatusType.Invited,
+            Type = OrganizationUserType.User
+        };
+
+        // i18n returns the key so we can assert on message contents
+        sutProvider.GetDependency<II18nService>()
+            .T(Arg.Any<string>(), Arg.Any<object?[]>())
+            .Returns(ci => (string)ci[0]!);
+
+        // Arrange repository expectations for the flow
+        sutProvider.GetDependency<IUserRepository>().GetByEmailAsync(email).Returns(existingUser);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(organization);
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByUserAsync(existingUser.Id)
+            .Returns(new List<OrganizationUser> { orgUser });
+
+        var claims = new[]
+        {
+            new Claim(JwtClaimTypes.Email, email),
+            new Claim(JwtClaimTypes.Name, "Invited User")
+        } as IEnumerable<Claim>;
+        var config = new SsoConfigurationData();
+
+        var method = typeof(AccountController).GetMethod(
+            "CreateUserAndOrgUserConditionallyAsync",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(method);
+
+        // Act + Assert
+        var task = (Task<(User user, Organization organization, OrganizationUser orgUser)>)method.Invoke(sutProvider.Sut, new object[]
+        {
+            orgId.ToString(),
+            providerUserId,
+            claims,
+            null!,
+            config
+        })!;
+
+        var ex = await Assert.ThrowsAsync<Exception>(async () => await task);
+        Assert.Equal("AcceptInviteBeforeUsingSSO", ex.Message);
     }
 
     /// <summary>
