@@ -6,7 +6,10 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Business;
 using Bit.Core.Entities;
 using Bit.Core.Models.Mail;
+using Bit.Core.Platform.Mail.Delivery;
+using Bit.Core.Platform.Mail.Enqueuing;
 using Bit.Core.Services;
+using Bit.Core.Services.Mail;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
@@ -23,6 +26,7 @@ public class HandlebarsMailServiceTests
     private readonly IMailDeliveryService _mailDeliveryService;
     private readonly IMailEnqueuingService _mailEnqueuingService;
     private readonly IDistributedCache _distributedCache;
+    private readonly ILogger<HandlebarsMailService> _logger;
 
     public HandlebarsMailServiceTests()
     {
@@ -30,12 +34,14 @@ public class HandlebarsMailServiceTests
         _mailDeliveryService = Substitute.For<IMailDeliveryService>();
         _mailEnqueuingService = Substitute.For<IMailEnqueuingService>();
         _distributedCache = Substitute.For<IDistributedCache>();
+        _logger = Substitute.For<ILogger<HandlebarsMailService>>();
 
         _sut = new HandlebarsMailService(
             _globalSettings,
             _mailDeliveryService,
             _mailEnqueuingService,
-            _distributedCache
+            _distributedCache,
+            _logger
         );
     }
 
@@ -217,8 +223,9 @@ public class HandlebarsMailServiceTests
 
         var mailDeliveryService = new MailKitSmtpMailDeliveryService(globalSettings, Substitute.For<ILogger<MailKitSmtpMailDeliveryService>>());
         var distributedCache = Substitute.For<IDistributedCache>();
+        var logger = Substitute.For<ILogger<HandlebarsMailService>>();
 
-        var handlebarsService = new HandlebarsMailService(globalSettings, mailDeliveryService, new BlockingMailEnqueuingService(), distributedCache);
+        var handlebarsService = new HandlebarsMailService(globalSettings, mailDeliveryService, new BlockingMailEnqueuingService(), distributedCache, logger);
 
         var sendMethods = typeof(IMailService).GetMethods(BindingFlags.Public | BindingFlags.Instance)
             .Where(m => m.Name.StartsWith("Send") && m.Name != "SendEnqueuedMailMessageAsync");

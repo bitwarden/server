@@ -75,7 +75,13 @@ public class PreviewOrganizationTaxCommand(
                             Quantity = purchase.SecretsManager.Seats
                         }
                     ]);
-                    options.Coupon = CouponIDs.SecretsManagerStandalone;
+                    options.Discounts =
+                    [
+                        new InvoiceDiscountOptions
+                        {
+                            Coupon = CouponIDs.SecretsManagerStandalone
+                        }
+                    ];
                     break;
 
                 default:
@@ -135,6 +141,8 @@ public class PreviewOrganizationTaxCommand(
 
                 var newPlan = await pricingClient.GetPlanOrThrow(planChange.PlanType);
 
+                var quantity = newPlan.HasNonSeatBasedPasswordManagerPlan() ? 1 : 2;
+
                 var items = new List<InvoiceSubscriptionDetailsItemOptions>
                 {
                     new ()
@@ -142,7 +150,7 @@ public class PreviewOrganizationTaxCommand(
                         Price = newPlan.HasNonSeatBasedPasswordManagerPlan()
                             ? newPlan.PasswordManager.StripePlanId
                             : newPlan.PasswordManager.StripeSeatPlanId,
-                        Quantity = 2
+                        Quantity = quantity
                     }
                 };
 
@@ -178,7 +186,10 @@ public class PreviewOrganizationTaxCommand(
 
                 if (subscription.Customer.Discount != null)
                 {
-                    options.Coupon = subscription.Customer.Discount.Coupon.Id;
+                    options.Discounts =
+                    [
+                        new InvoiceDiscountOptions { Coupon = subscription.Customer.Discount.Coupon.Id }
+                    ];
                 }
 
                 var currentPlan = await pricingClient.GetPlanOrThrow(organization.PlanType);
@@ -194,12 +205,17 @@ public class PreviewOrganizationTaxCommand(
                         ? currentPlan.PasswordManager.StripePlanId
                         : currentPlan.PasswordManager.StripeSeatPlanId];
 
+                var quantity = currentPlan.HasNonSeatBasedPasswordManagerPlan() &&
+                               !newPlan.HasNonSeatBasedPasswordManagerPlan()
+                    ? (long)organization.Seats!
+                    : passwordManagerSeats.Quantity;
+
                 items.Add(new InvoiceSubscriptionDetailsItemOptions
                 {
                     Price = newPlan.HasNonSeatBasedPasswordManagerPlan()
                         ? newPlan.PasswordManager.StripePlanId
                         : newPlan.PasswordManager.StripeSeatPlanId,
-                    Quantity = passwordManagerSeats.Quantity
+                    Quantity = quantity
                 });
 
                 var hasStorage =
@@ -270,7 +286,10 @@ public class PreviewOrganizationTaxCommand(
 
             if (subscription.Customer.Discount != null)
             {
-                options.Coupon = subscription.Customer.Discount.Coupon.Id;
+                options.Discounts =
+                [
+                    new InvoiceDiscountOptions { Coupon = subscription.Customer.Discount.Coupon.Id }
+                ];
             }
 
             var currentPlan = await pricingClient.GetPlanOrThrow(organization.PlanType);
@@ -322,7 +341,7 @@ public class PreviewOrganizationTaxCommand(
         });
 
     private static (decimal, decimal) GetAmounts(Invoice invoice) => (
-        Convert.ToDecimal(invoice.Tax) / 100,
+        Convert.ToDecimal(invoice.TotalTaxes.Sum(invoiceTotalTax => invoiceTotalTax.Amount)) / 100,
         Convert.ToDecimal(invoice.Total) / 100);
 
     private static InvoiceCreatePreviewOptions GetBaseOptions(

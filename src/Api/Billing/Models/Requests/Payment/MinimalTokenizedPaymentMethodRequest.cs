@@ -7,7 +7,7 @@ namespace Bit.Api.Billing.Models.Requests.Payment;
 public class MinimalTokenizedPaymentMethodRequest
 {
     [Required]
-    [PaymentMethodTypeValidation]
+    [TokenizedPaymentMethodTypeValidation]
     public required string Type { get; set; }
 
     [Required]
