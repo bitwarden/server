@@ -1,6 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 
-namespace Bit.Core.AdminConsole.Services;
+namespace Bit.Core.Services;
 
 public interface IOrganizationCache
 {

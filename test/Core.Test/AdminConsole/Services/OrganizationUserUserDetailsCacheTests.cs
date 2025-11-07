@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Bit.Core.Test.AdminConsole.Services;
 
-public class OrganizationUserDetailsCacheTests
+public class OrganizationUserUserDetailsCacheTests
 {
     [Theory, BitAutoData]
     public async Task GetAsync_ConcurrentRequests_OnlyLoadsOnce(OrganizationUserUserDetails userDetails)
@@ -107,16 +107,27 @@ public class OrganizationUserDetailsCacheTests
     }
 
     [Fact]
-    public void Dispose_DisposesMemoryCache()
+    public void OrganizationUserKey_Equality_ReturnsCorrectValues()
     {
-        var memoryCache = Substitute.For<IMemoryCache>();
-        var cache = new OrganizationUserUserDetailsCache(
-            memoryCache: memoryCache,
-            cacheEntryTtl: TimeSpan.FromMilliseconds(5),
-            userRepository: Substitute.For<IOrganizationUserRepository>()
-        );
+        var org1 = Guid.NewGuid();
+        var org2 = Guid.NewGuid();
+        var user1 = Guid.NewGuid();
+        var user2 = Guid.NewGuid();
 
-        cache.Dispose();
-        memoryCache.Received(1).Dispose();
+        var key = new OrganizationUserKey(org1, user1);
+        var same = new OrganizationUserKey(org1, user1);
+        var diffOrg = new OrganizationUserKey(org2, user1);
+        var diffUser = new OrganizationUserKey(org1, user2);
+        var diffBoth = new OrganizationUserKey(org2, user2);
+
+        Assert.True(key == same);
+        Assert.False(key != same);
+
+        Assert.False(key == diffOrg);
+        Assert.True(key != diffOrg);
+        Assert.False(key == diffUser);
+        Assert.True(key != diffUser);
+        Assert.False(key == diffBoth);
+        Assert.True(key != diffBoth);
     }
 }

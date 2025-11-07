@@ -40,5 +40,9 @@ public readonly struct OrganizationUserKey : IEquatable<OrganizationUserKey>
 
     public override bool Equals(object? obj) => obj is OrganizationUserKey other && Equals(other);
 
+    public static bool operator ==(OrganizationUserKey left, OrganizationUserKey right) => left.Equals(right);
+
+    public static bool operator !=(OrganizationUserKey left, OrganizationUserKey right) => !left.Equals(right);
+
     public override int GetHashCode() => HashCode.Combine(OrganizationId, UserId);
 }

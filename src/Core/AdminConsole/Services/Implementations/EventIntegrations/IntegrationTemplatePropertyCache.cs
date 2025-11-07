@@ -47,11 +47,6 @@ public abstract class IntegrationTemplatePropertyCache<TKey, TValue>(IMemoryCach
         return await lazy.Value;
     }
 
-    public void Dispose()
-    {
-        memoryCache.Dispose();
-    }
-
     /// <summary>
     /// Helper to run a factory function only once per key.
     /// </summary>
@@ -61,7 +56,7 @@ public abstract class IntegrationTemplatePropertyCache<TKey, TValue>(IMemoryCach
 
         public AsyncLazy(Func<Task<T>> factory)
         {
-            _instance = new Lazy<Task<T>>(() => Task.Run(factory));
+            _instance = new Lazy<Task<T>>(factory);
         }
 
         public Task<T> Value => _instance.Value;

@@ -100,18 +100,4 @@ public class GroupCacheTests
 
         await repo.DidNotReceive().GetByIdAsync(Arg.Any<Guid>());
     }
-
-    [Fact]
-    public void Dispose_DisposesMemoryCache()
-    {
-        var memoryCache = Substitute.For<IMemoryCache>();
-        var cache = new GroupCache(
-            memoryCache: memoryCache,
-            cacheEntryTtl: TimeSpan.FromMilliseconds(5),
-            groupRepository: Substitute.For<IGroupRepository>()
-        );
-
-        cache.Dispose();
-        memoryCache.Received(1).Dispose();
-    }
 }

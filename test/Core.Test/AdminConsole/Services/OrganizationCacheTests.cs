@@ -100,18 +100,4 @@ public class OrganizationCacheTests
 
         await repo.DidNotReceive().GetByIdAsync(Arg.Any<Guid>());
     }
-
-    [Fact]
-    public void Dispose_DisposesMemoryCache()
-    {
-        var memoryCache = Substitute.For<IMemoryCache>();
-        var cache = new OrganizationCache(
-            memoryCache: memoryCache,
-            cacheEntryTtl: TimeSpan.FromMilliseconds(5),
-            organizationRepository: Substitute.For<IOrganizationRepository>()
-        );
-
-        cache.Dispose();
-        memoryCache.Received(1).Dispose();
-    }
 }
