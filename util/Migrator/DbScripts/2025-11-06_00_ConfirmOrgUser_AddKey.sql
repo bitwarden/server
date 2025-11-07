@@ -2,7 +2,7 @@ CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_ConfirmById]
     @Id UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
     @RevisionDate DATETIME2(7),
-    @Key NVARCHAR(MAX)
+    @Key NVARCHAR(MAX) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
