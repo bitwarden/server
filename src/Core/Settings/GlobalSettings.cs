@@ -310,6 +310,12 @@ public class GlobalSettings : IGlobalSettings
         public AzureServiceBusSettings AzureServiceBus { get; set; } = new AzureServiceBusSettings();
         public RabbitMqSettings RabbitMq { get; set; } = new RabbitMqSettings();
         public int IntegrationCacheRefreshIntervalMinutes { get; set; } = 10;
+        public int UserCacheTtlMinutes { get; set; } = 60;
+        public int UserCacheMaxEntries { get; set; } = 100_000;
+        public int GroupCacheTtlMinutes { get; set; } = 60;
+        public int GroupCacheMaxEntries { get; set; } = 100_000;
+        public int OrganizationCacheTtlMinutes { get; set; } = 60;
+        public int OrganizationCacheMaxEntries { get; set; } = 100_000;
         public int MaxRetries { get; set; } = 3;
 
         public class AzureServiceBusSettings
