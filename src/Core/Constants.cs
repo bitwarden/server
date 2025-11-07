@@ -145,6 +145,11 @@ public static class FeatureFlagKeys
     public const string AccountRecoveryCommand = "pm-25581-prevent-provider-account-recovery";
     public const string PolicyValidatorsRefactor = "pm-26423-refactor-policy-side-effects";
 
+    /* Architecture */
+    public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";
+    public const string DesktopMigrationMilestone2 = "desktop-ui-migration-milestone-2";
+    public const string DesktopMigrationMilestone3 = "desktop-ui-migration-milestone-3";
+
     /* Auth Team */
     public const string TwoFactorExtensionDataPersistence = "pm-9115-two-factor-extension-data-persistence";
     public const string EmailVerification = "email-verification";
