@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Models.Mail;
-using Bit.Core.Settings;
 using Bit.Core.Platform.Mail.Delivery;
 using Bit.Core.Platform.Mail.Mailer;
+using Bit.Core.Settings;
 using Bit.Core.Test.Platform.Mailer.TestMail;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
