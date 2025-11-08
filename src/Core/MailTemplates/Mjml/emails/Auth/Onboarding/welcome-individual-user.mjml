@@ -1,7 +1,6 @@
 <mjml>
   <mj-head>
     <mj-include path="../../../components/head.mjml" />
-    <mj-include path="../../../components/mj-bw-icon-row-head.mjml" />
   </mj-head>
 
   <mj-body css-class="border-fix">
@@ -51,7 +50,7 @@
 
     <!-- Learn More Section -->
     <mj-wrapper padding="5px 20px 10px 20px">
-      <mj-include path="../../../components/learn-more-footer.mjml" />
+      <mj-bw-learn-more-footer />
     </mj-wrapper>
 
     <!-- Footer -->

@@ -24,6 +24,9 @@
       </mj-section>
     </mj-wrapper>
 
-    <mj-include path="../../components/footer.mjml" />
+    <!-- Learn More Section -->
+    <mj-wrapper>
+      <mj-bw-learn-more-footer />
+    </mj-wrapper>
   </mj-body>
 </mjml>
