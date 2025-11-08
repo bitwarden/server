@@ -50,7 +50,7 @@
 
     <!-- Learn More Section -->
     <mj-wrapper padding="5px 20px 10px 20px">
-      <mj-include path="../../../components/learn-more-footer.mjml" />
+      <mj-bw-learn-more-footer />
     </mj-wrapper>
 
     <!-- Footer -->
