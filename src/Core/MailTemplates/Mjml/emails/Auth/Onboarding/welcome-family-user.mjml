@@ -18,7 +18,7 @@
       <mj-section background-color="#fff" padding="15px 10px 10px 10px">
         <mj-column>
           <mj-text font-size="16px" line-height="24px" padding="10px 15px">
-            A <b>{{OrganizationName}}</b> administrator will approve you
+            An administrator from <b>{{OrganizationName}}</b> will approve you
             before you can share passwords. While you wait for approval, get
             started with Bitwarden Password Manager:
           </mj-text>
