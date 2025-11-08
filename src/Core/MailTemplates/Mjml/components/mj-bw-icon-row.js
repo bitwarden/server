@@ -18,10 +18,25 @@ class MjBwIconRow extends BodyComponent {
 
   static defaultAttributes = {};
 
+  componentHeadStyle = (breakpoint) => {
+    return `
+      @media only screen and (max-width:${breakpoint}): {
+        ".mj-bw-icon-row-text": {
+          padding-left: "5px !important",
+          line-height: "20px",
+        },
+        ".mj-bw-icon-row": {
+          padding: "10px 15px",
+          width: "fit-content !important",
+        }
+      }
+    `;
+  };
+
   render() {
-    let headAnchorElement = "";
-    if (this.getAttribute("head-url-text") && this.getAttribute("head-url")) {
-      headAnchorElement = `<a href="${this.getAttribute("head-url")}" class="link">
+    const headAnchorElement =
+      this.getAttribute("head-url-text") && this.getAttribute("head-url")
+        ? `<a href="${this.getAttribute("head-url")}" class="link">
                 ${this.getAttribute("head-url-text")}
                 <span style="text-decoration: none">
                   <img src="https://assets.bitwarden.com/email/v1/bwi-external-link-16px.png"
@@ -30,11 +45,12 @@ class MjBwIconRow extends BodyComponent {
                     style="vertical-align: middle;"
                   />
                 </span>
-              </a>`;
-    }
-    let footAnchorElement = "";
-    if (this.getAttribute("foot-url-text") && this.getAttribute("foot-url")) {
-      footAnchorElement = `<a href="${this.getAttribute("foot-url")}" class="link">
+              </a>`
+        : "";
+
+    const footAnchorElement =
+      this.getAttribute("foot-url-text") && this.getAttribute("foot-url")
+        ? `<a href="${this.getAttribute("foot-url")}" class="link">
                 ${this.getAttribute("foot-url-text")}
                 <span style="text-decoration: none">
                   <img src="https://assets.bitwarden.com/email/v1/bwi-external-link-16px.png"
@@ -43,8 +59,9 @@ class MjBwIconRow extends BodyComponent {
                     style="vertical-align: middle;"
                   />
                 </span>
-              </a>`;
-    }
+          </a>`
+        : "";
+
     return this.renderMJML(
       `
       <mj-section background-color="#fff" padding="10px 10px 10px 10px">

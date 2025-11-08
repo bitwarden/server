@@ -22,17 +22,3 @@
     border-radius: 3px;
   }
 </mj-style>
-
-<!-- Responsive icon visibility -->
-<mj-style>
-  @media only screen and (max-width: 480px) {
-    .hide-small-img {
-      display: none !important;
-    }
-    .send-bubble {
-      padding-left: 20px;
-      padding-right: 20px;
-      width: 90% !important;
-    }
-  }
-</mj-style>
