@@ -94,7 +94,7 @@ public class ResetPasswordPolicyValidatorTests
             .GetByOrganizationIdAsync(policyUpdate.OrganizationId)
             .Returns(ssoConfig);
 
-        var savePolicyModel = new SavePolicyModel(policyUpdate, null, new EmptyMetadataModel());
+        var savePolicyModel = new SavePolicyModel(policyUpdate);
 
         var result = await sutProvider.Sut.ValidateAsync(savePolicyModel, policy);
         Assert.Contains("Trusted device encryption is on and requires this policy.", result, StringComparison.OrdinalIgnoreCase);
@@ -118,7 +118,7 @@ public class ResetPasswordPolicyValidatorTests
             .GetByOrganizationIdAsync(policyUpdate.OrganizationId)
             .Returns(ssoConfig);
 
-        var savePolicyModel = new SavePolicyModel(policyUpdate, null, new EmptyMetadataModel());
+        var savePolicyModel = new SavePolicyModel(policyUpdate);
 
         var result = await sutProvider.Sut.ValidateAsync(savePolicyModel, policy);
         Assert.True(string.IsNullOrEmpty(result));
