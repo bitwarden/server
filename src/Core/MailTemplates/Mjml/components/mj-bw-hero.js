@@ -18,10 +18,19 @@ class MjBwHero extends BodyComponent {
 
   static defaultAttributes = {};
 
+  componentHeadStyle = breakpoint => {
+    return `
+      @media only screen and (max-width:${breakpoint}) {
+        .mj-bw-hero-responsive-img {
+          display: none !important;
+        }
+      }
+    `
+  }
+
   render() {
-    let buttonElement = "";
-    if (this.getAttribute("button-text") && this.getAttribute("button-url")) {
-      buttonElement = `<mj-button
+    const buttonElement = this.getAttribute("button-text") && this.getAttribute("button-url") ?
+      `<mj-button
             href="${this.getAttribute("button-url")}"
             background-color="#fff"
             color="#1A41AC"
@@ -30,16 +39,14 @@ class MjBwHero extends BodyComponent {
           >
               ${this.getAttribute("button-text")}
             </mj-button
-          >`;
-    }
-    let subTitleElement = "";
-    if (this.getAttribute("sub-title")) {
-      subTitleElement = `<mj-text color="#fff" padding-top="0" padding-bottom="0">
+          >` : "";
+    const subTitleElement = this.getAttribute("sub-title") ?
+      `<mj-text color="#fff" padding-top="0" padding-bottom="0">
             <h2 style="font-weight: normal; font-size: 16px; line-height: 0px">
               ${this.getAttribute("sub-title")}
             </h2>
-          </mj-text>`;
-    }
+          </mj-text>` : "";
+
     return this.renderMJML(
       `
       <mj-section
@@ -71,7 +78,7 @@ class MjBwHero extends BodyComponent {
             alt=""
             width="155px"
             padding="0px"
-            css-class="hide-small-img"
+            css-class="mj-bw-hero-responsive-img"
             />
         </mj-column>
       </mj-section>
