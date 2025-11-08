@@ -3,6 +3,8 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Stripe;
 
@@ -14,10 +16,9 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 public record UpdateOrganizationRequest
 {
     /// <summary>
-    /// The organization to update. This should be unchanged - any properties to be updated should be
-    /// separate properties on this request model.
+    /// The ID of the organization to update.
     /// </summary>
-    public required Organization Organization { get; init; }
+    public required Guid OrganizationId { get; init; }
 
     /// <summary>
     /// The new organization name to apply.
@@ -48,19 +49,24 @@ public record UpdateOrganizationRequest
 public class UpdateOrganizationCommand(
     IProviderRepository providerRepository,
     IStripeAdapter stripeAdapter,
-    IOrganizationService organizationService
+    IOrganizationService organizationService,
+    IOrganizationRepository organizationRepository
 ) : IUpdateOrganizationCommand
 {
     public async Task UpdateAsync(UpdateOrganizationRequest request)
     {
-        var organization = request.Organization;
+        var organization = await organizationRepository.GetByIdAsync(request.OrganizationId);
+        if (organization == null)
+        {
+            throw new NotFoundException();
+        }
 
         // Store original values for comparison
         var originalName = organization.Name;
         var originalBillingEmail = organization.BillingEmail;
 
         // Apply updates to organization
-        await ApplyUpdatesToOrganizationAsync(request);
+        await ApplyUpdatesToOrganizationAsync(organization, request);
 
         await organizationService.ReplaceAndUpdateCacheAsync(organization, EventType.Organization_Updated);
 
@@ -68,9 +74,8 @@ public class UpdateOrganizationCommand(
         await UpdateBillingIfRequiredAsync(organization, originalName, originalBillingEmail);
     }
 
-    private async Task ApplyUpdatesToOrganizationAsync(UpdateOrganizationRequest request)
+    private async Task ApplyUpdatesToOrganizationAsync(Organization organization, UpdateOrganizationRequest request)
     {
-        var organization = request.Organization;
         organization.Name = request.Name;
         organization.BusinessName = request.BusinessName;
 
