@@ -1,4 +1,4 @@
-using Bit.Api.IntegrationTest.Factories;
+﻿using Bit.Api.IntegrationTest.Factories;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;

@@ -1,4 +1,4 @@
-using Bit.Api.AdminConsole.Authorization.Requirements;
+﻿using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Test.AdminConsole.AutoFixture;

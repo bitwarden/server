@@ -1,4 +1,4 @@
-using Bit.Core.Context;
+﻿using Bit.Core.Context;
 using Bit.Core.Enums;
 
 namespace Bit.Api.AdminConsole.Authorization.Requirements;

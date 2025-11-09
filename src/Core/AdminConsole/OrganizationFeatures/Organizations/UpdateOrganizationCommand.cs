@@ -1,14 +1,11 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Stripe;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 
@@ -103,6 +100,8 @@ public class UpdateOrganizationCommand(
         // Update keys if provided and not already set.
         // This is legacy code for old organizations that were not created with a public/private keypair.
         // FIXME: check if we can remove this migration pathway as it is now years old.
+        // This is the only part of the command that does anything on self-host, so if this is removed then
+        // this endpoint can be blocked for self-host entirely.
         if (!string.IsNullOrWhiteSpace(request.PublicKey) && string.IsNullOrWhiteSpace(organization.PublicKey))
         {
             organization.PublicKey = request.PublicKey;

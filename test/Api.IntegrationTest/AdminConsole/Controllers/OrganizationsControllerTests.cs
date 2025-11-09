@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
