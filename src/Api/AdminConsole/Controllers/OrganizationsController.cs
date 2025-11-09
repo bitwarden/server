@@ -234,11 +234,10 @@ public class OrganizationsController : Controller
     public async Task<OrganizationResponseModel> Put(Guid organizationId, [FromBody] OrganizationUpdateRequestModel model)
     {
         var commandRequest = model.ToCommandRequest(organizationId);
-        await _updateOrganizationCommand.UpdateAsync(commandRequest);
+        var updatedOrganization = await _updateOrganizationCommand.UpdateAsync(commandRequest);
 
-        var organization = await _organizationRepository.GetByIdAsync(organizationId);
-        var plan = await _pricingClient.GetPlan(organization.PlanType);
-        return new OrganizationResponseModel(organization, plan);
+        var plan = await _pricingClient.GetPlan(updatedOrganization.PlanType);
+        return new OrganizationResponseModel(updatedOrganization, plan);
     }
 
     [HttpPost("{id}")]

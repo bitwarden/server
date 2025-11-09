@@ -50,7 +50,7 @@ public class UpdateOrganizationCommand(
     IGlobalSettings globalSettings
 ) : IUpdateOrganizationCommand
 {
-    public async Task UpdateAsync(UpdateOrganizationRequest request)
+    public async Task<Organization> UpdateAsync(UpdateOrganizationRequest request)
     {
         var organization = await organizationRepository.GetByIdAsync(request.OrganizationId);
         if (organization == null)
@@ -70,6 +70,8 @@ public class UpdateOrganizationCommand(
 
         // Update billing information in Stripe if required
         await UpdateBillingIfRequiredAsync(organization, originalName, originalBillingEmail);
+
+        return organization;
     }
 
     private async Task UpdateOrganizationDetailsAsync(Organization organization, UpdateOrganizationRequest request)

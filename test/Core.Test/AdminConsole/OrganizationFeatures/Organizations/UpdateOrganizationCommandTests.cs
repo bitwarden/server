@@ -51,20 +51,22 @@ public class UpdateOrganizationCommandTests
         };
 
         // Act
-        await sutProvider.Sut.UpdateAsync(request);
+        var result = await sutProvider.Sut.UpdateAsync(request);
 
         // Assert
+        Assert.NotNull(result);
+        Assert.Equal(organizationId, result.Id);
+        Assert.Equal(name, result.Name);
+        Assert.Equal(billingEmail.ToLowerInvariant().Trim(), result.BillingEmail);
+
         await organizationRepository
             .Received(1)
             .GetByIdAsync(Arg.Is<Guid>(id => id == organizationId));
         await organizationService
             .Received(1)
             .ReplaceAndUpdateCacheAsync(
-                Arg.Is<Organization>(org =>
-                    org.Id == organizationId &&
-                    org.Name == name &&
-                    org.BillingEmail == billingEmail.ToLowerInvariant().Trim()),
-                Arg.Is<EventType>(e => e == EventType.Organization_Updated));
+                result,
+                EventType.Organization_Updated);
         await stripeAdapter
             .DidNotReceiveWithAnyArgs()
             .CustomerUpdateAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>());
@@ -106,9 +108,13 @@ public class UpdateOrganizationCommandTests
         };
 
         // Act
-        await sutProvider.Sut.UpdateAsync(request);
+        var result = await sutProvider.Sut.UpdateAsync(request);
 
         // Assert
+        Assert.NotNull(result);
+        Assert.Equal(organizationId, result.Id);
+        Assert.Equal(newName, result.Name);
+
         await stripeAdapter
             .Received(1)
             .CustomerUpdateAsync(
@@ -153,9 +159,13 @@ public class UpdateOrganizationCommandTests
         };
 
         // Act
-        await sutProvider.Sut.UpdateAsync(request);
+        var result = await sutProvider.Sut.UpdateAsync(request);
 
         // Assert
+        Assert.NotNull(result);
+        Assert.Equal(organizationId, result.Id);
+        Assert.Equal(newBillingEmail.ToLowerInvariant().Trim(), result.BillingEmail);
+
         await stripeAdapter
             .Received(1)
             .CustomerUpdateAsync(
@@ -198,17 +208,19 @@ public class UpdateOrganizationCommandTests
         };
 
         // Act
-        await sutProvider.Sut.UpdateAsync(request);
+        var result = await sutProvider.Sut.UpdateAsync(request);
 
         // Assert
+        Assert.NotNull(result);
+        Assert.Equal(organizationId, result.Id);
+        Assert.Equal(name, result.Name);
+        Assert.Equal("original@example.com", result.BillingEmail); // Original billing email preserved
+
         await organizationService
             .Received(1)
             .ReplaceAndUpdateCacheAsync(
-                Arg.Is<Organization>(org =>
-                    org.Id == organizationId &&
-                    org.Name == name &&
-                    org.BillingEmail == "original@example.com"), // Original billing email preserved
-                Arg.Is<EventType>(e => e == EventType.Organization_Updated));
+                result,
+                EventType.Organization_Updated);
     }
 
     [Theory, BitAutoData]
@@ -246,9 +258,14 @@ public class UpdateOrganizationCommandTests
         };
 
         // Act
-        await sutProvider.Sut.UpdateAsync(request);
+        var result = await sutProvider.Sut.UpdateAsync(request);
 
         // Assert
+        Assert.NotNull(result);
+        Assert.Equal(organizationId, result.Id);
+        Assert.Equal(newName, result.Name);
+        Assert.Equal("billing@example.com", result.BillingEmail); // Original billing email preserved due to provider
+
         await stripeAdapter
             .Received(1)
             .CustomerUpdateAsync(
@@ -290,9 +307,13 @@ public class UpdateOrganizationCommandTests
         };
 
         // Act
-        await sutProvider.Sut.UpdateAsync(request);
+        var result = await sutProvider.Sut.UpdateAsync(request);
 
         // Assert
+        Assert.NotNull(result);
+        Assert.Equal(organizationId, result.Id);
+        Assert.Equal(longName, result.Name);
+
         await stripeAdapter
             .Received(1)
             .CustomerUpdateAsync(
@@ -359,14 +380,18 @@ public class UpdateOrganizationCommandTests
         };
 
         // Act
-        await sutProvider.Sut.UpdateAsync(request);
+        var result = await sutProvider.Sut.UpdateAsync(request);
 
         // Assert
+        Assert.NotNull(result);
+        Assert.Equal(organizationId, result.Id);
+        Assert.Equal("New Name", result.Name);
+
         await organizationService
             .Received(1)
             .ReplaceAndUpdateCacheAsync(
-                Arg.Is<Organization>(org => org.Id == organizationId),
-                Arg.Is<EventType>(e => e == EventType.Organization_Updated));
+                result,
+                EventType.Organization_Updated);
         await stripeAdapter
             .DidNotReceiveWithAnyArgs()
             .CustomerUpdateAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>());
@@ -405,14 +430,18 @@ public class UpdateOrganizationCommandTests
         };
 
         // Act
-        await sutProvider.Sut.UpdateAsync(request);
+        var result = await sutProvider.Sut.UpdateAsync(request);
 
         // Assert
+        Assert.NotNull(result);
+        Assert.Equal(organizationId, result.Id);
+        Assert.Equal("New Name", result.Name);
+
         await organizationService
             .Received(1)
             .ReplaceAndUpdateCacheAsync(
-                Arg.Is<Organization>(org => org.Id == organizationId),
-                Arg.Is<EventType>(e => e == EventType.Organization_Updated));
+                result,
+                EventType.Organization_Updated);
         await stripeAdapter
             .DidNotReceiveWithAnyArgs()
             .CustomerUpdateAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>());
@@ -454,17 +483,19 @@ public class UpdateOrganizationCommandTests
         };
 
         // Act
-        await sutProvider.Sut.UpdateAsync(request);
+        var result = await sutProvider.Sut.UpdateAsync(request);
 
         // Assert
+        Assert.NotNull(result);
+        Assert.Equal(organizationId, result.Id);
+        Assert.Equal(publicKey, result.PublicKey);
+        Assert.Equal(encryptedPrivateKey, result.PrivateKey);
+
         await organizationService
             .Received(1)
             .ReplaceAndUpdateCacheAsync(
-                Arg.Is<Organization>(org =>
-                    org.Id == organizationId &&
-                    org.PublicKey == publicKey &&
-                    org.PrivateKey == encryptedPrivateKey),
-                Arg.Is<EventType>(e => e == EventType.Organization_Updated));
+                result,
+                EventType.Organization_Updated);
     }
 
     [Theory, BitAutoData]
@@ -503,17 +534,19 @@ public class UpdateOrganizationCommandTests
         };
 
         // Act
-        await sutProvider.Sut.UpdateAsync(request);
+        var result = await sutProvider.Sut.UpdateAsync(request);
 
         // Assert
+        Assert.NotNull(result);
+        Assert.Equal(organizationId, result.Id);
+        Assert.Equal(existingPublicKey, result.PublicKey);
+        Assert.Equal(existingPrivateKey, result.PrivateKey);
+
         await organizationService
             .Received(1)
             .ReplaceAndUpdateCacheAsync(
-                Arg.Is<Organization>(org =>
-                    org.Id == organizationId &&
-                    org.PublicKey == existingPublicKey &&
-                    org.PrivateKey == existingPrivateKey),
-                Arg.Is<EventType>(e => e == EventType.Organization_Updated));
+                result,
+                EventType.Organization_Updated);
     }
 
     [Theory, BitAutoData]
@@ -551,16 +584,18 @@ public class UpdateOrganizationCommandTests
         };
 
         // Act
-        await sutProvider.Sut.UpdateAsync(request);
+        var result = await sutProvider.Sut.UpdateAsync(request);
 
         // Assert
+        Assert.NotNull(result);
+        Assert.Equal(organizationId, result.Id);
+        Assert.Equal(publicKey, result.PublicKey);
+        Assert.Null(result.PrivateKey);
+
         await organizationService
             .Received(1)
             .ReplaceAndUpdateCacheAsync(
-                Arg.Is<Organization>(org =>
-                    org.Id == organizationId &&
-                    org.PublicKey == publicKey &&
-                    org.PrivateKey == null),
-                Arg.Is<EventType>(e => e == EventType.Organization_Updated));
+                result,
+                EventType.Organization_Updated);
     }
 }
