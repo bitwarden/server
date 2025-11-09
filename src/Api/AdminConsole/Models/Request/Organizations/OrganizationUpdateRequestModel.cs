@@ -7,10 +7,9 @@ namespace Bit.Api.AdminConsole.Models.Request.Organizations;
 
 public class OrganizationUpdateRequestModel
 {
-    [Required]
     [StringLength(50, ErrorMessage = "The field Name exceeds the maximum length.")]
     [JsonConverter(typeof(HtmlEncodingStringConverter))]
-    public required string Name { get; set; }
+    public required string? Name { get; set; }
 
     [EmailAddress]
     [StringLength(256)]

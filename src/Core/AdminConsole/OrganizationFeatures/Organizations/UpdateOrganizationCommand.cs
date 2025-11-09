@@ -13,7 +13,8 @@ using Stripe;
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 
 /// <summary>
-/// Request model for updating an organization.
+/// Request model for updating the name, billing email, and/or private keys for an organization (legacy migration code).
+/// Any combination of these properties can be updated, so they are optional. If none are specified it will not update anything.
 /// </summary>
 public record UpdateOrganizationRequest
 {
@@ -23,9 +24,9 @@ public record UpdateOrganizationRequest
     public required Guid OrganizationId { get; init; }
 
     /// <summary>
-    /// The new organization name to apply.
+    /// The new organization name to apply (optional, this is skipped if not provided).
     /// </summary>
-    public required string Name { get; init; }
+    public required string? Name { get; init; }
 
     /// <summary>
     /// The new billing email address to apply (optional, this is skipped if not provided).
@@ -84,9 +85,13 @@ public class UpdateOrganizationCommand(
             return;
         }
 
-        organization.Name = request.Name;
+        // These values may or may not be sent by the client depending on the operation being performed.
+        // Skip any values not provided.
+        if (request.Name is not null)
+        {
+            organization.Name = request.Name;
+        }
 
-        // Updating the billing email is optional
         if (request.BillingEmail is not null)
         {
             organization.BillingEmail = request.BillingEmail.ToLowerInvariant().Trim();
