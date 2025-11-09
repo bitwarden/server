@@ -21,7 +21,6 @@ public class UpdateOrganizationCommandTests
     public async Task UpdateAsync_WhenValidOrganization_UpdatesOrganization(
         Guid organizationId,
         string name,
-        string businessName,
         string billingEmail,
         Organization organization,
         SutProvider<UpdateOrganizationCommand> sutProvider)
@@ -48,7 +47,6 @@ public class UpdateOrganizationCommandTests
         {
             OrganizationId = organizationId,
             Name = name,
-            BusinessName = businessName,
             BillingEmail = billingEmail
         };
 
@@ -65,7 +63,6 @@ public class UpdateOrganizationCommandTests
                 Arg.Is<Organization>(org =>
                     org.Id == organizationId &&
                     org.Name == name &&
-                    org.BusinessName == businessName &&
                     org.BillingEmail == billingEmail.ToLowerInvariant().Trim()),
                 Arg.Is<EventType>(e => e == EventType.Organization_Updated));
         await stripeAdapter
@@ -105,7 +102,6 @@ public class UpdateOrganizationCommandTests
         {
             OrganizationId = organizationId,
             Name = newName,
-            BusinessName = organization.BusinessName,
             BillingEmail = organization.BillingEmail
         };
 
@@ -153,7 +149,6 @@ public class UpdateOrganizationCommandTests
         {
             OrganizationId = organizationId,
             Name = organization.Name,
-            BusinessName = organization.BusinessName,
             BillingEmail = newBillingEmail
         };
 
@@ -173,7 +168,6 @@ public class UpdateOrganizationCommandTests
     public async Task UpdateAsync_WhenProviderManaged_PreservesBillingEmail(
         Guid organizationId,
         string name,
-        string businessName,
         string newBillingEmail,
         Organization organization,
         Provider provider,
@@ -200,7 +194,6 @@ public class UpdateOrganizationCommandTests
         {
             OrganizationId = organizationId,
             Name = name,
-            BusinessName = businessName,
             BillingEmail = newBillingEmail
         };
 
@@ -214,7 +207,6 @@ public class UpdateOrganizationCommandTests
                 Arg.Is<Organization>(org =>
                     org.Id == organizationId &&
                     org.Name == name &&
-                    org.BusinessName == businessName &&
                     org.BillingEmail == "original@example.com"), // Original billing email preserved
                 Arg.Is<EventType>(e => e == EventType.Organization_Updated));
     }
@@ -250,7 +242,6 @@ public class UpdateOrganizationCommandTests
         {
             OrganizationId = organizationId,
             Name = newName,
-            BusinessName = organization.BusinessName,
             BillingEmail = "new@example.com" // This will be ignored due to provider
         };
 
@@ -295,7 +286,6 @@ public class UpdateOrganizationCommandTests
         {
             OrganizationId = organizationId,
             Name = longName,
-            BusinessName = organization.BusinessName,
             BillingEmail = organization.BillingEmail
         };
 
@@ -315,7 +305,6 @@ public class UpdateOrganizationCommandTests
     public async Task UpdateAsync_WhenOrganizationNotFound_ThrowsNotFoundException(
         Guid organizationId,
         string name,
-        string businessName,
         string billingEmail,
         SutProvider<UpdateOrganizationCommand> sutProvider)
     {
@@ -330,7 +319,6 @@ public class UpdateOrganizationCommandTests
         {
             OrganizationId = organizationId,
             Name = name,
-            BusinessName = businessName,
             BillingEmail = billingEmail
         };
 
@@ -367,7 +355,6 @@ public class UpdateOrganizationCommandTests
         {
             OrganizationId = organizationId,
             Name = "New Name",
-            BusinessName = organization.BusinessName,
             BillingEmail = organization.BillingEmail
         };
 
@@ -414,7 +401,6 @@ public class UpdateOrganizationCommandTests
         {
             OrganizationId = organizationId,
             Name = "New Name",
-            BusinessName = organization.BusinessName,
             BillingEmail = organization.BillingEmail
         };
 
@@ -462,7 +448,6 @@ public class UpdateOrganizationCommandTests
         {
             OrganizationId = organizationId,
             Name = organization.Name,
-            BusinessName = organization.BusinessName,
             BillingEmail = organization.BillingEmail,
             PublicKey = publicKey,
             EncryptedPrivateKey = encryptedPrivateKey
@@ -512,7 +497,6 @@ public class UpdateOrganizationCommandTests
         {
             OrganizationId = organizationId,
             Name = organization.Name,
-            BusinessName = organization.BusinessName,
             BillingEmail = organization.BillingEmail,
             PublicKey = newPublicKey,
             EncryptedPrivateKey = newEncryptedPrivateKey
@@ -561,7 +545,6 @@ public class UpdateOrganizationCommandTests
         {
             OrganizationId = organizationId,
             Name = organization.Name,
-            BusinessName = organization.BusinessName,
             BillingEmail = organization.BillingEmail,
             PublicKey = publicKey,
             EncryptedPrivateKey = null

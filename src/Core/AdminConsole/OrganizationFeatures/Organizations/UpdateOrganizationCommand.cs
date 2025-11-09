@@ -6,6 +6,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Stripe;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
@@ -24,11 +25,6 @@ public record UpdateOrganizationRequest
     /// The new organization name to apply.
     /// </summary>
     public required string Name { get; init; }
-
-    /// <summary>
-    /// The new business name to apply.
-    /// </summary>
-    public string? BusinessName { get; init; }
 
     /// <summary>
     /// The new billing email address to apply (ignored if organization is managed by a provider).
@@ -50,7 +46,8 @@ public class UpdateOrganizationCommand(
     IProviderRepository providerRepository,
     IStripeAdapter stripeAdapter,
     IOrganizationService organizationService,
-    IOrganizationRepository organizationRepository
+    IOrganizationRepository organizationRepository,
+    IGlobalSettings globalSettings
 ) : IUpdateOrganizationCommand
 {
     public async Task UpdateAsync(UpdateOrganizationRequest request)
@@ -65,8 +62,9 @@ public class UpdateOrganizationCommand(
         var originalName = organization.Name;
         var originalBillingEmail = organization.BillingEmail;
 
-        // Apply updates to organization
-        await ApplyUpdatesToOrganizationAsync(organization, request);
+        // Apply updates to organization model
+        await UpdateOrganizationDetailsAsync(organization, request);
+        UpdatePublicPrivateKeyPairAsync(organization, request);
 
         await organizationService.ReplaceAndUpdateCacheAsync(organization, EventType.Organization_Updated);
 
@@ -74,10 +72,17 @@ public class UpdateOrganizationCommand(
         await UpdateBillingIfRequiredAsync(organization, originalName, originalBillingEmail);
     }
 
-    private async Task ApplyUpdatesToOrganizationAsync(Organization organization, UpdateOrganizationRequest request)
+    private async Task UpdateOrganizationDetailsAsync(Organization organization, UpdateOrganizationRequest request)
     {
+        if (globalSettings.SelfHosted)
+        {
+            // These values come from the license file and cannot be updated on self-hosted instances.
+            // The only thing they can actually update here is to backfill their public/private keypair if missing
+            // (for old organizations).
+            return;
+        }
+
         organization.Name = request.Name;
-        organization.BusinessName = request.BusinessName;
 
         // Only update billing email if NOT managed by a provider
         var provider = await providerRepository.GetByOrganizationIdAsync(organization.Id);
@@ -85,7 +90,10 @@ public class UpdateOrganizationCommand(
         {
             organization.BillingEmail = request.BillingEmail.ToLowerInvariant().Trim();
         }
+    }
 
+    private void UpdatePublicPrivateKeyPairAsync(Organization organization, UpdateOrganizationRequest request)
+    {
         // Update keys if provided and not already set
         if (!string.IsNullOrWhiteSpace(request.PublicKey) && string.IsNullOrWhiteSpace(organization.PublicKey))
         {
@@ -104,7 +112,7 @@ public class UpdateOrganizationCommand(
         var shouldUpdateBilling = originalName != organization.Name ||
                                   originalBillingEmail != organization.BillingEmail;
 
-        if (!shouldUpdateBilling || string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
+        if (!shouldUpdateBilling || string.IsNullOrWhiteSpace(organization.GatewayCustomerId) || globalSettings.SelfHosted)
         {
             return;
         }

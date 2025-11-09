@@ -54,7 +54,6 @@ public class OrganizationsControllerTests : IClassFixture<ApiApplicationFactory>
         var updateRequest = new OrganizationUpdateRequestModel
         {
             Name = "Updated Organization Name",
-            BusinessName = _organization.BusinessName,
             BillingEmail = _organization.BillingEmail
         };
 
@@ -85,7 +84,6 @@ public class OrganizationsControllerTests : IClassFixture<ApiApplicationFactory>
         var updateRequest = new OrganizationUpdateRequestModel
         {
             Name = $"{providerType} Provider Updated Name",
-            BusinessName = _organization.BusinessName,
             BillingEmail = _organization.BillingEmail
         };
 

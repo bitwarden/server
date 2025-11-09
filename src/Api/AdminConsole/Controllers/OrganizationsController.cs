@@ -233,17 +233,8 @@ public class OrganizationsController : Controller
     [Authorize<OwnerOrProviderRequirement>]
     public async Task<OrganizationResponseModel> Put(Guid organizationId, [FromBody] OrganizationUpdateRequestModel model)
     {
-        var request = new UpdateOrganizationRequest
-        {
-            OrganizationId = organizationId,
-            Name = model.Name,
-            BusinessName = model.BusinessName,
-            BillingEmail = model.BillingEmail,
-            PublicKey = model.Keys?.PublicKey,
-            EncryptedPrivateKey = model.Keys?.EncryptedPrivateKey
-        };
-
-        await _updateOrganizationCommand.UpdateAsync(request);
+        var commandRequest = model.ToCommandRequest(organizationId);
+        await _updateOrganizationCommand.UpdateAsync(commandRequest);
 
         var organization = await _organizationRepository.GetByIdAsync(organizationId);
         var plan = await _pricingClient.GetPlan(organization.PlanType);
