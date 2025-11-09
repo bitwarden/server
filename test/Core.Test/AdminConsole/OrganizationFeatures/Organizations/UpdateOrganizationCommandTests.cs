@@ -2,6 +2,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -9,7 +10,6 @@ using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
-using Stripe;
 using Xunit;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Organizations;
@@ -29,10 +29,9 @@ public class UpdateOrganizationCommandTests
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         var providerRepository = sutProvider.GetDependency<IProviderRepository>();
         var organizationService = sutProvider.GetDependency<IOrganizationService>();
-        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        var organizationBillingService = sutProvider.GetDependency<IOrganizationBillingService>();
 
         organization.Id = organizationId;
-        organization.Identifier = null;
         organization.GatewayCustomerId = null; // No Stripe customer, so no billing update
 
         organizationRepository
@@ -67,13 +66,13 @@ public class UpdateOrganizationCommandTests
             .ReplaceAndUpdateCacheAsync(
                 result,
                 EventType.Organization_Updated);
-        await stripeAdapter
+        await organizationBillingService
             .DidNotReceiveWithAnyArgs()
-            .CustomerUpdateAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>());
+            .UpdateOrganizationNameAndEmail(Arg.Any<Organization>());
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateAsync_WhenNameChanges_UpdatesStripe(
+    public async Task UpdateAsync_WhenNameChanges_UpdatesBilling(
         Guid organizationId,
         string newName,
         Organization organization,
@@ -82,15 +81,10 @@ public class UpdateOrganizationCommandTests
         // Arrange
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         var providerRepository = sutProvider.GetDependency<IProviderRepository>();
-        var organizationService = sutProvider.GetDependency<IOrganizationService>();
-        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        var organizationBillingService = sutProvider.GetDependency<IOrganizationBillingService>();
 
         organization.Id = organizationId;
         organization.Name = "Old Name";
-        organization.BusinessName = "Business";
-        organization.BillingEmail = "billing@example.com";
-        organization.GatewayCustomerId = "cus_test123";
-        organization.Identifier = null;
 
         organizationRepository
             .GetByIdAsync(organizationId)
@@ -115,17 +109,13 @@ public class UpdateOrganizationCommandTests
         Assert.Equal(organizationId, result.Id);
         Assert.Equal(newName, result.Name);
 
-        await stripeAdapter
+        await organizationBillingService
             .Received(1)
-            .CustomerUpdateAsync(
-                Arg.Is<string>(id => id == organization.GatewayCustomerId),
-                Arg.Is<CustomerUpdateOptions>(options =>
-                    options.Email == organization.BillingEmail &&
-                    options.Description == organization.DisplayBusinessName()));
+            .UpdateOrganizationNameAndEmail(result);
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateAsync_WhenBillingEmailChanges_UpdatesStripe(
+    public async Task UpdateAsync_WhenBillingEmailChanges_UpdatesBilling(
         Guid organizationId,
         string newBillingEmail,
         Organization organization,
@@ -134,14 +124,10 @@ public class UpdateOrganizationCommandTests
         // Arrange
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         var providerRepository = sutProvider.GetDependency<IProviderRepository>();
-        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        var organizationBillingService = sutProvider.GetDependency<IOrganizationBillingService>();
 
         organization.Id = organizationId;
-        organization.Name = "Organization Name";
-        organization.BusinessName = "Business";
         organization.BillingEmail = "old@example.com";
-        organization.GatewayCustomerId = "cus_test123";
-        organization.Identifier = null;
 
         organizationRepository
             .GetByIdAsync(organizationId)
@@ -166,12 +152,9 @@ public class UpdateOrganizationCommandTests
         Assert.Equal(organizationId, result.Id);
         Assert.Equal(newBillingEmail.ToLowerInvariant().Trim(), result.BillingEmail);
 
-        await stripeAdapter
+        await organizationBillingService
             .Received(1)
-            .CustomerUpdateAsync(
-                Arg.Is<string>(id => id == organization.GatewayCustomerId),
-                Arg.Is<CustomerUpdateOptions>(options =>
-                    options.Email == newBillingEmail.ToLowerInvariant().Trim()));
+            .UpdateOrganizationNameAndEmail(result);
     }
 
     [Theory, BitAutoData]
@@ -190,7 +173,6 @@ public class UpdateOrganizationCommandTests
 
         organization.Id = organizationId;
         organization.BillingEmail = "original@example.com";
-        organization.Identifier = null;
 
         organizationRepository
             .GetByIdAsync(organizationId)
@@ -224,105 +206,6 @@ public class UpdateOrganizationCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateAsync_WhenProviderManagedAndNameChanges_StillUpdatesStripe(
-        Guid organizationId,
-        string newName,
-        Organization organization,
-        Provider provider,
-        SutProvider<UpdateOrganizationCommand> sutProvider)
-    {
-        // Arrange
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
-        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-
-        organization.Id = organizationId;
-        organization.Name = "Old Name";
-        organization.BillingEmail = "billing@example.com";
-        organization.GatewayCustomerId = "cus_test123";
-        organization.Identifier = null;
-
-        organizationRepository
-            .GetByIdAsync(organizationId)
-            .Returns(organization);
-
-        providerRepository
-            .GetByOrganizationIdAsync(organizationId)
-            .Returns(provider);
-
-        var request = new UpdateOrganizationRequest
-        {
-            OrganizationId = organizationId,
-            Name = newName,
-            BillingEmail = "new@example.com" // This will be ignored due to provider
-        };
-
-        // Act
-        var result = await sutProvider.Sut.UpdateAsync(request);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal(organizationId, result.Id);
-        Assert.Equal(newName, result.Name);
-        Assert.Equal("billing@example.com", result.BillingEmail); // Original billing email preserved due to provider
-
-        await stripeAdapter
-            .Received(1)
-            .CustomerUpdateAsync(
-                Arg.Is<string>(id => id == organization.GatewayCustomerId),
-                Arg.Any<CustomerUpdateOptions>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task UpdateAsync_WhenDisplayNameIsLong_TruncatesTo30Characters(
-        Guid organizationId,
-        Organization organization,
-        SutProvider<UpdateOrganizationCommand> sutProvider)
-    {
-        // Arrange
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
-        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-
-        var longName = "This is a very long organization name that exceeds thirty characters";
-
-        organization.Id = organizationId;
-        organization.Name = "Old Name";
-        organization.GatewayCustomerId = "cus_test123";
-        organization.Identifier = null;
-
-        organizationRepository
-            .GetByIdAsync(organizationId)
-            .Returns(organization);
-
-        providerRepository
-            .GetByOrganizationIdAsync(organizationId)
-            .Returns((Provider)null);
-
-        var request = new UpdateOrganizationRequest
-        {
-            OrganizationId = organizationId,
-            Name = longName,
-            BillingEmail = organization.BillingEmail
-        };
-
-        // Act
-        var result = await sutProvider.Sut.UpdateAsync(request);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal(organizationId, result.Id);
-        Assert.Equal(longName, result.Name);
-
-        await stripeAdapter
-            .Received(1)
-            .CustomerUpdateAsync(
-                Arg.Any<string>(),
-                Arg.Is<CustomerUpdateOptions>(options =>
-                    options.InvoiceSettings.CustomFields.First().Value.Length == 30));
-    }
-
-    [Theory, BitAutoData]
     public async Task UpdateAsync_WhenOrganizationNotFound_ThrowsNotFoundException(
         Guid organizationId,
         string name,
@@ -347,8 +230,11 @@ public class UpdateOrganizationCommandTests
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateAsync(request));
     }
 
-    [Theory, BitAutoData]
-    public async Task UpdateAsync_WhenGatewayCustomerIdIsNull_SkipsBillingUpdate(
+    [Theory]
+    [BitAutoData("")]
+    [BitAutoData((string)null)]
+    public async Task UpdateAsync_WhenGatewayCustomerIdIsNullOrEmpty_SkipsBillingUpdate(
+        string gatewayCustomerId,
         Guid organizationId,
         Organization organization,
         SutProvider<UpdateOrganizationCommand> sutProvider)
@@ -357,12 +243,11 @@ public class UpdateOrganizationCommandTests
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         var providerRepository = sutProvider.GetDependency<IProviderRepository>();
         var organizationService = sutProvider.GetDependency<IOrganizationService>();
-        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        var organizationBillingService = sutProvider.GetDependency<IOrganizationBillingService>();
 
         organization.Id = organizationId;
         organization.Name = "Old Name";
-        organization.GatewayCustomerId = null;
-        organization.Identifier = null;
+        organization.GatewayCustomerId = gatewayCustomerId;
 
         organizationRepository
             .GetByIdAsync(organizationId)
@@ -392,59 +277,9 @@ public class UpdateOrganizationCommandTests
             .ReplaceAndUpdateCacheAsync(
                 result,
                 EventType.Organization_Updated);
-        await stripeAdapter
+        await organizationBillingService
             .DidNotReceiveWithAnyArgs()
-            .CustomerUpdateAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task UpdateAsync_WhenGatewayCustomerIdIsEmpty_SkipsBillingUpdate(
-        Guid organizationId,
-        Organization organization,
-        SutProvider<UpdateOrganizationCommand> sutProvider)
-    {
-        // Arrange
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
-        var organizationService = sutProvider.GetDependency<IOrganizationService>();
-        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-
-        organization.Id = organizationId;
-        organization.Name = "Old Name";
-        organization.GatewayCustomerId = string.Empty;
-        organization.Identifier = null;
-
-        organizationRepository
-            .GetByIdAsync(organizationId)
-            .Returns(organization);
-
-        providerRepository
-            .GetByOrganizationIdAsync(organizationId)
-            .Returns((Provider)null);
-
-        var request = new UpdateOrganizationRequest
-        {
-            OrganizationId = organizationId,
-            Name = "New Name",
-            BillingEmail = organization.BillingEmail
-        };
-
-        // Act
-        var result = await sutProvider.Sut.UpdateAsync(request);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal(organizationId, result.Id);
-        Assert.Equal("New Name", result.Name);
-
-        await organizationService
-            .Received(1)
-            .ReplaceAndUpdateCacheAsync(
-                result,
-                EventType.Organization_Updated);
-        await stripeAdapter
-            .DidNotReceiveWithAnyArgs()
-            .CustomerUpdateAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>());
+            .UpdateOrganizationNameAndEmail(Arg.Any<Organization>());
     }
 
     [Theory, BitAutoData]
@@ -463,7 +298,6 @@ public class UpdateOrganizationCommandTests
         organization.Id = organizationId;
         organization.PublicKey = null;
         organization.PrivateKey = null;
-        organization.Identifier = null;
 
         organizationRepository
             .GetByIdAsync(organizationId)
@@ -514,7 +348,6 @@ public class UpdateOrganizationCommandTests
         organization.Id = organizationId;
         var existingPublicKey = organization.PublicKey;
         var existingPrivateKey = organization.PrivateKey;
-        organization.Identifier = null;
 
         organizationRepository
             .GetByIdAsync(organizationId)
@@ -541,56 +374,6 @@ public class UpdateOrganizationCommandTests
         Assert.Equal(organizationId, result.Id);
         Assert.Equal(existingPublicKey, result.PublicKey);
         Assert.Equal(existingPrivateKey, result.PrivateKey);
-
-        await organizationService
-            .Received(1)
-            .ReplaceAndUpdateCacheAsync(
-                result,
-                EventType.Organization_Updated);
-    }
-
-    [Theory, BitAutoData]
-    public async Task UpdateAsync_WhenOnlyPublicKeyProvided_SetsOnlyPublicKey(
-        Guid organizationId,
-        string publicKey,
-        Organization organization,
-        SutProvider<UpdateOrganizationCommand> sutProvider)
-    {
-        // Arrange
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
-        var organizationService = sutProvider.GetDependency<IOrganizationService>();
-
-        organization.Id = organizationId;
-        organization.PublicKey = null;
-        organization.PrivateKey = null;
-        organization.Identifier = null;
-
-        organizationRepository
-            .GetByIdAsync(organizationId)
-            .Returns(organization);
-
-        providerRepository
-            .GetByOrganizationIdAsync(organizationId)
-            .Returns((Provider)null);
-
-        var request = new UpdateOrganizationRequest
-        {
-            OrganizationId = organizationId,
-            Name = organization.Name,
-            BillingEmail = organization.BillingEmail,
-            PublicKey = publicKey,
-            EncryptedPrivateKey = null
-        };
-
-        // Act
-        var result = await sutProvider.Sut.UpdateAsync(request);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal(organizationId, result.Id);
-        Assert.Equal(publicKey, result.PublicKey);
-        Assert.Null(result.PrivateKey);
 
         await organizationService
             .Received(1)

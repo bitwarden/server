@@ -174,6 +174,35 @@ public class OrganizationBillingService(
         }
     }
 
+    public async Task UpdateOrganizationNameAndEmail(Organization organization)
+    {
+        if (organization.GatewayCustomerId is null)
+        {
+            throw new BillingException("Cannot update an organization in Stripe without a GatewayCustomerId.");
+        }
+
+        var newDisplayName = organization.DisplayName();
+
+        await stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId,
+            new CustomerUpdateOptions
+            {
+                Email = organization.BillingEmail,
+                Description = newDisplayName,
+                InvoiceSettings = new CustomerInvoiceSettingsOptions
+                {
+                    // This overwrites the existing custom fields for this organization
+                    CustomFields = [
+                        new CustomerInvoiceSettingsCustomFieldOptions
+                        {
+                            Name = organization.SubscriberType(),
+                            Value = newDisplayName.Length <= 30
+                                ? newDisplayName
+                                : newDisplayName[..30]
+                        }]
+                },
+            });
+    }
+
     #region Utilities
 
     private async Task<Customer> CreateCustomerAsync(

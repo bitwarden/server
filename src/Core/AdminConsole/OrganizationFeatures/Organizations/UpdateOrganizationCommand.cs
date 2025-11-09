@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -44,10 +45,10 @@ public record UpdateOrganizationRequest
 
 public class UpdateOrganizationCommand(
     IProviderRepository providerRepository,
-    IStripeAdapter stripeAdapter,
     IOrganizationService organizationService,
     IOrganizationRepository organizationRepository,
-    IGlobalSettings globalSettings
+    IGlobalSettings globalSettings,
+    IOrganizationBillingService organizationBillingService
 ) : IUpdateOrganizationCommand
 {
     public async Task<Organization> UpdateAsync(UpdateOrganizationRequest request)
@@ -119,25 +120,6 @@ public class UpdateOrganizationCommand(
             return;
         }
 
-        var newDisplayName = organization.DisplayName();
-
-        await stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId,
-            new CustomerUpdateOptions
-            {
-                Email = organization.BillingEmail,
-                Description = organization.DisplayBusinessName(),
-                InvoiceSettings = new CustomerInvoiceSettingsOptions
-                {
-                    // This overwrites the existing custom fields for this organization
-                    CustomFields = [
-                        new CustomerInvoiceSettingsCustomFieldOptions
-                        {
-                            Name = organization.SubscriberType(),
-                            Value = newDisplayName.Length <= 30
-                                ? newDisplayName
-                                : newDisplayName[..30]
-                        }]
-                },
-            });
+        await organizationBillingService.UpdateOrganizationNameAndEmail(organization);
     }
 }
