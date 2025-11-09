@@ -30,7 +30,7 @@ public record UpdateOrganizationRequest
     /// <summary>
     /// The new billing email address to apply (ignored if organization is managed by a provider).
     /// </summary>
-    public required string BillingEmail { get; init; }
+    public string? BillingEmail { get; init; }
 
     /// <summary>
     /// The organization's public key to set (optional, only set if not already present on the organization).
@@ -44,7 +44,6 @@ public record UpdateOrganizationRequest
 }
 
 public class UpdateOrganizationCommand(
-    IProviderRepository providerRepository,
     IOrganizationService organizationService,
     IOrganizationRepository organizationRepository,
     IGlobalSettings globalSettings,
@@ -64,8 +63,8 @@ public class UpdateOrganizationCommand(
         var originalBillingEmail = organization.BillingEmail;
 
         // Apply updates to organization model
-        await UpdateOrganizationDetailsAsync(organization, request);
-        UpdatePublicPrivateKeyPairAsync(organization, request);
+        UpdateOrganizationDetails(organization, request);
+        UpdatePublicPrivateKeyPair(organization, request);
 
         await organizationService.ReplaceAndUpdateCacheAsync(organization, EventType.Organization_Updated);
 
@@ -75,7 +74,7 @@ public class UpdateOrganizationCommand(
         return organization;
     }
 
-    private async Task UpdateOrganizationDetailsAsync(Organization organization, UpdateOrganizationRequest request)
+    private void UpdateOrganizationDetails(Organization organization, UpdateOrganizationRequest request)
     {
         if (globalSettings.SelfHosted)
         {
@@ -87,15 +86,14 @@ public class UpdateOrganizationCommand(
 
         organization.Name = request.Name;
 
-        // Only update billing email if NOT managed by a provider
-        var provider = await providerRepository.GetByOrganizationIdAsync(organization.Id);
-        if (provider == null)
+        // Updating the billing email is optional
+        if (request.BillingEmail is not null)
         {
             organization.BillingEmail = request.BillingEmail.ToLowerInvariant().Trim();
         }
     }
 
-    private void UpdatePublicPrivateKeyPairAsync(Organization organization, UpdateOrganizationRequest request)
+    private void UpdatePublicPrivateKeyPair(Organization organization, UpdateOrganizationRequest request)
     {
         // Update keys if provided and not already set
         if (!string.IsNullOrWhiteSpace(request.PublicKey) && string.IsNullOrWhiteSpace(organization.PublicKey))

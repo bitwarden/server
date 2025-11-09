@@ -13,9 +13,8 @@ public class OrganizationUpdateRequestModel
     public required string Name { get; set; }
 
     [EmailAddress]
-    [Required]
     [StringLength(256)]
-    public required string BillingEmail { get; set; }
+    public required string? BillingEmail { get; set; }
 
     public OrganizationKeysRequestModel? Keys { get; set; }
 

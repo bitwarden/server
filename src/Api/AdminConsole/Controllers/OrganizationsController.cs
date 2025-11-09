@@ -10,6 +10,7 @@ using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Auth.Models.Request.Organizations;
 using Bit.Api.Auth.Models.Response.Organizations;
+using Bit.Api.Billing.Models.Requirements;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
@@ -73,6 +74,7 @@ public class OrganizationsController : Controller
     private readonly IPricingClient _pricingClient;
     private readonly IOrganizationUpdateKeysCommand _organizationUpdateKeysCommand;
     private readonly IUpdateOrganizationCommand _updateOrganizationCommand;
+    private readonly IAuthorizationService _authorizationService;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -98,7 +100,8 @@ public class OrganizationsController : Controller
         IPolicyRequirementQuery policyRequirementQuery,
         IPricingClient pricingClient,
         IOrganizationUpdateKeysCommand organizationUpdateKeysCommand,
-        IUpdateOrganizationCommand updateOrganizationCommand)
+        IUpdateOrganizationCommand updateOrganizationCommand,
+        IAuthorizationService authorizationService)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -124,6 +127,7 @@ public class OrganizationsController : Controller
         _pricingClient = pricingClient;
         _organizationUpdateKeysCommand = organizationUpdateKeysCommand;
         _updateOrganizationCommand = updateOrganizationCommand;
+        _authorizationService = authorizationService;
     }
 
     [HttpGet("{id}")]
@@ -230,19 +234,31 @@ public class OrganizationsController : Controller
     }
 
     [HttpPut("{organizationId:guid}")]
-    [Authorize<OwnerOrProviderRequirement>]
-    public async Task<OrganizationResponseModel> Put(Guid organizationId, [FromBody] OrganizationUpdateRequestModel model)
+    public async Task<IResult> Put(Guid organizationId, [FromBody] OrganizationUpdateRequestModel model)
     {
+        // Authorization logic depends on what's being edited. Additional checks apply if the Billing Email
+        // is being changed, because this implicates billing details.
+        IAuthorizationRequirement authorizationRequirement = model.BillingEmail is not null
+            ? new ManageOrganizationBillingRequirement() // TODO: fix the logic in this requirement pending Alex feedback
+            : new OwnerOrProviderRequirement();
+
+        var authorizationResult =
+            await _authorizationService.AuthorizeAsync(User, authorizationRequirement);
+        if (!authorizationResult.Succeeded)
+        {
+            return TypedResults.Unauthorized();
+        }
+
         var commandRequest = model.ToCommandRequest(organizationId);
         var updatedOrganization = await _updateOrganizationCommand.UpdateAsync(commandRequest);
 
         var plan = await _pricingClient.GetPlan(updatedOrganization.PlanType);
-        return new OrganizationResponseModel(updatedOrganization, plan);
+        return TypedResults.Ok(new OrganizationResponseModel(updatedOrganization, plan));
     }
 
     [HttpPost("{id}")]
     [Obsolete("This endpoint is deprecated. Use PUT method instead")]
-    public async Task<OrganizationResponseModel> PostPut(Guid id, [FromBody] OrganizationUpdateRequestModel model)
+    public async Task<IResult> PostPut(Guid id, [FromBody] OrganizationUpdateRequestModel model)
     {
         return await Put(id, model);
     }
