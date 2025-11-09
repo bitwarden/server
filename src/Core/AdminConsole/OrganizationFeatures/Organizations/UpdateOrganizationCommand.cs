@@ -28,7 +28,7 @@ public record UpdateOrganizationRequest
     public required string Name { get; init; }
 
     /// <summary>
-    /// The new billing email address to apply (ignored if organization is managed by a provider).
+    /// The new billing email address to apply (optional, this is skipped if not provided).
     /// </summary>
     public string? BillingEmail { get; init; }
 
@@ -95,7 +95,9 @@ public class UpdateOrganizationCommand(
 
     private void UpdatePublicPrivateKeyPair(Organization organization, UpdateOrganizationRequest request)
     {
-        // Update keys if provided and not already set
+        // Update keys if provided and not already set.
+        // This is legacy code for old organizations that were not created with a public/private keypair.
+        // FIXME: check if we can remove this migration pathway as it is now years old.
         if (!string.IsNullOrWhiteSpace(request.PublicKey) && string.IsNullOrWhiteSpace(organization.PublicKey))
         {
             organization.PublicKey = request.PublicKey;
