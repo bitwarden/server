@@ -6,7 +6,7 @@ BEGIN
     SET NOCOUNT ON
 
 SELECT
-    TOP 1 *
+    *
 FROM
     [dbo].[OrganizationUserUserDetailsView]
 WHERE
