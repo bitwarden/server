@@ -33,9 +33,14 @@ public class AutomaticUserConfirmationPolicyValidator(
 {
     public PolicyType Type => PolicyType.AutomaticUserConfirmation;
 
-    private const string _singleOrgPolicyNotEnabledErrorMessage = "The Single organization policy must be enabled before enabling the Automatically confirm invited users policy.";
-    private const string _usersNotCompliantWithSingleOrgErrorMessage = "All organization users must be compliant with the Single organization policy before enabling the Automatically confirm invited users policy. Please remove users who are members of multiple organizations.";
-    private const string _providerUsersExistErrorMessage = "The organization has users with the Provider user type. Please remove provider users before enabling the Automatically confirm invited users policy.";
+    private const string _singleOrgPolicyNotEnabledErrorMessage =
+        "The Single organization policy must be enabled before enabling the Automatically confirm invited users policy.";
+
+    private const string _usersNotCompliantWithSingleOrgErrorMessage =
+        "All organization users must be compliant with the Single organization policy before enabling the Automatically confirm invited users policy. Please remove users who are members of multiple organizations.";
+
+    private const string _providerUsersExistErrorMessage =
+        "The organization has users with the Provider user type. Please remove provider users before enabling the Automatically confirm invited users policy.";
 
     public IEnumerable<PolicyType> RequiredPolicies => [PolicyType.SingleOrg];
 
@@ -92,15 +97,12 @@ public class AutomaticUserConfirmationPolicyValidator(
 
     private async Task<string> ValidateSingleOrgPolicyComplianceAsync(Guid organizationId)
     {
-        // First check if Single Org policy is enabled (this is also handled by RequiredPolicies,
-        // but we check explicitly to provide a better error message)
         var singleOrgPolicy = await policyRepository.GetByOrganizationIdTypeAsync(organizationId, PolicyType.SingleOrg);
         if (singleOrgPolicy is not { Enabled: true })
         {
             return _singleOrgPolicyNotEnabledErrorMessage;
         }
 
-        // Get all active, non-revoked organization users (including Owners and Admins)
         var organizationUsers = (await organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId))
             .Where(ou => ou.Status != OrganizationUserStatusType.Invited &&
                          ou.Status != OrganizationUserStatusType.Revoked &&
@@ -112,21 +114,12 @@ public class AutomaticUserConfirmationPolicyValidator(
             return string.Empty;
         }
 
-        // Check if any users are members of multiple organizations
-        var allUserOrgs = await organizationUserRepository.GetManyByManyUsersAsync(
-            organizationUsers.Select(ou => ou.UserId!.Value));
+        var hasNonCompliantUser = (await organizationUserRepository.GetManyByManyUsersAsync(
+                organizationUsers.Select(ou => ou.UserId!.Value)))
+            .Any(uo => uo.OrganizationId != organizationId &&
+                       uo.Status != OrganizationUserStatusType.Invited);
 
-        var nonCompliantUsers = organizationUsers.Where(ou =>
-            allUserOrgs.Any(uo => uo.UserId == ou.UserId &&
-                uo.OrganizationId != organizationId &&
-                uo.Status != OrganizationUserStatusType.Invited)).ToList();
-
-        if (nonCompliantUsers.Count > 0)
-        {
-            return _usersNotCompliantWithSingleOrgErrorMessage;
-        }
-
-        return string.Empty;
+        return hasNonCompliantUser ? _usersNotCompliantWithSingleOrgErrorMessage : string.Empty;
     }
 
     private async Task<string> ValidateNoProviderUsersAsync(Guid organizationId)
