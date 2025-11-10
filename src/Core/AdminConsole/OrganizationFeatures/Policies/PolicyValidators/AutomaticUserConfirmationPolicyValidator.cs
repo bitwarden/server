@@ -122,7 +122,8 @@ public class AutomaticUserConfirmationPolicyValidator(
         // Get all active, non-revoked organization users (including Owners and Admins)
         var organizationUsers = (await organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId))
             .Where(ou => ou.Status != OrganizationUserStatusType.Invited &&
-                         ou.Status != OrganizationUserStatusType.Revoked)
+                         ou.Status != OrganizationUserStatusType.Revoked &&
+                         ou.UserId.HasValue)
             .ToList();
 
         if (organizationUsers.Count == 0)
