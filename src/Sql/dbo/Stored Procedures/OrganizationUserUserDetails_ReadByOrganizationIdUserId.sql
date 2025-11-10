@@ -14,5 +14,5 @@ WHERE
 AND
     [UserId] = @UserId
 END
-go
+GO
 
