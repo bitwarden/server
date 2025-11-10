@@ -4,7 +4,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Enums;
-using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
@@ -30,7 +29,7 @@ public class AutomaticUserConfirmationPolicyValidator(
     IPolicyRepository policyRepository,
     IOrganizationRepository organizationRepository,
     TimeProvider timeProvider)
-    : IPolicyValidator, IOnPolicyPreUpdateEvent
+    : IPolicyValidator, IPolicyValidationEvent
 {
     public PolicyType Type => PolicyType.AutomaticUserConfirmation;
 
@@ -57,6 +56,9 @@ public class AutomaticUserConfirmationPolicyValidator(
         return await ValidateEnablingPolicyAsync(policyUpdate.OrganizationId);
     }
 
+    public async Task<string> ValidateAsync(SavePolicyModel savePolicyModel, Policy? currentPolicy) =>
+        await ValidateAsync(savePolicyModel.PolicyUpdate, currentPolicy);
+
     public async Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
     {
         var organization = await organizationRepository.GetByIdAsync(policyUpdate.OrganizationId);
@@ -66,27 +68,6 @@ public class AutomaticUserConfirmationPolicyValidator(
             organization.UseAutomaticUserConfirmation = policyUpdate.Enabled;
             organization.RevisionDate = timeProvider.GetUtcNow().UtcDateTime;
             await organizationRepository.UpsertAsync(organization);
-        }
-    }
-
-    public async Task ExecutePreUpsertSideEffectAsync(SavePolicyModel policyRequest, Policy? currentPolicy)
-    {
-        // Only validate when the policy is being enabled (previously disabled or null -> now enabled)
-        if (policyRequest.PolicyUpdate is not { Enabled: true })
-        {
-            return;
-        }
-
-        // If the current policy is already enabled, no validation needed
-        if (currentPolicy is { Enabled: true })
-        {
-            return;
-        }
-
-        var validationError = await ValidateEnablingPolicyAsync(policyRequest.PolicyUpdate.OrganizationId);
-        if (!string.IsNullOrWhiteSpace(validationError))
-        {
-            throw new BadRequestException(validationError);
         }
     }
 

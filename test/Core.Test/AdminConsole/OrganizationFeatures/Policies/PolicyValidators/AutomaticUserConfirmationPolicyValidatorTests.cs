@@ -7,7 +7,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Test.AdminConsole.AutoFixture;
@@ -250,71 +249,6 @@ public class AutomaticUserConfirmationPolicyValidatorTests
 
         Assert.True(string.IsNullOrEmpty(result));
         // Should not call any repository methods when disabling
-        await sutProvider.GetDependency<IPolicyRepository>()
-            .DidNotReceive()
-            .GetByOrganizationIdTypeAsync(Arg.Any<Guid>(), Arg.Any<PolicyType>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task ExecutePreUpsertSideEffectAsync_EnablingPolicy_ValidationFails_ThrowsBadRequestException(
-        [PolicyUpdate(PolicyType.AutomaticUserConfirmation)] PolicyUpdate policyUpdate,
-        SutProvider<AutomaticUserConfirmationPolicyValidator> sutProvider)
-    {
-        // Single Org policy is not enabled
-        sutProvider.GetDependency<IPolicyRepository>()
-            .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SingleOrg)
-            .Returns((Policy?)null);
-
-        var savePolicyModel = new SavePolicyModel(policyUpdate);
-
-        await Assert.ThrowsAsync<BadRequestException>(
-            async () => await sutProvider.Sut.ExecutePreUpsertSideEffectAsync(savePolicyModel, null));
-    }
-
-    [Theory, BitAutoData]
-    public async Task ExecutePreUpsertSideEffectAsync_EnablingPolicy_ValidationPasses_DoesNotThrow(
-        [PolicyUpdate(PolicyType.AutomaticUserConfirmation)] PolicyUpdate policyUpdate,
-        [Policy(PolicyType.SingleOrg)] Policy singleOrgPolicy,
-        SutProvider<AutomaticUserConfirmationPolicyValidator> sutProvider)
-    {
-        singleOrgPolicy.OrganizationId = policyUpdate.OrganizationId;
-
-        sutProvider.GetDependency<IPolicyRepository>()
-            .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SingleOrg)
-            .Returns(singleOrgPolicy);
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyDetailsByOrganizationAsync(policyUpdate.OrganizationId)
-            .Returns([]);
-
-        sutProvider.GetDependency<IProviderUserRepository>()
-            .GetManyByOrganizationAsync(policyUpdate.OrganizationId)
-            .Returns([]);
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByOrganizationAsync(policyUpdate.OrganizationId, null)
-            .Returns([]);
-
-        var savePolicyModel = new SavePolicyModel(policyUpdate);
-
-        await sutProvider.Sut.ExecutePreUpsertSideEffectAsync(savePolicyModel, null);
-
-        // Should not throw
-    }
-
-    [Theory, BitAutoData]
-    public async Task ExecutePreUpsertSideEffectAsync_PolicyAlreadyEnabled_DoesNotValidate(
-        [PolicyUpdate(PolicyType.AutomaticUserConfirmation)] PolicyUpdate policyUpdate,
-        [Policy(PolicyType.AutomaticUserConfirmation)] Policy currentPolicy,
-        SutProvider<AutomaticUserConfirmationPolicyValidator> sutProvider)
-    {
-        currentPolicy.OrganizationId = policyUpdate.OrganizationId;
-
-        var savePolicyModel = new SavePolicyModel(policyUpdate);
-
-        await sutProvider.Sut.ExecutePreUpsertSideEffectAsync(savePolicyModel, currentPolicy);
-
-        // Should not call any repository methods since policy is already enabled
         await sutProvider.GetDependency<IPolicyRepository>()
             .DidNotReceive()
             .GetByOrganizationIdTypeAsync(Arg.Any<Guid>(), Arg.Any<PolicyType>());
