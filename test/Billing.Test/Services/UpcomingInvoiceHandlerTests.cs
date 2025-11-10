@@ -268,7 +268,8 @@ public class UpcomingInvoiceHandlerTests
             Arg.Is("sub_123"),
             Arg.Is<SubscriptionUpdateOptions>(o =>
                 o.Items[0].Id == priceSubscriptionId &&
-                o.Items[0].Price == priceId));
+                o.Items[0].Price == priceId &&
+                o.ProrationBehavior == "none"));
 
         // Verify the updated invoice email was sent
         await _mailer.Received(1).SendEmail(

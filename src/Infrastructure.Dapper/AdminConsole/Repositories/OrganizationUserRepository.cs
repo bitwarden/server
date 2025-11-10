@@ -681,7 +681,8 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             {
                 organizationUser.Id,
                 organizationUser.UserId,
-                RevisionDate = DateTime.UtcNow.Date
+                RevisionDate = DateTime.UtcNow.Date,
+                Key = organizationUser.Key
             });
 
         return rowCount > 0;
