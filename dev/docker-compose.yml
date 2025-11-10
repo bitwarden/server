@@ -56,7 +56,7 @@ services:
       - ef
 
   mysql:
-    image: mysql:8.0
+    image: mysql:9.5
     container_name: bw-mysql
     ports:
       - "3306:3306"
