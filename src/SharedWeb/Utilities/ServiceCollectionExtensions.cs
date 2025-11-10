@@ -540,7 +540,7 @@ public static class ServiceCollectionExtensions
 
         if (CoreHelpers.SettingHasValue(globalSettings.Events.ConnectionString))
         {
-            services.AddSingleton<IEventWriteService, AzureQueueEventWriteService>();
+            services.TryAddSingleton<IEventWriteService, AzureQueueEventWriteService>();
             return services;
         }
 
