@@ -25,6 +25,7 @@ public class CipherFido2CredentialModel
         UserDisplayName = data.UserDisplayName;
         Counter = data.Counter;
         Discoverable = data.Discoverable;
+        HmacSecret = data.HmacSecret;
         CreationDate = data.CreationDate;
     }
 
@@ -64,6 +65,9 @@ public class CipherFido2CredentialModel
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string Discoverable { get; set; }
+    [EncryptedString]
+    [EncryptedStringLength(1000)]
+    public string HmacSecret { get; set; }
     [Required]
     public DateTime CreationDate { get; set; }
 
@@ -83,6 +87,7 @@ public class CipherFido2CredentialModel
             UserDisplayName = UserDisplayName,
             Counter = Counter,
             Discoverable = Discoverable,
+            HmacSecret = HmacSecret,
             CreationDate = CreationDate
         };
     }
