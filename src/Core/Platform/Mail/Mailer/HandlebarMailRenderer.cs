@@ -1,16 +1,17 @@
 ﻿#nullable enable
 using System.Collections.Concurrent;
 using System.Reflection;
+using Bit.Core.Settings;
 using HandlebarsDotNet;
+using Microsoft.Extensions.Logging;
 
-namespace Bit.Core.Platform.Mailer;
-
+namespace Bit.Core.Platform.Mail.Mailer;
 public class HandlebarMailRenderer : IMailRenderer
 {
     /// <summary>
     /// Lazy-initialized Handlebars instance. Thread-safe and ensures initialization occurs only once.
     /// </summary>
-    private readonly Lazy<Task<IHandlebars>> _handlebarsTask = new(InitializeHandlebarsAsync, LazyThreadSafetyMode.ExecutionAndPublication);
+    private readonly Lazy<Task<IHandlebars>> _handlebarsTask;
 
     /// <summary>
     /// Helper function that returns the handlebar instance.
@@ -21,6 +22,17 @@ public class HandlebarMailRenderer : IMailRenderer
     /// This dictionary is used to cache compiled templates in a thread-safe manner.
     /// </summary>
     private readonly ConcurrentDictionary<string, Lazy<Task<HandlebarsTemplate<object, object>>>> _templateCache = new();
+
+    private readonly ILogger<HandlebarMailRenderer> _logger;
+    private readonly GlobalSettings _globalSettings;
+
+    public HandlebarMailRenderer(ILogger<HandlebarMailRenderer> logger, GlobalSettings globalSettings)
+    {
+        _logger = logger;
+        _globalSettings = globalSettings;
+
+        _handlebarsTask = new Lazy<Task<IHandlebars>>(InitializeHandlebarsAsync, LazyThreadSafetyMode.ExecutionAndPublication);
+    }
 
     public async Task<(string html, string txt)> RenderAsync(BaseMailView model)
     {
@@ -54,11 +66,17 @@ public class HandlebarMailRenderer : IMailRenderer
         return handlebars.Compile(source);
     }
 
-    private static async Task<string> ReadSourceAsync(Assembly assembly, string template)
+    private async Task<string> ReadSourceAsync(Assembly assembly, string template)
     {
         if (assembly.GetManifestResourceNames().All(f => f != template))
         {
             throw new FileNotFoundException("Template not found: " + template);
+        }
+
+        var diskSource = await ReadSourceFromDiskAsync(template);
+        if (!string.IsNullOrWhiteSpace(diskSource))
+        {
+            return diskSource;
         }
 
         await using var s = assembly.GetManifestResourceStream(template)!;
@@ -66,7 +84,41 @@ public class HandlebarMailRenderer : IMailRenderer
         return await sr.ReadToEndAsync();
     }
 
-    private static async Task<IHandlebars> InitializeHandlebarsAsync()
+    private async Task<string?> ReadSourceFromDiskAsync(string template)
+    {
+        if (!_globalSettings.SelfHosted)
+        {
+            return null;
+        }
+
+        try
+        {
+            var diskPath = Path.GetFullPath(Path.Combine(_globalSettings.MailTemplateDirectory, template));
+            var baseDirectory = Path.GetFullPath(_globalSettings.MailTemplateDirectory);
+
+            // Ensure the resolved path is within the configured directory
+            if (!diskPath.StartsWith(baseDirectory + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) &&
+                !diskPath.Equals(baseDirectory, StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogWarning("Template path traversal attempt detected: {Template}", template);
+                return null;
+            }
+
+            if (File.Exists(diskPath))
+            {
+                var fileContents = await File.ReadAllTextAsync(diskPath);
+                return fileContents;
+            }
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Failed to read mail template from disk: {TemplateName}", template);
+        }
+
+        return null;
+    }
+
+    private async Task<IHandlebars> InitializeHandlebarsAsync()
     {
         var handlebars = Handlebars.Create();
 
