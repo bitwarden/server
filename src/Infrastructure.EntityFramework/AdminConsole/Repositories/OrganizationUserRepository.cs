@@ -951,8 +951,9 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
         var result = await dbContext.OrganizationUsers
             .Where(ou => ou.Id == organizationUser.Id && ou.Status == OrganizationUserStatusType.Accepted)
-            .ExecuteUpdateAsync(x =>
-                x.SetProperty(y => y.Status, OrganizationUserStatusType.Confirmed));
+            .ExecuteUpdateAsync(x => x
+                .SetProperty(y => y.Status, OrganizationUserStatusType.Confirmed)
+                .SetProperty(y => y.Key, organizationUser.Key));
 
         if (result <= 0)
         {

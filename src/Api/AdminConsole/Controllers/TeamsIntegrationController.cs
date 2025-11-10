@@ -1,6 +1,5 @@
 ﻿using System.Text.Json;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.Context;
@@ -8,7 +7,6 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Bot.Builder;
@@ -16,7 +14,6 @@ using Microsoft.Bot.Builder.Integration.AspNet.Core;
 
 namespace Bit.Api.AdminConsole.Controllers;
 
-[RequireFeature(FeatureFlagKeys.EventBasedOrganizationIntegrations)]
 [Route("organizations")]
 [Authorize("Application")]
 public class TeamsIntegrationController(

@@ -1485,6 +1485,8 @@ public class OrganizationUserRepositoryTests
         var organization = await organizationRepository.CreateTestOrganizationAsync();
         var user = await userRepository.CreateTestUserAsync();
         var orgUser = await organizationUserRepository.CreateAcceptedTestOrganizationUserAsync(organization, user);
+        const string key = "test-key";
+        orgUser.Key = key;
 
         var acceptedOrganizationUser = new AcceptedOrganizationUser(orgUser);
 
@@ -1496,6 +1498,7 @@ public class OrganizationUserRepositoryTests
         var updatedUser = await organizationUserRepository.GetByIdAsync(orgUser.Id);
         Assert.NotNull(updatedUser);
         Assert.Equal(OrganizationUserStatusType.Confirmed, updatedUser.Status);
+        Assert.Equal(key, updatedUser.Key);
 
         // Annul
         await organizationRepository.DeleteAsync(organization);
