@@ -524,31 +524,33 @@ public static class ServiceCollectionExtensions
 
     public static IServiceCollection AddEventWriteServices(this IServiceCollection services, GlobalSettings globalSettings)
     {
-        if (!globalSettings.SelfHosted)
+        if (IsAzureServiceBusEnabled(globalSettings))
         {
-            if (IsAzureServiceBusEnabled(globalSettings))
-            {
-                services.TryAddSingleton<IEventIntegrationPublisher, AzureServiceBusService>();
-                services.TryAddSingleton<IEventWriteService, EventIntegrationEventWriteService>();
-            }
-            else
-            {
-                services.TryAddSingleton<IEventWriteService, NoopEventWriteService>();
-            }
-        }
-        else
-        {
-            if (IsRabbitMqEnabled(globalSettings))
-            {
-                services.TryAddSingleton<IEventIntegrationPublisher, RabbitMqService>();
-                services.TryAddSingleton<IEventWriteService, EventIntegrationEventWriteService>();
-            }
-            else
-            {
-                services.TryAddSingleton<IEventWriteService, RepositoryEventWriteService>();
-            }
+            services.TryAddSingleton<IEventIntegrationPublisher, AzureServiceBusService>();
+            services.TryAddSingleton<IEventWriteService, EventIntegrationEventWriteService>();
+            return services;
         }
 
+        if (IsRabbitMqEnabled(globalSettings))
+        {
+            services.TryAddSingleton<IEventIntegrationPublisher, RabbitMqService>();
+            services.TryAddSingleton<IEventWriteService, EventIntegrationEventWriteService>();
+            return services;
+        }
+
+        if (CoreHelpers.SettingHasValue(globalSettings.Events.ConnectionString))
+        {
+            services.AddSingleton<IEventWriteService, AzureQueueEventWriteService>();
+            return services;
+        }
+
+        if (globalSettings.SelfHosted)
+        {
+            services.TryAddSingleton<IEventWriteService, RepositoryEventWriteService>();
+            return services;
+        }
+
+        services.TryAddSingleton<IEventWriteService, NoopEventWriteService>();
         return services;
     }
 
