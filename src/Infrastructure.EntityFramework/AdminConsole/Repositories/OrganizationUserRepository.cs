@@ -971,7 +971,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         {
             var dbContext = GetDatabaseContext(scope);
             var view = new OrganizationUserUserDetailsViewQuery();
-            var entity = await view.Run(dbContext).FirstOrDefaultAsync(ou => ou.OrganizationId == organizationId && ou.UserId == userId);
+            var entity = await view.Run(dbContext).SingleOrDefaultAsync(ou => ou.OrganizationId == organizationId && ou.UserId == userId);
             return entity;
         }
     }
