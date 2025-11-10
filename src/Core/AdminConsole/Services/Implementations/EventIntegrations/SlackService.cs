@@ -1,5 +1,6 @@
 ﻿using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 using System.Web;
 using Bit.Core.Models.Slack;
 using Bit.Core.Settings;
@@ -71,7 +72,7 @@ public class SlackService(
     public async Task<string> GetDmChannelByEmailAsync(string token, string email)
     {
         var userId = await GetUserIdByEmailAsync(token, email);
-        return await OpenDmChannel(token, userId);
+        return await OpenDmChannelAsync(token, userId);
     }
 
     public string GetRedirectUrl(string callbackUrl, string state)
@@ -97,21 +98,21 @@ public class SlackService(
         }
 
         var tokenResponse = await _httpClient.PostAsync($"{_slackApiBaseUrl}/oauth.v2.access",
-            new FormUrlEncodedContent(new[]
-            {
+            new FormUrlEncodedContent([
                 new KeyValuePair<string, string>("client_id", _clientId),
                 new KeyValuePair<string, string>("client_secret", _clientSecret),
                 new KeyValuePair<string, string>("code", code),
                 new KeyValuePair<string, string>("redirect_uri", redirectUrl)
-            }));
+            ]));
 
         SlackOAuthResponse? result;
         try
         {
             result = await tokenResponse.Content.ReadFromJsonAsync<SlackOAuthResponse>();
         }
-        catch
+        catch (JsonException ex)
         {
+            logger.LogError(ex, "Error parsing SlackOAuthResponse: invalid JSON");
             result = null;
         }
 
@@ -129,14 +130,25 @@ public class SlackService(
         return result.AccessToken;
     }
 
-    public async Task SendSlackMessageByChannelIdAsync(string token, string message, string channelId)
+    public async Task<SlackSendMessageResponse?> SendSlackMessageByChannelIdAsync(string token, string message,
+        string channelId)
     {
         var payload = JsonContent.Create(new { channel = channelId, text = message });
         var request = new HttpRequestMessage(HttpMethod.Post, $"{_slackApiBaseUrl}/chat.postMessage");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         request.Content = payload;
 
-        await _httpClient.SendAsync(request);
+        var response = await _httpClient.SendAsync(request);
+
+        try
+        {
+            return await response.Content.ReadFromJsonAsync<SlackSendMessageResponse>();
+        }
+        catch (JsonException ex)
+        {
+            logger.LogError(ex, "Error parsing Slack message response: invalid JSON");
+            return null;
+        }
     }
 
     private async Task<string> GetUserIdByEmailAsync(string token, string email)
@@ -144,7 +156,16 @@ public class SlackService(
         var request = new HttpRequestMessage(HttpMethod.Get, $"{_slackApiBaseUrl}/users.lookupByEmail?email={email}");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var response = await _httpClient.SendAsync(request);
-        var result = await response.Content.ReadFromJsonAsync<SlackUserResponse>();
+        SlackUserResponse? result;
+        try
+        {
+            result = await response.Content.ReadFromJsonAsync<SlackUserResponse>();
+        }
+        catch (JsonException ex)
+        {
+            logger.LogError(ex, "Error parsing SlackUserResponse: invalid JSON");
+            result = null;
+        }
 
         if (result is null)
         {
@@ -160,7 +181,7 @@ public class SlackService(
         return result.User.Id;
     }
 
-    private async Task<string> OpenDmChannel(string token, string userId)
+    private async Task<string> OpenDmChannelAsync(string token, string userId)
     {
         if (string.IsNullOrEmpty(userId))
             return string.Empty;
@@ -170,7 +191,16 @@ public class SlackService(
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         request.Content = payload;
         var response = await _httpClient.SendAsync(request);
-        var result = await response.Content.ReadFromJsonAsync<SlackDmResponse>();
+        SlackDmResponse? result;
+        try
+        {
+            result = await response.Content.ReadFromJsonAsync<SlackDmResponse>();
+        }
+        catch (JsonException ex)
+        {
+            logger.LogError(ex, "Error parsing SlackDmResponse: invalid JSON");
+            result = null;
+        }
 
         if (result is null)
         {
