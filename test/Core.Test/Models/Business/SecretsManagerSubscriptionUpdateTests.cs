@@ -22,7 +22,7 @@ public class SecretsManagerSubscriptionUpdateTests
     }
 
     public static TheoryData<Plan> NonSmPlans =>
-        ToPlanTheory([PlanType.Custom, PlanType.FamiliesAnnually, PlanType.FamiliesAnnually2019]);
+        ToPlanTheory([PlanType.Custom, PlanType.FamiliesAnnually, PlanType.FamiliesAnnually2025, PlanType.FamiliesAnnually2019]);
 
     public static TheoryData<Plan> SmPlans => ToPlanTheory([
         PlanType.EnterpriseAnnually2019,
