@@ -58,6 +58,7 @@ public record PlanAdapter : Core.Models.StaticStore.Plan
             "enterprise-monthly-2020" => PlanType.EnterpriseMonthly2020,
             "enterprise-monthly-2023" => PlanType.EnterpriseMonthly2023,
             "families" => PlanType.FamiliesAnnually,
+            "families-2025" => PlanType.FamiliesAnnually2025,
             "families-2019" => PlanType.FamiliesAnnually2019,
             "free" => PlanType.Free,
             "teams-annually" => PlanType.TeamsAnnually,
@@ -77,7 +78,7 @@ public record PlanAdapter : Core.Models.StaticStore.Plan
         => planType switch
         {
             PlanType.Free => ProductTierType.Free,
-            PlanType.FamiliesAnnually or PlanType.FamiliesAnnually2019 => ProductTierType.Families,
+            PlanType.FamiliesAnnually or PlanType.FamiliesAnnually2025 or PlanType.FamiliesAnnually2019 => ProductTierType.Families,
             PlanType.TeamsStarter or PlanType.TeamsStarter2023 => ProductTierType.TeamsStarter,
             _ when planType.ToString().Contains("Teams") => ProductTierType.Teams,
             _ when planType.ToString().Contains("Enterprise") => ProductTierType.Enterprise,
