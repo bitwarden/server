@@ -18,8 +18,7 @@
       <mj-section background-color="#fff" padding="15px 10px 10px 10px">
         <mj-column>
           <mj-text font-size="16px" line-height="24px" padding="10px 15px">
-            An administrator from <b>{{OrganizationName}}</b> will need to confirm
-            you before you can share passwords. Get started with Bitwarden
+            Follow these simple steps to get up and running with Bitwarden
             Password Manager:
           </mj-text>
         </mj-column>
@@ -39,11 +38,11 @@
         text="Quickly transfer existing passwords to Bitwarden using the importer."
       />
       <mj-bw-icon-row
-        icon-src="https://assets.bitwarden.com/email/v1/icon-autofill.png"
-        icon-alt="Autofill Icon"
-        head-url-text="Try Bitwarden autofill"
-        head-url="https://bitwarden.com/help/auto-fill-browser/"
-        text="Fill your passwords securely with one click."
+        icon-src="https://assets.bitwarden.com/email/v1/icon-devices.png"
+        icon-alt="Devices Icon"
+        head-url-text="Download Bitwarden on all devices"
+        head-url="https://bitwarden.com/download/"
+        text="Take your passwords with you anywhere."
       />
       <mj-section background-color="#fff" padding="0 20px 20px 20px">
       </mj-section>

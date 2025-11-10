@@ -24,7 +24,6 @@
       </mj-section>
     </mj-wrapper>
 
-    <!-- Learn More Section -->
     <mj-wrapper>
       <mj-bw-learn-more-footer />
     </mj-wrapper>
