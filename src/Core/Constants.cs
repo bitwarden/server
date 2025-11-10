@@ -137,7 +137,6 @@ public static class FeatureFlagKeys
     /* Admin Console Team */
     public const string PolicyRequirements = "pm-14439-policy-requirements";
     public const string ScimInviteUserOptimization = "pm-16811-optimize-invite-user-flow-to-fail-fast";
-    public const string EventBasedOrganizationIntegrations = "event-based-organization-integrations";
     public const string CreateDefaultLocation = "pm-19467-create-default-location";
     public const string AutomaticConfirmUsers = "pm-19934-auto-confirm-organization-users";
     public const string PM23845_VNextApplicationCache = "pm-24957-refactor-memory-application-cache";
