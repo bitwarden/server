@@ -23,7 +23,7 @@ public class AutomaticUserConfirmationPolicyValidatorTests
 {
     [Theory, BitAutoData]
     public async Task ValidateAsync_EnablingPolicy_SingleOrgNotEnabled_ReturnsError(
-        [PolicyUpdate(PolicyType.AutomaticUserConfirmation, true)] PolicyUpdate policyUpdate,
+        [PolicyUpdate(PolicyType.AutomaticUserConfirmation)] PolicyUpdate policyUpdate,
         SutProvider<AutomaticUserConfirmationPolicyValidator> sutProvider)
     {
         // Single Org policy is not enabled
@@ -37,9 +37,27 @@ public class AutomaticUserConfirmationPolicyValidatorTests
     }
 
     [Theory, BitAutoData]
+    public async Task ValidateAsync_EnablingPolicy_SingleOrgPolicyDisabled_ReturnsError(
+        [PolicyUpdate(PolicyType.AutomaticUserConfirmation)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.SingleOrg, false)] Policy singleOrgPolicy,
+        SutProvider<AutomaticUserConfirmationPolicyValidator> sutProvider)
+    {
+        singleOrgPolicy.OrganizationId = policyUpdate.OrganizationId;
+
+        // Single Org policy exists but is disabled
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SingleOrg)
+            .Returns(singleOrgPolicy);
+
+        var result = await sutProvider.Sut.ValidateAsync(policyUpdate, null);
+
+        Assert.Contains("Single organization policy must be enabled", result, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory, BitAutoData]
     public async Task ValidateAsync_EnablingPolicy_UsersNotCompliantWithSingleOrg_ReturnsError(
-        [PolicyUpdate(PolicyType.AutomaticUserConfirmation, true)] PolicyUpdate policyUpdate,
-        [Policy(PolicyType.SingleOrg, true)] Policy singleOrgPolicy,
+        [PolicyUpdate(PolicyType.AutomaticUserConfirmation)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.SingleOrg)] Policy singleOrgPolicy,
         Guid nonCompliantUserId,
         SutProvider<AutomaticUserConfirmationPolicyValidator> sutProvider)
     {
@@ -81,9 +99,59 @@ public class AutomaticUserConfirmationPolicyValidatorTests
     }
 
     [Theory, BitAutoData]
+    public async Task ValidateAsync_EnablingPolicy_UserWithInvitedStatusInOtherOrg_ValidationPasses(
+        [PolicyUpdate(PolicyType.AutomaticUserConfirmation)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.SingleOrg)] Policy singleOrgPolicy,
+        Guid userId,
+        SutProvider<AutomaticUserConfirmationPolicyValidator> sutProvider)
+    {
+        singleOrgPolicy.OrganizationId = policyUpdate.OrganizationId;
+
+        var orgUser = new OrganizationUserUserDetails
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = policyUpdate.OrganizationId,
+            Type = OrganizationUserType.User,
+            Status = OrganizationUserStatusType.Confirmed,
+            UserId = userId,
+            Email = "user@example.com"
+        };
+
+        // User has invited status in another organization (should not count as non-compliant)
+        var otherOrgUser = new OrganizationUser
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = Guid.NewGuid(), // Different organization
+            UserId = userId,
+            Status = OrganizationUserStatusType.Invited
+        };
+
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SingleOrg)
+            .Returns(singleOrgPolicy);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyDetailsByOrganizationAsync(policyUpdate.OrganizationId)
+            .Returns([orgUser]);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByManyUsersAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns([otherOrgUser]);
+
+        sutProvider.GetDependency<IProviderUserRepository>()
+            .GetManyByOrganizationAsync(policyUpdate.OrganizationId)
+            .Returns([]);
+
+        var result = await sutProvider.Sut.ValidateAsync(policyUpdate, null);
+
+        // Invited users in other orgs should not make validation fail
+        Assert.True(string.IsNullOrEmpty(result));
+    }
+
+    [Theory, BitAutoData]
     public async Task ValidateAsync_EnablingPolicy_ProviderUsersExist_ReturnsError(
-        [PolicyUpdate(PolicyType.AutomaticUserConfirmation, true)] PolicyUpdate policyUpdate,
-        [Policy(PolicyType.SingleOrg, true)] Policy singleOrgPolicy,
+        [PolicyUpdate(PolicyType.AutomaticUserConfirmation)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.SingleOrg)] Policy singleOrgPolicy,
         SutProvider<AutomaticUserConfirmationPolicyValidator> sutProvider)
     {
         singleOrgPolicy.OrganizationId = policyUpdate.OrganizationId;
@@ -105,7 +173,7 @@ public class AutomaticUserConfirmationPolicyValidatorTests
             .Returns([]);
 
         sutProvider.GetDependency<IProviderUserRepository>()
-            .GetManyByOrganizationAsync(policyUpdate.OrganizationId, null)
+            .GetManyByOrganizationAsync(policyUpdate.OrganizationId)
             .Returns([providerUser]);
 
         var result = await sutProvider.Sut.ValidateAsync(policyUpdate, null);
@@ -113,59 +181,11 @@ public class AutomaticUserConfirmationPolicyValidatorTests
         Assert.Contains("Provider user type", result, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Theory, BitAutoData]
-    public async Task ValidateAsync_EnablingPolicy_UsersEnrolledInAccountRecovery_ReturnsError(
-        [PolicyUpdate(PolicyType.AutomaticUserConfirmation, true)] PolicyUpdate policyUpdate,
-        [Policy(PolicyType.SingleOrg, true)] Policy singleOrgPolicy,
-        SutProvider<AutomaticUserConfirmationPolicyValidator> sutProvider)
-    {
-        singleOrgPolicy.OrganizationId = policyUpdate.OrganizationId;
-
-        var orgUser = new OrganizationUser
-        {
-            Id = Guid.NewGuid(),
-            OrganizationId = policyUpdate.OrganizationId,
-            UserId = Guid.NewGuid(),
-            Status = OrganizationUserStatusType.Confirmed
-        };
-
-        var accountRecoveryDetails = new OrganizationUserResetPasswordDetails
-        {
-            OrganizationUserId = orgUser.Id,
-            ResetPasswordKey = "SomeEncryptedKey"
-        };
-
-        sutProvider.GetDependency<IPolicyRepository>()
-            .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SingleOrg)
-            .Returns(singleOrgPolicy);
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyDetailsByOrganizationAsync(policyUpdate.OrganizationId)
-            .Returns([]);
-
-        sutProvider.GetDependency<IProviderUserRepository>()
-            .GetManyByOrganizationAsync(policyUpdate.OrganizationId, null)
-            .Returns([]);
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByOrganizationAsync(policyUpdate.OrganizationId, null)
-            .Returns([orgUser]);
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyAccountRecoveryDetailsByOrganizationUserAsync(
-                policyUpdate.OrganizationId,
-                Arg.Any<IEnumerable<Guid>>())
-            .Returns([accountRecoveryDetails]);
-
-        var result = await sutProvider.Sut.ValidateAsync(policyUpdate, null);
-
-        Assert.Contains("account recovery", result, StringComparison.OrdinalIgnoreCase);
-    }
 
     [Theory, BitAutoData]
     public async Task ValidateAsync_EnablingPolicy_AllValidationsPassed_ReturnsEmptyString(
-        [PolicyUpdate(PolicyType.AutomaticUserConfirmation, true)] PolicyUpdate policyUpdate,
-        [Policy(PolicyType.SingleOrg, true)] Policy singleOrgPolicy,
+        [PolicyUpdate(PolicyType.AutomaticUserConfirmation)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.SingleOrg)] Policy singleOrgPolicy,
         SutProvider<AutomaticUserConfirmationPolicyValidator> sutProvider)
     {
         singleOrgPolicy.OrganizationId = policyUpdate.OrganizationId;
@@ -178,12 +198,6 @@ public class AutomaticUserConfirmationPolicyValidatorTests
             Status = OrganizationUserStatusType.Confirmed,
             UserId = Guid.NewGuid(),
             Email = "user@example.com"
-        };
-
-        var accountRecoveryDetails = new OrganizationUserResetPasswordDetails
-        {
-            OrganizationUserId = orgUser.Id,
-            ResetPasswordKey = null // Not enrolled in account recovery
         };
 
         sutProvider.GetDependency<IPolicyRepository>()
@@ -199,18 +213,8 @@ public class AutomaticUserConfirmationPolicyValidatorTests
             .Returns([]); // No other org memberships
 
         sutProvider.GetDependency<IProviderUserRepository>()
-            .GetManyByOrganizationAsync(policyUpdate.OrganizationId, null)
+            .GetManyByOrganizationAsync(policyUpdate.OrganizationId)
             .Returns([]);
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByOrganizationAsync(policyUpdate.OrganizationId, null)
-            .Returns([new OrganizationUser { Id = orgUser.Id }]);
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyAccountRecoveryDetailsByOrganizationUserAsync(
-                policyUpdate.OrganizationId,
-                Arg.Any<IEnumerable<Guid>>())
-            .Returns([accountRecoveryDetails]);
 
         var result = await sutProvider.Sut.ValidateAsync(policyUpdate, null);
 
@@ -219,8 +223,8 @@ public class AutomaticUserConfirmationPolicyValidatorTests
 
     [Theory, BitAutoData]
     public async Task ValidateAsync_PolicyAlreadyEnabled_ReturnsEmptyString(
-        [PolicyUpdate(PolicyType.AutomaticUserConfirmation, true)] PolicyUpdate policyUpdate,
-        [Policy(PolicyType.AutomaticUserConfirmation, true)] Policy currentPolicy,
+        [PolicyUpdate(PolicyType.AutomaticUserConfirmation)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.AutomaticUserConfirmation)] Policy currentPolicy,
         SutProvider<AutomaticUserConfirmationPolicyValidator> sutProvider)
     {
         currentPolicy.OrganizationId = policyUpdate.OrganizationId;
@@ -237,7 +241,7 @@ public class AutomaticUserConfirmationPolicyValidatorTests
     [Theory, BitAutoData]
     public async Task ValidateAsync_DisablingPolicy_ReturnsEmptyString(
         [PolicyUpdate(PolicyType.AutomaticUserConfirmation, false)] PolicyUpdate policyUpdate,
-        [Policy(PolicyType.AutomaticUserConfirmation, true)] Policy currentPolicy,
+        [Policy(PolicyType.AutomaticUserConfirmation)] Policy currentPolicy,
         SutProvider<AutomaticUserConfirmationPolicyValidator> sutProvider)
     {
         currentPolicy.OrganizationId = policyUpdate.OrganizationId;
@@ -253,7 +257,7 @@ public class AutomaticUserConfirmationPolicyValidatorTests
 
     [Theory, BitAutoData]
     public async Task ExecutePreUpsertSideEffectAsync_EnablingPolicy_ValidationFails_ThrowsBadRequestException(
-        [PolicyUpdate(PolicyType.AutomaticUserConfirmation, true)] PolicyUpdate policyUpdate,
+        [PolicyUpdate(PolicyType.AutomaticUserConfirmation)] PolicyUpdate policyUpdate,
         SutProvider<AutomaticUserConfirmationPolicyValidator> sutProvider)
     {
         // Single Org policy is not enabled
@@ -269,8 +273,8 @@ public class AutomaticUserConfirmationPolicyValidatorTests
 
     [Theory, BitAutoData]
     public async Task ExecutePreUpsertSideEffectAsync_EnablingPolicy_ValidationPasses_DoesNotThrow(
-        [PolicyUpdate(PolicyType.AutomaticUserConfirmation, true)] PolicyUpdate policyUpdate,
-        [Policy(PolicyType.SingleOrg, true)] Policy singleOrgPolicy,
+        [PolicyUpdate(PolicyType.AutomaticUserConfirmation)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.SingleOrg)] Policy singleOrgPolicy,
         SutProvider<AutomaticUserConfirmationPolicyValidator> sutProvider)
     {
         singleOrgPolicy.OrganizationId = policyUpdate.OrganizationId;
@@ -284,7 +288,7 @@ public class AutomaticUserConfirmationPolicyValidatorTests
             .Returns([]);
 
         sutProvider.GetDependency<IProviderUserRepository>()
-            .GetManyByOrganizationAsync(policyUpdate.OrganizationId, null)
+            .GetManyByOrganizationAsync(policyUpdate.OrganizationId)
             .Returns([]);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -300,8 +304,8 @@ public class AutomaticUserConfirmationPolicyValidatorTests
 
     [Theory, BitAutoData]
     public async Task ExecutePreUpsertSideEffectAsync_PolicyAlreadyEnabled_DoesNotValidate(
-        [PolicyUpdate(PolicyType.AutomaticUserConfirmation, true)] PolicyUpdate policyUpdate,
-        [Policy(PolicyType.AutomaticUserConfirmation, true)] Policy currentPolicy,
+        [PolicyUpdate(PolicyType.AutomaticUserConfirmation)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.AutomaticUserConfirmation)] Policy currentPolicy,
         SutProvider<AutomaticUserConfirmationPolicyValidator> sutProvider)
     {
         currentPolicy.OrganizationId = policyUpdate.OrganizationId;
@@ -318,8 +322,8 @@ public class AutomaticUserConfirmationPolicyValidatorTests
 
     [Theory, BitAutoData]
     public async Task ValidateAsync_EnablingPolicy_IncludesOwnersAndAdmins_InComplianceCheck(
-        [PolicyUpdate(PolicyType.AutomaticUserConfirmation, true)] PolicyUpdate policyUpdate,
-        [Policy(PolicyType.SingleOrg, true)] Policy singleOrgPolicy,
+        [PolicyUpdate(PolicyType.AutomaticUserConfirmation)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.SingleOrg)] Policy singleOrgPolicy,
         Guid nonCompliantOwnerId,
         SutProvider<AutomaticUserConfirmationPolicyValidator> sutProvider)
     {
@@ -363,8 +367,8 @@ public class AutomaticUserConfirmationPolicyValidatorTests
 
     [Theory, BitAutoData]
     public async Task ValidateAsync_EnablingPolicy_InvitedUsersExcluded_FromComplianceCheck(
-        [PolicyUpdate(PolicyType.AutomaticUserConfirmation, true)] PolicyUpdate policyUpdate,
-        [Policy(PolicyType.SingleOrg, true)] Policy singleOrgPolicy,
+        [PolicyUpdate(PolicyType.AutomaticUserConfirmation)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.SingleOrg)] Policy singleOrgPolicy,
         SutProvider<AutomaticUserConfirmationPolicyValidator> sutProvider)
     {
         singleOrgPolicy.OrganizationId = policyUpdate.OrganizationId;
@@ -388,7 +392,7 @@ public class AutomaticUserConfirmationPolicyValidatorTests
             .Returns([invitedUser]);
 
         sutProvider.GetDependency<IProviderUserRepository>()
-            .GetManyByOrganizationAsync(policyUpdate.OrganizationId, null)
+            .GetManyByOrganizationAsync(policyUpdate.OrganizationId)
             .Returns([]);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -398,6 +402,42 @@ public class AutomaticUserConfirmationPolicyValidatorTests
         var result = await sutProvider.Sut.ValidateAsync(policyUpdate, null);
 
         // Invited users are excluded, so validation should pass
+        Assert.True(string.IsNullOrEmpty(result));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_EnablingPolicy_RevokedUsersExcluded_FromComplianceCheck(
+        [PolicyUpdate(PolicyType.AutomaticUserConfirmation)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.SingleOrg)] Policy singleOrgPolicy,
+        SutProvider<AutomaticUserConfirmationPolicyValidator> sutProvider)
+    {
+        singleOrgPolicy.OrganizationId = policyUpdate.OrganizationId;
+
+        var revokedUser = new OrganizationUserUserDetails
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = policyUpdate.OrganizationId,
+            Type = OrganizationUserType.User,
+            Status = OrganizationUserStatusType.Revoked,
+            UserId = Guid.NewGuid(),
+            Email = "revoked@example.com"
+        };
+
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SingleOrg)
+            .Returns(singleOrgPolicy);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyDetailsByOrganizationAsync(policyUpdate.OrganizationId)
+            .Returns([revokedUser]);
+
+        sutProvider.GetDependency<IProviderUserRepository>()
+            .GetManyByOrganizationAsync(policyUpdate.OrganizationId)
+            .Returns([]);
+
+        var result = await sutProvider.Sut.ValidateAsync(policyUpdate, null);
+
+        // Revoked users are excluded, so validation should pass
         Assert.True(string.IsNullOrEmpty(result));
     }
 }
