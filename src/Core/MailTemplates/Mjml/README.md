@@ -64,7 +64,7 @@ The minified `html.hbs` artifacts are deliverables and must be placed into the c
 ### Testing the mail template with `IMailService`
 
 > [!WARNING]  
-> The `IMailService` has been deprecated. The [IMailer](#recommended-development---imailer) should be used instead.
+> The `IMailService` has been deprecated. The [IMailer](#testing-the-mail-template-with-imailer) should be used instead.
 
 After the email is developed from the [initial step](#developing-the-mail-template), make sure the email `{{variables}}` are populated properly by running it through an `IMailService` implementation.
 
