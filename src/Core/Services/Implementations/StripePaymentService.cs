@@ -641,7 +641,7 @@ public class StripePaymentService : IPaymentService
         }
 
         var subscription = await _stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId,
-            new SubscriptionGetOptions { Expand = ["customer", "discounts", "test_clock"] });
+            new SubscriptionGetOptions { Expand = ["customer.discount.coupon.applies_to", "discounts.coupon.applies_to", "test_clock"] });
 
         subscriptionInfo.Subscription = new SubscriptionInfo.BillingSubscription(subscription);
 
