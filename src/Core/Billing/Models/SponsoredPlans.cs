@@ -23,4 +23,14 @@ public static class SponsoredPlans
         UsersCanSponsor = (OrganizationUserOrganizationDetails org) =>
             org.PlanType.GetProductTier() == ProductTierType.Enterprise,
     };
+
+    /// <summary>
+    /// All available sponsored plans in the system.
+    /// Add new sponsored plans to this collection to automatically include them
+    /// in sponsorship validation logic.
+    /// </summary>
+    public static IEnumerable<SponsoredPlan> All { get; } = new[]
+    {
+        FamiliesForEnterprise
+    };
 }

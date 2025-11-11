@@ -10,8 +10,8 @@ public class StaticStoreTests
     {
         // Ref: https://daniel.haxx.se/blog/2025/05/16/detecting-malicious-unicode/
         // URLs can contain unicode characters that to a computer would point to completely seperate domains but to the
-        // naked eye look completely identical. For example 'g' and 'ց' look incredibly similar but when included in a 
-        // URL would lead you somewhere different. There is an opening for an attacker to contribute to Bitwarden with a 
+        // naked eye look completely identical. For example 'g' and 'ց' look incredibly similar but when included in a
+        // URL would lead you somewhere different. There is an opening for an attacker to contribute to Bitwarden with a
         // url update that could be missed in code review and then if they got a user to that URL Bitwarden could
         // consider it equivalent with a cipher in the users vault and offer autofill when we should not.
         // GitHub does now show a warning on non-ascii characters but it could still be missed.

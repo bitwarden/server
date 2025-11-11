@@ -23,6 +23,7 @@ public class CloudICloudOrganizationSignUpCommandTests
 {
     [Theory]
     [BitAutoData(PlanType.FamiliesAnnually)]
+    [BitAutoData(PlanType.FamiliesAnnually2025)]
     public async Task SignUp_PM_Family_Passes(PlanType planType, OrganizationSignup signup, SutProvider<CloudOrganizationSignUpCommand> sutProvider)
     {
         signup.Plan = planType;
@@ -65,6 +66,7 @@ public class CloudICloudOrganizationSignUpCommandTests
 
     [Theory]
     [BitAutoData(PlanType.FamiliesAnnually)]
+    [BitAutoData(PlanType.FamiliesAnnually2025)]
     public async Task SignUp_AssignsOwnerToDefaultCollection
         (PlanType planType, OrganizationSignup signup, SutProvider<CloudOrganizationSignUpCommand> sutProvider)
     {
