@@ -158,7 +158,7 @@ public class ImportCiphersCommand : IImportCiphersCommand
 
             /*
              * If the organization was created by a Provider, the organization may have zero members (users)
-             * In this situation importingOrgUser will be null, and accessing importingOOrgUser.Id will
+             * In this situation importingOrgUser will be null, and accessing importingOrgUser.Id will
              * result in a null reference exception.
              */
             if (importingOrgUser == null)
