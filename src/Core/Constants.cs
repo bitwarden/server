@@ -252,6 +252,7 @@ public static class FeatureFlagKeys
     public const string PM22136_SdkCipherEncryption = "pm-22136-sdk-cipher-encryption";
     public const string PM23904_RiskInsightsForPremium = "pm-23904-risk-insights-for-premium";
     public const string PM25083_AutofillConfirmFromSearch = "pm-25083-autofill-confirm-from-search";
+    public const string VaultLoadingSkeletons = "pm-25081-vault-skeleton-loaders";
 
     /* Innovation Team */
     public const string ArchiveVaultItems = "pm-19148-innovation-archive";
