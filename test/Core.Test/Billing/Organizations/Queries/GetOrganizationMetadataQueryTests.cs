@@ -22,15 +22,6 @@ namespace Bit.Core.Test.Billing.Organizations.Queries;
 public class GetOrganizationMetadataQueryTests
 {
     [Theory, BitAutoData]
-    public async Task Run_NullOrganization_ReturnsNull(
-        SutProvider<GetOrganizationMetadataQuery> sutProvider)
-    {
-        var result = await sutProvider.Sut.Run(null);
-
-        Assert.Null(result);
-    }
-
-    [Theory, BitAutoData]
     public async Task Run_SelfHosted_ReturnsDefault(
         Organization organization,
         SutProvider<GetOrganizationMetadataQuery> sutProvider)
@@ -74,8 +65,7 @@ public class GetOrganizationMetadataQueryTests
             .Returns(new OrganizationSeatCounts { Users = 5, Sponsored = 0 });
 
         sutProvider.GetDependency<ISubscriberService>()
-            .GetCustomer(organization, Arg.Is<CustomerGetOptions>(options =>
-                options.Expand.Contains("discount.coupon.applies_to")))
+            .GetCustomer(organization)
             .ReturnsNull();
 
         var result = await sutProvider.Sut.Run(organization);
@@ -100,12 +90,12 @@ public class GetOrganizationMetadataQueryTests
             .Returns(new OrganizationSeatCounts { Users = 7, Sponsored = 0 });
 
         sutProvider.GetDependency<ISubscriberService>()
-            .GetCustomer(organization, Arg.Is<CustomerGetOptions>(options =>
-                options.Expand.Contains("discount.coupon.applies_to")))
+            .GetCustomer(organization)
             .Returns(customer);
 
         sutProvider.GetDependency<ISubscriberService>()
-            .GetSubscription(organization)
+            .GetSubscription(organization, Arg.Is<SubscriptionGetOptions>(options =>
+                options.Expand.Contains("discounts.coupon.applies_to")))
             .ReturnsNull();
 
         var result = await sutProvider.Sut.Run(organization);
@@ -124,23 +114,24 @@ public class GetOrganizationMetadataQueryTests
         organization.PlanType = PlanType.EnterpriseAnnually;
 
         var productId = "product_123";
-        var customer = new Customer
-        {
-            Discount = new Discount
-            {
-                Coupon = new Coupon
-                {
-                    Id = StripeConstants.CouponIDs.SecretsManagerStandalone,
-                    AppliesTo = new CouponAppliesTo
-                    {
-                        Products = [productId]
-                    }
-                }
-            }
-        };
+        var customer = new Customer();
 
         var subscription = new Subscription
         {
+            Discounts =
+            [
+                new Discount
+                {
+                    Coupon = new Coupon
+                    {
+                        Id = StripeConstants.CouponIDs.SecretsManagerStandalone,
+                        AppliesTo = new CouponAppliesTo
+                        {
+                            Products = [productId]
+                        }
+                    }
+                }
+            ],
             Items = new StripeList<SubscriptionItem>
             {
                 Data =
@@ -162,12 +153,12 @@ public class GetOrganizationMetadataQueryTests
             .Returns(new OrganizationSeatCounts { Users = 15, Sponsored = 0 });
 
         sutProvider.GetDependency<ISubscriberService>()
-            .GetCustomer(organization, Arg.Is<CustomerGetOptions>(options =>
-                options.Expand.Contains("discount.coupon.applies_to")))
+            .GetCustomer(organization)
             .Returns(customer);
 
         sutProvider.GetDependency<ISubscriberService>()
-            .GetSubscription(organization)
+            .GetSubscription(organization, Arg.Is<SubscriptionGetOptions>(options =>
+                options.Expand.Contains("discounts.coupon.applies_to")))
             .Returns(subscription);
 
         sutProvider.GetDependency<IPricingClient>()
@@ -189,13 +180,11 @@ public class GetOrganizationMetadataQueryTests
         organization.GatewaySubscriptionId = "sub_123";
         organization.PlanType = PlanType.TeamsAnnually;
 
-        var customer = new Customer
-        {
-            Discount = null
-        };
+        var customer = new Customer();
 
         var subscription = new Subscription
         {
+            Discounts = null,
             Items = new StripeList<SubscriptionItem>
             {
                 Data =
@@ -217,12 +206,12 @@ public class GetOrganizationMetadataQueryTests
             .Returns(new OrganizationSeatCounts { Users = 20, Sponsored = 0 });
 
         sutProvider.GetDependency<ISubscriberService>()
-            .GetCustomer(organization, Arg.Is<CustomerGetOptions>(options =>
-                options.Expand.Contains("discount.coupon.applies_to")))
+            .GetCustomer(organization)
             .Returns(customer);
 
         sutProvider.GetDependency<ISubscriberService>()
-            .GetSubscription(organization)
+            .GetSubscription(organization, Arg.Is<SubscriptionGetOptions>(options =>
+                options.Expand.Contains("discounts.coupon.applies_to")))
             .Returns(subscription);
 
         sutProvider.GetDependency<IPricingClient>()
@@ -244,23 +233,24 @@ public class GetOrganizationMetadataQueryTests
         organization.GatewaySubscriptionId = "sub_123";
         organization.PlanType = PlanType.EnterpriseAnnually;
 
-        var customer = new Customer
-        {
-            Discount = new Discount
-            {
-                Coupon = new Coupon
-                {
-                    Id = StripeConstants.CouponIDs.SecretsManagerStandalone,
-                    AppliesTo = new CouponAppliesTo
-                    {
-                        Products = ["different_product_id"]
-                    }
-                }
-            }
-        };
+        var customer = new Customer();
 
         var subscription = new Subscription
         {
+            Discounts =
+            [
+                new Discount
+                {
+                    Coupon = new Coupon
+                    {
+                        Id = StripeConstants.CouponIDs.SecretsManagerStandalone,
+                        AppliesTo = new CouponAppliesTo
+                        {
+                            Products = ["different_product_id"]
+                        }
+                    }
+                }
+            ],
             Items = new StripeList<SubscriptionItem>
             {
                 Data =
@@ -282,12 +272,12 @@ public class GetOrganizationMetadataQueryTests
             .Returns(new OrganizationSeatCounts { Users = 12, Sponsored = 0 });
 
         sutProvider.GetDependency<ISubscriberService>()
-            .GetCustomer(organization, Arg.Is<CustomerGetOptions>(options =>
-                options.Expand.Contains("discount.coupon.applies_to")))
+            .GetCustomer(organization)
             .Returns(customer);
 
         sutProvider.GetDependency<ISubscriberService>()
-            .GetSubscription(organization)
+            .GetSubscription(organization, Arg.Is<SubscriptionGetOptions>(options =>
+                options.Expand.Contains("discounts.coupon.applies_to")))
             .Returns(subscription);
 
         sutProvider.GetDependency<IPricingClient>()
@@ -310,23 +300,24 @@ public class GetOrganizationMetadataQueryTests
         organization.PlanType = PlanType.FamiliesAnnually;
 
         var productId = "product_123";
-        var customer = new Customer
-        {
-            Discount = new Discount
-            {
-                Coupon = new Coupon
-                {
-                    Id = StripeConstants.CouponIDs.SecretsManagerStandalone,
-                    AppliesTo = new CouponAppliesTo
-                    {
-                        Products = [productId]
-                    }
-                }
-            }
-        };
+        var customer = new Customer();
 
         var subscription = new Subscription
         {
+            Discounts =
+            [
+                new Discount
+                {
+                    Coupon = new Coupon
+                    {
+                        Id = StripeConstants.CouponIDs.SecretsManagerStandalone,
+                        AppliesTo = new CouponAppliesTo
+                        {
+                            Products = [productId]
+                        }
+                    }
+                }
+            ],
             Items = new StripeList<SubscriptionItem>
             {
                 Data =
@@ -348,12 +339,12 @@ public class GetOrganizationMetadataQueryTests
             .Returns(new OrganizationSeatCounts { Users = 8, Sponsored = 0 });
 
         sutProvider.GetDependency<ISubscriberService>()
-            .GetCustomer(organization, Arg.Is<CustomerGetOptions>(options =>
-                options.Expand.Contains("discount.coupon.applies_to")))
+            .GetCustomer(organization)
             .Returns(customer);
 
         sutProvider.GetDependency<ISubscriberService>()
-            .GetSubscription(organization)
+            .GetSubscription(organization, Arg.Is<SubscriptionGetOptions>(options =>
+                options.Expand.Contains("discounts.coupon.applies_to")))
             .Returns(subscription);
 
         sutProvider.GetDependency<IPricingClient>()
