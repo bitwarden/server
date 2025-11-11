@@ -1,6 +1,6 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Utilities;
-using Bit.Infrastructure.EntityFramework.Models;
 using Bit.RustSDK;
 using Microsoft.AspNetCore.Identity;
 

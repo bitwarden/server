@@ -5,7 +5,7 @@ namespace Bit.SharedWeb.Utilities;
 
 public sealed class PlayIdMiddleware(RequestDelegate next)
 {
-    public Task Invoke(HttpContext context, IPlayIdService playIdService)
+    public Task Invoke(HttpContext context, PlayIdService playIdService)
     {
         if (context.Request.Headers.TryGetValue("x-play-id", out var playId))
         {

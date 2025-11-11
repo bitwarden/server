@@ -6,6 +6,7 @@ using Bit.SharedWeb.Utilities;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+builder.Services.AddHttpContextAccessor();
 
 var globalSettings = builder.Services.AddGlobalSettingsServices(builder.Configuration, builder.Environment);
 
@@ -25,6 +26,9 @@ builder.Services.AddScenes();
 builder.Services.AddQueries();
 
 var app = builder.Build();
+
+// Add PlayIdMiddleware services
+app.UseMiddleware<PlayIdMiddleware>();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

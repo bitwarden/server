@@ -1,10 +1,10 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Bit.Infrastructure.EntityFramework.Repositories;
+using Bit.Core.Repositories;
 using Bit.Seeder.Factories;
 
 namespace Bit.Seeder.Scenes;
 
-public class SingleUserScene(DatabaseContext db, UserSeeder userSeeder) : IScene<SingleUserScene.Request>
+public class SingleUserScene(UserSeeder userSeeder, IUserRepository userRepository) : IScene<SingleUserScene.Request>
 {
     public class Request
     {
@@ -14,12 +14,11 @@ public class SingleUserScene(DatabaseContext db, UserSeeder userSeeder) : IScene
         public bool Premium { get; set; } = false;
     }
 
-    public SceneResult Seed(Request request)
+    public async Task<SceneResult> SeedAsync(Request request)
     {
         var user = userSeeder.CreateUser(request.Email, request.EmailVerified, request.Premium);
 
-        db.Add(user);
-        db.SaveChanges();
+        await userRepository.CreateAsync(user);
 
         return new SceneResult(mangleMap: userSeeder.GetMangleMap(user, new UserData
         {
@@ -31,9 +30,6 @@ public class SingleUserScene(DatabaseContext db, UserSeeder userSeeder) : IScene
             ApiKey = user.ApiKey,
             Kdf = user.Kdf,
             KdfIterations = user.KdfIterations,
-        }), trackedEntities: new Dictionary<string, List<Guid>>
-        {
-            ["User"] = [user.Id]
-        });
+        }));
     }
 }

@@ -1,6 +1,5 @@
 ﻿using System.Text.Json;
 using Bit.Core.Repositories;
-using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Seeder;
 using Bit.SeederApi.Models.Response;
@@ -12,6 +11,7 @@ public class SceneService(
     ILogger<SceneService> logger,
     IServiceProvider serviceProvider,
     IUserRepository userRepository,
+    IPlayDataRepository playDataRepository,
     IOrganizationRepository organizationRepository)
     : ISceneService
 {
@@ -21,35 +21,18 @@ public class SceneService(
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
-    public List<SeededData> GetAllSeededData()
+    public List<string> GetAllPlayIds()
     {
-        return databaseContext.SeededData.ToList();
+        return [.. databaseContext.PlayData
+            .Select(pd => pd.PlayId)
+            .Distinct()];
     }
 
-    public SceneResponseModel ExecuteScene(string templateName, JsonElement? arguments)
+    public async Task<SceneResponseModel> ExecuteScene(string templateName, JsonElement? arguments)
     {
-        var result = ExecuteSceneMethod(templateName, arguments, "Seed");
+        var result = await ExecuteSceneMethod(templateName, arguments, "Seed");
 
-        if (result.TrackedEntities.Count == 0)
-        {
-            return SceneResponseModel.FromSceneResult(result, seedId: null);
-        }
-
-        var seededData = new SeededData
-        {
-            Id = Guid.NewGuid(),
-            RecipeName = templateName,
-            Data = JsonSerializer.Serialize(result.TrackedEntities),
-            CreationDate = DateTime.UtcNow
-        };
-
-        databaseContext.Add(seededData);
-        databaseContext.SaveChanges();
-
-        logger.LogInformation("Saved seeded data with ID {SeedId} for scene {SceneName}",
-            seededData.Id, templateName);
-
-        return SceneResponseModel.FromSceneResult(result, seededData.Id);
+        return SceneResponseModel.FromSceneResult(result);
     }
 
     public object ExecuteQuery(string queryName, JsonElement? arguments)
@@ -113,31 +96,23 @@ public class SceneService(
         }
     }
 
-    public async Task<object?> DestroyScene(Guid seedId)
+    public async Task<object?> DestroyScene(string playId)
     {
-        var seededData = databaseContext.SeededData.FirstOrDefault(s => s.Id == seedId);
-        if (seededData == null)
-        {
-            logger.LogInformation("No seeded data found with ID {SeedId}, skipping", seedId);
-            return null;
-        }
+        // Note, delete cascade will remove PlayData entries
 
-        var trackedEntities = JsonSerializer.Deserialize<Dictionary<string, List<Guid>>>(seededData.Data);
-        if (trackedEntities == null)
-        {
-            throw new SceneExecutionException($"Failed to deserialize tracked entities for seed ID {seedId}");
-        }
+        var playData = await playDataRepository.GetByPlayIdAsync(playId);
+        var userIds = playData.Select(pd => pd.UserId).Distinct().ToList();
+        var organizationIds = playData.Select(pd => pd.OrganizationId).Distinct().ToList();
 
-        // Delete in reverse order to respect foreign key constraints
-        if (trackedEntities.TryGetValue("User", out var userIds))
+        // Delete Users before Oraganizations to respect foreign key constraints
+        if (userIds.Count > 0)
         {
             var users = databaseContext.Users.Where(u => userIds.Contains(u.Id));
             await userRepository.DeleteManyAsync(users);
         }
-
-        if (trackedEntities.TryGetValue("Organization", out var orgIds))
+        if (organizationIds.Count > 0)
         {
-            var organizations = databaseContext.Organizations.Where(o => orgIds.Contains(o.Id));
+            var organizations = databaseContext.Organizations.Where(o => organizationIds.Contains(o.Id));
             var aggregateException = new AggregateException();
             foreach (var org in organizations)
             {
@@ -153,21 +128,18 @@ public class SceneService(
             if (aggregateException.InnerExceptions.Count > 0)
             {
                 throw new SceneExecutionException(
-                    $"One or more errors occurred while deleting organizations for seed ID {seedId}",
+                    $"One or more errors occurred while deleting organizations for seed ID {playId}",
                     aggregateException);
             }
         }
 
-        databaseContext.Remove(seededData);
-        databaseContext.SaveChanges();
+        logger.LogInformation("Successfully destroyed seeded data with ID {PlayId}",
+            playId);
 
-        logger.LogInformation("Successfully destroyed seeded data with ID {SeedId} for scene {SceneName}",
-            seedId, seededData.RecipeName);
-
-        return new { SeedId = seedId, SceneName = seededData.RecipeName };
+        return new { PlayId = playId };
     }
 
-    private SceneResult<object?> ExecuteSceneMethod(string templateName, JsonElement? arguments, string methodName)
+    private async Task<SceneResult<object?>> ExecuteSceneMethod(string templateName, JsonElement? arguments, string methodName)
     {
         try
         {
@@ -214,7 +186,7 @@ public class SceneService(
                 }
             }
 
-            var result = scene.Seed(requestModel);
+            var result = await scene.SeedAsync(requestModel);
 
             logger.LogInformation("Successfully executed {MethodName} on scene: {TemplateName}", methodName, templateName);
             return result;

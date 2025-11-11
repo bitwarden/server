@@ -1,4 +1,4 @@
-﻿using Bit.Infrastructure.EntityFramework.Models;
+﻿using Bit.Core.Entities;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Seeder.Factories;
 using LinqToDB.EntityFrameworkCore;

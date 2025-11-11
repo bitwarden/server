@@ -3,7 +3,7 @@
 public interface IScene
 {
     Type GetRequestType();
-    SceneResult<object?> Seed(object request);
+    Task<SceneResult<object?>> SeedAsync(object request);
 }
 
 /// <summary>
@@ -12,19 +12,19 @@ public interface IScene
 /// <typeparam name="TRequest"></typeparam>
 public interface IScene<TRequest> : IScene where TRequest : class
 {
-    SceneResult Seed(TRequest request);
+    Task<SceneResult> SeedAsync(TRequest request);
     Type IScene.GetRequestType() => typeof(TRequest);
-    SceneResult<object?> IScene.Seed(object request)
+    async Task<SceneResult<object?>> IScene.SeedAsync(object request)
     {
-        var result = Seed((TRequest)request);
-        return new SceneResult(mangleMap: result.MangleMap, trackedEntities: result.TrackedEntities);
+        var result = await SeedAsync((TRequest)request);
+        return new SceneResult(mangleMap: result.MangleMap);
     }
 }
 
 public interface IScene<TRequest, TResult> : IScene where TRequest : class where TResult : class
 {
-    SceneResult<TResult> Seed(TRequest request);
+    Task<SceneResult<TResult>> SeedAsync(TRequest request);
 
     Type IScene.GetRequestType() => typeof(TRequest);
-    SceneResult<object?> IScene.Seed(object request) => (SceneResult<object?>)Seed((TRequest)request);
+    async Task<SceneResult<object?>> IScene.SeedAsync(object request) => (SceneResult<object?>)await SeedAsync((TRequest)request);
 }

@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Billing.Enums;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
-using Bit.Infrastructure.EntityFramework.Models;
 
 namespace Bit.Seeder.Factories;
 

@@ -119,8 +119,11 @@ public static class ServiceCollectionExtensions
         }
 
         // Include PlayIdService for tracking Play Ids in repositories
-        services.AddScoped<IPlayIdService, PlayIdService>();
+        // We need the http context accessor to use the Singleton version, which pulls from the scoped version
+        services.AddHttpContextAccessor();
 
+        services.AddSingleton<IPlayIdService, PlayIdSingletonService>();
+        services.AddScoped<PlayIdService>();
 
         return provider;
     }

@@ -6,17 +6,18 @@ using Microsoft.AspNetCore.Mvc;
 namespace Bit.SeederApi.Controllers;
 
 [Route("seed")]
-public class SeedController(ILogger<SeedController> logger, ISceneService sceneService)
+public class SeedController(ILogger<SeedController> logger, ISceneService sceneService, IServiceProvider serviceProvider)
     : Controller
 {
     [HttpPost]
-    public IActionResult Seed([FromBody] SeedRequestModel request)
+    public async Task<IActionResult> Seed([FromBody] SeedRequestModel request)
     {
+        logger.LogInformation("Received seed request {Provider}", serviceProvider.GetType().FullName);
         logger.LogInformation("Seeding with template: {Template}", request.Template);
 
         try
         {
-            SceneResponseModel response = sceneService.ExecuteScene(request.Template, request.Arguments);
+            SceneResponseModel response = await sceneService.ExecuteScene(request.Template, request.Arguments);
 
             return Json(response);
         }
@@ -36,24 +37,24 @@ public class SeedController(ILogger<SeedController> logger, ISceneService sceneS
     }
 
     [HttpDelete("batch")]
-    public async Task<IActionResult> DeleteBatch([FromBody] List<Guid> seedIds)
+    public async Task<IActionResult> DeleteBatch([FromBody] List<string> playIds)
     {
-        logger.LogInformation("Deleting batch of seeded data with IDs: {SeedIds}", string.Join(", ", seedIds));
+        logger.LogInformation("Deleting batch of seeded data with IDs: {PlayIds}", string.Join(", ", playIds));
 
         var aggregateException = new AggregateException();
 
         await Task.Run(async () =>
         {
-            foreach (var seedId in seedIds)
+            foreach (var playId in playIds)
             {
                 try
                 {
-                    await sceneService.DestroyScene(seedId);
+                    await sceneService.DestroyScene(playId);
                 }
                 catch (Exception ex)
                 {
                     aggregateException = new AggregateException(aggregateException, ex);
-                    logger.LogError(ex, "Error deleting seeded data: {SeedId}", seedId);
+                    logger.LogError(ex, "Error deleting seeded data: {SeedId}", playId);
                 }
             }
         });
@@ -72,20 +73,20 @@ public class SeedController(ILogger<SeedController> logger, ISceneService sceneS
         });
     }
 
-    [HttpDelete("{seedId}")]
-    public async Task<IActionResult> Delete([FromRoute] Guid seedId)
+    [HttpDelete("{playId}")]
+    public async Task<IActionResult> Delete([FromRoute] string playId)
     {
-        logger.LogInformation("Deleting seeded data with ID: {SeedId}", seedId);
+        logger.LogInformation("Deleting seeded data with ID: {PlayId}", playId);
 
         try
         {
-            var result = await sceneService.DestroyScene(seedId);
+            var result = await sceneService.DestroyScene(playId);
 
             return Json(result);
         }
         catch (SceneExecutionException ex)
         {
-            logger.LogError(ex, "Error deleting seeded data: {SeedId}", seedId);
+            logger.LogError(ex, "Error deleting seeded data: {PlayId}", playId);
             return BadRequest(new
             {
                 Error = ex.Message,
@@ -101,25 +102,23 @@ public class SeedController(ILogger<SeedController> logger, ISceneService sceneS
         logger.LogInformation("Deleting all seeded data");
 
         // Pull all Seeded Data ids
-        var seededData = sceneService.GetAllSeededData();
+
+        var playIds = sceneService.GetAllPlayIds();
 
         var aggregateException = new AggregateException();
 
-        await Task.Run(async () =>
+        foreach (var playId in playIds)
         {
-            foreach (var sd in seededData)
+            try
             {
-                try
-                {
-                    await sceneService.DestroyScene(sd.Id);
-                }
-                catch (Exception ex)
-                {
-                    aggregateException = new AggregateException(aggregateException, ex);
-                    logger.LogError(ex, "Error deleting seeded data: {SeedId}", sd.Id);
-                }
+                await sceneService.DestroyScene(playId);
             }
-        });
+            catch (Exception ex)
+            {
+                aggregateException = new AggregateException(aggregateException, ex);
+                logger.LogError(ex, "Error deleting seeded data: {PlayId}", playId);
+            }
+        }
 
         if (aggregateException.InnerExceptions.Count > 0)
         {
