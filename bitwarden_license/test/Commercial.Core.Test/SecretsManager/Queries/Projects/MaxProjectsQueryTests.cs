@@ -6,6 +6,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Settings;
+using Bit.Core.Test.Billing.Mocks;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -69,7 +70,7 @@ public class MaxProjectsQueryTests
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
 
         sutProvider.GetDependency<IPricingClient>().GetPlan(organization.PlanType)
-            .Returns(StaticStore.GetPlan(organization.PlanType));
+            .Returns(MockPlans.Get(organization.PlanType));
 
         var (limit, overLimit) = await sutProvider.Sut.GetByOrgIdAsync(organization.Id, 1);
 
@@ -114,7 +115,7 @@ public class MaxProjectsQueryTests
             .Returns(projects);
 
         sutProvider.GetDependency<IPricingClient>().GetPlan(organization.PlanType)
-            .Returns(StaticStore.GetPlan(organization.PlanType));
+            .Returns(MockPlans.Get(organization.PlanType));
 
         var (max, overMax) = await sutProvider.Sut.GetByOrgIdAsync(organization.Id, projectsToAdd);
 

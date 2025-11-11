@@ -9,6 +9,7 @@ using Bit.Core.Billing.Providers.Entities;
 using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bit.Core.Test.Billing.Mocks;
 using Bit.Core.Utilities;
 using NSubstitute;
 using Stripe;
@@ -237,7 +238,7 @@ public class ProviderEventServiceTests
 
         foreach (var providerPlan in providerPlans)
         {
-            _pricingClient.GetPlanOrThrow(providerPlan.PlanType).Returns(StaticStore.GetPlan(providerPlan.PlanType));
+            _pricingClient.GetPlanOrThrow(providerPlan.PlanType).Returns(MockPlans.Get(providerPlan.PlanType));
         }
 
         _providerPlanRepository.GetByProviderId(providerId).Returns(providerPlans);
@@ -246,8 +247,8 @@ public class ProviderEventServiceTests
         await _providerEventService.TryRecordInvoiceLineItems(stripeEvent);
 
         // Assert
-        var teamsPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
-        var enterprisePlan = StaticStore.GetPlan(PlanType.EnterpriseMonthly);
+        var teamsPlan = MockPlans.Get(PlanType.TeamsMonthly);
+        var enterprisePlan = MockPlans.Get(PlanType.EnterpriseMonthly);
 
         await _providerInvoiceItemRepository.Received(1).CreateAsync(Arg.Is<ProviderInvoiceItem>(
             options =>

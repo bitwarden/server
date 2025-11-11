@@ -23,6 +23,7 @@ using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Test.Billing.Mocks;
 using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -305,7 +306,7 @@ public class OrganizationsControllerTests : IDisposable
         // Arrange
         _currentContext.OrganizationOwner(organization.Id).Returns(true);
 
-        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
+        var plan = MockPlans.Get(PlanType.EnterpriseAnnually);
         _pricingClient.GetPlan(Arg.Any<PlanType>()).Returns(plan);
 
         _organizationService
