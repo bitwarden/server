@@ -137,6 +137,7 @@ public static class StaticStore
             new Teams2019Plan(true),
             new Teams2019Plan(false),
             new Families2019Plan(),
+            new Families2025Plan()
         }.ToImmutableList();
     }
 
