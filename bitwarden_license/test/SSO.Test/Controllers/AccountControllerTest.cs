@@ -1045,7 +1045,7 @@ public class AccountControllerTest
         var config = new SsoConfigurationData();
 
         var method = typeof(AccountController).GetMethod(
-            "AutoProvisionUserAsync",
+            "CreateUserAndOrgUserConditionallyAsync",
             BindingFlags.Instance | BindingFlags.NonPublic);
         Assert.NotNull(method);
 
@@ -1108,7 +1108,7 @@ public class AccountControllerTest
         var config = new SsoConfigurationData();
 
         var method = typeof(AccountController).GetMethod(
-            "AutoProvisionUserAsync",
+            "CreateUserAndOrgUserConditionallyAsync",
             BindingFlags.Instance | BindingFlags.NonPublic);
         Assert.NotNull(method);
 
@@ -1137,6 +1137,4 @@ public class AccountControllerTest
         Assert.NotNull(result.user);
         Assert.Equal(email, result.user.Email);
     }
-
-    // ...existing code...
 }
