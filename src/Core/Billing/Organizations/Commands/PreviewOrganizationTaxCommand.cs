@@ -3,6 +3,7 @@ using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Pricing;
@@ -54,7 +55,7 @@ public class PreviewOrganizationTaxCommand(
             switch (purchase)
             {
                 case { PasswordManager.Sponsored: true }:
-                    var sponsoredPlan = StaticStore.GetSponsoredPlan(PlanSponsorshipType.FamiliesForEnterprise);
+                    var sponsoredPlan = SponsoredPlans.Get(PlanSponsorshipType.FamiliesForEnterprise);
                     items.Add(new InvoiceSubscriptionDetailsItemOptions
                     {
                         Price = sponsoredPlan.StripePlanId,

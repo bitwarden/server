@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Models.StaticStore.Plans;
 using Bit.Core.Models.StaticStore;
+using Bit.Core.Test.Billing.Mocks.Plans;
 
 namespace Bit.Core.Test.Billing.Mocks;
 

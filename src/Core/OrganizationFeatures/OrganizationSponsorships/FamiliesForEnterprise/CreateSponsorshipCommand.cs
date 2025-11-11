@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Models;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -34,11 +35,10 @@ public class CreateSponsorshipCommand(
             throw new BadRequestException("Cannot offer a Families Organization Sponsorship to yourself. Choose a different email.");
         }
 
-        var requiredSponsoringProductType = StaticStore.GetSponsoredPlan(sponsorshipType)?.SponsoringProductTierType;
+        var requiredSponsoringProductType = SponsoredPlans.Get(sponsorshipType).SponsoringProductTierType;
         var sponsoringOrgProductTier = sponsoringOrganization.PlanType.GetProductTier();
 
-        if (requiredSponsoringProductType == null ||
-            sponsoringOrgProductTier != requiredSponsoringProductType.Value)
+        if (sponsoringOrgProductTier != requiredSponsoringProductType)
         {
             throw new BadRequestException("Specified Organization cannot sponsor other organizations.");
         }

@@ -1,11 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
-using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Extensions;
 using Bit.Core.Enums;
-using Bit.Core.Models.Data.Organizations.OrganizationUsers;
-using Bit.Core.Models.StaticStore;
 
 namespace Bit.Core.Utilities;
 
@@ -111,20 +107,4 @@ public static class StaticStore
     }
 
     public static IDictionary<GlobalEquivalentDomainsType, IEnumerable<string>> GlobalDomains { get; set; }
-    [Obsolete("Use PricingClient.ListPlans to retrieve all plans.")]
-    public static IEnumerable<SponsoredPlan> SponsoredPlans { get; set; } = new[]
-        {
-            new SponsoredPlan
-            {
-                PlanSponsorshipType = PlanSponsorshipType.FamiliesForEnterprise,
-                SponsoredProductTierType = ProductTierType.Families,
-                SponsoringProductTierType = ProductTierType.Enterprise,
-                StripePlanId = "2021-family-for-enterprise-annually",
-                UsersCanSponsor = (OrganizationUserOrganizationDetails org) =>
-                    org.PlanType.GetProductTier() == ProductTierType.Enterprise,
-            }
-        };
-
-    public static SponsoredPlan GetSponsoredPlan(PlanSponsorshipType planSponsorshipType) =>
-        SponsoredPlans.FirstOrDefault(p => p.PlanSponsorshipType == planSponsorshipType);
 }
