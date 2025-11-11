@@ -34,6 +34,18 @@ public class SecretVersionRepository : Repository<Core.SecretsManager.Entities.S
         return Mapper.Map<List<Core.SecretsManager.Entities.SecretVersion>>(secretVersions);
     }
 
+    public async Task<IEnumerable<Core.SecretsManager.Entities.SecretVersion>> GetManyByIdsAsync(IEnumerable<Guid> ids)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var versionIds = ids.ToList();
+        var secretVersions = await dbContext.SecretVersion
+            .Where(sv => versionIds.Contains(sv.Id))
+            .OrderByDescending(sv => sv.VersionDate)
+            .ToListAsync();
+        return Mapper.Map<List<Core.SecretsManager.Entities.SecretVersion>>(secretVersions);
+    }
+
     public override async Task<Core.SecretsManager.Entities.SecretVersion> CreateAsync(Core.SecretsManager.Entities.SecretVersion secretVersion)
     {
         const int maxVersionsToKeep = 10;

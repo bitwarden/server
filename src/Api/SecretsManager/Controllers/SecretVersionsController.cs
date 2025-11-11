@@ -113,6 +113,67 @@ public class SecretVersionsController : Controller
         return new SecretVersionResponseModel(secretVersion);
     }
 
+    [HttpPost("secret-versions/get-by-ids")]
+    public async Task<ListResponseModel<SecretVersionResponseModel>> GetManyByIdsAsync([FromBody] List<Guid> ids)
+    {
+        if (!ids.Any())
+        {
+            throw new BadRequestException("No version IDs provided.");
+        }
+
+        // Get all versions
+        var versions = (await _secretVersionRepository.GetManyByIdsAsync(ids)).ToList();
+        if (!versions.Any())
+        {
+            throw new NotFoundException();
+        }
+
+        // Get all associated secrets and check permissions
+        var secretIds = versions.Select(v => v.SecretId).Distinct().ToList();
+        var secrets = (await _secretRepository.GetManyByIds(secretIds)).ToList();
+
+        if (!secrets.Any())
+        {
+            throw new NotFoundException();
+        }
+
+        // Ensure all secrets belong to the same organization
+        var organizationId = secrets.First().OrganizationId;
+        if (secrets.Any(s => s.OrganizationId != organizationId) ||
+            !_currentContext.AccessSecretsManager(organizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        // For service accounts and organization API, skip user-level access checks
+        if (_currentContext.IdentityClientType == IdentityClientType.ServiceAccount ||
+            _currentContext.IdentityClientType == IdentityClientType.Organization)
+        {
+            // Already verified Secrets Manager access and organization ownership above
+            var serviceAccountResponses = versions.Select(v => new SecretVersionResponseModel(v));
+            return new ListResponseModel<SecretVersionResponseModel>(serviceAccountResponses);
+        }
+
+        var userId = _userService.GetProperUserId(User);
+        if (!userId.HasValue)
+        {
+            throw new NotFoundException();
+        }
+
+        var isAdmin = await _currentContext.OrganizationAdmin(organizationId);
+        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.IdentityClientType, isAdmin);
+
+        // Verify read access to all associated secrets
+        var accessResults = await _secretRepository.AccessToSecretsAsync(secretIds, userId.Value, accessClient);
+        if (accessResults.Values.Any(access => !access.Read))
+        {
+            throw new NotFoundException();
+        }
+
+        var responses = versions.Select(v => new SecretVersionResponseModel(v));
+        return new ListResponseModel<SecretVersionResponseModel>(responses);
+    }
+
     [HttpPut("secrets/{secretId}/versions/restore")]
     public async Task<SecretResponseModel> RestoreVersionAsync([FromRoute] Guid secretId, [FromBody] RestoreSecretVersionRequestModel request)
     {
@@ -228,13 +289,10 @@ public class SecretVersionsController : Controller
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.IdentityClientType, orgAdmin);
 
         // Verify write access to all associated secrets
-        foreach (var secretId in secretIds)
+        var accessResults = await _secretRepository.AccessToSecretsAsync(secretIds, userId.Value, accessClient);
+        if (accessResults.Values.Any(access => !access.Write))
         {
-            var access = await _secretRepository.AccessToSecretAsync(secretId, userId.Value, accessClient);
-            if (!access.Write)
-            {
-                throw new NotFoundException();
-            }
+            throw new NotFoundException();
         }
 
         await _secretVersionRepository.DeleteManyByIdAsync(ids);

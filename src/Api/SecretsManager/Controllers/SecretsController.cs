@@ -8,6 +8,7 @@ using Bit.Core.Auth.Identity;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
 using Bit.Core.SecretsManager.Entities;
@@ -39,6 +40,7 @@ public class SecretsController : Controller
     private readonly IUserService _userService;
     private readonly IEventService _eventService;
     private readonly IAuthorizationService _authorizationService;
+    private readonly IOrganizationUserRepository _organizationUserRepository;
 
     public SecretsController(
         ICurrentContext currentContext,
@@ -53,7 +55,8 @@ public class SecretsController : Controller
         ISecretAccessPoliciesUpdatesQuery secretAccessPoliciesUpdatesQuery,
         IUserService userService,
         IEventService eventService,
-        IAuthorizationService authorizationService)
+        IAuthorizationService authorizationService,
+        IOrganizationUserRepository organizationUserRepository)
     {
         _currentContext = currentContext;
         _projectRepository = projectRepository;
@@ -68,6 +71,7 @@ public class SecretsController : Controller
         _userService = userService;
         _eventService = eventService;
         _authorizationService = authorizationService;
+        _organizationUserRepository = organizationUserRepository;
 
     }
 
@@ -209,7 +213,15 @@ public class SecretsController : Controller
             }
             else if (_currentContext.IdentityClientType == IdentityClientType.User)
             {
-                editorOrganizationUserId = userId;
+                var orgUser = await _organizationUserRepository.GetByOrganizationAsync(secret.OrganizationId, userId);
+                if (orgUser != null)
+                {
+                    editorOrganizationUserId = orgUser.Id;
+                }
+                else
+                {
+                    throw new NotFoundException();
+                }
             }
 
             var secretVersion = new SecretVersion
