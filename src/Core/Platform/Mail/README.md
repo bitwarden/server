@@ -16,20 +16,19 @@ The Mailer system consists of four main components:
 
 1. **IMailer** - Service interface for sending emails
 2. **BaseMail<TView>** - Abstract base class defining email metadata (recipients, subject, category)
-3. **BaseMailView** - Abstract base class for email template view models
+3. **BaseMailView** - Abstract base class for email template ViewModels
 4. **IMailRenderer** - Internal interface for rendering templates (implemented by `HandlebarMailRenderer`)
 
 ### How To Use
 
-1. Define a view model that inherits from `BaseMailView` with properties for template data
-2. Create Handlebars templates (`.html.hbs` and `.text.hbs`) as embedded resources, preferably using the MJML pipeline,
-   `/src/Core/MailTemplates/Mjml`.
-3. Define an email class that inherits from `BaseMail<TView>` with metadata like subject
-4. Use `IMailer.SendEmail()` to render and send the email
+1. Define a ViewModel that inherits from `BaseMailView` with properties for template data and an email class that inherits from `BaseMail<TView>` with metadata like `Subject`
+2. Create Handlebars templates (`.html.hbs` and `.text.hbs`) as embedded resources, preferably using the `MJML` [pipeline](../../MailTemplates/Mjml/README.md), in
+   a directory in `/src/Core/MailTemplates/Mjml`.
+3. Use `IMailer.SendEmail()` to render and send the email
 
 ### Creating a New Email
 
-#### Step 1: Define the Email & View Model
+#### Step 1: Define the ViewModel
 
 Create a class that inherits from `BaseMailView`:
 
@@ -50,10 +49,12 @@ public class WelcomeEmail : BaseMail<WelcomeEmailView>
 }
 ```
 
-#### Step 2: Create Handlebars Templates
+#### Step 2: Create Handlebars templates
 
-Create two template files as embedded resources next to your view model. **Important**: The file names must be located
-directly next to the `ViewClass` and match the name of the view.
+Create two template files as embedded resources next to your ViewModel.
+
+> [!IMPORTANT]  
+> The files must be located directly next to the `ViewClass` and match the name of the view.
 
 **WelcomeEmailView.html.hbs** (HTML version):
 
@@ -87,7 +88,7 @@ Activate your account: {{ ActivationUrl }}
 </ItemGroup>
 ```
 
-#### Step 3: Send the Email
+#### Step 3: Send the email
 
 Inject `IMailer` and send the email, this may be done in a service, command or some other application layer.
 
@@ -210,4 +211,4 @@ services.TryAddSingleton<IMailer, Mailer>();
 
 The mail services support loading the mail template from disk. This is intended to be used by self-hosted customers who want to modify their email appearance. These overrides are not intended to be used during local development, as any changes there would not be reflected in the templates used in a normal deployment configuration.
 
-Any customer using this override has worked with Bitwarden support on an approved implementation and has acknowledged that they are responsible for reacting to any changes made to the templates as a part of the Bitwarden development process. This includes, but is not limited to, changes in Handlebars property names, removal of properties from the `ViewModel` classes, and changes in template names.  **Bitwarden is not responsible for maintaining backward compatibility between releases in order to support any overridden emails.**
+Any customer using this override has worked with Bitwarden support on an approved implementation and has acknowledged that they are responsible for reacting to any changes made to the templates as a part of the Bitwarden development process. This includes, but is not limited to, changes in Handlebars property names, removal of properties from the ViewModel classes, and changes in template names.  **Bitwarden is not responsible for maintaining backward compatibility between releases in order to support any overridden emails.**
