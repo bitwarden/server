@@ -166,7 +166,7 @@ public class MarketingEmail : BaseMail<MarketingEmailView>
 
 ### Built-in View Properties
 
-All view models inherit from `BaseMailView`, which provides:
+All ViewModels inherit from `BaseMailView`, which provides:
 
 - **CurrentYear** - The current UTC year (useful for copyright notices)
 
@@ -182,7 +182,7 @@ Templates must follow this naming convention:
 - HTML template: `{ViewModelFullName}.html.hbs`
 - Text template: `{ViewModelFullName}.text.hbs`
 
-For example, if your view model is `Bit.Core.Auth.Models.Mail.VerifyEmailView`, the templates must be:
+For example, if your ViewModel is `Bit.Core.Auth.Models.Mail.VerifyEmailView`, the templates must be:
 
 - `Bit.Core.Auth.Models.Mail.VerifyEmailView.html.hbs`
 - `Bit.Core.Auth.Models.Mail.VerifyEmailView.text.hbs`
