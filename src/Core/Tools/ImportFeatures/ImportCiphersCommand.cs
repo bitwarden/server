@@ -160,9 +160,13 @@ public class ImportCiphersCommand : IImportCiphersCommand
              * If the organization was created by a Provider, the organization may have zero members (users)
              * In this situation importingOrgUser will be null, and accessing importingOrgUser.Id will
              * result in a null reference exception.
+             *
+             * Avoid user assignment, but proceed with adding the collection.
              */
             if (importingOrgUser == null)
             {
+                collection.SetNewId();
+                newCollections.Add(collection);
                 continue;
             }
 
