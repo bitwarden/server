@@ -26,15 +26,21 @@ public class MariaDbImporter(DatabaseConfig config, ILogger<MariaDbImporter> log
     {
         try
         {
-            // Build connection string with redacted password for safe logging
-            var safeConnectionString = $"Server={_host};Port={_port};Database={_database};" +
-                                      $"Uid={_username};Pwd={DbSeederConstants.REDACTED_PASSWORD};" +
-                                      $"ConnectionTimeout={DbSeederConstants.DEFAULT_CONNECTION_TIMEOUT};" +
-                                      $"CharSet=utf8mb4;AllowLoadLocalInfile=false;MaxPoolSize={DbSeederConstants.DEFAULT_MAX_POOL_SIZE};";
+            // SECURITY: Use MySqlConnectionStringBuilder to safely construct connection string
+            var builder = new MySqlConnectionStringBuilder
+            {
+                Server = _host,
+                Port = (uint)_port,
+                Database = _database,
+                UserID = _username,
+                Password = _password,
+                ConnectionTimeout = (uint)DbSeederConstants.DEFAULT_CONNECTION_TIMEOUT,
+                CharacterSet = "utf8mb4",
+                AllowLoadLocalInfile = false,
+                MaximumPoolSize = (uint)DbSeederConstants.DEFAULT_MAX_POOL_SIZE
+            };
 
-            var actualConnectionString = safeConnectionString.Replace(DbSeederConstants.REDACTED_PASSWORD, _password);
-
-            _connection = new MySqlConnection(actualConnectionString);
+            _connection = new MySqlConnection(builder.ConnectionString);
             _connection.Open();
 
             _logger.LogInformation("Connected to MariaDB: {Host}:{Port}/{Database}", _host, _port, _database);

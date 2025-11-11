@@ -26,14 +26,18 @@ public class SqlServerExporter(DatabaseConfig config, ILogger<SqlServerExporter>
     {
         try
         {
-            var safeConnectionString = $"Server={_host},{_port};Database={_database};" +
-                                      $"User Id={_username};Password={DbSeederConstants.REDACTED_PASSWORD};" +
-                                      $"TrustServerCertificate=True;" +
-                                      $"Connection Timeout={DbSeederConstants.DEFAULT_CONNECTION_TIMEOUT};";
+            // SECURITY: Use SqlConnectionStringBuilder to safely construct connection string
+            var builder = new SqlConnectionStringBuilder
+            {
+                DataSource = $"{_host},{_port}",
+                InitialCatalog = _database,
+                UserID = _username,
+                Password = _password,
+                TrustServerCertificate = true,
+                ConnectTimeout = DbSeederConstants.DEFAULT_CONNECTION_TIMEOUT
+            };
 
-            var actualConnectionString = safeConnectionString.Replace(DbSeederConstants.REDACTED_PASSWORD, _password);
-
-            _connection = new SqlConnection(actualConnectionString);
+            _connection = new SqlConnection(builder.ConnectionString);
             _connection.Open();
 
             _logger.LogInformation("Connected to SQL Server: {Host}/{Database}", _host, _database);
@@ -320,12 +324,14 @@ public class SqlServerExporter(DatabaseConfig config, ILogger<SqlServerExporter>
 
             var whereClause = string.Join(" OR ", textColumns.Select(col => $"[{col}] IS NOT NULL"));
 
+            // SECURITY: Use parameterized query for TOP clause to maintain consistent security patterns
             var query = $@"
-                SELECT TOP {sampleSize} {columnList}
+                SELECT TOP (@SampleSize) {columnList}
                 FROM [{tableName}]
                 WHERE {whereClause}";
 
             using var command = new SqlCommand(query, _connection);
+            command.Parameters.AddWithValue("@SampleSize", sampleSize);
             using var reader = command.ExecuteReader();
 
             var sampleData = new List<object[]>();

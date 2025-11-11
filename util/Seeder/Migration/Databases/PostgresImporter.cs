@@ -27,13 +27,19 @@ public class PostgresImporter(DatabaseConfig config, ILogger<PostgresImporter> l
     {
         try
         {
-            var safeConnectionString = $"Host={_host};Port={_port};Database={_database};" +
-                                      $"Username={_username};Password={DbSeederConstants.REDACTED_PASSWORD};" +
-                                      $"Timeout={DbSeederConstants.DEFAULT_CONNECTION_TIMEOUT};CommandTimeout={DbSeederConstants.DEFAULT_COMMAND_TIMEOUT};";
+            // SECURITY: Use NpgsqlConnectionStringBuilder to safely construct connection string
+            var builder = new NpgsqlConnectionStringBuilder
+            {
+                Host = _host,
+                Port = _port,
+                Database = _database,
+                Username = _username,
+                Password = _password,
+                Timeout = DbSeederConstants.DEFAULT_CONNECTION_TIMEOUT,
+                CommandTimeout = DbSeederConstants.DEFAULT_COMMAND_TIMEOUT
+            };
 
-            var actualConnectionString = safeConnectionString.Replace(DbSeederConstants.REDACTED_PASSWORD, _password);
-
-            _connection = new NpgsqlConnection(actualConnectionString);
+            _connection = new NpgsqlConnection(builder.ConnectionString);
             _connection.Open();
 
             _logger.LogInformation("Connected to PostgreSQL: {Host}:{Port}/{Database}", _host, _port, _database);
@@ -302,6 +308,7 @@ public class PostgresImporter(DatabaseConfig config, ILogger<PostgresImporter> l
                 var paramNum = idx + 1;
                 var colType = validColumnTypes[idx];
                 // Cast to appropriate type if needed - PostgreSQL requires explicit casts for text to other types
+                // SECURITY: Use explicit allowlist to prevent potential SQL injection through compromised schema
                 return colType switch
                 {
                     // UUID types
@@ -328,8 +335,27 @@ public class PostgresImporter(DatabaseConfig config, ILogger<PostgresImporter> l
                     // Boolean type
                     "boolean" => $"${paramNum}::boolean",
 
-                    // Default - no cast needed for text types
-                    _ => $"${paramNum}"
+                    // Text and string types (no cast needed)
+                    "text" => $"${paramNum}",
+                    "character varying" => $"${paramNum}",
+                    "varchar" => $"${paramNum}",
+                    "character" => $"${paramNum}",
+                    "char" => $"${paramNum}",
+
+                    // Binary types
+                    "bytea" => $"${paramNum}::bytea",
+
+                    // JSON types
+                    "json" => $"${paramNum}::json",
+                    "jsonb" => $"${paramNum}::jsonb",
+
+                    // Array types (common cases)
+                    "text[]" => $"${paramNum}::text[]",
+                    "integer[]" => $"${paramNum}::integer[]",
+                    "uuid[]" => $"${paramNum}::uuid[]",
+
+                    // Reject unknown types to prevent potential schema-based attacks
+                    _ => throw new InvalidOperationException($"Unsupported PostgreSQL column type '{colType}' for column '{col}'. Type must be explicitly allowed in the PostgresImporter allowlist.")
                 };
             });
             var insertSql = $"INSERT INTO \"{actualTableName}\" ({string.Join(", ", quotedColumns)}) VALUES ({string.Join(", ", placeholders)})";

@@ -105,7 +105,15 @@ public class CsvHandler(CsvSettings settings, ILogger<CsvHandler> logger)
                 Delimiter = delimiterUsed,
                 HasHeaderRecord = _settings.IncludeHeaders,
                 Encoding = _encoding,
-                BadDataFound = null, // Ignore bad data
+                BadDataFound = context =>
+                {
+                    // Log malformed CSV data to prevent silent data corruption
+                    _logger.LogWarning(
+                        "Bad CSV data at row {Row}, field {Field}: {RawRecord}",
+                        context.Context.Parser.Row,
+                        context.Field,
+                        context.RawRecord);
+                },
                 TrimOptions = CsvHelper.Configuration.TrimOptions.None // Don't trim anything
             };
 
