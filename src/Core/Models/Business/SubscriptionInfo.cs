@@ -93,25 +93,26 @@ public class SubscriptionInfo
     {
         public BillingSubscription(Subscription sub)
         {
-            Status = sub.Status;
-            TrialStartDate = sub.TrialStart;
-            TrialEndDate = sub.TrialEnd;
-            var currentPeriod = sub.GetCurrentPeriod();
+            Status = sub?.Status;
+            TrialStartDate = sub?.TrialStart;
+            TrialEndDate = sub?.TrialEnd;
+            var currentPeriod = sub?.GetCurrentPeriod();
             if (currentPeriod != null)
             {
                 var (start, end) = currentPeriod.Value;
                 PeriodStartDate = start;
                 PeriodEndDate = end;
             }
-            CancelledDate = sub.CanceledAt;
-            CancelAtEndDate = sub.CancelAtPeriodEnd;
-            Cancelled = sub.Status == "canceled" || sub.Status == "unpaid" || sub.Status == "incomplete_expired";
-            if (sub.Items?.Data != null)
+            CancelledDate = sub?.CanceledAt;
+            CancelAtEndDate = sub?.CancelAtPeriodEnd ?? false;
+            var status = sub?.Status;
+            Cancelled = status == "canceled" || status == "unpaid" || status == "incomplete_expired";
+            if (sub?.Items?.Data != null)
             {
                 Items = sub.Items.Data.Select(i => new BillingSubscriptionItem(i));
             }
-            CollectionMethod = sub.CollectionMethod;
-            GracePeriod = sub.CollectionMethod == "charge_automatically"
+            CollectionMethod = sub?.CollectionMethod;
+            GracePeriod = sub?.CollectionMethod == "charge_automatically"
                 ? 14
                 : 30;
         }

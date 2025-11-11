@@ -643,6 +643,11 @@ public class StripePaymentService : IPaymentService
         var subscription = await _stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId,
             new SubscriptionGetOptions { Expand = ["customer.discount.coupon.applies_to", "discounts.coupon.applies_to", "test_clock"] });
 
+        if (subscription == null)
+        {
+            return subscriptionInfo;
+        }
+
         subscriptionInfo.Subscription = new SubscriptionInfo.BillingSubscription(subscription);
 
         // Discount selection priority:

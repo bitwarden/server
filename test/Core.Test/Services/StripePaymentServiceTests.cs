@@ -542,17 +542,20 @@ public class StripePaymentServiceTests
         var subscription = new Subscription
         {
             Id = "sub_test123",
+            Status = "active",
+            CollectionMethod = "charge_automatically",
             Customer = new Customer
             {
                 Discount = customerDiscount
             },
-            Discounts = new List<Discount>() // Empty list
+            Discounts = new List<Discount>(), // Empty list
+            Items = new StripeList<SubscriptionItem> { Data = [] }
         };
 
         sutProvider.GetDependency<IStripeAdapter>()
             .SubscriptionGetAsync(
                 subscriber.GatewaySubscriptionId,
-                Arg.Is<SubscriptionGetOptions>(o => o.Expand.Contains("customer") && o.Expand.Contains("discounts")))
+                Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
 
         // Act
@@ -590,17 +593,20 @@ public class StripePaymentServiceTests
         var subscription = new Subscription
         {
             Id = "sub_test123",
+            Status = "active",
+            CollectionMethod = "charge_automatically",
             Customer = new Customer
             {
                 Discount = null // No customer discount
             },
-            Discounts = new List<Discount> { subscriptionDiscount }
+            Discounts = new List<Discount> { subscriptionDiscount },
+            Items = new StripeList<SubscriptionItem> { Data = [] }
         };
 
         sutProvider.GetDependency<IStripeAdapter>()
             .SubscriptionGetAsync(
                 subscriber.GatewaySubscriptionId,
-                Arg.Is<SubscriptionGetOptions>(o => o.Expand.Contains("customer") && o.Expand.Contains("discounts")))
+                Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
 
         // Act
@@ -646,17 +652,20 @@ public class StripePaymentServiceTests
         var subscription = new Subscription
         {
             Id = "sub_test123",
+            Status = "active",
+            CollectionMethod = "charge_automatically",
             Customer = new Customer
             {
                 Discount = customerDiscount // Should prefer this
             },
-            Discounts = new List<Discount> { subscriptionDiscount }
+            Discounts = new List<Discount> { subscriptionDiscount },
+            Items = new StripeList<SubscriptionItem> { Data = [] }
         };
 
         sutProvider.GetDependency<IStripeAdapter>()
             .SubscriptionGetAsync(
                 subscriber.GatewaySubscriptionId,
-                Arg.Is<SubscriptionGetOptions>(o => o.Expand.Contains("customer") && o.Expand.Contains("discounts")))
+                Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
 
         // Act
@@ -682,17 +691,20 @@ public class StripePaymentServiceTests
         var subscription = new Subscription
         {
             Id = "sub_test123",
+            Status = "active",
+            CollectionMethod = "charge_automatically",
             Customer = new Customer
             {
                 Discount = null
             },
-            Discounts = new List<Discount>() // Empty list, no discounts
+            Discounts = new List<Discount>(), // Empty list, no discounts
+            Items = new StripeList<SubscriptionItem> { Data = [] }
         };
 
         sutProvider.GetDependency<IStripeAdapter>()
             .SubscriptionGetAsync(
                 subscriber.GatewaySubscriptionId,
-                Arg.Is<SubscriptionGetOptions>(o => o.Expand.Contains("customer") && o.Expand.Contains("discounts")))
+                Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
 
         // Act
@@ -736,18 +748,21 @@ public class StripePaymentServiceTests
         var subscription = new Subscription
         {
             Id = "sub_test123",
+            Status = "active",
+            CollectionMethod = "charge_automatically",
             Customer = new Customer
             {
                 Discount = null // No customer discount
             },
             // Multiple subscription discounts - FirstOrDefault() should select the first one
-            Discounts = new List<Discount> { firstDiscount, secondDiscount }
+            Discounts = new List<Discount> { firstDiscount, secondDiscount },
+            Items = new StripeList<SubscriptionItem> { Data = [] }
         };
 
         sutProvider.GetDependency<IStripeAdapter>()
             .SubscriptionGetAsync(
                 subscriber.GatewaySubscriptionId,
-                Arg.Is<SubscriptionGetOptions>(o => o.Expand.Contains("customer") && o.Expand.Contains("discounts")))
+                Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
 
         // Act
@@ -776,14 +791,17 @@ public class StripePaymentServiceTests
         var subscription = new Subscription
         {
             Id = "sub_test123",
+            Status = "active",
+            CollectionMethod = "charge_automatically",
             Customer = null, // Customer not expanded or null
-            Discounts = new List<Discount>() // Empty discounts
+            Discounts = new List<Discount>(), // Empty discounts
+            Items = new StripeList<SubscriptionItem> { Data = [] }
         };
 
         sutProvider.GetDependency<IStripeAdapter>()
             .SubscriptionGetAsync(
                 subscriber.GatewaySubscriptionId,
-                Arg.Is<SubscriptionGetOptions>(o => o.Expand.Contains("customer") && o.Expand.Contains("discounts")))
+                Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
 
         // Act
@@ -807,17 +825,20 @@ public class StripePaymentServiceTests
         var subscription = new Subscription
         {
             Id = "sub_test123",
+            Status = "active",
+            CollectionMethod = "charge_automatically",
             Customer = new Customer
             {
                 Discount = null // No customer discount
             },
-            Discounts = null // Discounts not expanded or null
+            Discounts = null, // Discounts not expanded or null
+            Items = new StripeList<SubscriptionItem> { Data = [] }
         };
 
         sutProvider.GetDependency<IStripeAdapter>()
             .SubscriptionGetAsync(
                 subscriber.GatewaySubscriptionId,
-                Arg.Is<SubscriptionGetOptions>(o => o.Expand.Contains("customer") && o.Expand.Contains("discounts")))
+                Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
 
         // Act
@@ -841,8 +862,11 @@ public class StripePaymentServiceTests
         var subscription = new Subscription
         {
             Id = "sub_test123",
+            Status = "active",
+            CollectionMethod = "charge_automatically",
             Customer = new Customer { Discount = null },
-            Discounts = new List<Discount>() // Empty list
+            Discounts = new List<Discount>(), // Empty list
+            Items = new StripeList<SubscriptionItem> { Data = [] }
         };
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
@@ -859,8 +883,8 @@ public class StripePaymentServiceTests
         await stripeAdapter.Received(1).SubscriptionGetAsync(
             subscriber.GatewaySubscriptionId,
             Arg.Is<SubscriptionGetOptions>(o =>
-                o.Expand.Contains("customer") &&
-                o.Expand.Contains("discounts") &&
+                o.Expand.Contains("customer.discount.coupon.applies_to") &&
+                o.Expand.Contains("discounts.coupon.applies_to") &&
                 o.Expand.Contains("test_clock")));
     }
 
