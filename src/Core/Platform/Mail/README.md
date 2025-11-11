@@ -1,9 +1,14 @@
 # Mail Services
 ## `MailService`
 
-The `MailService` and its implementation in `HandlebarsMailService` has been deprecated in favor of the `Mailer` implementation.
+> [!WARNING]
+> The `MailService` and its implementation in `HandlebarsMailService` has been deprecated in favor of the `Mailer` implementation.
 
-New emails should be implemented using [MJML](../../MailTemplates/README.md) and the `Mailer`.
+The `MailService` class manages **all** emails, and has multiple responsibilities, including formatting, email building (instantiation of ViewModels from variables), and deciding if a mail request should be enqueued or sent directly.
+
+The resulting implementation cannot be owned by a single team (since all emails are in a single class), and as a result that anyone can edit any template without the appropriate team being informed.
+
+To alleviate these issues, all new emails should be implemented using [MJML](../../MailTemplates/README.md) and the `Mailer`.
 
 ## `Mailer`
 
