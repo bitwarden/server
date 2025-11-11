@@ -7,11 +7,9 @@ This directory contains `MJML` templates for emails. `MJML` is a markup language
 
 ## Implementation considerations
 
-`MJML` templates are compiled into `HTML` which will then be further consumed by Handlebars when sending the email. We can continue to use this service to assign values from our ViewModels. This leverages the existing infrastructure. It also means we can continue to use the double brace (`{{}}`) syntax within MJML since Handlebars can be used to assign values to those `{{variables}}`.
+`MJML` templates are compiled into `HTML`, and those outputs are then consumed by Handlebars to render the final email for delivery. It builds on top of our existing infrastructure and means we can continue to use the double brace (`{{}}`) syntax within `MJML`, since Handlebars will assign values to those `{{variables}}`.
 
-There is no change on how we interact with our ViewModels.
-
-There is an added step where we compile `*.mjml` to `*.html.hbs`. `*.html.hbs` is the format we use so the Handlebars service can apply the variables. This build pipeline process is in progress and may need to be manually done at times.
+To do this, there is an added step where we compile `*.mjml` to `*.html.hbs`. `*.html.hbs` is the format we use so the Handlebars service can apply the variables. This build pipeline process is in progress and may need to be manually done at times.
 
 ### `*.txt.hbs`
 
@@ -38,7 +36,7 @@ npm run build:minify
 npm run prettier
 ```
 
-## Development
+## Development process
 
 `MJML` supports components and you can create your own components by adding them to `.mjmlconfig`. Components are simple JavaScript that return `MJML` markup based on the attributes assigned, see components/mj-bw-hero.js. The markup is not a proper object, but contained in a string.
 
@@ -46,34 +44,29 @@ When using `MJML` templating you can use the above [commands](#building-mjml-fil
 
 Not all `MJML` tags have the same attributes, it is highly recommended to review the documentation on the official MJML website to understand the usages of each of the tags.
 
-### Mail template development
+### Developing the mail template
 
 1. Create `cool-email.mjml` in appropriate team directory.
 2. Run `npm run build:watch`.
 3. View compiled `HTML` output in a web browser.
-4. Iterate.
-  1. While `build:watch`'ing you should be able to refresh the browser page after the `mjml/js` recompile to see the changes.
+4. Iterate through your development. While running `build:watch` you should be able to refresh the browser page after the `mjml/js` recompile to see the changes.
 
-### Testing with `IMailer`
+### Testing the mail template with `IMailer`
 
-After the email is developed from the [initial step](#mjml-email-template-development) make sure the email `{{variables}}` are populated properly by running it through an `IMailer` implementation. The `IMailer`, documented [here](../../Platform/Mail/README.md#step-2-create-handlebars-templates), requires that the ViewModel, the `.html.hbs` `MJML` build artifact, and `.text.hbs` files be in the same directory. 
-
-To do this, you can:
+After the email is developed in the [initial step](#developing-the-mail-template), we need to make sure that the email `{{variables}}` are populated properly by Handlebars.  We can do this by running it through an `IMailer` implementation. The `IMailer`, documented [here](../../Platform/Mail/README.md#step-2-create-handlebars-templates), requires that the ViewModel, the `.html.hbs` `MJML` build artifact, and `.text.hbs` files be in the same directory. 
 
 1. Run `npm run build:hbs`.
-2. Copy built `*.html.hbs` files from the build directory to the directory that the `IMailer` expects.
-  1. All files in the `Core/MailTemplates/Mjml/out` directory should be copied to the `/src/Core/MailTemplates/Mjml` directory, ensuring that the files are in the same directory as the corresponding ViewModels. If a shared component is modified it is important to copy and overwrite all files in that directory to capture changes in the `*.html.hbs` files.
+2. Copy built `*.html.hbs` files from the build directory to the directory that the `IMailer` expects. All files in the `Core/MailTemplates/Mjml/out` directory should be copied to the `/src/Core/MailTemplates/Mjml` directory, ensuring that the files are in the same directory as the corresponding ViewModels. If a shared component is modified it is important to copy and overwrite all files in that directory to capture changes in the `*.html.hbs` files.
 3. Run code that will send the email.
 
-The minified `html.hbs` artifacts are deliverables and must be placed into the correct `/src/Core/MailTemplates/Mjml` directories in order to be used by `IMailer` implementations, see 2.1 above.
+The minified `html.hbs` artifacts are deliverables and must be placed into the correct `/src/Core/MailTemplates/Mjml` directories in order to be used by `IMailer` implementations, see step 2 above.
 
-
-### Testing with `IMailService`
+### Testing the mail template with `IMailService`
 
 > [!WARNING]  
 > The `IMailService` has been deprecated. The [IMailer](#recommended-development---imailer) should be used instead.
 
-After the email is developed from the [initial step](#mjml-email-template-development) make sure the email `{{variables}}` are populated properly by running it through an `IMailService` implementation.
+After the email is developed from the [initial step](#developing-the-mail-template), make sure the email `{{variables}}` are populated properly by running it through an `IMailService` implementation.
 
 1. Run `npm run build:hbs`
 2. Copy built `*.html.hbs` files from the build directory to a location the mail service can consume them.
