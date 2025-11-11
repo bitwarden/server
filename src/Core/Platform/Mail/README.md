@@ -27,7 +27,7 @@ The Mailer system consists of four main components:
 ### How To Use
 
 1. Define a ViewModel that inherits from `BaseMailView` with properties for template data and an email class that inherits from `BaseMail<TView>` with metadata like `Subject`
-2. Create Handlebars templates (`.html.hbs` and `.text.hbs`) as embedded resources, preferably using the `MJML` [pipeline](../../MailTemplates/Mjml/README.md), in
+2. Create Handlebars templates (`.html.hbs` and `.text.hbs`) as embedded resources, preferably using the `MJML` [pipeline](../../MailTemplates/Mjml/README.md#development-process), in
    a directory in `/src/Core/MailTemplates/Mjml`.
 3. Use `IMailer.SendEmail()` to render and send the email
 
