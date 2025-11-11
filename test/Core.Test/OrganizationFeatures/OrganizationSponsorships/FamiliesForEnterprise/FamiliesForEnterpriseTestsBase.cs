@@ -1,7 +1,6 @@
 ﻿using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Test.Billing.Mocks;
-using Bit.Core.Utilities;
 
 namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise;
 

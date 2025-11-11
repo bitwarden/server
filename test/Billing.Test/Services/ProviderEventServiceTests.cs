@@ -10,7 +10,6 @@ using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Test.Billing.Mocks;
-using Bit.Core.Utilities;
 using NSubstitute;
 using Stripe;
 using Xunit;

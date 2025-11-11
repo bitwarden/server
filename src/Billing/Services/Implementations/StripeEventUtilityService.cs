@@ -9,7 +9,6 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Braintree;
 using Stripe;
 using Customer = Stripe.Customer;

@@ -21,7 +21,6 @@ using Bit.Core.Services;
 using Bit.Core.Test.Billing.Mocks;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Repositories;
-using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;

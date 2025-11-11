@@ -8,7 +8,6 @@ using Bit.Core.Models.Data.Organizations.OrganizationSponsorships;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
 

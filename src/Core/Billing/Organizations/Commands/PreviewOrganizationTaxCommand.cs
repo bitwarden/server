@@ -9,7 +9,6 @@ using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Enums;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 using OneOf;
 using Stripe;

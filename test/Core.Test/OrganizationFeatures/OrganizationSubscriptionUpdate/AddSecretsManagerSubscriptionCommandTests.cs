@@ -10,7 +10,6 @@ using Bit.Core.Models.StaticStore;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 using Bit.Core.Services;
 using Bit.Core.Test.Billing.Mocks;
-using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;

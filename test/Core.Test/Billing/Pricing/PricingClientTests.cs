@@ -3,7 +3,6 @@ using Bit.Core.Billing;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.Extensions.Logging;

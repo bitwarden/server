@@ -2,7 +2,6 @@
 using Bit.Core.Billing.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Test.Billing.Mocks;
-using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Stripe;
 using Xunit;

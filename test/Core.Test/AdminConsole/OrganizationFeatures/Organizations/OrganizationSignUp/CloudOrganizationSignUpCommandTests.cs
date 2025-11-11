@@ -11,7 +11,6 @@ using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Test.Billing.Mocks;
-using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;

@@ -9,7 +9,6 @@ using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Test.Billing.Mocks;
-using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;

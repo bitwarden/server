@@ -17,7 +17,6 @@ using Bit.Core.SecretsManager.Queries.ServiceAccounts.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.Billing.Mocks;
-using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
