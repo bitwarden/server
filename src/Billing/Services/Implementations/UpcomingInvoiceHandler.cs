@@ -177,7 +177,8 @@ public class UpcomingInvoiceHandler(
                         Discounts =
                         [
                             new SubscriptionDiscountOptions { Coupon = CouponIDs.Milestone2SubscriptionDiscount }
-                        ]
+                        ],
+                        ProrationBehavior = "none"
                     });
             }
             catch (Exception exception)

@@ -134,6 +134,29 @@ public class OrganizationIntegrationControllerTests
     }
 
     [Theory, BitAutoData]
+    public async Task PostDeleteAsync_AllParamsProvided_Succeeds(
+        SutProvider<OrganizationIntegrationController> sutProvider,
+        Guid organizationId,
+        OrganizationIntegration organizationIntegration)
+    {
+        organizationIntegration.OrganizationId = organizationId;
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(organizationIntegration);
+
+        await sutProvider.Sut.PostDeleteAsync(organizationId, organizationIntegration.Id);
+
+        await sutProvider.GetDependency<IOrganizationIntegrationRepository>().Received(1)
+            .GetByIdAsync(organizationIntegration.Id);
+        await sutProvider.GetDependency<IOrganizationIntegrationRepository>().Received(1)
+            .DeleteAsync(organizationIntegration);
+    }
+
+    [Theory, BitAutoData]
     public async Task DeleteAsync_IntegrationDoesNotBelongToOrganization_ThrowsNotFound(
         SutProvider<OrganizationIntegrationController> sutProvider,
         Guid organizationId,
