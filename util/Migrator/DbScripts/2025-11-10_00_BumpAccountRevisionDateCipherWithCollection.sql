@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Cipher_CreateWithCollections]
+CREATE OR ALTER PROCEDURE [dbo].[Cipher_CreateWithCollections]
     @Id UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
@@ -23,7 +23,7 @@ BEGIN
 
     DECLARE @UpdateCollectionsSuccess INT
     EXEC @UpdateCollectionsSuccess = [dbo].[Cipher_UpdateCollections] @Id, @UserId, @OrganizationId, @CollectionIds
-    
+
     -- Bump the account revision date AFTER collections are assigned.
     EXEC [dbo].[User_BumpAccountRevisionDateByCipherId] @Id, @OrganizationId
 END
