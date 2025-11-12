@@ -26,6 +26,7 @@ CREATE TABLE [dbo].[Organization] (
     [UsersGetPremium]               BIT              NOT NULL,
     [Storage]                       BIGINT           NULL,
     [MaxStorageGb]                  SMALLINT         NULL,
+    [MaxStorageGbIncreased]         SMALLINT         NULL,
     [Gateway]                       TINYINT          NULL,
     [GatewayCustomerId]             VARCHAR (50)     NULL,
     [GatewaySubscriptionId]         VARCHAR (50)     NULL,
