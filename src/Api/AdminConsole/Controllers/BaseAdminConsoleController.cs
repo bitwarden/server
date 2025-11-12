@@ -24,16 +24,6 @@ public abstract class BaseAdminConsoleController : Controller
             success => Results.Ok(resultSelector(success))
         );
 
-    protected static IResult Handle(BulkCommandResult commandResult) =>
-        commandResult.Result.Match<IResult>(
-           error => error switch
-           {
-               NotFoundError notFoundError => TypedResults.NotFound(new ErrorResponseModel(notFoundError.Message)),
-               _ => TypedResults.BadRequest(new ErrorResponseModel(error.Message))
-           },
-           _ => TypedResults.NoContent()
-        );
-
     protected static IResult Handle(CommandResult commandResult) =>
         commandResult.Match<IResult>(
             error => error switch

@@ -22,6 +22,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Billing.Pricing;
@@ -599,7 +600,14 @@ public class OrganizationUsersController : BaseAdminConsoleController
             return TypedResults.Unauthorized();
         }
 
-        return Handle(await _deleteClaimedOrganizationUserAccountCommand.DeleteUserAsync(orgId, id, currentUserId.Value));
+        var commandResult = await _deleteClaimedOrganizationUserAccountCommand.DeleteUserAsync(orgId, id, currentUserId.Value);
+
+        return commandResult.Result.Match<IResult>(
+            error => error is NotFoundError
+                ? TypedResults.NotFound(new ErrorResponseModel(error.Message))
+                : TypedResults.BadRequest(new ErrorResponseModel(error.Message)),
+            TypedResults.Ok
+        );
     }
 
     [HttpPost("{id}/delete-account")]
