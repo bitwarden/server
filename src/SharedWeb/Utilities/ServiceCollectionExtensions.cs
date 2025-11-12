@@ -78,6 +78,7 @@ using Microsoft.Bot.Builder;
 using Microsoft.Bot.Builder.Integration.AspNet.Core;
 using Microsoft.Extensions.Caching.Cosmos;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -85,6 +86,9 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using StackExchange.Redis;
+using ZiggyCreatures.Caching.Fusion;
+using ZiggyCreatures.Caching.Fusion.Backplane.StackExchangeRedis;
+using ZiggyCreatures.Caching.Fusion.Serialization.SystemTextJson;
 using NoopRepos = Bit.Core.Repositories.Noop;
 using Role = Bit.Core.Entities.Role;
 using TableStorageRepos = Bit.Core.Repositories.TableStorage;
@@ -834,6 +838,56 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<IFeatureService, LaunchDarklyFeatureService>();
 
+        return services;
+    }
+
+    /// <summary>
+    /// Add Fusion Cache <see href="https://github.com/ZiggyCreatures/FusionCache"/> to the service
+    /// collection.<br/>
+    /// <br/>
+    /// If Redis is configured, it uses Redis for an L2 cache and backplane. If not, it simply uses in-memory caching.
+    /// </summary>
+    public static IServiceCollection AddFusionCache(this IServiceCollection services, GlobalSettings globalSettings)
+    {
+        var fusionCacheBuilder = services.AddFusionCache()
+            .WithOptions(options =>
+            {
+                options.DistributedCacheCircuitBreakerDuration = globalSettings.FusionCache.DistributedCacheCircuitBreakerDuration;
+            })
+            .WithDefaultEntryOptions(new FusionCacheEntryOptions
+            {
+                Duration = globalSettings.FusionCache.Duration,
+                IsFailSafeEnabled = globalSettings.FusionCache.IsFailSafeEnabled,
+                FailSafeMaxDuration = globalSettings.FusionCache.FailSafeMaxDuration,
+                FailSafeThrottleDuration = globalSettings.FusionCache.FailSafeThrottleDuration,
+                EagerRefreshThreshold = globalSettings.FusionCache.EagerRefreshThreshold,
+                FactorySoftTimeout = globalSettings.FusionCache.FactorySoftTimeout,
+                FactoryHardTimeout = globalSettings.FusionCache.FactoryHardTimeout,
+                DistributedCacheSoftTimeout = globalSettings.FusionCache.DistributedCacheSoftTimeout,
+                DistributedCacheHardTimeout = globalSettings.FusionCache.DistributedCacheHardTimeout,
+                AllowBackgroundDistributedCacheOperations = globalSettings.FusionCache.AllowBackgroundDistributedCacheOperations,
+                JitterMaxDuration = globalSettings.FusionCache.JitterMaxDuration
+            })
+            .WithSerializer(
+                new FusionCacheSystemTextJsonSerializer()
+            );
+
+        if (CoreHelpers.SettingHasValue(globalSettings.DistributedCache.Redis.ConnectionString))
+        {
+            fusionCacheBuilder
+                .WithDistributedCache(
+                    new RedisCache(new RedisCacheOptions()
+                    {
+                        Configuration = globalSettings.DistributedCache.Redis.ConnectionString
+                    })
+                )
+                .WithBackplane(
+                    new RedisBackplane(new RedisBackplaneOptions()
+                    {
+                        Configuration = globalSettings.DistributedCache.Redis.ConnectionString
+                    })
+                );
+        }
         return services;
     }
 

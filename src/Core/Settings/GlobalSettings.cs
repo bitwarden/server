@@ -68,6 +68,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual IConnectionStringSettings Storage { get; set; } = new ConnectionStringSettings();
     public virtual ConnectionStringSettings Events { get; set; } = new ConnectionStringSettings();
     public virtual DistributedCacheSettings DistributedCache { get; set; } = new DistributedCacheSettings();
+    public virtual FusionCacheSettings FusionCache { get; set; } = new FusionCacheSettings();
     public virtual NotificationsSettings Notifications { get; set; } = new NotificationsSettings();
     public virtual IFileStorageSettings Attachment { get; set; }
     public virtual FileStorageSettings Send { get; set; }
@@ -793,5 +794,21 @@ public class GlobalSettings : IGlobalSettings
     public class Fido2Settings
     {
         public HashSet<string> Origins { get; set; }
+    }
+
+    public class FusionCacheSettings
+    {
+        public TimeSpan Duration { get; set; } = TimeSpan.FromMinutes(30);
+        public bool IsFailSafeEnabled { get; set; } = true;
+        public TimeSpan FailSafeMaxDuration { get; set; } = TimeSpan.FromHours(2);
+        public TimeSpan FailSafeThrottleDuration { get; set; } = TimeSpan.FromSeconds(30);
+        public float? EagerRefreshThreshold { get; set; } = 0.9f;
+        public TimeSpan FactorySoftTimeout { get; set; } = TimeSpan.FromMilliseconds(100);
+        public TimeSpan FactoryHardTimeout { get; set; } = TimeSpan.FromMilliseconds(1500);
+        public TimeSpan DistributedCacheSoftTimeout { get; set; } = TimeSpan.FromSeconds(1);
+        public TimeSpan DistributedCacheHardTimeout { get; set; } = TimeSpan.FromSeconds(2);
+        public bool AllowBackgroundDistributedCacheOperations { get; set; } = true;
+        public TimeSpan JitterMaxDuration { get; set; } = TimeSpan.FromSeconds(2);
+        public TimeSpan DistributedCacheCircuitBreakerDuration { get; set; } = TimeSpan.FromSeconds(30);
     }
 }
