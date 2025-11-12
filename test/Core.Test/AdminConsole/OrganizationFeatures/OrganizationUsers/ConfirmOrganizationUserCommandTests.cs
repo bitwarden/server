@@ -97,6 +97,8 @@ public class ConfirmOrganizationUserCommandTests
     [BitAutoData(PlanType.EnterpriseMonthly2019, OrganizationUserType.Owner)]
     [BitAutoData(PlanType.FamiliesAnnually, OrganizationUserType.Admin)]
     [BitAutoData(PlanType.FamiliesAnnually, OrganizationUserType.Owner)]
+    [BitAutoData(PlanType.FamiliesAnnually2025, OrganizationUserType.Admin)]
+    [BitAutoData(PlanType.FamiliesAnnually2025, OrganizationUserType.Owner)]
     [BitAutoData(PlanType.FamiliesAnnually2019, OrganizationUserType.Admin)]
     [BitAutoData(PlanType.FamiliesAnnually2019, OrganizationUserType.Owner)]
     [BitAutoData(PlanType.TeamsAnnually, OrganizationUserType.Admin)]
