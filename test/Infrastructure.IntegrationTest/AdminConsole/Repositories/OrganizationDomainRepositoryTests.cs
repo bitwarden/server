@@ -403,7 +403,8 @@ public class OrganizationDomainRepositoryTests
             Plan = "Test",
             PrivateKey = "privatekey",
             Enabled = true,
-            UsePolicies = true
+            UsePolicies = true,
+            UseOrganizationDomains = true
         });
 
         var organizationDomain = new OrganizationDomain
@@ -448,7 +449,8 @@ public class OrganizationDomainRepositoryTests
             Plan = "Test",
             PrivateKey = "privatekey",
             Enabled = true,
-            UsePolicies = true
+            UsePolicies = true,
+            UseOrganizationDomains = true
         });
 
         var organizationDomain = new OrganizationDomain
@@ -493,7 +495,8 @@ public class OrganizationDomainRepositoryTests
             Plan = "Test",
             PrivateKey = "privatekey",
             Enabled = true,
-            UsePolicies = true
+            UsePolicies = true,
+            UseOrganizationDomains = true
         });
 
         var organizationDomain = new OrganizationDomain
@@ -538,7 +541,100 @@ public class OrganizationDomainRepositoryTests
             Plan = "Test",
             PrivateKey = "privatekey",
             Enabled = false,
-            UsePolicies = true
+            UsePolicies = true,
+            UseOrganizationDomains = true
+        });
+
+        var organizationDomain = new OrganizationDomain
+        {
+            OrganizationId = organization.Id,
+            DomainName = domainName,
+            Txt = "btw+12345"
+        };
+        organizationDomain.SetNextRunDate(1);
+        organizationDomain.SetVerifiedDate();
+        await organizationDomainRepository.CreateAsync(organizationDomain);
+
+        var policy = new Policy
+        {
+            OrganizationId = organization.Id,
+            Type = PolicyType.BlockClaimedDomainAccountCreation,
+            Enabled = true
+        };
+        await policyRepository.CreateAsync(policy);
+
+        // Act
+        var result = await organizationDomainRepository.HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(domainName);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Theory, DatabaseData]
+    public async Task HasVerifiedDomainWithBlockClaimedDomainPolicyAsync_WithUsePoliciesFalse_ReturnsFalse(
+        IOrganizationRepository organizationRepository,
+        IOrganizationDomainRepository organizationDomainRepository,
+        IPolicyRepository policyRepository)
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        var domainName = $"test-{id}.example.com";
+
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = $"Test Org {id}",
+            BillingEmail = $"test+{id}@example.com",
+            Plan = "Test",
+            PrivateKey = "privatekey",
+            Enabled = true,
+            UsePolicies = false, // Organization doesn't have policies feature
+            UseOrganizationDomains = true
+        });
+
+        var organizationDomain = new OrganizationDomain
+        {
+            OrganizationId = organization.Id,
+            DomainName = domainName,
+            Txt = "btw+12345"
+        };
+        organizationDomain.SetNextRunDate(1);
+        organizationDomain.SetVerifiedDate();
+        await organizationDomainRepository.CreateAsync(organizationDomain);
+
+        var policy = new Policy
+        {
+            OrganizationId = organization.Id,
+            Type = PolicyType.BlockClaimedDomainAccountCreation,
+            Enabled = true
+        };
+        await policyRepository.CreateAsync(policy);
+
+        // Act
+        var result = await organizationDomainRepository.HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(domainName);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Theory, DatabaseData]
+    public async Task HasVerifiedDomainWithBlockClaimedDomainPolicyAsync_WithUseOrganizationDomainsFalse_ReturnsFalse(
+        IOrganizationRepository organizationRepository,
+        IOrganizationDomainRepository organizationDomainRepository,
+        IPolicyRepository policyRepository)
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        var domainName = $"test-{id}.example.com";
+
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = $"Test Org {id}",
+            BillingEmail = $"test+{id}@example.com",
+            Plan = "Test",
+            PrivateKey = "privatekey",
+            Enabled = true,
+            UsePolicies = true,
+            UseOrganizationDomains = false // Organization doesn't have organization domains feature
         });
 
         var organizationDomain = new OrganizationDomain
@@ -582,7 +678,8 @@ public class OrganizationDomainRepositoryTests
             Plan = "Test",
             PrivateKey = "privatekey",
             Enabled = true,
-            UsePolicies = true
+            UsePolicies = true,
+            UseOrganizationDomains = true
         });
 
         var organizationDomain = new OrganizationDomain
@@ -635,7 +732,8 @@ public class OrganizationDomainRepositoryTests
             Plan = "Test",
             PrivateKey = "privatekey",
             Enabled = true,
-            UsePolicies = true
+            UsePolicies = true,
+            UseOrganizationDomains = true
         });
 
         var organizationDomain = new OrganizationDomain
@@ -680,7 +778,8 @@ public class OrganizationDomainRepositoryTests
             Plan = "Test",
             PrivateKey = "privatekey",
             Enabled = true,
-            UsePolicies = true
+            UsePolicies = true,
+            UseOrganizationDomains = true
         });
 
         var organizationDomain1 = new OrganizationDomain
@@ -709,7 +808,8 @@ public class OrganizationDomainRepositoryTests
             Plan = "Test",
             PrivateKey = "privatekey",
             Enabled = true,
-            UsePolicies = true
+            UsePolicies = true,
+            UseOrganizationDomains = true
         });
 
         // Act - Exclude organization2 (but organization1 still has the domain blocked)
