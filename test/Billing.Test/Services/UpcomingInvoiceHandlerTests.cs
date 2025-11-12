@@ -1043,12 +1043,10 @@ public class UpcomingInvoiceHandlerTests
                 org.UsersGetPremium == familiesPlan.UsersGetPremium &&
                 org.Seats == familiesPlan.PasswordManager.BaseSeats));
 
-        await _mailService.Received(1).SendInvoiceUpcoming(
-            Arg.Is<IEnumerable<string>>(emails => emails.Contains("org@example.com")),
-            Arg.Any<decimal>(),
-            Arg.Any<DateTime>(),
-            Arg.Any<List<string>>(),
-            Arg.Any<bool>());
+        await _mailer.Received(1).SendEmail(
+            Arg.Is<UpdatedInvoiceUpcomingMail>(email =>
+                email.ToEmails.Contains("org@example.com") &&
+                email.Subject == "Your Subscription Will Renew Soon"));
     }
 
     [Fact]
@@ -1465,11 +1463,9 @@ public class UpcomingInvoiceHandlerTests
             Arg.Any<Func<object, Exception, string>>());
 
         // Should still attempt to send email despite the failure
-        await _mailService.Received(1).SendInvoiceUpcoming(
-            Arg.Is<IEnumerable<string>>(emails => emails.Contains("org@example.com")),
-            Arg.Any<decimal>(),
-            Arg.Any<DateTime>(),
-            Arg.Any<List<string>>(),
-            Arg.Any<bool>());
+        await _mailer.Received(1).SendEmail(
+            Arg.Is<UpdatedInvoiceUpcomingMail>(email =>
+                email.ToEmails.Contains("org@example.com") &&
+                email.Subject == "Your Subscription Will Renew Soon"));
     }
 }
