@@ -94,7 +94,7 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     ///
     /// This is an idempotent operation.
     /// </summary>
-    /// <param name="organizationUser">Accepted OrganizationUser to confirm</param>
+    /// <param name="organizationUserToConfirm">Accepted OrganizationUser to confirm</param>
     /// <returns>True, if the user was updated. False, if not performed.</returns>
-    Task<bool> ConfirmOrganizationUserAsync(AcceptedOrganizationUser organizationUser);
+    Task<bool> ConfirmOrganizationUserAsync(AcceptedOrganizationUserToConfirm organizationUserToConfirm);
 }

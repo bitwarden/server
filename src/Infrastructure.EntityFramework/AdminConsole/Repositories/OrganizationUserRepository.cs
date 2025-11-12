@@ -944,23 +944,24 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         await dbContext.SaveChangesAsync();
     }
 
-    public async Task<bool> ConfirmOrganizationUserAsync(AcceptedOrganizationUser organizationUser)
+    public async Task<bool> ConfirmOrganizationUserAsync(AcceptedOrganizationUserToConfirm organizationUserToConfirm)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         await using var dbContext = GetDatabaseContext(scope);
 
         var result = await dbContext.OrganizationUsers
-            .Where(ou => ou.Id == organizationUser.Id && ou.Status == OrganizationUserStatusType.Accepted)
+            .Where(ou => ou.Id == organizationUserToConfirm.OrganizationUserId
+                         && ou.Status == OrganizationUserStatusType.Accepted)
             .ExecuteUpdateAsync(x => x
                 .SetProperty(y => y.Status, OrganizationUserStatusType.Confirmed)
-                .SetProperty(y => y.Key, organizationUser.Key));
+                .SetProperty(y => y.Key, organizationUserToConfirm.Key));
 
         if (result <= 0)
         {
             return false;
         }
 
-        await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdAsync(organizationUser.Id);
+        await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdAsync(organizationUserToConfirm.OrganizationUserId);
         return true;
 
     }

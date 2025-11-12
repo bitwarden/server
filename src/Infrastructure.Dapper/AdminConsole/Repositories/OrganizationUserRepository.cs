@@ -672,7 +672,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             commandType: CommandType.StoredProcedure);
     }
 
-    public async Task<bool> ConfirmOrganizationUserAsync(AcceptedOrganizationUser organizationUser)
+    public async Task<bool> ConfirmOrganizationUserAsync(AcceptedOrganizationUserToConfirm organizationUserToConfirm)
     {
         await using var connection = new SqlConnection(_marsConnectionString);
 
@@ -680,10 +680,10 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             $"[{Schema}].[OrganizationUser_ConfirmById]",
             new
             {
-                organizationUser.Id,
-                organizationUser.UserId,
+                Id = organizationUserToConfirm.OrganizationUserId,
+                UserId = organizationUserToConfirm.UserId,
                 RevisionDate = DateTime.UtcNow.Date,
-                Key = organizationUser.Key
+                Key = organizationUserToConfirm.Key
             });
 
         return rowCount > 0;

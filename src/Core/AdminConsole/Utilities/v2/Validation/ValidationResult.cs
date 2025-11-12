@@ -38,47 +38,4 @@ public static class ValidationResultHelpers
             .Where(r => r.IsValid)
             .Select(r => r.Request)
             .ToList();
-
-    /// <summary>
-    /// Chains the execution of another asynchronous validation step to the result of an initial validation.
-    /// </summary>
-    /// <param name="inputTask">The task representing the initial <see cref="ValidationResult{T}"/>.</param>
-    /// <param name="next">A function that defines the next asynchronous validation step to execute if the initial validation is valid.</param>
-    /// <typeparam name="T">The type of the request being validated.</typeparam>
-    /// <returns>A task representing the result of the chained validation step.</returns>
-    public static async Task<ValidationResult<T>> ThenAsync<T>(
-        this Task<ValidationResult<T>> inputTask,
-        Func<T, Task<ValidationResult<T>>> next)
-    {
-        var input = await inputTask;
-        if (input.IsError) return Invalid(input.Request, input.AsError);
-        return await next(input.Request);
-    }
-
-    /// <summary>
-    /// Chains a synchronous validation function to execute only if the current result is valid.
-    /// </summary>
-    public static ValidationResult<T> Then<T>(this ValidationResult<T> result, Func<T, ValidationResult<T>> next) =>
-        result.IsValid ? next(result.Request) : result;
-
-    /// <summary>
-    /// Chains a synchronous validation function to a Task-wrapped ValidationResult.
-    /// </summary>
-    public static async Task<ValidationResult<T>> ThenAsync<T>(
-        this Task<ValidationResult<T>> resultTask,
-        Func<T, ValidationResult<T>> next)
-    {
-        var result = await resultTask;
-        return result.IsValid ? next(result.Request) : result;
-    }
-
-    /// <summary>
-    /// Chains an asynchronous validation function to execute only if the current result is valid.
-    /// </summary>
-    public static async Task<ValidationResult<T>> ThenAsync<T>(
-        this ValidationResult<T> result,
-        Func<T, Task<ValidationResult<T>>> nextAsync)
-    {
-        return result.IsValid ? await nextAsync(result.Request) : result;
-    }
 }

@@ -1,10 +1,7 @@
-﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Models.Data.OrganizationUsers;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
+﻿using Bit.Core.AdminConsole.Models.Data.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
-using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -26,77 +23,75 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
     IPushRegistrationService pushRegistrationService,
     IDeviceRepository deviceRepository,
     IPushNotificationService pushNotificationService,
-    IFeatureService featureService,
     IPolicyRequirementQuery policyRequirementQuery,
     ICollectionRepository collectionRepository,
+    TimeProvider timeProvider,
     ILogger<AutomaticallyConfirmOrganizationUserCommand> logger) : IAutomaticallyConfirmOrganizationUserCommand
 {
     public async Task<CommandResult> AutomaticallyConfirmOrganizationUserAsync(AutomaticallyConfirmOrganizationUserRequest request)
     {
-        var requestData = await RetrieveDataAsync(request);
+        var validatorRequest = await RetrieveDataAsync(request);
 
-        if (requestData.IsError)
+        var validatedData = await validator.ValidateAsync(validatorRequest);
+
+        if (validatedData.IsValid)
         {
-            return requestData.AsError;
+            var userToConfirm = new AcceptedOrganizationUserToConfirm
+            {
+                OrganizationUserId = validatedData.Request.OrganizationUser!.Id,
+                UserId = validatedData.Request.OrganizationUser.UserId!.Value,
+                Key = validatedData.Request.Key
+            };
+
+            // This operation is idempotent. If false, user is already confirmed and no additional side effects are required.
+            if (!await organizationUserRepository.ConfirmOrganizationUserAsync(userToConfirm))
+            {
+                return new None();
+            }
+
+            await Task.WhenAll([
+                CreateDefaultCollectionsAsync(validatedData.Request),
+                LogOrganizationUserConfirmedEventAsync(validatedData.Request),
+                SendConfirmedOrganizationUserEmailAsync(validatedData.Request),
+                SyncOrganizationKeysAsync(validatedData.Request)
+            ]);
         }
 
-        var validatedData = await validator.ValidateAsync(requestData.AsSuccess);
-
-        if (validatedData.IsError)
-        {
-            return validatedData.AsError;
-        }
-
-        var validatedRequest = validatedData.Request;
-
-        var successfulConfirmation = await organizationUserRepository.ConfirmOrganizationUserAsync(validatedRequest.OrganizationUser);
-
-        if (!successfulConfirmation)
-        {
-            return new None(); // Operation is idempotent. If this is false, then the user is already confirmed.
-        }
-
-        _ = await validatedRequest.ApplyAsync([
-            CreateDefaultCollectionsAsync,
-            LogOrganizationUserConfirmedEventAsync,
-            SendConfirmedOrganizationUserEmailAsync,
-            DeleteDeviceRegistrationAsync,
-            PushSyncOrganizationKeysAsync
-        ]);
-
-        return new None(); // Operation is idempotent. If this is false, then the user is already confirmed.
+        return new None();
     }
 
-    private async Task<CommandResult<AutomaticallyConfirmOrganizationUserValidationRequest>> CreateDefaultCollectionsAsync(
-        AutomaticallyConfirmOrganizationUserValidationRequest request)
+    private async Task SyncOrganizationKeysAsync(AutomaticallyConfirmOrganizationUserValidationRequest rqeuest)
+    {
+        await DeleteDeviceRegistrationAsync(rqeuest);
+        await PushSyncOrganizationKeysAsync(rqeuest);
+    }
+
+    private async Task CreateDefaultCollectionsAsync(AutomaticallyConfirmOrganizationUserValidationRequest request)
     {
         try
         {
             if (!await ShouldCreateDefaultCollectionAsync(request))
             {
-                return request;
+                return;
             }
 
             await collectionRepository.CreateAsync(
                 new Collection
                 {
-                    OrganizationId = request.Organization.Id,
+                    OrganizationId = request.Organization!.Id,
                     Name = request.DefaultUserCollectionName,
                     Type = CollectionType.DefaultUserCollection
                 },
                 groups: null,
                 [new CollectionAccessSelection
                 {
-                    Id = request.OrganizationUser.Id,
+                    Id = request.OrganizationUser!.Id,
                     Manage = true
                 }]);
-
-            return request;
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to create default collection for user.");
-            return new CommandResult<AutomaticallyConfirmOrganizationUserValidationRequest>(new FailedToCreateDefaultCollection());
         }
     }
 
@@ -108,120 +103,81 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
     /// </param>
     /// <returns>The result is a boolean value indicating whether a default collection should be created.</returns>
     private async Task<bool> ShouldCreateDefaultCollectionAsync(AutomaticallyConfirmOrganizationUserValidationRequest request) =>
-        featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation)
-        && !string.IsNullOrWhiteSpace(request.DefaultUserCollectionName)
-        && (await policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(request.OrganizationUser.UserId))
-            .RequiresDefaultCollectionOnConfirm(request.Organization.Id);
+        !string.IsNullOrWhiteSpace(request.DefaultUserCollectionName)
+        && (await policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(request.OrganizationUser!.UserId!.Value))
+            .RequiresDefaultCollectionOnConfirm(request.Organization!.Id);
 
-    private async Task<CommandResult<AutomaticallyConfirmOrganizationUserValidationRequest>> PushSyncOrganizationKeysAsync(AutomaticallyConfirmOrganizationUserValidationRequest request)
+    private async Task PushSyncOrganizationKeysAsync(AutomaticallyConfirmOrganizationUserValidationRequest request)
     {
         try
         {
-            await pushNotificationService.PushSyncOrgKeysAsync(request.OrganizationUser.UserId);
-            return request;
+            await pushNotificationService.PushSyncOrgKeysAsync(request.OrganizationUser!.UserId!.Value);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to push organization keys.");
-            return new FailedToPushOrganizationSyncKeys();
         }
     }
 
-    private async Task<CommandResult<AutomaticallyConfirmOrganizationUserValidationRequest>> LogOrganizationUserConfirmedEventAsync(
-        AutomaticallyConfirmOrganizationUserValidationRequest request)
+    private async Task LogOrganizationUserConfirmedEventAsync(AutomaticallyConfirmOrganizationUserValidationRequest request)
     {
         try
         {
             await eventService.LogOrganizationUserEventAsync(request.OrganizationUser,
                 EventType.OrganizationUser_AutomaticallyConfirmed,
                 request.PerformedOn.UtcDateTime);
-            return request;
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to log OrganizationUser_AutomaticallyConfirmed event.");
-            return new FailedToWriteToEventLog();
         }
     }
 
-    private async Task<CommandResult<AutomaticallyConfirmOrganizationUserValidationRequest>> SendConfirmedOrganizationUserEmailAsync(
-        AutomaticallyConfirmOrganizationUserValidationRequest request)
+    private async Task SendConfirmedOrganizationUserEmailAsync(AutomaticallyConfirmOrganizationUserValidationRequest request)
     {
         try
         {
-            var user = await userRepository.GetByIdAsync(request.OrganizationUser.UserId);
+            var user = await userRepository.GetByIdAsync(request.OrganizationUser!.UserId!.Value);
 
-            if (user is null) return new UserNotFoundError();
-
-            await mailService.SendOrganizationConfirmedEmailAsync(request.Organization.Name,
-                user.Email,
+            await mailService.SendOrganizationConfirmedEmailAsync(request.Organization!.Name,
+                user!.Email,
                 request.OrganizationUser.AccessSecretsManager);
-
-            return request;
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to send OrganizationUserConfirmed.");
-            return new FailedToSendConfirmedUserEmail();
         }
     }
 
-    private async Task<CommandResult<AutomaticallyConfirmOrganizationUserValidationRequest>> DeleteDeviceRegistrationAsync(
-        AutomaticallyConfirmOrganizationUserValidationRequest request)
+    private async Task DeleteDeviceRegistrationAsync(AutomaticallyConfirmOrganizationUserValidationRequest request)
     {
         try
         {
-            var devices = (await deviceRepository.GetManyByUserIdAsync(request.OrganizationUser.UserId))
+            var devices = (await deviceRepository.GetManyByUserIdAsync(request.OrganizationUser!.UserId!.Value))
                     .Where(d => !string.IsNullOrWhiteSpace(d.PushToken))
                     .Select(d => d.Id.ToString());
 
-            await pushRegistrationService.DeleteUserRegistrationOrganizationAsync(devices, request.Organization.Id.ToString());
-            return request;
+            await pushRegistrationService.DeleteUserRegistrationOrganizationAsync(devices, request.Organization!.Id.ToString());
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to delete device registration.");
-            return new FailedToDeleteDeviceRegistration();
         }
     }
 
-    private async Task<CommandResult<AutomaticallyConfirmOrganizationUserValidationRequest>> RetrieveDataAsync(
+    private async Task<AutomaticallyConfirmOrganizationUserValidationRequest> RetrieveDataAsync(
         AutomaticallyConfirmOrganizationUserRequest request)
     {
-        var organizationUser = await GetOrganizationUserAsync(request);
-
-        if (organizationUser.IsError) return organizationUser.AsError;
-
-        var organization = await GetOrganizationAsync(request.OrganizationId);
-
-        if (organization.IsError) return organization.AsError;
-
         return new AutomaticallyConfirmOrganizationUserValidationRequest
         {
-            OrganizationUser = organizationUser.AsSuccess,
-            Organization = organization.AsSuccess,
-            PerformedBy = request.PerformedBy,
+            OrganizationUserId = request.OrganizationUserId,
+            OrganizationId = request.OrganizationId,
+            Key = request.Key,
             DefaultUserCollectionName = request.DefaultUserCollectionName,
-            PerformedOn = request.PerformedOn
+            PerformedBy = request.PerformedBy,
+            PerformedOn = timeProvider.GetUtcNow(),
+            OrganizationUser = await organizationUserRepository.GetByIdAsync(request.OrganizationUserId),
+            Organization = await organizationRepository.GetByIdAsync(request.OrganizationId)
         };
-    }
-
-    private async Task<CommandResult<AcceptedOrganizationUser>> GetOrganizationUserAsync(AutomaticallyConfirmOrganizationUserRequest request)
-    {
-        var organizationUser = await organizationUserRepository.GetByIdAsync(request.OrganizationUserId);
-
-        return organizationUser switch
-        {
-            null or { UserId: null } => new UserNotFoundError(),
-            { Status: not OrganizationUserStatusType.Accepted } => new UserIsNotAccepted(),
-            _ => new AcceptedOrganizationUser(organizationUser, request.Key)
-        };
-    }
-
-    private async Task<CommandResult<Organization>> GetOrganizationAsync(Guid organizationId)
-    {
-        var organization = await organizationRepository.GetByIdAsync(organizationId);
-
-        return organization is not null ? organization : new OrganizationNotFound();
     }
 }

@@ -1,8 +1,8 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
-using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpers;
@@ -16,71 +16,83 @@ public class AutomaticallyConfirmOrganizationUsersValidator(
     ) : IAutomaticallyConfirmOrganizationUsersValidator
 {
     public async Task<ValidationResult<AutomaticallyConfirmOrganizationUserValidationRequest>> ValidateAsync(
-        AutomaticallyConfirmOrganizationUserValidationRequest request) =>
-        await OrganizationUserBelongsToOrganization(request)
-            .Then(OrganizationUserIsNotOfTypeUser)
-            .ThenAsync(OrganizationUserOwnershipValidationAsync)
-            .ThenAsync(OrganizationUserConformsToTwoFactorRequiredPolicyAsync)
-            .ThenAsync(OrganizationUserConformsToSingleOrgPolicyAsync);
-
-    private static ValidationResult<AutomaticallyConfirmOrganizationUserValidationRequest> OrganizationUserIsNotOfTypeUser(
-            AutomaticallyConfirmOrganizationUserValidationRequest request) =>
-        request.OrganizationUser is { Type: OrganizationUserType.User }
-            ? Valid(request)
-            : Invalid(request, new UserIsNotUserType());
-
-    private static ValidationResult<AutomaticallyConfirmOrganizationUserValidationRequest> OrganizationUserBelongsToOrganization(
-            AutomaticallyConfirmOrganizationUserValidationRequest request) =>
-        request.OrganizationUser.OrganizationId == request.Organization.Id
-            ? Valid(request)
-            : Invalid(request, new OrganizationUserIdIsInvalid());
-
-    private async Task<ValidationResult<AutomaticallyConfirmOrganizationUserValidationRequest>> OrganizationUserOwnershipValidationAsync(
-        AutomaticallyConfirmOrganizationUserValidationRequest request) =>
-        request.Organization.PlanType is not PlanType.Free
-        || await organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(request.OrganizationUser.UserId) == 0
-            ? Valid(request)
-            : Invalid(request, new UserToConfirmIsAnAdminOrOwnerOfAnotherFreeOrganization());
-
-    private async Task<ValidationResult<AutomaticallyConfirmOrganizationUserValidationRequest>> OrganizationUserConformsToTwoFactorRequiredPolicyAsync(
-            AutomaticallyConfirmOrganizationUserValidationRequest request)
+        AutomaticallyConfirmOrganizationUserValidationRequest request)
     {
-        if ((await twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync([request.OrganizationUser.UserId]))
-            .Any(x => x.userId == request.OrganizationUser.UserId && x.twoFactorIsEnabled))
+        // User must exist
+        if (request is { OrganizationUser: null } || request.OrganizationUser is { UserId: null })
         {
-            return Valid(request);
+            return Invalid(request, new UserNotFoundError());
         }
 
-        return (await policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(request.OrganizationUser.UserId))
-            .IsTwoFactorRequiredForOrganization(request.Organization.Id)
-                ? Invalid(request, new UserDoesNotHaveTwoFactorEnabled())
-                : Valid(request);
-    }
-
-    private async Task<ValidationResult<AutomaticallyConfirmOrganizationUserValidationRequest>> OrganizationUserConformsToSingleOrgPolicyAsync(
-            AutomaticallyConfirmOrganizationUserValidationRequest request)
-    {
-        var allOrganizationUsersForUser = await organizationUserRepository
-            .GetManyByUserAsync(request.OrganizationUser.UserId);
-
-        if (allOrganizationUsersForUser.Count == 1)
+        // Organization must exist
+        if (request is { Organization: null })
         {
-            return Valid(request);
+            return Invalid(request, new OrganizationNotFound());
         }
 
-        var policyRequirement = await policyRequirementQuery
-            .GetAsync<SingleOrganizationPolicyRequirement>(request.OrganizationUser.UserId);
+        // User must belong to the organization
+        if (request.OrganizationUser.OrganizationId != request.Organization.Id)
+        {
+            return Invalid(request, new OrganizationUserIdIsInvalid());
+        }
 
-        if (policyRequirement.IsSingleOrgEnabledForThisOrganization(request.Organization.Id))
+        // User must be accepted
+        if (request is { OrganizationUser.Status: not OrganizationUserStatusType.Accepted })
+        {
+            return Invalid(request, new UserIsNotAccepted());
+        }
+
+        // User must be of type User
+        if (request is { OrganizationUser.Type: not OrganizationUserType.User })
+        {
+            return Invalid(request, new UserIsNotUserType());
+        }
+
+        // OrgUser must conform to Two Factor Required Policy if applicable
+        if (!await OrganizationUserConformsToTwoFactorRequiredPolicyAsync(request))
+        {
+            return Invalid(request, new UserDoesNotHaveTwoFactorEnabled());
+        }
+
+        // OrgUser must conform to Single Org Policy if applicable
+        if (!await OrganizationUserConformsToSingleOrgPolicyAsync(request))
         {
             return Invalid(request, new OrganizationEnforcesSingleOrgPolicy());
         }
 
-        if (policyRequirement.IsSingleOrgEnabledForOrganizationsOtherThan(request.Organization.Id))
+        return Valid(request);
+    }
+
+    private async Task<bool> OrganizationUserConformsToTwoFactorRequiredPolicyAsync(AutomaticallyConfirmOrganizationUserValidationRequest request)
+    {
+        if ((await twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync([request.OrganizationUser!.UserId!.Value]))
+            .Any(x => x.userId == request.OrganizationUser.UserId && x.twoFactorIsEnabled))
         {
-            return Invalid(request, new OtherOrganizationEnforcesSingleOrgPolicy());
+            return true;
         }
 
-        return Valid(request);
+        return !(await policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(request.OrganizationUser.UserId!.Value))
+            .IsTwoFactorRequiredForOrganization(request.Organization!.Id);
+    }
+
+    private async Task<bool> OrganizationUserConformsToSingleOrgPolicyAsync(AutomaticallyConfirmOrganizationUserValidationRequest request)
+    {
+        var allOrganizationUsersForUser = await organizationUserRepository
+            .GetManyByUserAsync(request.OrganizationUser!.UserId!.Value);
+
+        if (allOrganizationUsersForUser.Count == 1)
+        {
+            return true;
+        }
+
+        var policyRequirement = await policyRequirementQuery
+            .GetAsync<SingleOrganizationPolicyRequirement>(request.OrganizationUser!.UserId!.Value);
+
+        if (policyRequirement.IsSingleOrgEnabledForThisOrganization(request.Organization!.Id))
+        {
+            return false;
+        }
+
+        return !policyRequirement.IsSingleOrgEnabledForOrganizationsOtherThan(request.Organization.Id);
     }
 }
