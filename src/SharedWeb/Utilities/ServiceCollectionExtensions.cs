@@ -79,6 +79,7 @@ using Microsoft.Bot.Builder;
 using Microsoft.Bot.Builder.Integration.AspNet.Core;
 using Microsoft.Extensions.Caching.Cosmos;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -890,9 +891,9 @@ public static class ServiceCollectionExtensions
                 eventIntegrationPublisher: provider.GetRequiredService<IEventIntegrationPublisher>(),
                 integrationFilterService: provider.GetRequiredService<IIntegrationFilterService>(),
                 configurationCache: provider.GetRequiredService<IIntegrationConfigurationDetailsCache>(),
-                groupRepository: provider.GetRequiredService<IGroupRepository>(),
-                organizationRepository: provider.GetRequiredService<IOrganizationRepository>(),
-                organizationUserRepository: provider.GetRequiredService<IOrganizationUserRepository>(),
+                groupCache: provider.GetRequiredService<IGroupCache>(),
+                organizationCache: provider.GetRequiredService<IOrganizationCache>(),
+                organizationUserCache: provider.GetRequiredService<IOrganizationUserUserDetailsCache>(),
                 logger: provider.GetRequiredService<ILogger<EventIntegrationHandler<TConfig>>>()
             )
         );
@@ -940,6 +941,43 @@ public static class ServiceCollectionExtensions
         services.AddHostedService(provider => provider.GetRequiredService<IntegrationConfigurationDetailsCacheService>());
         services.TryAddSingleton<IIntegrationFilterService, IntegrationFilterService>();
         services.TryAddKeyedSingleton<IEventWriteService, RepositoryEventWriteService>("persistent");
+
+        services.TryAddKeyedSingleton<IMemoryCache>(
+            "UserCache",
+            new MemoryCache(new MemoryCacheOptions() { SizeLimit = globalSettings.EventLogging.UserCacheMaxEntries })
+        );
+        services.TryAddSingleton<IOrganizationUserUserDetailsCache>(provider =>
+        {
+            return new OrganizationUserUserDetailsCache(
+                memoryCache: provider.GetRequiredKeyedService<IMemoryCache>("UserCache"),
+                cacheEntryTtl: TimeSpan.FromMinutes(globalSettings.EventLogging.UserCacheTtlMinutes),
+                userRepository: provider.GetRequiredService<IOrganizationUserRepository>()
+            );
+        });
+        services.TryAddKeyedSingleton<IMemoryCache>(
+            "GroupCache",
+            new MemoryCache(new MemoryCacheOptions() { SizeLimit = globalSettings.EventLogging.GroupCacheMaxEntries })
+        );
+        services.TryAddSingleton<IGroupCache>(provider =>
+        {
+            return new GroupCache(
+                memoryCache: provider.GetRequiredKeyedService<IMemoryCache>("GroupCache"),
+                cacheEntryTtl: TimeSpan.FromMinutes(globalSettings.EventLogging.GroupCacheTtlMinutes),
+                groupRepository: provider.GetRequiredService<IGroupRepository>()
+            );
+        });
+        services.TryAddKeyedSingleton<IMemoryCache>(
+            "OrganizationCache",
+            new MemoryCache(new MemoryCacheOptions() { SizeLimit = globalSettings.EventLogging.OrganizationCacheMaxEntries })
+        );
+        services.TryAddSingleton<IOrganizationCache>(provider =>
+        {
+            return new OrganizationCache(
+                memoryCache: provider.GetRequiredKeyedService<IMemoryCache>("OrganizationCache"),
+                cacheEntryTtl: TimeSpan.FromMinutes(globalSettings.EventLogging.OrganizationCacheTtlMinutes),
+                organizationRepository: provider.GetRequiredService<IOrganizationRepository>()
+            );
+        });
 
         // Add services in support of handlers
         services.AddSlackService(globalSettings);
@@ -1018,9 +1056,9 @@ public static class ServiceCollectionExtensions
                 eventIntegrationPublisher: provider.GetRequiredService<IEventIntegrationPublisher>(),
                 integrationFilterService: provider.GetRequiredService<IIntegrationFilterService>(),
                 configurationCache: provider.GetRequiredService<IIntegrationConfigurationDetailsCache>(),
-                groupRepository: provider.GetRequiredService<IGroupRepository>(),
-                organizationRepository: provider.GetRequiredService<IOrganizationRepository>(),
-                organizationUserRepository: provider.GetRequiredService<IOrganizationUserRepository>(),
+                groupCache: provider.GetRequiredService<IGroupCache>(),
+                organizationCache: provider.GetRequiredService<IOrganizationCache>(),
+                organizationUserCache: provider.GetRequiredService<IOrganizationUserUserDetailsCache>(),
                 logger: provider.GetRequiredService<ILogger<EventIntegrationHandler<TConfig>>>()
             )
         );

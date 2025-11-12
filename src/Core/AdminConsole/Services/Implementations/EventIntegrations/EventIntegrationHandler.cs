@@ -1,10 +1,8 @@
 ﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
-using Bit.Core.Repositories;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services;
@@ -14,9 +12,9 @@ public class EventIntegrationHandler<T>(
     IEventIntegrationPublisher eventIntegrationPublisher,
     IIntegrationFilterService integrationFilterService,
     IIntegrationConfigurationDetailsCache configurationCache,
-    IGroupRepository groupRepository,
-    IOrganizationRepository organizationRepository,
-    IOrganizationUserRepository organizationUserRepository,
+    IGroupCache groupCache,
+    IOrganizationCache organizationCache,
+    IOrganizationUserUserDetailsCache organizationUserCache,
     ILogger<EventIntegrationHandler<T>> logger)
     : IEventMessageHandler
 {
@@ -93,7 +91,7 @@ public class EventIntegrationHandler<T>(
 
         if (IntegrationTemplateProcessor.TemplateRequiresGroup(template) && eventMessage.GroupId.HasValue)
         {
-            context.Group = await groupRepository.GetByIdAsync(eventMessage.GroupId.Value);
+            context.Group = await groupCache.GetAsync(eventMessage.GroupId.Value);
         }
 
         if (eventMessage.OrganizationId is not Guid organizationId)
@@ -103,7 +101,7 @@ public class EventIntegrationHandler<T>(
 
         if (IntegrationTemplateProcessor.TemplateRequiresUser(template) && eventMessage.UserId.HasValue)
         {
-            context.User = await organizationUserRepository.GetDetailsByOrganizationIdUserIdAsync(
+            context.User = await organizationUserCache.GetAsync(
                 organizationId: organizationId,
                 userId: eventMessage.UserId.Value
             );
@@ -111,7 +109,7 @@ public class EventIntegrationHandler<T>(
 
         if (IntegrationTemplateProcessor.TemplateRequiresActingUser(template) && eventMessage.ActingUserId.HasValue)
         {
-            context.ActingUser = await organizationUserRepository.GetDetailsByOrganizationIdUserIdAsync(
+            context.ActingUser = await organizationUserCache.GetAsync(
                 organizationId: organizationId,
                 userId: eventMessage.ActingUserId.Value
             );
@@ -119,7 +117,7 @@ public class EventIntegrationHandler<T>(
 
         if (IntegrationTemplateProcessor.TemplateRequiresOrganization(template))
         {
-            context.Organization = await organizationRepository.GetByIdAsync(organizationId);
+            context.Organization = await organizationCache.GetAsync(organizationId);
         }
 
         return context;
