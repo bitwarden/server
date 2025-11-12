@@ -63,10 +63,10 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
         );
     }
 
-    private async Task SyncOrganizationKeysAsync(AutomaticallyConfirmOrganizationUserValidationRequest rqeuest)
+    private async Task SyncOrganizationKeysAsync(AutomaticallyConfirmOrganizationUserValidationRequest request)
     {
-        await DeleteDeviceRegistrationAsync(rqeuest);
-        await PushSyncOrganizationKeysAsync(rqeuest);
+        await DeleteDeviceRegistrationAsync(request);
+        await PushSyncOrganizationKeysAsync(request);
     }
 
     private async Task CreateDefaultCollectionsAsync(AutomaticallyConfirmOrganizationUserValidationRequest request)
