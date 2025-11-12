@@ -190,14 +190,6 @@ public class SecretVersionsController : Controller
             throw new NotFoundException();
         }
 
-        // Verify the version's secret belongs to the same organization
-        // This prevents restoring versions from secrets in other organizations
-        var versionSecret = await _secretRepository.GetByIdAsync(version.SecretId);
-        if (versionSecret == null || versionSecret.OrganizationId != secret.OrganizationId)
-        {
-            throw new NotFoundException();
-        }
-
         // For service accounts and organization API, skip user-level access checks
         if (_currentContext.IdentityClientType == IdentityClientType.ServiceAccount ||
             _currentContext.IdentityClientType == IdentityClientType.Organization)
@@ -241,20 +233,14 @@ public class SecretVersionsController : Controller
             throw new BadRequestException("No version IDs provided.");
         }
 
-        // Get all versions and check permissions on their associated secrets
-        var versions = new List<Core.SecretsManager.Entities.SecretVersion>();
-        foreach (var id in ids)
+        var secretVersions = (await _secretVersionRepository.GetManyByIdsAsync(ids)).ToList();
+        if (secretVersions.Count != ids.Count)
         {
-            var version = await _secretVersionRepository.GetByIdAsync(id);
-            if (version == null)
-            {
-                throw new NotFoundException();
-            }
-            versions.Add(version);
+            throw new NotFoundException();
         }
 
         // Ensure all versions belong to secrets in the same organization
-        var secretIds = versions.Select(v => v.SecretId).Distinct().ToList();
+        var secretIds = secretVersions.Select(v => v.SecretId).Distinct().ToList();
         var secrets = await _secretRepository.GetManyByIds(secretIds);
         var secretsList = secrets.ToList();
 

@@ -23,4 +23,9 @@ public class NoopSecretVersionRepository : ISecretVersionRepository
     {
         return Task.CompletedTask;
     }
+
+    public Task<IEnumerable<SecretVersion>> GetManyByIdsAsync(IEnumerable<Guid> ids)
+    {
+        return Task.FromResult(Enumerable.Empty<SecretVersion>());
+    }
 }

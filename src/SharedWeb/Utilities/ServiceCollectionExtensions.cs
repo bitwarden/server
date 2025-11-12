@@ -340,6 +340,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IProviderService, NoopProviderService>();
         services.AddScoped<IServiceAccountRepository, NoopServiceAccountRepository>();
         services.AddScoped<ISecretRepository, NoopSecretRepository>();
+        services.AddScoped<ISecretVersionRepository, NoopSecretVersionRepository>();
         services.AddScoped<IProjectRepository, NoopProjectRepository>();
     }
 
