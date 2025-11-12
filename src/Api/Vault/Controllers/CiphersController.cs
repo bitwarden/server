@@ -402,8 +402,9 @@ public class CiphersController : Controller
     {
         var org = _currentContext.GetOrganization(organizationId);
 
-        // If we're not an "admin" or if we're not a provider user we don't need to check the ciphers
-        if (org is not ({ Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or { Permissions.EditAnyCollection: true }) || await _currentContext.ProviderUserForOrgAsync(organizationId))
+        // If we're not an "admin" we don't need to check the ciphers
+        if (org is not ({Type: OrganizationUserType.Owner or OrganizationUserType.Admin} or
+            {Permissions.EditAnyCollection: true}))
         {
             return false;
         }
@@ -416,8 +417,9 @@ public class CiphersController : Controller
     {
         var org = _currentContext.GetOrganization(organizationId);
 
-        // If we're not an "admin" or if we're a provider user we don't need to check the ciphers
-        if (org is not ({ Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or { Permissions.EditAnyCollection: true }) || await _currentContext.ProviderUserForOrgAsync(organizationId))
+        // If we're not an "admin" we don't need to check the ciphers
+        if (org is not ({Type: OrganizationUserType.Owner or OrganizationUserType.Admin} or
+            {Permissions.EditAnyCollection: true}))
         {
             return false;
         }
