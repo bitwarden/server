@@ -156,6 +156,10 @@ public class ImportCiphersCommand : IImportCiphersCommand
                 continue;
             }
 
+            // Create new collections if not already present
+            collection.SetNewId();
+            newCollections.Add(collection);
+
             /*
              * If the organization was created by a Provider, the organization may have zero members (users)
              * In this situation importingOrgUser will be null, and accessing importingOrgUser.Id will
@@ -165,13 +169,9 @@ public class ImportCiphersCommand : IImportCiphersCommand
              */
             if (importingOrgUser == null)
             {
-                collection.SetNewId();
-                newCollections.Add(collection);
                 continue;
             }
 
-            collection.SetNewId();
-            newCollections.Add(collection);
             newCollectionUsers.Add(new CollectionUser
             {
                 CollectionId = collection.Id,
