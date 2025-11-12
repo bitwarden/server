@@ -193,25 +193,6 @@ public static class OrganizationTestHelpers
     }
 
     /// <summary>
-    /// Enables the Organization Auto Confirm policy for the specified organization.
-    /// </summary>
-    public static async Task EnableOrganizationAutoConfirmPolicyAsync<T>(
-        WebApplicationFactoryBase<T> factory,
-        Guid organizationId) where T : class
-    {
-        var policyRepository = factory.GetService<IPolicyRepository>();
-
-        var policy = new Policy
-        {
-            OrganizationId = organizationId,
-            Type = PolicyType.AutomaticUserConfirmation,
-            Enabled = true
-        };
-
-        await policyRepository.CreateAsync(policy);
-    }
-
-    /// <summary>
     /// Creates a user account without a Master Password and adds them as a member to the specified organization.
     /// </summary>
     public static async Task<(User User, OrganizationUser OrganizationUser)> CreateUserWithoutMasterPasswordAsync(ApiApplicationFactory factory, string email, Guid organizationId)
