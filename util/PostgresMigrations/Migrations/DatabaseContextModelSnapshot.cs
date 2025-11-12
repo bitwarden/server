@@ -161,6 +161,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<short?>("MaxStorageGb")
                         .HasColumnType("smallint");
 
+                    b.Property<short?>("MaxStorageGbIncreased")
+                        .HasColumnType("smallint");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -848,6 +851,9 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("integer");
 
                     b.Property<short?>("MaxStorageGb")
+                        .HasColumnType("smallint");
+
+                    b.Property<short?>("MaxStorageGbIncreased")
                         .HasColumnType("smallint");
 
                     b.Property<Guid>("OrganizationId")
@@ -1886,6 +1892,9 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("character varying(50)");
 
                     b.Property<short?>("MaxStorageGb")
+                        .HasColumnType("smallint");
+
+                    b.Property<short?>("MaxStorageGbIncreased")
                         .HasColumnType("smallint");
 
                     b.Property<string>("Name")
