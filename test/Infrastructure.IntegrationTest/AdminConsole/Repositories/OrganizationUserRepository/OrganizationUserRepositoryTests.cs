@@ -1488,7 +1488,12 @@ public class OrganizationUserRepositoryTests
         const string key = "test-key";
         orgUser.Key = key;
 
-        var acceptedOrganizationUser = new AcceptedOrganizationUser(orgUser);
+        var acceptedOrganizationUser = new AcceptedOrganizationUserToConfirm
+        {
+            OrganizationUserId = orgUser.Id,
+            UserId = user.Id,
+            Key = key
+        };
 
         // Act
         var result = await organizationUserRepository.ConfirmOrganizationUserAsync(acceptedOrganizationUser);
@@ -1517,7 +1522,12 @@ public class OrganizationUserRepositoryTests
 
         orgUser.Status = OrganizationUserStatusType.Accepted; // To simulate a second call to ConfirmOrganizationUserAsync
 
-        var acceptedOrganizationUser = new AcceptedOrganizationUser(orgUser);
+        var acceptedOrganizationUser = new AcceptedOrganizationUserToConfirm
+        {
+            OrganizationUserId = orgUser.Id,
+            UserId = user.Id,
+            Key = "test-key"
+        };
 
         // Act
         var result = await organizationUserRepository.ConfirmOrganizationUserAsync(acceptedOrganizationUser);
@@ -1544,7 +1554,12 @@ public class OrganizationUserRepositoryTests
         var user = await userRepository.CreateTestUserAsync();
         var orgUser = await organizationUserRepository.CreateAcceptedTestOrganizationUserAsync(organization, user);
 
-        var acceptedOrganizationUser = new AcceptedOrganizationUser(orgUser);
+        var acceptedOrganizationUser = new AcceptedOrganizationUserToConfirm
+        {
+            OrganizationUserId = orgUser.Id,
+            UserId = user.Id,
+            Key = "test-key"
+        };
 
         // Act - First call should confirm
         var firstResult = await organizationUserRepository.ConfirmOrganizationUserAsync(acceptedOrganizationUser);
@@ -1567,15 +1582,12 @@ public class OrganizationUserRepositoryTests
         IOrganizationUserRepository organizationUserRepository)
     {
         // Arrange
-        var nonExistentUser = new AcceptedOrganizationUser(new OrganizationUser
+        var nonExistentUser = new AcceptedOrganizationUserToConfirm
         {
-            Id = Guid.NewGuid(),
-            OrganizationId = Guid.NewGuid(),
+            OrganizationUserId = Guid.NewGuid(),
             UserId = Guid.NewGuid(),
-            Email = "nonexistent@bitwarden.com",
-            Status = OrganizationUserStatusType.Accepted,
-            Type = OrganizationUserType.Owner
-        });
+            Key = "test-key"
+        };
 
         // Act
         var result = await organizationUserRepository.ConfirmOrganizationUserAsync(nonExistentUser);
