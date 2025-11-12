@@ -105,11 +105,14 @@ public class UpcomingInvoiceHandler(
 
         var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
 
+        var milestone3 = featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3);
+
         await AlignOrganizationSubscriptionConcernsAsync(
             organization,
             @event,
             subscription,
-            plan);
+            plan,
+            milestone3);
 
         // Don't send the upcoming invoice email unless the organization's on an annual plan.
         if (!plan.IsAnnual)
@@ -132,7 +135,9 @@ public class UpcomingInvoiceHandler(
             }
         }
 
-        await SendUpcomingInvoiceEmailsAsync(new List<string> { organization.BillingEmail }, invoice);
+        await (milestone3
+            ? SendUpdatedUpcomingInvoiceEmailsAsync([organization.BillingEmail])
+            : SendUpcomingInvoiceEmailsAsync([organization.BillingEmail], invoice));
     }
 
     private async Task AlignOrganizationTaxConcernsAsync(
@@ -187,10 +192,9 @@ public class UpcomingInvoiceHandler(
         Organization organization,
         Event @event,
         Subscription subscription,
-        Plan plan)
+        Plan plan,
+        bool milestone3)
     {
-        var milestone3 = featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3);
-
         if (milestone3 && plan.Type == PlanType.FamiliesAnnually2019)
         {
             var passwordManagerItem =
@@ -221,7 +225,7 @@ public class UpcomingInvoiceHandler(
                 ],
                 Discounts =
                 [
-                    new SubscriptionDiscountOptions { Coupon = CouponIDs.MIlestone3SubscriptionDiscount }
+                    new SubscriptionDiscountOptions { Coupon = CouponIDs.Milestone3SubscriptionDiscount }
                 ],
                 ProrationBehavior = ProrationBehavior.None
             };
@@ -240,8 +244,8 @@ public class UpcomingInvoiceHandler(
 
             try
             {
-                await stripeFacade.UpdateSubscription(subscription.Id, options);
                 await organizationRepository.ReplaceAsync(organization);
+                await stripeFacade.UpdateSubscription(subscription.Id, options);
             }
             catch (Exception exception)
             {

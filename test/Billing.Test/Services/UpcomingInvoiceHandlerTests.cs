@@ -1032,7 +1032,7 @@ public class UpcomingInvoiceHandlerTests
                 o.Items[1].Id == premiumAccessItemId &&
                 o.Items[1].Deleted == true &&
                 o.Discounts.Count == 1 &&
-                o.Discounts[0].Coupon == CouponIDs.MIlestone3SubscriptionDiscount &&
+                o.Discounts[0].Coupon == CouponIDs.Milestone3SubscriptionDiscount &&
                 o.ProrationBehavior == ProrationBehavior.None));
 
         await _organizationRepository.Received(1).ReplaceAsync(
@@ -1129,7 +1129,7 @@ public class UpcomingInvoiceHandlerTests
                 o.Items[0].Id == passwordManagerItemId &&
                 o.Items[0].Price == familiesPlan.PasswordManager.StripePlanId &&
                 o.Discounts.Count == 1 &&
-                o.Discounts[0].Coupon == CouponIDs.MIlestone3SubscriptionDiscount &&
+                o.Discounts[0].Coupon == CouponIDs.Milestone3SubscriptionDiscount &&
                 o.ProrationBehavior == ProrationBehavior.None));
 
         await _organizationRepository.Received(1).ReplaceAsync(
