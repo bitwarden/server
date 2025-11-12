@@ -6,12 +6,12 @@ BEGIN
     SET NOCOUNT ON
 
 SELECT
-    TOP 1 *
+    *
 FROM
     [dbo].[OrganizationUserUserDetailsView]
 WHERE
     [OrganizationId] = @OrganizationId
-  AND
+AND
     [UserId] = @UserId
 END
 GO
