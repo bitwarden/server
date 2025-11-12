@@ -159,6 +159,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<short?>("MaxStorageGb")
                         .HasColumnType("smallint");
 
+                    b.Property<short?>("MaxStorageGbIncreased")
+                        .HasColumnType("smallint");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -843,6 +846,9 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("int");
 
                     b.Property<short?>("MaxStorageGb")
+                        .HasColumnType("smallint");
+
+                    b.Property<short?>("MaxStorageGbIncreased")
                         .HasColumnType("smallint");
 
                     b.Property<Guid>("OrganizationId")
@@ -1880,6 +1886,9 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("varchar(50)");
 
                     b.Property<short?>("MaxStorageGb")
+                        .HasColumnType("smallint");
+
+                    b.Property<short?>("MaxStorageGbIncreased")
                         .HasColumnType("smallint");
 
                     b.Property<string>("Name")
