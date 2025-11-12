@@ -3,7 +3,6 @@ using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.Models.Data.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Utilities.v2;
@@ -48,16 +47,15 @@ public class AutomaticallyConfirmUsersCommandTests
             OrganizationId = organization.Id,
             Key = key,
             DefaultUserCollectionName = defaultCollectionName,
-            PerformedBy = new StandardUser(performingUserId, true),
-            PerformedOn = DateTimeOffset.UtcNow
+            PerformedBy = new StandardUser(performingUserId, true)
         };
 
         SetupRepositoryMocks(sutProvider, organizationUser, organization, user);
-        SetupValidatorMock(sutProvider, organizationUser, organization, request, true);
-        SetupFeatureServiceMock(sutProvider, false);
+        SetupValidatorMock(sutProvider, request, organizationUser, organization, true);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .ConfirmOrganizationUserAsync(Arg.Is<AcceptedOrganizationUser>(o => o.Id == organizationUser.Id && o.Key == request.Key))
+            .ConfirmOrganizationUserAsync(Arg.Is<AcceptedOrganizationUserToConfirm>(o =>
+                o.OrganizationUserId == organizationUser.Id && o.Key == request.Key))
             .Returns(true);
 
         // Act
@@ -68,127 +66,10 @@ public class AutomaticallyConfirmUsersCommandTests
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
-            .ConfirmOrganizationUserAsync(Arg.Is<AcceptedOrganizationUser>(o => o.Id == organizationUser.Id && o.Key == request.Key));
+            .ConfirmOrganizationUserAsync(Arg.Is<AcceptedOrganizationUserToConfirm>(o =>
+                o.OrganizationUserId == organizationUser.Id && o.Key == request.Key));
 
         await AssertSuccessfulOperationsAsync(sutProvider, organizationUser, organization, user, key);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task AutomaticallyConfirmOrganizationUserAsync_WithInvalidOrganizationUserId_ReturnsUserNotFoundError(
-        SutProvider<AutomaticallyConfirmOrganizationUserCommand> sutProvider,
-        Guid organizationUserId,
-        Guid organizationId,
-        Guid performingUserId,
-        string key,
-        string defaultCollectionName)
-    {
-        // Arrange
-        var request = new AutomaticallyConfirmOrganizationUserRequest
-        {
-            OrganizationUserId = organizationUserId,
-            OrganizationId = organizationId,
-            Key = key,
-            DefaultUserCollectionName = defaultCollectionName,
-            PerformedBy = new StandardUser(performingUserId, true),
-            PerformedOn = DateTimeOffset.UtcNow
-        };
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByIdAsync(request.OrganizationUserId)
-            .Returns((OrganizationUser)null!);
-
-        // Act
-        var result = await sutProvider.Sut.AutomaticallyConfirmOrganizationUserAsync(request);
-
-        // Assert
-        Assert.True(result.IsError);
-        Assert.IsType<UserNotFoundError>(result.AsError);
-
-        await sutProvider.GetDependency<IOrganizationUserRepository>()
-            .DidNotReceive()
-            .ConfirmOrganizationUserAsync(Arg.Any<AcceptedOrganizationUser>());
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task AutomaticallyConfirmOrganizationUserAsync_WithNullUserId_ReturnsUserNotFoundError(
-        SutProvider<AutomaticallyConfirmOrganizationUserCommand> sutProvider,
-        [OrganizationUser] OrganizationUser organizationUser,
-        Guid organizationId,
-        Guid performingUserId,
-        string key,
-        string defaultCollectionName)
-    {
-        // Arrange
-        organizationUser.UserId = null;
-
-        var request = new AutomaticallyConfirmOrganizationUserRequest
-        {
-            OrganizationUserId = organizationUser.Id,
-            OrganizationId = organizationId,
-            Key = key,
-            DefaultUserCollectionName = defaultCollectionName,
-            PerformedBy = new StandardUser(performingUserId, true),
-            PerformedOn = DateTimeOffset.UtcNow
-        };
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByIdAsync(request.OrganizationUserId)
-            .Returns(organizationUser);
-
-        // Act
-        var result = await sutProvider.Sut.AutomaticallyConfirmOrganizationUserAsync(request);
-
-        // Assert
-        Assert.True(result.IsError);
-        Assert.IsType<UserNotFoundError>(result.AsError);
-
-        await sutProvider.GetDependency<IOrganizationUserRepository>()
-            .DidNotReceive()
-            .ConfirmOrganizationUserAsync(Arg.Any<AcceptedOrganizationUser>());
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task AutomaticallyConfirmOrganizationUserAsync_WithInvalidOrganizationId_ReturnsOrganizationNotFoundError(
-        SutProvider<AutomaticallyConfirmOrganizationUserCommand> sutProvider,
-        [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
-        User user,
-        Guid performingUserId,
-        string key,
-        string defaultCollectionName)
-    {
-        // Arrange
-        organizationUser.UserId = user.Id;
-        var request = new AutomaticallyConfirmOrganizationUserRequest
-        {
-            OrganizationUserId = organizationUser.Id,
-            OrganizationId = Guid.NewGuid(),
-            Key = key,
-            DefaultUserCollectionName = defaultCollectionName,
-            PerformedBy = new StandardUser(performingUserId, true),
-            PerformedOn = DateTimeOffset.UtcNow
-        };
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByIdAsync(request.OrganizationUserId)
-            .Returns(organizationUser);
-
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(request.OrganizationId)
-            .Returns((Organization)null!);
-
-        // Act
-        var result = await sutProvider.Sut.AutomaticallyConfirmOrganizationUserAsync(request);
-
-        // Assert
-        Assert.True(result.IsError);
-        Assert.IsType<OrganizationNotFound>(result.AsError);
-
-        await sutProvider.GetDependency<IOrganizationUserRepository>()
-            .DidNotReceive()
-            .ConfirmOrganizationUserAsync(Arg.Any<AcceptedOrganizationUser>());
     }
 
     [Theory]
@@ -211,12 +92,11 @@ public class AutomaticallyConfirmUsersCommandTests
             OrganizationId = organization.Id,
             Key = key,
             DefaultUserCollectionName = defaultCollectionName,
-            PerformedBy = new StandardUser(performingUserId, true),
-            PerformedOn = DateTimeOffset.UtcNow
+            PerformedBy = new StandardUser(performingUserId, true)
         };
 
         SetupRepositoryMocks(sutProvider, organizationUser, organization, user);
-        SetupValidatorMock(sutProvider, organizationUser, organization, request, false, new OrganizationUserIdIsInvalid());
+        SetupValidatorMock(sutProvider, request, organizationUser, organization, false, new OrganizationUserIdIsInvalid());
 
         // Act
         var result = await sutProvider.Sut.AutomaticallyConfirmOrganizationUserAsync(request);
@@ -227,7 +107,7 @@ public class AutomaticallyConfirmUsersCommandTests
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceive()
-            .ConfirmOrganizationUserAsync(Arg.Any<AcceptedOrganizationUser>());
+            .ConfirmOrganizationUserAsync(Arg.Any<AcceptedOrganizationUserToConfirm>());
     }
 
     [Theory]
@@ -250,17 +130,16 @@ public class AutomaticallyConfirmUsersCommandTests
             OrganizationId = organization.Id,
             Key = key,
             DefaultUserCollectionName = defaultCollectionName,
-            PerformedBy = new StandardUser(performingUserId, true),
-            PerformedOn = DateTimeOffset.UtcNow
+            PerformedBy = new StandardUser(performingUserId, true)
         };
 
         SetupRepositoryMocks(sutProvider, organizationUser, organization, user);
-        SetupValidatorMock(sutProvider, organizationUser, organization, request, true);
-        SetupFeatureServiceMock(sutProvider, false);
+        SetupValidatorMock(sutProvider, request, organizationUser, organization, true);
 
-        // Return false to indicate user is already confirmed
+        // Return false to indicate the user is already confirmed
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .ConfirmOrganizationUserAsync(Arg.Is<AcceptedOrganizationUser>(x => x.Id == organizationUser.Id && x.Key == request.Key))
+            .ConfirmOrganizationUserAsync(Arg.Is<AcceptedOrganizationUserToConfirm>(x =>
+                x.OrganizationUserId == organizationUser.Id && x.Key == request.Key))
             .Returns(false);
 
         // Act
@@ -271,13 +150,13 @@ public class AutomaticallyConfirmUsersCommandTests
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
-            .ConfirmOrganizationUserAsync(Arg.Is<AcceptedOrganizationUser>(x =>
-                x.Id == organizationUser.Id && x.Key == request.Key)); ;
+            .ConfirmOrganizationUserAsync(Arg.Is<AcceptedOrganizationUserToConfirm>(x =>
+                x.OrganizationUserId == organizationUser.Id && x.Key == request.Key));
 
         // Verify no side effects occurred
         await sutProvider.GetDependency<IEventService>()
             .DidNotReceive()
-            .LogOrganizationUserEventAsync(Arg.Any<AcceptedOrganizationUser>(), Arg.Any<EventType>(), Arg.Any<DateTime?>());
+            .LogOrganizationUserEventAsync(Arg.Any<OrganizationUser>(), Arg.Any<EventType>(), Arg.Any<DateTime?>());
 
         await sutProvider.GetDependency<IPushNotificationService>()
             .DidNotReceive()
@@ -304,18 +183,16 @@ public class AutomaticallyConfirmUsersCommandTests
             OrganizationId = organization.Id,
             Key = key,
             DefaultUserCollectionName = defaultCollectionName, // Non-empty to trigger creation
-            PerformedBy = new StandardUser(performingUserId, true),
-            PerformedOn = DateTimeOffset.UtcNow
+            PerformedBy = new StandardUser(performingUserId, true)
         };
 
         SetupRepositoryMocks(sutProvider, organizationUser, organization, user);
-        SetupValidatorMock(sutProvider, organizationUser, organization, request, true);
-        SetupFeatureServiceMock(sutProvider, true); // Feature enabled
+        SetupValidatorMock(sutProvider, request, organizationUser, organization, true);
         SetupPolicyRequirementMock(sutProvider, user.Id, organization.Id, true); // Policy requires collection
 
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .ConfirmOrganizationUserAsync(
-                Arg.Is<AcceptedOrganizationUser>(o => o.Id == organizationUser.Id && o.Key == request.Key))
+        sutProvider.GetDependency<IOrganizationUserRepository>().ConfirmOrganizationUserAsync(
+                Arg.Is<AcceptedOrganizationUserToConfirm>(o =>
+                    o.OrganizationUserId == organizationUser.Id && o.Key == request.Key))
             .Returns(true);
 
         // Act
@@ -333,9 +210,7 @@ public class AutomaticallyConfirmUsersCommandTests
                     c.Type == CollectionType.DefaultUserCollection),
                 Arg.Is<IEnumerable<CollectionAccessSelection>>(groups => groups == null),
                 Arg.Is<IEnumerable<CollectionAccessSelection>>(access =>
-                    access.Count() == 1 &&
-                    access.First().Id == organizationUser.Id &&
-                    access.First().Manage));
+                    access.FirstOrDefault(x => x.Id == organizationUser.Id && x.Manage) != null));
     }
 
     [Theory]
@@ -356,19 +231,17 @@ public class AutomaticallyConfirmUsersCommandTests
             OrganizationUserId = organizationUser.Id,
             OrganizationId = organization.Id,
             Key = key,
-            DefaultUserCollectionName = string.Empty, // Empty, so collection won't be created
-            PerformedBy = new StandardUser(performingUserId, true),
-            PerformedOn = DateTimeOffset.UtcNow
+            DefaultUserCollectionName = string.Empty, // Empty, so the collection won't be created
+            PerformedBy = new StandardUser(performingUserId, true)
         };
 
         SetupRepositoryMocks(sutProvider, organizationUser, organization, user);
-        SetupValidatorMock(sutProvider, organizationUser, organization, request, true);
-        SetupFeatureServiceMock(sutProvider, false); // Feature disabled
+        SetupValidatorMock(sutProvider, request, organizationUser, organization, true);
         SetupPolicyRequirementMock(sutProvider, user.Id, organization.Id, false); // Policy doesn't require
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .ConfirmOrganizationUserAsync(
-                Arg.Is<AcceptedOrganizationUser>(o => o.Id == organizationUser.Id && o.Key == request.Key))
+            .ConfirmOrganizationUserAsync(Arg.Is<AcceptedOrganizationUserToConfirm>(o =>
+                o.OrganizationUserId == organizationUser.Id && o.Key == request.Key))
             .Returns(true);
 
         // Act
@@ -379,7 +252,9 @@ public class AutomaticallyConfirmUsersCommandTests
 
         await sutProvider.GetDependency<ICollectionRepository>()
             .DidNotReceive()
-            .CreateAsync(Arg.Any<Collection>(), Arg.Any<IEnumerable<CollectionAccessSelection>>(), Arg.Any<IEnumerable<CollectionAccessSelection>>());
+            .CreateAsync(Arg.Any<Collection>(),
+                Arg.Any<IEnumerable<CollectionAccessSelection>>(),
+                Arg.Any<IEnumerable<CollectionAccessSelection>>());
     }
 
     [Theory]
@@ -402,23 +277,22 @@ public class AutomaticallyConfirmUsersCommandTests
             OrganizationId = organization.Id,
             Key = key,
             DefaultUserCollectionName = defaultCollectionName, // Non-empty to trigger creation
-            PerformedBy = new StandardUser(performingUserId, true),
-            PerformedOn = DateTimeOffset.UtcNow
+            PerformedBy = new StandardUser(performingUserId, true)
         };
 
         SetupRepositoryMocks(sutProvider, organizationUser, organization, user);
-        SetupValidatorMock(sutProvider, organizationUser, organization, request, true);
-        SetupFeatureServiceMock(sutProvider, true);
+        SetupValidatorMock(sutProvider, request, organizationUser, organization, true);
         SetupPolicyRequirementMock(sutProvider, user.Id, organization.Id, true);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .ConfirmOrganizationUserAsync(
-                Arg.Is<AcceptedOrganizationUser>(o => o.Id == organizationUser.Id && o.Key == request.Key))
-            .Returns(true);
+            .ConfirmOrganizationUserAsync(Arg.Is<AcceptedOrganizationUserToConfirm>(o =>
+                o.OrganizationUserId == organizationUser.Id && o.Key == request.Key)).Returns(true);
 
         var collectionException = new Exception("Collection creation failed");
         sutProvider.GetDependency<ICollectionRepository>()
-            .CreateAsync(Arg.Any<Collection>(), Arg.Any<IEnumerable<CollectionAccessSelection>>(), Arg.Any<IEnumerable<CollectionAccessSelection>>())
+            .CreateAsync(Arg.Any<Collection>(),
+                Arg.Any<IEnumerable<CollectionAccessSelection>>(),
+                Arg.Any<IEnumerable<CollectionAccessSelection>>())
             .ThrowsAsync(collectionException);
 
         // Act
@@ -457,21 +331,22 @@ public class AutomaticallyConfirmUsersCommandTests
             OrganizationId = organization.Id,
             Key = key,
             DefaultUserCollectionName = defaultCollectionName,
-            PerformedBy = new StandardUser(performingUserId, true),
-            PerformedOn = DateTimeOffset.UtcNow
+            PerformedBy = new StandardUser(performingUserId, true)
         };
 
         SetupRepositoryMocks(sutProvider, organizationUser, organization, user);
-        SetupValidatorMock(sutProvider, organizationUser, organization, request, true);
-        SetupFeatureServiceMock(sutProvider, false);
+        SetupValidatorMock(sutProvider, request, organizationUser, organization, true);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .ConfirmOrganizationUserAsync(Arg.Is<AcceptedOrganizationUser>(o => o.Id == organizationUser.Id && o.Key == request.Key))
+            .ConfirmOrganizationUserAsync(Arg.Is<AcceptedOrganizationUserToConfirm>(o =>
+                o.OrganizationUserId == organizationUser.Id && o.Key == request.Key))
             .Returns(true);
 
         var eventException = new Exception("Event logging failed");
         sutProvider.GetDependency<IEventService>()
-            .LogOrganizationUserEventAsync(Arg.Any<OrganizationUser>(), EventType.OrganizationUser_AutomaticallyConfirmed, Arg.Any<DateTime?>())
+            .LogOrganizationUserEventAsync(Arg.Any<OrganizationUser>(),
+                EventType.OrganizationUser_AutomaticallyConfirmed,
+                Arg.Any<DateTime?>())
             .ThrowsAsync(eventException);
 
         // Act
@@ -510,16 +385,15 @@ public class AutomaticallyConfirmUsersCommandTests
             OrganizationId = organization.Id,
             Key = key,
             DefaultUserCollectionName = defaultCollectionName,
-            PerformedBy = new StandardUser(performingUserId, true),
-            PerformedOn = DateTimeOffset.UtcNow
+            PerformedBy = new StandardUser(performingUserId, true)
         };
 
         SetupRepositoryMocks(sutProvider, organizationUser, organization, user);
-        SetupValidatorMock(sutProvider, organizationUser, organization, request, true);
-        SetupFeatureServiceMock(sutProvider, false);
+        SetupValidatorMock(sutProvider, request, organizationUser, organization, true);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .ConfirmOrganizationUserAsync(Arg.Is<AcceptedOrganizationUser>(o => o.Id == organizationUser.Id && o.Key == request.Key))
+            .ConfirmOrganizationUserAsync(Arg.Is<AcceptedOrganizationUserToConfirm>(o =>
+                o.OrganizationUserId == organizationUser.Id && o.Key == request.Key))
             .Returns(true);
 
         var emailException = new Exception("Email sending failed");
@@ -563,17 +437,15 @@ public class AutomaticallyConfirmUsersCommandTests
             OrganizationId = organization.Id,
             Key = key,
             DefaultUserCollectionName = defaultCollectionName,
-            PerformedBy = new StandardUser(performingUserId, true),
-            PerformedOn = DateTimeOffset.UtcNow
+            PerformedBy = new StandardUser(performingUserId, true)
         };
 
         SetupRepositoryMocks(sutProvider, organizationUser, organization, user);
-        SetupValidatorMock(sutProvider, organizationUser, organization, request, true);
-        SetupFeatureServiceMock(sutProvider, false);
+        SetupValidatorMock(sutProvider, request, organizationUser, organization, true);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .ConfirmOrganizationUserAsync(
-                Arg.Is<AcceptedOrganizationUser>(o => o.Id == organizationUser.Id && o.Key == request.Key))
+            .ConfirmOrganizationUserAsync(Arg.Is<AcceptedOrganizationUserToConfirm>(o =>
+                o.OrganizationUserId == organizationUser.Id && o.Key == request.Key))
             .Returns(true);
 
         // Return null when retrieving user for email
@@ -611,16 +483,15 @@ public class AutomaticallyConfirmUsersCommandTests
             OrganizationId = organization.Id,
             Key = key,
             DefaultUserCollectionName = defaultCollectionName,
-            PerformedBy = new StandardUser(performingUserId, true),
-            PerformedOn = DateTimeOffset.UtcNow
+            PerformedBy = new StandardUser(performingUserId, true)
         };
 
         SetupRepositoryMocks(sutProvider, organizationUser, organization, user);
-        SetupValidatorMock(sutProvider, organizationUser, organization, request, true);
-        SetupFeatureServiceMock(sutProvider, false);
+        SetupValidatorMock(sutProvider, request, organizationUser, organization, true);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .ConfirmOrganizationUserAsync(Arg.Is<AcceptedOrganizationUser>(o => o.Id == organizationUser.Id && o.Key == request.Key))
+            .ConfirmOrganizationUserAsync(Arg.Is<AcceptedOrganizationUserToConfirm>(o =>
+                o.OrganizationUserId == organizationUser.Id && o.Key == request.Key))
             .Returns(true);
 
         sutProvider.GetDependency<IDeviceRepository>()
@@ -668,16 +539,15 @@ public class AutomaticallyConfirmUsersCommandTests
             OrganizationId = organization.Id,
             Key = key,
             DefaultUserCollectionName = defaultCollectionName,
-            PerformedBy = new StandardUser(performingUserId, true),
-            PerformedOn = DateTimeOffset.UtcNow
+            PerformedBy = new StandardUser(performingUserId, true)
         };
 
         SetupRepositoryMocks(sutProvider, organizationUser, organization, user);
-        SetupValidatorMock(sutProvider, organizationUser, organization, request, true);
-        SetupFeatureServiceMock(sutProvider, false);
+        SetupValidatorMock(sutProvider, request, organizationUser, organization, true);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .ConfirmOrganizationUserAsync(Arg.Is<AcceptedOrganizationUser>(o => o.Id == organizationUser.Id && o.Key == request.Key))
+            .ConfirmOrganizationUserAsync(Arg.Is<AcceptedOrganizationUserToConfirm>(o =>
+                o.OrganizationUserId == organizationUser.Id && o.Key == request.Key))
             .Returns(true);
 
         var pushException = new Exception("Push sync failed");
@@ -727,16 +597,15 @@ public class AutomaticallyConfirmUsersCommandTests
             OrganizationId = organization.Id,
             Key = key,
             DefaultUserCollectionName = defaultCollectionName,
-            PerformedBy = new StandardUser(performingUserId, true),
-            PerformedOn = DateTimeOffset.UtcNow
+            PerformedBy = new StandardUser(performingUserId, true)
         };
 
         SetupRepositoryMocks(sutProvider, organizationUser, organization, user);
-        SetupValidatorMock(sutProvider, organizationUser, organization, request, true);
-        SetupFeatureServiceMock(sutProvider, false);
+        SetupValidatorMock(sutProvider, request, organizationUser, organization, true);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .ConfirmOrganizationUserAsync(Arg.Is<AcceptedOrganizationUser>(o => o.Id == organizationUser.Id && o.Key == request.Key))
+            .ConfirmOrganizationUserAsync(Arg.Is<AcceptedOrganizationUserToConfirm>(o =>
+                o.OrganizationUserId == organizationUser.Id && o.Key == request.Key))
             .Returns(true);
 
         sutProvider.GetDependency<IDeviceRepository>()
@@ -782,19 +651,21 @@ public class AutomaticallyConfirmUsersCommandTests
 
     private static void SetupValidatorMock(
         SutProvider<AutomaticallyConfirmOrganizationUserCommand> sutProvider,
+        AutomaticallyConfirmOrganizationUserRequest originalRequest,
         OrganizationUser organizationUser,
         Organization organization,
-        AutomaticallyConfirmOrganizationUserRequest originalRequest,
         bool isValid,
         Error? error = null)
     {
         var validationRequest = new AutomaticallyConfirmOrganizationUserValidationRequest
         {
-            OrganizationUser = new AcceptedOrganizationUser(organizationUser, originalRequest.Key),
-            Organization = organization,
             PerformedBy = originalRequest.PerformedBy,
             DefaultUserCollectionName = originalRequest.DefaultUserCollectionName,
-            PerformedOn = originalRequest.PerformedOn
+            OrganizationUserId = originalRequest.OrganizationUserId,
+            OrganizationUser = organizationUser,
+            OrganizationId = originalRequest.OrganizationId,
+            Organization = organization,
+            Key = originalRequest.Key
         };
 
         var validationResult = isValid
@@ -804,15 +675,6 @@ public class AutomaticallyConfirmUsersCommandTests
         sutProvider.GetDependency<IAutomaticallyConfirmOrganizationUsersValidator>()
             .ValidateAsync(Arg.Any<AutomaticallyConfirmOrganizationUserValidationRequest>())
             .Returns(validationResult);
-    }
-
-    private static void SetupFeatureServiceMock(
-        SutProvider<AutomaticallyConfirmOrganizationUserCommand> sutProvider,
-        bool isEnabled)
-    {
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.CreateDefaultLocation)
-            .Returns(isEnabled);
     }
 
     private static void SetupPolicyRequirementMock(
@@ -844,7 +706,7 @@ public class AutomaticallyConfirmUsersCommandTests
         await sutProvider.GetDependency<IEventService>()
             .Received(1)
             .LogOrganizationUserEventAsync(
-                Arg.Is<AcceptedOrganizationUser>(x => x.Id == organizationUser.Id),
+                Arg.Is<OrganizationUser>(x => x.Id == organizationUser.Id),
                 EventType.OrganizationUser_AutomaticallyConfirmed,
                 Arg.Any<DateTime?>());
 
