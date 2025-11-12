@@ -47,7 +47,9 @@ public class AutomaticUserConfirmationPolicyValidator(
 
     public async Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
     {
-        if (policyUpdate is not { Enabled: true } || currentPolicy is { Enabled: true })
+        var isNotEnablingPolicy = policyUpdate is not { Enabled: true };
+        var policyAlreadyEnabled = currentPolicy is { Enabled: true };
+        if (isNotEnablingPolicy || policyAlreadyEnabled)
         {
             return string.Empty;
         }
