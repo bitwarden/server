@@ -15,6 +15,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Stripe;
 using Event = Stripe.Event;
+using Plan = Bit.Core.Models.StaticStore.Plan;
 
 namespace Bit.Billing.Services.Implementations;
 
@@ -104,6 +105,12 @@ public class UpcomingInvoiceHandler(
 
         var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
 
+        await AlignOrganizationSubscriptionConcernsAsync(
+            organization,
+            @event,
+            subscription,
+            plan);
+
         // Don't send the upcoming invoice email unless the organization's on an annual plan.
         if (!plan.IsAnnual)
         {
@@ -172,6 +179,78 @@ public class UpcomingInvoiceHandler(
                     "Failed to set organization's ({OrganizationID}) subscription to automatic tax while processing event with ID {EventID}",
                     organization.Id,
                     eventId);
+            }
+        }
+    }
+
+    private async Task AlignOrganizationSubscriptionConcernsAsync(
+        Organization organization,
+        Event @event,
+        Subscription subscription,
+        Plan plan)
+    {
+        var milestone3 = featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3);
+
+        if (milestone3 && plan.Type == PlanType.FamiliesAnnually2019)
+        {
+            var passwordManagerItem =
+                subscription.Items.FirstOrDefault(item => item.Price.Id == plan.PasswordManager.StripePlanId);
+
+            if (passwordManagerItem == null)
+            {
+                logger.LogWarning("Could not find Organization's ({OrganizationId}) password manager item while processing '{EventType}' event ({EventID})",
+                    organization.Id, @event.Type, @event.Id);
+                return;
+            }
+
+            var families = await pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually);
+
+            organization.PlanType = families.Type;
+            organization.Plan = families.Name;
+            organization.UsersGetPremium = families.UsersGetPremium;
+            organization.Seats = families.PasswordManager.BaseSeats;
+
+            var options = new SubscriptionUpdateOptions
+            {
+                Items =
+                [
+                    new SubscriptionItemOptions
+                    {
+                        Id = passwordManagerItem.Id, Price = families.PasswordManager.StripePlanId
+                    }
+                ],
+                Discounts =
+                [
+                    new SubscriptionDiscountOptions { Coupon = CouponIDs.MIlestone3SubscriptionDiscount }
+                ],
+                ProrationBehavior = ProrationBehavior.None
+            };
+
+            var premiumAccessAddOnItem = subscription.Items.FirstOrDefault(item =>
+                item.Price.Id == plan.PasswordManager.StripePremiumAccessPlanId);
+
+            if (premiumAccessAddOnItem != null)
+            {
+                options.Items.Add(new SubscriptionItemOptions
+                {
+                    Id = premiumAccessAddOnItem.Id,
+                    Deleted = true
+                });
+            }
+
+            try
+            {
+                await stripeFacade.UpdateSubscription(subscription.Id, options);
+                await organizationRepository.ReplaceAsync(organization);
+            }
+            catch (Exception exception)
+            {
+                logger.LogError(
+                    exception,
+                    "Failed to align subscription concerns for Organization ({OrganizationID}) while processing '{EventType}' event ({EventID})",
+                    organization.Id,
+                    @event.Type,
+                    @event.Id);
             }
         }
     }
