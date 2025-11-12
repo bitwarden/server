@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Enums;
@@ -54,10 +55,12 @@ public class AutomaticallyConfirmOrganizationUsersValidator(
             return Invalid(request, new UserDoesNotHaveTwoFactorEnabled());
         }
 
-        // OrgUser must conform to Single Org Policy if applicable
-        if (!await OrganizationUserConformsToSingleOrgPolicyAsync(request))
+        // OrgUser must conform to this Single Org Policy
+
+
+        if (await OrganizationUserConformsToSingleOrgPolicyAsync(request) is { } error)
         {
-            return Invalid(request, new OrganizationEnforcesSingleOrgPolicy());
+            return Invalid(request, error);
         }
 
         return Valid(request);
@@ -75,14 +78,15 @@ public class AutomaticallyConfirmOrganizationUsersValidator(
             .IsTwoFactorRequiredForOrganization(request.Organization!.Id);
     }
 
-    private async Task<bool> OrganizationUserConformsToSingleOrgPolicyAsync(AutomaticallyConfirmOrganizationUserValidationRequest request)
+    private async Task<Error?> OrganizationUserConformsToSingleOrgPolicyAsync(
+        AutomaticallyConfirmOrganizationUserValidationRequest request)
     {
         var allOrganizationUsersForUser = await organizationUserRepository
             .GetManyByUserAsync(request.OrganizationUser!.UserId!.Value);
 
         if (allOrganizationUsersForUser.Count == 1)
         {
-            return true;
+            return null;
         }
 
         var policyRequirement = await policyRequirementQuery
@@ -90,9 +94,14 @@ public class AutomaticallyConfirmOrganizationUsersValidator(
 
         if (policyRequirement.IsSingleOrgEnabledForThisOrganization(request.Organization!.Id))
         {
-            return false;
+            return new OrganizationEnforcesSingleOrgPolicy();
         }
 
-        return !policyRequirement.IsSingleOrgEnabledForOrganizationsOtherThan(request.Organization.Id);
+        if (policyRequirement.IsSingleOrgEnabledForOrganizationsOtherThan(request.Organization.Id))
+        {
+            return new OtherOrganizationEnforcesSingleOrgPolicy();
+        }
+
+        return null;
     }
 }
