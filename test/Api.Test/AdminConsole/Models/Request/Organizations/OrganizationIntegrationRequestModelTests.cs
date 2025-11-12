@@ -1,14 +1,47 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.Enums;
+using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
 
 namespace Bit.Api.Test.AdminConsole.Models.Request.Organizations;
 
 public class OrganizationIntegrationRequestModelTests
 {
+    [Fact]
+    public void ToOrganizationIntegration_CreatesNewOrganizationIntegration()
+    {
+        var model = new OrganizationIntegrationRequestModel
+        {
+            Type = IntegrationType.Hec,
+            Configuration = JsonSerializer.Serialize(new HecIntegration(Uri: new Uri("http://localhost"), Scheme: "Bearer", Token: "Token"))
+        };
+
+        var organizationId = Guid.NewGuid();
+        var organizationIntegration = model.ToOrganizationIntegration(organizationId);
+
+        Assert.Equal(organizationIntegration.Type, model.Type);
+        Assert.Equal(organizationIntegration.Configuration, model.Configuration);
+        Assert.Equal(organizationIntegration.OrganizationId, organizationId);
+    }
+
+    [Theory, BitAutoData]
+    public void ToOrganizationIntegration_UpdatesExistingOrganizationIntegration(OrganizationIntegration integration)
+    {
+        var model = new OrganizationIntegrationRequestModel
+        {
+            Type = IntegrationType.Hec,
+            Configuration = JsonSerializer.Serialize(new HecIntegration(Uri: new Uri("http://localhost"), Scheme: "Bearer", Token: "Token"))
+        };
+
+        var organizationIntegration = model.ToOrganizationIntegration(integration);
+
+        Assert.Equal(organizationIntegration.Configuration, model.Configuration);
+    }
+
     [Fact]
     public void Validate_CloudBillingSync_ReturnsNotYetSupportedError()
     {
