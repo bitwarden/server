@@ -16,6 +16,36 @@ namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
 
 public class OrganizationUserControllerAutoConfirmTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
+    private const string _mockEncryptedString = "2.AOs41Hd8OQiCPXjyJKCiDA==|O6OHgt2U2hJGBSNGnimJmg==|iD33s8B69C8JhYYhSa4V1tArjvLr8eEaGqOV7BRo5Jk=";
+
+    private readonly HttpClient _client;
+    private readonly ApiApplicationFactory _factory;
+    private readonly LoginHelper _loginHelper;
+
+    private Organization _organization = null!;
+    private string _ownerEmail = null!;
+
+    public OrganizationUserControllerAutoConfirmTests(ApiApplicationFactory apiFactory)
+    {
+        _factory = apiFactory;
+        _factory.SubstituteService<IFeatureService>(featureService =>
+        {
+            featureService
+                .IsEnabled(FeatureFlagKeys.CreateDefaultLocation)
+                .Returns(true);
+        });
+        _client = _factory.CreateClient();
+        _loginHelper = new LoginHelper(_factory, _client);
+    }
+
+    public async Task InitializeAsync()
+    {
+        _ownerEmail = $"org-user-integration-test-{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(_ownerEmail);
+
+        (_organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseAnnually2023,
+            ownerEmail: _ownerEmail, passwordManagerSeats: 5, paymentMethod: PaymentMethodType.Card);
+    }
 
     private static (ApiApplicationFactory factory, HttpClient client, LoginHelper loginHelper) GetAutoConfirmTestFactoryAsync()
     {
@@ -136,40 +166,9 @@ public class OrganizationUserControllerAutoConfirmTests : IClassFixture<ApiAppli
         Assert.Equal(testKey, confirmedUser.Key);
     }
 
-    public async Task InitializeAsync()
-    {
-        _ownerEmail = $"org-user-integration-test-{Guid.NewGuid()}@bitwarden.com";
-        await _factory.LoginWithNewAccount(_ownerEmail);
-
-        (_organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseAnnually2023,
-            ownerEmail: _ownerEmail, passwordManagerSeats: 5, paymentMethod: PaymentMethodType.Card);
-    }
-
     public Task DisposeAsync()
     {
         _client.Dispose();
         return Task.CompletedTask;
     }
-
-    public OrganizationUserControllerAutoConfirmTests(ApiApplicationFactory apiFactory)
-    {
-        _factory = apiFactory;
-        _factory.SubstituteService<IFeatureService>(featureService =>
-        {
-            featureService
-                .IsEnabled(FeatureFlagKeys.CreateDefaultLocation)
-                .Returns(true);
-        });
-        _client = _factory.CreateClient();
-        _loginHelper = new LoginHelper(_factory, _client);
-    }
-
-    private const string _mockEncryptedString = "2.AOs41Hd8OQiCPXjyJKCiDA==|O6OHgt2U2hJGBSNGnimJmg==|iD33s8B69C8JhYYhSa4V1tArjvLr8eEaGqOV7BRo5Jk=";
-
-    private readonly HttpClient _client;
-    private readonly ApiApplicationFactory _factory;
-    private readonly LoginHelper _loginHelper;
-
-    private Organization _organization = null!;
-    private string _ownerEmail = null!;
 }
