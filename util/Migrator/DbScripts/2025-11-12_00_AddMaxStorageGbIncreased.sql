@@ -872,3 +872,118 @@ INNER JOIN
 LEFT JOIN
     [dbo].[SsoConfig] SS ON SS.[OrganizationId] = O.[Id]
 GO
+
+-- Add MaxStorageGbIncreased column to ClientOrganizationMigrationRecord table
+IF COL_LENGTH('[dbo].[ClientOrganizationMigrationRecord]', 'MaxStorageGbIncreased') IS NULL
+BEGIN
+    ALTER TABLE [dbo].[ClientOrganizationMigrationRecord] ADD [MaxStorageGbIncreased] SMALLINT NULL;
+END
+GO
+
+-- Update ClientOrganizationMigrationRecord_Create stored procedure
+CREATE OR ALTER PROCEDURE [dbo].[ClientOrganizationMigrationRecord_Create]
+    @Id UNIQUEIDENTIFIER OUTPUT,
+    @OrganizationId UNIQUEIDENTIFIER,
+    @ProviderId UNIQUEIDENTIFIER,
+    @PlanType TINYINT,
+    @Seats SMALLINT,
+    @MaxStorageGb SMALLINT,
+    @MaxStorageGbIncreased SMALLINT = NULL,
+    @GatewayCustomerId VARCHAR(50),
+    @GatewaySubscriptionId VARCHAR(50),
+    @ExpirationDate DATETIME2(7),
+    @MaxAutoscaleSeats INT,
+    @Status TINYINT
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    INSERT INTO [dbo].[ClientOrganizationMigrationRecord]
+    (
+        [Id],
+        [OrganizationId],
+        [ProviderId],
+        [PlanType],
+        [Seats],
+        [MaxStorageGb],
+        [MaxStorageGbIncreased],
+        [GatewayCustomerId],
+        [GatewaySubscriptionId],
+        [ExpirationDate],
+        [MaxAutoscaleSeats],
+        [Status]
+    )
+    VALUES
+    (
+        @Id,
+        @OrganizationId,
+        @ProviderId,
+        @PlanType,
+        @Seats,
+        @MaxStorageGb,
+        @MaxStorageGbIncreased,
+        @GatewayCustomerId,
+        @GatewaySubscriptionId,
+        @ExpirationDate,
+        @MaxAutoscaleSeats,
+        @Status
+    )
+END
+GO
+
+-- Update ClientOrganizationMigrationRecord_Update stored procedure
+CREATE OR ALTER PROCEDURE [dbo].[ClientOrganizationMigrationRecord_Update]
+    @Id UNIQUEIDENTIFIER OUTPUT,
+    @OrganizationId UNIQUEIDENTIFIER,
+    @ProviderId UNIQUEIDENTIFIER,
+    @PlanType TINYINT,
+    @Seats SMALLINT,
+    @MaxStorageGb SMALLINT,
+    @MaxStorageGbIncreased SMALLINT = NULL,
+    @GatewayCustomerId VARCHAR(50),
+    @GatewaySubscriptionId VARCHAR(50),
+    @ExpirationDate DATETIME2(7),
+    @MaxAutoscaleSeats INT,
+    @Status TINYINT
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    UPDATE
+        [dbo].[ClientOrganizationMigrationRecord]
+    SET
+        [OrganizationId] = @OrganizationId,
+        [ProviderId] = @ProviderId,
+        [PlanType] = @PlanType,
+        [Seats] = @Seats,
+        [MaxStorageGb] = @MaxStorageGb,
+        [MaxStorageGbIncreased] = @MaxStorageGbIncreased,
+        [GatewayCustomerId] = @GatewayCustomerId,
+        [GatewaySubscriptionId] = @GatewaySubscriptionId,
+        [ExpirationDate] = @ExpirationDate,
+        [MaxAutoscaleSeats] = @MaxAutoscaleSeats,
+        [Status] = @Status
+    WHERE
+        [Id] = @Id
+END
+GO
+
+-- Update ClientOrganizationMigrationRecordView
+CREATE OR ALTER VIEW [dbo].[ClientOrganizationMigrationRecordView]
+AS
+SELECT
+    [Id],
+    [OrganizationId],
+    [ProviderId],
+    [PlanType],
+    [Seats],
+    COALESCE([MaxStorageGbIncreased], [MaxStorageGb]) AS [MaxStorageGb],
+    [GatewayCustomerId],
+    [GatewaySubscriptionId],
+    [ExpirationDate],
+    [MaxAutoscaleSeats],
+    [Status],
+    [MaxStorageGbIncreased]
+FROM
+    [dbo].[ClientOrganizationMigrationRecord]
+GO

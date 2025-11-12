@@ -10,15 +10,21 @@ public partial class AddMaxStorageGbIncreasedColumn : Migration
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.AddColumn<short>(
+        migrationBuilder.AddColumn<int>(
             name: "MaxStorageGbIncreased",
             table: "User",
             type: "INTEGER",
             nullable: true);
 
-        migrationBuilder.AddColumn<short>(
+        migrationBuilder.AddColumn<int>(
             name: "MaxStorageGbIncreased",
             table: "Organization",
+            type: "INTEGER",
+            nullable: true);
+
+        migrationBuilder.AddColumn<int>(
+            name: "MaxStorageGbIncreased",
+            table: "ClientOrganizationMigrationRecord",
             type: "INTEGER",
             nullable: true);
     }
@@ -33,5 +39,9 @@ public partial class AddMaxStorageGbIncreasedColumn : Migration
         migrationBuilder.DropColumn(
             name: "MaxStorageGbIncreased",
             table: "Organization");
+
+        migrationBuilder.DropColumn(
+            name: "MaxStorageGbIncreased",
+            table: "ClientOrganizationMigrationRecord");
     }
 }

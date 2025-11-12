@@ -237,12 +237,13 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
 
     public long StorageBytesRemaining()
     {
-        if (!MaxStorageGb.HasValue)
+        var effectiveMaxStorageGb = MaxStorageGbIncreased ?? MaxStorageGb;
+        if (!effectiveMaxStorageGb.HasValue)
         {
             return 0;
         }
 
-        return StorageBytesRemaining(MaxStorageGb.Value);
+        return StorageBytesRemaining(effectiveMaxStorageGb.Value);
     }
 
     public long StorageBytesRemaining(short maxStorageGb)
