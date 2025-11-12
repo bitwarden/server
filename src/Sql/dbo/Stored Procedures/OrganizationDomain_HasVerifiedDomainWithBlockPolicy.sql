@@ -18,6 +18,7 @@ BEGIN
         WHERE OD.DomainName = @DomainName
             AND OD.VerifiedDate IS NOT NULL
             AND O.Enabled = 1
+            AND O.UsePolicies = 1
             AND (@ExcludeOrganizationId IS NULL OR O.Id != @ExcludeOrganizationId)
             AND P.Type = 19  -- BlockClaimedDomainAccountCreation
             AND P.Enabled = 1

@@ -9,7 +9,7 @@ namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories;
 
 public class OrganizationDomainRepositoryTests
 {
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task GetExpiredOrganizationDomainsAsync_ShouldReturn3DaysOldUnverifiedDomains(
      IUserRepository userRepository,
      IOrganizationRepository organizationRepository,
@@ -76,7 +76,7 @@ public class OrganizationDomainRepositoryTests
         Assert.NotNull(expectedDomain2);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task GetExpiredOrganizationDomainsAsync_ShouldNotReturnDomainsUnder3DaysOld(
      IUserRepository userRepository,
      IOrganizationRepository organizationRepository,
@@ -122,7 +122,7 @@ public class OrganizationDomainRepositoryTests
         Assert.Null(expectedDomain2);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task GetExpiredOrganizationDomainsAsync_ShouldNotReturnVerifiedDomains(
      IUserRepository userRepository,
      IOrganizationRepository organizationRepository,
@@ -191,7 +191,7 @@ public class OrganizationDomainRepositoryTests
         Assert.Null(expectedDomain2);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task GetManyByNextRunDateAsync_ShouldReturnUnverifiedDomains(
      IOrganizationRepository organizationRepository,
      IOrganizationDomainRepository organizationDomainRepository)
@@ -230,7 +230,7 @@ public class OrganizationDomainRepositoryTests
         Assert.NotNull(expectedDomain);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task GetManyByNextRunDateAsync_ShouldNotReturnUnverifiedDomains_WhenNextRunDateIsOutside36hoursWindow(
         IOrganizationRepository organizationRepository,
         IOrganizationDomainRepository organizationDomainRepository)
@@ -269,7 +269,7 @@ public class OrganizationDomainRepositoryTests
         Assert.Null(expectedDomain);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task GetManyByNextRunDateAsync_ShouldNotReturnVerifiedDomains(
         IOrganizationRepository organizationRepository,
         IOrganizationDomainRepository organizationDomainRepository)
@@ -309,7 +309,7 @@ public class OrganizationDomainRepositoryTests
         Assert.Null(expectedDomain);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task GetVerifiedDomainsByOrganizationIdsAsync_ShouldVerifiedDomainsMatchesOrganizationIds(
         IOrganizationRepository organizationRepository,
         IOrganizationDomainRepository organizationDomainRepository)
@@ -386,7 +386,7 @@ public class OrganizationDomainRepositoryTests
         Assert.Null(unverifiedDomain);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task HasVerifiedDomainWithBlockClaimedDomainPolicyAsync_WithVerifiedDomainAndBlockPolicy_ReturnsTrue(
         IOrganizationRepository organizationRepository,
         IOrganizationDomainRepository organizationDomainRepository,
@@ -402,7 +402,8 @@ public class OrganizationDomainRepositoryTests
             BillingEmail = $"test+{id}@example.com",
             Plan = "Test",
             PrivateKey = "privatekey",
-            Enabled = true
+            Enabled = true,
+            UsePolicies = true
         });
 
         var organizationDomain = new OrganizationDomain
@@ -430,7 +431,7 @@ public class OrganizationDomainRepositoryTests
         Assert.True(result);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task HasVerifiedDomainWithBlockClaimedDomainPolicyAsync_WithUnverifiedDomain_ReturnsFalse(
         IOrganizationRepository organizationRepository,
         IOrganizationDomainRepository organizationDomainRepository,
@@ -446,7 +447,8 @@ public class OrganizationDomainRepositoryTests
             BillingEmail = $"test+{id}@example.com",
             Plan = "Test",
             PrivateKey = "privatekey",
-            Enabled = true
+            Enabled = true,
+            UsePolicies = true
         });
 
         var organizationDomain = new OrganizationDomain
@@ -474,7 +476,7 @@ public class OrganizationDomainRepositoryTests
         Assert.False(result);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task HasVerifiedDomainWithBlockClaimedDomainPolicyAsync_WithDisabledPolicy_ReturnsFalse(
         IOrganizationRepository organizationRepository,
         IOrganizationDomainRepository organizationDomainRepository,
@@ -490,7 +492,8 @@ public class OrganizationDomainRepositoryTests
             BillingEmail = $"test+{id}@example.com",
             Plan = "Test",
             PrivateKey = "privatekey",
-            Enabled = true
+            Enabled = true,
+            UsePolicies = true
         });
 
         var organizationDomain = new OrganizationDomain
@@ -518,7 +521,7 @@ public class OrganizationDomainRepositoryTests
         Assert.False(result);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task HasVerifiedDomainWithBlockClaimedDomainPolicyAsync_WithDisabledOrganization_ReturnsFalse(
         IOrganizationRepository organizationRepository,
         IOrganizationDomainRepository organizationDomainRepository,
@@ -534,7 +537,8 @@ public class OrganizationDomainRepositoryTests
             BillingEmail = $"test+{id}@example.com",
             Plan = "Test",
             PrivateKey = "privatekey",
-            Enabled = false
+            Enabled = false,
+            UsePolicies = true
         });
 
         var organizationDomain = new OrganizationDomain
@@ -562,7 +566,7 @@ public class OrganizationDomainRepositoryTests
         Assert.False(result);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task HasVerifiedDomainWithBlockClaimedDomainPolicyAsync_WithNoPolicyOfType_ReturnsFalse(
         IOrganizationRepository organizationRepository,
         IOrganizationDomainRepository organizationDomainRepository)
@@ -577,7 +581,8 @@ public class OrganizationDomainRepositoryTests
             BillingEmail = $"test+{id}@example.com",
             Plan = "Test",
             PrivateKey = "privatekey",
-            Enabled = true
+            Enabled = true,
+            UsePolicies = true
         });
 
         var organizationDomain = new OrganizationDomain
@@ -599,7 +604,7 @@ public class OrganizationDomainRepositoryTests
         Assert.False(result);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task HasVerifiedDomainWithBlockClaimedDomainPolicyAsync_WithNonExistentDomain_ReturnsFalse(
         IOrganizationDomainRepository organizationDomainRepository)
     {
@@ -613,7 +618,7 @@ public class OrganizationDomainRepositoryTests
         Assert.False(result);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task HasVerifiedDomainWithBlockClaimedDomainPolicyAsync_ExcludeOrganization_WhenSameOrg_ReturnsFalse(
         IOrganizationRepository organizationRepository,
         IOrganizationDomainRepository organizationDomainRepository,
@@ -629,7 +634,8 @@ public class OrganizationDomainRepositoryTests
             BillingEmail = $"test+{id}@example.com",
             Plan = "Test",
             PrivateKey = "privatekey",
-            Enabled = true
+            Enabled = true,
+            UsePolicies = true
         });
 
         var organizationDomain = new OrganizationDomain
@@ -657,7 +663,7 @@ public class OrganizationDomainRepositoryTests
         Assert.False(result);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task HasVerifiedDomainWithBlockClaimedDomainPolicyAsync_ExcludeOrganization_WhenDifferentOrg_ReturnsTrue(
         IOrganizationRepository organizationRepository,
         IOrganizationDomainRepository organizationDomainRepository,
@@ -673,7 +679,8 @@ public class OrganizationDomainRepositoryTests
             BillingEmail = $"test1+{id}@example.com",
             Plan = "Test",
             PrivateKey = "privatekey",
-            Enabled = true
+            Enabled = true,
+            UsePolicies = true
         });
 
         var organizationDomain1 = new OrganizationDomain
@@ -701,7 +708,8 @@ public class OrganizationDomainRepositoryTests
             BillingEmail = $"test2+{id}@example.com",
             Plan = "Test",
             PrivateKey = "privatekey",
-            Enabled = true
+            Enabled = true,
+            UsePolicies = true
         });
 
         // Act - Exclude organization2 (but organization1 still has the domain blocked)

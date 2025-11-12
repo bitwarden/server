@@ -188,6 +188,7 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
                     where od.DomainName == domainName
                         && od.VerifiedDate != null
                         && o.Enabled
+                        && o.UsePolicies
                         && (!excludeOrganizationId.HasValue || o.Id != excludeOrganizationId.Value)
                         && p.Type == Core.AdminConsole.Enums.PolicyType.BlockClaimedDomainAccountCreation
                         && p.Enabled
