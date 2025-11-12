@@ -18,7 +18,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 ///     <li>No provider users exist</li>
 /// </ul>
 ///
-/// This class also performs side effects when the policy is being enabled. They are:
+/// This class also performs side effects when the policy is being enabled or disabled. They are:
 /// <ul>
 ///     <li>Sets the UseAutomaticUserConfirmation organization feature to match the policy update</li>
 /// </ul>
@@ -29,9 +29,10 @@ public class AutomaticUserConfirmationPolicyValidator(
     IPolicyRepository policyRepository,
     IOrganizationRepository organizationRepository,
     TimeProvider timeProvider)
-    : IPolicyValidator, IPolicyValidationEvent
+    : IPolicyValidator, IPolicyValidationEvent, IOnPolicyPreUpdateEvent
 {
     public PolicyType Type => PolicyType.AutomaticUserConfirmation;
+    public Task ExecutePreUpsertSideEffectAsync(SavePolicyModel policyRequest, Policy? currentPolicy) => throw new NotImplementedException();
 
     private const string _singleOrgPolicyNotEnabledErrorMessage =
         "The Single organization policy must be enabled before enabling the Automatically confirm invited users policy.";
@@ -46,14 +47,7 @@ public class AutomaticUserConfirmationPolicyValidator(
 
     public async Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
     {
-        // Only perform validation when the policy is being enabled (previously disabled or null → now enabled)
-        if (policyUpdate is not { Enabled: true })
-        {
-            return string.Empty;
-        }
-
-        // If current policy is already enabled, no validation needed
-        if (currentPolicy is { Enabled: true })
+        if (policyUpdate is not { Enabled: true } || currentPolicy is { Enabled: true })
         {
             return string.Empty;
         }
@@ -78,14 +72,12 @@ public class AutomaticUserConfirmationPolicyValidator(
 
     private async Task<string> ValidateEnablingPolicyAsync(Guid organizationId)
     {
-        // Check 1: Validate Single Org policy is enabled and all users are compliant
         var singleOrgValidationError = await ValidateSingleOrgPolicyComplianceAsync(organizationId);
         if (!string.IsNullOrWhiteSpace(singleOrgValidationError))
         {
             return singleOrgValidationError;
         }
 
-        // Check 2: Validate no provider users exist
         var providerValidationError = await ValidateNoProviderUsersAsync(organizationId);
         if (!string.IsNullOrWhiteSpace(providerValidationError))
         {
@@ -103,6 +95,11 @@ public class AutomaticUserConfirmationPolicyValidator(
             return _singleOrgPolicyNotEnabledErrorMessage;
         }
 
+        return await ValidateUserComplianceWithSingleOrgAsync(organizationId);
+    }
+
+    private async Task<string> ValidateUserComplianceWithSingleOrgAsync(Guid organizationId)
+    {
         var organizationUsers = (await organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId))
             .Where(ou => ou.Status != OrganizationUserStatusType.Invited &&
                          ou.Status != OrganizationUserStatusType.Revoked &&
