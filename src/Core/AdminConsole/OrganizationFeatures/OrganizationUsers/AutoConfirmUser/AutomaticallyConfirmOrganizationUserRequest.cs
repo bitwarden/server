@@ -11,7 +11,6 @@ public record AutomaticallyConfirmOrganizationUserRequest
     public required string Key { get; init; }
     public required string DefaultUserCollectionName { get; init; }
     public required IActingUser PerformedBy { get; init; }
-    public required DateTimeOffset PerformedOn { get; init; }
 }
 
 public record AutomaticallyConfirmOrganizationUserValidationRequest : AutomaticallyConfirmOrganizationUserRequest

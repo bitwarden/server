@@ -761,7 +761,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
                 Key = model.Key,
                 DefaultUserCollectionName = model.DefaultUserCollectionName,
                 PerformedBy = new StandardUser(userId.Value, await _currentContext.OrganizationOwner(orgId)),
-                PerformedOn = _timeProvider.GetUtcNow()
             }));
     }
 

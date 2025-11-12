@@ -34,30 +34,33 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
 
         var validatedData = await validator.ValidateAsync(validatorRequest);
 
-        if (validatedData.IsValid)
-        {
-            var userToConfirm = new AcceptedOrganizationUserToConfirm
+        return await validatedData.Match<Task<CommandResult>>(
+            error => Task.FromResult(new CommandResult(error)),
+            async _ =>
             {
-                OrganizationUserId = validatedData.Request.OrganizationUser!.Id,
-                UserId = validatedData.Request.OrganizationUser.UserId!.Value,
-                Key = validatedData.Request.Key
-            };
+                var userToConfirm = new AcceptedOrganizationUserToConfirm
+                {
+                    OrganizationUserId = validatedData.Request.OrganizationUser!.Id,
+                    UserId = validatedData.Request.OrganizationUser.UserId!.Value,
+                    Key = validatedData.Request.Key
+                };
 
-            // This operation is idempotent. If false, user is already confirmed and no additional side effects are required.
-            if (!await organizationUserRepository.ConfirmOrganizationUserAsync(userToConfirm))
-            {
+                // This operation is idempotent. If false, the user is already confirmed and no additional side effects are required.
+                if (!await organizationUserRepository.ConfirmOrganizationUserAsync(userToConfirm))
+                {
+                    return new None();
+                }
+
+                await Task.WhenAll(
+                    CreateDefaultCollectionsAsync(validatedData.Request),
+                    LogOrganizationUserConfirmedEventAsync(validatedData.Request),
+                    SendConfirmedOrganizationUserEmailAsync(validatedData.Request),
+                    SyncOrganizationKeysAsync(validatedData.Request)
+                );
+
                 return new None();
             }
-
-            await Task.WhenAll([
-                CreateDefaultCollectionsAsync(validatedData.Request),
-                LogOrganizationUserConfirmedEventAsync(validatedData.Request),
-                SendConfirmedOrganizationUserEmailAsync(validatedData.Request),
-                SyncOrganizationKeysAsync(validatedData.Request)
-            ]);
-        }
-
-        return new None();
+        );
     }
 
     private async Task SyncOrganizationKeysAsync(AutomaticallyConfirmOrganizationUserValidationRequest rqeuest)
@@ -125,7 +128,7 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
         {
             await eventService.LogOrganizationUserEventAsync(request.OrganizationUser,
                 EventType.OrganizationUser_AutomaticallyConfirmed,
-                request.PerformedOn.UtcDateTime);
+                timeProvider.GetUtcNow().UtcDateTime);
         }
         catch (Exception ex)
         {
@@ -175,7 +178,6 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
             Key = request.Key,
             DefaultUserCollectionName = request.DefaultUserCollectionName,
             PerformedBy = request.PerformedBy,
-            PerformedOn = timeProvider.GetUtcNow(),
             OrganizationUser = await organizationUserRepository.GetByIdAsync(request.OrganizationUserId),
             Organization = await organizationRepository.GetByIdAsync(request.OrganizationId)
         };
