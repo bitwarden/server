@@ -61,6 +61,26 @@ public class TeamsIntegrationControllerTests
     }
 
     [Theory, BitAutoData]
+    public async Task CreateAsync_CallbackUrlIsEmpty_ThrowsBadRequest(
+        SutProvider<TeamsIntegrationController> sutProvider,
+        OrganizationIntegration integration)
+    {
+        integration.Type = IntegrationType.Teams;
+        integration.Configuration = null;
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.Sut.Url
+            .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "TeamsIntegration_Create"))
+            .Returns((string?)null);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(integration.Id)
+            .Returns(integration);
+        var state = IntegrationOAuthState.FromIntegration(integration, sutProvider.GetDependency<TimeProvider>());
+
+        await Assert.ThrowsAsync<BadRequestException>(async () =>
+            await sutProvider.Sut.CreateAsync(_validTeamsCode, state.ToString()));
+    }
+
+    [Theory, BitAutoData]
     public async Task CreateAsync_CodeIsEmpty_ThrowsBadRequest(
         SutProvider<TeamsIntegrationController> sutProvider,
         OrganizationIntegration integration)
@@ -313,6 +333,30 @@ public class TeamsIntegrationControllerTests
 
         Assert.IsType<RedirectResult>(requestAction);
         sutProvider.GetDependency<ITeamsService>().Received(1).GetRedirectUrl(Arg.Any<string>(), expectedState.ToString());
+    }
+
+    [Theory, BitAutoData]
+    public async Task RedirectAsync_CallbackUrlIsEmpty_ThrowsBadRequest(
+        SutProvider<TeamsIntegrationController> sutProvider,
+        Guid organizationId,
+        OrganizationIntegration integration)
+    {
+        integration.OrganizationId = organizationId;
+        integration.Configuration = null;
+        integration.Type = IntegrationType.Teams;
+
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.Sut.Url
+            .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "TeamsIntegration_Create"))
+            .Returns((string?)null);
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetManyByOrganizationAsync(organizationId)
+            .Returns([integration]);
+
+        await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.RedirectAsync(organizationId));
     }
 
     [Theory, BitAutoData]

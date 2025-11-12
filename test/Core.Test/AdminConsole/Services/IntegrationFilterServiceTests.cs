@@ -43,6 +43,35 @@ public class IntegrationFilterServiceTests
     }
 
     [Theory, BitAutoData]
+    public void EvaluateFilterGroup_EqualsUserIdString_Matches(EventMessage eventMessage)
+    {
+        var userId = Guid.NewGuid();
+        eventMessage.UserId = userId;
+
+        var group = new IntegrationFilterGroup
+        {
+            AndOperator = true,
+            Rules =
+            [
+                new()
+                {
+                    Property = "UserId",
+                    Operation = IntegrationFilterOperation.Equals,
+                    Value = userId.ToString()
+                }
+            ]
+        };
+
+        var result = _service.EvaluateFilterGroup(group, eventMessage);
+        Assert.True(result);
+
+        var jsonGroup = JsonSerializer.Serialize(group);
+        var roundtrippedGroup = JsonSerializer.Deserialize<IntegrationFilterGroup>(jsonGroup);
+        Assert.NotNull(roundtrippedGroup);
+        Assert.True(_service.EvaluateFilterGroup(roundtrippedGroup, eventMessage));
+    }
+
+    [Theory, BitAutoData]
     public void EvaluateFilterGroup_EqualsUserId_DoesNotMatch(EventMessage eventMessage)
     {
         eventMessage.UserId = Guid.NewGuid();
@@ -269,6 +298,45 @@ public class IntegrationFilterServiceTests
         var topGroup = new IntegrationFilterGroup
         {
             AndOperator = true,
+            Groups = [nestedGroup]
+        };
+
+        var result = _service.EvaluateFilterGroup(topGroup, eventMessage);
+        Assert.True(result);
+
+        var jsonGroup = JsonSerializer.Serialize(topGroup);
+        var roundtrippedGroup = JsonSerializer.Deserialize<IntegrationFilterGroup>(jsonGroup);
+        Assert.NotNull(roundtrippedGroup);
+        Assert.True(_service.EvaluateFilterGroup(roundtrippedGroup, eventMessage));
+    }
+
+
+    [Theory, BitAutoData]
+    public void EvaluateFilterGroup_NestedGroups_AnyMatch(EventMessage eventMessage)
+    {
+        var id = Guid.NewGuid();
+        var collectionId = Guid.NewGuid();
+        eventMessage.UserId = id;
+        eventMessage.CollectionId = collectionId;
+
+        var nestedGroup = new IntegrationFilterGroup
+        {
+            AndOperator = false,
+            Rules =
+            [
+                new() { Property = "UserId", Operation = IntegrationFilterOperation.Equals, Value = id },
+                new()
+                {
+                    Property = "CollectionId",
+                    Operation = IntegrationFilterOperation.In,
+                    Value = new Guid?[] { Guid.NewGuid() }
+                }
+            ]
+        };
+
+        var topGroup = new IntegrationFilterGroup
+        {
+            AndOperator = false,
             Groups = [nestedGroup]
         };
 

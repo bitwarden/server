@@ -72,6 +72,26 @@ public class SlackIntegrationControllerTests
     }
 
     [Theory, BitAutoData]
+    public async Task CreateAsync_CallbackUrlIsEmpty_ThrowsBadRequest(
+        SutProvider<SlackIntegrationController> sutProvider,
+        OrganizationIntegration integration)
+    {
+        integration.Type = IntegrationType.Slack;
+        integration.Configuration = null;
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.Sut.Url
+            .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "SlackIntegration_Create"))
+            .Returns((string?)null);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(integration.Id)
+            .Returns(integration);
+        var state = IntegrationOAuthState.FromIntegration(integration, sutProvider.GetDependency<TimeProvider>());
+
+        await Assert.ThrowsAsync<BadRequestException>(async () =>
+            await sutProvider.Sut.CreateAsync(_validSlackCode, state.ToString()));
+    }
+
+    [Theory, BitAutoData]
     public async Task CreateAsync_SlackServiceReturnsEmpty_ThrowsBadRequest(
         SutProvider<SlackIntegrationController> sutProvider,
         OrganizationIntegration integration)
@@ -153,6 +173,8 @@ public class SlackIntegrationControllerTests
         OrganizationIntegration wrongOrgIntegration)
     {
         wrongOrgIntegration.Id = integration.Id;
+        wrongOrgIntegration.Type = IntegrationType.Slack;
+        wrongOrgIntegration.Configuration = null;
 
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
@@ -300,6 +322,22 @@ public class SlackIntegrationControllerTests
             .GetManyByOrganizationAsync(organizationId)
             .Returns([integration]);
         sutProvider.GetDependency<ISlackService>().GetRedirectUrl(Arg.Any<string>(), Arg.Any<string>()).Returns(expectedUrl);
+
+        await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.RedirectAsync(organizationId));
+    }
+
+    [Theory, BitAutoData]
+    public async Task RedirectAsync_CallbackUrlReturnsEmpty_ThrowsBadRequest(
+        SutProvider<SlackIntegrationController> sutProvider,
+        Guid organizationId)
+    {
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.Sut.Url
+            .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "SlackIntegration_Create"))
+            .Returns((string?)null);
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(true);
 
         await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.RedirectAsync(organizationId));
     }

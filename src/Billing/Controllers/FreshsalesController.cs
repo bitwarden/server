@@ -158,6 +158,7 @@ public class FreshsalesController : Controller
                 planName = "Free";
                 return true;
             case PlanType.FamiliesAnnually:
+            case PlanType.FamiliesAnnually2025:
             case PlanType.FamiliesAnnually2019:
                 planName = "Families";
                 return true;
