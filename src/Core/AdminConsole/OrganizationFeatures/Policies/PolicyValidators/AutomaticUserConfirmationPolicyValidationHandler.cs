@@ -9,7 +9,7 @@ using Bit.Core.Repositories;
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 
 /// <summary>
-/// Represents a validator for the Automatic User Confirmation policy.
+/// Represents a validation handler for the Automatic User Confirmation policy.
 ///
 /// This class validates that the following conditions are met:
 /// <ul>
@@ -23,7 +23,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 ///     <li>Sets the UseAutomaticUserConfirmation organization feature to match the policy update</li>
 /// </ul>
 /// </summary>
-public class AutomaticUserConfirmationPolicyValidator(
+public class AutomaticUserConfirmationPolicyValidationHandler(
     IOrganizationUserRepository organizationUserRepository,
     IProviderUserRepository providerUserRepository,
     IPolicyRepository policyRepository,
@@ -32,7 +32,8 @@ public class AutomaticUserConfirmationPolicyValidator(
     : IPolicyValidator, IPolicyValidationEvent, IOnPolicyPreUpdateEvent
 {
     public PolicyType Type => PolicyType.AutomaticUserConfirmation;
-    public Task ExecutePreUpsertSideEffectAsync(SavePolicyModel policyRequest, Policy? currentPolicy) => throw new NotImplementedException();
+    public async Task ExecutePreUpsertSideEffectAsync(SavePolicyModel policyRequest, Policy? currentPolicy) =>
+        await OnSaveSideEffectsAsync(policyRequest.PolicyUpdate, currentPolicy);
 
     private const string _singleOrgPolicyNotEnabledErrorMessage =
         "The Single organization policy must be enabled before enabling the Automatically confirm invited users policy.";
