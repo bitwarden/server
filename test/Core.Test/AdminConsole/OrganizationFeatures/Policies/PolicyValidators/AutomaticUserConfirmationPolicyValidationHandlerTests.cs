@@ -25,13 +25,15 @@ public class AutomaticUserConfirmationPolicyValidationHandlerTests
         [PolicyUpdate(PolicyType.AutomaticUserConfirmation)] PolicyUpdate policyUpdate,
         SutProvider<AutomaticUserConfirmationPolicyValidationHandler> sutProvider)
     {
-        // Single Org policy is not enabled
+        // Arrange
         sutProvider.GetDependency<IPolicyRepository>()
             .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SingleOrg)
             .Returns((Policy?)null);
 
+        // Act
         var result = await sutProvider.Sut.ValidateAsync(policyUpdate, null);
 
+        // Assert
         Assert.Contains("Single organization policy must be enabled", result, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -41,15 +43,17 @@ public class AutomaticUserConfirmationPolicyValidationHandlerTests
         [Policy(PolicyType.SingleOrg, false)] Policy singleOrgPolicy,
         SutProvider<AutomaticUserConfirmationPolicyValidationHandler> sutProvider)
     {
+        // Arrange
         singleOrgPolicy.OrganizationId = policyUpdate.OrganizationId;
 
-        // Single Org policy exists but is disabled
         sutProvider.GetDependency<IPolicyRepository>()
             .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SingleOrg)
             .Returns(singleOrgPolicy);
 
+        // Act
         var result = await sutProvider.Sut.ValidateAsync(policyUpdate, null);
 
+        // Assert
         Assert.Contains("Single organization policy must be enabled", result, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -60,6 +64,7 @@ public class AutomaticUserConfirmationPolicyValidationHandlerTests
         Guid nonCompliantUserId,
         SutProvider<AutomaticUserConfirmationPolicyValidationHandler> sutProvider)
     {
+        // Arrange
         singleOrgPolicy.OrganizationId = policyUpdate.OrganizationId;
 
         var orgUser = new OrganizationUserUserDetails
@@ -75,7 +80,7 @@ public class AutomaticUserConfirmationPolicyValidationHandlerTests
         var otherOrgUser = new OrganizationUser
         {
             Id = Guid.NewGuid(),
-            OrganizationId = Guid.NewGuid(), // Different organization
+            OrganizationId = Guid.NewGuid(),
             UserId = nonCompliantUserId,
             Status = OrganizationUserStatusType.Confirmed
         };
@@ -92,8 +97,10 @@ public class AutomaticUserConfirmationPolicyValidationHandlerTests
             .GetManyByManyUsersAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns([otherOrgUser]);
 
+        // Act
         var result = await sutProvider.Sut.ValidateAsync(policyUpdate, null);
 
+        // Assert
         Assert.Contains("compliant with the Single organization policy", result, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -104,6 +111,7 @@ public class AutomaticUserConfirmationPolicyValidationHandlerTests
         Guid userId,
         SutProvider<AutomaticUserConfirmationPolicyValidationHandler> sutProvider)
     {
+        // Arrange
         singleOrgPolicy.OrganizationId = policyUpdate.OrganizationId;
 
         var orgUser = new OrganizationUserUserDetails
@@ -113,16 +121,16 @@ public class AutomaticUserConfirmationPolicyValidationHandlerTests
             Type = OrganizationUserType.User,
             Status = OrganizationUserStatusType.Confirmed,
             UserId = userId,
-            Email = "user@example.com"
+            Email = "test@email.com"
         };
 
-        // User has invited status in another organization (should not count as non-compliant)
         var otherOrgUser = new OrganizationUser
         {
             Id = Guid.NewGuid(),
-            OrganizationId = Guid.NewGuid(), // Different organization
-            UserId = userId,
-            Status = OrganizationUserStatusType.Invited
+            OrganizationId = Guid.NewGuid(),
+            UserId = null, // invited users do not have a user id
+            Status = OrganizationUserStatusType.Invited,
+            Email = orgUser.Email
         };
 
         sutProvider.GetDependency<IPolicyRepository>()
@@ -141,9 +149,10 @@ public class AutomaticUserConfirmationPolicyValidationHandlerTests
             .GetManyByOrganizationAsync(policyUpdate.OrganizationId)
             .Returns([]);
 
+        // Act
         var result = await sutProvider.Sut.ValidateAsync(policyUpdate, null);
 
-        // Invited users in other orgs should not make validation fail
+        // Assert
         Assert.True(string.IsNullOrEmpty(result));
     }
 
@@ -153,6 +162,7 @@ public class AutomaticUserConfirmationPolicyValidationHandlerTests
         [Policy(PolicyType.SingleOrg)] Policy singleOrgPolicy,
         SutProvider<AutomaticUserConfirmationPolicyValidationHandler> sutProvider)
     {
+        // Arrange
         singleOrgPolicy.OrganizationId = policyUpdate.OrganizationId;
 
         var providerUser = new ProviderUser
@@ -175,8 +185,10 @@ public class AutomaticUserConfirmationPolicyValidationHandlerTests
             .GetManyByOrganizationAsync(policyUpdate.OrganizationId)
             .Returns([providerUser]);
 
+        // Act
         var result = await sutProvider.Sut.ValidateAsync(policyUpdate, null);
 
+        // Assert
         Assert.Contains("Provider user type", result, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -187,6 +199,7 @@ public class AutomaticUserConfirmationPolicyValidationHandlerTests
         [Policy(PolicyType.SingleOrg)] Policy singleOrgPolicy,
         SutProvider<AutomaticUserConfirmationPolicyValidationHandler> sutProvider)
     {
+        // Arrange
         singleOrgPolicy.OrganizationId = policyUpdate.OrganizationId;
 
         var orgUser = new OrganizationUserUserDetails
@@ -209,14 +222,16 @@ public class AutomaticUserConfirmationPolicyValidationHandlerTests
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetManyByManyUsersAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns([]); // No other org memberships
+            .Returns([]);
 
         sutProvider.GetDependency<IProviderUserRepository>()
             .GetManyByOrganizationAsync(policyUpdate.OrganizationId)
             .Returns([]);
 
+        // Act
         var result = await sutProvider.Sut.ValidateAsync(policyUpdate, null);
 
+        // Assert
         Assert.True(string.IsNullOrEmpty(result));
     }
 
@@ -226,12 +241,14 @@ public class AutomaticUserConfirmationPolicyValidationHandlerTests
         [Policy(PolicyType.AutomaticUserConfirmation)] Policy currentPolicy,
         SutProvider<AutomaticUserConfirmationPolicyValidationHandler> sutProvider)
     {
+        // Arrange
         currentPolicy.OrganizationId = policyUpdate.OrganizationId;
 
+        // Act
         var result = await sutProvider.Sut.ValidateAsync(policyUpdate, currentPolicy);
 
+        // Assert
         Assert.True(string.IsNullOrEmpty(result));
-        // Should not call any repository methods since policy is already enabled
         await sutProvider.GetDependency<IPolicyRepository>()
             .DidNotReceive()
             .GetByOrganizationIdTypeAsync(Arg.Any<Guid>(), Arg.Any<PolicyType>());
@@ -243,12 +260,14 @@ public class AutomaticUserConfirmationPolicyValidationHandlerTests
         [Policy(PolicyType.AutomaticUserConfirmation)] Policy currentPolicy,
         SutProvider<AutomaticUserConfirmationPolicyValidationHandler> sutProvider)
     {
+        // Arrange
         currentPolicy.OrganizationId = policyUpdate.OrganizationId;
 
+        // Act
         var result = await sutProvider.Sut.ValidateAsync(policyUpdate, currentPolicy);
 
+        // Assert
         Assert.True(string.IsNullOrEmpty(result));
-        // Should not call any repository methods when disabling
         await sutProvider.GetDependency<IPolicyRepository>()
             .DidNotReceive()
             .GetByOrganizationIdTypeAsync(Arg.Any<Guid>(), Arg.Any<PolicyType>());
@@ -261,6 +280,7 @@ public class AutomaticUserConfirmationPolicyValidationHandlerTests
         Guid nonCompliantOwnerId,
         SutProvider<AutomaticUserConfirmationPolicyValidationHandler> sutProvider)
     {
+        // Arrange
         singleOrgPolicy.OrganizationId = policyUpdate.OrganizationId;
 
         var ownerUser = new OrganizationUserUserDetails
@@ -276,7 +296,7 @@ public class AutomaticUserConfirmationPolicyValidationHandlerTests
         var otherOrgUser = new OrganizationUser
         {
             Id = Guid.NewGuid(),
-            OrganizationId = Guid.NewGuid(), // Different organization
+            OrganizationId = Guid.NewGuid(),
             UserId = nonCompliantOwnerId,
             Status = OrganizationUserStatusType.Confirmed
         };
@@ -293,9 +313,10 @@ public class AutomaticUserConfirmationPolicyValidationHandlerTests
             .GetManyByManyUsersAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns([otherOrgUser]);
 
+        // Act
         var result = await sutProvider.Sut.ValidateAsync(policyUpdate, null);
 
-        // Owners and Admins should NOT be filtered out, so validation should fail
+        // Assert
         Assert.Contains("compliant with the Single organization policy", result, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -305,6 +326,7 @@ public class AutomaticUserConfirmationPolicyValidationHandlerTests
         [Policy(PolicyType.SingleOrg)] Policy singleOrgPolicy,
         SutProvider<AutomaticUserConfirmationPolicyValidationHandler> sutProvider)
     {
+        // Arrange
         singleOrgPolicy.OrganizationId = policyUpdate.OrganizationId;
 
         var invitedUser = new OrganizationUserUserDetails
@@ -329,13 +351,10 @@ public class AutomaticUserConfirmationPolicyValidationHandlerTests
             .GetManyByOrganizationAsync(policyUpdate.OrganizationId)
             .Returns([]);
 
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByOrganizationAsync(policyUpdate.OrganizationId, null)
-            .Returns([]);
-
+        // Act
         var result = await sutProvider.Sut.ValidateAsync(policyUpdate, null);
 
-        // Invited users are excluded, so validation should pass
+        // Assert
         Assert.True(string.IsNullOrEmpty(result));
     }
 
@@ -345,6 +364,7 @@ public class AutomaticUserConfirmationPolicyValidationHandlerTests
         [Policy(PolicyType.SingleOrg)] Policy singleOrgPolicy,
         SutProvider<AutomaticUserConfirmationPolicyValidationHandler> sutProvider)
     {
+        // Arrange
         singleOrgPolicy.OrganizationId = policyUpdate.OrganizationId;
 
         var revokedUser = new OrganizationUserUserDetails
@@ -369,9 +389,240 @@ public class AutomaticUserConfirmationPolicyValidationHandlerTests
             .GetManyByOrganizationAsync(policyUpdate.OrganizationId)
             .Returns([]);
 
+        // Act
         var result = await sutProvider.Sut.ValidateAsync(policyUpdate, null);
 
-        // Revoked users are excluded, so validation should pass
+        // Assert
         Assert.True(string.IsNullOrEmpty(result));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_EnablingPolicy_AcceptedUsersIncluded_InComplianceCheck(
+        [PolicyUpdate(PolicyType.AutomaticUserConfirmation)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.SingleOrg)] Policy singleOrgPolicy,
+        Guid nonCompliantUserId,
+        SutProvider<AutomaticUserConfirmationPolicyValidationHandler> sutProvider)
+    {
+        // Arrange
+        singleOrgPolicy.OrganizationId = policyUpdate.OrganizationId;
+
+        var acceptedUser = new OrganizationUserUserDetails
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = policyUpdate.OrganizationId,
+            Type = OrganizationUserType.User,
+            Status = OrganizationUserStatusType.Accepted,
+            UserId = nonCompliantUserId,
+            Email = "accepted@example.com"
+        };
+
+        var otherOrgUser = new OrganizationUser
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = Guid.NewGuid(),
+            UserId = nonCompliantUserId,
+            Status = OrganizationUserStatusType.Confirmed
+        };
+
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SingleOrg)
+            .Returns(singleOrgPolicy);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyDetailsByOrganizationAsync(policyUpdate.OrganizationId)
+            .Returns([acceptedUser]);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByManyUsersAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns([otherOrgUser]);
+
+        // Act
+        var result = await sutProvider.Sut.ValidateAsync(policyUpdate, null);
+
+        // Assert
+        Assert.Contains("compliant with the Single organization policy", result, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_EnablingPolicy_EmptyOrganization_ReturnsEmptyString(
+        [PolicyUpdate(PolicyType.AutomaticUserConfirmation)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.SingleOrg)] Policy singleOrgPolicy,
+        SutProvider<AutomaticUserConfirmationPolicyValidationHandler> sutProvider)
+    {
+        // Arrange
+        singleOrgPolicy.OrganizationId = policyUpdate.OrganizationId;
+
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SingleOrg)
+            .Returns(singleOrgPolicy);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyDetailsByOrganizationAsync(policyUpdate.OrganizationId)
+            .Returns([]);
+
+        sutProvider.GetDependency<IProviderUserRepository>()
+            .GetManyByOrganizationAsync(policyUpdate.OrganizationId)
+            .Returns([]);
+
+        // Act
+        var result = await sutProvider.Sut.ValidateAsync(policyUpdate, null);
+
+        // Assert
+        Assert.True(string.IsNullOrEmpty(result));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_WithSavePolicyModel_CallsValidateWithPolicyUpdate(
+        [PolicyUpdate(PolicyType.AutomaticUserConfirmation)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.SingleOrg)] Policy singleOrgPolicy,
+        SutProvider<AutomaticUserConfirmationPolicyValidationHandler> sutProvider)
+    {
+        // Arrange
+        singleOrgPolicy.OrganizationId = policyUpdate.OrganizationId;
+
+        var savePolicyModel = new SavePolicyModel(policyUpdate);
+
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SingleOrg)
+            .Returns(singleOrgPolicy);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyDetailsByOrganizationAsync(policyUpdate.OrganizationId)
+            .Returns([]);
+
+        sutProvider.GetDependency<IProviderUserRepository>()
+            .GetManyByOrganizationAsync(policyUpdate.OrganizationId)
+            .Returns([]);
+
+        // Act
+        var result = await sutProvider.Sut.ValidateAsync(savePolicyModel, null);
+
+        // Assert
+        Assert.True(string.IsNullOrEmpty(result));
+    }
+
+    [Theory, BitAutoData]
+    public async Task OnSaveSideEffectsAsync_EnablingPolicy_SetsUseAutomaticUserConfirmationToTrue(
+        [PolicyUpdate(PolicyType.AutomaticUserConfirmation)] PolicyUpdate policyUpdate,
+        Organization organization,
+        SutProvider<AutomaticUserConfirmationPolicyValidationHandler> sutProvider)
+    {
+        // Arrange
+        organization.Id = policyUpdate.OrganizationId;
+        organization.UseAutomaticUserConfirmation = false;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(policyUpdate.OrganizationId)
+            .Returns(organization);
+
+        // Act
+        await sutProvider.Sut.OnSaveSideEffectsAsync(policyUpdate, null);
+
+        // Assert
+        await sutProvider.GetDependency<IOrganizationRepository>()
+            .Received(1)
+            .UpsertAsync(Arg.Is<Organization>(o =>
+                o.Id == organization.Id &&
+                o.UseAutomaticUserConfirmation == true &&
+                o.RevisionDate > DateTime.MinValue));
+    }
+
+    [Theory, BitAutoData]
+    public async Task OnSaveSideEffectsAsync_DisablingPolicy_SetsUseAutomaticUserConfirmationToFalse(
+        [PolicyUpdate(PolicyType.AutomaticUserConfirmation, false)] PolicyUpdate policyUpdate,
+        Organization organization,
+        SutProvider<AutomaticUserConfirmationPolicyValidationHandler> sutProvider)
+    {
+        // Arrange
+        organization.Id = policyUpdate.OrganizationId;
+        organization.UseAutomaticUserConfirmation = true;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(policyUpdate.OrganizationId)
+            .Returns(organization);
+
+        // Act
+        await sutProvider.Sut.OnSaveSideEffectsAsync(policyUpdate, null);
+
+        // Assert
+        await sutProvider.GetDependency<IOrganizationRepository>()
+            .Received(1)
+            .UpsertAsync(Arg.Is<Organization>(o =>
+                o.Id == organization.Id &&
+                o.UseAutomaticUserConfirmation == false &&
+                o.RevisionDate > DateTime.MinValue));
+    }
+
+    [Theory, BitAutoData]
+    public async Task OnSaveSideEffectsAsync_OrganizationNotFound_DoesNotThrowException(
+        [PolicyUpdate(PolicyType.AutomaticUserConfirmation)] PolicyUpdate policyUpdate,
+        SutProvider<AutomaticUserConfirmationPolicyValidationHandler> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(policyUpdate.OrganizationId)
+            .Returns((Organization?)null);
+
+        // Act
+        await sutProvider.Sut.OnSaveSideEffectsAsync(policyUpdate, null);
+
+        // Assert
+        await sutProvider.GetDependency<IOrganizationRepository>()
+            .DidNotReceive()
+            .UpsertAsync(Arg.Any<Organization>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task ExecutePreUpsertSideEffectAsync_CallsOnSaveSideEffectsAsync(
+        [PolicyUpdate(PolicyType.AutomaticUserConfirmation)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.AutomaticUserConfirmation)] Policy currentPolicy,
+        Organization organization,
+        SutProvider<AutomaticUserConfirmationPolicyValidationHandler> sutProvider)
+    {
+        // Arrange
+        organization.Id = policyUpdate.OrganizationId;
+        currentPolicy.OrganizationId = policyUpdate.OrganizationId;
+
+        var savePolicyModel = new SavePolicyModel(policyUpdate);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(policyUpdate.OrganizationId)
+            .Returns(organization);
+
+        // Act
+        await sutProvider.Sut.ExecutePreUpsertSideEffectAsync(savePolicyModel, currentPolicy);
+
+        // Assert
+        await sutProvider.GetDependency<IOrganizationRepository>()
+            .Received(1)
+            .UpsertAsync(Arg.Is<Organization>(o =>
+                o.Id == organization.Id &&
+                o.UseAutomaticUserConfirmation == policyUpdate.Enabled));
+    }
+
+    [Theory, BitAutoData]
+    public async Task OnSaveSideEffectsAsync_UpdatesRevisionDate(
+        [PolicyUpdate(PolicyType.AutomaticUserConfirmation)] PolicyUpdate policyUpdate,
+        Organization organization,
+        SutProvider<AutomaticUserConfirmationPolicyValidationHandler> sutProvider)
+    {
+        // Arrange
+        organization.Id = policyUpdate.OrganizationId;
+        var originalRevisionDate = DateTime.UtcNow.AddDays(-1);
+        organization.RevisionDate = originalRevisionDate;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(policyUpdate.OrganizationId)
+            .Returns(organization);
+
+        // Act
+        await sutProvider.Sut.OnSaveSideEffectsAsync(policyUpdate, null);
+
+        // Assert
+        await sutProvider.GetDependency<IOrganizationRepository>()
+            .Received(1)
+            .UpsertAsync(Arg.Is<Organization>(o =>
+                o.Id == organization.Id &&
+                o.RevisionDate > originalRevisionDate));
     }
 }
