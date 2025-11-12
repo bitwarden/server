@@ -403,8 +403,8 @@ public class CiphersController : Controller
         var org = _currentContext.GetOrganization(organizationId);
 
         // If we're not an "admin" we don't need to check the ciphers
-        if (org is not ({Type: OrganizationUserType.Owner or OrganizationUserType.Admin} or
-            {Permissions.EditAnyCollection: true}))
+        if (org is not ({ Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
+            { Permissions.EditAnyCollection: true }))
         {
             return false;
         }
@@ -418,8 +418,8 @@ public class CiphersController : Controller
         var org = _currentContext.GetOrganization(organizationId);
 
         // If we're not an "admin" we don't need to check the ciphers
-        if (org is not ({Type: OrganizationUserType.Owner or OrganizationUserType.Admin} or
-            {Permissions.EditAnyCollection: true}))
+        if (org is not ({ Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
+            { Permissions.EditAnyCollection: true }))
         {
             return false;
         }
