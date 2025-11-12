@@ -154,9 +154,6 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<short?>("MaxStorageGb")
                         .HasColumnType("INTEGER");
 
-                    b.Property<short?>("MaxStorageGbIncreased")
-                        .HasColumnType("INTEGER");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -835,9 +832,6 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<short?>("MaxStorageGb")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<short?>("MaxStorageGbIncreased")
                         .HasColumnType("INTEGER");
 
                     b.Property<Guid>("OrganizationId")
@@ -1875,9 +1869,6 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<short?>("MaxStorageGb")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<short?>("MaxStorageGbIncreased")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Name")
