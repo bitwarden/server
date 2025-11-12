@@ -49,14 +49,10 @@ public class AutomaticallyConfirmOrganizationUsersValidator(
             return Invalid(request, new UserIsNotUserType());
         }
 
-        // OrgUser must conform to Two Factor Required Policy if applicable
         if (!await OrganizationUserConformsToTwoFactorRequiredPolicyAsync(request))
         {
             return Invalid(request, new UserDoesNotHaveTwoFactorEnabled());
         }
-
-        // OrgUser must conform to this Single Org Policy
-
 
         if (await OrganizationUserConformsToSingleOrgPolicyAsync(request) is { } error)
         {
