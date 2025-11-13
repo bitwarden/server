@@ -9,7 +9,7 @@ using Bit.Core.Repositories;
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 
 /// <summary>
-/// Represents a validation handler for the Automatic User Confirmation policy.
+/// Represents an event handler for the Automatic User Confirmation policy.
 ///
 /// This class validates that the following conditions are met:
 /// <ul>
@@ -23,13 +23,13 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 ///     <li>Sets the UseAutomaticUserConfirmation organization feature to match the policy update</li>
 /// </ul>
 /// </summary>
-public class AutomaticUserConfirmationPolicyValidationHandler(
+public class AutomaticUserConfirmationPolicyEventHandler(
     IOrganizationUserRepository organizationUserRepository,
     IProviderUserRepository providerUserRepository,
     IPolicyRepository policyRepository,
     IOrganizationRepository organizationRepository,
     TimeProvider timeProvider)
-    : IPolicyValidator, IPolicyValidationEvent, IOnPolicyPreUpdateEvent
+    : IPolicyValidator, IPolicyValidationEvent, IOnPolicyPreUpdateEvent, IEnforceDependentPoliciesEvent
 {
     public PolicyType Type => PolicyType.AutomaticUserConfirmation;
     public async Task ExecutePreUpsertSideEffectAsync(SavePolicyModel policyRequest, Policy? currentPolicy) =>

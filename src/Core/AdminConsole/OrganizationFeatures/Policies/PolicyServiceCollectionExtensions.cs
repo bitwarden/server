@@ -53,7 +53,7 @@ public static class PolicyServiceCollectionExtensions
         services.AddScoped<IPolicyUpdateEvent, FreeFamiliesForEnterprisePolicyValidator>();
         services.AddScoped<IPolicyUpdateEvent, OrganizationDataOwnershipPolicyValidator>();
         services.AddScoped<IPolicyUpdateEvent, UriMatchDefaultPolicyValidator>();
-        services.AddScoped<IPolicyUpdateEvent, AutomaticUserConfirmationPolicyValidationHandler>();
+        services.AddScoped<IPolicyUpdateEvent, AutomaticUserConfirmationPolicyEventHandler>();
     }
 
     private static void AddPolicyRequirements(this IServiceCollection services)

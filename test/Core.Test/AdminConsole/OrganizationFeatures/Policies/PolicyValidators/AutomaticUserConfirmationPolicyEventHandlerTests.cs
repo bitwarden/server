@@ -18,12 +18,12 @@ using Xunit;
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 
 [SutProviderCustomize]
-public class AutomaticUserConfirmationPolicyValidationHandlerTests
+public class AutomaticUserConfirmationPolicyEventHandlerTests
 {
     [Theory, BitAutoData]
     public async Task ValidateAsync_EnablingPolicy_SingleOrgNotEnabled_ReturnsError(
         [PolicyUpdate(PolicyType.AutomaticUserConfirmation)] PolicyUpdate policyUpdate,
-        SutProvider<AutomaticUserConfirmationPolicyValidationHandler> sutProvider)
+        SutProvider<AutomaticUserConfirmationPolicyEventHandler> sutProvider)
     {
         // Arrange
         sutProvider.GetDependency<IPolicyRepository>()
@@ -41,7 +41,7 @@ public class AutomaticUserConfirmationPolicyValidationHandlerTests
     public async Task ValidateAsync_EnablingPolicy_SingleOrgPolicyDisabled_ReturnsError(
         [PolicyUpdate(PolicyType.AutomaticUserConfirmation)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.SingleOrg, false)] Policy singleOrgPolicy,
-        SutProvider<AutomaticUserConfirmationPolicyValidationHandler> sutProvider)
+        SutProvider<AutomaticUserConfirmationPolicyEventHandler> sutProvider)
     {
         // Arrange
         singleOrgPolicy.OrganizationId = policyUpdate.OrganizationId;
@@ -62,7 +62,7 @@ public class AutomaticUserConfirmationPolicyValidationHandlerTests
         [PolicyUpdate(PolicyType.AutomaticUserConfirmation)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.SingleOrg)] Policy singleOrgPolicy,
         Guid nonCompliantUserId,
-        SutProvider<AutomaticUserConfirmationPolicyValidationHandler> sutProvider)
+        SutProvider<AutomaticUserConfirmationPolicyEventHandler> sutProvider)
     {
         // Arrange
         singleOrgPolicy.OrganizationId = policyUpdate.OrganizationId;
@@ -109,7 +109,7 @@ public class AutomaticUserConfirmationPolicyValidationHandlerTests
         [PolicyUpdate(PolicyType.AutomaticUserConfirmation)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.SingleOrg)] Policy singleOrgPolicy,
         Guid userId,
-        SutProvider<AutomaticUserConfirmationPolicyValidationHandler> sutProvider)
+        SutProvider<AutomaticUserConfirmationPolicyEventHandler> sutProvider)
     {
         // Arrange
         singleOrgPolicy.OrganizationId = policyUpdate.OrganizationId;
@@ -160,7 +160,7 @@ public class AutomaticUserConfirmationPolicyValidationHandlerTests
     public async Task ValidateAsync_EnablingPolicy_ProviderUsersExist_ReturnsError(
         [PolicyUpdate(PolicyType.AutomaticUserConfirmation)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.SingleOrg)] Policy singleOrgPolicy,
-        SutProvider<AutomaticUserConfirmationPolicyValidationHandler> sutProvider)
+        SutProvider<AutomaticUserConfirmationPolicyEventHandler> sutProvider)
     {
         // Arrange
         singleOrgPolicy.OrganizationId = policyUpdate.OrganizationId;
@@ -197,7 +197,7 @@ public class AutomaticUserConfirmationPolicyValidationHandlerTests
     public async Task ValidateAsync_EnablingPolicy_AllValidationsPassed_ReturnsEmptyString(
         [PolicyUpdate(PolicyType.AutomaticUserConfirmation)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.SingleOrg)] Policy singleOrgPolicy,
-        SutProvider<AutomaticUserConfirmationPolicyValidationHandler> sutProvider)
+        SutProvider<AutomaticUserConfirmationPolicyEventHandler> sutProvider)
     {
         // Arrange
         singleOrgPolicy.OrganizationId = policyUpdate.OrganizationId;
@@ -239,7 +239,7 @@ public class AutomaticUserConfirmationPolicyValidationHandlerTests
     public async Task ValidateAsync_PolicyAlreadyEnabled_ReturnsEmptyString(
         [PolicyUpdate(PolicyType.AutomaticUserConfirmation)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.AutomaticUserConfirmation)] Policy currentPolicy,
-        SutProvider<AutomaticUserConfirmationPolicyValidationHandler> sutProvider)
+        SutProvider<AutomaticUserConfirmationPolicyEventHandler> sutProvider)
     {
         // Arrange
         currentPolicy.OrganizationId = policyUpdate.OrganizationId;
@@ -258,7 +258,7 @@ public class AutomaticUserConfirmationPolicyValidationHandlerTests
     public async Task ValidateAsync_DisablingPolicy_ReturnsEmptyString(
         [PolicyUpdate(PolicyType.AutomaticUserConfirmation, false)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.AutomaticUserConfirmation)] Policy currentPolicy,
-        SutProvider<AutomaticUserConfirmationPolicyValidationHandler> sutProvider)
+        SutProvider<AutomaticUserConfirmationPolicyEventHandler> sutProvider)
     {
         // Arrange
         currentPolicy.OrganizationId = policyUpdate.OrganizationId;
@@ -278,7 +278,7 @@ public class AutomaticUserConfirmationPolicyValidationHandlerTests
         [PolicyUpdate(PolicyType.AutomaticUserConfirmation)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.SingleOrg)] Policy singleOrgPolicy,
         Guid nonCompliantOwnerId,
-        SutProvider<AutomaticUserConfirmationPolicyValidationHandler> sutProvider)
+        SutProvider<AutomaticUserConfirmationPolicyEventHandler> sutProvider)
     {
         // Arrange
         singleOrgPolicy.OrganizationId = policyUpdate.OrganizationId;
@@ -324,7 +324,7 @@ public class AutomaticUserConfirmationPolicyValidationHandlerTests
     public async Task ValidateAsync_EnablingPolicy_InvitedUsersExcluded_FromComplianceCheck(
         [PolicyUpdate(PolicyType.AutomaticUserConfirmation)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.SingleOrg)] Policy singleOrgPolicy,
-        SutProvider<AutomaticUserConfirmationPolicyValidationHandler> sutProvider)
+        SutProvider<AutomaticUserConfirmationPolicyEventHandler> sutProvider)
     {
         // Arrange
         singleOrgPolicy.OrganizationId = policyUpdate.OrganizationId;
@@ -362,7 +362,7 @@ public class AutomaticUserConfirmationPolicyValidationHandlerTests
     public async Task ValidateAsync_EnablingPolicy_RevokedUsersExcluded_FromComplianceCheck(
         [PolicyUpdate(PolicyType.AutomaticUserConfirmation)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.SingleOrg)] Policy singleOrgPolicy,
-        SutProvider<AutomaticUserConfirmationPolicyValidationHandler> sutProvider)
+        SutProvider<AutomaticUserConfirmationPolicyEventHandler> sutProvider)
     {
         // Arrange
         singleOrgPolicy.OrganizationId = policyUpdate.OrganizationId;
@@ -401,7 +401,7 @@ public class AutomaticUserConfirmationPolicyValidationHandlerTests
         [PolicyUpdate(PolicyType.AutomaticUserConfirmation)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.SingleOrg)] Policy singleOrgPolicy,
         Guid nonCompliantUserId,
-        SutProvider<AutomaticUserConfirmationPolicyValidationHandler> sutProvider)
+        SutProvider<AutomaticUserConfirmationPolicyEventHandler> sutProvider)
     {
         // Arrange
         singleOrgPolicy.OrganizationId = policyUpdate.OrganizationId;
@@ -447,7 +447,7 @@ public class AutomaticUserConfirmationPolicyValidationHandlerTests
     public async Task ValidateAsync_EnablingPolicy_EmptyOrganization_ReturnsEmptyString(
         [PolicyUpdate(PolicyType.AutomaticUserConfirmation)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.SingleOrg)] Policy singleOrgPolicy,
-        SutProvider<AutomaticUserConfirmationPolicyValidationHandler> sutProvider)
+        SutProvider<AutomaticUserConfirmationPolicyEventHandler> sutProvider)
     {
         // Arrange
         singleOrgPolicy.OrganizationId = policyUpdate.OrganizationId;
@@ -475,7 +475,7 @@ public class AutomaticUserConfirmationPolicyValidationHandlerTests
     public async Task ValidateAsync_WithSavePolicyModel_CallsValidateWithPolicyUpdate(
         [PolicyUpdate(PolicyType.AutomaticUserConfirmation)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.SingleOrg)] Policy singleOrgPolicy,
-        SutProvider<AutomaticUserConfirmationPolicyValidationHandler> sutProvider)
+        SutProvider<AutomaticUserConfirmationPolicyEventHandler> sutProvider)
     {
         // Arrange
         singleOrgPolicy.OrganizationId = policyUpdate.OrganizationId;
@@ -505,7 +505,7 @@ public class AutomaticUserConfirmationPolicyValidationHandlerTests
     public async Task OnSaveSideEffectsAsync_EnablingPolicy_SetsUseAutomaticUserConfirmationToTrue(
         [PolicyUpdate(PolicyType.AutomaticUserConfirmation)] PolicyUpdate policyUpdate,
         Organization organization,
-        SutProvider<AutomaticUserConfirmationPolicyValidationHandler> sutProvider)
+        SutProvider<AutomaticUserConfirmationPolicyEventHandler> sutProvider)
     {
         // Arrange
         organization.Id = policyUpdate.OrganizationId;
@@ -531,7 +531,7 @@ public class AutomaticUserConfirmationPolicyValidationHandlerTests
     public async Task OnSaveSideEffectsAsync_DisablingPolicy_SetsUseAutomaticUserConfirmationToFalse(
         [PolicyUpdate(PolicyType.AutomaticUserConfirmation, false)] PolicyUpdate policyUpdate,
         Organization organization,
-        SutProvider<AutomaticUserConfirmationPolicyValidationHandler> sutProvider)
+        SutProvider<AutomaticUserConfirmationPolicyEventHandler> sutProvider)
     {
         // Arrange
         organization.Id = policyUpdate.OrganizationId;
@@ -556,7 +556,7 @@ public class AutomaticUserConfirmationPolicyValidationHandlerTests
     [Theory, BitAutoData]
     public async Task OnSaveSideEffectsAsync_OrganizationNotFound_DoesNotThrowException(
         [PolicyUpdate(PolicyType.AutomaticUserConfirmation)] PolicyUpdate policyUpdate,
-        SutProvider<AutomaticUserConfirmationPolicyValidationHandler> sutProvider)
+        SutProvider<AutomaticUserConfirmationPolicyEventHandler> sutProvider)
     {
         // Arrange
         sutProvider.GetDependency<IOrganizationRepository>()
@@ -577,7 +577,7 @@ public class AutomaticUserConfirmationPolicyValidationHandlerTests
         [PolicyUpdate(PolicyType.AutomaticUserConfirmation)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.AutomaticUserConfirmation)] Policy currentPolicy,
         Organization organization,
-        SutProvider<AutomaticUserConfirmationPolicyValidationHandler> sutProvider)
+        SutProvider<AutomaticUserConfirmationPolicyEventHandler> sutProvider)
     {
         // Arrange
         organization.Id = policyUpdate.OrganizationId;
@@ -604,7 +604,7 @@ public class AutomaticUserConfirmationPolicyValidationHandlerTests
     public async Task OnSaveSideEffectsAsync_UpdatesRevisionDate(
         [PolicyUpdate(PolicyType.AutomaticUserConfirmation)] PolicyUpdate policyUpdate,
         Organization organization,
-        SutProvider<AutomaticUserConfirmationPolicyValidationHandler> sutProvider)
+        SutProvider<AutomaticUserConfirmationPolicyEventHandler> sutProvider)
     {
         // Arrange
         organization.Id = policyUpdate.OrganizationId;
