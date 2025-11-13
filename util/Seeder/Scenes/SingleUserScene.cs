@@ -4,6 +4,9 @@ using Bit.Seeder.Factories;
 
 namespace Bit.Seeder.Scenes;
 
+/// <summary>
+/// Creates a single user using the provided account details.
+/// </summary>
 public class SingleUserScene(UserSeeder userSeeder, IUserRepository userRepository) : IScene<SingleUserScene.Request>
 {
     public class Request

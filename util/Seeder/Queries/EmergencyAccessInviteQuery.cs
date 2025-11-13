@@ -5,6 +5,9 @@ using Bit.Infrastructure.EntityFramework.Repositories;
 
 namespace Bit.Seeder.Queries;
 
+/// <summary>
+/// Retrieves all emergency access invite urls for the provided email.
+/// </summary>
 public class EmergencyAccessInviteQuery(
     DatabaseContext db,
     IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> dataProtectorTokenizer)
