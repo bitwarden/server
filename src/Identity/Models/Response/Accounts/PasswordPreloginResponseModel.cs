@@ -32,7 +32,7 @@ public class PasswordPreloginResponseModel
     public int? KdfParallelism { get; set; }    // PM-28143 Remove with cleanup
 
     // New Data Types
-    public KdfSettings? KdfSettings { get; init; }  // PM-28143 With cleanup make this not nullish
-    public string? Salt { get; init; }              // PM-28143 With cleanup make this not nullish. Not used yet,
-                                                    // just the email from the request at this time.
+    public KdfSettings? KdfSettings { get; set; }  // PM-28143 With cleanup make this not nullish
+    public string? Salt { get; set; }              // PM-28143 With cleanup make this not nullish. Not used yet,
+                                                   // just the email from the request at this time.
 }
