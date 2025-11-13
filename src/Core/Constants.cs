@@ -137,7 +137,6 @@ public static class FeatureFlagKeys
     /* Admin Console Team */
     public const string PolicyRequirements = "pm-14439-policy-requirements";
     public const string ScimInviteUserOptimization = "pm-16811-optimize-invite-user-flow-to-fail-fast";
-    public const string EventBasedOrganizationIntegrations = "event-based-organization-integrations";
     public const string CreateDefaultLocation = "pm-19467-create-default-location";
     public const string AutomaticConfirmUsers = "pm-19934-auto-confirm-organization-users";
     public const string PM23845_VNextApplicationCache = "pm-24957-refactor-memory-application-cache";
@@ -195,6 +194,7 @@ public static class FeatureFlagKeys
     public const string PremiumUpgradeNewDesign = "pm-24033-updat-premium-subscription-page";
     public const string PM26793_FetchPremiumPriceFromPricingService = "pm-26793-fetch-premium-price-from-pricing-service";
     public const string PM23341_Milestone_2 = "pm-23341-milestone-2";
+    public const string PM26462_Milestone_3 = "pm-26462-milestone-3";
 
     /* Key Management Team */
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
@@ -252,6 +252,7 @@ public static class FeatureFlagKeys
     public const string PM22136_SdkCipherEncryption = "pm-22136-sdk-cipher-encryption";
     public const string PM23904_RiskInsightsForPremium = "pm-23904-risk-insights-for-premium";
     public const string PM25083_AutofillConfirmFromSearch = "pm-25083-autofill-confirm-from-search";
+    public const string VaultLoadingSkeletons = "pm-25081-vault-skeleton-loaders";
 
     /* Innovation Team */
     public const string ArchiveVaultItems = "pm-19148-innovation-archive";
