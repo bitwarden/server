@@ -1,4 +1,6 @@
 ﻿using Bit.Core.Settings;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -7,12 +9,12 @@ using ZiggyCreatures.Caching.Fusion;
 
 namespace Bit.Core.Test.Utilities;
 
-public class FusionCoreServiceCollectionExtensionsTests
+public class ExtendedCacheServiceCollectionExtensionsTests
 {
     private readonly IServiceCollection _services;
     private readonly GlobalSettings _globalSettings;
 
-    public FusionCoreServiceCollectionExtensionsTests()
+    public ExtendedCacheServiceCollectionExtensionsTests()
     {
         _services = new ServiceCollection();
 
@@ -34,20 +36,20 @@ public class FusionCoreServiceCollectionExtensionsTests
     {
         var settings = CreateGlobalSettings(new Dictionary<string, string?>
         {
-            { "GlobalSettings:FusionCache:Duration", "00:12:00" },
-            { "GlobalSettings:FusionCache:FailSafeMaxDuration", "01:30:00" },
-            { "GlobalSettings:FusionCache:FailSafeThrottleDuration", "00:01:00" },
-            { "GlobalSettings:FusionCache:EagerRefreshThreshold", "0.75" },
-            { "GlobalSettings:FusionCache:FactorySoftTimeout", "00:00:00.020" },
-            { "GlobalSettings:FusionCache:FactoryHardTimeout", "00:00:03" },
-            { "GlobalSettings:FusionCache:DistributedCacheSoftTimeout", "00:00:00.500" },
-            { "GlobalSettings:FusionCache:DistributedCacheHardTimeout", "00:00:01.500" },
-            { "GlobalSettings:FusionCache:JitterMaxDuration", "00:00:05" },
-            { "GlobalSettings:FusionCache:IsFailSafeEnabled", "false" },
-            { "GlobalSettings:FusionCache:AllowBackgroundDistributedCacheOperations", "false" },
+            { "GlobalSettings:DistributedCache:Duration", "00:12:00" },
+            { "GlobalSettings:DistributedCache:FailSafeMaxDuration", "01:30:00" },
+            { "GlobalSettings:DistributedCache:FailSafeThrottleDuration", "00:01:00" },
+            { "GlobalSettings:DistributedCache:EagerRefreshThreshold", "0.75" },
+            { "GlobalSettings:DistributedCache:FactorySoftTimeout", "00:00:00.020" },
+            { "GlobalSettings:DistributedCache:FactoryHardTimeout", "00:00:03" },
+            { "GlobalSettings:DistributedCache:DistributedCacheSoftTimeout", "00:00:00.500" },
+            { "GlobalSettings:DistributedCache:DistributedCacheHardTimeout", "00:00:01.500" },
+            { "GlobalSettings:DistributedCache:JitterMaxDuration", "00:00:05" },
+            { "GlobalSettings:DistributedCache:IsFailSafeEnabled", "false" },
+            { "GlobalSettings:DistributedCache:AllowBackgroundDistributedCacheOperations", "false" },
         });
 
-        _services.TryAddFusionCacheServices(settings);
+        _services.TryAddExtendedCacheServices(settings);
         using var provider = _services.BuildServiceProvider();
         var fusionCache = provider.GetRequiredService<IFusionCache>();
         var options = fusionCache.DefaultEntryOptions;
@@ -68,7 +70,7 @@ public class FusionCoreServiceCollectionExtensionsTests
     [Fact]
     public void TryAddFusionCoreServices_DefaultSettings_ConfiguresExpectedValues()
     {
-        _services.TryAddFusionCacheServices(_globalSettings);
+        _services.TryAddExtendedCacheServices(_globalSettings);
         using var provider = _services.BuildServiceProvider();
 
         var fusionCache = provider.GetRequiredService<IFusionCache>();
@@ -90,12 +92,18 @@ public class FusionCoreServiceCollectionExtensionsTests
     [Fact]
     public void TryAddFusionCoreServices_MultipleCalls_OnlyConfiguresOnce()
     {
-        _services.TryAddFusionCacheServices(_globalSettings);
-        _services.TryAddFusionCacheServices(_globalSettings);
-        _services.TryAddFusionCacheServices(_globalSettings);
+        var settings = CreateGlobalSettings(new Dictionary<string, string?>
+        {
+            { "GlobalSettings:DistributedCache:Redis:ConnectionString", "localhost:6379" },
+        });
+        _services.TryAddExtendedCacheServices(settings);
+        _services.TryAddExtendedCacheServices(settings);
+        _services.TryAddExtendedCacheServices(settings);
 
         var registrations = _services.Where(s => s.ServiceType == typeof(IFusionCache)).ToList();
         Assert.Single(registrations);
+        var distributedRegistrations = _services.Where(s => s.ServiceType == typeof(IDistributedCache)).ToList();
+        Assert.Single(distributedRegistrations);
 
         using var provider = _services.BuildServiceProvider();
         var fusionCache = provider.GetRequiredService<IFusionCache>();
@@ -110,7 +118,24 @@ public class FusionCoreServiceCollectionExtensionsTests
             { "GlobalSettings:DistributedCache:Redis:ConnectionString", "localhost:6379" },
         });
 
-        _services.TryAddFusionCacheServices(settings);
+        _services.TryAddExtendedCacheServices(settings);
+        using var provider = _services.BuildServiceProvider();
+
+        var fusionCache = provider.GetRequiredService<IFusionCache>();
+        Assert.True(fusionCache.HasDistributedCache);
+        Assert.True(fusionCache.HasBackplane);
+    }
+
+    [Fact]
+    public void TryAddFusionCoreServices_WithExistingRedis_EnablesDistributedCacheAndBackplane()
+    {
+        var settings = CreateGlobalSettings(new Dictionary<string, string?>
+        {
+            { "GlobalSettings:DistributedCache:Redis:ConnectionString", "localhost:6379" },
+        });
+
+        _services.AddSingleton<IDistributedCache, RedisCache>();
+        _services.TryAddExtendedCacheServices(settings);
         using var provider = _services.BuildServiceProvider();
 
         var fusionCache = provider.GetRequiredService<IFusionCache>();
@@ -121,7 +146,7 @@ public class FusionCoreServiceCollectionExtensionsTests
     [Fact]
     public void TryAddFusionCoreServices_WithoutRedis_DisablesDistributedCacheAndBackplane()
     {
-        _services.TryAddFusionCacheServices(_globalSettings);
+        _services.TryAddExtendedCacheServices(_globalSettings);
         using var provider = _services.BuildServiceProvider();
 
         var fusionCache = provider.GetRequiredService<IFusionCache>();

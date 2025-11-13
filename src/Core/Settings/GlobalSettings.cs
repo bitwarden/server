@@ -68,7 +68,6 @@ public class GlobalSettings : IGlobalSettings
     public virtual IConnectionStringSettings Storage { get; set; } = new ConnectionStringSettings();
     public virtual ConnectionStringSettings Events { get; set; } = new ConnectionStringSettings();
     public virtual DistributedCacheSettings DistributedCache { get; set; } = new DistributedCacheSettings();
-    public virtual FusionCacheSettings FusionCache { get; set; } = new FusionCacheSettings();
     public virtual NotificationsSettings Notifications { get; set; } = new NotificationsSettings();
     public virtual IFileStorageSettings Attachment { get; set; }
     public virtual FileStorageSettings Send { get; set; }
@@ -784,20 +783,7 @@ public class GlobalSettings : IGlobalSettings
     {
         public virtual IConnectionStringSettings Redis { get; set; } = new ConnectionStringSettings();
         public virtual IConnectionStringSettings Cosmos { get; set; } = new ConnectionStringSettings();
-    }
 
-    public class WebPushSettings : IWebPushSettings
-    {
-        public string VapidPublicKey { get; set; }
-    }
-
-    public class Fido2Settings
-    {
-        public HashSet<string> Origins { get; set; }
-    }
-
-    public class FusionCacheSettings
-    {
         public TimeSpan Duration { get; set; } = TimeSpan.FromMinutes(30);
         public bool IsFailSafeEnabled { get; set; } = true;
         public TimeSpan FailSafeMaxDuration { get; set; } = TimeSpan.FromHours(2);
@@ -810,5 +796,15 @@ public class GlobalSettings : IGlobalSettings
         public bool AllowBackgroundDistributedCacheOperations { get; set; } = true;
         public TimeSpan JitterMaxDuration { get; set; } = TimeSpan.FromSeconds(2);
         public TimeSpan DistributedCacheCircuitBreakerDuration { get; set; } = TimeSpan.FromSeconds(30);
+    }
+
+    public class WebPushSettings : IWebPushSettings
+    {
+        public string VapidPublicKey { get; set; }
+    }
+
+    public class Fido2Settings
+    {
+        public HashSet<string> Origins { get; set; }
     }
 }
