@@ -2,11 +2,11 @@
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Services;
@@ -30,8 +30,8 @@ public interface IGetOrganizationWarningsQuery
 
 public class GetOrganizationWarningsQuery(
     ICurrentContext currentContext,
+    IHasPaymentMethodQuery hasPaymentMethodQuery,
     IProviderRepository providerRepository,
-    ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService) : IGetOrganizationWarningsQuery
 {
@@ -81,15 +81,7 @@ public class GetOrganizationWarningsQuery(
             return null;
         }
 
-        var customer = subscription.Customer;
-
-        var hasUnverifiedBankAccount = await HasUnverifiedBankAccountAsync(organization);
-
-        var hasPaymentMethod =
-            !string.IsNullOrEmpty(customer.InvoiceSettings.DefaultPaymentMethodId) ||
-            !string.IsNullOrEmpty(customer.DefaultSourceId) ||
-            hasUnverifiedBankAccount ||
-            customer.Metadata.ContainsKey(MetadataKeys.BraintreeCustomerId);
+        var hasPaymentMethod = await hasPaymentMethodQuery.Run(organization);
 
         if (hasPaymentMethod)
         {
@@ -170,17 +162,23 @@ public class GetOrganizationWarningsQuery(
         if (subscription is
             {
                 Status: SubscriptionStatus.Trialing or SubscriptionStatus.Active,
-                LatestInvoice: null or { Status: InvoiceStatus.Paid }
-            } && (subscription.CurrentPeriodEnd - now).TotalDays <= 14)
+                LatestInvoice: null or { Status: InvoiceStatus.Paid },
+                Items.Data.Count: > 0
+            })
         {
-            return new ResellerRenewalWarning
+            var currentPeriodEnd = subscription.GetCurrentPeriodEnd();
+
+            if (currentPeriodEnd != null && (currentPeriodEnd.Value - now).TotalDays <= 14)
             {
-                Type = "upcoming",
-                Upcoming = new ResellerRenewalWarning.UpcomingRenewal
+                return new ResellerRenewalWarning
                 {
-                    RenewalDate = subscription.CurrentPeriodEnd
-                }
-            };
+                    Type = "upcoming",
+                    Upcoming = new ResellerRenewalWarning.UpcomingRenewal
+                    {
+                        RenewalDate = currentPeriodEnd.Value
+                    }
+                };
+            }
         }
 
         if (subscription is
@@ -286,23 +284,5 @@ public class GetOrganizationWarningsQuery(
             not null when taxId.Verification.Status == TaxIdVerificationStatus.Unverified => new TaxIdWarning { Type = "tax_id_failed_verification" },
             _ => null
         };
-    }
-
-    private async Task<bool> HasUnverifiedBankAccountAsync(
-        Organization organization)
-    {
-        var setupIntentId = await setupIntentCache.GetSetupIntentIdForSubscriber(organization.Id);
-
-        if (string.IsNullOrEmpty(setupIntentId))
-        {
-            return false;
-        }
-
-        var setupIntent = await stripeAdapter.SetupIntentGet(setupIntentId, new SetupIntentGetOptions
-        {
-            Expand = ["payment_method"]
-        });
-
-        return setupIntent.IsUnverifiedBankAccount();
     }
 }

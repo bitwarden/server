@@ -15,8 +15,6 @@ using Dapper;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 
-#nullable enable
-
 namespace Bit.Infrastructure.Dapper.Repositories;
 
 public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IOrganizationUserRepository
@@ -671,5 +669,22 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
                     }))
             },
             commandType: CommandType.StoredProcedure);
+    }
+
+    public async Task<bool> ConfirmOrganizationUserAsync(OrganizationUser organizationUser)
+    {
+        await using var connection = new SqlConnection(_marsConnectionString);
+
+        var rowCount = await connection.ExecuteScalarAsync<int>(
+            $"[{Schema}].[OrganizationUser_ConfirmById]",
+            new
+            {
+                organizationUser.Id,
+                organizationUser.UserId,
+                RevisionDate = DateTime.UtcNow.Date,
+                Key = organizationUser.Key
+            });
+
+        return rowCount > 0;
     }
 }

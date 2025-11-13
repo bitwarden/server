@@ -2,6 +2,7 @@
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
   extends: ["github>bitwarden/renovate-config"], // Extends our default configuration for pinned dependencies
   enabledManagers: [
+    "cargo",
     "dockerfile",
     "docker-compose",
     "github-actions",
@@ -9,6 +10,11 @@
     "nuget",
   ],
   packageRules: [
+    {
+      groupName: "cargo minor",
+      matchManagers: ["cargo"],
+      matchUpdateTypes: ["minor"],
+    },
     {
       groupName: "dockerfile minor",
       matchManagers: ["dockerfile"],
@@ -34,6 +40,10 @@
       ],
       matchUpdateTypes: ["patch"],
       dependencyDashboardApproval: false,
+    },
+    {
+      matchSourceUrls: ["https://github.com/bitwarden/sdk-internal"],
+      groupName: "sdk-internal",
     },
     {
       matchManagers: ["dockerfile", "docker-compose"],

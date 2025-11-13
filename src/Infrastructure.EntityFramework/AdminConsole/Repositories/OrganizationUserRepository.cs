@@ -942,4 +942,25 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
         await dbContext.SaveChangesAsync();
     }
+
+    public async Task<bool> ConfirmOrganizationUserAsync(Core.Entities.OrganizationUser organizationUser)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        await using var dbContext = GetDatabaseContext(scope);
+
+        var result = await dbContext.OrganizationUsers
+            .Where(ou => ou.Id == organizationUser.Id && ou.Status == OrganizationUserStatusType.Accepted)
+            .ExecuteUpdateAsync(x => x
+                .SetProperty(y => y.Status, OrganizationUserStatusType.Confirmed)
+                .SetProperty(y => y.Key, organizationUser.Key));
+
+        if (result <= 0)
+        {
+            return false;
+        }
+
+        await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdAsync(organizationUser.Id);
+        return true;
+
+    }
 }

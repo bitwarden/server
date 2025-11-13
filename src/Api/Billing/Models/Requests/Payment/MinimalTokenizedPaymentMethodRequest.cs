@@ -1,5 +1,4 @@
-﻿#nullable enable
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using Bit.Api.Billing.Attributes;
 using Bit.Core.Billing.Payment.Models;
 
@@ -8,18 +7,15 @@ namespace Bit.Api.Billing.Models.Requests.Payment;
 public class MinimalTokenizedPaymentMethodRequest
 {
     [Required]
-    [PaymentMethodTypeValidation]
+    [TokenizedPaymentMethodTypeValidation]
     public required string Type { get; set; }
 
     [Required]
     public required string Token { get; set; }
 
-    public TokenizedPaymentMethod ToDomain()
+    public TokenizedPaymentMethod ToDomain() => new()
     {
-        return new TokenizedPaymentMethod
-        {
-            Type = TokenizablePaymentMethodTypeExtensions.From(Type),
-            Token = Token
-        };
-    }
+        Type = TokenizablePaymentMethodTypeExtensions.From(Type),
+        Token = Token
+    };
 }

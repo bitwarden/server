@@ -19,5 +19,6 @@ public static class Registrations
         services.AddTransient<IGetBillingAddressQuery, GetBillingAddressQuery>();
         services.AddTransient<IGetCreditQuery, GetCreditQuery>();
         services.AddTransient<IGetPaymentMethodQuery, GetPaymentMethodQuery>();
+        services.AddTransient<IHasPaymentMethodQuery, HasPaymentMethodQuery>();
     }
 }

@@ -6,9 +6,12 @@ using System.Reflection;
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using AspNetCoreRateLimit;
+using Azure.Messaging.ServiceBus;
+using Bit.Core;
 using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
+using Bit.Core.AdminConsole.Models.Teams;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.AdminConsole.Services.Implementations;
@@ -35,6 +38,9 @@ using Bit.Core.KeyManagement;
 using Bit.Core.NotificationCenter;
 using Bit.Core.OrganizationFeatures;
 using Bit.Core.Platform;
+using Bit.Core.Platform.Mail.Delivery;
+using Bit.Core.Platform.Mail.Enqueuing;
+using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Platform.Push;
 using Bit.Core.Platform.PushRegistration.Internal;
 using Bit.Core.Repositories;
@@ -43,6 +49,7 @@ using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.SecretsManager.Repositories.Noop;
 using Bit.Core.Services;
 using Bit.Core.Services.Implementations;
+using Bit.Core.Services.Mail;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Bit.Core.Tools.ImportFeatures;
@@ -67,6 +74,8 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Azure.Cosmos.Fluent;
+using Microsoft.Bot.Builder;
+using Microsoft.Bot.Builder.Integration.AspNet.Core;
 using Microsoft.Extensions.Caching.Cosmos;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
@@ -237,8 +246,11 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPaymentService, StripePaymentService>();
         services.AddScoped<IPaymentHistoryService, PaymentHistoryService>();
         services.AddScoped<ITwoFactorEmailService, TwoFactorEmailService>();
+        // Legacy mailer service
         services.AddSingleton<IStripeSyncService, StripeSyncService>();
         services.AddSingleton<IMailService, HandlebarsMailService>();
+        // Modern mailers
+        services.AddMailer();
         services.AddSingleton<ILicensingService, LicensingService>();
         services.AddSingleton<ILookupClient>(_ =>
         {
@@ -512,42 +524,33 @@ public static class ServiceCollectionExtensions
 
     public static IServiceCollection AddEventWriteServices(this IServiceCollection services, GlobalSettings globalSettings)
     {
-        if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Events.ConnectionString))
+        if (IsAzureServiceBusEnabled(globalSettings))
         {
-            services.TryAddKeyedSingleton<IEventWriteService, AzureQueueEventWriteService>("storage");
-
-            if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.ConnectionString) &&
-                CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.EventTopicName))
-            {
-                services.TryAddSingleton<IEventIntegrationPublisher, AzureServiceBusService>();
-                services.TryAddKeyedSingleton<IEventWriteService, EventIntegrationEventWriteService>("broadcast");
-            }
-            else
-            {
-                services.TryAddKeyedSingleton<IEventWriteService, NoopEventWriteService>("broadcast");
-            }
-        }
-        else if (globalSettings.SelfHosted)
-        {
-            services.TryAddKeyedSingleton<IEventWriteService, RepositoryEventWriteService>("storage");
-
-            if (IsRabbitMqEnabled(globalSettings))
-            {
-                services.TryAddSingleton<IEventIntegrationPublisher, RabbitMqService>();
-                services.TryAddKeyedSingleton<IEventWriteService, EventIntegrationEventWriteService>("broadcast");
-            }
-            else
-            {
-                services.TryAddKeyedSingleton<IEventWriteService, NoopEventWriteService>("broadcast");
-            }
-        }
-        else
-        {
-            services.TryAddKeyedSingleton<IEventWriteService, NoopEventWriteService>("storage");
-            services.TryAddKeyedSingleton<IEventWriteService, NoopEventWriteService>("broadcast");
+            services.TryAddSingleton<IEventIntegrationPublisher, AzureServiceBusService>();
+            services.TryAddSingleton<IEventWriteService, EventIntegrationEventWriteService>();
+            return services;
         }
 
-        services.TryAddScoped<IEventWriteService, EventRouteService>();
+        if (IsRabbitMqEnabled(globalSettings))
+        {
+            services.TryAddSingleton<IEventIntegrationPublisher, RabbitMqService>();
+            services.TryAddSingleton<IEventWriteService, EventIntegrationEventWriteService>();
+            return services;
+        }
+
+        if (CoreHelpers.SettingHasValue(globalSettings.Events.ConnectionString))
+        {
+            services.TryAddSingleton<IEventWriteService, AzureQueueEventWriteService>();
+            return services;
+        }
+
+        if (globalSettings.SelfHosted)
+        {
+            services.TryAddSingleton<IEventWriteService, RepositoryEventWriteService>();
+            return services;
+        }
+
+        services.TryAddSingleton<IEventWriteService, NoopEventWriteService>();
         return services;
     }
 
@@ -597,6 +600,33 @@ public static class ServiceCollectionExtensions
         else
         {
             services.TryAddSingleton<ISlackService, NoopSlackService>();
+        }
+
+        return services;
+    }
+
+    public static IServiceCollection AddTeamsService(this IServiceCollection services, GlobalSettings globalSettings)
+    {
+        if (CoreHelpers.SettingHasValue(globalSettings.Teams.ClientId) &&
+            CoreHelpers.SettingHasValue(globalSettings.Teams.ClientSecret) &&
+            CoreHelpers.SettingHasValue(globalSettings.Teams.Scopes))
+        {
+            services.AddHttpClient(TeamsService.HttpClientName);
+            services.TryAddSingleton<TeamsService>();
+            services.TryAddSingleton<IBot>(sp => sp.GetRequiredService<TeamsService>());
+            services.TryAddSingleton<ITeamsService>(sp => sp.GetRequiredService<TeamsService>());
+            services.TryAddSingleton<IBotFrameworkHttpAdapter>(sp =>
+                new BotFrameworkHttpAdapter(
+                    new TeamsBotCredentialProvider(
+                        clientId: globalSettings.Teams.ClientId,
+                        clientSecret: globalSettings.Teams.ClientSecret
+                    )
+                )
+            );
+        }
+        else
+        {
+            services.TryAddSingleton<ITeamsService, NoopTeamsService>();
         }
 
         return services;
@@ -694,8 +724,23 @@ public static class ServiceCollectionExtensions
         {
             options.ServerDomain = new Uri(globalSettings.BaseServiceUri.Vault).Host;
             options.ServerName = "Bitwarden";
-            options.Origins = new HashSet<string> { globalSettings.BaseServiceUri.Vault, };
             options.TimestampDriftTolerance = 300000;
+
+            if (globalSettings.Fido2?.Origins?.Any() == true)
+            {
+                options.Origins = new HashSet<string>(globalSettings.Fido2.Origins);
+            }
+            else
+            {
+                // Default to allowing the vault domain and chromium browser extension IDs
+                options.Origins = new HashSet<string> {
+                    globalSettings.BaseServiceUri.Vault,
+                    Constants.BrowserExtensions.ChromeId,
+                    Constants.BrowserExtensions.EdgeId,
+                    Constants.BrowserExtensions.OperaId
+                 };
+            }
+
         });
     }
 
@@ -855,6 +900,11 @@ public static class ServiceCollectionExtensions
                     configuration: listenerConfiguration,
                     handler: provider.GetRequiredKeyedService<IEventMessageHandler>(serviceKey: listenerConfiguration.RoutingKey),
                     serviceBusService: provider.GetRequiredService<IAzureServiceBusService>(),
+                    serviceBusOptions: new ServiceBusProcessorOptions()
+                    {
+                        PrefetchCount = listenerConfiguration.EventPrefetchCount,
+                        MaxConcurrentCalls = listenerConfiguration.EventMaxConcurrentCalls
+                    },
                     loggerFactory: provider.GetRequiredService<ILoggerFactory>()
                 )
             )
@@ -865,6 +915,11 @@ public static class ServiceCollectionExtensions
                     configuration: listenerConfiguration,
                     handler: provider.GetRequiredService<IIntegrationHandler<TConfig>>(),
                     serviceBusService: provider.GetRequiredService<IAzureServiceBusService>(),
+                    serviceBusOptions: new ServiceBusProcessorOptions()
+                    {
+                        PrefetchCount = listenerConfiguration.IntegrationPrefetchCount,
+                        MaxConcurrentCalls = listenerConfiguration.IntegrationMaxConcurrentCalls
+                    },
                     loggerFactory: provider.GetRequiredService<ILoggerFactory>()
                 )
             )
@@ -886,6 +941,7 @@ public static class ServiceCollectionExtensions
 
         // Add services in support of handlers
         services.AddSlackService(globalSettings);
+        services.AddTeamsService(globalSettings);
         services.TryAddSingleton(TimeProvider.System);
         services.AddHttpClient(WebhookIntegrationHandler.HttpClientName);
         services.AddHttpClient(DatadogIntegrationHandler.HttpClientName);
@@ -894,12 +950,14 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<IIntegrationHandler<SlackIntegrationConfigurationDetails>, SlackIntegrationHandler>();
         services.TryAddSingleton<IIntegrationHandler<WebhookIntegrationConfigurationDetails>, WebhookIntegrationHandler>();
         services.TryAddSingleton<IIntegrationHandler<DatadogIntegrationConfigurationDetails>, DatadogIntegrationHandler>();
+        services.TryAddSingleton<IIntegrationHandler<TeamsIntegrationConfigurationDetails>, TeamsIntegrationHandler>();
 
         var repositoryConfiguration = new RepositoryListenerConfiguration(globalSettings);
         var slackConfiguration = new SlackListenerConfiguration(globalSettings);
         var webhookConfiguration = new WebhookListenerConfiguration(globalSettings);
         var hecConfiguration = new HecListenerConfiguration(globalSettings);
         var datadogConfiguration = new DatadogListenerConfiguration(globalSettings);
+        var teamsConfiguration = new TeamsListenerConfiguration(globalSettings);
 
         if (IsRabbitMqEnabled(globalSettings))
         {
@@ -917,6 +975,7 @@ public static class ServiceCollectionExtensions
             services.AddRabbitMqIntegration<WebhookIntegrationConfigurationDetails, WebhookListenerConfiguration>(webhookConfiguration);
             services.AddRabbitMqIntegration<WebhookIntegrationConfigurationDetails, HecListenerConfiguration>(hecConfiguration);
             services.AddRabbitMqIntegration<DatadogIntegrationConfigurationDetails, DatadogListenerConfiguration>(datadogConfiguration);
+            services.AddRabbitMqIntegration<TeamsIntegrationConfigurationDetails, TeamsListenerConfiguration>(teamsConfiguration);
         }
 
         if (IsAzureServiceBusEnabled(globalSettings))
@@ -927,6 +986,11 @@ public static class ServiceCollectionExtensions
                         configuration: repositoryConfiguration,
                         handler: provider.GetRequiredService<AzureTableStorageEventHandler>(),
                         serviceBusService: provider.GetRequiredService<IAzureServiceBusService>(),
+                        serviceBusOptions: new ServiceBusProcessorOptions()
+                        {
+                            PrefetchCount = repositoryConfiguration.EventPrefetchCount,
+                            MaxConcurrentCalls = repositoryConfiguration.EventMaxConcurrentCalls
+                        },
                         loggerFactory: provider.GetRequiredService<ILoggerFactory>()
                     )
                 )
@@ -935,6 +999,7 @@ public static class ServiceCollectionExtensions
             services.AddAzureServiceBusIntegration<WebhookIntegrationConfigurationDetails, WebhookListenerConfiguration>(webhookConfiguration);
             services.AddAzureServiceBusIntegration<WebhookIntegrationConfigurationDetails, HecListenerConfiguration>(hecConfiguration);
             services.AddAzureServiceBusIntegration<DatadogIntegrationConfigurationDetails, DatadogListenerConfiguration>(datadogConfiguration);
+            services.AddAzureServiceBusIntegration<TeamsIntegrationConfigurationDetails, TeamsListenerConfiguration>(teamsConfiguration);
         }
 
         return services;
