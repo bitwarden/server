@@ -424,6 +424,8 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
+    // TODO: DO NOT move to IMailer implementation: PM-27852
+    [Obsolete("Use SendIndividualUserWelcomeEmailAsync instead")]
     public async Task SendWelcomeEmailAsync(User user)
     {
         var message = CreateDefaultMessage("Welcome to Bitwarden!", user.Email);
@@ -437,6 +439,7 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
+    // TODO: Move to IMailer implementation: PM-27852
     public async Task SendIndividualUserWelcomeEmailAsync(User user)
     {
         var message = CreateDefaultMessage("Welcome to Bitwarden!", user.Email);
@@ -450,6 +453,7 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
+    // TODO: Move to IMailer implementation: PM-27852
     public async Task SendOrganizationUserWelcomeEmailAsync(User user, string organizationName)
     {
         var message = CreateDefaultMessage("Welcome to Bitwarden!", user.Email);
@@ -464,6 +468,7 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
+    // TODO: Move to IMailer implementation: PM-27852
     public async Task SendFreeOrgOrFamilyOrgUserWelcomeEmailAsync(User user, string familyOrganizationName)
     {
         var message = CreateDefaultMessage("Welcome to Bitwarden!", user.Email);

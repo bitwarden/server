@@ -658,6 +658,7 @@ public class AccountController : Controller
             to fetch the Organization. The old method RegisterUser(User) here does not have that context, so we need
             to use a new method RegisterSSOAutoProvisionedUserAsync(User, Organization) to send the correct email.
             [PM-28057]: Prefer RegisterSSOAutoProvisionedUserAsync for SSO auto-provisioned users.
+            TODO: Remove Feature flag: PM-28221
         */
         if (_featureService.IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates))
         {

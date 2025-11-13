@@ -397,6 +397,7 @@ public class RegisterUserCommand : IRegisterUserCommand
     private async Task SendWelcomeEmailAsync(User user, Organization? organization = null)
     {
         // Check if feature is enabled
+        // TODO: Remove Feature flag: PM-28221
         if (!_featureService.IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates))
         {
             await _mailService.SendWelcomeEmailAsync(user);
