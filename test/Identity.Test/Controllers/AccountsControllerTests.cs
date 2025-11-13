@@ -75,7 +75,7 @@ public class AccountsControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task PostPrelogin_WhenUserExists_ShouldReturnUserKdfInfo()
+    public async Task PostPasswordPrelogin_WhenUserExists_ShouldReturnUserKdfInfo()
     {
         var userKdfInfo = new UserKdfInformation
         {
@@ -91,7 +91,39 @@ public class AccountsControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task PostPrelogin_WhenUserDoesNotExistAndNoDefaultKdfHmacKeySet_ShouldDefaultToPBKDF()
+    public async Task PostPasswordPrelogin_WhenUserExists_ReturnsNewFieldsAlignedWithLegacy_Argon2()
+    {
+        var email = "user@example.com";
+        var userKdfInfo = new UserKdfInformation
+        {
+            Kdf = KdfType.Argon2id,
+            KdfIterations = AuthConstants.ARGON2_ITERATIONS.Default,
+            KdfMemory = AuthConstants.ARGON2_MEMORY.Default,
+            KdfParallelism = AuthConstants.ARGON2_PARALLELISM.Default
+        };
+        _userRepository.GetKdfInformationByEmailAsync(Arg.Any<string>()).Returns(userKdfInfo);
+
+        var response = await _sut.PostPasswordPrelogin(new PasswordPreloginRequestModel { Email = email });
+
+        // New fields exist and match repository values
+        Assert.NotNull(response.KdfSettings);
+        Assert.Equal(userKdfInfo.Kdf, response.KdfSettings!.KdfType);
+        Assert.Equal(userKdfInfo.KdfIterations, response.KdfSettings!.Iterations);
+        Assert.Equal(userKdfInfo.KdfMemory, response.KdfSettings!.Memory);
+        Assert.Equal(userKdfInfo.KdfParallelism, response.KdfSettings!.Parallelism);
+
+        // New and legacy fields are aligned during migration
+        Assert.Equal(response.Kdf, response.KdfSettings!.KdfType);
+        Assert.Equal(response.KdfIterations, response.KdfSettings!.Iterations);
+        Assert.Equal(response.KdfMemory, response.KdfSettings!.Memory);
+        Assert.Equal(response.KdfParallelism, response.KdfSettings!.Parallelism);
+
+        // Salt is set to the input email during migration
+        Assert.Equal(email, response.Salt);
+    }
+
+    [Fact]
+    public async Task PostPasswordPrelogin_WhenUserDoesNotExistAndNoDefaultKdfHmacKeySet_ShouldDefaultToPBKDF()
     {
         SetDefaultKdfHmacKey(null);
         _userRepository.GetKdfInformationByEmailAsync(Arg.Any<string>()).Returns(Task.FromResult<UserKdfInformation?>(null));
@@ -102,12 +134,34 @@ public class AccountsControllerTests : IDisposable
         Assert.Equal(AuthConstants.PBKDF2_ITERATIONS.Default, response.KdfIterations);
     }
 
+    [Fact]
+    public async Task PostPasswordPrelogin_NoUser_NoDefaultHmacKey_ReturnsAlignedNewFieldsAndSalt()
+    {
+        var email = "user@example.com";
+        SetDefaultKdfHmacKey(null);
+        _userRepository.GetKdfInformationByEmailAsync(Arg.Any<string>()).Returns(Task.FromResult<UserKdfInformation?>(null));
+
+        var response = await _sut.PostPasswordPrelogin(new PasswordPreloginRequestModel { Email = email });
+
+        // New fields exist
+        Assert.NotNull(response.KdfSettings);
+
+        // New and legacy fields are aligned during migration
+        Assert.Equal(response.Kdf, response.KdfSettings!.KdfType);
+        Assert.Equal(response.KdfIterations, response.KdfSettings!.Iterations);
+        Assert.Equal(response.KdfMemory, response.KdfSettings!.Memory);
+        Assert.Equal(response.KdfParallelism, response.KdfSettings!.Parallelism);
+
+        // Salt is set to the input email during migration
+        Assert.Equal(email, response.Salt);
+    }
+
     [Theory]
     [BitAutoData]
-    public async Task PostPrelogin_WhenUserDoesNotExistAndDefaultKdfHmacKeyIsSet_ShouldComputeHmacAndReturnExpectedKdf(string email)
+    public async Task PostPasswordPrelogin_WhenUserDoesNotExistAndDefaultKdfHmacKeyIsSet_ShouldComputeHmacAndReturnExpectedKdf(string email)
     {
         // Arrange:
-        var defaultKey = Encoding.UTF8.GetBytes("my-secret-key");
+        var defaultKey = "my-secret-key"u8.ToArray();
         SetDefaultKdfHmacKey(defaultKey);
 
         _userRepository.GetKdfInformationByEmailAsync(Arg.Any<string>()).Returns(Task.FromResult<UserKdfInformation?>(null));
@@ -132,6 +186,16 @@ public class AccountsControllerTests : IDisposable
             Assert.Equal(expectedKdf.KdfMemory, response.KdfMemory);
             Assert.Equal(expectedKdf.KdfParallelism, response.KdfParallelism);
         }
+
+        // New and legacy fields are aligned during migration
+        Assert.NotNull(response.KdfSettings);
+        Assert.Equal(response.Kdf, response.KdfSettings!.KdfType);
+        Assert.Equal(response.KdfIterations, response.KdfSettings!.Iterations);
+        Assert.Equal(response.KdfMemory, response.KdfSettings!.Memory);
+        Assert.Equal(response.KdfParallelism, response.KdfSettings!.Parallelism);
+
+        // Salt is set to the input email during migration
+        Assert.Equal(email, response.Salt);
     }
 
     [Theory]
