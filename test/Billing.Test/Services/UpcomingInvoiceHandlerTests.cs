@@ -269,6 +269,7 @@ public class UpcomingInvoiceHandlerTests
             Arg.Is<SubscriptionUpdateOptions>(o =>
                 o.Items[0].Id == priceSubscriptionId &&
                 o.Items[0].Price == priceId &&
+                o.Discounts[0].Coupon == CouponIDs.Milestone2SubscriptionDiscount &&
                 o.ProrationBehavior == "none"));
 
         // Verify the updated invoice email was sent
