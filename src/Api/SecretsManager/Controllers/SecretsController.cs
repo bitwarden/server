@@ -177,9 +177,6 @@ public class SecretsController : Controller
             throw new NotFoundException();
         }
 
-        // Store the old value, so we can later use this to add a SecretVersion record
-        var oldValue = secret.Value;
-
         var updatedSecret = updateRequest.ToSecret(secret);
         var authorizationResult = await _authorizationService.AuthorizeAsync(User, updatedSecret, SecretOperations.Update);
         if (!authorizationResult.Succeeded)
@@ -203,6 +200,8 @@ public class SecretsController : Controller
         // Create a version record if the value changed
         if (updateRequest.ValueChanged)
         {
+            // Store the old value before updating
+            var oldValue = secret.Value;
             var userId = _userService.GetProperUserId(User)!.Value;
             Guid? editorServiceAccountId = null;
             Guid? editorOrganizationUserId = null;

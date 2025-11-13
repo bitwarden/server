@@ -5,6 +5,7 @@ using Bit.Core.Auth.Identity;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -19,17 +20,20 @@ public class SecretVersionsController : Controller
     private readonly ISecretVersionRepository _secretVersionRepository;
     private readonly ISecretRepository _secretRepository;
     private readonly IUserService _userService;
+    private readonly IOrganizationUserRepository _organizationUserRepository;
 
     public SecretVersionsController(
         ICurrentContext currentContext,
         ISecretVersionRepository secretVersionRepository,
         ISecretRepository secretRepository,
-        IUserService userService)
+        IUserService userService,
+        IOrganizationUserRepository organizationUserRepository)
     {
         _currentContext = currentContext;
         _secretVersionRepository = secretVersionRepository;
         _secretRepository = secretRepository;
         _userService = userService;
+        _organizationUserRepository = organizationUserRepository;
     }
 
     [HttpGet("secrets/{secretId}/versions")]
@@ -177,6 +181,11 @@ public class SecretVersionsController : Controller
     [HttpPut("secrets/{secretId}/versions/restore")]
     public async Task<SecretResponseModel> RestoreVersionAsync([FromRoute] Guid secretId, [FromBody] RestoreSecretVersionRequestModel request)
     {
+        if (!(_currentContext.IdentityClientType == IdentityClientType.User || _currentContext.IdentityClientType == IdentityClientType.ServiceAccount))
+        {
+            throw new NotFoundException();
+        }
+
         var secret = await _secretRepository.GetByIdAsync(secretId);
         if (secret == null || !_currentContext.AccessSecretsManager(secret.OrganizationId))
         {
@@ -190,10 +199,30 @@ public class SecretVersionsController : Controller
             throw new NotFoundException();
         }
 
+        // Store the current value before restoration
+        var currentValue = secret.Value;
+
         // For service accounts and organization API, skip user-level access checks
-        if (_currentContext.IdentityClientType == IdentityClientType.ServiceAccount ||
-            _currentContext.IdentityClientType == IdentityClientType.Organization)
+        if (_currentContext.IdentityClientType == IdentityClientType.ServiceAccount)
         {
+            // Save current value as a version before restoring
+            if (currentValue != version.Value)
+            {
+                var editorUserId = _userService.GetProperUserId(User);
+                if (editorUserId.HasValue)
+                {
+                    var currentVersionSnapshot = new Core.SecretsManager.Entities.SecretVersion
+                    {
+                        SecretId = secretId,
+                        Value = currentValue!,
+                        VersionDate = DateTime.UtcNow,
+                        EditorServiceAccountId = editorUserId.Value
+                    };
+
+                    await _secretVersionRepository.CreateAsync(currentVersionSnapshot);
+                }
+            }
+
             // Already verified Secrets Manager access above
             secret.Value = version.Value;
             secret.RevisionDate = DateTime.UtcNow;
@@ -214,6 +243,26 @@ public class SecretVersionsController : Controller
         if (!access.Write)
         {
             throw new NotFoundException();
+        }
+
+        // Save current value as a version before restoring
+        if (currentValue != version.Value)
+        {
+            var orgUser = await _organizationUserRepository.GetByOrganizationAsync(secret.OrganizationId, userId.Value);
+            if (orgUser == null)
+            {
+                throw new NotFoundException();
+            }
+
+            var currentVersionSnapshot = new Core.SecretsManager.Entities.SecretVersion
+            {
+                SecretId = secretId,
+                Value = currentValue!,
+                VersionDate = DateTime.UtcNow,
+                EditorOrganizationUserId = orgUser.Id
+            };
+
+            await _secretVersionRepository.CreateAsync(currentVersionSnapshot);
         }
 
         // Update the secret with the version's value
