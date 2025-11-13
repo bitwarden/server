@@ -197,8 +197,9 @@ public class AccountsController : Controller
 
     // Moved from API, If you modify this endpoint, please update API as well. Self hosted installs still use the API endpoints.
     [HttpPost("prelogin")]
-    [Obsolete("Migrating to use a more descriptive endpoint that would support different types of prelogins. This endpoint has no EOL at the time of writing.")]
-    public async Task<PasswordPreloginResponseModel> PostPasswordPrelogin_Old([FromBody] PasswordPreloginRequestModel model)
+    [Obsolete("Migrating to use a more descriptive endpoint that would support different types of prelogins. " +
+              "Use prelogin/password instead. This endpoint has no EOL at the time of writing.")]
+    public async Task<PasswordPreloginResponseModel> PostPrelogin([FromBody] PasswordPreloginRequestModel model)
     {
         return await MakePasswordPreloginCall(model);
     }
