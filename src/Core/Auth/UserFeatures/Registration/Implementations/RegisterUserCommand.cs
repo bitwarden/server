@@ -16,15 +16,19 @@ using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
 namespace Bit.Core.Auth.UserFeatures.Registration.Implementations;
 
 public class RegisterUserCommand : IRegisterUserCommand
 {
+    private readonly ILogger<RegisterUserCommand> _logger;
     private readonly IGlobalSettings _globalSettings;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IPolicyRepository _policyRepository;
+    private readonly IOrganizationDomainRepository _organizationDomainRepository;
+    private readonly IFeatureService _featureService;
 
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _registrationEmailVerificationTokenDataFactory;
@@ -41,9 +45,12 @@ public class RegisterUserCommand : IRegisterUserCommand
     private readonly string _disabledUserRegistrationExceptionMsg = "Open registration has been disabled by the system administrator.";
 
     public RegisterUserCommand(
+        ILogger<RegisterUserCommand> logger,
         IGlobalSettings globalSettings,
         IOrganizationUserRepository organizationUserRepository,
         IPolicyRepository policyRepository,
+        IOrganizationDomainRepository organizationDomainRepository,
+        IFeatureService featureService,
         IDataProtectionProvider dataProtectionProvider,
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
         IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> registrationEmailVerificationTokenDataFactory,
@@ -53,9 +60,12 @@ public class RegisterUserCommand : IRegisterUserCommand
         IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> emergencyAccessInviteTokenDataFactory
         )
     {
+        _logger = logger;
         _globalSettings = globalSettings;
         _organizationUserRepository = organizationUserRepository;
         _policyRepository = policyRepository;
+        _organizationDomainRepository = organizationDomainRepository;
+        _featureService = featureService;
 
         _organizationServiceDataProtector = dataProtectionProvider.CreateProtector(
             "OrganizationServiceDataProtector");
@@ -74,6 +84,8 @@ public class RegisterUserCommand : IRegisterUserCommand
 
     public async Task<IdentityResult> RegisterUser(User user)
     {
+        await ValidateEmailDomainNotBlockedAsync(user.Email);
+
         var result = await _userService.CreateUserAsync(user);
         if (result == IdentityResult.Success)
         {
@@ -87,6 +99,20 @@ public class RegisterUserCommand : IRegisterUserCommand
         string orgInviteToken, Guid? orgUserId)
     {
         ValidateOrgInviteToken(orgInviteToken, orgUserId, user);
+
+        // Get the organization ID if we have an orgUserId, so we can exclude it from domain blocking
+        Guid? organizationId = null;
+        if (orgUserId.HasValue)
+        {
+            var orgUser = await _organizationUserRepository.GetByIdAsync(orgUserId.Value);
+            if (orgUser == null)
+            {
+                throw new BadRequestException("Invalid organization user invitation.");
+            }
+            organizationId = orgUser.OrganizationId;
+        }
+
+        await ValidateEmailDomainNotBlockedAsync(user.Email, organizationId);
         await SetUserEmail2FaIfOrgPolicyEnabledAsync(orgUserId, user);
 
         user.ApiKey = CoreHelpers.SecureRandomString(30);
@@ -235,6 +261,7 @@ public class RegisterUserCommand : IRegisterUserCommand
     {
 
         ValidateOpenRegistrationAllowed();
+        await ValidateEmailDomainNotBlockedAsync(user.Email);
 
         var tokenable = ValidateRegistrationEmailVerificationTokenable(emailVerificationToken, user.Email);
 
@@ -255,6 +282,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         string orgSponsoredFreeFamilyPlanInviteToken)
     {
         ValidateOpenRegistrationAllowed();
+        await ValidateEmailDomainNotBlockedAsync(user.Email);
         await ValidateOrgSponsoredFreeFamilyPlanInviteToken(orgSponsoredFreeFamilyPlanInviteToken, user.Email);
 
         user.EmailVerified = true;
@@ -275,6 +303,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         string acceptEmergencyAccessInviteToken, Guid acceptEmergencyAccessId)
     {
         ValidateOpenRegistrationAllowed();
+        await ValidateEmailDomainNotBlockedAsync(user.Email);
         ValidateAcceptEmergencyAccessInviteToken(acceptEmergencyAccessInviteToken, acceptEmergencyAccessId, user.Email);
 
         user.EmailVerified = true;
@@ -293,6 +322,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         string providerInviteToken, Guid providerUserId)
     {
         ValidateOpenRegistrationAllowed();
+        await ValidateEmailDomainNotBlockedAsync(user.Email);
         ValidateProviderInviteToken(providerInviteToken, providerUserId, user.Email);
 
         user.EmailVerified = true;
@@ -356,5 +386,27 @@ public class RegisterUserCommand : IRegisterUserCommand
         }
 
         return tokenable;
+    }
+
+    private async Task ValidateEmailDomainNotBlockedAsync(string email, Guid? excludeOrganizationId = null)
+    {
+        // Only check if feature flag is enabled
+        if (!_featureService.IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation))
+        {
+            return;
+        }
+
+        var emailDomain = EmailValidation.GetDomain(email);
+
+        var isDomainBlocked = await _organizationDomainRepository.HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(
+            emailDomain, excludeOrganizationId);
+        if (isDomainBlocked)
+        {
+            _logger.LogInformation(
+                "User registration blocked by domain claim policy. Domain: {Domain}, ExcludedOrgId: {ExcludedOrgId}",
+                emailDomain,
+                excludeOrganizationId);
+            throw new BadRequestException("This email address is claimed by an organization using Bitwarden.");
+        }
     }
 }
