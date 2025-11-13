@@ -643,9 +643,21 @@ public class StripePaymentService : IPaymentService
         var subscription = await _stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId,
             new SubscriptionGetOptions { Expand = ["customer.discount.coupon.applies_to", "discounts.coupon.applies_to", "test_clock"] });
 
+        if (subscription == null)
+        {
+            return subscriptionInfo;
+        }
+
         subscriptionInfo.Subscription = new SubscriptionInfo.BillingSubscription(subscription);
 
-        var discount = subscription.Customer.Discount ?? subscription.Discounts.FirstOrDefault();
+        // Discount selection priority:
+        // 1. Customer-level discount (applies to all subscriptions for the customer)
+        // 2. First subscription-level discount (if multiple exist, FirstOrDefault() selects the first one)
+        // Note: When multiple subscription-level discounts exist, only the first one is used.
+        // This matches Stripe's behavior where the first discount in the list is applied.
+        // Defensive null checks: Even though we expand "customer" and "discounts", external APIs
+        // may not always return the expected data structure, so we use null-safe operators.
+        var discount = subscription.Customer?.Discount ?? subscription.Discounts?.FirstOrDefault();
 
         if (discount != null)
         {
