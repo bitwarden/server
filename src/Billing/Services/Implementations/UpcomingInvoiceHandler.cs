@@ -220,7 +220,8 @@ public class UpcomingInvoiceHandler(
                 [
                     new SubscriptionItemOptions
                     {
-                        Id = passwordManagerItem.Id, Price = families.PasswordManager.StripePlanId
+                        Id = passwordManagerItem.Id,
+                        Price = families.PasswordManager.StripePlanId
                     }
                 ],
                 Discounts =
