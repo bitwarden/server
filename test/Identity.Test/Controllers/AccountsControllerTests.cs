@@ -84,7 +84,7 @@ public class AccountsControllerTests : IDisposable
         };
         _userRepository.GetKdfInformationByEmailAsync(Arg.Any<string>()).Returns(userKdfInfo);
 
-        var response = await _sut.PostPrelogin(new PreloginRequestModel { Email = "user@example.com" });
+        var response = await _sut.PostPasswordPrelogin(new PasswordPreloginRequestModel { Email = "user@example.com" });
 
         Assert.Equal(userKdfInfo.Kdf, response.Kdf);
         Assert.Equal(userKdfInfo.KdfIterations, response.KdfIterations);
@@ -96,7 +96,7 @@ public class AccountsControllerTests : IDisposable
         SetDefaultKdfHmacKey(null);
         _userRepository.GetKdfInformationByEmailAsync(Arg.Any<string>()).Returns(Task.FromResult<UserKdfInformation?>(null));
 
-        var response = await _sut.PostPrelogin(new PreloginRequestModel { Email = "user@example.com" });
+        var response = await _sut.PostPasswordPrelogin(new PasswordPreloginRequestModel { Email = "user@example.com" });
 
         Assert.Equal(KdfType.PBKDF2_SHA256, response.Kdf);
         Assert.Equal(AuthConstants.PBKDF2_ITERATIONS.Default, response.KdfIterations);
@@ -122,7 +122,7 @@ public class AccountsControllerTests : IDisposable
         var expectedKdf = defaultKdfResults[expectedIndex];
 
         // Act
-        var response = await _sut.PostPrelogin(new PreloginRequestModel { Email = email });
+        var response = await _sut.PostPasswordPrelogin(new PasswordPreloginRequestModel { Email = email });
 
         // Assert: Ensure the returned KDF matches the expected one from the computed hash
         Assert.Equal(expectedKdf.Kdf, response.Kdf);

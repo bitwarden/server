@@ -197,14 +197,15 @@ public class AccountsController : Controller
 
     // Moved from API, If you modify this endpoint, please update API as well. Self hosted installs still use the API endpoints.
     [HttpPost("prelogin")]
-    public async Task<PreloginResponseModel> PostPrelogin([FromBody] PreloginRequestModel model)
+    [HttpPost("prelogin/password")]
+    public async Task<PasswordPreloginResponseModel> PostPasswordPrelogin([FromBody] PasswordPreloginRequestModel model)
     {
         var kdfInformation = await _userRepository.GetKdfInformationByEmailAsync(model.Email);
         if (kdfInformation == null)
         {
             kdfInformation = GetDefaultKdf(model.Email);
         }
-        return new PreloginResponseModel(kdfInformation);
+        return new PasswordPreloginResponseModel(kdfInformation, model.Email);
     }
 
     [HttpGet("webauthn/assertion-options")]
@@ -228,19 +229,17 @@ public class AccountsController : Controller
         {
             return _defaultKdfResults[0];
         }
-        else
-        {
-            // Compute the HMAC hash of the email
-            var hmacMessage = Encoding.UTF8.GetBytes(email.Trim().ToLowerInvariant());
-            using var hmac = new System.Security.Cryptography.HMACSHA256(_defaultKdfHmacKey);
-            var hmacHash = hmac.ComputeHash(hmacMessage);
-            // Convert the hash to a number
-            var hashHex = BitConverter.ToString(hmacHash).Replace("-", string.Empty).ToLowerInvariant();
-            var hashFirst8Bytes = hashHex.Substring(0, 16);
-            var hashNumber = long.Parse(hashFirst8Bytes, System.Globalization.NumberStyles.HexNumber);
-            // Find the default KDF value for this hash number
-            var hashIndex = (int)(Math.Abs(hashNumber) % _defaultKdfResults.Count);
-            return _defaultKdfResults[hashIndex];
-        }
+
+        // Compute the HMAC hash of the email
+        var hmacMessage = Encoding.UTF8.GetBytes(email.Trim().ToLowerInvariant());
+        using var hmac = new System.Security.Cryptography.HMACSHA256(_defaultKdfHmacKey);
+        var hmacHash = hmac.ComputeHash(hmacMessage);
+        // Convert the hash to a number
+        var hashHex = BitConverter.ToString(hmacHash).Replace("-", string.Empty).ToLowerInvariant();
+        var hashFirst8Bytes = hashHex.Substring(0, 16);
+        var hashNumber = long.Parse(hashFirst8Bytes, System.Globalization.NumberStyles.HexNumber);
+        // Find the default KDF value for this hash number
+        var hashIndex = (int)(Math.Abs(hashNumber) % _defaultKdfResults.Count);
+        return _defaultKdfResults[hashIndex];
     }
 }
