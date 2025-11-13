@@ -2,6 +2,13 @@
 
 namespace Bit.SeederApi.Services;
 
+/// <summary>
+/// Service for executing query operations.
+/// </summary>
+/// <remarks>
+/// The query service provides a mechanism to execute read-only query operations by name with optional JSON arguments.
+/// Queries retrieve existing data from the system without modifying state or tracking entities.
+/// </remarks>
 public interface IQueryService
 {
     /// <summary>

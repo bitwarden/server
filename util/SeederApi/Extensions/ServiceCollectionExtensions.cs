@@ -7,7 +7,7 @@ namespace Bit.SeederApi.Extensions;
 public static class ServiceCollectionExtensions
 {
     /// <summary>
-    /// Dynamically registers all scene types that implement IScene<TRequest> from the Seeder assembly.
+    /// Dynamically registers all scene types that implement IScene&lt;TRequest&gt; from the Seeder assembly.
     /// Scenes are registered as keyed scoped services using their class name as the key.
     /// </summary>
     public static IServiceCollection AddScenes(this IServiceCollection services)
@@ -32,7 +32,7 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Dynamically registers all query types that implement IQuery<TRequest> from the Seeder assembly.
+    /// Dynamically registers all query types that implement IQuery&lt;TRequest&gt; from the Seeder assembly.
     /// Queries are registered as keyed scoped services using their class name as the key.
     /// </summary>
     public static IServiceCollection AddQueries(this IServiceCollection services)

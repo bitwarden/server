@@ -1,4 +1,4 @@
-﻿using Bit.SeederApi.Models.Requests;
+﻿using Bit.SeederApi.Models.Request;
 using Bit.SeederApi.Models.Response;
 using Bit.SeederApi.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -6,18 +6,20 @@ using Microsoft.AspNetCore.Mvc;
 namespace Bit.SeederApi.Controllers;
 
 [Route("seed")]
-public class SeedController(ILogger<SeedController> logger, ISceneService sceneService, IServiceProvider serviceProvider)
-    : Controller
+public class SeedController(
+    ILogger<SeedController> logger,
+    ISceneService sceneService,
+    IServiceProvider serviceProvider) : Controller
 {
     [HttpPost]
-    public async Task<IActionResult> Seed([FromBody] SeedRequestModel request)
+    public async Task<IActionResult> SeedAsync([FromBody] SeedRequestModel request)
     {
         logger.LogInformation("Received seed request {Provider}", serviceProvider.GetType().FullName);
         logger.LogInformation("Seeding with template: {Template}", request.Template);
 
         try
         {
-            SceneResponseModel response = await sceneService.ExecuteScene(request.Template, request.Arguments);
+            var response = await sceneService.ExecuteScene(request.Template, request.Arguments);
 
             return Json(response);
         }
@@ -28,16 +30,12 @@ public class SeedController(ILogger<SeedController> logger, ISceneService sceneS
         catch (SceneExecutionException ex)
         {
             logger.LogError(ex, "Error executing scene: {Template}", request.Template);
-            return BadRequest(new
-            {
-                Error = ex.Message,
-                Details = ex.InnerException?.Message
-            });
+            return BadRequest(new { Error = ex.Message, Details = ex.InnerException?.Message });
         }
     }
 
     [HttpDelete("batch")]
-    public async Task<IActionResult> DeleteBatch([FromBody] List<string> playIds)
+    public async Task<IActionResult> DeleteBatchAsync([FromBody] List<string> playIds)
     {
         logger.LogInformation("Deleting batch of seeded data with IDs: {PlayIds}", string.Join(", ", playIds));
 
@@ -67,14 +65,12 @@ public class SeedController(ILogger<SeedController> logger, ISceneService sceneS
                 Details = aggregateException.InnerExceptions.Select(e => e.Message).ToList()
             });
         }
-        return Ok(new
-        {
-            Message = "Batch delete completed successfully"
-        });
+
+        return Ok(new { Message = "Batch delete completed successfully" });
     }
 
     [HttpDelete("{playId}")]
-    public async Task<IActionResult> Delete([FromRoute] string playId)
+    public async Task<IActionResult> DeleteAsync([FromRoute] string playId)
     {
         logger.LogInformation("Deleting seeded data with ID: {PlayId}", playId);
 
@@ -87,17 +83,13 @@ public class SeedController(ILogger<SeedController> logger, ISceneService sceneS
         catch (SceneExecutionException ex)
         {
             logger.LogError(ex, "Error deleting seeded data: {PlayId}", playId);
-            return BadRequest(new
-            {
-                Error = ex.Message,
-                Details = ex.InnerException?.Message
-            });
+            return BadRequest(new { Error = ex.Message, Details = ex.InnerException?.Message });
         }
     }
 
 
     [HttpDelete]
-    public async Task<IActionResult> DeleteAll()
+    public async Task<IActionResult> DeleteAllAsync()
     {
         logger.LogInformation("Deleting all seeded data");
 
@@ -128,6 +120,7 @@ public class SeedController(ILogger<SeedController> logger, ISceneService sceneS
                 Details = aggregateException.InnerExceptions.Select(e => e.Message).ToList()
             });
         }
+
         return NoContent();
     }
 }

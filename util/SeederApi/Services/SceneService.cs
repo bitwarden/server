@@ -35,67 +35,6 @@ public class SceneService(
         return SceneResponseModel.FromSceneResult(result);
     }
 
-    public object ExecuteQuery(string queryName, JsonElement? arguments)
-    {
-        try
-        {
-            var query = serviceProvider.GetKeyedService<IQuery>(queryName)
-                ?? throw new SceneNotFoundException(queryName);
-
-            var requestType = query.GetRequestType();
-
-            // Deserialize the arguments into the request model
-            object? requestModel;
-            if (arguments == null)
-            {
-                // Try to create an instance with default values
-                try
-                {
-                    requestModel = Activator.CreateInstance(requestType);
-                    if (requestModel == null)
-                    {
-                        throw new SceneExecutionException(
-                            $"Arguments are required for query '{queryName}'");
-                    }
-                }
-                catch
-                {
-                    throw new SceneExecutionException(
-                        $"Arguments are required for query '{queryName}'");
-                }
-            }
-            else
-            {
-                try
-                {
-                    requestModel = JsonSerializer.Deserialize(arguments.Value.GetRawText(), requestType, _jsonOptions);
-                    if (requestModel == null)
-                    {
-                        throw new SceneExecutionException(
-                            $"Failed to deserialize request model for query '{queryName}'");
-                    }
-                }
-                catch (JsonException ex)
-                {
-                    throw new SceneExecutionException(
-                        $"Failed to deserialize request model for query '{queryName}': {ex.Message}", ex);
-                }
-            }
-
-            var result = query.Execute(requestModel);
-
-            logger.LogInformation("Successfully executed query: {QueryName}", queryName);
-            return result;
-        }
-        catch (Exception ex) when (ex is not SceneNotFoundException and not SceneExecutionException)
-        {
-            logger.LogError(ex, "Unexpected error executing query: {QueryName}", queryName);
-            throw new SceneExecutionException(
-                $"An unexpected error occurred while executing query '{queryName}'",
-                ex.InnerException ?? ex);
-        }
-    }
-
     public async Task<object?> DestroyScene(string playId)
     {
         // Note, delete cascade will remove PlayData entries

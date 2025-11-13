@@ -41,6 +41,3 @@ app.UseRouting();
 app.MapControllerRoute(name: "default", pattern: "{controller=Seed}/{action=Index}/{id?}");
 
 app.Run();
-
-// Make Program class accessible for integration tests
-public partial class Program { }

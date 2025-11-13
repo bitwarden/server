@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 
-namespace Bit.SeederApi.Models.Requests;
+namespace Bit.SeederApi.Models.Request;
 
 public class SeedRequestModel
 {

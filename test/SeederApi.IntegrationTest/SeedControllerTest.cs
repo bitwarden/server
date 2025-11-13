@@ -1,5 +1,5 @@
 ﻿using System.Net;
-using Bit.SeederApi.Models.Requests;
+using Bit.SeederApi.Models.Request;
 using Bit.SeederApi.Models.Response;
 using Xunit;
 

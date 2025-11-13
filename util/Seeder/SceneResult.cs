@@ -1,33 +1,19 @@
 ﻿namespace Bit.Seeder;
 
-public class SceneResult : SceneResult<object?>
-{
-    public SceneResult(Dictionary<string, string?> mangleMap)
-        : base(result: null, mangleMap: mangleMap) { }
-}
+public class SceneResult(Dictionary<string, string?> mangleMap)
+    : SceneResult<object?>(result: null, mangleMap: mangleMap);
 
-public class SceneResult<TResult>
+public class SceneResult<TResult>(TResult result, Dictionary<string, string?> mangleMap)
 {
-    public TResult Result { get; init; }
-    public Dictionary<string, string?> MangleMap { get; init; }
-
-    public SceneResult(TResult result, Dictionary<string, string?> mangleMap)
-    {
-        Result = result;
-        MangleMap = mangleMap;
-    }
+    public TResult Result { get; init; } = result;
+    public Dictionary<string, string?> MangleMap { get; init; } = mangleMap;
 
     public static explicit operator SceneResult<object?>(SceneResult<TResult> v)
     {
         var result = v.Result;
 
-        if (result is null)
-        {
-            return new SceneResult<object?>(result: null, mangleMap: v.MangleMap);
-        }
-        else
-        {
-            return new SceneResult<object?>(result: result, mangleMap: v.MangleMap);
-        }
+        return result is null
+            ? new SceneResult<object?>(result: null, mangleMap: v.MangleMap)
+            : new SceneResult<object?>(result: result, mangleMap: v.MangleMap);
     }
 }
