@@ -23,6 +23,7 @@ public static class StripeConstants
         public const string LegacyMSPDiscount = "msp-discount-35";
         public const string SecretsManagerStandalone = "sm-standalone";
         public const string Milestone2SubscriptionDiscount = "milestone-2c";
+        public const string Milestone3SubscriptionDiscount = "milestone-3";
 
         public static class MSPDiscounts
         {
