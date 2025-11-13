@@ -104,6 +104,14 @@ public record PlanAdapter : Core.Models.StaticStore.Plan
         var additionalStoragePricePerGb = plan.Storage?.Price ?? 0;
         var stripeStoragePlanId = plan.Storage?.StripePriceId;
         short? maxCollections = plan.AdditionalData.TryGetValue("passwordManager.maxCollections", out var value) ? short.Parse(value) : null;
+        var stripePremiumAccessPlanId =
+            plan.AdditionalData.TryGetValue("premiumAccessAddOnPriceId", out var premiumAccessAddOnPriceIdValue)
+                ? premiumAccessAddOnPriceIdValue
+                : null;
+        var premiumAccessOptionPrice =
+            plan.AdditionalData.TryGetValue("premiumAccessAddOnPriceAmount", out var premiumAccessAddOnPriceAmountValue)
+                ? decimal.Parse(premiumAccessAddOnPriceAmountValue)
+                : 0;
 
         return new PasswordManagerPlanFeatures
         {
@@ -121,7 +129,9 @@ public record PlanAdapter : Core.Models.StaticStore.Plan
             HasAdditionalStorageOption = hasAdditionalStorageOption,
             AdditionalStoragePricePerGb = additionalStoragePricePerGb,
             StripeStoragePlanId = stripeStoragePlanId,
-            MaxCollections = maxCollections
+            MaxCollections = maxCollections,
+            StripePremiumAccessPlanId = stripePremiumAccessPlanId,
+            PremiumAccessOptionPrice = premiumAccessOptionPrice
         };
     }
 
