@@ -38,4 +38,5 @@ public interface ICipherService
     Task<AttachmentResponseData> GetAttachmentDownloadDataAsync(Cipher cipher, string attachmentId);
     Task<bool> ValidateCipherAttachmentFile(Cipher cipher, CipherAttachment.MetaData attachmentData);
     Task ValidateBulkCollectionAssignmentAsync(IEnumerable<Guid> collectionIds, IEnumerable<Guid> cipherIds, Guid userId);
+    Task<CipherDetails> RestoreFromHistoryAsync(CipherDetails cipher, CipherHistory history, Guid restoringUserId);
 }

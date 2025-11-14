@@ -41,6 +41,7 @@ public class DatabaseContext : DbContext
     public DbSet<ApiKey> ApiKeys { get; set; }
     public DbSet<Cache> Cache { get; set; }
     public DbSet<Cipher> Ciphers { get; set; }
+    public DbSet<CipherHistory> CipherHistories { get; set; }
     public DbSet<Collection> Collections { get; set; }
     public DbSet<CollectionCipher> CollectionCiphers { get; set; }
     public DbSet<CollectionGroup> CollectionGroups { get; set; }
@@ -100,6 +101,7 @@ public class DatabaseContext : DbContext
         // Going forward use `IEntityTypeConfiguration` in the Configurations folder for managing
         // Entity Framework code first database configurations.
         var eCipher = builder.Entity<Cipher>();
+        var eCipherHistory = builder.Entity<CipherHistory>();
         var eCollection = builder.Entity<Collection>();
         var eCollectionCipher = builder.Entity<CollectionCipher>();
         var eCollectionUser = builder.Entity<CollectionUser>();
@@ -124,6 +126,7 @@ public class DatabaseContext : DbContext
         // Shadow property configurations go here
 
         eCipher.Property(c => c.Id).ValueGeneratedNever();
+        eCipherHistory.Property(c => c.Id).ValueGeneratedNever();
         eCollection.Property(c => c.Id).ValueGeneratedNever();
         eEmergencyAccess.Property(c => c.Id).ValueGeneratedNever();
         eFolder.Property(c => c.Id).ValueGeneratedNever();
@@ -162,6 +165,7 @@ public class DatabaseContext : DbContext
         }
 
         eCipher.ToTable(nameof(Cipher));
+        eCipherHistory.ToTable(nameof(CipherHistory));
         eCollection.ToTable(nameof(Collection));
         eCollectionCipher.ToTable(nameof(CollectionCipher));
         eEmergencyAccess.ToTable(nameof(EmergencyAccess));
