@@ -79,6 +79,34 @@ public class SceneService(
         return new { PlayId = playId };
     }
 
+    public async Task DestroyScenes(IEnumerable<string> playIds)
+    {
+        var exceptions = new List<Exception>();
+
+        var deleteTasks = playIds.Select(async playId =>
+        {
+            try
+            {
+                await DestroyScene(playId);
+            }
+            catch (Exception ex)
+            {
+                lock (exceptions)
+                {
+                    exceptions.Add(ex);
+                }
+                logger.LogError(ex, "Error deleting seeded data: {PlayId}", playId);
+            }
+        });
+
+        await Task.WhenAll(deleteTasks);
+
+        if (exceptions.Count > 0)
+        {
+            throw new AggregateException("One or more errors occurred while deleting seeded data", exceptions);
+        }
+    }
+
     private async Task<SceneResult<object?>> ExecuteSceneMethod(string templateName, JsonElement? arguments, string methodName)
     {
         try

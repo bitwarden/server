@@ -6,16 +6,12 @@ using Microsoft.AspNetCore.Mvc;
 namespace Bit.SeederApi.Controllers;
 
 [Route("seed")]
-public class SeedController(
-    ILogger<SeedController> logger,
-    ISceneService sceneService,
-    IServiceProvider serviceProvider) : Controller
+public class SeedController(ILogger<SeedController> logger, ISceneService sceneService) : Controller
 {
     [HttpPost]
     public async Task<IActionResult> SeedAsync([FromBody] SeedRequestModel request)
     {
-        logger.LogInformation("Received seed request {Provider}", serviceProvider.GetType().FullName);
-        logger.LogInformation("Seeding with template: {Template}", request.Template);
+        logger.LogInformation("Received seed request with template: {Template}", request.Template);
 
         try
         {
@@ -39,34 +35,19 @@ public class SeedController(
     {
         logger.LogInformation("Deleting batch of seeded data with IDs: {PlayIds}", string.Join(", ", playIds));
 
-        var aggregateException = new AggregateException();
-
-        await Task.Run(async () =>
+        try
         {
-            foreach (var playId in playIds)
-            {
-                try
-                {
-                    await sceneService.DestroyScene(playId);
-                }
-                catch (Exception ex)
-                {
-                    aggregateException = new AggregateException(aggregateException, ex);
-                    logger.LogError(ex, "Error deleting seeded data: {SeedId}", playId);
-                }
-            }
-        });
-
-        if (aggregateException.InnerExceptions.Count > 0)
+            await sceneService.DestroyScenes(playIds);
+            return Ok(new { Message = "Batch delete completed successfully" });
+        }
+        catch (AggregateException ex)
         {
             return BadRequest(new
             {
-                Error = "One or more errors occurred while deleting seeded data",
-                Details = aggregateException.InnerExceptions.Select(e => e.Message).ToList()
+                Error = ex.Message,
+                Details = ex.InnerExceptions.Select(e => e.Message).ToList()
             });
         }
-
-        return Ok(new { Message = "Batch delete completed successfully" });
     }
 
     [HttpDelete("{playId}")]
@@ -93,34 +74,20 @@ public class SeedController(
     {
         logger.LogInformation("Deleting all seeded data");
 
-        // Pull all Seeded Data ids
-
         var playIds = sceneService.GetAllPlayIds();
 
-        var aggregateException = new AggregateException();
-
-        foreach (var playId in playIds)
+        try
         {
-            try
-            {
-                await sceneService.DestroyScene(playId);
-            }
-            catch (Exception ex)
-            {
-                aggregateException = new AggregateException(aggregateException, ex);
-                logger.LogError(ex, "Error deleting seeded data: {PlayId}", playId);
-            }
+            await sceneService.DestroyScenes(playIds);
+            return NoContent();
         }
-
-        if (aggregateException.InnerExceptions.Count > 0)
+        catch (AggregateException ex)
         {
             return BadRequest(new
             {
-                Error = "One or more errors occurred while deleting seeded data",
-                Details = aggregateException.InnerExceptions.Select(e => e.Message).ToList()
+                Error = ex.Message,
+                Details = ex.InnerExceptions.Select(e => e.Message).ToList()
             });
         }
-
-        return NoContent();
     }
 }

@@ -36,4 +36,11 @@ public interface ISceneService
     /// </summary>
     /// <returns>A list of play IDs representing active seeded data that can be destroyed.</returns>
     List<string> GetAllPlayIds();
+
+    /// <summary>
+    /// Destroys multiple scenes by their play IDs.
+    /// </summary>
+    /// <param name="playIds">The list of play IDs to destroy</param>
+    /// <exception cref="AggregateException">Thrown when one or more scenes fail to destroy</exception>
+    Task DestroyScenes(IEnumerable<string> playIds);
 }
