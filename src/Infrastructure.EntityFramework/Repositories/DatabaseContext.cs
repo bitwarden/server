@@ -41,6 +41,7 @@ public class DatabaseContext : DbContext
     public DbSet<ApiKey> ApiKeys { get; set; }
     public DbSet<Cache> Cache { get; set; }
     public DbSet<Cipher> Ciphers { get; set; }
+    public DbSet<CipherArchive> CipherArchives { get; set; }
     public DbSet<Collection> Collections { get; set; }
     public DbSet<CollectionCipher> CollectionCiphers { get; set; }
     public DbSet<CollectionGroup> CollectionGroups { get; set; }
@@ -162,6 +163,7 @@ public class DatabaseContext : DbContext
         }
 
         eCipher.ToTable(nameof(Cipher));
+        eCipherArchive.ToTable(nameof(CipherArchive));
         eCollection.ToTable(nameof(Collection));
         eCollectionCipher.ToTable(nameof(CollectionCipher));
         eEmergencyAccess.ToTable(nameof(EmergencyAccess));
