@@ -651,7 +651,23 @@ public class AccountController : Controller
             EmailVerified = emailVerified,
             ApiKey = CoreHelpers.SecureRandomString(30)
         };
-        await _registerUserCommand.RegisterUser(newUser);
+
+        /*
+            The feature flag is checked here so that we can send the new MJML welcome email templates.
+            The other organization invites flows have an OrganizationUser allowing the RegisterUserCommand the ability
+            to fetch the Organization. The old method RegisterUser(User) here does not have that context, so we need
+            to use a new method RegisterSSOAutoProvisionedUserAsync(User, Organization) to send the correct email.
+            [PM-28057]: Prefer RegisterSSOAutoProvisionedUserAsync for SSO auto-provisioned users.
+            TODO: Remove Feature flag: PM-28221
+        */
+        if (_featureService.IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates))
+        {
+            await _registerUserCommand.RegisterSSOAutoProvisionedUserAsync(newUser, organization);
+        }
+        else
+        {
+            await _registerUserCommand.RegisterUser(newUser);
+        }
 
         // If the organization has 2fa policy enabled, make sure to default jit user 2fa to email
         var twoFactorPolicy =
