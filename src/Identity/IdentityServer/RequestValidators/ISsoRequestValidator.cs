@@ -9,7 +9,7 @@ namespace Bit.Identity.IdentityServer.RequestValidators;
 public interface ISsoRequestValidator
 {
     /// <summary>
-    /// Validates the SSO requirement for a user attempting to authenticate.
+    /// Validates the SSO requirement for a user attempting to authenticate. Sets the error state in the <see cref="CustomValidatorRequestContext.CustomResponse"/> if SSO is required.
     /// </summary>
     /// <param name="user">The user attempting to authenticate.</param>
     /// <param name="request">The token request containing grant type and other authentication details.</param>

@@ -45,13 +45,15 @@ public class SsoRequestValidator(
         // evaluated, and recovery will have been performed if requested.
         // We will send a descriptive message in these cases so clients can give the appropriate feedback and redirect
         // to /login.
+        // If the feature flag RecoveryCodeSupportForSsoRequiredUsers is set to false then this code is unreachable since
+        // Two Factor validation occurs after SSO validation in that scenario.
         if (context.TwoFactorRequired && context.TwoFactorRecoveryRequested)
         {
-            BuildSsoErrorResult(context, "Two-factor recovery has been performed. SSO authentication is required.");
+            SetContextCustomResponseSsoError(context, "Two-factor recovery has been performed. SSO authentication is required.");
             return false;
         }
 
-        BuildSsoErrorResult(context, "SSO authentication is required.");
+        SetContextCustomResponseSsoError(context, "SSO authentication is required.");
         return false;
     }
 
@@ -91,11 +93,11 @@ public class SsoRequestValidator(
     }
 
     /// <summary>
-    /// Builds the error result for SSO validation failure.
+    /// Sets the customResponse in the context with the error result for the SSO validation failure.
     /// </summary>
     /// <param name="context">The validator context to update with error details.</param>
     /// <param name="errorMessage">The error message to return to the client.</param>
-    private static void BuildSsoErrorResult(CustomValidatorRequestContext context, string errorMessage)
+    private static void SetContextCustomResponseSsoError(CustomValidatorRequestContext context, string errorMessage)
     {
         context.ValidationErrorResult = new ValidationResult
         {
