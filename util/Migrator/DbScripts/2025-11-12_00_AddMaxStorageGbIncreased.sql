@@ -273,7 +273,9 @@ GO
 
 -- Refresh views that reference Organization table
 EXEC sp_refreshview N'[dbo].[OrganizationCipherDetailsCollectionsView]';
+EXEC sp_refreshview N'[dbo].[OrganizationUserOrganizationDetailsView]';
 EXEC sp_refreshview N'[dbo].[ProviderOrganizationOrganizationDetailsView]';
+EXEC sp_refreshview N'[dbo].[ProviderUserProviderOrganizationDetailsView]';
 GO
 
 -- Refresh views that reference User table
@@ -281,5 +283,68 @@ EXEC sp_refreshview N'[dbo].[EmergencyAccessDetailsView]';
 EXEC sp_refreshview N'[dbo].[OrganizationUserUserDetailsView]';
 EXEC sp_refreshview N'[dbo].[ProviderUserUserDetailsView]';
 EXEC sp_refreshview N'[dbo].[UserEmailDomainView]';
+GO
+
+-- Refresh stored procedures that reference UserView
+EXEC sp_refreshsqlmodule N'[dbo].[Notification_ReadByUserIdAndStatus]';
+EXEC sp_refreshsqlmodule N'[dbo].[OrganizationUser_ReadById]';
+EXEC sp_refreshsqlmodule N'[dbo].[OrganizationUser_ReadByIds]';
+EXEC sp_refreshsqlmodule N'[dbo].[OrganizationUser_ReadByOrganizationId]';
+EXEC sp_refreshsqlmodule N'[dbo].[OrganizationUser_ReadByOrganizationIdEmail]';
+EXEC sp_refreshsqlmodule N'[dbo].[OrganizationUser_ReadByOrganizationIdUserId]';
+EXEC sp_refreshsqlmodule N'[dbo].[OrganizationUser_ReadByOrganizationIdWithClaimedDomains]';
+EXEC sp_refreshsqlmodule N'[dbo].[OrganizationUser_ReadByOrganizationIdWithClaimedDomains_V2]';
+EXEC sp_refreshsqlmodule N'[dbo].[OrganizationUser_ReadByUserId]';
+EXEC sp_refreshsqlmodule N'[dbo].[OrganizationUser_ReadByUserIds]';
+EXEC sp_refreshsqlmodule N'[dbo].[OrganizationUser_ReadByUserIdWithPolicyDetails]';
+EXEC sp_refreshsqlmodule N'[dbo].[OrganizationUser_ReadOccupiedSeatCountByOrganizationId]';
+EXEC sp_refreshsqlmodule N'[dbo].[OrganizationUser_ReadOccupiedSmSeatCountByOrganizationId]';
+EXEC sp_refreshsqlmodule N'[dbo].[ProviderUser_ReadById]';
+EXEC sp_refreshsqlmodule N'[dbo].[ProviderUser_ReadByIds]';
+EXEC sp_refreshsqlmodule N'[dbo].[ProviderUser_ReadByOrganizationIdStatus]';
+EXEC sp_refreshsqlmodule N'[dbo].[ProviderUser_ReadByProviderId]';
+EXEC sp_refreshsqlmodule N'[dbo].[ProviderUser_ReadByProviderIdUserId]';
+EXEC sp_refreshsqlmodule N'[dbo].[ProviderUser_ReadByUserId]';
+EXEC sp_refreshsqlmodule N'[dbo].[User_ReadByEmail]';
+EXEC sp_refreshsqlmodule N'[dbo].[User_ReadByEmails]';
+EXEC sp_refreshsqlmodule N'[dbo].[User_ReadById]';
+EXEC sp_refreshsqlmodule N'[dbo].[User_ReadByIds]';
+EXEC sp_refreshsqlmodule N'[dbo].[User_ReadByIdsWithCalculatedPremium]';
+EXEC sp_refreshsqlmodule N'[dbo].[User_ReadByPremium]';
+EXEC sp_refreshsqlmodule N'[dbo].[User_ReadBySsoUserOrganizationIdExternalId]';
+EXEC sp_refreshsqlmodule N'[dbo].[User_Search]';
+GO
+
+-- Refresh stored procedures that reference OrganizationView
+EXEC sp_refreshsqlmodule N'[dbo].[Organization_GetOrganizationsForSubscriptionSync]';
+EXEC sp_refreshsqlmodule N'[dbo].[Organization_ReadByClaimedUserEmailDomain]';
+EXEC sp_refreshsqlmodule N'[dbo].[Organization_ReadByEnabled]';
+EXEC sp_refreshsqlmodule N'[dbo].[Organization_ReadById]';
+EXEC sp_refreshsqlmodule N'[dbo].[Organization_ReadByIdentifier]';
+EXEC sp_refreshsqlmodule N'[dbo].[Organization_ReadByLicenseKey]';
+EXEC sp_refreshsqlmodule N'[dbo].[Organization_ReadByProviderId]';
+EXEC sp_refreshsqlmodule N'[dbo].[Organization_ReadByUserId]';
+EXEC sp_refreshsqlmodule N'[dbo].[Organization_ReadManyByIds]';
+EXEC sp_refreshsqlmodule N'[dbo].[Organization_ReadOccupiedSeatCountByOrganizationId]';
+EXEC sp_refreshsqlmodule N'[dbo].[Organization_Search]';
+EXEC sp_refreshsqlmodule N'[dbo].[Organization_UnassignedToProviderSearch]';
+EXEC sp_refreshsqlmodule N'[dbo].[OrganizationDomainSsoDetails_ReadByEmail]';
+EXEC sp_refreshsqlmodule N'[dbo].[PolicyDetails_ReadByOrganizationId]';
+EXEC sp_refreshsqlmodule N'[dbo].[PolicyDetails_ReadByUserId]';
+EXEC sp_refreshsqlmodule N'[dbo].[PolicyDetails_ReadByUserIdsPolicyType]';
+EXEC sp_refreshsqlmodule N'[dbo].[ProviderOrganization_ReadById]';
+EXEC sp_refreshsqlmodule N'[dbo].[ProviderOrganization_ReadByOrganizationId]';
+EXEC sp_refreshsqlmodule N'[dbo].[ProviderOrganization_ReadCountByOrganizationIds]';
+EXEC sp_refreshsqlmodule N'[dbo].[ProviderOrganizationProviderDetails_ReadByUserId]';
+EXEC sp_refreshsqlmodule N'[dbo].[VerfiedOrganaizationDomainSsoDetails_ReadByEmail]';
+GO
+
+-- Refresh stored procedures that reference OrganizationUserOrganizationDetailsView
+EXEC sp_refreshsqlmodule N'[dbo].[OrganizationUserOrganizationDetails_ReadByUserIdStatus]';
+EXEC sp_refreshsqlmodule N'[dbo].[OrganizationUserOrganizationDetails_ReadByUserIdStatusOrganizationId]';
+GO
+
+-- Refresh stored procedures that reference ProviderUserProviderOrganizationDetailsView
+EXEC sp_refreshsqlmodule N'[dbo].[ProviderUserProviderOrganizationDetails_ReadByUserIdStatus]';
 GO
 
