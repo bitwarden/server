@@ -4,18 +4,46 @@
 
 namespace Bit.PostgresMigrations.Migrations;
 
-/// <inheritdoc />
 public partial class AddCipherArchive : Migration
 {
-    /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
     {
+        migrationBuilder.CreateTable(
+            name: "CipherArchive",
+            columns: table => new
+            {
+                CipherId = table.Column<Guid>(type: "uuid", nullable: false),
+                UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                ArchivedDate = table.Column<DateTime>(
+                    type: "timestamp with time zone",
+                    nullable: false)
+            },
+            constraints: table =>
+            {
+                table.PrimaryKey("PK_CipherArchive", x => new { x.CipherId, x.UserId });
+                table.ForeignKey(
+                    name: "FK_CipherArchive_Cipher_CipherId",
+                    column: x => x.CipherId,
+                    principalTable: "Cipher",
+                    principalColumn: "Id",
+                    onDelete: ReferentialAction.Cascade);
+                table.ForeignKey(
+                    name: "FK_CipherArchive_User_UserId",
+                    column: x => x.UserId,
+                    principalTable: "User",
+                    principalColumn: "Id",
+                    onDelete: ReferentialAction.Cascade);
+            });
 
+        migrationBuilder.CreateIndex(
+            name: "IX_CipherArchive_UserId",
+            table: "CipherArchive",
+            column: "UserId");
     }
 
-    /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-
+        migrationBuilder.DropTable(
+            name: "CipherArchive");
     }
 }
