@@ -245,26 +245,13 @@ public class UpcomingInvoiceHandler(
 
             var seatAddOnItem = subscription.Items.FirstOrDefault(item => item.Price.Id == "personal-org-seat-annually");
 
-            switch (seatAddOnItem)
+            if (seatAddOnItem != null)
             {
-                case { Quantity: > 1 }:
-                    {
-                        options.Items.Add(new SubscriptionItemOptions
-                        {
-                            Id = seatAddOnItem.Id,
-                            Quantity = seatAddOnItem.Quantity - 1
-                        });
-                        break;
-                    }
-                case { Quantity: 1 }:
-                    {
-                        options.Items.Add(new SubscriptionItemOptions
-                        {
-                            Id = seatAddOnItem.Id,
-                            Deleted = true
-                        });
-                        break;
-                    }
+                options.Items.Add(new SubscriptionItemOptions
+                {
+                    Id = seatAddOnItem.Id,
+                    Deleted = true
+                });
             }
 
             try

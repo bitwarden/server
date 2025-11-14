@@ -1471,7 +1471,7 @@ public class UpcomingInvoiceHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_WhenMilestone3Enabled_AndSeatAddOnWithQuantityGreaterThanOne_DecrementsQuantity()
+    public async Task HandleAsync_WhenMilestone3Enabled_AndSeatAddOnExists_DeletesItem()
     {
         // Arrange
         var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
@@ -1555,7 +1555,7 @@ public class UpcomingInvoiceHandlerTests
                 o.Items[0].Id == passwordManagerItemId &&
                 o.Items[0].Price == familiesPlan.PasswordManager.StripePlanId &&
                 o.Items[1].Id == seatAddOnItemId &&
-                o.Items[1].Quantity == 2 &&
+                o.Items[1].Deleted == true &&
                 o.Discounts.Count == 1 &&
                 o.Discounts[0].Coupon == CouponIDs.Milestone3SubscriptionDiscount &&
                 o.ProrationBehavior == ProrationBehavior.None));
@@ -1771,7 +1771,7 @@ public class UpcomingInvoiceHandlerTests
                 o.Items[1].Id == premiumAccessItemId &&
                 o.Items[1].Deleted == true &&
                 o.Items[2].Id == seatAddOnItemId &&
-                o.Items[2].Quantity == 1 &&
+                o.Items[2].Deleted == true &&
                 o.Discounts.Count == 1 &&
                 o.Discounts[0].Coupon == CouponIDs.Milestone3SubscriptionDiscount &&
                 o.ProrationBehavior == ProrationBehavior.None));
