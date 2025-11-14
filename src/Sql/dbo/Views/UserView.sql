@@ -46,7 +46,6 @@ SELECT
     [VerifyDevices],
     [SecurityState],
     [SecurityVersion],
-    [SignedPublicKey],
-    [MaxStorageGbIncreased]
+    [SignedPublicKey]
 FROM
     [dbo].[User]

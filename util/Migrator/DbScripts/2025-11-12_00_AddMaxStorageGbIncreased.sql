@@ -61,8 +61,7 @@ SELECT
     [VerifyDevices],
     [SecurityState],
     [SecurityVersion],
-    [SignedPublicKey],
-    [MaxStorageGbIncreased]
+    [SignedPublicKey]
 FROM
     [dbo].[User]
 GO
@@ -131,8 +130,7 @@ SELECT
     [UseOrganizationDomains],
     [UseAdminSponsoredFamilies],
     [SyncSeats],
-    [UseAutomaticUserConfirmation],
-    [MaxStorageGbIncreased]
+    [UseAutomaticUserConfirmation]
 FROM
     [dbo].[Organization]
 GO

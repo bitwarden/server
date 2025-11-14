@@ -61,7 +61,6 @@ SELECT
     [UseOrganizationDomains],
     [UseAdminSponsoredFamilies],
     [SyncSeats],
-    [UseAutomaticUserConfirmation],
-    [MaxStorageGbIncreased]
+    [UseAutomaticUserConfirmation]
 FROM
     [dbo].[Organization]
