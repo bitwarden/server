@@ -21,6 +21,7 @@ builder.Services.AddScoped<Microsoft.AspNetCore.Identity.IPasswordHasher<Bit.Cor
 builder.Services.AddSingleton<Bit.RustSDK.RustSdkService>();
 builder.Services.AddScoped<Bit.Seeder.Factories.UserSeeder>();
 builder.Services.AddScoped<ISceneService, SceneService>();
+builder.Services.AddScoped<IQueryService, QueryService>();
 builder.Services.AddScoped<MangleId>(_ => new MangleId());
 builder.Services.AddScenes();
 builder.Services.AddQueries();
@@ -41,3 +42,6 @@ app.UseRouting();
 app.MapControllerRoute(name: "default", pattern: "{controller=Seed}/{action=Index}/{id?}");
 
 app.Run();
+
+// Make Program class accessible for integration tests
+public partial class Program { }

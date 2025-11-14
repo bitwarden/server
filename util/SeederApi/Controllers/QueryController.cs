@@ -18,11 +18,11 @@ public class QueryController(ILogger<QueryController> logger, IQueryService quer
 
             return Json(result);
         }
-        catch (SceneNotFoundException ex)
+        catch (QueryNotFoundException ex)
         {
             return NotFound(new { Error = ex.Message });
         }
-        catch (SceneExecutionException ex)
+        catch (QueryExecutionException ex)
         {
             logger.LogError(ex, "Error executing query: {Query}", request.Template);
             return BadRequest(new { Error = ex.Message, Details = ex.InnerException?.Message });

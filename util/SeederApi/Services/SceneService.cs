@@ -43,12 +43,13 @@ public class SceneService(
         var userIds = playData.Select(pd => pd.UserId).Distinct().ToList();
         var organizationIds = playData.Select(pd => pd.OrganizationId).Distinct().ToList();
 
-        // Delete Users before Oraganizations to respect foreign key constraints
+        // Delete Users before Organizations to respect foreign key constraints
         if (userIds.Count > 0)
         {
             var users = databaseContext.Users.Where(u => userIds.Contains(u.Id));
             await userRepository.DeleteManyAsync(users);
         }
+
         if (organizationIds.Count > 0)
         {
             var organizations = databaseContext.Organizations.Where(o => organizationIds.Contains(o.Id));

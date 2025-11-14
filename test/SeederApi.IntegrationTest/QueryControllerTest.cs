@@ -4,12 +4,12 @@ using Xunit;
 
 namespace Bit.SeederApi.IntegrationTest;
 
-public class EmergencyAccessInviteQueryTests : IClassFixture<SeederApiApplicationFactory>, IAsyncLifetime
+public class QueryControllerTests : IClassFixture<SeederApiApplicationFactory>, IAsyncLifetime
 {
     private readonly HttpClient _client;
     private readonly SeederApiApplicationFactory _factory;
 
-    public EmergencyAccessInviteQueryTests(SeederApiApplicationFactory factory)
+    public QueryControllerTests(SeederApiApplicationFactory factory)
     {
         _factory = factory;
         _client = _factory.CreateClient();
@@ -38,16 +38,11 @@ public class EmergencyAccessInviteQueryTests : IClassFixture<SeederApiApplicatio
         });
 
         response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<QueryResponse>();
+        var result = await response.Content.ReadAsStringAsync();
 
         Assert.NotNull(result);
-        Assert.NotNull(result.Result);
 
-        // The result should be a JSON array (even if empty for non-existent email)
-        var resultElement = result.Result as System.Text.Json.JsonElement?;
-        Assert.NotNull(resultElement);
-
-        var urls = System.Text.Json.JsonSerializer.Deserialize<List<string>>(resultElement.Value.GetRawText());
+        var urls = System.Text.Json.JsonSerializer.Deserialize<List<string>>(result);
         Assert.NotNull(urls);
         // For a non-existent email, we expect an empty list
         Assert.Empty(urls);
@@ -90,19 +85,9 @@ public class EmergencyAccessInviteQueryTests : IClassFixture<SeederApiApplicatio
         });
 
         response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<QueryResponse>();
+        var result = await response.Content.ReadAsStringAsync();
 
-        Assert.NotNull(result);
-
-        // Verify the response only has Result field, not SeedId
-        // (Queries are read-only and don't track entities)
-        var jsonString = await response.Content.ReadAsStringAsync();
-        Assert.DoesNotContain("seedId", jsonString, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("result", jsonString, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("[]", result);
     }
 
-    private class QueryResponse
-    {
-        public object? Result { get; set; }
-    }
 }
