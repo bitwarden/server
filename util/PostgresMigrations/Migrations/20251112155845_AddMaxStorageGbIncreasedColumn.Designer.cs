@@ -856,9 +856,6 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<short?>("MaxStorageGb")
                         .HasColumnType("smallint");
 
-                    b.Property<short?>("MaxStorageGbIncreased")
-                        .HasColumnType("smallint");
-
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid");
 

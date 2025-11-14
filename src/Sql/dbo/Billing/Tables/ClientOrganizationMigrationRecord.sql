@@ -5,7 +5,6 @@ CREATE TABLE [dbo].[ClientOrganizationMigrationRecord] (
     [PlanType] TINYINT NOT NULL,
     [Seats] SMALLINT NOT NULL,
     [MaxStorageGb] SMALLINT NULL,
-    [MaxStorageGbIncreased] SMALLINT NULL,
     [GatewayCustomerId] VARCHAR(50) NOT NULL,
     [GatewaySubscriptionId] VARCHAR(50) NOT NULL,
     [ExpirationDate] DATETIME2(7) NULL,

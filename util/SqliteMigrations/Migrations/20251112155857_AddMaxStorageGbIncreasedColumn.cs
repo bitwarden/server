@@ -21,12 +21,6 @@ public partial class AddMaxStorageGbIncreasedColumn : Migration
             table: "Organization",
             type: "INTEGER",
             nullable: true);
-
-        migrationBuilder.AddColumn<short>(
-            name: "MaxStorageGbIncreased",
-            table: "ClientOrganizationMigrationRecord",
-            type: "INTEGER",
-            nullable: true);
     }
 
     /// <inheritdoc />
@@ -39,9 +33,5 @@ public partial class AddMaxStorageGbIncreasedColumn : Migration
         migrationBuilder.DropColumn(
             name: "MaxStorageGbIncreased",
             table: "Organization");
-
-        migrationBuilder.DropColumn(
-            name: "MaxStorageGbIncreased",
-            table: "ClientOrganizationMigrationRecord");
     }
 }

@@ -26,7 +26,6 @@ CREATE PROCEDURE [dbo].[Organization_Update]
     @UsersGetPremium BIT,
     @Storage BIGINT,
     @MaxStorageGb SMALLINT,
-    @MaxStorageGbIncreased SMALLINT = NULL,
     @Gateway TINYINT,
     @GatewayCustomerId VARCHAR(50),
     @GatewaySubscriptionId VARCHAR(50),
@@ -60,7 +59,8 @@ CREATE PROCEDURE [dbo].[Organization_Update]
     @UseOrganizationDomains BIT = 0,
     @UseAdminSponsoredFamilies BIT = 0,
     @SyncSeats BIT = 0,
-    @UseAutomaticUserConfirmation BIT = 0
+    @UseAutomaticUserConfirmation BIT = 0,
+    @MaxStorageGbIncreased SMALLINT = NULL
 AS
 BEGIN
     SET NOCOUNT ON

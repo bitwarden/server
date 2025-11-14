@@ -6,12 +6,11 @@ SELECT
     [ProviderId],
     [PlanType],
     [Seats],
-    COALESCE([MaxStorageGbIncreased], [MaxStorageGb]) AS [MaxStorageGb],
+    [MaxStorageGb],
     [GatewayCustomerId],
     [GatewaySubscriptionId],
     [ExpirationDate],
     [MaxAutoscaleSeats],
-    [Status],
-    [MaxStorageGbIncreased]
+    [Status]
 FROM
     [dbo].[ClientOrganizationMigrationRecord]

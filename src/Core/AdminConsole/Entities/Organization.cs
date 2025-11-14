@@ -66,7 +66,6 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
     public bool UseCustomPermissions { get; set; }
     public long? Storage { get; set; }
     public short? MaxStorageGb { get; set; }
-    public short? MaxStorageGbIncreased { get; set; }
     public GatewayType? Gateway { get; set; }
     [MaxLength(50)]
     public string? GatewayCustomerId { get; set; }
@@ -212,13 +211,12 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
 
     public long StorageBytesRemaining()
     {
-        var effectiveMaxStorageGb = MaxStorageGbIncreased ?? MaxStorageGb;
-        if (!effectiveMaxStorageGb.HasValue)
+        if (!MaxStorageGb.HasValue)
         {
             return 0;
         }
 
-        return StorageBytesRemaining(effectiveMaxStorageGb.Value);
+        return StorageBytesRemaining(MaxStorageGb.Value);
     }
 
     public long StorageBytesRemaining(short maxStorageGb)
