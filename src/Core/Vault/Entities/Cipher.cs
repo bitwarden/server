@@ -25,6 +25,13 @@ public class Cipher : ITableObject<Guid>, ICloneable
     public DateTime? DeletedDate { get; set; }
     public Enums.CipherRepromptType? Reprompt { get; set; }
     public string Key { get; set; }
+
+    /// <summary>
+    /// Deprecated as of 2025-11-13.
+    /// Source of truth is now CipherArchive (CipherId + UserId).
+    /// Kept for backward compatibility during phased migration.
+    /// </summary>
+    [Obsolete("Use CipherArchive table instead. This property will be removed in a future release.")]
     public DateTime? ArchivedDate { get; set; }
 
     public void SetNewId()
