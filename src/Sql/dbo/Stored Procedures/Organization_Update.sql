@@ -59,8 +59,7 @@ CREATE PROCEDURE [dbo].[Organization_Update]
     @UseOrganizationDomains BIT = 0,
     @UseAdminSponsoredFamilies BIT = 0,
     @SyncSeats BIT = 0,
-    @UseAutomaticUserConfirmation BIT = 0,
-    @MaxStorageGbIncreased SMALLINT = NULL
+    @UseAutomaticUserConfirmation BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -94,7 +93,6 @@ BEGIN
         [UsersGetPremium] = @UsersGetPremium,
         [Storage] = @Storage,
         [MaxStorageGb] = @MaxStorageGb,
-        [MaxStorageGbIncreased] = @MaxStorageGbIncreased,
         [Gateway] = @Gateway,
         [GatewayCustomerId] = @GatewayCustomerId,
         [GatewaySubscriptionId] = @GatewaySubscriptionId,

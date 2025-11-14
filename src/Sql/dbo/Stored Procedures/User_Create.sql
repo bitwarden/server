@@ -44,8 +44,7 @@
     @VerifyDevices BIT = 1,
     @SecurityState VARCHAR(MAX) = NULL,
     @SecurityVersion INT = NULL,
-    @SignedPublicKey VARCHAR(MAX) = NULL,
-    @MaxStorageGbIncreased SMALLINT = NULL
+    @SignedPublicKey VARCHAR(MAX) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -73,7 +72,6 @@ BEGIN
         [RenewalReminderDate],
         [Storage],
         [MaxStorageGb],
-        [MaxStorageGbIncreased],
         [Gateway],
         [GatewayCustomerId],
         [GatewaySubscriptionId],
@@ -123,7 +121,6 @@ BEGIN
         @RenewalReminderDate,
         @Storage,
         @MaxStorageGb,
-        @MaxStorageGbIncreased,
         @Gateway,
         @GatewayCustomerId,
         @GatewaySubscriptionId,
