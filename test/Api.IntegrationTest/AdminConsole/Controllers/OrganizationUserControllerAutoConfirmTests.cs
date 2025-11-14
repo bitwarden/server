@@ -177,7 +177,7 @@ public class OrganizationUserControllerAutoConfirmTests : IClassFixture<ApiAppli
             OrganizationUserStatusType.Accepted);
 
         var tenRequests = Enumerable.Range(0, 5)
-            .Select(_ => _client.PostAsJsonAsync($"organizations/{organization.Id}/users/{organizationUser.Id}/auto-confirm",
+            .Select(async _ => await _client.PostAsJsonAsync($"organizations/{organization.Id}/users/{organizationUser.Id}/auto-confirm",
                 new OrganizationUserConfirmRequestModel
                 {
                     Key = testKey,
