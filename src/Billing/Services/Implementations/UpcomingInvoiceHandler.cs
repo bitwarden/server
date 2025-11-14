@@ -220,7 +220,8 @@ public class UpcomingInvoiceHandler(
                 [
                     new SubscriptionItemOptions
                     {
-                        Id = passwordManagerItem.Id, Price = families.PasswordManager.StripePlanId
+                        Id = passwordManagerItem.Id,
+                        Price = families.PasswordManager.StripePlanId
                     }
                 ],
                 Discounts =
@@ -240,6 +241,30 @@ public class UpcomingInvoiceHandler(
                     Id = premiumAccessAddOnItem.Id,
                     Deleted = true
                 });
+            }
+
+            var seatAddOnItem = subscription.Items.FirstOrDefault(item => item.Price.Id == "personal-org-seat-annually");
+
+            switch (seatAddOnItem)
+            {
+                case { Quantity: > 1 }:
+                    {
+                        options.Items.Add(new SubscriptionItemOptions
+                        {
+                            Id = seatAddOnItem.Id,
+                            Quantity = seatAddOnItem.Quantity - 1
+                        });
+                        break;
+                    }
+                case { Quantity: 1 }:
+                    {
+                        options.Items.Add(new SubscriptionItemOptions
+                        {
+                            Id = seatAddOnItem.Id,
+                            Deleted = true
+                        });
+                        break;
+                    }
             }
 
             try
