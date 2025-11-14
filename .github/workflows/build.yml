@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Check out repo
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
@@ -103,7 +103,7 @@ jobs:
           echo "has_secrets=$has_secrets" >> "$GITHUB_OUTPUT"
 
       - name: Check out repo
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
@@ -170,10 +170,10 @@ jobs:
 
       ########## Set up Docker ##########
       - name: Set up QEMU emulators
-        uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3.6.0
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
 
       ########## ACRs ##########
       - name: Log in to Azure
@@ -256,7 +256,7 @@ jobs:
 
       - name: Install Cosign
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-        uses: sigstore/cosign-installer@3454372f43399081ed03b604cb2d021dabca52bb # v3.8.2
+        uses: sigstore/cosign-installer@7e8b541eb2e61bf99390e1afd4be13a184e9ebc5 # v3.10.1
 
       - name: Sign image with Cosign
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
@@ -274,14 +274,14 @@ jobs:
 
       - name: Scan Docker image
         id: container-scan
-        uses: anchore/scan-action@f6601287cdb1efc985d6b765bbf99cb4c0ac29d8 # v7.0.0
+        uses: anchore/scan-action@568b89d27fc18c60e56937bff480c91c772cd993 # v7.1.0
         with:
           image: ${{ steps.image-tags.outputs.primary_tag }}
           fail-build: false
           output-format: sarif
 
       - name: Upload Grype results to GitHub
-        uses: github/codeql-action/upload-sarif@dd746615b3b9d728a6a37ca2045b68ca76d4841a # v3.28.8
+        uses: github/codeql-action/upload-sarif@5d5cd550d3e189c569da8f16ea8de2d821c9bf7a # v3.31.2
         with:
           sarif_file: ${{ steps.container-scan.outputs.sarif }}
           sha: ${{ contains(github.event_name, 'pull_request') && github.event.pull_request.head.sha || github.sha }}
@@ -299,7 +299,7 @@ jobs:
       actions: read
     steps:
       - name: Check out repo
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
@@ -426,7 +426,7 @@ jobs:
           - win-x64
     steps:
       - name: Check out repo
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
