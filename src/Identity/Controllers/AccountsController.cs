@@ -201,12 +201,16 @@ public class AccountsController : Controller
               "Use prelogin/password instead. This endpoint has no EOL at the time of writing.")]
     public async Task<PasswordPreloginResponseModel> PostPrelogin([FromBody] PasswordPreloginRequestModel model)
     {
+        // Same as PostPasswordPrelogin to maintain compatibility. Do not make changes in this function body,
+        // only make changes in MakePasswordPreloginCall
         return await MakePasswordPreloginCall(model);
     }
 
     [HttpPost("prelogin/password")]
     public async Task<PasswordPreloginResponseModel> PostPasswordPrelogin([FromBody] PasswordPreloginRequestModel model)
     {
+        // Same as PostPrelogin to maintain backwards compatibility. Do not make changes in this function body,
+        // only make changes in MakePasswordPreloginCall
         return await MakePasswordPreloginCall(model);
     }
 

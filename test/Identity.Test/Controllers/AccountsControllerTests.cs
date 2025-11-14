@@ -91,6 +91,35 @@ public class AccountsControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task PostPrelogin_And_PostPasswordPrelogin_ShouldUseSamePreloginLogic()
+    {
+        // Arrange: No user exists and no default HMAC key to force default path
+        var email = "same-user@example.com";
+        SetDefaultKdfHmacKey(null);
+        _userRepository.GetKdfInformationByEmailAsync(Arg.Any<string>()).Returns(Task.FromResult<UserKdfInformation?>(null));
+
+        // Act
+        var legacyResponse = await _sut.PostPrelogin(new PasswordPreloginRequestModel { Email = email });
+        var newResponse = await _sut.PostPasswordPrelogin(new PasswordPreloginRequestModel { Email = email });
+
+        // Assert: Both endpoints yield identical results, implying shared logic path
+        Assert.Equal(legacyResponse.Kdf, newResponse.Kdf);
+        Assert.Equal(legacyResponse.KdfIterations, newResponse.KdfIterations);
+        Assert.Equal(legacyResponse.KdfMemory, newResponse.KdfMemory);
+        Assert.Equal(legacyResponse.KdfParallelism, newResponse.KdfParallelism);
+        Assert.Equal(legacyResponse.Salt, newResponse.Salt);
+        Assert.NotNull(legacyResponse.KdfSettings);
+        Assert.NotNull(newResponse.KdfSettings);
+        Assert.Equal(legacyResponse.KdfSettings!.KdfType, newResponse.KdfSettings!.KdfType);
+        Assert.Equal(legacyResponse.KdfSettings!.Iterations, newResponse.KdfSettings!.Iterations);
+        Assert.Equal(legacyResponse.KdfSettings!.Memory, newResponse.KdfSettings!.Memory);
+        Assert.Equal(legacyResponse.KdfSettings!.Parallelism, newResponse.KdfSettings!.Parallelism);
+
+        // Both methods should consult the repository once each with the same email
+        await _userRepository.Received(2).GetKdfInformationByEmailAsync(Arg.Is<string>(e => e == email));
+    }
+
+    [Fact]
     public async Task PostPasswordPrelogin_WhenUserExists_ReturnsNewFieldsAlignedWithLegacy_Argon2()
     {
         var email = "user@example.com";
