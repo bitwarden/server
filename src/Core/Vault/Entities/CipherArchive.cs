@@ -1,4 +1,6 @@
-﻿using Bit.Core.Entities;
+﻿#nullable enable
+
+using Bit.Core.Entities;
 
 namespace Bit.Core.Vault.Entities;
 

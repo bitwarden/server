@@ -1,4 +1,4 @@
-﻿using Bit.Infrastructure.EntityFramework.Models;
+﻿#nullable enable
 
 namespace Bit.Infrastructure.EntityFramework.Vault.Models;
 
