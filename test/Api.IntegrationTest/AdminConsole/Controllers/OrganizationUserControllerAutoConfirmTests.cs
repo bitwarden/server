@@ -184,11 +184,21 @@ public class OrganizationUserControllerAutoConfirmTests : IClassFixture<ApiAppli
                     DefaultUserCollectionName = _mockEncryptedString
                 })).ToList();
 
-        foreach (var request in tenRequests)
-        {
-            var result = await request;
-            Assert.Equal(HttpStatusCode.NoContent, result.StatusCode);
-        }
+        var result1 = await _client.PostAsJsonAsync($"organizations/{organization.Id}/users/{organizationUser.Id}/auto-confirm",
+            new OrganizationUserConfirmRequestModel
+            {
+                Key = testKey,
+                DefaultUserCollectionName = _mockEncryptedString
+            });
+        Assert.Equal(HttpStatusCode.NoContent, result1.StatusCode);
+
+        var result2 = await _client.PostAsJsonAsync($"organizations/{organization.Id}/users/{organizationUser.Id}/auto-confirm",
+            new OrganizationUserConfirmRequestModel
+            {
+                Key = testKey,
+                DefaultUserCollectionName = _mockEncryptedString
+            });
+        Assert.Equal(HttpStatusCode.NoContent, result2.StatusCode);
 
         var orgUserRepository = _factory.GetService<IOrganizationUserRepository>();
         var confirmedUser = await orgUserRepository.GetByIdAsync(organizationUser.Id);
