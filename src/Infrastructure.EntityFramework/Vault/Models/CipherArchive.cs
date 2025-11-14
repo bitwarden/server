@@ -1,6 +1,8 @@
 ﻿#nullable disable
 
-using Bit.Infrastructure.EntityFramework.Vault.Models;
+using Bit.Infrastructure.EntityFramework.Models;
+
+namespace Bit.Infrastructure.EntityFramework.Vault.Models;
 
 public class CipherArchive
 {
@@ -8,6 +10,7 @@ public class CipherArchive
     public Guid UserId { get; set; }
     public DateTime ArchivedDate { get; set; }
 
-    // Optional navigation props – you can drop these if you don't want them.
+    // Navigation props
     public Cipher Cipher { get; set; }
+    public User User { get; set; }   // optional, matches FK
 }

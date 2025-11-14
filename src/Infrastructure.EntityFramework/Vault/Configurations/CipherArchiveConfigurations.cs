@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Bit.Infrastructure.EntityFramework.Vault.Models;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Bit.Infrastructure.EntityFramework.Vault.Configurations;
@@ -17,7 +18,12 @@ public class CipherArchiveConfiguration : IEntityTypeConfiguration<CipherArchive
             .HasForeignKey(ca => ca.CipherId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // If you want explicit mapping:
+        builder
+            .HasOne(ca => ca.User)
+            .WithMany()
+            .HasForeignKey(ca => ca.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         builder.Property(ca => ca.ArchivedDate).IsRequired();
     }
 }

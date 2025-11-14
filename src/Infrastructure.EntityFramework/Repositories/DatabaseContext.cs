@@ -163,7 +163,6 @@ public class DatabaseContext : DbContext
         }
 
         eCipher.ToTable(nameof(Cipher));
-        eCipherArchive.ToTable(nameof(CipherArchive));
         eCollection.ToTable(nameof(Collection));
         eCollectionCipher.ToTable(nameof(CollectionCipher));
         eEmergencyAccess.ToTable(nameof(EmergencyAccess));
