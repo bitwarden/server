@@ -336,7 +336,7 @@ EXEC sp_refreshsqlmodule N'[dbo].[ProviderOrganization_ReadById]';
 EXEC sp_refreshsqlmodule N'[dbo].[ProviderOrganization_ReadByOrganizationId]';
 EXEC sp_refreshsqlmodule N'[dbo].[ProviderOrganization_ReadCountByOrganizationIds]';
 EXEC sp_refreshsqlmodule N'[dbo].[ProviderOrganizationProviderDetails_ReadByUserId]';
-EXEC sp_refreshsqlmodule N'[dbo].[VerfiedOrganaizationDomainSsoDetails_ReadByEmail]';
+EXEC sp_refreshsqlmodule N'[dbo].[VerifiedOrganizationDomainSsoDetails_ReadByEmail]';
 GO
 
 -- Refresh stored procedures that reference OrganizationUserOrganizationDetailsView
