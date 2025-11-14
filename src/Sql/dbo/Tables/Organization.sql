@@ -26,7 +26,6 @@ CREATE TABLE [dbo].[Organization] (
     [UsersGetPremium]               BIT              NOT NULL,
     [Storage]                       BIGINT           NULL,
     [MaxStorageGb]                  SMALLINT         NULL,
-    [MaxStorageGbIncreased]         SMALLINT         NULL,
     [Gateway]                       TINYINT          NULL,
     [GatewayCustomerId]             VARCHAR (50)     NULL,
     [GatewaySubscriptionId]         VARCHAR (50)     NULL,
@@ -61,6 +60,7 @@ CREATE TABLE [dbo].[Organization] (
     [UseAdminSponsoredFamilies]     BIT              NOT NULL CONSTRAINT [DF_Organization_UseAdminSponsoredFamilies] DEFAULT (0),
     [SyncSeats]                     BIT              NOT NULL CONSTRAINT [DF_Organization_SyncSeats] DEFAULT (0),
     [UseAutomaticUserConfirmation]  BIT              NOT NULL CONSTRAINT [DF_Organization_UseAutomaticUserConfirmation] DEFAULT (0),
+    [MaxStorageGbIncreased]         SMALLINT         NULL,
     CONSTRAINT [PK_Organization] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 
