@@ -42,7 +42,6 @@ BEGIN
 END;
 GO
 
--- Optional index for queries by user
 IF NOT EXISTS (
     SELECT 1
     FROM sys.indexes
