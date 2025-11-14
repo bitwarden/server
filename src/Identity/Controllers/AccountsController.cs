@@ -195,7 +195,6 @@ public class AccountsController : Controller
         throw new BadRequestException(ModelState);
     }
 
-    // Moved from API, If you modify this endpoint, please update API as well. Self hosted installs still use the API endpoints.
     [HttpPost("prelogin")]
     [Obsolete("Migrating to use a more descriptive endpoint that would support different types of prelogins. " +
               "Use prelogin/password instead. This endpoint has no EOL at the time of writing.")]
@@ -206,6 +205,9 @@ public class AccountsController : Controller
         return await MakePasswordPreloginCall(model);
     }
 
+    // There are two functions done this way because the open api docs that get generated in our build pipeline
+    // cannot handle two of the same post attributes on the same function call. That is why there is a
+    // PostPrelogin and the more appropriate PostPasswordPrelogin.
     [HttpPost("prelogin/password")]
     public async Task<PasswordPreloginResponseModel> PostPasswordPrelogin([FromBody] PasswordPreloginRequestModel model)
     {
