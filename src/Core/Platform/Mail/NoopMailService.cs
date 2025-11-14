@@ -114,6 +114,20 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
+    public Task SendIndividualUserWelcomeEmailAsync(User user)
+    {
+        return Task.FromResult(0);
+    }
+
+    public Task SendOrganizationUserWelcomeEmailAsync(User user, string organizationName)
+    {
+        return Task.FromResult(0);
+    }
+
+    public Task SendFreeOrgOrFamilyOrgUserWelcomeEmailAsync(User user, string familyOrganizationName)
+    {
+        return Task.FromResult(0);
+    }
     public Task SendVerifyDeleteEmailAsync(string email, Guid userId, string token)
     {
         return Task.FromResult(0);
