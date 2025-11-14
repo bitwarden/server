@@ -1,5 +1,4 @@
 ﻿using Bit.SeederApi.Models.Request;
-using Bit.SeederApi.Models.Response;
 using Bit.SeederApi.Services;
 using Microsoft.AspNetCore.Mvc;
 

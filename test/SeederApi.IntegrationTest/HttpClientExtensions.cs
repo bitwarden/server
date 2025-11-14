@@ -1,5 +1,4 @@
-using System.Diagnostics.CodeAnalysis;
-using System.Net.Http.Json;
+﻿using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 
 namespace Bit.SeederApi.IntegrationTest;
