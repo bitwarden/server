@@ -12,7 +12,6 @@ BEGIN
 END;
 GO
 
--- FK → Cipher
 IF NOT EXISTS (
     SELECT 1
     FROM sys.foreign_keys
@@ -28,7 +27,6 @@ BEGIN
 END;
 GO
 
--- FK → User
 IF NOT EXISTS (
     SELECT 1
     FROM sys.foreign_keys
