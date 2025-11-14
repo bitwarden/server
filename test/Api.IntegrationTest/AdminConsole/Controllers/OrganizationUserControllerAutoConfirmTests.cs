@@ -24,7 +24,6 @@ public class OrganizationUserControllerAutoConfirmTests : IClassFixture<ApiAppli
     private readonly ApiApplicationFactory _factory;
     private readonly LoginHelper _loginHelper;
 
-    private Organization _organization = null!;
     private string _ownerEmail = null!;
 
     public OrganizationUserControllerAutoConfirmTests(ApiApplicationFactory apiFactory)
@@ -44,9 +43,6 @@ public class OrganizationUserControllerAutoConfirmTests : IClassFixture<ApiAppli
     {
         _ownerEmail = $"org-user-integration-test-{Guid.NewGuid()}@example.com";
         await _factory.LoginWithNewAccount(_ownerEmail);
-
-        (_organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseAnnually2023,
-            ownerEmail: _ownerEmail, passwordManagerSeats: 5, paymentMethod: PaymentMethodType.Card);
     }
 
     [Fact]
@@ -83,6 +79,8 @@ public class OrganizationUserControllerAutoConfirmTests : IClassFixture<ApiAppli
             });
 
         Assert.Equal(HttpStatusCode.Forbidden, result.StatusCode);
+
+        await _factory.GetService<IOrganizationRepository>().DeleteAsync(organization);
     }
 
     [Fact]
