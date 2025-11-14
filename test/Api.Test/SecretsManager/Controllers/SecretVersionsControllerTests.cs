@@ -1,7 +1,10 @@
 ﻿using Bit.Api.SecretsManager.Controllers;
 using Bit.Api.SecretsManager.Models.Request;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Exceptions;
+using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
@@ -198,11 +201,14 @@ public class SecretVersionsControllerTests
         Secret secret,
         SecretVersion version,
         RestoreSecretVersionRequestModel request,
-        Guid userId)
+        Guid userId,
+        OrganizationUser organizationUser)
     {
         version.SecretId = secret.Id;
         request.VersionId = version.Id;
         var versionValue = version.Value;
+        organizationUser.OrganizationId = secret.OrganizationId;
+        organizationUser.UserId = userId;
 
         sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(secret.Id).Returns(secret);
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(secret.OrganizationId).Returns(true);
@@ -211,6 +217,8 @@ public class SecretVersionsControllerTests
         sutProvider.GetDependency<ISecretRepository>().AccessToSecretAsync(secret.Id, userId, default)
             .ReturnsForAnyArgs((true, true));
         sutProvider.GetDependency<ISecretVersionRepository>().GetByIdAsync(request.VersionId).Returns(version);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(secret.OrganizationId, userId).Returns(organizationUser);
         sutProvider.GetDependency<ISecretRepository>().UpdateAsync(Arg.Any<Secret>()).Returns(x => x.Arg<Secret>());
 
         var result = await sutProvider.Sut.RestoreVersionAsync(secret.Id, request);
@@ -279,12 +287,13 @@ public class SecretVersionsControllerTests
         foreach (var version in versions)
         {
             version.SecretId = secret.Id;
-            sutProvider.GetDependency<ISecretVersionRepository>().GetByIdAsync(version.Id).Returns(version);
         }
 
+        sutProvider.GetDependency<ISecretVersionRepository>().GetManyByIdsAsync(ids).Returns(versions);
         sutProvider.GetDependency<ISecretRepository>().GetManyByIds(Arg.Any<IEnumerable<Guid>>())
             .Returns(new List<Secret> { secret });
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(secret.OrganizationId).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().IdentityClientType.Returns(IdentityClientType.ServiceAccount);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(secret.OrganizationId).Returns(true);
         sutProvider.GetDependency<ISecretRepository>().AccessToSecretAsync(secret.Id, userId, default)
