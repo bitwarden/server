@@ -74,7 +74,7 @@ public class AutomaticallyConfirmUsersCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task AutomaticallyConfirmOrganizationUserAsync_WithValidationError_ReturnsValidationError(
+    public async Task AutomaticallyConfirmOrganizationUserAsync_WithInvalidUserOrgId_ReturnsOrganizationUserIdIsInvalidError(
         SutProvider<AutomaticallyConfirmOrganizationUserCommand> sutProvider,
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
