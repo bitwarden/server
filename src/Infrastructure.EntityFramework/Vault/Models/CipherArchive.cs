@@ -1,5 +1,7 @@
 ﻿#nullable enable
 
+using Bit.Infrastructure.EntityFramework.Models;
+
 namespace Bit.Infrastructure.EntityFramework.Vault.Models;
 
 public class CipherArchive
