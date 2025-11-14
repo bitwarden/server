@@ -176,15 +176,19 @@ public class OrganizationUserControllerAutoConfirmTests : IClassFixture<ApiAppli
             new Permissions(),
             OrganizationUserStatusType.Accepted);
 
-        var tenRequests = Enumerable.Range(0, 5)
-            .Select(async _ => await _client.PostAsJsonAsync($"organizations/{organization.Id}/users/{organizationUser.Id}/auto-confirm",
+        var tenRequests = Enumerable.Range(0, 10)
+            .Select(_ => _client.PostAsJsonAsync($"organizations/{organization.Id}/users/{organizationUser.Id}/auto-confirm",
                 new OrganizationUserConfirmRequestModel
                 {
                     Key = testKey,
                     DefaultUserCollectionName = _mockEncryptedString
-                }));
+                })).ToList();
 
-        var results = await Task.WhenAll(tenRequests);
+        var results = new List<HttpResponseMessage>(tenRequests.Count);
+        foreach (var request in tenRequests)
+        {
+            results.Add(await request);
+        }
 
         Assert.All(results, result => Assert.Equal(HttpStatusCode.NoContent, result.StatusCode));
 
