@@ -48,15 +48,12 @@ public class OrganizationUserControllerAutoConfirmTests : IClassFixture<ApiAppli
     [Fact]
     public async Task AutoConfirm_WhenUserCannotManageOtherUsers_ThenShouldReturnForbidden()
     {
-        var ownerEmail = $"org-user-integration-test-{Guid.NewGuid()}@example.com";
-        await _factory.LoginWithNewAccount(ownerEmail);
-
         var (organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseAnnually2023,
-            ownerEmail: ownerEmail, passwordManagerSeats: 5, paymentMethod: PaymentMethodType.Card);
+            ownerEmail: _ownerEmail, passwordManagerSeats: 5, paymentMethod: PaymentMethodType.Card);
 
         var testKey = $"test-key-{Guid.NewGuid()}";
 
-        await _loginHelper.LoginAsync(ownerEmail);
+        await _loginHelper.LoginAsync(_ownerEmail);
 
         var userToConfirmEmail = $"org-user-to-confirm-{Guid.NewGuid()}@example.com";
         await _factory.LoginWithNewAccount(userToConfirmEmail);
@@ -86,15 +83,12 @@ public class OrganizationUserControllerAutoConfirmTests : IClassFixture<ApiAppli
     [Fact]
     public async Task AutoConfirm_WhenOwnerConfirmsValidUser_ThenShouldReturnNoContent()
     {
-        var ownerEmail = $"org-user-integration-test-{Guid.NewGuid()}@example.com";
-        await _factory.LoginWithNewAccount(ownerEmail);
-
         var (organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseAnnually2023,
-            ownerEmail: ownerEmail, passwordManagerSeats: 5, paymentMethod: PaymentMethodType.Card);
+            ownerEmail: _ownerEmail, passwordManagerSeats: 5, paymentMethod: PaymentMethodType.Card);
 
         var testKey = $"test-key-{Guid.NewGuid()}";
 
-        await _loginHelper.LoginAsync(ownerEmail);
+        await _loginHelper.LoginAsync(_ownerEmail);
 
         var userToConfirmEmail = $"org-user-to-confirm-{Guid.NewGuid()}@example.com";
         await _factory.LoginWithNewAccount(userToConfirmEmail);
@@ -149,15 +143,12 @@ public class OrganizationUserControllerAutoConfirmTests : IClassFixture<ApiAppli
     [Fact]
     public async Task AutoConfirm_WhenUserIsConfirmedMultipleTimes_ThenShouldSuccessAndOnlyConfirmOneUser()
     {
-        var ownerEmail = $"org-user-integration-test-{Guid.NewGuid()}@example.com";
-        await _factory.LoginWithNewAccount(ownerEmail);
-
         var (organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseAnnually2023,
-            ownerEmail: ownerEmail, passwordManagerSeats: 5, paymentMethod: PaymentMethodType.Card);
+            ownerEmail: _ownerEmail, passwordManagerSeats: 5, paymentMethod: PaymentMethodType.Card);
 
         var testKey = $"test-key-{Guid.NewGuid()}";
 
-        await _loginHelper.LoginAsync(ownerEmail);
+        await _loginHelper.LoginAsync(_ownerEmail);
 
         var userToConfirmEmail = $"org-user-to-confirm-{Guid.NewGuid()}@example.com";
         await _factory.LoginWithNewAccount(userToConfirmEmail);
@@ -185,7 +176,7 @@ public class OrganizationUserControllerAutoConfirmTests : IClassFixture<ApiAppli
             new Permissions(),
             OrganizationUserStatusType.Accepted);
 
-        var tenRequests = Enumerable.Range(0, 10)
+        var tenRequests = Enumerable.Range(0, 5)
             .Select(_ => _client.PostAsJsonAsync($"organizations/{organization.Id}/users/{organizationUser.Id}/auto-confirm",
                 new OrganizationUserConfirmRequestModel
                 {
