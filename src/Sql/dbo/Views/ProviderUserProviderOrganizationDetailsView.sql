@@ -23,7 +23,7 @@ SELECT
     O.[UseCustomPermissions],
     O.[Seats],
     O.[MaxCollections],
-    O.[MaxStorageGb],
+    COALESCE(O.[MaxStorageGbIncreased], O.[MaxStorageGb]) AS [MaxStorageGb],
     O.[Identifier],
     PO.[Key],
     O.[PublicKey],
