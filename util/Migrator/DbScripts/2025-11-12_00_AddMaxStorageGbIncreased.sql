@@ -283,6 +283,5 @@ EXEC sp_refreshview N'[dbo].[EmergencyAccessDetailsView]';
 EXEC sp_refreshview N'[dbo].[OrganizationUserUserDetailsView]';
 EXEC sp_refreshview N'[dbo].[ProviderUserUserDetailsView]';
 EXEC sp_refreshview N'[dbo].[UserEmailDomainView]';
-EXEC sp_refreshview N'[dbo].[UserMaskedView]';
 GO
 
