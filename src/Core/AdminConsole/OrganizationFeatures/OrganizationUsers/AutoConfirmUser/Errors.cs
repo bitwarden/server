@@ -10,3 +10,4 @@ public record OrganizationUserIdIsInvalid() : BadRequestError("Invalid organizat
 public record UserDoesNotHaveTwoFactorEnabled() : BadRequestError("User does not have two-step login enabled.");
 public record OrganizationEnforcesSingleOrgPolicy() : BadRequestError("Cannot confirm this member to the organization until they leave or remove all other organizations");
 public record OtherOrganizationEnforcesSingleOrgPolicy() : BadRequestError("Cannot confirm this member to the organization because they are in another organization which forbids it.");
+public record AutomaticallyConfirmUsersPolicyIsNotEnabled() : BadRequestError("Cannot confirm this member because the Automatically Confirm Users policy is not enabled.");

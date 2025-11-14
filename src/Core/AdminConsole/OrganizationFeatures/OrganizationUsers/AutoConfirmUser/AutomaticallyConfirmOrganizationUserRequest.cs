@@ -4,6 +4,9 @@ using Bit.Core.Entities;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 
+/// <summary>
+/// Automatically Confirm User Command Request
+/// </summary>
 public record AutomaticallyConfirmOrganizationUserRequest
 {
     public required Guid OrganizationUserId { get; init; }
@@ -13,6 +16,12 @@ public record AutomaticallyConfirmOrganizationUserRequest
     public required IActingUser PerformedBy { get; init; }
 }
 
+/// <summary>
+/// Automatically Confirm User Validation Request
+/// </summary>
+/// <remarks>
+/// This is used to hold retrieved data and pass it to the validator
+/// </remarks>
 public record AutomaticallyConfirmOrganizationUserValidationRequest : AutomaticallyConfirmOrganizationUserRequest
 {
     public OrganizationUser? OrganizationUser { get; set; }

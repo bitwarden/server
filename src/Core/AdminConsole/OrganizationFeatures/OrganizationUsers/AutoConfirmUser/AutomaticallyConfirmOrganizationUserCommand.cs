@@ -51,8 +51,9 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
                     return new None();
                 }
 
+                await CreateDefaultCollectionsAsync(validatedData.Request);
+
                 await Task.WhenAll(
-                    CreateDefaultCollectionsAsync(validatedData.Request),
                     LogOrganizationUserConfirmedEventAsync(validatedData.Request),
                     SendConfirmedOrganizationUserEmailAsync(validatedData.Request),
                     SyncOrganizationKeysAsync(validatedData.Request)
