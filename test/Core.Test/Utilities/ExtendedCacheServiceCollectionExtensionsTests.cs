@@ -1,9 +1,10 @@
 ﻿using Bit.Core.Settings;
 using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using NSubstitute;
+using StackExchange.Redis;
 using Xunit;
 using ZiggyCreatures.Caching.Fusion;
 
@@ -96,14 +97,13 @@ public class ExtendedCacheServiceCollectionExtensionsTests
         {
             { "GlobalSettings:DistributedCache:Redis:ConnectionString", "localhost:6379" },
         });
+        _services.AddSingleton(Substitute.For<IConnectionMultiplexer>());
         _services.TryAddExtendedCacheServices(settings);
         _services.TryAddExtendedCacheServices(settings);
         _services.TryAddExtendedCacheServices(settings);
 
         var registrations = _services.Where(s => s.ServiceType == typeof(IFusionCache)).ToList();
         Assert.Single(registrations);
-        var distributedRegistrations = _services.Where(s => s.ServiceType == typeof(IDistributedCache)).ToList();
-        Assert.Single(distributedRegistrations);
 
         using var provider = _services.BuildServiceProvider();
         var fusionCache = provider.GetRequiredService<IFusionCache>();
@@ -118,6 +118,7 @@ public class ExtendedCacheServiceCollectionExtensionsTests
             { "GlobalSettings:DistributedCache:Redis:ConnectionString", "localhost:6379" },
         });
 
+        _services.AddSingleton(Substitute.For<IConnectionMultiplexer>());
         _services.TryAddExtendedCacheServices(settings);
         using var provider = _services.BuildServiceProvider();
 
@@ -134,13 +135,16 @@ public class ExtendedCacheServiceCollectionExtensionsTests
             { "GlobalSettings:DistributedCache:Redis:ConnectionString", "localhost:6379" },
         });
 
-        _services.AddSingleton<IDistributedCache, RedisCache>();
+        _services.AddSingleton(Substitute.For<IConnectionMultiplexer>());
+        _services.AddSingleton(Substitute.For<IDistributedCache>());
         _services.TryAddExtendedCacheServices(settings);
         using var provider = _services.BuildServiceProvider();
 
         var fusionCache = provider.GetRequiredService<IFusionCache>();
         Assert.True(fusionCache.HasDistributedCache);
         Assert.True(fusionCache.HasBackplane);
+        var distributedCache = provider.GetRequiredService<IDistributedCache>();
+        Assert.NotNull(distributedCache);
     }
 
     [Fact]

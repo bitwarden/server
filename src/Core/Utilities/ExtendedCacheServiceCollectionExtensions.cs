@@ -1,7 +1,12 @@
 ﻿using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.StackExchangeRedis;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using StackExchange.Redis;
 using ZiggyCreatures.Caching.Fusion;
+using ZiggyCreatures.Caching.Fusion.Backplane;
+using ZiggyCreatures.Caching.Fusion.Backplane.StackExchangeRedis;
 using ZiggyCreatures.Caching.Fusion.Serialization.SystemTextJson;
 
 namespace Microsoft.Extensions.DependencyInjection;
@@ -44,26 +49,41 @@ public static class ExtendedCacheServiceCollectionExtensions
                 new FusionCacheSystemTextJsonSerializer()
             );
 
-        if (CoreHelpers.SettingHasValue(globalSettings.DistributedCache.Redis.ConnectionString))
+        if (!CoreHelpers.SettingHasValue(globalSettings.DistributedCache.Redis.ConnectionString))
         {
-            // Add Redis Cache if one doesn't already exist
-            if (services.All(s => s.ServiceType != typeof(IDistributedCache)))
-            {
-                services.AddStackExchangeRedisCache(options =>
-                {
-                    options.Configuration = globalSettings.DistributedCache.Redis.ConnectionString;
-                });
-            }
-            // Add Redis Backplane
-            services.AddFusionCacheStackExchangeRedisBackplane(opt =>
-            {
-                opt.Configuration = globalSettings.DistributedCache.Redis.ConnectionString;
-            });
-
-            fusionCacheBuilder
-                .WithRegisteredDistributedCache()
-                .WithRegisteredBackplane();
+            return services;
         }
+
+        services.TryAddSingleton<IConnectionMultiplexer>(sp =>
+            ConnectionMultiplexer.Connect(globalSettings.DistributedCache.Redis.ConnectionString));
+
+        fusionCacheBuilder
+            .WithDistributedCache(sp =>
+            {
+                var cache = sp.GetService<IDistributedCache>();
+                if (cache is not null)
+                {
+                    return cache;
+                }
+                var mux = sp.GetRequiredService<IConnectionMultiplexer>();
+                return new RedisCache(new RedisCacheOptions
+                {
+                    ConnectionMultiplexerFactory = () => Task.FromResult(mux)
+                });
+            })
+            .WithBackplane(sp =>
+            {
+                var backplane = sp.GetService<IFusionCacheBackplane>();
+                if (backplane is not null)
+                {
+                    return backplane;
+                }
+                var mux = sp.GetRequiredService<IConnectionMultiplexer>();
+                return new RedisBackplane(new RedisBackplaneOptions
+                {
+                    ConnectionMultiplexerFactory = () => Task.FromResult(mux)
+                });
+            });
 
         return services;
     }
