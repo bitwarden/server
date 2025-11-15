@@ -80,6 +80,8 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
             return new BadRequest("Additional storage must be greater than 0.");
         }
 
+        var premiumPlan = await pricingClient.GetAvailablePremiumPlan();
+
         Customer? customer;
 
         /*
@@ -107,7 +109,7 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
 
         customer = await ReconcileBillingLocationAsync(customer, billingAddress);
 
-        var subscription = await CreateSubscriptionAsync(user.Id, customer, additionalStorageGb > 0 ? additionalStorageGb : null);
+        var subscription = await CreateSubscriptionAsync(user.Id, customer, premiumPlan, additionalStorageGb > 0 ? additionalStorageGb : null);
 
         paymentMethod.Switch(
             tokenized =>
@@ -140,7 +142,7 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
         user.Gateway = GatewayType.Stripe;
         user.GatewayCustomerId = customer.Id;
         user.GatewaySubscriptionId = subscription.Id;
-        user.MaxStorageGb = (short)(1 + additionalStorageGb);
+        user.MaxStorageGb = (short)(premiumPlan.Storage.Provided + additionalStorageGb);
         user.LicenseKey = CoreHelpers.SecureRandomString(20);
         user.RevisionDate = DateTime.UtcNow;
 
@@ -304,9 +306,9 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
     private async Task<Subscription> CreateSubscriptionAsync(
         Guid userId,
         Customer customer,
+        Pricing.Premium.Plan premiumPlan,
         int? storage)
     {
-        var premiumPlan = await pricingClient.GetAvailablePremiumPlan();
 
         var subscriptionItemOptionsList = new List<SubscriptionItemOptions>
         {

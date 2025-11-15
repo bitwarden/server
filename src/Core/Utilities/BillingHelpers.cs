@@ -7,7 +7,7 @@ namespace Bit.Core.Utilities;
 public static class BillingHelpers
 {
     internal static async Task<string> AdjustStorageAsync(IPaymentService paymentService, IStorableSubscriber storableSubscriber,
-        short storageAdjustmentGb, string storagePlanId)
+        short storageAdjustmentGb, string storagePlanId, short baseStorageGb)
     {
         if (storableSubscriber == null)
         {
@@ -30,9 +30,9 @@ public static class BillingHelpers
         }
 
         var newStorageGb = (short)(storableSubscriber.MaxStorageGb.Value + storageAdjustmentGb);
-        if (newStorageGb < 1)
+        if (newStorageGb < baseStorageGb)
         {
-            newStorageGb = 1;
+            newStorageGb = baseStorageGb;
         }
 
         if (newStorageGb > 100)
@@ -48,7 +48,7 @@ public static class BillingHelpers
                 "Delete some stored data first.");
         }
 
-        var additionalStorage = newStorageGb - 1;
+        var additionalStorage = newStorageGb - baseStorageGb;
         var paymentIntentClientSecret = await paymentService.AdjustStorageAsync(storableSubscriber,
             additionalStorage, storagePlanId);
         storableSubscriber.MaxStorageGb = newStorageGb;

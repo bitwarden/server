@@ -75,8 +75,7 @@ public class CloudOrganizationSignUpCommand(
             PlanType = plan!.Type,
             Seats = (short)(plan.PasswordManager.BaseSeats + signup.AdditionalSeats),
             MaxCollections = plan.PasswordManager.MaxCollections,
-            MaxStorageGb = !plan.PasswordManager.BaseStorageGb.HasValue ?
-                (short?)null : (short)(plan.PasswordManager.BaseStorageGb.Value + signup.AdditionalStorageGb),
+            MaxStorageGb = (short)(plan.PasswordManager.BaseStorageGb + signup.AdditionalStorageGb),
             UsePolicies = plan.HasPolicies,
             UseSso = plan.HasSso,
             UseGroups = plan.HasGroups,

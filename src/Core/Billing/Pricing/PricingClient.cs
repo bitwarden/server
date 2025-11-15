@@ -186,6 +186,6 @@ public class PricingClient(
         Available = true,
         LegacyYear = null,
         Seat = new Purchasable { Price = 10M, StripePriceId = StripeConstants.Prices.PremiumAnnually },
-        Storage = new Purchasable { Price = 4M, StripePriceId = StripeConstants.Prices.StoragePlanPersonal }
+        Storage = new Purchasable { Price = 4M, StripePriceId = StripeConstants.Prices.StoragePlanPersonal, Provided = 1 }
     };
 }

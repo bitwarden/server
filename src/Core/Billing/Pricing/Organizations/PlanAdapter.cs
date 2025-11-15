@@ -99,7 +99,7 @@ public record PlanAdapter : Core.Models.StaticStore.Plan
             _ => true);
         var baseSeats = GetBaseSeats(plan.Seats);
         var maxSeats = GetMaxSeats(plan.Seats);
-        var baseStorageGb = (short?)plan.Storage?.Provided;
+        var baseStorageGb = (short)(plan.Storage?.Provided ?? 0);
         var hasAdditionalStorageOption = plan.Storage != null;
         var additionalStoragePricePerGb = plan.Storage?.Price ?? 0;
         var stripeStoragePlanId = plan.Storage?.StripePriceId;
