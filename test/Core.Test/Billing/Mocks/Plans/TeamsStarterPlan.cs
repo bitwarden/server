@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Billing.Enums;
 using Bit.Core.Models.StaticStore;
 
-namespace Bit.Core.Billing.Models.StaticStore.Plans;
+namespace Bit.Core.Test.Billing.Mocks.Plans;
 
 public record TeamsStarterPlan : Plan
 {

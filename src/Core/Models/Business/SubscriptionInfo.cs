@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Models;
 using Stripe;
 
 #nullable enable
@@ -150,7 +151,7 @@ public class SubscriptionInfo
                 }
 
                 Quantity = (int)item.Quantity;
-                SponsoredSubscriptionItem = item.Plan != null && Utilities.StaticStore.SponsoredPlans.Any(p => p.StripePlanId == item.Plan.Id);
+                SponsoredSubscriptionItem = item.Plan != null && SponsoredPlans.All.Any(p => p.StripePlanId == item.Plan.Id);
             }
 
             public bool AddonSubscriptionItem { get; set; }

@@ -3,7 +3,7 @@ using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.PasswordManager;
 using Bit.Core.AdminConsole.Utilities.Validation;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Models.StaticStore.Plans;
+using Bit.Core.Test.Billing.Mocks.Plans;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;

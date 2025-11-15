@@ -1,4 +1,5 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.Billing.Models;
+using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Utilities;
@@ -27,7 +28,7 @@ public class ProfileOrganizationResponseModel : BaseProfileOrganizationResponseM
         FamilySponsorshipToDelete = organizationDetails.FamilySponsorshipToDelete;
         FamilySponsorshipValidUntil = organizationDetails.FamilySponsorshipValidUntil;
         FamilySponsorshipAvailable = (organizationDetails.FamilySponsorshipFriendlyName == null || IsAdminInitiated) &&
-            StaticStore.GetSponsoredPlan(PlanSponsorshipType.FamiliesForEnterprise)
+            SponsoredPlans.Get(PlanSponsorshipType.FamiliesForEnterprise)
             .UsersCanSponsor(organizationDetails);
         AccessSecretsManager = organizationDetails.AccessSecretsManager;
     }

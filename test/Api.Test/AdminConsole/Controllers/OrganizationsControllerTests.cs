@@ -30,8 +30,8 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Test.Billing.Mocks;
 using Bit.Core.Tokens;
-using Bit.Core.Utilities;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider;
 using NSubstitute;
 using Xunit;
@@ -305,7 +305,7 @@ public class OrganizationsControllerTests : IDisposable
         // Arrange
         _currentContext.OrganizationOwner(organization.Id).Returns(true);
 
-        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
+        var plan = MockPlans.Get(PlanType.EnterpriseAnnually);
         _pricingClient.GetPlan(Arg.Any<PlanType>()).Returns(plan);
 
         _organizationService

@@ -24,6 +24,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Billing\Billing.csproj" />
     <ProjectReference Include="..\Common\Common.csproj" />
+    <ProjectReference Include="..\Core.Test\Core.Test.csproj" />
   </ItemGroup>
 
   <ItemGroup>

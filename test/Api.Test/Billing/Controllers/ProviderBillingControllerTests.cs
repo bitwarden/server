@@ -17,7 +17,7 @@ using Bit.Core.Context;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.BitStripe;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
+using Bit.Core.Test.Billing.Mocks;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Http;
@@ -351,7 +351,7 @@ public class ProviderBillingControllerTests
 
         foreach (var providerPlan in providerPlans)
         {
-            var plan = StaticStore.GetPlan(providerPlan.PlanType);
+            var plan = MockPlans.Get(providerPlan.PlanType);
             sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(providerPlan.PlanType).Returns(plan);
             var priceId = ProviderPriceAdapter.GetPriceId(provider, subscription, providerPlan.PlanType);
             sutProvider.GetDependency<IStripeAdapter>().PriceGetAsync(priceId)
@@ -372,7 +372,7 @@ public class ProviderBillingControllerTests
         Assert.Equal(subscription.Customer!.Discount!.Coupon!.PercentOff, response.DiscountPercentage);
         Assert.Equal(subscription.CollectionMethod, response.CollectionMethod);
 
-        var teamsPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
+        var teamsPlan = MockPlans.Get(PlanType.TeamsMonthly);
         var providerTeamsPlan = response.Plans.FirstOrDefault(plan => plan.PlanName == teamsPlan.Name);
         Assert.NotNull(providerTeamsPlan);
         Assert.Equal(50, providerTeamsPlan.SeatMinimum);
@@ -381,7 +381,7 @@ public class ProviderBillingControllerTests
         Assert.Equal(60 * teamsPlan.PasswordManager.ProviderPortalSeatPrice, providerTeamsPlan.Cost);
         Assert.Equal("Monthly", providerTeamsPlan.Cadence);
 
-        var enterprisePlan = StaticStore.GetPlan(PlanType.EnterpriseMonthly);
+        var enterprisePlan = MockPlans.Get(PlanType.EnterpriseMonthly);
         var providerEnterprisePlan = response.Plans.FirstOrDefault(plan => plan.PlanName == enterprisePlan.Name);
         Assert.NotNull(providerEnterprisePlan);
         Assert.Equal(100, providerEnterprisePlan.SeatMinimum);
@@ -498,7 +498,7 @@ public class ProviderBillingControllerTests
 
         foreach (var providerPlan in providerPlans)
         {
-            var plan = StaticStore.GetPlan(providerPlan.PlanType);
+            var plan = MockPlans.Get(providerPlan.PlanType);
             sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(providerPlan.PlanType).Returns(plan);
             var priceId = ProviderPriceAdapter.GetPriceId(provider, subscription, providerPlan.PlanType);
             sutProvider.GetDependency<IStripeAdapter>().PriceGetAsync(priceId)
