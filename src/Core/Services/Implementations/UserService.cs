@@ -14,6 +14,8 @@ using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+using Bit.Core.Billing.Licenses;
+using Bit.Core.Billing.Licenses.Extensions;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Models.Sales;
@@ -948,6 +950,16 @@ public class UserService : UserManager<User>, IUserService
         if (!license.CanUse(user, claimsPrincipal, out var exceptionMessage))
         {
             throw new BadRequestException(exceptionMessage);
+        }
+
+        // If the license has a Token (claims-based), extract all properties from claims
+        // Otherwise, fall back to using the properties already on the license object (backward compatibility)
+        if (claimsPrincipal != null)
+        {
+            license.LicenseKey = claimsPrincipal.GetValue<string>(UserLicenseConstants.LicenseKey);
+            license.Premium = claimsPrincipal.GetValue<bool>(UserLicenseConstants.Premium);
+            license.MaxStorageGb = claimsPrincipal.GetValue<short?>(UserLicenseConstants.MaxStorageGb);
+            license.Expires = claimsPrincipal.GetValue<DateTime?>(UserLicenseConstants.Expires);
         }
 
         var dir = $"{_globalSettings.LicenseDirectory}/user";
