@@ -1,4 +1,4 @@
-﻿using Bit.Infrastructure.EntityFramework.Models;
+﻿using Bit.Core.Entities;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Seeder.Factories;
 using LinqToDB.EntityFrameworkCore;
@@ -10,14 +10,14 @@ public class OrganizationWithUsersRecipe(DatabaseContext db)
     public Guid Seed(string name, int users, string domain)
     {
         var organization = OrganizationSeeder.CreateEnterprise(name, domain, users);
-        var user = UserSeeder.CreateUser($"admin@{domain}");
+        var user = UserSeeder.CreateUserNoMangle($"admin@{domain}");
         var orgUser = organization.CreateOrganizationUser(user);
 
         var additionalUsers = new List<User>();
         var additionalOrgUsers = new List<OrganizationUser>();
         for (var i = 0; i < users; i++)
         {
-            var additionalUser = UserSeeder.CreateUser($"user{i}@{domain}");
+            var additionalUser = UserSeeder.CreateUserNoMangle($"user{i}@{domain}");
             additionalUsers.Add(additionalUser);
             additionalOrgUsers.Add(organization.CreateOrganizationUser(additionalUser));
         }

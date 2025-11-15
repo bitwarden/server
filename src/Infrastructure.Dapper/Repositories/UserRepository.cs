@@ -5,10 +5,12 @@ using Bit.Core.Entities;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Dapper;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging;
 
 #nullable enable
 
@@ -16,14 +18,23 @@ namespace Bit.Infrastructure.Dapper.Repositories;
 
 public class UserRepository : Repository<User, Guid>, IUserRepository
 {
+    private readonly IPlayIdService _playIdService;
+    private readonly IPlayDataRepository _playDataRepository;
     private readonly IDataProtector _dataProtector;
+    private readonly ILogger<UserRepository> _logger;
 
     public UserRepository(
+        IPlayIdService playIdService,
         GlobalSettings globalSettings,
-        IDataProtectionProvider dataProtectionProvider)
+        IPlayDataRepository playDataRepository,
+        IDataProtectionProvider dataProtectionProvider,
+        ILogger<UserRepository> logger)
         : base(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
     {
+        _playIdService = playIdService;
+        _playDataRepository = playDataRepository;
         _dataProtector = dataProtectionProvider.CreateProtector(Constants.DatabaseFieldProtectorPurpose);
+        _logger = logger;
     }
 
     public override async Task<User?> GetByIdAsync(Guid id)
@@ -153,6 +164,15 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
     public override async Task<User> CreateAsync(User user)
     {
         await ProtectDataAndSaveAsync(user, async () => await base.CreateAsync(user));
+
+        if (_playIdService.InPlay(out var playId))
+        {
+            _logger.LogInformation("Associating user {UserId} with Play ID {PlayId}",
+                user.Id, playId);
+
+            await _playDataRepository.CreateAsync(PlayData.Create(user, playId));
+        }
+
         return user;
     }
 

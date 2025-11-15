@@ -6,6 +6,7 @@ using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Dapper;
 using Microsoft.Data.SqlClient;
@@ -17,14 +18,35 @@ namespace Bit.Infrastructure.Dapper.Repositories;
 
 public class OrganizationRepository : Repository<Organization, Guid>, IOrganizationRepository
 {
+    private readonly IPlayIdService _playIdService;
+    private readonly IPlayDataRepository _playDataRepository;
     private readonly ILogger<OrganizationRepository> _logger;
 
     public OrganizationRepository(
+        IPlayIdService playIdService,
+        IPlayDataRepository playDataRepository,
         GlobalSettings globalSettings,
         ILogger<OrganizationRepository> logger)
         : base(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
     {
+        _playIdService = playIdService;
+        _playDataRepository = playDataRepository;
         _logger = logger;
+    }
+
+    public override async Task<Organization> CreateAsync(Organization obj)
+    {
+        await base.CreateAsync(obj);
+
+        if (_playIdService.InPlay(out var playId))
+        {
+            _logger.LogInformation("Associating organization {OrganizationId} with Play ID {PlayId}",
+                obj.Id, playId);
+
+            await _playDataRepository.CreateAsync(PlayData.Create(obj, playId));
+        }
+
+        return obj;
     }
 
     public async Task<Organization?> GetByIdentifierAsync(string identifier)
