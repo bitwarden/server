@@ -150,17 +150,34 @@ public class ImportCiphersCommand : IImportCiphersCommand
 
         foreach (var collection in collections)
         {
-            if (!organizationCollectionsIds.Contains(collection.Id))
+            // If the collection already exists, skip it
+            if (organizationCollectionsIds.Contains(collection.Id))
             {
-                collection.SetNewId();
-                newCollections.Add(collection);
-                newCollectionUsers.Add(new CollectionUser
-                {
-                    CollectionId = collection.Id,
-                    OrganizationUserId = importingOrgUser.Id,
-                    Manage = true
-                });
+                continue;
             }
+
+            // Create new collections if not already present
+            collection.SetNewId();
+            newCollections.Add(collection);
+
+            /*
+             * If the organization was created by a Provider, the organization may have zero members (users)
+             * In this situation importingOrgUser will be null, and accessing importingOrgUser.Id will
+             * result in a null reference exception.
+             *
+             * Avoid user assignment, but proceed with adding the collection.
+             */
+            if (importingOrgUser == null)
+            {
+                continue;
+            }
+
+            newCollectionUsers.Add(new CollectionUser
+            {
+                CollectionId = collection.Id,
+                OrganizationUserId = importingOrgUser.Id,
+                Manage = true
+            });
         }
 
         // Create associations based on the newly assigned ids
