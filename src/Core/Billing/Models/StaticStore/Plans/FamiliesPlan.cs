@@ -23,12 +23,12 @@ public record FamiliesPlan : Plan
         UpgradeSortOrder = 1;
         DisplaySortOrder = 1;
 
-        PasswordManager = new TeamsPasswordManagerFeatures();
+        PasswordManager = new FamiliesPasswordManagerFeatures();
     }
 
-    private record TeamsPasswordManagerFeatures : PasswordManagerPlanFeatures
+    private record FamiliesPasswordManagerFeatures : PasswordManagerPlanFeatures
     {
-        public TeamsPasswordManagerFeatures()
+        public FamiliesPasswordManagerFeatures()
         {
             BaseSeats = 6;
             BaseStorageGb = 1;
