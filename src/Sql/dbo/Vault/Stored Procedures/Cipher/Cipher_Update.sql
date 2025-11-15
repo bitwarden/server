@@ -11,8 +11,7 @@
     @RevisionDate DATETIME2(7),
     @DeletedDate DATETIME2(7),
     @Reprompt TINYINT,
-    @Key VARCHAR(MAX) = NULL,
-    @ArchivedDate DATETIME2(7) = NULL
+    @Key VARCHAR(MAX) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -31,8 +30,7 @@ BEGIN
         [RevisionDate] = @RevisionDate,
         [DeletedDate] = @DeletedDate,
         [Reprompt] = @Reprompt,
-        [Key] = @Key,
-        [ArchivedDate] = @ArchivedDate
+        [Key] = @Key
     WHERE
         [Id] = @Id
 

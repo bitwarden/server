@@ -22,6 +22,11 @@ ADD CONSTRAINT [FK_CipherArchive_User]
     ON DELETE CASCADE;
 GO
 
+ALTER TABLE [dbo].[CipherArchive]
+ADD CONSTRAINT [UX_CipherArchive_CipherId_UserId]
+    UNIQUE (CipherId, UserId);
+GO
+
 CREATE NONCLUSTERED INDEX [IX_CipherArchive_UserId]
     ON [dbo].[CipherArchive]([UserId]);
 GO

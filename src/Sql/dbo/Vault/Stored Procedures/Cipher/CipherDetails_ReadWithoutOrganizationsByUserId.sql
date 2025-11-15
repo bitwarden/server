@@ -12,6 +12,9 @@ BEGIN
         0 [OrganizationUseTotp]
     FROM
         [dbo].[CipherDetails](@UserId)
+    LEFT JOIN [dbo].[CipherArchive] ca
+        ON ca.CipherId = c.Id
+       AND ca.UserId = @UserId
     WHERE
         [UserId] = @UserId
 END

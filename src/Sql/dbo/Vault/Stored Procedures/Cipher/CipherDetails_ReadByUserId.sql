@@ -8,4 +8,8 @@ BEGIN
         *
     FROM
         [dbo].[UserCipherDetails](@UserId)
+    LEFT JOIN [dbo].[CipherArchive] ca
+        ON ca.CipherId = c.Id
+       AND ca.UserId = @UserId
+    WHERE
 END

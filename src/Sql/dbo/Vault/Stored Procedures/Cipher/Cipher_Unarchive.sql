@@ -1,39 +1,18 @@
 ﻿CREATE PROCEDURE [dbo].[Cipher_Unarchive]
-    @Ids AS [dbo].[GuidIdArray] READONLY,
-    @UserId AS UNIQUEIDENTIFIER
+    @Ids dbo.GuidIdArray READONLY,
+    @UserId UNIQUEIDENTIFIER
 AS
 BEGIN
-    SET NOCOUNT ON
-
-    CREATE TABLE #Temp
-    (
-        [Id] UNIQUEIDENTIFIER NOT NULL,
-        [UserId] UNIQUEIDENTIFIER NULL
-    )
-
-    INSERT INTO #Temp
-    SELECT
-        [Id],
-        [UserId]
-    FROM
-        [dbo].[UserCipherDetails](@UserId)
-    WHERE
-        [Edit] = 1
-      AND [ArchivedDate] IS NOT NULL
-      AND [Id] IN (SELECT * FROM @Ids)
+    SET NOCOUNT ON;
 
     DECLARE @UtcNow DATETIME2(7) = SYSUTCDATETIME();
-    UPDATE
-        [dbo].[Cipher]
-    SET
-        [ArchivedDate] = NULL,
-        [RevisionDate] = @UtcNow
-    WHERE
-        [Id] IN (SELECT [Id] FROM #Temp)
+
+    DELETE Ca
+    FROM [dbo].[CipherArchive] Ca
+    INNER JOIN @Ids I ON Ca.CipherId = I.[Id]
+    WHERE Ca.UserId = @UserId
 
     EXEC [dbo].[User_BumpAccountRevisionDate] @UserId
 
-    DROP TABLE #Temp
-
-    SELECT @UtcNow
+    SELECT @UtcNow;
 END

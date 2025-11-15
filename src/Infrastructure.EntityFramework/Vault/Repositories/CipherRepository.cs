@@ -786,7 +786,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
             {
                 CipherStateAction.Unarchive => ucd.ArchivedDate != null,
                 CipherStateAction.Archive => ucd.ArchivedDate == null,
-                _ => true
+                _ => true,
             };
         }
 
@@ -794,21 +794,65 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         {
             var dbContext = GetDatabaseContext(scope);
             var userCipherDetailsQuery = new UserCipherDetailsQuery(userId);
-            var cipherEntitiesToCheck = await dbContext.Ciphers.Where(c => ids.Contains(c.Id)).ToListAsync();
-            var query = from ucd in await userCipherDetailsQuery.Run(dbContext).ToListAsync()
-                        join c in cipherEntitiesToCheck
-                            on ucd.Id equals c.Id
-                        where ucd.Edit && FilterArchivedDate(action, ucd)
-                        select c;
+
+            var userCipherDetails = await userCipherDetailsQuery
+                .Run(dbContext)
+                .Where(ucd => ids.Contains(ucd.Id) && ucd.Edit)
+                .ToListAsync();
 
             var utcNow = DateTime.UtcNow;
-            var cipherIdsToModify = query.Select(c => c.Id);
-            var cipherEntitiesToModify = dbContext.Ciphers.Where(x => cipherIdsToModify.Contains(x.Id));
 
+            var cipherIdsToModify = userCipherDetails
+                .Where(ucd => FilterArchivedDate(action, ucd))
+                .Select(ucd => ucd.Id)
+                .Distinct()
+                .ToList();
+
+            if (!cipherIdsToModify.Any())
+            {
+                return utcNow;
+            }
+
+            if (action == CipherStateAction.Archive)
+            {
+                var existingArchiveCipherIds = await dbContext.CipherArchives
+                    .Where(ca => ca.UserId == userId && cipherIdsToModify.Contains(ca.CipherId))
+                    .Select(ca => ca.CipherId)
+                    .ToListAsync();
+
+                var cipherIdsToArchive = cipherIdsToModify
+                    .Except(existingArchiveCipherIds)
+                    .ToList();
+
+                if (cipherIdsToArchive.Any())
+                {
+                    var archives = cipherIdsToArchive.Select(id => new CipherArchive
+                    {
+                        CipherId = id,
+                        UserId = userId,
+                        ArchivedDate = utcNow,
+                    });
+
+                    await dbContext.CipherArchives.AddRangeAsync(archives);
+                }
+            }
+            else if (action == CipherStateAction.Unarchive)
+            {
+                var archivesToRemove = await dbContext.CipherArchives
+                    .Where(ca => ca.UserId == userId && cipherIdsToModify.Contains(ca.CipherId))
+                    .ToListAsync();
+
+                if (archivesToRemove.Count > 0)
+                {
+                    dbContext.CipherArchives.RemoveRange(archivesToRemove);
+                }
+            }
+
+            // Keep the behavior that archive/unarchive "touches" the cipher row for sync.
+            var cipherEntitiesToModify = dbContext.Ciphers.Where(c => cipherIdsToModify.Contains(c.Id));
             await cipherEntitiesToModify.ForEachAsync(cipher =>
             {
                 dbContext.Attach(cipher);
-                cipher.ArchivedDate = action == CipherStateAction.Unarchive ? null : utcNow;
                 cipher.RevisionDate = utcNow;
             });
 
@@ -818,6 +862,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
             return utcNow;
         }
     }
+
 
     private async Task<DateTime> ToggleDeleteCipherStatesAsync(IEnumerable<Guid> ids, Guid userId, CipherStateAction action)
     {
