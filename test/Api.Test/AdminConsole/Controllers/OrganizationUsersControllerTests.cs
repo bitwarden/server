@@ -9,10 +9,12 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
@@ -33,9 +35,11 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using NSubstitute;
+using OneOf.Types;
 using Xunit;
 
 namespace Bit.Api.Test.AdminConsole.Controllers;
@@ -476,7 +480,7 @@ public class OrganizationUsersControllerTests
 
         var result = await sutProvider.Sut.PutResetPassword(orgId, orgUserId, model);
 
-        Assert.IsType<NotFound>(result);
+        Assert.IsType<Microsoft.AspNetCore.Http.HttpResults.NotFound>(result);
     }
 
     [Theory]
@@ -506,7 +510,7 @@ public class OrganizationUsersControllerTests
 
         var result = await sutProvider.Sut.PutResetPassword(orgId, orgUserId, model);
 
-        Assert.IsType<NotFound>(result);
+        Assert.IsType<Microsoft.AspNetCore.Http.HttpResults.NotFound>(result);
     }
 
     [Theory]
@@ -521,7 +525,7 @@ public class OrganizationUsersControllerTests
 
         var result = await sutProvider.Sut.PutResetPassword(orgId, orgUserId, model);
 
-        Assert.IsType<NotFound>(result);
+        Assert.IsType<Microsoft.AspNetCore.Http.HttpResults.NotFound>(result);
     }
 
     [Theory]
@@ -593,5 +597,191 @@ public class OrganizationUsersControllerTests
         var result = await sutProvider.Sut.PutResetPassword(orgId, orgUserId, model);
 
         Assert.IsType<BadRequest<ModelStateDictionary>>(result);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task AutomaticallyConfirmOrganizationUserAsync_UserIdNull_ReturnsUnauthorized(
+        Guid orgId,
+        Guid orgUserId,
+        OrganizationUserConfirmRequestModel model,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(true);
+
+        sutProvider.GetDependency<IUserService>()
+            .GetProperUserId(Arg.Any<ClaimsPrincipal>())
+            .Returns((Guid?)null);
+
+        // Act
+        var result = await sutProvider.Sut.AutomaticallyConfirmOrganizationUserAsync(orgId, orgUserId, model);
+
+        // Assert
+        Assert.IsType<UnauthorizedHttpResult>(result);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task AutomaticallyConfirmOrganizationUserAsync_UserIdEmpty_ReturnsUnauthorized(
+        Guid orgId,
+        Guid orgUserId,
+        OrganizationUserConfirmRequestModel model,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(true);
+
+        sutProvider.GetDependency<IUserService>()
+            .GetProperUserId(Arg.Any<ClaimsPrincipal>())
+            .Returns(Guid.Empty);
+
+        // Act
+        var result = await sutProvider.Sut.AutomaticallyConfirmOrganizationUserAsync(orgId, orgUserId, model);
+
+        // Assert
+        Assert.IsType<UnauthorizedHttpResult>(result);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task AutomaticallyConfirmOrganizationUserAsync_Success_ReturnsOk(
+        Guid orgId,
+        Guid orgUserId,
+        Guid userId,
+        OrganizationUserConfirmRequestModel model,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(true);
+
+        sutProvider.GetDependency<IUserService>()
+            .GetProperUserId(Arg.Any<ClaimsPrincipal>())
+            .Returns(userId);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(orgId)
+            .Returns(true);
+
+        sutProvider.GetDependency<IAutomaticallyConfirmOrganizationUserCommand>()
+            .AutomaticallyConfirmOrganizationUserAsync(Arg.Any<AutomaticallyConfirmOrganizationUserRequest>())
+            .Returns(new CommandResult(new None()));
+
+        // Act
+        var result = await sutProvider.Sut.AutomaticallyConfirmOrganizationUserAsync(orgId, orgUserId, model);
+
+        // Assert
+        Assert.IsType<NoContent>(result);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task AutomaticallyConfirmOrganizationUserAsync_NotFoundError_ReturnsNotFound(
+        Guid orgId,
+        Guid orgUserId,
+        Guid userId,
+        OrganizationUserConfirmRequestModel model,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(true);
+
+        sutProvider.GetDependency<IUserService>()
+            .GetProperUserId(Arg.Any<ClaimsPrincipal>())
+            .Returns(userId);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(orgId)
+            .Returns(false);
+
+        var notFoundError = new OrganizationNotFound();
+        sutProvider.GetDependency<IAutomaticallyConfirmOrganizationUserCommand>()
+            .AutomaticallyConfirmOrganizationUserAsync(Arg.Any<AutomaticallyConfirmOrganizationUserRequest>())
+            .Returns(new CommandResult(notFoundError));
+
+        // Act
+        var result = await sutProvider.Sut.AutomaticallyConfirmOrganizationUserAsync(orgId, orgUserId, model);
+
+        // Assert
+        var notFoundResult = Assert.IsType<NotFound<ErrorResponseModel>>(result);
+        Assert.Equal(notFoundError.Message, notFoundResult.Value.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task AutomaticallyConfirmOrganizationUserAsync_BadRequestError_ReturnsBadRequest(
+        Guid orgId,
+        Guid orgUserId,
+        Guid userId,
+        OrganizationUserConfirmRequestModel model,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(true);
+
+        sutProvider.GetDependency<IUserService>()
+            .GetProperUserId(Arg.Any<ClaimsPrincipal>())
+            .Returns(userId);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(orgId)
+            .Returns(true);
+
+        var badRequestError = new UserIsNotAccepted();
+        sutProvider.GetDependency<IAutomaticallyConfirmOrganizationUserCommand>()
+            .AutomaticallyConfirmOrganizationUserAsync(Arg.Any<AutomaticallyConfirmOrganizationUserRequest>())
+            .Returns(new CommandResult(badRequestError));
+
+        // Act
+        var result = await sutProvider.Sut.AutomaticallyConfirmOrganizationUserAsync(orgId, orgUserId, model);
+
+        // Assert
+        var badRequestResult = Assert.IsType<BadRequest<ErrorResponseModel>>(result);
+        Assert.Equal(badRequestError.Message, badRequestResult.Value.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task AutomaticallyConfirmOrganizationUserAsync_InternalError_ReturnsProblem(
+        Guid orgId,
+        Guid orgUserId,
+        Guid userId,
+        OrganizationUserConfirmRequestModel model,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(true);
+
+        sutProvider.GetDependency<IUserService>()
+            .GetProperUserId(Arg.Any<ClaimsPrincipal>())
+            .Returns(userId);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(orgId)
+            .Returns(true);
+
+        var internalError = new FailedToWriteToEventLog();
+        sutProvider.GetDependency<IAutomaticallyConfirmOrganizationUserCommand>()
+            .AutomaticallyConfirmOrganizationUserAsync(Arg.Any<AutomaticallyConfirmOrganizationUserRequest>())
+            .Returns(new CommandResult(internalError));
+
+        // Act
+        var result = await sutProvider.Sut.AutomaticallyConfirmOrganizationUserAsync(orgId, orgUserId, model);
+
+        // Assert
+        var problemResult = Assert.IsType<JsonHttpResult<ErrorResponseModel>>(result);
+        Assert.Equal(StatusCodes.Status500InternalServerError, problemResult.StatusCode);
     }
 }

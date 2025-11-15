@@ -3,6 +3,7 @@
 
 using AutoMapper;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -943,23 +944,24 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         await dbContext.SaveChangesAsync();
     }
 
-    public async Task<bool> ConfirmOrganizationUserAsync(Core.Entities.OrganizationUser organizationUser)
+    public async Task<bool> ConfirmOrganizationUserAsync(AcceptedOrganizationUserToConfirm organizationUserToConfirm)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         await using var dbContext = GetDatabaseContext(scope);
 
         var result = await dbContext.OrganizationUsers
-            .Where(ou => ou.Id == organizationUser.Id && ou.Status == OrganizationUserStatusType.Accepted)
+            .Where(ou => ou.Id == organizationUserToConfirm.OrganizationUserId
+                         && ou.Status == OrganizationUserStatusType.Accepted)
             .ExecuteUpdateAsync(x => x
                 .SetProperty(y => y.Status, OrganizationUserStatusType.Confirmed)
-                .SetProperty(y => y.Key, organizationUser.Key));
+                .SetProperty(y => y.Key, organizationUserToConfirm.Key));
 
         if (result <= 0)
         {
             return false;
         }
 
-        await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdAsync(organizationUser.Id);
+        await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdAsync(organizationUserToConfirm.OrganizationUserId);
         return true;
 
     }
