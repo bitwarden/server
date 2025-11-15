@@ -20,7 +20,6 @@ public interface IGlobalSettings
     IConnectionStringSettings Storage { get; set; }
     IBaseServiceUriSettings BaseServiceUri { get; set; }
     ISsoSettings Sso { get; set; }
-    ILogLevelSettings MinLogLevel { get; set; }
     IPasswordlessAuthSettings PasswordlessAuth { get; set; }
     IDomainVerificationSettings DomainVerification { get; set; }
     ILaunchDarklySettings LaunchDarkly { get; set; }

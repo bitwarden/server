@@ -2,14 +2,12 @@
 #nullable disable
 
 using Bit.Core.Auth.Settings;
-using Bit.Core.Settings.LoggingSettings;
 
 namespace Bit.Core.Settings;
 
 public class GlobalSettings : IGlobalSettings
 {
     private string _mailTemplateDirectory;
-    private string _logDirectory;
     private string _licenseDirectory;
 
     public GlobalSettings()
@@ -25,14 +23,6 @@ public class GlobalSettings : IGlobalSettings
     public virtual string KnownProxies { get; set; }
     public virtual string SiteName { get; set; }
     public virtual string ProjectName { get; set; }
-    public virtual string LogDirectory
-    {
-        get => BuildDirectory(_logDirectory, "/logs");
-        set => _logDirectory = value;
-    }
-    public virtual bool LogDirectoryByProject { get; set; } = true;
-    public virtual long? LogRollBySizeLimit { get; set; }
-    public virtual bool EnableDevLogging { get; set; } = false;
     public virtual string LicenseDirectory
     {
         get => BuildDirectory(_licenseDirectory, "/core/licenses");
@@ -73,9 +63,6 @@ public class GlobalSettings : IGlobalSettings
     public virtual FileStorageSettings Send { get; set; }
     public virtual IdentityServerSettings IdentityServer { get; set; } = new IdentityServerSettings();
     public virtual DataProtectionSettings DataProtection { get; set; }
-    public virtual SentrySettings Sentry { get; set; } = new SentrySettings();
-    public virtual SyslogSettings Syslog { get; set; } = new SyslogSettings();
-    public virtual ILogLevelSettings MinLogLevel { get; set; } = new LogLevelSettings();
     public virtual NotificationHubPoolSettings NotificationHubPool { get; set; } = new();
     public virtual YubicoSettings Yubico { get; set; } = new YubicoSettings();
     public virtual DuoSettings Duo { get; set; } = new DuoSettings();
@@ -548,57 +535,9 @@ public class GlobalSettings : IGlobalSettings
         }
     }
 
-    public class SentrySettings
-    {
-        public string Dsn { get; set; }
-    }
-
     public class NotificationsSettings : ConnectionStringSettings
     {
         public string RedisConnectionString { get; set; }
-    }
-
-    public class SyslogSettings
-    {
-        /// <summary>
-        /// The connection string used to connect to a remote syslog server over TCP or UDP, or to connect locally.
-        /// </summary>
-        /// <remarks>
-        /// <para>The connection string will be parsed using <see cref="System.Uri" /> to extract the protocol, host name and port number.
-        /// </para>
-        /// <para>
-        /// Supported protocols are:
-        /// <list type="bullet">
-        /// <item>UDP (use <code>udp://</code>)</item>
-        /// <item>TCP (use <code>tcp://</code>)</item>
-        /// <item>TLS over TCP (use <code>tls://</code>)</item>
-        /// </list>
-        /// </para>
-        /// </remarks>
-        /// <example>
-        /// A remote server (logging.dev.example.com) is listening on UDP (port 514):
-        /// <code>
-        /// udp://logging.dev.example.com:514</code>.
-        /// </example>
-        public string Destination { get; set; }
-        /// <summary>
-        /// The absolute path to a Certificate (DER or Base64 encoded with private key).
-        /// </summary>
-        /// <remarks>
-        /// The certificate path and <see cref="CertificatePassword"/> are passed into the <see cref="System.Security.Cryptography.X509Certificates.X509Certificate2.X509Certificate2(string, string)" />.
-        /// The file format of the certificate may be binary encoded (DER) or base64. If the private key is encrypted, provide the password in <see cref="CertificatePassword"/>,
-        /// </remarks>
-        public string CertificatePath { get; set; }
-        /// <summary>
-        /// The password for the encrypted private key in the certificate supplied in <see cref="CertificatePath" />.
-        /// </summary>
-        /// <value></value>
-        public string CertificatePassword { get; set; }
-        /// <summary>
-        /// The thumbprint of the certificate in the X.509 certificate store for personal certificates for the user account running Bitwarden.
-        /// </summary>
-        /// <value></value>
-        public string CertificateThumbprint { get; set; }
     }
 
     public class NotificationHubSettings
