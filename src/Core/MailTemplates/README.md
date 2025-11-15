@@ -75,4 +75,4 @@ The `IMailService` automatically uses both versions when sending emails:
 - Test plain text templates to ensure they're readable and convey the same message
 
 ## `*.mjml`
-This is a templating language we use to increase efficiency when creating email content. See the readme within the `./mjml` directory for more comprehensive information.
+This is a templating language we use to increase efficiency when creating email content. See the `MJML` [documentation](./Mjml/README.md) for more details.
