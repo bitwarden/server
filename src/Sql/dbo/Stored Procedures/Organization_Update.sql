@@ -126,7 +126,8 @@ BEGIN
         [UseOrganizationDomains] = @UseOrganizationDomains,
         [UseAdminSponsoredFamilies] = @UseAdminSponsoredFamilies,
         [SyncSeats] = @SyncSeats,
-        [UseAutomaticUserConfirmation] = @UseAutomaticUserConfirmation
+        [UseAutomaticUserConfirmation] = @UseAutomaticUserConfirmation,
+        [MaxStorageGbIncreased] = @MaxStorageGb
     WHERE
         [Id] = @Id;
 END

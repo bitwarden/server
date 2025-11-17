@@ -126,7 +126,8 @@ BEGIN
         [UseOrganizationDomains],
         [UseAdminSponsoredFamilies],
         [SyncSeats],
-        [UseAutomaticUserConfirmation]
+        [UseAutomaticUserConfirmation],
+        [MaxStorageGbIncreased]
     )
     VALUES
         (
@@ -190,6 +191,7 @@ BEGIN
             @UseOrganizationDomains,
             @UseAdminSponsoredFamilies,
             @SyncSeats,
-            @UseAutomaticUserConfirmation
+            @UseAutomaticUserConfirmation,
+            @MaxStorageGb
         );
 END
