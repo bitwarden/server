@@ -33,7 +33,8 @@ public abstract class BaseJobsHostedService : IHostedService, IDisposable
         _globalSettings = globalSettings;
     }
 
-    public IEnumerable<Tuple<Type, ITrigger>>? Jobs { get; protected set; }
+    protected IEnumerable<Tuple<Type, ITrigger>>? Jobs { get; set; }
+    protected IList<JobKey> JobKeys { get; private set; } = new List<JobKey>();
 
     public virtual async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -64,14 +65,13 @@ public abstract class BaseJobsHostedService : IHostedService, IDisposable
             GroupMatcher<JobKey>.AnyGroup());
         await _scheduler.Start(cancellationToken);
 
-        var jobKeys = new List<JobKey>();
         var triggerKeys = new List<TriggerKey>();
 
         if (Jobs != null)
         {
             foreach (var (job, trigger) in Jobs)
             {
-                jobKeys.Add(JobBuilder.Create(job)
+                JobKeys.Add(JobBuilder.Create(job)
                     .WithIdentity(job.FullName!)
                     .Build().Key);
                 triggerKeys.Add(trigger.Key);
@@ -120,7 +120,7 @@ public abstract class BaseJobsHostedService : IHostedService, IDisposable
 
         foreach (var key in existingJobKeys)
         {
-            if (jobKeys.Contains(key))
+            if (JobKeys.Contains(key))
             {
                 continue;
             }
@@ -148,6 +148,19 @@ public abstract class BaseJobsHostedService : IHostedService, IDisposable
         if (_scheduler is not null)
         {
             await _scheduler.Shutdown(cancellationToken);
+        }
+    }
+
+    public async Task InterruptJobsAndShutdownAsync(CancellationToken cancellationToken = default)
+    {
+        if (_scheduler is not null)
+        {
+            foreach (var jobKey in JobKeys)
+            {
+                await _scheduler.Interrupt(jobKey, cancellationToken);
+            }
+
+            await _scheduler.Shutdown(true, cancellationToken);
         }
     }
 

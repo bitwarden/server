@@ -1,13 +1,13 @@
-﻿using Bit.Core.Jobs;
+using Bit.Core.Jobs;
 using Bit.Core.Settings;
 using Quartz;
 
 namespace Bit.Billing.Jobs;
 
-public class JobsHostedService(
+public class ReconcileAdditionalStorageJobHostedService(
     GlobalSettings globalSettings,
     IServiceProvider serviceProvider,
-    ILogger<JobsHostedService> logger,
+    ILogger<ReconcileAdditionalStorageJobHostedService> logger,
     ILogger<JobListener> listenerLogger)
     : BaseJobsHostedService(globalSettings, serviceProvider, logger, listenerLogger)
 {
@@ -15,7 +15,7 @@ public class JobsHostedService(
     {
         Jobs = new List<Tuple<Type, ITrigger>>
         {
-            new(typeof(AliveJob), AliveJob.GetTrigger())
+            new(typeof(ReconcileAdditionalStorageJob), ReconcileAdditionalStorageJob.GetTrigger()),
         };
 
         await base.StartAsync(cancellationToken);
@@ -23,7 +23,9 @@ public class JobsHostedService(
 
     public static void AddJobsServices(IServiceCollection services)
     {
-        services.AddTransient<AliveJob>();
-        services.AddTransient<SubscriptionCancellationJob>();
+        services.AddTransient<ReconcileAdditionalStorageJob>();
+        services.AddSingleton<ReconcileAdditionalStorageJobHostedService>();
+        services.AddHostedService(sp => sp.GetRequiredService<ReconcileAdditionalStorageJobHostedService>());
     }
+
 }

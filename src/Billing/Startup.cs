@@ -3,6 +3,7 @@
 
 using System.Globalization;
 using System.Net.Http.Headers;
+using Bit.Billing.Jobs;
 using Bit.Billing.Services;
 using Bit.Billing.Services.Implementations;
 using Bit.Commercial.Core.Utilities;
@@ -121,6 +122,9 @@ public class Startup
         // Jobs service
         Jobs.JobsHostedService.AddJobsServices(services);
         services.AddHostedService<Jobs.JobsHostedService>();
+
+        // Specialized job service for reconcile storage job so it can be shutdown if needed
+        ReconcileAdditionalStorageJobHostedService.AddJobsServices(services);
 
         // Swagger
         services.AddEndpointsApiExplorer();
