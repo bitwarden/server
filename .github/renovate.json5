@@ -42,6 +42,10 @@
       dependencyDashboardApproval: false,
     },
     {
+      matchSourceUrls: ["https://github.com/bitwarden/sdk-internal"],
+      groupName: "sdk-internal",
+    },
+    {
       matchManagers: ["dockerfile", "docker-compose"],
       commitMessagePrefix: "[deps] BRE:",
     },

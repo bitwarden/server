@@ -13,6 +13,10 @@ public class MasterPasswordUnlockAndAuthenticationData
 
     public required string Email { get; set; }
     public required string MasterKeyAuthenticationHash { get; set; }
+    /// <summary>
+    /// The user's symmetric key encrypted with their master key.
+    /// Also known as "MasterKeyWrappedUserKey"
+    /// </summary>
     public required string MasterKeyEncryptedUserKey { get; set; }
     public string? MasterPasswordHint { get; set; }
 

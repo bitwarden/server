@@ -58,6 +58,7 @@ public record PlanAdapter : Core.Models.StaticStore.Plan
             "enterprise-monthly-2020" => PlanType.EnterpriseMonthly2020,
             "enterprise-monthly-2023" => PlanType.EnterpriseMonthly2023,
             "families" => PlanType.FamiliesAnnually,
+            "families-2025" => PlanType.FamiliesAnnually2025,
             "families-2019" => PlanType.FamiliesAnnually2019,
             "free" => PlanType.Free,
             "teams-annually" => PlanType.TeamsAnnually,
@@ -77,7 +78,7 @@ public record PlanAdapter : Core.Models.StaticStore.Plan
         => planType switch
         {
             PlanType.Free => ProductTierType.Free,
-            PlanType.FamiliesAnnually or PlanType.FamiliesAnnually2019 => ProductTierType.Families,
+            PlanType.FamiliesAnnually or PlanType.FamiliesAnnually2025 or PlanType.FamiliesAnnually2019 => ProductTierType.Families,
             PlanType.TeamsStarter or PlanType.TeamsStarter2023 => ProductTierType.TeamsStarter,
             _ when planType.ToString().Contains("Teams") => ProductTierType.Teams,
             _ when planType.ToString().Contains("Enterprise") => ProductTierType.Enterprise,
@@ -103,6 +104,14 @@ public record PlanAdapter : Core.Models.StaticStore.Plan
         var additionalStoragePricePerGb = plan.Storage?.Price ?? 0;
         var stripeStoragePlanId = plan.Storage?.StripePriceId;
         short? maxCollections = plan.AdditionalData.TryGetValue("passwordManager.maxCollections", out var value) ? short.Parse(value) : null;
+        var stripePremiumAccessPlanId =
+            plan.AdditionalData.TryGetValue("premiumAccessAddOnPriceId", out var premiumAccessAddOnPriceIdValue)
+                ? premiumAccessAddOnPriceIdValue
+                : null;
+        var premiumAccessOptionPrice =
+            plan.AdditionalData.TryGetValue("premiumAccessAddOnPriceAmount", out var premiumAccessAddOnPriceAmountValue)
+                ? decimal.Parse(premiumAccessAddOnPriceAmountValue)
+                : 0;
 
         return new PasswordManagerPlanFeatures
         {
@@ -120,7 +129,9 @@ public record PlanAdapter : Core.Models.StaticStore.Plan
             HasAdditionalStorageOption = hasAdditionalStorageOption,
             AdditionalStoragePricePerGb = additionalStoragePricePerGb,
             StripeStoragePlanId = stripeStoragePlanId,
-            MaxCollections = maxCollections
+            MaxCollections = maxCollections,
+            StripePremiumAccessPlanId = stripePremiumAccessPlanId,
+            PremiumAccessOptionPrice = premiumAccessOptionPrice
         };
     }
 

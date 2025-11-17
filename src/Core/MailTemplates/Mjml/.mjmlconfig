@@ -1,5 +1,7 @@
 {
   "packages": [
-    "components/mj-bw-hero"
+    "components/mj-bw-hero",
+    "components/mj-bw-icon-row",
+    "components/mj-bw-learn-more-footer"
   ]
 }
