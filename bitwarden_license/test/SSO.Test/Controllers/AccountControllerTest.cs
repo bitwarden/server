@@ -5,6 +5,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.UserFeatures.Registration;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -18,6 +19,7 @@ using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
@@ -1007,5 +1009,132 @@ public class AccountControllerTest
             _output.WriteLine($"Scenario={scenario} | ON: SSO={onCounts.UserGetBySso}, Email={onCounts.UserGetByEmail}, Org={onCounts.OrgGetById}, OrgUserByOrg={onCounts.OrgUserGetByOrg}, OrgUserByEmail={onCounts.OrgUserGetByEmail}");
             _output.WriteLine($"Scenario={scenario} | OFF: SSO={offCounts.UserGetBySso}, Email={offCounts.UserGetByEmail}, Org={offCounts.OrgGetById}, OrgUserByOrg={offCounts.OrgUserGetByOrg}, OrgUserByEmail={offCounts.OrgUserGetByEmail}");
         }
+    }
+
+    [Theory, BitAutoData]
+    public async Task AutoProvisionUserAsync_WithFeatureFlagEnabled_CallsRegisterSSOAutoProvisionedUser(
+        SutProvider<AccountController> sutProvider)
+    {
+        // Arrange
+        var orgId = Guid.NewGuid();
+        var providerUserId = "ext-new-user";
+        var email = "newuser@example.com";
+        var organization = new Organization { Id = orgId, Name = "Test Org", Seats = null };
+
+        // No existing user (JIT provisioning scenario)
+        sutProvider.GetDependency<IUserRepository>().GetByEmailAsync(email).Returns((User?)null);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(organization);
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetByOrganizationEmailAsync(orgId, email)
+            .Returns((OrganizationUser?)null);
+
+        // Feature flag enabled
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates)
+            .Returns(true);
+
+        // Mock the RegisterSSOAutoProvisionedUserAsync to return success
+        sutProvider.GetDependency<IRegisterUserCommand>()
+            .RegisterSSOAutoProvisionedUserAsync(Arg.Any<User>(), Arg.Any<Organization>())
+            .Returns(IdentityResult.Success);
+
+        var claims = new[]
+        {
+            new Claim(JwtClaimTypes.Email, email),
+            new Claim(JwtClaimTypes.Name, "New User")
+        } as IEnumerable<Claim>;
+        var config = new SsoConfigurationData();
+
+        var method = typeof(AccountController).GetMethod(
+            "CreateUserAndOrgUserConditionallyAsync",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(method);
+
+        // Act
+        var task = (Task<(User user, Organization organization, OrganizationUser orgUser)>)method!.Invoke(
+            sutProvider.Sut,
+            new object[]
+            {
+                orgId.ToString(),
+                providerUserId,
+                claims,
+                null!,
+                config
+            })!;
+
+        var result = await task;
+
+        // Assert
+        await sutProvider.GetDependency<IRegisterUserCommand>().Received(1)
+            .RegisterSSOAutoProvisionedUserAsync(
+                Arg.Is<User>(u => u.Email == email && u.Name == "New User"),
+                Arg.Is<Organization>(o => o.Id == orgId && o.Name == "Test Org"));
+
+        Assert.NotNull(result.user);
+        Assert.Equal(email, result.user.Email);
+        Assert.Equal(organization.Id, result.organization.Id);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AutoProvisionUserAsync_WithFeatureFlagDisabled_CallsRegisterUserInstead(
+        SutProvider<AccountController> sutProvider)
+    {
+        // Arrange
+        var orgId = Guid.NewGuid();
+        var providerUserId = "ext-legacy-user";
+        var email = "legacyuser@example.com";
+        var organization = new Organization { Id = orgId, Name = "Test Org", Seats = null };
+
+        // No existing user (JIT provisioning scenario)
+        sutProvider.GetDependency<IUserRepository>().GetByEmailAsync(email).Returns((User?)null);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(organization);
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetByOrganizationEmailAsync(orgId, email)
+            .Returns((OrganizationUser?)null);
+
+        // Feature flag disabled
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates)
+            .Returns(false);
+
+        // Mock the RegisterUser to return success
+        sutProvider.GetDependency<IRegisterUserCommand>()
+            .RegisterUser(Arg.Any<User>())
+            .Returns(IdentityResult.Success);
+
+        var claims = new[]
+        {
+            new Claim(JwtClaimTypes.Email, email),
+            new Claim(JwtClaimTypes.Name, "Legacy User")
+        } as IEnumerable<Claim>;
+        var config = new SsoConfigurationData();
+
+        var method = typeof(AccountController).GetMethod(
+            "CreateUserAndOrgUserConditionallyAsync",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(method);
+
+        // Act
+        var task = (Task<(User user, Organization organization, OrganizationUser orgUser)>)method!.Invoke(
+            sutProvider.Sut,
+            new object[]
+            {
+                orgId.ToString(),
+                providerUserId,
+                claims,
+                null!,
+                config
+            })!;
+
+        var result = await task;
+
+        // Assert
+        await sutProvider.GetDependency<IRegisterUserCommand>().Received(1)
+            .RegisterUser(Arg.Is<User>(u => u.Email == email && u.Name == "Legacy User"));
+
+        // Verify the new method was NOT called
+        await sutProvider.GetDependency<IRegisterUserCommand>().DidNotReceive()
+            .RegisterSSOAutoProvisionedUserAsync(Arg.Any<User>(), Arg.Any<Organization>());
+
+        Assert.NotNull(result.user);
+        Assert.Equal(email, result.user.Email);
     }
 }
