@@ -86,6 +86,6 @@ SELECT
     1 [Manage],
     0 [OrganizationUseTotp]
 FROM
-    [dbo].[CipherDetails](@UserId)
+    [dbo].[CipherDetails](@UserId) AS C
 WHERE
-    [UserId] = @UserId
+    C.[UserId] = @UserId
