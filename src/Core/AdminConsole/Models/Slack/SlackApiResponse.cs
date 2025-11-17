@@ -33,6 +33,12 @@ public class SlackOAuthResponse : SlackApiResponse
     public SlackTeam Team { get; set; } = new();
 }
 
+public class SlackSendMessageResponse : SlackApiResponse
+{
+    [JsonPropertyName("channel")]
+    public string Channel { get; set; } = string.Empty;
+}
+
 public class SlackTeam
 {
     public string Id { get; set; } = string.Empty;

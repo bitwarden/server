@@ -10,19 +10,17 @@ namespace Bit.Api.AdminConsole.Models.Request;
 public class PolicyRequestModel
 {
     [Required]
-    public PolicyType? Type { get; set; }
-    [Required]
     public bool? Enabled { get; set; }
     public Dictionary<string, object>? Data { get; set; }
 
-    public async Task<PolicyUpdate> ToPolicyUpdateAsync(Guid organizationId, ICurrentContext currentContext)
+    public async Task<PolicyUpdate> ToPolicyUpdateAsync(Guid organizationId, PolicyType type, ICurrentContext currentContext)
     {
-        var serializedData = PolicyDataValidator.ValidateAndSerialize(Data, Type!.Value);
+        var serializedData = PolicyDataValidator.ValidateAndSerialize(Data, type);
         var performedBy = new StandardUser(currentContext.UserId!.Value, await currentContext.OrganizationOwner(organizationId));
 
         return new()
         {
-            Type = Type!.Value,
+            Type = type,
             OrganizationId = organizationId,
             Data = serializedData,
             Enabled = Enabled.GetValueOrDefault(),
