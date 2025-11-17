@@ -40,6 +40,7 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly IUserRepository _userRepository;
     private readonly IAuthRequestRepository _authRequestRepository;
     private readonly IMailService _mailService;
+    private readonly IClientVersionValidator _clientVersionValidator;
 
     protected ICurrentContext CurrentContext { get; }
     protected IPolicyService PolicyService { get; }
@@ -68,7 +69,8 @@ public abstract class BaseRequestValidator<T> where T : class
         IPolicyRequirementQuery policyRequirementQuery,
         IAuthRequestRepository authRequestRepository,
         IMailService mailService,
-        IUserAccountKeysQuery userAccountKeysQuery
+        IUserAccountKeysQuery userAccountKeysQuery,
+        IClientVersionValidator clientVersionValidator
     )
     {
         _userManager = userManager;
@@ -89,6 +91,7 @@ public abstract class BaseRequestValidator<T> where T : class
         _authRequestRepository = authRequestRepository;
         _mailService = mailService;
         _accountKeysQuery = userAccountKeysQuery;
+        _clientVersionValidator = clientVersionValidator;
     }
 
     protected async Task ValidateAsync(T context, ValidatedTokenRequest request,
@@ -259,6 +262,7 @@ public abstract class BaseRequestValidator<T> where T : class
             return
             [
                 () => ValidateMasterPasswordAsync(context, validatorContext),
+                () => ValidateClientVersionAsync(context, validatorContext),
                 () => ValidateTwoFactorAsync(context, request, validatorContext),
                 () => ValidateSsoAsync(context, request, validatorContext),
                 () => ValidateNewDeviceAsync(context, request, validatorContext),
@@ -272,6 +276,7 @@ public abstract class BaseRequestValidator<T> where T : class
             return
             [
                 () => ValidateMasterPasswordAsync(context, validatorContext),
+                () => ValidateClientVersionAsync(context, validatorContext),
                 () => ValidateSsoAsync(context, request, validatorContext),
                 () => ValidateTwoFactorAsync(context, request, validatorContext),
                 () => ValidateNewDeviceAsync(context, request, validatorContext),
@@ -321,6 +326,24 @@ public abstract class BaseRequestValidator<T> where T : class
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// Validates whether the client version is compatible for the user attempting to authenticate.
+    /// New authentications only; refresh/device grants are handled elsewhere.
+    /// </summary>
+    /// <returns>true if the scheme successfully passed validation, otherwise false.</returns>
+    private async Task<bool> ValidateClientVersionAsync(T context, CustomValidatorRequestContext validatorContext)
+    {
+        var ok = await _clientVersionValidator.ValidateAsync(validatorContext.User, validatorContext);
+        if (ok)
+        {
+            return true;
+        }
+
+        SetValidationErrorResult(context, validatorContext);
+        await LogFailedLoginEvent(validatorContext.User, EventType.User_FailedLogIn);
+        return false;
     }
 
     /// <summary>

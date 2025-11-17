@@ -49,7 +49,8 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         IPolicyRequirementQuery policyRequirementQuery,
         IAuthRequestRepository authRequestRepository,
         IMailService mailService,
-        IUserAccountKeysQuery userAccountKeysQuery)
+        IUserAccountKeysQuery userAccountKeysQuery,
+        IClientVersionValidator clientVersionValidator)
         : base(
             userManager,
             userService,
@@ -68,7 +69,8 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             policyRequirementQuery,
             authRequestRepository,
             mailService,
-            userAccountKeysQuery)
+            userAccountKeysQuery,
+            clientVersionValidator)
     {
         _userManager = userManager;
         _updateInstallationCommand = updateInstallationCommand;
