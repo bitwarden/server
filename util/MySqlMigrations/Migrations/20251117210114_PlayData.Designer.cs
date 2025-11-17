@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.MySqlMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20251105002110_2025-11-04_00_PlayData")]
-    partial class _20251104_00_PlayData
+    [Migration("20251117210114_PlayData")]
+    partial class PlayData
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1017,6 +1017,12 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
 
+                    b.Property<int?>("ApplicationAtRiskCount")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ApplicationCount")
+                        .HasColumnType("int");
+
                     b.Property<string>("ApplicationData")
                         .HasColumnType("longtext");
 
@@ -1027,8 +1033,38 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<int?>("CriticalApplicationAtRiskCount")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("CriticalApplicationCount")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("CriticalMemberAtRiskCount")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("CriticalMemberCount")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("CriticalPasswordAtRiskCount")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("CriticalPasswordCount")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("MemberAtRiskCount")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("MemberCount")
+                        .HasColumnType("int");
+
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("char(36)");
+
+                    b.Property<int?>("PasswordAtRiskCount")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PasswordCount")
+                        .HasColumnType("int");
 
                     b.Property<string>("ReportData")
                         .IsRequired()
@@ -1622,28 +1658,6 @@ namespace Bit.MySqlMigrations.Migrations
                         {
                             t.HasCheckConstraint("CK_PlayData_UserOrOrganization", "([UserId] IS NOT NULL AND [OrganizationId] IS NULL) OR ([UserId] IS NULL AND [OrganizationId] IS NOT NULL)");
                         });
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.SeededData", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
-
-                    b.Property<DateTime>("CreationDate")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("Data")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("RecipeName")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("SeededData");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Send", b =>

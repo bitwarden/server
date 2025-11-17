@@ -72,22 +72,4 @@ public class QueryControllerTests : IClassFixture<SeederApiApplicationFactory>, 
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
-
-    [Fact]
-    public async Task QueryEndpoint_VerifyQueryDoesNotCreateSeedId()
-    {
-        var testEmail = $"test-{Guid.NewGuid()}@bitwarden.com";
-
-        var response = await _client.PostAsJsonAsync("/query", new QueryRequestModel
-        {
-            Template = "EmergencyAccessInviteQuery",
-            Arguments = System.Text.Json.JsonSerializer.SerializeToElement(new { email = testEmail })
-        });
-
-        response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadAsStringAsync();
-
-        Assert.Equal("[]", result);
-    }
-
 }
