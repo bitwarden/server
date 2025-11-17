@@ -5,11 +5,23 @@ BEGIN
     SET NOCOUNT ON
 
     SELECT
-        *
+        c.Id,
+        c.UserId,
+        c.OrganizationId,
+        c.Type,
+        c.Data,
+        c.Favorites,
+        c.Folders,
+        c.Attachments,
+        c.CreationDate,
+        c.RevisionDate,
+        c.DeletedDate,
+        c.Reprompt,
+        c.Key,
+        ca.ArchivedDate
     FROM
-        [dbo].[UserCipherDetails](@UserId)
-    LEFT JOIN [dbo].[CipherArchive] ca
-        ON ca.CipherId = c.Id
-       AND ca.UserId = @UserId
-    WHERE
+        [dbo].[UserCipherDetails](@UserId) AS c
+        LEFT JOIN [dbo].[CipherArchive] AS ca
+            ON ca.CipherId = c.Id
+           AND ca.UserId = @UserId
 END

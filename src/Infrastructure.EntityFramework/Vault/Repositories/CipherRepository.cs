@@ -786,7 +786,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
             {
                 CipherStateAction.Unarchive => ucd.ArchivedDate != null,
                 CipherStateAction.Archive => ucd.ArchivedDate == null,
-                _ => true,
+                _ => true
             };
         }
 
