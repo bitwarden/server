@@ -23,7 +23,7 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
             throw new InvalidOperationException("UserCipherDetailsQuery requires a non-null userId.");
         }
 
-        var userId = _userId;
+        var userId = _userId.Value;
         var query = from c in dbContext.Ciphers
 
                     join ou in dbContext.OrganizationUsers
@@ -64,8 +64,8 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
                     from cg in cg_g.DefaultIfEmpty()
                     from ca in caGroup.DefaultIfEmpty()
 
-
-                    where (cu == null ? (Guid?)null : cu.CollectionId) != null || (cg == null ? (Guid?)null : cg.CollectionId) != null
+                    where (cu == null ? (Guid?)null : cu.CollectionId) != null
+                       || (cg == null ? (Guid?)null : cg.CollectionId) != null
 
                     select new
                     {
@@ -93,10 +93,11 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
                      where c.UserId == _userId
 
                      join ca in dbContext.CipherArchives
-                         on new { CipherId = c.Id, UserId = userId }
-                         equals new { Id = ca.CipherId, userId = ca.UserId }
+                         on c.Id equals ca.CipherId
                          into caGroup
-                     from ca in caGroup.DefaultIfEmpty()
+                     from ca in caGroup
+                         .Where(a => a.UserId == userId)
+                         .DefaultIfEmpty()
 
                      select new
                      {

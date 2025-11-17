@@ -24,16 +24,16 @@ SELECT
     C.FolderId,
     C.DeletedDate,
     C.Reprompt,
-    C.Key,
+    C.[Key],
     CASE
         WHEN COALESCE(CU.[ReadOnly], CG.[ReadOnly], 0) = 0
         THEN 1
         ELSE 0
     END [Edit],
     CASE
-    	WHEN COALESCE(CU.[HidePasswords], CG.[HidePasswords], 0) = 0
-    	THEN 1
-    	ELSE 0
+        WHEN COALESCE(CU.[HidePasswords], CG.[HidePasswords], 0) = 0
+        THEN 1
+        ELSE 0
     END [ViewPassword],
     CASE
         WHEN COALESCE(CU.[Manage], CG.[Manage], 0) = 1
@@ -80,7 +80,7 @@ SELECT
     C.FolderId,
     C.DeletedDate,
     C.Reprompt,
-    C.Key,
+    C.[Key],
     1 [Edit],
     1 [ViewPassword],
     1 [Manage],
@@ -88,4 +88,4 @@ SELECT
 FROM
     [dbo].[CipherDetails](@UserId) AS C
 WHERE
-    C.[UserId] = @UserId
+    C.[UserId] = @UserId;
