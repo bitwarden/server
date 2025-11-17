@@ -1791,7 +1791,7 @@ public class UpcomingInvoiceHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_WhenMilestone3Enabled_AndFamilies2025Plan_UpdatesSubscriptionWithoutDiscount()
+    public async Task HandleAsync_WhenMilestone3Enabled_AndFamilies2025Plan_UpdatesSubscriptionOnlyNoAddons()
     {
         // Arrange
         var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
