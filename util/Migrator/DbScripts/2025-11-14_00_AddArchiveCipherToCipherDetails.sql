@@ -170,3 +170,142 @@ BEGIN
     END
 END
 GO
+
+IF OBJECT_ID('[dbo].[CipherDetails]') IS NOT NULL
+BEGIN
+    DROP FUNCTION [dbo].[CipherDetails];
+END
+GO
+
+CREATE FUNCTION [dbo].[CipherDetails](@UserId UNIQUEIDENTIFIER)
+RETURNS TABLE
+AS RETURN
+SELECT
+    C.[Id],
+    C.[UserId],
+    C.[OrganizationId],
+    C.[Type],
+    C.[Data],
+    C.[Attachments],
+    C.[CreationDate],
+    C.[RevisionDate],
+    CASE
+        WHEN
+            @UserId IS NULL
+            OR C.[Favorites] IS NULL
+            OR JSON_VALUE(C.[Favorites], CONCAT('$."', @UserId, '"')) IS NULL
+        THEN 0
+        ELSE 1
+    END [Favorite],
+    CASE
+        WHEN
+            @UserId IS NULL
+            OR C.[Folders] IS NULL
+        THEN NULL
+        ELSE TRY_CONVERT(UNIQUEIDENTIFIER, JSON_VALUE(C.[Folders], CONCAT('$."', @UserId, '"')))
+    END [FolderId],
+    C.[DeletedDate],
+    C.[Reprompt],
+    C.[Key]
+FROM
+    [dbo].[Cipher] C
+GO
+
+IF OBJECT_ID('[dbo].[UserCipherDetails]') IS NOT NULL
+BEGIN
+    DROP FUNCTION [dbo].[UserCipherDetails];
+END
+GO
+
+CREATE FUNCTION [dbo].[UserCipherDetails](@UserId UNIQUEIDENTIFIER)
+RETURNS TABLE
+AS RETURN
+WITH [CTE] AS (
+    SELECT
+        [Id],
+        [OrganizationId]
+    FROM
+        [OrganizationUser]
+    WHERE
+        [UserId] = @UserId
+        AND [Status] = 2 -- Confirmed
+)
+SELECT
+    C.Id,
+    C.UserId,
+    C.OrganizationId,
+    C.Type,
+    C.Data,
+    C.Attachments,
+    C.CreationDate,
+    C.RevisionDate,
+    C.Favorite,
+    C.FolderId,
+    C.DeletedDate,
+    C.Reprompt,
+    C.[Key],
+    CASE
+        WHEN COALESCE(CU.[ReadOnly], CG.[ReadOnly], 0) = 0
+        THEN 1
+        ELSE 0
+    END [Edit],
+    CASE
+        WHEN COALESCE(CU.[HidePasswords], CG.[HidePasswords], 0) = 0
+        THEN 1
+        ELSE 0
+    END [ViewPassword],
+    CASE
+        WHEN COALESCE(CU.[Manage], CG.[Manage], 0) = 1
+        THEN 1
+        ELSE 0
+    END [Manage],
+    CASE
+        WHEN O.[UseTotp] = 1
+        THEN 1
+        ELSE 0
+    END [OrganizationUseTotp]
+FROM
+    [dbo].[CipherDetails](@UserId) C
+INNER JOIN
+    [CTE] OU ON C.[UserId] IS NULL AND C.[OrganizationId] IN (SELECT [OrganizationId] FROM [CTE])
+INNER JOIN
+    [dbo].[Organization] O ON O.[Id] = OU.[OrganizationId] AND O.[Id] = C.[OrganizationId] AND O.[Enabled] = 1
+LEFT JOIN
+    [dbo].[CollectionCipher] CC ON CC.[CipherId] = C.[Id]
+LEFT JOIN
+    [dbo].[CollectionUser] CU ON CU.[CollectionId] = CC.[CollectionId] AND CU.[OrganizationUserId] = OU.[Id]
+LEFT JOIN
+    [dbo].[GroupUser] GU ON CU.[CollectionId] IS NULL AND GU.[OrganizationUserId] = OU.[Id]
+LEFT JOIN
+    [dbo].[Group] G ON G.[Id] = GU.[GroupId]
+LEFT JOIN
+    [dbo].[CollectionGroup] CG ON CG.[CollectionId] = CC.[CollectionId] AND CG.[GroupId] = GU.[GroupId]
+WHERE
+    CU.[CollectionId] IS NOT NULL
+    OR CG.[CollectionId] IS NOT NULL
+
+UNION ALL
+
+SELECT
+    C.Id,
+    C.UserId,
+    C.OrganizationId,
+    C.Type,
+    C.Data,
+    C.Attachments,
+    C.CreationDate,
+    C.RevisionDate,
+    C.Favorite,
+    C.FolderId,
+    C.DeletedDate,
+    C.Reprompt,
+    C.[Key],
+    1 [Edit],
+    1 [ViewPassword],
+    1 [Manage],
+    0 [OrganizationUseTotp]
+FROM
+    [dbo].[CipherDetails](@UserId) AS C
+WHERE
+    C.[UserId] = @UserId;
+GO

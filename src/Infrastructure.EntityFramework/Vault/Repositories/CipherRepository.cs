@@ -795,10 +795,11 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
             var dbContext = GetDatabaseContext(scope);
             var userCipherDetailsQuery = new UserCipherDetailsQuery(userId);
 
-            var userCipherDetails = await userCipherDetailsQuery
+            var userCipherDetails = (await userCipherDetailsQuery
                 .Run(dbContext)
+                .ToListAsync())
                 .Where(ucd => ids.Contains(ucd.Id) && ucd.Edit)
-                .ToListAsync();
+                .ToList();
 
             var utcNow = DateTime.UtcNow;
 
