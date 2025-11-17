@@ -2,6 +2,7 @@ using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Auth.Sso;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
@@ -15,9 +16,10 @@ namespace Bit.Identity.IdentityServer.RequestValidators;
 /// Validates whether a user is required to authenticate via SSO based on organization policies.
 /// </summary>
 public class SsoRequestValidator(
-    IPolicyService policyService,
-    IFeatureService featureService,
-    IPolicyRequirementQuery policyRequirementQuery) : ISsoRequestValidator
+    IPolicyService _policyService,
+    IFeatureService _featureService,
+    IUserSsoOrganizationIdentifierQuery _userSsoOrganizationIdentifierQuery,
+    IPolicyRequirementQuery _policyRequirementQuery) : ISsoRequestValidator
 {
     /// <summary>
     /// Validates the SSO requirement for a user attempting to authenticate.
@@ -30,7 +32,7 @@ public class SsoRequestValidator(
     /// <returns>true if the user can proceed with authentication; false if SSO is required and the user must be redirected to SSO flow.</returns>
     public async Task<bool> ValidateAsync(User user, ValidatedTokenRequest request, CustomValidatorRequestContext context)
     {
-        context.SsoRequired = await RequireSsoLoginAsync(user, request.GrantType);
+        context.SsoRequired = await RequireSsoAuthenticationAsync(user, request.GrantType);
 
         if (!context.SsoRequired)
         {
@@ -49,11 +51,11 @@ public class SsoRequestValidator(
         // Two Factor validation occurs after SSO validation in that scenario.
         if (context.TwoFactorRequired && context.TwoFactorRecoveryRequested)
         {
-            SetContextCustomResponseSsoError(context, "Two-factor recovery has been performed. SSO authentication is required.");
+            await SetContextCustomResponseSsoErrorAsync(context, "Two-factor recovery has been performed. SSO authentication is required.");
             return false;
         }
 
-        SetContextCustomResponseSsoError(context, "SSO authentication is required.");
+        await SetContextCustomResponseSsoErrorAsync(context, "SSO authentication is required.");
         return false;
     }
 
@@ -66,21 +68,22 @@ public class SsoRequestValidator(
     /// <param name="user">user trying to login</param>
     /// <param name="grantType">magic string identifying the grant type requested</param>
     /// <returns>true if sso required; false if not required or already in process</returns>
-    private async Task<bool> RequireSsoLoginAsync(User user, string grantType)
+    private async Task<bool> RequireSsoAuthenticationAsync(User user, string grantType)
     {
         if (grantType == OidcConstants.GrantTypes.AuthorizationCode ||
             grantType == OidcConstants.GrantTypes.ClientCredentials)
         {
-            // SSO is not required for users already using SSO to authenticate, or logging-in via API key
-            // allow user to continue request validation
+            // SSO is not required for users already using SSO to authenticate which uses the authorization_code grant type,
+            // or logging-in via API key which is the client_credentials grant type.
+            // Allow user to continue request validation
             return false;
         }
 
         // Check if user belongs to any organization with an active SSO policy
-        var ssoRequired = featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements)
-            ? (await policyRequirementQuery.GetAsync<RequireSsoPolicyRequirement>(user.Id))
+        var ssoRequired = _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements)
+            ? (await _policyRequirementQuery.GetAsync<RequireSsoPolicyRequirement>(user.Id))
             .SsoRequired
-            : await policyService.AnyPoliciesApplicableToUserAsync(
+            : await _policyService.AnyPoliciesApplicableToUserAsync(
                 user.Id, PolicyType.RequireSso, OrganizationUserStatusType.Confirmed);
 
         if (ssoRequired)
@@ -97,8 +100,10 @@ public class SsoRequestValidator(
     /// </summary>
     /// <param name="context">The validator context to update with error details.</param>
     /// <param name="errorMessage">The error message to return to the client.</param>
-    private static void SetContextCustomResponseSsoError(CustomValidatorRequestContext context, string errorMessage)
+    private async Task SetContextCustomResponseSsoErrorAsync(CustomValidatorRequestContext context, string errorMessage)
     {
+        var ssoOrganizationIdentifier = await _userSsoOrganizationIdentifierQuery.GetSsoOrganizationIdentifierAsync(context.User.Id);
+
         context.ValidationErrorResult = new ValidationResult
         {
             IsError = true,
@@ -110,5 +115,11 @@ public class SsoRequestValidator(
         {
             { "ErrorModel", new ErrorResponseModel(errorMessage) }
         };
+
+        // Include organization identifier in the response if available
+        if (ssoOrganizationIdentifier != null)
+        {
+            context.CustomResponse["SsoOrganizationIdentifier"] = ssoOrganizationIdentifier;
+        }
     }
 }
