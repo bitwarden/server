@@ -183,9 +183,8 @@ public class CipherService : ICipherService
         }
     }
 
-    public async Task UploadFileForExistingAttachmentAsync(Stream stream, Cipher cipher, CipherAttachment.MetaData attachment, DateTime? lastKnownRevisionDate = null)
+    public async Task UploadFileForExistingAttachmentAsync(Stream stream, Cipher cipher, CipherAttachment.MetaData attachment)
     {
-        ValidateCipherLastKnownRevisionDate(cipher, lastKnownRevisionDate);
         if (attachment == null)
         {
             throw new BadRequestException("Cipher attachment does not exist");
