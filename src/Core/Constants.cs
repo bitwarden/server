@@ -163,6 +163,7 @@ public static class FeatureFlagKeys
     public const string RecoveryCodeSupportForSsoRequiredUsers = "pm-21153-recovery-code-support-for-sso-required";
     public const string MJMLBasedEmailTemplates = "mjml-based-email-templates";
     public const string MjmlWelcomeEmailTemplates = "mjml-welcome-email-templates";
+    public const string MarketingInitiatedPremiumFlow = "pm-26140-marketing-initiated-premium-flow";
 
     /* Autofill Team */
     public const string IdpAutoSubmitLogin = "idp-auto-submit-login";
