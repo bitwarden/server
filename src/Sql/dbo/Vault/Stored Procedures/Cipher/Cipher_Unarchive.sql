@@ -10,7 +10,7 @@ BEGIN
     DELETE Ca
     FROM [dbo].[CipherArchive] Ca
     INNER JOIN @Ids I ON Ca.CipherId = I.[Id]
-    WHERE Ca.UserId = @UserId
+    WHERE Ca.UserId = @UserId;
 
     EXEC [dbo].[User_BumpAccountRevisionDate] @UserId
 
