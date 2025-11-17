@@ -22,7 +22,7 @@ env:
 jobs:
   lint:
     name: Lint
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Check out repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -38,7 +38,7 @@ jobs:
 
   build-artifacts:
     name: Build Docker images
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs:
       - lint
     outputs:
@@ -292,7 +292,7 @@ jobs:
 
   upload:
     name: Upload
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs: build-artifacts
     permissions:
       id-token: write
@@ -410,7 +410,7 @@ jobs:
 
   build-mssqlmigratorutility:
     name: Build MSSQL migrator utility
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs:
       - lint
     defaults:
@@ -467,7 +467,7 @@ jobs:
     if: |
       github.event_name != 'pull_request'
       && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc')
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs:
       - build-artifacts
     permissions:
