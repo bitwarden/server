@@ -148,7 +148,7 @@ public class OrganizationService : IOrganizationService
         }
 
         var secret = await BillingHelpers.AdjustStorageAsync(_paymentService, organization, storageAdjustmentGb,
-            plan.PasswordManager.StripeStoragePlanId);
+            plan.PasswordManager.StripeStoragePlanId, plan.PasswordManager.BaseStorageGb);
         await ReplaceAndUpdateCacheAsync(organization);
         return secret;
     }
