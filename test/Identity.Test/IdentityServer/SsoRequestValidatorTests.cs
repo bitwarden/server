@@ -2,6 +2,7 @@ using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Auth.Sso;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Services;
@@ -133,6 +134,10 @@ public class SsoRequestValidatorTests
         sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<RequireSsoPolicyRequirement>(user.Id)
             .Returns(requirement);
 
+        sutProvider.GetDependency<IUserSsoOrganizationIdentifierQuery>()
+            .GetSsoOrganizationIdentifierAsync(user.Id)
+            .Returns((string)null);
+
         // Act
         var result = await sutProvider.Sut.ValidateAsync(user, request, context);
 
@@ -146,6 +151,7 @@ public class SsoRequestValidatorTests
 
         Assert.NotNull(context.CustomResponse);
         Assert.True(context.CustomResponse.ContainsKey("ErrorModel"));
+        Assert.False(context.CustomResponse.ContainsKey("SsoOrganizationIdentifier"));
     }
 
     [Theory, BitAutoData]
@@ -166,6 +172,10 @@ public class SsoRequestValidatorTests
             OrganizationUserStatusType.Confirmed)
             .Returns(true);
 
+        sutProvider.GetDependency<IUserSsoOrganizationIdentifierQuery>()
+            .GetSsoOrganizationIdentifierAsync(user.Id)
+            .Returns((string)null);
+
         // Act
         var result = await sutProvider.Sut.ValidateAsync(user, request, context);
 
@@ -179,6 +189,7 @@ public class SsoRequestValidatorTests
 
         Assert.NotNull(context.CustomResponse);
         Assert.True(context.CustomResponse.ContainsKey("ErrorModel"));
+        Assert.False(context.CustomResponse.ContainsKey("SsoOrganizationIdentifier"));
     }
 
     [Theory, BitAutoData]
@@ -199,6 +210,10 @@ public class SsoRequestValidatorTests
         sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<RequireSsoPolicyRequirement>(user.Id)
             .Returns(requirement);
 
+        sutProvider.GetDependency<IUserSsoOrganizationIdentifierQuery>()
+            .GetSsoOrganizationIdentifierAsync(user.Id)
+            .Returns((string)null);
+
         // Act
         var result = await sutProvider.Sut.ValidateAsync(user, request, context);
 
@@ -213,6 +228,7 @@ public class SsoRequestValidatorTests
 
         Assert.NotNull(context.CustomResponse);
         Assert.True(context.CustomResponse.ContainsKey("ErrorModel"));
+        Assert.False(context.CustomResponse.ContainsKey("SsoOrganizationIdentifier"));
     }
 
     [Theory, BitAutoData]
@@ -231,6 +247,10 @@ public class SsoRequestValidatorTests
         sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<RequireSsoPolicyRequirement>(user.Id)
             .Returns(requirement);
 
+        sutProvider.GetDependency<IUserSsoOrganizationIdentifierQuery>()
+            .GetSsoOrganizationIdentifierAsync(user.Id)
+            .Returns((string)null);
+
         // Act
         var result = await sutProvider.Sut.ValidateAsync(user, request, context);
 
@@ -244,6 +264,7 @@ public class SsoRequestValidatorTests
 
         Assert.NotNull(context.CustomResponse);
         Assert.True(context.CustomResponse.ContainsKey("ErrorModel"));
+        Assert.False(context.CustomResponse.ContainsKey("SsoOrganizationIdentifier"));
     }
 
     [Theory]
@@ -266,6 +287,10 @@ public class SsoRequestValidatorTests
         sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<RequireSsoPolicyRequirement>(user.Id)
             .Returns(requirement);
 
+        sutProvider.GetDependency<IUserSsoOrganizationIdentifierQuery>()
+            .GetSsoOrganizationIdentifierAsync(user.Id)
+            .Returns((string)null);
+
         // Act
         var result = await sutProvider.Sut.ValidateAsync(user, request, context);
 
@@ -273,6 +298,9 @@ public class SsoRequestValidatorTests
         Assert.False(result);
         Assert.True(context.SsoRequired);
         Assert.NotNull(context.ValidationErrorResult);
+        Assert.True(context.ValidationErrorResult.IsError);
+        Assert.Equal("sso_required", context.ValidationErrorResult.Error);
+        Assert.Equal("SSO authentication is required.", context.ValidationErrorResult.ErrorDescription);
         Assert.NotNull(context.CustomResponse);
     }
 
@@ -301,5 +329,137 @@ public class SsoRequestValidatorTests
         Assert.False(context.SsoRequired); // Should be updated to false
         Assert.Null(context.ValidationErrorResult);
         Assert.Null(context.CustomResponse);
+    }
+
+    [Theory, BitAutoData]
+    public async void ValidateAsync_SsoRequired_WithOrganizationIdentifier_IncludesIdentifierInResponse(
+        User user,
+        [AuthFixtures.CustomValidatorRequestContext] CustomValidatorRequestContext context,
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request,
+        SutProvider<SsoRequestValidator> sutProvider)
+    {
+        // Arrange
+        const string orgIdentifier = "test-organization";
+        request.GrantType = OidcConstants.GrantTypes.Password;
+
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
+
+        var requirement = new RequireSsoPolicyRequirement { SsoRequired = true };
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<RequireSsoPolicyRequirement>(user.Id)
+            .Returns(requirement);
+
+        sutProvider.GetDependency<IUserSsoOrganizationIdentifierQuery>()
+            .GetSsoOrganizationIdentifierAsync(user.Id)
+            .Returns(orgIdentifier);
+
+        // Act
+        var result = await sutProvider.Sut.ValidateAsync(user, request, context);
+
+        // Assert
+        Assert.False(result);
+        Assert.True(context.SsoRequired);
+        Assert.NotNull(context.CustomResponse);
+        Assert.True(context.CustomResponse.ContainsKey("SsoOrganizationIdentifier"));
+        Assert.Equal(orgIdentifier, context.CustomResponse["SsoOrganizationIdentifier"]);
+
+        await sutProvider.GetDependency<IUserSsoOrganizationIdentifierQuery>()
+            .Received(1)
+            .GetSsoOrganizationIdentifierAsync(user.Id);
+    }
+
+    [Theory, BitAutoData]
+    public async void ValidateAsync_SsoRequired_NoOrganizationIdentifier_DoesNotIncludeIdentifierInResponse(
+        User user,
+        [AuthFixtures.CustomValidatorRequestContext] CustomValidatorRequestContext context,
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request,
+        SutProvider<SsoRequestValidator> sutProvider)
+    {
+        // Arrange
+        request.GrantType = OidcConstants.GrantTypes.Password;
+
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
+
+        var requirement = new RequireSsoPolicyRequirement { SsoRequired = true };
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<RequireSsoPolicyRequirement>(user.Id)
+            .Returns(requirement);
+
+        sutProvider.GetDependency<IUserSsoOrganizationIdentifierQuery>()
+            .GetSsoOrganizationIdentifierAsync(user.Id)
+            .Returns((string)null);
+
+        // Act
+        var result = await sutProvider.Sut.ValidateAsync(user, request, context);
+
+        // Assert
+        Assert.False(result);
+        Assert.True(context.SsoRequired);
+        Assert.NotNull(context.CustomResponse);
+        Assert.False(context.CustomResponse.ContainsKey("SsoOrganizationIdentifier"));
+
+        await sutProvider.GetDependency<IUserSsoOrganizationIdentifierQuery>()
+            .Received(1)
+            .GetSsoOrganizationIdentifierAsync(user.Id);
+    }
+
+    [Theory, BitAutoData]
+    public async void ValidateAsync_SsoRequired_EmptyOrganizationIdentifier_DoesNotIncludeIdentifierInResponse(
+        User user,
+        [AuthFixtures.CustomValidatorRequestContext] CustomValidatorRequestContext context,
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request,
+        SutProvider<SsoRequestValidator> sutProvider)
+    {
+        // Arrange
+        request.GrantType = OidcConstants.GrantTypes.Password;
+
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
+
+        var requirement = new RequireSsoPolicyRequirement { SsoRequired = true };
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<RequireSsoPolicyRequirement>(user.Id)
+            .Returns(requirement);
+
+        sutProvider.GetDependency<IUserSsoOrganizationIdentifierQuery>()
+            .GetSsoOrganizationIdentifierAsync(user.Id)
+            .Returns(string.Empty);
+
+        // Act
+        var result = await sutProvider.Sut.ValidateAsync(user, request, context);
+
+        // Assert
+        Assert.False(result);
+        Assert.True(context.SsoRequired);
+        Assert.NotNull(context.CustomResponse);
+        Assert.False(context.CustomResponse.ContainsKey("SsoOrganizationIdentifier"));
+
+        await sutProvider.GetDependency<IUserSsoOrganizationIdentifierQuery>()
+            .Received(1)
+            .GetSsoOrganizationIdentifierAsync(user.Id);
+    }
+
+    [Theory, BitAutoData]
+    public async void ValidateAsync_SsoNotRequired_DoesNotCallOrganizationIdentifierQuery(
+        User user,
+        [AuthFixtures.CustomValidatorRequestContext] CustomValidatorRequestContext context,
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request,
+        SutProvider<SsoRequestValidator> sutProvider)
+    {
+        // Arrange
+        request.GrantType = OidcConstants.GrantTypes.Password;
+
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
+
+        var requirement = new RequireSsoPolicyRequirement { SsoRequired = false };
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<RequireSsoPolicyRequirement>(user.Id)
+            .Returns(requirement);
+
+        // Act
+        var result = await sutProvider.Sut.ValidateAsync(user, request, context);
+
+        // Assert
+        Assert.True(result);
+        Assert.False(context.SsoRequired);
+
+        await sutProvider.GetDependency<IUserSsoOrganizationIdentifierQuery>()
+            .DidNotReceive()
+            .GetSsoOrganizationIdentifierAsync(Arg.Any<Guid>());
     }
 }
