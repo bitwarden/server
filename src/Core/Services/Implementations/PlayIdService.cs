@@ -14,16 +14,31 @@ public class PlayIdService(IHostEnvironment hostEnvironment) : IPlayIdService
     }
 }
 
+public class NeverPlayIdServices : IPlayIdService
+{
+    public string? PlayId
+    {
+        get => null;
+        set { }
+    }
+
+    public bool InPlay(out string playId)
+    {
+        playId = string.Empty;
+        return false;
+    }
+}
+
 public class PlayIdSingletonService(IHttpContextAccessor httpContextAccessor, IHostEnvironment hostEnvironment) : IPlayIdService
 {
-    private PlayIdService Current
+    private IPlayIdService Current
     {
         get
         {
             var httpContext = httpContextAccessor.HttpContext;
             if (httpContext == null)
             {
-                throw new InvalidOperationException("HttpContext is not available");
+                return new NeverPlayIdServices();
             }
             return httpContext.RequestServices.GetRequiredService<PlayIdService>();
         }

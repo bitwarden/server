@@ -1,5 +1,6 @@
 ﻿using System.Reflection;
 using Bit.Core.Enums;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper;
 using Bit.Infrastructure.EntityFramework;
@@ -124,6 +125,13 @@ public class DatabaseDataAttribute : DataAttribute
         {
             services.AddSingleton<TimeProvider, FakeTimeProvider>();
         }
+
+        // Include PlayIdService for tracking Play Ids in repositories
+        // We need the http context accessor to use the Singleton version, which pulls from the scoped version
+        services.AddHttpContextAccessor();
+
+        services.AddSingleton<IPlayIdService, PlayIdSingletonService>();
+        services.AddScoped<PlayIdService>();
     }
 
     private void AddDapperServices(IServiceCollection services, Database database)
