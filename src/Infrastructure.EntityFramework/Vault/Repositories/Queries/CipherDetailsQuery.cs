@@ -18,7 +18,7 @@ public class CipherDetailsQuery : IQuery<CipherDetails>
 
     public virtual IQueryable<CipherDetails> Run(DatabaseContext dbContext)
     {
-        // No user context: we can’t resolve per-user favorites/folders/archive.
+        // No user context: we can't resolve per-user favorites/folders/archive.
         if (!_userId.HasValue)
         {
             var query = from c in dbContext.Ciphers

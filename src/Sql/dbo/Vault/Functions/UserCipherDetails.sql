@@ -12,7 +12,19 @@ WITH [CTE] AS (
         AND [Status] = 2 -- Confirmed
 )
 SELECT
-    C.*,
+    C.Id,
+    C.UserId,
+    C.OrganizationId,
+    C.Type,
+    C.Data,
+    C.Favorites,
+    C.Folders,
+    C.Attachments,
+    C.CreationDate,
+    C.RevisionDate,
+    C.DeletedDate,
+    C.Reprompt,
+    C.Key,
     CASE
         WHEN COALESCE(CU.[ReadOnly], CG.[ReadOnly], 0) = 0
         THEN 1

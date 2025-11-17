@@ -28,6 +28,5 @@ SELECT
     C.[DeletedDate],
     C.[Reprompt],
     C.[Key],
-    C.[ArchivedDate]
 FROM
     [dbo].[Cipher] C

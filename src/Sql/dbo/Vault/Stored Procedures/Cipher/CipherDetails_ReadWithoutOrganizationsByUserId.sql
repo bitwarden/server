@@ -5,19 +5,7 @@ BEGIN
     SET NOCOUNT ON
 
     SELECT
-        c.Id,
-        c.UserId,
-        c.OrganizationId,
-        c.Type,
-        c.Data,
-        c.Favorites,
-        c.Folders,
-        c.Attachments,
-        c.CreationDate,
-        c.RevisionDate,
-        c.DeletedDate,
-        c.Reprompt,
-        c.Key,
+        c.*,
         1 [Edit],
         1 [ViewPassword],
         1 [Manage],
