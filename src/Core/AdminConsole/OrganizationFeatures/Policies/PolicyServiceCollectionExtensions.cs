@@ -33,6 +33,7 @@ public static class PolicyServiceCollectionExtensions
         services.AddScoped<IPolicyValidator, RequireSsoPolicyValidator>();
         services.AddScoped<IPolicyValidator, ResetPasswordPolicyValidator>();
         services.AddScoped<IPolicyValidator, MaximumVaultTimeoutPolicyValidator>();
+        services.AddScoped<IPolicyValidator, UriMatchDefaultPolicyValidator>();
         services.AddScoped<IPolicyValidator, FreeFamiliesForEnterprisePolicyValidator>();
     }
 
@@ -51,6 +52,8 @@ public static class PolicyServiceCollectionExtensions
         services.AddScoped<IPolicyUpdateEvent, MaximumVaultTimeoutPolicyValidator>();
         services.AddScoped<IPolicyUpdateEvent, FreeFamiliesForEnterprisePolicyValidator>();
         services.AddScoped<IPolicyUpdateEvent, OrganizationDataOwnershipPolicyValidator>();
+        services.AddScoped<IPolicyUpdateEvent, UriMatchDefaultPolicyValidator>();
+        services.AddScoped<IPolicyUpdateEvent, AutomaticUserConfirmationPolicyEventHandler>();
     }
 
     private static void AddPolicyRequirements(this IServiceCollection services)

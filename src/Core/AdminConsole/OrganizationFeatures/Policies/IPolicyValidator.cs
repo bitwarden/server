@@ -9,6 +9,10 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 /// <summary>
 /// Defines behavior and functionality for a given PolicyType.
 /// </summary>
+/// <remarks>
+/// All methods defined in this interface are for the PolicyService#SavePolicy method. This needs to be supported until
+/// we successfully refactor policy validators over to policy validation handlers
+/// </remarks>
 public interface IPolicyValidator
 {
     /// <summary>

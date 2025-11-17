@@ -111,5 +111,6 @@ public static class OrganizationFactory
             UseRiskInsights = license.UseRiskInsights,
             UseOrganizationDomains = license.UseOrganizationDomains,
             UseAdminSponsoredFamilies = license.UseAdminSponsoredFamilies,
+            UseAutomaticUserConfirmation = license.UseAutomaticUserConfirmation
         };
 }

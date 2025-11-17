@@ -16,7 +16,9 @@
   <ItemGroup>
     <EmbeddedResource Include="licensing.cer" />
     <EmbeddedResource Include="licensing_dev.cer" />
-    <EmbeddedResource Include="MailTemplates\Handlebars\**\*.hbs" />
+
+    <!-- Email templates uses .hbs extension, they must be included for emails to work -->
+    <EmbeddedResource Include="**\*.hbs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -66,13 +68,16 @@
     <PackageReference Include="Quartz.Extensions.Hosting" Version="3.14.0" />
     <PackageReference Include="Quartz.Extensions.DependencyInjection" Version="3.14.0" />
     <PackageReference Include="RabbitMQ.Client" Version="7.1.2" />
+    <PackageReference Include="ZiggyCreatures.FusionCache" Version="2.0.2" />
+    <PackageReference Include="ZiggyCreatures.FusionCache.Backplane.StackExchangeRedis" Version="2.0.2" />
+    <PackageReference Include="ZiggyCreatures.FusionCache.Serialization.SystemTextJson" Version="2.0.2" />
   </ItemGroup>
 
   <ItemGroup Label="Pinned transitive dependencies">
     <PackageReference Include="System.Text.Json" Version="8.0.5" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="8.0.1" />
   </ItemGroup>
-  
+
   <ItemGroup>
     <Folder Include="Resources\" />
     <Folder Include="Properties\" />
