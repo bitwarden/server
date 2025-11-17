@@ -18,6 +18,11 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
 
     public virtual IQueryable<CipherDetails> Run(DatabaseContext dbContext)
     {
+        if (!_userId.HasValue)
+        {
+            throw new InvalidOperationException("UserCipherDetailsQuery requires a non-null userId.");
+        }
+
         var userId = _userId;
         var query = from c in dbContext.Ciphers
 
@@ -52,13 +57,13 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
                            new { cg.CollectionId, cg.GroupId } into cg_g
 
                     join ca in dbContext.CipherArchives
-                        on c.Id equals ca.CipherId
+                        on new { c.Id, userId }
+                        equals new { Id = ca.CipherId, userId = ca.UserId }
                         into caGroup
 
                     from cg in cg_g.DefaultIfEmpty()
-                    from ca in caGroup
-                        .Where(a => userId.HasValue && a.UserId == userId.Value)
-                        .DefaultIfEmpty()
+                    from ca in caGroup.DefaultIfEmpty()
+
 
                     where (cu == null ? (Guid?)null : cu.CollectionId) != null || (cg == null ? (Guid?)null : cg.CollectionId) != null
 
@@ -88,11 +93,10 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
                      where c.UserId == _userId
 
                      join ca in dbContext.CipherArchives
-                         on c.Id equals ca.CipherId
+                         on new { CipherId = c.Id, UserId = userId }
+                         equals new { Id = ca.CipherId, userId = ca.UserId }
                          into caGroup
-                     from ca in caGroup
-                         .Where(a => userId.HasValue && a.UserId == userId.Value)
-                         .DefaultIfEmpty()
+                     from ca in caGroup.DefaultIfEmpty()
 
                      select new
                      {
@@ -113,7 +117,7 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
                          OrganizationUseTotp = false,
                          c.Reprompt,
                          c.Key,
-                         ArchivedDate = (DateTime?)ca.ArchivedDate
+                         ArchivedDate = (DateTime?)ca.ArchivedDate,
                      };
 
         var union = query.Union(query2).Select(c => new CipherDetails
