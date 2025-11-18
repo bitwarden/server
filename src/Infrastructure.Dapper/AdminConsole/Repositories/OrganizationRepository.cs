@@ -256,32 +256,21 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
 
 public class TestOrganizationTrackingOrganizationRepository : OrganizationRepository
 {
-    private readonly IPlayIdService _playIdService;
-    private readonly IPlayDataRepository _playDataRepository;
+    private readonly IPlayDataService _playDataService;
 
     public TestOrganizationTrackingOrganizationRepository(
-        IPlayIdService playIdService,
-        IPlayDataRepository playDataRepository,
+        IPlayDataService playDataService,
         GlobalSettings globalSettings,
         ILogger<OrganizationRepository> logger)
         : base(globalSettings, logger)
     {
-        _playIdService = playIdService;
-        _playDataRepository = playDataRepository;
+        _playDataService = playDataService;
     }
 
     public override async Task<Organization> CreateAsync(Organization obj)
     {
         var createdOrganization = await base.CreateAsync(obj);
-
-        if (_playIdService.InPlay(out var playId))
-        {
-            _logger.LogInformation("Associating organization {OrganizationId} with Play ID {PlayId}",
-                createdOrganization.Id, playId);
-
-            await _playDataRepository.CreateAsync(PlayData.Create(createdOrganization, playId));
-        }
-
+        await _playDataService.Record(createdOrganization);
         return createdOrganization;
     }
 }

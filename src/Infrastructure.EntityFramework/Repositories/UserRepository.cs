@@ -404,33 +404,22 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
 public class TestUserTrackingUserRepository : UserRepository
 {
-    private readonly IPlayIdService _playIdService;
-    private readonly IPlayDataRepository _playDataRepository;
+    private readonly IPlayDataService _playDataService;
 
     public TestUserTrackingUserRepository(
-        IPlayIdService playIdService,
-        IPlayDataRepository playDataRepository,
+        IPlayDataService playDataService,
         IServiceScopeFactory serviceScopeFactory,
         IMapper mapper,
         ILogger<UserRepository> logger)
         : base(serviceScopeFactory, mapper, logger)
     {
-        _playIdService = playIdService;
-        _playDataRepository = playDataRepository;
+        _playDataService = playDataService;
     }
 
     public override async Task<Core.Entities.User> CreateAsync(Core.Entities.User user)
     {
         var createdUser = await base.CreateAsync(user);
-
-        if (_playIdService.InPlay(out var playId))
-        {
-            _logger.LogInformation("Associating user {UserId} with Play ID {PlayId}",
-                user.Id, playId);
-
-            await _playDataRepository.CreateAsync(Core.Entities.PlayData.Create(user, playId));
-        }
-
+        await _playDataService.Record(createdUser);
         return createdUser;
     }
 }

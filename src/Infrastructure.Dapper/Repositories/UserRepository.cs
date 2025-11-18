@@ -404,32 +404,23 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
 
 public class TestUserTrackingUserRepository : UserRepository
 {
-    private readonly IPlayIdService _playIdService;
-    private readonly IPlayDataRepository _playDataRepository;
+    private readonly IPlayDataService _playDataService;
 
     public TestUserTrackingUserRepository(
-          IPlayIdService playIdService,
-          GlobalSettings globalSettings,
-          IPlayDataRepository playDataRepository,
-          IDataProtectionProvider dataProtectionProvider,
-          ILogger<UserRepository> logger)
-          : base(dataProtectionProvider, globalSettings, logger)
+        IPlayDataService playDataService,
+        GlobalSettings globalSettings,
+        IDataProtectionProvider dataProtectionProvider,
+        ILogger<UserRepository> logger)
+        : base(dataProtectionProvider, globalSettings, logger)
     {
-        _playIdService = playIdService;
-        _playDataRepository = playDataRepository;
+        _playDataService = playDataService;
     }
 
     public override async Task<User> CreateAsync(User user)
     {
         var createdUser = await base.CreateAsync(user);
 
-        if (_playIdService.InPlay(out var playId))
-        {
-            _logger.LogInformation("Associating user {UserId} with Play ID {PlayId}",
-            user.Id, playId);
-
-            await _playDataRepository.CreateAsync(PlayData.Create(createdUser, playId));
-        }
+        await _playDataService.Record(createdUser);
         return createdUser;
     }
 }

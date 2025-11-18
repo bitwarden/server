@@ -443,34 +443,22 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
 
 public class TestOrganizationTrackingOrganizationRepository : OrganizationRepository
 {
-    private readonly IPlayIdService _playIdService;
-    private readonly IPlayDataRepository _playDataRepository;
+    private readonly IPlayDataService _playDataService;
 
     public TestOrganizationTrackingOrganizationRepository(
-          IServiceScopeFactory serviceScopeFactory,
-          IMapper mapper,
-          ILogger<OrganizationRepository> logger,
-          IPlayIdService playIdService,
-          IPlayDataRepository playDataRepository)
-          : base(serviceScopeFactory, mapper, logger)
+        IPlayDataService playDataService,
+        IServiceScopeFactory serviceScopeFactory,
+        IMapper mapper,
+        ILogger<OrganizationRepository> logger)
+        : base(serviceScopeFactory, mapper, logger)
     {
-        _playIdService = playIdService;
-        _playDataRepository = playDataRepository;
-
+        _playDataService = playDataService;
     }
 
     public override async Task<Core.AdminConsole.Entities.Organization> CreateAsync(Core.AdminConsole.Entities.Organization organization)
     {
         var createdOrganization = await base.CreateAsync(organization);
-
-        if (_playIdService.InPlay(out var playId))
-        {
-            _logger.LogInformation("Associating organization {OrganizationId} with Play ID {PlayId}",
-                organization.Id, playId);
-
-            await _playDataRepository.CreateAsync(Core.Entities.PlayData.Create(organization, playId));
-        }
-
+        await _playDataService.Record(createdOrganization);
         return createdOrganization;
     }
 }
