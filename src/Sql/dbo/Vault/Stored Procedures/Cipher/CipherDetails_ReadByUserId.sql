@@ -5,7 +5,7 @@ BEGIN
     SET NOCOUNT ON
 
     SELECT
-        c.*
+        *
     FROM
-        [dbo].[UserCipherDetails](@UserId) AS c
+        [dbo].[UserCipherDetails](@UserId)
 END
