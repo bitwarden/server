@@ -23,6 +23,7 @@ SELECT
     C.Favorite,
     C.FolderId,
     C.DeletedDate,
+    C.ArchivedDate,
     C.Reprompt,
     C.[Key],
     CASE
@@ -79,6 +80,7 @@ SELECT
     C.Favorite,
     C.FolderId,
     C.DeletedDate,
+    C.ArchivedDate,
     C.Reprompt,
     C.[Key],
     1 [Edit],

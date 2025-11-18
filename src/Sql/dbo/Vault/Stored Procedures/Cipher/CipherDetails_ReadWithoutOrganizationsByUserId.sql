@@ -5,17 +5,13 @@ BEGIN
     SET NOCOUNT ON
 
     SELECT
-        c.*,
+        *,
         1 [Edit],
         1 [ViewPassword],
         1 [Manage],
-        0 [OrganizationUseTotp],
-        ca.ArchivedDate
+        0 [OrganizationUseTotp]
     FROM
-        [dbo].[CipherDetails](@UserId) AS c
-        LEFT JOIN [dbo].[CipherArchive] AS ca
-            ON ca.CipherId = c.Id
-           AND ca.UserId = @UserId
+        [dbo].[CipherDetails](@UserId)
     WHERE
-        c.[UserId] = @UserId
+        [UserId] = @UserId
 END

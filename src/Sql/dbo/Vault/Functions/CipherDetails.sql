@@ -27,6 +27,10 @@ SELECT
     END [FolderId],
     C.[DeletedDate],
     C.[Reprompt],
-    C.[Key]
+    C.[Key],
+    CA.[ArchivedDate]
 FROM
     [dbo].[Cipher] C
+    LEFT JOIN [dbo].[CipherArchive] CA
+        ON CA.[CipherId] = C.[Id]
+        AND CA.[UserId] = @UserId;

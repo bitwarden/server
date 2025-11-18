@@ -1,56 +1,3 @@
-IF OBJECT_ID('[dbo].[CipherDetails_ReadByUserId]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[CipherDetails_ReadByUserId];
-END
-GO
-
-CREATE PROCEDURE [dbo].[CipherDetails_ReadByUserId]
-    @UserId UNIQUEIDENTIFIER
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    SELECT
-        c.*,
-        ca.ArchivedDate
-    FROM
-        [dbo].[UserCipherDetails](@UserId) AS c
-        LEFT JOIN [dbo].[CipherArchive] AS ca
-            ON ca.CipherId = c.Id
-           AND ca.UserId = @UserId;
-END
-GO
-
-
-IF OBJECT_ID('[dbo].[CipherDetails_ReadWithoutOrganizationsByUserId]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[CipherDetails_ReadWithoutOrganizationsByUserId];
-END
-GO
-
-CREATE PROCEDURE [dbo].[CipherDetails_ReadWithoutOrganizationsByUserId]
-    @UserId UNIQUEIDENTIFIER
-AS
-BEGIN
-    SET NOCOUNT ON
-
-    SELECT
-        c.*,
-        1 [Edit],
-        1 [ViewPassword],
-        1 [Manage],
-        0 [OrganizationUseTotp],
-        ca.ArchivedDate
-    FROM
-        [dbo].[CipherDetails](@UserId) AS c
-        LEFT JOIN [dbo].[CipherArchive] AS ca
-            ON ca.CipherId = c.Id
-           AND ca.UserId = @UserId
-    WHERE
-        c.[UserId] = @UserId
-END
-GO
-
 IF OBJECT_ID('[dbo].[Cipher_Archive]') IS NOT NULL
 BEGIN
     DROP PROCEDURE [dbo].[Cipher_Archive];
@@ -206,9 +153,14 @@ SELECT
     END [FolderId],
     C.[DeletedDate],
     C.[Reprompt],
-    C.[Key]
+    C.[Key],
+    CA.[ArchivedDate]
 FROM
     [dbo].[Cipher] C
+    LEFT JOIN [dbo].[CipherArchive] CA
+        ON CA.[CipherId] = C.[Id]
+        AND CA.[UserId] = @UserId;
+
 GO
 
 IF OBJECT_ID('[dbo].[UserCipherDetails]') IS NOT NULL
@@ -242,6 +194,7 @@ SELECT
     C.Favorite,
     C.FolderId,
     C.DeletedDate,
+    C.ArchivedDate,
     C.Reprompt,
     C.[Key],
     CASE
@@ -298,6 +251,7 @@ SELECT
     C.Favorite,
     C.FolderId,
     C.DeletedDate,
+    C.ArchivedDate,
     C.Reprompt,
     C.[Key],
     1 [Edit],
@@ -308,61 +262,5 @@ FROM
     [dbo].[CipherDetails](@UserId) AS C
 WHERE
     C.[UserId] = @UserId;
-GO
-
-IF OBJECT_ID('[dbo].[CipherDetails_ReadByIdUserId]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[CipherDetails_ReadByIdUserId];
-END
-GO
-
-CREATE PROCEDURE [dbo].[CipherDetails_ReadByIdUserId]
-    @Id UNIQUEIDENTIFIER,
-    @UserId UNIQUEIDENTIFIER
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    SELECT
-        ucd.Id,
-        ucd.UserId,
-        ucd.OrganizationId,
-        ucd.Type,
-        ucd.Data,
-        ucd.Attachments,
-        ucd.CreationDate,
-        ucd.RevisionDate,
-        ucd.Favorite,
-        ucd.FolderId,
-        ucd.DeletedDate,
-        ucd.Reprompt,
-        ucd.[Key],
-        ucd.OrganizationUseTotp,
-        MAX(ca.ArchivedDate) AS ArchivedDate,
-        MAX(ucd.Edit) AS Edit,
-        MAX(ucd.ViewPassword) AS ViewPassword,
-        MAX(ucd.Manage) AS Manage
-    FROM
-        [dbo].[UserCipherDetails](@UserId) AS ucd
-        LEFT JOIN [dbo].[CipherArchive] AS ca
-            ON ca.CipherId = ucd.Id
-           AND ca.UserId = @UserId
-    WHERE
-        ucd.Id = @Id
-    GROUP BY
-        ucd.Id,
-        ucd.UserId,
-        ucd.OrganizationId,
-        ucd.Type,
-        ucd.Data,
-        ucd.Attachments,
-        ucd.CreationDate,
-        ucd.RevisionDate,
-        ucd.Favorite,
-        ucd.FolderId,
-        ucd.DeletedDate,
-        ucd.Reprompt,
-        ucd.[Key],
-        ucd.OrganizationUseTotp;
 END
 GO
