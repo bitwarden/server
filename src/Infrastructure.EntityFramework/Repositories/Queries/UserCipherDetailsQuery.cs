@@ -18,6 +18,12 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
 
     public virtual IQueryable<CipherDetails> Run(DatabaseContext dbContext)
     {
+        if (!_userId.HasValue)
+        {
+            throw new InvalidOperationException("UserCipherDetailsQuery requires a non-null userId.");
+        }
+
+        var userId = _userId.Value;
         var query = from c in dbContext.Ciphers
 
                     join ou in dbContext.OrganizationUsers
@@ -49,9 +55,11 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
                     join cg in dbContext.CollectionGroups
                         on new { cc.CollectionId, gu.GroupId } equals
                            new { cg.CollectionId, cg.GroupId } into cg_g
+
                     from cg in cg_g.DefaultIfEmpty()
 
-                    where (cu == null ? (Guid?)null : cu.CollectionId) != null || (cg == null ? (Guid?)null : cg.CollectionId) != null
+                    where (cu == null ? (Guid?)null : cu.CollectionId) != null
+                       || (cg == null ? (Guid?)null : cg.CollectionId) != null
 
                     select new
                     {
@@ -72,7 +80,6 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
                         OrganizationUseTotp = o.UseTotp,
                         c.Reprompt,
                         c.Key,
-                        c.ArchivedDate
                     };
 
         var query2 = from c in dbContext.Ciphers
@@ -96,7 +103,6 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
                          OrganizationUseTotp = false,
                          c.Reprompt,
                          c.Key,
-                         c.ArchivedDate
                      };
 
         var union = query.Union(query2).Select(c => new CipherDetails
@@ -118,7 +124,10 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
             Manage = c.Manage,
             OrganizationUseTotp = c.OrganizationUseTotp,
             Key = c.Key,
-            ArchivedDate = c.ArchivedDate
+            ArchivedDate = dbContext.CipherArchives
+                .Where(ca => ca.CipherId == c.Id && ca.UserId == userId)
+                .Select(ca => (DateTime?)ca.ArchivedDate)
+                .FirstOrDefault(),
         });
         return union;
     }

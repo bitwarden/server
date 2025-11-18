@@ -12,16 +12,29 @@ WITH [CTE] AS (
         AND [Status] = 2 -- Confirmed
 )
 SELECT
-    C.*,
+    C.Id,
+    C.UserId,
+    C.OrganizationId,
+    C.Type,
+    C.Data,
+    C.Attachments,
+    C.CreationDate,
+    C.RevisionDate,
+    C.Favorite,
+    C.FolderId,
+    C.DeletedDate,
+    CA.ArchivedDate,
+    C.Reprompt,
+    C.[Key],
     CASE
         WHEN COALESCE(CU.[ReadOnly], CG.[ReadOnly], 0) = 0
         THEN 1
         ELSE 0
     END [Edit],
     CASE
-    	WHEN COALESCE(CU.[HidePasswords], CG.[HidePasswords], 0) = 0
-    	THEN 1
-    	ELSE 0
+        WHEN COALESCE(CU.[HidePasswords], CG.[HidePasswords], 0) = 0
+        THEN 1
+        ELSE 0
     END [ViewPassword],
     CASE
         WHEN COALESCE(CU.[Manage], CG.[Manage], 0) = 1
@@ -49,6 +62,8 @@ LEFT JOIN
     [dbo].[Group] G ON G.[Id] = GU.[GroupId]
 LEFT JOIN
     [dbo].[CollectionGroup] CG ON CG.[CollectionId] = CC.[CollectionId] AND CG.[GroupId] = GU.[GroupId]
+LEFT JOIN
+    [dbo].[CipherArchive] CA ON CA.[CipherId] = C.[Id] AND CA.[UserId] = @UserId
 WHERE
     CU.[CollectionId] IS NOT NULL
     OR CG.[CollectionId] IS NOT NULL
@@ -56,12 +71,27 @@ WHERE
 UNION ALL
 
 SELECT
-    *,
+    C.Id,
+    C.UserId,
+    C.OrganizationId,
+    C.Type,
+    C.Data,
+    C.Attachments,
+    C.CreationDate,
+    C.RevisionDate,
+    C.Favorite,
+    C.FolderId,
+    C.DeletedDate,
+    CA.ArchivedDate,
+    C.Reprompt,
+    C.[Key],
     1 [Edit],
     1 [ViewPassword],
     1 [Manage],
     0 [OrganizationUseTotp]
 FROM
-    [dbo].[CipherDetails](@UserId)
+    [dbo].[CipherDetails](@UserId) AS C
+LEFT JOIN
+    [dbo].[CipherArchive] CA ON CA.[CipherId] = C.[Id] AND CA.[UserId] = @UserId
 WHERE
-    [UserId] = @UserId
+    C.[UserId] = @UserId;
