@@ -6,11 +6,14 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUs
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bit.Core.Test.AdminConsole.AutoFixture;
+using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -111,14 +114,14 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
     [BitAutoData]
     public async Task ValidateAsync_WithValidAcceptedUser_ReturnsValidResult(
         SutProvider<AutomaticallyConfirmOrganizationUsersValidator> sutProvider,
-        Organization organization,
+        [Organization(useAutomaticUserConfirmation: true, planType: PlanType.EnterpriseAnnually)] Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
-        Guid userId)
+        Guid userId,
+        [Policy(PolicyType.AutomaticUserConfirmation)] Policy autoConfirmPolicy)
     {
         // Arrange
         organizationUser.UserId = userId;
         organizationUser.OrganizationId = organization.Id;
-        organization.PlanType = PlanType.EnterpriseAnnually;
 
         var request = new AutomaticallyConfirmOrganizationUserValidationRequest
         {
@@ -130,6 +133,10 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
             OrganizationId = organization.Id,
             Key = "test-key"
         };
+
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(organization.Id, PolicyType.AutomaticUserConfirmation)
+            .Returns(autoConfirmPolicy);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
             .TwoFactorIsEnabledAsync(Arg.Any<IEnumerable<Guid>>())
@@ -183,70 +190,11 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
     }
 
     [Theory]
-    [BitAutoData]
-    public async Task ValidateAsync_WithInvitedStatus_ReturnsUserIsNotAcceptedError(
-        SutProvider<AutomaticallyConfirmOrganizationUsersValidator> sutProvider,
-        Organization organization,
-        [OrganizationUser(OrganizationUserStatusType.Invited)] OrganizationUser organizationUser,
-        Guid userId)
-    {
-        // Arrange
-        organizationUser.UserId = userId;
-        organizationUser.OrganizationId = organization.Id;
-
-        var request = new AutomaticallyConfirmOrganizationUserValidationRequest
-        {
-            PerformedBy = Substitute.For<IActingUser>(),
-            DefaultUserCollectionName = "test-collection",
-            OrganizationUser = organizationUser,
-            OrganizationUserId = organizationUser.Id,
-            Organization = organization,
-            OrganizationId = organization.Id,
-            Key = "test-key"
-        };
-
-        // Act
-        var result = await sutProvider.Sut.ValidateAsync(request);
-
-        // Assert
-        Assert.True(result.IsError);
-        Assert.IsType<UserIsNotAccepted>(result.AsError);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task ValidateAsync_WithConfirmedStatus_ReturnsUserIsNotAcceptedError(
-        SutProvider<AutomaticallyConfirmOrganizationUsersValidator> sutProvider,
-        Organization organization,
-        [OrganizationUser(OrganizationUserStatusType.Confirmed)] OrganizationUser organizationUser,
-        Guid userId)
-    {
-        // Arrange
-        organizationUser.UserId = userId;
-        organizationUser.OrganizationId = organization.Id;
-
-        var request = new AutomaticallyConfirmOrganizationUserValidationRequest
-        {
-            PerformedBy = Substitute.For<IActingUser>(),
-            DefaultUserCollectionName = "test-collection",
-            OrganizationUser = organizationUser,
-            OrganizationUserId = organizationUser.Id,
-            Organization = organization,
-            OrganizationId = organization.Id,
-            Key = "test-key"
-        };
-
-        // Act
-        var result = await sutProvider.Sut.ValidateAsync(request);
-
-        // Assert
-        Assert.True(result.IsError);
-        Assert.IsType<UserIsNotAccepted>(result.AsError);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task ValidateAsync_WithRevokedStatus_ReturnsUserIsNotAcceptedError(
+    [BitAutoData(OrganizationUserStatusType.Invited)]
+    [BitAutoData(OrganizationUserStatusType.Revoked)]
+    [BitAutoData(OrganizationUserStatusType.Confirmed)]
+    public async Task ValidateAsync_WithNotAcceptedStatus_ReturnsUserIsNotAcceptedError(
+        OrganizationUserStatusType statusType,
         SutProvider<AutomaticallyConfirmOrganizationUsersValidator> sutProvider,
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
@@ -255,6 +203,7 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
         // Arrange
         organizationUser.UserId = userId;
         organizationUser.OrganizationId = organization.Id;
+        organizationUser.Status = statusType;
 
         var request = new AutomaticallyConfirmOrganizationUserValidationRequest
         {
@@ -276,78 +225,20 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
     }
 
     [Theory]
-    [BitAutoData]
-    public async Task ValidateAsync_WithAdminType_ReturnsUserIsNotUserTypeError(
+    [BitAutoData(OrganizationUserType.Owner)]
+    [BitAutoData(OrganizationUserType.Custom)]
+    [BitAutoData(OrganizationUserType.Admin)]
+    public async Task ValidateAsync_WithNonUserType_ReturnsUserIsNotUserTypeError(
+        OrganizationUserType userType,
         SutProvider<AutomaticallyConfirmOrganizationUsersValidator> sutProvider,
         Organization organization,
-        [OrganizationUser(OrganizationUserStatusType.Accepted, OrganizationUserType.Admin)] OrganizationUser organizationUser,
+        [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
         Guid userId)
     {
         // Arrange
         organizationUser.UserId = userId;
         organizationUser.OrganizationId = organization.Id;
-
-        var request = new AutomaticallyConfirmOrganizationUserValidationRequest
-        {
-            PerformedBy = Substitute.For<IActingUser>(),
-            DefaultUserCollectionName = "test-collection",
-            OrganizationUser = organizationUser,
-            OrganizationUserId = organizationUser.Id,
-            Organization = organization,
-            OrganizationId = organization.Id,
-            Key = "test-key"
-        };
-
-        // Act
-        var result = await sutProvider.Sut.ValidateAsync(request);
-
-        // Assert
-        Assert.True(result.IsError);
-        Assert.IsType<UserIsNotUserType>(result.AsError);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task ValidateAsync_WithOwnerType_ReturnsUserIsNotUserTypeError(
-        SutProvider<AutomaticallyConfirmOrganizationUsersValidator> sutProvider,
-        Organization organization,
-        [OrganizationUser(OrganizationUserStatusType.Accepted, OrganizationUserType.Owner)] OrganizationUser organizationUser,
-        Guid userId)
-    {
-        // Arrange
-        organizationUser.UserId = userId;
-        organizationUser.OrganizationId = organization.Id;
-
-        var request = new AutomaticallyConfirmOrganizationUserValidationRequest
-        {
-            PerformedBy = Substitute.For<IActingUser>(),
-            DefaultUserCollectionName = "test-collection",
-            OrganizationUser = organizationUser,
-            OrganizationUserId = organizationUser.Id,
-            Organization = organization,
-            OrganizationId = organization.Id,
-            Key = "test-key"
-        };
-
-        // Act
-        var result = await sutProvider.Sut.ValidateAsync(request);
-
-        // Assert
-        Assert.True(result.IsError);
-        Assert.IsType<UserIsNotUserType>(result.AsError);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task ValidateAsync_WithCustomType_ReturnsUserIsNotUserTypeError(
-        SutProvider<AutomaticallyConfirmOrganizationUsersValidator> sutProvider,
-        Organization organization,
-        [OrganizationUser(OrganizationUserStatusType.Accepted, OrganizationUserType.Custom)] OrganizationUser organizationUser,
-        Guid userId)
-    {
-        // Arrange
-        organizationUser.UserId = userId;
-        organizationUser.OrganizationId = organization.Id;
+        organizationUser.Type = userType;
 
         var request = new AutomaticallyConfirmOrganizationUserValidationRequest
         {
@@ -372,9 +263,10 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
     [BitAutoData]
     public async Task ValidateAsync_UserWithout2FA_And2FARequired_ReturnsError(
         SutProvider<AutomaticallyConfirmOrganizationUsersValidator> sutProvider,
-        Organization organization,
+        [Organization(useAutomaticUserConfirmation: true)] Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
-        Guid userId)
+        Guid userId,
+        [Policy(PolicyType.AutomaticUserConfirmation)] Policy autoConfirmPolicy)
     {
         // Arrange
         organizationUser.UserId = userId;
@@ -396,6 +288,10 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
             OrganizationId = organization.Id,
             PolicyType = PolicyType.TwoFactorAuthentication
         };
+
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(organization.Id, PolicyType.AutomaticUserConfirmation)
+            .Returns(autoConfirmPolicy);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
             .TwoFactorIsEnabledAsync(Arg.Any<IEnumerable<Guid>>())
@@ -421,9 +317,10 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
     [BitAutoData]
     public async Task ValidateAsync_UserWith2FA_ReturnsValidResult(
         SutProvider<AutomaticallyConfirmOrganizationUsersValidator> sutProvider,
-        Organization organization,
+        [Organization(useAutomaticUserConfirmation: true)] Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
-        Guid userId)
+        Guid userId,
+        [Policy(PolicyType.AutomaticUserConfirmation)] Policy autoConfirmPolicy)
     {
         // Arrange
         organizationUser.UserId = userId;
@@ -439,6 +336,10 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
             OrganizationId = organization.Id,
             Key = "test-key"
         };
+
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(organization.Id, PolicyType.AutomaticUserConfirmation)
+            .Returns(autoConfirmPolicy);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
             .TwoFactorIsEnabledAsync(Arg.Any<IEnumerable<Guid>>())
@@ -459,9 +360,10 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
     [BitAutoData]
     public async Task ValidateAsync_UserWithout2FA_And2FANotRequired_ReturnsValidResult(
         SutProvider<AutomaticallyConfirmOrganizationUsersValidator> sutProvider,
-        Organization organization,
+        [Organization(useAutomaticUserConfirmation: true)] Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
-        Guid userId)
+        Guid userId,
+        [Policy(PolicyType.AutomaticUserConfirmation)] Policy autoConfirmPolicy)
     {
         // Arrange
         organizationUser.UserId = userId;
@@ -477,6 +379,10 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
             OrganizationId = organization.Id,
             Key = "test-key"
         };
+
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(organization.Id, PolicyType.AutomaticUserConfirmation)
+            .Returns(autoConfirmPolicy);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
             .TwoFactorIsEnabledAsync(Arg.Any<IEnumerable<Guid>>())
@@ -501,10 +407,11 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
     [BitAutoData]
     public async Task ValidateAsync_UserInMultipleOrgs_WithSingleOrgPolicyOnThisOrg_ReturnsError(
         SutProvider<AutomaticallyConfirmOrganizationUsersValidator> sutProvider,
-        Organization organization,
+        [Organization(useAutomaticUserConfirmation: true)] Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
         OrganizationUser otherOrgUser,
-        Guid userId)
+        Guid userId,
+        [Policy(PolicyType.AutomaticUserConfirmation)] Policy autoConfirmPolicy)
     {
         // Arrange
         organizationUser.UserId = userId;
@@ -526,6 +433,10 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
             OrganizationId = organization.Id,
             PolicyType = PolicyType.SingleOrg
         };
+
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(organization.Id, PolicyType.AutomaticUserConfirmation)
+            .Returns(autoConfirmPolicy);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
             .TwoFactorIsEnabledAsync(Arg.Any<IEnumerable<Guid>>())
@@ -551,10 +462,11 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
     [BitAutoData]
     public async Task ValidateAsync_UserInMultipleOrgs_WithSingleOrgPolicyOnOtherOrg_ReturnsError(
         SutProvider<AutomaticallyConfirmOrganizationUsersValidator> sutProvider,
-        Organization organization,
+        [Organization(useAutomaticUserConfirmation: true)] Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
         OrganizationUser otherOrgUser,
-        Guid userId)
+        Guid userId,
+        [Policy(PolicyType.AutomaticUserConfirmation)] Policy autoConfirmPolicy)
     {
         // Arrange
         organizationUser.UserId = userId;
@@ -577,6 +489,10 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
             OrganizationId = otherOrgId,
             PolicyType = PolicyType.SingleOrg,
         };
+
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(organization.Id, PolicyType.AutomaticUserConfirmation)
+            .Returns(autoConfirmPolicy);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
             .TwoFactorIsEnabledAsync(Arg.Any<IEnumerable<Guid>>())
@@ -602,9 +518,10 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
     [BitAutoData]
     public async Task ValidateAsync_UserInSingleOrg_ReturnsValidResult(
         SutProvider<AutomaticallyConfirmOrganizationUsersValidator> sutProvider,
-        Organization organization,
+        [Organization(useAutomaticUserConfirmation: true)] Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
-        Guid userId)
+        Guid userId,
+        [Policy(PolicyType.AutomaticUserConfirmation)] Policy autoConfirmPolicy)
     {
         // Arrange
         organizationUser.UserId = userId;
@@ -620,6 +537,10 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
             OrganizationId = organization.Id,
             Key = "test-key"
         };
+
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(organization.Id, PolicyType.AutomaticUserConfirmation)
+            .Returns(autoConfirmPolicy);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
             .TwoFactorIsEnabledAsync(Arg.Any<IEnumerable<Guid>>())
@@ -640,14 +561,17 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
     [BitAutoData]
     public async Task ValidateAsync_UserInMultipleOrgs_WithNoSingleOrgPolicy_ReturnsValidResult(
         SutProvider<AutomaticallyConfirmOrganizationUsersValidator> sutProvider,
-        Organization organization,
+        [Organization(useAutomaticUserConfirmation: true)] Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
         OrganizationUser otherOrgUser,
-        Guid userId)
+        Guid userId,
+        Policy autoConfirmPolicy)
     {
         // Arrange
         organizationUser.UserId = userId;
         organizationUser.OrganizationId = organization.Id;
+        autoConfirmPolicy.Type = PolicyType.AutomaticUserConfirmation;
+        autoConfirmPolicy.Enabled = true;
 
         var request = new AutomaticallyConfirmOrganizationUserValidationRequest
         {
@@ -659,6 +583,10 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
             OrganizationId = organization.Id,
             Key = "test-key"
         };
+
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(organization.Id, PolicyType.AutomaticUserConfirmation)
+            .Returns(autoConfirmPolicy);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
             .TwoFactorIsEnabledAsync(Arg.Any<IEnumerable<Guid>>())
@@ -677,5 +605,92 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
 
         // Assert
         Assert.True(result.IsValid);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_WithAutoConfirmPolicyDisabled_ReturnsAutoConfirmPolicyNotEnabledError(
+        SutProvider<AutomaticallyConfirmOrganizationUsersValidator> sutProvider,
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
+        Guid userId)
+    {
+        // Arrange
+        organizationUser.UserId = userId;
+        organizationUser.OrganizationId = organization.Id;
+
+        var request = new AutomaticallyConfirmOrganizationUserValidationRequest
+        {
+            PerformedBy = Substitute.For<IActingUser>(),
+            DefaultUserCollectionName = "test-collection",
+            OrganizationUser = organizationUser,
+            OrganizationUserId = organizationUser.Id,
+            Organization = organization,
+            OrganizationId = organization.Id,
+            Key = "test-key"
+        };
+
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(organization.Id, PolicyType.AutomaticUserConfirmation)
+            .Returns((Policy)null);
+
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns([(userId, true)]);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByUserAsync(userId)
+            .Returns([organizationUser]);
+
+        // Act
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        // Assert
+        Assert.True(result.IsError);
+        Assert.IsType<AutomaticallyConfirmUsersPolicyIsNotEnabled>(result.AsError);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_WithOrganizationUseAutomaticUserConfirmationDisabled_ReturnsAutoConfirmPolicyNotEnabledError(
+        SutProvider<AutomaticallyConfirmOrganizationUsersValidator> sutProvider,
+        [Organization(useAutomaticUserConfirmation: false)] Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
+        Guid userId,
+        [Policy(PolicyType.AutomaticUserConfirmation)] Policy autoConfirmPolicy)
+    {
+        // Arrange
+        organizationUser.UserId = userId;
+        organizationUser.OrganizationId = organization.Id;
+
+        var request = new AutomaticallyConfirmOrganizationUserValidationRequest
+        {
+            PerformedBy = Substitute.For<IActingUser>(),
+            DefaultUserCollectionName = "test-collection",
+            OrganizationUser = organizationUser,
+            OrganizationUserId = organizationUser.Id,
+            Organization = organization,
+            OrganizationId = organization.Id,
+            Key = "test-key"
+        };
+
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(organization.Id, PolicyType.AutomaticUserConfirmation)
+            .Returns(autoConfirmPolicy);
+
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns([(userId, true)]);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByUserAsync(userId)
+            .Returns([organizationUser]);
+
+        // Act
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        // Assert
+        Assert.True(result.IsError);
+        Assert.IsType<AutomaticallyConfirmUsersPolicyIsNotEnabled>(result.AsError);
     }
 }

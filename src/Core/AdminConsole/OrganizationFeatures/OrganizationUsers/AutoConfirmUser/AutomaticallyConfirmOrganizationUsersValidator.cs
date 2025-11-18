@@ -1,6 +1,8 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
+﻿using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
@@ -13,8 +15,8 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfi
 public class AutomaticallyConfirmOrganizationUsersValidator(
     IOrganizationUserRepository organizationUserRepository,
     ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-    IPolicyRequirementQuery policyRequirementQuery
-    ) : IAutomaticallyConfirmOrganizationUsersValidator
+    IPolicyRequirementQuery policyRequirementQuery,
+    IPolicyRepository policyRepository) : IAutomaticallyConfirmOrganizationUsersValidator
 {
     public async Task<ValidationResult<AutomaticallyConfirmOrganizationUserValidationRequest>> ValidateAsync(
         AutomaticallyConfirmOrganizationUserValidationRequest request)
@@ -49,6 +51,11 @@ public class AutomaticallyConfirmOrganizationUsersValidator(
             return Invalid(request, new UserIsNotUserType());
         }
 
+        if (!await OrganizationHasAutomaticallyConfirmUsersPolicyEnabledAsync(request))
+        {
+            return Invalid(request, new AutomaticallyConfirmUsersPolicyIsNotEnabled());
+        }
+
         if (!await OrganizationUserConformsToTwoFactorRequiredPolicyAsync(request))
         {
             return Invalid(request, new UserDoesNotHaveTwoFactorEnabled());
@@ -61,6 +68,12 @@ public class AutomaticallyConfirmOrganizationUsersValidator(
 
         return Valid(request);
     }
+
+    private async Task<bool> OrganizationHasAutomaticallyConfirmUsersPolicyEnabledAsync(
+            AutomaticallyConfirmOrganizationUserValidationRequest request) =>
+        await policyRepository.GetByOrganizationIdTypeAsync(request.OrganizationId,
+            PolicyType.AutomaticUserConfirmation) is { Enabled: true }
+        && request.Organization is { UseAutomaticUserConfirmation: true };
 
     private async Task<bool> OrganizationUserConformsToTwoFactorRequiredPolicyAsync(AutomaticallyConfirmOrganizationUserValidationRequest request)
     {
