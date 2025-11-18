@@ -26,9 +26,7 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
     public OrganizationRepository(
         IServiceScopeFactory serviceScopeFactory,
         IMapper mapper,
-        ILogger<OrganizationRepository> logger,
-        IPlayIdService playIdService,
-        IPlayDataRepository playDataRepository)
+        ILogger<OrganizationRepository> logger)
         : base(serviceScopeFactory, mapper, context => context.Organizations)
     {
         _logger = logger;
@@ -454,7 +452,7 @@ public class TestOrganizationTrackingOrganizationRepository : OrganizationReposi
           ILogger<OrganizationRepository> logger,
           IPlayIdService playIdService,
           IPlayDataRepository playDataRepository)
-          : base(serviceScopeFactory, mapper, logger, playIdService, playDataRepository)
+          : base(serviceScopeFactory, mapper, logger)
     {
         _playIdService = playIdService;
         _playDataRepository = playDataRepository;
