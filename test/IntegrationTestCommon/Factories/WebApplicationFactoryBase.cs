@@ -47,7 +47,7 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
     /// </remarks>
     public bool ManagesDatabase { get; set; } = true;
 
-    private readonly List<Action<IServiceCollection>> _configureTestServices = new();
+    protected readonly List<Action<IServiceCollection>> _configureTestServices = new();
     private readonly List<Action<IConfigurationBuilder>> _configureAppConfiguration = new();
 
     public void SubstituteService<TService>(Action<TService> mockService)
