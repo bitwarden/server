@@ -1,3 +1,4 @@
+﻿using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.Billing.Attributes;
 using Bit.Core;
@@ -7,7 +8,6 @@ using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
-using Bit.Api.AdminConsole.Authorization;
 
 namespace Bit.Api.Billing.Controllers.VNext;
 
