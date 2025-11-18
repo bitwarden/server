@@ -1658,7 +1658,7 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.ToTable("PlayData", null, t =>
                         {
-                            t.HasCheckConstraint("CK_PlayData_UserOrOrganization", "([UserId] IS NOT NULL AND [OrganizationId] IS NULL) OR ([UserId] IS NULL AND [OrganizationId] IS NOT NULL)");
+                            t.HasCheckConstraint("CK_PlayData_UserOrOrganization", "(\"UserId\" IS NOT NULL AND \"OrganizationId\" IS NULL) OR (\"UserId\" IS NULL AND \"OrganizationId\" IS NOT NULL)");
                         });
                 });
 
