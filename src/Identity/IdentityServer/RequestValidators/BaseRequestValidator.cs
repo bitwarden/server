@@ -674,7 +674,7 @@ public abstract class BaseRequestValidator<T> where T : class
 
     protected abstract ClaimsPrincipal GetSubject(T context);
 
-        /// <summary>
+    /// <summary>
     /// Check if the user is required to authenticate via SSO. If the user requires SSO, but they are
     /// logging in using an API Key (client_credentials) then they are allowed to bypass the SSO requirement.
     /// If the GrantType is authorization_code or client_credentials we know the user is trying to login

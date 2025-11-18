@@ -162,7 +162,7 @@ public static class FeatureFlagKeys
         "pm-23174-manage-account-recovery-permission-drives-the-need-to-set-master-password";
     public const string RecoveryCodeSupportForSsoRequiredUsers = "pm-21153-recovery-code-support-for-sso-required";
     public const string MJMLBasedEmailTemplates = "mjml-based-email-templates";
-    public const string RedirectOnSsoRequired ="pm-1632-redirect-on-sso-required";
+    public const string RedirectOnSsoRequired = "pm-1632-redirect-on-sso-required";
 
     /* Autofill Team */
     public const string IdpAutoSubmitLogin = "idp-auto-submit-login";
