@@ -4,11 +4,14 @@ using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.Models.Response;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
+using NSubstitute;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
@@ -25,6 +28,12 @@ public class OrganizationUserControllerBulkRevokeTests : IClassFixture<ApiApplic
     public OrganizationUserControllerBulkRevokeTests(ApiApplicationFactory apiFactory)
     {
         _factory = apiFactory;
+        _factory.SubstituteService<IFeatureService>(featureService =>
+        {
+            featureService
+                .IsEnabled(FeatureFlagKeys.BulkRevokeUsersV2)
+                .Returns(true);
+        });
         _client = _factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
     }
@@ -312,8 +321,7 @@ public class OrganizationUserControllerBulkRevokeTests : IClassFixture<ApiApplic
 
         var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
 
-        var initialOwnerOrgUser = await organizationUserRepository.GetByOrganizationAsync(_organization.Id, (await _factory.GetService<Core.Repositories.IUserRepository>().GetByEmailAsync(_ownerEmail)).Id);
-        await organizationUserRepository.DeleteAsync(initialOwnerOrgUser);
+        await organizationUserRepository.DeleteAsync(ownerOrgUser);
 
         var request = new OrganizationUserBulkRequestModel
         {

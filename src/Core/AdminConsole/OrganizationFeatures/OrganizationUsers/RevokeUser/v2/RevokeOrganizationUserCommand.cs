@@ -16,6 +16,7 @@ public class RevokeOrganizationUserCommand(
     IPushNotificationService pushNotificationService,
     IRevokeOrganizationUserValidator validator,
     IOrganizationRepository organizationRepository,
+    TimeProvider timeProvider,
     ILogger<RevokeOrganizationUserCommand> logger)
     : IRevokeOrganizationUserCommand
 {
@@ -79,13 +80,12 @@ public class RevokeOrganizationUserCommand(
             return;
         }
 
-        var eventDate = DateTime.UtcNow;
+        var eventDate = timeProvider.GetUtcNow().UtcDateTime;
 
-        // Log events based on who performed the action
-        if (actingUser.SystemUserType.HasValue)
+        if (actingUser is SystemUser { SystemUserType: not null })
         {
             var revokeEventsWithSystem = revokedUsers
-                .Select(user => (user, EventType.OrganizationUser_Revoked, actingUser.SystemUserType.Value, (DateTime?)eventDate))
+                .Select(user => (user, EventType.OrganizationUser_Revoked, actingUser.SystemUserType!.Value, (DateTime?)eventDate))
                 .ToList();
             await eventService.LogOrganizationUserEventsAsync(revokeEventsWithSystem);
         }

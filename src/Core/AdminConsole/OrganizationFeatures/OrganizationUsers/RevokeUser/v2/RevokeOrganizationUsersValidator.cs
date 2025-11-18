@@ -26,9 +26,9 @@ public class RevokeOrganizationUsersValidator(
                 { Status: OrganizationUserStatusType.Revoked } =>
                     Invalid(x, new UserAlreadyRevoked()),
                 { Type: OrganizationUserType.Owner } when !anyRemainingOwners =>
-                    Invalid(x, new OnlyOwnersCanRevokeOwners()),
-                { Type: OrganizationUserType.Owner } when !request.PerformedBy.IsOrganizationOwnerOrProvider =>
                     Invalid(x, new MustHaveConfirmedOwner()),
+                { Type: OrganizationUserType.Owner } when !request.PerformedBy.IsOrganizationOwnerOrProvider =>
+                    Invalid(x, new OnlyOwnersCanRevokeOwners()),
 
                 _ => Valid(x)
             };
