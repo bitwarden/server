@@ -225,6 +225,30 @@ public class HubHelpersTest
             .Group(Arg.Any<string>());
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task SendNotificationToHubAsync_PolicyChanged_SentToOrganizationGroup(
+        SutProvider<HubHelpers> sutProvider,
+        SyncPolicyPushNotification notification,
+        string contextId,
+        CancellationToken cancellationToken)
+    {
+        var json = ToNotificationJson(notification, PushType.PolicyChanged, contextId);
+        await sutProvider.Sut.SendNotificationToHubAsync(json, cancellationToken);
+
+        sutProvider.GetDependency<IHubContext<NotificationsHub>>().Clients.Received(0).User(Arg.Any<string>());
+        await sutProvider.GetDependency<IHubContext<NotificationsHub>>().Clients.Received(1)
+            .Group($"Organization_{notification.OrganizationId}")
+            .Received(1)
+            .SendCoreAsync("ReceiveMessage", Arg.Is<object?[]>(objects =>
+                    objects.Length == 1 && IsSyncPolicyPushNotificationEqual(notification, objects[0],
+                        PushType.PolicyChanged, contextId)),
+                cancellationToken);
+        sutProvider.GetDependency<IHubContext<AnonymousNotificationsHub>>().Clients.Received(0).User(Arg.Any<string>());
+        sutProvider.GetDependency<IHubContext<AnonymousNotificationsHub>>().Clients.Received(0)
+            .Group(Arg.Any<string>());
+    }
+
     private static string ToNotificationJson(object payload, PushType type, string contextId)
     {
         var notification = new PushNotificationData<object>(type, payload, contextId);
@@ -246,5 +270,21 @@ public class HubHelpersTest
                expected.OrganizationId == pushNotificationData.Payload.OrganizationId &&
                expected.ClientType == pushNotificationData.Payload.ClientType &&
                expected.RevisionDate == pushNotificationData.Payload.RevisionDate;
+    }
+
+    private static bool IsSyncPolicyPushNotificationEqual(SyncPolicyPushNotification expected, object? actual,
+        PushType type, string contextId)
+    {
+        if (actual is not PushNotificationData<SyncPolicyPushNotification> pushNotificationData)
+        {
+            return false;
+        }
+
+        return pushNotificationData.Type == type &&
+               pushNotificationData.ContextId == contextId &&
+               expected.OrganizationId == pushNotificationData.Payload.OrganizationId &&
+               expected.Policy.Id == pushNotificationData.Payload.Policy.Id &&
+               expected.Policy.Type == pushNotificationData.Payload.Policy.Type &&
+               expected.Policy.Enabled == pushNotificationData.Payload.Policy.Enabled;
     }
 }

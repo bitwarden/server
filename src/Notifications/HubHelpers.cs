@@ -231,6 +231,17 @@ public class HubHelpers
                 await _hubContext.Clients.User(pendingTasksData.Payload.UserId.ToString())
                     .SendAsync(_receiveMessageMethod, pendingTasksData, cancellationToken);
                 break;
+            case PushType.PolicyChanged:
+                var policyData = JsonSerializer.Deserialize<PushNotificationData<SyncPolicyPushNotification>>(notificationJson, _deserializerOptions);
+                if (policyData is null)
+                {
+                    break;
+                }
+
+                await _hubContext.Clients
+                    .Group(NotificationsHub.GetOrganizationGroup(policyData.Payload.OrganizationId))
+                    .SendAsync(_receiveMessageMethod, policyData, cancellationToken);
+                break;
             default:
                 _logger.LogWarning("Notification type '{NotificationType}' has not been registered in HubHelpers and will not be pushed as as result", notification.Type);
                 break;
