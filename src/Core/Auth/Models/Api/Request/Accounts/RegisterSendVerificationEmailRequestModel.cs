@@ -11,4 +11,5 @@ public class RegisterSendVerificationEmailRequestModel
     [StringLength(256)]
     public required string Email { get; set; }
     public bool ReceiveMarketingEmails { get; set; }
+    public string? FromMarketing { get; set; }
 }
