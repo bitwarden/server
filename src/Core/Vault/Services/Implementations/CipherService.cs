@@ -289,11 +289,10 @@ public class CipherService : ICipherService
     }
 
     public async Task CreateAttachmentShareAsync(Cipher cipher, Stream stream, string fileName, string key,
-        long requestLength, string attachmentId, Guid organizationId, DateTime? lastKnownRevisionDate = null)
+        long requestLength, string attachmentId, Guid organizationId)
     {
         try
         {
-            ValidateCipherLastKnownRevisionDate(cipher, lastKnownRevisionDate);
             if (requestLength < 1)
             {
                 throw new BadRequestException("No data to attach.");
