@@ -283,7 +283,7 @@ public class RegisterUserCommandTests
 
         // Assert
         await sutProvider.GetDependency<IOrganizationUserRepository>()
-            .Received(2)
+            .Received(1)
             .GetByIdAsync(orgUserId);
 
         await sutProvider.GetDependency<IPolicyRepository>()

@@ -112,20 +112,7 @@ public class RegisterUserCommand : IRegisterUserCommand
     {
         TryValidateOrgInviteToken(orgInviteToken, orgUserId, user);
         var orgUser = await SetUserEmail2FaIfOrgPolicyEnabledAsync(orgUserId, user);
-
-        // Get the organization ID if we have an orgUserId, so we can exclude it from domain blocking
-        var organizationId = orgUser?.OrganizationId;
-        if (!organizationId.HasValue && orgUserId.HasValue)
-        {
-            orgUser = await _organizationUserRepository.GetByIdAsync(orgUserId.Value);
-            if (orgUser == null)
-            {
-                throw new BadRequestException("Invalid organization user invitation.");
-            }
-            organizationId = orgUser.OrganizationId;
-        }
-
-        await ValidateEmailDomainNotBlockedAsync(user.Email, organizationId);
+        await ValidateEmailDomainNotBlockedAsync(user.Email, orgUser?.OrganizationId);
 
         user.ApiKey = CoreHelpers.SecureRandomString(30);
 
