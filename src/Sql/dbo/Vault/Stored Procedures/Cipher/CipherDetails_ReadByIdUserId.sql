@@ -3,9 +3,9 @@
     @UserId UNIQUEIDENTIFIER
 AS
 BEGIN
-    SET NOCOUNT ON;
+    SET NOCOUNT ON
 
-    SELECT
+SELECT
         [Id],
         [UserId],
         [OrganizationId],
@@ -21,9 +21,9 @@ BEGIN
         [Key],
         [OrganizationUseTotp],
         [ArchivedDate],
-        MAX([Edit]) AS Edit,
-        MAX([ViewPassword]) AS ViewPassword,
-        MAX([Manage]) AS Manage
+        MAX ([Edit]) AS Edit,
+        MAX ([ViewPassword]) AS ViewPassword,
+        MAX ([Manage]) AS Manage
     FROM
         [dbo].[UserCipherDetails](@UserId)
     WHERE
