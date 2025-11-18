@@ -61,27 +61,29 @@ public class UpdateOrganizationCommand(
         var originalBillingEmail = organization.BillingEmail;
 
         // Apply updates to organization model
-        UpdateOrganizationDetails(organization, request);
+        // Skipped if self-hosted because these values come from the license file
+        if (!globalSettings.SelfHosted)
+        {
+            UpdateOrganizationDetails(organization, request);
+        }
+
+        // Applies to both cloud and self-hosted
         UpdatePublicPrivateKeyPair(organization, request);
 
         await organizationService.ReplaceAndUpdateCacheAsync(organization, EventType.Organization_Updated);
 
         // Update billing information in Stripe if required
-        await UpdateBillingIfRequiredAsync(organization, originalName, originalBillingEmail);
+        // Skipped if self-hosted because only Cloud communicates with Stripe
+        if (!globalSettings.SelfHosted)
+        {
+            await UpdateBillingAsync(organization, originalName, originalBillingEmail);
+        }
 
         return organization;
     }
 
-    private void UpdateOrganizationDetails(Organization organization, UpdateOrganizationRequest request)
+    private static void UpdateOrganizationDetails(Organization organization, UpdateOrganizationRequest request)
     {
-        if (globalSettings.SelfHosted)
-        {
-            // These values come from the license file and cannot be updated on self-hosted instances.
-            // The only thing they can actually update here is to backfill their public/private keypair if missing
-            // (for old organizations).
-            return;
-        }
-
         // These values may or may not be sent by the client depending on the operation being performed.
         // Skip any values not provided.
         if (request.Name is not null)
@@ -95,11 +97,11 @@ public class UpdateOrganizationCommand(
         }
     }
 
-    private void UpdatePublicPrivateKeyPair(Organization organization, UpdateOrganizationRequest request)
+    private static void UpdatePublicPrivateKeyPair(Organization organization, UpdateOrganizationRequest request)
     {
         // Update keys if provided and not already set.
-        // This is legacy code for old organizations that were not created with a public/private keypair.
-        // FIXME: check if we can remove this migration pathway as it is now years old.
+        // This is legacy code for old organizations that were not created with a public/private keypair. It is a soft
+        // migration that will silently migrate organizations when they change their details.
         // This is the only part of the command that does anything on self-host, so if this is removed then
         // this endpoint can be blocked for self-host entirely.
         if (!string.IsNullOrWhiteSpace(request.PublicKey) && string.IsNullOrWhiteSpace(organization.PublicKey))
@@ -113,13 +115,13 @@ public class UpdateOrganizationCommand(
         }
     }
 
-    private async Task UpdateBillingIfRequiredAsync(Organization organization, string originalName, string? originalBillingEmail)
+    private async Task UpdateBillingAsync(Organization organization, string originalName, string? originalBillingEmail)
     {
         // Update Stripe if name or billing email changed
         var shouldUpdateBilling = originalName != organization.Name ||
                                   originalBillingEmail != organization.BillingEmail;
 
-        if (!shouldUpdateBilling || string.IsNullOrWhiteSpace(organization.GatewayCustomerId) || globalSettings.SelfHosted)
+        if (!shouldUpdateBilling || string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
         {
             return;
         }
