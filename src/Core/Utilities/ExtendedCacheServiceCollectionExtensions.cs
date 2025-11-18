@@ -14,76 +14,125 @@ namespace Microsoft.Extensions.DependencyInjection;
 public static class ExtendedCacheServiceCollectionExtensions
 {
     /// <summary>
-    /// Add Fusion Cache <see href="https://github.com/ZiggyCreatures/FusionCache"/> to the service
-    /// collection.<br/>
+    /// Adds a new, named Fusion Cache <see href="https://github.com/ZiggyCreatures/FusionCache"/> to the service
+    /// collection. If an existing cache of the same name is found, it will do nothing.<br/>
     /// <br/>
-    /// If Redis is configured, it uses Redis for an L2 cache and backplane. If not, it simply uses in-memory caching.
+    ///
     /// </summary>
-    public static IServiceCollection TryAddExtendedCacheServices(this IServiceCollection services, GlobalSettings globalSettings)
+    public static IServiceCollection AddExtendedCache(
+        this IServiceCollection services,
+        string cacheName,
+        GlobalSettings globalSettings,
+        GlobalSettings.ExtendedCacheSettings? settings = null)
     {
-        if (services.Any(s => s.ServiceType == typeof(IFusionCache)))
+        // If a cache already exists with this key, do nothing
+        if (services.Any(s => s.ServiceType == typeof(IFusionCache) &&
+                         s.ServiceKey?.Equals(cacheName) == true))
         {
             return services;
         }
 
-        var fusionCacheBuilder = services.AddFusionCache()
-            .WithOptions(options =>
+        if (services.All(s => s.ServiceType != typeof(FusionCacheSystemTextJsonSerializer)))
+        {
+            services.AddFusionCacheSystemTextJsonSerializer();
+        }
+        settings ??= globalSettings.DistributedCache.DefaultExtendedCache;
+        var fusionCacheBuilder = services
+            .AddFusionCache(cacheName)
+            .WithCacheKeyPrefix($"{cacheName}:")
+            .AsKeyedServiceByCacheName()
+            .WithOptions(opt =>
             {
-                options.DistributedCacheCircuitBreakerDuration = globalSettings.DistributedCache.DistributedCacheCircuitBreakerDuration;
+                opt.DistributedCacheCircuitBreakerDuration = settings.DistributedCacheCircuitBreakerDuration;
             })
             .WithDefaultEntryOptions(new FusionCacheEntryOptions
             {
-                Duration = globalSettings.DistributedCache.Duration,
-                IsFailSafeEnabled = globalSettings.DistributedCache.IsFailSafeEnabled,
-                FailSafeMaxDuration = globalSettings.DistributedCache.FailSafeMaxDuration,
-                FailSafeThrottleDuration = globalSettings.DistributedCache.FailSafeThrottleDuration,
-                EagerRefreshThreshold = globalSettings.DistributedCache.EagerRefreshThreshold,
-                FactorySoftTimeout = globalSettings.DistributedCache.FactorySoftTimeout,
-                FactoryHardTimeout = globalSettings.DistributedCache.FactoryHardTimeout,
-                DistributedCacheSoftTimeout = globalSettings.DistributedCache.DistributedCacheSoftTimeout,
-                DistributedCacheHardTimeout = globalSettings.DistributedCache.DistributedCacheHardTimeout,
-                AllowBackgroundDistributedCacheOperations = globalSettings.DistributedCache.AllowBackgroundDistributedCacheOperations,
-                JitterMaxDuration = globalSettings.DistributedCache.JitterMaxDuration
+                Duration = settings.Duration,
+                IsFailSafeEnabled = settings.IsFailSafeEnabled,
+                FailSafeMaxDuration = settings.FailSafeMaxDuration,
+                FailSafeThrottleDuration = settings.FailSafeThrottleDuration,
+                EagerRefreshThreshold = settings.EagerRefreshThreshold,
+                FactorySoftTimeout = settings.FactorySoftTimeout,
+                FactoryHardTimeout = settings.FactoryHardTimeout,
+                DistributedCacheSoftTimeout = settings.DistributedCacheSoftTimeout,
+                DistributedCacheHardTimeout = settings.DistributedCacheHardTimeout,
+                AllowBackgroundDistributedCacheOperations = settings.AllowBackgroundDistributedCacheOperations,
+                JitterMaxDuration = settings.JitterMaxDuration
             })
-            .WithSerializer(
-                new FusionCacheSystemTextJsonSerializer()
-            );
+            .WithRegisteredSerializer();
 
-        if (!CoreHelpers.SettingHasValue(globalSettings.DistributedCache.Redis.ConnectionString))
+        if (!settings.EnableDistributedCache)
+            return services;
+
+        if (settings.UseSharedRedisCache)
         {
+            // Using Shared Redis, TryAdd and reuse all pieces (multiplexer, distributed cache and backplane)
+
+            if (!CoreHelpers.SettingHasValue(globalSettings.DistributedCache.Redis.ConnectionString))
+                return services;
+
+            services.TryAddSingleton<IConnectionMultiplexer>(_ =>
+                ConnectionMultiplexer.Connect(globalSettings.DistributedCache.Redis.ConnectionString));
+            services.TryAddSingleton<IDistributedCache>(sp =>
+                {
+                    var mux = sp.GetRequiredService<IConnectionMultiplexer>();
+                    return new RedisCache(new RedisCacheOptions
+                    {
+                        ConnectionMultiplexerFactory = () => Task.FromResult(mux)
+                    });
+                });
+            services.TryAddSingleton<IFusionCacheBackplane>(sp =>
+                {
+                    var mux = sp.GetRequiredService<IConnectionMultiplexer>();
+                    return new RedisBackplane(new RedisBackplaneOptions
+                    {
+                        ConnectionMultiplexerFactory = () => Task.FromResult(mux)
+                    });
+                });
+
+            fusionCacheBuilder
+                .WithRegisteredDistributedCache()
+                .WithRegisteredBackplane();
+
             return services;
         }
 
-        services.TryAddSingleton<IConnectionMultiplexer>(sp =>
-            ConnectionMultiplexer.Connect(globalSettings.DistributedCache.Redis.ConnectionString));
+        // Using keyed Redis / Distributed Cache. Create all pieces as keyed services.
 
-        fusionCacheBuilder
-            .WithDistributedCache(sp =>
+        if (!CoreHelpers.SettingHasValue(settings.Redis.ConnectionString))
+            return services;
+
+        services.TryAddKeyedSingleton<IConnectionMultiplexer>(
+            cacheName,
+            (_, _) =>
+                ConnectionMultiplexer.Connect(settings.Redis.ConnectionString)
+        );
+        services.TryAddKeyedSingleton<IDistributedCache>(
+            cacheName,
+            (sp, _) =>
             {
-                var cache = sp.GetService<IDistributedCache>();
-                if (cache is not null)
-                {
-                    return cache;
-                }
-                var mux = sp.GetRequiredService<IConnectionMultiplexer>();
+                var mux = sp.GetRequiredKeyedService<IConnectionMultiplexer>(cacheName);
                 return new RedisCache(new RedisCacheOptions
                 {
                     ConnectionMultiplexerFactory = () => Task.FromResult(mux)
                 });
-            })
-            .WithBackplane(sp =>
+            }
+        );
+        services.TryAddKeyedSingleton<IFusionCacheBackplane>(
+            cacheName,
+            (sp, _) =>
             {
-                var backplane = sp.GetService<IFusionCacheBackplane>();
-                if (backplane is not null)
-                {
-                    return backplane;
-                }
-                var mux = sp.GetRequiredService<IConnectionMultiplexer>();
+                var mux = sp.GetRequiredKeyedService<IConnectionMultiplexer>(cacheName);
                 return new RedisBackplane(new RedisBackplaneOptions
                 {
                     ConnectionMultiplexerFactory = () => Task.FromResult(mux)
                 });
-            });
+            }
+        );
+
+        fusionCacheBuilder
+            .WithRegisteredKeyedDistributedCacheByCacheName()
+            .WithRegisteredKeyedBackplaneByCacheName();
 
         return services;
     }
