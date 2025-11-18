@@ -25,6 +25,7 @@
       "extensions": ["ms-dotnettools.csdevkit"]
     }
   },
+  "onCreateCommand": "bash .devcontainer/internal_dev/onCreateCommand.sh",
   "postCreateCommand": "bash .devcontainer/internal_dev/postCreateCommand.sh",
   "forwardPorts": [1080, 1433, 3306, 5432, 10000, 10001, 10002],
   "portsAttributes": {
