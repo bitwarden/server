@@ -1,4 +1,4 @@
-﻿using Bit.Api.Billing.Models.Requirements;
+﻿using Bit.Api.Billing.Authorization;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Authorization;
 using Microsoft.AspNetCore.Authorization;

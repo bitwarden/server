@@ -3,7 +3,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Enums;
 using Microsoft.AspNetCore.Authorization;
 
-namespace Bit.Api.Billing.Models.Requirements;
+namespace Bit.Api.Billing.Authorization;
 
 public class ManageOrganizationBillingRequirement : IAuthorizationRequirement;
 
