@@ -2,7 +2,9 @@
 #nullable disable
 
 using System.Reflection;
+using Xunit;
 using Xunit.Sdk;
+using Xunit.v3;
 
 namespace Bit.Test.Common.AutoFixture.Attributes;
 
@@ -24,7 +26,7 @@ public class EnvironmentDataAttribute : DataAttribute
         _environmentVariableNames = environmentVariableNames;
     }
 
-    public override IEnumerable<object[]> GetData(MethodInfo testMethod)
+    public override ValueTask<IReadOnlyCollection<ITheoryDataRow>> GetData(MethodInfo testMethod, DisposalTracker disposalTracker)
     {
         var methodParameters = testMethod.GetParameters();
 
@@ -40,6 +42,7 @@ public class EnvironmentDataAttribute : DataAttribute
             values[i] = Convert.ChangeType(Environment.GetEnvironmentVariable(_environmentVariableNames[i]), methodParameters[i].ParameterType);
         }
 
-        return new[] { values };
+        return new([new TheoryDataRow(values)]);
     }
+    public override bool SupportsDiscoveryEnumeration() => true;
 }

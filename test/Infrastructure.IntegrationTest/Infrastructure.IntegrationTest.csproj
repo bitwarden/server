@@ -11,12 +11,7 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.2" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.1" />
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" Version="8.10.0" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(MicrosoftNetTestSdkVersion)" />
     <PackageReference Include="xunit.v3" Version="3.0.1" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
     <PackageReference Include="coverlet.collector" Version="$(CoverletCollectorVersion)">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
@@ -30,6 +25,7 @@
     <ProjectReference Include="..\..\util\MySqlMigrations\MySqlMigrations.csproj" />
     <ProjectReference Include="..\..\util\PostgresMigrations\PostgresMigrations.csproj" />
     <ProjectReference Include="..\..\util\SqliteMigrations\SqliteMigrations.csproj" />
+    <ProjectReference Include="..\Common\Common.csproj" />
   </ItemGroup>
 
 </Project>

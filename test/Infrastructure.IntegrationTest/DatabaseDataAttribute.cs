@@ -5,6 +5,7 @@ using Bit.Infrastructure.Dapper;
 using Bit.Infrastructure.EntityFramework;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.IntegrationTest.Services;
+using Bit.Test.Common;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -183,7 +184,7 @@ public class DatabaseDataAttribute : DataAttribute
 
     public override bool SupportsDiscoveryEnumeration()
     {
-        return true;
+        return false;
     }
 
     private class ServiceBasedTheoryDataRow : TheoryDataRowBase

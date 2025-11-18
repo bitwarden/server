@@ -21,7 +21,7 @@ public class ConfigControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
         _client = _factory.CreateClient();
     }
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         _email = $"integration-test{Guid.NewGuid()}@bitwarden.com";
 
@@ -29,10 +29,10 @@ public class ConfigControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
     }
 
-    public Task DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         _client.Dispose();
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
     private async Task LoginAsync()

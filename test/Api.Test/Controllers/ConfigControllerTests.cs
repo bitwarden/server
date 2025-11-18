@@ -1,4 +1,4 @@
-﻿using AutoFixture.Xunit2;
+﻿using AutoFixture.Xunit3;
 using Bit.Api.Controllers;
 using Bit.Core.Services;
 using Bit.Core.Settings;

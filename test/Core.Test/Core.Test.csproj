@@ -8,15 +8,9 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.Extensions.Diagnostics.Testing" Version="9.3.0" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(MicrosoftNetTestSdkVersion)" />
     <PackageReference Include="NSubstitute" Version="$(NSubstituteVersion)" />
-    <PackageReference Include="xunit" Version="$(XUnitVersion)" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="$(XUnitRunnerVisualStudioVersion)">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="AutoFixture.Xunit2" Version="$(AutoFixtureXUnit2Version)" />
+    <PackageReference Include="xunit.v3" Version="$(XUnitv3Version)" />
+    <PackageReference Include="AutoFixture.Xunit3" Version="$(AutoFixtureXUnit3Version)" />
     <PackageReference Include="AutoFixture.AutoNSubstitute" Version="$(AutoFixtureAutoNSubstituteVersion)" />
     <PackageReference Include="Kralizek.AutoFixture.Extensions.MockHttp" Version="2.1.0" />
   </ItemGroup>

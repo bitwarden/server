@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using Xunit;
 
-namespace Bit.Infrastructure.IntegrationTest;
+namespace Bit.Test.Common;
 
 public sealed class XUnitLoggerProvider : ILoggerProvider
 {

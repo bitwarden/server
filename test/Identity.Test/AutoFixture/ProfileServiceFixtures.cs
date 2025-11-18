@@ -1,7 +1,7 @@
 ﻿using System.Reflection;
 using System.Security.Claims;
 using AutoFixture;
-using AutoFixture.Xunit2;
+using AutoFixture.Xunit3;
 using Bit.Core.Auth.Identity;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Validation;

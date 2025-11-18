@@ -8,24 +8,26 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Divergic.Logging.Xunit;
+using Bit.Test.Common;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Testing;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
-using Xunit.Abstractions;
 using Transaction = Bit.Core.Entities.Transaction;
 
 namespace Bit.Billing.Test.Controllers;
 
 public class PayPalControllerTests
 {
-    private readonly ITestOutputHelper _testOutputHelper;
+    private readonly ILogger<PayPalController> _logger;
+    private readonly FakeLogCollector _fakeLogCollector;
 
     private readonly IOptions<BillingSettings> _billingSettings = Substitute.For<IOptions<BillingSettings>>();
     private readonly IMailService _mailService = Substitute.For<IMailService>();
@@ -38,68 +40,68 @@ public class PayPalControllerTests
 
     private const string _defaultWebhookKey = "webhook-key";
 
-    public PayPalControllerTests(ITestOutputHelper testOutputHelper)
+    public PayPalControllerTests()
     {
-        _testOutputHelper = testOutputHelper;
+        var services = new ServiceCollection()
+            .AddLogging(b =>
+            {
+                b.AddProvider(new XUnitLoggerProvider());
+                b.AddFakeLogging();
+            })
+            .BuildServiceProvider();
+        _logger = services.GetRequiredService<ILogger<PayPalController>>();
+        _fakeLogCollector = services.GetFakeLogCollector();
     }
 
     [Fact]
     public async Task PostIpn_NullKey_BadRequest()
     {
-        var logger = _testOutputHelper.BuildLoggerFor<PayPalController>();
-
-        var controller = ConfigureControllerContextWith(logger, null, null);
+        var controller = ConfigureControllerContextWith(null, null);
 
         var result = await controller.PostIpn();
 
         HasStatusCode(result, 400);
 
-        LoggedError(logger, "PayPal IPN: Key is missing");
+        LoggedError("PayPal IPN: Key is missing");
     }
 
     [Fact]
     public async Task PostIpn_IncorrectKey_BadRequest()
     {
-        var logger = _testOutputHelper.BuildLoggerFor<PayPalController>();
-
         _billingSettings.Value.Returns(new BillingSettings
         {
             PayPal = { WebhookKey = "INCORRECT" }
         });
 
-        var controller = ConfigureControllerContextWith(logger, _defaultWebhookKey, null);
+        var controller = ConfigureControllerContextWith(_defaultWebhookKey, null);
 
         var result = await controller.PostIpn();
 
         HasStatusCode(result, 400);
 
-        LoggedError(logger, "PayPal IPN: Key is incorrect");
+        LoggedError("PayPal IPN: Key is incorrect");
     }
 
     [Fact]
     public async Task PostIpn_EmptyIPNBody_BadRequest()
     {
-        var logger = _testOutputHelper.BuildLoggerFor<PayPalController>();
-
         _billingSettings.Value.Returns(new BillingSettings
         {
             PayPal = { WebhookKey = _defaultWebhookKey }
         });
 
-        var controller = ConfigureControllerContextWith(logger, _defaultWebhookKey, null);
+        var controller = ConfigureControllerContextWith(_defaultWebhookKey, null);
 
         var result = await controller.PostIpn();
 
         HasStatusCode(result, 400);
 
-        LoggedError(logger, "PayPal IPN: Request body is null or empty");
+        LoggedError("PayPal IPN: Request body is null or empty");
     }
 
     [Fact]
     public async Task PostIpn_IPNHasNoEntityId_BadRequest()
     {
-        var logger = _testOutputHelper.BuildLoggerFor<PayPalController>();
-
         _billingSettings.Value.Returns(new BillingSettings
         {
             PayPal = { WebhookKey = _defaultWebhookKey }
@@ -107,20 +109,18 @@ public class PayPalControllerTests
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.TransactionMissingEntityIds);
 
-        var controller = ConfigureControllerContextWith(logger, _defaultWebhookKey, ipnBody);
+        var controller = ConfigureControllerContextWith(_defaultWebhookKey, ipnBody);
 
         var result = await controller.PostIpn();
 
         HasStatusCode(result, 400);
 
-        LoggedError(logger, "PayPal IPN (2PK15573S8089712Y): 'custom' did not contain a User ID or Organization ID or provider ID");
+        LoggedError("PayPal IPN (2PK15573S8089712Y): 'custom' did not contain a User ID or Organization ID or provider ID");
     }
 
     [Fact]
     public async Task PostIpn_OtherTransactionType_Unprocessed_Ok()
     {
-        var logger = _testOutputHelper.BuildLoggerFor<PayPalController>();
-
         _billingSettings.Value.Returns(new BillingSettings
         {
             PayPal = { WebhookKey = _defaultWebhookKey }
@@ -130,20 +130,18 @@ public class PayPalControllerTests
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.UnsupportedTransactionType);
 
-        var controller = ConfigureControllerContextWith(logger, _defaultWebhookKey, ipnBody);
+        var controller = ConfigureControllerContextWith(_defaultWebhookKey, ipnBody);
 
         var result = await controller.PostIpn();
 
         HasStatusCode(result, 200);
 
-        LoggedWarning(logger, "PayPal IPN (2PK15573S8089712Y): Transaction type (other) not supported for payments");
+        LoggedWarning("PayPal IPN (2PK15573S8089712Y): Transaction type (other) not supported for payments");
     }
 
     [Fact]
     public async Task PostIpn_MismatchedReceiverID_Unprocessed_Ok()
     {
-        var logger = _testOutputHelper.BuildLoggerFor<PayPalController>();
-
         _billingSettings.Value.Returns(new BillingSettings
         {
             PayPal =
@@ -157,20 +155,18 @@ public class PayPalControllerTests
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.SuccessfulPayment);
 
-        var controller = ConfigureControllerContextWith(logger, _defaultWebhookKey, ipnBody);
+        var controller = ConfigureControllerContextWith(_defaultWebhookKey, ipnBody);
 
         var result = await controller.PostIpn();
 
         HasStatusCode(result, 200);
 
-        LoggedWarning(logger, "PayPal IPN (2PK15573S8089712Y): Receiver ID (NHDYKLQ3L4LWL) does not match Bitwarden business ID (INCORRECT)");
+        LoggedWarning("PayPal IPN (2PK15573S8089712Y): Receiver ID (NHDYKLQ3L4LWL) does not match Bitwarden business ID (INCORRECT)");
     }
 
     [Fact]
     public async Task PostIpn_RefundMissingParent_Unprocessed_Ok()
     {
-        var logger = _testOutputHelper.BuildLoggerFor<PayPalController>();
-
         _billingSettings.Value.Returns(new BillingSettings
         {
             PayPal =
@@ -184,20 +180,18 @@ public class PayPalControllerTests
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.RefundMissingParentTransaction);
 
-        var controller = ConfigureControllerContextWith(logger, _defaultWebhookKey, ipnBody);
+        var controller = ConfigureControllerContextWith(_defaultWebhookKey, ipnBody);
 
         var result = await controller.PostIpn();
 
         HasStatusCode(result, 200);
 
-        LoggedWarning(logger, "PayPal IPN (2PK15573S8089712Y): Parent transaction ID is required for refund");
+        LoggedWarning("PayPal IPN (2PK15573S8089712Y): Parent transaction ID is required for refund");
     }
 
     [Fact]
     public async Task PostIpn_eCheckPayment_Unprocessed_Ok()
     {
-        var logger = _testOutputHelper.BuildLoggerFor<PayPalController>();
-
         _billingSettings.Value.Returns(new BillingSettings
         {
             PayPal =
@@ -211,20 +205,18 @@ public class PayPalControllerTests
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.ECheckPayment);
 
-        var controller = ConfigureControllerContextWith(logger, _defaultWebhookKey, ipnBody);
+        var controller = ConfigureControllerContextWith(_defaultWebhookKey, ipnBody);
 
         var result = await controller.PostIpn();
 
         HasStatusCode(result, 200);
 
-        LoggedWarning(logger, "PayPal IPN (2PK15573S8089712Y): Transaction was an eCheck payment");
+        LoggedWarning("PayPal IPN (2PK15573S8089712Y): Transaction was an eCheck payment");
     }
 
     [Fact]
     public async Task PostIpn_NonUSD_Unprocessed_Ok()
     {
-        var logger = _testOutputHelper.BuildLoggerFor<PayPalController>();
-
         _billingSettings.Value.Returns(new BillingSettings
         {
             PayPal =
@@ -238,20 +230,18 @@ public class PayPalControllerTests
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.NonUSDPayment);
 
-        var controller = ConfigureControllerContextWith(logger, _defaultWebhookKey, ipnBody);
+        var controller = ConfigureControllerContextWith(_defaultWebhookKey, ipnBody);
 
         var result = await controller.PostIpn();
 
         HasStatusCode(result, 200);
 
-        LoggedWarning(logger, "PayPal IPN (2PK15573S8089712Y): Transaction was not in USD (CAD)");
+        LoggedWarning("PayPal IPN (2PK15573S8089712Y): Transaction was not in USD (CAD)");
     }
 
     [Fact]
     public async Task PostIpn_Completed_ExistingTransaction_Unprocessed_Ok()
     {
-        var logger = _testOutputHelper.BuildLoggerFor<PayPalController>();
-
         _billingSettings.Value.Returns(new BillingSettings
         {
             PayPal =
@@ -269,20 +259,18 @@ public class PayPalControllerTests
             GatewayType.PayPal,
             "2PK15573S8089712Y").Returns(new Transaction());
 
-        var controller = ConfigureControllerContextWith(logger, _defaultWebhookKey, ipnBody);
+        var controller = ConfigureControllerContextWith(_defaultWebhookKey, ipnBody);
 
         var result = await controller.PostIpn();
 
         HasStatusCode(result, 200);
 
-        LoggedWarning(logger, "PayPal IPN (2PK15573S8089712Y): Already processed this completed transaction");
+        LoggedWarning("PayPal IPN (2PK15573S8089712Y): Already processed this completed transaction");
     }
 
     [Fact]
     public async Task PostIpn_Completed_CreatesTransaction_Ok()
     {
-        var logger = _testOutputHelper.BuildLoggerFor<PayPalController>();
-
         _billingSettings.Value.Returns(new BillingSettings
         {
             PayPal =
@@ -300,7 +288,7 @@ public class PayPalControllerTests
             GatewayType.PayPal,
             "2PK15573S8089712Y").ReturnsNull();
 
-        var controller = ConfigureControllerContextWith(logger, _defaultWebhookKey, ipnBody);
+        var controller = ConfigureControllerContextWith(_defaultWebhookKey, ipnBody);
 
         var result = await controller.PostIpn();
 
@@ -314,8 +302,6 @@ public class PayPalControllerTests
     [Fact]
     public async Task PostIpn_Completed_CreatesTransaction_CreditsOrganizationAccount_Ok()
     {
-        var logger = _testOutputHelper.BuildLoggerFor<PayPalController>();
-
         _billingSettings.Value.Returns(new BillingSettings
         {
             PayPal =
@@ -341,7 +327,7 @@ public class PayPalControllerTests
 
         _paymentService.CreditAccountAsync(organization, 48M).Returns(true);
 
-        var controller = ConfigureControllerContextWith(logger, _defaultWebhookKey, ipnBody);
+        var controller = ConfigureControllerContextWith(_defaultWebhookKey, ipnBody);
 
         var result = await controller.PostIpn();
 
@@ -362,8 +348,6 @@ public class PayPalControllerTests
     [Fact]
     public async Task PostIpn_Completed_CreatesTransaction_CreditsUserAccount_Ok()
     {
-        var logger = _testOutputHelper.BuildLoggerFor<PayPalController>();
-
         _billingSettings.Value.Returns(new BillingSettings
         {
             PayPal =
@@ -387,7 +371,7 @@ public class PayPalControllerTests
 
         _userRepository.GetByIdAsync(userId).Returns(user);
 
-        var controller = ConfigureControllerContextWith(logger, _defaultWebhookKey, ipnBody);
+        var controller = ConfigureControllerContextWith(_defaultWebhookKey, ipnBody);
 
         var result = await controller.PostIpn();
 
@@ -406,8 +390,6 @@ public class PayPalControllerTests
     [Fact]
     public async Task PostIpn_Refunded_ExistingTransaction_Unprocessed_Ok()
     {
-        var logger = _testOutputHelper.BuildLoggerFor<PayPalController>();
-
         _billingSettings.Value.Returns(new BillingSettings
         {
             PayPal =
@@ -425,13 +407,13 @@ public class PayPalControllerTests
             GatewayType.PayPal,
             "2PK15573S8089712Y").Returns(new Transaction());
 
-        var controller = ConfigureControllerContextWith(logger, _defaultWebhookKey, ipnBody);
+        var controller = ConfigureControllerContextWith(_defaultWebhookKey, ipnBody);
 
         var result = await controller.PostIpn();
 
         HasStatusCode(result, 200);
 
-        LoggedWarning(logger, "PayPal IPN (2PK15573S8089712Y): Already processed this refunded transaction");
+        LoggedWarning("PayPal IPN (2PK15573S8089712Y): Already processed this refunded transaction");
 
         await _transactionRepository.DidNotReceiveWithAnyArgs().ReplaceAsync(Arg.Any<Transaction>());
 
@@ -441,8 +423,6 @@ public class PayPalControllerTests
     [Fact]
     public async Task PostIpn_Refunded_MissingParentTransaction_Ok()
     {
-        var logger = _testOutputHelper.BuildLoggerFor<PayPalController>();
-
         _billingSettings.Value.Returns(new BillingSettings
         {
             PayPal =
@@ -464,13 +444,13 @@ public class PayPalControllerTests
             GatewayType.PayPal,
             "PARENT").ReturnsNull();
 
-        var controller = ConfigureControllerContextWith(logger, _defaultWebhookKey, ipnBody);
+        var controller = ConfigureControllerContextWith(_defaultWebhookKey, ipnBody);
 
         var result = await controller.PostIpn();
 
         HasStatusCode(result, 200);
 
-        LoggedWarning(logger, "PayPal IPN (2PK15573S8089712Y): Could not find parent transaction");
+        LoggedWarning("PayPal IPN (2PK15573S8089712Y): Could not find parent transaction");
 
         await _transactionRepository.DidNotReceiveWithAnyArgs().ReplaceAsync(Arg.Any<Transaction>());
 
@@ -480,8 +460,6 @@ public class PayPalControllerTests
     [Fact]
     public async Task PostIpn_Refunded_ReplacesParent_CreatesTransaction_Ok()
     {
-        var logger = _testOutputHelper.BuildLoggerFor<PayPalController>();
-
         _billingSettings.Value.Returns(new BillingSettings
         {
             PayPal =
@@ -511,7 +489,7 @@ public class PayPalControllerTests
             GatewayType.PayPal,
             "PARENT").Returns(parentTransaction);
 
-        var controller = ConfigureControllerContextWith(logger, _defaultWebhookKey, ipnBody);
+        var controller = ConfigureControllerContextWith(_defaultWebhookKey, ipnBody);
 
         var result = await controller.PostIpn();
 
@@ -530,13 +508,12 @@ public class PayPalControllerTests
     }
 
     private PayPalController ConfigureControllerContextWith(
-        ILogger<PayPalController> logger,
         string webhookKey,
         string ipnBody)
     {
         var controller = new PayPalController(
             _billingSettings,
-            logger,
+            _logger,
             _mailService,
             _organizationRepository,
             _paymentService,
@@ -578,16 +555,18 @@ public class PayPalControllerTests
         Assert.Equal(statusCode, statusCodeActionResult.StatusCode);
     }
 
-    private static void Logged(ICacheLogger logger, LogLevel logLevel, string message)
+    private void Logged(LogLevel logLevel, string message)
     {
-        Assert.NotNull(logger.Last);
-        Assert.Equal(logLevel, logger.Last!.LogLevel);
-        Assert.Equal(message, logger.Last!.Message);
+        var snapshot = _fakeLogCollector.GetSnapshot(true);
+        Assert.NotEmpty(snapshot);
+        var last = snapshot[^1];
+        Assert.Equal(logLevel, last.Level);
+        Assert.Equal(message, last.Message);
     }
 
-    private static void LoggedError(ICacheLogger logger, string message)
-        => Logged(logger, LogLevel.Error, message);
+    private void LoggedError(string message)
+        => Logged(LogLevel.Error, message);
 
-    private static void LoggedWarning(ICacheLogger logger, string message)
-        => Logged(logger, LogLevel.Warning, message);
+    private void LoggedWarning(string message)
+        => Logged(LogLevel.Warning, message);
 }

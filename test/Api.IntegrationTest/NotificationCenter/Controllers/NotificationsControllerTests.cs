@@ -49,7 +49,7 @@ public class NotificationsControllerTests : IClassFixture<ApiApplicationFactory>
         _userRepository = _factory.GetService<IUserRepository>();
     }
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         // Create the owner account
         _ownerEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
@@ -63,7 +63,7 @@ public class NotificationsControllerTests : IClassFixture<ApiApplicationFactory>
         _notificationsWithStatuses = await CreateNotificationsWithStatusesAsync();
     }
 
-    public Task DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         _client.Dispose();
 
@@ -72,7 +72,7 @@ public class NotificationsControllerTests : IClassFixture<ApiApplicationFactory>
             _notificationRepository.DeleteAsync(notification);
         }
 
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
     [Theory]
@@ -220,7 +220,7 @@ public class NotificationsControllerTests : IClassFixture<ApiApplicationFactory>
     }
 
     [Fact]
-    private async void MarkAsDeletedAsync_NotLoggedIn_Unauthorized()
+    private async Task MarkAsDeletedAsync_NotLoggedIn_Unauthorized()
     {
         var url = $"/notifications/{Guid.NewGuid().ToString()}/delete";
         var response = await _client.PatchAsync(url, new StringContent(""));
@@ -228,7 +228,7 @@ public class NotificationsControllerTests : IClassFixture<ApiApplicationFactory>
     }
 
     [Fact]
-    private async void MarkAsDeletedAsync_NonExistentNotificationId_NotFound()
+    private async Task MarkAsDeletedAsync_NonExistentNotificationId_NotFound()
     {
         await _loginHelper.LoginAsync(_ownerEmail);
 
@@ -238,7 +238,7 @@ public class NotificationsControllerTests : IClassFixture<ApiApplicationFactory>
     }
 
     [Fact]
-    private async void MarkAsDeletedAsync_UserIdNotMatching_NotFound()
+    private async Task MarkAsDeletedAsync_UserIdNotMatching_NotFound()
     {
         var email = $"integration-test{Guid.NewGuid()}@bitwarden.com";
         await _factory.LoginWithNewAccount(email);
@@ -253,7 +253,7 @@ public class NotificationsControllerTests : IClassFixture<ApiApplicationFactory>
     }
 
     [Fact]
-    private async void MarkAsDeletedAsync_OrganizationIdNotMatchingUserNotPartOfOrganization_NotFound()
+    private async Task MarkAsDeletedAsync_OrganizationIdNotMatchingUserNotPartOfOrganization_NotFound()
     {
         var email = $"integration-test{Guid.NewGuid()}@bitwarden.com";
         await _factory.LoginWithNewAccount(email);
@@ -268,7 +268,7 @@ public class NotificationsControllerTests : IClassFixture<ApiApplicationFactory>
     }
 
     [Fact]
-    private async void MarkAsDeletedAsync_OrganizationIdNotMatchingUserPartOfDifferentOrganization_NotFound()
+    private async Task MarkAsDeletedAsync_OrganizationIdNotMatchingUserPartOfDifferentOrganization_NotFound()
     {
         var (organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory,
             plan: PlanType.EnterpriseAnnually, ownerEmail: _ownerEmail, passwordManagerSeats: 10,
@@ -287,7 +287,7 @@ public class NotificationsControllerTests : IClassFixture<ApiApplicationFactory>
     }
 
     [Fact]
-    private async void MarkAsDeletedAsync_NotificationStatusNotExisting_Created()
+    private async Task MarkAsDeletedAsync_NotificationStatusNotExisting_Created()
     {
         var notifications = await CreateNotificationsAsync(_organizationUserOwner.UserId);
 
@@ -308,7 +308,7 @@ public class NotificationsControllerTests : IClassFixture<ApiApplicationFactory>
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    private async void MarkAsDeletedAsync_NotificationStatusExisting_Updated(bool deletedDateNull)
+    private async Task MarkAsDeletedAsync_NotificationStatusExisting_Updated(bool deletedDateNull)
     {
         var notifications = await CreateNotificationsAsync(_organizationUserOwner.UserId);
         await _notificationStatusRepository.CreateAsync(new NotificationStatus
@@ -334,7 +334,7 @@ public class NotificationsControllerTests : IClassFixture<ApiApplicationFactory>
     }
 
     [Fact]
-    private async void MarkAsReadAsync_NotLoggedIn_Unauthorized()
+    private async Task MarkAsReadAsync_NotLoggedIn_Unauthorized()
     {
         var url = $"/notifications/{Guid.NewGuid().ToString()}/read";
         var response = await _client.PatchAsync(url, new StringContent(""));
@@ -342,7 +342,7 @@ public class NotificationsControllerTests : IClassFixture<ApiApplicationFactory>
     }
 
     [Fact]
-    private async void MarkAsReadAsync_NonExistentNotificationId_NotFound()
+    private async Task MarkAsReadAsync_NonExistentNotificationId_NotFound()
     {
         await _loginHelper.LoginAsync(_ownerEmail);
 
@@ -352,7 +352,7 @@ public class NotificationsControllerTests : IClassFixture<ApiApplicationFactory>
     }
 
     [Fact]
-    private async void MarkAsReadAsync_UserIdNotMatching_NotFound()
+    private async Task MarkAsReadAsync_UserIdNotMatching_NotFound()
     {
         var email = $"integration-test{Guid.NewGuid()}@bitwarden.com";
         await _factory.LoginWithNewAccount(email);
@@ -367,7 +367,7 @@ public class NotificationsControllerTests : IClassFixture<ApiApplicationFactory>
     }
 
     [Fact]
-    private async void MarkAsReadAsync_OrganizationIdNotMatchingUserNotPartOfOrganization_NotFound()
+    private async Task MarkAsReadAsync_OrganizationIdNotMatchingUserNotPartOfOrganization_NotFound()
     {
         var email = $"integration-test{Guid.NewGuid()}@bitwarden.com";
         await _factory.LoginWithNewAccount(email);
@@ -382,7 +382,7 @@ public class NotificationsControllerTests : IClassFixture<ApiApplicationFactory>
     }
 
     [Fact]
-    private async void MarkAsReadAsync_OrganizationIdNotMatchingUserPartOfDifferentOrganization_NotFound()
+    private async Task MarkAsReadAsync_OrganizationIdNotMatchingUserPartOfDifferentOrganization_NotFound()
     {
         var (organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory,
             plan: PlanType.EnterpriseAnnually, ownerEmail: _ownerEmail, passwordManagerSeats: 10,
@@ -401,7 +401,7 @@ public class NotificationsControllerTests : IClassFixture<ApiApplicationFactory>
     }
 
     [Fact]
-    private async void MarkAsReadAsync_NotificationStatusNotExisting_Created()
+    private async Task MarkAsReadAsync_NotificationStatusNotExisting_Created()
     {
         var notifications = await CreateNotificationsAsync(_organizationUserOwner.UserId);
 
@@ -422,7 +422,7 @@ public class NotificationsControllerTests : IClassFixture<ApiApplicationFactory>
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    private async void MarkAsReadAsync_NotificationStatusExisting_Updated(bool readDateNull)
+    private async Task MarkAsReadAsync_NotificationStatusExisting_Updated(bool readDateNull)
     {
         var notifications = await CreateNotificationsAsync(_organizationUserOwner.UserId);
         await _notificationStatusRepository.CreateAsync(new NotificationStatus

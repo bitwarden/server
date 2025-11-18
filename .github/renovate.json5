@@ -80,7 +80,7 @@
     {
       matchPackageNames: [
         "AutoFixture.AutoNSubstitute",
-        "AutoFixture.Xunit2",
+        "AutoFixture.Xunit3",
         "BenchmarkDotNet",
         "BitPay.Light",
         "Braintree",
@@ -98,8 +98,7 @@
         "Stripe.net",
         "Swashbuckle.AspNetCore",
         "Swashbuckle.AspNetCore.SwaggerGen",
-        "xunit",
-        "xunit.runner.visualstudio",
+        "xunit.v3",
       ],
       description: "Billing owned dependencies",
       commitMessagePrefix: "[deps] Billing:",

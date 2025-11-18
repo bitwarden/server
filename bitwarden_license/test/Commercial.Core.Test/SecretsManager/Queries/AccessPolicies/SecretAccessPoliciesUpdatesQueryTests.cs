@@ -88,27 +88,27 @@ public class SecretAccessPoliciesUpdatesQueryTests
         Assert.Equal(data.SecretId, result.SecretId);
         Assert.Equal(data.OrganizationId, result.OrganizationId);
 
-        Assert.Single(result.UserAccessPolicyUpdates.Where(x =>
-            x.Operation == AccessPolicyOperation.Delete && x.AccessPolicy == userPolicyChanges.Delete));
-        Assert.Single(result.UserAccessPolicyUpdates.Where(x =>
+        Assert.Single(result.UserAccessPolicyUpdates, x =>
+            x.Operation == AccessPolicyOperation.Delete && x.AccessPolicy == userPolicyChanges.Delete);
+        Assert.Single(result.UserAccessPolicyUpdates, x =>
             x.Operation == AccessPolicyOperation.Update &&
-            x.AccessPolicy.OrganizationUserId == userPolicyChanges.Update.OrganizationUserId));
+            x.AccessPolicy.OrganizationUserId == userPolicyChanges.Update.OrganizationUserId);
         Assert.Equal(result.UserAccessPolicyUpdates.Count() - 2,
             result.UserAccessPolicyUpdates.Count(x => x.Operation == AccessPolicyOperation.Create));
 
-        Assert.Single(result.GroupAccessPolicyUpdates.Where(x =>
-            x.Operation == AccessPolicyOperation.Delete && x.AccessPolicy == groupPolicyChanges.Delete));
-        Assert.Single(result.GroupAccessPolicyUpdates.Where(x =>
+        Assert.Single(result.GroupAccessPolicyUpdates, x =>
+            x.Operation == AccessPolicyOperation.Delete && x.AccessPolicy == groupPolicyChanges.Delete);
+        Assert.Single(result.GroupAccessPolicyUpdates, x =>
             x.Operation == AccessPolicyOperation.Update &&
-            x.AccessPolicy.GroupId == groupPolicyChanges.Update.GroupId));
+            x.AccessPolicy.GroupId == groupPolicyChanges.Update.GroupId);
         Assert.Equal(result.GroupAccessPolicyUpdates.Count() - 2,
             result.GroupAccessPolicyUpdates.Count(x => x.Operation == AccessPolicyOperation.Create));
 
-        Assert.Single(result.ServiceAccountAccessPolicyUpdates.Where(x =>
-            x.Operation == AccessPolicyOperation.Delete && x.AccessPolicy == serviceAccountPolicyChanges.Delete));
-        Assert.Single(result.ServiceAccountAccessPolicyUpdates.Where(x =>
+        Assert.Single(result.ServiceAccountAccessPolicyUpdates, x =>
+            x.Operation == AccessPolicyOperation.Delete && x.AccessPolicy == serviceAccountPolicyChanges.Delete);
+        Assert.Single(result.ServiceAccountAccessPolicyUpdates, x =>
             x.Operation == AccessPolicyOperation.Update &&
-            x.AccessPolicy.ServiceAccountId == serviceAccountPolicyChanges.Update.ServiceAccountId));
+            x.AccessPolicy.ServiceAccountId == serviceAccountPolicyChanges.Update.ServiceAccountId);
         Assert.Equal(result.ServiceAccountAccessPolicyUpdates.Count() - 2,
             result.ServiceAccountAccessPolicyUpdates.Count(x => x.Operation == AccessPolicyOperation.Create));
     }

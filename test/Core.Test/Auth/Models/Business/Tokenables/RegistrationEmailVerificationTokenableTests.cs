@@ -1,4 +1,4 @@
-﻿using AutoFixture.Xunit2;
+﻿using AutoFixture.Xunit3;
 using Bit.Core.Tokens;
 
 namespace Bit.Core.Test.Auth.Models.Business.Tokenables;

@@ -1,14 +1,13 @@
-﻿using AutoFixture.Xunit2;
+﻿using AutoFixture.Xunit3;
 using Xunit;
-using Xunit.Sdk;
 
 namespace Bit.Test.Common.AutoFixture.Attributes;
 
 public class InlineCustomAutoDataAttribute : CompositeDataAttribute
 {
-    public InlineCustomAutoDataAttribute(Type[] iCustomizationTypes, params object[] values) : base(new DataAttribute[] {
+    public InlineCustomAutoDataAttribute(Type[] iCustomizationTypes, params object[] values) : base([
         new InlineDataAttribute(values),
         new CustomAutoDataAttribute(iCustomizationTypes)
-    })
+    ])
     { }
 }

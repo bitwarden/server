@@ -28,17 +28,17 @@ public class SecretsManagerEventsControllerTests : IClassFixture<ApiApplicationF
         _serviceAccountRepository = _factory.GetService<IServiceAccountRepository>();
     }
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         _email = $"integration-test{Guid.NewGuid()}@bitwarden.com";
         await _factory.LoginWithNewAccount(_email);
         _organizationHelper = new SecretsManagerOrganizationHelper(_factory, _email);
     }
 
-    public Task DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         _client.Dispose();
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
     private async Task LoginAsync(string email)

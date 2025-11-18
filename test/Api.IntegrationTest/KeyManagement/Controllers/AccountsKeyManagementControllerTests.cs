@@ -58,16 +58,16 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         _userSignatureKeyPairRepository = _factory.GetService<IUserSignatureKeyPairRepository>();
     }
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         _ownerEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
         await _factory.LoginWithNewAccount(_ownerEmail);
     }
 
-    public Task DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         _client.Dispose();
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
     [Theory]
