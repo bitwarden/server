@@ -659,7 +659,10 @@ public static class ServiceCollectionExtensions
         IWebHostEnvironment env, GlobalSettings globalSettings)
     {
         app.UseMiddleware<RequestLoggingMiddleware>();
-        app.UseMiddleware<PlayIdMiddleware>();
+        if (globalSettings.TestPlayIdTrackingEnabled)
+        {
+            app.UseMiddleware<PlayIdMiddleware>();
+        }
     }
 
     public static void UseForwardedHeaders(this IApplicationBuilder app, IGlobalSettings globalSettings)

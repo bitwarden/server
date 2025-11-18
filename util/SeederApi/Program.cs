@@ -29,7 +29,10 @@ builder.Services.AddQueries();
 var app = builder.Build();
 
 // Add PlayIdMiddleware services
-app.UseMiddleware<PlayIdMiddleware>();
+if (globalSettings.TestPlayIdTrackingEnabled)
+{
+    app.UseMiddleware<PlayIdMiddleware>();
+}
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
@@ -38,8 +41,6 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseRouting();
-
-app.MapControllerRoute(name: "default", pattern: "{controller=Seed}/{action=Index}/{id?}");
 
 app.Run();
 
