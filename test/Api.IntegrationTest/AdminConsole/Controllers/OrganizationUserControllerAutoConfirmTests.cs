@@ -41,7 +41,7 @@ public class OrganizationUserControllerAutoConfirmTests : IClassFixture<ApiAppli
 
     public async Task InitializeAsync()
     {
-        _ownerEmail = $"org-user-integration-test-{Guid.NewGuid()}@example.com";
+        _ownerEmail = $"org-owner-{Guid.NewGuid()}@example.com";
         await _factory.LoginWithNewAccount(_ownerEmail);
     }
 
@@ -51,21 +51,26 @@ public class OrganizationUserControllerAutoConfirmTests : IClassFixture<ApiAppli
         var (organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseAnnually2023,
             ownerEmail: _ownerEmail, passwordManagerSeats: 5, paymentMethod: PaymentMethodType.Card);
 
-        var testKey = $"test-key-{Guid.NewGuid()}";
+        organization.UseAutomaticUserConfirmation = true;
 
-        await _loginHelper.LoginAsync(_ownerEmail);
+        await _factory.GetService<IOrganizationRepository>()
+            .UpsertAsync(organization);
+
+        var testKey = $"test-key-{Guid.NewGuid()}";
 
         var userToConfirmEmail = $"org-user-to-confirm-{Guid.NewGuid()}@example.com";
         await _factory.LoginWithNewAccount(userToConfirmEmail);
 
-        await _loginHelper.LoginAsync(userToConfirmEmail);
+        var (confirmingUserEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory, organization.Id, OrganizationUserType.User);
+        await _loginHelper.LoginAsync(confirmingUserEmail);
+
         var organizationUser = await OrganizationTestHelpers.CreateUserAsync(
             _factory,
             organization.Id,
             userToConfirmEmail,
             OrganizationUserType.User,
             false,
-            new Permissions(),
+            new Permissions { ManageUsers = false },
             OrganizationUserStatusType.Accepted);
 
         var result = await _client.PostAsJsonAsync($"organizations/{organization.Id}/users/{organizationUser.Id}/auto-confirm",
@@ -86,12 +91,12 @@ public class OrganizationUserControllerAutoConfirmTests : IClassFixture<ApiAppli
         var (organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseAnnually2023,
             ownerEmail: _ownerEmail, passwordManagerSeats: 5, paymentMethod: PaymentMethodType.Card);
 
+        organization.UseAutomaticUserConfirmation = true;
+
+        await _factory.GetService<IOrganizationRepository>()
+            .UpsertAsync(organization);
+
         var testKey = $"test-key-{Guid.NewGuid()}";
-
-        await _loginHelper.LoginAsync(_ownerEmail);
-
-        var userToConfirmEmail = $"org-user-to-confirm-{Guid.NewGuid()}@example.com";
-        await _factory.LoginWithNewAccount(userToConfirmEmail);
 
         await _factory.GetService<IPolicyRepository>().CreateAsync(new Policy
         {
@@ -107,6 +112,10 @@ public class OrganizationUserControllerAutoConfirmTests : IClassFixture<ApiAppli
             Enabled = true
         });
 
+        var userToConfirmEmail = $"org-user-to-confirm-{Guid.NewGuid()}@example.com";
+        await _factory.LoginWithNewAccount(userToConfirmEmail);
+
+        await _loginHelper.LoginAsync(_ownerEmail);
         var organizationUser = await OrganizationTestHelpers.CreateUserAsync(
             _factory,
             organization.Id,
@@ -146,9 +155,12 @@ public class OrganizationUserControllerAutoConfirmTests : IClassFixture<ApiAppli
         var (organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseAnnually2023,
             ownerEmail: _ownerEmail, passwordManagerSeats: 5, paymentMethod: PaymentMethodType.Card);
 
-        var testKey = $"test-key-{Guid.NewGuid()}";
+        organization.UseAutomaticUserConfirmation = true;
 
-        await _loginHelper.LoginAsync(_ownerEmail);
+        await _factory.GetService<IOrganizationRepository>()
+            .UpsertAsync(organization);
+
+        var testKey = $"test-key-{Guid.NewGuid()}";
 
         var userToConfirmEmail = $"org-user-to-confirm-{Guid.NewGuid()}@example.com";
         await _factory.LoginWithNewAccount(userToConfirmEmail);
@@ -166,6 +178,8 @@ public class OrganizationUserControllerAutoConfirmTests : IClassFixture<ApiAppli
             Type = PolicyType.OrganizationDataOwnership,
             Enabled = true
         });
+
+        await _loginHelper.LoginAsync(_ownerEmail);
 
         var organizationUser = await OrganizationTestHelpers.CreateUserAsync(
             _factory,
