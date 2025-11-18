@@ -262,5 +262,4 @@ FROM
     [dbo].[CipherDetails](@UserId) AS C
 WHERE
     C.[UserId] = @UserId;
-END
 GO
