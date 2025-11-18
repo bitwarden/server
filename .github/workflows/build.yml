@@ -498,7 +498,7 @@ jobs:
             await github.rest.actions.createWorkflowDispatch({
               owner: 'bitwarden',
               repo: 'self-host',
-              workflow_id: 'build-lite.yml',
+              workflow_id: 'build-bitwarden-lite.yml',
               ref: 'main',
               inputs: {
                 server_branch: process.env.GITHUB_REF
