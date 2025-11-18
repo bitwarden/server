@@ -194,7 +194,7 @@ SELECT
     C.Favorite,
     C.FolderId,
     C.DeletedDate,
-    C.ArchivedDate,
+    CA.ArchivedDate,
     C.Reprompt,
     C.[Key],
     CASE
@@ -233,6 +233,8 @@ LEFT JOIN
     [dbo].[Group] G ON G.[Id] = GU.[GroupId]
 LEFT JOIN
     [dbo].[CollectionGroup] CG ON CG.[CollectionId] = CC.[CollectionId] AND CG.[GroupId] = GU.[GroupId]
+LEFT JOIN
+    [dbo].[CipherArchive] CA ON CA.[CipherId] = C.[Id] AND CA.[UserId] = @UserId
 WHERE
     CU.[CollectionId] IS NOT NULL
     OR CG.[CollectionId] IS NOT NULL
@@ -251,7 +253,7 @@ SELECT
     C.Favorite,
     C.FolderId,
     C.DeletedDate,
-    C.ArchivedDate,
+    CA.ArchivedDate,
     C.Reprompt,
     C.[Key],
     1 [Edit],
@@ -260,6 +262,7 @@ SELECT
     0 [OrganizationUseTotp]
 FROM
     [dbo].[CipherDetails](@UserId) AS C
+LEFT JOIN
+    [dbo].[CipherArchive] CA ON CA.[CipherId] = C.[Id] AND CA.[UserId] = @UserId
 WHERE
     C.[UserId] = @UserId;
-GO
