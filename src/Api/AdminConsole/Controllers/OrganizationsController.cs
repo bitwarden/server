@@ -237,7 +237,7 @@ public class OrganizationsController : Controller
         // Authorization logic depends on what's being edited. Additional checks apply if the Billing Email
         // is being changed, because this implicates billing details.
         IAuthorizationRequirement authorizationRequirement = model.BillingEmail is not null
-            ? new ManageOrganizationBillingRequirement() // TODO: fix the logic in this requirement pending Alex feedback
+            ? new ManageOrganizationBillingRequirement()
             : new OwnerOrProviderRequirement();
 
         var authorizationResult =

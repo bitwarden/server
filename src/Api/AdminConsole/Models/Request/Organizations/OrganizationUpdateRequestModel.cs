@@ -9,11 +9,11 @@ public class OrganizationUpdateRequestModel
 {
     [StringLength(50, ErrorMessage = "The field Name exceeds the maximum length.")]
     [JsonConverter(typeof(HtmlEncodingStringConverter))]
-    public required string? Name { get; set; }
+    public string? Name { get; set; }
 
     [EmailAddress]
     [StringLength(256)]
-    public required string? BillingEmail { get; set; }
+    public string? BillingEmail { get; set; }
 
     public OrganizationKeysRequestModel? Keys { get; set; }
 
