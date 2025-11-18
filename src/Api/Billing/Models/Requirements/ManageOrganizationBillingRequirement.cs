@@ -12,27 +12,12 @@ public class ManageOrganizationBillingRequirement : IAuthorizationRequirement;
 public class OrganizationBillingAuthorizationHandler(
     IHttpContextAccessor httpContextAccessor,
     IOrganizationContext organizationContext,
-    IProviderOrganizationRepository providerOrganizationRepository,
-    IUserService userService)
+    IProviderOrganizationRepository providerOrganizationRepository)
     : AuthorizationHandler<ManageOrganizationBillingRequirement>
 {
-    public const string NoHttpContextError = "This method should only be called in the context of an HTTP Request.";
-    public const string NoUserIdError = "This method should only be called on the private api with a logged in user.";
-
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, ManageOrganizationBillingRequirement requirement)
     {
-        var httpContext = httpContextAccessor.HttpContext;
-        if (httpContext == null)
-        {
-            throw new InvalidOperationException(NoHttpContextError);
-        }
-
-        var organizationId = httpContext.GetOrganizationId();
-        var userId = userService.GetProperUserId(context.User);
-        if (userId == null)
-        {
-            throw new InvalidOperationException(NoUserIdError);
-        }
+        var organizationId = httpContextAccessor.GetHttpContextOrThrow().GetOrganizationId();
 
         // Providers are always authorized to make billing changes.
         if (await organizationContext.IsProviderUserForOrganization(context.User, organizationId))

@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Repositories;
 
 namespace Bit.Api.IntegrationTest.Helpers;
 
@@ -45,5 +46,32 @@ public static class ProviderTestHelpers
         });
 
         return provider;
+    }
+
+    /// <summary>
+    /// Creates a providerUser for a provider.
+    /// </summary>
+    public static async Task<ProviderUser> CreateProviderUserAsync(
+        ApiApplicationFactory factory,
+        Guid providerId,
+        string userEmail,
+        ProviderUserType providerUserType)
+    {
+        var userRepository = factory.GetService<IUserRepository>();
+        var user = await userRepository.GetByEmailAsync(userEmail);
+        if (user is null)
+        {
+            throw new Exception("No user found in test setup.");
+        }
+
+        var providerUserRepository = factory.GetService<IProviderUserRepository>();
+        return await providerUserRepository.CreateAsync(new ProviderUser
+        {
+            ProviderId = providerId,
+            Status = ProviderUserStatusType.Confirmed,
+            UserId = user.Id,
+            Key = Guid.NewGuid().ToString(),
+            Type = providerUserType
+        });
     }
 }
