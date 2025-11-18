@@ -1,6 +1,6 @@
-name: Bitwarden Unified Deployment Bug Report
+name: Bitwarden Lite Deployment Bug Report
 description: File a bug report
-labels: [bug, bw-unified-deploy]
+labels: [bug, bw-lite-deploy]
 body:
   - type: markdown
     attributes:
@@ -74,7 +74,7 @@ body:
     id: epic-label
     attributes:
       label: Issue-Link
-      description: Link to our pinned issue, tracking all Bitwarden Unified
+      description: Link to our pinned issue, tracking all Bitwarden Lite
       value: |
         https://github.com/bitwarden/server/issues/2480
     validations:

@@ -62,7 +62,7 @@ jobs:
           docker compose --profile mssql --profile postgres --profile mysql up -d
         shell: pwsh
 
-      - name: Add MariaDB for unified
+      - name: Add MariaDB for Bitwarden Lite
         # Use a different port than MySQL
         run: |
           docker run --detach --name mariadb --env MARIADB_ROOT_PASSWORD=mariadb-password -p 4306:3306 mariadb:10
@@ -133,7 +133,7 @@ jobs:
           # Default Sqlite
           BW_TEST_DATABASES__3__TYPE: "Sqlite"
           BW_TEST_DATABASES__3__CONNECTIONSTRING: "Data Source=${{ runner.temp }}/test.db"
-          # Unified MariaDB
+          # Bitwarden Lite MariaDB
           BW_TEST_DATABASES__4__TYPE: "MySql"
           BW_TEST_DATABASES__4__CONNECTIONSTRING: "server=localhost;port=4306;uid=root;pwd=mariadb-password;database=vault_dev;Allow User Variables=true"
         run: dotnet test --logger "trx;LogFileName=infrastructure-test-results.trx" /p:CoverletOutputFormatter="cobertura" --collect:"XPlat Code Coverage"
