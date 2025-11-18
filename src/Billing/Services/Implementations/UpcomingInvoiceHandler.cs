@@ -195,40 +195,48 @@ public class UpcomingInvoiceHandler(
         Plan plan,
         bool milestone3)
     {
-        if (milestone3 && plan.Type == PlanType.FamiliesAnnually2019)
+        // currently these are the only plans that need aligned and both require the same flag and share most of the logic
+        if (!milestone3 || plan.Type is not (PlanType.FamiliesAnnually2019 or PlanType.FamiliesAnnually2025))
         {
-            var passwordManagerItem =
-                subscription.Items.FirstOrDefault(item => item.Price.Id == plan.PasswordManager.StripePlanId);
+            return;
+        }
 
-            if (passwordManagerItem == null)
-            {
-                logger.LogWarning("Could not find Organization's ({OrganizationId}) password manager item while processing '{EventType}' event ({EventID})",
-                    organization.Id, @event.Type, @event.Id);
-                return;
-            }
+        var passwordManagerItem =
+            subscription.Items.FirstOrDefault(item => item.Price.Id == plan.PasswordManager.StripePlanId);
 
-            var families = await pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually);
+        if (passwordManagerItem == null)
+        {
+            logger.LogWarning("Could not find Organization's ({OrganizationId}) password manager item while processing '{EventType}' event ({EventID})",
+                organization.Id, @event.Type, @event.Id);
+            return;
+        }
 
-            organization.PlanType = families.Type;
-            organization.Plan = families.Name;
-            organization.UsersGetPremium = families.UsersGetPremium;
-            organization.Seats = families.PasswordManager.BaseSeats;
+        var families = await pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually);
 
-            var options = new SubscriptionUpdateOptions
-            {
-                Items =
-                [
-                    new SubscriptionItemOptions
-                    {
-                        Id = passwordManagerItem.Id, Price = families.PasswordManager.StripePlanId
-                    }
-                ],
-                Discounts =
-                [
-                    new SubscriptionDiscountOptions { Coupon = CouponIDs.Milestone3SubscriptionDiscount }
-                ],
-                ProrationBehavior = ProrationBehavior.None
-            };
+        organization.PlanType = families.Type;
+        organization.Plan = families.Name;
+        organization.UsersGetPremium = families.UsersGetPremium;
+        organization.Seats = families.PasswordManager.BaseSeats;
+
+        var options = new SubscriptionUpdateOptions
+        {
+            Items =
+            [
+                new SubscriptionItemOptions
+                {
+                    Id = passwordManagerItem.Id,
+                        Price = families.PasswordManager.StripePlanId
+                }
+            ],
+            ProrationBehavior = ProrationBehavior.None
+        };
+
+        if (plan.Type == PlanType.FamiliesAnnually2019)
+        {
+            options.Discounts =
+            [
+                new SubscriptionDiscountOptions { Coupon = CouponIDs.Milestone3SubscriptionDiscount }
+            ];
 
             var premiumAccessAddOnItem = subscription.Items.FirstOrDefault(item =>
                 item.Price.Id == plan.PasswordManager.StripePremiumAccessPlanId);
@@ -242,20 +250,31 @@ public class UpcomingInvoiceHandler(
                 });
             }
 
-            try
+            var seatAddOnItem = subscription.Items.FirstOrDefault(item => item.Price.Id == "personal-org-seat-annually");
+
+            if (seatAddOnItem != null)
             {
-                await organizationRepository.ReplaceAsync(organization);
-                await stripeFacade.UpdateSubscription(subscription.Id, options);
+                options.Items.Add(new SubscriptionItemOptions
+                {
+                    Id = seatAddOnItem.Id,
+                    Deleted = true
+                });
             }
-            catch (Exception exception)
-            {
-                logger.LogError(
-                    exception,
-                    "Failed to align subscription concerns for Organization ({OrganizationID}) while processing '{EventType}' event ({EventID})",
-                    organization.Id,
-                    @event.Type,
-                    @event.Id);
-            }
+        }
+
+        try
+        {
+            await organizationRepository.ReplaceAsync(organization);
+            await stripeFacade.UpdateSubscription(subscription.Id, options);
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(
+                exception,
+                "Failed to align subscription concerns for Organization ({OrganizationID}) while processing '{EventType}' event ({EventID})",
+                organization.Id,
+                @event.Type,
+                @event.Id);
         }
     }
 
