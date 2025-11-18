@@ -41,23 +41,24 @@ public class RegisterUserCommand : IRegisterUserCommand
     private readonly IValidateRedemptionTokenCommand _validateRedemptionTokenCommand;
 
     private readonly IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> _emergencyAccessInviteTokenDataFactory;
-    private readonly IFeatureService _featureService;
 
     private readonly string _disabledUserRegistrationExceptionMsg = "Open registration has been disabled by the system administrator.";
 
     public RegisterUserCommand(
+            ILogger<RegisterUserCommand> logger,
             IGlobalSettings globalSettings,
             IOrganizationUserRepository organizationUserRepository,
             IOrganizationRepository organizationRepository,
             IPolicyRepository policyRepository,
+            IOrganizationDomainRepository organizationDomainRepository,
+            IFeatureService featureService,
             IDataProtectionProvider dataProtectionProvider,
             IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
             IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> registrationEmailVerificationTokenDataFactory,
             IUserService userService,
             IMailService mailService,
             IValidateRedemptionTokenCommand validateRedemptionTokenCommand,
-            IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> emergencyAccessInviteTokenDataFactory,
-            IFeatureService featureService)
+            IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> emergencyAccessInviteTokenDataFactory)
     {
         _logger = logger;
         _globalSettings = globalSettings;
@@ -111,7 +112,20 @@ public class RegisterUserCommand : IRegisterUserCommand
     {
         TryValidateOrgInviteToken(orgInviteToken, orgUserId, user);
         var orgUser = await SetUserEmail2FaIfOrgPolicyEnabledAsync(orgUserId, user);
-        await ValidateEmailDomainNotBlockedAsync(user.Email, orgUser.organizationId);
+
+        // Get the organization ID if we have an orgUserId, so we can exclude it from domain blocking
+        var organizationId = orgUser?.OrganizationId;
+        if (!organizationId.HasValue && orgUserId.HasValue)
+        {
+            orgUser = await _organizationUserRepository.GetByIdAsync(orgUserId.Value);
+            if (orgUser == null)
+            {
+                throw new BadRequestException("Invalid organization user invitation.");
+            }
+            organizationId = orgUser.OrganizationId;
+        }
+
+        await ValidateEmailDomainNotBlockedAsync(user.Email, organizationId);
 
         user.ApiKey = CoreHelpers.SecureRandomString(30);
 
@@ -423,7 +437,7 @@ public class RegisterUserCommand : IRegisterUserCommand
             throw new BadRequestException("This email address is claimed by an organization using Bitwarden.");
         }
     }
-    
+
     /// <summary>
     /// We send different welcome emails depending on whether the user is joining a free/family or an enterprise organization. If information to populate the
     /// email isn't present we send the standard individual welcome email.

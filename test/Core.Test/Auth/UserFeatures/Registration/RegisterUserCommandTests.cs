@@ -1010,6 +1010,8 @@ public class RegisterUserCommandTests
         await sutProvider.GetDependency<IOrganizationDomainRepository>()
             .Received(1)
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("allowed-domain.com");
+    }
+
     // SendWelcomeEmail tests
     // -----------------------------------------------------------------------------------------------
     [Theory]
@@ -1235,6 +1237,8 @@ public class RegisterUserCommandTests
         Assert.Equal("Invalid email address format.", exception.Message);
     }
 
+    [Theory]
+    [BitAutoData]
     public async Task SendWelcomeEmail_OrganizationNull_SendsIndividualWelcomeEmail(
         User user,
         OrganizationUser orgUser,
