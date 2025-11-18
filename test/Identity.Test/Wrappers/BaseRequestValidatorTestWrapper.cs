@@ -134,12 +134,21 @@ IBaseRequestValidatorTestWrapper
     protected override void SetTwoFactorResult(
         BaseRequestValidationContextFake context,
         Dictionary<string, object> customResponse)
-    { }
+    {
+        context.GrantResult = new GrantValidationResult(
+            TokenRequestErrors.InvalidGrant, "Two-factor authentication required.", customResponse);
+    }
 
     protected override void SetValidationErrorResult(
         BaseRequestValidationContextFake context,
         CustomValidatorRequestContext requestContext)
-    { }
+    {
+        // context.GrantResult.Error = requestContext.ValidationErrorResult.Error;
+        // context.GrantResult.IsError = requestContext.ValidationErrorResult.IsError;
+        // context.GrantResult.ErrorDescription = requestContext.ValidationErrorResult.ErrorDescription;
+        // context.GrantResult.CustomResponse = requestContext.CustomResponse;
+        context.GrantResult.IsError = true;
+    }
 
     protected override Task<bool> ValidateContextAsync(
         BaseRequestValidationContextFake context,

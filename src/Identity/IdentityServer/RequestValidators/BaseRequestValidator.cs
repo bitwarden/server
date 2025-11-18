@@ -132,7 +132,7 @@ public abstract class BaseRequestValidator<T> where T : class
                     SetSsoResult(context,
                         new Dictionary<string, object>
                         {
-                        { "ErrorModel", new ErrorResponseModel("SSO authentication is required.") }
+                            { "ErrorModel", new ErrorResponseModel("SSO authentication is required.") }
                         });
                     return;
                 }
