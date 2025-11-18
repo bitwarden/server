@@ -228,7 +228,7 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
     [BitAutoData(OrganizationUserType.Owner)]
     [BitAutoData(OrganizationUserType.Custom)]
     [BitAutoData(OrganizationUserType.Admin)]
-    public async Task ValidateAsync_WithAdminType_ReturnsUserIsNotUserTypeError(
+    public async Task ValidateAsync_WithNonUserType_ReturnsUserIsNotUserTypeError(
         OrganizationUserType userType,
         SutProvider<AutomaticallyConfirmOrganizationUsersValidator> sutProvider,
         Organization organization,
