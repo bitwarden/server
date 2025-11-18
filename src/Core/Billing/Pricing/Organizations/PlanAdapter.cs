@@ -99,11 +99,19 @@ public record PlanAdapter : Core.Models.StaticStore.Plan
             _ => true);
         var baseSeats = GetBaseSeats(plan.Seats);
         var maxSeats = GetMaxSeats(plan.Seats);
-        var baseStorageGb = (short?)plan.Storage?.Provided;
+        var baseStorageGb = (short)(plan.Storage?.Provided ?? 0);
         var hasAdditionalStorageOption = plan.Storage != null;
         var additionalStoragePricePerGb = plan.Storage?.Price ?? 0;
         var stripeStoragePlanId = plan.Storage?.StripePriceId;
         short? maxCollections = plan.AdditionalData.TryGetValue("passwordManager.maxCollections", out var value) ? short.Parse(value) : null;
+        var stripePremiumAccessPlanId =
+            plan.AdditionalData.TryGetValue("premiumAccessAddOnPriceId", out var premiumAccessAddOnPriceIdValue)
+                ? premiumAccessAddOnPriceIdValue
+                : null;
+        var premiumAccessOptionPrice =
+            plan.AdditionalData.TryGetValue("premiumAccessAddOnPriceAmount", out var premiumAccessAddOnPriceAmountValue)
+                ? decimal.Parse(premiumAccessAddOnPriceAmountValue)
+                : 0;
 
         return new PasswordManagerPlanFeatures
         {
@@ -121,7 +129,9 @@ public record PlanAdapter : Core.Models.StaticStore.Plan
             HasAdditionalStorageOption = hasAdditionalStorageOption,
             AdditionalStoragePricePerGb = additionalStoragePricePerGb,
             StripeStoragePlanId = stripeStoragePlanId,
-            MaxCollections = maxCollections
+            MaxCollections = maxCollections,
+            StripePremiumAccessPlanId = stripePremiumAccessPlanId,
+            PremiumAccessOptionPrice = premiumAccessOptionPrice
         };
     }
 
