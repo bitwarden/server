@@ -1,11 +1,10 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -26,6 +25,7 @@ public class RegisterUserCommand : IRegisterUserCommand
     private readonly ILogger<RegisterUserCommand> _logger;
     private readonly IGlobalSettings _globalSettings;
     private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly IOrganizationRepository _organizationRepository;
     private readonly IPolicyRepository _policyRepository;
     private readonly IOrganizationDomainRepository _organizationDomainRepository;
     private readonly IFeatureService _featureService;
@@ -41,28 +41,28 @@ public class RegisterUserCommand : IRegisterUserCommand
     private readonly IValidateRedemptionTokenCommand _validateRedemptionTokenCommand;
 
     private readonly IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> _emergencyAccessInviteTokenDataFactory;
+    private readonly IFeatureService _featureService;
 
     private readonly string _disabledUserRegistrationExceptionMsg = "Open registration has been disabled by the system administrator.";
 
     public RegisterUserCommand(
-        ILogger<RegisterUserCommand> logger,
-        IGlobalSettings globalSettings,
-        IOrganizationUserRepository organizationUserRepository,
-        IPolicyRepository policyRepository,
-        IOrganizationDomainRepository organizationDomainRepository,
-        IFeatureService featureService,
-        IDataProtectionProvider dataProtectionProvider,
-        IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
-        IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> registrationEmailVerificationTokenDataFactory,
-        IUserService userService,
-        IMailService mailService,
-        IValidateRedemptionTokenCommand validateRedemptionTokenCommand,
-        IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> emergencyAccessInviteTokenDataFactory
-        )
+            IGlobalSettings globalSettings,
+            IOrganizationUserRepository organizationUserRepository,
+            IOrganizationRepository organizationRepository,
+            IPolicyRepository policyRepository,
+            IDataProtectionProvider dataProtectionProvider,
+            IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
+            IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> registrationEmailVerificationTokenDataFactory,
+            IUserService userService,
+            IMailService mailService,
+            IValidateRedemptionTokenCommand validateRedemptionTokenCommand,
+            IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> emergencyAccessInviteTokenDataFactory,
+            IFeatureService featureService)
     {
         _logger = logger;
         _globalSettings = globalSettings;
         _organizationUserRepository = organizationUserRepository;
+        _organizationRepository = organizationRepository;
         _policyRepository = policyRepository;
         _organizationDomainRepository = organizationDomainRepository;
         _featureService = featureService;
@@ -79,8 +79,8 @@ public class RegisterUserCommand : IRegisterUserCommand
         _emergencyAccessInviteTokenDataFactory = emergencyAccessInviteTokenDataFactory;
 
         _providerServiceDataProtector = dataProtectionProvider.CreateProtector("ProviderServiceDataProtector");
+        _featureService = featureService;
     }
-
 
     public async Task<IdentityResult> RegisterUser(User user)
     {
@@ -95,25 +95,23 @@ public class RegisterUserCommand : IRegisterUserCommand
         return result;
     }
 
+    public async Task<IdentityResult> RegisterSSOAutoProvisionedUserAsync(User user, Organization organization)
+    {
+        var result = await _userService.CreateUserAsync(user);
+        if (result == IdentityResult.Success)
+        {
+            await SendWelcomeEmailAsync(user, organization);
+        }
+
+        return result;
+    }
+
     public async Task<IdentityResult> RegisterUserViaOrganizationInviteToken(User user, string masterPasswordHash,
         string orgInviteToken, Guid? orgUserId)
     {
-        ValidateOrgInviteToken(orgInviteToken, orgUserId, user);
-
-        // Get the organization ID if we have an orgUserId, so we can exclude it from domain blocking
-        Guid? organizationId = null;
-        if (orgUserId.HasValue)
-        {
-            var orgUser = await _organizationUserRepository.GetByIdAsync(orgUserId.Value);
-            if (orgUser == null)
-            {
-                throw new BadRequestException("Invalid organization user invitation.");
-            }
-            organizationId = orgUser.OrganizationId;
-        }
-
-        await ValidateEmailDomainNotBlockedAsync(user.Email, organizationId);
-        await SetUserEmail2FaIfOrgPolicyEnabledAsync(orgUserId, user);
+        TryValidateOrgInviteToken(orgInviteToken, orgUserId, user);
+        var orgUser = await SetUserEmail2FaIfOrgPolicyEnabledAsync(orgUserId, user);
+        await ValidateEmailDomainNotBlockedAsync(user.Email, orgUser.organizationId);
 
         user.ApiKey = CoreHelpers.SecureRandomString(30);
 
@@ -123,16 +121,17 @@ public class RegisterUserCommand : IRegisterUserCommand
         }
 
         var result = await _userService.CreateUserAsync(user, masterPasswordHash);
+        var organization = await GetOrganizationUserOrganization(orgUserId ?? Guid.Empty, orgUser);
         if (result == IdentityResult.Success)
         {
             var sentWelcomeEmail = false;
             if (!string.IsNullOrEmpty(user.ReferenceData))
             {
-                var referenceData = JsonConvert.DeserializeObject<Dictionary<string, object>>(user.ReferenceData);
+                var referenceData = JsonConvert.DeserializeObject<Dictionary<string, object>>(user.ReferenceData) ?? [];
                 if (referenceData.TryGetValue("initiationPath", out var value))
                 {
-                    var initiationPath = value.ToString();
-                    await SendAppropriateWelcomeEmailAsync(user, initiationPath);
+                    var initiationPath = value.ToString() ?? string.Empty;
+                    await SendAppropriateWelcomeEmailAsync(user, initiationPath, organization);
                     sentWelcomeEmail = true;
                     if (!string.IsNullOrEmpty(initiationPath))
                     {
@@ -143,14 +142,22 @@ public class RegisterUserCommand : IRegisterUserCommand
 
             if (!sentWelcomeEmail)
             {
-                await _mailService.SendWelcomeEmailAsync(user);
+                await SendWelcomeEmailAsync(user, organization);
             }
         }
 
         return result;
     }
 
-    private void ValidateOrgInviteToken(string orgInviteToken, Guid? orgUserId, User user)
+    /// <summary>
+    /// This method attempts to validate the org invite token if provided. If the token is invalid an exception is thrown.
+    /// If there is no exception it is assumed the token is valid or not provided and open registration is allowed.
+    /// </summary>
+    /// <param name="orgInviteToken">The organization invite token.</param>
+    /// <param name="orgUserId">The organization user ID.</param>
+    /// <param name="user">The user being registered.</param>
+    /// <exception cref="BadRequestException">If validation fails then an exception is thrown.</exception>
+    private void TryValidateOrgInviteToken(string orgInviteToken, Guid? orgUserId, User user)
     {
         var orgInviteTokenProvided = !string.IsNullOrWhiteSpace(orgInviteToken);
 
@@ -163,7 +170,6 @@ public class RegisterUserCommand : IRegisterUserCommand
             }
 
             // Token data is invalid
-
             if (_globalSettings.DisableUserRegistration)
             {
                 throw new BadRequestException(_disabledUserRegistrationExceptionMsg);
@@ -173,7 +179,6 @@ public class RegisterUserCommand : IRegisterUserCommand
         }
 
         // no token data or missing token data
-
         // Throw if open registration is disabled and there isn't an org invite token or an org user id
         // as you can't register without them.
         if (_globalSettings.DisableUserRegistration)
@@ -197,12 +202,20 @@ public class RegisterUserCommand : IRegisterUserCommand
         // If both orgInviteToken && orgUserId are missing, then proceed with open registration
     }
 
+    /// <summary>
+    /// Validates the org invite token using the new tokenable logic first, then falls back to the old token validation logic for backwards compatibility.
+    /// Will set the out parameter organizationWelcomeEmailDetails if the new token is valid. If the token is invalid then no welcome email needs to be sent
+    /// so the out parameter is set to null.
+    /// </summary>
+    /// <param name="orgInviteToken">Invite token</param>
+    /// <param name="orgUserId">Inviting Organization UserId</param>
+    /// <param name="userEmail">User email</param>
+    /// <returns>true if the token is valid false otherwise</returns>
     private bool IsOrgInviteTokenValid(string orgInviteToken, Guid orgUserId, string userEmail)
     {
         // TODO: PM-4142 - remove old token validation logic once 3 releases of backwards compatibility are complete
         var newOrgInviteTokenValid = OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
             _orgUserInviteTokenDataFactory, orgInviteToken, orgUserId, userEmail);
-
         return newOrgInviteTokenValid || CoreHelpers.UserInviteTokenIsValid(
             _organizationServiceDataProtector, orgInviteToken, userEmail, orgUserId, _globalSettings);
     }
@@ -213,11 +226,12 @@ public class RegisterUserCommand : IRegisterUserCommand
     /// </summary>
     /// <param name="orgUserId">The optional org user id</param>
     /// <param name="user">The newly created user object which could be modified</param>
-    private async Task SetUserEmail2FaIfOrgPolicyEnabledAsync(Guid? orgUserId, User user)
+    /// <returns>The organization user if one exists for the provided org user id, null otherwise</returns>
+    private async Task<OrganizationUser?> SetUserEmail2FaIfOrgPolicyEnabledAsync(Guid? orgUserId, User user)
     {
         if (!orgUserId.HasValue)
         {
-            return;
+            return null;
         }
 
         var orgUser = await _organizationUserRepository.GetByIdAsync(orgUserId.Value);
@@ -239,10 +253,11 @@ public class RegisterUserCommand : IRegisterUserCommand
                 _userService.SetTwoFactorProvider(user, TwoFactorProviderType.Email);
             }
         }
+        return orgUser;
     }
 
 
-    private async Task SendAppropriateWelcomeEmailAsync(User user, string initiationPath)
+    private async Task SendAppropriateWelcomeEmailAsync(User user, string initiationPath, Organization? organization)
     {
         var isFromMarketingWebsite = initiationPath.Contains("Secrets Manager trial");
 
@@ -252,14 +267,13 @@ public class RegisterUserCommand : IRegisterUserCommand
         }
         else
         {
-            await _mailService.SendWelcomeEmailAsync(user);
+            await SendWelcomeEmailAsync(user, organization);
         }
     }
 
     public async Task<IdentityResult> RegisterUserViaEmailVerificationToken(User user, string masterPasswordHash,
         string emailVerificationToken)
     {
-
         ValidateOpenRegistrationAllowed();
         await ValidateEmailDomainNotBlockedAsync(user.Email);
 
@@ -272,7 +286,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         var result = await _userService.CreateUserAsync(user, masterPasswordHash);
         if (result == IdentityResult.Success)
         {
-            await _mailService.SendWelcomeEmailAsync(user);
+            await SendWelcomeEmailAsync(user);
         }
 
         return result;
@@ -291,7 +305,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         var result = await _userService.CreateUserAsync(user, masterPasswordHash);
         if (result == IdentityResult.Success)
         {
-            await _mailService.SendWelcomeEmailAsync(user);
+            await SendWelcomeEmailAsync(user);
         }
 
         return result;
@@ -312,7 +326,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         var result = await _userService.CreateUserAsync(user, masterPasswordHash);
         if (result == IdentityResult.Success)
         {
-            await _mailService.SendWelcomeEmailAsync(user);
+            await SendWelcomeEmailAsync(user);
         }
 
         return result;
@@ -331,7 +345,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         var result = await _userService.CreateUserAsync(user, masterPasswordHash);
         if (result == IdentityResult.Success)
         {
-            await _mailService.SendWelcomeEmailAsync(user);
+            await SendWelcomeEmailAsync(user);
         }
 
         return result;
@@ -408,5 +422,60 @@ public class RegisterUserCommand : IRegisterUserCommand
                 excludeOrganizationId);
             throw new BadRequestException("This email address is claimed by an organization using Bitwarden.");
         }
+    }
+    
+    /// <summary>
+    /// We send different welcome emails depending on whether the user is joining a free/family or an enterprise organization. If information to populate the
+    /// email isn't present we send the standard individual welcome email.
+    /// </summary>
+    /// <param name="user">Target user for the email</param>
+    /// <param name="organization">this value is nullable</param>
+    /// <returns></returns>
+    private async Task SendWelcomeEmailAsync(User user, Organization? organization = null)
+    {
+        // Check if feature is enabled
+        // TODO: Remove Feature flag: PM-28221
+        if (!_featureService.IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates))
+        {
+            await _mailService.SendWelcomeEmailAsync(user);
+            return;
+        }
+
+        // Most emails are probably for non organization users so we default to that experience
+        if (organization == null)
+        {
+            await _mailService.SendIndividualUserWelcomeEmailAsync(user);
+        }
+        // We need to make sure that the organization email has the correct data to display otherwise we just send the standard welcome email
+        else if (!string.IsNullOrEmpty(organization.DisplayName()))
+        {
+            // If the organization is Free or Families plan, send families welcome email
+            if (organization.PlanType is PlanType.FamiliesAnnually
+                or PlanType.FamiliesAnnually2019
+                or PlanType.Free)
+            {
+                await _mailService.SendFreeOrgOrFamilyOrgUserWelcomeEmailAsync(user, organization.DisplayName());
+            }
+            else
+            {
+                await _mailService.SendOrganizationUserWelcomeEmailAsync(user, organization.DisplayName());
+            }
+        }
+        // If the organization data isn't present send the standard welcome email
+        else
+        {
+            await _mailService.SendIndividualUserWelcomeEmailAsync(user);
+        }
+    }
+
+    private async Task<Organization?> GetOrganizationUserOrganization(Guid orgUserId, OrganizationUser? orgUser = null)
+    {
+        var organizationUser = orgUser ?? await _organizationUserRepository.GetByIdAsync(orgUserId);
+        if (organizationUser == null)
+        {
+            return null;
+        }
+
+        return await _organizationRepository.GetByIdAsync(organizationUser.OrganizationId);
     }
 }

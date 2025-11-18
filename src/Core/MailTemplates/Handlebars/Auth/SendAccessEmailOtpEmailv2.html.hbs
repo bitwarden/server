@@ -51,6 +51,20 @@
     
     <style type="text/css">
 
+      @media only screen and (max-width:480px) {
+        .mj-bw-hero-responsive-img {
+          display: none !important;
+        }
+      }
+    
+
+      @media only screen and (max-width:480px) {
+        .mj-bw-learn-more-footer-responsive-img {
+          display: none !important;
+        }
+      }
+    
+
     @media only screen and (max-width:479px) {
       table.mj-full-width-mobile { width: 100% !important; }
       td.mj-full-width-mobile { width: auto !important; }
@@ -65,11 +79,13 @@
   .border-fix > table > tbody > tr > td {
     border-radius: 3px;
   }
-@media only screen and
-  (max-width: 480px) { .hide-small-img { display: none !important; } .send-bubble { padding-left: 20px; padding-right: 20px; width: 90% !important; } }
-
+.send-bubble {
+        padding-left: 20px;
+        padding-right: 20px;
+        width: 90% !important;
+      }
     </style>
-    <!-- Responsive icon visibility -->
+    
   </head>
   <body style="word-spacing:normal;background-color:#e6e9ef;">
     
@@ -151,14 +167,14 @@
         <tbody>
           
               <tr>
-                <td align="center" class="hide-small-img" style="font-size:0px;padding:0px;word-break:break-word;">
+                <td align="center" class="mj-bw-hero-responsive-img" style="font-size:0px;padding:0px;word-break:break-word;">
                   
       <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:collapse;border-spacing:0px;">
         <tbody>
           <tr>
-            <td style="width:140px;">
+            <td style="width:155px;">
               
-      <img alt src="https://assets.bitwarden.com/email/v1/spot-secure-send-round.png" style="border:0;display:block;outline:none;text-decoration:none;height:140px;width:100%;font-size:16px;" width="140" height="140">
+      <img alt src="https://assets.bitwarden.com/email/v1/spot-secure-send-round.png" style="border:0;display:block;outline:none;text-decoration:none;height:auto;width:100%;font-size:16px;" width="155" height="auto">
     
             </td>
           </tr>
@@ -260,8 +276,8 @@
               <tr>
                 <td align="left" style="font-size:0px;padding:10px 25px;word-break:break-word;">
                   
-      <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:16px;line-height:1;text-align:left;color:#1B2029;">This code expires in {{Expiry}} minutes. After that, you'll need to
-            verify your email again.</div>
+      <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:16px;line-height:1;text-align:left;color:#1B2029;">This code expires in {{Expiry}} minutes. After that, you'll need
+            to verify your email again.</div>
     
                 </td>
               </tr>
@@ -370,8 +386,8 @@
         <table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="background:#f6f6f6;background-color:#f6f6f6;width:100%;border-radius:0px 0px 4px 4px;">
           <tbody>
             <tr>
-              <td style="direction:ltr;font-size:0px;padding:5px 20px 10px 20px;text-align:center;">
-                <!--[if mso | IE]><table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr><td class="" style="vertical-align:top;width:406px;" ><![endif]-->
+              <td style="direction:ltr;font-size:0px;padding:5px 10px 10px 10px;text-align:center;">
+                <!--[if mso | IE]><table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr><td class="" style="vertical-align:top;width:420px;" ><![endif]-->
             
       <div class="mj-column-per-70 mj-outlook-group-fix" style="font-size:0px;text-align:left;direction:ltr;display:inline-block;vertical-align:top;width:100%;">
         
@@ -381,11 +397,11 @@
               <tr>
                 <td align="left" style="font-size:0px;padding:10px 25px;word-break:break-word;">
                   
-      <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:16px;line-height:24px;text-align:left;color:#1B2029;"><h3 style="font-size: 20px; margin: 0; line-height: 28px">
-        Learn more about Bitwarden
-      </h3>
-      Find user guides, product documentation, and videos on the
-      <a href="https://bitwarden.com/help/" class="link" style="text-decoration: none; color: #175ddc; font-weight: 600;"> Bitwarden Help Center</a>.</div>
+      <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:16px;line-height:24px;text-align:left;color:#1B2029;"><p style="font-size: 18px; line-height: 28px; font-weight: bold;">
+              Learn more about Bitwarden
+            </p>
+            Find user guides, product documentation, and videos on the
+            <a href="https://bitwarden.com/help/" class="link" style="text-decoration: none; color: #175ddc; font-weight: 600;"> Bitwarden Help Center</a>.</div>
     
                 </td>
               </tr>
@@ -395,7 +411,7 @@
     
       </div>
     
-          <!--[if mso | IE]></td><td class="" style="vertical-align:top;width:174px;" ><![endif]-->
+          <!--[if mso | IE]></td><td class="" style="vertical-align:top;width:180px;" ><![endif]-->
             
       <div class="mj-column-per-30 mj-outlook-group-fix" style="font-size:0px;text-align:left;direction:ltr;display:inline-block;vertical-align:top;width:100%;">
         
@@ -403,7 +419,7 @@
         <tbody>
           
               <tr>
-                <td align="center" class="hide-small-img" style="font-size:0px;padding:10px 25px;word-break:break-word;">
+                <td align="center" class="mj-bw-learn-more-footer-responsive-img" style="font-size:0px;padding:10px 25px;word-break:break-word;">
                   
       <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:collapse;border-spacing:0px;">
         <tbody>

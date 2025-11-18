@@ -7,6 +7,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.UserFeatures.Registration.Implementations;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -90,6 +91,120 @@ public class RegisterUserCommandTests
         await sutProvider.GetDependency<IMailService>()
             .DidNotReceive()
             .SendWelcomeEmailAsync(Arg.Any<User>());
+    }
+
+    // -----------------------------------------------------------------------------------------------
+    // RegisterSSOAutoProvisionedUserAsync tests
+    // -----------------------------------------------------------------------------------------------
+    [Theory, BitAutoData]
+    public async Task RegisterSSOAutoProvisionedUserAsync_Success(
+        User user,
+        Organization organization,
+        SutProvider<RegisterUserCommand> sutProvider)
+    {
+        // Arrange
+        user.Id = Guid.NewGuid();
+        organization.Id = Guid.NewGuid();
+        organization.Name = "Test Organization";
+
+        sutProvider.GetDependency<IUserService>()
+            .CreateUserAsync(user)
+            .Returns(IdentityResult.Success);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates)
+            .Returns(true);
+
+        // Act
+        var result = await sutProvider.Sut.RegisterSSOAutoProvisionedUserAsync(user, organization);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        await sutProvider.GetDependency<IUserService>()
+            .Received(1)
+            .CreateUserAsync(user);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RegisterSSOAutoProvisionedUserAsync_UserRegistrationFails_ReturnsFailedResult(
+        User user,
+        Organization organization,
+        SutProvider<RegisterUserCommand> sutProvider)
+    {
+        // Arrange
+        var expectedError = new IdentityError();
+        sutProvider.GetDependency<IUserService>()
+            .CreateUserAsync(user)
+            .Returns(IdentityResult.Failed(expectedError));
+
+        // Act
+        var result = await sutProvider.Sut.RegisterSSOAutoProvisionedUserAsync(user, organization);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Contains(expectedError, result.Errors);
+        await sutProvider.GetDependency<IMailService>()
+            .DidNotReceive()
+            .SendOrganizationUserWelcomeEmailAsync(Arg.Any<User>(), Arg.Any<string>());
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.EnterpriseAnnually)]
+    [BitAutoData(PlanType.EnterpriseMonthly)]
+    [BitAutoData(PlanType.TeamsAnnually)]
+    public async Task RegisterSSOAutoProvisionedUserAsync_EnterpriseOrg_SendsOrganizationWelcomeEmail(
+        PlanType planType,
+        User user,
+        Organization organization,
+        SutProvider<RegisterUserCommand> sutProvider)
+    {
+        // Arrange
+        organization.PlanType = planType;
+        organization.Name = "Enterprise Org";
+
+        sutProvider.GetDependency<IUserService>()
+            .CreateUserAsync(user)
+            .Returns(IdentityResult.Success);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates)
+            .Returns(true);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns((OrganizationUser)null);
+
+        // Act
+        await sutProvider.Sut.RegisterSSOAutoProvisionedUserAsync(user, organization);
+
+        // Assert
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendOrganizationUserWelcomeEmailAsync(user, organization.Name);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RegisterSSOAutoProvisionedUserAsync_FeatureFlagDisabled_SendsLegacyWelcomeEmail(
+        User user,
+        Organization organization,
+        SutProvider<RegisterUserCommand> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IUserService>()
+            .CreateUserAsync(user)
+            .Returns(IdentityResult.Success);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates)
+            .Returns(false);
+
+        // Act
+        await sutProvider.Sut.RegisterSSOAutoProvisionedUserAsync(user, organization);
+
+        // Assert
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendWelcomeEmailAsync(user);
     }
 
     // -----------------------------------------------------------------------------------------------
@@ -895,6 +1010,41 @@ public class RegisterUserCommandTests
         await sutProvider.GetDependency<IOrganizationDomainRepository>()
             .Received(1)
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("allowed-domain.com");
+    // SendWelcomeEmail tests
+    // -----------------------------------------------------------------------------------------------
+    [Theory]
+    [BitAutoData(PlanType.FamiliesAnnually)]
+    [BitAutoData(PlanType.FamiliesAnnually2019)]
+    [BitAutoData(PlanType.Free)]
+    public async Task SendWelcomeEmail_FamilyOrg_SendsFamilyWelcomeEmail(
+        PlanType planType,
+        User user,
+        Organization organization,
+        SutProvider<RegisterUserCommand> sutProvider)
+    {
+        // Arrange
+        organization.PlanType = planType;
+        organization.Name = "Family Org";
+
+        sutProvider.GetDependency<IUserService>()
+            .CreateUserAsync(user)
+            .Returns(IdentityResult.Success);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates)
+            .Returns(true);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns((OrganizationUser)null);
+
+        // Act
+        await sutProvider.Sut.RegisterSSOAutoProvisionedUserAsync(user, organization);
+
+        // Assert
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendFreeOrgOrFamilyOrgUserWelcomeEmailAsync(user, organization.Name);
     }
 
     [Theory]
@@ -1085,5 +1235,146 @@ public class RegisterUserCommandTests
         Assert.Equal("Invalid email address format.", exception.Message);
     }
 
+    public async Task SendWelcomeEmail_OrganizationNull_SendsIndividualWelcomeEmail(
+        User user,
+        OrganizationUser orgUser,
+        string orgInviteToken,
+        string masterPasswordHash,
+        SutProvider<RegisterUserCommand> sutProvider)
+    {
+        // Arrange
+        user.ReferenceData = null;
+        orgUser.Email = user.Email;
 
+        sutProvider.GetDependency<IUserService>()
+            .CreateUserAsync(user, masterPasswordHash)
+            .Returns(IdentityResult.Success);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(orgUser.Id)
+            .Returns(orgUser);
+
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(Arg.Any<Guid>(), PolicyType.TwoFactorAuthentication)
+            .Returns((Policy)null);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(orgUser.OrganizationId)
+            .Returns((Organization)null);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates)
+            .Returns(true);
+
+        var orgInviteTokenable = new OrgUserInviteTokenable(orgUser);
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<OrgUserInviteTokenable>>()
+            .TryUnprotect(orgInviteToken, out Arg.Any<OrgUserInviteTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = orgInviteTokenable;
+                return true;
+            });
+
+        // Act
+        var result = await sutProvider.Sut.RegisterUserViaOrganizationInviteToken(user, masterPasswordHash, orgInviteToken, orgUser.Id);
+
+        // Assert
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendIndividualUserWelcomeEmailAsync(user);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SendWelcomeEmail_OrganizationDisplayNameNull_SendsIndividualWelcomeEmail(
+        User user,
+        SutProvider<RegisterUserCommand> sutProvider)
+    {
+        // Arrange
+        Organization organization = new Organization
+        {
+            Name = null
+        };
+
+        sutProvider.GetDependency<IUserService>()
+            .CreateUserAsync(user)
+            .Returns(IdentityResult.Success);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates)
+            .Returns(true);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns((OrganizationUser)null);
+
+        // Act
+        await sutProvider.Sut.RegisterSSOAutoProvisionedUserAsync(user, organization);
+
+        // Assert
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendIndividualUserWelcomeEmailAsync(user);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetOrganizationWelcomeEmailDetailsAsync_HappyPath_ReturnsOrganizationWelcomeEmailDetails(
+        Organization organization,
+        User user,
+        OrganizationUser orgUser,
+        string masterPasswordHash,
+        string orgInviteToken,
+        SutProvider<RegisterUserCommand> sutProvider)
+    {
+        // Arrange
+        user.ReferenceData = null;
+        orgUser.Email = user.Email;
+        organization.PlanType = PlanType.EnterpriseAnnually;
+
+        sutProvider.GetDependency<IUserService>()
+            .CreateUserAsync(user, masterPasswordHash)
+            .Returns(IdentityResult.Success);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(orgUser.Id)
+            .Returns(orgUser);
+
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(Arg.Any<Guid>(), PolicyType.TwoFactorAuthentication)
+            .Returns((Policy)null);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(orgUser.OrganizationId)
+            .Returns(organization);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates)
+            .Returns(true);
+
+        var orgInviteTokenable = new OrgUserInviteTokenable(orgUser);
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<OrgUserInviteTokenable>>()
+            .TryUnprotect(orgInviteToken, out Arg.Any<OrgUserInviteTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = orgInviteTokenable;
+                return true;
+            });
+
+        // Act
+        var result = await sutProvider.Sut.RegisterUserViaOrganizationInviteToken(user, masterPasswordHash, orgInviteToken, orgUser.Id);
+
+        // Assert
+        Assert.True(result.Succeeded);
+
+        await sutProvider.GetDependency<IOrganizationRepository>()
+            .Received(1)
+            .GetByIdAsync(orgUser.OrganizationId);
+
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendOrganizationUserWelcomeEmailAsync(user, organization.DisplayName());
+    }
 }

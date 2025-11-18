@@ -38,6 +38,20 @@ public class EventIntegrationEventWriteServiceTests
             organizationId: Arg.Is<string>(orgId => eventMessage.OrganizationId.ToString().Equals(orgId)));
     }
 
+    [Fact]
+    public async Task CreateManyAsync_EmptyList_DoesNothing()
+    {
+        await Subject.CreateManyAsync([]);
+        await _eventIntegrationPublisher.DidNotReceiveWithAnyArgs().PublishEventAsync(Arg.Any<string>(), Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task DisposeAsync_DisposesEventIntegrationPublisher()
+    {
+        await Subject.DisposeAsync();
+        await _eventIntegrationPublisher.Received(1).DisposeAsync();
+    }
+
     private static bool AssertJsonStringsMatch(EventMessage expected, string body)
     {
         var actual = JsonSerializer.Deserialize<EventMessage>(body);
