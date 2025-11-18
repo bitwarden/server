@@ -1,8 +1,6 @@
 ﻿using Bit.Api.AdminConsole.Authorization;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Context;
 using Bit.Core.Enums;
-using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 
 namespace Bit.Api.Billing.Models.Requirements;
