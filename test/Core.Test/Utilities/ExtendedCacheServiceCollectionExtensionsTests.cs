@@ -110,6 +110,19 @@ public class ExtendedCacheServiceCollectionExtensionsTests
     }
 
     [Fact]
+    public void AddExtendedCache_EmptyCacheName_DoesNothing()
+    {
+        _services.AddExtendedCache(string.Empty, _globalSettings);
+
+        var regs = _services.Where(s => s.ServiceType == typeof(IFusionCache)).ToList();
+        Assert.Empty(regs);
+
+        using var provider = _services.BuildServiceProvider();
+        var cache = provider.GetKeyedService<IFusionCache>(_cacheName);
+        Assert.Null(cache);
+    }
+
+    [Fact]
     public void AddExtendedCache_MultipleCalls_OnlyAddsOneCacheService()
     {
         var settings = CreateGlobalSettings(new()

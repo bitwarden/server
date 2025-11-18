@@ -3,6 +3,7 @@ using Bit.Core.Utilities;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
 using ZiggyCreatures.Caching.Fusion;
 using ZiggyCreatures.Caching.Fusion.Backplane;
@@ -25,6 +26,12 @@ public static class ExtendedCacheServiceCollectionExtensions
         GlobalSettings globalSettings,
         GlobalSettings.ExtendedCacheSettings? settings = null)
     {
+        settings ??= globalSettings.DistributedCache.DefaultExtendedCache;
+        if (settings is null || string.IsNullOrEmpty(cacheName))
+        {
+            return services;
+        }
+
         // If a cache already exists with this key, do nothing
         if (services.Any(s => s.ServiceType == typeof(IFusionCache) &&
                          s.ServiceKey?.Equals(cacheName) == true))
@@ -36,7 +43,6 @@ public static class ExtendedCacheServiceCollectionExtensions
         {
             services.AddFusionCacheSystemTextJsonSerializer();
         }
-        settings ??= globalSettings.DistributedCache.DefaultExtendedCache;
         var fusionCacheBuilder = services
             .AddFusionCache(cacheName)
             .WithCacheKeyPrefix($"{cacheName}:")
@@ -71,8 +77,8 @@ public static class ExtendedCacheServiceCollectionExtensions
             if (!CoreHelpers.SettingHasValue(globalSettings.DistributedCache.Redis.ConnectionString))
                 return services;
 
-            services.TryAddSingleton<IConnectionMultiplexer>(_ =>
-                ConnectionMultiplexer.Connect(globalSettings.DistributedCache.Redis.ConnectionString));
+            services.TryAddSingleton<IConnectionMultiplexer>(sp =>
+                CreateConnectionMultiplexer(sp, cacheName, globalSettings.DistributedCache.Redis.ConnectionString));
             services.TryAddSingleton<IDistributedCache>(sp =>
                 {
                     var mux = sp.GetRequiredService<IConnectionMultiplexer>();
@@ -104,8 +110,7 @@ public static class ExtendedCacheServiceCollectionExtensions
 
         services.TryAddKeyedSingleton<IConnectionMultiplexer>(
             cacheName,
-            (_, _) =>
-                ConnectionMultiplexer.Connect(settings.Redis.ConnectionString)
+            (sp, _) => CreateConnectionMultiplexer(sp, cacheName, settings.Redis.ConnectionString)
         );
         services.TryAddKeyedSingleton<IDistributedCache>(
             cacheName,
@@ -135,5 +140,20 @@ public static class ExtendedCacheServiceCollectionExtensions
             .WithRegisteredKeyedBackplaneByCacheName();
 
         return services;
+    }
+
+    private static ConnectionMultiplexer CreateConnectionMultiplexer(IServiceProvider sp, string cacheName,
+        string connectionString)
+    {
+        try
+        {
+            return ConnectionMultiplexer.Connect(connectionString);
+        }
+        catch (Exception ex)
+        {
+            var logger = sp.GetRequiredService<ILogger>();
+            logger.LogError(ex, "Failed to connect to Redis for cache {CacheName}", cacheName);
+            throw;
+        }
     }
 }
