@@ -1,5 +1,4 @@
 ﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v1;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -8,7 +7,7 @@ using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v1;
 
 public class RevokeOrganizationUserCommand(
     IEventService eventService,
