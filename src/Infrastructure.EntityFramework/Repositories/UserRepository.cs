@@ -14,36 +14,15 @@ namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserRepository
 {
-    private readonly IPlayIdService _playIdService;
-    private readonly IPlayDataRepository _playDataRepository;
-    private readonly ILogger<UserRepository> _logger;
+    protected readonly ILogger<UserRepository> _logger;
 
     public UserRepository(
         IServiceScopeFactory serviceScopeFactory,
         IMapper mapper,
-        IPlayIdService playIdService,
-        IPlayDataRepository playDataRepository,
         ILogger<UserRepository> logger)
         : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Users)
     {
-        _playIdService = playIdService;
-        _playDataRepository = playDataRepository;
         _logger = logger;
-    }
-
-    public override async Task<Core.Entities.User> CreateAsync(Core.Entities.User user)
-    {
-        var createdUser = await base.CreateAsync(user);
-
-        if (_playIdService.InPlay(out var playId))
-        {
-            _logger.LogInformation("Associating user {UserId} with Play ID {PlayId}",
-                user.Id, playId);
-
-            await _playDataRepository.CreateAsync(Core.Entities.PlayData.Create(user, playId));
-        }
-
-        return createdUser;
     }
 
     public async Task<Core.Entities.User?> GetByEmailAsync(string email)
@@ -420,5 +399,38 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             item.Collection.DefaultUserCollectionEmail = item.Collection.DefaultUserCollectionEmail ?? item.UserEmail;
             item.Collection.RevisionDate = DateTime.UtcNow;
         }
+    }
+}
+
+public class TestUserTrackingUserRepository : UserRepository
+{
+    private readonly IPlayIdService _playIdService;
+    private readonly IPlayDataRepository _playDataRepository;
+
+    public TestUserTrackingUserRepository(
+        IPlayIdService playIdService,
+        IPlayDataRepository playDataRepository,
+        IServiceScopeFactory serviceScopeFactory,
+        IMapper mapper,
+        ILogger<UserRepository> logger)
+        : base(serviceScopeFactory, mapper, logger)
+    {
+        _playIdService = playIdService;
+        _playDataRepository = playDataRepository;
+    }
+
+    public override async Task<Core.Entities.User> CreateAsync(Core.Entities.User user)
+    {
+        var createdUser = await base.CreateAsync(user);
+
+        if (_playIdService.InPlay(out var playId))
+        {
+            _logger.LogInformation("Associating user {UserId} with Play ID {PlayId}",
+                user.Id, playId);
+
+            await _playDataRepository.CreateAsync(Core.Entities.PlayData.Create(user, playId));
+        }
+
+        return createdUser;
     }
 }

@@ -1,6 +1,5 @@
 ﻿using System.Reflection;
 using Bit.Core.Enums;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper;
 using Bit.Infrastructure.EntityFramework;
@@ -125,18 +124,10 @@ public class DatabaseDataAttribute : DataAttribute
         {
             services.AddSingleton<TimeProvider, FakeTimeProvider>();
         }
-
-        // Include PlayIdService for tracking Play Ids in repositories
-        // We need the http context accessor to use the Singleton version, which pulls from the scoped version
-        services.AddHttpContextAccessor();
-
-        services.AddSingleton<IPlayIdService, PlayIdSingletonService>();
-        services.AddScoped<PlayIdService>();
     }
 
     private void AddDapperServices(IServiceCollection services, Database database)
     {
-        services.AddDapperRepositories(SelfHosted);
         var globalSettings = new GlobalSettings
         {
             DatabaseProvider = "sqlServer",
@@ -149,6 +140,7 @@ public class DatabaseDataAttribute : DataAttribute
                 UserRequestExpiration = TimeSpan.FromMinutes(15),
             }
         };
+        services.AddDapperRepositories(SelfHosted, globalSettings);
         services.AddSingleton(globalSettings);
         services.AddSingleton<IGlobalSettings>(globalSettings);
         services.AddSingleton(database);
@@ -168,7 +160,6 @@ public class DatabaseDataAttribute : DataAttribute
     private void AddEfServices(IServiceCollection services, Database database)
     {
         services.SetupEntityFramework(database.ConnectionString, database.Type);
-        services.AddPasswordManagerEFRepositories(SelfHosted);
 
         var globalSettings = new GlobalSettings
         {
@@ -177,6 +168,7 @@ public class DatabaseDataAttribute : DataAttribute
                 UserRequestExpiration = TimeSpan.FromMinutes(15),
             },
         };
+        services.AddPasswordManagerEFRepositories(SelfHosted, globalSettings);
         services.AddSingleton(globalSettings);
         services.AddSingleton<IGlobalSettings>(globalSettings);
 

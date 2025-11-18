@@ -10,6 +10,7 @@ using Bit.Core.NotificationCenter.Repositories;
 using Bit.Core.Platform.Installations;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
+using Bit.Core.Settings;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Vault.Repositories;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
@@ -67,8 +68,19 @@ public static class EntityFrameworkServiceCollectionExtensions
         });
     }
 
-    public static void AddPasswordManagerEFRepositories(this IServiceCollection services, bool selfHosted)
+    public static void AddPasswordManagerEFRepositories(this IServiceCollection services, bool selfHosted, GlobalSettings globalSettings)
     {
+        if (globalSettings.TestPlayIdTrackingEnabled)
+        {
+            services.AddSingleton<IOrganizationRepository, TestOrganizationTrackingOrganizationRepository>();
+            services.AddSingleton<IUserRepository, TestUserTrackingUserRepository>();
+        }
+        else
+        {
+            services.AddSingleton<IOrganizationRepository, OrganizationRepository>();
+            services.AddSingleton<IUserRepository, UserRepository>();
+        }
+
         services.AddSingleton<IApiKeyRepository, ApiKeyRepository>();
         services.AddSingleton<IAuthRequestRepository, AuthRequestRepository>();
         services.AddSingleton<ICipherRepository, CipherRepository>();
@@ -85,7 +97,6 @@ public static class EntityFrameworkServiceCollectionExtensions
         services.AddSingleton<IOrganizationConnectionRepository, OrganizationConnectionRepository>();
         services.AddSingleton<IOrganizationIntegrationRepository, OrganizationIntegrationRepository>();
         services.AddSingleton<IOrganizationIntegrationConfigurationRepository, OrganizationIntegrationConfigurationRepository>();
-        services.AddSingleton<IOrganizationRepository, OrganizationRepository>();
         services.AddSingleton<IOrganizationSponsorshipRepository, OrganizationSponsorshipRepository>();
         services.AddSingleton<IOrganizationUserRepository, OrganizationUserRepository>();
         services.AddSingleton<IPlayDataRepository, PlayDataRepository>();
@@ -97,7 +108,6 @@ public static class EntityFrameworkServiceCollectionExtensions
         services.AddSingleton<ISsoConfigRepository, SsoConfigRepository>();
         services.AddSingleton<ISsoUserRepository, SsoUserRepository>();
         services.AddSingleton<ITransactionRepository, TransactionRepository>();
-        services.AddSingleton<IUserRepository, UserRepository>();
         services.AddSingleton<IOrganizationDomainRepository, OrganizationDomainRepository>();
         services.AddSingleton<IWebAuthnCredentialRepository, WebAuthnCredentialRepository>();
         services.AddSingleton<IProviderPlanRepository, ProviderPlanRepository>();

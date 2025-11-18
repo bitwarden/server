@@ -18,21 +18,15 @@ namespace Bit.Infrastructure.Dapper.Repositories;
 
 public class UserRepository : Repository<User, Guid>, IUserRepository
 {
-    private readonly IPlayIdService _playIdService;
-    private readonly IPlayDataRepository _playDataRepository;
     private readonly IDataProtector _dataProtector;
-    private readonly ILogger<UserRepository> _logger;
+    protected readonly ILogger<UserRepository> _logger;
 
     public UserRepository(
-        IPlayIdService playIdService,
-        GlobalSettings globalSettings,
-        IPlayDataRepository playDataRepository,
         IDataProtectionProvider dataProtectionProvider,
+        GlobalSettings globalSettings,
         ILogger<UserRepository> logger)
         : base(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
     {
-        _playIdService = playIdService;
-        _playDataRepository = playDataRepository;
         _dataProtector = dataProtectionProvider.CreateProtector(Constants.DatabaseFieldProtectorPurpose);
         _logger = logger;
     }
@@ -164,14 +158,6 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
     public override async Task<User> CreateAsync(User user)
     {
         await ProtectDataAndSaveAsync(user, async () => await base.CreateAsync(user));
-
-        if (_playIdService.InPlay(out var playId))
-        {
-            _logger.LogInformation("Associating user {UserId} with Play ID {PlayId}",
-                user.Id, playId);
-
-            await _playDataRepository.CreateAsync(PlayData.Create(user, playId));
-        }
 
         return user;
     }
@@ -413,5 +399,37 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         {
             UnprotectData(user);
         }
+    }
+}
+
+public class TestUserTrackingUserRepository : UserRepository
+{
+    private readonly IPlayIdService _playIdService;
+    private readonly IPlayDataRepository _playDataRepository;
+
+    public TestUserTrackingUserRepository(
+          IPlayIdService playIdService,
+          GlobalSettings globalSettings,
+          IPlayDataRepository playDataRepository,
+          IDataProtectionProvider dataProtectionProvider,
+          ILogger<UserRepository> logger)
+          : base(dataProtectionProvider, globalSettings, logger)
+    {
+        _playIdService = playIdService;
+        _playDataRepository = playDataRepository;
+    }
+
+    public override async Task<User> CreateAsync(User user)
+    {
+        var createdUser = await base.CreateAsync(user);
+
+        if (_playIdService.InPlay(out var playId))
+        {
+            _logger.LogInformation("Associating user {UserId} with Play ID {PlayId}",
+            user.Id, playId);
+
+            await _playDataRepository.CreateAsync(PlayData.Create(createdUser, playId));
+        }
+        return createdUser;
     }
 }

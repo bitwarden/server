@@ -21,9 +21,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Organization, Organization, Guid>, IOrganizationRepository
 {
-    private readonly ILogger<OrganizationRepository> _logger;
-    private readonly IPlayIdService _playIdService;
-    private readonly IPlayDataRepository _playDataRepository;
+    protected readonly ILogger<OrganizationRepository> _logger;
 
     public OrganizationRepository(
         IServiceScopeFactory serviceScopeFactory,
@@ -34,24 +32,9 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
         : base(serviceScopeFactory, mapper, context => context.Organizations)
     {
         _logger = logger;
-        _playIdService = playIdService;
-        _playDataRepository = playDataRepository;
     }
 
-    public override async Task<Core.AdminConsole.Entities.Organization> CreateAsync(Core.AdminConsole.Entities.Organization organization)
-    {
-        var createdOrganization = await base.CreateAsync(organization);
 
-        if (_playIdService.InPlay(out var playId))
-        {
-            _logger.LogInformation("Associating organization {OrganizationId} with Play ID {PlayId}",
-                organization.Id, playId);
-
-            await _playDataRepository.CreateAsync(Core.Entities.PlayData.Create(organization, playId));
-        }
-
-        return createdOrganization;
-    }
 
     public async Task<Core.AdminConsole.Entities.Organization> GetByIdentifierAsync(string identifier)
     {
@@ -457,5 +440,39 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 .SetProperty(o => o.Seats, o => o.Seats + increaseAmount)
                 .SetProperty(o => o.SyncSeats, true)
                 .SetProperty(o => o.RevisionDate, requestDate));
+    }
+}
+
+public class TestOrganizationTrackingOrganizationRepository : OrganizationRepository
+{
+    private readonly IPlayIdService _playIdService;
+    private readonly IPlayDataRepository _playDataRepository;
+
+    public TestOrganizationTrackingOrganizationRepository(
+          IServiceScopeFactory serviceScopeFactory,
+          IMapper mapper,
+          ILogger<OrganizationRepository> logger,
+          IPlayIdService playIdService,
+          IPlayDataRepository playDataRepository)
+          : base(serviceScopeFactory, mapper, logger, playIdService, playDataRepository)
+    {
+        _playIdService = playIdService;
+        _playDataRepository = playDataRepository;
+
+    }
+
+    public override async Task<Core.AdminConsole.Entities.Organization> CreateAsync(Core.AdminConsole.Entities.Organization organization)
+    {
+        var createdOrganization = await base.CreateAsync(organization);
+
+        if (_playIdService.InPlay(out var playId))
+        {
+            _logger.LogInformation("Associating organization {OrganizationId} with Play ID {PlayId}",
+                organization.Id, playId);
+
+            await _playDataRepository.CreateAsync(Core.Entities.PlayData.Create(organization, playId));
+        }
+
+        return createdOrganization;
     }
 }

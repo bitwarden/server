@@ -18,35 +18,14 @@ namespace Bit.Infrastructure.Dapper.Repositories;
 
 public class OrganizationRepository : Repository<Organization, Guid>, IOrganizationRepository
 {
-    private readonly IPlayIdService _playIdService;
-    private readonly IPlayDataRepository _playDataRepository;
-    private readonly ILogger<OrganizationRepository> _logger;
+    protected readonly ILogger<OrganizationRepository> _logger;
 
     public OrganizationRepository(
-        IPlayIdService playIdService,
-        IPlayDataRepository playDataRepository,
         GlobalSettings globalSettings,
         ILogger<OrganizationRepository> logger)
         : base(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
     {
-        _playIdService = playIdService;
-        _playDataRepository = playDataRepository;
         _logger = logger;
-    }
-
-    public override async Task<Organization> CreateAsync(Organization obj)
-    {
-        await base.CreateAsync(obj);
-
-        if (_playIdService.InPlay(out var playId))
-        {
-            _logger.LogInformation("Associating organization {OrganizationId} with Play ID {PlayId}",
-                obj.Id, playId);
-
-            await _playDataRepository.CreateAsync(PlayData.Create(obj, playId));
-        }
-
-        return obj;
     }
 
     public async Task<Organization?> GetByIdentifierAsync(string identifier)
@@ -272,5 +251,37 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
         await connection.ExecuteAsync("[dbo].[Organization_IncrementSeatCount]",
             new { OrganizationId = organizationId, SeatsToAdd = increaseAmount, RequestDate = requestDate },
             commandType: CommandType.StoredProcedure);
+    }
+}
+
+public class TestOrganizationTrackingOrganizationRepository : OrganizationRepository
+{
+    private readonly IPlayIdService _playIdService;
+    private readonly IPlayDataRepository _playDataRepository;
+
+    public TestOrganizationTrackingOrganizationRepository(
+        IPlayIdService playIdService,
+        IPlayDataRepository playDataRepository,
+        GlobalSettings globalSettings,
+        ILogger<OrganizationRepository> logger)
+        : base(globalSettings, logger)
+    {
+        _playIdService = playIdService;
+        _playDataRepository = playDataRepository;
+    }
+
+    public override async Task<Organization> CreateAsync(Organization obj)
+    {
+        var createdOrganization = await base.CreateAsync(obj);
+
+        if (_playIdService.InPlay(out var playId))
+        {
+            _logger.LogInformation("Associating organization {OrganizationId} with Play ID {PlayId}",
+                createdOrganization.Id, playId);
+
+            await _playDataRepository.CreateAsync(PlayData.Create(createdOrganization, playId));
+        }
+
+        return createdOrganization;
     }
 }
