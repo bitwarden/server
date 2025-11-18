@@ -6,7 +6,7 @@ public interface IGlobalSettings
 {
     // This interface exists for testing. Add settings here as needed for testing
     bool SelfHosted { get; set; }
-    bool UnifiedDeployment { get; set; }
+    bool LiteDeployment { get; set; }
     string KnownProxies { get; set; }
     string ProjectName { get; set; }
     bool EnableCloudCommunication { get; set; }
