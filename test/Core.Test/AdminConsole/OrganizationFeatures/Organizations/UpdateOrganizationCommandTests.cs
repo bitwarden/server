@@ -65,82 +65,6 @@ public class UpdateOrganizationCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateAsync_WhenNameChanges_UpdatesBilling(
-        Guid organizationId,
-        string newName,
-        Organization organization,
-        SutProvider<UpdateOrganizationCommand> sutProvider)
-    {
-        // Arrange
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var organizationBillingService = sutProvider.GetDependency<IOrganizationBillingService>();
-
-        organization.Id = organizationId;
-        organization.Name = "Old Name";
-
-        organizationRepository
-            .GetByIdAsync(organizationId)
-            .Returns(organization);
-
-        var request = new UpdateOrganizationRequest
-        {
-            OrganizationId = organizationId,
-            Name = newName,
-            BillingEmail = organization.BillingEmail
-        };
-
-        // Act
-        var result = await sutProvider.Sut.UpdateAsync(request);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal(organizationId, result.Id);
-        Assert.Equal(newName, result.Name);
-
-        await organizationBillingService
-            .Received(1)
-            .UpdateOrganizationNameAndEmail(result);
-    }
-
-    [Theory, BitAutoData]
-    public async Task UpdateAsync_WhenBillingEmailChanges_UpdatesBilling(
-        Guid organizationId,
-        string newBillingEmail,
-        Organization organization,
-        SutProvider<UpdateOrganizationCommand> sutProvider)
-    {
-        // Arrange
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var organizationBillingService = sutProvider.GetDependency<IOrganizationBillingService>();
-
-        organization.Id = organizationId;
-        organization.BillingEmail = "old@example.com";
-
-        organizationRepository
-            .GetByIdAsync(organizationId)
-            .Returns(organization);
-
-        var request = new UpdateOrganizationRequest
-        {
-            OrganizationId = organizationId,
-            Name = organization.Name,
-            BillingEmail = newBillingEmail
-        };
-
-        // Act
-        var result = await sutProvider.Sut.UpdateAsync(request);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal(organizationId, result.Id);
-        Assert.Equal(newBillingEmail.ToLowerInvariant().Trim(), result.BillingEmail);
-
-        await organizationBillingService
-            .Received(1)
-            .UpdateOrganizationNameAndEmail(result);
-    }
-
-    [Theory, BitAutoData]
     public async Task UpdateAsync_WhenOrganizationNotFound_ThrowsNotFoundException(
         Guid organizationId,
         string name,
@@ -300,5 +224,142 @@ public class UpdateOrganizationCommandTests
             .ReplaceAndUpdateCacheAsync(
                 result,
                 EventType.Organization_Updated);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_UpdatingNameOnly_UpdatesNameAndNotBillingEmail(
+        Guid organizationId,
+        string newName,
+        Organization organization,
+        SutProvider<UpdateOrganizationCommand> sutProvider)
+    {
+        // Arrange
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var organizationService = sutProvider.GetDependency<IOrganizationService>();
+        var organizationBillingService = sutProvider.GetDependency<IOrganizationBillingService>();
+
+        organization.Id = organizationId;
+        organization.Name = "Old Name";
+        var originalBillingEmail = organization.BillingEmail;
+
+        organizationRepository
+            .GetByIdAsync(organizationId)
+            .Returns(organization);
+
+        var request = new UpdateOrganizationRequest
+        {
+            OrganizationId = organizationId,
+            Name = newName,
+            BillingEmail = null
+        };
+
+        // Act
+        var result = await sutProvider.Sut.UpdateAsync(request);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(organizationId, result.Id);
+        Assert.Equal(newName, result.Name);
+        Assert.Equal(originalBillingEmail, result.BillingEmail);
+
+        await organizationService
+            .Received(1)
+            .ReplaceAndUpdateCacheAsync(
+                result,
+                EventType.Organization_Updated);
+        await organizationBillingService
+            .Received(1)
+            .UpdateOrganizationNameAndEmail(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_UpdatingBillingEmailOnly_UpdatesBillingEmailAndNotName(
+        Guid organizationId,
+        string newBillingEmail,
+        Organization organization,
+        SutProvider<UpdateOrganizationCommand> sutProvider)
+    {
+        // Arrange
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var organizationService = sutProvider.GetDependency<IOrganizationService>();
+        var organizationBillingService = sutProvider.GetDependency<IOrganizationBillingService>();
+
+        organization.Id = organizationId;
+        organization.BillingEmail = "old@example.com";
+        var originalName = organization.Name;
+
+        organizationRepository
+            .GetByIdAsync(organizationId)
+            .Returns(organization);
+
+        var request = new UpdateOrganizationRequest
+        {
+            OrganizationId = organizationId,
+            Name = null,
+            BillingEmail = newBillingEmail
+        };
+
+        // Act
+        var result = await sutProvider.Sut.UpdateAsync(request);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(organizationId, result.Id);
+        Assert.Equal(originalName, result.Name);
+        Assert.Equal(newBillingEmail.ToLowerInvariant().Trim(), result.BillingEmail);
+
+        await organizationService
+            .Received(1)
+            .ReplaceAndUpdateCacheAsync(
+                result,
+                EventType.Organization_Updated);
+        await organizationBillingService
+            .Received(1)
+            .UpdateOrganizationNameAndEmail(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_WhenNoChanges_PreservesBothFields(
+        Guid organizationId,
+        Organization organization,
+        SutProvider<UpdateOrganizationCommand> sutProvider)
+    {
+        // Arrange
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var organizationService = sutProvider.GetDependency<IOrganizationService>();
+        var organizationBillingService = sutProvider.GetDependency<IOrganizationBillingService>();
+
+        organization.Id = organizationId;
+        var originalName = organization.Name;
+        var originalBillingEmail = organization.BillingEmail;
+
+        organizationRepository
+            .GetByIdAsync(organizationId)
+            .Returns(organization);
+
+        var request = new UpdateOrganizationRequest
+        {
+            OrganizationId = organizationId,
+            Name = null,
+            BillingEmail = null
+        };
+
+        // Act
+        var result = await sutProvider.Sut.UpdateAsync(request);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(organizationId, result.Id);
+        Assert.Equal(originalName, result.Name);
+        Assert.Equal(originalBillingEmail, result.BillingEmail);
+
+        await organizationService
+            .Received(1)
+            .ReplaceAndUpdateCacheAsync(
+                result,
+                EventType.Organization_Updated);
+        await organizationBillingService
+            .DidNotReceiveWithAnyArgs()
+            .UpdateOrganizationNameAndEmail(Arg.Any<Organization>());
     }
 }
