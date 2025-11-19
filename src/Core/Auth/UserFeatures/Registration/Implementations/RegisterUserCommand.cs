@@ -111,9 +111,12 @@ public class RegisterUserCommand : IRegisterUserCommand
         string orgInviteToken, Guid? orgUserId)
     {
         TryValidateOrgInviteToken(orgInviteToken, orgUserId, user);
-        var orgUser = await SetUserEmail2FaIfOrgPolicyEnabledAsync(orgUserId, user) ??
+        var orgUser = await SetUserEmail2FaIfOrgPolicyEnabledAsync(orgUserId, user);
+        if (orgUser == null && orgUserId.HasValue)
+        {
             throw new BadRequestException("Invalid organization user invitation.");
-        await ValidateEmailDomainNotBlockedAsync(user.Email, orgUser.OrganizationId);
+        }
+        await ValidateEmailDomainNotBlockedAsync(user.Email, orgUser?.OrganizationId);
 
         user.ApiKey = CoreHelpers.SecureRandomString(30);
 
