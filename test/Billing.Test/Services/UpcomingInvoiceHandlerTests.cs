@@ -5,7 +5,6 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Models.StaticStore.Plans;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
@@ -16,6 +15,7 @@ using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterpri
 using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Test.Billing.Mocks.Plans;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
@@ -1141,7 +1141,7 @@ public class UpcomingInvoiceHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_WhenMilestone3Disabled_DoesNotUpdateSubscription()
+    public async Task HandleAsync_WhenMilestone3Disabled_AndFamilies2019Plan_DoesNotUpdateSubscription()
     {
         // Arrange
         var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
@@ -1468,5 +1468,491 @@ public class UpcomingInvoiceHandlerTests
             Arg.Is<UpdatedInvoiceUpcomingMail>(email =>
                 email.ToEmails.Contains("org@example.com") &&
                 email.Subject == "Your Subscription Will Renew Soon"));
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenMilestone3Enabled_AndSeatAddOnExists_DeletesItem()
+    {
+        // Arrange
+        var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
+        var customerId = "cus_123";
+        var subscriptionId = "sub_123";
+        var passwordManagerItemId = "si_pm_123";
+        var seatAddOnItemId = "si_seat_123";
+
+        var invoice = new Invoice
+        {
+            CustomerId = customerId,
+            AmountDue = 40000,
+            NextPaymentAttempt = DateTime.UtcNow.AddDays(7),
+            Lines = new StripeList<InvoiceLineItem>
+            {
+                Data = new List<InvoiceLineItem> { new() { Description = "Test Item" } }
+            }
+        };
+
+        var families2019Plan = new Families2019Plan();
+        var familiesPlan = new FamiliesPlan();
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            CustomerId = customerId,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = new List<SubscriptionItem>
+                {
+                    new()
+                    {
+                        Id = passwordManagerItemId,
+                        Price = new Price { Id = families2019Plan.PasswordManager.StripePlanId }
+                    },
+                    new()
+                    {
+                        Id = seatAddOnItemId,
+                        Price = new Price { Id = "personal-org-seat-annually" },
+                        Quantity = 3
+                    }
+                }
+            },
+            AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
+            Metadata = new Dictionary<string, string>()
+        };
+
+        var customer = new Customer
+        {
+            Id = customerId,
+            Subscriptions = new StripeList<Subscription> { Data = new List<Subscription> { subscription } },
+            Address = new Address { Country = "US" }
+        };
+
+        var organization = new Organization
+        {
+            Id = _organizationId,
+            BillingEmail = "org@example.com",
+            PlanType = PlanType.FamiliesAnnually2019
+        };
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeFacade.GetCustomer(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService
+            .GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
+        _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019).Returns(families2019Plan);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesPlan);
+        _featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3).Returns(true);
+        _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _stripeFacade.Received(1).UpdateSubscription(
+            Arg.Is(subscriptionId),
+            Arg.Is<SubscriptionUpdateOptions>(o =>
+                o.Items.Count == 2 &&
+                o.Items[0].Id == passwordManagerItemId &&
+                o.Items[0].Price == familiesPlan.PasswordManager.StripePlanId &&
+                o.Items[1].Id == seatAddOnItemId &&
+                o.Items[1].Deleted == true &&
+                o.Discounts.Count == 1 &&
+                o.Discounts[0].Coupon == CouponIDs.Milestone3SubscriptionDiscount &&
+                o.ProrationBehavior == ProrationBehavior.None));
+
+        await _organizationRepository.Received(1).ReplaceAsync(
+            Arg.Is<Organization>(org =>
+                org.Id == _organizationId &&
+                org.PlanType == PlanType.FamiliesAnnually &&
+                org.Plan == familiesPlan.Name &&
+                org.UsersGetPremium == familiesPlan.UsersGetPremium &&
+                org.Seats == familiesPlan.PasswordManager.BaseSeats));
+
+        await _mailer.Received(1).SendEmail(
+            Arg.Is<UpdatedInvoiceUpcomingMail>(email =>
+                email.ToEmails.Contains("org@example.com") &&
+                email.Subject == "Your Subscription Will Renew Soon"));
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenMilestone3Enabled_AndSeatAddOnWithQuantityOne_DeletesItem()
+    {
+        // Arrange
+        var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
+        var customerId = "cus_123";
+        var subscriptionId = "sub_123";
+        var passwordManagerItemId = "si_pm_123";
+        var seatAddOnItemId = "si_seat_123";
+
+        var invoice = new Invoice
+        {
+            CustomerId = customerId,
+            AmountDue = 40000,
+            NextPaymentAttempt = DateTime.UtcNow.AddDays(7),
+            Lines = new StripeList<InvoiceLineItem>
+            {
+                Data = new List<InvoiceLineItem> { new() { Description = "Test Item" } }
+            }
+        };
+
+        var families2019Plan = new Families2019Plan();
+        var familiesPlan = new FamiliesPlan();
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            CustomerId = customerId,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = new List<SubscriptionItem>
+                {
+                    new()
+                    {
+                        Id = passwordManagerItemId,
+                        Price = new Price { Id = families2019Plan.PasswordManager.StripePlanId }
+                    },
+                    new()
+                    {
+                        Id = seatAddOnItemId,
+                        Price = new Price { Id = "personal-org-seat-annually" },
+                        Quantity = 1
+                    }
+                }
+            },
+            AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
+            Metadata = new Dictionary<string, string>()
+        };
+
+        var customer = new Customer
+        {
+            Id = customerId,
+            Subscriptions = new StripeList<Subscription> { Data = new List<Subscription> { subscription } },
+            Address = new Address { Country = "US" }
+        };
+
+        var organization = new Organization
+        {
+            Id = _organizationId,
+            BillingEmail = "org@example.com",
+            PlanType = PlanType.FamiliesAnnually2019
+        };
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeFacade.GetCustomer(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService
+            .GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
+        _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019).Returns(families2019Plan);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesPlan);
+        _featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3).Returns(true);
+        _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _stripeFacade.Received(1).UpdateSubscription(
+            Arg.Is(subscriptionId),
+            Arg.Is<SubscriptionUpdateOptions>(o =>
+                o.Items.Count == 2 &&
+                o.Items[0].Id == passwordManagerItemId &&
+                o.Items[0].Price == familiesPlan.PasswordManager.StripePlanId &&
+                o.Items[1].Id == seatAddOnItemId &&
+                o.Items[1].Deleted == true &&
+                o.Discounts.Count == 1 &&
+                o.Discounts[0].Coupon == CouponIDs.Milestone3SubscriptionDiscount &&
+                o.ProrationBehavior == ProrationBehavior.None));
+
+        await _organizationRepository.Received(1).ReplaceAsync(
+            Arg.Is<Organization>(org =>
+                org.Id == _organizationId &&
+                org.PlanType == PlanType.FamiliesAnnually &&
+                org.Plan == familiesPlan.Name &&
+                org.UsersGetPremium == familiesPlan.UsersGetPremium &&
+                org.Seats == familiesPlan.PasswordManager.BaseSeats));
+
+        await _mailer.Received(1).SendEmail(
+            Arg.Is<UpdatedInvoiceUpcomingMail>(email =>
+                email.ToEmails.Contains("org@example.com") &&
+                email.Subject == "Your Subscription Will Renew Soon"));
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenMilestone3Enabled_WithPremiumAccessAndSeatAddOn_UpdatesBothItems()
+    {
+        // Arrange
+        var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
+        var customerId = "cus_123";
+        var subscriptionId = "sub_123";
+        var passwordManagerItemId = "si_pm_123";
+        var premiumAccessItemId = "si_premium_123";
+        var seatAddOnItemId = "si_seat_123";
+
+        var invoice = new Invoice
+        {
+            CustomerId = customerId,
+            AmountDue = 40000,
+            NextPaymentAttempt = DateTime.UtcNow.AddDays(7),
+            Lines = new StripeList<InvoiceLineItem>
+            {
+                Data = new List<InvoiceLineItem> { new() { Description = "Test Item" } }
+            }
+        };
+
+        var families2019Plan = new Families2019Plan();
+        var familiesPlan = new FamiliesPlan();
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            CustomerId = customerId,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = new List<SubscriptionItem>
+                {
+                    new()
+                    {
+                        Id = passwordManagerItemId,
+                        Price = new Price { Id = families2019Plan.PasswordManager.StripePlanId }
+                    },
+                    new()
+                    {
+                        Id = premiumAccessItemId,
+                        Price = new Price { Id = families2019Plan.PasswordManager.StripePremiumAccessPlanId }
+                    },
+                    new()
+                    {
+                        Id = seatAddOnItemId,
+                        Price = new Price { Id = "personal-org-seat-annually" },
+                        Quantity = 2
+                    }
+                }
+            },
+            AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
+            Metadata = new Dictionary<string, string>()
+        };
+
+        var customer = new Customer
+        {
+            Id = customerId,
+            Subscriptions = new StripeList<Subscription> { Data = new List<Subscription> { subscription } },
+            Address = new Address { Country = "US" }
+        };
+
+        var organization = new Organization
+        {
+            Id = _organizationId,
+            BillingEmail = "org@example.com",
+            PlanType = PlanType.FamiliesAnnually2019
+        };
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeFacade.GetCustomer(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService
+            .GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
+        _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019).Returns(families2019Plan);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesPlan);
+        _featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3).Returns(true);
+        _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _stripeFacade.Received(1).UpdateSubscription(
+            Arg.Is(subscriptionId),
+            Arg.Is<SubscriptionUpdateOptions>(o =>
+                o.Items.Count == 3 &&
+                o.Items[0].Id == passwordManagerItemId &&
+                o.Items[0].Price == familiesPlan.PasswordManager.StripePlanId &&
+                o.Items[1].Id == premiumAccessItemId &&
+                o.Items[1].Deleted == true &&
+                o.Items[2].Id == seatAddOnItemId &&
+                o.Items[2].Deleted == true &&
+                o.Discounts.Count == 1 &&
+                o.Discounts[0].Coupon == CouponIDs.Milestone3SubscriptionDiscount &&
+                o.ProrationBehavior == ProrationBehavior.None));
+
+        await _organizationRepository.Received(1).ReplaceAsync(
+            Arg.Is<Organization>(org =>
+                org.Id == _organizationId &&
+                org.PlanType == PlanType.FamiliesAnnually &&
+                org.Plan == familiesPlan.Name &&
+                org.UsersGetPremium == familiesPlan.UsersGetPremium &&
+                org.Seats == familiesPlan.PasswordManager.BaseSeats));
+
+        await _mailer.Received(1).SendEmail(
+            Arg.Is<UpdatedInvoiceUpcomingMail>(email =>
+                email.ToEmails.Contains("org@example.com") &&
+                email.Subject == "Your Subscription Will Renew Soon"));
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenMilestone3Enabled_AndFamilies2025Plan_UpdatesSubscriptionOnlyNoAddons()
+    {
+        // Arrange
+        var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
+        var customerId = "cus_123";
+        var subscriptionId = "sub_123";
+        var passwordManagerItemId = "si_pm_123";
+
+        var invoice = new Invoice
+        {
+            CustomerId = customerId,
+            AmountDue = 40000,
+            NextPaymentAttempt = DateTime.UtcNow.AddDays(7),
+            Lines = new StripeList<InvoiceLineItem>
+            {
+                Data = new List<InvoiceLineItem> { new() { Description = "Test Item" } }
+            }
+        };
+
+        var families2025Plan = new Families2025Plan();
+        var familiesPlan = new FamiliesPlan();
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            CustomerId = customerId,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = new List<SubscriptionItem>
+                {
+                    new()
+                    {
+                        Id = passwordManagerItemId,
+                        Price = new Price { Id = families2025Plan.PasswordManager.StripePlanId }
+                    }
+                }
+            },
+            AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
+            Metadata = new Dictionary<string, string>()
+        };
+
+        var customer = new Customer
+        {
+            Id = customerId,
+            Subscriptions = new StripeList<Subscription> { Data = new List<Subscription> { subscription } },
+            Address = new Address { Country = "US" }
+        };
+
+        var organization = new Organization
+        {
+            Id = _organizationId,
+            BillingEmail = "org@example.com",
+            PlanType = PlanType.FamiliesAnnually2025
+        };
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeFacade.GetCustomer(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService
+            .GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
+        _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2025).Returns(families2025Plan);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesPlan);
+        _featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3).Returns(true);
+        _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _stripeFacade.Received(1).UpdateSubscription(
+            Arg.Is(subscriptionId),
+            Arg.Is<SubscriptionUpdateOptions>(o =>
+                o.Items.Count == 1 &&
+                o.Items[0].Id == passwordManagerItemId &&
+                o.Items[0].Price == familiesPlan.PasswordManager.StripePlanId &&
+                o.Discounts == null &&
+                o.ProrationBehavior == ProrationBehavior.None));
+
+        await _organizationRepository.Received(1).ReplaceAsync(
+            Arg.Is<Organization>(org =>
+                org.Id == _organizationId &&
+                org.PlanType == PlanType.FamiliesAnnually &&
+                org.Plan == familiesPlan.Name &&
+                org.UsersGetPremium == familiesPlan.UsersGetPremium &&
+                org.Seats == familiesPlan.PasswordManager.BaseSeats));
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenMilestone3Disabled_AndFamilies2025Plan_DoesNotUpdateSubscription()
+    {
+        // Arrange
+        var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
+        var customerId = "cus_123";
+        var subscriptionId = "sub_123";
+        var passwordManagerItemId = "si_pm_123";
+
+        var invoice = new Invoice
+        {
+            CustomerId = customerId,
+            AmountDue = 40000,
+            NextPaymentAttempt = DateTime.UtcNow.AddDays(7),
+            Lines = new StripeList<InvoiceLineItem>
+            {
+                Data = new List<InvoiceLineItem> { new() { Description = "Test Item" } }
+            }
+        };
+
+        var families2025Plan = new Families2025Plan();
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            CustomerId = customerId,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = new List<SubscriptionItem>
+                {
+                    new()
+                    {
+                        Id = passwordManagerItemId,
+                        Price = new Price { Id = families2025Plan.PasswordManager.StripePlanId }
+                    }
+                }
+            },
+            AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
+            Metadata = new Dictionary<string, string>()
+        };
+
+        var customer = new Customer
+        {
+            Id = customerId,
+            Subscriptions = new StripeList<Subscription> { Data = new List<Subscription> { subscription } },
+            Address = new Address { Country = "US" }
+        };
+
+        var organization = new Organization
+        {
+            Id = _organizationId,
+            BillingEmail = "org@example.com",
+            PlanType = PlanType.FamiliesAnnually2025
+        };
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeFacade.GetCustomer(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService
+            .GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
+        _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2025).Returns(families2025Plan);
+        _featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3).Returns(false);
+        _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert - should not update subscription or organization when feature flag is disabled
+        await _stripeFacade.DidNotReceive().UpdateSubscription(
+            Arg.Any<string>(),
+            Arg.Any<SubscriptionUpdateOptions>());
+
+        await _organizationRepository.DidNotReceive().ReplaceAsync(
+            Arg.Is<Organization>(org => org.PlanType == PlanType.FamiliesAnnually));
     }
 }
