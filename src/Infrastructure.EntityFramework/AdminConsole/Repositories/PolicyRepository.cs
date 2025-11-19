@@ -217,7 +217,7 @@ public class PolicyRepository : Repository<AdminConsoleEntities.Policy, Policy, 
                                       UserId = u.Id
                                   }).ToListAsync();
 
-        // Combine results with provder lookup
+        // Combine results with the provider lookup
         var allResults = acceptedUsers.Concat(invitedUsers)
             .Select(item => new OrganizationPolicyDetails
             {

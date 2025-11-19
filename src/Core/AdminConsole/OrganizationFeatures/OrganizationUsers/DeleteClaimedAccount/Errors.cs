@@ -1,15 +1,6 @@
-﻿namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
+﻿using Bit.Core.AdminConsole.Utilities.v2;
 
-/// <summary>
-/// A strongly typed error containing a reason that an action failed.
-/// This is used for business logic validation and other expected errors, not exceptions.
-/// </summary>
-public abstract record Error(string Message);
-/// <summary>
-/// An <see cref="Error"/> type that maps to a NotFoundResult at the api layer.
-/// </summary>
-/// <param name="Message"></param>
-public abstract record NotFoundError(string Message) : Error(Message);
+namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
 
 public record UserNotFoundError() : NotFoundError("Invalid user.");
 public record UserNotClaimedError() : Error("Member is not claimed by the organization.");
