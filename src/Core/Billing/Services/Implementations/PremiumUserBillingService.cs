@@ -101,7 +101,9 @@ public class PremiumUserBillingService(
          */
         customer = await ReconcileBillingLocationAsync(customer, customerSetup.TaxInformation);
 
-        var subscription = await CreateSubscriptionAsync(user.Id, customer, storage);
+        var premiumPlan = await pricingClient.GetAvailablePremiumPlan();
+
+        var subscription = await CreateSubscriptionAsync(user.Id, customer, premiumPlan, storage);
 
         switch (customerSetup.TokenizedPaymentSource)
         {
@@ -119,6 +121,7 @@ public class PremiumUserBillingService(
         user.Gateway = GatewayType.Stripe;
         user.GatewayCustomerId = customer.Id;
         user.GatewaySubscriptionId = subscription.Id;
+        user.MaxStorageGb = (short)(premiumPlan.Storage.Provided + (storage ?? 0));
 
         await userRepository.ReplaceAsync(user);
     }
@@ -301,9 +304,9 @@ public class PremiumUserBillingService(
     private async Task<Subscription> CreateSubscriptionAsync(
         Guid userId,
         Customer customer,
+        Pricing.Premium.Plan premiumPlan,
         int? storage)
     {
-        var premiumPlan = await pricingClient.GetAvailablePremiumPlan();
 
         var subscriptionItemOptionsList = new List<SubscriptionItemOptions>
         {

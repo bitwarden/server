@@ -52,6 +52,36 @@ public class OrganizationIntegrationsConfigurationControllerTests
     }
 
     [Theory, BitAutoData]
+    public async Task PostDeleteAsync_AllParamsProvided_Succeeds(
+        SutProvider<OrganizationIntegrationConfigurationController> sutProvider,
+        Guid organizationId,
+        OrganizationIntegration organizationIntegration,
+        OrganizationIntegrationConfiguration organizationIntegrationConfiguration)
+    {
+        organizationIntegration.OrganizationId = organizationId;
+        organizationIntegrationConfiguration.OrganizationIntegrationId = organizationIntegration.Id;
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(organizationIntegration);
+        sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(organizationIntegrationConfiguration);
+
+        await sutProvider.Sut.PostDeleteAsync(organizationId, organizationIntegration.Id, organizationIntegrationConfiguration.Id);
+
+        await sutProvider.GetDependency<IOrganizationIntegrationRepository>().Received(1)
+            .GetByIdAsync(organizationIntegration.Id);
+        await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().Received(1)
+            .GetByIdAsync(organizationIntegrationConfiguration.Id);
+        await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().Received(1)
+            .DeleteAsync(organizationIntegrationConfiguration);
+    }
+
+    [Theory, BitAutoData]
     public async Task DeleteAsync_IntegrationConfigurationDoesNotExist_ThrowsNotFound(
         SutProvider<OrganizationIntegrationConfigurationController> sutProvider,
         Guid organizationId,
@@ -199,27 +229,6 @@ public class OrganizationIntegrationsConfigurationControllerTests
             .GetManyByIntegrationAsync(organizationIntegration.Id);
     }
 
-    // [Theory, BitAutoData]
-    // public async Task GetAsync_IntegrationConfigurationDoesNotExist_ThrowsNotFound(
-    //     SutProvider<OrganizationIntegrationConfigurationController> sutProvider,
-    //     Guid organizationId,
-    //     OrganizationIntegration organizationIntegration)
-    // {
-    //     organizationIntegration.OrganizationId = organizationId;
-    //     sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
-    //     sutProvider.GetDependency<ICurrentContext>()
-    //         .OrganizationOwner(organizationId)
-    //         .Returns(true);
-    //     sutProvider.GetDependency<IOrganizationIntegrationRepository>()
-    //         .GetByIdAsync(Arg.Any<Guid>())
-    //         .Returns(organizationIntegration);
-    //     sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>()
-    //         .GetByIdAsync(Arg.Any<Guid>())
-    //         .ReturnsNull();
-    //
-    //     await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.GetAsync(organizationId, Guid.Empty, Guid.Empty));
-    // }
-    //
     [Theory, BitAutoData]
     public async Task GetAsync_IntegrationDoesNotExist_ThrowsNotFound(
         SutProvider<OrganizationIntegrationConfigurationController> sutProvider,
@@ -293,15 +302,16 @@ public class OrganizationIntegrationsConfigurationControllerTests
         sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>()
             .CreateAsync(Arg.Any<OrganizationIntegrationConfiguration>())
             .Returns(organizationIntegrationConfiguration);
-        var requestAction = await sutProvider.Sut.CreateAsync(organizationId, organizationIntegration.Id, model);
+        var createResponse = await sutProvider.Sut.CreateAsync(organizationId, organizationIntegration.Id, model);
 
         await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().Received(1)
             .CreateAsync(Arg.Any<OrganizationIntegrationConfiguration>());
-        Assert.IsType<OrganizationIntegrationConfigurationResponseModel>(requestAction);
-        Assert.Equal(expected.Id, requestAction.Id);
-        Assert.Equal(expected.Configuration, requestAction.Configuration);
-        Assert.Equal(expected.EventType, requestAction.EventType);
-        Assert.Equal(expected.Template, requestAction.Template);
+        Assert.IsType<OrganizationIntegrationConfigurationResponseModel>(createResponse);
+        Assert.Equal(expected.Id, createResponse.Id);
+        Assert.Equal(expected.Configuration, createResponse.Configuration);
+        Assert.Equal(expected.EventType, createResponse.EventType);
+        Assert.Equal(expected.Filters, createResponse.Filters);
+        Assert.Equal(expected.Template, createResponse.Template);
     }
 
     [Theory, BitAutoData]
@@ -331,15 +341,16 @@ public class OrganizationIntegrationsConfigurationControllerTests
         sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>()
             .CreateAsync(Arg.Any<OrganizationIntegrationConfiguration>())
             .Returns(organizationIntegrationConfiguration);
-        var requestAction = await sutProvider.Sut.CreateAsync(organizationId, organizationIntegration.Id, model);
+        var createResponse = await sutProvider.Sut.CreateAsync(organizationId, organizationIntegration.Id, model);
 
         await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().Received(1)
             .CreateAsync(Arg.Any<OrganizationIntegrationConfiguration>());
-        Assert.IsType<OrganizationIntegrationConfigurationResponseModel>(requestAction);
-        Assert.Equal(expected.Id, requestAction.Id);
-        Assert.Equal(expected.Configuration, requestAction.Configuration);
-        Assert.Equal(expected.EventType, requestAction.EventType);
-        Assert.Equal(expected.Template, requestAction.Template);
+        Assert.IsType<OrganizationIntegrationConfigurationResponseModel>(createResponse);
+        Assert.Equal(expected.Id, createResponse.Id);
+        Assert.Equal(expected.Configuration, createResponse.Configuration);
+        Assert.Equal(expected.EventType, createResponse.EventType);
+        Assert.Equal(expected.Filters, createResponse.Filters);
+        Assert.Equal(expected.Template, createResponse.Template);
     }
 
     [Theory, BitAutoData]
@@ -369,15 +380,16 @@ public class OrganizationIntegrationsConfigurationControllerTests
         sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>()
             .CreateAsync(Arg.Any<OrganizationIntegrationConfiguration>())
             .Returns(organizationIntegrationConfiguration);
-        var requestAction = await sutProvider.Sut.CreateAsync(organizationId, organizationIntegration.Id, model);
+        var createResponse = await sutProvider.Sut.CreateAsync(organizationId, organizationIntegration.Id, model);
 
         await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().Received(1)
             .CreateAsync(Arg.Any<OrganizationIntegrationConfiguration>());
-        Assert.IsType<OrganizationIntegrationConfigurationResponseModel>(requestAction);
-        Assert.Equal(expected.Id, requestAction.Id);
-        Assert.Equal(expected.Configuration, requestAction.Configuration);
-        Assert.Equal(expected.EventType, requestAction.EventType);
-        Assert.Equal(expected.Template, requestAction.Template);
+        Assert.IsType<OrganizationIntegrationConfigurationResponseModel>(createResponse);
+        Assert.Equal(expected.Id, createResponse.Id);
+        Assert.Equal(expected.Configuration, createResponse.Configuration);
+        Assert.Equal(expected.EventType, createResponse.EventType);
+        Assert.Equal(expected.Filters, createResponse.Filters);
+        Assert.Equal(expected.Template, createResponse.Template);
     }
 
     [Theory, BitAutoData]
@@ -575,7 +587,7 @@ public class OrganizationIntegrationsConfigurationControllerTests
         sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>()
             .GetByIdAsync(Arg.Any<Guid>())
             .Returns(organizationIntegrationConfiguration);
-        var requestAction = await sutProvider.Sut.UpdateAsync(
+        var updateResponse = await sutProvider.Sut.UpdateAsync(
             organizationId,
             organizationIntegration.Id,
             organizationIntegrationConfiguration.Id,
@@ -583,11 +595,12 @@ public class OrganizationIntegrationsConfigurationControllerTests
 
         await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().Received(1)
             .ReplaceAsync(Arg.Any<OrganizationIntegrationConfiguration>());
-        Assert.IsType<OrganizationIntegrationConfigurationResponseModel>(requestAction);
-        Assert.Equal(expected.Id, requestAction.Id);
-        Assert.Equal(expected.Configuration, requestAction.Configuration);
-        Assert.Equal(expected.EventType, requestAction.EventType);
-        Assert.Equal(expected.Template, requestAction.Template);
+        Assert.IsType<OrganizationIntegrationConfigurationResponseModel>(updateResponse);
+        Assert.Equal(expected.Id, updateResponse.Id);
+        Assert.Equal(expected.Configuration, updateResponse.Configuration);
+        Assert.Equal(expected.EventType, updateResponse.EventType);
+        Assert.Equal(expected.Filters, updateResponse.Filters);
+        Assert.Equal(expected.Template, updateResponse.Template);
     }
 
 
@@ -619,7 +632,7 @@ public class OrganizationIntegrationsConfigurationControllerTests
         sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>()
             .GetByIdAsync(Arg.Any<Guid>())
             .Returns(organizationIntegrationConfiguration);
-        var requestAction = await sutProvider.Sut.UpdateAsync(
+        var updateResponse = await sutProvider.Sut.UpdateAsync(
             organizationId,
             organizationIntegration.Id,
             organizationIntegrationConfiguration.Id,
@@ -627,11 +640,12 @@ public class OrganizationIntegrationsConfigurationControllerTests
 
         await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().Received(1)
             .ReplaceAsync(Arg.Any<OrganizationIntegrationConfiguration>());
-        Assert.IsType<OrganizationIntegrationConfigurationResponseModel>(requestAction);
-        Assert.Equal(expected.Id, requestAction.Id);
-        Assert.Equal(expected.Configuration, requestAction.Configuration);
-        Assert.Equal(expected.EventType, requestAction.EventType);
-        Assert.Equal(expected.Template, requestAction.Template);
+        Assert.IsType<OrganizationIntegrationConfigurationResponseModel>(updateResponse);
+        Assert.Equal(expected.Id, updateResponse.Id);
+        Assert.Equal(expected.Configuration, updateResponse.Configuration);
+        Assert.Equal(expected.EventType, updateResponse.EventType);
+        Assert.Equal(expected.Filters, updateResponse.Filters);
+        Assert.Equal(expected.Template, updateResponse.Template);
     }
 
     [Theory, BitAutoData]
@@ -662,7 +676,7 @@ public class OrganizationIntegrationsConfigurationControllerTests
         sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>()
             .GetByIdAsync(Arg.Any<Guid>())
             .Returns(organizationIntegrationConfiguration);
-        var requestAction = await sutProvider.Sut.UpdateAsync(
+        var updateResponse = await sutProvider.Sut.UpdateAsync(
             organizationId,
             organizationIntegration.Id,
             organizationIntegrationConfiguration.Id,
@@ -670,11 +684,12 @@ public class OrganizationIntegrationsConfigurationControllerTests
 
         await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().Received(1)
             .ReplaceAsync(Arg.Any<OrganizationIntegrationConfiguration>());
-        Assert.IsType<OrganizationIntegrationConfigurationResponseModel>(requestAction);
-        Assert.Equal(expected.Id, requestAction.Id);
-        Assert.Equal(expected.Configuration, requestAction.Configuration);
-        Assert.Equal(expected.EventType, requestAction.EventType);
-        Assert.Equal(expected.Template, requestAction.Template);
+        Assert.IsType<OrganizationIntegrationConfigurationResponseModel>(updateResponse);
+        Assert.Equal(expected.Id, updateResponse.Id);
+        Assert.Equal(expected.Configuration, updateResponse.Configuration);
+        Assert.Equal(expected.EventType, updateResponse.EventType);
+        Assert.Equal(expected.Filters, updateResponse.Filters);
+        Assert.Equal(expected.Template, updateResponse.Template);
     }
 
     [Theory, BitAutoData]

@@ -53,6 +53,7 @@ public static class PolicyServiceCollectionExtensions
         services.AddScoped<IPolicyUpdateEvent, FreeFamiliesForEnterprisePolicyValidator>();
         services.AddScoped<IPolicyUpdateEvent, OrganizationDataOwnershipPolicyValidator>();
         services.AddScoped<IPolicyUpdateEvent, UriMatchDefaultPolicyValidator>();
+        services.AddScoped<IPolicyUpdateEvent, AutomaticUserConfirmationPolicyEventHandler>();
     }
 
     private static void AddPolicyRequirements(this IServiceCollection services)
@@ -64,5 +65,6 @@ public static class PolicyServiceCollectionExtensions
         services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, RequireSsoPolicyRequirementFactory>();
         services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, RequireTwoFactorPolicyRequirementFactory>();
         services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, MasterPasswordPolicyRequirementFactory>();
+        services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, SingleOrganizationPolicyRequirementFactory>();
     }
 }
