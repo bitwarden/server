@@ -5,6 +5,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -358,6 +359,54 @@ public class UpdateOrganizationCommandTests
             .ReplaceAndUpdateCacheAsync(
                 result,
                 EventType.Organization_Updated);
+        await organizationBillingService
+            .DidNotReceiveWithAnyArgs()
+            .UpdateOrganizationNameAndEmail(Arg.Any<Organization>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_SelfHosted_OnlyUpdatesKeysNotOrganizationDetails(
+        Guid organizationId,
+        string newName,
+        string newBillingEmail,
+        string publicKey,
+        string encryptedPrivateKey,
+        Organization organization,
+        SutProvider<UpdateOrganizationCommand> sutProvider)
+    {
+        // Arrange
+        var organizationBillingService = sutProvider.GetDependency<IOrganizationBillingService>();
+        var globalSettings = sutProvider.GetDependency<IGlobalSettings>();
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+
+        globalSettings.SelfHosted.Returns(true);
+
+        organization.Id = organizationId;
+        organization.Name = "Original Name";
+        organization.BillingEmail = "original@example.com";
+        organization.PublicKey = null;
+        organization.PrivateKey = null;
+
+        organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+
+        var request = new UpdateOrganizationRequest
+        {
+            OrganizationId = organizationId,
+            Name = newName, // Should be ignored
+            BillingEmail = newBillingEmail, // Should be ignored
+            PublicKey = publicKey,
+            EncryptedPrivateKey = encryptedPrivateKey
+        };
+
+        // Act
+        var result = await sutProvider.Sut.UpdateAsync(request);
+
+        // Assert
+        Assert.Equal("Original Name", result.Name); // Not changed
+        Assert.Equal("original@example.com", result.BillingEmail); // Not changed
+        Assert.Equal(publicKey, result.PublicKey); // Changed
+        Assert.Equal(encryptedPrivateKey, result.PrivateKey); // Changed
+
         await organizationBillingService
             .DidNotReceiveWithAnyArgs()
             .UpdateOrganizationNameAndEmail(Arg.Any<Organization>());

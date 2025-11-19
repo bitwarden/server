@@ -10,7 +10,7 @@ using Bit.Core.Settings;
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 
 /// <summary>
-/// Request model for updating the name, billing email, and/or private keys for an organization (legacy migration code).
+/// Request model for updating the name, billing email, and/or public-private keys for an organization (legacy migration code).
 /// Any combination of these properties can be updated, so they are optional. If none are specified it will not update anything.
 /// </summary>
 public record UpdateOrganizationRequest
