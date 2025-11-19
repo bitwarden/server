@@ -7,6 +7,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Services;
+using Bit.Identity.IdentityServer.RequestValidationConstants;
 using Duende.IdentityModel;
 using Duende.IdentityServer.Validation;
 
@@ -51,11 +52,11 @@ public class SsoRequestValidator(
         // Two Factor validation occurs after SSO validation in that scenario.
         if (context.TwoFactorRequired && context.TwoFactorRecoveryRequested)
         {
-            await SetContextCustomResponseSsoErrorAsync(context, "Two-factor recovery has been performed. SSO authentication is required.");
+            await SetContextCustomResponseSsoErrorAsync(context, SsoConstants.RequestErrors.SsoTwoFactorRecoveryDescription);
             return false;
         }
 
-        await SetContextCustomResponseSsoErrorAsync(context, "SSO authentication is required.");
+        await SetContextCustomResponseSsoErrorAsync(context, SsoConstants.RequestErrors.SsoRequiredDescription);
         return false;
     }
 
@@ -107,19 +108,19 @@ public class SsoRequestValidator(
         context.ValidationErrorResult = new ValidationResult
         {
             IsError = true,
-            Error = "sso_required",
+            Error = OidcConstants.TokenErrors.InvalidGrant,
             ErrorDescription = errorMessage
         };
 
         context.CustomResponse = new Dictionary<string, object>
         {
-            { "ErrorModel", new ErrorResponseModel(errorMessage) }
+            { CustomResponseConstants.ResponseKeys.ErrorModel, new ErrorResponseModel(errorMessage) }
         };
 
         // Include organization identifier in the response if available
-        if (ssoOrganizationIdentifier != null)
+        if (!string.IsNullOrEmpty(ssoOrganizationIdentifier))
         {
-            context.CustomResponse["SsoOrganizationIdentifier"] = ssoOrganizationIdentifier;
+            context.CustomResponse[CustomResponseConstants.ResponseKeys.SsoOrganizationIdentifier] = ssoOrganizationIdentifier;
         }
     }
 }

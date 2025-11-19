@@ -8,6 +8,7 @@ using Bit.Core.Enums;
 using Bit.Core.Services;
 using Bit.Identity.IdentityServer;
 using Bit.Identity.IdentityServer.Enums;
+using Bit.Identity.IdentityServer.RequestValidationConstants;
 using Bit.Identity.IdentityServer.RequestValidators;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -146,12 +147,12 @@ public class SsoRequestValidatorTests
         Assert.True(context.SsoRequired);
         Assert.NotNull(context.ValidationErrorResult);
         Assert.True(context.ValidationErrorResult.IsError);
-        Assert.Equal("sso_required", context.ValidationErrorResult.Error);
-        Assert.Equal("SSO authentication is required.", context.ValidationErrorResult.ErrorDescription);
+        Assert.Equal(OidcConstants.TokenErrors.InvalidGrant, context.ValidationErrorResult.Error);
+        Assert.Equal(SsoConstants.RequestErrors.SsoRequiredDescription, context.ValidationErrorResult.ErrorDescription);
 
         Assert.NotNull(context.CustomResponse);
-        Assert.True(context.CustomResponse.ContainsKey("ErrorModel"));
-        Assert.False(context.CustomResponse.ContainsKey("SsoOrganizationIdentifier"));
+        Assert.True(context.CustomResponse.ContainsKey(CustomResponseConstants.ResponseKeys.ErrorModel));
+        Assert.False(context.CustomResponse.ContainsKey(CustomResponseConstants.ResponseKeys.SsoOrganizationIdentifier));
     }
 
     [Theory, BitAutoData]
@@ -184,8 +185,8 @@ public class SsoRequestValidatorTests
         Assert.True(context.SsoRequired);
         Assert.NotNull(context.ValidationErrorResult);
         Assert.True(context.ValidationErrorResult.IsError);
-        Assert.Equal("sso_required", context.ValidationErrorResult.Error);
-        Assert.Equal("SSO authentication is required.", context.ValidationErrorResult.ErrorDescription);
+        Assert.Equal(OidcConstants.TokenErrors.InvalidGrant, context.ValidationErrorResult.Error);
+        Assert.Equal(SsoConstants.RequestErrors.SsoRequiredDescription, context.ValidationErrorResult.ErrorDescription);
 
         Assert.NotNull(context.CustomResponse);
         Assert.True(context.CustomResponse.ContainsKey("ErrorModel"));
@@ -222,7 +223,7 @@ public class SsoRequestValidatorTests
         Assert.True(context.SsoRequired);
         Assert.NotNull(context.ValidationErrorResult);
         Assert.True(context.ValidationErrorResult.IsError);
-        Assert.Equal("sso_required", context.ValidationErrorResult.Error);
+        Assert.Equal(OidcConstants.TokenErrors.InvalidGrant, context.ValidationErrorResult.Error);
         Assert.Equal("Two-factor recovery has been performed. SSO authentication is required.",
             context.ValidationErrorResult.ErrorDescription);
 
@@ -259,8 +260,8 @@ public class SsoRequestValidatorTests
         Assert.True(context.SsoRequired);
         Assert.NotNull(context.ValidationErrorResult);
         Assert.True(context.ValidationErrorResult.IsError);
-        Assert.Equal("sso_required", context.ValidationErrorResult.Error);
-        Assert.Equal("SSO authentication is required.", context.ValidationErrorResult.ErrorDescription);
+        Assert.Equal(OidcConstants.TokenErrors.InvalidGrant, context.ValidationErrorResult.Error);
+        Assert.Equal(SsoConstants.RequestErrors.SsoRequiredDescription, context.ValidationErrorResult.ErrorDescription);
 
         Assert.NotNull(context.CustomResponse);
         Assert.True(context.CustomResponse.ContainsKey("ErrorModel"));
@@ -299,8 +300,8 @@ public class SsoRequestValidatorTests
         Assert.True(context.SsoRequired);
         Assert.NotNull(context.ValidationErrorResult);
         Assert.True(context.ValidationErrorResult.IsError);
-        Assert.Equal("sso_required", context.ValidationErrorResult.Error);
-        Assert.Equal("SSO authentication is required.", context.ValidationErrorResult.ErrorDescription);
+        Assert.Equal(OidcConstants.TokenErrors.InvalidGrant, context.ValidationErrorResult.Error);
+        Assert.Equal(SsoConstants.RequestErrors.SsoRequiredDescription, context.ValidationErrorResult.ErrorDescription);
         Assert.NotNull(context.CustomResponse);
     }
 
@@ -341,6 +342,7 @@ public class SsoRequestValidatorTests
         // Arrange
         const string orgIdentifier = "test-organization";
         request.GrantType = OidcConstants.GrantTypes.Password;
+        context.User = user;
 
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
 
@@ -359,8 +361,8 @@ public class SsoRequestValidatorTests
         Assert.False(result);
         Assert.True(context.SsoRequired);
         Assert.NotNull(context.CustomResponse);
-        Assert.True(context.CustomResponse.ContainsKey("SsoOrganizationIdentifier"));
-        Assert.Equal(orgIdentifier, context.CustomResponse["SsoOrganizationIdentifier"]);
+        Assert.True(context.CustomResponse.ContainsKey(CustomResponseConstants.ResponseKeys.SsoOrganizationIdentifier));
+        Assert.Equal(orgIdentifier, context.CustomResponse[CustomResponseConstants.ResponseKeys.SsoOrganizationIdentifier]);
 
         await sutProvider.GetDependency<IUserSsoOrganizationIdentifierQuery>()
             .Received(1)
@@ -376,6 +378,7 @@ public class SsoRequestValidatorTests
     {
         // Arrange
         request.GrantType = OidcConstants.GrantTypes.Password;
+        context.User = user;
 
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
 
@@ -394,7 +397,7 @@ public class SsoRequestValidatorTests
         Assert.False(result);
         Assert.True(context.SsoRequired);
         Assert.NotNull(context.CustomResponse);
-        Assert.False(context.CustomResponse.ContainsKey("SsoOrganizationIdentifier"));
+        Assert.False(context.CustomResponse.ContainsKey(CustomResponseConstants.ResponseKeys.SsoOrganizationIdentifier));
 
         await sutProvider.GetDependency<IUserSsoOrganizationIdentifierQuery>()
             .Received(1)
@@ -410,6 +413,7 @@ public class SsoRequestValidatorTests
     {
         // Arrange
         request.GrantType = OidcConstants.GrantTypes.Password;
+        context.User = user;
 
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
 
@@ -428,7 +432,7 @@ public class SsoRequestValidatorTests
         Assert.False(result);
         Assert.True(context.SsoRequired);
         Assert.NotNull(context.CustomResponse);
-        Assert.False(context.CustomResponse.ContainsKey("SsoOrganizationIdentifier"));
+        Assert.False(context.CustomResponse.ContainsKey(CustomResponseConstants.ResponseKeys.SsoOrganizationIdentifier));
 
         await sutProvider.GetDependency<IUserSsoOrganizationIdentifierQuery>()
             .Received(1)
