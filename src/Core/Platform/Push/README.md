@@ -79,7 +79,7 @@ to a value.
 ### Relay
 
 Used when the application is being self-hosted. This relays a notification from the self-hosted
-instance to a cloud instance. The notification is recieved by our cloud and then relayed to
+instance to a cloud instance. The notification is received by our cloud and then relayed to
 Azure Notification Hub. This is necessary because self-hosted instance aren't able to directly send
 notifications to mobile devices.
 
