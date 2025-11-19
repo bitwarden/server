@@ -70,7 +70,6 @@ public class OrganizationsController : Controller
     private readonly IPricingClient _pricingClient;
     private readonly IOrganizationUpdateKeysCommand _organizationUpdateKeysCommand;
     private readonly IUpdateOrganizationCommand _updateOrganizationCommand;
-    private readonly IAuthorizationService _authorizationService;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -96,8 +95,7 @@ public class OrganizationsController : Controller
         IPolicyRequirementQuery policyRequirementQuery,
         IPricingClient pricingClient,
         IOrganizationUpdateKeysCommand organizationUpdateKeysCommand,
-        IUpdateOrganizationCommand updateOrganizationCommand,
-        IAuthorizationService authorizationService)
+        IUpdateOrganizationCommand updateOrganizationCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -123,7 +121,6 @@ public class OrganizationsController : Controller
         _pricingClient = pricingClient;
         _organizationUpdateKeysCommand = organizationUpdateKeysCommand;
         _updateOrganizationCommand = updateOrganizationCommand;
-        _authorizationService = authorizationService;
     }
 
     [HttpGet("{id}")]
@@ -232,9 +229,10 @@ public class OrganizationsController : Controller
     [HttpPut("{organizationId:guid}")]
     public async Task<IResult> Put(Guid organizationId, [FromBody] OrganizationUpdateRequestModel model)
     {
-        // Authorization logic depends on what's being edited. Additional checks apply if the Billing Email
-        // is being changed, because this implicates billing details.
-        var authorized = model.BillingEmail is not null
+        // If billing email is being changed, require subscription editing permissions.
+        // Otherwise, organization owner permissions are sufficient.
+        var requiresBillingPermission = model.BillingEmail is not null;
+        var authorized = requiresBillingPermission
             ? await _currentContext.EditSubscription(organizationId)
             : await _currentContext.OrganizationOwner(organizationId);
 

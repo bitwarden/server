@@ -23,7 +23,7 @@ public record UpdateOrganizationRequest
     /// <summary>
     /// The new organization name to apply (optional, this is skipped if not provided).
     /// </summary>
-    public required string? Name { get; init; }
+    public string? Name { get; init; }
 
     /// <summary>
     /// The new billing email address to apply (optional, this is skipped if not provided).
