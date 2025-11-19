@@ -24,7 +24,7 @@ SELECT
     O.[UseSecretsManager],
     O.[Seats],
     O.[MaxCollections],
-    O.[MaxStorageGb],
+    COALESCE(O.[MaxStorageGbIncreased], O.[MaxStorageGb]) AS [MaxStorageGb],
     O.[Identifier],
     OU.[Key],
     OU.[ResetPasswordKey],
