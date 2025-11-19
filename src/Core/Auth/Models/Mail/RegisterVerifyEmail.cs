@@ -20,7 +20,7 @@ public class RegisterVerifyEmail : BaseMailModel
         WebVaultUrl,
         Token,
         Email,
-        FromMarketing == MarketingInitiativeConstants.Premium ? $"&fromMarketing={MarketingInitiativeConstants.Premium}" : string.Empty);
+        !string.IsNullOrEmpty(FromMarketing) && FromMarketing == MarketingInitiativeConstants.Premium ? $"&fromMarketing={MarketingInitiativeConstants.Premium}" : string.Empty);
 
     public string Token { get; set; }
     public string Email { get; set; }
