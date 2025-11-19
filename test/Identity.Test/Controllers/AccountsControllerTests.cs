@@ -241,7 +241,7 @@ public class AccountsControllerTests : IDisposable
 
         var token = "fakeToken";
 
-        _sendVerificationEmailForRegistrationCommand.Run(email, name, receiveMarketingEmails).Returns(token);
+        _sendVerificationEmailForRegistrationCommand.Run(email, name, receiveMarketingEmails, null).Returns(token);
 
         // Act
         var result = await _sut.PostRegisterSendVerificationEmail(model);
@@ -264,7 +264,7 @@ public class AccountsControllerTests : IDisposable
             ReceiveMarketingEmails = receiveMarketingEmails
         };
 
-        _sendVerificationEmailForRegistrationCommand.Run(email, name, receiveMarketingEmails).ReturnsNull();
+        _sendVerificationEmailForRegistrationCommand.Run(email, name, receiveMarketingEmails, null).ReturnsNull();
 
         // Act
         var result = await _sut.PostRegisterSendVerificationEmail(model);
@@ -272,6 +272,54 @@ public class AccountsControllerTests : IDisposable
         // Assert
         var noContentResult = Assert.IsType<NoContentResult>(result);
         Assert.Equal(204, noContentResult.StatusCode);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostRegisterSendEmailVerification_WhenFeatureFlagEnabled_PassesFromMarketingToCommandAsync(
+        string email, string name, bool receiveMarketingEmails, string fromMarketing)
+    {
+        // Arrange
+        var model = new RegisterSendVerificationEmailRequestModel
+        {
+            Email = email,
+            Name = name,
+            ReceiveMarketingEmails = receiveMarketingEmails,
+            FromMarketing = fromMarketing
+        };
+
+        _featureService.IsEnabled(FeatureFlagKeys.MarketingInitiatedPremiumFlow).Returns(true);
+
+        // Act
+        await _sut.PostRegisterSendVerificationEmail(model);
+
+        // Assert
+        await _sendVerificationEmailForRegistrationCommand.Received(1)
+            .Run(email, name, receiveMarketingEmails, fromMarketing);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostRegisterSendEmailVerification_WhenFeatureFlagDisabled_PassesNullFromMarketingToCommandAsync(
+        string email, string name, bool receiveMarketingEmails, string fromMarketing)
+    {
+        // Arrange
+        var model = new RegisterSendVerificationEmailRequestModel
+        {
+            Email = email,
+            Name = name,
+            ReceiveMarketingEmails = receiveMarketingEmails,
+            FromMarketing = fromMarketing
+        };
+
+        _featureService.IsEnabled(FeatureFlagKeys.MarketingInitiatedPremiumFlow).Returns(false);
+
+        // Act
+        await _sut.PostRegisterSendVerificationEmail(model);
+
+        // Assert
+        await _sendVerificationEmailForRegistrationCommand.Received(1)
+            .Run(email, name, receiveMarketingEmails, null);
     }
 
     [Theory, BitAutoData]
