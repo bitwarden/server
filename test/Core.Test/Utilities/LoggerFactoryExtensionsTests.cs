@@ -88,12 +88,14 @@ public class LoggerFactoryExtensionsTests
 
         logger.LogWarning("This is a test");
 
+        await provider.DisposeAsync();
+
         // Writing to the file is buffered, give it a little time to flush
         await Task.Delay(50, TestContext.Current.CancellationToken);
 
         var logFile = Assert.Single(tempDir.EnumerateFiles("Logs/*.log"));
 
-        var logFileContents = await File.ReadAllTextAsync(logFile.FullName);
+        var logFileContents = await File.ReadAllTextAsync(logFile.FullName, TestContext.Current.CancellationToken);
 
         Assert.DoesNotContain(
             "This configuration location for file logging has been deprecated.",
@@ -166,7 +168,7 @@ public class LoggerFactoryExtensionsTests
         return provider.GetServices<ILoggerProvider>();
     }
 
-    private static IServiceProvider GetServiceProvider(Dictionary<string, string?> initialData, string environment)
+    private static ServiceProvider GetServiceProvider(Dictionary<string, string?> initialData, string environment)
     {
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(initialData)
