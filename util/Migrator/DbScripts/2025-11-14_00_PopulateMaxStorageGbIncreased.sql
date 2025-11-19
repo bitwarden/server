@@ -1,3 +1,27 @@
+  -- Dependency validation: Ensure PM-27603 has been deployed
+  -- This prevents cryptic "Invalid column name" errors
+
+  IF NOT EXISTS (
+      SELECT 1 FROM sys.columns
+      WHERE object_id = OBJECT_ID('[dbo].[User]')
+      AND name = 'MaxStorageGbIncreased'
+  )
+  BEGIN
+      RAISERROR('MaxStorageGbIncreased column does not exist in User table. PM-27603 must be deployed first.', 16, 1);
+      RETURN;
+  END;
+
+  IF NOT EXISTS (
+      SELECT 1 FROM sys.columns
+      WHERE object_id = OBJECT_ID('[dbo].[Organization]')
+      AND name = 'MaxStorageGbIncreased'
+  )
+  BEGIN
+      RAISERROR('MaxStorageGbIncreased column does not exist in Organization table. PM-27603 must be deployed first.', 16, 1);
+      RETURN;
+  END;
+  GO
+  
 -- Populate MaxStorageGbIncreased for Users in batches
 -- Set MaxStorageGbIncreased = MaxStorageGb + 4 for all users with storage quota
 -- Using batched updates to reduce lock contention and transaction log impact
