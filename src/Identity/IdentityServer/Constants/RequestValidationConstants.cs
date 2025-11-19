@@ -1,4 +1,4 @@
-namespace Bit.Identity.IdentityServer.RequestValidationConstants;
+﻿namespace Bit.Identity.IdentityServer.RequestValidationConstants;
 
 public static class CustomResponseConstants
 {
