@@ -1,6 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Models.Mail;
 
 namespace Bit.Core.Auth.Models.Mail;
@@ -15,11 +16,13 @@ public class RegisterVerifyEmail : BaseMailModel
     // so we must land on a redirect connector which will redirect to the finish signup page.
     // Note 3: The use of a fragment to indicate the redirect url is to prevent the query string from being logged by
     // proxies and servers. It also helps reduce open redirect vulnerabilities.
-    public string Url => string.Format("{0}/redirect-connector.html#finish-signup?token={1}&email={2}&fromEmail=true",
+    public string Url => string.Format("{0}/redirect-connector.html#finish-signup?token={1}&email={2}&fromEmail=true{3}",
         WebVaultUrl,
         Token,
-        Email);
+        Email,
+        FromMarketing == MarketingInitiativeConstants.Premium ? $"&fromMarketing={MarketingInitiativeConstants.Premium}" : string.Empty);
 
     public string Token { get; set; }
     public string Email { get; set; }
+    public string FromMarketing { get; set; }
 }
