@@ -39,7 +39,7 @@ public class OrganizationUserControllerAutoConfirmTests : IClassFixture<ApiAppli
         _loginHelper = new LoginHelper(_factory, _client);
     }
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         _ownerEmail = $"org-owner-{Guid.NewGuid()}@example.com";
         await _factory.LoginWithNewAccount(_ownerEmail);
@@ -144,7 +144,7 @@ public class OrganizationUserControllerAutoConfirmTests : IClassFixture<ApiAppli
         var collections = await collectionRepository.GetManyByUserIdAsync(organizationUser.UserId!.Value);
 
         Assert.NotEmpty(collections);
-        Assert.Single(collections.Where(c => c.Type == CollectionType.DefaultUserCollection));
+        Assert.Single(collections, c => c.Type == CollectionType.DefaultUserCollection);
 
         await _factory.GetService<IOrganizationRepository>().DeleteAsync(organization);
     }
@@ -212,14 +212,14 @@ public class OrganizationUserControllerAutoConfirmTests : IClassFixture<ApiAppli
             .GetManyByUserIdAsync(organizationUser.UserId!.Value);
         Assert.NotEmpty(collections);
         // validates user only received one default collection
-        Assert.Single(collections.Where(c => c.Type == CollectionType.DefaultUserCollection));
+        Assert.Single(collections, c => c.Type == CollectionType.DefaultUserCollection);
 
         await _factory.GetService<IOrganizationRepository>().DeleteAsync(organization);
     }
 
-    public Task DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         _client.Dispose();
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 }
