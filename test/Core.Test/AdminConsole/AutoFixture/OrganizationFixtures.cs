@@ -1,6 +1,8 @@
-﻿using System.Text.Json;
+﻿using System.Reflection;
+using System.Text.Json;
 using AutoFixture;
 using AutoFixture.Kernel;
+using AutoFixture.Xunit2;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
@@ -20,6 +22,18 @@ public class OrganizationCustomization : ICustomization
 {
     public bool UseGroups { get; set; }
     public PlanType PlanType { get; set; }
+    public bool UseAutomaticUserConfirmation { get; set; }
+
+    public OrganizationCustomization()
+    {
+
+    }
+
+    public OrganizationCustomization(bool useAutomaticUserConfirmation, PlanType planType)
+    {
+        UseAutomaticUserConfirmation = useAutomaticUserConfirmation;
+        PlanType = planType;
+    }
 
     public void Customize(IFixture fixture)
     {
@@ -37,7 +51,8 @@ public class OrganizationCustomization : ICustomization
             .With(o => o.UseGroups, UseGroups)
             .With(o => o.PlanType, PlanType)
             .With(o => o.Seats, seats)
-            .With(o => o.SmSeats, smSeats));
+            .With(o => o.SmSeats, smSeats)
+            .With(o => o.UseAutomaticUserConfirmation, UseAutomaticUserConfirmation));
 
         fixture.Customize<Collection>(composer =>
             composer
@@ -276,4 +291,10 @@ internal class EphemeralDataProtectionAutoDataAttribute : CustomAutoDataAttribut
 {
     public EphemeralDataProtectionAutoDataAttribute() : base(new SutProviderCustomization(), new EphemeralDataProtectionCustomization())
     { }
+}
+
+internal class OrganizationAttribute(bool useAutomaticUserConfirmation = false, PlanType planType = PlanType.Free) : CustomizeAttribute
+{
+    public override ICustomization GetCustomization(ParameterInfo parameter) =>
+        new OrganizationCustomization(useAutomaticUserConfirmation, planType);
 }
