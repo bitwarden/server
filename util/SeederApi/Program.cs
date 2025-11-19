@@ -13,7 +13,7 @@ var globalSettings = builder.Services.AddGlobalSettingsServices(builder.Configur
 // Common services
 builder.Services.AddCustomDataProtectionServices(builder.Environment, globalSettings);
 builder.Services.AddTokenizers();
-builder.Services.AddDatabaseRepositories(globalSettings, forceEf: true);
+builder.Services.AddDatabaseRepositories(globalSettings);
 
 builder.Services.AddScoped<Microsoft.AspNetCore.Identity.IPasswordHasher<Bit.Core.Entities.User>, Microsoft.AspNetCore.Identity.PasswordHasher<Bit.Core.Entities.User>>();
 

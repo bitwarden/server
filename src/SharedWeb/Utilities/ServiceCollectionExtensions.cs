@@ -93,12 +93,12 @@ namespace Bit.SharedWeb.Utilities;
 
 public static class ServiceCollectionExtensions
 {
-    public static SupportedDatabaseProviders AddDatabaseRepositories(this IServiceCollection services, GlobalSettings globalSettings, bool forceEf = false)
+    public static SupportedDatabaseProviders AddDatabaseRepositories(this IServiceCollection services, GlobalSettings globalSettings)
     {
         var (provider, connectionString) = GetDatabaseProvider(globalSettings);
         services.SetupEntityFramework(connectionString, provider);
 
-        if (provider != SupportedDatabaseProviders.SqlServer && !forceEf)
+        if (provider != SupportedDatabaseProviders.SqlServer)
         {
             services.AddPasswordManagerEFRepositories(globalSettings.SelfHosted, globalSettings);
         }
@@ -124,6 +124,7 @@ public static class ServiceCollectionExtensions
             // We need the http context accessor to use the Singleton version, which pulls from the scoped version
             services.AddHttpContextAccessor();
 
+            services.AddSingleton<IPlayDataService, PlayDataService>();
             services.AddSingleton<IPlayIdService, PlayIdSingletonService>();
             services.AddScoped<PlayIdService>();
         }
