@@ -56,29 +56,40 @@ public class UpdateOrganizationCommand(
             throw new NotFoundException();
         }
 
+        if (globalSettings.SelfHosted)
+        {
+            return await UpdateSelfHostedAsync(organization, request);
+        }
+
+        return await UpdateCloudAsync(organization, request);
+    }
+
+    private async Task<Organization> UpdateCloudAsync(Organization organization, UpdateOrganizationRequest request)
+    {
         // Store original values for comparison
         var originalName = organization.Name;
         var originalBillingEmail = organization.BillingEmail;
 
-        // Apply updates to organization model
-        // Skipped if self-hosted because these values come from the license file
-        if (!globalSettings.SelfHosted)
-        {
-            UpdateOrganizationDetails(organization, request);
-        }
-
-        // Applies to both cloud and self-hosted
+        // Apply updates to organization
+        UpdateOrganizationDetails(organization, request);
         UpdatePublicPrivateKeyPair(organization, request);
-
         await organizationService.ReplaceAndUpdateCacheAsync(organization, EventType.Organization_Updated);
 
         // Update billing information in Stripe if required
-        // Skipped if self-hosted because only Cloud communicates with Stripe
-        if (!globalSettings.SelfHosted)
-        {
-            await UpdateBillingAsync(organization, originalName, originalBillingEmail);
-        }
+        await UpdateBillingAsync(organization, originalName, originalBillingEmail);
 
+        return organization;
+    }
+
+    /// <summary>
+    /// Self-host cannot update the organization details because they are set by the license file.
+    /// However, this command does offer a soft migration pathway for organizations without public and private keys.
+    /// If we remove this migration code in the future, this command and endpoint can become cloud only.
+    /// </summary>
+    private async Task<Organization> UpdateSelfHostedAsync(Organization organization, UpdateOrganizationRequest request)
+    {
+        UpdatePublicPrivateKeyPair(organization, request);
+        await organizationService.ReplaceAndUpdateCacheAsync(organization, EventType.Organization_Updated);
         return organization;
     }
 
@@ -97,13 +108,13 @@ public class UpdateOrganizationCommand(
         }
     }
 
+    /// <summary>
+    /// Updates the organization public and private keys if provided and not already set.
+    /// This is legacy code for old organizations that were not created with a public/private keypair. It is a soft
+    /// migration that will silently migrate organizations when they change their details.
+    /// </summary>
     private static void UpdatePublicPrivateKeyPair(Organization organization, UpdateOrganizationRequest request)
     {
-        // Update keys if provided and not already set.
-        // This is legacy code for old organizations that were not created with a public/private keypair. It is a soft
-        // migration that will silently migrate organizations when they change their details.
-        // This is the only part of the command that does anything on self-host, so if this is removed then
-        // this endpoint can be blocked for self-host entirely.
         if (!string.IsNullOrWhiteSpace(request.PublicKey) && string.IsNullOrWhiteSpace(organization.PublicKey))
         {
             organization.PublicKey = request.PublicKey;
