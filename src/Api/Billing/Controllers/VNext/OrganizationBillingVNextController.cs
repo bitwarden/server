@@ -1,9 +1,9 @@
 ﻿using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.Billing.Attributes;
-using Bit.Api.Billing.Authorization;
 using Bit.Api.Billing.Models.Requests.Payment;
 using Bit.Api.Billing.Models.Requests.Subscriptions;
+using Bit.Api.Billing.Models.Requirements;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Commands;

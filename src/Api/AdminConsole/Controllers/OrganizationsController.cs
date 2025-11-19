@@ -2,14 +2,12 @@
 #nullable disable
 
 using System.Text.Json;
-using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Auth.Models.Request.Organizations;
 using Bit.Api.Auth.Models.Response.Organizations;
-using Bit.Api.Billing.Authorization;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
@@ -236,13 +234,11 @@ public class OrganizationsController : Controller
     {
         // Authorization logic depends on what's being edited. Additional checks apply if the Billing Email
         // is being changed, because this implicates billing details.
-        IAuthorizationRequirement authorizationRequirement = model.BillingEmail is not null
-            ? new ManageOrganizationBillingRequirement()
-            : new OwnerOrProviderRequirement();
+        var authorized = model.BillingEmail is not null
+            ? await _currentContext.EditSubscription(organizationId)
+            : await _currentContext.OrganizationOwner(organizationId);
 
-        var authorizationResult =
-            await _authorizationService.AuthorizeAsync(User, authorizationRequirement);
-        if (!authorizationResult.Succeeded)
+        if (!authorized)
         {
             return TypedResults.Unauthorized();
         }
