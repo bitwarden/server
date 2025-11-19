@@ -68,7 +68,9 @@ public class DatabaseDataAttribute : DataAttribute
 
             if (!database.Enabled)
             {
-                var theory = new TheoryDataRow()
+                // Use the database type as an argument since it is used to build a unique ID and if we have multiple with no
+                // data then the tests overwrite each other
+                var theory = new TheoryDataRow(database.Type, database.ConnectionString)
                     .WithSkip("Not-Enabled")
                     .WithTrait("Database", database.Type.ToString());
                 theory.Label = database.Type.ToString();
@@ -103,7 +105,9 @@ public class DatabaseDataAttribute : DataAttribute
 
         foreach (var unconfiguredDatabase in unconfiguredDatabases)
         {
-            var theory = new TheoryDataRow()
+            // Use the database type as an argument since it is used to build a unique ID and if we have multiple with no
+            // data then the tests overwrite each other
+            var theory = new TheoryDataRow(unconfiguredDatabase)
                 .WithSkip("Unconfigured")
                 .WithTrait("Database", unconfiguredDatabase.ToString());
             theory.Label = unconfiguredDatabase.ToString();
@@ -184,7 +188,7 @@ public class DatabaseDataAttribute : DataAttribute
 
     public override bool SupportsDiscoveryEnumeration()
     {
-        return false;
+        return true;
     }
 
     private class ServiceBasedTheoryDataRow : TheoryDataRowBase
