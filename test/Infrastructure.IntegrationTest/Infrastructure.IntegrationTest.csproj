@@ -3,6 +3,8 @@
   <PropertyGroup>
     <IsPackable>false</IsPackable>
     <UserSecretsId>6570f288-5c2c-47ad-8978-f3da255079c2</UserSecretsId>
+    <!-- This project will not run any tests unless a databases are running and configured, so ignore the exit code that fails if 0 tests run -->
+    <TestingPlatformCommandLineArguments>$(TestingPlatformCommandLineArguments) --ignore-exit-code 8</TestingPlatformCommandLineArguments>
   </PropertyGroup>
 
   <ItemGroup>
