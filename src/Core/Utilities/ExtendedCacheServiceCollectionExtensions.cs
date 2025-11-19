@@ -79,7 +79,13 @@ public static class ExtendedCacheServiceCollectionExtensions
 
             services.TryAddSingleton<IConnectionMultiplexer>(sp =>
                 CreateConnectionMultiplexer(sp, cacheName, globalSettings.DistributedCache.Redis.ConnectionString));
-            services.TryAddSingleton<IDistributedCache>(sp =>
+
+            // Can't use TryAdd here because MemoryDistributedCache will block adding Redis the first time
+            if (!services.Any(s =>
+                    s.ServiceType == typeof(IDistributedCache) &&
+                    s.ImplementationType != typeof(MemoryDistributedCache)))
+            {
+                services.AddSingleton<IDistributedCache>(sp =>
                 {
                     var mux = sp.GetRequiredService<IConnectionMultiplexer>();
                     return new RedisCache(new RedisCacheOptions
@@ -87,6 +93,8 @@ public static class ExtendedCacheServiceCollectionExtensions
                         ConnectionMultiplexerFactory = () => Task.FromResult(mux)
                     });
                 });
+            }
+
             services.TryAddSingleton<IFusionCacheBackplane>(sp =>
                 {
                     var mux = sp.GetRequiredService<IConnectionMultiplexer>();
@@ -151,8 +159,8 @@ public static class ExtendedCacheServiceCollectionExtensions
         }
         catch (Exception ex)
         {
-            var logger = sp.GetRequiredService<ILogger>();
-            logger.LogError(ex, "Failed to connect to Redis for cache {CacheName}", cacheName);
+            var logger = sp.GetService<ILogger>();
+            logger?.LogError(ex, "Failed to connect to Redis for cache {CacheName}", cacheName);
             throw;
         }
     }
