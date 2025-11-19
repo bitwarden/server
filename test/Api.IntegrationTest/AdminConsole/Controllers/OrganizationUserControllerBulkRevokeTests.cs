@@ -6,6 +6,10 @@ using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.Models.Response;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Providers.Interfaces;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -314,14 +318,41 @@ public class OrganizationUserControllerBulkRevokeTests : IClassFixture<ApiApplic
     [Fact]
     public async Task BulkRevoke_CannotRevokeLastConfirmedOwner_ReturnsBadRequest()
     {
+        var providerEmail = $"provider-user{Guid.NewGuid()}@example.com";
+
+        // create user for provider
+        await _factory.LoginWithNewAccount(providerEmail);
+
+        // create provider and provider user
+        await _factory.GetService<ICreateProviderCommand>()
+            .CreateBusinessUnitAsync(
+                new Provider
+                {
+                    Name = "provider",
+                    Type = ProviderType.BusinessUnit
+                },
+                providerEmail,
+                PlanType.EnterpriseAnnually2023,
+                10);
+
+        await _loginHelper.LoginAsync(providerEmail);
+
+        var providerUserUser = await _factory.GetService<IUserRepository>().GetByEmailAsync(providerEmail);
+
+        var providerUserCollection =
+            await _factory.GetService<IProviderUserRepository>().GetManyByUserAsync(providerUserUser.Id);
+        var providerUser = providerUserCollection.First();
+
+        await _factory.GetService<IProviderOrganizationRepository>().CreateAsync(new ProviderOrganization
+        {
+            ProviderId = providerUser.ProviderId,
+            OrganizationId = _organization.Id,
+            Key = null,
+            Settings = null
+        });
+
         var (ownerEmail, ownerOrgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
             _organization.Id, OrganizationUserType.Owner);
-
-        await _loginHelper.LoginAsync(ownerEmail);
-
-        var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
-
-        await organizationUserRepository.DeleteAsync(ownerOrgUser);
 
         var request = new OrganizationUserBulkRequestModel
         {
