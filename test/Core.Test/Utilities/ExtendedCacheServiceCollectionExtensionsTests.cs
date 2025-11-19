@@ -306,68 +306,6 @@ public class ExtendedCacheServiceCollectionExtensionsTests
         Assert.Same(existingCache, resolved);
     }
 
-    [Fact]
-    public void AddExtendedCache_WithMemoryDistributedCache_ReplacesWithRedis()
-    {
-        var settings = CreateGlobalSettings(new()
-        {
-            { "GlobalSettings:DistributedCache:Redis:ConnectionString", "localhost:6379" },
-        });
-
-        // Simulate what happens in many .NET templates - an in-memory distributed cache is added
-        _services.AddDistributedMemoryCache();
-
-        // Provide a multiplexer (shared)
-        _services.AddSingleton(Substitute.For<IConnectionMultiplexer>());
-
-        _services.AddExtendedCache(_cacheName, settings);
-
-        using var provider = _services.BuildServiceProvider();
-        var cache = provider.GetRequiredKeyedService<IFusionCache>(_cacheName);
-
-        // FusionCache should have a real distributed cache (Redis), not memory
-        Assert.True(cache.HasDistributedCache);
-        Assert.True(cache.HasBackplane);
-
-        // Verify that a RedisCache was registered (not just MemoryDistributedCache)
-        var distributedCache = provider.GetRequiredService<IDistributedCache>();
-        Assert.NotNull(distributedCache);
-
-        // The resolved cache should be RedisCache, not MemoryDistributedCache
-        Assert.IsNotType<MemoryDistributedCache>(distributedCache);
-    }
-
-    [Fact]
-    public void AddExtendedCache_WithMemoryCacheCalledMultipleTimes_OnlyAddsRedisOnce()
-    {
-        var settings = CreateGlobalSettings(new()
-        {
-            { "GlobalSettings:DistributedCache:Redis:ConnectionString", "localhost:6379" },
-            { "GlobalSettings:DistributedCache:DefaultExtendedCache:UseSharedRedisCache", "true" }
-        });
-
-        // Add memory cache first
-        _services.AddDistributedMemoryCache();
-
-        // Provide a multiplexer (shared)
-        _services.AddSingleton(Substitute.For<IConnectionMultiplexer>());
-
-        // Call multiple times
-        _services.AddExtendedCache(_cacheName, settings);
-        _services.AddExtendedCache(_cacheName, settings);
-        _services.AddExtendedCache(_cacheName, settings);
-
-        // Should only have 2 IDistributedCache registrations: MemoryDistributedCache + RedisCache
-        var cacheRegistrations = _services.Where(s => s.ServiceType == typeof(IDistributedCache)).ToList();
-        Assert.Equal(2, cacheRegistrations.Count);
-
-        using var provider = _services.BuildServiceProvider();
-        var cache = provider.GetRequiredKeyedService<IFusionCache>(_cacheName);
-
-        Assert.True(cache.HasDistributedCache);
-        Assert.True(cache.HasBackplane);
-    }
-
     private static GlobalSettings CreateGlobalSettings(Dictionary<string, string?> data)
     {
         var config = new ConfigurationBuilder()

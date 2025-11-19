@@ -18,7 +18,9 @@ public static class ExtendedCacheServiceCollectionExtensions
     /// Adds a new, named Fusion Cache <see href="https://github.com/ZiggyCreatures/FusionCache"/> to the service
     /// collection. If an existing cache of the same name is found, it will do nothing.<br/>
     /// <br/>
-    ///
+    /// <b>Note</b>: When re-using the existing Redis cache, it is expected to call this method <b>after</b> calling
+    /// <code>services.AddDistributedCache(globalSettings)</code><br />This ensures that DI correctly finds,
+    /// configures, and re-uses all the shared Redis architecture.
     /// </summary>
     public static IServiceCollection AddExtendedCache(
         this IServiceCollection services,
@@ -80,20 +82,14 @@ public static class ExtendedCacheServiceCollectionExtensions
             services.TryAddSingleton<IConnectionMultiplexer>(sp =>
                 CreateConnectionMultiplexer(sp, cacheName, globalSettings.DistributedCache.Redis.ConnectionString));
 
-            // Can't use TryAdd here because MemoryDistributedCache will block adding Redis the first time
-            if (!services.Any(s =>
-                    s.ServiceType == typeof(IDistributedCache) &&
-                    s.ImplementationType != typeof(MemoryDistributedCache)))
+            services.TryAddSingleton<IDistributedCache>(sp =>
             {
-                services.AddSingleton<IDistributedCache>(sp =>
+                var mux = sp.GetRequiredService<IConnectionMultiplexer>();
+                return new RedisCache(new RedisCacheOptions
                 {
-                    var mux = sp.GetRequiredService<IConnectionMultiplexer>();
-                    return new RedisCache(new RedisCacheOptions
-                    {
-                        ConnectionMultiplexerFactory = () => Task.FromResult(mux)
-                    });
+                    ConnectionMultiplexerFactory = () => Task.FromResult(mux)
                 });
-            }
+            });
 
             services.TryAddSingleton<IFusionCacheBackplane>(sp =>
                 {

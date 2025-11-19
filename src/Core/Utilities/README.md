@@ -20,6 +20,12 @@ Each named cache automatically receives:
 - **Memory + distributed cache + backplane** using the **shared** application Redis
 - **Memory + distributed cache + backplane** using a **fully isolated** Redis instance
 
+**Note**: When using the shared Redis cache option (which is on by default, if the
+Redis connection string is configured), it is expected to call
+`services.AddDistributedCache(globalSettings)` **before** calling
+`AddExtendedCache`. The idea is to set up the distributed cache in our normal pattern
+and then "extend" it to include more functionality.
+
 ### Configuration
 
 `ExtendedCache` exposes a set of default properties that define how each named cache behaves.
@@ -28,16 +34,19 @@ jitter, fail-safe mode, etc. Any cache can override these defaults independently
 
 #### Default configuration
 
-The simplest approach registers a new named cache with default settings:
+The simplest approach registers a new named cache with default settings and reusing
+the existing distributed cache:
 
 ``` csharp
+    services.AddDistributedCache(globalSettings);
     services.AddExtendedCache(cacheName, globalSettings);
 ```
 
 By default:
  - If `GlobalSettings.DistributedCache.Redis.ConnectionString` is configured:
    - The cache is memory + distributed (Redis)
-   - A Redis backplane is configured
+   - The Redis cache created by `AddDistributedCache` is re-used
+   - A Redis backplane is configured, re-using the same multiplexer
  - If Redis is **not** configured the cache automatically falls back to memory-only
 
 #### Overriding default properties
