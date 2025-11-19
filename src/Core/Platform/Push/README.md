@@ -58,7 +58,8 @@ before its returned task completes.
 ### Azure Notification Hub
 
 Used when the application is hosted by Bitwarden in the cloud. This sends the notification to the
-configured Azure Notification Hub (ANH), which we currently rely on for sending notifications to:
+configured [Azure Notification Hub (ANH)](https://learn.microsoft.com/en-us/azure/notification-hubs/notification-hubs-push-notification-overview),
+which we currently rely on for sending notifications to:
 
 - Our mobile clients, through the Notification Hub federation with mobile app notification systems
 - Our clients configured to use Web Push (currently the Chrome Extension).

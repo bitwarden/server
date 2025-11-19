@@ -13,15 +13,16 @@ If your feature changes the status of any of the following pieces of data please
 so that we can keep push registration working correctly:
 
 - The creation/deletion of a new `Device`.
-- The addition of removal of an organization a `User` is a part of.
+- The addition or removal of an organization a `User` is a part of.
 
 ## Implementation
 
 ### Azure Notification Hub
 
 Used when the application is hosted by Bitwarden in the cloud. This registers the device and
-associated metadata with Azure Notification Hub (ANH). This is necessary so that when a notification
-is sent ANH will be able to get the notification to that device.
+associated metadata with [Azure Notification Hub (ANH)](https://learn.microsoft.com/en-us/azure/notification-hubs/notification-hubs-push-notification-overview).
+This is necessary so that when a notification is sent ANH will be able to get the notification to
+that device.
 
 Since Azure Notification Hub has a limit on the amount of devices per hub we have begun to shard
 devices across multiple hubs. Multiple hubs can be setup through configuration and each one can
@@ -79,14 +80,14 @@ memberships of a user. If a user is added/removed from an organization, it is im
 
 ### Relay
 
-Used when the application is self-hosted. This sends a API request to the configured cloud instance
-and which will then use [Azure Notification Hub](#azure-notification-hub) but will associate the
-installation as the self-hosted installation id instead of using the cloud one. The endpoints are
+Used when the application is self-hosted. This sends a API request to the configured cloud instance,
+which will then use [Azure Notification Hub](#azure-notification-hub) but will associate the
+installation as the self-hosted installation ID instead of using the cloud one. The endpoints are
 in the [`PushController`](../../../Api/Platform/Push/Controllers/PushController.cs)
 
 ### SignalR
 
-While not an implementation of `IPushRegistrationService` the SignalR hub adds users to various
+While not an implementation of `IPushRegistrationService`, the SignalR hub adds users to various
 groups in [`NotificationsHub.OnConnectedAsync`](../../../Notifications/NotificationsHub.cs) method.
 It utilizes a manual build of `ICurrentContext` where it reads the claims provided from the access
 token.
