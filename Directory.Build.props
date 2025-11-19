@@ -20,6 +20,10 @@
     <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
   </PropertyGroup>
 
+  <ItemGroup Condition="'$(IsTestProject)' == 'true'">
+    <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.0.4" />
+  </ItemGroup>
+
   <PropertyGroup>
 
     <MicrosoftNetTestSdkVersion>17.8.0</MicrosoftNetTestSdkVersion>
@@ -27,8 +31,6 @@
     <XUnitv3Version>3.0.1</XUnitv3Version>
 
     <XUnitRunnerVisualStudioVersion>3.1.4</XUnitRunnerVisualStudioVersion>
-
-    <CoverletCollectorVersion>6.0.0</CoverletCollectorVersion>
 
     <NSubstituteVersion>5.1.0</NSubstituteVersion>
 

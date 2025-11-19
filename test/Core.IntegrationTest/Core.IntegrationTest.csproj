@@ -10,7 +10,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="coverlet.collector" Version="6.0.4" />
     <PackageReference Include="MartinCostello.Logging.XUnit.v3" Version="0.6.0" />
     <PackageReference Include="Rnwood.SmtpServer" Version="3.1.0-ci0868" />
     <PackageReference Include="xunit.v3" Version="$(XUnitv3Version)" />

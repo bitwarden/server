@@ -9,10 +9,6 @@
 
   <ItemGroup>
     <PackageReference Include="xunit.v3" Version="$(XUnitv3Version)" />
-    <PackageReference Include="coverlet.collector" Version="$(CoverletCollectorVersion)">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
   </ItemGroup>
 
   <ItemGroup>

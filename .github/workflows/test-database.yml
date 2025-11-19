@@ -136,7 +136,7 @@ jobs:
           # Bitwarden Lite MariaDB
           BW_TEST_DATABASES__4__TYPE: "MySql"
           BW_TEST_DATABASES__4__CONNECTIONSTRING: "server=localhost;port=4306;uid=root;pwd=mariadb-password;database=vault_dev;Allow User Variables=true"
-        run: dotnet test --logger "trx;LogFileName=infrastructure-test-results.trx" /p:CoverletOutputFormatter="cobertura" --collect:"XPlat Code Coverage"
+        run: dotnet test -- --coverage --coverage-output-format cobertura --coverage-output "coverage.cobertura.xml" --report-xunit-trx --report-xunit-trx-filename "test-results.trx"
         shell: pwsh
 
       - name: Print MySQL Logs
@@ -240,7 +240,7 @@ jobs:
              echo "  - SQL project files: src/Sql/"
              echo "  - Download 'report.xml' artifact for full details"
              echo ""
-             
+
              # Show actual SQL differences - exclude database setup commands
              if [ -s "diff.sql" ]; then
                echo "Key SQL differences:"
@@ -248,9 +248,9 @@ jobs:
                grep -E "^(CREATE|DROP|ALTER)" diff.sql | grep -v "ALTER DATABASE" | grep -v "DatabaseName" | head -5
                echo ""
              fi
-             
+
              echo "Common causes: naming differences (underscores, case), missing objects, or definition mismatches"
-             
+
              exit 1
            else
              echo "SUCCESS: Database validation passed"

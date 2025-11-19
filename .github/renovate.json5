@@ -84,7 +84,7 @@
         "BenchmarkDotNet",
         "BitPay.Light",
         "Braintree",
-        "coverlet.collector",
+        "Microsoft.Testing.Extensions.CodeCoverage",
         "CsvHelper",
         "Kralizek.AutoFixture.Extensions.MockHttp",
         "Microsoft.AspNetCore.Mvc.Testing",

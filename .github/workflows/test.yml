@@ -53,10 +53,10 @@ jobs:
         run: dotnet sln bitwarden-server.sln remove src/Sql/Sql.sqlproj
 
       - name: Test OSS solution
-        run: dotnet test ./test --configuration Debug --logger "trx;LogFileName=oss-test-results.trx" /p:CoverletOutputFormatter="cobertura" --collect:"XPlat Code Coverage"
+        run: dotnet test ./test --configuration Debug -- --coverage --coverage-output-format cobertura --coverage-output "coverage.cobertura.xml" --report-xunit-trx --report-xunit-trx-filename "test-results.trx"
 
       - name: Test Bitwarden solution
-        run: dotnet test ./bitwarden_license/test --configuration Debug --logger "trx;LogFileName=bw-test-results.trx" /p:CoverletOutputFormatter="cobertura" --collect:"XPlat Code Coverage"
+        run: dotnet test ./bitwarden_license/test --configuration Debug -- --coverage --coverage-output-format cobertura --coverage-output "coverage.cobertura.xml" --report-xunit-trx --report-xunit-trx-filename "test-results.trx"
 
       - name: Report test results
         uses: dorny/test-reporter@890a17cecf52a379fc869ab770a71657660be727 # v2.1.0
