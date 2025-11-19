@@ -9,7 +9,7 @@ using Bit.Core.Models.Business;
 using Bit.Core.Models.StaticStore;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
+using Bit.Core.Test.Billing.Mocks;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -42,7 +42,7 @@ public class AddSecretsManagerSubscriptionCommandTests
     {
         organization.PlanType = planType;
 
-        var plan = StaticStore.GetPlan(organization.PlanType);
+        var plan = MockPlans.Get(organization.PlanType);
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType).Returns(plan);
 
         await sutProvider.Sut.SignUpAsync(organization, additionalSmSeats, additionalServiceAccounts);
@@ -88,7 +88,7 @@ public class AddSecretsManagerSubscriptionCommandTests
         organization.GatewayCustomerId = null;
         organization.PlanType = PlanType.EnterpriseAnnually;
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType)
-            .Returns(StaticStore.GetPlan(organization.PlanType));
+            .Returns(MockPlans.Get(organization.PlanType));
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.SignUpAsync(organization, additionalSmSeats, additionalServiceAccounts));
         Assert.Contains("No payment method found.", exception.Message);
@@ -106,7 +106,7 @@ public class AddSecretsManagerSubscriptionCommandTests
         organization.GatewaySubscriptionId = null;
         organization.PlanType = PlanType.EnterpriseAnnually;
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType)
-            .Returns(StaticStore.GetPlan(organization.PlanType));
+            .Returns(MockPlans.Get(organization.PlanType));
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.SignUpAsync(organization, additionalSmSeats, additionalServiceAccounts));
         Assert.Contains("No subscription found.", exception.Message);
@@ -139,7 +139,7 @@ public class AddSecretsManagerSubscriptionCommandTests
         provider.Type = ProviderType.Msp;
         sutProvider.GetDependency<IProviderRepository>().GetByOrganizationIdAsync(organization.Id).Returns(provider);
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType)
-            .Returns(StaticStore.GetPlan(organization.PlanType));
+            .Returns(MockPlans.Get(organization.PlanType));
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SignUpAsync(organization, 10, 10));

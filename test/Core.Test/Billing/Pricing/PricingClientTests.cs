@@ -3,7 +3,6 @@ using Bit.Core.Billing;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.Extensions.Logging;
@@ -34,7 +33,6 @@ public class PricingClientTests
 
         var featureService = Substitute.For<IFeatureService>();
         featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3).Returns(true);
-        featureService.IsEnabled(FeatureFlagKeys.UsePricingService).Returns(true);
 
         var globalSettings = new GlobalSettings { SelfHosted = false };
 
@@ -70,7 +68,6 @@ public class PricingClientTests
 
         var featureService = Substitute.For<IFeatureService>();
         featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3).Returns(false);
-        featureService.IsEnabled(FeatureFlagKeys.UsePricingService).Returns(true);
 
         var globalSettings = new GlobalSettings { SelfHosted = false };
 
@@ -109,7 +106,6 @@ public class PricingClientTests
 
         var featureService = Substitute.For<IFeatureService>();
         featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3).Returns(false);
-        featureService.IsEnabled(FeatureFlagKeys.UsePricingService).Returns(true);
 
         var globalSettings = new GlobalSettings { SelfHosted = false };
 
@@ -144,7 +140,6 @@ public class PricingClientTests
 
         var featureService = Substitute.For<IFeatureService>();
         featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3).Returns(true);
-        featureService.IsEnabled(FeatureFlagKeys.UsePricingService).Returns(true);
 
         var globalSettings = new GlobalSettings { SelfHosted = false };
 
@@ -179,7 +174,6 @@ public class PricingClientTests
 
         var featureService = Substitute.For<IFeatureService>();
         featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3).Returns(true);
-        featureService.IsEnabled(FeatureFlagKeys.UsePricingService).Returns(true);
 
         var globalSettings = new GlobalSettings { SelfHosted = false };
 
@@ -217,7 +211,6 @@ public class PricingClientTests
 
         var featureService = Substitute.For<IFeatureService>();
         featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3).Returns(false);
-        featureService.IsEnabled(FeatureFlagKeys.UsePricingService).Returns(true);
 
         var globalSettings = new GlobalSettings { SelfHosted = false };
 
@@ -258,7 +251,6 @@ public class PricingClientTests
 
         var featureService = Substitute.For<IFeatureService>();
         featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3).Returns(false);
-        featureService.IsEnabled(FeatureFlagKeys.UsePricingService).Returns(true);
 
         var globalSettings = new GlobalSettings { SelfHosted = false };
 
@@ -297,7 +289,6 @@ public class PricingClientTests
 
         var featureService = Substitute.For<IFeatureService>();
         featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3).Returns(true);
-        featureService.IsEnabled(FeatureFlagKeys.UsePricingService).Returns(true);
 
         var globalSettings = new GlobalSettings { SelfHosted = false };
 
@@ -340,32 +331,11 @@ public class PricingClientTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetPlan_WhenPricingServiceDisabled_ReturnsStaticStorePlan(
-        SutProvider<PricingClient> sutProvider)
-    {
-        // Arrange
-        sutProvider.GetDependency<GlobalSettings>().SelfHosted = false;
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.UsePricingService)
-            .Returns(false);
-
-        // Act
-        var result = await sutProvider.Sut.GetPlan(PlanType.FamiliesAnnually);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal(PlanType.FamiliesAnnually, result.Type);
-    }
-
-    [Theory, BitAutoData]
     public async Task GetPlan_WhenLookupKeyNotFound_ReturnsNull(
         SutProvider<PricingClient> sutProvider)
     {
         // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.UsePricingService)
-            .Returns(true);
+        sutProvider.GetDependency<GlobalSettings>().SelfHosted = false;
 
         // Act - Using PlanType that doesn't have a lookup key mapping
         var result = await sutProvider.Sut.GetPlan(unchecked((PlanType)999));
@@ -384,7 +354,6 @@ public class PricingClientTests
 
         var featureService = Substitute.For<IFeatureService>();
         featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3).Returns(true);
-        featureService.IsEnabled(FeatureFlagKeys.UsePricingService).Returns(true);
 
         var globalSettings = new GlobalSettings { SelfHosted = false };
 
@@ -413,7 +382,6 @@ public class PricingClientTests
 
         var featureService = Substitute.For<IFeatureService>();
         featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3).Returns(true);
-        featureService.IsEnabled(FeatureFlagKeys.UsePricingService).Returns(true);
 
         var globalSettings = new GlobalSettings { SelfHosted = false };
 
@@ -450,26 +418,6 @@ public class PricingClientTests
         Assert.Empty(result);
     }
 
-    [Theory, BitAutoData]
-    public async Task ListPlans_WhenPricingServiceDisabled_ReturnsStaticStorePlans(
-        SutProvider<PricingClient> sutProvider)
-    {
-        // Arrange
-        sutProvider.GetDependency<GlobalSettings>().SelfHosted = false;
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.UsePricingService)
-            .Returns(false);
-
-        // Act
-        var result = await sutProvider.Sut.ListPlans();
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.NotEmpty(result);
-        Assert.Equal(StaticStore.Plans.Count(), result.Count);
-    }
-
     [Fact]
     public async Task ListPlans_WhenPricingServiceReturnsError_ThrowsBillingException()
     {
@@ -479,7 +427,6 @@ public class PricingClientTests
             .Respond(HttpStatusCode.InternalServerError);
 
         var featureService = Substitute.For<IFeatureService>();
-        featureService.IsEnabled(FeatureFlagKeys.UsePricingService).Returns(true);
 
         var globalSettings = new GlobalSettings { SelfHosted = false };
 
