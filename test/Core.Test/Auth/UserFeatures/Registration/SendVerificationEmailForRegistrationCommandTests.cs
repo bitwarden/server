@@ -41,7 +41,7 @@ public class SendVerificationEmailForRegistrationCommandTests
             .Returns(false);
 
         sutProvider.GetDependency<IMailService>()
-            .SendRegistrationVerificationEmailAsync(email, Arg.Any<string>(), Arg.Any<string>())
+            .SendRegistrationVerificationEmailAsync(email, Arg.Any<string>(), null)
             .Returns(Task.CompletedTask);
 
         var mockedToken = "token";
@@ -55,7 +55,7 @@ public class SendVerificationEmailForRegistrationCommandTests
         // Assert
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
-            .SendRegistrationVerificationEmailAsync(email, mockedToken, Arg.Any<string>());
+            .SendRegistrationVerificationEmailAsync(email, mockedToken, null);
         Assert.Null(result);
     }
 
@@ -92,7 +92,7 @@ public class SendVerificationEmailForRegistrationCommandTests
         // Assert
         await sutProvider.GetDependency<IMailService>()
             .DidNotReceive()
-            .SendRegistrationVerificationEmailAsync(email, mockedToken, Arg.Any<string>());
+            .SendRegistrationVerificationEmailAsync(email, mockedToken, null);
         Assert.Null(result);
     }
 
@@ -207,7 +207,7 @@ public class SendVerificationEmailForRegistrationCommandTests
             .DisableUserRegistration = false;
 
         sutProvider.GetDependency<IMailService>()
-            .SendRegistrationVerificationEmailAsync(email, Arg.Any<string>(), Arg.Any<string>())
+            .SendRegistrationVerificationEmailAsync(email, Arg.Any<string>(), fromMarketing)
             .Returns(Task.CompletedTask);
 
         var mockedToken = "token";
