@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace Bit.Core.Models.Slack;
 
@@ -33,6 +31,12 @@ public class SlackOAuthResponse : SlackApiResponse
     [JsonPropertyName("access_token")]
     public string AccessToken { get; set; } = string.Empty;
     public SlackTeam Team { get; set; } = new();
+}
+
+public class SlackSendMessageResponse : SlackApiResponse
+{
+    [JsonPropertyName("channel")]
+    public string Channel { get; set; } = string.Empty;
 }
 
 public class SlackTeam

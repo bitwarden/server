@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using System.Text;
+﻿using System.Text;
 using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.Enums;
 using Bit.Core.Settings;
@@ -124,7 +122,7 @@ public class RabbitMqService : IRabbitMqService
             body: body);
     }
 
-    public async Task PublishEventAsync(string body)
+    public async Task PublishEventAsync(string body, string? organizationId)
     {
         await using var channel = await CreateChannelAsync();
         var properties = new BasicProperties

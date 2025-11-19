@@ -11,12 +11,14 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Entities;
 using Bit.Core.Billing.Providers.Repositories;
+using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Test.Billing.Mocks;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.DataProtection;
@@ -71,7 +73,7 @@ public class BusinessUnitConverterTests
     {
         organization.PlanType = PlanType.EnterpriseAnnually2020;
 
-        var enterpriseAnnually2020 = StaticStore.GetPlan(PlanType.EnterpriseAnnually2020);
+        var enterpriseAnnually2020 = MockPlans.Get(PlanType.EnterpriseAnnually2020);
 
         var subscription = new Subscription
         {
@@ -133,7 +135,7 @@ public class BusinessUnitConverterTests
         _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually2020)
             .Returns(enterpriseAnnually2020);
 
-        var enterpriseAnnually = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
+        var enterpriseAnnually = MockPlans.Get(PlanType.EnterpriseAnnually);
 
         _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually)
             .Returns(enterpriseAnnually);
@@ -241,7 +243,7 @@ public class BusinessUnitConverterTests
             argument.Status == ProviderStatusType.Pending &&
             argument.Type == ProviderType.BusinessUnit)).Returns(provider);
 
-        var plan = StaticStore.GetPlan(organization.PlanType);
+        var plan = MockPlans.Get(organization.PlanType);
 
         _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(plan);
 

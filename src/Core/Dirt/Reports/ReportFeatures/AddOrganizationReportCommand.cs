@@ -26,28 +26,45 @@ public class AddOrganizationReportCommand : IAddOrganizationReportCommand
 
     public async Task<OrganizationReport> AddOrganizationReportAsync(AddOrganizationReportRequest request)
     {
-        _logger.LogInformation("Adding organization report for organization {organizationId}", request.OrganizationId);
+        _logger.LogInformation(Constants.BypassFiltersEventId, "Adding organization report for organization {organizationId}", request.OrganizationId);
 
         var (isValid, errorMessage) = await ValidateRequestAsync(request);
         if (!isValid)
         {
-            _logger.LogInformation("Failed to add organization {organizationId} report: {errorMessage}", request.OrganizationId, errorMessage);
+            _logger.LogInformation(Constants.BypassFiltersEventId, "Failed to add organization {organizationId} report: {errorMessage}", request.OrganizationId, errorMessage);
             throw new BadRequestException(errorMessage);
         }
+
+        var requestMetrics = request.Metrics ?? new OrganizationReportMetricsRequest();
 
         var organizationReport = new OrganizationReport
         {
             OrganizationId = request.OrganizationId,
-            ReportData = request.ReportData,
-            Date = request.Date == default ? DateTime.UtcNow : request.Date,
+            ReportData = request.ReportData ?? string.Empty,
             CreationDate = DateTime.UtcNow,
+            ContentEncryptionKey = request.ContentEncryptionKey ?? string.Empty,
+            SummaryData = request.SummaryData,
+            ApplicationData = request.ApplicationData,
+            ApplicationCount = requestMetrics.ApplicationCount,
+            ApplicationAtRiskCount = requestMetrics.ApplicationAtRiskCount,
+            CriticalApplicationCount = requestMetrics.CriticalApplicationCount,
+            CriticalApplicationAtRiskCount = requestMetrics.CriticalApplicationAtRiskCount,
+            MemberCount = requestMetrics.MemberCount,
+            MemberAtRiskCount = requestMetrics.MemberAtRiskCount,
+            CriticalMemberCount = requestMetrics.CriticalMemberCount,
+            CriticalMemberAtRiskCount = requestMetrics.CriticalMemberAtRiskCount,
+            PasswordCount = requestMetrics.PasswordCount,
+            PasswordAtRiskCount = requestMetrics.PasswordAtRiskCount,
+            CriticalPasswordCount = requestMetrics.CriticalPasswordCount,
+            CriticalPasswordAtRiskCount = requestMetrics.CriticalPasswordAtRiskCount,
+            RevisionDate = DateTime.UtcNow
         };
 
         organizationReport.SetNewId();
 
         var data = await _organizationReportRepo.CreateAsync(organizationReport);
 
-        _logger.LogInformation("Successfully added organization report for organization {organizationId}, {organizationReportId}",
+        _logger.LogInformation(Constants.BypassFiltersEventId, "Successfully added organization report for organization {organizationId}, {organizationReportId}",
                 request.OrganizationId, data.Id);
 
         return data;
@@ -63,10 +80,24 @@ public class AddOrganizationReportCommand : IAddOrganizationReportCommand
             return (false, "Invalid Organization");
         }
 
-        // ensure that we have report data
+        if (string.IsNullOrWhiteSpace(request.ContentEncryptionKey))
+        {
+            return (false, "Content Encryption Key is required");
+        }
+
         if (string.IsNullOrWhiteSpace(request.ReportData))
         {
             return (false, "Report Data is required");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.SummaryData))
+        {
+            return (false, "Summary Data is required");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.ApplicationData))
+        {
+            return (false, "Application Data is required");
         }
 
         return (true, string.Empty);

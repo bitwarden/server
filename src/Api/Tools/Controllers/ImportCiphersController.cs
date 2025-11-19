@@ -63,7 +63,7 @@ public class ImportCiphersController : Controller
     }
 
     [HttpPost("import-organization")]
-    public async Task PostImport([FromQuery] string organizationId,
+    public async Task PostImportOrganization([FromQuery] string organizationId,
         [FromBody] ImportOrganizationCiphersRequestModel model)
     {
         if (!_globalSettings.SelfHosted &&
@@ -74,9 +74,13 @@ public class ImportCiphersController : Controller
             throw new BadRequestException("You cannot import this much data at once.");
         }
 
+        if (model.Ciphers.Any(c => c.ArchivedDate.HasValue))
+        {
+            throw new BadRequestException("You cannot import archived items into an organization.");
+        }
+
         var orgId = new Guid(organizationId);
         var collections = model.Collections.Select(c => c.ToCollection(orgId)).ToList();
-
 
         //An User is allowed to import if CanCreate Collections or has AccessToImportExport
         var authorized = await CheckOrgImportPermission(collections, orgId);
@@ -156,7 +160,7 @@ public class ImportCiphersController : Controller
         if (existingCollections.Any() && (await _authorizationService.AuthorizeAsync(User, existingCollections, BulkCollectionOperations.ImportCiphers)).Succeeded)
         {
             return true;
-        };
+        }
 
         return false;
     }

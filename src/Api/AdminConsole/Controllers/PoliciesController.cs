@@ -1,14 +1,18 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Api.AdminConsole.Authorization;
+using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.AdminConsole.Models.Request;
 using Bit.Api.AdminConsole.Models.Response.Helpers;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Response;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Context;
@@ -30,7 +34,6 @@ namespace Bit.Api.AdminConsole.Controllers;
 public class PoliciesController : Controller
 {
     private readonly ICurrentContext _currentContext;
-    private readonly IFeatureService _featureService;
     private readonly GlobalSettings _globalSettings;
     private readonly IOrganizationHasVerifiedDomainsQuery _organizationHasVerifiedDomainsQuery;
     private readonly IOrganizationRepository _organizationRepository;
@@ -39,8 +42,9 @@ public class PoliciesController : Controller
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IPolicyRepository _policyRepository;
     private readonly IUserService _userService;
-
+    private readonly IFeatureService _featureService;
     private readonly ISavePolicyCommand _savePolicyCommand;
+    private readonly IVNextSavePolicyCommand _vNextSavePolicyCommand;
 
     public PoliciesController(IPolicyRepository policyRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -49,10 +53,11 @@ public class PoliciesController : Controller
         GlobalSettings globalSettings,
         IDataProtectionProvider dataProtectionProvider,
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
-        IFeatureService featureService,
         IOrganizationHasVerifiedDomainsQuery organizationHasVerifiedDomainsQuery,
         IOrganizationRepository organizationRepository,
-        ISavePolicyCommand savePolicyCommand)
+        IFeatureService featureService,
+        ISavePolicyCommand savePolicyCommand,
+        IVNextSavePolicyCommand vNextSavePolicyCommand)
     {
         _policyRepository = policyRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -63,9 +68,10 @@ public class PoliciesController : Controller
             "OrganizationServiceDataProtector");
         _organizationRepository = organizationRepository;
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
-        _featureService = featureService;
         _organizationHasVerifiedDomainsQuery = organizationHasVerifiedDomainsQuery;
+        _featureService = featureService;
         _savePolicyCommand = savePolicyCommand;
+        _vNextSavePolicyCommand = vNextSavePolicyCommand;
     }
 
     [HttpGet("{type}")]
@@ -90,7 +96,7 @@ public class PoliciesController : Controller
     }
 
     [HttpGet("")]
-    public async Task<ListResponseModel<PolicyResponseModel>> Get(string orgId)
+    public async Task<ListResponseModel<PolicyResponseModel>> GetAll(string orgId)
     {
         var orgIdGuid = new Guid(orgId);
         if (!await _currentContext.ManagePolicies(orgIdGuid))
@@ -203,13 +209,22 @@ public class PoliciesController : Controller
             throw new NotFoundException();
         }
 
-        if (type != model.Type)
-        {
-            throw new BadRequestException("Mismatched policy type");
-        }
-
-        var policyUpdate = await model.ToPolicyUpdateAsync(orgId, _currentContext);
+        var policyUpdate = await model.ToPolicyUpdateAsync(orgId, type, _currentContext);
         var policy = await _savePolicyCommand.SaveAsync(policyUpdate);
+        return new PolicyResponseModel(policy);
+    }
+
+    [HttpPut("{type}/vnext")]
+    [RequireFeatureAttribute(FeatureFlagKeys.CreateDefaultLocation)]
+    [Authorize<ManagePoliciesRequirement>]
+    public async Task<PolicyResponseModel> PutVNext(Guid orgId, PolicyType type, [FromBody] SavePolicyRequest model)
+    {
+        var savePolicyRequest = await model.ToSavePolicyModelAsync(orgId, type, _currentContext);
+
+        var policy = _featureService.IsEnabled(FeatureFlagKeys.PolicyValidatorsRefactor) ?
+            await _vNextSavePolicyCommand.SaveAsync(savePolicyRequest) :
+            await _savePolicyCommand.VNextSaveAsync(savePolicyRequest);
+
         return new PolicyResponseModel(policy);
     }
 }

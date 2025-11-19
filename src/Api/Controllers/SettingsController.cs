@@ -32,7 +32,6 @@ public class SettingsController : Controller
     }
 
     [HttpPut("domains")]
-    [HttpPost("domains")]
     public async Task<DomainsResponseModel> PutDomains([FromBody] UpdateDomainsRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
@@ -45,5 +44,12 @@ public class SettingsController : Controller
 
         var response = new DomainsResponseModel(user);
         return response;
+    }
+
+    [HttpPost("domains")]
+    [Obsolete("This endpoint is deprecated. Use PUT /domains instead.")]
+    public async Task<DomainsResponseModel> PostDomains([FromBody] UpdateDomainsRequestModel model)
+    {
+        return await PutDomains(model);
     }
 }

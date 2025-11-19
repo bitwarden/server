@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using System.Text;
+﻿using System.Text;
 using Azure.Messaging.ServiceBus;
 using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Microsoft.Extensions.Logging;
@@ -16,13 +14,14 @@ public class AzureServiceBusEventListenerService<TConfiguration> : EventLoggingL
         TConfiguration configuration,
         IEventMessageHandler handler,
         IAzureServiceBusService serviceBusService,
+        ServiceBusProcessorOptions serviceBusOptions,
         ILoggerFactory loggerFactory)
         : base(handler, CreateLogger(loggerFactory, configuration))
     {
         _processor = serviceBusService.CreateProcessor(
             topicName: configuration.EventTopicName,
             subscriptionName: configuration.EventSubscriptionName,
-            new ServiceBusProcessorOptions());
+            options: serviceBusOptions);
     }
 
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)

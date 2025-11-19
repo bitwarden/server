@@ -3,11 +3,12 @@ using System.Security.Claims;
 using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
-using Bit.Core.IdentityServer;
+using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Platform.Installations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -47,7 +48,8 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         IUpdateInstallationCommand updateInstallationCommand,
         IPolicyRequirementQuery policyRequirementQuery,
         IAuthRequestRepository authRequestRepository,
-        IMailService mailService)
+        IMailService mailService,
+        IUserAccountKeysQuery userAccountKeysQuery)
         : base(
             userManager,
             userService,
@@ -65,7 +67,8 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             userDecryptionOptionsBuilder,
             policyRequirementQuery,
             authRequestRepository,
-            mailService)
+            mailService,
+            userAccountKeysQuery)
     {
         _userManager = userManager;
         _updateInstallationCommand = updateInstallationCommand;

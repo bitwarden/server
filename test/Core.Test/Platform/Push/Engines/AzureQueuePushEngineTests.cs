@@ -358,20 +358,28 @@ public class AzureQueuePushEngineTests
     }
 
     [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task PushLogOutAsync_SendsExpectedResponse(bool excludeCurrentContext)
+    [InlineData(true, null)]
+    [InlineData(true, PushNotificationLogOutReason.KdfChange)]
+    [InlineData(false, null)]
+    [InlineData(false, PushNotificationLogOutReason.KdfChange)]
+    public async Task PushLogOutAsync_SendsExpectedResponse(bool excludeCurrentContext,
+        PushNotificationLogOutReason? reason)
     {
         var userId = Guid.NewGuid();
+
+        var payload = new JsonObject
+        {
+            ["UserId"] = userId
+        };
+        if (reason != null)
+        {
+            payload["Reason"] = (int)reason;
+        }
 
         var expectedPayload = new JsonObject
         {
             ["Type"] = 11,
-            ["Payload"] = new JsonObject
-            {
-                ["UserId"] = userId,
-                ["Date"] = _fakeTimeProvider.GetUtcNow().UtcDateTime,
-            },
+            ["Payload"] = payload,
         };
 
         if (excludeCurrentContext)
@@ -380,7 +388,7 @@ public class AzureQueuePushEngineTests
         }
 
         await VerifyNotificationAsync(
-            async sut => await sut.PushLogOutAsync(userId, excludeCurrentContext),
+            async sut => await sut.PushLogOutAsync(userId, excludeCurrentContext, reason),
             expectedPayload
         );
     }
@@ -647,31 +655,6 @@ public class AzureQueuePushEngineTests
 
         await VerifyNotificationAsync(
             async sut => await sut.PushNotificationStatusAsync(notification, notificationStatus),
-            expectedPayload
-        );
-    }
-
-    [Fact]
-    public async Task PushSyncOrganizationStatusAsync_SendsExpectedResponse()
-    {
-        var organization = new Organization
-        {
-            Id = Guid.NewGuid(),
-            Enabled = true,
-        };
-
-        var expectedPayload = new JsonObject
-        {
-            ["Type"] = 18,
-            ["Payload"] = new JsonObject
-            {
-                ["OrganizationId"] = organization.Id,
-                ["Enabled"] = organization.Enabled,
-            },
-        };
-
-        await VerifyNotificationAsync(
-            async sut => await sut.PushSyncOrganizationStatusAsync(organization),
             expectedPayload
         );
     }

@@ -167,18 +167,17 @@ public interface IPushNotificationService
             ExcludeCurrentContext = false,
         });
 
-    Task PushLogOutAsync(Guid userId, bool excludeCurrentContextFromPush = false)
-        => PushAsync(new PushNotification<UserPushNotification>
+    Task PushLogOutAsync(Guid userId, bool excludeCurrentContextFromPush = false,
+        PushNotificationLogOutReason? reason = null)
+        => PushAsync(new PushNotification<LogOutPushNotification>
         {
             Type = PushType.LogOut,
             Target = NotificationTarget.User,
             TargetId = userId,
-            Payload = new UserPushNotification
+            Payload = new LogOutPushNotification
             {
                 UserId = userId,
-#pragma warning disable BWP0001 // Type or member is obsolete
-                Date = TimeProvider.GetUtcNow().UtcDateTime,
-#pragma warning restore BWP0001 // Type or member is obsolete
+                Reason = reason
             },
             ExcludeCurrentContext = excludeCurrentContextFromPush,
         });
@@ -397,20 +396,6 @@ public interface IPushNotificationService
                 UserId = authRequest.UserId,
             },
             ExcludeCurrentContext = true,
-        });
-
-    Task PushSyncOrganizationStatusAsync(Organization organization)
-        => PushAsync(new PushNotification<OrganizationStatusPushNotification>
-        {
-            Type = PushType.SyncOrganizationStatusChanged,
-            Target = NotificationTarget.Organization,
-            TargetId = organization.Id,
-            Payload = new OrganizationStatusPushNotification
-            {
-                OrganizationId = organization.Id,
-                Enabled = organization.Enabled,
-            },
-            ExcludeCurrentContext = false,
         });
 
     Task PushSyncOrganizationCollectionManagementSettingsAsync(Organization organization)

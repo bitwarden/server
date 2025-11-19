@@ -5,9 +5,10 @@ using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
-using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Quartz;
@@ -25,7 +26,6 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     private readonly IStripeFacade _stripeFacade;
     private readonly IOrganizationSponsorshipRenewCommand _organizationSponsorshipRenewCommand;
     private readonly IUserService _userService;
-    private readonly IPushNotificationService _pushNotificationService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ISchedulerFactory _schedulerFactory;
     private readonly IOrganizationEnableCommand _organizationEnableCommand;
@@ -35,6 +35,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     private readonly IProviderRepository _providerRepository;
     private readonly IProviderService _providerService;
     private readonly ILogger<SubscriptionUpdatedHandler> _logger;
+    private readonly IPushNotificationAdapter _pushNotificationAdapter;
 
     public SubscriptionUpdatedHandler(
         IStripeEventService stripeEventService,
@@ -43,7 +44,6 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         IStripeFacade stripeFacade,
         IOrganizationSponsorshipRenewCommand organizationSponsorshipRenewCommand,
         IUserService userService,
-        IPushNotificationService pushNotificationService,
         IOrganizationRepository organizationRepository,
         ISchedulerFactory schedulerFactory,
         IOrganizationEnableCommand organizationEnableCommand,
@@ -52,7 +52,8 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         IFeatureService featureService,
         IProviderRepository providerRepository,
         IProviderService providerService,
-        ILogger<SubscriptionUpdatedHandler> logger)
+        ILogger<SubscriptionUpdatedHandler> logger,
+        IPushNotificationAdapter pushNotificationAdapter)
     {
         _stripeEventService = stripeEventService;
         _stripeEventUtilityService = stripeEventUtilityService;
@@ -61,7 +62,6 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         _stripeFacade = stripeFacade;
         _organizationSponsorshipRenewCommand = organizationSponsorshipRenewCommand;
         _userService = userService;
-        _pushNotificationService = pushNotificationService;
         _organizationRepository = organizationRepository;
         _providerRepository = providerRepository;
         _schedulerFactory = schedulerFactory;
@@ -72,6 +72,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         _providerRepository = providerRepository;
         _providerService = providerService;
         _logger = logger;
+        _pushNotificationAdapter = pushNotificationAdapter;
     }
 
     /// <summary>
@@ -83,12 +84,14 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         var subscription = await _stripeEventService.GetSubscription(parsedEvent, true, ["customer", "discounts", "latest_invoice", "test_clock"]);
         var (organizationId, userId, providerId) = _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata);
 
+        var currentPeriodEnd = subscription.GetCurrentPeriodEnd();
+
         switch (subscription.Status)
         {
             case StripeSubscriptionStatus.Unpaid or StripeSubscriptionStatus.IncompleteExpired
                 when organizationId.HasValue:
                 {
-                    await _organizationDisableCommand.DisableAsync(organizationId.Value, subscription.CurrentPeriodEnd);
+                    await _organizationDisableCommand.DisableAsync(organizationId.Value, currentPeriodEnd);
                     if (subscription.Status == StripeSubscriptionStatus.Unpaid &&
                         subscription.LatestInvoice is { BillingReason: "subscription_cycle" or "subscription_create" })
                     {
@@ -115,7 +118,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                         await VoidOpenInvoices(subscription.Id);
                     }
 
-                    await _userService.DisablePremiumAsync(userId.Value, subscription.CurrentPeriodEnd);
+                    await _userService.DisablePremiumAsync(userId.Value, currentPeriodEnd);
 
                     break;
                 }
@@ -125,7 +128,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                     var organization = await _organizationRepository.GetByIdAsync(organizationId.Value);
                     if (organization != null)
                     {
-                        await _pushNotificationService.PushSyncOrganizationStatusAsync(organization);
+                        await _pushNotificationAdapter.NotifyEnabledChangedAsync(organization);
                     }
                     break;
                 }
@@ -155,7 +158,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 {
                     if (userId.HasValue)
                     {
-                        await _userService.EnablePremiumAsync(userId.Value, subscription.CurrentPeriodEnd);
+                        await _userService.EnablePremiumAsync(userId.Value, currentPeriodEnd);
                     }
                     break;
                 }
@@ -163,17 +166,17 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
         if (organizationId.HasValue)
         {
-            await _organizationService.UpdateExpirationDateAsync(organizationId.Value, subscription.CurrentPeriodEnd);
-            if (_stripeEventUtilityService.IsSponsoredSubscription(subscription))
+            await _organizationService.UpdateExpirationDateAsync(organizationId.Value, currentPeriodEnd);
+            if (_stripeEventUtilityService.IsSponsoredSubscription(subscription) && currentPeriodEnd.HasValue)
             {
-                await _organizationSponsorshipRenewCommand.UpdateExpirationDateAsync(organizationId.Value, subscription.CurrentPeriodEnd);
+                await _organizationSponsorshipRenewCommand.UpdateExpirationDateAsync(organizationId.Value, currentPeriodEnd.Value);
             }
 
             await RemovePasswordManagerCouponIfRemovingSecretsManagerTrialAsync(parsedEvent, subscription);
         }
         else if (userId.HasValue)
         {
-            await _userService.UpdatePremiumExpirationAsync(userId.Value, subscription.CurrentPeriodEnd);
+            await _userService.UpdatePremiumExpirationAsync(userId.Value, currentPeriodEnd);
         }
     }
 
@@ -281,9 +284,8 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             ?.Coupon
             ?.Id == "sm-standalone";
 
-        var subscriptionHasSecretsManagerTrial = subscription.Discount
-            ?.Coupon
-            ?.Id == "sm-standalone";
+        var subscriptionHasSecretsManagerTrial = subscription.Discounts.Select(discount => discount.Coupon.Id)
+            .Contains(StripeConstants.CouponIDs.SecretsManagerStandalone);
 
         if (customerHasSecretsManagerTrial)
         {

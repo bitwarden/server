@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -87,4 +88,13 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     Task<IEnumerable<OrganizationUserUserDetails>> GetManyDetailsByRoleAsync(Guid organizationId, OrganizationUserType role);
 
     Task CreateManyAsync(IEnumerable<CreateOrganizationUser> organizationUserCollection);
+
+    /// <summary>
+    /// It will only confirm if the user is in the `Accepted` state.
+    ///
+    /// This is an idempotent operation.
+    /// </summary>
+    /// <param name="organizationUserToConfirm">Accepted OrganizationUser to confirm</param>
+    /// <returns>True, if the user was updated. False, if not performed.</returns>
+    Task<bool> ConfirmOrganizationUserAsync(AcceptedOrganizationUserToConfirm organizationUserToConfirm);
 }

@@ -86,3 +86,20 @@ public class OrganizationCollectionManagementPushNotification
     public bool LimitCollectionDeletion { get; init; }
     public bool LimitItemDeletion { get; init; }
 }
+
+public class OrganizationBankAccountVerifiedPushNotification
+{
+    public Guid OrganizationId { get; set; }
+}
+
+public class ProviderBankAccountVerifiedPushNotification
+{
+    public Guid ProviderId { get; set; }
+    public Guid AdminId { get; set; }
+}
+
+public class LogOutPushNotification
+{
+    public Guid UserId { get; set; }
+    public PushNotificationLogOutReason? Reason { get; set; }
+}

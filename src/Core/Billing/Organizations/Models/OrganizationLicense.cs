@@ -96,50 +96,13 @@ public class OrganizationLicense : ILicense
         AllowAdminAccessToAllCollectionItems = org.AllowAdminAccessToAllCollectionItems;
         //
 
-        if (subscriptionInfo?.Subscription == null)
-        {
-            if (org.ExpirationDate.HasValue)
-            {
-                Expires = Refresh = org.ExpirationDate.Value;
-                Trial = false;
-            }
-            else
-            {
-                Expires = Refresh = Issued.AddDays(7);
-                Trial = true;
-            }
-        }
-        else if (subscriptionInfo.Subscription.TrialEndDate.HasValue &&
-                 subscriptionInfo.Subscription.TrialEndDate.Value > DateTime.UtcNow)
-        {
-            Expires = Refresh = subscriptionInfo.Subscription.TrialEndDate.Value;
-            Trial = true;
-        }
-        else
-        {
-            if (org.ExpirationDate.HasValue && org.ExpirationDate.Value < DateTime.UtcNow)
-            {
-                // expired
-                Expires = Refresh = org.ExpirationDate.Value;
-            }
-            else if (subscriptionInfo?.Subscription?.PeriodDuration != null &&
-                     subscriptionInfo.Subscription.PeriodDuration > TimeSpan.FromDays(180))
-            {
-                Refresh = DateTime.UtcNow.AddDays(30);
-                Expires = subscriptionInfo.Subscription.PeriodEndDate?.AddDays(Core.Constants
-                    .OrganizationSelfHostSubscriptionGracePeriodDays);
-                ExpirationWithoutGracePeriod = subscriptionInfo.Subscription.PeriodEndDate;
-            }
-            else
-            {
-                Expires = org.ExpirationDate.HasValue ? org.ExpirationDate.Value.AddMonths(11) : Issued.AddYears(1);
-                Refresh = DateTime.UtcNow - Expires > TimeSpan.FromDays(30) ? DateTime.UtcNow.AddDays(30) : Expires;
-            }
-
-            Trial = false;
-        }
-
         UseAdminSponsoredFamilies = org.UseAdminSponsoredFamilies;
+
+        Expires = org.CalculateFreshExpirationDate(subscriptionInfo, Issued);
+        Refresh = org.CalculateFreshRefreshDate(subscriptionInfo, Issued);
+        ExpirationWithoutGracePeriod = org.CalculateFreshExpirationDateWithoutGracePeriod(subscriptionInfo);
+        Trial = org.CalculateIsTrialing(subscriptionInfo);
+
         Hash = Convert.ToBase64String(ComputeHash());
         Signature = Convert.ToBase64String(licenseService.SignLicense(this));
     }
@@ -190,6 +153,7 @@ public class OrganizationLicense : ILicense
     public LicenseType? LicenseType { get; set; }
     public bool UseOrganizationDomains { get; set; }
     public bool UseAdminSponsoredFamilies { get; set; }
+    public bool UseAutomaticUserConfirmation { get; set; }
     public string Hash { get; set; }
     public string Signature { get; set; }
     public string Token { get; set; }
@@ -263,7 +227,8 @@ public class OrganizationLicense : ILicense
                     // any new fields added need to be added here so that they're ignored
                     !p.Name.Equals(nameof(UseRiskInsights)) &&
                     !p.Name.Equals(nameof(UseAdminSponsoredFamilies)) &&
-                    !p.Name.Equals(nameof(UseOrganizationDomains)))
+                    !p.Name.Equals(nameof(UseOrganizationDomains)) &&
+                    !p.Name.Equals(nameof(UseAutomaticUserConfirmation)))
                 .OrderBy(p => p.Name)
                 .Select(p => $"{p.Name}:{Core.Utilities.CoreHelpers.FormatLicenseSignatureValue(p.GetValue(this, null))}")
                 .Aggregate((c, n) => $"{c}|{n}");
@@ -458,6 +423,7 @@ public class OrganizationLicense : ILicense
         var smServiceAccounts = claimsPrincipal.GetValue<int?>(nameof(SmServiceAccounts));
         var useAdminSponsoredFamilies = claimsPrincipal.GetValue<bool>(nameof(UseAdminSponsoredFamilies));
         var useOrganizationDomains = claimsPrincipal.GetValue<bool>(nameof(UseOrganizationDomains));
+        var useAutomaticUserConfirmation = claimsPrincipal.GetValue<bool>(nameof(UseAutomaticUserConfirmation));
 
         return issued <= DateTime.UtcNow &&
                expires >= DateTime.UtcNow &&
@@ -487,7 +453,8 @@ public class OrganizationLicense : ILicense
                smSeats == organization.SmSeats &&
                smServiceAccounts == organization.SmServiceAccounts &&
                useAdminSponsoredFamilies == organization.UseAdminSponsoredFamilies &&
-               useOrganizationDomains == organization.UseOrganizationDomains;
+               useOrganizationDomains == organization.UseOrganizationDomains &&
+               useAutomaticUserConfirmation == organization.UseAutomaticUserConfirmation;
 
     }
 

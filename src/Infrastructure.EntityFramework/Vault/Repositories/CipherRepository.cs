@@ -4,6 +4,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using AutoMapper;
+using Bit.Core.Enums;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Enums;
@@ -207,7 +208,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
 
     public async Task DeleteAsync(IEnumerable<Guid> ids, Guid userId)
     {
-        await ToggleCipherStates(ids, userId, CipherStateAction.HardDelete);
+        await ToggleDeleteCipherStatesAsync(ids, userId, CipherStateAction.HardDelete);
     }
 
     public async Task DeleteAttachmentAsync(Guid cipherId, string attachmentId)
@@ -258,17 +259,20 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         {
             var dbContext = GetDatabaseContext(scope);
 
-            var collectionCiphers = from cc in dbContext.CollectionCiphers
-                                    join c in dbContext.Collections
-                                        on cc.CollectionId equals c.Id
-                                    where c.OrganizationId == organizationId
-                                    select cc;
-            dbContext.RemoveRange(collectionCiphers);
+            var ciphersToDelete = from c in dbContext.Ciphers
+                                  where c.OrganizationId == organizationId
+                                        && !c.CollectionCiphers.Any(cc =>
+                                            cc.Collection.Type == CollectionType.DefaultUserCollection)
+                                  select c;
+            dbContext.RemoveRange(ciphersToDelete);
 
-            var ciphers = from c in dbContext.Ciphers
-                          where c.OrganizationId == organizationId
-                          select c;
-            dbContext.RemoveRange(ciphers);
+            var collectionCiphersToRemove = from cc in dbContext.CollectionCiphers
+                                            join col in dbContext.Collections on cc.CollectionId equals col.Id
+                                            join c in dbContext.Ciphers on cc.CipherId equals c.Id
+                                            where col.Type != CollectionType.DefaultUserCollection
+                                                  && c.OrganizationId == organizationId
+                                            select cc;
+            dbContext.RemoveRange(collectionCiphersToRemove);
 
             await OrganizationUpdateStorage(organizationId);
             await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(organizationId);
@@ -485,7 +489,8 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
                                         ViewPassword = true,
                                         Manage = true,
                                         OrganizationUseTotp = false,
-                                        Key = c.Key
+                                        Key = c.Key,
+                                        ArchivedDate = c.ArchivedDate,
                                     };
             }
 
@@ -728,9 +733,14 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
+    public async Task<DateTime> UnarchiveAsync(IEnumerable<Guid> ids, Guid userId)
+    {
+        return await ToggleArchiveCipherStatesAsync(ids, userId, CipherStateAction.Unarchive);
+    }
+
     public async Task<DateTime> RestoreAsync(IEnumerable<Guid> ids, Guid userId)
     {
-        return await ToggleCipherStates(ids, userId, CipherStateAction.Restore);
+        return await ToggleDeleteCipherStatesAsync(ids, userId, CipherStateAction.Restore);
     }
 
     public async Task<DateTime> RestoreByIdsOrganizationIdAsync(IEnumerable<Guid> ids, Guid organizationId)
@@ -758,20 +768,25 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
-    public async Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId)
+    public async Task<DateTime> ArchiveAsync(IEnumerable<Guid> ids, Guid userId)
     {
-        await ToggleCipherStates(ids, userId, CipherStateAction.SoftDelete);
+        return await ToggleArchiveCipherStatesAsync(ids, userId, CipherStateAction.Archive);
     }
 
-    private async Task<DateTime> ToggleCipherStates(IEnumerable<Guid> ids, Guid userId, CipherStateAction action)
+    public async Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId)
     {
-        static bool FilterDeletedDate(CipherStateAction action, CipherDetails ucd)
+        await ToggleDeleteCipherStatesAsync(ids, userId, CipherStateAction.SoftDelete);
+    }
+
+    private async Task<DateTime> ToggleArchiveCipherStatesAsync(IEnumerable<Guid> ids, Guid userId, CipherStateAction action)
+    {
+        static bool FilterArchivedDate(CipherStateAction action, CipherDetails ucd)
         {
             return action switch
             {
-                CipherStateAction.Restore => ucd.DeletedDate != null,
-                CipherStateAction.SoftDelete => ucd.DeletedDate == null,
-                _ => true,
+                CipherStateAction.Unarchive => ucd.ArchivedDate != null,
+                CipherStateAction.Archive => ucd.ArchivedDate == null,
+                _ => true
             };
         }
 
@@ -779,8 +794,49 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         {
             var dbContext = GetDatabaseContext(scope);
             var userCipherDetailsQuery = new UserCipherDetailsQuery(userId);
-            var cipherEntitiesToCheck = await (dbContext.Ciphers.Where(c => ids.Contains(c.Id))).ToListAsync();
-            var query = from ucd in await (userCipherDetailsQuery.Run(dbContext)).ToListAsync()
+            var cipherEntitiesToCheck = await dbContext.Ciphers.Where(c => ids.Contains(c.Id)).ToListAsync();
+            var query = from ucd in await userCipherDetailsQuery.Run(dbContext).ToListAsync()
+                        join c in cipherEntitiesToCheck
+                            on ucd.Id equals c.Id
+                        where ucd.Edit && FilterArchivedDate(action, ucd)
+                        select c;
+
+            var utcNow = DateTime.UtcNow;
+            var cipherIdsToModify = query.Select(c => c.Id);
+            var cipherEntitiesToModify = dbContext.Ciphers.Where(x => cipherIdsToModify.Contains(x.Id));
+
+            await cipherEntitiesToModify.ForEachAsync(cipher =>
+            {
+                dbContext.Attach(cipher);
+                cipher.ArchivedDate = action == CipherStateAction.Unarchive ? null : utcNow;
+                cipher.RevisionDate = utcNow;
+            });
+
+            await dbContext.UserBumpAccountRevisionDateAsync(userId);
+            await dbContext.SaveChangesAsync();
+
+            return utcNow;
+        }
+    }
+
+    private async Task<DateTime> ToggleDeleteCipherStatesAsync(IEnumerable<Guid> ids, Guid userId, CipherStateAction action)
+    {
+        static bool FilterDeletedDate(CipherStateAction action, CipherDetails ucd)
+        {
+            return action switch
+            {
+                CipherStateAction.Restore => ucd.DeletedDate != null,
+                CipherStateAction.SoftDelete => ucd.DeletedDate == null,
+                _ => true
+            };
+        }
+
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var userCipherDetailsQuery = new UserCipherDetailsQuery(userId);
+            var cipherEntitiesToCheck = await dbContext.Ciphers.Where(c => ids.Contains(c.Id)).ToListAsync();
+            var query = from ucd in await userCipherDetailsQuery.Run(dbContext).ToListAsync()
                         join c in cipherEntitiesToCheck
                             on ucd.Id equals c.Id
                         where ucd.Edit && FilterDeletedDate(action, ucd)
@@ -818,6 +874,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
             }
             await dbContext.UserBumpAccountRevisionDateAsync(userId);
             await dbContext.SaveChangesAsync();
+
             return utcNow;
         }
     }
@@ -968,6 +1025,55 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
 
             await dbContext.SaveChangesAsync();
         };
+    }
+
+    public async Task<IEnumerable<CipherOrganizationDetailsWithCollections>>
+        GetManyCipherOrganizationDetailsExcludingDefaultCollectionsAsync(Guid organizationId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var defaultTypeInt = (int)CollectionType.DefaultUserCollection;
+
+        //  filter out any cipher that belongs *only* to default collections
+        //    i.e. keep ciphers with no collections, or with ≥1 non-default collection
+        var query = from c in dbContext.Ciphers.AsNoTracking()
+                    where c.UserId == null
+                       && c.OrganizationId == organizationId
+                       && c.Organization.Enabled
+                       && (
+                            c.CollectionCiphers.Count() == 0
+                            || c.CollectionCiphers.Any(cc => (int)cc.Collection.Type != defaultTypeInt)
+                          )
+                    select new CipherOrganizationDetailsWithCollections(
+                        new CipherOrganizationDetails
+                        {
+                            Id = c.Id,
+                            UserId = c.UserId,
+                            OrganizationId = c.OrganizationId,
+                            Type = c.Type,
+                            Data = c.Data,
+                            Favorites = c.Favorites,
+                            Folders = c.Folders,
+                            Attachments = c.Attachments,
+                            CreationDate = c.CreationDate,
+                            RevisionDate = c.RevisionDate,
+                            DeletedDate = c.DeletedDate,
+                            Reprompt = c.Reprompt,
+                            Key = c.Key,
+                            OrganizationUseTotp = c.Organization.UseTotp
+                        },
+                        new Dictionary<Guid, IGrouping<Guid, Bit.Core.Entities.CollectionCipher>>()
+                    )
+                    {
+                        CollectionIds = c.CollectionCiphers
+                            .Where(cc => (int)cc.Collection.Type != defaultTypeInt)
+                            .Select(cc => cc.CollectionId)
+                            .ToArray()
+                    };
+
+        var result = await query.ToListAsync();
+        return result;
     }
 
     public async Task UpsertAsync(CipherDetails cipher)

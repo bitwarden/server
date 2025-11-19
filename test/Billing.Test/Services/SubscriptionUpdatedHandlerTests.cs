@@ -8,12 +8,11 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Models.StaticStore.Plans;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
-using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Test.Billing.Mocks.Plans;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using NSubstitute;
@@ -33,7 +32,6 @@ public class SubscriptionUpdatedHandlerTests
     private readonly IStripeFacade _stripeFacade;
     private readonly IOrganizationSponsorshipRenewCommand _organizationSponsorshipRenewCommand;
     private readonly IUserService _userService;
-    private readonly IPushNotificationService _pushNotificationService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationEnableCommand _organizationEnableCommand;
     private readonly IOrganizationDisableCommand _organizationDisableCommand;
@@ -42,6 +40,7 @@ public class SubscriptionUpdatedHandlerTests
     private readonly IProviderRepository _providerRepository;
     private readonly IProviderService _providerService;
     private readonly IScheduler _scheduler;
+    private readonly IPushNotificationAdapter _pushNotificationAdapter;
     private readonly SubscriptionUpdatedHandler _sut;
 
     public SubscriptionUpdatedHandlerTests()
@@ -53,7 +52,6 @@ public class SubscriptionUpdatedHandlerTests
         _organizationSponsorshipRenewCommand = Substitute.For<IOrganizationSponsorshipRenewCommand>();
         _userService = Substitute.For<IUserService>();
         _providerService = Substitute.For<IProviderService>();
-        _pushNotificationService = Substitute.For<IPushNotificationService>();
         _organizationRepository = Substitute.For<IOrganizationRepository>();
         var schedulerFactory = Substitute.For<ISchedulerFactory>();
         _organizationEnableCommand = Substitute.For<IOrganizationEnableCommand>();
@@ -64,6 +62,7 @@ public class SubscriptionUpdatedHandlerTests
         _providerService = Substitute.For<IProviderService>();
         var logger = Substitute.For<ILogger<SubscriptionUpdatedHandler>>();
         _scheduler = Substitute.For<IScheduler>();
+        _pushNotificationAdapter = Substitute.For<IPushNotificationAdapter>();
 
         schedulerFactory.GetScheduler().Returns(_scheduler);
 
@@ -74,7 +73,6 @@ public class SubscriptionUpdatedHandlerTests
             _stripeFacade,
             _organizationSponsorshipRenewCommand,
             _userService,
-            _pushNotificationService,
             _organizationRepository,
             schedulerFactory,
             _organizationEnableCommand,
@@ -83,7 +81,8 @@ public class SubscriptionUpdatedHandlerTests
             _featureService,
             _providerRepository,
             _providerService,
-            logger);
+            logger,
+            _pushNotificationAdapter);
     }
 
     [Fact]
@@ -97,7 +96,13 @@ public class SubscriptionUpdatedHandlerTests
         {
             Id = subscriptionId,
             Status = StripeSubscriptionStatus.Unpaid,
-            CurrentPeriodEnd = currentPeriodEnd,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem { CurrentPeriodEnd = currentPeriodEnd }
+                ]
+            },
             Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
             LatestInvoice = new Invoice { BillingReason = "subscription_cycle" }
         };
@@ -143,7 +148,13 @@ public class SubscriptionUpdatedHandlerTests
         {
             Id = subscriptionId,
             Status = StripeSubscriptionStatus.Unpaid,
-            CurrentPeriodEnd = DateTime.UtcNow.AddDays(30),
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem { CurrentPeriodEnd = DateTime.UtcNow.AddDays(30) }
+                ]
+            },
             Metadata = new Dictionary<string, string>
             {
                 ["providerId"] = providerId.ToString(),
@@ -207,7 +218,13 @@ public class SubscriptionUpdatedHandlerTests
         {
             Id = subscriptionId,
             Status = StripeSubscriptionStatus.Unpaid,
-            CurrentPeriodEnd = DateTime.UtcNow.AddDays(30),
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem { CurrentPeriodEnd = DateTime.UtcNow.AddDays(30) }
+                ]
+            },
             Metadata = new Dictionary<string, string> { ["providerId"] = providerId.ToString() },
             LatestInvoice = new Invoice { BillingReason = "subscription_cycle" },
             TestClock = null
@@ -258,6 +275,13 @@ public class SubscriptionUpdatedHandlerTests
         var subscription = new Subscription
         {
             Id = subscriptionId,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem { CurrentPeriodEnd = DateTime.UtcNow.AddDays(30) }
+                ]
+            },
             Status = StripeSubscriptionStatus.Unpaid,
             Metadata = new Dictionary<string, string> { { "providerId", providerId.ToString() } },
             LatestInvoice = new Invoice { BillingReason = "subscription_cycle" }
@@ -307,6 +331,13 @@ public class SubscriptionUpdatedHandlerTests
         var subscription = new Subscription
         {
             Id = subscriptionId,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem { CurrentPeriodEnd = DateTime.UtcNow.AddDays(30) }
+                ]
+            },
             Status = StripeSubscriptionStatus.Unpaid,
             Metadata = new Dictionary<string, string> { { "providerId", providerId.ToString() } },
             LatestInvoice = new Invoice { BillingReason = "subscription_cycle" }
@@ -349,7 +380,13 @@ public class SubscriptionUpdatedHandlerTests
         {
             Id = subscriptionId,
             Status = StripeSubscriptionStatus.IncompleteExpired,
-            CurrentPeriodEnd = currentPeriodEnd,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem { CurrentPeriodEnd = currentPeriodEnd }
+                ]
+            },
             Metadata = new Dictionary<string, string> { { "providerId", providerId.ToString() } },
             LatestInvoice = new Invoice { BillingReason = "renewal" }
         };
@@ -391,7 +428,13 @@ public class SubscriptionUpdatedHandlerTests
         {
             Id = subscriptionId,
             Status = StripeSubscriptionStatus.Unpaid,
-            CurrentPeriodEnd = currentPeriodEnd,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem { CurrentPeriodEnd = currentPeriodEnd }
+                ]
+            },
             Metadata = new Dictionary<string, string> { { "providerId", providerId.ToString() } },
             LatestInvoice = new Invoice { BillingReason = "subscription_cycle" }
         };
@@ -427,7 +470,13 @@ public class SubscriptionUpdatedHandlerTests
         {
             Id = subscriptionId,
             Status = StripeSubscriptionStatus.Unpaid,
-            CurrentPeriodEnd = currentPeriodEnd,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem { CurrentPeriodEnd = currentPeriodEnd }
+                ]
+            },
             Metadata = new Dictionary<string, string> { { "providerId", providerId.ToString() } },
             LatestInvoice = new Invoice { BillingReason = "subscription_cycle" }
         };
@@ -465,13 +514,16 @@ public class SubscriptionUpdatedHandlerTests
         {
             Id = subscriptionId,
             Status = StripeSubscriptionStatus.Unpaid,
-            CurrentPeriodEnd = currentPeriodEnd,
             Metadata = new Dictionary<string, string> { { "userId", userId.ToString() } },
             Items = new StripeList<SubscriptionItem>
             {
                 Data =
                 [
-                    new SubscriptionItem { Price = new Price { Id = IStripeEventUtilityService.PremiumPlanId } }
+                    new SubscriptionItem
+                    {
+                        CurrentPeriodEnd = currentPeriodEnd,
+                        Price = new Price { Id = IStripeEventUtilityService.PremiumPlanId }
+                    }
                 ]
             }
         };
@@ -509,7 +561,13 @@ public class SubscriptionUpdatedHandlerTests
         var subscription = new Subscription
         {
             Status = StripeSubscriptionStatus.Active,
-            CurrentPeriodEnd = currentPeriodEnd,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem { CurrentPeriodEnd = currentPeriodEnd }
+                ]
+            },
             Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } }
         };
 
@@ -540,8 +598,8 @@ public class SubscriptionUpdatedHandlerTests
             .EnableAsync(organizationId);
         await _organizationService.Received(1)
             .UpdateExpirationDateAsync(organizationId, currentPeriodEnd);
-        await _pushNotificationService.Received(1)
-            .PushSyncOrganizationStatusAsync(organization);
+        await _pushNotificationAdapter.Received(1)
+            .NotifyEnabledChangedAsync(organization);
     }
 
     [Fact]
@@ -553,7 +611,13 @@ public class SubscriptionUpdatedHandlerTests
         var subscription = new Subscription
         {
             Status = StripeSubscriptionStatus.Active,
-            CurrentPeriodEnd = currentPeriodEnd,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem { CurrentPeriodEnd = currentPeriodEnd }
+                ]
+            },
             Metadata = new Dictionary<string, string> { { "userId", userId.ToString() } }
         };
 
@@ -584,7 +648,13 @@ public class SubscriptionUpdatedHandlerTests
         var subscription = new Subscription
         {
             Status = StripeSubscriptionStatus.Active,
-            CurrentPeriodEnd = currentPeriodEnd,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem { CurrentPeriodEnd = currentPeriodEnd }
+                ]
+            },
             Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } }
         };
 
@@ -617,18 +687,24 @@ public class SubscriptionUpdatedHandlerTests
         {
             Id = "sub_123",
             Status = StripeSubscriptionStatus.Active,
-            CurrentPeriodEnd = DateTime.UtcNow.AddDays(10),
             CustomerId = "cus_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data = [new SubscriptionItem { Plan = new Plan { Id = "2023-enterprise-org-seat-annually" } }]
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        CurrentPeriodEnd = DateTime.UtcNow.AddDays(10),
+                        Plan = new Plan { Id = "2023-enterprise-org-seat-annually" }
+                    }
+                ]
             },
             Customer = new Customer
             {
                 Balance = 0,
                 Discount = new Discount { Coupon = new Coupon { Id = "sm-standalone" } }
             },
-            Discount = new Discount { Coupon = new Coupon { Id = "sm-standalone" } },
+            Discounts = [new Discount { Coupon = new Coupon { Id = "sm-standalone" } }],
             Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } }
         };
 
@@ -728,7 +804,6 @@ public class SubscriptionUpdatedHandlerTests
             .Received(1)
             .IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover);
     }
-
 
     [Fact]
     public async Task
@@ -999,6 +1074,13 @@ public class SubscriptionUpdatedHandlerTests
         var newSubscription = new Subscription
         {
             Id = previousSubscription?.Id ?? "sub_123",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem { CurrentPeriodEnd = DateTime.UtcNow.AddDays(30) }
+                ]
+            },
             Status = StripeSubscriptionStatus.Active,
             Metadata = new Dictionary<string, string> { { "providerId", providerId.ToString() } }
         };
@@ -1022,7 +1104,10 @@ public class SubscriptionUpdatedHandlerTests
         {
             new object[] { new Subscription { Id = "sub_123", Status = StripeSubscriptionStatus.Unpaid } },
             new object[] { new Subscription { Id = "sub_123", Status = StripeSubscriptionStatus.Incomplete } },
-            new object[] { new Subscription { Id = "sub_123", Status = StripeSubscriptionStatus.IncompleteExpired } },
+            new object[]
+            {
+                new Subscription { Id = "sub_123", Status = StripeSubscriptionStatus.IncompleteExpired }
+            },
             new object[] { new Subscription { Id = "sub_123", Status = StripeSubscriptionStatus.Paused } }
         };
     }

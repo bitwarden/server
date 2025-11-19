@@ -254,9 +254,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         organization.UseApi = newPlan.HasApi;
         organization.SelfHost = newPlan.HasSelfHost;
         organization.UsePolicies = newPlan.HasPolicies;
-        organization.MaxStorageGb = !newPlan.PasswordManager.BaseStorageGb.HasValue
-            ? (short?)null
-            : (short)(newPlan.PasswordManager.BaseStorageGb.Value + upgrade.AdditionalStorageGb);
+        organization.MaxStorageGb = (short)(newPlan.PasswordManager.BaseStorageGb + upgrade.AdditionalStorageGb);
         organization.UseGroups = newPlan.HasGroups;
         organization.UseDirectory = newPlan.HasDirectory;
         organization.UseEvents = newPlan.HasEvents;
@@ -265,7 +263,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         organization.UseApi = newPlan.HasApi;
         organization.UseSso = newPlan.HasSso;
         organization.UseOrganizationDomains = newPlan.HasOrganizationDomains;
-        organization.UseKeyConnector = newPlan.HasKeyConnector;
+        organization.UseKeyConnector = newPlan.HasKeyConnector ? organization.UseKeyConnector : false;
         organization.UseScim = newPlan.HasScim;
         organization.UseResetPassword = newPlan.HasResetPassword;
         organization.SelfHost = newPlan.HasSelfHost;

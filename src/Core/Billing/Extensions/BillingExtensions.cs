@@ -15,11 +15,24 @@ public static class BillingExtensions
         => planType switch
         {
             PlanType.Custom or PlanType.Free => ProductTierType.Free,
-            PlanType.FamiliesAnnually or PlanType.FamiliesAnnually2019 => ProductTierType.Families,
+            PlanType.FamiliesAnnually or PlanType.FamiliesAnnually2025 or PlanType.FamiliesAnnually2019 => ProductTierType.Families,
             PlanType.TeamsStarter or PlanType.TeamsStarter2023 => ProductTierType.TeamsStarter,
             _ when planType.ToString().Contains("Teams") => ProductTierType.Teams,
             _ when planType.ToString().Contains("Enterprise") => ProductTierType.Enterprise,
             _ => throw new BillingException($"PlanType {planType} could not be matched to a ProductTierType")
+        };
+
+    public static bool IsBusinessProductTierType(this PlanType planType)
+        => IsBusinessProductTierType(planType.GetProductTier());
+
+    public static bool IsBusinessProductTierType(this ProductTierType productTierType)
+        => productTierType switch
+        {
+            ProductTierType.Free => false,
+            ProductTierType.Families => false,
+            ProductTierType.Enterprise => true,
+            ProductTierType.Teams => true,
+            ProductTierType.TeamsStarter => true
         };
 
     public static bool IsBillable(this Provider provider) =>

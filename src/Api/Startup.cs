@@ -13,7 +13,6 @@ using Bit.Api.KeyManagement.Validators;
 using Bit.Api.Tools.Models.Request;
 using Bit.Api.Vault.Models.Request;
 using Bit.Core.Auth.Entities;
-using Bit.Core.IdentityServer;
 using Bit.SharedWeb.Health;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.OpenApi.Models;
@@ -33,6 +32,10 @@ using Bit.Core.Tools.ImportFeatures;
 using Bit.Core.Auth.Models.Api.Request;
 using Bit.Core.Dirt.Reports.ReportFeatures;
 using Bit.Core.Tools.SendFeatures;
+using Bit.Core.Auth.IdentityServer;
+using Bit.Core.Auth.Identity;
+using Bit.Core.Enums;
+
 
 #if !OSS
 using Bit.Commercial.Core.SecretsManager;
@@ -91,9 +94,6 @@ public class Startup
         services.AddMemoryCache();
         services.AddDistributedCache(globalSettings);
 
-        // BitPay
-        services.AddSingleton<BitPayClient>();
-
         if (!globalSettings.SelfHosted)
         {
             services.AddIpRateLimiting(globalSettings);
@@ -103,46 +103,52 @@ public class Startup
         services.AddCustomIdentityServices(globalSettings);
         services.AddIdentityAuthenticationServices(globalSettings, Environment, config =>
         {
-            config.AddPolicy("Application", policy =>
+            config.AddPolicy(Policies.Application, policy =>
             {
                 policy.RequireAuthenticatedUser();
                 policy.RequireClaim(JwtClaimTypes.AuthenticationMethod, "Application", "external");
                 policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.Api);
             });
-            config.AddPolicy("Web", policy =>
+            config.AddPolicy(Policies.Web, policy =>
             {
                 policy.RequireAuthenticatedUser();
                 policy.RequireClaim(JwtClaimTypes.AuthenticationMethod, "Application", "external");
                 policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.Api);
-                policy.RequireClaim(JwtClaimTypes.ClientId, "web");
+                policy.RequireClaim(JwtClaimTypes.ClientId, BitwardenClient.Web);
             });
-            config.AddPolicy("Push", policy =>
+            config.AddPolicy(Policies.Push, policy =>
             {
                 policy.RequireAuthenticatedUser();
                 policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.ApiPush);
             });
-            config.AddPolicy("Licensing", policy =>
+            config.AddPolicy(Policies.Licensing, policy =>
             {
                 policy.RequireAuthenticatedUser();
                 policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.ApiLicensing);
             });
-            config.AddPolicy("Organization", policy =>
+            config.AddPolicy(Policies.Organization, policy =>
             {
                 policy.RequireAuthenticatedUser();
                 policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.ApiOrganization);
             });
-            config.AddPolicy("Installation", policy =>
+            config.AddPolicy(Policies.Installation, policy =>
             {
                 policy.RequireAuthenticatedUser();
                 policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.ApiInstallation);
             });
-            config.AddPolicy("Secrets", policy =>
+            config.AddPolicy(Policies.Secrets, policy =>
             {
                 policy.RequireAuthenticatedUser();
                 policy.RequireAssertion(ctx => ctx.User.HasClaim(c =>
                     c.Type == JwtClaimTypes.Scope &&
                     (c.Value.Contains(ApiScopes.Api) || c.Value.Contains(ApiScopes.ApiSecrets))
                 ));
+            });
+            config.AddPolicy(Policies.Send, configurePolicy: policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.ApiSendAccess);
+                policy.RequireClaim(Claims.SendAccessClaims.SendId);
             });
         });
 
@@ -220,8 +226,9 @@ public class Startup
             services.AddHostedService<Core.HostedServices.ApplicationCacheHostedService>();
         }
 
-        // Add SlackService for OAuth API requests - if configured
+        // Add Slack / Teams Services for OAuth API requests - if configured
         services.AddSlackService(globalSettings);
+        services.AddTeamsService(globalSettings);
     }
 
     public void Configure(
@@ -316,6 +323,6 @@ public class Startup
         }
 
         // Log startup
-        logger.LogInformation(Constants.BypassFiltersEventId, globalSettings.ProjectName + " started.");
+        logger.LogInformation(Constants.BypassFiltersEventId, "{Project} started.", globalSettings.ProjectName);
     }
 }

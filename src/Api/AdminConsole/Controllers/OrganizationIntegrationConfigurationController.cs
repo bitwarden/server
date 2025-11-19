@@ -1,16 +1,13 @@
 ﻿using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
-using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.AdminConsole.Controllers;
 
-[RequireFeature(FeatureFlagKeys.EventBasedOrganizationIntegrations)]
 [Route("organizations/{organizationId:guid}/integrations/{integrationId:guid}/configurations")]
 [Authorize("Application")]
 public class OrganizationIntegrationConfigurationController(
@@ -98,7 +95,6 @@ public class OrganizationIntegrationConfigurationController(
     }
 
     [HttpDelete("{configurationId:guid}")]
-    [HttpPost("{configurationId:guid}/delete")]
     public async Task DeleteAsync(Guid organizationId, Guid integrationId, Guid configurationId)
     {
         if (!await HasPermission(organizationId))
@@ -118,6 +114,13 @@ public class OrganizationIntegrationConfigurationController(
         }
 
         await integrationConfigurationRepository.DeleteAsync(configuration);
+    }
+
+    [HttpPost("{configurationId:guid}/delete")]
+    [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
+    public async Task PostDeleteAsync(Guid organizationId, Guid integrationId, Guid configurationId)
+    {
+        await DeleteAsync(organizationId, integrationId, configurationId);
     }
 
     private async Task<bool> HasPermission(Guid organizationId)

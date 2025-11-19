@@ -4,11 +4,12 @@
 #
 # https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 
-## Docker files have shared ownership ##
-**/Dockerfile
-**/*.Dockerfile
-**/.dockerignore
-**/entrypoint.sh
+## Docker-related files
+**/Dockerfile @bitwarden/team-appsec @bitwarden/dept-bre
+**/*.Dockerfile @bitwarden/team-appsec @bitwarden/dept-bre
+**/*.dockerignore @bitwarden/team-appsec @bitwarden/dept-bre
+**/docker-compose.yml @bitwarden/team-appsec @bitwarden/dept-bre
+**/entrypoint.sh @bitwarden/team-appsec @bitwarden/dept-bre
 
 ## BRE team owns these workflows ##
 .github/workflows/publish.yml @bitwarden/dept-bre
@@ -95,6 +96,14 @@ src/Admin/Views/Tools @bitwarden/team-billing-dev
 # The PushType enum is expected to be editted by anyone without need for Platform review
 src/Core/Platform/Push/PushType.cs
 
+# SDK
+util/RustSdk @bitwarden/team-sdk-sme
+
 # Multiple owners - DO NOT REMOVE (BRE)
 **/packages.lock.json
 Directory.Build.props
+
+# Claude related files
+.claude/ @bitwarden/team-ai-sme
+.github/workflows/respond.yml @bitwarden/team-ai-sme
+.github/workflows/review-code.yml @bitwarden/team-ai-sme
