@@ -25,7 +25,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
+using Bit.Core.Test.Billing.Mocks;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -235,7 +235,7 @@ public class OrganizationsControllerTests
         // Arrange
         sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(organization.Id).Returns(true);
 
-        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
+        var plan = MockPlans.Get(PlanType.EnterpriseAnnually);
         sutProvider.GetDependency<IPricingClient>().GetPlan(Arg.Any<PlanType>()).Returns(plan);
 
         sutProvider.GetDependency<IOrganizationService>()
