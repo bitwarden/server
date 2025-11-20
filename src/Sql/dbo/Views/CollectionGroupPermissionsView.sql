@@ -1,4 +1,4 @@
-CREATE OR ALTER VIEW [dbo].[CollectionGroupPermissionsView]
+CREATE VIEW [dbo].[CollectionGroupPermissionsView]
 AS
 SELECT
     GU.[OrganizationUserId],

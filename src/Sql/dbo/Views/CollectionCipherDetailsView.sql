@@ -1,4 +1,4 @@
-CREATE OR ALTER VIEW [dbo].[CollectionCipherDetailsView]
+CREATE VIEW [dbo].[CollectionCipherDetailsView]
 AS
 SELECT
     CC.[CollectionId],
