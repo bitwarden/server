@@ -1,6 +1,6 @@
-  -- Dependency validation: Ensure PM-27603 has been deployed
-  -- This prevents cryptic "Invalid column name" errors
-
+ -- ========================================
+  -- Dependency Validation
+  -- ========================================
   IF NOT EXISTS (
       SELECT 1 FROM sys.columns
       WHERE object_id = OBJECT_ID('[dbo].[User]')
@@ -21,57 +21,101 @@
       RETURN;
   END;
   GO
-  
--- Populate MaxStorageGbIncreased for Users in batches
--- Set MaxStorageGbIncreased = MaxStorageGb + 4 for all users with storage quota
--- Using batched updates to reduce lock contention and transaction log impact
-DECLARE @BatchSize INT = 5000;
-DECLARE @RowsAffected INT = 1;
-DECLARE @TotalUpdated INT = 0;
 
-PRINT 'Starting User table update...';
+  -- ========================================
+  -- User Table Migration
+  -- ========================================
 
-WHILE @RowsAffected > 0
-BEGIN
-    UPDATE TOP (@BatchSize) [dbo].[User]
-    SET [MaxStorageGbIncreased] = [MaxStorageGb] + 4
-    WHERE [MaxStorageGb] IS NOT NULL
-      AND [MaxStorageGbIncreased] IS NULL; -- Only update rows not yet processed
+  -- Create temporary index for performance
+  IF NOT EXISTS (
+      SELECT 1
+      FROM sys.indexes
+      WHERE object_id = OBJECT_ID('dbo.User')
+      AND name = 'IX_TEMP_User_MaxStorageGb_MaxStorageGbIncreased'
+  )
+  BEGIN
+      PRINT 'Creating temporary index on User table...';
+      CREATE INDEX IX_TEMP_User_MaxStorageGb_MaxStorageGbIncreased
+      ON [dbo].[User]([MaxStorageGb], [MaxStorageGbIncreased]);
+      PRINT 'Temporary index created.';
+  END
+  GO
 
-    SET @RowsAffected = @@ROWCOUNT;
-    SET @TotalUpdated = @TotalUpdated + @RowsAffected;
+  -- Populate MaxStorageGbIncreased for Users in batches
+  DECLARE @BatchSize INT = 5000;
+  DECLARE @RowsAffected INT = 1;
+  DECLARE @TotalUpdated INT = 0;
 
-    PRINT 'Users updated: ' + CAST(@TotalUpdated AS VARCHAR(10));
+  PRINT 'Starting User table update...';
 
-    WAITFOR DELAY '00:00:00.100'; -- 100ms delay to reduce contention
-END
+  WHILE @RowsAffected > 0
+  BEGIN
+      UPDATE TOP (@BatchSize) [dbo].[User]
+      SET [MaxStorageGbIncreased] = [MaxStorageGb] + 4
+      WHERE [MaxStorageGb] IS NOT NULL
+        AND [MaxStorageGbIncreased] IS NULL;
 
-PRINT 'User table update complete. Total rows updated: ' + CAST(@TotalUpdated AS VARCHAR(10));
-GO
+      SET @RowsAffected = @@ROWCOUNT;
+      SET @TotalUpdated = @TotalUpdated + @RowsAffected;
 
--- Populate MaxStorageGbIncreased for Organizations in batches
--- Set MaxStorageGbIncreased = MaxStorageGb + 4 for all organizations with storage quota
--- Using batched updates to reduce lock contention and transaction log impact
-DECLARE @BatchSize INT = 5000;
-DECLARE @RowsAffected INT = 1;
-DECLARE @TotalUpdated INT = 0;
+      PRINT 'Users updated: ' + CAST(@TotalUpdated AS VARCHAR(10));
 
-PRINT 'Starting Organization table update...';
+      WAITFOR DELAY '00:00:00.100'; -- 100ms delay to reduce contention
+  END
 
-WHILE @RowsAffected > 0
-BEGIN
-    UPDATE TOP (@BatchSize) [dbo].[Organization]
-    SET [MaxStorageGbIncreased] = [MaxStorageGb] + 4
-    WHERE [MaxStorageGb] IS NOT NULL
-      AND [MaxStorageGbIncreased] IS NULL; -- Only update rows not yet processed
+  PRINT 'User table update complete. Total rows updated: ' + CAST(@TotalUpdated AS VARCHAR(10));
+  GO
 
-    SET @RowsAffected = @@ROWCOUNT;
-    SET @TotalUpdated = @TotalUpdated + @RowsAffected;
+  -- Drop temporary index
+  DROP INDEX IF EXISTS [dbo].[User].[IX_TEMP_User_MaxStorageGb_MaxStorageGbIncreased];
+  PRINT 'Temporary index on User table dropped.';
+  GO
 
-    PRINT 'Organizations updated: ' + CAST(@TotalUpdated AS VARCHAR(10));
+  -- ========================================
+  -- Organization Table Migration
+  -- ========================================
 
-    WAITFOR DELAY '00:00:00.100'; -- 100ms delay to reduce contention
-END
+  -- Create temporary index for performance
+  IF NOT EXISTS (
+      SELECT 1
+      FROM sys.indexes
+      WHERE object_id = OBJECT_ID('dbo.Organization')
+      AND name = 'IX_TEMP_Organization_MaxStorageGb_MaxStorageGbIncreased'
+  )
+  BEGIN
+      PRINT 'Creating temporary index on Organization table...';
+      CREATE INDEX IX_TEMP_Organization_MaxStorageGb_MaxStorageGbIncreased
+      ON [dbo].[Organization]([MaxStorageGb], [MaxStorageGbIncreased]);
+      PRINT 'Temporary index created.';
+  END
+  GO
 
-PRINT 'Organization table update complete. Total rows updated: ' + CAST(@TotalUpdated AS VARCHAR(10));
-GO
+  -- Populate MaxStorageGbIncreased for Organizations in batches
+  DECLARE @BatchSize INT = 5000;
+  DECLARE @RowsAffected INT = 1;
+  DECLARE @TotalUpdated INT = 0;
+
+  PRINT 'Starting Organization table update...';
+
+  WHILE @RowsAffected > 0
+  BEGIN
+      UPDATE TOP (@BatchSize) [dbo].[Organization]
+      SET [MaxStorageGbIncreased] = [MaxStorageGb] + 4
+      WHERE [MaxStorageGb] IS NOT NULL
+        AND [MaxStorageGbIncreased] IS NULL;
+
+      SET @RowsAffected = @@ROWCOUNT;
+      SET @TotalUpdated = @TotalUpdated + @RowsAffected;
+
+      PRINT 'Organizations updated: ' + CAST(@TotalUpdated AS VARCHAR(10));
+
+      WAITFOR DELAY '00:00:00.100'; -- 100ms delay to reduce contention
+  END
+
+  PRINT 'Organization table update complete. Total rows updated: ' + CAST(@TotalUpdated AS VARCHAR(10));
+  GO
+
+  -- Drop temporary index
+  DROP INDEX IF EXISTS [dbo].[Organization].[IX_TEMP_Organization_MaxStorageGb_MaxStorageGbIncreased];
+  PRINT 'Temporary index on Organization table dropped.';
+  GO
