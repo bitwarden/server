@@ -20,6 +20,7 @@ using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
+using Bit.Core.Test.Billing.Mocks;
 using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
@@ -811,12 +812,12 @@ public class ProviderServiceTests
         organization.Plan = "Enterprise (Monthly)";
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType)
-            .Returns(StaticStore.GetPlan(organization.PlanType));
+            .Returns(MockPlans.Get(organization.PlanType));
 
         var expectedPlanType = PlanType.EnterpriseMonthly2020;
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(expectedPlanType)
-            .Returns(StaticStore.GetPlan(expectedPlanType));
+            .Returns(MockPlans.Get(expectedPlanType));
 
         var expectedPlanId = "2020-enterprise-org-seat-monthly";
 

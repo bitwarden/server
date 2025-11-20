@@ -45,6 +45,7 @@
     [SecurityState]                    VARCHAR (MAX)   NULL,
     [SecurityVersion]                  INT              NULL,
     [SignedPublicKey]                  VARCHAR (MAX)   NULL,
+    [MaxStorageGbIncreased]            SMALLINT         NULL,
     CONSTRAINT [PK_User] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 
