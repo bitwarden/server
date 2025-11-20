@@ -1,4 +1,5 @@
-using System.Globalization;
+﻿using System.Globalization;
+using System.Text.Json;
 using Bit.Billing.Services;
 using Bit.Core;
 using Bit.Core.Billing.Constants;
@@ -6,7 +7,6 @@ using Bit.Core.Jobs;
 using Bit.Core.Services;
 using Quartz;
 using Stripe;
-using System.Text.Json;
 
 namespace Bit.Billing.Jobs;
 
@@ -57,7 +57,7 @@ public class ReconcileAdditionalStorageJob(
                         subscriptionsWithErrors,
                         failures.Count > 0
                             ? $", Failures: {Environment.NewLine}{string.Join(Environment.NewLine, failures)}"
-                            :  string.Empty
+                            : string.Empty
                         );
                     return;
                 }
@@ -126,7 +126,7 @@ public class ReconcileAdditionalStorageJob(
             subscriptionsWithErrors,
             failures.Count > 0
                 ? $", Failures: {Environment.NewLine}{string.Join(Environment.NewLine, failures)}"
-                :  string.Empty
+                : string.Empty
             );
     }
 

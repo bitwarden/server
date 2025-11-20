@@ -1,4 +1,4 @@
-using Bit.Billing.Jobs;
+﻿using Bit.Billing.Jobs;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Mvc;
 using Quartz;

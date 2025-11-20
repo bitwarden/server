@@ -1,4 +1,4 @@
-using Bit.Core.Jobs;
+﻿using Bit.Core.Jobs;
 using Bit.Core.Settings;
 using Quartz;
 
