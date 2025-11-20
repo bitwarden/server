@@ -1,50 +1,31 @@
-﻿using Bit.Seeder;
-using Bit.SeederApi.Extensions;
-using Bit.SeederApi.Services;
-using Bit.SharedWeb.Utilities;
+﻿using Bit.Core.Utilities;
 
-var builder = WebApplication.CreateBuilder(args);
+namespace Bit.SeederApi;
 
-builder.Services.AddControllers();
-builder.Services.AddHttpContextAccessor();
-
-var globalSettings = builder.Services.AddGlobalSettingsServices(builder.Configuration, builder.Environment);
-
-// Common services
-builder.Services.AddCustomDataProtectionServices(builder.Environment, globalSettings);
-builder.Services.AddTokenizers();
-builder.Services.AddDatabaseRepositories(globalSettings);
-
-builder.Services.AddScoped<Microsoft.AspNetCore.Identity.IPasswordHasher<Bit.Core.Entities.User>, Microsoft.AspNetCore.Identity.PasswordHasher<Bit.Core.Entities.User>>();
-
-// Seeder services
-builder.Services.AddSingleton<Bit.RustSDK.RustSdkService>();
-builder.Services.AddScoped<Bit.Seeder.Factories.UserSeeder>();
-builder.Services.AddScoped<ISceneService, SceneService>();
-builder.Services.AddScoped<IQueryService, QueryService>();
-builder.Services.AddScoped<MangleId>(_ => new MangleId());
-builder.Services.AddScenes();
-builder.Services.AddQueries();
-
-var app = builder.Build();
-
-// Add PlayIdMiddleware services
-if (globalSettings.TestPlayIdTrackingEnabled)
+public class Program
 {
-    app.UseMiddleware<PlayIdMiddleware>();
+    public static void Main(string[] args)
+    {
+        Host
+            .CreateDefaultBuilder(args)
+            .ConfigureCustomAppConfiguration(args)
+            .ConfigureWebHostDefaults(webBuilder =>
+            {
+                webBuilder.UseStartup<Startup>();
+                webBuilder.ConfigureLogging((hostingContext, logging) =>
+                    logging.AddSerilog(hostingContext, (e, globalSettings) =>
+                    {
+                        var context = e.Properties["SourceContext"].ToString();
+                        if (e.Properties.TryGetValue("RequestPath", out var requestPath) &&
+                            !string.IsNullOrWhiteSpace(requestPath?.ToString()) &&
+                            (context.Contains(".Server.Kestrel") || context.Contains(".Core.IISHttpServer")))
+                        {
+                            return false;
+                        }
+                        return e.Level >= Serilog.Events.LogEventLevel.Information;
+                    }));
+            })
+            .Build()
+            .Run();
+    }
 }
-
-// Configure the HTTP request pipeline.
-if (!app.Environment.IsDevelopment())
-{
-    app.UseExceptionHandler("/Home/Error");
-}
-
-app.UseRouting();
-
-app.MapControllerRoute(name: "default", pattern: "{controller=Seed}/{action=Index}/{id?}");
-
-app.Run();
-
-// Make Program class accessible for integration tests
-public partial class Program { }

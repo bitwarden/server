@@ -4,7 +4,7 @@ using Bit.IntegrationTestCommon.Factories;
 
 namespace Bit.SeederApi.IntegrationTest;
 
-public class SeederApiApplicationFactory : WebApplicationFactoryBase<Program>
+public class SeederApiApplicationFactory : WebApplicationFactoryBase<Startup>
 {
     public SeederApiApplicationFactory()
     {
