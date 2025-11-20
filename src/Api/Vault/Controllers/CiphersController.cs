@@ -1422,11 +1422,9 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        // Extract lastKnownRevisionDate from form data if present
-        DateTime? lastKnownRevisionDate = GetLastKnownRevisionDateFromForm();
         await Request.GetFileAsync(async (stream) =>
         {
-            await _cipherService.UploadFileForExistingAttachmentAsync(stream, cipher, attachmentData, lastKnownRevisionDate);
+            await _cipherService.UploadFileForExistingAttachmentAsync(stream, cipher, attachmentData);
         });
     }
 
@@ -1525,13 +1523,10 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        // Extract lastKnownRevisionDate from form data if present
-        DateTime? lastKnownRevisionDate = GetLastKnownRevisionDateFromForm();
-
         await Request.GetFileAsync(async (stream, fileName, key) =>
         {
             await _cipherService.CreateAttachmentShareAsync(cipher, stream, fileName, key,
-                Request.ContentLength.GetValueOrDefault(0), attachmentId, organizationId, lastKnownRevisionDate);
+                Request.ContentLength.GetValueOrDefault(0), attachmentId, organizationId);
         });
     }
 
