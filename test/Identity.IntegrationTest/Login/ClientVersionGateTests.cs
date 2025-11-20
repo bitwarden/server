@@ -115,5 +115,3 @@ public class ClientVersionGateTests : IClassFixture<IdentityApplicationFactory>
         databaseContext.SaveChanges();
     }
 }
-
-

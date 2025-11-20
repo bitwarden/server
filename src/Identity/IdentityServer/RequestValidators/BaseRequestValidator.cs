@@ -111,7 +111,7 @@ public abstract class BaseRequestValidator<T> where T : class
         }
         else
         {
-            // 1. We need to check if the user's master password hash is correct.
+            // 1. We need to check if the user is legitimate via the appropriate mechanism through.
             var valid = await ValidateContextAsync(context, validatorContext);
             var user = validatorContext.User;
             if (!valid)
@@ -122,9 +122,10 @@ public abstract class BaseRequestValidator<T> where T : class
                 return;
             }
 
-            // 1.5 We need to check now the version number
+            // 1.5 Now check the version number of the client. Do this after ValidateContextAsync so that
+            // we prevent account enumeration. If we were to do this before we would validate that a given user
+            // could exist
             await ValidateClientVersionAsync(context, validatorContext);
-
 
             // 2. Decide if this user belongs to an organization that requires SSO.
             validatorContext.SsoRequired = await RequireSsoLoginAsync(user, request.GrantType);

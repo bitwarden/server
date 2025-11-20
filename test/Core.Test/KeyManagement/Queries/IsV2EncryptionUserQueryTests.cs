@@ -61,5 +61,3 @@ public class IsV2EncryptionUserQueryTests
         await Assert.ThrowsAsync<InvalidOperationException>(async () => await sut.Run(user));
     }
 }
-
-

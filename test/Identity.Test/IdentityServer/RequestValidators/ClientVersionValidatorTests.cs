@@ -51,5 +51,3 @@ public class ClientVersionValidatorTests
         Assert.True(ok);
     }
 }
-
-

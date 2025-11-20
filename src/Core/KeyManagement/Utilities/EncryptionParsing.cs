@@ -25,5 +25,3 @@ public static class EncryptionParsing
         throw new ArgumentException("Invalid encryption type string.");
     }
 }
-
-

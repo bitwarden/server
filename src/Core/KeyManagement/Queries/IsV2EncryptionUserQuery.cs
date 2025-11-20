@@ -29,5 +29,3 @@ public class IsV2EncryptionUserQuery(IUserSignatureKeyPairRepository userSignatu
         };
     }
 }
-
-

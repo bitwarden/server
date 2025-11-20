@@ -21,5 +21,3 @@ public class GetMinimumClientVersionForUserQuery(IIsV2EncryptionUserQuery isV2En
         return null;
     }
 }
-
-

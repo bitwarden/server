@@ -6,5 +6,3 @@ public interface IGetMinimumClientVersionForUserQuery
 {
     Task<Version?> Run(User? user);
 }
-
-

@@ -6,5 +6,3 @@ public interface IIsV2EncryptionUserQuery
 {
     Task<bool> Run(User user);
 }
-
-
