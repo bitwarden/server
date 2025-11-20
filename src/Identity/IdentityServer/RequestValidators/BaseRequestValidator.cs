@@ -269,7 +269,7 @@ public abstract class BaseRequestValidator<T> where T : class
             // validation to perform the recovery as part of scheme validation based on the request.
             return
             [
-                () => ValidateMasterPasswordAsync(context, validatorContext),
+                () => ValidateUserViaAppropriateValidatorContextAsync(context, validatorContext),
                 () => ValidateClientVersionAsync(context, validatorContext),
                 () => ValidateTwoFactorAsync(context, request, validatorContext),
                 () => ValidateSsoAsync(context, request, validatorContext),
@@ -283,7 +283,7 @@ public abstract class BaseRequestValidator<T> where T : class
             // The typical validation scenario.
             return
             [
-                () => ValidateMasterPasswordAsync(context, validatorContext),
+                () => ValidateUserViaAppropriateValidatorContextAsync(context, validatorContext),
                 () => ValidateClientVersionAsync(context, validatorContext),
                 () => ValidateSsoAsync(context, request, validatorContext),
                 () => ValidateTwoFactorAsync(context, request, validatorContext),
@@ -355,12 +355,12 @@ public abstract class BaseRequestValidator<T> where T : class
     }
 
     /// <summary>
-    /// Validates the user's Master Password hash.
+    /// Validates the user's master password, webauthen, or custom token request via the appropriate context validator.
     /// </summary>
     /// <param name="context">The current request context.</param>
     /// <param name="validatorContext"><see cref="Bit.Identity.IdentityServer.CustomValidatorRequestContext" /></param>
     /// <returns>true if the scheme successfully passed validation, otherwise false.</returns>
-    private async Task<bool> ValidateMasterPasswordAsync(T context, CustomValidatorRequestContext validatorContext)
+    private async Task<bool> ValidateUserViaAppropriateValidatorContextAsync(T context, CustomValidatorRequestContext validatorContext)
     {
         var valid = await ValidateContextAsync(context, validatorContext);
         var user = validatorContext.User;
