@@ -14,6 +14,7 @@ using Bit.Test.Common.Helpers;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace Bit.Core.Test.Services;
 
@@ -25,7 +26,6 @@ public class EventIntegrationHandlerTests
     private const string _templateWithOrganization = "Org: #OrganizationName#";
     private const string _templateWithUser = "#UserName#, #UserEmail#, #UserType#";
     private const string _templateWithActingUser = "#ActingUserName#, #ActingUserEmail#, #ActingUserType#";
-    private static readonly Guid _groupId = Guid.NewGuid();
     private static readonly Guid _organizationId = Guid.NewGuid();
     private static readonly Uri _uri = new Uri("https://localhost");
     private static readonly Uri _uri2 = new Uri("https://example.com");
@@ -113,6 +113,232 @@ public class EventIntegrationHandlerTests
         return [config];
     }
 
+    [Theory, BitAutoData]
+    public async Task BuildContextAsync_ActingUserIdPresent_UsesCache(EventMessage eventMessage, OrganizationUserUserDetails actingUser)
+    {
+        var sutProvider = GetSutProvider(OneConfiguration(_templateWithActingUser));
+        var fusionCache = sutProvider.GetDependency<IFusionCache>();
+
+        eventMessage.OrganizationId ??= Guid.NewGuid();
+        eventMessage.ActingUserId ??= Guid.NewGuid();
+
+        fusionCache.GetOrSetAsync(
+            key: Arg.Any<string>(),
+            factory: Arg.Any<Func<FusionCacheFactoryExecutionContext<OrganizationUserUserDetails?>, CancellationToken, Task<OrganizationUserUserDetails?>>>()
+        ).Returns(actingUser);
+
+        var context = await sutProvider.Sut.BuildContextAsync(eventMessage, _templateWithActingUser);
+
+        await fusionCache.Received(1).GetOrSetAsync(
+            key: Arg.Any<string>(),
+            factory: Arg.Any<Func<FusionCacheFactoryExecutionContext<OrganizationUserUserDetails?>, CancellationToken, Task<OrganizationUserUserDetails?>>>()
+        );
+
+        Assert.Equal(actingUser, context.ActingUser);
+    }
+
+    [Theory, BitAutoData]
+    public async Task BuildContextAsync_ActingUserIdNull_SkipsCache(EventMessage eventMessage)
+    {
+        var sutProvider = GetSutProvider(OneConfiguration(_templateWithActingUser));
+        var fusionCache = sutProvider.GetDependency<IFusionCache>();
+
+        eventMessage.OrganizationId ??= Guid.NewGuid();
+        eventMessage.ActingUserId = null;
+
+        var context = await sutProvider.Sut.BuildContextAsync(eventMessage, _templateWithActingUser);
+
+        await fusionCache.DidNotReceive().GetOrSetAsync(
+            key: Arg.Any<string>(),
+            factory: Arg.Any<Func<FusionCacheFactoryExecutionContext<OrganizationUserUserDetails?>, CancellationToken, Task<OrganizationUserUserDetails?>>>()
+        );
+        Assert.Null(context.ActingUser);
+    }
+
+    [Theory, BitAutoData]
+    public async Task BuildContextAsync_ActingUserOrganizationIdNull_SkipsCache(EventMessage eventMessage)
+    {
+        var sutProvider = GetSutProvider(OneConfiguration(_templateWithActingUser));
+        var fusionCache = sutProvider.GetDependency<IFusionCache>();
+
+        eventMessage.OrganizationId = null;
+        eventMessage.ActingUserId ??= Guid.NewGuid();
+
+        var context = await sutProvider.Sut.BuildContextAsync(eventMessage, _templateWithActingUser);
+
+        await fusionCache.DidNotReceive().GetOrSetAsync(
+            key: Arg.Any<string>(),
+            factory: Arg.Any<Func<FusionCacheFactoryExecutionContext<OrganizationUserUserDetails?>, CancellationToken, Task<OrganizationUserUserDetails?>>>()
+        );
+        Assert.Null(context.ActingUser);
+    }
+
+    [Theory, BitAutoData]
+    public async Task BuildContextAsync_GroupIdPresent_UsesCache(EventMessage eventMessage, Group group)
+    {
+        var sutProvider = GetSutProvider(OneConfiguration(_templateWithGroup));
+        var fusionCache = sutProvider.GetDependency<IFusionCache>();
+
+        eventMessage.GroupId ??= Guid.NewGuid();
+
+        fusionCache.GetOrSetAsync(
+            key: Arg.Any<string>(),
+            factory: Arg.Any<Func<FusionCacheFactoryExecutionContext<Group?>, CancellationToken, Task<Group?>>>()
+        ).Returns(group);
+
+        var context = await sutProvider.Sut.BuildContextAsync(eventMessage, _templateWithGroup);
+
+        await fusionCache.Received(1).GetOrSetAsync(
+            key: Arg.Any<string>(),
+            factory: Arg.Any<Func<FusionCacheFactoryExecutionContext<Group?>, CancellationToken, Task<Group?>>>()
+        );
+        Assert.Equal(group, context.Group);
+    }
+
+    [Theory, BitAutoData]
+    public async Task BuildContextAsync_GroupIdNull_SkipsCache(EventMessage eventMessage)
+    {
+        var sutProvider = GetSutProvider(OneConfiguration(_templateWithGroup));
+        var fusionCache = sutProvider.GetDependency<IFusionCache>();
+        eventMessage.GroupId = null;
+
+        var context = await sutProvider.Sut.BuildContextAsync(eventMessage, _templateWithGroup);
+
+        await fusionCache.DidNotReceive().GetOrSetAsync(
+            key: Arg.Any<string>(),
+            factory: Arg.Any<Func<FusionCacheFactoryExecutionContext<Group?>, CancellationToken, Task<Group?>>>()
+        );
+        Assert.Null(context.Group);
+    }
+
+    [Theory, BitAutoData]
+    public async Task BuildContextAsync_OrganizationIdPresent_UsesCache(EventMessage eventMessage, Organization organization)
+    {
+        var sutProvider = GetSutProvider(OneConfiguration(_templateWithOrganization));
+        var fusionCache = sutProvider.GetDependency<IFusionCache>();
+
+        eventMessage.OrganizationId ??= Guid.NewGuid();
+
+        fusionCache.GetOrSetAsync(
+            key: Arg.Any<string>(),
+            factory: Arg.Any<Func<FusionCacheFactoryExecutionContext<Organization?>, CancellationToken, Task<Organization?>>>()
+        ).Returns(organization);
+
+        var context = await sutProvider.Sut.BuildContextAsync(eventMessage, _templateWithOrganization);
+
+        await fusionCache.Received(1).GetOrSetAsync(
+            key: Arg.Any<string>(),
+            factory: Arg.Any<Func<FusionCacheFactoryExecutionContext<Organization?>, CancellationToken, Task<Organization?>>>()
+        );
+        Assert.Equal(organization, context.Organization);
+    }
+
+    [Theory, BitAutoData]
+    public async Task BuildContextAsync_OrganizationIdNull_SkipsCache(EventMessage eventMessage)
+    {
+        var sutProvider = GetSutProvider(OneConfiguration(_templateWithOrganization));
+        var fusionCache = sutProvider.GetDependency<IFusionCache>();
+
+        eventMessage.OrganizationId = null;
+
+        var context = await sutProvider.Sut.BuildContextAsync(eventMessage, _templateWithOrganization);
+
+        await fusionCache.DidNotReceive().GetOrSetAsync(
+            key: Arg.Any<string>(),
+            factory: Arg.Any<Func<FusionCacheFactoryExecutionContext<Organization?>, CancellationToken, Task<Organization?>>>()
+        );
+        Assert.Null(context.Organization);
+    }
+
+    [Theory, BitAutoData]
+    public async Task BuildContextAsync_UserIdPresent_UsesCache(EventMessage eventMessage, OrganizationUserUserDetails userDetails)
+    {
+        var sutProvider = GetSutProvider(OneConfiguration(_templateWithUser));
+        var fusionCache = sutProvider.GetDependency<IFusionCache>();
+
+        eventMessage.OrganizationId ??= Guid.NewGuid();
+        eventMessage.UserId ??= Guid.NewGuid();
+
+        fusionCache.GetOrSetAsync(
+            key: Arg.Any<string>(),
+            factory: Arg.Any<Func<FusionCacheFactoryExecutionContext<OrganizationUserUserDetails?>, CancellationToken, Task<OrganizationUserUserDetails?>>>()
+        ).Returns(userDetails);
+
+        var context = await sutProvider.Sut.BuildContextAsync(eventMessage, _templateWithUser);
+
+        await fusionCache.Received(1).GetOrSetAsync(
+            key: Arg.Any<string>(),
+            factory: Arg.Any<Func<FusionCacheFactoryExecutionContext<OrganizationUserUserDetails?>, CancellationToken, Task<OrganizationUserUserDetails?>>>()
+        );
+
+        Assert.Equal(userDetails, context.User);
+    }
+
+
+    [Theory, BitAutoData]
+    public async Task BuildContextAsync_UserIdNull_SkipsCache(EventMessage eventMessage)
+    {
+        var sutProvider = GetSutProvider(OneConfiguration(_templateWithUser));
+        var fusionCache = sutProvider.GetDependency<IFusionCache>();
+
+        eventMessage.OrganizationId = null;
+        eventMessage.UserId ??= Guid.NewGuid();
+
+        var context = await sutProvider.Sut.BuildContextAsync(eventMessage, _templateWithUser);
+
+        await fusionCache.DidNotReceive().GetOrSetAsync(
+            key: Arg.Any<string>(),
+            factory: Arg.Any<Func<FusionCacheFactoryExecutionContext<OrganizationUserUserDetails?>, CancellationToken, Task<OrganizationUserUserDetails?>>>()
+        );
+
+        Assert.Null(context.User);
+    }
+
+    [Theory, BitAutoData]
+    public async Task BuildContextAsync_OrganizationUserIdNull_SkipsCache(EventMessage eventMessage)
+    {
+        var sutProvider = GetSutProvider(OneConfiguration(_templateWithUser));
+        var fusionCache = sutProvider.GetDependency<IFusionCache>();
+
+        eventMessage.OrganizationId ??= Guid.NewGuid();
+        eventMessage.UserId = null;
+
+        var context = await sutProvider.Sut.BuildContextAsync(eventMessage, _templateWithUser);
+
+        await fusionCache.DidNotReceive().GetOrSetAsync(
+            key: Arg.Any<string>(),
+            factory: Arg.Any<Func<FusionCacheFactoryExecutionContext<OrganizationUserUserDetails?>, CancellationToken, Task<OrganizationUserUserDetails?>>>()
+        );
+
+        Assert.Null(context.User);
+    }
+
+    [Theory, BitAutoData]
+    public async Task BuildContextAsync_NoSpecialTokens_DoesNotCallAnyCache(EventMessage eventMessage)
+    {
+        var sutProvider = GetSutProvider(OneConfiguration(_templateWithUser));
+        var fusionCache = sutProvider.GetDependency<IFusionCache>();
+
+        eventMessage.ActingUserId ??= Guid.NewGuid();
+        eventMessage.GroupId ??= Guid.NewGuid();
+        eventMessage.OrganizationId ??= Guid.NewGuid();
+        eventMessage.UserId ??= Guid.NewGuid();
+
+        await sutProvider.Sut.BuildContextAsync(eventMessage, _templateBase);
+
+        await fusionCache.DidNotReceive().GetOrSetAsync(
+            key: Arg.Any<string>(),
+            factory: Arg.Any<Func<FusionCacheFactoryExecutionContext<Group?>, CancellationToken, Task<Group?>>>()
+        );
+        await fusionCache.DidNotReceive().GetOrSetAsync(
+            key: Arg.Any<string>(),
+            factory: Arg.Any<Func<FusionCacheFactoryExecutionContext<Organization?>, CancellationToken, Task<Organization?>>>()
+        );
+        await fusionCache.DidNotReceive().GetOrSetAsync(
+            key: Arg.Any<string>(),
+            factory: Arg.Any<Func<FusionCacheFactoryExecutionContext<OrganizationUserUserDetails?>, CancellationToken, Task<OrganizationUserUserDetails?>>>()
+        );
+    }
 
     [Theory, BitAutoData]
     public async Task HandleEventAsync_BaseTemplateNoConfigurations_DoesNothing(EventMessage eventMessage)
@@ -174,99 +400,6 @@ public class EventIntegrationHandlerTests
         await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().GetByIdAsync(Arg.Any<Guid>());
         await sutProvider.GetDependency<IOrganizationRepository>().DidNotReceiveWithAnyArgs().GetByIdAsync(Arg.Any<Guid>());
         await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs().GetDetailsByOrganizationIdUserIdAsync(Arg.Any<Guid>(), Arg.Any<Guid>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task HandleEventAsync_ActingUserTemplate_LoadsUserFromRepository(EventMessage eventMessage)
-    {
-        var sutProvider = GetSutProvider(OneConfiguration(_templateWithActingUser));
-        var user = Substitute.For<OrganizationUserUserDetails>();
-        user.Email = "test@example.com";
-        user.Name = "Test";
-        eventMessage.OrganizationId = _organizationId;
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetDetailsByOrganizationIdUserIdAsync(Arg.Any<Guid>(), Arg.Any<Guid>()).Returns(user);
-        await sutProvider.Sut.HandleEventAsync(eventMessage);
-
-        var expectedMessage = EventIntegrationHandlerTests.ExpectedMessage($"{user.Name}, {user.Email}, {user.Type}");
-
-        Assert.Single(_eventIntegrationPublisher.ReceivedCalls());
-        await _eventIntegrationPublisher.Received(1).PublishAsync(Arg.Is(
-            AssertHelper.AssertPropertyEqual(expectedMessage, new[] { "MessageId" })));
-        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().GetByIdAsync(Arg.Any<Guid>());
-        await sutProvider.GetDependency<IOrganizationRepository>().DidNotReceiveWithAnyArgs().GetByIdAsync(Arg.Any<Guid>());
-        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).GetDetailsByOrganizationIdUserIdAsync(Arg.Any<Guid>(), eventMessage.ActingUserId ?? Guid.Empty);
-    }
-
-    [Theory, BitAutoData]
-    public async Task HandleEventAsync_GroupTemplate_LoadsGroupFromRepository(EventMessage eventMessage)
-    {
-        var sutProvider = GetSutProvider(OneConfiguration(_templateWithGroup));
-        var group = Substitute.For<Group>();
-        group.Name = "Test";
-        eventMessage.GroupId = _groupId;
-        eventMessage.OrganizationId = _organizationId;
-
-        sutProvider.GetDependency<IGroupRepository>().GetByIdAsync(Arg.Any<Guid>()).Returns(group);
-        await sutProvider.Sut.HandleEventAsync(eventMessage);
-
-        Assert.Single(_eventIntegrationPublisher.ReceivedCalls());
-
-        var expectedMessage = EventIntegrationHandlerTests.ExpectedMessage($"Group: {group.Name}");
-
-        Assert.Single(_eventIntegrationPublisher.ReceivedCalls());
-        await _eventIntegrationPublisher.Received(1).PublishAsync(Arg.Is(
-            AssertHelper.AssertPropertyEqual(expectedMessage, new[] { "MessageId" })));
-        await sutProvider.GetDependency<IGroupRepository>().Received(1).GetByIdAsync(eventMessage.GroupId ?? Guid.Empty);
-        await sutProvider.GetDependency<IOrganizationRepository>().DidNotReceiveWithAnyArgs().GetByIdAsync(Arg.Any<Guid>());
-        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs().GetDetailsByOrganizationIdUserIdAsync(Arg.Any<Guid>(), Arg.Any<Guid>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task HandleEventAsync_OrganizationTemplate_LoadsOrganizationFromRepository(EventMessage eventMessage)
-    {
-        var sutProvider = GetSutProvider(OneConfiguration(_templateWithOrganization));
-        var organization = Substitute.For<Organization>();
-        organization.Name = "Test";
-        eventMessage.OrganizationId = _organizationId;
-
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(Arg.Any<Guid>()).Returns(organization);
-        await sutProvider.Sut.HandleEventAsync(eventMessage);
-
-        Assert.Single(_eventIntegrationPublisher.ReceivedCalls());
-
-        var expectedMessage = EventIntegrationHandlerTests.ExpectedMessage($"Org: {organization.Name}");
-
-        Assert.Single(_eventIntegrationPublisher.ReceivedCalls());
-        await _eventIntegrationPublisher.Received(1).PublishAsync(Arg.Is(
-            AssertHelper.AssertPropertyEqual(expectedMessage, new[] { "MessageId" })));
-        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().GetByIdAsync(Arg.Any<Guid>());
-        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).GetByIdAsync(eventMessage.OrganizationId ?? Guid.Empty);
-        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs().GetDetailsByOrganizationIdUserIdAsync(Arg.Any<Guid>(), Arg.Any<Guid>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task HandleEventAsync_UserTemplate_LoadsUserFromRepository(EventMessage eventMessage)
-    {
-        var sutProvider = GetSutProvider(OneConfiguration(_templateWithUser));
-        var user = Substitute.For<OrganizationUserUserDetails>();
-        user.Email = "test@example.com";
-        user.Name = "Test";
-        eventMessage.OrganizationId = _organizationId;
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetDetailsByOrganizationIdUserIdAsync(Arg.Any<Guid>(), Arg.Any<Guid>()).Returns(user);
-        await sutProvider.Sut.HandleEventAsync(eventMessage);
-
-        var expectedMessage = EventIntegrationHandlerTests.ExpectedMessage($"{user.Name}, {user.Email}, {user.Type}");
-
-        Assert.Single(_eventIntegrationPublisher.ReceivedCalls());
-        await _eventIntegrationPublisher.Received(1).PublishAsync(Arg.Is(
-            AssertHelper.AssertPropertyEqual(expectedMessage, new[] { "MessageId" })));
-        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().GetByIdAsync(Arg.Any<Guid>());
-        await sutProvider.GetDependency<IOrganizationRepository>().DidNotReceiveWithAnyArgs().GetByIdAsync(Arg.Any<Guid>());
-        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).GetDetailsByOrganizationIdUserIdAsync(Arg.Any<Guid>(), eventMessage.UserId ?? Guid.Empty);
     }
 
     [Theory, BitAutoData]
