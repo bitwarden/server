@@ -277,15 +277,16 @@ public class AccountsControllerTests : IDisposable
     [Theory]
     [BitAutoData]
     public async Task PostRegisterSendEmailVerification_WhenFeatureFlagEnabled_PassesFromMarketingToCommandAsync(
-        string email, string name, bool receiveMarketingEmails, string fromMarketing)
+        string email, string name, bool receiveMarketingEmails)
     {
         // Arrange
+        var fromMarketing = MarketingInitiativeConstants.Premium;
         var model = new RegisterSendVerificationEmailRequestModel
         {
             Email = email,
             Name = name,
             ReceiveMarketingEmails = receiveMarketingEmails,
-            FromMarketing = fromMarketing
+            FromMarketing = fromMarketing,
         };
 
         _featureService.IsEnabled(FeatureFlagKeys.MarketingInitiatedPremiumFlow).Returns(true);
@@ -301,7 +302,7 @@ public class AccountsControllerTests : IDisposable
     [Theory]
     [BitAutoData]
     public async Task PostRegisterSendEmailVerification_WhenFeatureFlagDisabled_PassesNullFromMarketingToCommandAsync(
-        string email, string name, bool receiveMarketingEmails, string fromMarketing)
+        string email, string name, bool receiveMarketingEmails)
     {
         // Arrange
         var model = new RegisterSendVerificationEmailRequestModel
@@ -309,7 +310,7 @@ public class AccountsControllerTests : IDisposable
             Email = email,
             Name = name,
             ReceiveMarketingEmails = receiveMarketingEmails,
-            FromMarketing = fromMarketing
+            FromMarketing = MarketingInitiativeConstants.Premium, // model includes FromMarketing: "premium"
         };
 
         _featureService.IsEnabled(FeatureFlagKeys.MarketingInitiatedPremiumFlow).Returns(false);
@@ -319,7 +320,7 @@ public class AccountsControllerTests : IDisposable
 
         // Assert
         await _sendVerificationEmailForRegistrationCommand.Received(1)
-            .Run(email, name, receiveMarketingEmails, null);
+            .Run(email, name, receiveMarketingEmails, null); // fromMarketing gets ignored and null gets passed
     }
 
     [Theory, BitAutoData]
