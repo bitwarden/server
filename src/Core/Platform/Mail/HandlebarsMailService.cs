@@ -87,7 +87,7 @@ public class HandlebarsMailService : IMailService
             Email = WebUtility.UrlEncode(email),
             WebVaultUrl = _globalSettings.BaseServiceUri.Vault,
             SiteName = _globalSettings.SiteName,
-            FromMarketing = fromMarketing,
+            FromMarketing = WebUtility.UrlEncode(fromMarketing),
         };
         await AddMessageContentAsync(message, "Auth.RegistrationVerifyEmail", model);
         message.MetaData.Add("SendGridBypassListManagement", true);
