@@ -1,23 +1,14 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
-using Bit.Core.AdminConsole.Utilities.v2.Validation;
+﻿using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpers;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v2;
 
-public class RevokeOrganizationUsersValidator(
-    IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery)
-    : IRevokeOrganizationUserValidator
+public class RevokeOrganizationUsersValidator : IRevokeOrganizationUserValidator
 {
-    public async Task<ICollection<ValidationResult<OrganizationUser>>> ValidateAsync(
-        RevokeOrganizationUsersValidationRequest request)
-    {
-        var anyRemainingOwners = await hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(
-            request.OrganizationId,
-            request.OrganizationUsersToRevoke.Select(x => x.Id));
-
-        return request.OrganizationUsersToRevoke.Select(x =>
+    public ICollection<ValidationResult<OrganizationUser>> Validate(RevokeOrganizationUsersValidationRequest request) =>
+        request.OrganizationUsersToRevoke.Select(x =>
         {
             return x switch
             {
@@ -25,13 +16,10 @@ public class RevokeOrganizationUsersValidator(
                     Invalid(x, new CannotRevokeYourself()),
                 { Status: OrganizationUserStatusType.Revoked } =>
                     Invalid(x, new UserAlreadyRevoked()),
-                { Type: OrganizationUserType.Owner } when !anyRemainingOwners =>
-                    Invalid(x, new MustHaveConfirmedOwner()),
                 { Type: OrganizationUserType.Owner } when !request.PerformedBy.IsOrganizationOwnerOrProvider =>
                     Invalid(x, new OnlyOwnersCanRevokeOwners()),
 
                 _ => Valid(x)
             };
         }).ToList();
-    }
 }

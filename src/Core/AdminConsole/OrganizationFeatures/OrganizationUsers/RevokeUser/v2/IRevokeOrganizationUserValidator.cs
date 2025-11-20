@@ -5,5 +5,5 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUse
 
 public interface IRevokeOrganizationUserValidator
 {
-    Task<ICollection<ValidationResult<OrganizationUser>>> ValidateAsync(RevokeOrganizationUsersValidationRequest request);
+    ICollection<ValidationResult<OrganizationUser>> Validate(RevokeOrganizationUsersValidationRequest request);
 }

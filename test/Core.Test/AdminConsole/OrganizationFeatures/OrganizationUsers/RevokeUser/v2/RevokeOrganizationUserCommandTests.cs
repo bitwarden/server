@@ -198,14 +198,12 @@ public class RevokeOrganizationUserCommandTests
                 Arg.Any<Func<object, Exception?, string>>());
     }
 
-    private static IActingUser CreateActingUser(Guid? userId, bool isOwnerOrProvider, EventSystemUser? systemUserType)
-    {
-        var actingUser = Substitute.For<IActingUser>();
-        actingUser.UserId.Returns(userId);
-        actingUser.IsOrganizationOwnerOrProvider.Returns(isOwnerOrProvider);
-        actingUser.SystemUserType.Returns(systemUserType);
-        return actingUser;
-    }
+    private static IActingUser CreateActingUser(Guid? userId, bool isOwnerOrProvider, EventSystemUser? systemUserType) =>
+        (userId, systemUserType) switch
+        {
+            ({ } id, _) => new StandardUser(id, isOwnerOrProvider),
+            (null, { } type) => new SystemUser(type)
+        };
 
     private static void SetupRepositoryMocks(
         SutProvider<RevokeOrganizationUserCommand> sutProvider,
@@ -227,7 +225,7 @@ public class RevokeOrganizationUserCommandTests
         ICollection<ValidationResult<OrganizationUser>> validationResults)
     {
         sutProvider.GetDependency<IRevokeOrganizationUserValidator>()
-            .ValidateAsync(Arg.Any<RevokeOrganizationUsersValidationRequest>())
+            .Validate(Arg.Any<RevokeOrganizationUsersValidationRequest>())
             .Returns(validationResults);
     }
 }

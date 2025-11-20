@@ -47,7 +47,7 @@ public class OrganizationUserControllerBulkRevokeTests : IClassFixture<ApiApplic
         _ownerEmail = $"org-user-bulk-revoke-test-{Guid.NewGuid()}@bitwarden.com";
         await _factory.LoginWithNewAccount(_ownerEmail);
 
-        (_organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseAnnually2023,
+        (_organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseMonthly,
             ownerEmail: _ownerEmail, passwordManagerSeats: 10, paymentMethod: PaymentMethodType.Card);
     }
 
@@ -316,7 +316,7 @@ public class OrganizationUserControllerBulkRevokeTests : IClassFixture<ApiApplic
     }
 
     [Fact]
-    public async Task BulkRevoke_CannotRevokeLastConfirmedOwner_ReturnsBadRequest()
+    public async Task BulkRevoke_ProviderRevokesOwner_ReturnsOk()
     {
         var providerEmail = $"provider-user{Guid.NewGuid()}@example.com";
 
@@ -361,6 +361,6 @@ public class OrganizationUserControllerBulkRevokeTests : IClassFixture<ApiApplic
 
         var httpResponse = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/revoke", request);
 
-        Assert.Equal(HttpStatusCode.BadRequest, httpResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, httpResponse.StatusCode);
     }
 }

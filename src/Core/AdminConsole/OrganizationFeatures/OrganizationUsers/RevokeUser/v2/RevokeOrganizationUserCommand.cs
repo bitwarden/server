@@ -24,27 +24,25 @@ public class RevokeOrganizationUserCommand(
     {
         var validationRequest = await CreateValidationRequestsAsync(request);
 
-        // Validate all requests
-        var results = await validator.ValidateAsync(validationRequest);
+        var results = validator.Validate(validationRequest);
 
-        // Get validation results for individual users
         var validUsers = results.Where(r => r.IsValid).Select(r => r.Request).ToList();
 
-        // Must be done first
         await RevokeValidUsersAsync(validUsers);
 
-        // fire and forget these
-        await LogRevokedOrganizationUsersAsync(validUsers, request.PerformedBy);
-        await SendPushNotificationsAsync(validUsers);
+        await Task.WhenAll(
+            LogRevokedOrganizationUsersAsync(validUsers, request.PerformedBy),
+            SendPushNotificationsAsync(validUsers)
+        );
 
-        // Map validation results to bulk command results
         return results.Select(r => r.Match(
             error => new BulkCommandResult(r.Request.Id, error),
             _ => new BulkCommandResult(r.Request.Id, new None())
         ));
     }
 
-    private async Task<RevokeOrganizationUsersValidationRequest> CreateValidationRequestsAsync(RevokeOrganizationUsersRequest request)
+    private async Task<RevokeOrganizationUsersValidationRequest> CreateValidationRequestsAsync(
+        RevokeOrganizationUsersRequest request)
     {
         var organizationUserToRevoke = await organizationUserRepository
             .GetManyAsync(request.OrganizationUserIdsToRevoke);
@@ -85,7 +83,8 @@ public class RevokeOrganizationUserCommand(
         if (actingUser is SystemUser { SystemUserType: not null })
         {
             var revokeEventsWithSystem = revokedUsers
-                .Select(user => (user, EventType.OrganizationUser_Revoked, actingUser.SystemUserType!.Value, (DateTime?)eventDate))
+                .Select(user => (user, EventType.OrganizationUser_Revoked, actingUser.SystemUserType!.Value,
+                    (DateTime?)eventDate))
                 .ToList();
             await eventService.LogOrganizationUserEventsAsync(revokeEventsWithSystem);
         }
