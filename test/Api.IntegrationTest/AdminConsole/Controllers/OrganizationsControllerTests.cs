@@ -5,8 +5,11 @@ using Bit.Api.IntegrationTest.Helpers;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bit.Core.Test.Billing.Mocks;
+using NSubstitute;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
@@ -25,6 +28,15 @@ public class OrganizationsControllerTests : IClassFixture<ApiApplicationFactory>
     public OrganizationsControllerTests(ApiApplicationFactory apiFactory)
     {
         _factory = apiFactory;
+        _factory.SubstituteService<IPricingClient>(pricingClient =>
+        {
+            pricingClient
+                .GetPlan(Arg.Any<PlanType>())
+                .Returns(x => MockPlans.Get(x.Arg<PlanType>()));
+            pricingClient
+                .GetPlanOrThrow(Arg.Any<PlanType>())
+                .Returns(x => MockPlans.Get(x.Arg<PlanType>()));
+        });
         _client = _factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
     }
