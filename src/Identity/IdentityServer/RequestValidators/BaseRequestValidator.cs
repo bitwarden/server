@@ -128,7 +128,11 @@ public abstract class BaseRequestValidator<T> where T : class
             // could use a known invalid client version and make a request for a user (before we know if they have
             // demonstrated ownership of the account via correct credentials) and identify if they exist by getting
             // an error response back from the validator saying the user is not compatible with the client.
-            await ValidateClientVersionAsync(context, validatorContext);
+            var clientVersionValid = await ValidateClientVersionAsync(context, validatorContext);
+            if (!clientVersionValid)
+            {
+                return;
+            }
 
             // 2. Decide if this user belongs to an organization that requires SSO.
             validatorContext.SsoRequired = await RequireSsoLoginAsync(user, request.GrantType);

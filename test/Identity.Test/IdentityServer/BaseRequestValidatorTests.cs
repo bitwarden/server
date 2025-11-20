@@ -101,6 +101,11 @@ public class BaseRequestValidatorTests
             _mailService,
             _userAccountKeysQuery,
             _clientVersionValidator);
+
+        // Default client version validator behavior: allow to pass unless a test overrides.
+        _clientVersionValidator
+            .ValidateAsync(Arg.Any<User>(), Arg.Any<CustomValidatorRequestContext>())
+            .Returns(Task.FromResult(true));
     }
 
     private void SetupRecoveryCodeSupportForSsoRequiredUsersFeatureFlag(bool recoveryCodeSupportEnabled)
@@ -1244,6 +1249,41 @@ public class BaseRequestValidatorTests
             Assert.False(requestContext.TwoFactorRecoveryRequested,
                 "TwoFactorRecoveryRequested should be false in legacy mode");
         }
+    }
+
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
+    public async Task ValidateAsync_ClientVersionValidator_IsInvoked_ForFeatureFlagStates(
+        bool featureFlagValue,
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        [AuthFixtures.CustomValidatorRequestContext] CustomValidatorRequestContext requestContext,
+        GrantValidationResult grantResult)
+    {
+        // Arrange
+        SetupRecoveryCodeSupportForSsoRequiredUsersFeatureFlag(featureFlagValue);
+        var context = CreateContext(tokenRequest, requestContext, grantResult);
+        _sut.isValid = true; // ensure initial context validation passes
+
+        // Force a grant type that will evaluate SSO after client version validation
+        context.ValidatedTokenRequest.GrantType = "password";
+
+        // Make client version validation succeed but ensure it's invoked
+        _clientVersionValidator
+            .ValidateAsync(requestContext.User, requestContext)
+            .Returns(Task.FromResult(true));
+
+        // Ensure SSO requirement triggers an early stop after version validation to avoid success path setup
+        _policyService.AnyPoliciesApplicableToUserAsync(
+                Arg.Any<Guid>(), PolicyType.RequireSso, OrganizationUserStatusType.Confirmed)
+            .Returns(Task.FromResult(true));
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert
+        await _clientVersionValidator.Received(1)
+            .ValidateAsync(requestContext.User, requestContext);
     }
 
     private BaseRequestValidationContextFake CreateContext(
