@@ -21,6 +21,7 @@ public enum PolicyType : byte
     UriMatchDefaults = 16,
     AutotypeDefaultSetting = 17,
     AutomaticUserConfirmation = 18,
+    BlockClaimedDomainAccountCreation = 19,
 }
 
 public static class PolicyTypeExtensions
@@ -52,6 +53,7 @@ public static class PolicyTypeExtensions
             PolicyType.UriMatchDefaults => "URI match defaults",
             PolicyType.AutotypeDefaultSetting => "Autotype default setting",
             PolicyType.AutomaticUserConfirmation => "Automatically confirm invited users",
+            PolicyType.BlockClaimedDomainAccountCreation => "Block account creation for claimed domains",
         };
     }
 }
