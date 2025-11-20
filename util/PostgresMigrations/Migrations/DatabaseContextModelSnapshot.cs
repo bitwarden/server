@@ -23,9 +23,12 @@ namespace Bit.PostgresMigrations.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("Bit.Core.Dirt.Reports.Models.Data.OrganizationMemberBaseDetail", b =>
+            modelBuilder.Entity("Bit.Core.Dirt.Models.Data.OrganizationMemberBaseDetail", b =>
                 {
-                    b.Property<Guid>("CipherId")
+                    b.Property<string>("AvatarColor")
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("CipherId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid?>("CollectionId")

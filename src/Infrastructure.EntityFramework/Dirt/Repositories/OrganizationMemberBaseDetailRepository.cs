@@ -1,12 +1,12 @@
 ﻿using AutoMapper;
-using Bit.Core.Dirt.Reports.Models.Data;
+using Bit.Core.Dirt.Models.Data;
 using Bit.Core.Dirt.Reports.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Bit.Infrastructure.EntityFramework.Dirt;
+namespace Bit.Infrastructure.EntityFramework.Dirt.Repositories;
 
 public class OrganizationMemberBaseDetailRepository : BaseEntityFrameworkRepository, IOrganizationMemberBaseDetailRepository
 {

@@ -1,5 +1,5 @@
 ﻿using Bit.Core;
-using Bit.Core.Dirt.Reports.Models.Data;
+using Bit.Core.Dirt.Models.Data;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider;
 using Bit.Infrastructure.EntityFramework.Auth.Models;

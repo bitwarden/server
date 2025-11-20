@@ -8,6 +8,7 @@ public class MemberAccessReportDetail
     public Guid? UserGuid { get; set; }
     public string UserName { get; set; }
     public string Email { get; set; }
+    public string AvatarColor { get; set; }
     public bool TwoFactorEnabled { get; set; }
     public bool AccountRecoveryEnabled { get; set; }
     public bool UsesKeyConnector { get; set; }

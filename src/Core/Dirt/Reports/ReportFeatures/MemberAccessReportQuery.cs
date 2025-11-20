@@ -48,6 +48,7 @@ public class MemberAccessReportQuery(
                 b.UserGuid,
                 b.UserName,
                 b.Email,
+                b.AvatarColor,
                 b.TwoFactorProviders,
                 b.ResetPasswordKey,
                 b.UsesKeyConnector,
@@ -64,6 +65,7 @@ public class MemberAccessReportQuery(
                 UserGuid = g.Key.UserGuid,
                 UserName = g.Key.UserName,
                 Email = g.Key.Email,
+                AvatarColor = g.Key.AvatarColor,
                 TwoFactorEnabled = orgUsersTwoFactorEnabled.FirstOrDefault(x => x.userId == g.Key.UserGuid).twoFactorIsEnabled,
                 AccountRecoveryEnabled = !string.IsNullOrWhiteSpace(g.Key.ResetPasswordKey) && orgAbility.UseResetPassword,
                 UsesKeyConnector = g.Key.UsesKeyConnector,
@@ -74,7 +76,7 @@ public class MemberAccessReportQuery(
                 ReadOnly = g.Key.ReadOnly,
                 HidePasswords = g.Key.HidePasswords,
                 Manage = g.Key.Manage,
-                CipherIds = g.Select(c => c.CipherId)
+                CipherIds = g.Select(c => c.CipherId).Where(id => id.HasValue).Select(id => id.Value)
             });
 
         var accessDetailsCount = accessDetails.Count();
