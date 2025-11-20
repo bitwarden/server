@@ -1,0 +1,33 @@
+# Build outputs
+bin/
+obj/
+out/
+*.user
+*.suo
+*.cache
+
+# IDE
+.vs/
+.vscode/
+.idea/
+
+# Logs
+*.log
+logs/
+
+# Exports (will be mounted as volumes)
+exports/
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+!README.md
+
+# Test files
+**/test/
+**/tests/
+*.Test/
