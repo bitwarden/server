@@ -16,7 +16,7 @@ class MjBwInviterInfo extends BodyComponent {
   render() {
     const emailAddressText = this.getAttribute("email-address")
       ? `This invitation was sent by <a href="mailto:${this.getAttribute("email-address")}" class="link">${this.getAttribute("email-address")}</a> and expires `
-      : "Expires ";
+      : "This invitation expires ";
 
     return this.renderMJML(
       `
