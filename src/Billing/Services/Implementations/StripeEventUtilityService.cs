@@ -3,12 +3,12 @@
 
 using Bit.Billing.Constants;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Models;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Braintree;
 using Stripe;
 using Customer = Stripe.Customer;
@@ -112,7 +112,7 @@ public class StripeEventUtilityService : IStripeEventUtilityService
     }
 
     public bool IsSponsoredSubscription(Subscription subscription) =>
-        StaticStore.SponsoredPlans
+        SponsoredPlans.All
             .Any(p => subscription.Items
                 .Any(i => i.Plan.Id == p.StripePlanId));
 

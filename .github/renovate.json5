@@ -42,7 +42,7 @@
       dependencyDashboardApproval: false,
     },
     {
-      matchSourceUrls: ["https://github.com/bitwarden/sdk-internal"],
+      matchPackageNames: ["https://github.com/bitwarden/sdk-internal.git"],
       groupName: "sdk-internal",
     },
     {

@@ -22,7 +22,7 @@ env:
 jobs:
   lint:
     name: Lint
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Check out repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -38,7 +38,7 @@ jobs:
 
   build-artifacts:
     name: Build Docker images
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs:
       - lint
     outputs:
@@ -49,7 +49,6 @@ jobs:
     timeout-minutes: 45
     strategy:
       fail-fast: false
-      max-parallel: 5
       matrix:
         include:
           - project_name: Admin
@@ -281,7 +280,7 @@ jobs:
           output-format: sarif
 
       - name: Upload Grype results to GitHub
-        uses: github/codeql-action/upload-sarif@dd746615b3b9d728a6a37ca2045b68ca76d4841a # v3.28.8
+        uses: github/codeql-action/upload-sarif@0499de31b99561a6d14a36a5f662c2a54f91beee # v4.31.2
         with:
           sarif_file: ${{ steps.container-scan.outputs.sarif }}
           sha: ${{ contains(github.event_name, 'pull_request') && github.event.pull_request.head.sha || github.sha }}
@@ -292,7 +291,7 @@ jobs:
 
   upload:
     name: Upload
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs: build-artifacts
     permissions:
       id-token: write
@@ -410,7 +409,7 @@ jobs:
 
   build-mssqlmigratorutility:
     name: Build MSSQL migrator utility
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs:
       - lint
     defaults:
@@ -467,7 +466,7 @@ jobs:
     if: |
       github.event_name != 'pull_request'
       && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc')
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs:
       - build-artifacts
     permissions:
@@ -490,7 +489,7 @@ jobs:
       - name: Log out from Azure
         uses: bitwarden/gh-actions/azure-logout@main
 
-      - name: Trigger self-host build
+      - name: Trigger Bitwarden Lite build
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         with:
           github-token: ${{ steps.retrieve-secret-pat.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
@@ -498,7 +497,7 @@ jobs:
             await github.rest.actions.createWorkflowDispatch({
               owner: 'bitwarden',
               repo: 'self-host',
-              workflow_id: 'build-unified.yml',
+              workflow_id: 'build-bitwarden-lite.yml',
               ref: 'main',
               inputs: {
                 server_branch: process.env.GITHUB_REF

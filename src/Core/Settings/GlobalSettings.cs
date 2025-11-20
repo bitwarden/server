@@ -21,7 +21,7 @@ public class GlobalSettings : IGlobalSettings
     }
 
     public bool SelfHosted { get; set; }
-    public bool UnifiedDeployment { get; set; }
+    public bool LiteDeployment { get; set; }
     public virtual string KnownProxies { get; set; }
     public virtual string SiteName { get; set; }
     public virtual string ProjectName { get; set; }
@@ -783,7 +783,18 @@ public class GlobalSettings : IGlobalSettings
     {
         public virtual IConnectionStringSettings Redis { get; set; } = new ConnectionStringSettings();
         public virtual IConnectionStringSettings Cosmos { get; set; } = new ConnectionStringSettings();
+        public ExtendedCacheSettings DefaultExtendedCache { get; set; } = new ExtendedCacheSettings();
+    }
 
+    /// <summary>
+    /// A collection of Settings for customizing the FusionCache used in extended caching. Defaults are
+    /// provided for every attribute so that only specific values need to be overridden if needed.
+    /// </summary>
+    public class ExtendedCacheSettings
+    {
+        public bool EnableDistributedCache { get; set; } = true;
+        public bool UseSharedRedisCache { get; set; } = true;
+        public IConnectionStringSettings Redis { get; set; } = new ConnectionStringSettings();
         public TimeSpan Duration { get; set; } = TimeSpan.FromMinutes(30);
         public bool IsFailSafeEnabled { get; set; } = true;
         public TimeSpan FailSafeMaxDuration { get; set; } = TimeSpan.FromHours(2);
