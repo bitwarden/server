@@ -11,7 +11,8 @@ public interface IClientVersionValidator
     Task<bool> ValidateAsync(User user, CustomValidatorRequestContext requestContext);
 }
 
-public class ClientVersionValidator(ICurrentContext currentContext,
+public class ClientVersionValidator(
+    ICurrentContext currentContext,
     IGetMinimumClientVersionForUserQuery getMinimumClientVersionForUserQuery)
     : IClientVersionValidator
 {
@@ -37,7 +38,7 @@ public class ClientVersionValidator(ICurrentContext currentContext,
         {
             requestContext.ValidationErrorResult = new ValidationResult
             {
-                Error = "invalid_grant",
+                Error = "invalid_client_version",
                 ErrorDescription = UpgradeMessage,
                 IsError = true
             };

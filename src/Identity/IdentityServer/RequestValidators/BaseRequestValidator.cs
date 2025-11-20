@@ -122,6 +122,10 @@ public abstract class BaseRequestValidator<T> where T : class
                 return;
             }
 
+            // 1.5 We need to check now the version number
+            await ValidateClientVersionAsync(context, validatorContext);
+
+
             // 2. Decide if this user belongs to an organization that requires SSO.
             validatorContext.SsoRequired = await RequireSsoLoginAsync(user, request.GrantType);
             if (validatorContext.SsoRequired)

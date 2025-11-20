@@ -16,10 +16,7 @@ using Bit.Core.Settings;
 using Duende.IdentityModel;
 using Duende.IdentityServer.Extensions;
 using Duende.IdentityServer.Validation;
-using HandlebarsDotNet;
 using Microsoft.AspNetCore.Identity;
-
-#nullable enable
 
 namespace Bit.Identity.IdentityServer.RequestValidators;
 
