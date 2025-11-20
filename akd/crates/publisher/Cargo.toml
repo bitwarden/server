@@ -8,19 +8,23 @@ keywords.workspace = true
 
 [dependencies]
 akd = { workspace = true }
-akd_storage = { workspace = true}
-bitwarden-akd-configuration = { workspace = true}
+akd_storage = { workspace = true }
+bitwarden-akd-configuration = { workspace = true }
 common = { workspace = true }
-tokio-util = {version = "0.7.16", features = ["compat"] }
+tokio-util = { version = "0.7.16", features = ["compat"] }
 tokio = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
-async-std = {version =  "1.13.2", features = ["attributes"] }
+async-std = { version = "1.13.2", features = ["attributes"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
-tiberius = { version = "0.12.3", default-features = false, features = ["chrono", "tokio", "rustls"] }
+tiberius = { version = "0.12.3", default-features = false, features = [
+  "chrono",
+  "tokio",
+  "rustls",
+] }
 
-[target.'cfg(not(target_os = "macos"))'.workspace.dependencies]
+[target.'cfg(not(target_os = "macos"))'.dependencies]
 tiberius = { version = "0.12.3", features = ["chrono", "tokio"] }
 
 
