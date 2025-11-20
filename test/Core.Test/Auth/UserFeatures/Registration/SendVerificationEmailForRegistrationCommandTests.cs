@@ -72,6 +72,10 @@ public class SendVerificationEmailForRegistrationCommandTests
         sutProvider.GetDependency<GlobalSettings>()
             .DisableUserRegistration = false;
 
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
+
         var mockedToken = "token";
         sutProvider.GetDependency<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>()
             .Protect(Arg.Any<RegistrationEmailVerificationTokenable>())
