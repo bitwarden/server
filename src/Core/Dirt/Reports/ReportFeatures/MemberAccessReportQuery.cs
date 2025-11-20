@@ -67,7 +67,7 @@ public class MemberAccessReportQuery(
                 Email = g.Key.Email,
                 AvatarColor = g.Key.AvatarColor,
                 TwoFactorEnabled = orgUsersTwoFactorEnabled.FirstOrDefault(x => x.userId == g.Key.UserGuid).twoFactorIsEnabled,
-                AccountRecoveryEnabled = !string.IsNullOrWhiteSpace(g.Key.ResetPasswordKey) && orgAbility.UseResetPassword,
+                AccountRecoveryEnabled = !string.IsNullOrWhiteSpace(g.Key.ResetPasswordKey) && orgAbility?.UseResetPassword == true,
                 UsesKeyConnector = g.Key.UsesKeyConnector,
                 GroupId = g.Key.GroupId,
                 GroupName = g.Key.GroupName,

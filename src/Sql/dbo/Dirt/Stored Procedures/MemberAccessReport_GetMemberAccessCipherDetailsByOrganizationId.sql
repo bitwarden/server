@@ -106,4 +106,10 @@ IF @OrganizationId IS NULL
         FROM [dbo].[CollectionUserPermissionsView] CUP
         WHERE CUP.[OrganizationUserId] = OU.[Id]
           AND CUP.[OrganizationId] = @OrganizationId
+    )
+      AND NOT EXISTS (
+        SELECT 1
+        FROM [dbo].[CollectionGroupPermissionsView] CGP
+        WHERE CGP.[OrganizationUserId] = OU.[Id]
+          AND CGP.[OrganizationId] = @OrganizationId
     );

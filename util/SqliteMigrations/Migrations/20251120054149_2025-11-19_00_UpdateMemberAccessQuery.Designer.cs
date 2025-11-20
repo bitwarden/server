@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.SqliteMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20251119211521_2025-11-19_00_UpdateMemberAccessQuery")]
+    [Migration("20251120054149_2025-11-19_00_UpdateMemberAccessQuery")]
     partial class _20251119_00_UpdateMemberAccessQuery
     {
         /// <inheritdoc />
