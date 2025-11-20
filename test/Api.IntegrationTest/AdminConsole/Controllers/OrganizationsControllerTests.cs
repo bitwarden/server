@@ -5,11 +5,8 @@ using Bit.Api.IntegrationTest.Helpers;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Pricing;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
-using Bit.Core.Test.Billing.Mocks;
-using NSubstitute;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
