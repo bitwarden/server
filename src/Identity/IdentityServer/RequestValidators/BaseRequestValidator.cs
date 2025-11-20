@@ -111,7 +111,8 @@ public abstract class BaseRequestValidator<T> where T : class
         }
         else
         {
-            // 1. We need to check if the user is legitimate via the appropriate mechanism through.
+            // 1. We need to check if the user is legitimate via the contextually appropriate mechanism
+            // (webauthn, password, custom token, etc.).
             var valid = await ValidateContextAsync(context, validatorContext);
             var user = validatorContext.User;
             if (!valid)
@@ -123,8 +124,10 @@ public abstract class BaseRequestValidator<T> where T : class
             }
 
             // 1.5 Now check the version number of the client. Do this after ValidateContextAsync so that
-            // we prevent account enumeration. If we were to do this before we would validate that a given user
-            // could exist
+            // we prevent account enumeration. If we were to do this before ValidateContextAsync, then attackers
+            // could use a known invalid client version and make a request for a user (before we know if they have
+            // demonstrated ownership of the account via correct credentials) and identify if they exist by getting
+            // an error response back from the validator saying the user is not compatible with the client.
             await ValidateClientVersionAsync(context, validatorContext);
 
             // 2. Decide if this user belongs to an organization that requires SSO.

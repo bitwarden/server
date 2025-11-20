@@ -40,7 +40,7 @@ public class ClientVersionValidatorTests
         Assert.False(ok);
         Assert.NotNull(ctx.ValidationErrorResult);
         Assert.True(ctx.ValidationErrorResult.IsError);
-        Assert.Equal("invalid_grant", ctx.ValidationErrorResult.Error);
+        Assert.Equal("invalid_client_version", ctx.ValidationErrorResult.Error);
     }
 
     [Fact]

@@ -6,7 +6,6 @@ public static class EncryptionParsing
 {
     /// <summary>
     /// Helper method to convert an encryption type string to an enum value.
-    /// Accepts formats like "Header.iv|ct|mac" or "Header" COSE format.
     /// </summary>
     public static EncryptionType GetEncryptionType(string encString)
     {

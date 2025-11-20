@@ -55,6 +55,7 @@ public class BaseRequestValidatorTests
     private readonly IAuthRequestRepository _authRequestRepository;
     private readonly IMailService _mailService;
     private readonly IUserAccountKeysQuery _userAccountKeysQuery;
+    private readonly IClientVersionValidator _clientVersionValidator;
 
     private readonly BaseRequestValidatorTestWrapper _sut;
 
@@ -78,6 +79,7 @@ public class BaseRequestValidatorTests
         _authRequestRepository = Substitute.For<IAuthRequestRepository>();
         _mailService = Substitute.For<IMailService>();
         _userAccountKeysQuery = Substitute.For<IUserAccountKeysQuery>();
+        _clientVersionValidator = Substitute.For<IClientVersionValidator>();
 
         _sut = new BaseRequestValidatorTestWrapper(
             _userManager,
@@ -97,7 +99,8 @@ public class BaseRequestValidatorTests
             _policyRequirementQuery,
             _authRequestRepository,
             _mailService,
-            _userAccountKeysQuery);
+            _userAccountKeysQuery,
+            _clientVersionValidator);
     }
 
     private void SetupRecoveryCodeSupportForSsoRequiredUsersFeatureFlag(bool recoveryCodeSupportEnabled)
