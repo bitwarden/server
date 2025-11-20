@@ -57,10 +57,16 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<string>("ResetPasswordKey")
                         .HasColumnType("longtext");
 
+                    b.Property<short>("Status")
+                        .HasColumnType("smallint");
+
                     b.Property<string>("TwoFactorProviders")
                         .HasColumnType("longtext");
 
                     b.Property<Guid?>("UserGuid")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("UserId")
                         .HasColumnType("char(36)");
 
                     b.Property<string>("UserName")

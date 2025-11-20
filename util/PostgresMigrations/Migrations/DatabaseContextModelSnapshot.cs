@@ -58,10 +58,16 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<string>("ResetPasswordKey")
                         .HasColumnType("text");
 
+                    b.Property<short>("Status")
+                        .HasColumnType("smallint");
+
                     b.Property<string>("TwoFactorProviders")
                         .HasColumnType("text");
 
                     b.Property<Guid?>("UserGuid")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("UserId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("UserName")

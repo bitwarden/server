@@ -52,10 +52,16 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<string>("ResetPasswordKey")
                         .HasColumnType("TEXT");
 
+                    b.Property<short>("Status")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("TwoFactorProviders")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid?>("UserGuid")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("UserId")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("UserName")

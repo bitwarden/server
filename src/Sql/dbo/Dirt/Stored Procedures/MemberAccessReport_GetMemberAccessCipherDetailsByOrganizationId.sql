@@ -10,8 +10,10 @@ BEGIN
     -- Direct user-collection permissions
     SELECT
         OU.[Id] AS [UserGuid],
+        OU.[UserId],
         OU.[Name] AS [UserName],
         OU.[Email],
+        OU.[Status],
         OU.[AvatarColor],
         OU.[TwoFactorProviders],
         OU.[UsesKeyConnector],
@@ -45,8 +47,10 @@ BEGIN
     -- Group-based collection permissions
     SELECT
         OU.[Id] AS [UserGuid],
+        OU.[UserId],
         OU.[Name] AS [UserName],
         OU.[Email],
+        OU.[Status],
         OU.[AvatarColor],
         OU.[TwoFactorProviders],
         OU.[UsesKeyConnector],
@@ -80,8 +84,10 @@ BEGIN
     -- Users without collection access
     SELECT
         OU.[Id] AS [UserGuid],
+        OU.[UserId],
         OU.[Name] AS [UserName],
         OU.[Email],
+        OU.[Status],
         OU.[AvatarColor],
         OU.[TwoFactorProviders],
         OU.[UsesKeyConnector],
