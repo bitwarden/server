@@ -252,6 +252,9 @@ public static class FeatureFlagKeys
     /* Innovation Team */
     public const string ArchiveVaultItems = "pm-19148-innovation-archive";
 
+    /* Secrets Manager Team */
+    public const string RemoveSecretsManagerAds = "sm-1719-remove-secrets-manager-ads";
+
     /* DIRT Team */
     public const string PM22887_RiskInsightsActivityTab = "pm-22887-risk-insights-activity-tab";
     public const string EventManagementForDataDogAndCrowdStrike = "event-management-for-datadog-and-crowdstrike";
