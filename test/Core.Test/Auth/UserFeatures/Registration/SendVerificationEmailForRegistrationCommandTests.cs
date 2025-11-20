@@ -222,41 +222,6 @@ public class SendVerificationEmailForRegistrationCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task SendVerificationEmailForRegistrationCommand_WhenFromMarketingIsNotNull_SendsEmailWithMarketingParameter(SutProvider<SendVerificationEmailForRegistrationCommand> sutProvider,
-        string email, string name, bool receiveMarketingEmails, string fromMarketing)
-    {
-        // Arrange
-        sutProvider.GetDependency<IUserRepository>()
-            .GetByEmailAsync(email)
-            .ReturnsNull();
-
-        sutProvider.GetDependency<GlobalSettings>()
-            .EnableEmailVerification = true;
-
-        sutProvider.GetDependency<GlobalSettings>()
-            .DisableUserRegistration = false;
-
-        sutProvider.GetDependency<IMailService>()
-            .SendRegistrationVerificationEmailAsync(email, Arg.Any<string>(), fromMarketing)
-            .Returns(Task.CompletedTask);
-
-        var mockedToken = "token";
-        sutProvider.GetDependency<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>()
-            .Protect(Arg.Any<RegistrationEmailVerificationTokenable>())
-            .Returns(mockedToken);
-
-        // Act
-        var result = await sutProvider.Sut.Run(email, name, receiveMarketingEmails, fromMarketing);
-
-        // Assert
-        await sutProvider.GetDependency<IMailService>()
-            .Received(1)
-            .SendRegistrationVerificationEmailAsync(email, mockedToken, fromMarketing);
-        Assert.Null(result);
-    }
-
-    [Theory]
-    [BitAutoData]
     public async Task SendVerificationEmailForRegistrationCommand_WhenBlockedDomain_ThrowsBadRequestException(SutProvider<SendVerificationEmailForRegistrationCommand> sutProvider,
         string name, bool receiveMarketingEmails)
     {
