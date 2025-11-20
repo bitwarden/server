@@ -28,15 +28,6 @@ public class OrganizationsControllerTests : IClassFixture<ApiApplicationFactory>
     public OrganizationsControllerTests(ApiApplicationFactory apiFactory)
     {
         _factory = apiFactory;
-        _factory.SubstituteService<IPricingClient>(pricingClient =>
-        {
-            pricingClient
-                .GetPlan(Arg.Any<PlanType>())
-                .Returns(x => MockPlans.Get(x.Arg<PlanType>()));
-            pricingClient
-                .GetPlanOrThrow(Arg.Any<PlanType>())
-                .Returns(x => MockPlans.Get(x.Arg<PlanType>()));
-        });
         _client = _factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
     }
@@ -49,7 +40,7 @@ public class OrganizationsControllerTests : IClassFixture<ApiApplicationFactory>
         (_organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory,
             name: _organizationName,
             billingEmail: _billingEmail,
-            plan: PlanType.EnterpriseAnnually2023,
+            plan: PlanType.EnterpriseAnnually,
             ownerEmail: _ownerEmail,
             passwordManagerSeats: 5,
             paymentMethod: PaymentMethodType.Card);
