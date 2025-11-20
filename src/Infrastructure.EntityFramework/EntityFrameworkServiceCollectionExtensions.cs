@@ -15,7 +15,6 @@ using Bit.Core.Vault.Repositories;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
 using Bit.Infrastructure.EntityFramework.Auth.Repositories;
 using Bit.Infrastructure.EntityFramework.Billing.Repositories;
-using Bit.Infrastructure.EntityFramework.Dirt;
 using Bit.Infrastructure.EntityFramework.Dirt.Repositories;
 using Bit.Infrastructure.EntityFramework.KeyManagement.Repositories;
 using Bit.Infrastructure.EntityFramework.NotificationCenter.Repositories;
