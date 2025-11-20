@@ -22,7 +22,7 @@ class MjBwInviterInfo extends BodyComponent {
       `
       <mj-section background-color="#fff" padding="15px 10px 10px 10px">
         <mj-column>
-          <mj-text font-size="12px" line-height="24px" padding="10px 15px" color="#1B2029">
+          <mj-text font-size="12px" line-height="24px" padding="10px 15px">
             ${emailAddressText + this.getAttribute("expiration-date")}
           </mj-text>
         </mj-column>
