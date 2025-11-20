@@ -1,8 +1,6 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
-using Bit.Core.Auth.Attributes;
-using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Models.Mail;
 
 namespace Bit.Core.Auth.Models.Mail;
@@ -21,10 +19,9 @@ public class RegisterVerifyEmail : BaseMailModel
         WebVaultUrl,
         Token,
         Email,
-        !string.IsNullOrEmpty(FromMarketing) && FromMarketing == MarketingInitiativeConstants.Premium ? $"&fromMarketing={MarketingInitiativeConstants.Premium}" : string.Empty);
+        !string.IsNullOrEmpty(FromMarketing) ? $"&fromMarketing={FromMarketing}" : string.Empty);
 
     public string Token { get; set; }
     public string Email { get; set; }
-    [MarketingInitiativeValidation]
     public string FromMarketing { get; set; }
 }
