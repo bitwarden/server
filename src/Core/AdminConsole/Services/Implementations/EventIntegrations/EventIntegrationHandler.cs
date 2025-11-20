@@ -7,6 +7,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 using ZiggyCreatures.Caching.Fusion;
 
@@ -17,7 +18,7 @@ public class EventIntegrationHandler<T>(
     IEventIntegrationPublisher eventIntegrationPublisher,
     IIntegrationFilterService integrationFilterService,
     IIntegrationConfigurationDetailsCache configurationCache,
-    IFusionCache fusionCache,
+    IFusionCache cache,
     IGroupRepository groupRepository,
     IOrganizationRepository organizationRepository,
     IOrganizationUserRepository organizationUserRepository,
@@ -93,12 +94,14 @@ public class EventIntegrationHandler<T>(
 
     internal async Task<IntegrationTemplateContext> BuildContextAsync(EventMessage eventMessage, string template)
     {
+        // Note: All of these cache calls use the default options, including TTL of 30 minutes
+
         var context = new IntegrationTemplateContext(eventMessage);
 
         if (IntegrationTemplateProcessor.TemplateRequiresGroup(template) && eventMessage.GroupId.HasValue)
         {
-            context.Group = await fusionCache.GetOrSetAsync<Group?>(
-                key: $"Group:{eventMessage.GroupId.Value:N}",
+            context.Group = await cache.GetOrSetAsync<Group?>(
+                key: EventIntegrationsCacheConstants.BuildCacheKeyForGroup(eventMessage.GroupId.Value),
                 factory: async _ => await groupRepository.GetByIdAsync(eventMessage.GroupId.Value)
             );
         }
@@ -120,8 +123,8 @@ public class EventIntegrationHandler<T>(
 
         if (IntegrationTemplateProcessor.TemplateRequiresOrganization(template))
         {
-            context.Organization = await fusionCache.GetOrSetAsync<Organization?>(
-                key: $"Organization:{organizationId:N}",
+            context.Organization = await cache.GetOrSetAsync<Organization?>(
+                key: EventIntegrationsCacheConstants.BuildCacheKeyForOrganization(organizationId),
                 factory: async _ => await organizationRepository.GetByIdAsync(organizationId)
             );
         }
@@ -130,8 +133,8 @@ public class EventIntegrationHandler<T>(
     }
 
     private async Task<OrganizationUserUserDetails?> GetUserFromCacheAsync(Guid organizationId, Guid userId) =>
-        await fusionCache.GetOrSetAsync<OrganizationUserUserDetails?>(
-            key: $"OrganizationUserUserDetails-orgId:{organizationId:N}-userId:{userId:N}",
+        await cache.GetOrSetAsync<OrganizationUserUserDetails?>(
+            key: EventIntegrationsCacheConstants.BuildCacheKeyForOrganizationUser(organizationId, userId),
             factory: async _ => await organizationUserRepository.GetDetailsByOrganizationIdUserIdAsync(
                 organizationId: organizationId,
                 userId: userId

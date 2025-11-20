@@ -117,19 +117,19 @@ public class EventIntegrationHandlerTests
     public async Task BuildContextAsync_ActingUserIdPresent_UsesCache(EventMessage eventMessage, OrganizationUserUserDetails actingUser)
     {
         var sutProvider = GetSutProvider(OneConfiguration(_templateWithActingUser));
-        var fusionCache = sutProvider.GetDependency<IFusionCache>();
+        var cache = sutProvider.GetDependency<IFusionCache>();
 
         eventMessage.OrganizationId ??= Guid.NewGuid();
         eventMessage.ActingUserId ??= Guid.NewGuid();
 
-        fusionCache.GetOrSetAsync(
+        cache.GetOrSetAsync(
             key: Arg.Any<string>(),
             factory: Arg.Any<Func<FusionCacheFactoryExecutionContext<OrganizationUserUserDetails?>, CancellationToken, Task<OrganizationUserUserDetails?>>>()
         ).Returns(actingUser);
 
         var context = await sutProvider.Sut.BuildContextAsync(eventMessage, _templateWithActingUser);
 
-        await fusionCache.Received(1).GetOrSetAsync(
+        await cache.Received(1).GetOrSetAsync(
             key: Arg.Any<string>(),
             factory: Arg.Any<Func<FusionCacheFactoryExecutionContext<OrganizationUserUserDetails?>, CancellationToken, Task<OrganizationUserUserDetails?>>>()
         );
@@ -141,14 +141,14 @@ public class EventIntegrationHandlerTests
     public async Task BuildContextAsync_ActingUserIdNull_SkipsCache(EventMessage eventMessage)
     {
         var sutProvider = GetSutProvider(OneConfiguration(_templateWithActingUser));
-        var fusionCache = sutProvider.GetDependency<IFusionCache>();
+        var cache = sutProvider.GetDependency<IFusionCache>();
 
         eventMessage.OrganizationId ??= Guid.NewGuid();
         eventMessage.ActingUserId = null;
 
         var context = await sutProvider.Sut.BuildContextAsync(eventMessage, _templateWithActingUser);
 
-        await fusionCache.DidNotReceive().GetOrSetAsync(
+        await cache.DidNotReceive().GetOrSetAsync(
             key: Arg.Any<string>(),
             factory: Arg.Any<Func<FusionCacheFactoryExecutionContext<OrganizationUserUserDetails?>, CancellationToken, Task<OrganizationUserUserDetails?>>>()
         );
@@ -159,14 +159,14 @@ public class EventIntegrationHandlerTests
     public async Task BuildContextAsync_ActingUserOrganizationIdNull_SkipsCache(EventMessage eventMessage)
     {
         var sutProvider = GetSutProvider(OneConfiguration(_templateWithActingUser));
-        var fusionCache = sutProvider.GetDependency<IFusionCache>();
+        var cache = sutProvider.GetDependency<IFusionCache>();
 
         eventMessage.OrganizationId = null;
         eventMessage.ActingUserId ??= Guid.NewGuid();
 
         var context = await sutProvider.Sut.BuildContextAsync(eventMessage, _templateWithActingUser);
 
-        await fusionCache.DidNotReceive().GetOrSetAsync(
+        await cache.DidNotReceive().GetOrSetAsync(
             key: Arg.Any<string>(),
             factory: Arg.Any<Func<FusionCacheFactoryExecutionContext<OrganizationUserUserDetails?>, CancellationToken, Task<OrganizationUserUserDetails?>>>()
         );
@@ -177,18 +177,18 @@ public class EventIntegrationHandlerTests
     public async Task BuildContextAsync_GroupIdPresent_UsesCache(EventMessage eventMessage, Group group)
     {
         var sutProvider = GetSutProvider(OneConfiguration(_templateWithGroup));
-        var fusionCache = sutProvider.GetDependency<IFusionCache>();
+        var cache = sutProvider.GetDependency<IFusionCache>();
 
         eventMessage.GroupId ??= Guid.NewGuid();
 
-        fusionCache.GetOrSetAsync(
+        cache.GetOrSetAsync(
             key: Arg.Any<string>(),
             factory: Arg.Any<Func<FusionCacheFactoryExecutionContext<Group?>, CancellationToken, Task<Group?>>>()
         ).Returns(group);
 
         var context = await sutProvider.Sut.BuildContextAsync(eventMessage, _templateWithGroup);
 
-        await fusionCache.Received(1).GetOrSetAsync(
+        await cache.Received(1).GetOrSetAsync(
             key: Arg.Any<string>(),
             factory: Arg.Any<Func<FusionCacheFactoryExecutionContext<Group?>, CancellationToken, Task<Group?>>>()
         );
@@ -199,12 +199,12 @@ public class EventIntegrationHandlerTests
     public async Task BuildContextAsync_GroupIdNull_SkipsCache(EventMessage eventMessage)
     {
         var sutProvider = GetSutProvider(OneConfiguration(_templateWithGroup));
-        var fusionCache = sutProvider.GetDependency<IFusionCache>();
+        var cache = sutProvider.GetDependency<IFusionCache>();
         eventMessage.GroupId = null;
 
         var context = await sutProvider.Sut.BuildContextAsync(eventMessage, _templateWithGroup);
 
-        await fusionCache.DidNotReceive().GetOrSetAsync(
+        await cache.DidNotReceive().GetOrSetAsync(
             key: Arg.Any<string>(),
             factory: Arg.Any<Func<FusionCacheFactoryExecutionContext<Group?>, CancellationToken, Task<Group?>>>()
         );
@@ -215,18 +215,18 @@ public class EventIntegrationHandlerTests
     public async Task BuildContextAsync_OrganizationIdPresent_UsesCache(EventMessage eventMessage, Organization organization)
     {
         var sutProvider = GetSutProvider(OneConfiguration(_templateWithOrganization));
-        var fusionCache = sutProvider.GetDependency<IFusionCache>();
+        var cache = sutProvider.GetDependency<IFusionCache>();
 
         eventMessage.OrganizationId ??= Guid.NewGuid();
 
-        fusionCache.GetOrSetAsync(
+        cache.GetOrSetAsync(
             key: Arg.Any<string>(),
             factory: Arg.Any<Func<FusionCacheFactoryExecutionContext<Organization?>, CancellationToken, Task<Organization?>>>()
         ).Returns(organization);
 
         var context = await sutProvider.Sut.BuildContextAsync(eventMessage, _templateWithOrganization);
 
-        await fusionCache.Received(1).GetOrSetAsync(
+        await cache.Received(1).GetOrSetAsync(
             key: Arg.Any<string>(),
             factory: Arg.Any<Func<FusionCacheFactoryExecutionContext<Organization?>, CancellationToken, Task<Organization?>>>()
         );
@@ -237,13 +237,13 @@ public class EventIntegrationHandlerTests
     public async Task BuildContextAsync_OrganizationIdNull_SkipsCache(EventMessage eventMessage)
     {
         var sutProvider = GetSutProvider(OneConfiguration(_templateWithOrganization));
-        var fusionCache = sutProvider.GetDependency<IFusionCache>();
+        var cache = sutProvider.GetDependency<IFusionCache>();
 
         eventMessage.OrganizationId = null;
 
         var context = await sutProvider.Sut.BuildContextAsync(eventMessage, _templateWithOrganization);
 
-        await fusionCache.DidNotReceive().GetOrSetAsync(
+        await cache.DidNotReceive().GetOrSetAsync(
             key: Arg.Any<string>(),
             factory: Arg.Any<Func<FusionCacheFactoryExecutionContext<Organization?>, CancellationToken, Task<Organization?>>>()
         );
@@ -254,19 +254,19 @@ public class EventIntegrationHandlerTests
     public async Task BuildContextAsync_UserIdPresent_UsesCache(EventMessage eventMessage, OrganizationUserUserDetails userDetails)
     {
         var sutProvider = GetSutProvider(OneConfiguration(_templateWithUser));
-        var fusionCache = sutProvider.GetDependency<IFusionCache>();
+        var cache = sutProvider.GetDependency<IFusionCache>();
 
         eventMessage.OrganizationId ??= Guid.NewGuid();
         eventMessage.UserId ??= Guid.NewGuid();
 
-        fusionCache.GetOrSetAsync(
+        cache.GetOrSetAsync(
             key: Arg.Any<string>(),
             factory: Arg.Any<Func<FusionCacheFactoryExecutionContext<OrganizationUserUserDetails?>, CancellationToken, Task<OrganizationUserUserDetails?>>>()
         ).Returns(userDetails);
 
         var context = await sutProvider.Sut.BuildContextAsync(eventMessage, _templateWithUser);
 
-        await fusionCache.Received(1).GetOrSetAsync(
+        await cache.Received(1).GetOrSetAsync(
             key: Arg.Any<string>(),
             factory: Arg.Any<Func<FusionCacheFactoryExecutionContext<OrganizationUserUserDetails?>, CancellationToken, Task<OrganizationUserUserDetails?>>>()
         );
@@ -279,14 +279,14 @@ public class EventIntegrationHandlerTests
     public async Task BuildContextAsync_UserIdNull_SkipsCache(EventMessage eventMessage)
     {
         var sutProvider = GetSutProvider(OneConfiguration(_templateWithUser));
-        var fusionCache = sutProvider.GetDependency<IFusionCache>();
+        var cache = sutProvider.GetDependency<IFusionCache>();
 
         eventMessage.OrganizationId = null;
         eventMessage.UserId ??= Guid.NewGuid();
 
         var context = await sutProvider.Sut.BuildContextAsync(eventMessage, _templateWithUser);
 
-        await fusionCache.DidNotReceive().GetOrSetAsync(
+        await cache.DidNotReceive().GetOrSetAsync(
             key: Arg.Any<string>(),
             factory: Arg.Any<Func<FusionCacheFactoryExecutionContext<OrganizationUserUserDetails?>, CancellationToken, Task<OrganizationUserUserDetails?>>>()
         );
@@ -298,14 +298,14 @@ public class EventIntegrationHandlerTests
     public async Task BuildContextAsync_OrganizationUserIdNull_SkipsCache(EventMessage eventMessage)
     {
         var sutProvider = GetSutProvider(OneConfiguration(_templateWithUser));
-        var fusionCache = sutProvider.GetDependency<IFusionCache>();
+        var cache = sutProvider.GetDependency<IFusionCache>();
 
         eventMessage.OrganizationId ??= Guid.NewGuid();
         eventMessage.UserId = null;
 
         var context = await sutProvider.Sut.BuildContextAsync(eventMessage, _templateWithUser);
 
-        await fusionCache.DidNotReceive().GetOrSetAsync(
+        await cache.DidNotReceive().GetOrSetAsync(
             key: Arg.Any<string>(),
             factory: Arg.Any<Func<FusionCacheFactoryExecutionContext<OrganizationUserUserDetails?>, CancellationToken, Task<OrganizationUserUserDetails?>>>()
         );
@@ -317,7 +317,7 @@ public class EventIntegrationHandlerTests
     public async Task BuildContextAsync_NoSpecialTokens_DoesNotCallAnyCache(EventMessage eventMessage)
     {
         var sutProvider = GetSutProvider(OneConfiguration(_templateWithUser));
-        var fusionCache = sutProvider.GetDependency<IFusionCache>();
+        var cache = sutProvider.GetDependency<IFusionCache>();
 
         eventMessage.ActingUserId ??= Guid.NewGuid();
         eventMessage.GroupId ??= Guid.NewGuid();
@@ -326,15 +326,15 @@ public class EventIntegrationHandlerTests
 
         await sutProvider.Sut.BuildContextAsync(eventMessage, _templateBase);
 
-        await fusionCache.DidNotReceive().GetOrSetAsync(
+        await cache.DidNotReceive().GetOrSetAsync(
             key: Arg.Any<string>(),
             factory: Arg.Any<Func<FusionCacheFactoryExecutionContext<Group?>, CancellationToken, Task<Group?>>>()
         );
-        await fusionCache.DidNotReceive().GetOrSetAsync(
+        await cache.DidNotReceive().GetOrSetAsync(
             key: Arg.Any<string>(),
             factory: Arg.Any<Func<FusionCacheFactoryExecutionContext<Organization?>, CancellationToken, Task<Organization?>>>()
         );
-        await fusionCache.DidNotReceive().GetOrSetAsync(
+        await cache.DidNotReceive().GetOrSetAsync(
             key: Arg.Any<string>(),
             factory: Arg.Any<Func<FusionCacheFactoryExecutionContext<OrganizationUserUserDetails?>, CancellationToken, Task<OrganizationUserUserDetails?>>>()
         );
