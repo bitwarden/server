@@ -1,6 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Core.Auth.Attributes;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Models.Mail;
 
@@ -24,5 +25,6 @@ public class RegisterVerifyEmail : BaseMailModel
 
     public string Token { get; set; }
     public string Email { get; set; }
+    [MarketingInitiativeValidation]
     public string FromMarketing { get; set; }
 }
