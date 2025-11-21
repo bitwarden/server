@@ -625,7 +625,11 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
 
         await connection.ExecuteAsync(
             "[dbo].[OrganizationUser_SetStatusForUsersByGuidIdArray]",
-            new { OrganizationUserIds = organizationUserIds.ToGuidIdArrayTVP(), Status = OrganizationUserStatusType.Revoked },
+            new
+            {
+                OrganizationUserIds = organizationUserIds.ToGuidIdArrayTVP(),
+                Status = OrganizationUserStatusType.Revoked
+            },
             commandType: CommandType.StoredProcedure);
     }
 
