@@ -36,7 +36,7 @@ public class JobsHostedService(
         services.AddHostedService(sp => sp.GetRequiredService<JobsHostedService>());
     }
 
-    public async Task InterruptAdHocJobAsync<T>(CancellationToken cancellationToken = default)
+    public async Task InterruptAdHocJobAsync<T>(CancellationToken cancellationToken = default) where T : class, IJob
     {
         if (_adHocScheduler == null)
         {

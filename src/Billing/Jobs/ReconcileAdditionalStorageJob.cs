@@ -195,7 +195,7 @@ public class ReconcileAdditionalStorageJob(
         return TriggerBuilder.Create()
             .WithIdentity("EveryMorningTrigger")
             .StartNow()
-            .WithCronSchedule("0 0 16 * * ?") // 10am CST daily, assuming the pods execute in UTC time
+            .WithCronSchedule("0 0 16 * * ?") // 10am CST daily; the pods execute in UTC time
             .Build();
     }
 }
