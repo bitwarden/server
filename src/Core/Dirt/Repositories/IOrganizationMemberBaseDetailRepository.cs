@@ -1,6 +1,6 @@
-﻿using Bit.Core.Dirt.Reports.Models.Data;
+﻿using Bit.Core.Dirt.Models.Data;
 
-namespace Bit.Core.Dirt.Reports.Repositories;
+namespace Bit.Core.Dirt.Repositories;
 
 public interface IOrganizationMemberBaseDetailRepository
 {

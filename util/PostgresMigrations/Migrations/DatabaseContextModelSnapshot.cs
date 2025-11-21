@@ -23,9 +23,12 @@ namespace Bit.PostgresMigrations.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("Bit.Core.Dirt.Reports.Models.Data.OrganizationMemberBaseDetail", b =>
+            modelBuilder.Entity("Bit.Core.Dirt.Models.Data.OrganizationMemberBaseDetail", b =>
                 {
-                    b.Property<Guid>("CipherId")
+                    b.Property<string>("AvatarColor")
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("CipherId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid?>("CollectionId")
@@ -49,16 +52,22 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool?>("Manage")
                         .HasColumnType("boolean");
 
+                    b.Property<Guid?>("OrganizationUserId")
+                        .HasColumnType("uuid");
+
                     b.Property<bool?>("ReadOnly")
                         .HasColumnType("boolean");
 
                     b.Property<string>("ResetPasswordKey")
                         .HasColumnType("text");
 
+                    b.Property<short>("Status")
+                        .HasColumnType("smallint");
+
                     b.Property<string>("TwoFactorProviders")
                         .HasColumnType("text");
 
-                    b.Property<Guid?>("UserGuid")
+                    b.Property<Guid?>("UserId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("UserName")
