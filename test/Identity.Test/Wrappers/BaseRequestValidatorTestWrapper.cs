@@ -66,7 +66,8 @@ IBaseRequestValidatorTestWrapper
         IPolicyRequirementQuery policyRequirementQuery,
         IAuthRequestRepository authRequestRepository,
         IMailService mailService,
-        IUserAccountKeysQuery userAccountKeysQuery) :
+        IUserAccountKeysQuery userAccountKeysQuery,
+        IClientVersionValidator clientVersionValidator) :
          base(
             userManager,
             userService,
@@ -85,7 +86,8 @@ IBaseRequestValidatorTestWrapper
             policyRequirementQuery,
             authRequestRepository,
             mailService,
-            userAccountKeysQuery)
+            userAccountKeysQuery,
+            clientVersionValidator)
     {
     }
 

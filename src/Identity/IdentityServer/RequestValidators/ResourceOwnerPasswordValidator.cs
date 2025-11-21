@@ -43,7 +43,8 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
         IPolicyRequirementQuery policyRequirementQuery,
         IMailService mailService,
-        IUserAccountKeysQuery userAccountKeysQuery)
+        IUserAccountKeysQuery userAccountKeysQuery,
+        IClientVersionValidator clientVersionValidator)
         : base(
             userManager,
             userService,
@@ -62,7 +63,8 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
             policyRequirementQuery,
             authRequestRepository,
             mailService,
-            userAccountKeysQuery)
+            userAccountKeysQuery,
+            clientVersionValidator)
     {
         _userManager = userManager;
         _currentContext = currentContext;
@@ -72,7 +74,6 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
 
     public async Task ValidateAsync(ResourceOwnerPasswordValidationContext context)
     {
-
         var user = await _userManager.FindByEmailAsync(context.UserName.ToLowerInvariant());
         // We want to keep this device around incase the device is new for the user
         var requestDevice = DeviceValidator.GetDeviceFromRequest(context.Request);
