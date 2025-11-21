@@ -146,7 +146,7 @@ public class ReconcileAdditionalStorageJob(
 
         var updateOptions = new SubscriptionUpdateOptions
         {
-            ProrationBehavior = StripeConstants.ProrationBehavior.AlwaysInvoice,
+            ProrationBehavior = StripeConstants.ProrationBehavior.CreateProrations,
             Metadata = new Dictionary<string, string>
             {
                 [StripeConstants.MetadataKeys.StorageReconciled2025] = DateTime.UtcNow.ToString("o")

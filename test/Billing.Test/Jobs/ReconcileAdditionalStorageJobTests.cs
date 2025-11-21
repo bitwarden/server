@@ -302,7 +302,7 @@ public class ReconcileAdditionalStorageJobTests
     #region Update Options Tests
 
     [Fact]
-    public async Task Execute_UpdateOptions_SetsProrationBehaviorToAlwaysInvoice()
+    public async Task Execute_UpdateOptions_SetsProrationBehaviorToCreateProrations()
     {
         // Arrange
         var context = CreateJobExecutionContext();
@@ -322,7 +322,7 @@ public class ReconcileAdditionalStorageJobTests
         // Assert
         await _stripeFacade.Received(1).UpdateSubscription(
             "sub_123",
-            Arg.Is<SubscriptionUpdateOptions>(o => o.ProrationBehavior == "always_invoice"));
+            Arg.Is<SubscriptionUpdateOptions>(o => o.ProrationBehavior == StripeConstants.ProrationBehavior.CreateProrations));
     }
 
     [Fact]
