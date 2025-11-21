@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models.Sales;
@@ -353,4 +354,97 @@ public class OrganizationBillingServiceTests
     }
 
     #endregion
+
+    [Theory, BitAutoData]
+    public async Task UpdateOrganizationNameAndEmail_UpdatesStripeCustomer(
+        Organization organization,
+        SutProvider<OrganizationBillingService> sutProvider)
+    {
+        organization.Name = "Short name";
+
+        CustomerUpdateOptions capturedOptions = null;
+        sutProvider.GetDependency<IStripeAdapter>()
+            .CustomerUpdateAsync(
+                Arg.Is<string>(id => id == organization.GatewayCustomerId),
+                Arg.Do<CustomerUpdateOptions>(options => capturedOptions = options))
+            .Returns(new Customer());
+
+        // Act
+        await sutProvider.Sut.UpdateOrganizationNameAndEmail(organization);
+
+        // Assert
+        await sutProvider.GetDependency<IStripeAdapter>()
+            .Received(1)
+            .CustomerUpdateAsync(
+                organization.GatewayCustomerId,
+                Arg.Any<CustomerUpdateOptions>());
+
+        Assert.NotNull(capturedOptions);
+        Assert.Equal(organization.BillingEmail, capturedOptions.Email);
+        Assert.Equal(organization.DisplayName(), capturedOptions.Description);
+        Assert.NotNull(capturedOptions.InvoiceSettings);
+        Assert.NotNull(capturedOptions.InvoiceSettings.CustomFields);
+        Assert.Single(capturedOptions.InvoiceSettings.CustomFields);
+
+        var customField = capturedOptions.InvoiceSettings.CustomFields.First();
+        Assert.Equal(organization.SubscriberType(), customField.Name);
+        Assert.Equal(organization.DisplayName(), customField.Value);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateOrganizationNameAndEmail_WhenNameIsLong_TruncatesTo30Characters(
+        Organization organization,
+        SutProvider<OrganizationBillingService> sutProvider)
+    {
+        // Arrange
+        organization.Name = "This is a very long organization name that exceeds thirty characters";
+
+        CustomerUpdateOptions capturedOptions = null;
+        sutProvider.GetDependency<IStripeAdapter>()
+            .CustomerUpdateAsync(
+                Arg.Is<string>(id => id == organization.GatewayCustomerId),
+                Arg.Do<CustomerUpdateOptions>(options => capturedOptions = options))
+            .Returns(new Customer());
+
+        // Act
+        await sutProvider.Sut.UpdateOrganizationNameAndEmail(organization);
+
+        // Assert
+        await sutProvider.GetDependency<IStripeAdapter>()
+            .Received(1)
+            .CustomerUpdateAsync(
+                organization.GatewayCustomerId,
+                Arg.Any<CustomerUpdateOptions>());
+
+        Assert.NotNull(capturedOptions);
+        Assert.NotNull(capturedOptions.InvoiceSettings);
+        Assert.NotNull(capturedOptions.InvoiceSettings.CustomFields);
+
+        var customField = capturedOptions.InvoiceSettings.CustomFields.First();
+        Assert.Equal(30, customField.Value.Length);
+
+        var expectedCustomFieldDisplayName = "This is a very long organizati";
+        Assert.Equal(expectedCustomFieldDisplayName, customField.Value);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateOrganizationNameAndEmail_WhenGatewayCustomerIdIsNull_ThrowsBillingException(
+        Organization organization,
+        SutProvider<OrganizationBillingService> sutProvider)
+    {
+        // Arrange
+        organization.GatewayCustomerId = null;
+        organization.Name = "Test Organization";
+        organization.BillingEmail = "billing@example.com";
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BillingException>(
+            () => sutProvider.Sut.UpdateOrganizationNameAndEmail(organization));
+
+        Assert.Contains("Cannot update an organization in Stripe without a GatewayCustomerId.", exception.Response);
+
+        await sutProvider.GetDependency<IStripeAdapter>()
+            .DidNotReceiveWithAnyArgs()
+            .CustomerUpdateAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>());
+    }
 }
