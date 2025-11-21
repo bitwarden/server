@@ -330,6 +330,7 @@ public class OrganizationEditModel : OrganizationViewModel
         existingOrganization.SmServiceAccounts = SmServiceAccounts;
         existingOrganization.MaxAutoscaleSmServiceAccounts = MaxAutoscaleSmServiceAccounts;
         existingOrganization.UseOrganizationDomains = UseOrganizationDomains;
+        existingOrganization.UsePhishingBlocker = UsePhishingBlocker;
         return existingOrganization;
     }
 }
