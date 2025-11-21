@@ -3,7 +3,6 @@ using System.Net.Http.Headers;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Seeder.Recipes;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
 

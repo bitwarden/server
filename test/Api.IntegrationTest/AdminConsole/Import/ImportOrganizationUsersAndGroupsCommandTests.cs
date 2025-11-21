@@ -26,7 +26,7 @@ public class ImportOrganizationUsersAndGroupsCommandTests : IClassFixture<ApiApp
         _loginHelper = new LoginHelper(_factory, _client);
     }
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         // Create the owner account
         _ownerEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
@@ -40,10 +40,10 @@ public class ImportOrganizationUsersAndGroupsCommandTests : IClassFixture<ApiApp
         await _loginHelper.LoginWithOrganizationApiKeyAsync(_organization.Id);
     }
 
-    public Task DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         _client.Dispose();
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
     [Fact]

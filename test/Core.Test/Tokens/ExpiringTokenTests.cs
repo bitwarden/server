@@ -1,5 +1,5 @@
 ﻿using System.Text.Json;
-using AutoFixture.Xunit2;
+using AutoFixture.Xunit3;
 using Bit.Core.Utilities;
 using Xunit;
 

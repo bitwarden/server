@@ -53,7 +53,7 @@ public class BatchAuthRequestUpdateProcessorTests
         var sut = new BatchAuthRequestUpdateProcessor(authRequests, updates, configuration);
         Assert.NotEmpty(sut.Processors);
         sut.Process(errorHandler);
-        Assert.NotEmpty(sut.Processors.Where(p => p.ProcessedAuthRequest != null));
+        Assert.Contains(sut.Processors, p => p.ProcessedAuthRequest != null);
     }
 
     [Theory]

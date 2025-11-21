@@ -4,7 +4,7 @@ using System.ComponentModel;
 using System.Reflection;
 using AutoFixture;
 using AutoFixture.Kernel;
-using AutoFixture.Xunit2;
+using AutoFixture.Xunit3;
 using Bit.Test.Common.AutoFixture.Attributes;
 
 namespace Bit.Test.Common.Helpers;

@@ -1,13 +1,12 @@
-﻿#nullable enable
-
-using System.Reflection;
+﻿using System.Reflection;
 using AutoFixture;
 using Bit.Test.Common.Helpers;
+using Xunit;
 using Xunit.Sdk;
+using Xunit.v3;
 
 namespace Bit.Test.Common.AutoFixture.Attributes;
 
-[DataDiscoverer("AutoFixture.Xunit2.NoPreDiscoveryDataDiscoverer", "AutoFixture.Xunit2")]
 public class BitAutoDataAttribute : DataAttribute
 {
     private readonly Func<IFixture> _createFixture;
@@ -26,6 +25,23 @@ public class BitAutoDataAttribute : DataAttribute
         _fixedTestParameters = fixedTestParameters;
     }
 
-    public override IEnumerable<object?[]> GetData(MethodInfo testMethod)
-        => BitAutoDataAttributeHelpers.GetData(testMethod, _createFixture(), _fixedTestParameters);
+    protected IEnumerable<object?[]> GetDataCore(MethodInfo testMethod)
+    {
+        return BitAutoDataAttributeHelpers.GetData(testMethod, _createFixture(), _fixedTestParameters);
+    }
+
+    public override ValueTask<IReadOnlyCollection<ITheoryDataRow>> GetData(MethodInfo testMethod, DisposalTracker disposalTracker)
+    {
+        var theoryData = new List<ITheoryDataRow>();
+        var data = GetDataCore(testMethod);
+
+        foreach (var dataRow in data)
+        {
+            theoryData.Add(new TheoryDataRow(dataRow));
+        }
+
+        return new(theoryData);
+    }
+
+    public override bool SupportsDiscoveryEnumeration() => false;
 }
