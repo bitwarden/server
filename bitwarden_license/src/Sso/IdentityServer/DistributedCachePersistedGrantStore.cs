@@ -21,42 +21,29 @@ namespace Bit.Sso.IdentityServer;
 public class DistributedCachePersistedGrantStore : IPersistedGrantStore
 {
     private readonly IFusionCache _cache;
-    private readonly ILogger<DistributedCachePersistedGrantStore> _logger;
-
-    private const string KeyPrefix = "grant:";
 
     public DistributedCachePersistedGrantStore(
-        [FromKeyedServices("sso-grants")] IFusionCache cache,
-        ILogger<DistributedCachePersistedGrantStore> logger)
+        [FromKeyedServices("sso-grants")] IFusionCache cache)
     {
         _cache = cache;
-        _logger = logger;
     }
 
     public async Task<PersistedGrant?> GetAsync(string key)
     {
-        var cacheKey = GetCacheKey(key);
-
-        var result = await _cache.TryGetAsync<PersistedGrant>(cacheKey);
+        var result = await _cache.TryGetAsync<PersistedGrant>(key);
 
         if (!result.HasValue)
         {
-            _logger.LogDebug("Grant {Key} not found in cache", key);
             return null;
         }
 
         var grant = result.Value;
 
         // Check expiration
-        if (grant.Expiration.HasValue && grant.Expiration.Value < DateTime.UtcNow)
-        {
-            _logger.LogDebug("Grant {Key} has expired", key);
-            await RemoveAsync(key);
-            return null;
-        }
+        if (!grant.Expiration.HasValue || grant.Expiration.Value >= DateTime.UtcNow) return grant;
+        await RemoveAsync(key);
+        return null;
 
-        _logger.LogDebug("Retrieved grant {Key} of type {GrantType}", key, grant.Type);
-        return grant;
     }
 
     public Task<IEnumerable<PersistedGrant>> GetAllAsync(PersistedGrantFilter filter)
@@ -64,40 +51,32 @@ public class DistributedCachePersistedGrantStore : IPersistedGrantStore
         // Cache stores are key-value based and don't support querying by filter criteria.
         // This method is typically used for cleanup operations on long-lived grants in databases.
         // For SSO's short-lived authorization codes, we rely on TTL expiration instead.
-        _logger.LogDebug(
-            "GetAllAsync called on cache-backed store with filter SubjectId={SubjectId}, SessionId={SessionId}, ClientId={ClientId}, Type={Type}. " +
-            "Cache stores do not support filtering. Returning empty collection.",
-            filter.SubjectId, filter.SessionId, filter.ClientId, filter.Type);
 
         return Task.FromResult(Enumerable.Empty<PersistedGrant>());
     }
 
     public Task RemoveAllAsync(PersistedGrantFilter filter)
     {
+        // Revocation Strategy: SSO's logout flow (AccountController.LogoutAsync) only clears local
+        // authentication cookies and performs federated logout with external IdPs. It does not invoke
+        // Duende's EndSession or TokenRevocation endpoints. Authorization codes are single-use and expire
+        // within 5 minutes, making explicit revocation unnecessary for SSO's security model.
+        // https://docs.duendesoftware.com/identityserver/reference/stores/persisted-grant-store/
+
         // Cache stores are key-value based and don't support bulk deletion by filter.
         // This method is typically used for cleanup operations on long-lived grants in databases.
         // For SSO's short-lived authorization codes, we rely on TTL expiration instead.
-        _logger.LogDebug(
-            "RemoveAllAsync called on cache-backed store with filter SubjectId={SubjectId}, SessionId={SessionId}, ClientId={ClientId}, Type={Type}. " +
-            "Cache stores do not support filtering. No action taken.",
-            filter.SubjectId, filter.SessionId, filter.ClientId, filter.Type);
 
         return Task.FromResult(0);
     }
 
     public async Task RemoveAsync(string key)
     {
-        var cacheKey = GetCacheKey(key);
-
-        await _cache.RemoveAsync(cacheKey);
-
-        _logger.LogDebug("Removed grant {Key} from cache", key);
+        await _cache.RemoveAsync(key);
     }
 
     public async Task StoreAsync(PersistedGrant grant)
     {
-        var cacheKey = GetCacheKey(grant.Key);
-
         // Calculate TTL based on grant expiration
         var duration = grant.Expiration.HasValue
             ? grant.Expiration.Value - DateTime.UtcNow
@@ -106,12 +85,13 @@ public class DistributedCachePersistedGrantStore : IPersistedGrantStore
         // Ensure positive duration
         if (duration <= TimeSpan.Zero)
         {
-            _logger.LogWarning("Grant {Key} has already expired. Not storing in cache.", grant.Key);
             return;
         }
 
+        // Cache key "sso-grant:" is configured by service registration. Going through the consumed KeyedService will
+        // give us a consistent cache key prefix for these grants.
         await _cache.SetAsync(
-            cacheKey,
+            grant.Key,
             grant,
             new FusionCacheEntryOptions
             {
@@ -119,10 +99,5 @@ public class DistributedCachePersistedGrantStore : IPersistedGrantStore
                 // Keep distributed cache enabled for multi-instance scenarios
                 // When Redis isn't configured, FusionCache gracefully uses only L1 (in-memory)
             }.SetSkipDistributedCache(false, false));
-
-        _logger.LogDebug("Stored grant {Key} of type {GrantType} with TTL {Duration}s",
-            grant.Key, grant.Type, duration.TotalSeconds);
     }
-
-    private string GetCacheKey(string key) => $"{KeyPrefix}{key}";
 }
