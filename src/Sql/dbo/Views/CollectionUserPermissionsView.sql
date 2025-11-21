@@ -10,6 +10,6 @@ SELECT
     CU.[Manage]
 FROM
     [dbo].[CollectionUser] CU
-        INNER JOIN
+INNER JOIN
     [dbo].[Collection] C ON C.[Id] = CU.[CollectionId]
 GO

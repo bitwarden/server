@@ -8,8 +8,8 @@ SELECT
     Ci.[DeletedDate]
 FROM
     [dbo].[CollectionCipher] CC
-        INNER JOIN
+INNER JOIN
     [dbo].[Collection] C ON C.[Id] = CC.[CollectionId]
-        INNER JOIN
+INNER JOIN
     [dbo].[Cipher] Ci ON Ci.[Id] = CC.[CipherId]
 GO

@@ -12,10 +12,10 @@ SELECT
     CG.[Manage]
 FROM
     [dbo].[GroupUser] GU
-        INNER JOIN
+INNER JOIN
     [dbo].[Group] G ON G.[Id] = GU.[GroupId]
-        INNER JOIN
+INNER JOIN
     [dbo].[CollectionGroup] CG ON CG.[GroupId] = G.[Id]
-        INNER JOIN
+INNER JOIN
     [dbo].[Collection] C ON C.[Id] = CG.[CollectionId]
 GO
