@@ -3,7 +3,7 @@ using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Dirt.Models.Data;
 using Bit.Core.Dirt.Reports.ReportFeatures;
 using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
-using Bit.Core.Dirt.Reports.Repositories;
+using Bit.Core.Dirt.Repositories;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
@@ -31,7 +31,7 @@ public class MemberAccessReportQueryTests
         {
             new OrganizationMemberBaseDetail
             {
-                UserGuid = Guid.NewGuid(),
+                OrganizationUserId = Guid.NewGuid(),
                 UserName = "Test User",
                 Email = "test@example.com",
                 AvatarColor = expectedAvatarColor,
@@ -57,7 +57,7 @@ public class MemberAccessReportQueryTests
             .TwoFactorIsEnabledAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new List<(Guid userId, bool twoFactorIsEnabled)>
             {
-                (baseDetails[0].UserGuid.Value, false)
+                (baseDetails[0].OrganizationUserId.Value, false)
             });
 
         sutProvider.GetDependency<IApplicationCacheService>()
@@ -91,7 +91,7 @@ public class MemberAccessReportQueryTests
             // User with group-based collection access
             new OrganizationMemberBaseDetail
             {
-                UserGuid = userWithGroupAccess,
+                OrganizationUserId = userWithGroupAccess,
                 UserName = "Group User",
                 Email = "group@example.com",
                 AvatarColor = "#FF0000",
@@ -110,7 +110,7 @@ public class MemberAccessReportQueryTests
             // User with direct collection access
             new OrganizationMemberBaseDetail
             {
-                UserGuid = userWithDirectAccess,
+                OrganizationUserId = userWithDirectAccess,
                 UserName = "Direct User",
                 Email = "direct@example.com",
                 AvatarColor = "#00FF00",
@@ -132,10 +132,10 @@ public class MemberAccessReportQueryTests
             .GetOrganizationMemberBaseDetailsByOrganizationId(organizationId)
             .Returns(baseDetails);
 
-        var userGuids = new[] { userWithGroupAccess, userWithDirectAccess };
+        var organizationUserIds = new[] { userWithGroupAccess, userWithDirectAccess };
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
             .TwoFactorIsEnabledAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns(userGuids.Select(id => (id, false)).ToList());
+            .Returns(organizationUserIds.Select(id => (id, false)).ToList());
 
         sutProvider.GetDependency<IApplicationCacheService>()
             .GetOrganizationAbilityAsync(organizationId)
@@ -149,11 +149,11 @@ public class MemberAccessReportQueryTests
         Assert.Equal(2, resultList.Count);
 
         // Verify both users with access are in results
-        Assert.Contains(resultList, r => r.UserGuid == userWithGroupAccess);
-        Assert.Contains(resultList, r => r.UserGuid == userWithDirectAccess);
+        Assert.Contains(resultList, r => r.OrganizationUserId == userWithGroupAccess);
+        Assert.Contains(resultList, r => r.OrganizationUserId == userWithDirectAccess);
 
         // Verify the user with group access has group information
-        var groupUser = resultList.First(r => r.UserGuid == userWithGroupAccess);
+        var groupUser = resultList.First(r => r.OrganizationUserId == userWithGroupAccess);
         Assert.NotNull(groupUser.GroupId);
         Assert.Equal("Test Group", groupUser.GroupName);
     }
@@ -167,7 +167,7 @@ public class MemberAccessReportQueryTests
         var fixture = new Fixture();
         var organizationId = fixture.Create<Guid>();
         var request = new MemberAccessReportRequest { OrganizationId = organizationId };
-        var userGuid = Guid.NewGuid();
+        var organizationUserId = Guid.NewGuid();
         var collectionId = Guid.NewGuid();
         var cipherId1 = Guid.NewGuid();
         var cipherId2 = Guid.NewGuid();
@@ -177,7 +177,7 @@ public class MemberAccessReportQueryTests
             // Same user, same collection, multiple ciphers (some null)
             new OrganizationMemberBaseDetail
             {
-                UserGuid = userGuid,
+                OrganizationUserId = organizationUserId,
                 UserName = "Test User",
                 Email = "test@example.com",
                 AvatarColor = "#FF5733",
@@ -195,7 +195,7 @@ public class MemberAccessReportQueryTests
             },
             new OrganizationMemberBaseDetail
             {
-                UserGuid = userGuid,
+                OrganizationUserId = organizationUserId,
                 UserName = "Test User",
                 Email = "test@example.com",
                 AvatarColor = "#FF5733",
@@ -213,7 +213,7 @@ public class MemberAccessReportQueryTests
             },
             new OrganizationMemberBaseDetail
             {
-                UserGuid = userGuid,
+                OrganizationUserId = organizationUserId,
                 UserName = "Test User",
                 Email = "test@example.com",
                 AvatarColor = "#FF5733",
@@ -237,7 +237,7 @@ public class MemberAccessReportQueryTests
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
             .TwoFactorIsEnabledAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns(new List<(Guid userId, bool twoFactorIsEnabled)> { (userGuid, false) });
+            .Returns(new List<(Guid userId, bool twoFactorIsEnabled)> { (organizationUserId, false) });
 
         sutProvider.GetDependency<IApplicationCacheService>()
             .GetOrganizationAbilityAsync(organizationId)
@@ -268,7 +268,7 @@ public class MemberAccessReportQueryTests
         var fixture = new Fixture();
         var organizationId = fixture.Create<Guid>();
         var request = new MemberAccessReportRequest { OrganizationId = organizationId };
-        var userGuid = Guid.NewGuid();
+        var organizationUserId = Guid.NewGuid();
         var collectionId = Guid.NewGuid();
 
         var baseDetails = new List<OrganizationMemberBaseDetail>
@@ -276,7 +276,7 @@ public class MemberAccessReportQueryTests
             // Same user, same collection, different ciphers
             new OrganizationMemberBaseDetail
             {
-                UserGuid = userGuid,
+                OrganizationUserId = organizationUserId,
                 UserName = "Test User",
                 Email = "test@example.com",
                 AvatarColor = "#FF5733",
@@ -294,7 +294,7 @@ public class MemberAccessReportQueryTests
             },
             new OrganizationMemberBaseDetail
             {
-                UserGuid = userGuid,
+                OrganizationUserId = organizationUserId,
                 UserName = "Test User",
                 Email = "test@example.com",
                 AvatarColor = "#FF5733",
@@ -318,7 +318,7 @@ public class MemberAccessReportQueryTests
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
             .TwoFactorIsEnabledAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns(new List<(Guid userId, bool twoFactorIsEnabled)> { (userGuid, true) });
+            .Returns(new List<(Guid userId, bool twoFactorIsEnabled)> { (organizationUserId, true) });
 
         sutProvider.GetDependency<IApplicationCacheService>()
             .GetOrganizationAbilityAsync(organizationId)
@@ -334,7 +334,7 @@ public class MemberAccessReportQueryTests
         Assert.Single(resultList);
 
         var record = resultList[0];
-        Assert.Equal(userGuid, record.UserGuid);
+        Assert.Equal(organizationUserId, record.OrganizationUserId);
         Assert.Equal(collectionId, record.CollectionId);
         Assert.True(record.ReadOnly);
         Assert.True(record.HidePasswords);
@@ -361,7 +361,7 @@ public class MemberAccessReportQueryTests
         {
             new OrganizationMemberBaseDetail
             {
-                UserGuid = userWithRecovery,
+                OrganizationUserId = userWithRecovery,
                 UserName = "User With Recovery",
                 Email = "recovery@example.com",
                 AvatarColor = "#FF0000",
@@ -379,7 +379,7 @@ public class MemberAccessReportQueryTests
             },
             new OrganizationMemberBaseDetail
             {
-                UserGuid = userWithoutRecovery,
+                OrganizationUserId = userWithoutRecovery,
                 UserName = "User Without Recovery",
                 Email = "norecovery@example.com",
                 AvatarColor = "#00FF00",
@@ -420,8 +420,8 @@ public class MemberAccessReportQueryTests
         var resultList = result.ToList();
         Assert.Equal(2, resultList.Count);
 
-        var withRecovery = resultList.First(r => r.UserGuid == userWithRecovery);
-        var withoutRecovery = resultList.First(r => r.UserGuid == userWithoutRecovery);
+        var withRecovery = resultList.First(r => r.OrganizationUserId == userWithRecovery);
+        var withoutRecovery = resultList.First(r => r.OrganizationUserId == userWithoutRecovery);
 
         Assert.True(withRecovery.AccountRecoveryEnabled);
         Assert.False(withoutRecovery.AccountRecoveryEnabled);
@@ -442,7 +442,7 @@ public class MemberAccessReportQueryTests
         {
             new OrganizationMemberBaseDetail
             {
-                UserGuid = userWithKeyConnector,
+                OrganizationUserId = userWithKeyConnector,
                 UserName = "Key Connector User",
                 Email = "keyconnector@example.com",
                 AvatarColor = "#0000FF",
@@ -493,7 +493,7 @@ public class MemberAccessReportQueryTests
         var fixture = new Fixture();
         var organizationId = fixture.Create<Guid>();
         var request = new MemberAccessReportRequest { OrganizationId = organizationId };
-        var userGuid = Guid.NewGuid();
+        var organizationUserId = Guid.NewGuid();
         var directCollectionId = Guid.NewGuid();
         var groupCollectionId = Guid.NewGuid();
 
@@ -502,7 +502,7 @@ public class MemberAccessReportQueryTests
             // Direct access
             new OrganizationMemberBaseDetail
             {
-                UserGuid = userGuid,
+                OrganizationUserId = organizationUserId,
                 UserName = "Test User",
                 Email = "test@example.com",
                 AvatarColor = "#FF5733",
@@ -521,7 +521,7 @@ public class MemberAccessReportQueryTests
             // Group access
             new OrganizationMemberBaseDetail
             {
-                UserGuid = userGuid,
+                OrganizationUserId = organizationUserId,
                 UserName = "Test User",
                 Email = "test@example.com",
                 AvatarColor = "#FF5733",
@@ -545,7 +545,7 @@ public class MemberAccessReportQueryTests
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
             .TwoFactorIsEnabledAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns(new List<(Guid userId, bool twoFactorIsEnabled)> { (userGuid, false) });
+            .Returns(new List<(Guid userId, bool twoFactorIsEnabled)> { (organizationUserId, false) });
 
         sutProvider.GetDependency<IApplicationCacheService>()
             .GetOrganizationAbilityAsync(organizationId)
@@ -612,13 +612,13 @@ public class MemberAccessReportQueryTests
         var fixture = new Fixture();
         var organizationId = fixture.Create<Guid>();
         var request = new MemberAccessReportRequest { OrganizationId = organizationId };
-        var userGuid = Guid.NewGuid();
+        var organizationUserId = Guid.NewGuid();
 
         var baseDetails = new List<OrganizationMemberBaseDetail>
         {
             new OrganizationMemberBaseDetail
             {
-                UserGuid = userGuid,
+                OrganizationUserId = organizationUserId,
                 UserName = "Test User",
                 Email = "test@example.com",
                 AvatarColor = "#FF5733",
@@ -642,7 +642,7 @@ public class MemberAccessReportQueryTests
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
             .TwoFactorIsEnabledAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns(new List<(Guid userId, bool twoFactorIsEnabled)> { (userGuid, false) });
+            .Returns(new List<(Guid userId, bool twoFactorIsEnabled)> { (organizationUserId, false) });
 
         sutProvider.GetDependency<IApplicationCacheService>()
             .GetOrganizationAbilityAsync(organizationId)
@@ -667,7 +667,7 @@ public class MemberAccessReportQueryTests
         var fixture = new Fixture();
         var organizationId = fixture.Create<Guid>();
         var request = new MemberAccessReportRequest { OrganizationId = organizationId };
-        var userGuid = Guid.NewGuid();
+        var organizationUserId = Guid.NewGuid();
         var collectionId = Guid.NewGuid();
 
         var baseDetails = new List<OrganizationMemberBaseDetail>
@@ -675,7 +675,7 @@ public class MemberAccessReportQueryTests
             // Collection access with null cipher (collection has no ciphers)
             new OrganizationMemberBaseDetail
             {
-                UserGuid = userGuid,
+                OrganizationUserId = organizationUserId,
                 UserName = "Test User",
                 Email = "test@example.com",
                 AvatarColor = "#FF5733",
@@ -699,7 +699,7 @@ public class MemberAccessReportQueryTests
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
             .TwoFactorIsEnabledAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns(new List<(Guid userId, bool twoFactorIsEnabled)> { (userGuid, false) });
+            .Returns(new List<(Guid userId, bool twoFactorIsEnabled)> { (organizationUserId, false) });
 
         sutProvider.GetDependency<IApplicationCacheService>()
             .GetOrganizationAbilityAsync(organizationId)
@@ -723,7 +723,7 @@ public class MemberAccessReportQueryTests
         var fixture = new Fixture();
         var organizationId = fixture.Create<Guid>();
         var request = new MemberAccessReportRequest { OrganizationId = organizationId };
-        var userGuid = Guid.NewGuid();
+        var organizationUserId = Guid.NewGuid();
         var collectionId = Guid.NewGuid();
         var group1Id = Guid.NewGuid();
         var group2Id = Guid.NewGuid();
@@ -735,7 +735,7 @@ public class MemberAccessReportQueryTests
             // Same user, same collection, group 1
             new OrganizationMemberBaseDetail
             {
-                UserGuid = userGuid,
+                OrganizationUserId = organizationUserId,
                 UserName = "Test User",
                 Email = "test@example.com",
                 AvatarColor = "#FF5733",
@@ -754,7 +754,7 @@ public class MemberAccessReportQueryTests
             // Same user, same collection, group 2
             new OrganizationMemberBaseDetail
             {
-                UserGuid = userGuid,
+                OrganizationUserId = organizationUserId,
                 UserName = "Test User",
                 Email = "test@example.com",
                 AvatarColor = "#FF5733",
@@ -778,7 +778,7 @@ public class MemberAccessReportQueryTests
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
             .TwoFactorIsEnabledAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns(new List<(Guid userId, bool twoFactorIsEnabled)> { (userGuid, false) });
+            .Returns(new List<(Guid userId, bool twoFactorIsEnabled)> { (organizationUserId, false) });
 
         sutProvider.GetDependency<IApplicationCacheService>()
             .GetOrganizationAbilityAsync(organizationId)
@@ -811,7 +811,7 @@ public class MemberAccessReportQueryTests
         var fixture = new Fixture();
         var organizationId = fixture.Create<Guid>();
         var request = new MemberAccessReportRequest { OrganizationId = organizationId };
-        var userGuid = Guid.NewGuid();
+        var organizationUserId = Guid.NewGuid();
         var collection1Id = Guid.NewGuid();
         var collection2Id = Guid.NewGuid();
 
@@ -820,7 +820,7 @@ public class MemberAccessReportQueryTests
             // Collection 1 - ReadOnly + HidePasswords
             new OrganizationMemberBaseDetail
             {
-                UserGuid = userGuid,
+                OrganizationUserId = organizationUserId,
                 UserName = "Test User",
                 Email = "test@example.com",
                 AvatarColor = "#FF5733",
@@ -839,7 +839,7 @@ public class MemberAccessReportQueryTests
             // Collection 2 - Manage access
             new OrganizationMemberBaseDetail
             {
-                UserGuid = userGuid,
+                OrganizationUserId = organizationUserId,
                 UserName = "Test User",
                 Email = "test@example.com",
                 AvatarColor = "#FF5733",
@@ -863,7 +863,7 @@ public class MemberAccessReportQueryTests
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
             .TwoFactorIsEnabledAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns(new List<(Guid userId, bool twoFactorIsEnabled)> { (userGuid, false) });
+            .Returns(new List<(Guid userId, bool twoFactorIsEnabled)> { (organizationUserId, false) });
 
         sutProvider.GetDependency<IApplicationCacheService>()
             .GetOrganizationAbilityAsync(organizationId)
@@ -904,7 +904,7 @@ public class MemberAccessReportQueryTests
         {
             new OrganizationMemberBaseDetail
             {
-                UserGuid = user1,
+                OrganizationUserId = user1,
                 UserName = "User 1",
                 Email = "user1@example.com",
                 AvatarColor = "#FF0000",
@@ -922,7 +922,7 @@ public class MemberAccessReportQueryTests
             },
             new OrganizationMemberBaseDetail
             {
-                UserGuid = user2,
+                OrganizationUserId = user2,
                 UserName = "User 2",
                 Email = "user2@example.com",
                 AvatarColor = "#00FF00",
@@ -964,8 +964,8 @@ public class MemberAccessReportQueryTests
         var resultList = result.ToList();
         Assert.Equal(2, resultList.Count);
 
-        var user1Result = resultList.First(r => r.UserGuid == user1);
-        var user2Result = resultList.First(r => r.UserGuid == user2);
+        var user1Result = resultList.First(r => r.OrganizationUserId == user1);
+        var user2Result = resultList.First(r => r.OrganizationUserId == user2);
 
         Assert.True(user1Result.TwoFactorEnabled);
         // User2 should default to false when not in TwoFactorQuery results

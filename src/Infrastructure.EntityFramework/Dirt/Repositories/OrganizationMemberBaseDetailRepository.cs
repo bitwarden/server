@@ -1,6 +1,6 @@
 ﻿using AutoMapper;
 using Bit.Core.Dirt.Models.Data;
-using Bit.Core.Dirt.Reports.Repositories;
+using Bit.Core.Dirt.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;

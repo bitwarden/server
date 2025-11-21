@@ -4,7 +4,7 @@ namespace Bit.Core.Dirt.Models.Data;
 
 public class OrganizationMemberBaseDetail
 {
-    public Guid? UserGuid { get; set; }
+    public Guid? OrganizationUserId { get; set; }
     public Guid? UserId { get; set; }
     public string? UserName { get; set; }
     public string? Email { get; set; }

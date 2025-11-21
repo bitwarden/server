@@ -52,6 +52,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool?>("Manage")
                         .HasColumnType("boolean");
 
+                    b.Property<Guid?>("OrganizationUserId")
+                        .HasColumnType("uuid");
+
                     b.Property<bool?>("ReadOnly")
                         .HasColumnType("boolean");
 
@@ -63,9 +66,6 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<string>("TwoFactorProviders")
                         .HasColumnType("text");
-
-                    b.Property<Guid?>("UserGuid")
-                        .HasColumnType("uuid");
 
                     b.Property<Guid?>("UserId")
                         .HasColumnType("uuid");

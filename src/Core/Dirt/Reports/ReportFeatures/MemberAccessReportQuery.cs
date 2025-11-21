@@ -1,11 +1,8 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
-using Bit.Core.Dirt.Reports.Models.Data;
+﻿using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+using Bit.Core.Dirt.Models.Data;
 using Bit.Core.Dirt.Reports.ReportFeatures.OrganizationReportMembers.Interfaces;
 using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
-using Bit.Core.Dirt.Reports.Repositories;
+using Bit.Core.Dirt.Repositories;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 
@@ -29,7 +26,7 @@ public class MemberAccessReportQuery(
         logger.LogInformation(Constants.BypassFiltersEventId, "Retrieved {BaseDetailsCount} base details for OrganizationId: {OrganizationId}",
             baseDetails.Count(), request.OrganizationId);
 
-        var orgUsers = baseDetails.Select(x => x.UserGuid.GetValueOrDefault()).Distinct();
+        var orgUsers = baseDetails.Select(x => x.OrganizationUserId.GetValueOrDefault()).Distinct();
         var orgUsersCount = orgUsers.Count();
         logger.LogInformation(Constants.BypassFiltersEventId, "Found {UniqueUsersCount} unique users for OrganizationId: {OrganizationId}",
             orgUsersCount, request.OrganizationId);
@@ -45,9 +42,11 @@ public class MemberAccessReportQuery(
         var accessDetails = baseDetails
             .GroupBy(b => new
             {
-                b.UserGuid,
+                b.OrganizationUserId,
+                b.UserId,
                 b.UserName,
                 b.Email,
+                b.Status,
                 b.AvatarColor,
                 b.TwoFactorProviders,
                 b.ResetPasswordKey,
@@ -62,11 +61,13 @@ public class MemberAccessReportQuery(
             })
             .Select(g => new MemberAccessReportDetail
             {
-                UserGuid = g.Key.UserGuid,
+                OrganizationUserId = g.Key.OrganizationUserId,
+                UserId = g.Key.UserId,
                 UserName = g.Key.UserName,
                 Email = g.Key.Email,
+                Status = g.Key.Status,
                 AvatarColor = g.Key.AvatarColor,
-                TwoFactorEnabled = orgUsersTwoFactorEnabled.FirstOrDefault(x => x.userId == g.Key.UserGuid).twoFactorIsEnabled,
+                TwoFactorEnabled = orgUsersTwoFactorEnabled.FirstOrDefault(x => x.userId == g.Key.OrganizationUserId).twoFactorIsEnabled,
                 AccountRecoveryEnabled = !string.IsNullOrWhiteSpace(g.Key.ResetPasswordKey) && orgAbility?.UseResetPassword == true,
                 UsesKeyConnector = g.Key.UsesKeyConnector,
                 GroupId = g.Key.GroupId,
@@ -76,10 +77,11 @@ public class MemberAccessReportQuery(
                 ReadOnly = g.Key.ReadOnly,
                 HidePasswords = g.Key.HidePasswords,
                 Manage = g.Key.Manage,
-                CipherIds = g.Select(c => c.CipherId).Where(id => id.HasValue).Select(id => id.Value)
-            });
+                CipherIds = g.Select(c => c.CipherId).OfType<Guid>().ToList()
+            })
+            .ToList();
 
-        var accessDetailsCount = accessDetails.Count();
+        var accessDetailsCount = accessDetails.Count;
         logger.LogInformation(Constants.BypassFiltersEventId, "Completed MemberAccessReport generation for OrganizationId: {OrganizationId}. Generated {AccessDetailsCount} access detail records",
             request.OrganizationId, accessDetailsCount);
 

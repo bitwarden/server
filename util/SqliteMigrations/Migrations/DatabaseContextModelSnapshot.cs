@@ -46,6 +46,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool?>("Manage")
                         .HasColumnType("INTEGER");
 
+                    b.Property<Guid?>("OrganizationUserId")
+                        .HasColumnType("TEXT");
+
                     b.Property<bool?>("ReadOnly")
                         .HasColumnType("INTEGER");
 
@@ -56,9 +59,6 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("TwoFactorProviders")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid?>("UserGuid")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid?>("UserId")

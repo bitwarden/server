@@ -2,7 +2,6 @@
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Billing.Organizations.Repositories;
 using Bit.Core.Billing.Providers.Repositories;
-using Bit.Core.Dirt.Reports.Repositories;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Repositories;

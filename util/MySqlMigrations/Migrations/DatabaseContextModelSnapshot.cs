@@ -51,6 +51,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool?>("Manage")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<Guid?>("OrganizationUserId")
+                        .HasColumnType("char(36)");
+
                     b.Property<bool?>("ReadOnly")
                         .HasColumnType("tinyint(1)");
 
@@ -62,9 +65,6 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.Property<string>("TwoFactorProviders")
                         .HasColumnType("longtext");
-
-                    b.Property<Guid?>("UserGuid")
-                        .HasColumnType("char(36)");
 
                     b.Property<Guid?>("UserId")
                         .HasColumnType("char(36)");

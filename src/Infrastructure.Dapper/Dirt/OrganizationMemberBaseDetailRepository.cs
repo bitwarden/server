@@ -1,6 +1,6 @@
 ﻿using System.Data;
 using Bit.Core.Dirt.Models.Data;
-using Bit.Core.Dirt.Reports.Repositories;
+using Bit.Core.Dirt.Repositories;
 using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper.Repositories;
 using Dapper;

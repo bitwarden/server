@@ -9,7 +9,7 @@ BEGIN
 
     -- Direct user-collection permissions
     SELECT
-        OU.[Id] AS [UserGuid],
+        OU.[Id] AS [OrganizationUserId],
         OU.[UserId],
         OU.[Name] AS [UserName],
         OU.[Email],
@@ -46,7 +46,7 @@ BEGIN
 
     -- Group-based collection permissions
     SELECT
-        OU.[Id] AS [UserGuid],
+        OU.[Id] AS [OrganizationUserId],
         OU.[UserId],
         OU.[Name] AS [UserName],
         OU.[Email],
@@ -83,7 +83,7 @@ BEGIN
 
     -- Users without collection access
     SELECT
-        OU.[Id] AS [UserGuid],
+        OU.[Id] AS [OrganizationUserId],
         OU.[UserId],
         OU.[Name] AS [UserName],
         OU.[Email],
