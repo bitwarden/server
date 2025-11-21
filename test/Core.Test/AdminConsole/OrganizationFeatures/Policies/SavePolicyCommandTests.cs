@@ -365,6 +365,44 @@ public class SavePolicyCommandTests
     }
 
     [Theory, BitAutoData]
+    public async Task VNextSaveAsync_SendsPushNotification(
+        [PolicyUpdate(PolicyType.SingleOrg)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.SingleOrg, false)] Policy currentPolicy)
+    {
+        // Arrange
+        var fakePolicyValidator = new FakeSingleOrgPolicyValidator();
+        fakePolicyValidator.ValidateAsyncMock(policyUpdate, null).Returns("");
+        var sutProvider = SutProviderFactory([fakePolicyValidator]);
+        var savePolicyModel = new SavePolicyModel(policyUpdate);
+
+        currentPolicy.OrganizationId = policyUpdate.OrganizationId;
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, policyUpdate.Type)
+            .Returns(currentPolicy);
+
+        ArrangeOrganization(sutProvider, policyUpdate);
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetManyByOrganizationIdAsync(policyUpdate.OrganizationId)
+            .Returns([currentPolicy]);
+
+        // Act
+        var result = await sutProvider.Sut.VNextSaveAsync(savePolicyModel);
+
+        // Assert
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1)
+            .PushAsync(Arg.Is<PushNotification<SyncPolicyPushNotification>>(p =>
+                p.Type == PushType.PolicyChanged &&
+                p.Target == NotificationTarget.Organization &&
+                p.TargetId == policyUpdate.OrganizationId &&
+                p.ExcludeCurrentContext == false &&
+                p.Payload.OrganizationId == policyUpdate.OrganizationId &&
+                p.Payload.Policy.Id == result.Id &&
+                p.Payload.Policy.Type == policyUpdate.Type &&
+                p.Payload.Policy.Enabled == policyUpdate.Enabled &&
+                p.Payload.Policy.Data == policyUpdate.Data));
+    }
+
+    [Theory, BitAutoData]
     public async Task SaveAsync_SendsPushNotification([PolicyUpdate(PolicyType.SingleOrg)] PolicyUpdate policyUpdate)
     {
         var fakePolicyValidator = new FakeSingleOrgPolicyValidator();

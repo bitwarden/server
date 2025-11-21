@@ -18,7 +18,7 @@ public class SavePolicyCommand : ISavePolicyCommand
     private readonly IReadOnlyDictionary<PolicyType, IPolicyValidator> _policyValidators;
     private readonly TimeProvider _timeProvider;
     private readonly IPostSavePolicySideEffect _postSavePolicySideEffect;
-    private readonly IPushNotificationService _pushNotificationServcie;
+    private readonly IPushNotificationService _pushNotificationService;
 
     public SavePolicyCommand(IApplicationCacheService applicationCacheService,
         IEventService eventService,
@@ -33,7 +33,7 @@ public class SavePolicyCommand : ISavePolicyCommand
         _policyRepository = policyRepository;
         _timeProvider = timeProvider;
         _postSavePolicySideEffect = postSavePolicySideEffect;
-        _pushNotificationServcie = pushNotificationService;
+        _pushNotificationService = pushNotificationService;
 
         var policyValidatorsDict = new Dictionary<PolicyType, IPolicyValidator>();
         foreach (var policyValidator in policyValidators)
@@ -160,7 +160,7 @@ public class SavePolicyCommand : ISavePolicyCommand
         return (savedPoliciesDict, currentPolicy);
     }
 
-    Task PushPolicyUpdateToClients(Guid organizationId, Policy policy) => this._pushNotificationServcie.PushAsync(new PushNotification<SyncPolicyPushNotification>
+    Task PushPolicyUpdateToClients(Guid organizationId, Policy policy) => this._pushNotificationService.PushAsync(new PushNotification<SyncPolicyPushNotification>
     {
         Type = PushType.PolicyChanged,
         Target = NotificationTarget.Organization,
