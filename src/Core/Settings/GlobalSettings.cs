@@ -21,7 +21,7 @@ public class GlobalSettings : IGlobalSettings
     }
 
     public bool SelfHosted { get; set; }
-    public bool UnifiedDeployment { get; set; }
+    public bool LiteDeployment { get; set; }
     public virtual string KnownProxies { get; set; }
     public virtual string SiteName { get; set; }
     public virtual string ProjectName { get; set; }
@@ -783,6 +783,30 @@ public class GlobalSettings : IGlobalSettings
     {
         public virtual IConnectionStringSettings Redis { get; set; } = new ConnectionStringSettings();
         public virtual IConnectionStringSettings Cosmos { get; set; } = new ConnectionStringSettings();
+        public ExtendedCacheSettings DefaultExtendedCache { get; set; } = new ExtendedCacheSettings();
+    }
+
+    /// <summary>
+    /// A collection of Settings for customizing the FusionCache used in extended caching. Defaults are
+    /// provided for every attribute so that only specific values need to be overridden if needed.
+    /// </summary>
+    public class ExtendedCacheSettings
+    {
+        public bool EnableDistributedCache { get; set; } = true;
+        public bool UseSharedRedisCache { get; set; } = true;
+        public IConnectionStringSettings Redis { get; set; } = new ConnectionStringSettings();
+        public TimeSpan Duration { get; set; } = TimeSpan.FromMinutes(30);
+        public bool IsFailSafeEnabled { get; set; } = true;
+        public TimeSpan FailSafeMaxDuration { get; set; } = TimeSpan.FromHours(2);
+        public TimeSpan FailSafeThrottleDuration { get; set; } = TimeSpan.FromSeconds(30);
+        public float? EagerRefreshThreshold { get; set; } = 0.9f;
+        public TimeSpan FactorySoftTimeout { get; set; } = TimeSpan.FromMilliseconds(100);
+        public TimeSpan FactoryHardTimeout { get; set; } = TimeSpan.FromMilliseconds(1500);
+        public TimeSpan DistributedCacheSoftTimeout { get; set; } = TimeSpan.FromSeconds(1);
+        public TimeSpan DistributedCacheHardTimeout { get; set; } = TimeSpan.FromSeconds(2);
+        public bool AllowBackgroundDistributedCacheOperations { get; set; } = true;
+        public TimeSpan JitterMaxDuration { get; set; } = TimeSpan.FromSeconds(2);
+        public TimeSpan DistributedCacheCircuitBreakerDuration { get; set; } = TimeSpan.FromSeconds(30);
     }
 
     public class WebPushSettings : IWebPushSettings

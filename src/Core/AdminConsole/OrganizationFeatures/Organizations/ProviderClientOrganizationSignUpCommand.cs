@@ -73,7 +73,7 @@ public class ProviderClientOrganizationSignUpCommand : IProviderClientOrganizati
             PlanType = plan!.Type,
             Seats = signup.AdditionalSeats,
             MaxCollections = plan.PasswordManager.MaxCollections,
-            MaxStorageGb = 1,
+            MaxStorageGb = plan.PasswordManager.BaseStorageGb,
             UsePolicies = plan.HasPolicies,
             UseSso = plan.HasSso,
             UseOrganizationDomains = plan.HasOrganizationDomains,

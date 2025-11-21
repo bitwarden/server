@@ -10,7 +10,7 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
+using Bit.Core.Test.Billing.Mocks;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -31,38 +31,39 @@ public class OrganizationBillingServiceTests
         SutProvider<OrganizationBillingService> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(organization);
-        sutProvider.GetDependency<IPricingClient>().ListPlans().Returns(StaticStore.Plans.ToList());
+        sutProvider.GetDependency<IPricingClient>().ListPlans().Returns(MockPlans.Plans.ToList());
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType)
-            .Returns(StaticStore.GetPlan(organization.PlanType));
+            .Returns(MockPlans.Get(organization.PlanType));
 
         var subscriberService = sutProvider.GetDependency<ISubscriberService>();
         var organizationSeatCount = new OrganizationSeatCounts { Users = 1, Sponsored = 0 };
-        var customer = new Customer
-        {
-            Discount = new Discount
-            {
-                Coupon = new Coupon
-                {
-                    Id = StripeConstants.CouponIDs.SecretsManagerStandalone,
-                    AppliesTo = new CouponAppliesTo
-                    {
-                        Products = ["product_id"]
-                    }
-                }
-            }
-        };
+        var customer = new Customer();
 
         subscriberService
-            .GetCustomer(organization, Arg.Is<CustomerGetOptions>(options =>
-                options.Expand.Contains("discount.coupon.applies_to")))
+            .GetCustomer(organization)
             .Returns(customer);
 
-        subscriberService.GetSubscription(organization).Returns(new Subscription
-        {
-            Items = new StripeList<SubscriptionItem>
+        subscriberService.GetSubscription(organization, Arg.Is<SubscriptionGetOptions>(options =>
+            options.Expand.Contains("discounts.coupon.applies_to"))).Returns(new Subscription
             {
-                Data =
+                Discounts =
+            [
+                new Discount
+                {
+                    Coupon = new Coupon
+                    {
+                        Id = StripeConstants.CouponIDs.SecretsManagerStandalone,
+                        AppliesTo = new CouponAppliesTo
+                        {
+                            Products = ["product_id"]
+                        }
+                    }
+                }
+            ],
+                Items = new StripeList<SubscriptionItem>
+                {
+                    Data =
                 [
                     new SubscriptionItem
                     {
@@ -72,8 +73,8 @@ public class OrganizationBillingServiceTests
                         }
                     }
                 ]
-            }
-        });
+                }
+            });
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
@@ -96,10 +97,10 @@ public class OrganizationBillingServiceTests
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(organization);
 
-        sutProvider.GetDependency<IPricingClient>().ListPlans().Returns(StaticStore.Plans.ToList());
+        sutProvider.GetDependency<IPricingClient>().ListPlans().Returns(MockPlans.Plans.ToList());
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType)
-            .Returns(StaticStore.GetPlan(organization.PlanType));
+            .Returns(MockPlans.Get(organization.PlanType));
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
@@ -109,11 +110,12 @@ public class OrganizationBillingServiceTests
 
         // Set up subscriber service to return null for customer
         subscriberService
-            .GetCustomer(organization, Arg.Is<CustomerGetOptions>(options => options.Expand.FirstOrDefault() == "discount.coupon.applies_to"))
+            .GetCustomer(organization)
             .Returns((Customer)null);
 
         // Set up subscriber service to return null for subscription
-        subscriberService.GetSubscription(organization).Returns((Subscription)null);
+        subscriberService.GetSubscription(organization, Arg.Is<SubscriptionGetOptions>(options =>
+            options.Expand.Contains("discounts.coupon.applies_to"))).Returns((Subscription)null);
 
         var metadata = await sutProvider.Sut.GetMetadata(organizationId);
 
@@ -132,7 +134,7 @@ public class OrganizationBillingServiceTests
         SutProvider<OrganizationBillingService> sutProvider)
     {
         // Arrange
-        var plan = StaticStore.GetPlan(PlanType.TeamsAnnually);
+        var plan = MockPlans.Get(PlanType.TeamsAnnually);
         organization.PlanType = PlanType.TeamsAnnually;
         organization.GatewayCustomerId = "cus_test123";
         organization.GatewaySubscriptionId = null;
@@ -208,7 +210,7 @@ public class OrganizationBillingServiceTests
         SutProvider<OrganizationBillingService> sutProvider)
     {
         // Arrange
-        var plan = StaticStore.GetPlan(PlanType.TeamsAnnually);
+        var plan = MockPlans.Get(PlanType.TeamsAnnually);
         organization.PlanType = PlanType.TeamsAnnually;
         organization.GatewayCustomerId = "cus_test123";
         organization.GatewaySubscriptionId = null;
@@ -282,7 +284,7 @@ public class OrganizationBillingServiceTests
         SutProvider<OrganizationBillingService> sutProvider)
     {
         // Arrange
-        var plan = StaticStore.GetPlan(PlanType.TeamsAnnually);
+        var plan = MockPlans.Get(PlanType.TeamsAnnually);
         organization.PlanType = PlanType.TeamsAnnually;
         organization.GatewayCustomerId = "cus_test123";
         organization.GatewaySubscriptionId = null;

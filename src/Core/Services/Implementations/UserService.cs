@@ -904,7 +904,6 @@ public class UserService : UserManager<User>, IUserService
         }
         else
         {
-            user.MaxStorageGb = (short)(1 + additionalStorageGb);
             user.LicenseKey = CoreHelpers.SecureRandomString(20);
         }
 
@@ -977,7 +976,8 @@ public class UserService : UserManager<User>, IUserService
 
         var premiumPlan = await _pricingClient.GetAvailablePremiumPlan();
 
-        var secret = await BillingHelpers.AdjustStorageAsync(_paymentService, user, storageAdjustmentGb, premiumPlan.Storage.StripePriceId);
+        var baseStorageGb = (short)premiumPlan.Storage.Provided;
+        var secret = await BillingHelpers.AdjustStorageAsync(_paymentService, user, storageAdjustmentGb, premiumPlan.Storage.StripePriceId, baseStorageGb);
         await SaveUserAsync(user);
         return secret;
     }
