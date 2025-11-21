@@ -339,5 +339,6 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
         UseOrganizationDomains = license.UseOrganizationDomains;
         UseAdminSponsoredFamilies = license.UseAdminSponsoredFamilies;
         UseAutomaticUserConfirmation = license.UseAutomaticUserConfirmation;
+        UsePhishingBlocker = license.UsePhishingBlocker;
     }
 }
