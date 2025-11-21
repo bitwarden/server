@@ -1,4 +1,5 @@
-﻿using Bit.Core.Jobs;
+﻿using Bit.Core.Exceptions;
+using Bit.Core.Jobs;
 using Bit.Core.Settings;
 using Quartz;
 
@@ -19,7 +20,8 @@ public class JobsHostedService(
     {
         Jobs = new List<Tuple<Type, ITrigger>>
         {
-            new(typeof(AliveJob), AliveJob.GetTrigger())
+            new(typeof(AliveJob), AliveJob.GetTrigger()),
+            new(typeof(ReconcileAdditionalStorageJob), ReconcileAdditionalStorageJob.GetTrigger())
         };
 
         await base.StartAsync(cancellationToken);
@@ -41,11 +43,13 @@ public class JobsHostedService(
             throw new InvalidOperationException("AdHocScheduler is null, cannot interrupt ad-hoc job.");
         }
 
-        var jobKey = AdHocJobKeys.FirstOrDefault(j => j.Name == nameof(T));
+        var jobKey = AdHocJobKeys.FirstOrDefault(j => j.Name == typeof(T).ToString());
         if (jobKey == null)
         {
-            throw new InvalidOperationException($"Cannot find job key: {nameof(T)}");
+            throw new NotFoundException($"Cannot find job key: {typeof(T)}, not running?");
         }
+        logger.LogInformation("CANCELLING ad-hoc job with key: {JobKey}", jobKey);
+        AdHocJobKeys.Remove(jobKey);
         await _adHocScheduler.Interrupt(jobKey, cancellationToken);
     }
 
@@ -53,7 +57,7 @@ public class JobsHostedService(
     {
         _adHocScheduler ??= await schedulerFactory.GetScheduler(cancellationToken);
 
-        var jobKey = new JobKey(nameof(T));
+        var jobKey = new JobKey(typeof(T).ToString());
 
         var currentlyExecuting = await _adHocScheduler.GetCurrentlyExecutingJobs(cancellationToken);
         if (currentlyExecuting.Any(j => j.JobDetail.Key.Equals(jobKey)))
@@ -68,7 +72,7 @@ public class JobsHostedService(
             .Build();
 
         var trigger = TriggerBuilder.Create()
-            .WithIdentity(nameof(T))
+            .WithIdentity(typeof(T).ToString())
             .StartNow()
             .Build();
 
