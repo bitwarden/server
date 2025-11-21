@@ -39,11 +39,14 @@ public class DistributedCachePersistedGrantStore : IPersistedGrantStore
 
         var grant = result.Value;
 
-        // Check expiration
-        if (!grant.Expiration.HasValue || grant.Expiration.Value >= DateTime.UtcNow) return grant;
-        await RemoveAsync(key);
-        return null;
+        // Check if grant has expired - remove expired grants from cache
+        if (grant.Expiration.HasValue && grant.Expiration.Value < DateTime.UtcNow)
+        {
+            await RemoveAsync(key);
+            return null;
+        }
 
+        return grant;
     }
 
     public Task<IEnumerable<PersistedGrant>> GetAllAsync(PersistedGrantFilter filter)

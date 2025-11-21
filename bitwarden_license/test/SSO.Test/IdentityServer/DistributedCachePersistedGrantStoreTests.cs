@@ -86,6 +86,74 @@ public class DistributedCachePersistedGrantStoreTests
     }
 
     [Fact]
+    public async Task GetAsync_WithValidGrant_ReturnsGrant()
+    {
+        // Arrange
+        var grant = CreateTestGrant("valid-key", expiration: DateTime.UtcNow.AddMinutes(5));
+        _cache.TryGetAsync<PersistedGrant>("valid-key")
+            .Returns(MaybeValue<PersistedGrant>.FromValue(grant));
+
+        // Act
+        var result = await _sut.GetAsync("valid-key");
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("valid-key", result.Key);
+        Assert.Equal("authorization_code", result.Type);
+        Assert.Equal("test-subject", result.SubjectId);
+        await _cache.DidNotReceive().RemoveAsync(Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task GetAsync_WithNonExistentKey_ReturnsNull()
+    {
+        // Arrange
+        _cache.TryGetAsync<PersistedGrant>("nonexistent-key")
+            .Returns(MaybeValue<PersistedGrant>.None);
+
+        // Act
+        var result = await _sut.GetAsync("nonexistent-key");
+
+        // Assert
+        Assert.Null(result);
+        await _cache.DidNotReceive().RemoveAsync(Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task GetAsync_WithExpiredGrant_RemovesAndReturnsNull()
+    {
+        // Arrange
+        var expiredGrant = CreateTestGrant("expired-key", expiration: DateTime.UtcNow.AddMinutes(-1));
+        _cache.TryGetAsync<PersistedGrant>("expired-key")
+            .Returns(MaybeValue<PersistedGrant>.FromValue(expiredGrant));
+
+        // Act
+        var result = await _sut.GetAsync("expired-key");
+
+        // Assert
+        Assert.Null(result);
+        await _cache.Received(1).RemoveAsync("expired-key");
+    }
+
+    [Fact]
+    public async Task GetAsync_WithNoExpiration_ReturnsGrant()
+    {
+        // Arrange
+        var grant = CreateTestGrant("no-expiry-key", expiration: null);
+        _cache.TryGetAsync<PersistedGrant>("no-expiry-key")
+            .Returns(MaybeValue<PersistedGrant>.FromValue(grant));
+
+        // Act
+        var result = await _sut.GetAsync("no-expiry-key");
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("no-expiry-key", result.Key);
+        Assert.Null(result.Expiration);
+        await _cache.DidNotReceive().RemoveAsync(Arg.Any<string>());
+    }
+
+    [Fact]
     public async Task RemoveAsync_RemovesGrantFromCache()
     {
         // Act
