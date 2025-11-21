@@ -67,6 +67,9 @@ public class ReconcileAdditionalStorageJob(
                     continue;
                 }
 
+                logger.LogInformation("Processing subscription: {SubscriptionId}", subscription.Id);
+                subscriptionsFound++;
+
                 if (subscription.Metadata?.TryGetValue(StripeConstants.MetadataKeys.StorageReconciled2025, out var dateString) == true)
                 {
                     if (DateTime.TryParse(dateString, null, DateTimeStyles.RoundtripKind, out var dateProcessed))
@@ -77,9 +80,6 @@ public class ReconcileAdditionalStorageJob(
                         continue;
                     }
                 }
-
-                logger.LogInformation("Processing subscription: {SubscriptionId}", subscription.Id);
-                subscriptionsFound++;
 
                 var updateOptions = BuildSubscriptionUpdateOptions(subscription, priceId);
 
@@ -197,29 +197,5 @@ public class ReconcileAdditionalStorageJob(
             .StartNow()
             .WithCronSchedule("0 0 16 * * ?") // 10am CST daily, assuming the pods execute in UTC time
             .Build();
-    }
-
-    public static async Task RunJobNowAsync(ISchedulerFactory schedulerFactory)
-    {
-        var scheduler = await schedulerFactory.GetScheduler();
-
-        var jobKey = new JobKey(nameof(ReconcileAdditionalStorageJob));
-
-        var currentlyExecuting = await scheduler.GetCurrentlyExecutingJobs();
-        if (currentlyExecuting.Any(j => j.JobDetail.Key.Equals(jobKey)))
-        {
-            throw new InvalidOperationException("Job is already running");
-        }
-
-        var job = JobBuilder.Create<ReconcileAdditionalStorageJob>()
-            .WithIdentity(jobKey)
-            .Build();
-
-        var trigger = TriggerBuilder.Create()
-            .WithIdentity("ReconcileAdditionalStorageJob.RunNow")
-            .StartNow()
-            .Build();
-
-        await scheduler.ScheduleJob(job, trigger);
     }
 }
