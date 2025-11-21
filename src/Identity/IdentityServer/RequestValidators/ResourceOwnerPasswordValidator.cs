@@ -74,7 +74,6 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
 
     public async Task ValidateAsync(ResourceOwnerPasswordValidationContext context)
     {
-
         var user = await _userManager.FindByEmailAsync(context.UserName.ToLowerInvariant());
         // We want to keep this device around incase the device is new for the user
         var requestDevice = DeviceValidator.GetDeviceFromRequest(context.Request);
