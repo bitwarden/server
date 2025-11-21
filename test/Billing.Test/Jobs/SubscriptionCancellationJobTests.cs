@@ -1,4 +1,4 @@
-using Bit.Billing.Constants;
+﻿using Bit.Billing.Constants;
 using Bit.Billing.Jobs;
 using Bit.Billing.Services;
 using Bit.Core.AdminConsole.Entities;
