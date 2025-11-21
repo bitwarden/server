@@ -10,6 +10,7 @@ public class MemberAccessDetailReportResponseModel
     public string? UserName { get; set; }
     public string? Email { get; set; }
     public OrganizationUserStatusType Status { get; set; }
+    public string? AvatarColor { get; set; }
     public bool TwoFactorEnabled { get; set; }
     public bool AccountRecoveryEnabled { get; set; }
     public bool UsesKeyConnector { get; set; }
@@ -29,6 +30,7 @@ public class MemberAccessDetailReportResponseModel
         UserName = reportDetail.UserName;
         Email = reportDetail.Email;
         Status = reportDetail.Status;
+        AvatarColor = reportDetail.AvatarColor;
         TwoFactorEnabled = reportDetail.TwoFactorEnabled;
         AccountRecoveryEnabled = reportDetail.AccountRecoveryEnabled;
         UsesKeyConnector = reportDetail.UsesKeyConnector;
