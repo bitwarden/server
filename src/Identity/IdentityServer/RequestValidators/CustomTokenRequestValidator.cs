@@ -168,7 +168,6 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         }
         if (userDecryptionOptions is { KeyConnectorOption: { } })
         {
-            context.Result.CustomResponse["KeyConnectorUrl"] = userDecryptionOptions.KeyConnectorOption.KeyConnectorUrl;
             context.Result.CustomResponse["ResetMasterPassword"] = false;
         }
 
