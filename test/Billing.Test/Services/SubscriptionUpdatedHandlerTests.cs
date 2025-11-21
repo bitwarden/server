@@ -1,7 +1,6 @@
 ﻿using Bit.Billing.Constants;
 using Bit.Billing.Services;
 using Bit.Billing.Services.Implementations;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
@@ -128,79 +127,6 @@ public class SubscriptionUpdatedHandlerTests
 
     [Fact]
     public async Task
-        HandleAsync_UnpaidProviderSubscription_WithManualSuspensionViaMetadata_DisablesProviderAndSchedulesCancellation()
-    {
-        // Arrange
-        var providerId = Guid.NewGuid();
-        var subscriptionId = "sub_test123";
-
-        var previousSubscription = new Subscription
-        {
-            Id = subscriptionId,
-            Status = StripeSubscriptionStatus.Active,
-            Metadata = new Dictionary<string, string>
-            {
-                ["suspend_provider"] = null // This is the key part - metadata exists, but value is null
-            }
-        };
-
-        var currentSubscription = new Subscription
-        {
-            Id = subscriptionId,
-            Status = StripeSubscriptionStatus.Unpaid,
-            Items = new StripeList<SubscriptionItem>
-            {
-                Data =
-                [
-                    new SubscriptionItem { CurrentPeriodEnd = DateTime.UtcNow.AddDays(30) }
-                ]
-            },
-            Metadata = new Dictionary<string, string>
-            {
-                ["providerId"] = providerId.ToString(),
-                ["suspend_provider"] = "true" // Now has a value, indicating manual suspension
-            },
-            TestClock = null
-        };
-
-        var parsedEvent = new Event
-        {
-            Id = "evt_test123",
-            Type = HandledStripeWebhook.SubscriptionUpdated,
-            Data = new EventData
-            {
-                Object = currentSubscription,
-                PreviousAttributes = JObject.FromObject(previousSubscription)
-            }
-        };
-
-        var provider = new Provider { Id = providerId, Enabled = true };
-
-        _featureService.IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover).Returns(true);
-        _stripeEventService.GetSubscription(parsedEvent, true, Arg.Any<List<string>>()).Returns(currentSubscription);
-        _stripeEventUtilityService.GetIdsFromMetadata(currentSubscription.Metadata)
-            .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, null, providerId));
-        _providerRepository.GetByIdAsync(providerId).Returns(provider);
-
-        // Act
-        await _sut.HandleAsync(parsedEvent);
-
-        // Assert
-        Assert.False(provider.Enabled);
-        await _providerService.Received(1).UpdateAsync(provider);
-
-        // Verify that UpdateSubscription was called with both CancelAt and the new metadata
-        await _stripeFacade.Received(1).UpdateSubscription(
-            subscriptionId,
-            Arg.Is<SubscriptionUpdateOptions>(options =>
-                options.CancelAt.HasValue &&
-                options.CancelAt.Value <= DateTime.UtcNow.AddDays(7).AddMinutes(1) &&
-                options.Metadata != null &&
-                options.Metadata.ContainsKey("suspended_provider_via_webhook_at")));
-    }
-
-    [Fact]
-    public async Task
         HandleAsync_UnpaidProviderSubscription_WithValidTransition_DisablesProviderAndSchedulesCancellation()
     {
         // Arrange
@@ -243,7 +169,6 @@ public class SubscriptionUpdatedHandlerTests
 
         var provider = new Provider { Id = providerId, Enabled = true };
 
-        _featureService.IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover).Returns(true);
         _stripeEventService.GetSubscription(parsedEvent, true, Arg.Any<List<string>>()).Returns(currentSubscription);
         _stripeEventUtilityService.GetIdsFromMetadata(currentSubscription.Metadata)
             .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, null, providerId));
@@ -256,13 +181,12 @@ public class SubscriptionUpdatedHandlerTests
         Assert.False(provider.Enabled);
         await _providerService.Received(1).UpdateAsync(provider);
 
-        // Verify that UpdateSubscription was called with CancelAt but WITHOUT suspension metadata
+        // Verify that UpdateSubscription was called with CancelAt
         await _stripeFacade.Received(1).UpdateSubscription(
             subscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options =>
                 options.CancelAt.HasValue &&
-                options.CancelAt.Value <= DateTime.UtcNow.AddDays(7).AddMinutes(1) &&
-                (options.Metadata == null || !options.Metadata.ContainsKey("suspended_provider_via_webhook_at"))));
+                options.CancelAt.Value <= DateTime.UtcNow.AddDays(7).AddMinutes(1)));
     }
 
     [Fact]
@@ -305,9 +229,6 @@ public class SubscriptionUpdatedHandlerTests
 
         _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
             .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, null, providerId));
-
-        _featureService.IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover)
-            .Returns(true);
 
         _providerRepository.GetByIdAsync(providerId)
             .Returns(provider);
@@ -352,9 +273,6 @@ public class SubscriptionUpdatedHandlerTests
 
         _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
             .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, null, providerId));
-
-        _featureService.IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover)
-            .Returns(true);
 
         _providerRepository.GetByIdAsync(providerId)
             .Returns(provider);
@@ -401,9 +319,6 @@ public class SubscriptionUpdatedHandlerTests
         _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
             .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, null, providerId));
 
-        _featureService.IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover)
-            .Returns(true);
-
         _providerRepository.GetByIdAsync(providerId)
             .Returns(provider);
 
@@ -414,48 +329,6 @@ public class SubscriptionUpdatedHandlerTests
         Assert.False(provider.Enabled);
         await _providerService.Received(1).UpdateAsync(provider);
         await _stripeFacade.DidNotReceive().UpdateSubscription(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
-    }
-
-    [Fact]
-    public async Task HandleAsync_UnpaidProviderSubscription_WhenFeatureFlagDisabled_DoesNothing()
-    {
-        // Arrange
-        var providerId = Guid.NewGuid();
-        var subscriptionId = "sub_123";
-        var currentPeriodEnd = DateTime.UtcNow.AddDays(30);
-
-        var subscription = new Subscription
-        {
-            Id = subscriptionId,
-            Status = StripeSubscriptionStatus.Unpaid,
-            Items = new StripeList<SubscriptionItem>
-            {
-                Data =
-                [
-                    new SubscriptionItem { CurrentPeriodEnd = currentPeriodEnd }
-                ]
-            },
-            Metadata = new Dictionary<string, string> { { "providerId", providerId.ToString() } },
-            LatestInvoice = new Invoice { BillingReason = "subscription_cycle" }
-        };
-
-        var parsedEvent = new Event { Data = new EventData() };
-
-        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
-            .Returns(subscription);
-
-        _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
-            .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, null, providerId));
-
-        _featureService.IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover)
-            .Returns(false);
-
-        // Act
-        await _sut.HandleAsync(parsedEvent);
-
-        // Assert
-        await _providerRepository.DidNotReceive().GetByIdAsync(Arg.Any<Guid>());
-        await _providerService.DidNotReceive().UpdateAsync(Arg.Any<Provider>());
     }
 
     [Fact]
@@ -488,9 +361,6 @@ public class SubscriptionUpdatedHandlerTests
 
         _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
             .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, null, providerId));
-
-        _featureService.IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover)
-            .Returns(true);
 
         _providerRepository.GetByIdAsync(providerId)
             .Returns((Provider)null);
@@ -777,8 +647,6 @@ public class SubscriptionUpdatedHandlerTests
         _stripeFacade
             .UpdateSubscription(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
             .Returns(newSubscription);
-        _featureService.IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover)
-            .Returns(true);
 
         // Act
         await _sut.HandleAsync(parsedEvent);
@@ -800,9 +668,6 @@ public class SubscriptionUpdatedHandlerTests
             .Received(1)
             .UpdateSubscription(newSubscription.Id,
                 Arg.Is<SubscriptionUpdateOptions>(options => options.CancelAtPeriodEnd == false));
-        _featureService
-            .Received(1)
-            .IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover);
     }
 
     [Fact]
@@ -823,8 +688,6 @@ public class SubscriptionUpdatedHandlerTests
         _providerRepository
             .GetByIdAsync(Arg.Any<Guid>())
             .Returns(provider);
-        _featureService.IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover)
-            .Returns(true);
 
         // Act
         await _sut.HandleAsync(parsedEvent);
@@ -843,9 +706,6 @@ public class SubscriptionUpdatedHandlerTests
         await _stripeFacade
             .DidNotReceiveWithAnyArgs()
             .UpdateSubscription(Arg.Any<string>());
-        _featureService
-            .Received(1)
-            .IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover);
     }
 
     [Fact]
@@ -866,8 +726,6 @@ public class SubscriptionUpdatedHandlerTests
         _providerRepository
             .GetByIdAsync(Arg.Any<Guid>())
             .Returns(provider);
-        _featureService.IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover)
-            .Returns(true);
 
         // Act
         await _sut.HandleAsync(parsedEvent);
@@ -886,9 +744,6 @@ public class SubscriptionUpdatedHandlerTests
         await _stripeFacade
             .DidNotReceiveWithAnyArgs()
             .UpdateSubscription(Arg.Any<string>());
-        _featureService
-            .Received(1)
-            .IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover);
     }
 
     [Fact]
@@ -909,8 +764,6 @@ public class SubscriptionUpdatedHandlerTests
         _providerRepository
             .GetByIdAsync(Arg.Any<Guid>())
             .Returns(provider);
-        _featureService.IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover)
-            .Returns(true);
 
         // Act
         await _sut.HandleAsync(parsedEvent);
@@ -929,9 +782,6 @@ public class SubscriptionUpdatedHandlerTests
         await _stripeFacade
             .DidNotReceiveWithAnyArgs()
             .UpdateSubscription(Arg.Any<string>());
-        _featureService
-            .Received(1)
-            .IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover);
     }
 
     [Fact]
@@ -953,8 +803,6 @@ public class SubscriptionUpdatedHandlerTests
         _providerRepository
             .GetByIdAsync(Arg.Any<Guid>())
             .Returns(provider);
-        _featureService.IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover)
-            .Returns(true);
 
         // Act
         await _sut.HandleAsync(parsedEvent);
@@ -975,9 +823,6 @@ public class SubscriptionUpdatedHandlerTests
         await _stripeFacade
             .DidNotReceiveWithAnyArgs()
             .UpdateSubscription(Arg.Any<string>());
-        _featureService
-            .Received(1)
-            .IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover);
     }
 
     [Fact]
@@ -997,8 +842,6 @@ public class SubscriptionUpdatedHandlerTests
         _providerRepository
             .GetByIdAsync(Arg.Any<Guid>())
             .ReturnsNull();
-        _featureService.IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover)
-            .Returns(true);
 
         // Act
         await _sut.HandleAsync(parsedEvent);
@@ -1019,9 +862,6 @@ public class SubscriptionUpdatedHandlerTests
         await _stripeFacade
             .DidNotReceive()
             .UpdateSubscription(Arg.Any<string>());
-        _featureService
-            .Received(1)
-            .IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover);
     }
 
     [Fact]
@@ -1040,8 +880,6 @@ public class SubscriptionUpdatedHandlerTests
         _providerRepository
             .GetByIdAsync(Arg.Any<Guid>())
             .Returns(provider);
-        _featureService.IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover)
-            .Returns(true);
 
         // Act
         await _sut.HandleAsync(parsedEvent);
@@ -1062,9 +900,6 @@ public class SubscriptionUpdatedHandlerTests
         await _stripeFacade
             .DidNotReceive()
             .UpdateSubscription(Arg.Any<string>());
-        _featureService
-            .Received(1)
-            .IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover);
     }
 
     private static (Guid providerId, Subscription newSubscription, Provider provider, Event parsedEvent)
