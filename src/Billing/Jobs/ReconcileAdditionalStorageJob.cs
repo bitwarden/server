@@ -41,7 +41,12 @@ public class ReconcileAdditionalStorageJob(
 
         foreach (var priceId in priceIds)
         {
-            var options = new SubscriptionListOptions { Limit = 100, Status = "active", Price = priceId };
+            var options = new SubscriptionListOptions
+            {
+                Limit = 100,
+                Status = StripeConstants.SubscriptionStatus.Active,
+                Price = priceId
+            };
 
             await foreach (var subscription in stripeFacade.ListSubscriptionsAutoPagingAsync(options))
             {
@@ -141,7 +146,7 @@ public class ReconcileAdditionalStorageJob(
 
         var updateOptions = new SubscriptionUpdateOptions
         {
-            ProrationBehavior = "always_invoice",
+            ProrationBehavior = StripeConstants.ProrationBehavior.AlwaysInvoice,
             Metadata = new Dictionary<string, string>
             {
                 [StripeConstants.MetadataKeys.StorageReconciled2025] = DateTime.UtcNow.ToString("o")
