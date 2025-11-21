@@ -6,6 +6,7 @@ using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Dapper;
 using Microsoft.Data.SqlClient;
@@ -17,7 +18,7 @@ namespace Bit.Infrastructure.Dapper.Repositories;
 
 public class OrganizationRepository : Repository<Organization, Guid>, IOrganizationRepository
 {
-    private readonly ILogger<OrganizationRepository> _logger;
+    protected readonly ILogger<OrganizationRepository> _logger;
 
     public OrganizationRepository(
         GlobalSettings globalSettings,
@@ -250,5 +251,26 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
         await connection.ExecuteAsync("[dbo].[Organization_IncrementSeatCount]",
             new { OrganizationId = organizationId, SeatsToAdd = increaseAmount, RequestDate = requestDate },
             commandType: CommandType.StoredProcedure);
+    }
+}
+
+public class TestOrganizationTrackingOrganizationRepository : OrganizationRepository
+{
+    private readonly IPlayDataService _playDataService;
+
+    public TestOrganizationTrackingOrganizationRepository(
+        IPlayDataService playDataService,
+        GlobalSettings globalSettings,
+        ILogger<OrganizationRepository> logger)
+        : base(globalSettings, logger)
+    {
+        _playDataService = playDataService;
+    }
+
+    public override async Task<Organization> CreateAsync(Organization obj)
+    {
+        var createdOrganization = await base.CreateAsync(obj);
+        await _playDataService.Record(createdOrganization);
+        return createdOrganization;
     }
 }

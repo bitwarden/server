@@ -10,6 +10,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using LinqToDB.Tools;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,7 +21,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Organization, Organization, Guid>, IOrganizationRepository
 {
-    private readonly ILogger<OrganizationRepository> _logger;
+    protected readonly ILogger<OrganizationRepository> _logger;
 
     public OrganizationRepository(
         IServiceScopeFactory serviceScopeFactory,
@@ -30,6 +31,8 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
     {
         _logger = logger;
     }
+
+
 
     public async Task<Core.AdminConsole.Entities.Organization> GetByIdentifierAsync(string identifier)
     {
@@ -436,5 +439,27 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 .SetProperty(o => o.Seats, o => o.Seats + increaseAmount)
                 .SetProperty(o => o.SyncSeats, true)
                 .SetProperty(o => o.RevisionDate, requestDate));
+    }
+}
+
+public class TestOrganizationTrackingOrganizationRepository : OrganizationRepository
+{
+    private readonly IPlayDataService _playDataService;
+
+    public TestOrganizationTrackingOrganizationRepository(
+        IPlayDataService playDataService,
+        IServiceScopeFactory serviceScopeFactory,
+        IMapper mapper,
+        ILogger<OrganizationRepository> logger)
+        : base(serviceScopeFactory, mapper, logger)
+    {
+        _playDataService = playDataService;
+    }
+
+    public override async Task<Core.AdminConsole.Entities.Organization> CreateAsync(Core.AdminConsole.Entities.Organization organization)
+    {
+        var createdOrganization = await base.CreateAsync(organization);
+        await _playDataService.Record(createdOrganization);
+        return createdOrganization;
     }
 }

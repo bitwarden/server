@@ -18,12 +18,12 @@
     <Content Include="./rust/target/release/libsdk*.so">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <PackageCopyToOutput>true</PackageCopyToOutput>
-      <Link>runtimes/linux-x64/native/libsdk.dylib</Link>
+      <Link>runtimes/linux-x64/native/libsdk.so</Link>
     </Content>
     <Content Include="./rust/target/release/libsdk*.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <PackageCopyToOutput>true</PackageCopyToOutput>
-      <Link>runtimes/windows-x64/native/libsdk.dylib</Link>
+      <Link>runtimes/windows-x64/native/libsdk.dll</Link>
     </Content>
 
     <!-- This is a work around because this file is compiled by the PreBuild event below, and won't
