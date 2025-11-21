@@ -1,7 +1,6 @@
 ﻿using Bit.Billing.Constants;
 using Bit.Billing.Services;
 using Bit.Billing.Services.Implementations;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
