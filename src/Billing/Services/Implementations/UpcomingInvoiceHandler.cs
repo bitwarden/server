@@ -225,7 +225,7 @@ public class UpcomingInvoiceHandler(
                 new SubscriptionItemOptions
                 {
                     Id = passwordManagerItem.Id,
-                        Price = families.PasswordManager.StripePlanId
+                    Price = families.PasswordManager.StripePlanId
                 }
             ],
             ProrationBehavior = ProrationBehavior.None
