@@ -74,7 +74,8 @@ public class OrganizationUserOrganizationDetailsViewQuery : IQuery<OrganizationU
                         LimitItemDeletion = o.LimitItemDeletion,
                         IsAdminInitiated = os.IsAdminInitiated,
                         UseOrganizationDomains = o.UseOrganizationDomains,
-                        UseAutomaticUserConfirmation = o.UseAutomaticUserConfirmation
+                        UseAutomaticUserConfirmation = o.UseAutomaticUserConfirmation,
+                        UsePhishingBlocker = o.UsePhishingBlocker
                     };
         return query;
     }

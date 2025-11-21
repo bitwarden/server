@@ -61,6 +61,7 @@ public class ProviderUserOrganizationDetailsViewQuery : IQuery<ProviderUserOrgan
             UseAutomaticUserConfirmation = x.o.UseAutomaticUserConfirmation,
             SsoEnabled = x.ss.Enabled,
             SsoConfig = x.ss.Data,
+            UsePhishingBlocker = x.o.UsePhishingBlocker
         });
     }
 }
