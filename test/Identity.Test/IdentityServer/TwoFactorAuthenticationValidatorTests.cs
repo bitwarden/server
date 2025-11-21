@@ -32,7 +32,7 @@ public class TwoFactorAuthenticationValidatorTests
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> _ssoEmail2faSessionTokenable;
-    private readonly ITwoFactorIsEnabledQuery _twoFactorenabledQuery;
+    private readonly ITwoFactorIsEnabledQuery _twoFactorEnabledQuery;
     private readonly ICurrentContext _currentContext;
     private readonly TwoFactorAuthenticationValidator _sut;
 
@@ -45,7 +45,7 @@ public class TwoFactorAuthenticationValidatorTests
         _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
         _organizationRepository = Substitute.For<IOrganizationRepository>();
         _ssoEmail2faSessionTokenable = Substitute.For<IDataProtectorTokenFactory<SsoEmail2faSessionTokenable>>();
-        _twoFactorenabledQuery = Substitute.For<ITwoFactorIsEnabledQuery>();
+        _twoFactorEnabledQuery = Substitute.For<ITwoFactorIsEnabledQuery>();
         _currentContext = Substitute.For<ICurrentContext>();
 
         _sut = new TwoFactorAuthenticationValidator(
@@ -56,7 +56,7 @@ public class TwoFactorAuthenticationValidatorTests
                     _organizationUserRepository,
                     _organizationRepository,
                     _ssoEmail2faSessionTokenable,
-                    _twoFactorenabledQuery,
+                    _twoFactorEnabledQuery,
                     _currentContext);
     }
 
