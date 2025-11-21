@@ -399,7 +399,6 @@ public class OrganizationLicense : ILicense
         var installationId = claimsPrincipal.GetValue<Guid>(nameof(InstallationId));
         var licenseKey = claimsPrincipal.GetValue<string>(nameof(LicenseKey));
         var enabled = claimsPrincipal.GetValue<bool>(nameof(Enabled));
-        var planType = claimsPrincipal.GetValue<PlanType>(nameof(PlanType));
         var seats = claimsPrincipal.GetValue<int?>(nameof(Seats));
         var maxCollections = claimsPrincipal.GetValue<short?>(nameof(MaxCollections));
         var useGroups = claimsPrincipal.GetValue<bool>(nameof(UseGroups));
@@ -425,12 +424,18 @@ public class OrganizationLicense : ILicense
         var useOrganizationDomains = claimsPrincipal.GetValue<bool>(nameof(UseOrganizationDomains));
         var useAutomaticUserConfirmation = claimsPrincipal.GetValue<bool>(nameof(UseAutomaticUserConfirmation));
 
+        var claimedPlanType = claimsPrincipal.GetValue<PlanType>(nameof(PlanType));
+
+        var planTypesMatch = claimedPlanType == PlanType.FamiliesAnnually
+            ? organization.PlanType is PlanType.FamiliesAnnually or PlanType.FamiliesAnnually2025
+            : organization.PlanType == claimedPlanType;
+
         return issued <= DateTime.UtcNow &&
                expires >= DateTime.UtcNow &&
                installationId == globalSettings.Installation.Id &&
                licenseKey == organization.LicenseKey &&
                enabled == organization.Enabled &&
-               planType == organization.PlanType &&
+               planTypesMatch &&
                seats == organization.Seats &&
                maxCollections == organization.MaxCollections &&
                useGroups == organization.UseGroups &&
