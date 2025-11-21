@@ -1,5 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Update;
 using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -14,7 +14,7 @@ using Xunit;
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Organizations;
 
 [SutProviderCustomize]
-public class UpdateOrganizationCommandTests
+public class OrganizationUpdateCommandTests
 {
     [Theory, BitAutoData]
     public async Task UpdateAsync_WhenValidOrganization_UpdatesOrganization(
@@ -22,7 +22,7 @@ public class UpdateOrganizationCommandTests
         string name,
         string billingEmail,
         Organization organization,
-        SutProvider<UpdateOrganizationCommand> sutProvider)
+        SutProvider<OrganizationUpdateCommand> sutProvider)
     {
         // Arrange
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
@@ -36,7 +36,7 @@ public class UpdateOrganizationCommandTests
             .GetByIdAsync(organizationId)
             .Returns(organization);
 
-        var request = new UpdateOrganizationRequest
+        var request = new OrganizationUpdateRequest
         {
             OrganizationId = organizationId,
             Name = name,
@@ -70,7 +70,7 @@ public class UpdateOrganizationCommandTests
         Guid organizationId,
         string name,
         string billingEmail,
-        SutProvider<UpdateOrganizationCommand> sutProvider)
+        SutProvider<OrganizationUpdateCommand> sutProvider)
     {
         // Arrange
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
@@ -79,7 +79,7 @@ public class UpdateOrganizationCommandTests
             .GetByIdAsync(organizationId)
             .Returns((Organization)null);
 
-        var request = new UpdateOrganizationRequest
+        var request = new OrganizationUpdateRequest
         {
             OrganizationId = organizationId,
             Name = name,
@@ -97,7 +97,7 @@ public class UpdateOrganizationCommandTests
         string gatewayCustomerId,
         Guid organizationId,
         Organization organization,
-        SutProvider<UpdateOrganizationCommand> sutProvider)
+        SutProvider<OrganizationUpdateCommand> sutProvider)
     {
         // Arrange
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
@@ -112,7 +112,7 @@ public class UpdateOrganizationCommandTests
             .GetByIdAsync(organizationId)
             .Returns(organization);
 
-        var request = new UpdateOrganizationRequest
+        var request = new OrganizationUpdateRequest
         {
             OrganizationId = organizationId,
             Name = "New Name",
@@ -143,7 +143,7 @@ public class UpdateOrganizationCommandTests
         string publicKey,
         string encryptedPrivateKey,
         Organization organization,
-        SutProvider<UpdateOrganizationCommand> sutProvider)
+        SutProvider<OrganizationUpdateCommand> sutProvider)
     {
         // Arrange
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
@@ -157,7 +157,7 @@ public class UpdateOrganizationCommandTests
             .GetByIdAsync(organizationId)
             .Returns(organization);
 
-        var request = new UpdateOrganizationRequest
+        var request = new OrganizationUpdateRequest
         {
             OrganizationId = organizationId,
             Name = organization.Name,
@@ -188,7 +188,7 @@ public class UpdateOrganizationCommandTests
         string newPublicKey,
         string newEncryptedPrivateKey,
         Organization organization,
-        SutProvider<UpdateOrganizationCommand> sutProvider)
+        SutProvider<OrganizationUpdateCommand> sutProvider)
     {
         // Arrange
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
@@ -202,7 +202,7 @@ public class UpdateOrganizationCommandTests
             .GetByIdAsync(organizationId)
             .Returns(organization);
 
-        var request = new UpdateOrganizationRequest
+        var request = new OrganizationUpdateRequest
         {
             OrganizationId = organizationId,
             Name = organization.Name,
@@ -232,7 +232,7 @@ public class UpdateOrganizationCommandTests
         Guid organizationId,
         string newName,
         Organization organization,
-        SutProvider<UpdateOrganizationCommand> sutProvider)
+        SutProvider<OrganizationUpdateCommand> sutProvider)
     {
         // Arrange
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
@@ -247,7 +247,7 @@ public class UpdateOrganizationCommandTests
             .GetByIdAsync(organizationId)
             .Returns(organization);
 
-        var request = new UpdateOrganizationRequest
+        var request = new OrganizationUpdateRequest
         {
             OrganizationId = organizationId,
             Name = newName,
@@ -278,7 +278,7 @@ public class UpdateOrganizationCommandTests
         Guid organizationId,
         string newBillingEmail,
         Organization organization,
-        SutProvider<UpdateOrganizationCommand> sutProvider)
+        SutProvider<OrganizationUpdateCommand> sutProvider)
     {
         // Arrange
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
@@ -293,7 +293,7 @@ public class UpdateOrganizationCommandTests
             .GetByIdAsync(organizationId)
             .Returns(organization);
 
-        var request = new UpdateOrganizationRequest
+        var request = new OrganizationUpdateRequest
         {
             OrganizationId = organizationId,
             Name = null,
@@ -323,7 +323,7 @@ public class UpdateOrganizationCommandTests
     public async Task UpdateAsync_WhenNoChanges_PreservesBothFields(
         Guid organizationId,
         Organization organization,
-        SutProvider<UpdateOrganizationCommand> sutProvider)
+        SutProvider<OrganizationUpdateCommand> sutProvider)
     {
         // Arrange
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
@@ -338,7 +338,7 @@ public class UpdateOrganizationCommandTests
             .GetByIdAsync(organizationId)
             .Returns(organization);
 
-        var request = new UpdateOrganizationRequest
+        var request = new OrganizationUpdateRequest
         {
             OrganizationId = organizationId,
             Name = null,
@@ -372,7 +372,7 @@ public class UpdateOrganizationCommandTests
         string publicKey,
         string encryptedPrivateKey,
         Organization organization,
-        SutProvider<UpdateOrganizationCommand> sutProvider)
+        SutProvider<OrganizationUpdateCommand> sutProvider)
     {
         // Arrange
         var organizationBillingService = sutProvider.GetDependency<IOrganizationBillingService>();
@@ -389,7 +389,7 @@ public class UpdateOrganizationCommandTests
 
         organizationRepository.GetByIdAsync(organizationId).Returns(organization);
 
-        var request = new UpdateOrganizationRequest
+        var request = new OrganizationUpdateRequest
         {
             OrganizationId = organizationId,
             Name = newName, // Should be ignored

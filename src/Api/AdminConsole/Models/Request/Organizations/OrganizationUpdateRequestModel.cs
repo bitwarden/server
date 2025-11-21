@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
-using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Update;
 using Bit.Core.Utilities;
 
 namespace Bit.Api.AdminConsole.Models.Request.Organizations;
@@ -17,7 +17,7 @@ public class OrganizationUpdateRequestModel
 
     public OrganizationKeysRequestModel? Keys { get; set; }
 
-    public UpdateOrganizationRequest ToCommandRequest(Guid organizationId) => new()
+    public OrganizationUpdateRequest ToCommandRequest(Guid organizationId) => new()
     {
         OrganizationId = organizationId,
         Name = Name,

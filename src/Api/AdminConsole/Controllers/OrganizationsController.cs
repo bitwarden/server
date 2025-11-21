@@ -69,7 +69,7 @@ public class OrganizationsController : Controller
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IPricingClient _pricingClient;
     private readonly IOrganizationUpdateKeysCommand _organizationUpdateKeysCommand;
-    private readonly IUpdateOrganizationCommand _updateOrganizationCommand;
+    private readonly IOrganizationUpdateCommand _organizationUpdateCommand;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -95,7 +95,7 @@ public class OrganizationsController : Controller
         IPolicyRequirementQuery policyRequirementQuery,
         IPricingClient pricingClient,
         IOrganizationUpdateKeysCommand organizationUpdateKeysCommand,
-        IUpdateOrganizationCommand updateOrganizationCommand)
+        IOrganizationUpdateCommand organizationUpdateCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -120,7 +120,7 @@ public class OrganizationsController : Controller
         _policyRequirementQuery = policyRequirementQuery;
         _pricingClient = pricingClient;
         _organizationUpdateKeysCommand = organizationUpdateKeysCommand;
-        _updateOrganizationCommand = updateOrganizationCommand;
+        _organizationUpdateCommand = organizationUpdateCommand;
     }
 
     [HttpGet("{id}")]
@@ -242,7 +242,7 @@ public class OrganizationsController : Controller
         }
 
         var commandRequest = model.ToCommandRequest(organizationId);
-        var updatedOrganization = await _updateOrganizationCommand.UpdateAsync(commandRequest);
+        var updatedOrganization = await _organizationUpdateCommand.UpdateAsync(commandRequest);
 
         var plan = await _pricingClient.GetPlan(updatedOrganization.PlanType);
         return TypedResults.Ok(new OrganizationResponseModel(updatedOrganization, plan));
