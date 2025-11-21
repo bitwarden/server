@@ -107,6 +107,7 @@ public class OrganizationEditModel : OrganizationViewModel
         MaxAutoscaleSmServiceAccounts = org.MaxAutoscaleSmServiceAccounts;
         UseOrganizationDomains = org.UseOrganizationDomains;
         UseAutomaticUserConfirmation = org.UseAutomaticUserConfirmation;
+        UsePhishingBlocker = org.UsePhishingBlocker;
 
         _plans = plans;
     }
@@ -160,6 +161,8 @@ public class OrganizationEditModel : OrganizationViewModel
     public new bool UseSecretsManager { get; set; }
     [Display(Name = "Risk Insights")]
     public new bool UseRiskInsights { get; set; }
+    [Display(Name = "Phishing Blocker")]
+    public new bool UsePhishingBlocker { get; set; }
     [Display(Name = "Admin Sponsored Families")]
     public bool UseAdminSponsoredFamilies { get; set; }
     [Display(Name = "Self Host")]
