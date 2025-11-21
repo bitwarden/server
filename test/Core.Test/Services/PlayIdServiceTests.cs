@@ -18,7 +18,7 @@ public class PlayIdServiceTests
         string playId,
         SutProvider<PlayIdService> sutProvider)
     {
-        sutProvider.GetDependency<IHostEnvironment>().IsDevelopment().Returns(true);
+        sutProvider.GetDependency<IHostEnvironment>().EnvironmentName.Returns(Environments.Development);
         sutProvider.Sut.PlayId = playId;
 
         var result = sutProvider.Sut.InPlay(out var resultPlayId);
@@ -33,7 +33,7 @@ public class PlayIdServiceTests
         string playId,
         SutProvider<PlayIdService> sutProvider)
     {
-        sutProvider.GetDependency<IHostEnvironment>().IsDevelopment().Returns(false);
+        sutProvider.GetDependency<IHostEnvironment>().EnvironmentName.Returns(Environments.Production);
         sutProvider.Sut.PlayId = playId;
 
         var result = sutProvider.Sut.InPlay(out var resultPlayId);
@@ -49,7 +49,7 @@ public class PlayIdServiceTests
         string? playId,
         SutProvider<PlayIdService> sutProvider)
     {
-        sutProvider.GetDependency<IHostEnvironment>().IsDevelopment().Returns(true);
+        sutProvider.GetDependency<IHostEnvironment>().EnvironmentName.Returns(Environments.Development);
         sutProvider.Sut.PlayId = playId;
 
         var result = sutProvider.Sut.InPlay(out var resultPlayId);
@@ -105,7 +105,7 @@ public class PlayIdSingletonServiceTests
         SutProvider<PlayIdSingletonService> sutProvider)
     {
         sutProvider.GetDependency<IHttpContextAccessor>().HttpContext.Returns((HttpContext?)null);
-        sutProvider.GetDependency<IHostEnvironment>().IsDevelopment().Returns(true);
+        sutProvider.GetDependency<IHostEnvironment>().EnvironmentName.Returns(Environments.Development);
 
         var result = sutProvider.Sut.InPlay(out var playId);
 
@@ -133,7 +133,7 @@ public class PlayIdSingletonServiceTests
         serviceProvider.GetRequiredService<PlayIdService>().Returns(scopedPlayIdService);
 
         sutProvider.GetDependency<IHttpContextAccessor>().HttpContext.Returns(httpContext);
-        sutProvider.GetDependency<IHostEnvironment>().IsDevelopment().Returns(false);
+        sutProvider.GetDependency<IHostEnvironment>().EnvironmentName.Returns(Environments.Production);
 
         var result = sutProvider.Sut.InPlay(out var playId);
 
@@ -150,14 +150,14 @@ public class PlayIdSingletonServiceTests
         var httpContext = Substitute.For<HttpContext>();
         var serviceProvider = Substitute.For<IServiceProvider>();
         var hostEnvironment = Substitute.For<IHostEnvironment>();
-        hostEnvironment.IsDevelopment().Returns(true);
+        hostEnvironment.EnvironmentName.Returns(Environments.Development);
         var scopedPlayIdService = new PlayIdService(hostEnvironment) { PlayId = playIdValue };
 
         httpContext.RequestServices.Returns(serviceProvider);
         serviceProvider.GetRequiredService<PlayIdService>().Returns(scopedPlayIdService);
 
         sutProvider.GetDependency<IHttpContextAccessor>().HttpContext.Returns(httpContext);
-        sutProvider.GetDependency<IHostEnvironment>().IsDevelopment().Returns(true);
+        sutProvider.GetDependency<IHostEnvironment>().EnvironmentName.Returns(Environments.Development);
 
         var result = sutProvider.Sut.InPlay(out var playId);
 
