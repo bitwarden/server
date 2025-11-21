@@ -267,8 +267,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
             return;
         }
 
-        var organizationDataOwnershipPolicy =
-            await _policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(organizationUser.UserId!.Value);
+        var organizationDataOwnershipPolicy = await _policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(organizationUser.UserId!.Value);
         if (!organizationDataOwnershipPolicy.RequiresDefaultCollectionOnConfirm(organizationUser.OrganizationId))
         {
             return;
@@ -311,8 +310,8 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
             return;
         }
 
-        var policyEligibleOrganizationUserIds =
-            await _policyRequirementQuery.GetManyByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(organizationId);
+        var policyEligibleOrganizationUserIds = await _policyRequirementQuery
+            .GetManyByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(organizationId);
 
         var eligibleOrganizationUserIds = confirmedOrganizationUsers
             .Where(ou => policyEligibleOrganizationUserIds.Contains(ou.Id))
