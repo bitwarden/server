@@ -44,7 +44,7 @@ public class SendVerificationEmailForRegistrationCommand : ISendVerificationEmai
 
     }
 
-    public async Task<string?> Run(string email, string? name, bool receiveMarketingEmails)
+    public async Task<string?> Run(string email, string? name, bool receiveMarketingEmails, string? fromMarketing)
     {
         if (_globalSettings.DisableUserRegistration)
         {
@@ -92,7 +92,7 @@ public class SendVerificationEmailForRegistrationCommand : ISendVerificationEmai
             // If the user doesn't exist, create a new EmailVerificationTokenable and send the user
             // an email with a link to verify their email address
             var token = GenerateToken(email, name, receiveMarketingEmails);
-            await _mailService.SendRegistrationVerificationEmailAsync(email, token);
+            await _mailService.SendRegistrationVerificationEmailAsync(email, token, fromMarketing);
         }
 
         // User exists but we will return a 200 regardless of whether the email was sent or not; so return null
