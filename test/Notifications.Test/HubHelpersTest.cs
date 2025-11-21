@@ -241,7 +241,7 @@ public class HubHelpersTest
             .Group($"Organization_{notification.OrganizationId}")
             .Received(1)
             .SendCoreAsync("ReceiveMessage", Arg.Is<object?[]>(objects =>
-                    objects.Length == 1 && IsSyncPolicyPushNotificationEqual(notification, objects[0],
+                    objects.Length == 1 && AssertSyncPolicyPushNotification(notification, objects[0],
                         PushType.PolicyChanged, contextId)),
                 cancellationToken);
         sutProvider.GetDependency<IHubContext<AnonymousNotificationsHub>>().Clients.Received(0).User(Arg.Any<string>());
@@ -272,7 +272,7 @@ public class HubHelpersTest
                expected.RevisionDate == pushNotificationData.Payload.RevisionDate;
     }
 
-    private static bool IsSyncPolicyPushNotificationEqual(SyncPolicyPushNotification expected, object? actual,
+    private static bool AssertSyncPolicyPushNotification(SyncPolicyPushNotification expected, object? actual,
         PushType type, string contextId)
     {
         if (actual is not PushNotificationData<SyncPolicyPushNotification> pushNotificationData)

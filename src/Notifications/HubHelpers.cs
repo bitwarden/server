@@ -232,19 +232,25 @@ public class HubHelpers
                     .SendAsync(_receiveMessageMethod, pendingTasksData, cancellationToken);
                 break;
             case PushType.PolicyChanged:
-                var policyData = JsonSerializer.Deserialize<PushNotificationData<SyncPolicyPushNotification>>(notificationJson, _deserializerOptions);
-                if (policyData is null)
-                {
-                    break;
-                }
-
-                await _hubContext.Clients
-                    .Group(NotificationsHub.GetOrganizationGroup(policyData.Payload.OrganizationId))
-                    .SendAsync(_receiveMessageMethod, policyData, cancellationToken);
+                await policyChangedNotificationHandler(notificationJson, cancellationToken);
                 break;
             default:
                 _logger.LogWarning("Notification type '{NotificationType}' has not been registered in HubHelpers and will not be pushed as as result", notification.Type);
                 break;
         }
+    }
+
+    private async Task policyChangedNotificationHandler(string notificationJson, CancellationToken cancellationToken)
+    {
+        var policyData = JsonSerializer.Deserialize<PushNotificationData<SyncPolicyPushNotification>>(notificationJson, _deserializerOptions);
+        if (policyData is null)
+        {
+            return;
+        }
+
+        await _hubContext.Clients
+            .Group(NotificationsHub.GetOrganizationGroup(policyData.Payload.OrganizationId))
+            .SendAsync(_receiveMessageMethod, policyData, cancellationToken);
+
     }
 }
