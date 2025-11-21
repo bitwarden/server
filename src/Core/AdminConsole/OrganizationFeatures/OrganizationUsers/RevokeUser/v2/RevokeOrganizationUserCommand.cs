@@ -24,7 +24,7 @@ public class RevokeOrganizationUserCommand(
     {
         var validationRequest = await CreateValidationRequestsAsync(request);
 
-        var results = validator.Validate(validationRequest);
+        var results = await validator.ValidateAsync(validationRequest);
 
         var validUsers = results.Where(r => r.IsValid).Select(r => r.Request).ToList();
 

@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Data;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v2;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -16,7 +17,7 @@ public class RevokeOrganizationUsersValidatorTests
 {
     [Theory]
     [BitAutoData]
-    public void Validate_WithValidUsers_ReturnsSuccess(
+    public async Task ValidateAsync_WithValidUsers_ReturnsSuccess(
         SutProvider<RevokeOrganizationUsersValidator> sutProvider,
         Guid organizationId,
         Guid actingUserId,
@@ -36,8 +37,12 @@ public class RevokeOrganizationUsersValidatorTests
             actingUser,
             organization);
 
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(true);
+
         // Act
-        var results = sutProvider.Sut.Validate(request).ToList();
+        var results = (await sutProvider.Sut.ValidateAsync(request)).ToList();
 
         // Assert
         Assert.Equal(2, results.Count);
@@ -46,7 +51,7 @@ public class RevokeOrganizationUsersValidatorTests
 
     [Theory]
     [BitAutoData]
-    public void Validate_WithRevokedUser_ReturnsErrorForThatUser(
+    public async Task ValidateAsync_WithRevokedUser_ReturnsErrorForThatUser(
         SutProvider<RevokeOrganizationUsersValidator> sutProvider,
         Guid organizationId,
         Guid actingUserId,
@@ -64,8 +69,12 @@ public class RevokeOrganizationUsersValidatorTests
             actingUser,
             organization);
 
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(true);
+
         // Act
-        var results = sutProvider.Sut.Validate(request).ToList();
+        var results = (await sutProvider.Sut.ValidateAsync(request)).ToList();
 
         // Assert
         Assert.Single(results);
@@ -75,7 +84,7 @@ public class RevokeOrganizationUsersValidatorTests
 
     [Theory]
     [BitAutoData]
-    public void Validate_WhenRevokingSelf_ReturnsErrorForThatUser(
+    public async Task ValidateAsync_WhenRevokingSelf_ReturnsErrorForThatUser(
         SutProvider<RevokeOrganizationUsersValidator> sutProvider,
         Guid organizationId,
         Guid actingUserId,
@@ -84,7 +93,7 @@ public class RevokeOrganizationUsersValidatorTests
     {
         // Arrange
         orgUser.OrganizationId = organizationId;
-        orgUser.UserId = actingUserId; // Same as acting user
+        orgUser.UserId = actingUserId;
 
         var actingUser = CreateActingUser(actingUserId, false, null);
         var request = CreateValidationRequest(
@@ -93,8 +102,12 @@ public class RevokeOrganizationUsersValidatorTests
             actingUser,
             organization);
 
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(true);
+
         // Act
-        var results = sutProvider.Sut.Validate(request).ToList();
+        var results = (await sutProvider.Sut.ValidateAsync(request)).ToList();
 
         // Assert
         Assert.Single(results);
@@ -104,7 +117,7 @@ public class RevokeOrganizationUsersValidatorTests
 
     [Theory]
     [BitAutoData]
-    public void Validate_WhenNonOwnerRevokesOwner_ReturnsErrorForThatUser(
+    public async Task ValidateAsync_WhenNonOwnerRevokesOwner_ReturnsErrorForThatUser(
         SutProvider<RevokeOrganizationUsersValidator> sutProvider,
         Guid organizationId,
         Guid actingUserId,
@@ -115,15 +128,19 @@ public class RevokeOrganizationUsersValidatorTests
         ownerUser.OrganizationId = organizationId;
         ownerUser.UserId = Guid.NewGuid();
 
-        var actingUser = CreateActingUser(actingUserId, false, null); // Not an owner
+        var actingUser = CreateActingUser(actingUserId, false, null);
         var request = CreateValidationRequest(
             organizationId,
             [ownerUser],
             actingUser,
             organization);
 
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(true);
+
         // Act
-        var results = sutProvider.Sut.Validate(request).ToList();
+        var results = (await sutProvider.Sut.ValidateAsync(request)).ToList();
 
         // Assert
         Assert.Single(results);
@@ -133,7 +150,7 @@ public class RevokeOrganizationUsersValidatorTests
 
     [Theory]
     [BitAutoData]
-    public void Validate_WhenOwnerRevokesOwner_ReturnsSuccess(
+    public async Task ValidateAsync_WhenOwnerRevokesOwner_ReturnsSuccess(
         SutProvider<RevokeOrganizationUsersValidator> sutProvider,
         Guid organizationId,
         Guid actingUserId,
@@ -144,15 +161,19 @@ public class RevokeOrganizationUsersValidatorTests
         ownerUser.OrganizationId = organizationId;
         ownerUser.UserId = Guid.NewGuid();
 
-        var actingUser = CreateActingUser(actingUserId, true, null); // Is an owner
+        var actingUser = CreateActingUser(actingUserId, true, null);
         var request = CreateValidationRequest(
             organizationId,
             [ownerUser],
             actingUser,
             organization);
 
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(true);
+
         // Act
-        var results = sutProvider.Sut.Validate(request).ToList();
+        var results = (await sutProvider.Sut.ValidateAsync(request)).ToList();
 
         // Assert
         Assert.Single(results);
@@ -161,7 +182,7 @@ public class RevokeOrganizationUsersValidatorTests
 
     [Theory]
     [BitAutoData]
-    public void Validate_WithMultipleUsers_SomeValid_ReturnsMixedResults(
+    public async Task ValidateAsync_WithMultipleUsers_SomeValid_ReturnsMixedResults(
         SutProvider<RevokeOrganizationUsersValidator> sutProvider,
         Guid organizationId,
         Guid actingUserId,
@@ -181,8 +202,12 @@ public class RevokeOrganizationUsersValidatorTests
             actingUser,
             organization);
 
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(true);
+
         // Act
-        var results = sutProvider.Sut.Validate(request).ToList();
+        var results = (await sutProvider.Sut.ValidateAsync(request)).ToList();
 
         // Assert
         Assert.Equal(2, results.Count);
@@ -197,7 +222,7 @@ public class RevokeOrganizationUsersValidatorTests
 
     [Theory]
     [BitAutoData]
-    public void Validate_WithSystemUser_DoesNotRequireActingUserId(
+    public async Task ValidateAsync_WithSystemUser_DoesNotRequireActingUserId(
         SutProvider<RevokeOrganizationUsersValidator> sutProvider,
         Guid organizationId,
         Organization organization,
@@ -214,8 +239,12 @@ public class RevokeOrganizationUsersValidatorTests
             actingUser,
             organization);
 
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(true);
+
         // Act
-        var results = sutProvider.Sut.Validate(request).ToList();
+        var results = (await sutProvider.Sut.ValidateAsync(request)).ToList();
 
         // Assert
         Assert.Single(results);
@@ -224,7 +253,40 @@ public class RevokeOrganizationUsersValidatorTests
 
     [Theory]
     [BitAutoData]
-    public void Validate_WithMultipleValidationErrors_ReturnsAllErrors(
+    public async Task ValidateAsync_WhenRevokingLastOwner_ReturnsErrorForThatUser(
+        SutProvider<RevokeOrganizationUsersValidator> sutProvider,
+        Guid organizationId,
+        Guid actingUserId,
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser lastOwner)
+    {
+        // Arrange
+        lastOwner.OrganizationId = organizationId;
+        lastOwner.UserId = Guid.NewGuid();
+
+        var actingUser = CreateActingUser(actingUserId, true, null); // Is an owner
+        var request = CreateValidationRequest(
+            organizationId,
+            [lastOwner],
+            actingUser,
+            organization);
+
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(false);
+
+        // Act
+        var results = (await sutProvider.Sut.ValidateAsync(request)).ToList();
+
+        // Assert
+        Assert.Single(results);
+        Assert.True(results.First().IsError);
+        Assert.IsType<MustHaveConfirmedOwner>(results.First().AsError);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_WithMultipleValidationErrors_ReturnsAllErrors(
         SutProvider<RevokeOrganizationUsersValidator> sutProvider,
         Guid organizationId,
         Guid actingUserId,
@@ -244,8 +306,12 @@ public class RevokeOrganizationUsersValidatorTests
             actingUser,
             organization);
 
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(true);
+
         // Act
-        var results = sutProvider.Sut.Validate(request).ToList();
+        var results = (await sutProvider.Sut.ValidateAsync(request)).ToList();
 
         // Assert
         Assert.Equal(2, results.Count);
@@ -255,14 +321,13 @@ public class RevokeOrganizationUsersValidatorTests
         Assert.Contains(results, r => r.AsError is OnlyOwnersCanRevokeOwners);
     }
 
-    private static IActingUser CreateActingUser(Guid? userId, bool isOwnerOrProvider, EventSystemUser? systemUserType)
-    {
-        var actingUser = Substitute.For<IActingUser>();
-        actingUser.UserId.Returns(userId);
-        actingUser.IsOrganizationOwnerOrProvider.Returns(isOwnerOrProvider);
-        actingUser.SystemUserType.Returns(systemUserType);
-        return actingUser;
-    }
+    private static IActingUser CreateActingUser(Guid? userId, bool isOwnerOrProvider, EventSystemUser? systemUserType) =>
+        (userId, systemUserType) switch
+        {
+            ({ } id, _) => new StandardUser(id, isOwnerOrProvider),
+            (null, { } type) => new SystemUser(type)
+        };
+
 
     private static RevokeOrganizationUsersValidationRequest CreateValidationRequest(
         Guid organizationId,

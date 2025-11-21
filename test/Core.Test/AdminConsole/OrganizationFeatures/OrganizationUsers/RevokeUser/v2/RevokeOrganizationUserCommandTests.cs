@@ -225,7 +225,7 @@ public class RevokeOrganizationUserCommandTests
         ICollection<ValidationResult<OrganizationUser>> validationResults)
     {
         sutProvider.GetDependency<IRevokeOrganizationUserValidator>()
-            .Validate(Arg.Any<RevokeOrganizationUsersValidationRequest>())
+            .ValidateAsync(Arg.Any<RevokeOrganizationUsersValidationRequest>())
             .Returns(validationResults);
     }
 }

@@ -70,9 +70,6 @@ public class OrganizationUserControllerBulkRevokeTests : IClassFixture<ApiApplic
 
         var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
 
-        var arrangedUsers = await organizationUserRepository.GetManyAsync([orgUser1.Id, orgUser2.Id]);
-        Assert.All(arrangedUsers, u => Assert.Equal(OrganizationUserStatusType.Confirmed, u.Status));
-
         var request = new OrganizationUserBulkRequestModel
         {
             Ids = [orgUser1.Id, orgUser2.Id]
@@ -100,11 +97,6 @@ public class OrganizationUserControllerBulkRevokeTests : IClassFixture<ApiApplic
 
         var (_, orgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory, _organization.Id, OrganizationUserType.User);
 
-        var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
-
-        var arrangedUser = await organizationUserRepository.GetByIdAsync(orgUser.Id);
-        Assert.Equal(OrganizationUserStatusType.Confirmed, arrangedUser.Status);
-
         var request = new OrganizationUserBulkRequestModel
         {
             Ids = [orgUser.Id]
@@ -118,7 +110,8 @@ public class OrganizationUserControllerBulkRevokeTests : IClassFixture<ApiApplic
         Assert.Single(content.Data);
         Assert.All(content.Data, r => Assert.Empty(r.Error));
 
-        var actualUser = await organizationUserRepository.GetByIdAsync(orgUser.Id);
+        var actualUser = await _factory.GetService<IOrganizationUserRepository>().GetByIdAsync(orgUser.Id);
+        Assert.NotNull(actualUser);
         Assert.Equal(OrganizationUserStatusType.Revoked, actualUser.Status);
     }
 
@@ -129,11 +122,6 @@ public class OrganizationUserControllerBulkRevokeTests : IClassFixture<ApiApplic
             _organization.Id, OrganizationUserType.Admin);
 
         await _loginHelper.LoginAsync(userEmail);
-
-        var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
-
-        var arrangedUser = await organizationUserRepository.GetByIdAsync(orgUser.Id);
-        Assert.Equal(OrganizationUserStatusType.Confirmed, arrangedUser.Status);
 
         var request = new OrganizationUserBulkRequestModel
         {
@@ -148,7 +136,8 @@ public class OrganizationUserControllerBulkRevokeTests : IClassFixture<ApiApplic
         Assert.Single(content.Data);
         Assert.Contains(content.Data, r => r.Id == orgUser.Id && r.Error == "You cannot revoke yourself.");
 
-        var actualUser = await organizationUserRepository.GetByIdAsync(orgUser.Id);
+        var actualUser = await _factory.GetService<IOrganizationUserRepository>().GetByIdAsync(orgUser.Id);
+        Assert.NotNull(actualUser);
         Assert.Equal(OrganizationUserStatusType.Confirmed, actualUser.Status);
     }
 
@@ -165,8 +154,6 @@ public class OrganizationUserControllerBulkRevokeTests : IClassFixture<ApiApplic
         var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
 
         await organizationUserRepository.RevokeAsync(orgUser.Id);
-        var arrangedUser = await organizationUserRepository.GetByIdAsync(orgUser.Id);
-        Assert.Equal(OrganizationUserStatusType.Revoked, arrangedUser.Status);
 
         var request = new OrganizationUserBulkRequestModel
         {
@@ -182,6 +169,7 @@ public class OrganizationUserControllerBulkRevokeTests : IClassFixture<ApiApplic
         Assert.Contains(content.Data, r => r.Id == orgUser.Id && r.Error == "Already revoked.");
 
         var actualUser = await organizationUserRepository.GetByIdAsync(orgUser.Id);
+        Assert.NotNull(actualUser);
         Assert.Equal(OrganizationUserStatusType.Revoked, actualUser.Status);
     }
 
@@ -194,11 +182,6 @@ public class OrganizationUserControllerBulkRevokeTests : IClassFixture<ApiApplic
         await _loginHelper.LoginAsync(adminEmail);
 
         var (_, ownerOrgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory, _organization.Id, OrganizationUserType.Owner);
-
-        var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
-
-        var arrangedUser = await organizationUserRepository.GetByIdAsync(ownerOrgUser.Id);
-        Assert.Equal(OrganizationUserStatusType.Confirmed, arrangedUser.Status);
 
         var request = new OrganizationUserBulkRequestModel
         {
@@ -213,7 +196,8 @@ public class OrganizationUserControllerBulkRevokeTests : IClassFixture<ApiApplic
         Assert.Single(content.Data);
         Assert.Contains(content.Data, r => r.Id == ownerOrgUser.Id && r.Error == "Only owners can revoke other owners.");
 
-        var actualUser = await organizationUserRepository.GetByIdAsync(ownerOrgUser.Id);
+        var actualUser = await _factory.GetService<IOrganizationUserRepository>().GetByIdAsync(ownerOrgUser.Id);
+        Assert.NotNull(actualUser);
         Assert.Equal(OrganizationUserStatusType.Confirmed, actualUser.Status);
     }
 
@@ -231,10 +215,6 @@ public class OrganizationUserControllerBulkRevokeTests : IClassFixture<ApiApplic
         var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
 
         await organizationUserRepository.RevokeAsync(alreadyRevokedOrgUser.Id);
-
-        var arrangedUsers = await organizationUserRepository.GetManyAsync([validOrgUser.Id, alreadyRevokedOrgUser.Id, requestingOwner.Id]);
-        Assert.Equal(OrganizationUserStatusType.Confirmed, arrangedUsers.First(u => u.Id == validOrgUser.Id).Status);
-        Assert.Equal(OrganizationUserStatusType.Revoked, arrangedUsers.First(u => u.Id == alreadyRevokedOrgUser.Id).Status);
 
         var request = new OrganizationUserBulkRequestModel
         {
@@ -339,8 +319,9 @@ public class OrganizationUserControllerBulkRevokeTests : IClassFixture<ApiApplic
 
         var providerUserUser = await _factory.GetService<IUserRepository>().GetByEmailAsync(providerEmail);
 
-        var providerUserCollection =
-            await _factory.GetService<IProviderUserRepository>().GetManyByUserAsync(providerUserUser.Id);
+        var providerUserCollection = await _factory.GetService<IProviderUserRepository>()
+            .GetManyByUserAsync(providerUserUser!.Id);
+
         var providerUser = providerUserCollection.First();
 
         await _factory.GetService<IProviderOrganizationRepository>().CreateAsync(new ProviderOrganization
@@ -351,7 +332,7 @@ public class OrganizationUserControllerBulkRevokeTests : IClassFixture<ApiApplic
             Settings = null
         });
 
-        var (ownerEmail, ownerOrgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
+        var (_, ownerOrgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
             _organization.Id, OrganizationUserType.Owner);
 
         var request = new OrganizationUserBulkRequestModel
