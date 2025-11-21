@@ -26,7 +26,7 @@ public class DistributedCachePersistedGrantStore : IPersistedGrantStore
     private const string KeyPrefix = "grant:";
 
     public DistributedCachePersistedGrantStore(
-        IFusionCache cache,
+        [FromKeyedServices("sso-grants")] IFusionCache cache,
         ILogger<DistributedCachePersistedGrantStore> logger)
     {
         _cache = cache;
