@@ -98,6 +98,12 @@ public class StripeFacade : IStripeFacade
         CancellationToken cancellationToken = default) =>
         await _subscriptionService.ListAsync(options, requestOptions, cancellationToken);
 
+    public IAsyncEnumerable<Subscription> ListSubscriptionsAutoPagingAsync(
+        SubscriptionListOptions options = null,
+        RequestOptions requestOptions = null,
+        CancellationToken cancellationToken = default) =>
+        _subscriptionService.ListAutoPagingAsync(options, requestOptions, cancellationToken);
+
     public async Task<Subscription> GetSubscription(
         string subscriptionId,
         SubscriptionGetOptions subscriptionGetOptions = null,
