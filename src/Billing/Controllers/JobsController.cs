@@ -28,7 +28,7 @@ public class JobsController(
         if (jobName == nameof(ReconcileAdditionalStorageJob))
         {
             await jobsHostedService.InterruptAdHocJobAsync<ReconcileAdditionalStorageJob>();
-            return Ok(new { message = $"Job {jobName} stopped successfully" });
+            return Ok(new { message = $"Job {jobName} queued for cancellation" });
         }
 
         return BadRequest(new { error = $"Unknown job name: {jobName}" });
