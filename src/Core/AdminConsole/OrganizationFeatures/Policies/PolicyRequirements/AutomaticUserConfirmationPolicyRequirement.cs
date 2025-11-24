@@ -15,6 +15,10 @@ public class AutomaticUserConfirmationPolicyRequirementFactory : BasePolicyRequi
 
     protected override IEnumerable<OrganizationUserType> ExemptRoles => [];
 
+    protected override IEnumerable<OrganizationUserStatusType> ExemptStatuses => [];
+
+    protected override bool ExemptProviders => false;
+
     public override AutomaticUserConfirmationPolicyRequirement Create(IEnumerable<PolicyDetails> policyDetails) =>
         new(policyDetails);
 }
