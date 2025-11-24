@@ -36,6 +36,8 @@ public static class WebApplicationFactoryExtensions
                 httpContext.Request.Body = content.ReadAsStream();
             }
 
+            httpContext.Request.Headers.Append("Bitwarden-Client-Version", "2025.11.0");
+
             extraConfiguration?.Invoke(httpContext);
         });
     }
