@@ -18,6 +18,7 @@ public class ReconcileAdditionalStorageJob(
     private const string _storageGbMonthlyPriceId = "storage-gb-monthly";
     private const string _storageGbAnnuallyPriceId = "storage-gb-annually";
     private const string _personalStorageGbAnnuallyPriceId = "personal-storage-gb-annually";
+    private const int _storageGbToRemove = 4;
 
     protected override async Task ExecuteJobAsync(IJobExecutionContext context)
     {
@@ -161,9 +162,9 @@ public class ReconcileAdditionalStorageJob(
             hasUpdates = true;
             var currentQuantity = item.Quantity;
 
-            if (currentQuantity > 4)
+            if (currentQuantity > _storageGbToRemove)
             {
-                var newQuantity = currentQuantity - 4;
+                var newQuantity = currentQuantity - _storageGbToRemove;
                 logger.LogInformation(
                     "Subscription {SubscriptionId}: reducing quantity from {CurrentQuantity} to {NewQuantity} for price {PriceId}",
                     subscription.Id,
