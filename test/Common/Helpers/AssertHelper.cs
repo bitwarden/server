@@ -225,37 +225,7 @@ public static class AssertHelper
 
     public async static Task<T> AssertResponseTypeIs<T>(HttpContext context)
     {
-        try
-        {
-            if (context.Response.Body.CanSeek)
-            {
-                context.Response.Body.Position = 0;
-            }
-
-            return await JsonSerializer.DeserializeAsync<T>(context.Response.Body);
-        }
-        catch (JsonException ex)
-        {
-            string bodyText = "";
-            try
-            {
-                if (context.Response.Body.CanSeek)
-                {
-                    context.Response.Body.Position = 0;
-                }
-
-                using var sr = new StreamReader(context.Response.Body, leaveOpen: true);
-                bodyText = await sr.ReadToEndAsync();
-            }
-            catch
-            {
-                // ignore read errors
-            }
-
-            throw new Xunit.Sdk.XunitException(
-                $"Failed to deserialize response to {typeof(T).Name}. " +
-                $"StatusCode: {context.Response.StatusCode}. Body:\n{bodyText}\nException: {ex}");
-        }
+        return await JsonSerializer.DeserializeAsync<T>(context.Response.Body);
     }
 
     public static TimeSpan AssertRecent(DateTime dateTime, int skewSeconds = 2)
