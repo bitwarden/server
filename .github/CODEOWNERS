@@ -36,6 +36,7 @@ util/Setup/** @bitwarden/dept-bre @bitwarden/team-platform-dev
 
 # UIF
 src/Core/MailTemplates/Mjml @bitwarden/team-ui-foundation # Teams are expected to own sub-directories of this project
+src/Core/MailTemplates/Mjml/.mjmlconfig # This change allows teams to add components within their own subdirectories without requiring a code review from UIF.
 
 # Auth team
 **/Auth @bitwarden/team-auth-dev

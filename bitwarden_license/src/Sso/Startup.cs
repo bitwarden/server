@@ -100,8 +100,6 @@ public class Startup
             IdentityModelEventSource.ShowPII = true;
         }
 
-        app.UseSerilog(env, appLifetime, globalSettings);
-
         // Add general security headers
         app.UseMiddleware<SecurityHeadersMiddleware>();
 

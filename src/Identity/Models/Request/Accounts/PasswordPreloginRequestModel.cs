@@ -5,7 +5,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Bit.Identity.Models.Request.Accounts;
 
-public class PreloginRequestModel
+public class PasswordPreloginRequestModel
 {
     [Required]
     [EmailAddress]
