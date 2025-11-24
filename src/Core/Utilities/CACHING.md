@@ -139,29 +139,20 @@ services.AddExtendedCache("SpecializedCache", globalSettings, new GlobalSettings
 
 #### 2. Inject and use the cache:
 
-A named cache can be retrieved either:
-
-- Directly via DI using keyed services
-- Through `IFusionCacheProvider` (similar to [IHttpClientFactory](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/http-requests?view=aspnetcore-7.0#named-clients))
+A named cache is retrieved via DI using keyed services (similar to how [IHttpClientFactory](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/http-requests?view=aspnetcore-7.0#named-clients) works with named clients):
 
 ```csharp
 public class MyService
 {
     private readonly IFusionCache _cache;
 
-    // Option A: Inject via keyed service
+    // Option A: Inject via keyed service in constructor
     public MyService([FromKeyedServices("MyFeatureCache")] IFusionCache cache)
     {
         _cache = cache;
     }
 
-    // Option B: Inject via provider
-    public MyService(IFusionCacheProvider cacheProvider)
-    {
-        _cache = cacheProvider.GetCache("MyFeatureCache");
-    }
-
-    // Option C: Request manually from service provider
+    // Option B: Request manually from service provider
     // cache = provider.GetRequiredKeyedService<IFusionCache>(serviceKey: "MyFeatureCache")
 
     public async Task<Item> GetItemAsync(Guid id)
@@ -355,29 +346,43 @@ The persistent cache is accessed via keyed service injection and is optimized fo
 The persistent `IDistributedCache` service is appropriate for workflow state that spans multiple requests and needs automatic TTL cleanup.
 
 ```csharp
-public class SetupIntentDistributedCache : ISetupIntentCache
+public class SetupIntentDistributedCache(
+    [FromKeyedServices("persistent")] IDistributedCache distributedCache) : ISetupIntentCache
 {
-    private readonly IDistributedCache _persistentCache;
-
-    public SetupIntentDistributedCache([FromKeyedServices("persistent")] IDistributedCache persistentCache)
-    {
-        _persistentCache = persistentCache;
-    }
-
     public async Task Set(Guid subscriberId, string setupIntentId)
     {
         // Bidirectional mapping for payment flow
-        var subscriberKey = $"setup_intent_id_for_subscriber_id_{subscriberId}";
-        var intentKey = $"subscriber_id_for_setup_intent_id_{setupIntentId}";
+        var bySubscriberIdCacheKey = $"setup_intent_id_for_subscriber_id_{subscriberId}";
+        var bySetupIntentIdCacheKey = $"subscriber_id_for_setup_intent_id_{setupIntentId}";
 
-        await _persistentCache.SetStringAsync(subscriberKey, setupIntentId);
-        await _persistentCache.SetStringAsync(intentKey, subscriberId.ToString());
+        // Note: No explicit TTL set here. Cosmos DB uses container-level TTL for automatic cleanup.
+        // In cloud, Cosmos TTL handles expiration. In self-hosted, the cache backend manages TTL.
+        await Task.WhenAll(
+            distributedCache.SetStringAsync(bySubscriberIdCacheKey, setupIntentId),
+            distributedCache.SetStringAsync(bySetupIntentIdCacheKey, subscriberId.ToString()));
     }
 
-    public async Task<string> GetSetupIntentIdForSubscriber(Guid subscriberId)
+    public async Task<string?> GetSetupIntentIdForSubscriber(Guid subscriberId)
     {
-        var key = $"setup_intent_id_for_subscriber_id_{subscriberId}";
-        return await _persistentCache.GetStringAsync(key);
+        var cacheKey = $"setup_intent_id_for_subscriber_id_{subscriberId}";
+        return await distributedCache.GetStringAsync(cacheKey);
+    }
+
+    public async Task<Guid?> GetSubscriberIdForSetupIntent(string setupIntentId)
+    {
+        var cacheKey = $"subscriber_id_for_setup_intent_id_{setupIntentId}";
+        var value = await distributedCache.GetStringAsync(cacheKey);
+        if (string.IsNullOrEmpty(value) || !Guid.TryParse(value, out var subscriberId))
+        {
+            return null;
+        }
+        return subscriberId;
+    }
+
+    public async Task RemoveSetupIntentForSubscriber(Guid subscriberId)
+    {
+        var cacheKey = $"setup_intent_id_for_subscriber_id_{subscriberId}";
+        await distributedCache.RemoveAsync(cacheKey);
     }
 }
 ```
@@ -398,14 +403,14 @@ Long-lived OAuth grants (refresh tokens, consent grants, device codes) use the p
 
 **Grant type recommendations:**
 
-| Grant Type               | Lifetime     | Durability Requirement | Recommended Storage |
-| ------------------------ | ------------ | ---------------------- | ------------------- |
-| SSO authorization codes  | ≤5 min       | Ephemeral, can be lost | `ExtendedCache`     |
-| OIDC authorization codes | ≤5 min       | Ephemeral, can be lost | `ExtendedCache`     |
-| PKCE code verifiers      | ≤5 min       | Ephemeral, can be lost | `ExtendedCache`     |
-| Refresh tokens           | Days-weeks   | Must persist           | Persistent cache    |
-| Consent grants           | Weeks-months | Must persist           | Persistent cache    |
-| Device codes             | Days         | Must persist           | Persistent cache    |
+| Grant Type               | Lifetime     | Durability Requirement | Recommended Storage | Rationale                                                                                    |
+| ------------------------ | ------------ | ---------------------- | ------------------- | -------------------------------------------------------------------------------------------- |
+| SSO authorization codes  | ≤5 min       | Ephemeral, can be lost | `ExtendedCache`     | User can re-initiate SSO flow if code is lost; short lifetime limits exposure window        |
+| OIDC authorization codes | ≤5 min       | Ephemeral, can be lost | `ExtendedCache`     | OAuth spec allows user to retry authorization; code is single-use and short-lived            |
+| PKCE code verifiers      | ≤5 min       | Ephemeral, can be lost | `ExtendedCache`     | Tied to authorization code lifecycle; can be regenerated if authorization is retried         |
+| Refresh tokens           | Days-weeks   | Must persist           | Persistent cache    | Losing these forces user re-authentication; critical for seamless user experience            |
+| Consent grants           | Weeks-months | Must persist           | Persistent cache    | User shouldn't have to re-consent frequently; loss degrades UX and trust                     |
+| Device codes             | Days         | Must persist           | Persistent cache    | Device flow is async; losing codes breaks pending device authorizations with no recovery UX |
 
 ### Backend Configuration
 
