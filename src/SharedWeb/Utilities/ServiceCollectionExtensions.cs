@@ -12,6 +12,7 @@ using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.AdminConsole.Models.Teams;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.AdminConsole.Services.Implementations;
 using Bit.Core.AdminConsole.Services.NoopImplementations;
@@ -889,8 +890,9 @@ public static class ServiceCollectionExtensions
                 eventIntegrationPublisher: provider.GetRequiredService<IEventIntegrationPublisher>(),
                 integrationFilterService: provider.GetRequiredService<IIntegrationFilterService>(),
                 configurationCache: provider.GetRequiredService<IIntegrationConfigurationDetailsCache>(),
-                userRepository: provider.GetRequiredService<IUserRepository>(),
+                groupRepository: provider.GetRequiredService<IGroupRepository>(),
                 organizationRepository: provider.GetRequiredService<IOrganizationRepository>(),
+                organizationUserRepository: provider.GetRequiredService<IOrganizationUserRepository>(),
                 logger: provider.GetRequiredService<ILogger<EventIntegrationHandler<TConfig>>>()
             )
         );
@@ -1016,8 +1018,9 @@ public static class ServiceCollectionExtensions
                 eventIntegrationPublisher: provider.GetRequiredService<IEventIntegrationPublisher>(),
                 integrationFilterService: provider.GetRequiredService<IIntegrationFilterService>(),
                 configurationCache: provider.GetRequiredService<IIntegrationConfigurationDetailsCache>(),
-                userRepository: provider.GetRequiredService<IUserRepository>(),
+                groupRepository: provider.GetRequiredService<IGroupRepository>(),
                 organizationRepository: provider.GetRequiredService<IOrganizationRepository>(),
+                organizationUserRepository: provider.GetRequiredService<IOrganizationUserRepository>(),
                 logger: provider.GetRequiredService<ILogger<EventIntegrationHandler<TConfig>>>()
             )
         );
