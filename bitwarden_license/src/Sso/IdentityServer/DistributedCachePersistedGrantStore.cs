@@ -91,7 +91,7 @@ public class DistributedCachePersistedGrantStore : IPersistedGrantStore
             return;
         }
 
-        // Cache key "sso-grant:" is configured by service registration. Going through the consumed KeyedService will
+        // Cache key "sso-grants:" is configured by service registration. Going through the consumed KeyedService will
         // give us a consistent cache key prefix for these grants.
         await _cache.SetAsync(
             grant.Key,
