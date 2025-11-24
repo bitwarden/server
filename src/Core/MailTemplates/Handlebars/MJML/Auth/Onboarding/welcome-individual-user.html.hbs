@@ -53,11 +53,37 @@
     
     <style type="text/css">
 
+      @media only screen and (max-width:480px) {
+        .mj-bw-hero-responsive-img {
+          display: none !important;
+        }
+      }
+    
+
+      @media only screen and (max-width:480px) {
+        .mj-bw-learn-more-footer-responsive-img {
+          display: none !important;
+        }
+      }
+    
+
     @media only screen and (max-width:479px) {
       table.mj-full-width-mobile { width: 100% !important; }
       td.mj-full-width-mobile { width: auto !important; }
     }
   
+
+      @media only screen and (max-width:480px): {
+        ".mj-bw-icon-row-text": {
+          padding-left: "5px !important",
+          line-height: "20px",
+        },
+        ".mj-bw-icon-row": {
+          padding: "10px 15px",
+          width: "fit-content !important",
+        }
+      }
+    
     </style>
      
     <style type="text/css">
@@ -67,29 +93,8 @@
   .border-fix > table > tbody > tr > td {
     border-radius: 3px;
   }
-@media only screen and (max-width: 480px) {
-    .hide-small-img {
-      display: none !important;
-    }
-    .send-bubble {
-      padding-left: 20px;
-      padding-right: 20px;
-      width: 90% !important;
-    }
-  }
-@media only screen and (max-width: 480px) {
-    .mj-bw-icon-row-text {
-      padding-left: 5px !important;
-      line-height: 20px;
-    }
-    .mj-bw-icon-row {
-      padding: 10px 15px;
-      width: fit-content !important;
-    }
-  }
     </style>
-    <!-- Responsive icon visibility -->
-<!-- Responsive styling for mj-bw-icon-row -->
+    
   </head>
   <body style="word-spacing:normal;background-color:#e6e9ef;">
     
@@ -156,7 +161,7 @@
             </h1>
             <mj-text color="#fff" padding-top="0" padding-bottom="0">
             <h2 style="font-weight: normal; font-size: 16px; line-height: 0px">
-              Let's get set up to autofill.
+              Let’s get you set up to autofill.
             </h2>
           </mj-text></div>
     
@@ -176,7 +181,7 @@
         <tbody>
           
               <tr>
-                <td align="center" class="hide-small-img" style="font-size:0px;padding:0px;word-break:break-word;">
+                <td align="center" class="mj-bw-hero-responsive-img" style="font-size:0px;padding:0px;word-break:break-word;">
                   
       <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:collapse;border-spacing:0px;">
         <tbody>
@@ -621,10 +626,10 @@
                 <td align="left" style="font-size:0px;padding:10px 25px;word-break:break-word;">
                   
       <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:16px;line-height:24px;text-align:left;color:#1B2029;"><p style="font-size: 18px; line-height: 28px; font-weight: bold;">
-        Learn more about Bitwarden
-      </p>
-      Find user guides, product documentation, and videos on the
-      <a href="https://bitwarden.com/help/" class="link" style="text-decoration: none; color: #175ddc; font-weight: 600;"> Bitwarden Help Center</a>.</div>
+              Learn more about Bitwarden
+            </p>
+            Find user guides, product documentation, and videos on the
+            <a href="https://bitwarden.com/help/" class="link" style="text-decoration: none; color: #175ddc; font-weight: 600;"> Bitwarden Help Center</a>.</div>
     
                 </td>
               </tr>
@@ -642,7 +647,7 @@
         <tbody>
           
               <tr>
-                <td align="center" class="hide-small-img" style="font-size:0px;padding:10px 25px;word-break:break-word;">
+                <td align="center" class="mj-bw-learn-more-footer-responsive-img" style="font-size:0px;padding:10px 25px;word-break:break-word;">
                   
       <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:collapse;border-spacing:0px;">
         <tbody>
