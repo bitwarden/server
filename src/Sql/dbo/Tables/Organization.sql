@@ -61,7 +61,7 @@ CREATE TABLE [dbo].[Organization] (
     [SyncSeats]                     BIT              NOT NULL CONSTRAINT [DF_Organization_SyncSeats] DEFAULT (0),
     [UseAutomaticUserConfirmation]  BIT              NOT NULL CONSTRAINT [DF_Organization_UseAutomaticUserConfirmation] DEFAULT (0),
     [MaxStorageGbIncreased]         SMALLINT         NULL,
-    [UsePhishingBlocker]               BIT              NOT NULL CONSTRAINT [DF_Organization_UsePhishingBlocker] DEFAULT (0),
+    [UsePhishingBlocker]            BIT              NOT NULL CONSTRAINT [DF_Organization_UsePhishingBlocker] DEFAULT (0),
     CONSTRAINT [PK_Organization] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 

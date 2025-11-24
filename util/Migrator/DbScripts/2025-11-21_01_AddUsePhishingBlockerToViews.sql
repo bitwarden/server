@@ -226,3 +226,16 @@ IF OBJECT_ID('[dbo].[OrganizationView]') IS NOT NULL
         EXECUTE sp_refreshsqlmodule N'[dbo].[OrganizationView]';
     END
 GO
+
+--Manually refresh [dbo].[OrganizationCipherDetailsCollectionsView]
+IF OBJECT_ID('[dbo].[OrganizationCipherDetailsCollectionsView]') IS NOT NULL
+    BEGIN
+        EXECUTE sp_refreshsqlmodule N'[dbo].[OrganizationCipherDetailsCollectionsView]';
+    END
+GO
+--Manually refresh [dbo].[ProviderOrganizationOrganizationDetailsView]
+IF OBJECT_ID('[dbo].[ProviderOrganizationOrganizationDetailsView]') IS NOT NULL
+    BEGIN
+        EXECUTE sp_refreshsqlmodule N'[dbo].[ProviderOrganizationOrganizationDetailsView]';
+    END
+GO
