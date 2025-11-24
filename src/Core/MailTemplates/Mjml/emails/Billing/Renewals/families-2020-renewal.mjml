@@ -1,0 +1,39 @@
+<mjml>
+  <mj-head>
+    <mj-include path="../../../components/head.mjml" />
+  </mj-head>
+
+  <!-- Blue Header Section-->
+  <mj-body css-class="border-fix">
+    <mj-wrapper css-class="border-fix" padding="20px 20px 0px 20px">
+      <mj-bw-hero
+        img-src="https://assets.bitwarden.com/email/v1/account-fill.png"
+        title="Your Bitwarden Families renewal is updating"
+      />
+    </mj-wrapper>
+
+    <!-- Main Content Section -->
+    <mj-wrapper padding="0px 20px 0px 20px">
+      <mj-section background-color="#fff" padding="15px 10px 10px 10px">
+        <mj-column>
+          <mj-text font-size="16px" line-height="24px" padding="10px 15px 15px 15px">
+            Your Bitwarden Families subscription renews in 15 days. The price is updating to {{MonthlyRenewalPrice}}/month, billed annually.
+          </mj-text>
+          <mj-text font-size="16px" line-height="24px" padding="10px 15px">
+            Questions? Contact <a href="mailto:support@bitwarden.com" class="link">support@bitwarden.com</a>
+          </mj-text>
+        </mj-column>
+      </mj-section>
+      <mj-section background-color="#fff" padding="0 20px 20px 20px">
+      </mj-section>
+    </mj-wrapper>
+
+    <!-- Learn More Section -->
+    <mj-wrapper padding="0px 20px 10px 20px">
+      <mj-bw-learn-more-footer />
+    </mj-wrapper>
+
+    <!-- Footer -->
+    <mj-include path="../../../components/footer.mjml" />
+  </mj-body>
+</mjml>
