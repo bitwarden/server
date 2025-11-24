@@ -1,5 +1,9 @@
- /* Introduce new column 'UsePhishingBlocker' not nullable with default of 0  */
-ALTER TABLE [dbo].[Organization] ADD [UsePhishingBlocker] bit NOT NULL CONSTRAINT [DF_Organization_UsePhishingBlocker] default (0)
+
+/* Introduce new column 'UsePhishingBlocker' not nullable with default of 0  */
+IF COL_LENGTH('[dbo].[Organization]', 'UsePhishingBlocker') is NULL
+BEGIN
+    ALTER TABLE [dbo].[Organization] ADD [UsePhishingBlocker] bit NOT NULL CONSTRAINT [DF_Organization_UsePhishingBlocker] default (0)
+END
 GO
 
 /* Update existing stored procedures to include the new column - UsePhishingBlocker */
@@ -71,7 +75,7 @@ BEGIN
     SET NOCOUNT ON
 
     INSERT INTO [dbo].[Organization]
-    (
+        (
         [Id],
         [Identifier],
         [Name],
@@ -134,7 +138,7 @@ BEGIN
         [SyncSeats],
         [UseAutomaticUserConfirmation],
         [UsePhishingBlocker]
-    )
+        )
     VALUES
         (
             @Id,
