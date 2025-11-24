@@ -15,6 +15,7 @@ using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Commands.Interfaces;
 using Bit.Core.KeyManagement.Models.Data;
+using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -361,5 +362,40 @@ public class AccountsKeyManagementControllerTests
 
         await sutProvider.GetDependency<IUserService>().Received(1)
             .ConvertToKeyConnectorAsync(Arg.Is(expectedUser));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetKeyConnectorConfirmationDetailsAsync_NoUser_Throws(
+        SutProvider<AccountsKeyManagementController> sutProvider, string orgSsoIdentifier)
+    {
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .ReturnsNull();
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.GetKeyConnectorConfirmationDetailsAsync(orgSsoIdentifier));
+
+        await sutProvider.GetDependency<IKeyConnectorConfirmationDetailsQuery>().ReceivedWithAnyArgs(0)
+            .Run(Arg.Any<string>(), Arg.Any<Guid>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetKeyConnectorConfirmationDetailsAsync_Success(
+        SutProvider<AccountsKeyManagementController> sutProvider, User expectedUser, string orgSsoIdentifier)
+    {
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(expectedUser);
+        sutProvider.GetDependency<IKeyConnectorConfirmationDetailsQuery>().Run(orgSsoIdentifier, expectedUser.Id)
+            .Returns(
+                new KeyConnectorConfirmationDetails { OrganizationName = "test" }
+            );
+
+        var result = await sutProvider.Sut.GetKeyConnectorConfirmationDetailsAsync(orgSsoIdentifier);
+
+        Assert.NotNull(result);
+        Assert.Equal("test", result.OrganizationName);
+        await sutProvider.GetDependency<IKeyConnectorConfirmationDetailsQuery>().Received(1)
+            .Run(orgSsoIdentifier, expectedUser.Id);
     }
 }
