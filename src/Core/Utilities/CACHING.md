@@ -16,19 +16,24 @@ Is it organization or provider abilities data?
     Does your data need to be shared across all instances in a horizontally-scaled deployment?
     ├─ YES
     │   │
-    │   Do you need advanced cache features (stampede protection*, fail-safe, backplane)?
-    │   ├─ YES → Use `ExtendedCache`
-    │   └─ NO
+    │   Do you need long-term persistence with TTL (days/weeks)?
+    │   ├─ YES → Use `IDistributedCache` with persistent keyed service
+    │   └─ NO → Use `ExtendedCache`
     │       │
-    │       Do you need long-term persistence with TTL (days/weeks)?
-    │       ├─ YES → Use `IDistributedCache` with persistent keyed service
-    │       └─ NO → Use `IDistributedCache` default
+    │       Notes:
+    │       - With Redis configured: memory + distributed + backplane
+    │       - Without Redis: memory-only with stampede protection
+    │       - Provides fail-safe, eager refresh, circuit breaker
     │
     └─ NO (single instance or manual sync acceptable)
         │
-        Do you need sub-second performance for high-frequency reads?
-        ├─ YES → Use Specialized In-Memory Cache
-        └─ NO → Use `ExtendedCache` with memory-only mode
+        Use `ExtendedCache` with memory-only mode (EnableDistributedCache = false)
+        │
+        Notes:
+        - Same performance as raw IMemoryCache
+        - Built-in stampede protection, eager refresh, fail-safe
+        - "Free" Redis/backplane if available (but not required)
+        - Only use specialized in-memory cache if ExtendedCache API doesn't fit
 
 *Stampede protection = prevents cache stampedes (multiple simultaneous requests for the same expired/missing key triggering redundant backend calls)
 ```
@@ -110,11 +115,24 @@ Each named cache automatically receives:
 #### 1. Register the cache (in Startup.cs):
 
 ```csharp
-// Option 1: Use default settings with shared Redis
+// Option 1: Use default settings with shared Redis (if available)
 services.AddDistributedCache(globalSettings);
 services.AddExtendedCache("MyFeatureCache", globalSettings);
 
-// Option 2: Override default settings
+// Option 2: Memory-only mode for high-performance single-instance caching
+services.AddExtendedCache("MyFeatureCache", globalSettings, new GlobalSettings.ExtendedCacheSettings
+{
+    EnableDistributedCache = false,  // Memory-only, same performance as IMemoryCache
+    Duration = TimeSpan.FromHours(1),
+    IsFailSafeEnabled = true,
+    EagerRefreshThreshold = 0.9 // Refresh at 90% of TTL
+});
+// When EnableDistributedCache = false:
+// - Uses memory-only caching (same performance as raw IMemoryCache)
+// - Still provides stampede protection, eager refresh, fail-safe
+// - Redis/backplane are "free" if available but not required
+
+// Option 3: Override default settings with Redis
 services.AddExtendedCache("MyFeatureCache", globalSettings, new GlobalSettings.ExtendedCacheSettings
 {
     Duration = TimeSpan.FromHours(1),
@@ -123,7 +141,7 @@ services.AddExtendedCache("MyFeatureCache", globalSettings, new GlobalSettings.E
     EagerRefreshThreshold = 0.9 // Refresh at 90% of TTL
 });
 
-// Option 3: Isolated Redis for specialized features
+// Option 4: Isolated Redis for specialized features
 services.AddExtendedCache("SpecializedCache", globalSettings, new GlobalSettings.ExtendedCacheSettings
 {
     UseSharedRedisCache = false,
@@ -235,12 +253,16 @@ public class SsoAuthorizationService
 **Self-hosted**:
 
 1. Redis (if configured in `appsettings.json`)
-2. Memory-only (default fallback)
+2. SQL Server / EF Cache (if `IDistributedCache` is registered and no Redis)
+3. Memory-only (default fallback)
+
+> **Note**: ExtendedCache works seamlessly with any `IDistributedCache` backend. In self-hosted scenarios without Redis, you can configure ExtendedCache to use SQL Server or Entity Framework cache as its distributed layer. This provides local memory caching in front of the database cache, with the option to add Redis later if needed. You won't get the backplane (cross-instance invalidation) without Redis, but you still get stampede protection, eager refresh, and fail-safe mode.
 
 ### When NOT to Use
 
-- Organization/Provider abilities (use `IApplicationCacheService` instead)
-- Extremely high-frequency reads (>10K req/s) where serialization overhead matters (use in-memory)
+- **Organization/Provider abilities** - Use `IApplicationCacheService` instead (domain-specific implementation)
+- **Long-term persistent data** (days/weeks) - Use `IDistributedCache` with persistent keyed service for structured TTL support
+- **Custom caching logic** - If ExtendedCache's API doesn't fit your use case, consider specialized in-memory cache
 
 ---
 
@@ -255,11 +277,12 @@ public class SsoAuthorizationService
 
 **Default `IDistributedCache`**:
 
-- **Simple key-value caching** without advanced features
-- **Ephemeral data** (2FA codes, TOTP tokens, email tokens, replay prevention)
-- **Short-lived data** (≤15 minutes) that doesn't need fail-safe or stampede protection
-- **Authentication session tickets**
-- You need **direct control** over serialization and expiration
+- **Legacy code** already using `IDistributedCache` (consider migrating to `ExtendedCache`)
+- **Third-party integrations** requiring `IDistributedCache` interface
+- **ASP.NET Core session storage** (framework dependency)
+- You have **specific requirements** that ExtendedCache doesn't support
+
+> **Note**: For new code, prefer `ExtendedCache` over default `IDistributedCache`. ExtendedCache can be configured with `EnableDistributedCache = false` to use memory-only caching with the same performance as raw `IMemoryCache`, while still providing stampede protection, fail-safe, and eager refresh.
 
 **Persistent cache** (keyed service: `"persistent"`):
 
@@ -570,9 +593,9 @@ services.AddKeyedSingleton<IDistributedCache, CosmosCache>("persistent", (provid
 
 ### When NOT to Use
 
-- Data requiring stampede protection (use `ExtendedCache`)
-- Organization/Provider abilities (use `IApplicationCacheService`)
-- Extremely high-frequency reads where serialization overhead matters (use in-memory cache)
+- **New general-purpose caching** - Use `ExtendedCache` instead for stampede protection, fail-safe, and backplane support
+- **Organization/Provider abilities** - Use `IApplicationCacheService` instead
+- **Short-lived ephemeral data** without persistence requirements - Use `ExtendedCache` (simpler, more features)
 
 ---
 
@@ -640,12 +663,18 @@ For general caching needs, use:
 
 ## Specialized In-Memory Cache
 
+> **Recommendation**: In most cases, use `ExtendedCache` with `EnableDistributedCache = false` instead of implementing a specialized in-memory cache. ExtendedCache provides the same memory-only performance with built-in stampede protection, eager refresh, and fail-safe capabilities.
+
 ### When to Use
 
-- **Extremely high-frequency reads** (>10K requests/second)
-- **Hot path optimization** where serialization overhead is unacceptable
-- **Application-level configuration** that rarely changes
-- **Single-instance deployments** or manual cache synchronization is acceptable
+Use a specialized in-memory cache only when:
+
+- **ExtendedCache's API doesn't fit** your specific use case
+- **Custom eviction logic** is required beyond TTL-based expiration
+- **Non-standard data structures** (e.g., priority queues, LRU with custom scoring)
+- **Direct memory access patterns** that bypass serialization entirely
+
+For general high-performance caching, prefer `ExtendedCache` with memory-only mode.
 
 ### Pros
 
@@ -732,9 +761,12 @@ public class MyService
 
 ### When NOT to Use
 
-- Multi-instance deployments requiring consistency (use `ExtendedCache` or `IDistributedCache`)
-- Data that benefits from fail-safe mode (use `ExtendedCache`)
-- Long-lived OAuth grants (use persistent `IDistributedCache`)
+- **Most general-purpose caching** - Use `ExtendedCache` with memory-only mode instead
+- **Data requiring stampede protection** - Use `ExtendedCache`
+- **Multi-instance deployments** requiring consistency - Use `ExtendedCache` with Redis
+- **Long-lived OAuth grants** - Use persistent `IDistributedCache`
+
+> **Important**: Before implementing a custom in-memory cache, first try `ExtendedCache` with `EnableDistributedCache = false`. This gives you memory-only performance with automatic stampede protection, eager refresh, and fail-safe mode.
 
 ---
 
