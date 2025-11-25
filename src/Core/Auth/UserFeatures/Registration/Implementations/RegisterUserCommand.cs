@@ -44,6 +44,18 @@ public class RegisterUserCommand : IRegisterUserCommand
 
     private readonly string _disabledUserRegistrationExceptionMsg = "Open registration has been disabled by the system administrator.";
 
+
+    /// <summary>
+    /// A list of plan types that are considered Family or Free plans. <see cref="PlanType"/>
+    /// </summary>
+    private static PlanType[] FamilyAndFreePlanTypes =>
+    [
+        PlanType.Free,
+        PlanType.FamiliesAnnually,
+        PlanType.FamiliesAnnually2019,
+        PlanType.FamiliesAnnually2025
+    ];
+
     public RegisterUserCommand(
             ILogger<RegisterUserCommand> logger,
             IGlobalSettings globalSettings,
@@ -455,9 +467,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         else if (!string.IsNullOrEmpty(organization.DisplayName()))
         {
             // If the organization is Free or Families plan, send families welcome email
-            if (organization.PlanType is PlanType.FamiliesAnnually
-                or PlanType.FamiliesAnnually2019
-                or PlanType.Free)
+            if (FamilyAndFreePlanTypes.Contains(organization.PlanType))
             {
                 await _mailService.SendFreeOrgOrFamilyOrgUserWelcomeEmailAsync(user, organization.DisplayName());
             }
