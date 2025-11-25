@@ -193,7 +193,7 @@ public class VerifyOrganizationDomainCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task UserVerifyOrganizationDomainAsync_WhenPolicyValidatorsRefactorFlagEnabled_UsesVNextSavePolicyCommand(
+    public async Task UserVerifyOrganizationDomainAsync_UsesVNextSavePolicyCommand(
         OrganizationDomain domain, Guid userId, SutProvider<VerifyOrganizationDomainCommand> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationDomainRepository>()
@@ -206,10 +206,6 @@ public class VerifyOrganizationDomainCommandTests
 
         sutProvider.GetDependency<ICurrentContext>()
             .UserId.Returns(userId);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PolicyValidatorsRefactor)
-            .Returns(true);
 
         _ = await sutProvider.Sut.UserVerifyOrganizationDomainAsync(domain);
 
