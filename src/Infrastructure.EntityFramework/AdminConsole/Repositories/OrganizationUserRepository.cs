@@ -513,6 +513,10 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
         var query = from ou in dbContext.OrganizationUsers
                     where ou.OrganizationId == organizationId
+                    let hasPremiumFromOrg = ou.User != null && dbContext.OrganizationUsers
+                        .Where(ou2 => ou2.UserId == ou.User.Id)
+                        .Join(dbContext.Organizations, ou2 => ou2.OrganizationId, o2 => o2.Id, (ou2, o2) => o2)
+                        .Any(o2 => o2.UsersGetPremium && o2.Enabled)
                     select new OrganizationUserUserDetails
                     {
                         Id = ou.Id,
@@ -535,6 +539,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                         UsesKeyConnector = ou.User != null && ou.User.UsesKeyConnector,
                         AccessSecretsManager = ou.AccessSecretsManager,
                         HasMasterPassword = ou.User != null && !string.IsNullOrWhiteSpace(ou.User.MasterPassword),
+                        HasPremiumAccess = ou.User != null && (ou.User.Premium || hasPremiumFromOrg),
 
                         // Project directly from navigation properties with conditional loading
                         Groups = includeGroups

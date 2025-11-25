@@ -11,7 +11,11 @@ public class OrganizationUserUserDetailsViewQuery : IQuery<OrganizationUserUserD
                     from u in u_g.DefaultIfEmpty()
                     join su in dbContext.SsoUsers on new { ou.UserId, OrganizationId = (Guid?)ou.OrganizationId } equals new { UserId = (Guid?)su.UserId, su.OrganizationId } into su_g
                     from su in su_g.DefaultIfEmpty()
-                    select new { ou, u, su };
+                    let hasPremiumFromOrg = u != null && dbContext.OrganizationUsers
+                        .Where(ou2 => ou2.UserId == u.Id)
+                        .Join(dbContext.Organizations, ou2 => ou2.OrganizationId, o2 => o2.Id, (ou2, o2) => o2)
+                        .Any(o2 => o2.UsersGetPremium && o2.Enabled)
+                    select new { ou, u, su, hasPremiumFromOrg };
         return query.Select(x => new OrganizationUserUserDetails
         {
             Id = x.ou.Id,
@@ -30,7 +34,8 @@ public class OrganizationUserUserDetailsViewQuery : IQuery<OrganizationUserUserD
             ResetPasswordKey = x.ou.ResetPasswordKey,
             UsesKeyConnector = x.u != null && x.u.UsesKeyConnector,
             AccessSecretsManager = x.ou.AccessSecretsManager,
-            HasMasterPassword = x.u != null && !string.IsNullOrWhiteSpace(x.u.MasterPassword)
+            HasMasterPassword = x.u != null && !string.IsNullOrWhiteSpace(x.u.MasterPassword),
+            HasPremiumAccess = x.u != null && (x.u.Premium || x.hasPremiumFromOrg)
         });
     }
 }
