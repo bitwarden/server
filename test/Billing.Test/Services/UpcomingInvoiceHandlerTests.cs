@@ -981,7 +981,6 @@ public class UpcomingInvoiceHandlerTests
                         Id = passwordManagerItemId,
                         Price = new Price { Id = families2019Plan.PasswordManager.StripePlanId }
                     },
-
                     new()
                     {
                         Id = premiumAccessItemId,
