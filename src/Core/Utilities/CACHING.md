@@ -9,31 +9,28 @@ Caching options available in Bitwarden's server. The server uses multiple cachin
 Use this decision tree to identify the appropriate caching option for your feature:
 
 ```
-Is it organization or provider abilities data?
-├─ YES → Use `IApplicationCacheService`
-└─ NO
+Does your data need to be shared across all instances in a horizontally-scaled deployment?
+├─ YES
+│   │
+│   Do you need long-term persistence with TTL (days/weeks)?
+│   ├─ YES → Use `IDistributedCache` with persistent keyed service
+│   └─ NO → Use `ExtendedCache`
+│       │
+│       Notes:
+│       - With Redis configured: memory + distributed + backplane
+│       - Without Redis: memory-only with stampede protection
+│       - Provides fail-safe, eager refresh, circuit breaker
+│       - For org/provider abilities: Use GetOrSetAsync with preloading pattern
+│
+└─ NO (single instance or manual sync acceptable)
     │
-    Does your data need to be shared across all instances in a horizontally-scaled deployment?
-    ├─ YES
-    │   │
-    │   Do you need long-term persistence with TTL (days/weeks)?
-    │   ├─ YES → Use `IDistributedCache` with persistent keyed service
-    │   └─ NO → Use `ExtendedCache`
-    │       │
-    │       Notes:
-    │       - With Redis configured: memory + distributed + backplane
-    │       - Without Redis: memory-only with stampede protection
-    │       - Provides fail-safe, eager refresh, circuit breaker
+    Use `ExtendedCache` with memory-only mode (EnableDistributedCache = false)
     │
-    └─ NO (single instance or manual sync acceptable)
-        │
-        Use `ExtendedCache` with memory-only mode (EnableDistributedCache = false)
-        │
-        Notes:
-        - Same performance as raw IMemoryCache
-        - Built-in stampede protection, eager refresh, fail-safe
-        - "Free" Redis/backplane if available (but not required)
-        - Only use specialized in-memory cache if ExtendedCache API doesn't fit
+    Notes:
+    - Same performance as raw IMemoryCache
+    - Built-in stampede protection, eager refresh, fail-safe
+    - "Free" Redis/backplane if available (but not required)
+    - Only use specialized in-memory cache if ExtendedCache API doesn't fit
 
 *Stampede protection = prevents cache stampedes (multiple simultaneous requests for the same expired/missing key triggering redundant backend calls)
 ```
@@ -47,7 +44,6 @@ Is it organization or provider abilities data?
 | **ExtendedCache**                      | General-purpose caching with advanced features | ✅ Yes           | ✅ Yes      | Redis, Memory          |
 | **IDistributedCache** (default)        | Short-lived key-value caching                  | ✅ Yes           | ⚠️ Manual   | Redis, SQL, EF         |
 | **IDistributedCache** (`"persistent"`) | Long-lived data with TTL                       | ✅ Yes           | ✅ Yes      | Cosmos, Redis, SQL, EF |
-| **IApplicationCacheService**           | Org/Provider abilities                         | ✅ Yes           | ❌ No       | Memory + Service Bus   |
 | **In-Memory Cache**                    | High-frequency reads, single instance          | ❌ No            | ⚠️ Manual   | Memory                 |
 
 ---
@@ -258,9 +254,73 @@ public class SsoAuthorizationService
 
 > **Note**: ExtendedCache works seamlessly with any `IDistributedCache` backend. In self-hosted scenarios without Redis, you can configure ExtendedCache to use SQL Server or Entity Framework cache as its distributed layer. This provides local memory caching in front of the database cache, with the option to add Redis later if needed. You won't get the backplane (cross-instance invalidation) without Redis, but you still get stampede protection, eager refresh, and fail-safe mode.
 
+### Specific Example: Organization/Provider Abilities
+
+Organization and provider abilities are read extremely frequently (on every request that checks permissions) but change infrequently. `ExtendedCache` is ideal for this access pattern with its eager refresh and Redis backplane support:
+
+```csharp
+services.AddExtendedCache("OrganizationAbilities", globalSettings, new GlobalSettings.ExtendedCacheSettings
+{
+    Duration = TimeSpan.FromMinutes(10),
+    EagerRefreshThreshold = 0.9,  // Refresh at 90% of TTL
+    IsFailSafeEnabled = true,
+    FailSafeMaxDuration = TimeSpan.FromHours(1)  // Serve stale data up to 1 hour on backend failures
+});
+
+public class OrganizationAbilityService
+{
+    private readonly IFusionCache _cache;
+    private readonly IOrganizationRepository _organizationRepository;
+
+    public OrganizationAbilityService(
+        [FromKeyedServices("OrganizationAbilities")] IFusionCache cache,
+        IOrganizationRepository organizationRepository)
+    {
+        _cache = cache;
+        _organizationRepository = organizationRepository;
+    }
+
+    public async Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync()
+    {
+        return await _cache.GetOrSetAsync<IDictionary<Guid, OrganizationAbility>>(
+            "all-org-abilities",
+            async _ =>
+            {
+                var abilities = await _organizationRepository.GetManyAbilitiesAsync();
+                return abilities.ToDictionary(a => a.Id);
+            }
+        );
+    }
+
+    public async Task<OrganizationAbility?> GetOrganizationAbilityAsync(Guid orgId)
+    {
+        var abilities = await GetOrganizationAbilitiesAsync();
+        abilities.TryGetValue(orgId, out var ability);
+        return ability;
+    }
+
+    public async Task UpsertOrganizationAbilityAsync(Organization organization)
+    {
+        // Update database
+        await _organizationRepository.ReplaceAsync(organization);
+
+        // Invalidate cache - with Redis backplane, this broadcasts to all instances
+        await _cache.RemoveAsync("all-org-abilities");
+    }
+}
+```
+
+**Why `ExtendedCache` for org/provider abilities:**
+
+- **High-frequency reads**: Every permission check reads abilities
+- **Infrequent writes**: Abilities change rarely
+- **Eager refresh**: Automatically refreshes at 90% of TTL to prevent cache misses
+- **Fail-safe mode**: Serves stale data if database temporarily unavailable
+- **Redis backplane**: Automatically invalidates across all instances when abilities change
+- **No Service Bus dependency**: Simpler infrastructure (one Redis instead of Redis + Service Bus)
+
 ### When NOT to Use
 
-- **Organization/Provider abilities** - Use `IApplicationCacheService` instead (domain-specific implementation)
 - **Long-term persistent data** (days/weeks) - Use `IDistributedCache` with persistent keyed service for structured TTL support
 - **Custom caching logic** - If ExtendedCache's API doesn't fit your use case, consider specialized in-memory cache
 
@@ -594,70 +654,49 @@ services.AddKeyedSingleton<IDistributedCache, CosmosCache>("persistent", (provid
 ### When NOT to Use
 
 - **New general-purpose caching** - Use `ExtendedCache` instead for stampede protection, fail-safe, and backplane support
-- **Organization/Provider abilities** - Use `IApplicationCacheService` instead
+- **Organization/Provider abilities** - Use `ExtendedCache` with preloading pattern (see example above)
 - **Short-lived ephemeral data** without persistence requirements - Use `ExtendedCache` (simpler, more features)
 
 ---
 
-## `IApplicationCacheService`
+## `IApplicationCacheService` (Deprecated)
 
-> **Note**: This is a **highly domain-specific caching service** for Bitwarden organization and provider abilities. It is built on top of the core caching primitives (in-memory cache + Service Bus for invalidation) and is **not implemented for most domains**.
+> **⚠️ Deprecated**: This service is being phased out in favor of `ExtendedCache`. New code should use `ExtendedCache` with the preloading pattern shown in the [Organization/Provider Abilities example](#specific-example-organizationprovider-abilities) above.
 
-### When to Use
+### Background
 
-This service is **pre-built for specific Bitwarden domains** and should only be used for:
+`IApplicationCacheService` was a **highly domain-specific caching service** built for Bitwarden organization and provider abilities. It used in-memory cache with Azure Service Bus for cross-instance invalidation.
 
-- **Organization abilities** (feature flags, enabled features, billing status)
-- **Provider abilities** (provider-level feature flags and configuration)
+**Why it's being replaced:**
 
-This service is **highly specific to these domains** and is not implemented for other use cases. For new caching needs, use `ExtendedCache` or `IDistributedCache` directly.
+- **Infrastructure complexity**: Required both Redis and Azure Service Bus
+- **Limited applicability**: Only worked for org/provider abilities
+- **Maintenance burden**: Custom implementation instead of leveraging standard caching primitives
+- **Better alternative exists**: `ExtendedCache` with Redis backplane provides the same functionality with simpler infrastructure
 
-### How It Works
+### Migration Path
 
-Organization and provider abilities are read extremely frequently (every request that checks permissions) but change infrequently. This service optimizes for this access pattern by:
+**Old approach** (IApplicationCacheService):
 
-1. Loading all abilities into memory on startup
-2. Serving reads from in-memory cache (no database calls)
-3. Invalidating cache across all instances when abilities change (via Service Bus)
-4. Periodically refreshing to catch missed updates
+- In-memory cache with periodic refresh
+- Azure Service Bus for cross-instance invalidation
+- Custom implementation for each domain
 
-### Example Usage
+**New approach** (ExtendedCache):
 
-```csharp
-public class OrganizationService
-{
-    private readonly IApplicationCacheService _applicationCacheService;
+- Memory + Redis distributed cache with backplane
+- Eager refresh for automatic background updates
+- Fail-safe mode for resilience
+- Standard FusionCache API
+- One Redis instance instead of Redis + Service Bus
 
-    public OrganizationService(IApplicationCacheService applicationCacheService)
-    {
-        _applicationCacheService = applicationCacheService;
-    }
-
-    public async Task<OrganizationAbility> GetOrganizationAbilityAsync(Guid orgId)
-    {
-        return await _applicationCacheService.GetOrganizationAbilityAsync(orgId);
-    }
-
-    public async Task UpdateOrganizationAsync(Organization org)
-    {
-        // Update database
-        await _organizationRepository.ReplaceAsync(org);
-
-        // Invalidate cache (broadcasts to all instances via Service Bus)
-        await _applicationCacheService.UpsertOrganizationAbilityAsync(org);
-    }
-}
-```
+See the [Organization/Provider Abilities example](#specific-example-organizationprovider-abilities) for the recommended migration pattern.
 
 ### When NOT to Use
 
-❌ **Any domain other than org/provider abilities**
+❌ **Do not use for new code** - Use `ExtendedCache` instead
 
-For general caching needs, use:
-
-- `ExtendedCache` for feature-level caching with advanced capabilities
-- `IDistributedCache` for simple key-value caching
-- Specialized in-memory cache for extreme performance needs
+For existing code using `IApplicationCacheService`, plan migration to `ExtendedCache` using the pattern shown above.
 
 ---
 
@@ -781,7 +820,6 @@ The following table shows how different caching options resolve to storage backe
 | **ExtendedCache**                      | Redis → Memory            | Redis → Memory              | `GlobalSettings.DistributedCache.Redis.ConnectionString`  |
 | **IDistributedCache** (default)        | Redis                     | Redis → SQL → EF            | `GlobalSettings.DistributedCache.Redis.ConnectionString`  |
 | **IDistributedCache** (`"persistent"`) | Cosmos → Redis            | Redis → SQL → EF            | `GlobalSettings.DistributedCache.Cosmos.ConnectionString` |
-| **IApplicationCacheService**           | Memory + Service Bus      | Memory                      | `GlobalSettings.ServiceBus.ConnectionString`              |
 | **OAuth Grants** (long-lived)          | Persistent cache (Cosmos) | `IGrantRepository` (SQL/EF) | Various (see above)                                       |
 
 ### Redis Configuration
@@ -860,19 +898,6 @@ No additional configuration required. Uses existing database connection.
 
 - Table: `Cache`
 - Migrations: Applied automatically
-
-### Azure Service Bus (ApplicationCacheService only)
-
-```json
-{
-  "GlobalSettings": {
-    "ServiceBus": {
-      "ConnectionString": "Endpoint=sb://...;SharedAccessKeyName=...;SharedAccessKey=...",
-      "ApplicationCacheTopicName": "application-cache"
-    }
-  }
-}
-```
 
 ---
 
