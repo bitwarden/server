@@ -101,7 +101,7 @@ Each named cache automatically receives:
 
 ❌ Slightly more overhead than raw `IDistributedCache`
 
-❌ Redis dependency for multi-instance deployments (but degrades gracefully to memory-only)
+❌ IDistributedCache dependency for multi-instance deployments (typically Redis, but degrades gracefully to memory-only)
 
 ### Example Usage
 
@@ -160,6 +160,16 @@ public class MyService
 
     // Option B: Request manually from service provider
     // cache = provider.GetRequiredKeyedService<IFusionCache>(serviceKey: "MyFeatureCache")
+
+    // Option C: Inject IFusionCacheProvider and request the named cache
+    // (similar to IHttpClientFactory pattern)
+    public MyService(
+        IFusionCacheProvider cacheProvider,
+        IItemRepository itemRepository)
+    {
+        _cache = cacheProvider.GetCache("MyFeatureCache");
+        _itemRepository = itemRepository;
+    }
 
     public async Task<Item> GetItemAsync(Guid id)
     {
@@ -288,7 +298,7 @@ public class SsoAuthorizationService
 
 ### Example Usage: Default (Ephemeral Data)
 
-#### 1. Registration (already done in all Startup.cs files):
+#### 1. Registration (already done in Api, Admin, Billing, Identity, and Notifications Startup.cs files, plus Events and EventsProcessor service collection extensions):
 
 ```csharp
 services.AddDistributedCache(globalSettings);
