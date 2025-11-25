@@ -42,7 +42,7 @@ public class OrganizationUsersControllerPutResetPasswordTests : IClassFixture<Ap
         _loginHelper = new LoginHelper(_factory, _client);
     }
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         _ownerEmail = $"reset-password-test-{Guid.NewGuid()}@example.com";
         await _factory.LoginWithNewAccount(_ownerEmail);
@@ -67,10 +67,10 @@ public class OrganizationUsersControllerPutResetPasswordTests : IClassFixture<Ap
         });
     }
 
-    public Task DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         _client.Dispose();
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
     /// <summary>

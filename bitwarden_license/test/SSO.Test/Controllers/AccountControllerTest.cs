@@ -23,7 +23,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using Xunit.Abstractions;
 using AuthenticationOptions = Duende.IdentityServer.Configuration.AuthenticationOptions;
 
 namespace Bit.SSO.Test.Controllers;

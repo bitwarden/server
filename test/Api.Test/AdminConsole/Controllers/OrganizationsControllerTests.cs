@@ -1,5 +1,5 @@
 ﻿using System.Security.Claims;
-using AutoFixture.Xunit2;
+using AutoFixture.Xunit3;
 using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Models.Request.Organizations;

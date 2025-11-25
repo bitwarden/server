@@ -1,4 +1,4 @@
-﻿using AutoFixture.Xunit2;
+﻿using AutoFixture.Xunit3;
 using Bit.Api.AdminConsole.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;

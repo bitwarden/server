@@ -1,6 +1,6 @@
 ﻿using System.Reflection;
 using AutoFixture;
-using AutoFixture.Xunit2;
+using AutoFixture.Xunit3;
 using Bit.Core.AdminConsole.Enums.Provider;
 
 namespace Bit.Commercial.Core.Test.AdminConsole.AutoFixture;
