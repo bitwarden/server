@@ -5,8 +5,6 @@ using System.Net;
 using Bit.Api.AdminConsole.Public.Models.Request;
 using Bit.Api.AdminConsole.Public.Models.Response;
 using Bit.Api.Models.Public.Response;
-using Bit.Core;
-using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
@@ -24,10 +22,7 @@ namespace Bit.Api.AdminConsole.Public.Controllers;
 public class PoliciesController : Controller
 {
     private readonly IPolicyRepository _policyRepository;
-    private readonly IPolicyService _policyService;
     private readonly ICurrentContext _currentContext;
-    private readonly IFeatureService _featureService;
-    private readonly ISavePolicyCommand _savePolicyCommand;
     private readonly IVNextSavePolicyCommand _vNextSavePolicyCommand;
 
     public PoliciesController(
@@ -39,10 +34,7 @@ public class PoliciesController : Controller
         IVNextSavePolicyCommand vNextSavePolicyCommand)
     {
         _policyRepository = policyRepository;
-        _policyService = policyService;
         _currentContext = currentContext;
-        _featureService = featureService;
-        _savePolicyCommand = savePolicyCommand;
         _vNextSavePolicyCommand = vNextSavePolicyCommand;
     }
 
@@ -97,17 +89,8 @@ public class PoliciesController : Controller
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
     public async Task<IActionResult> Put(PolicyType type, [FromBody] PolicyUpdateRequestModel model)
     {
-        Policy policy;
-        if (_featureService.IsEnabled(FeatureFlagKeys.PolicyValidatorsRefactor))
-        {
-            var savePolicyModel = model.ToSavePolicyModel(_currentContext.OrganizationId!.Value, type);
-            policy = await _vNextSavePolicyCommand.SaveAsync(savePolicyModel);
-        }
-        else
-        {
-            var policyUpdate = model.ToPolicyUpdate(_currentContext.OrganizationId!.Value, type);
-            policy = await _savePolicyCommand.SaveAsync(policyUpdate);
-        }
+        var savePolicyModel = model.ToSavePolicyModel(_currentContext.OrganizationId!.Value, type);
+        var policy = await _vNextSavePolicyCommand.SaveAsync(savePolicyModel);
 
         var response = new PolicyResponseModel(policy);
         return new JsonResult(response);
