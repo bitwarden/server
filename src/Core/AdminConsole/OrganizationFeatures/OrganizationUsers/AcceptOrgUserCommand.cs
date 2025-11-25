@@ -3,6 +3,7 @@
 
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Models.Business.Tokenables;
@@ -34,6 +35,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IFeatureService _featureService;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
+    private readonly IAutomaticUserConfirmationPolicyEnforcementQuery _automaticUserConfirmationPolicyEnforcementQuery;
 
     public AcceptOrgUserCommand(
         IDataProtectionProvider dataProtectionProvider,
@@ -46,7 +48,8 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
         IFeatureService featureService,
-        IPolicyRequirementQuery policyRequirementQuery)
+        IPolicyRequirementQuery policyRequirementQuery,
+        IAutomaticUserConfirmationPolicyEnforcementQuery automaticUserConfirmationPolicyEnforcementQuery)
     {
         // TODO: remove data protector when old token validation removed
         _dataProtector = dataProtectionProvider.CreateProtector(OrgUserInviteTokenable.DataProtectorPurpose);
@@ -60,6 +63,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
         _featureService = featureService;
         _policyRequirementQuery = policyRequirementQuery;
+        _automaticUserConfirmationPolicyEnforcementQuery = automaticUserConfirmationPolicyEnforcementQuery;
     }
 
     public async Task<OrganizationUser> AcceptOrgUserByEmailTokenAsync(Guid organizationUserId, User user, string emailToken,
@@ -186,13 +190,16 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
             }
         }
 
-        // Enforce Single Organization Policy of organization user is trying to join
         var allOrgUsers = await _organizationUserRepository.GetManyByUserAsync(user.Id);
-        var hasOtherOrgs = allOrgUsers.Any(ou => ou.OrganizationId != orgUser.OrganizationId);
+
+        await ValidateAutomaticUserConfirmationPolicyAsync(orgUser, allOrgUsers, user);
+
+        // Enforce Single Organization Policy of organization user is trying to join
         var invitedSingleOrgPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id,
             PolicyType.SingleOrg, OrganizationUserStatusType.Invited);
 
-        if (hasOtherOrgs && invitedSingleOrgPolicies.Any(p => p.OrganizationId == orgUser.OrganizationId))
+        if (allOrgUsers.Any(ou => ou.OrganizationId != orgUser.OrganizationId)
+            && invitedSingleOrgPolicies.Any(p => p.OrganizationId == orgUser.OrganizationId))
         {
             throw new BadRequestException("You may not join this organization until you leave or remove all other organizations.");
         }
@@ -253,6 +260,22 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
             {
                 throw new BadRequestException("You cannot join this organization until you enable two-step login on your user account.");
             }
+        }
+    }
+
+    private async Task ValidateAutomaticUserConfirmationPolicyAsync(OrganizationUser orgUser,
+        ICollection<OrganizationUser> allOrgUsers, User user)
+    {
+        var error = (await _automaticUserConfirmationPolicyEnforcementQuery.IsCompliantAsync(
+                new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser, allOrgUsers, user)))
+            .Match(
+                error => error.Message,
+                _ => string.Empty
+            );
+
+        if (!string.IsNullOrEmpty(error))
+        {
+            throw new BadRequestException(error);
         }
     }
 }
