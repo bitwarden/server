@@ -29,7 +29,7 @@ Does your data need to be shared across all instances in a horizontally-scaled d
     Notes:
     - Same performance as raw IMemoryCache
     - Built-in stampede protection, eager refresh, fail-safe
-    - "Free" Redis/backplane if available (but not required)
+    - "Free" Redis/backplane if needed at a later date (but not required)
     - Only use specialized in-memory cache if ExtendedCache API doesn't fit
 
 *Stampede protection = prevents cache stampedes (multiple simultaneous requests for the same expired/missing key triggering redundant backend calls)
@@ -126,7 +126,7 @@ services.AddExtendedCache("MyFeatureCache", globalSettings, new GlobalSettings.E
 // When EnableDistributedCache = false:
 // - Uses memory-only caching (same performance as raw IMemoryCache)
 // - Still provides stampede protection, eager refresh, fail-safe
-// - Redis/backplane are "free" if available but not required
+// - Redis/backplane can be enabled later by setting EnableDistributedCache = true
 
 // Option 3: Override default settings with Redis
 services.AddExtendedCache("MyFeatureCache", globalSettings, new GlobalSettings.ExtendedCacheSettings
