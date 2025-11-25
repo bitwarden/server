@@ -142,7 +142,6 @@ public static class FeatureFlagKeys
     public const string PM23845_VNextApplicationCache = "pm-24957-refactor-memory-application-cache";
     public const string AccountRecoveryCommand = "pm-25581-prevent-provider-account-recovery";
     public const string BlockClaimedDomainAccountCreation = "pm-28297-block-uninvited-claimed-domain-registration";
-    public const string PolicyValidatorsRefactor = "pm-26423-refactor-policy-side-effects";
     public const string IncreaseBulkReinviteLimitForCloud = "pm-28251-increase-bulk-reinvite-limit-for-cloud";
 
     /* Architecture */
