@@ -90,7 +90,6 @@ public class OrganizationLicense : ILicense
         SmServiceAccounts = org.SmServiceAccounts;
         UseRiskInsights = org.UseRiskInsights;
         UseOrganizationDomains = org.UseOrganizationDomains;
-        UsePhishingBlocker = org.UsePhishingBlocker;
 
         // Deprecated. Left for backwards compatibility with old license versions.
         LimitCollectionCreationDeletion = org.LimitCollectionCreation || org.LimitCollectionDeletion;
