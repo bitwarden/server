@@ -247,7 +247,6 @@ public static class FeatureFlagKeys
     public const string PM8851_BrowserOnboardingNudge = "pm-8851-browser-onboarding-nudge";
     public const string CipherKeyEncryption = "cipher-key-encryption";
     public const string PM19941MigrateCipherDomainToSdk = "pm-19941-migrate-cipher-domain-to-sdk";
-    public const string EndUserNotifications = "pm-10609-end-user-notifications";
     public const string PhishingDetection = "phishing-detection";
     public const string RemoveCardItemTypePolicy = "pm-16442-remove-card-item-type-policy";
     public const string PM22134SdkCipherListView = "pm-22134-sdk-cipher-list-view";
