@@ -189,7 +189,7 @@ public class AccountsKeyManagementController : Controller
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
         {
-            throw new NotFoundException();
+            throw new UnauthorizedAccessException();
         }
 
         var details = await _keyConnectorConfirmationDetailsQuery.Run(orgSsoIdentifier, user.Id);

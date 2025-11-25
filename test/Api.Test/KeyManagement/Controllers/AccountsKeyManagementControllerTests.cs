@@ -372,7 +372,7 @@ public class AccountsKeyManagementControllerTests
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
             .ReturnsNull();
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
             sutProvider.Sut.GetKeyConnectorConfirmationDetailsAsync(orgSsoIdentifier));
 
         await sutProvider.GetDependency<IKeyConnectorConfirmationDetailsQuery>().ReceivedWithAnyArgs(0)
