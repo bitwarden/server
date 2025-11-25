@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[User_ReadByIdsWithCalculatedPremium]
+CREATE PROCEDURE [dbo].[User_ReadByIdsWithCalculatedPremium]
     @Ids NVARCHAR(MAX)
 AS
 BEGIN
@@ -21,21 +21,11 @@ BEGIN
     -- Main query to fetch user details and calculate premium access
     SELECT
         U.*,
-        CASE
-            WHEN U.[Premium] = 1
-                OR EXISTS (
-                    SELECT 1
-                    FROM [dbo].[OrganizationUser] OU
-                    JOIN [dbo].[Organization] O ON OU.[OrganizationId] = O.[Id]
-                    WHERE OU.[UserId] = U.[Id]
-                        AND O.[UsersGetPremium] = 1
-                        AND O.[Enabled] = 1
-                )
-                THEN 1
-            ELSE 0
-            END AS HasPremiumAccess
+        ISNULL(UPA.[HasPremiumAccess], 0) AS HasPremiumAccess
     FROM
         [dbo].[UserView] U
+    LEFT JOIN
+        [dbo].[UserPremiumAccessView] UPA ON UPA.[UserId] = U.[Id]
     WHERE
         U.[Id] IN (SELECT [Id] FROM @ParsedIds);
 END;
