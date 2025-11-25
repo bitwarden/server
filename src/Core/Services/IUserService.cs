@@ -64,6 +64,9 @@ public interface IUserService
     /// <param name="user">user being acted on</param>
     /// <returns>true if they can access premium; false otherwise.</returns>
     Task<bool> CanAccessPremium(ITwoFactorProvidersUser user);
+    /// <summary>
+    /// Checks if the user has premium access through organization membership (does not check personal subscription).
+    /// </summary>
     Task<bool> HasPremiumFromOrganization(ITwoFactorProvidersUser user);
     Task<string> GenerateSignInTokenAsync(User user, string purpose);
 
