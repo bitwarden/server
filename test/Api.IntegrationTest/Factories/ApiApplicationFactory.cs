@@ -66,10 +66,10 @@ public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
                 KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
                 UserAsymmetricKeys = new KeysRequestModel()
                 {
-                    PublicKey = "public_key",
-                    EncryptedPrivateKey = "private_key"
+                    PublicKey = "pk_test",
+                    EncryptedPrivateKey = "2.iv|ct|mac" // v1-format so parsing succeeds and user is treated as v1
                 },
-                UserSymmetricKey = "sym_key",
+                UserSymmetricKey = "2.iv|ct|mac",
             });
 
         return await _identityApplicationFactory.TokenFromPasswordAsync(email, masterPasswordHash);

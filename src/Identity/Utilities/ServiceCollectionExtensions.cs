@@ -25,6 +25,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IAuthorizationCodeStore, AuthorizationCodeStore>();
         services.AddTransient<IUserDecryptionOptionsBuilder, UserDecryptionOptionsBuilder>();
         services.AddTransient<IDeviceValidator, DeviceValidator>();
+        services.AddTransient<IClientVersionValidator, ClientVersionValidator>();
         services.AddTransient<ITwoFactorAuthenticationValidator, TwoFactorAuthenticationValidator>();
         services.AddTransient<ILoginApprovingClientTypes, LoginApprovingClientTypes>();
         services.AddTransient<ISendAuthenticationMethodValidator<ResourcePassword>, SendPasswordRequestValidator>();
