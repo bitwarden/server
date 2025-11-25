@@ -1,6 +1,7 @@
 {
   "packages": [
     "components/mj-bw-hero",
+    "components/mj-bw-simple-hero",
     "components/mj-bw-icon-row",
     "components/mj-bw-learn-more-footer",
     "emails/AdminConsole/components/mj-bw-inviter-info"

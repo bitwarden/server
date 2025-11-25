@@ -6,10 +6,7 @@
   <!-- Blue Header Section-->
   <mj-body css-class="border-fix">
     <mj-wrapper css-class="border-fix" padding="20px 20px 0px 20px">
-      <mj-bw-hero
-        img-src="https://assets.bitwarden.com/email/v1/account-fill.png"
-        title="Your Bitwarden Families renewal is updating"
-      />
+      <mj-bw-simple-hero />
     </mj-wrapper>
 
     <!-- Main Content Section -->
