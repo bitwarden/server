@@ -13,10 +13,10 @@ Is it organization or provider abilities data?
 ├─ YES → Use `IApplicationCacheService`
 └─ NO
     │
-    Does your data need to be shared across ALL application instances (cloud + self-hosted)?
+    Does your data need to be shared across all instances in a horizontally-scaled deployment?
     ├─ YES
     │   │
-    │   Do you need advanced cache features (stampede protection, fail-safe, backplane)?
+    │   Do you need advanced cache features (stampede protection*, fail-safe, backplane)?
     │   ├─ YES → Use `ExtendedCache`
     │   └─ NO
     │       │
@@ -29,19 +29,21 @@ Is it organization or provider abilities data?
         Do you need sub-second performance for high-frequency reads?
         ├─ YES → Use Specialized In-Memory Cache
         └─ NO → Use `ExtendedCache` with memory-only mode
+
+*Stampede protection = prevents cache stampedes (multiple simultaneous requests for the same expired/missing key triggering redundant backend calls)
 ```
 
 ---
 
 ## Caching Options Overview
 
-| Option                             | Best For                                       | Horizontal Scale | TTL Support | Backend Options        |
-| ---------------------------------- | ---------------------------------------------- | ---------------- | ----------- | ---------------------- |
-| **ExtendedCache**                  | General-purpose caching with advanced features | ✅ Yes           | ✅ Yes      | Redis, Memory          |
-| **IDistributedCache** (default)    | Short-lived key-value caching                  | ✅ Yes           | ⚠️ Manual   | Redis, SQL, EF         |
-| **IDistributedCache** (persistent) | Long-lived data with TTL                       | ✅ Yes           | ✅ Yes      | Cosmos, Redis, SQL, EF |
-| **IApplicationCacheService**       | Org/Provider abilities                         | ✅ Yes           | ❌ No       | Memory + Service Bus   |
-| **In-Memory Cache**                | High-frequency reads, single instance          | ❌ No            | ⚠️ Manual   | Memory                 |
+| Option                                 | Best For                                       | Horizontal Scale | TTL Support | Backend Options        |
+| -------------------------------------- | ---------------------------------------------- | ---------------- | ----------- | ---------------------- |
+| **ExtendedCache**                      | General-purpose caching with advanced features | ✅ Yes           | ✅ Yes      | Redis, Memory          |
+| **IDistributedCache** (default)        | Short-lived key-value caching                  | ✅ Yes           | ⚠️ Manual   | Redis, SQL, EF         |
+| **IDistributedCache** (`"persistent"`) | Long-lived data with TTL                       | ✅ Yes           | ✅ Yes      | Cosmos, Redis, SQL, EF |
+| **IApplicationCacheService**           | Org/Provider abilities                         | ✅ Yes           | ❌ No       | Memory + Service Bus   |
+| **In-Memory Cache**                    | High-frequency reads, single instance          | ❌ No            | ⚠️ Manual   | Memory                 |
 
 ---
 
@@ -59,14 +61,14 @@ Each named cache automatically receives:
 
 `ExtendedCache` supports three deployment modes:
 
-- **Memory-only caching** (with stampede protection)
+- **Memory-only caching** (with stampede protection: prevents multiple concurrent requests for the same key from hitting the backend)
 - **Memory + distributed cache + backplane** using the **shared** application Redis
 - **Memory + distributed cache + backplane** using a **fully isolated** Redis instance
 
 ### When to Use
 
 - **General-purpose caching** for any domain data
-- Features requiring **stampede protection** (prevents cache stampedes during refresh)
+- Features requiring **stampede protection** (when multiple concurrent requests for the same cache key should result in only a single backend call, with all requesters waiting for the same result)
 - Data that benefits from **fail-safe mode** (serve stale data on backend failures)
 - Multi-instance applications requiring **cache synchronization** via backplane
 - You want **isolated cache configuration** per feature
@@ -145,11 +147,15 @@ A named cache is retrieved via DI using keyed services (similar to how [IHttpCli
 public class MyService
 {
     private readonly IFusionCache _cache;
+    private readonly IItemRepository _itemRepository;
 
     // Option A: Inject via keyed service in constructor
-    public MyService([FromKeyedServices("MyFeatureCache")] IFusionCache cache)
+    public MyService(
+        [FromKeyedServices("MyFeatureCache")] IFusionCache cache,
+        IItemRepository itemRepository)
     {
         _cache = cache;
+        _itemRepository = itemRepository;
     }
 
     // Option B: Request manually from service provider
@@ -233,7 +239,7 @@ public class SsoAuthorizationService
 `IDistributedCache` provides two service registrations for different use cases:
 
 1. **Default (unnamed) service** - For ephemeral, short-lived data
-2. **Persistent (keyed service: `"persistent"`)** - For longer-lived data with structured TTL
+2. **Persistent cache** (keyed service: `"persistent"`) - For longer-lived data with structured TTL
 
 ### When to Use
 
@@ -245,7 +251,7 @@ public class SsoAuthorizationService
 - **Authentication session tickets**
 - You need **direct control** over serialization and expiration
 
-**Persistent `IDistributedCache`** (keyed: `"persistent"`):
+**Persistent cache** (keyed service: `"persistent"`):
 
 - **Critical data where memory loss would impact users** (refresh tokens, consent grants)
 - **Long-lived structured data** with automatic TTL (days to weeks)
@@ -403,13 +409,13 @@ Long-lived OAuth grants (refresh tokens, consent grants, device codes) use the p
 
 **Grant type recommendations:**
 
-| Grant Type               | Lifetime     | Durability Requirement | Recommended Storage | Rationale                                                                                    |
-| ------------------------ | ------------ | ---------------------- | ------------------- | -------------------------------------------------------------------------------------------- |
+| Grant Type               | Lifetime     | Durability Requirement | Recommended Storage | Rationale                                                                                   |
+| ------------------------ | ------------ | ---------------------- | ------------------- | ------------------------------------------------------------------------------------------- |
 | SSO authorization codes  | ≤5 min       | Ephemeral, can be lost | `ExtendedCache`     | User can re-initiate SSO flow if code is lost; short lifetime limits exposure window        |
-| OIDC authorization codes | ≤5 min       | Ephemeral, can be lost | `ExtendedCache`     | OAuth spec allows user to retry authorization; code is single-use and short-lived            |
-| PKCE code verifiers      | ≤5 min       | Ephemeral, can be lost | `ExtendedCache`     | Tied to authorization code lifecycle; can be regenerated if authorization is retried         |
-| Refresh tokens           | Days-weeks   | Must persist           | Persistent cache    | Losing these forces user re-authentication; critical for seamless user experience            |
-| Consent grants           | Weeks-months | Must persist           | Persistent cache    | User shouldn't have to re-consent frequently; loss degrades UX and trust                     |
+| OIDC authorization codes | ≤5 min       | Ephemeral, can be lost | `ExtendedCache`     | OAuth spec allows user to retry authorization; code is single-use and short-lived           |
+| PKCE code verifiers      | ≤5 min       | Ephemeral, can be lost | `ExtendedCache`     | Tied to authorization code lifecycle; can be regenerated if authorization is retried        |
+| Refresh tokens           | Days-weeks   | Must persist           | Persistent cache    | Losing these forces user re-authentication; critical for seamless user experience           |
+| Consent grants           | Weeks-months | Must persist           | Persistent cache    | User shouldn't have to re-consent frequently; loss degrades UX and trust                    |
 | Device codes             | Days         | Must persist           | Persistent cache    | Device flow is async; losing codes breaks pending device authorizations with no recovery UX |
 
 ### Backend Configuration
@@ -428,7 +434,7 @@ The backend is automatically selected based on configuration and service key:
 2. **SQL Server Cache table** (if database provider is SQL Server)
 3. **Entity Framework Cache table** (for PostgreSQL, MySQL, SQLite)
 
-#### Persistent `IDistributedCache` (keyed: `"persistent"`)
+#### Persistent cache (keyed service: `"persistent"`)
 
 **Cloud (Bitwarden-hosted)**:
 
@@ -520,7 +526,7 @@ services.AddKeyedSingleton<IDistributedCache, CosmosCache>("persistent", (provid
 
 ### Comparison: Default vs Persistent
 
-| Characteristic          | Default                        | Persistent (`"persistent"`)                    |
+| Characteristic          | Default                        | Persistent cache (`"persistent"`)              |
 | ----------------------- | ------------------------------ | ---------------------------------------------- |
 | **Primary Use Case**    | Ephemeral tokens, session data | Long-lived grants, workflow state              |
 | **Typical TTL**         | 5-15 minutes                   | Hours to weeks                                 |
@@ -667,6 +673,11 @@ public class MyFeatureCache
             ExpiresAt = DateTime.UtcNow + _defaultExpiration
         });
 
+        // WARNING: This implementation has a race condition. Multiple threads detecting
+        // expiration simultaneously may each call TryRemove and then recursively call
+        // GetOrAdd, potentially causing the factory to execute multiple times. For
+        // production use cases requiring thread-safe expiration, consider using
+        // IMemoryCache with GetOrCreateAsync or ExtendedCache with stampede protection.
         if (entry.ExpiresAt < DateTime.UtcNow)
         {
             _cache.TryRemove(key, out _);
@@ -723,13 +734,13 @@ public class MyService
 
 The following table shows how different caching options resolve to storage backends based on configuration:
 
-| Cache Option                       | Cloud Backend             | Self-Hosted Backend         | Config Setting                                            |
-| ---------------------------------- | ------------------------- | --------------------------- | --------------------------------------------------------- |
-| **ExtendedCache**                  | Redis → Memory            | Redis → Memory              | `GlobalSettings.DistributedCache.Redis.ConnectionString`  |
-| **IDistributedCache** (default)    | Redis                     | Redis → SQL → EF            | `GlobalSettings.DistributedCache.Redis.ConnectionString`  |
-| **IDistributedCache** (persistent) | Cosmos → Redis            | Redis → SQL → EF            | `GlobalSettings.DistributedCache.Cosmos.ConnectionString` |
-| **IApplicationCacheService**       | Memory + Service Bus      | Memory                      | `GlobalSettings.ServiceBus.ConnectionString`              |
-| **OAuth Grants** (long-lived)      | Persistent cache (Cosmos) | `IGrantRepository` (SQL/EF) | Various (see above)                                       |
+| Cache Option                           | Cloud Backend             | Self-Hosted Backend         | Config Setting                                            |
+| -------------------------------------- | ------------------------- | --------------------------- | --------------------------------------------------------- |
+| **ExtendedCache**                      | Redis → Memory            | Redis → Memory              | `GlobalSettings.DistributedCache.Redis.ConnectionString`  |
+| **IDistributedCache** (default)        | Redis                     | Redis → SQL → EF            | `GlobalSettings.DistributedCache.Redis.ConnectionString`  |
+| **IDistributedCache** (`"persistent"`) | Cosmos → Redis            | Redis → SQL → EF            | `GlobalSettings.DistributedCache.Cosmos.ConnectionString` |
+| **IApplicationCacheService**           | Memory + Service Bus      | Memory                      | `GlobalSettings.ServiceBus.ConnectionString`              |
+| **OAuth Grants** (long-lived)          | Persistent cache (Cosmos) | `IGrantRepository` (SQL/EF) | Various (see above)                                       |
 
 ### Redis Configuration
 
@@ -835,6 +846,8 @@ No additional configuration required. Uses existing database connection.
 | **Entity Framework** | 5-20ms       | 10-50ms       | 1K-5K req/s   |
 | **Cosmos DB**        | 5-15ms       | 5-15ms        | 10K+ req/s    |
 
+**Note**: Latencies represent typical p95 values in production environments. Redis latencies assume same-datacenter deployment and include serialization overhead. Actual performance varies based on network topology, data size, and load.
+
 ### Recommendations
 
 **For high-frequency reads (>1K req/s)**:
@@ -935,27 +948,57 @@ Examples of migrating from one caching option to another:
 **Before**:
 
 ```csharp
+// Registration
 services.AddDistributedCache(globalSettings);
 
-public MyService(IDistributedCache cache) { ... }
-
-var data = await cache.TryGetValue<MyData>(key);
-if (data == null)
+// Constructor
+public MyService(IDistributedCache cache, IRepository repository)
 {
-    data = await _repository.GetAsync(key);
-    await cache.SetAsync(key, data, ...);
+    _cache = cache;
+    _repository = repository;
+}
+
+// Usage
+public async Task<MyData> GetDataAsync(string key)
+{
+    var data = await _cache.TryGetValue<MyData>(key);
+    if (data == null)
+    {
+        data = await _repository.GetAsync(key);
+        await _cache.SetAsync(key, data, new DistributedCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30)
+        });
+    }
+    return data;
 }
 ```
 
 **After**:
 
 ```csharp
+// Registration
 services.AddDistributedCache(globalSettings);
 services.AddExtendedCache("MyFeature", globalSettings);
 
-public MyService([FromKeyedServices("MyFeature")] IFusionCache cache) { ... }
+// Constructor
+public MyService(
+    [FromKeyedServices("MyFeature")] IFusionCache cache,
+    IRepository repository)
+{
+    _cache = cache;
+    _repository = repository;
+}
 
-var data = await cache.GetOrSetAsync(key, _ => _repository.GetAsync(key));
+// Usage
+public async Task<MyData> GetDataAsync(string key)
+{
+    return await _cache.GetOrSetAsync(
+        key,
+        async _ => await _repository.GetAsync(key),
+        options => options.SetDuration(TimeSpan.FromMinutes(30))
+    );
+}
 ```
 
 ### From In-Memory → `ExtendedCache`
@@ -963,23 +1006,51 @@ var data = await cache.GetOrSetAsync(key, _ => _repository.GetAsync(key));
 **Before**:
 
 ```csharp
+// Field
 private readonly ConcurrentDictionary<string, MyData> _cache = new();
+private readonly IRepository _repository;
 
-public MyData GetData(string key)
+// Constructor
+public MyService(IRepository repository)
 {
-    return _cache.GetOrAdd(key, _ => _repository.Get(key));
+    _repository = repository;
+}
+
+// Usage
+public async Task<MyData> GetDataAsync(string key)
+{
+    if (_cache.TryGetValue(key, out var cached))
+    {
+        return cached;
+    }
+
+    var data = await _repository.GetAsync(key);
+    _cache.TryAdd(key, data);
+    return data;
 }
 ```
 
 **After**:
 
 ```csharp
+// Registration
 services.AddExtendedCache("MyFeature", globalSettings);
 
-public MyService([FromKeyedServices("MyFeature")] IFusionCache cache) { ... }
+// Constructor
+public MyService(
+    [FromKeyedServices("MyFeature")] IFusionCache cache,
+    IRepository repository)
+{
+    _cache = cache;
+    _repository = repository;
+}
 
+// Usage
 public async Task<MyData> GetDataAsync(string key)
 {
-    return await _cache.GetOrSetAsync(key, _ => _repository.GetAsync(key));
+    return await _cache.GetOrSetAsync(
+        key,
+        async _ => await _repository.GetAsync(key)
+    );
 }
 ```
