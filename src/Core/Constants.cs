@@ -143,6 +143,7 @@ public static class FeatureFlagKeys
     public const string AccountRecoveryCommand = "pm-25581-prevent-provider-account-recovery";
     public const string BlockClaimedDomainAccountCreation = "pm-28297-block-uninvited-claimed-domain-registration";
     public const string PolicyValidatorsRefactor = "pm-26423-refactor-policy-side-effects";
+    public const string IncreaseBulkReinviteLimitForCloud = "pm-28251-increase-bulk-reinvite-limit-for-cloud";
 
     /* Architecture */
     public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";
@@ -186,7 +187,6 @@ public static class FeatureFlagKeys
 
     /* Billing Team */
     public const string TrialPayment = "PM-8163-trial-payment";
-    public const string PM19422_AllowAutomaticTaxUpdates = "pm-19422-allow-automatic-tax-updates";
     public const string PM21821_ProviderPortalTakeover = "pm-21821-provider-portal-takeover";
     public const string PM22415_TaxIDWarnings = "pm-22415-tax-id-warnings";
     public const string PM25379_UseNewOrganizationMetadataStructure = "pm-25379-use-new-organization-metadata-structure";
@@ -197,6 +197,8 @@ public static class FeatureFlagKeys
     public const string PM26793_FetchPremiumPriceFromPricingService = "pm-26793-fetch-premium-price-from-pricing-service";
     public const string PM23341_Milestone_2 = "pm-23341-milestone-2";
     public const string PM26462_Milestone_3 = "pm-26462-milestone-3";
+    public const string PM28265_EnableReconcileAdditionalStorageJob = "pm-28265-enable-reconcile-additional-storage-job";
+    public const string PM28265_ReconcileAdditionalStorageJobEnableLiveMode = "pm-28265-reconcile-additional-storage-job-enable-live-mode";
 
     /* Key Management Team */
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
@@ -262,6 +264,9 @@ public static class FeatureFlagKeys
     public const string PM22887_RiskInsightsActivityTab = "pm-22887-risk-insights-activity-tab";
     public const string EventManagementForDataDogAndCrowdStrike = "event-management-for-datadog-and-crowdstrike";
     public const string EventDiagnosticLogging = "pm-27666-siem-event-log-debugging";
+
+    /* UIF Team */
+    public const string RouterFocusManagement = "router-focus-management";
 
     public static List<string> GetAllKeys()
     {
