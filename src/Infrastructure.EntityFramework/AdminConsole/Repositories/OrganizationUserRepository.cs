@@ -965,4 +965,20 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         return true;
 
     }
+
+#nullable enable
+
+    public async Task<OrganizationUserUserDetails?> GetDetailsByOrganizationIdUserIdAsync(Guid organizationId, Guid userId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var view = new OrganizationUserUserDetailsViewQuery();
+            var entity = await view.Run(dbContext).SingleOrDefaultAsync(ou => ou.OrganizationId == organizationId && ou.UserId == userId);
+            return entity;
+        }
+    }
+#nullable disable
+
+
 }
