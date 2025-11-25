@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities.v2;
@@ -8,6 +9,7 @@ using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpers;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
@@ -16,6 +18,8 @@ public class AutomaticallyConfirmOrganizationUsersValidator(
     IOrganizationUserRepository organizationUserRepository,
     ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
     IPolicyRequirementQuery policyRequirementQuery,
+    IAutomaticUserConfirmationPolicyEnforcementQuery automaticUserConfirmationPolicyEnforcementQuery,
+    IUserService userService,
     IPolicyRepository policyRepository) : IAutomaticallyConfirmOrganizationUsersValidator
 {
     public async Task<ValidationResult<AutomaticallyConfirmOrganizationUserValidationRequest>> ValidateAsync(
@@ -61,7 +65,7 @@ public class AutomaticallyConfirmOrganizationUsersValidator(
             return Invalid(request, new UserDoesNotHaveTwoFactorEnabled());
         }
 
-        if (await OrganizationUserConformsToSingleOrgPolicyAsync(request) is { } error)
+        if (await OrganizationUserConformsToAutomaticUserConfirmationPolicyAsync(request) is { } error)
         {
             return Invalid(request, error);
         }
@@ -87,30 +91,27 @@ public class AutomaticallyConfirmOrganizationUsersValidator(
             .IsTwoFactorRequiredForOrganization(request.Organization!.Id);
     }
 
-    private async Task<Error?> OrganizationUserConformsToSingleOrgPolicyAsync(
+    private async Task<Error?> OrganizationUserConformsToAutomaticUserConfirmationPolicyAsync(
         AutomaticallyConfirmOrganizationUserValidationRequest request)
     {
         var allOrganizationUsersForUser = await organizationUserRepository
             .GetManyByUserAsync(request.OrganizationUser!.UserId!.Value);
+
+        var user = await userService.GetUserByIdAsync(request.OrganizationUser!.UserId!.Value);
 
         if (allOrganizationUsersForUser.Count == 1)
         {
             return null;
         }
 
-        var policyRequirement = await policyRequirementQuery
-            .GetAsync<SingleOrganizationPolicyRequirement>(request.OrganizationUser!.UserId!.Value);
-
-        if (policyRequirement.IsSingleOrgEnabledForThisOrganization(request.Organization!.Id))
-        {
-            return new OrganizationEnforcesSingleOrgPolicy();
-        }
-
-        if (policyRequirement.IsSingleOrgEnabledForOrganizationsOtherThan(request.Organization.Id))
-        {
-            return new OtherOrganizationEnforcesSingleOrgPolicy();
-        }
-
-        return null;
+        return (await automaticUserConfirmationPolicyEnforcementQuery.IsCompliantAsync(
+                new AutomaticUserConfirmationPolicyEnforcementRequest(
+                    request.OrganizationUser,
+                    allOrganizationUsersForUser.Where(x => x.OrganizationId != request.OrganizationId),
+                    user)))
+            .Match<Error?>(
+                error => error,
+                _ => null
+            );
     }
 }

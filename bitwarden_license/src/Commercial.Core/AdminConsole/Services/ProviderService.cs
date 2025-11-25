@@ -418,12 +418,15 @@ public class ProviderService : IProviderService
                 "The organization is subscribed to Secrets Manager. Please contact Customer Support to manage the subscription.");
         }
 
-        var organizationAutoConfirmPolicyRequirement = await _policyRequirementQuery
-            .GetManyByOrganizationIdAsync<AutomaticUserConfirmationPolicyRequirement>(organizationId);
-
-        if (organizationAutoConfirmPolicyRequirement.Any())
+        if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
         {
-            throw new BadRequestException(new AutoConfirmDoesNotAllowProviderUsers().Message);
+            var organizationAutoConfirmPolicyRequirement = await _policyRequirementQuery
+                .GetManyByOrganizationIdAsync<AutomaticUserConfirmationPolicyRequirement>(organizationId);
+
+            if (organizationAutoConfirmPolicyRequirement.Any())
+            {
+                throw new BadRequestException(new AutoConfirmDoesNotAllowProviderUsers().Message);
+            }
         }
 
         var providerOrganization = new ProviderOrganization
