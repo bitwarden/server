@@ -419,7 +419,7 @@ public class TwoFactorIsEnabledQueryTests
             return Id;
         }
 
-        public bool GetPremium()
+        public bool HasPersonalPremiumSubscription()
         {
             return Premium;
         }

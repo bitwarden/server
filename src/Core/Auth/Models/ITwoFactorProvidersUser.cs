@@ -18,5 +18,10 @@ public interface ITwoFactorProvidersUser
     /// <returns>Dictionary of providers with the type enum as the key</returns>
     Dictionary<TwoFactorProviderType, TwoFactorProvider> GetTwoFactorProviders();
     Guid? GetUserId();
-    bool GetPremium();
+    /// <summary>
+    /// Returns true if the user has a personal premium subscription (User.Premium).
+    /// For feature access checks, use IUserService.CanAccessPremium() instead,
+    /// which also checks organization-granted premium access.
+    /// </summary>
+    bool HasPersonalPremiumSubscription();
 }

@@ -1112,7 +1112,7 @@ public class UserService : UserManager<User>, IUserService
             return false;
         }
 
-        return user.GetPremium() || await this.HasPremiumFromOrganization(user);
+        return user.HasPersonalPremiumSubscription() || await this.HasPremiumFromOrganization(user);
     }
 
     public async Task<bool> HasPremiumFromOrganization(ITwoFactorProvidersUser user)

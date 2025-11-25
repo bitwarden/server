@@ -200,7 +200,7 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
         return Id;
     }
 
-    public bool GetPremium()
+    public bool HasPersonalPremiumSubscription()
     {
         return Premium;
     }
