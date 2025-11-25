@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Auth.Models;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
 namespace Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 
@@ -11,11 +12,10 @@ public interface ITwoFactorIsEnabledQuery
     /// <param name="userIds">The list of user IDs to check.</param>
     Task<IEnumerable<(Guid userId, bool twoFactorIsEnabled)>> TwoFactorIsEnabledAsync(IEnumerable<Guid> userIds);
     /// <summary>
-    /// Returns a list of users and whether two factor is enabled for each user.
+    /// Returns a list of organization users and whether two factor is enabled for each user.
+    /// Uses the pre-calculated HasPremiumAccess property from OrganizationUserUserDetails.
     /// </summary>
-    /// <param name="users">The list of users to check.</param>
-    /// <typeparam name="T">The type of user in the list. Must implement <see cref="ITwoFactorProvidersUser"/>.</typeparam>
-    Task<IEnumerable<(T user, bool twoFactorIsEnabled)>> TwoFactorIsEnabledAsync<T>(IEnumerable<T> users) where T : ITwoFactorProvidersUser;
+    Task<IEnumerable<(OrganizationUserUserDetails user, bool twoFactorIsEnabled)>> TwoFactorIsEnabledAsync(IEnumerable<OrganizationUserUserDetails> users);
     /// <summary>
     /// Returns whether two factor is enabled for the user. A user is able to have a TwoFactorProvider that is enabled but requires Premium.
     /// If the user does not have premium then the TwoFactorProvider is considered _not_ enabled.

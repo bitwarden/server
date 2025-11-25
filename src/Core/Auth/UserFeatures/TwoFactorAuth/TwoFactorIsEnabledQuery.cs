@@ -4,6 +4,7 @@
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 
 namespace Bit.Core.Auth.UserFeatures.TwoFactorAuth;
@@ -34,30 +35,17 @@ public class TwoFactorIsEnabledQuery(IUserRepository userRepository) : ITwoFacto
         return result;
     }
 
-    public async Task<IEnumerable<(T user, bool twoFactorIsEnabled)>> TwoFactorIsEnabledAsync<T>(IEnumerable<T> users) where T : ITwoFactorProvidersUser
+    public async Task<IEnumerable<(OrganizationUserUserDetails user, bool twoFactorIsEnabled)>> TwoFactorIsEnabledAsync(IEnumerable<OrganizationUserUserDetails> users)
     {
-        var userIds = users
-            .Select(u => u.GetUserId())
-            .Where(u => u.HasValue)
-            .Select(u => u.Value)
-            .ToList();
-
-        var twoFactorResults = await TwoFactorIsEnabledAsync(userIds);
-
-        var result = new List<(T user, bool twoFactorIsEnabled)>();
+        var result = new List<(OrganizationUserUserDetails user, bool twoFactorIsEnabled)>();
 
         foreach (var user in users)
         {
-            var userId = user.GetUserId();
-            if (userId.HasValue)
-            {
-                var hasTwoFactor = twoFactorResults.FirstOrDefault(res => res.userId == userId.Value).twoFactorIsEnabled;
-                result.Add((user, hasTwoFactor));
-            }
-            else
-            {
-                result.Add((user, false));
-            }
+            var hasTwoFactor = await TwoFactorEnabledAsync(
+                user.GetTwoFactorProviders(),
+                () => Task.FromResult(user.HasPremiumAccess)
+            );
+            result.Add((user, hasTwoFactor));
         }
 
         return result;
