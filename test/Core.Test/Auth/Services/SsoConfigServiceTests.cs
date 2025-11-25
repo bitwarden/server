@@ -369,7 +369,7 @@ public class SsoConfigServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task SaveAsync_Tde_WhenPolicyValidatorsRefactorEnabled_UsesVNextSavePolicyCommand(
+    public async Task SaveAsync_Tde_UsesVNextSavePolicyCommand(
         SutProvider<SsoConfigService> sutProvider, Organization organization)
     {
         var ssoConfig = new SsoConfig
@@ -382,10 +382,6 @@ public class SsoConfigServiceTests
             Enabled = true,
             OrganizationId = organization.Id,
         };
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PolicyValidatorsRefactor)
-            .Returns(true);
 
         await sutProvider.Sut.SaveAsync(ssoConfig, organization);
 
