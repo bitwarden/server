@@ -265,6 +265,9 @@ public static class FeatureFlagKeys
     public const string EventManagementForDataDogAndCrowdStrike = "event-management-for-datadog-and-crowdstrike";
     public const string EventDiagnosticLogging = "pm-27666-siem-event-log-debugging";
 
+    /* UIF Team */
+    public const string RouterFocusManagement = "router-focus-management";
+
     public static List<string> GetAllKeys()
     {
         return typeof(FeatureFlagKeys).GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
