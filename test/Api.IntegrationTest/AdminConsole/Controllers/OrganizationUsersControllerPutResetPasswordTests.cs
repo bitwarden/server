@@ -32,12 +32,6 @@ public class OrganizationUsersControllerPutResetPasswordTests : IClassFixture<Ap
     public OrganizationUsersControllerPutResetPasswordTests(ApiApplicationFactory apiFactory)
     {
         _factory = apiFactory;
-        _factory.SubstituteService<IFeatureService>(featureService =>
-        {
-            featureService
-                .IsEnabled(FeatureFlagKeys.AccountRecoveryCommand)
-                .Returns(true);
-        });
         _client = _factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
     }
