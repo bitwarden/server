@@ -122,6 +122,69 @@ public class UserServiceTests
         Assert.True(await sutProvider.Sut.HasPremiumFromOrganization(user));
     }
 
+    [Theory, BitAutoData]
+    public async Task CanAccessPremium_WithUserPremium_ReturnsTrue(SutProvider<UserService> sutProvider, User user)
+    {
+        user.Premium = true;
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByUserAsync(user.Id).Returns(new List<OrganizationUser>());
+
+        Assert.True(await sutProvider.Sut.CanAccessPremium(user));
+    }
+
+    [Theory, BitAutoData]
+    public async Task CanAccessPremium_WithOrganizationPremium_ReturnsTrue(SutProvider<UserService> sutProvider, User user, OrganizationUser orgUser, Organization organization)
+    {
+        user.Premium = false;
+        orgUser.OrganizationId = organization.Id;
+        organization.Enabled = true;
+        organization.UsersGetPremium = true;
+        var orgAbilities = new Dictionary<Guid, OrganizationAbility>() { { organization.Id, new OrganizationAbility(organization) } };
+
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByUserAsync(user.Id).Returns(new List<OrganizationUser>() { orgUser });
+        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync().Returns(orgAbilities);
+
+        Assert.True(await sutProvider.Sut.CanAccessPremium(user));
+    }
+
+    [Theory, BitAutoData]
+    public async Task CanAccessPremium_WithBothPersonalAndOrganizationPremium_ReturnsTrue(SutProvider<UserService> sutProvider, User user, OrganizationUser orgUser, Organization organization)
+    {
+        user.Premium = true;
+        orgUser.OrganizationId = organization.Id;
+        organization.Enabled = true;
+        organization.UsersGetPremium = true;
+        var orgAbilities = new Dictionary<Guid, OrganizationAbility>() { { organization.Id, new OrganizationAbility(organization) } };
+
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByUserAsync(user.Id).Returns(new List<OrganizationUser>() { orgUser });
+        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync().Returns(orgAbilities);
+
+        Assert.True(await sutProvider.Sut.CanAccessPremium(user));
+    }
+
+    [Theory, BitAutoData]
+    public async Task CanAccessPremium_WithoutPremium_ReturnsFalse(SutProvider<UserService> sutProvider, User user)
+    {
+        user.Premium = false;
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByUserAsync(user.Id).Returns(new List<OrganizationUser>());
+
+        Assert.False(await sutProvider.Sut.CanAccessPremium(user));
+    }
+
+    [Theory, BitAutoData]
+    public async Task CanAccessPremium_WithDisabledOrganization_ReturnsFalse(SutProvider<UserService> sutProvider, User user, OrganizationUser orgUser, Organization organization)
+    {
+        user.Premium = false;
+        orgUser.OrganizationId = organization.Id;
+        organization.Enabled = false;
+        organization.UsersGetPremium = true;
+        var orgAbilities = new Dictionary<Guid, OrganizationAbility>() { { organization.Id, new OrganizationAbility(organization) } };
+
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByUserAsync(user.Id).Returns(new List<OrganizationUser>() { orgUser });
+        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync().Returns(orgAbilities);
+
+        Assert.False(await sutProvider.Sut.CanAccessPremium(user));
+    }
+
     [Flags]
     public enum ShouldCheck
     {
