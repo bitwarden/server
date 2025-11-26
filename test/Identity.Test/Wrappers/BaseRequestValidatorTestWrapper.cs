@@ -143,10 +143,6 @@ IBaseRequestValidatorTestWrapper
         BaseRequestValidationContextFake context,
         CustomValidatorRequestContext requestContext)
     {
-        // context.GrantResult.Error = requestContext.ValidationErrorResult.Error;
-        // context.GrantResult.IsError = requestContext.ValidationErrorResult.IsError;
-        // context.GrantResult.ErrorDescription = requestContext.ValidationErrorResult.ErrorDescription;
-        // context.GrantResult.CustomResponse = requestContext.CustomResponse;
         context.GrantResult.IsError = true;
     }
 
