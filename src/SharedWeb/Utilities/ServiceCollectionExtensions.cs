@@ -85,6 +85,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using StackExchange.Redis;
+using ZiggyCreatures.Caching.Fusion;
 using Constants = Bit.Core.Constants;
 using NoopRepos = Bit.Core.Repositories.Noop;
 using Role = Bit.Core.Entities.Role;
@@ -890,6 +891,7 @@ public static class ServiceCollectionExtensions
                 eventIntegrationPublisher: provider.GetRequiredService<IEventIntegrationPublisher>(),
                 integrationFilterService: provider.GetRequiredService<IIntegrationFilterService>(),
                 configurationCache: provider.GetRequiredService<IIntegrationConfigurationDetailsCache>(),
+                cache: provider.GetRequiredKeyedService<IFusionCache>(EventIntegrationsCacheConstants.CacheName),
                 groupRepository: provider.GetRequiredService<IGroupRepository>(),
                 organizationRepository: provider.GetRequiredService<IOrganizationRepository>(),
                 organizationUserRepository: provider.GetRequiredService<IOrganizationUserRepository>(),
@@ -934,6 +936,8 @@ public static class ServiceCollectionExtensions
         GlobalSettings globalSettings)
     {
         // Add common services
+        services.AddDistributedCache(globalSettings);
+        services.AddExtendedCache(EventIntegrationsCacheConstants.CacheName, globalSettings);
         services.TryAddSingleton<IntegrationConfigurationDetailsCacheService>();
         services.TryAddSingleton<IIntegrationConfigurationDetailsCache>(provider =>
             provider.GetRequiredService<IntegrationConfigurationDetailsCacheService>());
@@ -1018,6 +1022,7 @@ public static class ServiceCollectionExtensions
                 eventIntegrationPublisher: provider.GetRequiredService<IEventIntegrationPublisher>(),
                 integrationFilterService: provider.GetRequiredService<IIntegrationFilterService>(),
                 configurationCache: provider.GetRequiredService<IIntegrationConfigurationDetailsCache>(),
+                cache: provider.GetRequiredKeyedService<IFusionCache>(EventIntegrationsCacheConstants.CacheName),
                 groupRepository: provider.GetRequiredService<IGroupRepository>(),
                 organizationRepository: provider.GetRequiredService<IOrganizationRepository>(),
                 organizationUserRepository: provider.GetRequiredService<IOrganizationUserRepository>(),

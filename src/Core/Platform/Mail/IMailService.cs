@@ -38,7 +38,7 @@ public interface IMailService
     /// <returns>Task</returns>
     Task SendFreeOrgOrFamilyOrgUserWelcomeEmailAsync(User user, string familyOrganizationName);
     Task SendVerifyEmailEmailAsync(string email, Guid userId, string token);
-    Task SendRegistrationVerificationEmailAsync(string email, string token);
+    Task SendRegistrationVerificationEmailAsync(string email, string token, string? fromMarketing);
     Task SendTrialInitiationSignupEmailAsync(
         bool isExistingUser,
         string email,

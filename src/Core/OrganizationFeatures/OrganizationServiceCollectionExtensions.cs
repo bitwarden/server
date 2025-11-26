@@ -12,6 +12,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Update;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
@@ -87,6 +88,7 @@ public static class OrganizationServiceCollectionExtensions
     private static void AddOrganizationUpdateCommands(this IServiceCollection services)
     {
         services.AddScoped<IOrganizationUpdateKeysCommand, OrganizationUpdateKeysCommand>();
+        services.AddScoped<IOrganizationUpdateCommand, OrganizationUpdateCommand>();
     }
 
     private static void AddOrganizationEnableCommands(this IServiceCollection services) =>
