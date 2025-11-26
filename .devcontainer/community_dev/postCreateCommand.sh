@@ -42,7 +42,7 @@ get_installation_id_and_key() {
     pushd ./dev >/dev/null || exit
     echo "Please enter your installation id and key from https://bitwarden.com/host:"
     INSTALLATION_ID="$(get_option "INSTALLATION_ID" "Installation id: " "00000000-0000-0000-0000-000000000001")"
-    INSTALLATION_KEY="$(get_option "INSTALLATION_KEY", "Installation key: " "" 1)"
+    INSTALLATION_KEY="$(get_option "INSTALLATION_KEY" "Installation key: " "" 1)"
     jq ".globalSettings.installation.id = \"$INSTALLATION_ID\" |
         .globalSettings.installation.key = \"$INSTALLATION_KEY\"" \
         secrets.json.example >secrets.json # create/overwrite secrets.json
