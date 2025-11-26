@@ -263,8 +263,8 @@ jobs:
         run: docker compose down
         shell: pwsh
 
-  check-migration-order:
-    name: Validate migration chronological order
+  validate-migration-naming:
+    name: Validate new migration naming and order
     runs-on: ubuntu-22.04
 
     steps:
@@ -274,7 +274,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Validate migration order for pull request
+      - name: Validate new migrations for pull request
         if: github.event_name == 'pull_request'
         run: |
           # Use C locale for consistent, locale-independent string comparison
@@ -312,10 +312,15 @@ jobs:
           while IFS= read -r migration; do
             MIGRATION_NAME=$(basename "$migration")
 
-            # Validate migration filename format (YYYY-MM-DD_NN_Description.sql with leading zeros)
+            # Validate NEW migration filename format - enforce strict format for new migrations
+            # Required format: YYYY-MM-DD_NN_Description.sql (with leading zeros in date and sequence)
             if ! [[ "$MIGRATION_NAME" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}_.+\.sql$ ]]; then
-              echo "ERROR: Migration '$MIGRATION_NAME' does not match expected format"
-              echo "Expected format: YYYY-MM-DD_NN_Description.sql (with leading zeros)"
+              echo "ERROR: Migration '$MIGRATION_NAME' does not match required format"
+              echo "Required format: YYYY-MM-DD_NN_Description.sql"
+              echo "  - YYYY: 4-digit year"
+              echo "  - MM: 2-digit month with leading zero (01-12)"
+              echo "  - DD: 2-digit day with leading zero (01-31)"
+              echo "  - NN: 2-digit sequence number (00, 01, 02, etc.)"
               echo "Example: 2025-01-15_00_MyMigration.sql"
               VALIDATION_FAILED=1
               continue
@@ -332,24 +337,27 @@ jobs:
 
           echo ""
           if [ $VALIDATION_FAILED -eq 1 ]; then
-            echo "FAILED: One or more migrations are not in chronological order or incorrectly formatted"
+            echo "FAILED: One or more migrations are incorrectly named or not in chronological order"
             echo ""
-            echo "Migration files must be named to execute in chronological order."
-            echo "New migrations must have dates/names that come after existing migrations."
-            echo "Expected format: YYYY-MM-DD_NN_Description.sql (with leading zeros)"
+            echo "All new migration files must:"
+            echo "  1. Follow the naming format: YYYY-MM-DD_NN_Description.sql"
+            echo "  2. Use leading zeros in dates (e.g., 2025-01-05, not 2025-1-5)"
+            echo "  3. Include a 2-digit sequence number (e.g., _00, _01)"
+            echo "  4. Have a filename that sorts after the last migration in main"
             echo ""
             echo "To fix this issue:"
             echo "  1. Locate your migration file(s) in util/Migrator/DbScripts/"
-            echo "  2. Rename the file to use a date after $LAST_MAIN_MIGRATION"
-            echo "  3. Ensure the date format is YYYY-MM-DD with leading zeros (e.g., 2025-01-05, not 2025-1-5)"
-            echo "  4. Use _NN suffix (e.g., _00, _01) if multiple migrations exist for the same date"
+            echo "  2. Rename to follow format: YYYY-MM-DD_NN_Description.sql"
+            echo "  3. Ensure the date is after $LAST_MAIN_MIGRATION"
+            echo ""
+            echo "Example: 2025-01-15_00_AddNewFeature.sql"
             exit 1
           fi
 
-          echo "SUCCESS: All new migrations are in correct chronological order"
+          echo "SUCCESS: All new migrations are correctly named and in chronological order"
         shell: bash
 
-      - name: Validate migration order for push
+      - name: Validate new migrations for push
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         run: |
           # Use C locale for consistent, locale-independent string comparison
@@ -387,10 +395,15 @@ jobs:
             while IFS= read -r migration; do
               MIGRATION_NAME=$(basename "$migration")
 
-              # Validate migration filename format (YYYY-MM-DD_NN_Description.sql with leading zeros)
+              # Validate NEW migration filename format - enforce strict format for new migrations
+              # Required format: YYYY-MM-DD_NN_Description.sql (with leading zeros in date and sequence)
               if ! [[ "$MIGRATION_NAME" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}_.+\.sql$ ]]; then
-                echo "ERROR: Migration '$MIGRATION_NAME' does not match expected format"
-                echo "Expected format: YYYY-MM-DD_NN_Description.sql (with leading zeros)"
+                echo "ERROR: Migration '$MIGRATION_NAME' does not match required format"
+                echo "Required format: YYYY-MM-DD_NN_Description.sql"
+                echo "  - YYYY: 4-digit year"
+                echo "  - MM: 2-digit month with leading zero (01-12)"
+                echo "  - DD: 2-digit day with leading zero (01-31)"
+                echo "  - NN: 2-digit sequence number (00, 01, 02, etc.)"
                 echo "Example: 2025-01-15_00_MyMigration.sql"
                 VALIDATION_FAILED=1
                 continue
@@ -407,11 +420,13 @@ jobs:
 
             echo ""
             if [ $VALIDATION_FAILED -eq 1 ]; then
-              echo "FAILED: One or more migrations are not in chronological order or incorrectly formatted"
+              echo "FAILED: One or more migrations are incorrectly named or not in chronological order"
               echo ""
-              echo "Migration files must be named to execute in chronological order."
-              echo "New migrations must have dates/names that come after existing migrations."
-              echo "Expected format: YYYY-MM-DD_NN_Description.sql (with leading zeros)"
+              echo "All new migration files must:"
+              echo "  1. Follow the naming format: YYYY-MM-DD_NN_Description.sql"
+              echo "  2. Use leading zeros in dates (e.g., 2025-01-05, not 2025-1-5)"
+              echo "  3. Include a 2-digit sequence number (e.g., _00, _01)"
+              echo "  4. Have a filename that sorts after the last migration"
               echo ""
               echo "Migration files are located in: util/Migrator/DbScripts/"
               exit 1
@@ -420,5 +435,5 @@ jobs:
             echo "No previous migrations found (initial commit?). Skipping validation."
           fi
 
-          echo "SUCCESS: All new migrations are in correct chronological order"
+          echo "SUCCESS: All new migrations are correctly named and in chronological order"
         shell: bash
