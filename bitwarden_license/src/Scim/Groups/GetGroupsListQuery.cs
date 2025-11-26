@@ -16,7 +16,7 @@ public class GetGroupsListQuery : IGetGroupsListQuery
         _groupRepository = groupRepository;
     }
 
-    public async Task<(IEnumerable<Group> groupList, int totalResults)> GetGroupsListAsync(Guid organizationId, string filter, int? count, int? startIndex)
+    public async Task<(IEnumerable<Group> groupList, int totalResults)> GetGroupsListAsync(Guid organizationId, string filter, int count, int startIndex)
     {
         string nameFilter = null;
         string externalIdFilter = null;
@@ -53,11 +53,11 @@ public class GetGroupsListQuery : IGetGroupsListQuery
             }
             totalResults = groupList.Count;
         }
-        else if (string.IsNullOrWhiteSpace(filter) && startIndex.HasValue && count.HasValue)
+        else if (string.IsNullOrWhiteSpace(filter))
         {
             groupList = groups.OrderBy(g => g.Name)
-                .Skip(startIndex.Value - 1)
-                .Take(count.Value)
+                .Skip(startIndex - 1)
+                .Take(count)
                 .ToList();
             totalResults = groups.Count;
         }

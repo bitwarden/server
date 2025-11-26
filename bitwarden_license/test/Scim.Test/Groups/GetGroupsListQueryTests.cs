@@ -47,7 +47,7 @@ public class GetGroupsListCommandTests
             .GetManyByOrganizationIdAsync(organizationId)
             .Returns(groups);
 
-        var result = await sutProvider.Sut.GetGroupsListAsync(organizationId, filter, null, null);
+        var result = await sutProvider.Sut.GetGroupsListAsync(organizationId, filter, 50, 1);
 
         AssertHelper.AssertPropertyEqual(expectedGroupList, result.groupList);
         AssertHelper.AssertPropertyEqual(expectedTotalResults, result.totalResults);
@@ -67,7 +67,7 @@ public class GetGroupsListCommandTests
             .GetManyByOrganizationIdAsync(organizationId)
             .Returns(groups);
 
-        var result = await sutProvider.Sut.GetGroupsListAsync(organizationId, filter, null, null);
+        var result = await sutProvider.Sut.GetGroupsListAsync(organizationId, filter, 50, 1);
 
         AssertHelper.AssertPropertyEqual(expectedGroupList, result.groupList);
         AssertHelper.AssertPropertyEqual(expectedTotalResults, result.totalResults);
@@ -90,7 +90,7 @@ public class GetGroupsListCommandTests
             .GetManyByOrganizationIdAsync(organizationId)
             .Returns(groups);
 
-        var result = await sutProvider.Sut.GetGroupsListAsync(organizationId, filter, null, null);
+        var result = await sutProvider.Sut.GetGroupsListAsync(organizationId, filter, 50, 1);
 
         AssertHelper.AssertPropertyEqual(expectedGroupList, result.groupList);
         AssertHelper.AssertPropertyEqual(expectedTotalResults, result.totalResults);
@@ -112,7 +112,7 @@ public class GetGroupsListCommandTests
             .GetManyByOrganizationIdAsync(organizationId)
             .Returns(groups);
 
-        var result = await sutProvider.Sut.GetGroupsListAsync(organizationId, filter, null, null);
+        var result = await sutProvider.Sut.GetGroupsListAsync(organizationId, filter, 50, 1);
 
         AssertHelper.AssertPropertyEqual(expectedGroupList, result.groupList);
         AssertHelper.AssertPropertyEqual(expectedTotalResults, result.totalResults);
