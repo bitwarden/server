@@ -262,3 +262,138 @@ jobs:
         working-directory: "dev"
         run: docker compose down
         shell: pwsh
+
+  check-migration-order:
+    name: Validate migration chronological order
+    runs-on: ubuntu-22.04
+    needs:
+      - test
+      - validate
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate migration order for pull request
+        if: github.event_name == 'pull_request'
+        run: |
+          # Get list of migrations from main branch
+          git fetch origin main:main
+          MAIN_MIGRATIONS=$(git ls-tree -r --name-only main -- util/Migrator/DbScripts/*.sql | sort)
+
+          # Get list of migrations from current branch
+          CURRENT_MIGRATIONS=$(git ls-tree -r --name-only HEAD -- util/Migrator/DbScripts/*.sql | sort)
+
+          # Save to temporary files for comparison
+          echo "$MAIN_MIGRATIONS" > /tmp/main_migrations.txt
+          echo "$CURRENT_MIGRATIONS" > /tmp/current_migrations.txt
+
+          # Find added migrations
+          ADDED_MIGRATIONS=$(comm -13 /tmp/main_migrations.txt /tmp/current_migrations.txt)
+
+          if [ -z "$ADDED_MIGRATIONS" ]; then
+            echo "No new migration files added."
+            exit 0
+          fi
+
+          echo "New migration files detected:"
+          echo "$ADDED_MIGRATIONS"
+          echo ""
+
+          # Check that all added migrations come after all existing migrations
+          LAST_MAIN_MIGRATION=$(echo "$MAIN_MIGRATIONS" | tail -n 1 | xargs basename)
+          echo "Last migration in main branch: $LAST_MAIN_MIGRATION"
+          echo ""
+
+          VALIDATION_FAILED=0
+          while IFS= read -r migration; do
+            MIGRATION_NAME=$(basename "$migration")
+
+            # Compare migration name with last main migration
+            if [[ "$MIGRATION_NAME" < "$LAST_MAIN_MIGRATION" ]]; then
+              echo "ERROR: New migration '$MIGRATION_NAME' is not chronologically after '$LAST_MAIN_MIGRATION'"
+              VALIDATION_FAILED=1
+            else
+              echo "OK: '$MIGRATION_NAME' is chronologically after '$LAST_MAIN_MIGRATION'"
+            fi
+          done <<< "$ADDED_MIGRATIONS"
+
+          echo ""
+          if [ $VALIDATION_FAILED -eq 1 ]; then
+            echo "FAILED: One or more migrations are not in chronological order"
+            echo ""
+            echo "Migration files must be named to execute in chronological order."
+            echo "New migrations must have dates/names that come after existing migrations."
+            echo "Expected format: YYYY-MM-DD_NN_Description.sql"
+            echo ""
+            echo "To fix this issue:"
+            echo "  1. Rename your migration file(s) to use a date after $LAST_MAIN_MIGRATION"
+            echo "  2. Ensure the date format is YYYY-MM-DD (with leading zeros)"
+            echo "  3. Use _NN suffix if multiple migrations exist for the same date"
+            exit 1
+          fi
+
+          echo "SUCCESS: All new migrations are in correct chronological order"
+        shell: bash
+
+      - name: Validate migration order for push
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        run: |
+          # Get list of migrations from previous commit
+          PREV_MIGRATIONS=$(git ls-tree -r --name-only HEAD~1 -- util/Migrator/DbScripts/*.sql 2>/dev/null | sort || echo "")
+
+          # Get list of migrations from current commit
+          CURRENT_MIGRATIONS=$(git ls-tree -r --name-only HEAD -- util/Migrator/DbScripts/*.sql | sort)
+
+          # Save to temporary files for comparison
+          echo "$PREV_MIGRATIONS" > /tmp/prev_migrations.txt
+          echo "$CURRENT_MIGRATIONS" > /tmp/current_migrations.txt
+
+          # Find added migrations
+          ADDED_MIGRATIONS=$(comm -13 /tmp/prev_migrations.txt /tmp/current_migrations.txt)
+
+          if [ -z "$ADDED_MIGRATIONS" ]; then
+            echo "No new migration files added in this commit."
+            exit 0
+          fi
+
+          echo "New migration files detected:"
+          echo "$ADDED_MIGRATIONS"
+          echo ""
+
+          # Check that all added migrations come after all existing migrations
+          if [ -n "$PREV_MIGRATIONS" ]; then
+            LAST_PREV_MIGRATION=$(echo "$PREV_MIGRATIONS" | tail -n 1 | xargs basename)
+            echo "Last migration in previous commit: $LAST_PREV_MIGRATION"
+            echo ""
+
+            VALIDATION_FAILED=0
+            while IFS= read -r migration; do
+              MIGRATION_NAME=$(basename "$migration")
+
+              # Compare migration name with last previous migration
+              if [[ "$MIGRATION_NAME" < "$LAST_PREV_MIGRATION" ]]; then
+                echo "ERROR: New migration '$MIGRATION_NAME' is not chronologically after '$LAST_PREV_MIGRATION'"
+                VALIDATION_FAILED=1
+              else
+                echo "OK: '$MIGRATION_NAME' is chronologically after '$LAST_PREV_MIGRATION'"
+              fi
+            done <<< "$ADDED_MIGRATIONS"
+
+            echo ""
+            if [ $VALIDATION_FAILED -eq 1 ]; then
+              echo "FAILED: One or more migrations are not in chronological order"
+              echo ""
+              echo "Migration files must be named to execute in chronological order."
+              echo "New migrations must have dates/names that come after existing migrations."
+              exit 1
+            fi
+          else
+            echo "No previous migrations found (initial commit?). Skipping validation."
+          fi
+
+          echo "SUCCESS: All new migrations are in correct chronological order"
+        shell: bash
