@@ -192,7 +192,10 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
 
         var allOrgUsers = await _organizationUserRepository.GetManyByUserAsync(user.Id);
 
-        await ValidateAutomaticUserConfirmationPolicyAsync(orgUser, allOrgUsers, user);
+        if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
+        {
+            await ValidateAutomaticUserConfirmationPolicyAsync(orgUser, allOrgUsers, user);
+        }
 
         // Enforce Single Organization Policy of organization user is trying to join
         var invitedSingleOrgPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id,
