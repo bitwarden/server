@@ -4,6 +4,7 @@ using Bit.Core.Repositories;
 namespace Bit.Core.Auth.Sso;
 
 /// <summary>
+/// TODO : PM-28846 review data structures as they relate to this query
 /// Query to retrieve the SSO organization identifier that a user is a confirmed member of.
 /// </summary>
 public class UserSsoOrganizationIdentifierQuery(
