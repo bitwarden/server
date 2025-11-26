@@ -8,7 +8,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoCo
 public record AutomaticUserConfirmationPolicyEnforcementRequest
 {
     public OrganizationUser OrganizationUser { get; }
-    public IEnumerable<OrganizationUser>? OtherOrganizationsOrganizationUsers { get; }
+    public IEnumerable<OrganizationUser> OtherOrganizationsOrganizationUsers { get; }
     public User User { get; }
 
     /// <summary>
@@ -29,22 +29,6 @@ public record AutomaticUserConfirmationPolicyEnforcementRequest
     {
         OrganizationUser = organizationUserToValidate;
         OtherOrganizationsOrganizationUsers = organizationUsersForOtherOrganizations;
-        User = user;
-    }
-
-    /// <summary>
-    /// Request object for <see cref="AutomaticUserConfirmationPolicyEnforcementQuery"/>
-    /// </summary>
-    /// <remarks>
-    /// Use this constructor when you haven't retrieved the organization user records for other organizations yet.
-    /// </remarks>
-    /// <param name="organizationUserToValidate">Organization User to Validate</param>
-    /// <param name="user">User record for orgUser</param>
-    public AutomaticUserConfirmationPolicyEnforcementRequest(OrganizationUser organizationUserToValidate,
-        User user)
-    {
-        OrganizationUser = organizationUserToValidate;
-        OtherOrganizationsOrganizationUsers = null;
         User = user;
     }
 }

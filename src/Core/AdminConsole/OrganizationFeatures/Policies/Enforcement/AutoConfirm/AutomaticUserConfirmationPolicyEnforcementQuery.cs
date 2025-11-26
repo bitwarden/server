@@ -23,7 +23,8 @@ public class AutomaticUserConfirmationPolicyEnforcementQuery(
             return Invalid(request, new OrganizationEnforcesSingleOrgPolicy());
         }
 
-        if (automaticUserConfirmationPolicyRequirement.IsEnabledAndUserIsAProvider(request.OrganizationUser.OrganizationId))
+        if (automaticUserConfirmationPolicyRequirement.IsEnabledAndUserIsAProvider(request.OrganizationUser
+                .OrganizationId))
         {
             return Invalid(request, new ProviderUsersCannotJoin());
         }
@@ -39,7 +40,6 @@ public class AutomaticUserConfirmationPolicyEnforcementQuery(
 
     private async Task<bool> OrganizationUserBelongsToAnotherOrganizationAsync(
         AutomaticUserConfirmationPolicyEnforcementRequest request) =>
-        request.OtherOrganizationsOrganizationUsers?.ToArray() is { Length: > 0 }
-        || (await organizationUserRepository.GetManyByUserAsync(request.User.Id))
-        .Any(x => x.OrganizationId != request.OrganizationUser.OrganizationId);
+        (await organizationUserRepository.GetManyByUserAsync(request.User.Id)).Any(x =>
+            x.OrganizationId != request.OrganizationUser.OrganizationId);
 }
