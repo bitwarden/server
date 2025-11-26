@@ -89,7 +89,21 @@ public class PolicyService : IPolicyService
     private async Task<IEnumerable<OrganizationUserPolicyDetails>> QueryOrganizationUserPolicyDetailsAsync(Guid userId, PolicyType policyType, OrganizationUserStatusType minStatus = OrganizationUserStatusType.Accepted)
     {
         var organizationUserPolicyDetails = await _organizationUserRepository.GetByUserIdWithPolicyDetailsAsync(userId, policyType);
-        var excludedUserTypes = GetUserTypesExcludedFromPolicy(policyType);
+
+        OrganizationUserType[] excludedUserTypes;
+
+        if (policyType == PolicyType.SingleOrg
+            && _featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            && await GetPoliciesApplicableToUserAsync(userId, PolicyType.AutomaticUserConfirmation, OrganizationUserStatusType.Revoked) is { Count: > 0 })
+        {
+            minStatus = OrganizationUserStatusType.Revoked;
+            excludedUserTypes = [];
+        }
+        else
+        {
+            excludedUserTypes = GetUserTypesExcludedFromPolicy(policyType);
+        }
+
         var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
         return organizationUserPolicyDetails.Where(o =>
             (!orgAbilities.TryGetValue(o.OrganizationId, out var orgAbility) || orgAbility.UsePolicies) &&

@@ -7,6 +7,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services.Implementations;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -121,6 +122,212 @@ public class PolicyServiceTests
             .AnyPoliciesApplicableToUserAsync(userId, PolicyType.DisableSend, OrganizationUserStatusType.Invited);
 
         Assert.True(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetPoliciesApplicableToUserAsync_WithAutoConfirmEnabled_WithSingleOrgPolicy_IncludesRevokedUsers(
+        Guid userId,
+        SutProvider<PolicyService> sutProvider)
+    {
+        // Arrange - Setup SingleOrg policy with Revoked user
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByUserIdWithPolicyDetailsAsync(userId, PolicyType.SingleOrg)
+            .Returns(new List<OrganizationUserPolicyDetails>
+            {
+                new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.SingleOrg, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.User, OrganizationUserStatus = OrganizationUserStatusType.Revoked, IsProvider = false },
+                new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.SingleOrg, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.Owner, OrganizationUserStatus = OrganizationUserStatusType.Confirmed, IsProvider = false }
+            });
+
+        // Enable AutomaticConfirmUsers feature flag
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(true);
+
+        // Setup recursive call - user has AutomaticUserConfirmation policy
+        var autoConfirmPolicies = new List<OrganizationUserPolicyDetails>
+        {
+            new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.AutomaticUserConfirmation, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.User, OrganizationUserStatus = OrganizationUserStatusType.Revoked, IsProvider = false }
+        };
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByUserIdWithPolicyDetailsAsync(userId, PolicyType.AutomaticUserConfirmation)
+            .Returns(autoConfirmPolicies);
+
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilitiesAsync()
+            .Returns(Task.FromResult<IDictionary<Guid, OrganizationAbility>>(
+                new Dictionary<Guid, OrganizationAbility>()));
+
+        // Act
+        var result = await sutProvider.Sut
+            .GetPoliciesApplicableToUserAsync(userId, PolicyType.SingleOrg);
+
+        // Assert - Should include Revoked user because auto-confirm is enabled
+        Assert.Equal(2, result.Count());
+        Assert.Contains(result, p => p.OrganizationUserStatus == OrganizationUserStatusType.Revoked);
+        Assert.Contains(result, p => p.OrganizationUserType == OrganizationUserType.Owner);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetPoliciesApplicableToUserAsync_WithAutoConfirmEnabled_WithSingleOrgPolicy_IncludesOwnerAndAdmin(
+        Guid userId,
+        SutProvider<PolicyService> sutProvider)
+    {
+        // Arrange - Setup SingleOrg policy with Owner and Admin users (normally excluded from SingleOrg)
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByUserIdWithPolicyDetailsAsync(userId, PolicyType.SingleOrg)
+            .Returns(new List<OrganizationUserPolicyDetails>
+            {
+                new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.SingleOrg, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.Owner, OrganizationUserStatus = OrganizationUserStatusType.Confirmed, IsProvider = false },
+                new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.SingleOrg, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.Admin, OrganizationUserStatus = OrganizationUserStatusType.Confirmed, IsProvider = false },
+                new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.SingleOrg, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.User, OrganizationUserStatus = OrganizationUserStatusType.Confirmed, IsProvider = false }
+            });
+
+        // Enable AutomaticConfirmUsers feature flag
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(true);
+
+        // Setup recursive call - user has AutomaticUserConfirmation policy
+        var autoConfirmPolicies = new List<OrganizationUserPolicyDetails>
+        {
+            new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.AutomaticUserConfirmation, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.User, OrganizationUserStatus = OrganizationUserStatusType.Confirmed, IsProvider = false }
+        };
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByUserIdWithPolicyDetailsAsync(userId, PolicyType.AutomaticUserConfirmation)
+            .Returns(autoConfirmPolicies);
+
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilitiesAsync()
+            .Returns(Task.FromResult<IDictionary<Guid, OrganizationAbility>>(
+                new Dictionary<Guid, OrganizationAbility>()));
+
+        // Act
+        var result = await sutProvider.Sut
+            .GetPoliciesApplicableToUserAsync(userId, PolicyType.SingleOrg);
+
+        // Assert - Should include Owner and Admin because excludedUserTypes is empty when auto-confirm is enabled
+        Assert.Equal(3, result.Count());
+        Assert.Contains(result, p => p.OrganizationUserType == OrganizationUserType.Owner);
+        Assert.Contains(result, p => p.OrganizationUserType == OrganizationUserType.Admin);
+        Assert.Contains(result, p => p.OrganizationUserType == OrganizationUserType.User);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetPoliciesApplicableToUserAsync_WithAutoConfirmDisabled_WithSingleOrgPolicy_ExcludesRevokedUsers(
+        Guid userId,
+        SutProvider<PolicyService> sutProvider)
+    {
+        // Arrange - Setup SingleOrg policy with Revoked and Confirmed users
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByUserIdWithPolicyDetailsAsync(userId, PolicyType.SingleOrg)
+            .Returns(new List<OrganizationUserPolicyDetails>
+            {
+                new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.SingleOrg, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.User, OrganizationUserStatus = OrganizationUserStatusType.Revoked, IsProvider = false },
+                new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.SingleOrg, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.User, OrganizationUserStatus = OrganizationUserStatusType.Confirmed, IsProvider = false }
+            });
+
+        // Disable AutomaticConfirmUsers feature flag
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(false);
+
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilitiesAsync()
+            .Returns(Task.FromResult<IDictionary<Guid, OrganizationAbility>>(
+                new Dictionary<Guid, OrganizationAbility>()));
+
+        // Act
+        var result = await sutProvider.Sut
+            .GetPoliciesApplicableToUserAsync(userId, PolicyType.SingleOrg);
+
+        // Assert - Should NOT include Revoked user because feature flag is disabled
+        Assert.Single(result);
+        Assert.DoesNotContain(result, p => p.OrganizationUserStatus == OrganizationUserStatusType.Revoked);
+        Assert.All(result, p => Assert.True(p.OrganizationUserStatus >= OrganizationUserStatusType.Accepted));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetPoliciesApplicableToUserAsync_WithAutoConfirmEnabled_NoAutoConfirmPolicy_ExcludesOwnerAndAdmin(
+        Guid userId,
+        SutProvider<PolicyService> sutProvider)
+    {
+        // Arrange - Setup SingleOrg policy with Owner, Admin, and User
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByUserIdWithPolicyDetailsAsync(userId, PolicyType.SingleOrg)
+            .Returns(new List<OrganizationUserPolicyDetails>
+            {
+                new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.SingleOrg, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.Owner, OrganizationUserStatus = OrganizationUserStatusType.Confirmed, IsProvider = false },
+                new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.SingleOrg, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.Admin, OrganizationUserStatus = OrganizationUserStatusType.Confirmed, IsProvider = false },
+                new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.SingleOrg, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.User, OrganizationUserStatus = OrganizationUserStatusType.Confirmed, IsProvider = false }
+            });
+
+        // Enable AutomaticConfirmUsers feature flag
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(true);
+
+        // Setup recursive call - user has NO AutomaticUserConfirmation policy
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByUserIdWithPolicyDetailsAsync(userId, PolicyType.AutomaticUserConfirmation)
+            .Returns(new List<OrganizationUserPolicyDetails>());
+
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilitiesAsync()
+            .Returns(Task.FromResult<IDictionary<Guid, OrganizationAbility>>(
+                new Dictionary<Guid, OrganizationAbility>()));
+
+        // Act
+        var result = await sutProvider.Sut
+            .GetPoliciesApplicableToUserAsync(userId, PolicyType.SingleOrg);
+
+        // Assert - Should NOT include Owner/Admin because user doesn't have auto-confirm policy
+        Assert.Single(result);
+        Assert.DoesNotContain(result, p => p.OrganizationUserType == OrganizationUserType.Owner);
+        Assert.DoesNotContain(result, p => p.OrganizationUserType == OrganizationUserType.Admin);
+        Assert.All(result, p => Assert.Equal(OrganizationUserType.User, p.OrganizationUserType));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetPoliciesApplicableToUserAsync_WithNonSingleOrgPolicy_IgnoresAutoConfirmSettings(
+        Guid userId,
+        SutProvider<PolicyService> sutProvider)
+    {
+        // Arrange - Setup DisableSend policy (not SingleOrg)
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByUserIdWithPolicyDetailsAsync(userId, PolicyType.DisableSend)
+            .Returns(new List<OrganizationUserPolicyDetails>
+            {
+                new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.DisableSend, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.User, OrganizationUserStatus = OrganizationUserStatusType.Revoked, IsProvider = false },
+                new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.DisableSend, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.User, OrganizationUserStatus = OrganizationUserStatusType.Confirmed, IsProvider = false }
+            });
+
+        // Enable AutomaticConfirmUsers feature flag
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(true);
+
+        // User has AutomaticUserConfirmation policy (but we're querying DisableSend, not SingleOrg)
+        var autoConfirmPolicies = new List<OrganizationUserPolicyDetails>
+        {
+            new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.AutomaticUserConfirmation, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.User, OrganizationUserStatus = OrganizationUserStatusType.Confirmed, IsProvider = false }
+        };
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByUserIdWithPolicyDetailsAsync(userId, PolicyType.AutomaticUserConfirmation)
+            .Returns(autoConfirmPolicies);
+
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilitiesAsync()
+            .Returns(Task.FromResult<IDictionary<Guid, OrganizationAbility>>(
+                new Dictionary<Guid, OrganizationAbility>()));
+
+        // Act
+        var result = await sutProvider.Sut
+            .GetPoliciesApplicableToUserAsync(userId, PolicyType.DisableSend);
+
+        // Assert - Should NOT include Revoked user because auto-confirm only applies to SingleOrg policy
+        Assert.Single(result);
+        Assert.DoesNotContain(result, p => p.OrganizationUserStatus == OrganizationUserStatusType.Revoked);
+        Assert.All(result, p => Assert.Equal(OrganizationUserStatusType.Confirmed, p.OrganizationUserStatus));
     }
 
     [Theory, BitAutoData]
