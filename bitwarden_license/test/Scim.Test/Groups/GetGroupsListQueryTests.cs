@@ -24,7 +24,7 @@ public class GetGroupsListCommandTests
             .GetManyByOrganizationIdAsync(organizationId)
             .Returns(groups);
 
-        var result = await sutProvider.Sut.GetGroupsListAsync(organizationId, null, count, startIndex);
+        var result = await sutProvider.Sut.GetGroupsListAsync(organizationId, new GetGroupsQueryParamModel { Count = count, StartIndex = startIndex });
 
         AssertHelper.AssertPropertyEqual(groups.Skip(startIndex - 1).Take(count).ToList(), result.groupList);
         AssertHelper.AssertPropertyEqual(groups.Count, result.totalResults);
@@ -47,7 +47,7 @@ public class GetGroupsListCommandTests
             .GetManyByOrganizationIdAsync(organizationId)
             .Returns(groups);
 
-        var result = await sutProvider.Sut.GetGroupsListAsync(organizationId, filter, 50, 1);
+        var result = await sutProvider.Sut.GetGroupsListAsync(organizationId, new GetGroupsQueryParamModel { Filter = filter });
 
         AssertHelper.AssertPropertyEqual(expectedGroupList, result.groupList);
         AssertHelper.AssertPropertyEqual(expectedTotalResults, result.totalResults);
@@ -67,7 +67,7 @@ public class GetGroupsListCommandTests
             .GetManyByOrganizationIdAsync(organizationId)
             .Returns(groups);
 
-        var result = await sutProvider.Sut.GetGroupsListAsync(organizationId, filter, 50, 1);
+        var result = await sutProvider.Sut.GetGroupsListAsync(organizationId, new GetGroupsQueryParamModel { Filter = filter });
 
         AssertHelper.AssertPropertyEqual(expectedGroupList, result.groupList);
         AssertHelper.AssertPropertyEqual(expectedTotalResults, result.totalResults);
@@ -90,7 +90,7 @@ public class GetGroupsListCommandTests
             .GetManyByOrganizationIdAsync(organizationId)
             .Returns(groups);
 
-        var result = await sutProvider.Sut.GetGroupsListAsync(organizationId, filter, 50, 1);
+        var result = await sutProvider.Sut.GetGroupsListAsync(organizationId, new GetGroupsQueryParamModel { Filter = filter });
 
         AssertHelper.AssertPropertyEqual(expectedGroupList, result.groupList);
         AssertHelper.AssertPropertyEqual(expectedTotalResults, result.totalResults);
@@ -112,7 +112,7 @@ public class GetGroupsListCommandTests
             .GetManyByOrganizationIdAsync(organizationId)
             .Returns(groups);
 
-        var result = await sutProvider.Sut.GetGroupsListAsync(organizationId, filter, 50, 1);
+        var result = await sutProvider.Sut.GetGroupsListAsync(organizationId, new GetGroupsQueryParamModel { Filter = filter });
 
         AssertHelper.AssertPropertyEqual(expectedGroupList, result.groupList);
         AssertHelper.AssertPropertyEqual(expectedTotalResults, result.totalResults);

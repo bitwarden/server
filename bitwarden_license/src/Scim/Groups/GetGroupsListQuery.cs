@@ -16,10 +16,15 @@ public class GetGroupsListQuery : IGetGroupsListQuery
         _groupRepository = groupRepository;
     }
 
-    public async Task<(IEnumerable<Group> groupList, int totalResults)> GetGroupsListAsync(Guid organizationId, string filter, int count, int startIndex)
+    public async Task<(IEnumerable<Group> groupList, int totalResults)> GetGroupsListAsync(Guid organizationId, GetGroupsQueryParamModel userQueryParams)
     {
         string nameFilter = null;
         string externalIdFilter = null;
+
+        int count = userQueryParams.Count;
+        int startIndex = userQueryParams.StartIndex;
+        string filter = userQueryParams.Filter;
+
         if (!string.IsNullOrWhiteSpace(filter))
         {
             if (filter.StartsWith("displayName eq "))

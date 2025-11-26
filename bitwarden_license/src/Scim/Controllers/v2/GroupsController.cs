@@ -61,18 +61,15 @@ public class GroupsController : Controller
     [HttpGet("")]
     public async Task<IActionResult> Get(
         Guid organizationId,
-        [FromQuery] string filter,
-        [FromQuery] int? count,
-        [FromQuery] int? startIndex)
+        [FromQuery] GetGroupsQueryParamModel model)
     {
-        var groupsListQueryResult = await _getGroupsListQuery.GetGroupsListAsync(organizationId, filter,
-            count.GetValueOrDefault(50), startIndex.GetValueOrDefault(1));
+        var groupsListQueryResult = await _getGroupsListQuery.GetGroupsListAsync(organizationId, model);
         var scimListResponseModel = new ScimListResponseModel<ScimGroupResponseModel>
         {
             Resources = groupsListQueryResult.groupList.Select(g => new ScimGroupResponseModel(g)).ToList(),
-            ItemsPerPage = count.GetValueOrDefault(groupsListQueryResult.groupList.Count()),
+            ItemsPerPage = model.Count,
             TotalResults = groupsListQueryResult.totalResults,
-            StartIndex = startIndex.GetValueOrDefault(1),
+            StartIndex = model.StartIndex,
         };
         return Ok(scimListResponseModel);
     }
