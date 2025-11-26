@@ -266,9 +266,6 @@ jobs:
   check-migration-order:
     name: Validate migration chronological order
     runs-on: ubuntu-22.04
-    needs:
-      - test
-      - validate
 
     steps:
       - name: Check out repo
