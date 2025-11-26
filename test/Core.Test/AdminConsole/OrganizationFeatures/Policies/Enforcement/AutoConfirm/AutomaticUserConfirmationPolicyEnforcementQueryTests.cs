@@ -6,7 +6,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfir
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Repositories;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -34,10 +33,6 @@ public class AutomaticUserConfirmationPolicyEnforcementQueryTests
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
             .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByUserAsync(user.Id)
-            .Returns([organizationUser]);
 
         // Act
         var result = await sutProvider.Sut.IsCompliantAsync(request);
@@ -69,10 +64,6 @@ public class AutomaticUserConfirmationPolicyEnforcementQueryTests
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
             .Returns(new AutomaticUserConfirmationPolicyRequirement([policyDetails]));
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByUserAsync(user.Id)
-            .Returns([organizationUser]); // Only belongs to this one org
 
         // Act
         var result = await sutProvider.Sut.IsCompliantAsync(request);
@@ -138,10 +129,6 @@ public class AutomaticUserConfirmationPolicyEnforcementQueryTests
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
             .Returns(new AutomaticUserConfirmationPolicyRequirement([policyDetails]));
 
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByUserAsync(user.Id)
-            .Returns([organizationUser]); // Only in this org, so first check passes
-
         // Act
         var result = await sutProvider.Sut.IsCompliantAsync(request);
 
@@ -174,10 +161,6 @@ public class AutomaticUserConfirmationPolicyEnforcementQueryTests
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
             .Returns(new AutomaticUserConfirmationPolicyRequirement([policyDetails]));
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByUserAsync(user.Id)
-            .Returns([organizationUser]);
 
         // Act
         var result = await sutProvider.Sut.IsCompliantAsync(request);
@@ -223,16 +206,12 @@ public class AutomaticUserConfirmationPolicyEnforcementQueryTests
         // Arrange
         var request = new AutomaticUserConfirmationPolicyEnforcementRequest(
             organizationUser,
-            [],
+            [organizationUser],
             user);
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
             .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByUserAsync(user.Id)
-            .Returns([organizationUser]); // Only one org
 
         // Act
         var result = await sutProvider.Sut.IsCompliantAsync(request);
@@ -291,10 +270,6 @@ public class AutomaticUserConfirmationPolicyEnforcementQueryTests
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
             .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByUserAsync(user.Id)
-            .Returns([organizationUser]); // Only one org
 
         // Act
         var result = await sutProvider.Sut.IsCompliantAsync(request);
