@@ -1,4 +1,5 @@
-﻿using Bit.Billing.Services;
+﻿using System.Globalization;
+using Bit.Billing.Services;
 using Bit.Billing.Services.Implementations;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
@@ -10,7 +11,7 @@ using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Pricing.Premium;
 using Bit.Core.Entities;
-using Bit.Core.Models.Mail.UpdatedInvoiceIncoming;
+using Bit.Core.Models.Mail.Billing.Renewal.Families2020Renewal;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
@@ -117,7 +118,7 @@ public class UpcomingInvoiceHandlerTests
             NextPaymentAttempt = DateTime.UtcNow.AddDays(7),
             Lines = new StripeList<InvoiceLineItem>
             {
-                Data = new List<InvoiceLineItem> { new() { Description = "Test Item" } }
+                Data = [new() { Description = "Test Item" }]
             }
         };
         var subscription = new Subscription
@@ -126,10 +127,7 @@ public class UpcomingInvoiceHandlerTests
             CustomerId = customerId,
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new() { Id = "si_123", Price = new Price { Id = Prices.PremiumAnnually } }
-                }
+                Data = [new() { Id = "si_123", Price = new Price { Id = Prices.PremiumAnnually } }]
             },
             AutomaticTax = new SubscriptionAutomaticTax { Enabled = false },
             Customer = new Customer { Id = customerId },
@@ -199,7 +197,7 @@ public class UpcomingInvoiceHandlerTests
             NextPaymentAttempt = DateTime.UtcNow.AddDays(7),
             Lines = new StripeList<InvoiceLineItem>
             {
-                Data = new List<InvoiceLineItem> { new() { Description = "Test Item" } }
+                Data = [new() { Description = "Test Item" }]
             }
         };
         var subscription = new Subscription
@@ -208,10 +206,7 @@ public class UpcomingInvoiceHandlerTests
             CustomerId = customerId,
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new() { Id = priceSubscriptionId, Price = new Price { Id = Prices.PremiumAnnually } }
-                }
+                Data = [new() { Id = priceSubscriptionId, Price = new Price { Id = Prices.PremiumAnnually } }]
             },
             AutomaticTax = new SubscriptionAutomaticTax { Enabled = false },
             Customer = new Customer
@@ -233,7 +228,7 @@ public class UpcomingInvoiceHandlerTests
         var customer = new Customer
         {
             Id = customerId,
-            Subscriptions = new StripeList<Subscription> { Data = new List<Subscription> { subscription } }
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] }
         };
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
@@ -272,11 +267,12 @@ public class UpcomingInvoiceHandlerTests
                 o.Discounts[0].Coupon == CouponIDs.Milestone2SubscriptionDiscount &&
                 o.ProrationBehavior == "none"));
 
-        // Verify the updated invoice email was sent
+        // Verify the updated invoice email was sent with correct price
         await _mailer.Received(1).SendEmail(
-            Arg.Is<UpdatedInvoiceUpcomingMail>(email =>
+            Arg.Is<Families2020RenewalMail>(email =>
                 email.ToEmails.Contains("user@example.com") &&
-                email.Subject == "Your Subscription Will Renew Soon"));
+                email.Subject == "Your Bitwarden Families renewal is updating" &&
+                email.View.MonthlyRenewalPrice == (plan.Seat.Price / 12).ToString("C", new CultureInfo("en-US"))));
     }
 
     [Fact]
@@ -291,7 +287,7 @@ public class UpcomingInvoiceHandlerTests
             NextPaymentAttempt = DateTime.UtcNow.AddDays(7),
             Lines = new StripeList<InvoiceLineItem>
             {
-                Data = new List<InvoiceLineItem> { new() { Description = "Test Item" } }
+                Data = [new() { Description = "Test Item" }]
             }
         };
         var subscription = new Subscription
@@ -307,7 +303,7 @@ public class UpcomingInvoiceHandlerTests
         var customer = new Customer
         {
             Id = "cus_123",
-            Subscriptions = new StripeList<Subscription> { Data = new List<Subscription> { subscription } },
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
             Address = new Address { Country = "US" }
         };
         var organization = new Organization
@@ -375,7 +371,7 @@ public class UpcomingInvoiceHandlerTests
             NextPaymentAttempt = DateTime.UtcNow.AddDays(7),
             Lines = new StripeList<InvoiceLineItem>
             {
-                Data = new List<InvoiceLineItem> { new() { Description = "Test Item" } }
+                Data = [new() { Description = "Test Item" }]
             }
         };
         var subscription = new Subscription
@@ -395,7 +391,7 @@ public class UpcomingInvoiceHandlerTests
         var customer = new Customer
         {
             Id = "cus_123",
-            Subscriptions = new StripeList<Subscription> { Data = new List<Subscription> { subscription } },
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
             Address = new Address { Country = "US" }
         };
         var organization = new Organization
@@ -469,7 +465,7 @@ public class UpcomingInvoiceHandlerTests
             NextPaymentAttempt = DateTime.UtcNow.AddDays(7),
             Lines = new StripeList<InvoiceLineItem>
             {
-                Data = new List<InvoiceLineItem> { new() { Description = "Test Item" } }
+                Data = [new() { Description = "Test Item" }]
             }
         };
         var subscription = new Subscription
@@ -489,7 +485,7 @@ public class UpcomingInvoiceHandlerTests
         var customer = new Customer
         {
             Id = "cus_123",
-            Subscriptions = new StripeList<Subscription> { Data = new List<Subscription> { subscription } },
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
             Address = new Address { Country = "US" }
         };
         var organization = new Organization
@@ -560,7 +556,7 @@ public class UpcomingInvoiceHandlerTests
             NextPaymentAttempt = DateTime.UtcNow.AddDays(7),
             Lines = new StripeList<InvoiceLineItem>
             {
-                Data = new List<InvoiceLineItem> { new() { Description = "Test Item" } }
+                Data = [new() { Description = "Test Item" }]
             }
         };
         var subscription = new Subscription
@@ -576,7 +572,7 @@ public class UpcomingInvoiceHandlerTests
         var customer = new Customer
         {
             Id = "cus_123",
-            Subscriptions = new StripeList<Subscription> { Data = new List<Subscription> { subscription } },
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
             Address = new Address { Country = "UK" },
             TaxExempt = TaxExempt.None
         };
@@ -622,9 +618,8 @@ public class UpcomingInvoiceHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_WhenUpdateSubscriptionItemPriceIdFails_LogsErrorAndSendsEmail()
+    public async Task HandleAsync_WhenUpdateSubscriptionItemPriceIdFails_LogsErrorAndSendsTraditionalEmail()
     {
-        // Arrange
         // Arrange
         var parsedEvent = new Event { Id = "evt_123" };
         var customerId = "cus_123";
@@ -637,7 +632,7 @@ public class UpcomingInvoiceHandlerTests
             NextPaymentAttempt = DateTime.UtcNow.AddDays(7),
             Lines = new StripeList<InvoiceLineItem>
             {
-                Data = new List<InvoiceLineItem> { new() { Description = "Test Item" } }
+                Data = [new() { Description = "Test Item" }]
             }
         };
         var subscription = new Subscription
@@ -646,10 +641,7 @@ public class UpcomingInvoiceHandlerTests
             CustomerId = customerId,
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new() { Id = priceSubscriptionId, Price = new Price { Id = Prices.PremiumAnnually } }
-                }
+                Data = [new() { Id = priceSubscriptionId, Price = new Price { Id = Prices.PremiumAnnually } }]
             },
             AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
             Customer = new Customer
@@ -671,7 +663,7 @@ public class UpcomingInvoiceHandlerTests
         var customer = new Customer
         {
             Id = customerId,
-            Subscriptions = new StripeList<Subscription> { Data = new List<Subscription> { subscription } }
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] }
         };
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
@@ -708,11 +700,16 @@ public class UpcomingInvoiceHandlerTests
             Arg.Any<Exception>(),
             Arg.Any<Func<object, Exception, string>>());
 
-        // Verify that email was still sent despite the exception
-        await _mailer.Received(1).SendEmail(
-            Arg.Is<UpdatedInvoiceUpcomingMail>(email =>
-                email.ToEmails.Contains("user@example.com") &&
-                email.Subject == "Your Subscription Will Renew Soon"));
+        // Verify that traditional email was sent when update fails
+        await _mailService.Received(1).SendInvoiceUpcoming(
+            Arg.Is<IEnumerable<string>>(emails => emails.Contains("user@example.com")),
+            Arg.Is<decimal>(amount => amount == invoice.AmountDue / 100M),
+            Arg.Is<DateTime>(dueDate => dueDate == invoice.NextPaymentAttempt.Value),
+            Arg.Is<List<string>>(items => items.Count == invoice.Lines.Data.Count),
+            Arg.Is<bool>(b => b == true));
+
+        // Verify renewal email was NOT sent
+        await _mailer.DidNotReceive().SendEmail(Arg.Any<Families2020RenewalMail>());
     }
 
     [Fact]
@@ -727,7 +724,7 @@ public class UpcomingInvoiceHandlerTests
             NextPaymentAttempt = DateTime.UtcNow.AddDays(7),
             Lines = new StripeList<InvoiceLineItem>
             {
-                Data = new List<InvoiceLineItem> { new() { Description = "Test Item" } }
+                Data = [new() { Description = "Test Item" }]
             }
         };
         var subscription = new Subscription
@@ -737,12 +734,12 @@ public class UpcomingInvoiceHandlerTests
             Items = new StripeList<SubscriptionItem>(),
             AutomaticTax = new SubscriptionAutomaticTax { Enabled = false },
             Customer = new Customer { Id = "cus_123" },
-            Metadata = new Dictionary<string, string>(),
+            Metadata = new Dictionary<string, string>()
         };
         var customer = new Customer
         {
             Id = "cus_123",
-            Subscriptions = new StripeList<Subscription> { Data = new List<Subscription> { subscription } }
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] }
         };
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
@@ -784,7 +781,7 @@ public class UpcomingInvoiceHandlerTests
             NextPaymentAttempt = DateTime.UtcNow.AddDays(7),
             Lines = new StripeList<InvoiceLineItem>
             {
-                Data = new List<InvoiceLineItem> { new() { Description = "Free Item" } }
+                Data = [new() { Description = "Free Item" }]
             }
         };
         var subscription = new Subscription
@@ -800,7 +797,7 @@ public class UpcomingInvoiceHandlerTests
         var customer = new Customer
         {
             Id = "cus_123",
-            Subscriptions = new StripeList<Subscription> { Data = new List<Subscription> { subscription } }
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] }
         };
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
@@ -841,7 +838,7 @@ public class UpcomingInvoiceHandlerTests
             NextPaymentAttempt = DateTime.UtcNow.AddDays(7),
             Lines = new StripeList<InvoiceLineItem>
             {
-                Data = new List<InvoiceLineItem> { new() { Description = "Test Item" } }
+                Data = [new() { Description = "Test Item" }]
             }
         };
         var subscription = new Subscription
@@ -856,7 +853,7 @@ public class UpcomingInvoiceHandlerTests
         var customer = new Customer
         {
             Id = "cus_123",
-            Subscriptions = new StripeList<Subscription> { Data = new List<Subscription> { subscription } }
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] }
         };
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
@@ -885,7 +882,7 @@ public class UpcomingInvoiceHandlerTests
             Arg.Any<List<string>>(),
             Arg.Any<bool>());
 
-        await _mailer.DidNotReceive().SendEmail(Arg.Any<UpdatedInvoiceUpcomingMail>());
+        await _mailer.DidNotReceive().SendEmail(Arg.Any<Families2020RenewalMail>());
     }
 
     [Fact]
@@ -900,7 +897,7 @@ public class UpcomingInvoiceHandlerTests
             NextPaymentAttempt = DateTime.UtcNow.AddDays(7),
             Lines = new StripeList<InvoiceLineItem>
             {
-                Data = new List<InvoiceLineItem> { new() { Description = "Test Item" } }
+                Data = [new() { Description = "Test Item" }]
             }
         };
         var subscription = new Subscription
@@ -915,7 +912,7 @@ public class UpcomingInvoiceHandlerTests
         var customer = new Customer
         {
             Id = "cus_123",
-            Subscriptions = new StripeList<Subscription> { Data = new List<Subscription> { subscription } }
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] }
         };
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
@@ -964,7 +961,7 @@ public class UpcomingInvoiceHandlerTests
             NextPaymentAttempt = DateTime.UtcNow.AddDays(7),
             Lines = new StripeList<InvoiceLineItem>
             {
-                Data = new List<InvoiceLineItem> { new() { Description = "Test Item" } }
+                Data = [new() { Description = "Test Item" }]
             }
         };
 
@@ -977,8 +974,8 @@ public class UpcomingInvoiceHandlerTests
             CustomerId = customerId,
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
+                Data =
+                [
                     new()
                     {
                         Id = passwordManagerItemId,
@@ -989,7 +986,7 @@ public class UpcomingInvoiceHandlerTests
                         Id = premiumAccessItemId,
                         Price = new Price { Id = families2019Plan.PasswordManager.StripePremiumAccessPlanId }
                     }
-                }
+                ]
             },
             AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
             Metadata = new Dictionary<string, string>()
@@ -998,7 +995,7 @@ public class UpcomingInvoiceHandlerTests
         var customer = new Customer
         {
             Id = customerId,
-            Subscriptions = new StripeList<Subscription> { Data = new List<Subscription> { subscription } },
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
             Address = new Address { Country = "US" }
         };
 
@@ -1045,9 +1042,10 @@ public class UpcomingInvoiceHandlerTests
                 org.Seats == familiesPlan.PasswordManager.BaseSeats));
 
         await _mailer.Received(1).SendEmail(
-            Arg.Is<UpdatedInvoiceUpcomingMail>(email =>
+            Arg.Is<Families2020RenewalMail>(email =>
                 email.ToEmails.Contains("org@example.com") &&
-                email.Subject == "Your Subscription Will Renew Soon"));
+                email.Subject == "Your Bitwarden Families renewal is updating" &&
+                email.View.MonthlyRenewalPrice == (familiesPlan.PasswordManager.BasePrice / 12).ToString("C", new CultureInfo("en-US"))));
     }
 
     [Fact]
@@ -1066,7 +1064,7 @@ public class UpcomingInvoiceHandlerTests
             NextPaymentAttempt = DateTime.UtcNow.AddDays(7),
             Lines = new StripeList<InvoiceLineItem>
             {
-                Data = new List<InvoiceLineItem> { new() { Description = "Test Item" } }
+                Data = [new() { Description = "Test Item" }]
             }
         };
 
@@ -1079,14 +1077,14 @@ public class UpcomingInvoiceHandlerTests
             CustomerId = customerId,
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
+                Data =
+                [
                     new()
                     {
                         Id = passwordManagerItemId,
                         Price = new Price { Id = families2019Plan.PasswordManager.StripePlanId }
                     }
-                }
+                ]
             },
             AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
             Metadata = new Dictionary<string, string>()
@@ -1095,7 +1093,7 @@ public class UpcomingInvoiceHandlerTests
         var customer = new Customer
         {
             Id = customerId,
-            Subscriptions = new StripeList<Subscription> { Data = new List<Subscription> { subscription } },
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
             Address = new Address { Country = "US" }
         };
 
@@ -1156,7 +1154,7 @@ public class UpcomingInvoiceHandlerTests
             NextPaymentAttempt = DateTime.UtcNow.AddDays(7),
             Lines = new StripeList<InvoiceLineItem>
             {
-                Data = new List<InvoiceLineItem> { new() { Description = "Test Item" } }
+                Data = [new() { Description = "Test Item" }]
             }
         };
 
@@ -1168,14 +1166,14 @@ public class UpcomingInvoiceHandlerTests
             CustomerId = customerId,
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
+                Data =
+                [
                     new()
                     {
                         Id = passwordManagerItemId,
                         Price = new Price { Id = families2019Plan.PasswordManager.StripePlanId }
                     }
-                }
+                ]
             },
             AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
             Metadata = new Dictionary<string, string>()
@@ -1184,7 +1182,7 @@ public class UpcomingInvoiceHandlerTests
         var customer = new Customer
         {
             Id = customerId,
-            Subscriptions = new StripeList<Subscription> { Data = new List<Subscription> { subscription } },
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
             Address = new Address { Country = "US" }
         };
 
@@ -1232,7 +1230,7 @@ public class UpcomingInvoiceHandlerTests
             NextPaymentAttempt = DateTime.UtcNow.AddDays(7),
             Lines = new StripeList<InvoiceLineItem>
             {
-                Data = new List<InvoiceLineItem> { new() { Description = "Test Item" } }
+                Data = [new() { Description = "Test Item" }]
             }
         };
 
@@ -1244,14 +1242,10 @@ public class UpcomingInvoiceHandlerTests
             CustomerId = customerId,
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new()
-                    {
-                        Id = "si_pm_123",
-                        Price = new Price { Id = familiesPlan.PasswordManager.StripePlanId }
-                    }
-                }
+                Data =
+                [
+                    new() { Id = "si_pm_123", Price = new Price { Id = familiesPlan.PasswordManager.StripePlanId } }
+                ]
             },
             AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
             Metadata = new Dictionary<string, string>()
@@ -1260,7 +1254,7 @@ public class UpcomingInvoiceHandlerTests
         var customer = new Customer
         {
             Id = customerId,
-            Subscriptions = new StripeList<Subscription> { Data = new List<Subscription> { subscription } },
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
             Address = new Address { Country = "US" }
         };
 
@@ -1307,7 +1301,7 @@ public class UpcomingInvoiceHandlerTests
             NextPaymentAttempt = DateTime.UtcNow.AddDays(7),
             Lines = new StripeList<InvoiceLineItem>
             {
-                Data = new List<InvoiceLineItem> { new() { Description = "Test Item" } }
+                Data = [new() { Description = "Test Item" }]
             }
         };
 
@@ -1319,14 +1313,10 @@ public class UpcomingInvoiceHandlerTests
             CustomerId = customerId,
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new()
-                    {
-                        Id = "si_different_item",
-                        Price = new Price { Id = "different-price-id" }
-                    }
-                }
+                Data =
+                [
+                    new() { Id = "si_different_item", Price = new Price { Id = "different-price-id" } }
+                ]
             },
             AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
             Metadata = new Dictionary<string, string>()
@@ -1335,7 +1325,7 @@ public class UpcomingInvoiceHandlerTests
         var customer = new Customer
         {
             Id = customerId,
-            Subscriptions = new StripeList<Subscription> { Data = new List<Subscription> { subscription } },
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
             Address = new Address { Country = "US" }
         };
 
@@ -1378,7 +1368,7 @@ public class UpcomingInvoiceHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_WhenMilestone3Enabled_AndUpdateFails_LogsError()
+    public async Task HandleAsync_WhenMilestone3Enabled_AndUpdateFails_LogsErrorAndSendsTraditionalEmail()
     {
         // Arrange
         var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
@@ -1393,7 +1383,7 @@ public class UpcomingInvoiceHandlerTests
             NextPaymentAttempt = DateTime.UtcNow.AddDays(7),
             Lines = new StripeList<InvoiceLineItem>
             {
-                Data = new List<InvoiceLineItem> { new() { Description = "Test Item" } }
+                Data = [new() { Description = "Test Item" }]
             }
         };
 
@@ -1406,14 +1396,14 @@ public class UpcomingInvoiceHandlerTests
             CustomerId = customerId,
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
+                Data =
+                [
                     new()
                     {
                         Id = passwordManagerItemId,
                         Price = new Price { Id = families2019Plan.PasswordManager.StripePlanId }
                     }
-                }
+                ]
             },
             AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
             Metadata = new Dictionary<string, string>()
@@ -1422,7 +1412,7 @@ public class UpcomingInvoiceHandlerTests
         var customer = new Customer
         {
             Id = customerId,
-            Subscriptions = new StripeList<Subscription> { Data = new List<Subscription> { subscription } },
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
             Address = new Address { Country = "US" }
         };
 
@@ -1463,11 +1453,16 @@ public class UpcomingInvoiceHandlerTests
             Arg.Any<Exception>(),
             Arg.Any<Func<object, Exception, string>>());
 
-        // Should still attempt to send email despite the failure
-        await _mailer.Received(1).SendEmail(
-            Arg.Is<UpdatedInvoiceUpcomingMail>(email =>
-                email.ToEmails.Contains("org@example.com") &&
-                email.Subject == "Your Subscription Will Renew Soon"));
+        // Should send traditional email when update fails
+        await _mailService.Received(1).SendInvoiceUpcoming(
+            Arg.Is<IEnumerable<string>>(emails => emails.Contains("org@example.com")),
+            Arg.Is<decimal>(amount => amount == invoice.AmountDue / 100M),
+            Arg.Is<DateTime>(dueDate => dueDate == invoice.NextPaymentAttempt.Value),
+            Arg.Is<List<string>>(items => items.Count == invoice.Lines.Data.Count),
+            Arg.Is<bool>(b => b == true));
+
+        // Verify renewal email was NOT sent
+        await _mailer.DidNotReceive().SendEmail(Arg.Any<Families2020RenewalMail>());
     }
 
     [Fact]
@@ -1487,7 +1482,7 @@ public class UpcomingInvoiceHandlerTests
             NextPaymentAttempt = DateTime.UtcNow.AddDays(7),
             Lines = new StripeList<InvoiceLineItem>
             {
-                Data = new List<InvoiceLineItem> { new() { Description = "Test Item" } }
+                Data = [new() { Description = "Test Item" }]
             }
         };
 
@@ -1500,20 +1495,21 @@ public class UpcomingInvoiceHandlerTests
             CustomerId = customerId,
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
+                Data =
+                [
                     new()
                     {
                         Id = passwordManagerItemId,
                         Price = new Price { Id = families2019Plan.PasswordManager.StripePlanId }
                     },
+
                     new()
                     {
                         Id = seatAddOnItemId,
                         Price = new Price { Id = "personal-org-seat-annually" },
                         Quantity = 3
                     }
-                }
+                ]
             },
             AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
             Metadata = new Dictionary<string, string>()
@@ -1522,7 +1518,7 @@ public class UpcomingInvoiceHandlerTests
         var customer = new Customer
         {
             Id = customerId,
-            Subscriptions = new StripeList<Subscription> { Data = new List<Subscription> { subscription } },
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
             Address = new Address { Country = "US" }
         };
 
@@ -1569,9 +1565,10 @@ public class UpcomingInvoiceHandlerTests
                 org.Seats == familiesPlan.PasswordManager.BaseSeats));
 
         await _mailer.Received(1).SendEmail(
-            Arg.Is<UpdatedInvoiceUpcomingMail>(email =>
+            Arg.Is<Families2020RenewalMail>(email =>
                 email.ToEmails.Contains("org@example.com") &&
-                email.Subject == "Your Subscription Will Renew Soon"));
+                email.Subject == "Your Bitwarden Families renewal is updating" &&
+                email.View.MonthlyRenewalPrice == (familiesPlan.PasswordManager.BasePrice / 12).ToString("C", new CultureInfo("en-US"))));
     }
 
     [Fact]
@@ -1591,7 +1588,7 @@ public class UpcomingInvoiceHandlerTests
             NextPaymentAttempt = DateTime.UtcNow.AddDays(7),
             Lines = new StripeList<InvoiceLineItem>
             {
-                Data = new List<InvoiceLineItem> { new() { Description = "Test Item" } }
+                Data = [new() { Description = "Test Item" }]
             }
         };
 
@@ -1604,20 +1601,21 @@ public class UpcomingInvoiceHandlerTests
             CustomerId = customerId,
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
+                Data =
+                [
                     new()
                     {
                         Id = passwordManagerItemId,
                         Price = new Price { Id = families2019Plan.PasswordManager.StripePlanId }
                     },
+
                     new()
                     {
                         Id = seatAddOnItemId,
                         Price = new Price { Id = "personal-org-seat-annually" },
                         Quantity = 1
                     }
-                }
+                ]
             },
             AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
             Metadata = new Dictionary<string, string>()
@@ -1626,7 +1624,7 @@ public class UpcomingInvoiceHandlerTests
         var customer = new Customer
         {
             Id = customerId,
-            Subscriptions = new StripeList<Subscription> { Data = new List<Subscription> { subscription } },
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
             Address = new Address { Country = "US" }
         };
 
@@ -1673,9 +1671,10 @@ public class UpcomingInvoiceHandlerTests
                 org.Seats == familiesPlan.PasswordManager.BaseSeats));
 
         await _mailer.Received(1).SendEmail(
-            Arg.Is<UpdatedInvoiceUpcomingMail>(email =>
+            Arg.Is<Families2020RenewalMail>(email =>
                 email.ToEmails.Contains("org@example.com") &&
-                email.Subject == "Your Subscription Will Renew Soon"));
+                email.Subject == "Your Bitwarden Families renewal is updating" &&
+                email.View.MonthlyRenewalPrice == (familiesPlan.PasswordManager.BasePrice / 12).ToString("C", new CultureInfo("en-US"))));
     }
 
     [Fact]
@@ -1696,7 +1695,7 @@ public class UpcomingInvoiceHandlerTests
             NextPaymentAttempt = DateTime.UtcNow.AddDays(7),
             Lines = new StripeList<InvoiceLineItem>
             {
-                Data = new List<InvoiceLineItem> { new() { Description = "Test Item" } }
+                Data = [new() { Description = "Test Item" }]
             }
         };
 
@@ -1709,25 +1708,27 @@ public class UpcomingInvoiceHandlerTests
             CustomerId = customerId,
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
+                Data =
+                [
                     new()
                     {
                         Id = passwordManagerItemId,
                         Price = new Price { Id = families2019Plan.PasswordManager.StripePlanId }
                     },
+
                     new()
                     {
                         Id = premiumAccessItemId,
                         Price = new Price { Id = families2019Plan.PasswordManager.StripePremiumAccessPlanId }
                     },
+
                     new()
                     {
                         Id = seatAddOnItemId,
                         Price = new Price { Id = "personal-org-seat-annually" },
                         Quantity = 2
                     }
-                }
+                ]
             },
             AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
             Metadata = new Dictionary<string, string>()
@@ -1736,7 +1737,7 @@ public class UpcomingInvoiceHandlerTests
         var customer = new Customer
         {
             Id = customerId,
-            Subscriptions = new StripeList<Subscription> { Data = new List<Subscription> { subscription } },
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
             Address = new Address { Country = "US" }
         };
 
@@ -1785,9 +1786,10 @@ public class UpcomingInvoiceHandlerTests
                 org.Seats == familiesPlan.PasswordManager.BaseSeats));
 
         await _mailer.Received(1).SendEmail(
-            Arg.Is<UpdatedInvoiceUpcomingMail>(email =>
+            Arg.Is<Families2020RenewalMail>(email =>
                 email.ToEmails.Contains("org@example.com") &&
-                email.Subject == "Your Subscription Will Renew Soon"));
+                email.Subject == "Your Bitwarden Families renewal is updating" &&
+                email.View.MonthlyRenewalPrice == (familiesPlan.PasswordManager.BasePrice / 12).ToString("C", new CultureInfo("en-US"))));
     }
 
     [Fact]
@@ -1806,7 +1808,7 @@ public class UpcomingInvoiceHandlerTests
             NextPaymentAttempt = DateTime.UtcNow.AddDays(7),
             Lines = new StripeList<InvoiceLineItem>
             {
-                Data = new List<InvoiceLineItem> { new() { Description = "Test Item" } }
+                Data = [new() { Description = "Test Item" }]
             }
         };
 
@@ -1819,14 +1821,14 @@ public class UpcomingInvoiceHandlerTests
             CustomerId = customerId,
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
+                Data =
+                [
                     new()
                     {
                         Id = passwordManagerItemId,
                         Price = new Price { Id = families2025Plan.PasswordManager.StripePlanId }
                     }
-                }
+                ]
             },
             AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
             Metadata = new Dictionary<string, string>()
@@ -1835,7 +1837,7 @@ public class UpcomingInvoiceHandlerTests
         var customer = new Customer
         {
             Id = customerId,
-            Subscriptions = new StripeList<Subscription> { Data = new List<Subscription> { subscription } },
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
             Address = new Address { Country = "US" }
         };
 
@@ -1895,7 +1897,7 @@ public class UpcomingInvoiceHandlerTests
             NextPaymentAttempt = DateTime.UtcNow.AddDays(7),
             Lines = new StripeList<InvoiceLineItem>
             {
-                Data = new List<InvoiceLineItem> { new() { Description = "Test Item" } }
+                Data = [new() { Description = "Test Item" }]
             }
         };
 
@@ -1907,14 +1909,14 @@ public class UpcomingInvoiceHandlerTests
             CustomerId = customerId,
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
+                Data =
+                [
                     new()
                     {
                         Id = passwordManagerItemId,
                         Price = new Price { Id = families2025Plan.PasswordManager.StripePlanId }
                     }
-                }
+                ]
             },
             AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
             Metadata = new Dictionary<string, string>()
@@ -1923,7 +1925,7 @@ public class UpcomingInvoiceHandlerTests
         var customer = new Customer
         {
             Id = customerId,
-            Subscriptions = new StripeList<Subscription> { Data = new List<Subscription> { subscription } },
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
             Address = new Address { Country = "US" }
         };
 
