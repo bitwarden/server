@@ -100,18 +100,17 @@ public class AutomaticallyConfirmOrganizationUsersValidator(
             .IsTwoFactorRequiredForOrganization(request.Organization!.Id);
     }
 
-    private async Task<Error?> OrganizationUserConformsToAutomaticUserConfirmationPolicyAsync(
-        AutomaticallyConfirmOrganizationUserValidationRequest request)
+    private async Task<Error?> OrganizationUserConformsToAutomaticUserConfirmationPolicyAsync(AutomaticallyConfirmOrganizationUserValidationRequest request)
     {
         var allOrganizationUsersForUser = await organizationUserRepository
             .GetManyByUserAsync(request.OrganizationUser!.UserId!.Value);
-
-        var user = await userService.GetUserByIdAsync(request.OrganizationUser!.UserId!.Value);
 
         if (allOrganizationUsersForUser.Count == 1)
         {
             return null;
         }
+
+        var user = await userService.GetUserByIdAsync(request.OrganizationUser!.UserId!.Value);
 
         return (await automaticUserConfirmationPolicyEnforcementQuery.IsCompliantAsync(
                 new AutomaticUserConfirmationPolicyEnforcementRequest(
