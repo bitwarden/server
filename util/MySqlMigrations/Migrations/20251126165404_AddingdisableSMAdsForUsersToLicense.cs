@@ -5,7 +5,7 @@
 namespace Bit.MySqlMigrations.Migrations;
 
 /// <inheritdoc />
-public partial class AddingNewFlagToLicenseForDisableSMAdsForUser : Migration
+public partial class AddingdisableSMAdsForUsersToLicense : Migration
 {
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)

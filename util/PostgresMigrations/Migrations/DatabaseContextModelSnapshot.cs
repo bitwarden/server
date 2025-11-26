@@ -111,9 +111,6 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<bool>("UseDisableSmAdsForUsers")
-                        .HasColumnType("boolean");
-
                     b.Property<bool>("Enabled")
                         .HasColumnType("boolean");
 
@@ -232,6 +229,9 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<bool>("UseDirectory")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("UseDisableSmAdsForUsers")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("UseEvents")
