@@ -342,9 +342,10 @@ jobs:
             echo "Expected format: YYYY-MM-DD_NN_Description.sql (with leading zeros)"
             echo ""
             echo "To fix this issue:"
-            echo "  1. Rename your migration file(s) to use a date after $LAST_MAIN_MIGRATION"
-            echo "  2. Ensure the date format is YYYY-MM-DD with leading zeros (e.g., 2025-01-05, not 2025-1-5)"
-            echo "  3. Use _NN suffix (e.g., _00, _01) if multiple migrations exist for the same date"
+            echo "  1. Locate your migration file(s) in util/Migrator/DbScripts/"
+            echo "  2. Rename the file to use a date after $LAST_MAIN_MIGRATION"
+            echo "  3. Ensure the date format is YYYY-MM-DD with leading zeros (e.g., 2025-01-05, not 2025-1-5)"
+            echo "  4. Use _NN suffix (e.g., _00, _01) if multiple migrations exist for the same date"
             exit 1
           fi
 
@@ -414,6 +415,8 @@ jobs:
               echo "Migration files must be named to execute in chronological order."
               echo "New migrations must have dates/names that come after existing migrations."
               echo "Expected format: YYYY-MM-DD_NN_Description.sql (with leading zeros)"
+              echo ""
+              echo "Migration files are located in: util/Migrator/DbScripts/"
               exit 1
             fi
           else
