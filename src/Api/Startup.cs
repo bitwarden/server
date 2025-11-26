@@ -93,6 +93,7 @@ public class Startup
         // Caching
         services.AddMemoryCache();
         services.AddDistributedCache(globalSettings);
+        services.AddExtendedCache(EventIntegrationsCacheConstants.CacheName, globalSettings);
 
         if (!globalSettings.SelfHosted)
         {

@@ -295,33 +295,59 @@ graph TD
 ```
 ## Caching
 
-To reduce database load and improve performance, integration configurations are cached in-memory as a Dictionary
-with a periodic load of all configurations. Without caching, each incoming `EventMessage` would trigger a database
+To reduce database load and improve performance, event integrations uses its own named extended cache (see
+the [README in Utilities](https://github.com/bitwarden/server/blob/main/src/Core/Utilities/README.md#extended-cache)
+for more information). Without caching, for instance, each incoming `EventMessage` would trigger a database
 query to retrieve the relevant `OrganizationIntegrationConfigurationDetails`.
 
-By loading all configurations into memory on a fixed interval, we ensure:
+### `EventIntegrationsCacheConstants`
 
-- Consistent performance for reads.
-- Reduced database pressure.
-- Predictable refresh timing, independent of event activity.
+`EventIntegrationsCacheConstants` allows the code to have strongly typed references to a number of cache-related
+details when working with the extended cache. The cache name and all cache keys and tags are programmatically accessed
+from `EventIntegrationsCacheConstants` rather than simple strings. For instance,
+`EventIntegrationsCacheConstants.CacheName` is used in the cache setup, keyed services, dependency injection, etc.,
+rather than using a string literal (i.e. "EventIntegrations") in code.
 
-### Architecture / Design
+### `OrganizationIntegrationConfigurationDetails`
 
-- The cache is read-only for consumers. It is only updated in bulk by a background refresh process.
-- The cache is fully replaced on each refresh to avoid locking or partial state.
+- This is one of the most actively used portions of the architecture because any event that has an associated
+  organization requires a check of the configurations to determine if we need to fire off an integration.
+- By using the extended cache, all reads are hitting the L1 or L2 cache before needing to access the database.
 - Reads return a `List<OrganizationIntegrationConfigurationDetails>` for a given key or an empty list if no
   match exists.
-- Failures or delays in the loading process do not affect the existing cache state. The cache will continue serving
-  the last known good state until the update replaces the whole cache.
+- The TTL is set very high on these records (1 day). This is because when the admin API makes any changes, it
+  tells the cache to remove that key. This propagates to the event listening code via the extended cache backplane,
+  which means that the cache is then expired and the next read will fetch the new values. This allows us to have
+  a high TTL and avoid needing to refresh values except when necessary.
 
-### Background Refresh
+#### Tagging per integration
 
-A hosted service (`IntegrationConfigurationDetailsCacheService`) runs in the background and:
+- Each entry in the cache (which again, returns `List<OrganizationIntegrationConfigurationDetails>`) is tagged with
+  the organization id and the integration type.
+- This allows us to remove all of a given organization's configuration details for an integration when the admin
+  makes changes at the integration level.
+    - For instance, if there were 5 events configured for a given organization's webhook and the admin changed the URL
+      at the integration level, the updates would need to be propagated or else the cache will continue returning the
+      stale URL.
+    - By tagging each of the entries, the API can ask the extended cache to remove all the entries for a given
+      organization integration in one call. The cache will handle dropping / refreshing these entries in a
+      performant way.
+- There are two places in the code that are both aware of the tagging functionality
+    - The `EventIntegrationHandler` must use the tag when fetching relevant configuration details. This tells the cache
+      to store the entry with the tag when it successfully loads from the repository.
+    - The `OrganizationIntegrationController` needs to use the tag to remove all the tagged entries when and admin
+      creates, updates, or deletes an integration.
+    - To ensure both places are synchronized on how to tag entries, they both use
+      `EventIntegrationsCacheConstants.BuildCacheTagForOrganizationIntegration` to build the tag.
 
-- Loads all configuration records at application startup.
-- Refreshes the cache on a configurable interval.
-- Logs timing and entry count on success.
-- Logs exceptions on failure without disrupting application flow.
+### Template Properties
+
+- The `IntegrationTemplateProcessor` supports some properties that require an additional lookup. For instance,
+  the `UserId` is provided as part of the `EventMessage`, but `UserName` means an additional lookup to map the user
+  id to the actual name.
+- The properties for a `User` (which includes `ActingUser`), `Group`, and `Organization` are cached via the
+  extended cache with a default TTL of 30 minutes.
+- This is cached in both the L1 (Memory) and L2 (Redis) and will be automatically refreshed as needed.
 
 # Building a new integration
 

@@ -3,8 +3,10 @@ using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace Bit.Api.AdminConsole.Controllers;
 
@@ -12,6 +14,7 @@ namespace Bit.Api.AdminConsole.Controllers;
 [Authorize("Application")]
 public class OrganizationIntegrationConfigurationController(
     ICurrentContext currentContext,
+    [FromKeyedServices(EventIntegrationsCacheConstants.CacheName)] IFusionCache cache,
     IOrganizationIntegrationRepository integrationRepository,
     IOrganizationIntegrationConfigurationRepository integrationConfigurationRepository) : Controller
 {
@@ -58,6 +61,16 @@ public class OrganizationIntegrationConfigurationController(
 
         var organizationIntegrationConfiguration = model.ToOrganizationIntegrationConfiguration(integrationId);
         var configuration = await integrationConfigurationRepository.CreateAsync(organizationIntegrationConfiguration);
+
+        // Invalidate the cached configuration details
+        // Even though this is a new record, the cache could hold a stale empty list for this
+        await cache.RemoveAsync(
+            EventIntegrationsCacheConstants.BuildCacheKeyForOrganizationIntegrationConfigurationDetails(
+                organizationId: organizationId,
+                integrationType: integration.Type,
+                eventType: configuration.EventType
+            ));
+
         return new OrganizationIntegrationConfigurationResponseModel(configuration);
     }
 
@@ -91,6 +104,13 @@ public class OrganizationIntegrationConfigurationController(
         var newConfiguration = model.ToOrganizationIntegrationConfiguration(configuration);
         await integrationConfigurationRepository.ReplaceAsync(newConfiguration);
 
+        await cache.RemoveAsync(
+            EventIntegrationsCacheConstants.BuildCacheKeyForOrganizationIntegrationConfigurationDetails(
+                organizationId: organizationId,
+                integrationType: integration.Type,
+                eventType: configuration.EventType
+            ));
+
         return new OrganizationIntegrationConfigurationResponseModel(newConfiguration);
     }
 
@@ -114,6 +134,12 @@ public class OrganizationIntegrationConfigurationController(
         }
 
         await integrationConfigurationRepository.DeleteAsync(configuration);
+        await cache.RemoveAsync(
+            EventIntegrationsCacheConstants.BuildCacheKeyForOrganizationIntegrationConfigurationDetails(
+                organizationId: organizationId,
+                integrationType: integration.Type,
+                eventType: configuration.EventType
+            ));
     }
 
     [HttpPost("{configurationId:guid}/delete")]

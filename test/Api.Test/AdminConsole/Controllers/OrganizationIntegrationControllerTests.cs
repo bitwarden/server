@@ -6,12 +6,14 @@ using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Mvc;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace Bit.Api.Test.AdminConsole.Controllers;
 
@@ -19,7 +21,7 @@ namespace Bit.Api.Test.AdminConsole.Controllers;
 [SutProviderCustomize]
 public class OrganizationIntegrationControllerTests
 {
-    private OrganizationIntegrationRequestModel _webhookRequestModel = new OrganizationIntegrationRequestModel()
+    private readonly OrganizationIntegrationRequestModel _webhookRequestModel = new OrganizationIntegrationRequestModel()
     {
         Configuration = null,
         Type = IntegrationType.Webhook
@@ -80,7 +82,7 @@ public class OrganizationIntegrationControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task CreateAsync_Webhook_AllParamsProvided_Succeeds(
+    public async Task CreateAsync_AllParamsProvided_Succeeds(
         SutProvider<OrganizationIntegrationController> sutProvider,
         Guid organizationId)
     {
@@ -88,6 +90,9 @@ public class OrganizationIntegrationControllerTests
         sutProvider.GetDependency<ICurrentContext>()
             .OrganizationOwner(organizationId)
             .Returns(true);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetManyByOrganizationAsync(organizationId)
+            .Returns([]);
         sutProvider.GetDependency<IOrganizationIntegrationRepository>()
             .CreateAsync(Arg.Any<OrganizationIntegration>())
             .Returns(callInfo => callInfo.Arg<OrganizationIntegration>());
@@ -98,6 +103,52 @@ public class OrganizationIntegrationControllerTests
         Assert.IsType<OrganizationIntegrationResponseModel>(response);
         Assert.Equal(IntegrationType.Webhook, response.Type);
     }
+
+    [Theory, BitAutoData]
+    public async Task CreateAsync_Succeeds_InvalidatesCacheByTag(
+        SutProvider<OrganizationIntegrationController> sutProvider,
+        Guid organizationId)
+    {
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetManyByOrganizationAsync(organizationId)
+            .Returns([]);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .CreateAsync(Arg.Any<OrganizationIntegration>())
+            .Returns(callInfo => callInfo.Arg<OrganizationIntegration>());
+        await sutProvider.Sut.CreateAsync(organizationId, _webhookRequestModel);
+
+        var expectedTag = EventIntegrationsCacheConstants.BuildCacheTagForOrganizationIntegration(
+            organizationId,
+            IntegrationType.Webhook
+        );
+        await sutProvider.GetDependency<IFusionCache>().Received(1)
+            .RemoveByTagAsync(expectedTag);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateAsync_IntegrationAlreadyExists_ThrowsBadRequest(
+        SutProvider<OrganizationIntegrationController> sutProvider,
+        Guid organizationId,
+        OrganizationIntegration existingIntegration)
+    {
+        existingIntegration.OrganizationId = organizationId;
+        existingIntegration.Type = IntegrationType.Webhook; // Same type as _webhookRequestModel
+
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetManyByOrganizationAsync(organizationId)
+            .Returns([existingIntegration]);
+
+        await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.CreateAsync(organizationId, _webhookRequestModel));
+    }
+
 
     [Theory, BitAutoData]
     public async Task CreateAsync_UserIsNotOrganizationAdmin_ThrowsNotFound(SutProvider<OrganizationIntegrationController> sutProvider, Guid organizationId)
@@ -134,6 +185,32 @@ public class OrganizationIntegrationControllerTests
     }
 
     [Theory, BitAutoData]
+    public async Task DeleteAsync_Success_InvalidatesCacheByTag(
+        SutProvider<OrganizationIntegrationController> sutProvider,
+        Guid organizationId,
+        OrganizationIntegration organizationIntegration)
+    {
+        organizationIntegration.OrganizationId = organizationId;
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(organizationIntegration);
+
+        await sutProvider.Sut.DeleteAsync(organizationId, organizationIntegration.Id);
+
+        var expectedTag = EventIntegrationsCacheConstants.BuildCacheTagForOrganizationIntegration(
+            organizationId,
+            organizationIntegration.Type
+        );
+        await sutProvider.GetDependency<IFusionCache>().Received(1)
+            .RemoveByTagAsync(expectedTag);
+    }
+
+    [Theory, BitAutoData]
+    [Obsolete("Obsolete")]
     public async Task PostDeleteAsync_AllParamsProvided_Succeeds(
         SutProvider<OrganizationIntegrationController> sutProvider,
         Guid organizationId,
@@ -154,6 +231,14 @@ public class OrganizationIntegrationControllerTests
             .GetByIdAsync(organizationIntegration.Id);
         await sutProvider.GetDependency<IOrganizationIntegrationRepository>().Received(1)
             .DeleteAsync(organizationIntegration);
+
+        // Verify cache was invalidated with correct tag
+        var expectedTag = EventIntegrationsCacheConstants.BuildCacheTagForOrganizationIntegration(
+            organizationId,
+            organizationIntegration.Type
+        );
+        await sutProvider.GetDependency<IFusionCache>().Received(1)
+            .RemoveByTagAsync(expectedTag);
     }
 
     [Theory, BitAutoData]
@@ -227,6 +312,32 @@ public class OrganizationIntegrationControllerTests
             .ReplaceAsync(organizationIntegration);
         Assert.IsType<OrganizationIntegrationResponseModel>(response);
         Assert.Equal(IntegrationType.Webhook, response.Type);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_Success_InvalidatesCacheByTag(
+        SutProvider<OrganizationIntegrationController> sutProvider,
+        Guid organizationId,
+        OrganizationIntegration organizationIntegration)
+    {
+        organizationIntegration.OrganizationId = organizationId;
+        organizationIntegration.Type = IntegrationType.Webhook;
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(organizationIntegration);
+
+        await sutProvider.Sut.UpdateAsync(organizationId, organizationIntegration.Id, _webhookRequestModel);
+
+        var expectedTag = EventIntegrationsCacheConstants.BuildCacheTagForOrganizationIntegration(
+            organizationId,
+            organizationIntegration.Type
+        );
+        await sutProvider.GetDependency<IFusionCache>().Received(1)
+            .RemoveByTagAsync(expectedTag);
     }
 
     [Theory, BitAutoData]

@@ -3,16 +3,14 @@ using Bit.Core.Models.Data.Organizations;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories.Queries;
 
-public class OrganizationIntegrationConfigurationDetailsReadManyByEventTypeOrganizationIdIntegrationTypeQuery : IQuery<OrganizationIntegrationConfigurationDetails>
+public class OrganizationIntegrationConfigurationDetailsReadManyWildcardByOrganizationIdIntegrationTypeQuery : IQuery<OrganizationIntegrationConfigurationDetails>
 {
     private readonly Guid _organizationId;
-    private readonly EventType _eventType;
     private readonly IntegrationType _integrationType;
 
-    public OrganizationIntegrationConfigurationDetailsReadManyByEventTypeOrganizationIdIntegrationTypeQuery(Guid organizationId, EventType eventType, IntegrationType integrationType)
+    public OrganizationIntegrationConfigurationDetailsReadManyWildcardByOrganizationIdIntegrationTypeQuery(Guid organizationId, IntegrationType integrationType)
     {
         _organizationId = organizationId;
-        _eventType = eventType;
         _integrationType = integrationType;
     }
 
@@ -23,7 +21,7 @@ public class OrganizationIntegrationConfigurationDetailsReadManyByEventTypeOrgan
                     from oi in dbContext.OrganizationIntegrations
                     where oi.OrganizationId == _organizationId &&
                           oi.Type == _integrationType &&
-                          oic.EventType == _eventType
+                          !oic.EventType.HasValue
                     select new OrganizationIntegrationConfigurationDetails()
                     {
                         Id = oic.Id,
