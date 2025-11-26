@@ -84,4 +84,4 @@ Proceed? [y/N] " "n")"
     fi
 }
 
-one_time_setu
+one_time_setup
