@@ -577,14 +577,12 @@ public class UpcomingInvoiceHandler(
         var coupon = await stripeFacade.GetCoupon(CouponIDs.Milestone3SubscriptionDiscount);
         if (coupon == null)
         {
-            logger.LogWarning("Could not find coupon for sending families 2019 email with ID: {CouponID}", CouponIDs.Milestone3SubscriptionDiscount);
-            return;
+            throw new InvalidOperationException($"Coupon for sending families 2019 email id:{CouponIDs.Milestone3SubscriptionDiscount} not found");
         }
 
         if (coupon.PercentOff == null)
         {
-            logger.LogWarning("The coupon for sending families 2019 email with ID: {CouponID} has a null PercentOff.", CouponIDs.Milestone3SubscriptionDiscount);
-            return;
+            throw new InvalidOperationException($"coupon.PercentOff for sending families 2019 email id:{CouponIDs.Milestone3SubscriptionDiscount} is null");
         }
 
         var discountedAnnualRenewalPrice = familiesPlan.PasswordManager.BasePrice * (100 - coupon.PercentOff.Value) / 100;
