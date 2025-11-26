@@ -143,7 +143,7 @@ public class PolicyServiceTests
             .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
             .Returns(true);
 
-        // Setup recursive call - user has AutomaticUserConfirmation policy
+        // Mock repository call - user has AutomaticUserConfirmation policy details
         var autoConfirmPolicies = new List<OrganizationUserPolicyDetails>
         {
             new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.AutomaticUserConfirmation, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.User, OrganizationUserStatus = OrganizationUserStatusType.Revoked, IsProvider = false }
@@ -187,7 +187,7 @@ public class PolicyServiceTests
             .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
             .Returns(true);
 
-        // Setup recursive call - user has AutomaticUserConfirmation policy
+        // Mock repository call - user has AutomaticUserConfirmation policy details
         var autoConfirmPolicies = new List<OrganizationUserPolicyDetails>
         {
             new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.AutomaticUserConfirmation, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.User, OrganizationUserStatus = OrganizationUserStatusType.Confirmed, IsProvider = false }
@@ -266,7 +266,7 @@ public class PolicyServiceTests
             .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
             .Returns(true);
 
-        // Setup recursive call - user has NO AutomaticUserConfirmation policy
+        // Mock repository call - user has NO AutomaticUserConfirmation policy details
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByUserIdWithPolicyDetailsAsync(userId, PolicyType.AutomaticUserConfirmation)
             .Returns(new List<OrganizationUserPolicyDetails>());
