@@ -20,6 +20,7 @@ public class AutomaticallyConfirmOrganizationUsersValidator(
     IPolicyRequirementQuery policyRequirementQuery,
     IAutomaticUserConfirmationPolicyEnforcementQuery automaticUserConfirmationPolicyEnforcementQuery,
     IUserService userService,
+    IProviderUserRepository providerUserRepository,
     IPolicyRepository policyRepository) : IAutomaticallyConfirmOrganizationUsersValidator
 {
     public async Task<ValidationResult<AutomaticallyConfirmOrganizationUserValidationRequest>> ValidateAsync(
@@ -70,8 +71,16 @@ public class AutomaticallyConfirmOrganizationUsersValidator(
             return Invalid(request, error);
         }
 
+        if (await OrganizationUserIsProviderAsync(request))
+        {
+            return Invalid(request, new ProviderUsersCannotJoin());
+        }
+
         return Valid(request);
     }
+
+    private async Task<bool> OrganizationUserIsProviderAsync(AutomaticallyConfirmOrganizationUserValidationRequest request) =>
+        (await providerUserRepository.GetManyByUserAsync(request.OrganizationUser!.UserId!.Value)).Count != 0;
 
     private async Task<bool> OrganizationHasAutomaticallyConfirmUsersPolicyEnabledAsync(
             AutomaticallyConfirmOrganizationUserValidationRequest request) =>
@@ -114,4 +123,6 @@ public class AutomaticallyConfirmOrganizationUsersValidator(
                 _ => null
             );
     }
+
+
 }

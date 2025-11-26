@@ -9,8 +9,8 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business.Provider;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
@@ -425,7 +425,7 @@ public class ProviderService : IProviderService
 
             if (organizationAutoConfirmPolicyRequirement.Any())
             {
-                throw new BadRequestException(new AutoConfirmDoesNotAllowProviderUsers().Message);
+                throw new BadRequestException(new ProviderUsersCannotJoin().Message);
             }
         }
 
