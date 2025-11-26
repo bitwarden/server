@@ -280,6 +280,9 @@ jobs:
       - name: Validate migration order for pull request
         if: github.event_name == 'pull_request'
         run: |
+          # Use C locale for consistent, locale-independent string comparison
+          export LC_ALL=C
+
           # Get list of migrations from main branch
           git fetch origin main:main
           MAIN_MIGRATIONS=$(git ls-tree -r --name-only main -- util/Migrator/DbScripts/*.sql | sort)
@@ -312,6 +315,15 @@ jobs:
           while IFS= read -r migration; do
             MIGRATION_NAME=$(basename "$migration")
 
+            # Validate migration filename format (YYYY-MM-DD_NN_Description.sql with leading zeros)
+            if ! [[ "$MIGRATION_NAME" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}_.+\.sql$ ]]; then
+              echo "ERROR: Migration '$MIGRATION_NAME' does not match expected format"
+              echo "Expected format: YYYY-MM-DD_NN_Description.sql (with leading zeros)"
+              echo "Example: 2025-01-15_00_MyMigration.sql"
+              VALIDATION_FAILED=1
+              continue
+            fi
+
             # Compare migration name with last main migration
             if [[ "$MIGRATION_NAME" < "$LAST_MAIN_MIGRATION" ]]; then
               echo "ERROR: New migration '$MIGRATION_NAME' is not chronologically after '$LAST_MAIN_MIGRATION'"
@@ -323,16 +335,16 @@ jobs:
 
           echo ""
           if [ $VALIDATION_FAILED -eq 1 ]; then
-            echo "FAILED: One or more migrations are not in chronological order"
+            echo "FAILED: One or more migrations are not in chronological order or incorrectly formatted"
             echo ""
             echo "Migration files must be named to execute in chronological order."
             echo "New migrations must have dates/names that come after existing migrations."
-            echo "Expected format: YYYY-MM-DD_NN_Description.sql"
+            echo "Expected format: YYYY-MM-DD_NN_Description.sql (with leading zeros)"
             echo ""
             echo "To fix this issue:"
             echo "  1. Rename your migration file(s) to use a date after $LAST_MAIN_MIGRATION"
-            echo "  2. Ensure the date format is YYYY-MM-DD (with leading zeros)"
-            echo "  3. Use _NN suffix if multiple migrations exist for the same date"
+            echo "  2. Ensure the date format is YYYY-MM-DD with leading zeros (e.g., 2025-01-05, not 2025-1-5)"
+            echo "  3. Use _NN suffix (e.g., _00, _01) if multiple migrations exist for the same date"
             exit 1
           fi
 
@@ -342,6 +354,9 @@ jobs:
       - name: Validate migration order for push
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         run: |
+          # Use C locale for consistent, locale-independent string comparison
+          export LC_ALL=C
+
           # Get list of migrations from previous commit
           PREV_MIGRATIONS=$(git ls-tree -r --name-only HEAD~1 -- util/Migrator/DbScripts/*.sql 2>/dev/null | sort || echo "")
 
@@ -374,6 +389,15 @@ jobs:
             while IFS= read -r migration; do
               MIGRATION_NAME=$(basename "$migration")
 
+              # Validate migration filename format (YYYY-MM-DD_NN_Description.sql with leading zeros)
+              if ! [[ "$MIGRATION_NAME" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}_.+\.sql$ ]]; then
+                echo "ERROR: Migration '$MIGRATION_NAME' does not match expected format"
+                echo "Expected format: YYYY-MM-DD_NN_Description.sql (with leading zeros)"
+                echo "Example: 2025-01-15_00_MyMigration.sql"
+                VALIDATION_FAILED=1
+                continue
+              fi
+
               # Compare migration name with last previous migration
               if [[ "$MIGRATION_NAME" < "$LAST_PREV_MIGRATION" ]]; then
                 echo "ERROR: New migration '$MIGRATION_NAME' is not chronologically after '$LAST_PREV_MIGRATION'"
@@ -385,10 +409,11 @@ jobs:
 
             echo ""
             if [ $VALIDATION_FAILED -eq 1 ]; then
-              echo "FAILED: One or more migrations are not in chronological order"
+              echo "FAILED: One or more migrations are not in chronological order or incorrectly formatted"
               echo ""
               echo "Migration files must be named to execute in chronological order."
               echo "New migrations must have dates/names that come after existing migrations."
+              echo "Expected format: YYYY-MM-DD_NN_Description.sql (with leading zeros)"
               exit 1
             fi
           else
