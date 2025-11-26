@@ -14,34 +14,32 @@ public class AutomaticUserConfirmationPolicyEnforcementQuery(
     public async Task<ValidationResult<AutomaticUserConfirmationPolicyEnforcementRequest>> IsCompliantAsync(
         AutomaticUserConfirmationPolicyEnforcementRequest request)
     {
-        var (organizationUser, otherOrganizationsOrganizationUsers, user) = request;
-
         var automaticUserConfirmationPolicyRequirement = await policyRequirementQuery
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(request.User.Id);
 
-        if (automaticUserConfirmationPolicyRequirement.IsEnabled(organizationUser.OrganizationId))
-        {
-            return Invalid(request, new AutoConfirmDoesNotAllowMembershipToOtherOrganizations());
-        }
-
-        if (automaticUserConfirmationPolicyRequirement.IsEnabledAndUserIsAProvider(organizationUser.OrganizationId))
-        {
-            return Invalid(request, new ProviderUsersCannotJoin());
-        }
-
-        if (automaticUserConfirmationPolicyRequirement.IsEnabledForOrganizationsOtherThan(organizationUser
-                .OrganizationId))
+        if (automaticUserConfirmationPolicyRequirement.IsEnabled(request.OrganizationUser.OrganizationId)
+            && await OrganizationUserBelongsToAnotherOrganizationAsync(request))
         {
             return Invalid(request, new OrganizationEnforcesSingleOrgPolicy());
         }
 
-        if (otherOrganizationsOrganizationUsers is { Count: > 0 }
-            || (await organizationUserRepository.GetManyByUserAsync(user.Id))
-            .Any(x => x.OrganizationId != organizationUser.OrganizationId))
+        if (automaticUserConfirmationPolicyRequirement.IsEnabledAndUserIsAProvider(request.OrganizationUser.OrganizationId))
+        {
+            return Invalid(request, new ProviderUsersCannotJoin());
+        }
+
+        if (automaticUserConfirmationPolicyRequirement.IsEnabledForOrganizationsOtherThan(request.OrganizationUser
+                .OrganizationId))
         {
             return Invalid(request, new OtherOrganizationEnforcesSingleOrgPolicy());
         }
 
         return Valid(request);
     }
+
+    private async Task<bool> OrganizationUserBelongsToAnotherOrganizationAsync(
+        AutomaticUserConfirmationPolicyEnforcementRequest request) =>
+        request.OtherOrganizationsOrganizationUsers?.ToArray() is { Length: > 0 }
+        || (await organizationUserRepository.GetManyByUserAsync(request.User.Id))
+        .Any(x => x.OrganizationId != request.OrganizationUser.OrganizationId);
 }

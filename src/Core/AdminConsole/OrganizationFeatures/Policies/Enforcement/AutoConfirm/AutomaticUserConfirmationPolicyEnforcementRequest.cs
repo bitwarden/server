@@ -47,12 +47,5 @@ public record AutomaticUserConfirmationPolicyEnforcementRequest
         OtherOrganizationsOrganizationUsers = null;
         User = user;
     }
-
-    public void Deconstruct(out OrganizationUser organizationUser, out ICollection<OrganizationUser>? otherOrganizationsOrganizationUsers, out User user)
-    {
-        organizationUser = OrganizationUser;
-        otherOrganizationsOrganizationUsers = OtherOrganizationsOrganizationUsers?.ToArray();
-        user = User;
-    }
 }
 
