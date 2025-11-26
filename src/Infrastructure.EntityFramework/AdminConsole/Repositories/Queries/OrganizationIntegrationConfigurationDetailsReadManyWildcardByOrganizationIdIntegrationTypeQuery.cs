@@ -17,8 +17,7 @@ public class OrganizationIntegrationConfigurationDetailsReadManyWildcardByOrgani
     public IQueryable<OrganizationIntegrationConfigurationDetails> Run(DatabaseContext dbContext)
     {
         var query = from oic in dbContext.OrganizationIntegrationConfigurations
-                    join oi in dbContext.OrganizationIntegrations on oic.OrganizationIntegrationId equals oi.Id into oioic
-                    from oi in dbContext.OrganizationIntegrations
+                    join oi in dbContext.OrganizationIntegrations on oic.OrganizationIntegrationId equals oi.Id
                     where oi.OrganizationId == _organizationId &&
                           oi.Type == _integrationType &&
                           !oic.EventType.HasValue
