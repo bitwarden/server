@@ -13,6 +13,7 @@ using Bit.Core.Billing.Pricing.Premium;
 using Bit.Core.Entities;
 using Bit.Core.Models.Mail.Billing.Renewal.Families2019Renewal;
 using Bit.Core.Models.Mail.Billing.Renewal.Families2020Renewal;
+using Bit.Core.Models.Mail.Billing.Renewal.Premium;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
@@ -253,6 +254,9 @@ public class UpcomingInvoiceHandlerTests
             .IsEnabled(FeatureFlagKeys.PM23341_Milestone_2)
             .Returns(true);
 
+        var coupon = new Coupon { PercentOff = 20, Id = CouponIDs.Milestone2SubscriptionDiscount };
+
+        _stripeFacade.GetCoupon(CouponIDs.Milestone2SubscriptionDiscount).Returns(coupon);
 
         // Act
         await _sut.HandleAsync(parsedEvent);
@@ -260,6 +264,7 @@ public class UpcomingInvoiceHandlerTests
         // Assert
         await _userRepository.Received(1).GetByIdAsync(_userId);
         await _pricingClient.Received(1).GetAvailablePremiumPlan();
+        await _stripeFacade.Received(1).GetCoupon(CouponIDs.Milestone2SubscriptionDiscount);
         await _stripeFacade.Received(1).UpdateSubscription(
             Arg.Is("sub_123"),
             Arg.Is<SubscriptionUpdateOptions>(o =>
@@ -269,11 +274,15 @@ public class UpcomingInvoiceHandlerTests
                 o.ProrationBehavior == "none"));
 
         // Verify the updated invoice email was sent with correct price
+        var discountedPrice = plan.Seat.Price * (100 - coupon.PercentOff.Value) / 100;
         await _mailer.Received(1).SendEmail(
-            Arg.Is<Families2020RenewalMail>(email =>
+            Arg.Is<PremiumRenewalMail>(email =>
                 email.ToEmails.Contains("user@example.com") &&
-                email.Subject == "Your Bitwarden Families renewal is updating" &&
-                email.View.MonthlyRenewalPrice == (plan.Seat.Price / 12).ToString("C", new CultureInfo("en-US"))));
+                email.Subject == "Your Bitwarden Premium renewal is updating" &&
+                email.View.BaseMonthlyRenewalPrice == (plan.Seat.Price / 12).ToString("C", new CultureInfo("en-US")) &&
+                email.View.DiscountedMonthlyRenewalPrice == (discountedPrice / 12).ToString("C", new CultureInfo("en-US")) &&
+                email.View.DiscountAmount == $"{coupon.PercentOff}%"
+            ));
     }
 
     [Fact]
