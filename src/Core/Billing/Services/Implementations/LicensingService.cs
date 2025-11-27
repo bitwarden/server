@@ -28,6 +28,12 @@ namespace Bit.Core.Billing.Services;
 
 public class LicensingService : ILicensingService
 {
+    /// <summary>
+    /// Maximum reasonable expiration period in years from the current date.
+    /// Used to prevent unreasonably far future dates (e.g., year 3000) from being accepted.
+    /// </summary>
+    private const int MaxReasonableExpirationYears = 10;
+
     private readonly X509Certificate2 _certificate;
     private readonly IGlobalSettings _globalSettings;
     private readonly IUserRepository _userRepository;
@@ -120,7 +126,51 @@ public class LicensingService : ILicensingService
                     continue;
                 }
 
-                if (!license.VerifyData(org, GetClaimsPrincipalFromLicense(license), _globalSettings))
+                // Validate expiration date from license file to prevent tampering
+                if (license.Expires.HasValue)
+                {
+                    // Check if license has expired
+                    if (license.Expires.Value < DateTime.UtcNow)
+                    {
+                        await DisableOrganizationAsync(org, license, "License has expired.");
+                        continue;
+                    }
+
+                    // Validate that expiration date is not unreasonably far in the future
+                    // This prevents dates like year 3000 from being accepted
+                    var maxReasonableExpiration = DateTime.UtcNow.AddYears(MaxReasonableExpirationYears);
+                    if (license.Expires.Value > maxReasonableExpiration)
+                    {
+                        await DisableOrganizationAsync(org, license, "License expiration date is invalid.");
+                        continue;
+                    }
+                }
+
+                // Verify hash FIRST to detect tampering with license file content before token validation
+                // This is critical because if the file is tampered, token validation is meaningless
+                if (!string.IsNullOrWhiteSpace(license.Hash))
+                {
+                    var computedHash = Convert.ToBase64String(license.ComputeHash());
+                    if (!computedHash.Equals(license.Hash, StringComparison.Ordinal))
+                    {
+                        await DisableOrganizationAsync(org, license, "License file has been tampered with (hash mismatch). The license file content does not match the original hash.");
+                        continue;
+                    }
+                }
+
+                ClaimsPrincipal claimsPrincipal;
+                try
+                {
+                    claimsPrincipal = GetClaimsPrincipalFromLicense(license);
+                }
+                catch (Exception ex)
+                {
+                    // Token validation failed (invalid signature, expired, etc.)
+                    await DisableOrganizationAsync(org, license, $"Invalid license token: {ex.Message}");
+                    continue;
+                }
+
+                if (!license.VerifyData(org, claimsPrincipal, _globalSettings))
                 {
                     await DisableOrganizationAsync(org, license, "Invalid data.");
                     continue;
@@ -300,7 +350,8 @@ public class LicensingService : ILicensingService
         }
 
         using var fs = File.OpenRead(filePath);
-        return await JsonSerializer.DeserializeAsync<OrganizationLicense>(fs);
+        // Use case-insensitive deserialization to handle both "expires" and "Expires" in JSON
+        return await JsonSerializer.DeserializeAsync<OrganizationLicense>(fs, JsonHelpers.IgnoreCase);
     }
 
     public ClaimsPrincipal GetClaimsPrincipalFromLicense(ILicense license)

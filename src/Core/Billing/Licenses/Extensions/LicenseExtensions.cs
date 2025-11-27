@@ -131,7 +131,13 @@ public static class LicenseExtensions
         // Handle DateTime
         if (typeof(T) == typeof(DateTime))
         {
-            return DateTime.TryParse(claim.Value, out var dateTime)
+            // Try ISO 8601 format first (round-trip format) to preserve precision
+            if (DateTime.TryParseExact(claim.Value, "O", null, System.Globalization.DateTimeStyles.RoundtripKind, out var dateTime))
+            {
+                return (T)(object)dateTime;
+            }
+            // Fallback to regular parse
+            return DateTime.TryParse(claim.Value, out dateTime)
                 ? (T)(object)dateTime
                 : default;
         }
@@ -177,6 +183,13 @@ public static class LicenseExtensions
         {
             return double.TryParse(claim.Value, out var doubleValue)
                 ? (T)(object)doubleValue
+                : default;
+        }
+
+        if (underlyingType == typeof(short))
+        {
+            return short.TryParse(claim.Value, out var shortValue)
+                ? (T)(object)shortValue
                 : default;
         }
 

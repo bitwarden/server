@@ -45,6 +45,22 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
             throw new BadRequestException("License is already in use by another organization.");
         }
 
+        // Verify hash FIRST to detect tampering with license file content before any other validation
+        // This is critical because if the file is tampered, all subsequent validations are meaningless
+        if (!string.IsNullOrWhiteSpace(license.Hash))
+        {
+            var computedHash = Convert.ToBase64String(license.ComputeHash());
+            if (!computedHash.Equals(license.Hash, StringComparison.Ordinal))
+            {
+                throw new BadRequestException("License file has been tampered with (hash mismatch). The license file content does not match the original hash.");
+            }
+        }
+        else
+        {
+            // If hash is missing, this is suspicious - old licenses might not have hashes, but new ones should
+            // For now, we'll allow it but this could be tightened in the future
+        }
+
         var claimsPrincipal = _licensingService.GetClaimsPrincipalFromLicense(license);
         var canUse = license.CanUse(_globalSettings, _licensingService, claimsPrincipal, out var exception) &&
             selfHostedOrganization.CanUseLicense(license, out exception);
@@ -52,6 +68,13 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
         if (!canUse)
         {
             throw new BadRequestException(exception);
+        }
+
+        // Validate license data including expiration date to prevent tampering
+        var organization = selfHostedOrganization.ToOrganization();
+        if (!license.VerifyData(organization, claimsPrincipal, _globalSettings))
+        {
+            throw new BadRequestException("Invalid license data. The license file may have been tampered with.");
         }
 
         var useAutomaticUserConfirmation = claimsPrincipal?
