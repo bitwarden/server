@@ -301,30 +301,31 @@ public class Startup
                 config.RouteTemplate = "specs/{documentName}/swagger.json";
                 config.PreSerializeFilters.Add((swaggerDoc, httpReq) =>
                 {
-                    // Simplify servers for local development
-                    swaggerDoc.Servers = new List<OpenApiServer>
+                    // Move last server to front for local development
+                    if (swaggerDoc.Servers.Count > 1)
                     {
-                        new() { Url = globalSettings.BaseServiceUri.Api, Description = "dev-server" }
-                    };
-
-                    // Filter security requirements to keep only dev-server
-                    var devServerRequirements = swaggerDoc.SecurityRequirements
-                        .Where(req => req.Keys.Any(scheme => scheme.Reference?.Id == "dev-server"))
-                        .ToList();
-                    swaggerDoc.SecurityRequirements.Clear();
-                    foreach (var req in devServerRequirements)
-                    {
-                        swaggerDoc.SecurityRequirements.Add(req);
+                        var lastServer = swaggerDoc.Servers[swaggerDoc.Servers.Count - 1];
+                        swaggerDoc.Servers.RemoveAt(swaggerDoc.Servers.Count - 1);
+                        swaggerDoc.Servers.Insert(0, lastServer);
                     }
 
-                    // Filter security definitions to keep only dev-server
-                    var securitySchemesToRemove = swaggerDoc.Components.SecuritySchemes
-                        .Where(kvp => kvp.Key != "dev-server")
-                        .Select(kvp => kvp.Key)
-                        .ToList();
-                    foreach (var key in securitySchemesToRemove)
+                    // Move last security scheme to front for local development
+                    if (swaggerDoc.Components.SecuritySchemes.Count > 1)
                     {
-                        swaggerDoc.Components.SecuritySchemes.Remove(key);
+                        var lastScheme = swaggerDoc.Components.SecuritySchemes.Last();
+                        var reordered = new Dictionary<string, OpenApiSecurityScheme>
+                        {
+                            { lastScheme.Key, lastScheme.Value }
+                        };
+                        foreach (var kvp in swaggerDoc.Components.SecuritySchemes.Where(s => s.Key != lastScheme.Key))
+                        {
+                            reordered.Add(kvp.Key, kvp.Value);
+                        }
+                        swaggerDoc.Components.SecuritySchemes.Clear();
+                        foreach (var kvp in reordered)
+                        {
+                            swaggerDoc.Components.SecuritySchemes.Add(kvp.Key, kvp.Value);
+                        }
                     }
                 });
             });

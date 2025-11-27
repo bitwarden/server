@@ -10,6 +10,7 @@ using Bit.Core.Utilities;
 using Bit.Core.Vault.Authorization.SecurityTasks;
 using Bit.SharedWeb.Health;
 using Bit.SharedWeb.Swagger;
+using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.OpenApi.Models;
 
@@ -39,6 +40,8 @@ public static class ServiceCollectionExtensions
                               organizations tools for managing members, collections, groups, event logs, and policies.
                               If you are looking for the Vault Management API, refer instead to
                               [this document](https://bitwarden.com/help/vault-management-api/).
+
+                              **Note:** your authorization must match the server you have selected.
                               """,
                 License = new OpenApiLicense
                 {
@@ -49,110 +52,23 @@ public static class ServiceCollectionExtensions
 
             config.SwaggerDoc("internal", new OpenApiInfo { Title = "Bitwarden Internal API", Version = "latest" });
 
-            config.AddSecurityDefinition("dev-server", new OpenApiSecurityScheme
-            {
-                Type = SecuritySchemeType.OAuth2,
-                Flows = new OpenApiOAuthFlows
-                {
-                    ClientCredentials = new OpenApiOAuthFlow
-                    {
-                        TokenUrl = new Uri($"{globalSettings.BaseServiceUri.Identity}/connect/token"),
-                        Scopes = new Dictionary<string, string>
-                        {
-                            { ApiScopes.ApiOrganization, "Organization APIs" },
-                        },
-                    }
-                },
-            });
+            config.AddSwaggerServerWithSecurity(
+                serverId: "US_server",
+                serverUrl: "https://api.bitwarden.com",
+                identityTokenUrl: "https://identity.bitwarden.com/connect/token",
+                serverDescription: "US server");
 
-            config.AddSecurityDefinition("us-server", new OpenApiSecurityScheme
-            {
-                Type = SecuritySchemeType.OAuth2,
-                Flows = new OpenApiOAuthFlows
-                {
-                    ClientCredentials = new OpenApiOAuthFlow
-                    {
-                        TokenUrl = new Uri("https://identity.bitwarden.com/connect/token"),
-                        Scopes = new Dictionary<string, string>
-                        {
-                            { ApiScopes.ApiOrganization, "Organization APIs" },
-                        },
-                    }
-                },
-            });
+            config.AddSwaggerServerWithSecurity(
+                serverId: "EU_server",
+                serverUrl: "https://api.bitwarden.eu",
+                identityTokenUrl: "https://identity.bitwarden.eu/connect/token",
+                serverDescription: "EU server");
 
-            config.AddSecurityDefinition("eu-server", new OpenApiSecurityScheme
-            {
-                Type = SecuritySchemeType.OAuth2,
-                Flows = new OpenApiOAuthFlows
-                {
-                    ClientCredentials = new OpenApiOAuthFlow
-                    {
-                        TokenUrl = new Uri("https://identity.bitwarden.eu/connect/token"),
-                        Scopes = new Dictionary<string, string>
-                        {
-                            { ApiScopes.ApiOrganization, "Organization APIs" },
-                        },
-                    }
-                },
-            });
-
-            config.AddSecurityRequirement(new OpenApiSecurityRequirement
-            {
-                {
-                    new OpenApiSecurityScheme
-                    {
-                        Reference = new OpenApiReference
-                        {
-                            Type = ReferenceType.SecurityScheme,
-                            Id = "dev-server"
-                        },
-                    },
-                    new[] { ApiScopes.ApiOrganization }
-                }
-            });
-
-            config.AddSecurityRequirement(new OpenApiSecurityRequirement
-            {
-                {
-                    new OpenApiSecurityScheme
-                    {
-                        Reference = new OpenApiReference
-                        {
-                            Type = ReferenceType.SecurityScheme,
-                            Id = "us-server"
-                        },
-                    },
-                    new[] { ApiScopes.ApiOrganization }
-                }
-            });
-
-            config.AddSecurityRequirement(new OpenApiSecurityRequirement
-            {
-                {
-                    new OpenApiSecurityScheme
-                    {
-                        Reference = new OpenApiReference
-                        {
-                            Type = ReferenceType.SecurityScheme,
-                            Id = "eu-server"
-                        },
-                    },
-                    new[] { ApiScopes.ApiOrganization }
-                }
-            });
-
-            config.AddServer(new OpenApiServer
-            {
-                Url = "https://api.bitwarden.com",
-                Description = "US-server"
-            });
-
-            config.AddServer(new OpenApiServer
-            {
-                Url = "https://api.bitwarden.eu",
-                Description = "EU-server"
-            });
+            config.AddSwaggerServerWithSecurity(
+                serverId: "Local_server",
+                serverUrl: globalSettings.BaseServiceUri.Api,
+                identityTokenUrl: $"{globalSettings.BaseServiceUri.Identity}/connect/token",
+                serverDescription: "Self-hosted or local server");
 
             config.DescribeAllParametersInCamelCase();
             // config.UseReferencedDefinitionsForEnums();
