@@ -52,6 +52,9 @@ public static class ServiceCollectionExtensions
 
             config.SwaggerDoc("internal", new OpenApiInfo { Title = "Bitwarden Internal API", Version = "latest" });
 
+            // Configure Bitwarden cloud US and EU servers. These will appear in the swagger.json build artifact
+            // used for our help center. These are overwritten with the local server when running in self-hosted
+            // or dev mode (see Api Startup.cs).
             config.AddSwaggerServerWithSecurity(
                 serverId: "US_server",
                 serverUrl: "https://api.bitwarden.com",
@@ -63,12 +66,6 @@ public static class ServiceCollectionExtensions
                 serverUrl: "https://api.bitwarden.eu",
                 identityTokenUrl: "https://identity.bitwarden.eu/connect/token",
                 serverDescription: "EU server");
-
-            config.AddSwaggerServerWithSecurity(
-                serverId: "Local_server",
-                serverUrl: globalSettings.BaseServiceUri.Api,
-                identityTokenUrl: $"{globalSettings.BaseServiceUri.Identity}/connect/token",
-                serverDescription: "Self-hosted or local server");
 
             config.DescribeAllParametersInCamelCase();
             // config.UseReferencedDefinitionsForEnums();

@@ -299,34 +299,48 @@ public class Startup
             app.UseSwagger(config =>
             {
                 config.RouteTemplate = "specs/{documentName}/swagger.json";
+
+                // Remove all Bitwarden cloud servers and only register the local server
                 config.PreSerializeFilters.Add((swaggerDoc, httpReq) =>
                 {
-                    // Move the local/dev server option to the top of the list for convenience
-                    if (swaggerDoc.Servers.Count > 1)
+                    swaggerDoc.Servers.Clear();
+                    swaggerDoc.Servers.Add(new OpenApiServer
                     {
-                        var lastServer = swaggerDoc.Servers[swaggerDoc.Servers.Count - 1];
-                        swaggerDoc.Servers.RemoveAt(swaggerDoc.Servers.Count - 1);
-                        swaggerDoc.Servers.Insert(0, lastServer);
-                    }
+                        Url = globalSettings.BaseServiceUri.Api,
+                    });
 
-                    // Move the local/dev server option to the top of the list for convenience
-                    if (swaggerDoc.Components.SecuritySchemes.Count > 1)
+                    swaggerDoc.Components.SecuritySchemes.Clear();
+                    swaggerDoc.Components.SecuritySchemes.Add("oauth2-client-credentials", new OpenApiSecurityScheme
                     {
-                        var lastScheme = swaggerDoc.Components.SecuritySchemes.Last();
-                        var reordered = new Dictionary<string, OpenApiSecurityScheme>
+                        Type = SecuritySchemeType.OAuth2,
+                        Flows = new OpenApiOAuthFlows
                         {
-                            { lastScheme.Key, lastScheme.Value }
-                        };
-                        foreach (var kvp in swaggerDoc.Components.SecuritySchemes.Where(s => s.Key != lastScheme.Key))
-                        {
-                            reordered.Add(kvp.Key, kvp.Value);
+                            ClientCredentials = new OpenApiOAuthFlow
+                            {
+                                TokenUrl = new Uri($"{globalSettings.BaseServiceUri.Identity}/connect/token"),
+                                Scopes = new Dictionary<string, string>
+                                {
+                                    { ApiScopes.ApiOrganization, "Organization APIs" }
+                                }
+                            }
                         }
-                        swaggerDoc.Components.SecuritySchemes.Clear();
-                        foreach (var kvp in reordered)
+                    });
+
+                    swaggerDoc.SecurityRequirements.Clear();
+                    swaggerDoc.SecurityRequirements.Add(new OpenApiSecurityRequirement
+                    {
                         {
-                            swaggerDoc.Components.SecuritySchemes.Add(kvp.Key, kvp.Value);
+                            new OpenApiSecurityScheme
+                            {
+                                Reference = new OpenApiReference
+                                {
+                                    Type = ReferenceType.SecurityScheme,
+                                    Id = "oauth2-client-credentials"
+                                }
+                            },
+                            [ApiScopes.ApiOrganization]
                         }
-                    }
+                    });
                 });
             });
 

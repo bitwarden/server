@@ -1096,7 +1096,7 @@ public static class ServiceCollectionExtensions
         config.AddSecurityDefinition(serverId, new OpenApiSecurityScheme
         {
             Type = SecuritySchemeType.OAuth2,
-            Description = $"**Use this option if you've selected \"{serverDescription}\"**",
+            Description = $"**Use this option if you've selected the {serverDescription}**",
             Flows = new OpenApiOAuthFlows
             {
                 ClientCredentials = new OpenApiOAuthFlow
