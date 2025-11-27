@@ -216,7 +216,7 @@ public class Startup
             config.Conventions.Add(new PublicApiControllersModelConvention());
         });
 
-        services.AddSwagger(globalSettings, Environment);
+        services.AddSwaggerGen(globalSettings, Environment);
         Jobs.JobsHostedService.AddJobsServices(services, globalSettings.SelfHosted);
         services.AddHostedService<Jobs.JobsHostedService>();
 
@@ -292,17 +292,20 @@ public class Startup
         });
 
         // Add Swagger
+        // Note that the swagger.json generation is configured in the call to AddSwaggerGen above.
         if (Environment.IsDevelopment() || globalSettings.SelfHosted)
         {
+            // adds the middleware to serve the swagger.json while the server is running
             app.UseSwagger(config =>
             {
                 config.RouteTemplate = "specs/{documentName}/swagger.json";
                 config.PreSerializeFilters.Add((swaggerDoc, httpReq) =>
-                    swaggerDoc.Servers = new List<OpenApiServer>
-                    {
-                        new OpenApiServer { Url = globalSettings.BaseServiceUri.Api }
-                    });
+                {
+                    swaggerDoc.Servers = new List<OpenApiServer> { new() { Url = globalSettings.BaseServiceUri.Api } };
+                });
             });
+
+            // adds the middleware to display the web UI
             app.UseSwaggerUI(config =>
             {
                 config.DocumentTitle = "Bitwarden API Documentation";

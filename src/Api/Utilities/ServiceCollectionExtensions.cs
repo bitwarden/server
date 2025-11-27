@@ -17,7 +17,10 @@ namespace Bit.Api.Utilities;
 
 public static class ServiceCollectionExtensions
 {
-    public static void AddSwagger(this IServiceCollection services, GlobalSettings globalSettings, IWebHostEnvironment environment)
+    /// <summary>
+    /// Configures the generation of swagger.json OpenAPI spec.
+    /// </summary>
+    public static void AddSwaggerGen(this IServiceCollection services, GlobalSettings globalSettings, IWebHostEnvironment environment)
     {
         services.AddSwaggerGen(config =>
         {
