@@ -301,7 +301,31 @@ public class Startup
                 config.RouteTemplate = "specs/{documentName}/swagger.json";
                 config.PreSerializeFilters.Add((swaggerDoc, httpReq) =>
                 {
-                    swaggerDoc.Servers = new List<OpenApiServer> { new() { Url = globalSettings.BaseServiceUri.Api } };
+                    // Simplify servers for local development
+                    swaggerDoc.Servers = new List<OpenApiServer>
+                    {
+                        new() { Url = globalSettings.BaseServiceUri.Api, Description = "dev-server" }
+                    };
+
+                    // Filter security requirements to keep only dev-server
+                    var devServerRequirements = swaggerDoc.SecurityRequirements
+                        .Where(req => req.Keys.Any(scheme => scheme.Reference?.Id == "dev-server"))
+                        .ToList();
+                    swaggerDoc.SecurityRequirements.Clear();
+                    foreach (var req in devServerRequirements)
+                    {
+                        swaggerDoc.SecurityRequirements.Add(req);
+                    }
+
+                    // Filter security definitions to keep only dev-server
+                    var securitySchemesToRemove = swaggerDoc.Components.SecuritySchemes
+                        .Where(kvp => kvp.Key != "dev-server")
+                        .Select(kvp => kvp.Key)
+                        .ToList();
+                    foreach (var key in securitySchemesToRemove)
+                    {
+                        swaggerDoc.Components.SecuritySchemes.Remove(key);
+                    }
                 });
             });
 

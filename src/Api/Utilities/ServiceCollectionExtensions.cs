@@ -49,7 +49,7 @@ public static class ServiceCollectionExtensions
 
             config.SwaggerDoc("internal", new OpenApiInfo { Title = "Bitwarden Internal API", Version = "latest" });
 
-            config.AddSecurityDefinition("oauth2-client-credentials", new OpenApiSecurityScheme
+            config.AddSecurityDefinition("dev-server", new OpenApiSecurityScheme
             {
                 Type = SecuritySchemeType.OAuth2,
                 Flows = new OpenApiOAuthFlows
@@ -57,6 +57,38 @@ public static class ServiceCollectionExtensions
                     ClientCredentials = new OpenApiOAuthFlow
                     {
                         TokenUrl = new Uri($"{globalSettings.BaseServiceUri.Identity}/connect/token"),
+                        Scopes = new Dictionary<string, string>
+                        {
+                            { ApiScopes.ApiOrganization, "Organization APIs" },
+                        },
+                    }
+                },
+            });
+
+            config.AddSecurityDefinition("us-server", new OpenApiSecurityScheme
+            {
+                Type = SecuritySchemeType.OAuth2,
+                Flows = new OpenApiOAuthFlows
+                {
+                    ClientCredentials = new OpenApiOAuthFlow
+                    {
+                        TokenUrl = new Uri("https://identity.bitwarden.com/connect/token"),
+                        Scopes = new Dictionary<string, string>
+                        {
+                            { ApiScopes.ApiOrganization, "Organization APIs" },
+                        },
+                    }
+                },
+            });
+
+            config.AddSecurityDefinition("eu-server", new OpenApiSecurityScheme
+            {
+                Type = SecuritySchemeType.OAuth2,
+                Flows = new OpenApiOAuthFlows
+                {
+                    ClientCredentials = new OpenApiOAuthFlow
+                    {
+                        TokenUrl = new Uri("https://identity.bitwarden.eu/connect/token"),
                         Scopes = new Dictionary<string, string>
                         {
                             { ApiScopes.ApiOrganization, "Organization APIs" },
@@ -73,11 +105,53 @@ public static class ServiceCollectionExtensions
                         Reference = new OpenApiReference
                         {
                             Type = ReferenceType.SecurityScheme,
-                            Id = "oauth2-client-credentials"
+                            Id = "dev-server"
                         },
                     },
                     new[] { ApiScopes.ApiOrganization }
                 }
+            });
+
+            config.AddSecurityRequirement(new OpenApiSecurityRequirement
+            {
+                {
+                    new OpenApiSecurityScheme
+                    {
+                        Reference = new OpenApiReference
+                        {
+                            Type = ReferenceType.SecurityScheme,
+                            Id = "us-server"
+                        },
+                    },
+                    new[] { ApiScopes.ApiOrganization }
+                }
+            });
+
+            config.AddSecurityRequirement(new OpenApiSecurityRequirement
+            {
+                {
+                    new OpenApiSecurityScheme
+                    {
+                        Reference = new OpenApiReference
+                        {
+                            Type = ReferenceType.SecurityScheme,
+                            Id = "eu-server"
+                        },
+                    },
+                    new[] { ApiScopes.ApiOrganization }
+                }
+            });
+
+            config.AddServer(new OpenApiServer
+            {
+                Url = "https://api.bitwarden.com",
+                Description = "US-server"
+            });
+
+            config.AddServer(new OpenApiServer
+            {
+                Url = "https://api.bitwarden.eu",
+                Description = "EU-server"
             });
 
             config.DescribeAllParametersInCamelCase();
