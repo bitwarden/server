@@ -13,6 +13,7 @@ using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.AdminConsole.Models.Teams;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.AdminConsole.Services.Implementations;
 using Bit.Core.AdminConsole.Services.NoopImplementations;
@@ -85,6 +86,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using StackExchange.Redis;
+using ZiggyCreatures.Caching.Fusion;
 using NoopRepos = Bit.Core.Repositories.Noop;
 using Role = Bit.Core.Entities.Role;
 using TableStorageRepos = Bit.Core.Repositories.TableStorage;
@@ -539,42 +541,33 @@ public static class ServiceCollectionExtensions
 
     public static IServiceCollection AddEventWriteServices(this IServiceCollection services, GlobalSettings globalSettings)
     {
-        if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Events.ConnectionString))
+        if (IsAzureServiceBusEnabled(globalSettings))
         {
-            services.TryAddKeyedSingleton<IEventWriteService, AzureQueueEventWriteService>("storage");
-
-            if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.ConnectionString) &&
-                CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.EventTopicName))
-            {
-                services.TryAddSingleton<IEventIntegrationPublisher, AzureServiceBusService>();
-                services.TryAddKeyedSingleton<IEventWriteService, EventIntegrationEventWriteService>("broadcast");
-            }
-            else
-            {
-                services.TryAddKeyedSingleton<IEventWriteService, NoopEventWriteService>("broadcast");
-            }
-        }
-        else if (globalSettings.SelfHosted)
-        {
-            services.TryAddKeyedSingleton<IEventWriteService, RepositoryEventWriteService>("storage");
-
-            if (IsRabbitMqEnabled(globalSettings))
-            {
-                services.TryAddSingleton<IEventIntegrationPublisher, RabbitMqService>();
-                services.TryAddKeyedSingleton<IEventWriteService, EventIntegrationEventWriteService>("broadcast");
-            }
-            else
-            {
-                services.TryAddKeyedSingleton<IEventWriteService, NoopEventWriteService>("broadcast");
-            }
-        }
-        else
-        {
-            services.TryAddKeyedSingleton<IEventWriteService, NoopEventWriteService>("storage");
-            services.TryAddKeyedSingleton<IEventWriteService, NoopEventWriteService>("broadcast");
+            services.TryAddSingleton<IEventIntegrationPublisher, AzureServiceBusService>();
+            services.TryAddSingleton<IEventWriteService, EventIntegrationEventWriteService>();
+            return services;
         }
 
-        services.TryAddScoped<IEventWriteService, EventRouteService>();
+        if (IsRabbitMqEnabled(globalSettings))
+        {
+            services.TryAddSingleton<IEventIntegrationPublisher, RabbitMqService>();
+            services.TryAddSingleton<IEventWriteService, EventIntegrationEventWriteService>();
+            return services;
+        }
+
+        if (CoreHelpers.SettingHasValue(globalSettings.Events.ConnectionString))
+        {
+            services.TryAddSingleton<IEventWriteService, AzureQueueEventWriteService>();
+            return services;
+        }
+
+        if (globalSettings.SelfHosted)
+        {
+            services.TryAddSingleton<IEventWriteService, RepositoryEventWriteService>();
+            return services;
+        }
+
+        services.TryAddSingleton<IEventWriteService, NoopEventWriteService>();
         return services;
     }
 
@@ -673,7 +666,7 @@ public static class ServiceCollectionExtensions
             ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
         };
 
-        if (!globalSettings.UnifiedDeployment)
+        if (!globalSettings.LiteDeployment)
         {
             // Trust the X-Forwarded-Host header of the nginx docker container
             try
@@ -917,8 +910,10 @@ public static class ServiceCollectionExtensions
                 eventIntegrationPublisher: provider.GetRequiredService<IEventIntegrationPublisher>(),
                 integrationFilterService: provider.GetRequiredService<IIntegrationFilterService>(),
                 configurationCache: provider.GetRequiredService<IIntegrationConfigurationDetailsCache>(),
-                userRepository: provider.GetRequiredService<IUserRepository>(),
+                cache: provider.GetRequiredKeyedService<IFusionCache>(EventIntegrationsCacheConstants.CacheName),
+                groupRepository: provider.GetRequiredService<IGroupRepository>(),
                 organizationRepository: provider.GetRequiredService<IOrganizationRepository>(),
+                organizationUserRepository: provider.GetRequiredService<IOrganizationUserRepository>(),
                 logger: provider.GetRequiredService<ILogger<EventIntegrationHandler<TConfig>>>()
             )
         );
@@ -960,6 +955,8 @@ public static class ServiceCollectionExtensions
         GlobalSettings globalSettings)
     {
         // Add common services
+        services.AddDistributedCache(globalSettings);
+        services.AddExtendedCache(EventIntegrationsCacheConstants.CacheName, globalSettings);
         services.TryAddSingleton<IntegrationConfigurationDetailsCacheService>();
         services.TryAddSingleton<IIntegrationConfigurationDetailsCache>(provider =>
             provider.GetRequiredService<IntegrationConfigurationDetailsCacheService>());
@@ -1044,8 +1041,10 @@ public static class ServiceCollectionExtensions
                 eventIntegrationPublisher: provider.GetRequiredService<IEventIntegrationPublisher>(),
                 integrationFilterService: provider.GetRequiredService<IIntegrationFilterService>(),
                 configurationCache: provider.GetRequiredService<IIntegrationConfigurationDetailsCache>(),
-                userRepository: provider.GetRequiredService<IUserRepository>(),
+                cache: provider.GetRequiredKeyedService<IFusionCache>(EventIntegrationsCacheConstants.CacheName),
+                groupRepository: provider.GetRequiredService<IGroupRepository>(),
                 organizationRepository: provider.GetRequiredService<IOrganizationRepository>(),
+                organizationUserRepository: provider.GetRequiredService<IOrganizationUserRepository>(),
                 logger: provider.GetRequiredService<ILogger<EventIntegrationHandler<TConfig>>>()
             )
         );

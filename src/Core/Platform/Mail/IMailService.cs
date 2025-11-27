@@ -15,9 +15,30 @@ namespace Bit.Core.Services;
 [Obsolete("The IMailService has been deprecated in favor of the IMailer. All new emails should be sent with an IMailer implementation.")]
 public interface IMailService
 {
+    [Obsolete("Use SendIndividualUserWelcomeEmailAsync instead")]
     Task SendWelcomeEmailAsync(User user);
+    /// <summary>
+    /// Email sent to users who have created a new account as an individual user.
+    /// </summary>
+    /// <param name="user">The new User</param>
+    /// <returns>Task</returns>
+    Task SendIndividualUserWelcomeEmailAsync(User user);
+    /// <summary>
+    /// Email sent to users who have been confirmed to an organization.
+    /// </summary>
+    /// <param name="user">The User</param>
+    /// <param name="organizationName">The Organization user is being added to</param>
+    /// <returns>Task</returns>
+    Task SendOrganizationUserWelcomeEmailAsync(User user, string organizationName);
+    /// <summary>
+    /// Email sent to users who have been confirmed to a free or families organization.
+    /// </summary>
+    /// <param name="user">The User</param>
+    /// <param name="familyOrganizationName">The Families Organization user is being added to</param>
+    /// <returns>Task</returns>
+    Task SendFreeOrgOrFamilyOrgUserWelcomeEmailAsync(User user, string familyOrganizationName);
     Task SendVerifyEmailEmailAsync(string email, Guid userId, string token);
-    Task SendRegistrationVerificationEmailAsync(string email, string token);
+    Task SendRegistrationVerificationEmailAsync(string email, string token, string? fromMarketing);
     Task SendTrialInitiationSignupEmailAsync(
         bool isExistingUser,
         string email,

@@ -1,8 +1,10 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
@@ -12,6 +14,7 @@ using Bit.Core.Auth.Services;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -360,6 +363,56 @@ public class SsoConfigServiceTests
                     t.OrganizationId == organization.Id &&
                     t.Enabled)
             );
+
+        await sutProvider.GetDependency<ISsoConfigRepository>().ReceivedWithAnyArgs()
+            .UpsertAsync(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveAsync_Tde_WhenPolicyValidatorsRefactorEnabled_UsesVNextSavePolicyCommand(
+        SutProvider<SsoConfigService> sutProvider, Organization organization)
+    {
+        var ssoConfig = new SsoConfig
+        {
+            Id = default,
+            Data = new SsoConfigurationData
+            {
+                MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption,
+            }.Serialize(),
+            Enabled = true,
+            OrganizationId = organization.Id,
+        };
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PolicyValidatorsRefactor)
+            .Returns(true);
+
+        await sutProvider.Sut.SaveAsync(ssoConfig, organization);
+
+        await sutProvider.GetDependency<IVNextSavePolicyCommand>()
+            .Received(1)
+            .SaveAsync(Arg.Is<SavePolicyModel>(m =>
+                m.PolicyUpdate.Type == PolicyType.SingleOrg &&
+                m.PolicyUpdate.OrganizationId == organization.Id &&
+                m.PolicyUpdate.Enabled &&
+                m.PerformedBy is SystemUser));
+
+        await sutProvider.GetDependency<IVNextSavePolicyCommand>()
+            .Received(1)
+            .SaveAsync(Arg.Is<SavePolicyModel>(m =>
+                m.PolicyUpdate.Type == PolicyType.ResetPassword &&
+                m.PolicyUpdate.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled &&
+                m.PolicyUpdate.OrganizationId == organization.Id &&
+                m.PolicyUpdate.Enabled &&
+                m.PerformedBy is SystemUser));
+
+        await sutProvider.GetDependency<IVNextSavePolicyCommand>()
+            .Received(1)
+            .SaveAsync(Arg.Is<SavePolicyModel>(m =>
+                m.PolicyUpdate.Type == PolicyType.RequireSso &&
+                m.PolicyUpdate.OrganizationId == organization.Id &&
+                m.PolicyUpdate.Enabled &&
+                m.PerformedBy is SystemUser));
 
         await sutProvider.GetDependency<ISsoConfigRepository>().ReceivedWithAnyArgs()
             .UpsertAsync(default);

@@ -47,7 +47,7 @@ public class OrganizationUsersControllerPutResetPasswordTests : IClassFixture<Ap
         _ownerEmail = $"reset-password-test-{Guid.NewGuid()}@example.com";
         await _factory.LoginWithNewAccount(_ownerEmail);
 
-        (_organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseAnnually2023,
+        (_organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseAnnually,
             ownerEmail: _ownerEmail, passwordManagerSeats: 5, paymentMethod: PaymentMethodType.Card);
 
         // Enable reset password and policies for the organization
