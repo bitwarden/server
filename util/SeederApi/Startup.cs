@@ -1,6 +1,5 @@
 ﻿using System.Globalization;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Bit.Seeder;
 using Bit.Seeder.Factories;
 using Bit.SeederApi.Extensions;
@@ -63,8 +62,6 @@ public class Startup
         IHostApplicationLifetime appLifetime,
         GlobalSettings globalSettings)
     {
-        app.UseSerilog(env, appLifetime, globalSettings);
-
         // Add PlayIdMiddleware services
         if (globalSettings.TestPlayIdTrackingEnabled)
         {
