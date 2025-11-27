@@ -1077,7 +1077,7 @@ public static class ServiceCollectionExtensions
     /// <param name="serverId">Unique identifier for this server (e.g., "us-server", "eu-server")</param>
     /// <param name="serverUrl">The API server URL</param>
     /// <param name="identityTokenUrl">The identity server token URL</param>
-    /// <param name="serverDescription">Optional description for the server</param>
+    /// <param name="serverDescription">Human-readable description for the server</param>
     public static void AddSwaggerServerWithSecurity(
         this SwaggerGenOptions config,
         string serverId,
