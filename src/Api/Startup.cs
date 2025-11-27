@@ -301,7 +301,7 @@ public class Startup
                 config.RouteTemplate = "specs/{documentName}/swagger.json";
                 config.PreSerializeFilters.Add((swaggerDoc, httpReq) =>
                 {
-                    // Move last server to front for local development
+                    // Move the local/dev server option to the top of the list for convenience
                     if (swaggerDoc.Servers.Count > 1)
                     {
                         var lastServer = swaggerDoc.Servers[swaggerDoc.Servers.Count - 1];
@@ -309,7 +309,7 @@ public class Startup
                         swaggerDoc.Servers.Insert(0, lastServer);
                     }
 
-                    // Move last security scheme to front for local development
+                    // Move the local/dev server option to the top of the list for convenience
                     if (swaggerDoc.Components.SecuritySchemes.Count > 1)
                     {
                         var lastScheme = swaggerDoc.Components.SecuritySchemes.Last();
