@@ -71,6 +71,7 @@ public class PlayIdServiceTests
     }
 }
 
+[SutProviderCustomize]
 public class NeverPlayIdServicesTests
 {
     [Fact]
@@ -97,6 +98,7 @@ public class NeverPlayIdServicesTests
     }
 }
 
+[SutProviderCustomize]
 public class PlayIdSingletonServiceTests
 {
     [Theory]
