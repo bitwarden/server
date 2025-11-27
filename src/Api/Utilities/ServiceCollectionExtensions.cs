@@ -1,6 +1,5 @@
 ﻿using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.Tools.Authorization;
-using Bit.Core.Auth.IdentityServer;
 using Bit.Core.PhishingDomainFeatures;
 using Bit.Core.PhishingDomainFeatures.Interfaces;
 using Bit.Core.Repositories;
