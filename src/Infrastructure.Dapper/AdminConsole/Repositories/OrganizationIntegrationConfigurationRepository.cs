@@ -41,6 +41,25 @@ public class OrganizationIntegrationConfigurationRepository : Repository<Organiz
         }
     }
 
+    public async Task<List<OrganizationIntegrationConfigurationDetails>> GetWildcardConfigurationDetailsAsync(
+        Guid organizationId,
+        IntegrationType integrationType)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<OrganizationIntegrationConfigurationDetails>(
+                "[dbo].[OrganizationIntegrationConfigurationDetails_ReadManyWildcardByOrganizationIdIntegrationType]",
+                new
+                {
+                    OrganizationId = organizationId,
+                    IntegrationType = integrationType
+                },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
+
     public async Task<List<OrganizationIntegrationConfigurationDetails>> GetAllConfigurationDetailsAsync()
     {
         using (var connection = new SqlConnection(ConnectionString))

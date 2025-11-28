@@ -26,8 +26,23 @@ public class OrganizationIntegrationConfigurationRepository : Repository<Core.Ad
         {
             var dbContext = GetDatabaseContext(scope);
             var query = new OrganizationIntegrationConfigurationDetailsReadManyByEventTypeOrganizationIdIntegrationTypeQuery(
-                organizationId, eventType, integrationType
+                organizationId,
+                eventType,
+                integrationType
                 );
+            return await query.Run(dbContext).ToListAsync();
+        }
+    }
+
+    public async Task<List<OrganizationIntegrationConfigurationDetails>> GetWildcardConfigurationDetailsAsync(Guid organizationId, IntegrationType integrationType)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = new OrganizationIntegrationConfigurationDetailsReadManyWildcardByOrganizationIdIntegrationTypeQuery(
+                organizationId,
+                integrationType
+            );
             return await query.Run(dbContext).ToListAsync();
         }
     }

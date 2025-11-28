@@ -8,12 +8,14 @@ using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Mvc;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace Bit.Api.Test.AdminConsole.Controllers;
 
@@ -49,6 +51,11 @@ public class OrganizationIntegrationsConfigurationControllerTests
             .GetByIdAsync(organizationIntegrationConfiguration.Id);
         await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().Received(1)
             .DeleteAsync(organizationIntegrationConfiguration);
+        await sutProvider.GetDependency<IFusionCache>().Received(1).RemoveAsync(
+            EventIntegrationsCacheConstants.BuildCacheKeyForOrganizationIntegrationConfigurationDetails(
+                organizationId: organizationId,
+                integrationType: organizationIntegration.Type,
+                eventType: organizationIntegrationConfiguration.EventType));
     }
 
     [Theory, BitAutoData]
@@ -79,6 +86,11 @@ public class OrganizationIntegrationsConfigurationControllerTests
             .GetByIdAsync(organizationIntegrationConfiguration.Id);
         await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().Received(1)
             .DeleteAsync(organizationIntegrationConfiguration);
+        await sutProvider.GetDependency<IFusionCache>().Received(1).RemoveAsync(
+            EventIntegrationsCacheConstants.BuildCacheKeyForOrganizationIntegrationConfigurationDetails(
+                organizationId: organizationId,
+                integrationType: organizationIntegration.Type,
+                eventType: organizationIntegrationConfiguration.EventType));
     }
 
     [Theory, BitAutoData]
@@ -312,6 +324,12 @@ public class OrganizationIntegrationsConfigurationControllerTests
         Assert.Equal(expected.EventType, createResponse.EventType);
         Assert.Equal(expected.Filters, createResponse.Filters);
         Assert.Equal(expected.Template, createResponse.Template);
+
+        await sutProvider.GetDependency<IFusionCache>().Received(1).RemoveAsync(
+            EventIntegrationsCacheConstants.BuildCacheKeyForOrganizationIntegrationConfigurationDetails(
+                organizationId: organizationId,
+                integrationType: organizationIntegration.Type,
+                eventType: organizationIntegrationConfiguration.EventType));
     }
 
     [Theory, BitAutoData]
@@ -351,6 +369,12 @@ public class OrganizationIntegrationsConfigurationControllerTests
         Assert.Equal(expected.EventType, createResponse.EventType);
         Assert.Equal(expected.Filters, createResponse.Filters);
         Assert.Equal(expected.Template, createResponse.Template);
+
+        await sutProvider.GetDependency<IFusionCache>().Received(1).RemoveAsync(
+            EventIntegrationsCacheConstants.BuildCacheKeyForOrganizationIntegrationConfigurationDetails(
+                organizationId: organizationId,
+                integrationType: organizationIntegration.Type,
+                eventType: organizationIntegrationConfiguration.EventType));
     }
 
     [Theory, BitAutoData]
@@ -390,6 +414,12 @@ public class OrganizationIntegrationsConfigurationControllerTests
         Assert.Equal(expected.EventType, createResponse.EventType);
         Assert.Equal(expected.Filters, createResponse.Filters);
         Assert.Equal(expected.Template, createResponse.Template);
+
+        await sutProvider.GetDependency<IFusionCache>().Received(1).RemoveAsync(
+            EventIntegrationsCacheConstants.BuildCacheKeyForOrganizationIntegrationConfigurationDetails(
+                organizationId: organizationId,
+                integrationType: organizationIntegration.Type,
+                eventType: organizationIntegrationConfiguration.EventType));
     }
 
     [Theory, BitAutoData]
@@ -601,6 +631,12 @@ public class OrganizationIntegrationsConfigurationControllerTests
         Assert.Equal(expected.EventType, updateResponse.EventType);
         Assert.Equal(expected.Filters, updateResponse.Filters);
         Assert.Equal(expected.Template, updateResponse.Template);
+
+        await sutProvider.GetDependency<IFusionCache>().Received(1).RemoveAsync(
+            EventIntegrationsCacheConstants.BuildCacheKeyForOrganizationIntegrationConfigurationDetails(
+                organizationId: organizationId,
+                integrationType: organizationIntegration.Type,
+                eventType: organizationIntegrationConfiguration.EventType));
     }
 
 
@@ -646,6 +682,12 @@ public class OrganizationIntegrationsConfigurationControllerTests
         Assert.Equal(expected.EventType, updateResponse.EventType);
         Assert.Equal(expected.Filters, updateResponse.Filters);
         Assert.Equal(expected.Template, updateResponse.Template);
+
+        await sutProvider.GetDependency<IFusionCache>().Received(1).RemoveAsync(
+            EventIntegrationsCacheConstants.BuildCacheKeyForOrganizationIntegrationConfigurationDetails(
+                organizationId: organizationId,
+                integrationType: organizationIntegration.Type,
+                eventType: organizationIntegrationConfiguration.EventType));
     }
 
     [Theory, BitAutoData]
@@ -690,6 +732,12 @@ public class OrganizationIntegrationsConfigurationControllerTests
         Assert.Equal(expected.EventType, updateResponse.EventType);
         Assert.Equal(expected.Filters, updateResponse.Filters);
         Assert.Equal(expected.Template, updateResponse.Template);
+
+        await sutProvider.GetDependency<IFusionCache>().Received(1).RemoveAsync(
+            EventIntegrationsCacheConstants.BuildCacheKeyForOrganizationIntegrationConfigurationDetails(
+                organizationId: organizationId,
+                integrationType: organizationIntegration.Type,
+                eventType: organizationIntegrationConfiguration.EventType));
     }
 
     [Theory, BitAutoData]

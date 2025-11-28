@@ -3,8 +3,10 @@ using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace Bit.Api.AdminConsole.Controllers;
 
@@ -12,6 +14,7 @@ namespace Bit.Api.AdminConsole.Controllers;
 [Authorize("Application")]
 public class OrganizationIntegrationController(
     ICurrentContext currentContext,
+    [FromKeyedServices(EventIntegrationsCacheConstants.CacheName)] IFusionCache cache,
     IOrganizationIntegrationRepository integrationRepository) : Controller
 {
     [HttpGet("")]
@@ -36,7 +39,21 @@ public class OrganizationIntegrationController(
             throw new NotFoundException();
         }
 
+        var integrations = await integrationRepository.GetManyByOrganizationAsync(organizationId: organizationId);
+        if (integrations.Any(i => i.Type == model.Type))
+        {
+            throw new BadRequestException("An integration of this type already exists for this organization.");
+        }
+
         var integration = await integrationRepository.CreateAsync(model.ToOrganizationIntegration(organizationId));
+
+        // Invalidate all cached configuration details for this integration
+        // Even though this is a new record, the cache could hold a stale empty list for this
+        await cache.RemoveByTagAsync(EventIntegrationsCacheConstants.BuildCacheTagForOrganizationIntegration(
+            organizationId: organizationId,
+            integrationType: integration.Type
+        ));
+
         return new OrganizationIntegrationResponseModel(integration);
     }
 
@@ -55,6 +72,13 @@ public class OrganizationIntegrationController(
         }
 
         await integrationRepository.ReplaceAsync(model.ToOrganizationIntegration(integration));
+
+        // Invalidate all cached configuration details for this integration
+        await cache.RemoveByTagAsync(EventIntegrationsCacheConstants.BuildCacheTagForOrganizationIntegration(
+            organizationId: organizationId,
+            integrationType: integration.Type
+        ));
+
         return new OrganizationIntegrationResponseModel(integration);
     }
 
@@ -73,6 +97,12 @@ public class OrganizationIntegrationController(
         }
 
         await integrationRepository.DeleteAsync(integration);
+
+        // Invalidate all cached configuration details for this integration
+        await cache.RemoveByTagAsync(EventIntegrationsCacheConstants.BuildCacheTagForOrganizationIntegration(
+            organizationId: organizationId,
+            integrationType: integration.Type
+        ));
     }
 
     [HttpPost("{integrationId:guid}/delete")]
