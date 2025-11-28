@@ -4,6 +4,8 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models;
+using Bit.Core.Platform.Push;
 using Bit.Core.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
@@ -16,19 +18,22 @@ public class SavePolicyCommand : ISavePolicyCommand
     private readonly IReadOnlyDictionary<PolicyType, IPolicyValidator> _policyValidators;
     private readonly TimeProvider _timeProvider;
     private readonly IPostSavePolicySideEffect _postSavePolicySideEffect;
+    private readonly IPushNotificationService _pushNotificationService;
 
     public SavePolicyCommand(IApplicationCacheService applicationCacheService,
         IEventService eventService,
         IPolicyRepository policyRepository,
         IEnumerable<IPolicyValidator> policyValidators,
         TimeProvider timeProvider,
-        IPostSavePolicySideEffect postSavePolicySideEffect)
+        IPostSavePolicySideEffect postSavePolicySideEffect,
+        IPushNotificationService pushNotificationService)
     {
         _applicationCacheService = applicationCacheService;
         _eventService = eventService;
         _policyRepository = policyRepository;
         _timeProvider = timeProvider;
         _postSavePolicySideEffect = postSavePolicySideEffect;
+        _pushNotificationService = pushNotificationService;
 
         var policyValidatorsDict = new Dictionary<PolicyType, IPolicyValidator>();
         foreach (var policyValidator in policyValidators)
@@ -74,6 +79,8 @@ public class SavePolicyCommand : ISavePolicyCommand
 
         await _policyRepository.UpsertAsync(policy);
         await _eventService.LogPolicyEventAsync(policy, EventType.Policy_Updated);
+
+        await PushPolicyUpdateToClients(policy.OrganizationId, policy);
 
         return policy;
     }
@@ -152,4 +159,17 @@ public class SavePolicyCommand : ISavePolicyCommand
         var currentPolicy = savedPoliciesDict.GetValueOrDefault(policyUpdate.Type);
         return (savedPoliciesDict, currentPolicy);
     }
+
+    Task PushPolicyUpdateToClients(Guid organizationId, Policy policy) => this._pushNotificationService.PushAsync(new PushNotification<SyncPolicyPushNotification>
+    {
+        Type = PushType.PolicyChanged,
+        Target = NotificationTarget.Organization,
+        TargetId = organizationId,
+        ExcludeCurrentContext = false,
+        Payload = new SyncPolicyPushNotification
+        {
+            Policy = policy,
+            OrganizationId = organizationId
+        }
+    });
 }
