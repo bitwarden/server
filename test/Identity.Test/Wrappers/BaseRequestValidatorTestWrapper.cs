@@ -54,6 +54,7 @@ IBaseRequestValidatorTestWrapper
         IEventService eventService,
         IDeviceValidator deviceValidator,
         ITwoFactorAuthenticationValidator twoFactorAuthenticationValidator,
+        ISsoRequestValidator ssoRequestValidator,
         IOrganizationUserRepository organizationUserRepository,
         ILogger logger,
         ICurrentContext currentContext,
@@ -73,6 +74,7 @@ IBaseRequestValidatorTestWrapper
             eventService,
             deviceValidator,
             twoFactorAuthenticationValidator,
+            ssoRequestValidator,
             organizationUserRepository,
             logger,
             currentContext,
@@ -132,12 +134,17 @@ IBaseRequestValidatorTestWrapper
     protected override void SetTwoFactorResult(
         BaseRequestValidationContextFake context,
         Dictionary<string, object> customResponse)
-    { }
+    {
+        context.GrantResult = new GrantValidationResult(
+            TokenRequestErrors.InvalidGrant, "Two-factor authentication required.", customResponse);
+    }
 
     protected override void SetValidationErrorResult(
         BaseRequestValidationContextFake context,
         CustomValidatorRequestContext requestContext)
-    { }
+    {
+        context.GrantResult.IsError = true;
+    }
 
     protected override Task<bool> ValidateContextAsync(
         BaseRequestValidationContextFake context,
