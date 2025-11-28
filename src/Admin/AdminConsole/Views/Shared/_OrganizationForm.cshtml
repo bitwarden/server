@@ -156,6 +156,10 @@
                     <input type="checkbox" class="form-check-input" asp-for="UseAdminSponsoredFamilies" disabled='@(canEditPlan ? null : "disabled")'>
                     <label class="form-check-label" asp-for="UseAdminSponsoredFamilies"></label>
                 </div>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" asp-for="UsePhishingBlocker" disabled='@(canEditPlan ? null : "disabled")'>
+                    <label class="form-check-label" asp-for="UsePhishingBlocker"></label>
+                </div>
                 @if(FeatureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
                 {
                     <div class="form-check">

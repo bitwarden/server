@@ -673,7 +673,8 @@ public class OrganizationUserRepositoryTests
             LimitItemDeletion = false,
             AllowAdminAccessToAllCollectionItems = false,
             UseRiskInsights = false,
-            UseAdminSponsoredFamilies = false
+            UseAdminSponsoredFamilies = false,
+            UsePhishingBlocker = false,
         });
 
         var organizationDomain = new OrganizationDomain

@@ -134,6 +134,11 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
     /// </summary>
     public bool UseAutomaticUserConfirmation { get; set; }
 
+    /// <summary>
+    /// If set to true, the organization has phishing protection enabled.
+    /// </summary>
+    public bool UsePhishingBlocker { get; set; }
+
     public void SetNewId()
     {
         if (Id == default(Guid))
@@ -334,5 +339,6 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
         UseOrganizationDomains = license.UseOrganizationDomains;
         UseAdminSponsoredFamilies = license.UseAdminSponsoredFamilies;
         UseAutomaticUserConfirmation = license.UseAutomaticUserConfirmation;
+        UsePhishingBlocker = license.UsePhishingBlocker;
     }
 }
