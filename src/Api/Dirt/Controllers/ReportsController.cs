@@ -1,6 +1,5 @@
 ﻿using Bit.Api.Dirt.Models;
 using Bit.Api.Dirt.Models.Response;
-using Bit.Api.Tools.Models.Response;
 using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Dirt.Entities;
