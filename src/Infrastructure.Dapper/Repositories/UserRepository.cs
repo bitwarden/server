@@ -5,10 +5,12 @@ using Bit.Core.Entities;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Dapper;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging;
 
 #nullable enable
 
@@ -17,13 +19,16 @@ namespace Bit.Infrastructure.Dapper.Repositories;
 public class UserRepository : Repository<User, Guid>, IUserRepository
 {
     private readonly IDataProtector _dataProtector;
+    protected readonly ILogger<UserRepository> _logger;
 
     public UserRepository(
+        IDataProtectionProvider dataProtectionProvider,
         GlobalSettings globalSettings,
-        IDataProtectionProvider dataProtectionProvider)
+        ILogger<UserRepository> logger)
         : base(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
     {
         _dataProtector = dataProtectionProvider.CreateProtector(Constants.DatabaseFieldProtectorPurpose);
+        _logger = logger;
     }
 
     public override async Task<User?> GetByIdAsync(Guid id)
@@ -153,6 +158,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
     public override async Task<User> CreateAsync(User user)
     {
         await ProtectDataAndSaveAsync(user, async () => await base.CreateAsync(user));
+
         return user;
     }
 
@@ -393,5 +399,28 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         {
             UnprotectData(user);
         }
+    }
+}
+
+public class TestUserTrackingUserRepository : UserRepository
+{
+    private readonly IPlayDataService _playDataService;
+
+    public TestUserTrackingUserRepository(
+        IPlayDataService playDataService,
+        GlobalSettings globalSettings,
+        IDataProtectionProvider dataProtectionProvider,
+        ILogger<UserRepository> logger)
+        : base(dataProtectionProvider, globalSettings, logger)
+    {
+        _playDataService = playDataService;
+    }
+
+    public override async Task<User> CreateAsync(User user)
+    {
+        var createdUser = await base.CreateAsync(user);
+
+        await _playDataService.Record(createdUser);
+        return createdUser;
     }
 }

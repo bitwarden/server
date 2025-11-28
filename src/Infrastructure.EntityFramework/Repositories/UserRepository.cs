@@ -2,9 +2,11 @@
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 #nullable enable
 
@@ -12,9 +14,16 @@ namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserRepository
 {
-    public UserRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
+    protected readonly ILogger<UserRepository> _logger;
+
+    public UserRepository(
+        IServiceScopeFactory serviceScopeFactory,
+        IMapper mapper,
+        ILogger<UserRepository> logger)
         : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Users)
-    { }
+    {
+        _logger = logger;
+    }
 
     public async Task<Core.Entities.User?> GetByEmailAsync(string email)
     {
@@ -390,5 +399,27 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             item.Collection.DefaultUserCollectionEmail = item.Collection.DefaultUserCollectionEmail ?? item.UserEmail;
             item.Collection.RevisionDate = DateTime.UtcNow;
         }
+    }
+}
+
+public class TestUserTrackingUserRepository : UserRepository
+{
+    private readonly IPlayDataService _playDataService;
+
+    public TestUserTrackingUserRepository(
+        IPlayDataService playDataService,
+        IServiceScopeFactory serviceScopeFactory,
+        IMapper mapper,
+        ILogger<UserRepository> logger)
+        : base(serviceScopeFactory, mapper, logger)
+    {
+        _playDataService = playDataService;
+    }
+
+    public override async Task<Core.Entities.User> CreateAsync(Core.Entities.User user)
+    {
+        var createdUser = await base.CreateAsync(user);
+        await _playDataService.Record(createdUser);
+        return createdUser;
     }
 }
