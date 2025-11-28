@@ -183,12 +183,12 @@ public class LocalAttachmentStorageServiceTests
 
     [Theory, BitAutoData]
     [UserCipherCustomize]
-    public async Task UserCipher_DeleteAttachmentsForCipherAsync_Succes(Cipher cipher) => await DeleteAttachmentsForCipherAsync_Succes(cipher);
+    public async Task UserCipher_DeleteAttachmentsForCipherAsync_Success(Cipher cipher) => await DeleteAttachmentsForCipherAsync_Success(cipher);
     [Theory, BitAutoData]
     [OrganizationCipherCustomize]
-    public async Task OrganizationCipher_DeleteAttachmentsForCipherAsync_Succes(Cipher cipher) => await DeleteAttachmentsForCipherAsync_Succes(cipher);
+    public async Task OrganizationCipher_DeleteAttachmentsForCipherAsync_Success(Cipher cipher) => await DeleteAttachmentsForCipherAsync_Success(cipher);
 
-    private async Task DeleteAttachmentsForCipherAsync_Succes(Cipher cipher)
+    private async Task DeleteAttachmentsForCipherAsync_Success(Cipher cipher)
     {
         using (var tempDirectory = new TempDirectory())
         {

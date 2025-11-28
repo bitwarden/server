@@ -14,12 +14,12 @@ namespace Bit.EfShared;
 public static class MigrationBuilderExtensions
 {
     /// <summary>
-    /// Reads an embedded resource for it's SQL contents and formats it with the specified direction for easier custom migration steps
+    /// Reads an embedded resource for its SQL contents and formats it with the specified direction for easier custom migration steps
     /// </summary>
     /// <param name="migrationBuilder">The MigrationBuilder instance the sql should be applied to</param>
     /// <param name="resourceName">The file name portion of the resource name, it is assumed to be in a Scripts folder</param>
     /// <param name="dir">The direction of the migration taking place</param>
-    public static void SqlResource(this MigrationBuilder migrationBuilder, string resourceName, [CallerMemberName] string dir = null)
+    public static void SqlResource(this MigrationBuilder migrationBuilder, string resourceName, [CallerMemberName] string dir = "")
     {
         var formattedResourceName = string.IsNullOrEmpty(dir) ? resourceName : string.Format(resourceName, dir);
 

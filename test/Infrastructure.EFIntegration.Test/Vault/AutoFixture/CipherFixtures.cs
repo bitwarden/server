@@ -5,6 +5,7 @@ using Bit.Core.Test.AutoFixture.UserFixtures;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
 using Bit.Infrastructure.EFIntegration.Test.AutoFixture.Relays;
+using Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.EntityFramework.Vault.Repositories;
 using Bit.Test.Common.AutoFixture;
@@ -37,7 +38,7 @@ internal class CipherBuilder : ISpecimenBuilder
                     .Without(c => c.OrganizationId));
         }
 
-        // Can't test valid Favorites and Folders without creating those values inide each test,
+        // Can't test valid Favorites and Folders without creating those values inside each test,
         // since we won't have any UserIds until the test is running & creating data
         fixture.Customize<Cipher>(c => c
             .Without(e => e.Favorites)
@@ -52,9 +53,9 @@ internal class CipherBuilder : ISpecimenBuilder
         {
             var obj = fixture.WithAutoNSubstitutions().Create<Cipher>();
             var cipherData = fixture.WithAutoNSubstitutions().Create<CipherLoginData>();
-            var cipherAttachements = fixture.WithAutoNSubstitutions().Create<List<CipherAttachment>>();
+            var cipherAttachments = fixture.WithAutoNSubstitutions().Create<List<CipherAttachment>>();
             obj.Data = JsonSerializer.Serialize(cipherData, serializerOptions);
-            obj.Attachments = JsonSerializer.Serialize(cipherAttachements, serializerOptions);
+            obj.Attachments = JsonSerializer.Serialize(cipherAttachments, serializerOptions);
 
             return obj;
         }
@@ -64,9 +65,9 @@ internal class CipherBuilder : ISpecimenBuilder
             for (var i = 0; i < ciphers.Count(); i++)
             {
                 var cipherData = fixture.WithAutoNSubstitutions().Create<CipherLoginData>();
-                var cipherAttachements = fixture.WithAutoNSubstitutions().Create<List<CipherAttachment>>();
+                var cipherAttachments = fixture.WithAutoNSubstitutions().Create<List<CipherAttachment>>();
                 ciphers[i].Data = JsonSerializer.Serialize(cipherData, serializerOptions);
-                ciphers[i].Attachments = JsonSerializer.Serialize(cipherAttachements, serializerOptions);
+                ciphers[i].Attachments = JsonSerializer.Serialize(cipherAttachments, serializerOptions);
             }
 
             return ciphers;

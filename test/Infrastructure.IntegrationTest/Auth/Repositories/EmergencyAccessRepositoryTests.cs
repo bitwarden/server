@@ -10,13 +10,12 @@ public class EmergencyAccessRepositoriesTests
 {
     [DatabaseTheory, DatabaseData]
     public async Task DeleteAsync_UpdatesRevisionDate(IUserRepository userRepository,
-      IEmergencyAccessRepository emergencyAccessRepository,
-      ITestDatabaseHelper helper)
+      IEmergencyAccessRepository emergencyAccessRepository)
     {
         var grantorUser = await userRepository.CreateAsync(new User
         {
             Name = "Test Grantor User",
-            Email = "test+grantor@email.com",
+            Email = $"test+grantor{Guid.NewGuid()}@email.com",
             ApiKey = "TEST",
             SecurityStamp = "stamp",
         });
@@ -24,7 +23,7 @@ public class EmergencyAccessRepositoriesTests
         var granteeUser = await userRepository.CreateAsync(new User
         {
             Name = "Test Grantee User",
-            Email = "test+grantee@email.com",
+            Email = $"test+grantee{Guid.NewGuid()}@email.com",
             ApiKey = "TEST",
             SecurityStamp = "stamp",
         });
@@ -36,12 +35,11 @@ public class EmergencyAccessRepositoriesTests
             Status = EmergencyAccessStatusType.Confirmed,
         });
 
-        helper.ClearTracker();
-
         await emergencyAccessRepository.DeleteAsync(emergencyAccess);
 
         var updatedGrantee = await userRepository.GetByIdAsync(granteeUser.Id);
 
+        Assert.NotNull(updatedGrantee);
         Assert.NotEqual(updatedGrantee.AccountRevisionDate, granteeUser.AccountRevisionDate);
     }
 }

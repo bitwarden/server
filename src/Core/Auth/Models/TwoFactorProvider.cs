@@ -1,4 +1,7 @@
-﻿using System.Text.Json;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text.Json;
 using Bit.Core.Auth.Enums;
 using Fido2NetLib.Objects;
 
@@ -56,8 +59,6 @@ public class TwoFactorProvider
         {
             case TwoFactorProviderType.Duo:
             case TwoFactorProviderType.YubiKey:
-            case TwoFactorProviderType.U2f: // Keep to ensure old U2f keys are considered premium
-            case TwoFactorProviderType.WebAuthn:
                 return true;
             default:
                 return false;

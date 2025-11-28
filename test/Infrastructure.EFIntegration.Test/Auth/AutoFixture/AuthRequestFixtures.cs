@@ -41,9 +41,11 @@ internal class EfAuthRequest : ICustomization
         fixture.Customizations.Add(new GlobalSettingsBuilder());
         fixture.Customizations.Add(new AuthRequestBuilder());
         fixture.Customizations.Add(new DeviceBuilder());
+        fixture.Customizations.Add(new OrganizationBuilder());
         fixture.Customizations.Add(new UserBuilder());
         fixture.Customizations.Add(new EfRepositoryListBuilder<AuthRequestRepository>());
         fixture.Customizations.Add(new EfRepositoryListBuilder<DeviceRepository>());
+        fixture.Customizations.Add(new EfRepositoryListBuilder<OrganizationRepository>());
         fixture.Customizations.Add(new EfRepositoryListBuilder<UserRepository>());
     }
 }

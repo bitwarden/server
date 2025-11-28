@@ -1,4 +1,5 @@
-﻿using Bit.Core.Auth.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Auth.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Infrastructure.EFIntegration.Test.Auth.AutoFixture;
@@ -14,14 +15,17 @@ namespace Bit.Infrastructure.EFIntegration.Test.Auth.Repositories;
 public class AuthRequestRepositoryTests
 {
     [CiSkippedTheory, EfAuthRequestAutoData]
-    public async void CreateAsync_Works_DataMatches(
+    public async Task CreateAsync_Works_DataMatches(
         AuthRequest authRequest,
         AuthRequestCompare equalityComparer,
         List<EfAuthRepo.AuthRequestRepository> suts,
         SqlAuthRepo.AuthRequestRepository sqlAuthRequestRepo,
+        Organization organization,
         User user,
         List<EfRepo.UserRepository> efUserRepos,
-        SqlRepo.UserRepository sqlUserRepo
+        List<EfRepo.OrganizationRepository> efOrgRepos,
+        SqlRepo.UserRepository sqlUserRepo,
+        SqlRepo.OrganizationRepository sqlOrgRepo
         )
     {
         authRequest.ResponseDeviceId = null;
@@ -34,6 +38,10 @@ public class AuthRequestRepositoryTests
             sut.ClearChangeTracking();
             authRequest.UserId = efUser.Id;
 
+            var efOrg = await efOrgRepos[i].CreateAsync(organization);
+            sut.ClearChangeTracking();
+            authRequest.OrganizationId = efOrg.Id;
+
             var postEfAuthRequest = await sut.CreateAsync(authRequest);
             sut.ClearChangeTracking();
 
@@ -43,6 +51,8 @@ public class AuthRequestRepositoryTests
 
         var sqlUser = await sqlUserRepo.CreateAsync(user);
         authRequest.UserId = sqlUser.Id;
+        var sqlOrg = await sqlOrgRepo.CreateAsync(organization);
+        authRequest.OrganizationId = sqlOrg.Id;
         var sqlAuthRequest = await sqlAuthRequestRepo.CreateAsync(authRequest);
         var savedSqlAuthRequest = await sqlAuthRequestRepo.GetByIdAsync(sqlAuthRequest.Id);
         savedAuthRequests.Add(savedSqlAuthRequest);

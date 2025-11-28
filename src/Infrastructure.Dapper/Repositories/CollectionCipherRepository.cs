@@ -5,6 +5,8 @@ using Bit.Core.Settings;
 using Dapper;
 using Microsoft.Data.SqlClient;
 
+#nullable enable
+
 namespace Bit.Infrastructure.Dapper.Repositories;
 
 public class CollectionCipherRepository : BaseRepository, ICollectionCipherRepository
@@ -36,6 +38,19 @@ public class CollectionCipherRepository : BaseRepository, ICollectionCipherRepos
         {
             var results = await connection.QueryAsync<CollectionCipher>(
                 "[dbo].[CollectionCipher_ReadByOrganizationId]",
+                new { OrganizationId = organizationId },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
+
+    public async Task<ICollection<CollectionCipher>> GetManySharedByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<CollectionCipher>(
+                "[dbo].[CollectionCipher_ReadSharedByOrganizationId]",
                 new { OrganizationId = organizationId },
                 commandType: CommandType.StoredProcedure);
 
@@ -92,6 +107,30 @@ public class CollectionCipherRepository : BaseRepository, ICollectionCipherRepos
                     OrganizationId = organizationId,
                     CollectionIds = collectionIds.ToGuidIdArrayTVP()
                 },
+                commandType: CommandType.StoredProcedure);
+        }
+    }
+
+    public async Task AddCollectionsForManyCiphersAsync(Guid organizationId, IEnumerable<Guid> cipherIds,
+        IEnumerable<Guid> collectionIds)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            await connection.ExecuteAsync(
+                "[dbo].[CollectionCipher_AddCollectionsForManyCiphers]",
+                new { CipherIds = cipherIds.ToGuidIdArrayTVP(), OrganizationId = organizationId, CollectionIds = collectionIds.ToGuidIdArrayTVP() },
+                commandType: CommandType.StoredProcedure);
+        }
+    }
+
+    public async Task RemoveCollectionsForManyCiphersAsync(Guid organizationId, IEnumerable<Guid> cipherIds,
+        IEnumerable<Guid> collectionIds)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            await connection.ExecuteAsync(
+                "[dbo].[CollectionCipher_RemoveCollectionsForManyCiphers]",
+                new { CipherIds = cipherIds.ToGuidIdArrayTVP(), OrganizationId = organizationId, CollectionIds = collectionIds.ToGuidIdArrayTVP() },
                 commandType: CommandType.StoredProcedure);
         }
     }

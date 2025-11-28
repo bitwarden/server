@@ -14,6 +14,10 @@ public class MetaData : ICustomization
     public void Customize(IFixture fixture)
     {
         fixture.Customize<CipherAttachment.MetaData>(composer => ComposerAction(fixture, composer));
+        fixture.Behaviors.OfType<ThrowingRecursionBehavior>()
+            .ToList()
+            .ForEach(b => fixture.Behaviors.Remove(b));
+        fixture.Behaviors.Add(new OmitOnRecursionBehavior(1));
     }
 }
 

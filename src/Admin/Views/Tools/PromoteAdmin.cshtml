@@ -9,17 +9,17 @@
     <div asp-validation-summary="All" class="alert alert-danger"></div>
     <div class="row">
         <div class="col-md">
-            <div class="form-group">
-                <label asp-for="UserId"></label>
+            <div class="mb-3">
+                <label asp-for="UserId" class="form-label"></label>
                 <input type="text" class="form-control" asp-for="UserId">
             </div>
         </div>
         <div class="col-md">
-            <div class="form-group">
-                <label asp-for="OrganizationId"></label>
+            <div class="mb-3">
+                <label asp-for="OrganizationId" class="form-label"></label>
                 <input type="text" class="form-control" asp-for="OrganizationId">
             </div>
         </div>
     </div>
-    <button type="submit" class="btn btn-primary mb-2">Promote Admin</button>
+    <button type="submit" class="btn btn-primary">Promote Admin</button>
 </form>

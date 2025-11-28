@@ -1,4 +1,7 @@
-﻿using Bit.Icons.Models;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Icons.Models;
 using Bit.Icons.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
@@ -81,7 +84,7 @@ public class IconsController : Controller
             }
             else
             {
-                icon = result.Icon;
+                icon = result;
             }
 
             // Only cache not found and smaller images (<= 50kb)

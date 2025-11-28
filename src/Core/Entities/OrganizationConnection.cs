@@ -1,13 +1,17 @@
-﻿using System.Text.Json;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
 using Bit.Core.Enums;
 using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.Utilities;
+
+#nullable enable
 
 namespace Bit.Core.Entities;
 
 public class OrganizationConnection<T> : OrganizationConnection where T : IConnectionConfig
 {
-    public new T Config
+    [DisallowNull]
+    public new T? Config
     {
         get => base.GetConfig<T>();
         set => base.SetConfig(value);
@@ -20,17 +24,22 @@ public class OrganizationConnection : ITableObject<Guid>
     public OrganizationConnectionType Type { get; set; }
     public Guid OrganizationId { get; set; }
     public bool Enabled { get; set; }
-    public string Config { get; set; }
+    public string? Config { get; set; }
 
     public void SetNewId()
     {
         Id = CoreHelpers.GenerateComb();
     }
 
-    public T GetConfig<T>() where T : IConnectionConfig
+    public T? GetConfig<T>() where T : IConnectionConfig
     {
         try
         {
+            if (Config is null)
+            {
+                return default;
+            }
+
             return JsonSerializer.Deserialize<T>(Config);
         }
         catch (JsonException)

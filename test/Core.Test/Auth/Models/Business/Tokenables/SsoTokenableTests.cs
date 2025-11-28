@@ -1,6 +1,6 @@
 ﻿using AutoFixture.Xunit2;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Models.Business.Tokenables;
-using Bit.Core.Entities;
 using Bit.Core.Tokens;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
@@ -67,7 +67,7 @@ public class SsoTokenableTests
             ExpirationDate = expectedDateTime
         };
 
-        var result = Tokenable.FromToken<HCaptchaTokenable>(token.ToToken());
+        var result = Tokenable.FromToken<SsoTokenable>(token.ToToken());
 
         Assert.Equal(expectedDateTime, result.ExpirationDate, TimeSpan.FromMilliseconds(10));
     }

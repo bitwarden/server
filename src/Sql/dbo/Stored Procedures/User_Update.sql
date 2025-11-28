@@ -36,12 +36,15 @@
     @UsesKeyConnector BIT = 0,
     @FailedLoginCount INT,
     @LastFailedLoginDate DATETIME2(7),
-    @UnknownDeviceVerificationEnabled BIT = 1,
     @AvatarColor VARCHAR(7),
     @LastPasswordChangeDate DATETIME2(7) = NULL,
     @LastKdfChangeDate DATETIME2(7) = NULL,
     @LastKeyRotationDate DATETIME2(7) = NULL,
-    @LastEmailChangeDate DATETIME2(7) = NULL
+    @LastEmailChangeDate DATETIME2(7) = NULL,
+    @VerifyDevices BIT = 1,
+    @SecurityState VARCHAR(MAX) = NULL,
+    @SecurityVersion INT = NULL,
+    @SignedPublicKey VARCHAR(MAX) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -85,12 +88,15 @@ BEGIN
         [UsesKeyConnector] = @UsesKeyConnector,
         [FailedLoginCount] = @FailedLoginCount,
         [LastFailedLoginDate] = @LastFailedLoginDate,
-        [UnknownDeviceVerificationEnabled] = @UnknownDeviceVerificationEnabled,
         [AvatarColor] = @AvatarColor,
         [LastPasswordChangeDate] = @LastPasswordChangeDate,
         [LastKdfChangeDate] = @LastKdfChangeDate,
         [LastKeyRotationDate] = @LastKeyRotationDate,
-        [LastEmailChangeDate] = @LastEmailChangeDate
+        [LastEmailChangeDate] = @LastEmailChangeDate,
+        [VerifyDevices] = @VerifyDevices,
+        [SecurityState] = @SecurityState,
+        [SecurityVersion] = @SecurityVersion,
+        [SignedPublicKey] = @SignedPublicKey
     WHERE
         [Id] = @Id
 END

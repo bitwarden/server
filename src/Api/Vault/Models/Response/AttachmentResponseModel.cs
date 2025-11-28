@@ -1,4 +1,6 @@
-﻿using System.Text.Json.Serialization;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
 using Bit.Core.Models.Api;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -15,7 +17,7 @@ public class AttachmentResponseModel : ResponseModel
         Url = data.Url;
         FileName = data.Data.FileName;
         Key = data.Data.Key;
-        Size = data.Data.Size;
+        Size = data.Data.Size.ToString();
         SizeName = CoreHelpers.ReadableBytesSize(data.Data.Size);
     }
 
@@ -27,7 +29,7 @@ public class AttachmentResponseModel : ResponseModel
         Url = $"{globalSettings.Attachment.BaseUrl}/{cipher.Id}/{id}";
         FileName = data.FileName;
         Key = data.Key;
-        Size = data.Size;
+        Size = data.Size.ToString();
         SizeName = CoreHelpers.ReadableBytesSize(data.Size);
     }
 
@@ -35,8 +37,7 @@ public class AttachmentResponseModel : ResponseModel
     public string Url { get; set; }
     public string FileName { get; set; }
     public string Key { get; set; }
-    [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString | JsonNumberHandling.WriteAsString)]
-    public long Size { get; set; }
+    public string Size { get; set; }
     public string SizeName { get; set; }
 
     public static IEnumerable<AttachmentResponseModel> FromCipher(Cipher cipher, IGlobalSettings globalSettings)

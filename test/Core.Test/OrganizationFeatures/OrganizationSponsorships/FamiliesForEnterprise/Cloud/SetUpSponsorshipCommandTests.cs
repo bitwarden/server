@@ -1,5 +1,6 @@
-﻿using Bit.Core.Entities;
-using Bit.Core.Enums;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Enums;
+using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
 using Bit.Core.Repositories;
@@ -65,7 +66,7 @@ public class SetUpSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
 
     [Theory]
     [BitMemberAutoData(nameof(NonFamiliesPlanTypes))]
-    public async Task SetUpSponsorship_OrgNotFamiles_ThrowsBadRequest(PlanType planType,
+    public async Task SetUpSponsorship_OrgNotFamilies_ThrowsBadRequest(PlanType planType,
         OrganizationSponsorship sponsorship, Organization org,
         SutProvider<SetUpSponsorshipCommand> sutProvider)
     {

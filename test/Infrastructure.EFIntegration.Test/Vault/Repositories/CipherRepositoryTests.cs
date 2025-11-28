@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Core.Vault.Entities;
@@ -8,6 +9,7 @@ using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using Bit.Test.Common.AutoFixture.Attributes;
 using LinqToDB;
 using Xunit;
+using EfAdminConsoleRepo = Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
 using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
 using EfVaultRepo = Bit.Infrastructure.EntityFramework.Vault.Repositories;
 using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
@@ -18,7 +20,7 @@ namespace Bit.Infrastructure.EFIntegration.Test.Repositories;
 public class CipherRepositoryTests
 {
     [Theory(Skip = "Run ad-hoc"), EfUserCipherCustomize, BitAutoData]
-    public async void RefreshDb(List<EfVaultRepo.CipherRepository> suts)
+    public async Task RefreshDb(List<EfVaultRepo.CipherRepository> suts)
     {
         foreach (var sut in suts)
         {
@@ -86,7 +88,7 @@ public class CipherRepositoryTests
     }
 
     [CiSkippedTheory, EfUserCipherCustomize, BitAutoData]
-    public async void CreateAsync_BumpsUserAccountRevisionDate(Cipher cipher, User user, List<EfVaultRepo.CipherRepository> suts, List<EfRepo.UserRepository> efUserRepos)
+    public async Task CreateAsync_BumpsUserAccountRevisionDate(Cipher cipher, User user, List<EfVaultRepo.CipherRepository> suts, List<EfRepo.UserRepository> efUserRepos)
     {
         var bumpedUsers = new List<User>();
         foreach (var sut in suts)
@@ -109,9 +111,9 @@ public class CipherRepositoryTests
     }
 
     [CiSkippedTheory, EfOrganizationCipherCustomize, BitAutoData]
-    public async void CreateAsync_BumpsOrgUserAccountRevisionDates(Cipher cipher, List<User> users,
+    public async Task CreateAsync_BumpsOrgUserAccountRevisionDates(Cipher cipher, List<User> users,
         List<OrganizationUser> orgUsers, Collection collection, Organization org, List<EfVaultRepo.CipherRepository> suts, List<EfRepo.UserRepository> efUserRepos, List<EfRepo.OrganizationRepository> efOrgRepos,
-        List<EfRepo.OrganizationUserRepository> efOrgUserRepos, List<EfRepo.CollectionRepository> efCollectionRepos)
+        List<EfAdminConsoleRepo.OrganizationUserRepository> efOrgUserRepos, List<EfRepo.CollectionRepository> efCollectionRepos)
     {
         var savedCiphers = new List<Cipher>();
         foreach (var sut in suts)
@@ -180,18 +182,14 @@ public class CipherRepositoryTests
         List<EfRepo.OrganizationRepository> efOrgRepos
             ) => await DeleteAsync_CipherIsDeleted(cipher, user, org, suts, efUserRepos, efOrgRepos);
     [CiSkippedTheory, EfOrganizationCipherCustomize, BitAutoData]
-    public Task OrganizationCipher_DeleteAsync_CipherIsDeleted(
+    public async Task OrganizationCipher_DeleteAsync_CipherIsDeleted(
         Cipher cipher,
         User user,
         Organization org,
         List<EfVaultRepo.CipherRepository> suts,
         List<EfRepo.UserRepository> efUserRepos,
         List<EfRepo.OrganizationRepository> efOrgRepos
-            )
-    {
-        DeleteAsync_CipherIsDeleted(cipher, user, org, suts, efUserRepos, efOrgRepos);
-        return Task.CompletedTask;
-    }
+            ) => await DeleteAsync_CipherIsDeleted(cipher, user, org, suts, efUserRepos, efOrgRepos);
 
     private async Task DeleteAsync_CipherIsDeleted(
         Cipher cipher,

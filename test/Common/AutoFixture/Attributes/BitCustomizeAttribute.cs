@@ -13,8 +13,8 @@ namespace Bit.Test.Common.AutoFixture.Attributes;
 public abstract class BitCustomizeAttribute : Attribute
 {
     /// <summary>
-    /// /// Gets a customization for the method's parameters.
+    /// Gets a customization for the method's parameters.
     /// </summary>
-    /// <returns>A customization for the method's paramters.</returns>
+    /// <returns>A customization for the method's parameters.</returns>
     public abstract ICustomization GetCustomization();
 }

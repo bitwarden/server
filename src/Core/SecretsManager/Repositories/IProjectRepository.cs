@@ -1,11 +1,15 @@
-﻿using Bit.Core.Enums;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Enums;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Models.Data;
 
 namespace Bit.Core.SecretsManager.Repositories;
 
 public interface IProjectRepository
 {
-    Task<IEnumerable<Project>> GetManyByOrganizationIdAsync(Guid organizationId, Guid userId, AccessClientType accessType);
+    Task<IEnumerable<ProjectPermissionDetails>> GetManyByOrganizationIdAsync(Guid organizationId, Guid userId, AccessClientType accessType);
     Task<IEnumerable<Project>> GetManyByOrganizationIdWriteAccessAsync(Guid organizationId, Guid userId, AccessClientType accessType);
     Task<IEnumerable<Project>> GetManyWithSecretsByIds(IEnumerable<Guid> ids);
     Task<Project> GetByIdAsync(Guid id);
@@ -13,10 +17,11 @@ public interface IProjectRepository
     Task ReplaceAsync(Project project);
     Task DeleteManyByIdAsync(IEnumerable<Guid> ids);
     Task<IEnumerable<Project>> ImportAsync(IEnumerable<Project> projects);
-    Task<bool> UserHasReadAccessToProject(Guid id, Guid userId);
-    Task<bool> UserHasWriteAccessToProject(Guid id, Guid userId);
-    Task<bool> ServiceAccountHasWriteAccessToProject(Guid id, Guid userId);
-    Task<bool> ServiceAccountHasReadAccessToProject(Guid id, Guid userId);
     Task<(bool Read, bool Write)> AccessToProjectAsync(Guid id, Guid userId, AccessClientType accessType);
     Task<bool> ProjectsAreInOrganization(List<Guid> projectIds, Guid organizationId);
+    Task<int> GetProjectCountByOrganizationIdAsync(Guid organizationId);
+    Task<int> GetProjectCountByOrganizationIdAsync(Guid organizationId, Guid userId, AccessClientType accessType);
+    Task<ProjectCounts> GetProjectCountsByIdAsync(Guid projectId, Guid userId, AccessClientType accessType);
+    Task<Dictionary<Guid, (bool Read, bool Write)>> AccessToProjectsAsync(IEnumerable<Guid> projectIds, Guid userId,
+        AccessClientType accessType);
 }

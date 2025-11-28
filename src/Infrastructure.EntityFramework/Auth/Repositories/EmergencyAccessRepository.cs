@@ -1,12 +1,16 @@
 ﻿using AutoMapper;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Auth.Models;
 using Bit.Infrastructure.EntityFramework.Auth.Repositories.Queries;
 using Bit.Infrastructure.EntityFramework.Repositories;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+
+#nullable enable
 
 namespace Bit.Infrastructure.EntityFramework.Auth.Repositories;
 
@@ -33,7 +37,7 @@ public class EmergencyAccessRepository : Repository<Core.Auth.Entities.Emergency
         await base.DeleteAsync(emergencyAccess);
     }
 
-    public async Task<EmergencyAccessDetails> GetDetailsByIdGrantorIdAsync(Guid id, Guid grantorId)
+    public async Task<EmergencyAccessDetails?> GetDetailsByIdGrantorIdAsync(Guid id, Guid grantorId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -116,4 +120,30 @@ public class EmergencyAccessRepository : Repository<Core.Auth.Entities.Emergency
             return notifies;
         }
     }
+
+    /// <inheritdoc />
+    public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(
+        Guid grantorId, IEnumerable<Core.Auth.Entities.EmergencyAccess> emergencyAccessKeys)
+    {
+        return async (SqlConnection connection, SqlTransaction transaction) =>
+        {
+            var newKeys = emergencyAccessKeys.ToList();
+            using var scope = ServiceScopeFactory.CreateScope();
+            var dbContext = GetDatabaseContext(scope);
+            var userEmergencyAccess = await GetDbSet(dbContext)
+                .Where(ea => ea.GrantorId == grantorId)
+                .ToListAsync();
+            var validEmergencyAccess = userEmergencyAccess
+                .Where(ea => newKeys.Any(eak => eak.Id == ea.Id));
+
+            foreach (var ea in validEmergencyAccess)
+            {
+                var eak = newKeys.First(eak => eak.Id == ea.Id);
+                ea.KeyEncrypted = eak.KeyEncrypted;
+            }
+
+            await dbContext.SaveChangesAsync();
+        };
+    }
+
 }

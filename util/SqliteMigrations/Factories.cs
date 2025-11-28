@@ -7,14 +7,20 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.SqliteMigrations;
 
-public static class GlobalSettingsFactory
+public class GlobalSettingsFactory
 {
-    public static GlobalSettings GlobalSettings { get; } = new GlobalSettings();
-    static GlobalSettingsFactory()
+    public GlobalSettings GlobalSettings { get; }
+
+    public GlobalSettingsFactory(string[] args)
     {
-        var configBuilder = new ConfigurationBuilder().AddUserSecrets("bitwarden-Api");
-        var Configuration = configBuilder.Build();
-        ConfigurationBinder.Bind(Configuration.GetSection("GlobalSettings"), GlobalSettings);
+        GlobalSettings = new GlobalSettings();
+        // UserSecretsId here should match what is in Api.csproj
+        var config = new ConfigurationBuilder()
+            .AddUserSecrets("bitwarden-Api")
+            .AddCommandLine(args)
+            .Build();
+
+        config.GetSection("GlobalSettings").Bind(GlobalSettings);
     }
 }
 
@@ -26,7 +32,8 @@ public class DatabaseContextFactory : IDesignTimeDbContextFactory<DatabaseContex
         services.AddDataProtection();
         var serviceProvider = services.BuildServiceProvider();
 
-        var globalSettings = GlobalSettingsFactory.GlobalSettings;
+        var globalSettings = new GlobalSettingsFactory(args)
+            .GlobalSettings;
         var optionsBuilder = new DbContextOptionsBuilder<DatabaseContext>();
         var connectionString = globalSettings.Sqlite?.ConnectionString ?? "Data Source=:memory:";
         if (string.IsNullOrWhiteSpace(connectionString))

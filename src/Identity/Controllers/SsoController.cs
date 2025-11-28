@@ -1,21 +1,22 @@
-﻿using System.Security.Claims;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Security.Claims;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 using Bit.Core.Repositories;
 using Bit.Identity.Models;
-using IdentityModel;
-using IdentityServer4;
-using IdentityServer4.Services;
+using Duende.IdentityModel;
+using Duende.IdentityServer;
+using Duende.IdentityServer.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Identity.Controllers;
 
-// TODO: 2022-01-12, Remove account alias
-[Route("account/[action]")]
 [Route("sso/[action]")]
 public class SsoController : Controller
 {
@@ -267,7 +268,7 @@ public class SsoController : Controller
         }
     }
 
-    private bool IsNativeClient(IdentityServer4.Models.AuthorizationRequest context)
+    private bool IsNativeClient(Duende.IdentityServer.Models.AuthorizationRequest context)
     {
         return !context.RedirectUri.StartsWith("https", StringComparison.Ordinal)
            && !context.RedirectUri.StartsWith("http", StringComparison.Ordinal);

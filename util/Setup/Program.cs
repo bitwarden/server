@@ -1,6 +1,10 @@
-﻿using System.Globalization;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Globalization;
 using System.Net.Http.Json;
 using Bit.Migrator;
+using Bit.Setup.Enums;
 
 namespace Bit.Setup;
 
@@ -16,32 +20,32 @@ public class Program
         {
             Args = args
         };
+
         ParseParameters();
 
-        if (_context.Parameters.ContainsKey("q"))
+        if (_context.Parameters.TryGetValue("q", out var q))
         {
-            _context.Quiet = _context.Parameters["q"] == "true" || _context.Parameters["q"] == "1";
+            _context.Quiet = q == "true" || q == "1";
         }
-        if (_context.Parameters.ContainsKey("os"))
+        if (_context.Parameters.TryGetValue("os", out var os))
         {
-            _context.HostOS = _context.Parameters["os"];
+            _context.HostOS = os;
         }
-        if (_context.Parameters.ContainsKey("corev"))
+        if (_context.Parameters.TryGetValue("corev", out var coreVersion))
         {
-            _context.CoreVersion = _context.Parameters["corev"];
+            _context.CoreVersion = coreVersion;
         }
-        if (_context.Parameters.ContainsKey("webv"))
+        if (_context.Parameters.TryGetValue("webv", out var webVersion))
         {
-            _context.WebVersion = _context.Parameters["webv"];
+            _context.WebVersion = webVersion;
         }
-        if (_context.Parameters.ContainsKey("keyconnectorv"))
+        if (_context.Parameters.TryGetValue("keyconnectorv", out var keyConnectorVersion))
         {
-            _context.KeyConnectorVersion = _context.Parameters["keyconnectorv"];
+            _context.KeyConnectorVersion = keyConnectorVersion;
         }
-        if (_context.Parameters.ContainsKey("stub"))
+        if (_context.Parameters.TryGetValue("stub", out var stub))
         {
-            _context.Stub = _context.Parameters["stub"] == "true" ||
-                _context.Parameters["stub"] == "1";
+            _context.Stub = stub == "true" || stub == "1";
         }
 
         Helpers.WriteLine(_context);
@@ -66,18 +70,18 @@ public class Program
 
     private static void Install()
     {
-        if (_context.Parameters.ContainsKey("letsencrypt"))
+        if (_context.Parameters.TryGetValue("letsencrypt", out var sslManagedLetsEncrypt))
         {
             _context.Config.SslManagedLetsEncrypt =
-                _context.Parameters["letsencrypt"].ToLowerInvariant() == "y";
+                sslManagedLetsEncrypt.ToLowerInvariant() == "y";
         }
-        if (_context.Parameters.ContainsKey("domain"))
+        if (_context.Parameters.TryGetValue("domain", out var domain))
         {
-            _context.Install.Domain = _context.Parameters["domain"].ToLowerInvariant();
+            _context.Install.Domain = domain.ToLowerInvariant();
         }
-        if (_context.Parameters.ContainsKey("dbname"))
+        if (_context.Parameters.TryGetValue("dbname", out var database))
         {
-            _context.Install.Database = _context.Parameters["dbname"];
+            _context.Install.Database = database;
         }
 
         if (_context.Stub)
@@ -154,7 +158,7 @@ public class Program
 
         if (_context.Parameters.ContainsKey("db"))
         {
-            MigrateDatabase();
+            PrepareAndMigrateDatabase();
         }
         else
         {
@@ -184,18 +188,26 @@ public class Program
         Console.WriteLine("\n");
     }
 
-    private static void MigrateDatabase(int attempt = 1)
+    private static void PrepareAndMigrateDatabase()
     {
         var vaultConnectionString = Helpers.GetValueFromEnvFile("global",
             "globalSettings__sqlServer__connectionString");
-        var migrator = new DbMigrator(vaultConnectionString, null);
-        migrator.MigrateMsSqlDatabaseWithRetries(false);
+        var migrator = new DbMigrator(vaultConnectionString);
+
+        var enableLogging = false;
+
+        // execute all general migration scripts (will detect those not yet applied)
+        migrator.MigrateMsSqlDatabaseWithRetries(enableLogging);
+
+        // execute explicit transition migration scripts, per EDD
+        migrator.MigrateMsSqlDatabaseWithRetries(enableLogging, true, MigratorConstants.TransitionMigrationsFolderName);
     }
 
     private static bool ValidateInstallation()
     {
         var installationId = string.Empty;
         var installationKey = string.Empty;
+        CloudRegion cloudRegion;
 
         if (_context.Parameters.ContainsKey("install-id"))
         {
@@ -203,7 +215,13 @@ public class Program
         }
         else
         {
-            installationId = Helpers.ReadInput("Enter your installation id (get at https://bitwarden.com/host)");
+            var prompt = "Enter your installation id (get at https://bitwarden.com/host)";
+            installationId = Helpers.ReadInput(prompt);
+            while (string.IsNullOrEmpty(installationId))
+            {
+                Helpers.WriteError("Invalid input for installation id. Please try again.");
+                installationId = Helpers.ReadInput(prompt);
+            }
         }
 
         if (!Guid.TryParse(installationId.Trim(), out var installationidGuid))
@@ -218,26 +236,68 @@ public class Program
         }
         else
         {
-            installationKey = Helpers.ReadInput("Enter your installation key");
+            var prompt = "Enter your installation key";
+            installationKey = Helpers.ReadInput(prompt);
+            while (string.IsNullOrEmpty(installationKey))
+            {
+                Helpers.WriteError("Invalid input for installation key. Please try again.");
+                installationKey = Helpers.ReadInput(prompt);
+            }
+        }
+
+        if (_context.Parameters.ContainsKey("cloud-region"))
+        {
+            Enum.TryParse(_context.Parameters["cloud-region"], out cloudRegion);
+        }
+        else
+        {
+            var prompt = "Enter your region (US/EU) [US]";
+            var region = Helpers.ReadInput(prompt);
+            if (string.IsNullOrEmpty(region)) region = "US";
+
+            while (!Enum.TryParse(region, out cloudRegion))
+            {
+                Helpers.WriteError("Invalid input for region. Please try again.");
+                region = Helpers.ReadInput(prompt);
+                if (string.IsNullOrEmpty(region)) region = "US";
+            }
         }
 
         _context.Install.InstallationId = installationidGuid;
         _context.Install.InstallationKey = installationKey;
+        _context.Install.CloudRegion = cloudRegion;
 
         try
         {
-            var response = new HttpClient().GetAsync("https://api.bitwarden.com/installations/" +
-                _context.Install.InstallationId).GetAwaiter().GetResult();
+            string url;
+            switch (cloudRegion)
+            {
+                case CloudRegion.EU:
+                    url = "https://api.bitwarden.eu/installations/";
+                    break;
+                case CloudRegion.US:
+                default:
+                    url = "https://api.bitwarden.com/installations/";
+                    break;
+            }
+
+            string installationUrl = Environment.GetEnvironmentVariable("BW_INSTALLATION_URL");
+            if (!string.IsNullOrEmpty(installationUrl))
+            {
+                url = $"{installationUrl}/installations/";
+            }
+
+            var response = new HttpClient().GetAsync(url + _context.Install.InstallationId).GetAwaiter().GetResult();
 
             if (!response.IsSuccessStatusCode)
             {
                 if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
                 {
-                    Console.WriteLine("Invalid installation id.");
+                    Console.WriteLine($"Invalid installation id for {cloudRegion.ToString()} region.");
                 }
                 else
                 {
-                    Console.WriteLine("Unable to validate installation id.");
+                    Console.WriteLine($"Unable to validate installation id for {cloudRegion.ToString()} region.");
                 }
 
                 return false;
@@ -246,7 +306,7 @@ public class Program
             var result = response.Content.ReadFromJsonAsync<InstallationValidationResponseModel>().GetAwaiter().GetResult();
             if (!result.Enabled)
             {
-                Console.WriteLine("Installation id has been disabled.");
+                Console.WriteLine($"Installation id has been disabled in the {cloudRegion.ToString()} region.");
                 return false;
             }
 
@@ -254,7 +314,7 @@ public class Program
         }
         catch
         {
-            Console.WriteLine("Unable to validate installation id. Problem contacting Bitwarden server.");
+            Console.WriteLine($"Unable to validate installation id. Problem contacting Bitwarden {cloudRegion.ToString()} server.");
             return false;
         }
     }

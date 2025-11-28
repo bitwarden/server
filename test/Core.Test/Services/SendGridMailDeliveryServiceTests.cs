@@ -1,5 +1,5 @@
 ﻿using Bit.Core.Models.Mail;
-using Bit.Core.Services;
+using Bit.Core.Platform.Mail.Delivery;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
@@ -25,7 +25,8 @@ public class SendGridMailDeliveryServiceTests : IDisposable
         {
             Mail =
             {
-                SendGridApiKey = "SendGridApiKey"
+                SendGridApiKey = "SendGridApiKey",
+                SendGridApiHost = "https://api.sendgrid.com"
             }
         };
 

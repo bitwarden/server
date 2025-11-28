@@ -8,5 +8,7 @@ CREATE TYPE [dbo].[OrganizationSponsorshipType] AS TABLE(
     [PlanSponsorshipType] TINYINT,
     [LastSyncDate] DATETIME2(7),
     [ValidUntil] DATETIME2(7),
-    [ToDelete] BIT
+    [ToDelete] BIT,
+    [IsAdminInitiated] BIT DEFAULT 0,
+    [Notes] NVARCHAR(512) NULL
 )

@@ -5,6 +5,8 @@ using Bit.Core.Settings;
 using Dapper;
 using Microsoft.Data.SqlClient;
 
+#nullable enable
+
 namespace Bit.Infrastructure.Dapper.Repositories;
 
 public class OrganizationSponsorshipRepository : Repository<OrganizationSponsorship, Guid>, IOrganizationSponsorshipRepository
@@ -17,7 +19,7 @@ public class OrganizationSponsorshipRepository : Repository<OrganizationSponsors
         : base(connectionString, readOnlyConnectionString)
     { }
 
-    public async Task<ICollection<Guid>> CreateManyAsync(IEnumerable<OrganizationSponsorship> organizationSponsorships)
+    public async Task<ICollection<Guid>?> CreateManyAsync(IEnumerable<OrganizationSponsorship> organizationSponsorships)
     {
         if (!organizationSponsorships.Any())
         {
@@ -87,7 +89,7 @@ public class OrganizationSponsorshipRepository : Repository<OrganizationSponsors
         }
     }
 
-    public async Task<OrganizationSponsorship> GetBySponsoringOrganizationUserIdAsync(Guid sponsoringOrganizationUserId)
+    public async Task<OrganizationSponsorship?> GetBySponsoringOrganizationUserIdAsync(Guid sponsoringOrganizationUserId, bool isAdminInitiated)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -95,7 +97,8 @@ public class OrganizationSponsorshipRepository : Repository<OrganizationSponsors
                 "[dbo].[OrganizationSponsorship_ReadBySponsoringOrganizationUserId]",
                 new
                 {
-                    SponsoringOrganizationUserId = sponsoringOrganizationUserId
+                    SponsoringOrganizationUserId = sponsoringOrganizationUserId,
+                    isAdminInitiated = isAdminInitiated
                 },
                 commandType: CommandType.StoredProcedure);
 
@@ -103,7 +106,7 @@ public class OrganizationSponsorshipRepository : Repository<OrganizationSponsors
         }
     }
 
-    public async Task<OrganizationSponsorship> GetBySponsoredOrganizationIdAsync(Guid sponsoredOrganizationId)
+    public async Task<OrganizationSponsorship?> GetBySponsoredOrganizationIdAsync(Guid sponsoredOrganizationId)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {

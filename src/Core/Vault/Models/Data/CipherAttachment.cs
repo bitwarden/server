@@ -1,4 +1,7 @@
-﻿using System.Text.Json.Serialization;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text.Json.Serialization;
 
 namespace Bit.Core.Vault.Models.Data;
 
@@ -31,5 +34,10 @@ public class CipherAttachment
         // This is stored alongside metadata as an identifier. It does not need repeating in serialization
         [JsonIgnore]
         public string AttachmentId { get; set; }
+
+        /// <summary>
+        /// Temporary metadata used to store original metadata on migrations from a user-owned attachment to an organization-owned one
+        /// </summary>
+        public MetaData TempMetadata { get; set; }
     }
 }

@@ -1,12 +1,14 @@
-﻿using Bit.Api.Auth.Models.Request;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.AdminConsole.Models.Request.Organizations;
+using Bit.Api.AdminConsole.Models.Response.Organizations;
+using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Response;
-using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core.Auth.Services;
-using Bit.Core.Entities;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Api.Response;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -16,7 +18,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Bit.Api.Auth.Controllers;
 
 [Route("emergency-access")]
-[Authorize("Application")]
+[Authorize(Core.Auth.Identity.Policies.Application)]
 public class EmergencyAccessController : Controller
 {
     private readonly IUserService _userService;
@@ -72,12 +74,11 @@ public class EmergencyAccessController : Controller
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         var policies = await _emergencyAccessService.GetPoliciesAsync(id, user);
-        var responses = policies.Select<Policy, PolicyResponseModel>(policy => new PolicyResponseModel(policy));
+        var responses = policies?.Select(policy => new PolicyResponseModel(policy));
         return new ListResponseModel<PolicyResponseModel>(responses);
     }
 
     [HttpPut("{id}")]
-    [HttpPost("{id}")]
     public async Task Put(Guid id, [FromBody] EmergencyAccessUpdateRequestModel model)
     {
         var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(id);
@@ -90,12 +91,25 @@ public class EmergencyAccessController : Controller
         await _emergencyAccessService.SaveAsync(model.ToEmergencyAccess(emergencyAccess), user);
     }
 
+    [HttpPost("{id}")]
+    [Obsolete("This endpoint is deprecated. Use PUT /{id} instead.")]
+    public async Task Post(Guid id, [FromBody] EmergencyAccessUpdateRequestModel model)
+    {
+        await Put(id, model);
+    }
+
     [HttpDelete("{id}")]
-    [HttpPost("{id}/delete")]
     public async Task Delete(Guid id)
     {
         var userId = _userService.GetProperUserId(User);
         await _emergencyAccessService.DeleteAsync(id, userId.Value);
+    }
+
+    [HttpPost("{id}/delete")]
+    [Obsolete("This endpoint is deprecated. Use DELETE /{id} instead.")]
+    public async Task PostDelete(Guid id)
+    {
+        await Delete(id);
     }
 
     [HttpPost("invite")]
@@ -134,7 +148,7 @@ public class EmergencyAccessController : Controller
     }
 
     [HttpPost("{id}/approve")]
-    public async Task Accept(Guid id)
+    public async Task Approve(Guid id)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         await _emergencyAccessService.ApproveAsync(id, user);
@@ -167,7 +181,7 @@ public class EmergencyAccessController : Controller
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         var viewResult = await _emergencyAccessService.ViewAsync(id, user);
-        return new EmergencyAccessViewResponseModel(_globalSettings, viewResult.EmergencyAccess, viewResult.Ciphers);
+        return new EmergencyAccessViewResponseModel(_globalSettings, viewResult.EmergencyAccess, viewResult.Ciphers, user);
     }
 
     [HttpGet("{id}/{cipherId}/attachment/{attachmentId}")]

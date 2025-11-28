@@ -43,8 +43,8 @@ fi
 # Replace database name in backup-db.sql
 if [ ! -z "$DATABASE" ]
 then
-  sed -i -e "/@DatabaseName /s/vault/$DATABASE/" backup-db.sql
-  sed -i -e "/@DatabaseNameSafe /s/vault/${DATABASE// /-}/" backup-db.sql
+  sed -i "/^SET @DatabaseName =/s/'[^']*'/'$DATABASE'/" backup-db.sql
+  sed -i "/^SET @DatabaseNameSafe =/s/'[^']*'/'${DATABASE// /-}'/" backup-db.sql
 fi
 
 # The rest...

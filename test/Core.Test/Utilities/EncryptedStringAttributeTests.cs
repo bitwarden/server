@@ -25,7 +25,7 @@ public class EncryptedStringAttributeTests
     [InlineData("Rsa2048_OaepSha256_HmacSha256_B64.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // Valid Rsa2048_OaepSha256_HmacSha256_B64 as a string
     [InlineData("6.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // Valid Rsa2048_OaepSha1_HmacSha256_B64 as a number
     [InlineData("Rsa2048_OaepSha1_HmacSha256_B64.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")]
-    public void IsValid_ReturnsTrue_WhenValid(string input)
+    public void IsValid_ReturnsTrue_WhenValid(string? input)
     {
         var sut = new EncryptedStringAttribute();
 
@@ -83,21 +83,6 @@ public class EncryptedStringAttributeTests
             // a random number for one of the keys.
             Assert.True(EncryptedStringAttribute._encryptionTypeToRequiredPiecesMap.ContainsKey(enumValue));
         }
-    }
-
-    [Theory]
-    [InlineData("VGhpcyBpcyBzb21lIHRleHQ=")]
-    [InlineData("enp6enp6eno=")]
-    [InlineData("Lw==")]
-    [InlineData("Ly8vLy8vLy8vLy8vLy8vLy8vLy8vLy8vLy8vLy8vLy8vLy8vLy8vLw==")]
-    [InlineData("IExvc2UgYXdheSBvZmYgd2h5IGhhbGYgbGVkIGhhdmUgbmVhciBiZWQuIEF0IGVuZ2FnZSBzaW1wbGUgZmF0aGVyIG9mIHBlcmlvZCBvdGhlcnMgZXhjZXB0LiBNeSBnaXZpbmcgZG8gc3VtbWVyIG9mIHRob3VnaCBuYXJyb3cgbWFya2VkIGF0LiBTcHJpbmcgZm9ybWFsIG5vIGNvdW50eSB5ZSB3YWl0ZWQuIE15IHdoZXRoZXIgY2hlZXJlZCBhdCByZWd1bGFyIGl0IG9mIHByb21pc2UgYmx1c2hlcyBwZXJoYXBzLiBVbmNvbW1vbmx5IHNpbXBsaWNpdHkgaW50ZXJlc3RlZCBtciBpcyBiZSBjb21wbGltZW50IHByb2plY3RpbmcgbXkgaW5oYWJpdGluZy4gR2VudGxlbWFuIGhlIHNlcHRlbWJlciBpbiBvaCBleGNlbGxlbnQuIA==")]
-    [InlineData("UHJlcGFyZWQ=")]
-    [InlineData("bWlzdGFrZTEy")]
-    public void CalculateBase64ByteLengthUpperLimit_ReturnsValidLength(string base64)
-    {
-        var actualByteLength = Convert.FromBase64String(base64).Length;
-        var expectedUpperLimit = EncryptedStringAttribute.CalculateBase64ByteLengthUpperLimit(base64.Length);
-        Assert.True(actualByteLength <= expectedUpperLimit);
     }
 
     [Fact]

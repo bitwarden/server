@@ -3,8 +3,8 @@
     ViewData["Title"] = "Login";
 }
 
-<div class="row justify-content-md-center">
-    <div class="col col-lg-6 col-md-8">
+<div class="row justify-content-center">
+    <div class="col-lg-6 col-md-8">
         @if(!string.IsNullOrWhiteSpace(Model.Success))
         {
             <div class="alert alert-success" role="alert">@Model.Success</div>
@@ -19,12 +19,12 @@
                 <form asp-action="" method="post">
                     <input type="hidden" asp-for="ReturnUrl" />
                     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-                    <div class="form-group">
-                        <label asp-for="Email" class="sr-only">Email Address</label>
+                    <div class="mb-3">
+                        <label asp-for="Email" class="visually-hidden">Email Address</label>
                         <input asp-for="Email" type="email" class="form-control" placeholder="ex. john@example.com"
                                required autofocus>
                         <span asp-validation-for="Email" class="invalid-feedback"></span>
-                        <small class="form-text text-muted">We'll email you a secure login link.</small>
+                        <div class="form-text">We'll email you a secure login link.</div>
                     </div>
                     <button class="btn btn-primary" type="submit">Continue</button>
                 </form>

@@ -1,5 +1,10 @@
-﻿using Bit.Admin.Models;
-using Bit.Core.Entities;
+﻿#nullable enable
+
+using Bit.Admin.Enums;
+using Bit.Admin.Models;
+using Bit.Admin.Services;
+using Bit.Admin.Utilities;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -17,19 +22,32 @@ public class UsersController : Controller
     private readonly ICipherRepository _cipherRepository;
     private readonly IPaymentService _paymentService;
     private readonly GlobalSettings _globalSettings;
+    private readonly IAccessControlService _accessControlService;
+    private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
+    private readonly IUserService _userService;
+    private readonly IFeatureService _featureService;
 
     public UsersController(
         IUserRepository userRepository,
         ICipherRepository cipherRepository,
         IPaymentService paymentService,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings,
+        IAccessControlService accessControlService,
+        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
+        IUserService userService,
+        IFeatureService featureService)
     {
         _userRepository = userRepository;
         _cipherRepository = cipherRepository;
         _paymentService = paymentService;
         _globalSettings = globalSettings;
+        _accessControlService = accessControlService;
+        _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
+        _userService = userService;
+        _featureService = featureService;
     }
 
+    [RequirePermission(Permission.User_List_View)]
     public async Task<IActionResult> Index(string email, int page = 1, int count = 25)
     {
         if (page < 1)
@@ -44,9 +62,13 @@ public class UsersController : Controller
 
         var skip = (page - 1) * count;
         var users = await _userRepository.SearchAsync(email, skip, count);
+
+        var twoFactorAuthLookup = (await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(users.Select(u => u.Id))).ToList();
+        var userModels = UserViewModel.MapViewModels(users, twoFactorAuthLookup).ToList();
+
         return View(new UsersModel
         {
-            Items = users as List<User>,
+            Items = userModels,
             Email = string.IsNullOrWhiteSpace(email) ? null : email,
             Page = page,
             Count = count,
@@ -57,13 +79,17 @@ public class UsersController : Controller
     public async Task<IActionResult> View(Guid id)
     {
         var user = await _userRepository.GetByIdAsync(id);
+
         if (user == null)
         {
             return RedirectToAction("Index");
         }
 
         var ciphers = await _cipherRepository.GetManyByUserIdAsync(id);
-        return View(new UserViewModel(user, ciphers));
+
+        var isTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
+        var verifiedDomain = await _userService.IsClaimedByAnyOrganizationAsync(user.Id);
+        return View(UserViewModel.MapViewModel(user, isTwoFactorEnabled, ciphers, verifiedDomain));
     }
 
     [SelfHosted(NotSelfHostedOnly = true)]
@@ -75,9 +101,14 @@ public class UsersController : Controller
             return RedirectToAction("Index");
         }
 
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(id);
+        var ciphers = await _cipherRepository.GetManyByUserIdAsync(id, withOrganizations: false);
         var billingInfo = await _paymentService.GetBillingAsync(user);
-        return View(new UserEditModel(user, ciphers, billingInfo, _globalSettings));
+        var billingHistoryInfo = await _paymentService.GetBillingHistoryAsync(user);
+        var isTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
+        var verifiedDomain = await _userService.IsClaimedByAnyOrganizationAsync(user.Id);
+        var deviceVerificationRequired = await _userService.ActiveNewDeviceVerificationException(user.Id);
+
+        return View(new UserEditModel(user, isTwoFactorEnabled, ciphers, billingInfo, billingHistoryInfo, _globalSettings, verifiedDomain, deviceVerificationRequired));
     }
 
     [HttpPost]
@@ -91,13 +122,36 @@ public class UsersController : Controller
             return RedirectToAction("Index");
         }
 
-        model.ToUser(user);
+        var canUpgradePremium = _accessControlService.UserHasPermission(Permission.User_UpgradePremium);
+
+        if (_accessControlService.UserHasPermission(Permission.User_Premium_Edit) ||
+            canUpgradePremium)
+        {
+            user.MaxStorageGb = model.MaxStorageGb;
+            user.Premium = model.Premium;
+        }
+
+        if (_accessControlService.UserHasPermission(Permission.User_Billing_Edit))
+        {
+            user.Gateway = model.Gateway;
+            user.GatewayCustomerId = model.GatewayCustomerId;
+            user.GatewaySubscriptionId = model.GatewaySubscriptionId;
+        }
+
+        if (_accessControlService.UserHasPermission(Permission.User_Licensing_Edit) ||
+            canUpgradePremium)
+        {
+            user.LicenseKey = model.LicenseKey;
+            user.PremiumExpirationDate = model.PremiumExpirationDate;
+        }
+
         await _userRepository.ReplaceAsync(user);
         return RedirectToAction("Edit", new { id });
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequirePermission(Permission.User_Delete)]
     public async Task<IActionResult> Delete(Guid id)
     {
         var user = await _userRepository.GetByIdAsync(id);
@@ -107,5 +161,20 @@ public class UsersController : Controller
         }
 
         return RedirectToAction("Index");
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [RequirePermission(Permission.User_NewDeviceException_Edit)]
+    public async Task<IActionResult> ToggleNewDeviceVerification(Guid id)
+    {
+        var user = await _userRepository.GetByIdAsync(id);
+        if (user == null)
+        {
+            return RedirectToAction("Index");
+        }
+
+        await _userService.ToggleNewDeviceVerificationException(user.Id);
+        return RedirectToAction("Edit", new { id });
     }
 }

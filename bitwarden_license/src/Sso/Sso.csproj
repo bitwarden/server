@@ -4,8 +4,13 @@
     <UserSecretsId>bitwarden-Sso</UserSecretsId>
   </PropertyGroup>
 
+  <PropertyGroup Condition=" '$(RunConfiguration)' == 'Sso' " />
+  <PropertyGroup Condition=" '$(RunConfiguration)' == 'Sso-SelfHost' " />
   <ItemGroup>
-    <PackageReference Include="Sustainsys.Saml2.AspNetCore2" Version="2.9.0" />
+    <!-- This is a transitive dependency to Sustainsys.Saml2.AspNetCore2 -->
+    <PackageReference Include="Microsoft.AspNetCore.Http" Version="2.2.2" />
+
+    <PackageReference Include="Sustainsys.Saml2.AspNetCore2" Version="2.11.0" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Organization_Update]
+CREATE PROCEDURE [dbo].[Organization_Update]
     @Id UNIQUEIDENTIFIER,
     @Identifier NVARCHAR(50),
     @Name NVARCHAR(50),
@@ -44,7 +44,22 @@
     @UseScim BIT = 0,
     @UseCustomPermissions BIT = 0,
     @UseSecretsManager BIT = 0,
-    @Status TINYINT = 0
+    @Status TINYINT = 0,
+    @UsePasswordManager BIT = 1,
+    @SmSeats INT = null,
+    @SmServiceAccounts INT = null,
+    @MaxAutoscaleSmSeats INT = null,
+    @MaxAutoscaleSmServiceAccounts INT = null,
+    @SecretsManagerBeta BIT = 0,
+    @LimitCollectionCreation BIT = null,
+    @LimitCollectionDeletion BIT = null,
+    @AllowAdminAccessToAllCollectionItems BIT = 0,
+    @UseRiskInsights BIT = 0,
+    @LimitItemDeletion BIT = 0,
+    @UseOrganizationDomains BIT = 0,
+    @UseAdminSponsoredFamilies BIT = 0,
+    @SyncSeats BIT = 0,
+    @UseAutomaticUserConfirmation BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -96,7 +111,22 @@ BEGIN
         [UseScim] = @UseScim,
         [UseCustomPermissions] = @UseCustomPermissions,
         [UseSecretsManager] = @UseSecretsManager,
-        [Status] = @Status
+        [Status] = @Status,
+        [UsePasswordManager] = @UsePasswordManager,
+        [SmSeats] = @SmSeats,
+        [SmServiceAccounts] = @SmServiceAccounts,
+        [MaxAutoscaleSmSeats] = @MaxAutoscaleSmSeats,
+        [MaxAutoscaleSmServiceAccounts] = @MaxAutoscaleSmServiceAccounts,
+        [SecretsManagerBeta] = @SecretsManagerBeta,
+        [LimitCollectionCreation] = @LimitCollectionCreation,
+        [LimitCollectionDeletion] = @LimitCollectionDeletion,
+        [AllowAdminAccessToAllCollectionItems] = @AllowAdminAccessToAllCollectionItems,
+        [UseRiskInsights] = @UseRiskInsights,
+        [LimitItemDeletion] = @LimitItemDeletion,
+        [UseOrganizationDomains] = @UseOrganizationDomains,
+        [UseAdminSponsoredFamilies] = @UseAdminSponsoredFamilies,
+        [SyncSeats] = @SyncSeats,
+        [UseAutomaticUserConfirmation] = @UseAutomaticUserConfirmation
     WHERE
-        [Id] = @Id
+        [Id] = @Id;
 END

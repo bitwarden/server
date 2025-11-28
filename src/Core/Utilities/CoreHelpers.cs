@@ -1,4 +1,7 @@
-﻿using System.Globalization;
+﻿#nullable enable
+
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -10,14 +13,15 @@ using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Queues.Models;
+using Bit.Core.AdminConsole.Context;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Identity;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Context;
 using Bit.Core.Entities;
-using Bit.Core.Enums;
-using Bit.Core.Enums.Provider;
-using Bit.Core.Identity;
 using Bit.Core.Settings;
-using IdentityModel;
+using Duende.IdentityModel;
 using Microsoft.AspNetCore.DataProtection;
 using MimeKit;
 
@@ -29,12 +33,20 @@ public static class CoreHelpers
     private static readonly DateTime _epoc = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
     private static readonly DateTime _max = new DateTime(9999, 1, 1, 0, 0, 0, DateTimeKind.Utc);
     private static readonly Random _random = new Random();
-    private static readonly string CloudFlareConnectingIp = "CF-Connecting-IP";
+    private static readonly string RealConnectingIp = "X-Connecting-IP";
+    private static readonly Regex _whiteSpaceRegex = new Regex(@"\s+");
+    private static readonly JsonSerializerOptions _jsonSerializerOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+    };
 
     /// <summary>
-    /// Generate sequential Guid for Sql Server.
-    /// ref: https://github.com/nhibernate/nhibernate-core/blob/master/src/NHibernate/Id/GuidCombGenerator.cs
+    /// Generate a sequential Guid for Sql Server. This prevents SQL Server index fragmentation by incorporating timestamp
+    /// information for sequential ordering. This should be preferred to <see cref="Guid.NewGuid"/> for any database IDs.
     /// </summary>
+    /// <remarks>
+    /// ref: https://github.com/nhibernate/nhibernate-core/blob/master/src/NHibernate/Id/GuidCombGenerator.cs
+    /// </remarks>
     /// <returns>A comb Guid.</returns>
     public static Guid GenerateComb()
         => GenerateComb(Guid.NewGuid(), DateTime.UtcNow);
@@ -50,24 +62,57 @@ public static class CoreHelpers
     {
         var guidArray = startingGuid.ToByteArray();
 
-        // Get the days and milliseconds which will be used to build the byte string 
+        // Get the days and milliseconds which will be used to build the byte string
         var days = new TimeSpan(time.Ticks - _baseDateTicks);
         var msecs = time.TimeOfDay;
 
-        // Convert to a byte array 
-        // Note that SQL Server is accurate to 1/300th of a millisecond so we divide by 3.333333 
+        // Convert to a byte array
+        // Note that SQL Server is accurate to 1/300th of a millisecond so we divide by 3.333333
         var daysArray = BitConverter.GetBytes(days.Days);
         var msecsArray = BitConverter.GetBytes((long)(msecs.TotalMilliseconds / 3.333333));
 
-        // Reverse the bytes to match SQL Servers ordering 
+        // Reverse the bytes to match SQL Servers ordering
         Array.Reverse(daysArray);
         Array.Reverse(msecsArray);
 
-        // Copy the bytes into the guid 
+        // Copy the bytes into the guid
         Array.Copy(daysArray, daysArray.Length - 2, guidArray, guidArray.Length - 6, 2);
         Array.Copy(msecsArray, msecsArray.Length - 4, guidArray, guidArray.Length - 4, 4);
 
         return new Guid(guidArray);
+    }
+
+    internal static DateTime DateFromComb(Guid combGuid)
+    {
+        var guidArray = combGuid.ToByteArray();
+        var daysArray = new byte[4];
+        var msecsArray = new byte[4];
+
+        Array.Copy(guidArray, guidArray.Length - 6, daysArray, 2, 2);
+        Array.Copy(guidArray, guidArray.Length - 4, msecsArray, 0, 4);
+
+        Array.Reverse(daysArray);
+        Array.Reverse(msecsArray);
+
+        var days = BitConverter.ToInt32(daysArray, 0);
+        var msecs = BitConverter.ToInt32(msecsArray, 0);
+
+        var time = TimeSpan.FromDays(days) + TimeSpan.FromMilliseconds(msecs * 3.333333);
+        return new DateTime(_baseDateTicks + time.Ticks, DateTimeKind.Utc);
+    }
+
+    internal static long BinForComb(Guid combGuid, int binCount)
+    {
+        // From System.Web.Util.HashCodeCombiner
+        uint CombineHashCodes(uint h1, byte h2)
+        {
+            return (uint)(((h1 << 5) + h1) ^ h2);
+        }
+        var guidArray = combGuid.ToByteArray();
+        var randomArray = new byte[10];
+        Array.Copy(guidArray, 0, randomArray, 0, 10);
+        var hash = randomArray.Aggregate((uint)randomArray.Length, CombineHashCodes);
+        return hash % binCount;
     }
 
     public static string CleanCertificateThumbprint(string thumbprint)
@@ -77,11 +122,11 @@ public static class CoreHelpers
         return Regex.Replace(thumbprint, @"[^\da-fA-F]", string.Empty).ToUpper();
     }
 
-    public static X509Certificate2 GetCertificate(string thumbprint)
+    public static X509Certificate2? GetCertificate(string thumbprint)
     {
         thumbprint = CleanCertificateThumbprint(thumbprint);
 
-        X509Certificate2 cert = null;
+        X509Certificate2? cert = null;
         var certStore = new X509Store(StoreName.My, StoreLocation.CurrentUser);
         certStore.Open(OpenFlags.ReadOnly);
         var certCollection = certStore.Certificates.Find(X509FindType.FindByThumbprint, thumbprint, false);
@@ -102,7 +147,7 @@ public static class CoreHelpers
     public async static Task<X509Certificate2> GetEmbeddedCertificateAsync(string file, string password)
     {
         var assembly = typeof(CoreHelpers).GetTypeInfo().Assembly;
-        using (var s = assembly.GetManifestResourceStream($"Bit.Core.{file}"))
+        using (var s = assembly.GetManifestResourceStream($"Bit.Core.{file}")!)
         using (var ms = new MemoryStream())
         {
             await s.CopyToAsync(ms);
@@ -114,14 +159,14 @@ public static class CoreHelpers
     {
         var assembly = Assembly.GetCallingAssembly();
         var resourceName = assembly.GetManifestResourceNames().Single(n => n.EndsWith(file));
-        using (var stream = assembly.GetManifestResourceStream(resourceName))
+        using (var stream = assembly.GetManifestResourceStream(resourceName)!)
         using (var reader = new StreamReader(stream))
         {
             return reader.ReadToEnd();
         }
     }
 
-    public async static Task<X509Certificate2> GetBlobCertificateAsync(string connectionString, string container, string file, string password)
+    public async static Task<X509Certificate2?> GetBlobCertificateAsync(string connectionString, string container, string file, string password)
     {
         try
         {
@@ -194,7 +239,7 @@ public static class CoreHelpers
             throw new ArgumentOutOfRangeException(nameof(length), "length cannot be less than zero.");
         }
 
-        if ((characters?.Length ?? 0) == 0)
+        if (string.IsNullOrEmpty(characters))
         {
             throw new ArgumentOutOfRangeException(nameof(characters), "characters invalid.");
         }
@@ -307,10 +352,10 @@ public static class CoreHelpers
     /// </summary>
     public static T CloneObject<T>(T obj)
     {
-        return JsonSerializer.Deserialize<T>(JsonSerializer.Serialize(obj));
+        return JsonSerializer.Deserialize<T>(JsonSerializer.Serialize(obj))!;
     }
 
-    public static bool SettingHasValue(string setting)
+    public static bool SettingHasValue([NotNullWhen(true)] string? setting)
     {
         var normalizedSetting = setting?.ToLowerInvariant();
         return !string.IsNullOrWhiteSpace(normalizedSetting) && !normalizedSetting.Equals("secret") &&
@@ -337,17 +382,53 @@ public static class CoreHelpers
         return Encoding.UTF8.GetString(Base64UrlDecode(input));
     }
 
+    /// <summary>
+    /// Encodes a Base64 URL formatted string.
+    /// </summary>
+    /// <param name="input">Byte data</param>
+    /// <returns>Base64 URL formatted string</returns>
     public static string Base64UrlEncode(byte[] input)
     {
-        var output = Convert.ToBase64String(input)
+        // Standard base64 encoder
+        var standardB64 = Convert.ToBase64String(input);
+        return TransformToBase64Url(standardB64);
+    }
+
+    /// <summary>
+    /// Transforms a Base64 standard formatted string to a Base64 URL formatted string.
+    /// </summary>
+    /// <param name="input">Base64 standard formatted string</param>
+    /// <returns>Base64 URL formatted string</returns>
+    public static string TransformToBase64Url(string input)
+    {
+        var output = input
             .Replace('+', '-')
             .Replace('/', '_')
             .Replace("=", string.Empty);
         return output;
     }
 
+    /// <summary>
+    /// Decodes a Base64 URL formatted string.
+    /// </summary>
+    /// <param name="input">Base64 URL formatted string</param>
+    /// <returns>Data as bytes</returns>
     public static byte[] Base64UrlDecode(string input)
     {
+        var standardB64 = TransformFromBase64Url(input);
+        // Standard base64 decoder
+        return Convert.FromBase64String(standardB64);
+    }
+
+    /// <summary>
+    /// Transforms a Base64 URL formatted string to a Base64 standard formatted string.
+    /// </summary>
+    /// <param name="input">Base64 URL formatted string</param>
+    /// <returns>Base64 standard formatted string</returns>
+    public static string TransformFromBase64Url(string input)
+    {
+        // TODO: .NET 9 Ships Base64Url in box, investigate replacing this usage with that
+        // Ref: https://github.com/dotnet/runtime/pull/102364
         var output = input;
         // 62nd char of encoding
         output = output.Replace('-', '+');
@@ -369,11 +450,12 @@ public static class CoreHelpers
                 throw new InvalidOperationException("Illegal base64url string!");
         }
 
-        // Standard base64 decoder
-        return Convert.FromBase64String(output);
+        // Standard base64 string output
+        return output;
     }
 
-    public static string PunyEncode(string text)
+    [return: NotNullIfNotNull(nameof(text))]
+    public static string? PunyEncode(string? text)
     {
         if (text == "")
         {
@@ -398,21 +480,21 @@ public static class CoreHelpers
         }
     }
 
-    public static string FormatLicenseSignatureValue(object val)
+    public static string? FormatLicenseSignatureValue(object val)
     {
         if (val == null)
         {
             return string.Empty;
         }
 
-        if (val.GetType() == typeof(DateTime))
+        if (val is DateTime dateTimeVal)
         {
-            return ToEpocSeconds((DateTime)val).ToString();
+            return ToEpocSeconds(dateTimeVal).ToString();
         }
 
-        if (val.GetType() == typeof(bool))
+        if (val is bool boolVal)
         {
-            return val.ToString().ToLowerInvariant();
+            return boolVal.ToString().ToLowerInvariant();
         }
 
         if (val is PlanType planType)
@@ -494,6 +576,7 @@ public static class CoreHelpers
         return string.Concat("Custom_", type.ToString());
     }
 
+    // TODO: PM-4142 - remove old token validation logic once 3 releases of backwards compatibility are complete
     public static bool UserInviteTokenIsValid(IDataProtector protector, string token, string userEmail,
         Guid orgUserId, IGlobalSettings globalSettings)
     {
@@ -526,12 +609,13 @@ public static class CoreHelpers
         return !invalid;
     }
 
-    public static string GetApplicationCacheServiceBusSubcriptionName(GlobalSettings globalSettings)
+    public static string GetApplicationCacheServiceBusSubscriptionName(GlobalSettings globalSettings)
     {
         var subName = globalSettings.ServiceBus.ApplicationCacheSubscriptionName;
         if (string.IsNullOrWhiteSpace(subName))
         {
-            var websiteInstanceId = Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID");
+            var websiteInstanceId = Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID") ??
+                                    globalSettings.ServiceBus.WebSiteInstanceId;
             if (string.IsNullOrWhiteSpace(websiteInstanceId))
             {
                 throw new Exception("No service bus subscription name available.");
@@ -548,7 +632,7 @@ public static class CoreHelpers
         return subName;
     }
 
-    public static string GetIpAddress(this Microsoft.AspNetCore.Http.HttpContext httpContext,
+    public static string? GetIpAddress(this Microsoft.AspNetCore.Http.HttpContext httpContext,
         GlobalSettings globalSettings)
     {
         if (httpContext == null)
@@ -556,9 +640,9 @@ public static class CoreHelpers
             return null;
         }
 
-        if (!globalSettings.SelfHosted && httpContext.Request.Headers.ContainsKey(CloudFlareConnectingIp))
+        if (!globalSettings.SelfHosted && httpContext.Request.Headers.TryGetValue(RealConnectingIp, out var realConnectingIp))
         {
-            return httpContext.Request.Headers[CloudFlareConnectingIp].ToString();
+            return realConnectingIp.ToString();
         }
 
         return httpContext.Connection?.RemoteIpAddress?.ToString();
@@ -575,13 +659,13 @@ public static class CoreHelpers
             (!globalSettings.SelfHosted && origin == "https://bitwarden.com");
     }
 
-    public static X509Certificate2 GetIdentityServerCertificate(GlobalSettings globalSettings)
+    public static X509Certificate2? GetIdentityServerCertificate(GlobalSettings globalSettings)
     {
         if (globalSettings.SelfHosted &&
             SettingHasValue(globalSettings.IdentityServer.CertificatePassword)
-            && File.Exists("identity.pfx"))
+            && File.Exists(globalSettings.IdentityServer.CertificateLocation))
         {
-            return GetCertificate("identity.pfx",
+            return GetCertificate(globalSettings.IdentityServer.CertificateLocation,
                 globalSettings.IdentityServer.CertificatePassword);
         }
         else if (SettingHasValue(globalSettings.IdentityServer.CertificateThumbprint))
@@ -623,14 +707,15 @@ public static class CoreHelpers
         return configDict;
     }
 
-    public static List<KeyValuePair<string, string>> BuildIdentityClaims(User user, ICollection<CurrentContentOrganization> orgs,
-        ICollection<CurrentContentProvider> providers, bool isPremium)
+    public static List<KeyValuePair<string, string>> BuildIdentityClaims(User user, ICollection<CurrentContextOrganization> orgs,
+        ICollection<CurrentContextProvider> providers, bool isPremium)
     {
         var claims = new List<KeyValuePair<string, string>>()
         {
             new(Claims.Premium, isPremium ? "true" : "false"),
             new(JwtClaimTypes.Email, user.Email),
             new(JwtClaimTypes.EmailVerified, user.EmailVerified ? "true" : "false"),
+            // TODO: [https://bitwarden.atlassian.net/browse/PM-22171] Remove this since it is already added from the persisted grant
             new(Claims.SecurityStamp, user.SecurityStamp),
         };
 
@@ -656,12 +741,6 @@ public static class CoreHelpers
                         foreach (var org in group)
                         {
                             claims.Add(new KeyValuePair<string, string>(Claims.OrganizationAdmin, org.Id.ToString()));
-                        }
-                        break;
-                    case Enums.OrganizationUserType.Manager:
-                        foreach (var org in group)
-                        {
-                            claims.Add(new KeyValuePair<string, string>(Claims.OrganizationManager, org.Id.ToString()));
                         }
                         break;
                     case Enums.OrganizationUserType.User:
@@ -725,29 +804,29 @@ public static class CoreHelpers
         return claims;
     }
 
-    public static T LoadClassFromJsonData<T>(string jsonData) where T : new()
+    /// <summary>
+    /// Deserializes JSON data into the specified type.
+    /// If the JSON data is a null reference, it will still return an instantiated class.
+    /// However, if the JSON data is a string "null", it will return null.
+    /// </summary>
+    /// <param name="jsonData">The JSON data</param>
+    /// <typeparam name="T">The type to deserialize into</typeparam>
+    /// <returns></returns>
+    public static T LoadClassFromJsonData<T>(string? jsonData) where T : new()
     {
         if (string.IsNullOrWhiteSpace(jsonData))
         {
             return new T();
         }
 
-        var options = new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        };
-
-        return System.Text.Json.JsonSerializer.Deserialize<T>(jsonData, options);
+#nullable disable // TODO: Remove this and fix any callee warnings.
+        return System.Text.Json.JsonSerializer.Deserialize<T>(jsonData, _jsonSerializerOptions);
+#nullable enable
     }
 
     public static string ClassToJsonData<T>(T data)
     {
-        var options = new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        };
-
-        return System.Text.Json.JsonSerializer.Serialize(data, options);
+        return System.Text.Json.JsonSerializer.Serialize(data, _jsonSerializerOptions);
     }
 
     public static ICollection<T> AddIfNotExists<T>(this ICollection<T> list, T item)
@@ -760,7 +839,7 @@ public static class CoreHelpers
         return list;
     }
 
-    public static string DecodeMessageText(this QueueMessage message)
+    public static string? DecodeMessageText(this QueueMessage message)
     {
         var text = message?.MessageText;
         if (string.IsNullOrWhiteSpace(text))
@@ -783,7 +862,7 @@ public static class CoreHelpers
             Encoding.UTF8.GetBytes(input1), Encoding.UTF8.GetBytes(input2));
     }
 
-    public static string ObfuscateEmail(string email)
+    public static string? ObfuscateEmail(string email)
     {
         if (email == null)
         {
@@ -815,5 +894,61 @@ public static class CoreHelpers
             .Append(emailParts[1])
             .ToString();
 
+    }
+
+    public static string? GetEmailDomain(string email)
+    {
+        if (!string.IsNullOrWhiteSpace(email))
+        {
+            var emailParts = email.Split('@', StringSplitOptions.RemoveEmptyEntries);
+
+            if (emailParts.Length == 2)
+            {
+                return emailParts[1].Trim();
+            }
+        }
+
+        return null;
+    }
+
+    public static string ReplaceWhiteSpace(string input, string newValue)
+    {
+        return _whiteSpaceRegex.Replace(input, newValue);
+    }
+
+    public static string? RedactEmailAddress(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return null;
+        }
+
+        var emailParts = email.Split('@');
+
+        string shownPart;
+        if (emailParts[0].Length > 2 && emailParts[0].Length <= 4)
+        {
+            shownPart = emailParts[0].Substring(0, 1);
+        }
+        else if (emailParts[0].Length > 4)
+        {
+            shownPart = emailParts[0].Substring(0, 2);
+        }
+        else
+        {
+            shownPart = string.Empty;
+        }
+
+        string redactedPart;
+        if (emailParts[0].Length > 4)
+        {
+            redactedPart = new string('*', emailParts[0].Length - 2);
+        }
+        else
+        {
+            redactedPart = new string('*', emailParts[0].Length - shownPart.Length);
+        }
+
+        return $"{shownPart}{redactedPart}@{emailParts[1]}";
     }
 }

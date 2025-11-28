@@ -1,17 +1,17 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
-  <!-- 
-    Microsoft ResX Schema 
-    
+  <!--
+    Microsoft ResX Schema
+
     Version 2.0
-    
-    The primary goals of this format is to allow a simple XML format 
-    that is mostly human readable. The generation and parsing of the 
-    various data types are done through the TypeConverter classes 
+
+    The primary goals of this format is to allow a simple XML format
+    that is mostly human readable. The generation and parsing of the
+    various data types are done through the TypeConverter classes
     associated with the data types.
-    
+
     Example:
-    
+
     ... ado.net/XML headers & schema ...
     <resheader name="resmimetype">text/microsoft-resx</resheader>
     <resheader name="version">2.0</resheader>
@@ -26,36 +26,36 @@
         <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
         <comment>This is a comment</comment>
     </data>
-                
-    There are any number of "resheader" rows that contain simple 
+
+    There are any number of "resheader" rows that contain simple
     name/value pairs.
-    
-    Each data row contains a name, and value. The row also contains a 
-    type or mimetype. Type corresponds to a .NET class that support 
-    text/value conversion through the TypeConverter architecture. 
-    Classes that don't support this are serialized and stored with the 
+
+    Each data row contains a name, and value. The row also contains a
+    type or mimetype. Type corresponds to a .NET class that support
+    text/value conversion through the TypeConverter architecture.
+    Classes that don't support this are serialized and stored with the
     mimetype set.
-    
-    The mimetype is used for serialized objects, and tells the 
-    ResXResourceReader how to depersist the object. This is currently not 
+
+    The mimetype is used for serialized objects, and tells the
+    ResXResourceReader how to depersist the object. This is currently not
     extensible. For a given mimetype the value must be set accordingly:
-    
-    Note - application/x-microsoft.net.object.binary.base64 is the format 
-    that the ResXResourceWriter will generate, however the reader can 
+
+    Note - application/x-microsoft.net.object.binary.base64 is the format
+    that the ResXResourceWriter will generate, however the reader can
     read any of the formats listed below.
-    
+
     mimetype: application/x-microsoft.net.object.binary.base64
-    value   : The object must be serialized with 
+    value   : The object must be serialized with
             : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
             : and then encoded with base64 encoding.
-    
+
     mimetype: application/x-microsoft.net.object.soap.base64
-    value   : The object must be serialized with 
+    value   : The object must be serialized with
             : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
             : and then encoded with base64 encoding.
 
     mimetype: application/x-microsoft.net.object.bytearray.base64
-    value   : The object must be serialized into a byte array 
+    value   : The object must be serialized into a byte array
             : using a System.ComponentModel.TypeConverter
             : and then encoded with base64 encoding.
     -->
@@ -389,28 +389,13 @@
     <value>If SAML Binding Type is set to artifact, identity provider resolution service URL is required.</value>
   </data>
   <data name="IdpSingleSignOnServiceUrlValidationError" xml:space="preserve">
-    <value>If Identity Provider Entity ID is not a URL, single sign on service URL is required.</value>
+    <value>Single sign on service URL is required.</value>
   </data>
   <data name="InvalidSchemeConfigurationError" xml:space="preserve">
     <value>The configured authentication scheme is not valid: "{0}"</value>
   </data>
-  <data name="NoSchemeOrHandlerForSsoConfigurationFoundError" xml:space="preserve">
-    <value>No scheme or handler for this SSO configuration found.</value>
-  </data>
-  <data name="SsoNotEnabledForOrganizationError" xml:space="preserve">
-    <value>SSO is not yet enabled for this organization.</value>
-  </data>
-  <data name="SsoConfigurationNotFoundForOrganizationError" xml:space="preserve">
-    <value>No SSO configuration exists for this organization.</value>
-  </data>
-  <data name="SsoNotAllowedForOrganizationError" xml:space="preserve">
-    <value>SSO is not allowed for this organization.</value>
-  </data>
   <data name="OrganizationNotFoundByIdentifierError" xml:space="preserve">
     <value>Organization not found from identifier.</value>
-  </data>
-  <data name="NoOrganizationIdentifierProvidedError" xml:space="preserve">
-    <value>No organization identifier provided.</value>
   </data>
   <data name="InvalidAuthenticationOptionsForSaml2SchemeError" xml:space="preserve">
     <value>Invalid authentication options provided to SAML2 scheme.</value>
@@ -523,14 +508,26 @@
   <data name="UserIdAndTokenMismatch" xml:space="preserve">
     <value>Supplied userId and token did not match.</value>
   </data>
+  <data name="UserShouldBeFound" xml:space="preserve">
+    <value>User should have been defined by this point.</value>
+  </data>
   <data name="CouldNotFindOrganization" xml:space="preserve">
     <value>Could not find organization for '{0}'</value>
+  </data>
+  <data name="CouldNotFindOrganizationUser" xml:space="preserve">
+    <value>Could not find organization user for user '{0}' organization '{1}'</value>
   </data>
   <data name="NoSeatsAvailable" xml:space="preserve">
     <value>No seats available for organization, '{0}'</value>
   </data>
-  <data name="UserAlreadyInvited" xml:space="preserve">
-    <value>User, '{0}', has already been invited to this organization, '{1}'. Accept the invite in order to log in with SSO.</value>
+  <data name="AcceptInviteBeforeUsingSSO" xml:space="preserve">
+    <value>To accept your invite to {0}, you must first log in using your master password. Once your invite has been accepted, you will be able to log in using SSO.</value>
+  </data>
+  <data name="OrganizationUserAccessRevoked" xml:space="preserve">
+    <value>Your access to organization {0} has been revoked. Please contact your administrator for assistance.</value>
+  </data>
+  <data name="OrganizationUserUnknownStatus" xml:space="preserve">
+    <value>Your access to organization {0} is in an unknown state. Please contact your administrator for assistance.</value>
   </data>
   <data name="UserAlreadyExistsInviteProcess" xml:space="preserve">
     <value>You were removed from the organization managing single sign-on for your account. Contact the organization administrator for help regaining access to your account.</value>
@@ -540,7 +537,7 @@
   </data>
   <data name="RedirectGet" xml:space="preserve">
     <value>Redirect GET</value>
-    <comment>An OIDC Connect Redirect Behavior, Redirect; Emits a 302 response 
+    <comment>An OIDC Connect Redirect Behavior, Redirect; Emits a 302 response
     to redirect the user agent to the OpenID Connect provider using a GET request.</comment>
   </data>
   <data name="FormPost" xml:space="preserve">
@@ -684,5 +681,8 @@
   </data>
   <data name="InvalidSsoRedirectToken" xml:space="preserve">
     <value>Single sign on redirect token is invalid or expired.</value>
+  </data>
+  <data name="SsoInvalidIdentifierError" xml:space="preserve">
+    <value>Invalid SSO identifier</value>
   </data>
 </root>

@@ -6,7 +6,11 @@
     @Identifier NVARCHAR(50),
     @PushToken NVARCHAR(255),
     @CreationDate DATETIME2(7),
-    @RevisionDate DATETIME2(7)
+    @RevisionDate DATETIME2(7),
+    @EncryptedUserKey VARCHAR(MAX) = NULL,
+    @EncryptedPublicKey VARCHAR(MAX) = NULL,
+    @EncryptedPrivateKey VARCHAR(MAX) = NULL,
+    @Active BIT = 1
 AS
 BEGIN
     SET NOCOUNT ON
@@ -20,7 +24,11 @@ BEGIN
         [Identifier],
         [PushToken],
         [CreationDate],
-        [RevisionDate]
+        [RevisionDate],
+        [EncryptedUserKey],
+        [EncryptedPublicKey],
+        [EncryptedPrivateKey],
+        [Active]
     )
     VALUES
     (
@@ -31,6 +39,10 @@ BEGIN
         @Identifier,
         @PushToken,
         @CreationDate,
-        @RevisionDate
+        @RevisionDate,
+        @EncryptedUserKey,
+        @EncryptedPublicKey,
+        @EncryptedPrivateKey,
+        @Active
     )
 END

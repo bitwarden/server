@@ -1,6 +1,10 @@
-﻿using Bit.Core.Enums;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
+using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Scim.Groups.Interfaces;
 using Bit.Scim.Models;
@@ -12,6 +16,7 @@ namespace Bit.Scim.Controllers.v2;
 
 [Authorize("Scim")]
 [Route("v2/{organizationId}/groups")]
+[Produces("application/scim+json")]
 [ExceptionHandlerFilter]
 public class GroupsController : Controller
 {
@@ -22,7 +27,6 @@ public class GroupsController : Controller
     private readonly IPatchGroupCommand _patchGroupCommand;
     private readonly IPostGroupCommand _postGroupCommand;
     private readonly IPutGroupCommand _putGroupCommand;
-    private readonly ILogger<GroupsController> _logger;
 
     public GroupsController(
         IGroupRepository groupRepository,
@@ -31,8 +35,8 @@ public class GroupsController : Controller
         IDeleteGroupCommand deleteGroupCommand,
         IPatchGroupCommand patchGroupCommand,
         IPostGroupCommand postGroupCommand,
-        IPutGroupCommand putGroupCommand,
-        ILogger<GroupsController> logger)
+        IPutGroupCommand putGroupCommand
+        )
     {
         _groupRepository = groupRepository;
         _organizationRepository = organizationRepository;
@@ -41,7 +45,6 @@ public class GroupsController : Controller
         _patchGroupCommand = patchGroupCommand;
         _postGroupCommand = postGroupCommand;
         _putGroupCommand = putGroupCommand;
-        _logger = logger;
     }
 
     [HttpGet("{id}")]
@@ -95,8 +98,13 @@ public class GroupsController : Controller
     [HttpPatch("{id}")]
     public async Task<IActionResult> Patch(Guid organizationId, Guid id, [FromBody] ScimPatchModel model)
     {
-        var organization = await _organizationRepository.GetByIdAsync(organizationId);
-        await _patchGroupCommand.PatchGroupAsync(organization, id, model);
+        var group = await _groupRepository.GetByIdAsync(id);
+        if (group == null || group.OrganizationId != organizationId)
+        {
+            throw new NotFoundException("Group not found.");
+        }
+
+        await _patchGroupCommand.PatchGroupAsync(group, model);
         return new NoContentResult();
     }
 

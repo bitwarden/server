@@ -4,6 +4,8 @@ using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
+#nullable enable
+
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public class OrganizationSponsorshipRepository : Repository<Core.Entities.OrganizationSponsorship, OrganizationSponsorship, Guid>, IOrganizationSponsorshipRepository
@@ -12,10 +14,11 @@ public class OrganizationSponsorshipRepository : Repository<Core.Entities.Organi
         : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.OrganizationSponsorships)
     { }
 
-    public async Task<ICollection<Guid>> CreateManyAsync(IEnumerable<Core.Entities.OrganizationSponsorship> organizationSponsorships)
+    public async Task<ICollection<Guid>?> CreateManyAsync(IEnumerable<Core.Entities.OrganizationSponsorship> organizationSponsorships)
     {
         if (!organizationSponsorships.Any())
         {
+            // TODO: This differs from SQL server implementation, we should have both return empty collection
             return new List<Guid>();
         }
 
@@ -79,7 +82,7 @@ public class OrganizationSponsorshipRepository : Repository<Core.Entities.Organi
         }
     }
 
-    public async Task<Core.Entities.OrganizationSponsorship> GetByOfferedToEmailAsync(string email)
+    public async Task<Core.Entities.OrganizationSponsorship?> GetByOfferedToEmailAsync(string email)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -90,7 +93,7 @@ public class OrganizationSponsorshipRepository : Repository<Core.Entities.Organi
         }
     }
 
-    public async Task<Core.Entities.OrganizationSponsorship> GetBySponsoredOrganizationIdAsync(Guid sponsoredOrganizationId)
+    public async Task<Core.Entities.OrganizationSponsorship?> GetBySponsoredOrganizationIdAsync(Guid sponsoredOrganizationId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -101,12 +104,13 @@ public class OrganizationSponsorshipRepository : Repository<Core.Entities.Organi
         }
     }
 
-    public async Task<Core.Entities.OrganizationSponsorship> GetBySponsoringOrganizationUserIdAsync(Guid sponsoringOrganizationUserId)
+    public async Task<Core.Entities.OrganizationSponsorship?> GetBySponsoringOrganizationUserIdAsync(Guid sponsoringOrganizationUserId, bool isAdminInitiated = false)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var orgSponsorship = await GetDbSet(dbContext).Where(e => e.SponsoringOrganizationUserId == sponsoringOrganizationUserId)
+            var orgSponsorship = await GetDbSet(dbContext)
+                .Where(e => e.SponsoringOrganizationUserId == sponsoringOrganizationUserId && e.IsAdminInitiated == isAdminInitiated)
                 .FirstOrDefaultAsync();
             return orgSponsorship;
         }

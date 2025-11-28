@@ -1,11 +1,13 @@
 ﻿using System.Globalization;
+using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Context;
-using Bit.Core.IdentityServer;
 using Bit.Core.Services;
+using Bit.Core.Services.Implementations;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
-using IdentityModel;
+using Duende.IdentityModel;
 
 namespace Bit.Events;
 
@@ -52,23 +54,24 @@ public class Startup
         // Services
         var usingServiceBusAppCache = CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
             CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName);
+        services.AddScoped<IApplicationCacheService, FeatureRoutedCacheService>();
+        services.AddSingleton<IVNextInMemoryApplicationCacheService, VNextInMemoryApplicationCacheService>();
+
         if (usingServiceBusAppCache)
         {
-            services.AddSingleton<IApplicationCacheService, InMemoryServiceBusApplicationCacheService>();
+            services.AddSingleton<IVCurrentInMemoryApplicationCacheService, InMemoryServiceBusApplicationCacheService>();
+            services.AddSingleton<IApplicationCacheServiceBusMessaging, ServiceBusApplicationCacheMessaging>();
         }
         else
         {
-            services.AddSingleton<IApplicationCacheService, InMemoryApplicationCacheService>();
+            services.AddSingleton<IVCurrentInMemoryApplicationCacheService, InMemoryApplicationCacheService>();
+            services.AddSingleton<IApplicationCacheServiceBusMessaging, NoOpApplicationCacheMessaging>();
         }
+
+        services.AddEventWriteServices(globalSettings);
         services.AddScoped<IEventService, EventService>();
-        if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Events.ConnectionString))
-        {
-            services.AddSingleton<IEventWriteService, AzureQueueEventWriteService>();
-        }
-        else
-        {
-            services.AddSingleton<IEventWriteService, RepositoryEventWriteService>();
-        }
+
+        services.AddOptionality();
 
         // Mvc
         services.AddMvc(config =>
@@ -80,18 +83,23 @@ public class Startup
         {
             services.AddHostedService<Core.HostedServices.ApplicationCacheHostedService>();
         }
+
+        services.AddRabbitMqListeners(globalSettings);
     }
 
     public void Configure(
         IApplicationBuilder app,
         IWebHostEnvironment env,
-        IHostApplicationLifetime appLifetime,
         GlobalSettings globalSettings)
     {
-        app.UseSerilog(env, appLifetime, globalSettings);
-
         // Add general security headers
         app.UseMiddleware<SecurityHeadersMiddleware>();
+
+        // Forwarding Headers
+        if (globalSettings.SelfHosted)
+        {
+            app.UseForwardedHeaders(globalSettings);
+        }
 
         if (env.IsDevelopment())
         {

@@ -1,4 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
 
@@ -16,4 +19,10 @@ public class OrganizationSponsorshipCreateRequestModel
 
     [StringLength(256)]
     public string FriendlyName { get; set; }
+
+    public bool? IsAdminInitiated { get; set; }
+
+    [EncryptedString]
+    [EncryptedStringLength(512)]
+    public string Notes { get; set; }
 }

@@ -1,4 +1,10 @@
-﻿using Bit.Core.Repositories;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Auth.Identity;
+using Bit.Core.Context;
+using Bit.Core.Exceptions;
+using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Commands.Projects.Interfaces;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
@@ -10,32 +16,58 @@ public class CreateProjectCommand : ICreateProjectCommand
     private readonly IAccessPolicyRepository _accessPolicyRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IProjectRepository _projectRepository;
+    private readonly ICurrentContext _currentContext;
+
 
     public CreateProjectCommand(
         IAccessPolicyRepository accessPolicyRepository,
         IOrganizationUserRepository organizationUserRepository,
-        IProjectRepository projectRepository
-        )
+        IProjectRepository projectRepository,
+        ICurrentContext currentContext)
     {
         _accessPolicyRepository = accessPolicyRepository;
         _organizationUserRepository = organizationUserRepository;
         _projectRepository = projectRepository;
+        _currentContext = currentContext;
     }
 
-    public async Task<Project> CreateAsync(Project project, Guid userId)
+    public async Task<Project> CreateAsync(Project project, Guid id, IdentityClientType identityClientType)
     {
+        if (identityClientType != IdentityClientType.User && identityClientType != IdentityClientType.ServiceAccount)
+        {
+            throw new NotFoundException();
+        }
+
         var createdProject = await _projectRepository.CreateAsync(project);
 
-        var orgUser = await _organizationUserRepository.GetByOrganizationAsync(createdProject.OrganizationId,
-            userId);
-        var accessPolicy = new UserProjectAccessPolicy()
+        if (identityClientType == IdentityClientType.User)
         {
-            OrganizationUserId = orgUser.Id,
-            GrantedProjectId = createdProject.Id,
-            Read = true,
-            Write = true,
-        };
-        await _accessPolicyRepository.CreateManyAsync(new List<BaseAccessPolicy> { accessPolicy });
+            var orgUser = await _organizationUserRepository.GetByOrganizationAsync(createdProject.OrganizationId, id);
+
+            var accessPolicy = new UserProjectAccessPolicy()
+            {
+                OrganizationUserId = orgUser.Id,
+                GrantedProjectId = createdProject.Id,
+                Read = true,
+                Write = true,
+            };
+
+            await _accessPolicyRepository.CreateManyAsync(new List<BaseAccessPolicy> { accessPolicy });
+
+        }
+        else if (identityClientType == IdentityClientType.ServiceAccount)
+        {
+            var serviceAccountProjectAccessPolicy = new ServiceAccountProjectAccessPolicy()
+            {
+                ServiceAccountId = id,
+                GrantedProjectId = createdProject.Id,
+                Read = true,
+                Write = true,
+            };
+
+            await _accessPolicyRepository.CreateManyAsync(new List<BaseAccessPolicy> { serviceAccountProjectAccessPolicy });
+        }
+
         return createdProject;
     }
 }

@@ -1,4 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.Utilities;
 
@@ -8,6 +11,7 @@ public class ServiceAccountCreateRequestModel
 {
     [Required]
     [EncryptedString]
+    [EncryptedStringLength(1000)]
     public string Name { get; set; }
 
     public ServiceAccount ToServiceAccount(Guid organizationId)

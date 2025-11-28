@@ -12,7 +12,9 @@ namespace Bit.SqliteMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
     [Migration("20221212154007_initial")]
+    #pragma warning disable CS8981 // We unfortunately can't rename migrations
     partial class initial
+    #pragma warning restore CS8981
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {

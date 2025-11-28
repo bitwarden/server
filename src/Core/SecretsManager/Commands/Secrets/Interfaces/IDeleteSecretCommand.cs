@@ -4,6 +4,6 @@ namespace Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
 
 public interface IDeleteSecretCommand
 {
-    Task<List<Tuple<Secret, string>>> DeleteSecrets(List<Guid> ids, Guid userId);
+    Task DeleteSecrets(IEnumerable<Secret> secrets);
 }
 

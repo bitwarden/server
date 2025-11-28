@@ -1,13 +1,14 @@
-﻿using System.Net;
+﻿using Azure.Data.Tables;
 using Bit.Core.Models.Data;
 using Bit.Core.Settings;
-using Microsoft.Azure.Cosmos.Table;
+
+#nullable enable
 
 namespace Bit.Core.Repositories.TableStorage;
 
 public class InstallationDeviceRepository : IInstallationDeviceRepository
 {
-    private readonly CloudTable _table;
+    private readonly TableClient _tableClient;
 
     public InstallationDeviceRepository(GlobalSettings globalSettings)
         : this(globalSettings.Events.ConnectionString)
@@ -15,19 +16,18 @@ public class InstallationDeviceRepository : IInstallationDeviceRepository
 
     public InstallationDeviceRepository(string storageConnectionString)
     {
-        var storageAccount = CloudStorageAccount.Parse(storageConnectionString);
-        var tableClient = storageAccount.CreateCloudTableClient();
-        _table = tableClient.GetTableReference("installationdevice");
+        var tableClient = new TableServiceClient(storageConnectionString);
+        _tableClient = tableClient.GetTableClient("installationdevice");
     }
 
     public async Task UpsertAsync(InstallationDeviceEntity entity)
     {
-        await _table.ExecuteAsync(TableOperation.InsertOrReplace(entity));
+        await _tableClient.UpsertEntityAsync(entity);
     }
 
-    public async Task UpsertManyAsync(IList<InstallationDeviceEntity> entities)
+    public async Task UpsertManyAsync(IList<InstallationDeviceEntity>? entities)
     {
-        if (!entities?.Any() ?? true)
+        if (entities is null || !entities.Any())
         {
             return;
         }
@@ -52,7 +52,7 @@ public class InstallationDeviceRepository : IInstallationDeviceRepository
             var iterations = groupEntities.Count / 100;
             for (var i = 0; i <= iterations; i++)
             {
-                var batch = new TableBatchOperation();
+                var batch = new List<TableTransactionAction>();
                 var batchEntities = groupEntities.Skip(i * 100).Take(100);
                 if (!batchEntities.Any())
                 {
@@ -61,24 +61,16 @@ public class InstallationDeviceRepository : IInstallationDeviceRepository
 
                 foreach (var entity in batchEntities)
                 {
-                    batch.InsertOrReplace(entity);
+                    batch.Add(new TableTransactionAction(TableTransactionActionType.UpsertReplace, entity));
                 }
 
-                await _table.ExecuteBatchAsync(batch);
+                await _tableClient.SubmitTransactionAsync(batch);
             }
         }
     }
 
     public async Task DeleteAsync(InstallationDeviceEntity entity)
     {
-        try
-        {
-            entity.ETag = "*";
-            await _table.ExecuteAsync(TableOperation.Delete(entity));
-        }
-        catch (StorageException e) when (e.RequestInformation.HttpStatusCode != (int)HttpStatusCode.NotFound)
-        {
-            throw;
-        }
+        await _tableClient.DeleteEntityAsync(entity.PartitionKey, entity.RowKey);
     }
 }

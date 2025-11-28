@@ -1,16 +1,30 @@
 ﻿using AutoMapper;
+using Bit.Core.Auth.Models.Data;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Repositories;
+using Bit.Core.Settings;
+using Bit.Infrastructure.EntityFramework.Auth.Repositories.Queries;
 using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+
+#nullable enable
 
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public class DeviceRepository : Repository<Core.Entities.Device, Device, Guid>, IDeviceRepository
 {
-    public DeviceRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
+    private readonly IGlobalSettings _globalSettings;
+
+    public DeviceRepository(
+        IServiceScopeFactory serviceScopeFactory,
+        IMapper mapper,
+        IGlobalSettings globalSettings
+        )
         : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Devices)
-    { }
+    {
+        _globalSettings = globalSettings;
+    }
 
     public async Task ClearPushTokenAsync(Guid id)
     {
@@ -24,7 +38,7 @@ public class DeviceRepository : Repository<Core.Entities.Device, Device, Guid>, 
         }
     }
 
-    public async Task<Core.Entities.Device> GetByIdAsync(Guid id, Guid userId)
+    public async Task<Core.Entities.Device?> GetByIdAsync(Guid id, Guid userId)
     {
         var device = await base.GetByIdAsync(id);
         if (device == null || device.UserId != userId)
@@ -35,7 +49,7 @@ public class DeviceRepository : Repository<Core.Entities.Device, Device, Guid>, 
         return Mapper.Map<Core.Entities.Device>(device);
     }
 
-    public async Task<Core.Entities.Device> GetByIdentifierAsync(string identifier)
+    public async Task<Core.Entities.Device?> GetByIdentifierAsync(string identifier)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -46,7 +60,7 @@ public class DeviceRepository : Repository<Core.Entities.Device, Device, Guid>, 
         }
     }
 
-    public async Task<Core.Entities.Device> GetByIdentifierAsync(string identifier, Guid userId)
+    public async Task<Core.Entities.Device?> GetByIdentifierAsync(string identifier, Guid userId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -67,4 +81,41 @@ public class DeviceRepository : Repository<Core.Entities.Device, Device, Guid>, 
             return Mapper.Map<List<Core.Entities.Device>>(devices);
         }
     }
+
+    public async Task<ICollection<DeviceAuthDetails>> GetManyByUserIdWithDeviceAuth(Guid userId)
+    {
+        var expirationMinutes = (int)_globalSettings.PasswordlessAuth.UserRequestExpiration.TotalMinutes;
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = new DeviceWithPendingAuthByUserIdQuery();
+            return await query.GetQuery(dbContext, userId, expirationMinutes).ToListAsync();
+        }
+    }
+
+    public UpdateEncryptedDataForKeyRotation UpdateKeysForRotationAsync(Guid userId, IEnumerable<Core.Entities.Device> devices)
+    {
+        return async (_, _) =>
+        {
+            var deviceUpdates = devices.ToList();
+            using var scope = ServiceScopeFactory.CreateScope();
+            var dbContext = GetDatabaseContext(scope);
+            var userDevices = await GetDbSet(dbContext)
+                .Where(device => device.UserId == userId)
+                .ToListAsync();
+            var userDevicesWithUpdatesPending = userDevices
+                .Where(existingDevice => deviceUpdates.Any(updatedDevice => updatedDevice.Id == existingDevice.Id))
+                .ToList();
+
+            foreach (var deviceToUpdate in userDevicesWithUpdatesPending)
+            {
+                var deviceUpdate = deviceUpdates.First(deviceUpdate => deviceUpdate.Id == deviceToUpdate.Id);
+                deviceToUpdate.EncryptedPublicKey = deviceUpdate.EncryptedPublicKey;
+                deviceToUpdate.EncryptedUserKey = deviceUpdate.EncryptedUserKey;
+            }
+
+            await dbContext.SaveChangesAsync();
+        };
+    }
+
 }

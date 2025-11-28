@@ -1,4 +1,8 @@
-﻿using System.Net;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Net;
+using Bit.IntegrationTestCommon.Factories;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -13,7 +17,7 @@ public class FakeRemoteIpAddressMiddleware
     public FakeRemoteIpAddressMiddleware(RequestDelegate next, IPAddress fakeIpAddress = null)
     {
         _next = next;
-        _fakeIpAddress = fakeIpAddress ?? IPAddress.Parse("127.0.0.1");
+        _fakeIpAddress = fakeIpAddress ?? IPAddress.Parse(FactoryConstants.WhitelistedIp);
     }
 
     public async Task Invoke(HttpContext httpContext)

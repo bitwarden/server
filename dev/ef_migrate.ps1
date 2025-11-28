@@ -9,7 +9,11 @@ $service = "mysql"
 
 Write-Output "--- Attempting to start $service service ---"
 
-docker-compose --profile $service up -d --no-recreate
+# Attempt to start mysql but if docker-compose doesn't
+# exist just trust that the user has it running some other way
+if (command -v docker-compose) {
+  docker-compose --profile $service up -d --no-recreate
+}
 
 dotnet tool restore
 

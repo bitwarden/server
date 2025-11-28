@@ -1,31 +1,26 @@
 ﻿using Azure.Storage.Queues;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
-using Microsoft.AspNetCore.SignalR;
 
 namespace Bit.Notifications;
 
 public class AzureQueueHostedService : IHostedService, IDisposable
 {
     private readonly ILogger _logger;
-    private readonly IHubContext<NotificationsHub> _hubContext;
-    private readonly IHubContext<AnonymousNotificationsHub> _anonymousHubContext;
+    private readonly HubHelpers _hubHelpers;
     private readonly GlobalSettings _globalSettings;
 
-    private Task _executingTask;
-    private CancellationTokenSource _cts;
-    private QueueClient _queueClient;
+    private Task? _executingTask;
+    private CancellationTokenSource? _cts;
 
     public AzureQueueHostedService(
         ILogger<AzureQueueHostedService> logger,
-        IHubContext<NotificationsHub> hubContext,
-        IHubContext<AnonymousNotificationsHub> anonymousHubContext,
+        HubHelpers hubHelpers,
         GlobalSettings globalSettings)
     {
         _logger = logger;
-        _hubContext = hubContext;
+        _hubHelpers = hubHelpers;
         _globalSettings = globalSettings;
-        _anonymousHubContext = anonymousHubContext;
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
@@ -41,40 +36,48 @@ public class AzureQueueHostedService : IHostedService, IDisposable
         {
             return;
         }
+
         _logger.LogWarning("Stopping service.");
-        _cts.Cancel();
+        _cts?.Cancel();
         await Task.WhenAny(_executingTask, Task.Delay(-1, cancellationToken));
         cancellationToken.ThrowIfCancellationRequested();
     }
 
     public void Dispose()
-    { }
+    {
+    }
 
     private async Task ExecuteAsync(CancellationToken cancellationToken)
     {
-        _queueClient = new QueueClient(_globalSettings.Notifications.ConnectionString, "notifications");
+        var queueClient = new QueueClient(_globalSettings.Notifications.ConnectionString, "notifications");
         while (!cancellationToken.IsCancellationRequested)
         {
             try
             {
-                var messages = await _queueClient.ReceiveMessagesAsync(32);
+                var messages = await queueClient.ReceiveMessagesAsync(32, cancellationToken: cancellationToken);
                 if (messages.Value?.Any() ?? false)
                 {
                     foreach (var message in messages.Value)
                     {
                         try
                         {
-                            await HubHelpers.SendNotificationToHubAsync(
-                                message.DecodeMessageText(), _hubContext, _anonymousHubContext, cancellationToken);
-                            await _queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt);
+                            var decodedMessage = message.DecodeMessageText();
+                            if (!string.IsNullOrWhiteSpace(decodedMessage))
+                            {
+                                await _hubHelpers.SendNotificationToHubAsync(decodedMessage, cancellationToken);
+                            }
+
+                            await queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt,
+                                cancellationToken);
                         }
                         catch (Exception e)
                         {
-                            _logger.LogError("Error processing dequeued message: " +
-                                $"{message.MessageId} x{message.DequeueCount}. {e.Message}", e);
+                            _logger.LogError(e, "Error processing dequeued message: {MessageId} x{DequeueCount}.",
+                                message.MessageId, message.DequeueCount);
                             if (message.DequeueCount > 2)
                             {
-                                await _queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt);
+                                await queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt,
+                                    cancellationToken);
                             }
                         }
                     }
@@ -84,9 +87,14 @@ public class AzureQueueHostedService : IHostedService, IDisposable
                     await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
                 }
             }
+            catch (TaskCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                _logger.LogDebug("Task.Delay cancelled during Alpine container shutdown");
+                break;
+            }
             catch (Exception e)
             {
-                _logger.LogError("Error processing messages.", e);
+                _logger.LogError(e, "Error processing messages.");
             }
         }
 

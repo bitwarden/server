@@ -24,11 +24,25 @@ BEGIN
 
     BEGIN TRANSACTION User_DeleteById
 
+    -- Delete WebAuthnCredentials
+    DELETE
+    FROM
+        [dbo].[WebAuthnCredential]
+    WHERE
+        [UserId] = @Id
+
     -- Delete folders
     DELETE
     FROM
         [dbo].[Folder]
     WHERE
+        [UserId] = @Id
+
+    -- Delete AuthRequest, must be before Device
+    DELETE
+    FROM
+        [dbo].[AuthRequest]
+    WHERE 
         [UserId] = @Id
 
     -- Delete devices
@@ -38,12 +52,22 @@ BEGIN
     WHERE
         [UserId] = @Id
 
+    -- Migrate DefaultUserCollection to SharedCollection before deleting CollectionUser records
+    DECLARE @OrgUserIds [dbo].[GuidIdArray]
+    INSERT INTO @OrgUserIds (Id)
+    SELECT [Id] FROM [dbo].[OrganizationUser] WHERE [UserId] = @Id
+    
+    IF EXISTS (SELECT 1 FROM @OrgUserIds)
+    BEGIN
+        EXEC [dbo].[OrganizationUser_MigrateDefaultCollection] @OrgUserIds
+    END
+
     -- Delete collection users
     DELETE
         CU
     FROM
         [dbo].[CollectionUser] CU
-    INNER JOIN
+        INNER JOIN
         [dbo].[OrganizationUser] OU ON OU.[Id] = CU.[OrganizationUserId]
     WHERE
         OU.[UserId] = @Id
@@ -53,7 +77,7 @@ BEGIN
         GU
     FROM
         [dbo].[GroupUser] GU
-    INNER JOIN
+        INNER JOIN
         [dbo].[OrganizationUser] OU ON OU.[Id] = GU.[OrganizationUserId]
     WHERE
         OU.[UserId] = @Id
@@ -63,7 +87,7 @@ BEGIN
         AP
     FROM
         [dbo].[AccessPolicy] AP
-    INNER JOIN
+        INNER JOIN
         [dbo].[OrganizationUser] OU ON OU.[Id] = AP.[OrganizationUserId]
     WHERE
         [UserId] = @Id
@@ -95,7 +119,7 @@ BEGIN
         [dbo].[EmergencyAccess]
     WHERE
         [GrantorId] = @Id
-    OR
+        OR
         [GranteeId] = @Id
 
     -- Delete Sends
@@ -103,6 +127,20 @@ BEGIN
     FROM
         [dbo].[Send]
     WHERE 
+        [UserId] = @Id
+
+    -- Delete Notification Status
+    DELETE
+    FROM
+        [dbo].[NotificationStatus]
+    WHERE
+        [UserId] = @Id
+
+    -- Delete Notification
+    DELETE
+    FROM
+        [dbo].[Notification]
+    WHERE
         [UserId] = @Id
     
     -- Finally, delete the user

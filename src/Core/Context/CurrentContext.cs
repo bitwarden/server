@@ -1,8 +1,15 @@
-﻿using System.Security.Claims;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Security.Claims;
+using Bit.Core.AdminConsole.Context;
+using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Models.Data.Provider;
+using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Auth.Identity;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Enums.Provider;
-using Bit.Core.Identity;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
@@ -11,10 +18,10 @@ using Microsoft.AspNetCore.Http;
 
 namespace Bit.Core.Context;
 
-public class CurrentContext : ICurrentContext
+public class CurrentContext(
+    IProviderOrganizationRepository _providerOrganizationRepository,
+    IProviderUserRepository _providerUserRepository) : ICurrentContext
 {
-    private readonly IProviderOrganizationRepository _providerOrganizationRepository;
-    private readonly IProviderUserRepository _providerUserRepository;
     private bool _builtHttpContext;
     private bool _builtClaimsPrincipal;
     private IEnumerable<ProviderOrganizationProviderDetails> _providerOrganizationProviderDetails;
@@ -26,8 +33,9 @@ public class CurrentContext : ICurrentContext
     public virtual string DeviceIdentifier { get; set; }
     public virtual DeviceType? DeviceType { get; set; }
     public virtual string IpAddress { get; set; }
-    public virtual List<CurrentContentOrganization> Organizations { get; set; }
-    public virtual List<CurrentContentProvider> Providers { get; set; }
+    public virtual string CountryName { get; set; }
+    public virtual List<CurrentContextOrganization> Organizations { get; set; }
+    public virtual List<CurrentContextProvider> Providers { get; set; }
     public virtual Guid? InstallationId { get; set; }
     public virtual Guid? OrganizationId { get; set; }
     public virtual bool CloudflareWorkerProxied { get; set; }
@@ -36,16 +44,9 @@ public class CurrentContext : ICurrentContext
     public virtual int? BotScore { get; set; }
     public virtual string ClientId { get; set; }
     public virtual Version ClientVersion { get; set; }
-    public virtual ClientType ClientType { get; set; }
+    public virtual bool ClientVersionIsPrerelease { get; set; }
+    public virtual IdentityClientType IdentityClientType { get; set; }
     public virtual Guid? ServiceAccountOrganizationId { get; set; }
-
-    public CurrentContext(
-        IProviderOrganizationRepository providerOrganizationRepository,
-        IProviderUserRepository providerUserRepository)
-    {
-        _providerOrganizationRepository = providerOrganizationRepository;
-        _providerUserRepository = providerUserRepository;
-    }
 
     public async virtual Task BuildAsync(HttpContext httpContext, GlobalSettings globalSettings)
     {
@@ -58,42 +59,53 @@ public class CurrentContext : ICurrentContext
         HttpContext = httpContext;
         await BuildAsync(httpContext.User, globalSettings);
 
-        if (DeviceIdentifier == null && httpContext.Request.Headers.ContainsKey("Device-Identifier"))
+        if (DeviceIdentifier == null && httpContext.Request.Headers.TryGetValue("Device-Identifier", out var deviceIdentifier))
         {
-            DeviceIdentifier = httpContext.Request.Headers["Device-Identifier"];
+            DeviceIdentifier = deviceIdentifier;
         }
 
-        if (httpContext.Request.Headers.ContainsKey("Device-Type") &&
-            Enum.TryParse(httpContext.Request.Headers["Device-Type"].ToString(), out DeviceType dType))
+        if (httpContext.Request.Headers.TryGetValue("Device-Type", out var deviceType) &&
+            Enum.TryParse(deviceType.ToString(), out DeviceType dType))
         {
             DeviceType = dType;
         }
 
-        if (!BotScore.HasValue && httpContext.Request.Headers.ContainsKey("X-Cf-Bot-Score") &&
-            int.TryParse(httpContext.Request.Headers["X-Cf-Bot-Score"], out var parsedBotScore))
+        if (!BotScore.HasValue && httpContext.Request.Headers.TryGetValue("X-Cf-Bot-Score", out var cfBotScore) &&
+            int.TryParse(cfBotScore, out var parsedBotScore))
         {
             BotScore = parsedBotScore;
         }
 
-        if (httpContext.Request.Headers.ContainsKey("X-Cf-Worked-Proxied"))
+        if (httpContext.Request.Headers.TryGetValue("X-Cf-Worked-Proxied", out var cfWorkedProxied))
         {
-            CloudflareWorkerProxied = httpContext.Request.Headers["X-Cf-Worked-Proxied"] == "1";
+            CloudflareWorkerProxied = cfWorkedProxied == "1";
         }
 
-        if (httpContext.Request.Headers.ContainsKey("X-Cf-Is-Bot"))
+        if (httpContext.Request.Headers.TryGetValue("X-Cf-Is-Bot", out var cfIsBot))
         {
-            IsBot = httpContext.Request.Headers["X-Cf-Is-Bot"] == "1";
+            IsBot = cfIsBot == "1";
         }
 
-        if (httpContext.Request.Headers.ContainsKey("X-Cf-Maybe-Bot"))
+        if (httpContext.Request.Headers.TryGetValue("X-Cf-Maybe-Bot", out var cfMaybeBot))
         {
-            MaybeBot = httpContext.Request.Headers["X-Cf-Maybe-Bot"] == "1";
+            MaybeBot = cfMaybeBot == "1";
         }
 
-        if (httpContext.Request.Headers.ContainsKey("Bitwarden-Client-Version") && Version.TryParse(httpContext.Request.Headers["Bitwarden-Client-Version"], out var cVersion))
+        if (httpContext.Request.Headers.TryGetValue("Bitwarden-Client-Version", out var bitWardenClientVersion) && Version.TryParse(bitWardenClientVersion, out var cVersion))
         {
             ClientVersion = cVersion;
         }
+
+        if (httpContext.Request.Headers.TryGetValue("Is-Prerelease", out var clientVersionIsPrerelease))
+        {
+            ClientVersionIsPrerelease = clientVersionIsPrerelease == "1";
+        }
+
+        if (httpContext.Request.Headers.TryGetValue("country-name", out var countryName))
+        {
+            CountryName = countryName;
+        }
+
     }
 
     public async virtual Task BuildAsync(ClaimsPrincipal user, GlobalSettings globalSettings)
@@ -116,6 +128,24 @@ public class CurrentContext : ICurrentContext
         }
 
         var claimsDict = user.Claims.GroupBy(c => c.Type).ToDictionary(c => c.Key, c => c.Select(v => v));
+
+        ClientId = GetClaimValue(claimsDict, "client_id");
+
+        var clientType = GetClaimValue(claimsDict, Claims.Type);
+        if (clientType != null)
+        {
+            if (Enum.TryParse(clientType, out IdentityClientType c))
+            {
+                IdentityClientType = c;
+            }
+        }
+
+        if (IdentityClientType == IdentityClientType.Send)
+        {
+            // For the Send client, we don't need to set any User specific properties on the context
+            // so just short circuit and return here.
+            return Task.FromResult(0);
+        }
 
         var subject = GetClaimValue(claimsDict, "sub");
         if (Guid.TryParse(subject, out var subIdGuid))
@@ -145,19 +175,17 @@ public class CurrentContext : ICurrentContext
             }
         }
 
-        var clientType = GetClaimValue(claimsDict, Claims.Type);
-        if (clientType != null)
-        {
-            Enum.TryParse(clientType, out ClientType c);
-            ClientType = c;
-        }
-
-        if (ClientType == ClientType.ServiceAccount)
+        if (IdentityClientType == IdentityClientType.ServiceAccount)
         {
             ServiceAccountOrganizationId = new Guid(GetClaimValue(claimsDict, Claims.Organization));
         }
 
         DeviceIdentifier = GetClaimValue(claimsDict, Claims.Device);
+
+        if (Enum.TryParse(GetClaimValue(claimsDict, Claims.DeviceType), out DeviceType deviceType))
+        {
+            DeviceType = deviceType;
+        }
 
         Organizations = GetOrganizations(claimsDict, orgApi);
 
@@ -166,17 +194,17 @@ public class CurrentContext : ICurrentContext
         return Task.FromResult(0);
     }
 
-    private List<CurrentContentOrganization> GetOrganizations(Dictionary<string, IEnumerable<Claim>> claimsDict, bool orgApi)
+    private List<CurrentContextOrganization> GetOrganizations(Dictionary<string, IEnumerable<Claim>> claimsDict, bool orgApi)
     {
-        var accessSecretsManager = claimsDict.ContainsKey(Claims.SecretsManagerAccess)
-            ? claimsDict[Claims.SecretsManagerAccess].ToDictionary(s => s.Value, _ => true)
+        var accessSecretsManager = claimsDict.TryGetValue(Claims.SecretsManagerAccess, out var secretsManagerAccessClaim)
+            ? secretsManagerAccessClaim.ToDictionary(s => s.Value, _ => true)
             : new Dictionary<string, bool>();
 
-        var organizations = new List<CurrentContentOrganization>();
-        if (claimsDict.ContainsKey(Claims.OrganizationOwner))
+        var organizations = new List<CurrentContextOrganization>();
+        if (claimsDict.TryGetValue(Claims.OrganizationOwner, out var organizationOwnerClaim))
         {
-            organizations.AddRange(claimsDict[Claims.OrganizationOwner].Select(c =>
-                new CurrentContentOrganization
+            organizations.AddRange(organizationOwnerClaim.Select(c =>
+                new CurrentContextOrganization
                 {
                     Id = new Guid(c.Value),
                     Type = OrganizationUserType.Owner,
@@ -185,17 +213,17 @@ public class CurrentContext : ICurrentContext
         }
         else if (orgApi && OrganizationId.HasValue)
         {
-            organizations.Add(new CurrentContentOrganization
+            organizations.Add(new CurrentContextOrganization
             {
                 Id = OrganizationId.Value,
                 Type = OrganizationUserType.Owner,
             });
         }
 
-        if (claimsDict.ContainsKey(Claims.OrganizationAdmin))
+        if (claimsDict.TryGetValue(Claims.OrganizationAdmin, out var organizationAdminClaim))
         {
-            organizations.AddRange(claimsDict[Claims.OrganizationAdmin].Select(c =>
-                new CurrentContentOrganization
+            organizations.AddRange(organizationAdminClaim.Select(c =>
+                new CurrentContextOrganization
                 {
                     Id = new Guid(c.Value),
                     Type = OrganizationUserType.Admin,
@@ -203,10 +231,10 @@ public class CurrentContext : ICurrentContext
                 }));
         }
 
-        if (claimsDict.ContainsKey(Claims.OrganizationUser))
+        if (claimsDict.TryGetValue(Claims.OrganizationUser, out var organizationUserClaim))
         {
-            organizations.AddRange(claimsDict[Claims.OrganizationUser].Select(c =>
-                new CurrentContentOrganization
+            organizations.AddRange(organizationUserClaim.Select(c =>
+                new CurrentContextOrganization
                 {
                     Id = new Guid(c.Value),
                     Type = OrganizationUserType.User,
@@ -214,21 +242,10 @@ public class CurrentContext : ICurrentContext
                 }));
         }
 
-        if (claimsDict.ContainsKey(Claims.OrganizationManager))
+        if (claimsDict.TryGetValue(Claims.OrganizationCustom, out var organizationCustomClaim))
         {
-            organizations.AddRange(claimsDict[Claims.OrganizationManager].Select(c =>
-                new CurrentContentOrganization
-                {
-                    Id = new Guid(c.Value),
-                    Type = OrganizationUserType.Manager,
-                    AccessSecretsManager = accessSecretsManager.ContainsKey(c.Value),
-                }));
-        }
-
-        if (claimsDict.ContainsKey(Claims.OrganizationCustom))
-        {
-            organizations.AddRange(claimsDict[Claims.OrganizationCustom].Select(c =>
-                new CurrentContentOrganization
+            organizations.AddRange(organizationCustomClaim.Select(c =>
+                new CurrentContextOrganization
                 {
                     Id = new Guid(c.Value),
                     Type = OrganizationUserType.Custom,
@@ -240,23 +257,23 @@ public class CurrentContext : ICurrentContext
         return organizations;
     }
 
-    private List<CurrentContentProvider> GetProviders(Dictionary<string, IEnumerable<Claim>> claimsDict)
+    private List<CurrentContextProvider> GetProviders(Dictionary<string, IEnumerable<Claim>> claimsDict)
     {
-        var providers = new List<CurrentContentProvider>();
-        if (claimsDict.ContainsKey(Claims.ProviderAdmin))
+        var providers = new List<CurrentContextProvider>();
+        if (claimsDict.TryGetValue(Claims.ProviderAdmin, out var providerAdminClaim))
         {
-            providers.AddRange(claimsDict[Claims.ProviderAdmin].Select(c =>
-                new CurrentContentProvider
+            providers.AddRange(providerAdminClaim.Select(c =>
+                new CurrentContextProvider
                 {
                     Id = new Guid(c.Value),
                     Type = ProviderUserType.ProviderAdmin
                 }));
         }
 
-        if (claimsDict.ContainsKey(Claims.ProviderServiceUser))
+        if (claimsDict.TryGetValue(Claims.ProviderServiceUser, out var providerServiceUserClaim))
         {
-            providers.AddRange(claimsDict[Claims.ProviderServiceUser].Select(c =>
-                new CurrentContentProvider
+            providers.AddRange(providerServiceUserClaim.Select(c =>
+                new CurrentContextProvider
                 {
                     Id = new Guid(c.Value),
                     Type = ProviderUserType.ServiceUser
@@ -269,12 +286,6 @@ public class CurrentContext : ICurrentContext
     public async Task<bool> OrganizationUser(Guid orgId)
     {
         return (Organizations?.Any(o => o.Id == orgId) ?? false) || await OrganizationOwner(orgId);
-    }
-
-    public async Task<bool> OrganizationManager(Guid orgId)
-    {
-        return await OrganizationAdmin(orgId) ||
-               (Organizations?.Any(o => o.Id == orgId && o.Type == OrganizationUserType.Manager) ?? false);
     }
 
     public async Task<bool> OrganizationAdmin(Guid orgId)
@@ -321,44 +332,16 @@ public class CurrentContext : ICurrentContext
                     && (o.Permissions?.AccessReports ?? false)) ?? false);
     }
 
-    public async Task<bool> CreateNewCollections(Guid orgId)
-    {
-        return await OrganizationManager(orgId) || (Organizations?.Any(o => o.Id == orgId
-                    && (o.Permissions?.CreateNewCollections ?? false)) ?? false);
-    }
-
     public async Task<bool> EditAnyCollection(Guid orgId)
     {
         return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
                     && (o.Permissions?.EditAnyCollection ?? false)) ?? false);
     }
 
-    public async Task<bool> DeleteAnyCollection(Guid orgId)
-    {
-        return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
-                    && (o.Permissions?.DeleteAnyCollection ?? false)) ?? false);
-    }
-
     public async Task<bool> ViewAllCollections(Guid orgId)
     {
-        return await CreateNewCollections(orgId) || await EditAnyCollection(orgId) || await DeleteAnyCollection(orgId);
-    }
-
-    public async Task<bool> EditAssignedCollections(Guid orgId)
-    {
-        return await OrganizationManager(orgId) || (Organizations?.Any(o => o.Id == orgId
-                    && (o.Permissions?.EditAssignedCollections ?? false)) ?? false);
-    }
-
-    public async Task<bool> DeleteAssignedCollections(Guid orgId)
-    {
-        return await OrganizationManager(orgId) || (Organizations?.Any(o => o.Id == orgId
-                    && (o.Permissions?.DeleteAssignedCollections ?? false)) ?? false);
-    }
-
-    public async Task<bool> ViewAssignedCollections(Guid orgId)
-    {
-        return await EditAssignedCollections(orgId) || await DeleteAssignedCollections(orgId);
+        var org = GetOrganization(orgId);
+        return await EditAnyCollection(orgId) || (org != null && org.Permissions.DeleteAnyCollection);
     }
 
     public async Task<bool> ManageGroups(Guid orgId)
@@ -399,9 +382,9 @@ public class CurrentContext : ICurrentContext
 
     public async Task<bool> ViewSubscription(Guid orgId)
     {
-        var orgManagedByMspProvider = (await GetOrganizationProviderDetails()).Any(po => po.OrganizationId == orgId && po.ProviderType == ProviderType.Msp);
+        var isManagedByBillableProvider = (await GetOrganizationProviderDetails()).Any(po => po.OrganizationId == orgId && po.ProviderType.SupportsConsolidatedBilling());
 
-        return orgManagedByMspProvider
+        return isManagedByBillableProvider
             ? await ProviderUserForOrgAsync(orgId)
             : await OrganizationOwner(orgId);
     }
@@ -423,6 +406,11 @@ public class CurrentContext : ICurrentContext
     public async Task<bool> ViewBillingHistory(Guid orgId)
     {
         return await EditSubscription(orgId);
+    }
+
+    public async Task<bool> AccessMembersTab(Guid orgId)
+    {
+        return await OrganizationAdmin(orgId) || await ManageUsers(orgId) || await ManageResetPassword(orgId);
     }
 
     public bool ProviderProviderAdmin(Guid providerId)
@@ -483,46 +471,59 @@ public class CurrentContext : ICurrentContext
         return Organizations?.Any(o => o.Id == orgId && o.AccessSecretsManager) ?? false;
     }
 
-    public async Task<ICollection<CurrentContentOrganization>> OrganizationMembershipAsync(
+    public async Task<ICollection<CurrentContextOrganization>> OrganizationMembershipAsync(
         IOrganizationUserRepository organizationUserRepository, Guid userId)
     {
         if (Organizations == null)
         {
+            // If we haven't had our user id set, take the one passed in since we are about to get information
+            // for them anyways.
+            UserId ??= userId;
+
             var userOrgs = await organizationUserRepository.GetManyDetailsByUserAsync(userId);
             Organizations = userOrgs.Where(ou => ou.Status == OrganizationUserStatusType.Confirmed)
-                .Select(ou => new CurrentContentOrganization(ou)).ToList();
+                .Select(ou => new CurrentContextOrganization(ou)).ToList();
         }
         return Organizations;
     }
 
-    public async Task<ICollection<CurrentContentProvider>> ProviderMembershipAsync(
+    public async Task<ICollection<CurrentContextProvider>> ProviderMembershipAsync(
         IProviderUserRepository providerUserRepository, Guid userId)
     {
         if (Providers == null)
         {
+            // If we haven't had our user id set, take the one passed in since we are about to get information
+            // for them anyways.
+            UserId ??= userId;
+
             var userProviders = await providerUserRepository.GetManyByUserAsync(userId);
             Providers = userProviders.Where(ou => ou.Status == ProviderUserStatusType.Confirmed)
-                .Select(ou => new CurrentContentProvider(ou)).ToList();
+                .Select(ou => new CurrentContextProvider(ou)).ToList();
         }
         return Providers;
     }
 
+    public CurrentContextOrganization GetOrganization(Guid orgId)
+    {
+        return Organizations?.Find(o => o.Id == orgId);
+    }
+
     private string GetClaimValue(Dictionary<string, IEnumerable<Claim>> claims, string type)
     {
-        if (!claims.ContainsKey(type))
+        if (!claims.TryGetValue(type, out var claim))
         {
             return null;
         }
 
-        return claims[type].FirstOrDefault()?.Value;
+        return claim.FirstOrDefault()?.Value;
     }
 
     private Permissions SetOrganizationPermissionsFromClaims(string organizationId, Dictionary<string, IEnumerable<Claim>> claimsDict)
     {
         bool hasClaim(string claimKey)
         {
-            return claimsDict.ContainsKey(claimKey) ?
-                claimsDict[claimKey].Any(x => x.Value == organizationId) : false;
+            return claimsDict.TryGetValue(claimKey, out var claim) ?
+                claim.Any(x => x.Value == organizationId) : false;
         }
 
         return new Permissions
@@ -533,8 +534,6 @@ public class CurrentContext : ICurrentContext
             CreateNewCollections = hasClaim("createnewcollections"),
             EditAnyCollection = hasClaim("editanycollection"),
             DeleteAnyCollection = hasClaim("deleteanycollection"),
-            EditAssignedCollections = hasClaim("editassignedcollections"),
-            DeleteAssignedCollections = hasClaim("deleteassignedcollections"),
             ManageGroups = hasClaim("managegroups"),
             ManagePolicies = hasClaim("managepolicies"),
             ManageSso = hasClaim("managesso"),

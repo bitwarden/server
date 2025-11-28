@@ -1,4 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
@@ -41,8 +44,14 @@ public class SsoConfigurationDataRequest : IValidatableObject
 
     [Required]
     public SsoType ConfigType { get; set; }
+    public MemberDecryptionType MemberDecryptionType { get; set; }
 
-    public bool KeyConnectorEnabled { get; set; }
+    [Obsolete("Use MemberDecryptionType instead")]
+    public bool KeyConnectorEnabled
+    {
+        // Setter is kept for backwards compatibility with older clients that still use this property.
+        set { MemberDecryptionType = value ? MemberDecryptionType.KeyConnector : MemberDecryptionType.MasterPassword; }
+    }
     public string KeyConnectorUrl { get; set; }
 
     // OIDC
@@ -60,6 +69,7 @@ public class SsoConfigurationDataRequest : IValidatableObject
     public string ExpectedReturnAcrValue { get; set; }
 
     // SAML2 SP
+    public bool? SpUniqueEntityId { get; set; }
     public Saml2NameIdFormat SpNameIdFormat { get; set; }
     public string SpOutboundSigningAlgorithm { get; set; }
     public Saml2SigningBehavior SpSigningBehavior { get; set; }
@@ -111,7 +121,7 @@ public class SsoConfigurationDataRequest : IValidatableObject
                     new[] { nameof(IdpEntityId) });
             }
 
-            if (!Uri.IsWellFormedUriString(IdpEntityId, UriKind.Absolute) && string.IsNullOrWhiteSpace(IdpSingleSignOnServiceUrl))
+            if (string.IsNullOrWhiteSpace(IdpSingleSignOnServiceUrl))
             {
                 yield return new ValidationResult(i18nService.GetLocalizedHtmlString("IdpSingleSignOnServiceUrlValidationError"),
                     new[] { nameof(IdpSingleSignOnServiceUrl) });
@@ -129,6 +139,7 @@ public class SsoConfigurationDataRequest : IValidatableObject
                     new[] { nameof(IdpSingleLogoutServiceUrl) });
             }
 
+            // TODO: On server, make public certificate required for SAML2 SSO: https://bitwarden.atlassian.net/browse/PM-26028
             if (!string.IsNullOrWhiteSpace(IdpX509PublicCert))
             {
                 // Validate the certificate is in a valid format
@@ -166,7 +177,7 @@ public class SsoConfigurationDataRequest : IValidatableObject
         return new SsoConfigurationData
         {
             ConfigType = ConfigType,
-            KeyConnectorEnabled = KeyConnectorEnabled,
+            MemberDecryptionType = MemberDecryptionType,
             KeyConnectorUrl = KeyConnectorUrl,
             Authority = Authority,
             ClientId = ClientId,
@@ -184,6 +195,7 @@ public class SsoConfigurationDataRequest : IValidatableObject
             IdpAllowUnsolicitedAuthnResponse = IdpAllowUnsolicitedAuthnResponse.GetValueOrDefault(),
             IdpDisableOutboundLogoutRequests = IdpDisableOutboundLogoutRequests.GetValueOrDefault(),
             IdpWantAuthnRequestsSigned = IdpWantAuthnRequestsSigned.GetValueOrDefault(),
+            SpUniqueEntityId = SpUniqueEntityId.GetValueOrDefault(),
             SpNameIdFormat = SpNameIdFormat,
             SpOutboundSigningAlgorithm = SpOutboundSigningAlgorithm ?? SamlSigningAlgorithms.Sha256,
             SpSigningBehavior = SpSigningBehavior,

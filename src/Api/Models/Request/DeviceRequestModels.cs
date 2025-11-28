@@ -1,6 +1,11 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Platform.PushRegistration;
+using Bit.Core.Utilities;
 
 namespace Bit.Api.Models.Request;
 
@@ -36,6 +41,26 @@ public class DeviceRequestModel
     }
 }
 
+public class WebPushAuthRequestModel
+{
+    [Required]
+    public string Endpoint { get; set; }
+    [Required]
+    public string P256dh { get; set; }
+    [Required]
+    public string Auth { get; set; }
+
+    public WebPushRegistrationData ToData()
+    {
+        return new WebPushRegistrationData
+        {
+            Endpoint = Endpoint,
+            P256dh = P256dh,
+            Auth = Auth
+        };
+    }
+}
+
 public class DeviceTokenRequestModel
 {
     [StringLength(255)]
@@ -44,6 +69,33 @@ public class DeviceTokenRequestModel
     public Device ToDevice(Device existingDevice)
     {
         existingDevice.PushToken = PushToken;
+        return existingDevice;
+    }
+}
+
+public class DeviceKeysRequestModel
+{
+    /// <inheritdoc cref="Device.EncryptedUserKey" />
+    [Required]
+    [EncryptedString]
+    public string EncryptedUserKey { get; set; }
+
+    /// <inheritdoc cref="Device.EncryptedPublicKey" />
+    [Required]
+    [EncryptedString]
+    public string EncryptedPublicKey { get; set; }
+
+    /// <inheritdoc cref="Device.EncryptedPrivateKey" />
+    [Required]
+    [EncryptedString]
+    public string EncryptedPrivateKey { get; set; }
+
+    public Device ToDevice(Device existingDevice)
+    {
+        existingDevice.EncryptedUserKey = EncryptedUserKey;
+        existingDevice.EncryptedPublicKey = EncryptedPublicKey;
+        existingDevice.EncryptedPrivateKey = EncryptedPrivateKey;
+
         return existingDevice;
     }
 }

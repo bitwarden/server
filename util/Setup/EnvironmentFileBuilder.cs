@@ -1,4 +1,7 @@
-﻿using Microsoft.Data.SqlClient;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Microsoft.Data.SqlClient;
 
 namespace Bit.Setup;
 
@@ -51,6 +54,12 @@ public class EnvironmentFileBuilder
             _globalOverrideValues.Remove("globalSettings__pushRelayBaseUri");
         }
 
+        if (_globalOverrideValues.TryGetValue("globalSettings__baseServiceUri__vault", out var vaultUri) && vaultUri != _context.Config.Url)
+        {
+            _globalOverrideValues["globalSettings__baseServiceUri__vault"] = _context.Config.Url;
+            Helpers.WriteLine(_context, "Updated globalSettings__baseServiceUri__vault to match value in config.yml");
+        }
+
         Build();
     }
 
@@ -73,6 +82,7 @@ public class EnvironmentFileBuilder
         _globalOverrideValues = new Dictionary<string, string>
         {
             ["globalSettings__baseServiceUri__vault"] = _context.Config.Url,
+            ["globalSettings__baseServiceUri__cloudRegion"] = _context.Install?.CloudRegion.ToString(),
             ["globalSettings__sqlServer__connectionString"] = $"\"{dbConnectionString.Replace("\"", "\\\"")}\"",
             ["globalSettings__identityServer__certificatePassword"] = _context.Install?.IdentityCertPassword,
             ["globalSettings__internalIdentityKey"] = _context.Stub ? "RANDOM_IDENTITY_KEY" :
@@ -104,6 +114,7 @@ public class EnvironmentFileBuilder
         _mssqlOverrideValues = new Dictionary<string, string>
         {
             ["SA_PASSWORD"] = dbPassword,
+            ["DATABASE"] = _context.Install?.Database ?? "vault"
         };
 
         _keyConnectorOverrideValues = new Dictionary<string, string>

@@ -1,0 +1,77 @@
+<script>
+    function resendOwnerInvite(orgId) {
+        if (confirm('Resend invite to organization?')) {
+            $.ajax({
+                type: "POST",
+                url: '@Url.Action("ResendOwnerInvite", "Organizations")' + '?id=' + orgId,
+                dataType: 'json',
+                contentType: false,
+                processData: false,
+                success: function (response) {
+                    alert('Invitation has been resent!');
+                },
+                error: function (response) {
+                    alert("Error!");
+                }
+            });
+        }
+        return false;
+    }
+
+    function deleteProvider(id) {
+        const providerName = $('#DeleteModal input#provider-name').val();
+        const encodedProviderName = encodeURIComponent(providerName);
+        $.ajax({
+            type: "POST",
+            url: `@Url.Action("Delete", "Providers")?id=${id}&providerName=${encodedProviderName}`,
+            dataType: 'json',
+            contentType: false,
+            processData: false,
+            success: function () {
+                $('#DeleteModal').modal('hide');
+                window.location.href = `@Url.Action("Index", "Providers")`;
+            },
+            error: function (response) {
+                alert("Error!: " + response.responseText);
+            }
+        });
+    }
+
+    function initiateDeleteProvider(id) {
+            const email = $('#requestDeletionModal input#provider-email').val();
+            const providerEmail = encodeURIComponent(email);
+            $.ajax({
+                type: "POST",
+                url: `@Url.Action("DeleteInitiation", "Providers")?id=${id}&providerEmail=${providerEmail}`,
+                dataType: 'json',
+                contentType: false,
+                processData: false,
+                success: function () {
+                    $('#requestDeletionModal').modal('hide');
+                    window.location.href = `@Url.Action("Index", "Providers")`;
+                },
+                error: function (response) {
+                    alert("Error!: " + response.responseText);
+                }
+            });
+        }
+
+    function openDeleteModal(providerOrganizations) {
+
+      if (providerOrganizations > 0){
+        $('#linkAccWarningBtn').click()
+      } else {
+         $('#deleteBtn').click()
+      }
+    }
+
+    function openRequestDeleteModal(providerOrganizations) {
+
+        if (providerOrganizations > 0){
+              $('#linkAccWarningBtn').click()
+          } else {
+         $('#requestDeletionBtn').click()
+        }
+    }
+
+</script>

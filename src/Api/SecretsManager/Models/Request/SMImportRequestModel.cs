@@ -1,4 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using Bit.Core.SecretsManager.Commands.Porting;
 using Bit.Core.Utilities;
 
@@ -36,12 +39,12 @@ public class SMImportRequestModel
 
         [Required]
         [EncryptedString]
-        [EncryptedStringLength(1000)]
+        [EncryptedStringLength(35000)]
         public string Value { get; set; }
 
         [Required]
         [EncryptedString]
-        [EncryptedStringLength(1000)]
+        [EncryptedStringLength(10000)]
         public string Note { get; set; }
 
         [Required]

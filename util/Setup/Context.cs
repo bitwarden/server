@@ -1,4 +1,8 @@
-﻿using YamlDotNet.Serialization;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Setup.Enums;
+using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
 namespace Bit.Setup;
@@ -149,6 +153,7 @@ public class Context
         var configText = File.ReadAllText(ConfigPath);
         var deserializer = new DeserializerBuilder()
             .WithNamingConvention(UnderscoredNamingConvention.Instance)
+            .IgnoreUnmatchedProperties()
             .Build();
         Config = deserializer.Deserialize<Configuration>(configText);
 
@@ -183,6 +188,7 @@ public class Context
     {
         public Guid InstallationId { get; set; }
         public string InstallationKey { get; set; }
+        public CloudRegion CloudRegion { get; set; }
         public bool DiffieHellman { get; set; }
         public bool Trusted { get; set; }
         public bool SelfSignedCert { get; set; }

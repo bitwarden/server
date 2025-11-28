@@ -1,4 +1,7 @@
-﻿using System.Text.Json;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text.Json;
 using Bit.Core.Enums;
 using Bit.Core.Vault.Models.Data;
 using Bit.Infrastructure.EntityFramework.Vault.Models;
@@ -12,6 +15,7 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
     {
         _userId = userId;
     }
+
     public virtual IQueryable<CipherDetails> Run(DatabaseContext dbContext)
     {
         var query = from c in dbContext.Ciphers
@@ -25,8 +29,7 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
                            new { OrganizationId = (Guid?)o.Id, OuOrganizationId = o.Id, o.Enabled }
 
                     join cc in dbContext.CollectionCiphers
-                        on new { ou.AccessAll, CipherId = c.Id } equals
-                           new { AccessAll = false, cc.CipherId } into cc_g
+                        on c.Id equals cc.CipherId into cc_g
                     from cc in cc_g.DefaultIfEmpty()
 
                     join cu in dbContext.CollectionUsers
@@ -35,8 +38,8 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
                     from cu in cu_g.DefaultIfEmpty()
 
                     join gu in dbContext.GroupUsers
-                        on new { CollectionId = (Guid?)cu.CollectionId, ou.AccessAll, OrganizationUserId = ou.Id } equals
-                           new { CollectionId = (Guid?)null, AccessAll = false, gu.OrganizationUserId } into gu_g
+                        on new { CollectionId = (Guid?)cu.CollectionId, OrganizationUserId = ou.Id } equals
+                           new { CollectionId = (Guid?)null, gu.OrganizationUserId } into gu_g
                     from gu in gu_g.DefaultIfEmpty()
 
                     join g in dbContext.Groups
@@ -44,17 +47,57 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
                     from g in g_g.DefaultIfEmpty()
 
                     join cg in dbContext.CollectionGroups
-                        on new { g.AccessAll, cc.CollectionId, gu.GroupId } equals
-                           new { AccessAll = false, cg.CollectionId, cg.GroupId } into cg_g
+                        on new { cc.CollectionId, gu.GroupId } equals
+                           new { cg.CollectionId, cg.GroupId } into cg_g
                     from cg in cg_g.DefaultIfEmpty()
 
-                    where ou.AccessAll || cu.CollectionId != null || g.AccessAll || cg.CollectionId != null
+                    where (cu == null ? (Guid?)null : cu.CollectionId) != null || (cg == null ? (Guid?)null : cg.CollectionId) != null
 
-                    select new { c, ou, o, cc, cu, gu, g, cg }.c;
+                    select new
+                    {
+                        c.Id,
+                        c.UserId,
+                        c.OrganizationId,
+                        c.Type,
+                        c.Data,
+                        c.Attachments,
+                        c.CreationDate,
+                        c.RevisionDate,
+                        c.DeletedDate,
+                        c.Favorites,
+                        c.Folders,
+                        Edit = cu == null ? (cg != null && cg.ReadOnly == false) : cu.ReadOnly == false,
+                        ViewPassword = cu == null ? (cg != null && cg.HidePasswords == false) : cu.HidePasswords == false,
+                        Manage = cu == null ? (cg != null && cg.Manage == true) : cu.Manage == true,
+                        OrganizationUseTotp = o.UseTotp,
+                        c.Reprompt,
+                        c.Key,
+                        c.ArchivedDate
+                    };
 
         var query2 = from c in dbContext.Ciphers
                      where c.UserId == _userId
-                     select c;
+                     select new
+                     {
+                         c.Id,
+                         c.UserId,
+                         c.OrganizationId,
+                         c.Type,
+                         c.Data,
+                         c.Attachments,
+                         c.CreationDate,
+                         c.RevisionDate,
+                         c.DeletedDate,
+                         c.Favorites,
+                         c.Folders,
+                         Edit = true,
+                         ViewPassword = true,
+                         Manage = true,
+                         OrganizationUseTotp = false,
+                         c.Reprompt,
+                         c.Key,
+                         c.ArchivedDate
+                     };
 
         var union = query.Union(query2).Select(c => new CipherDetails
         {
@@ -68,25 +111,37 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
             RevisionDate = c.RevisionDate,
             DeletedDate = c.DeletedDate,
             Favorite = _userId.HasValue && c.Favorites != null && c.Favorites.ToLowerInvariant().Contains($"\"{_userId}\":true"),
-            FolderId = GetFolderId(_userId, c),
-            Edit = true,
+            FolderId = GetFolderId(_userId, new Cipher { Id = c.Id, Folders = c.Folders }),
+            Edit = c.Edit,
             Reprompt = c.Reprompt,
-            ViewPassword = true,
-            OrganizationUseTotp = false,
+            ViewPassword = c.ViewPassword,
+            Manage = c.Manage,
+            OrganizationUseTotp = c.OrganizationUseTotp,
+            Key = c.Key,
+            ArchivedDate = c.ArchivedDate
         });
         return union;
     }
 
     private static Guid? GetFolderId(Guid? userId, Cipher cipher)
     {
-        if (userId.HasValue && !string.IsNullOrWhiteSpace(cipher.Folders))
+        try
         {
-            var folders = JsonSerializer.Deserialize<Dictionary<Guid, Guid>>(cipher.Folders);
-            if (folders.TryGetValue(userId.Value, out var folder))
+            if (userId.HasValue && !string.IsNullOrWhiteSpace(cipher.Folders))
             {
-                return folder;
+                var folders = JsonSerializer.Deserialize<Dictionary<Guid, Guid>>(cipher.Folders);
+                if (folders.TryGetValue(userId.Value, out var folder))
+                {
+                    return folder;
+                }
             }
+
+            return null;
         }
-        return null;
+        catch
+        {
+            // Some Folders might be in an invalid format like: '{ "", "<ValidGuid>" }'
+            return null;
+        }
     }
 }

@@ -7,10 +7,10 @@ public class UserKeyResponseModel : ResponseModel
     public UserKeyResponseModel(Guid id, string key)
         : base("userKey")
     {
-        UserId = id.ToString();
+        UserId = id;
         PublicKey = key;
     }
 
-    public string UserId { get; set; }
+    public Guid UserId { get; set; }
     public string PublicKey { get; set; }
 }

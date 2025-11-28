@@ -1,0 +1,35 @@
+﻿-- Migrate Custom users who only have 'editAssignedCollections' and/or 'deleteAssignedCollections' custom permissions to the User type.
+UPDATE "OrganizationUser"
+SET
+    "Type" = 2,
+    "Permissions" = NULL
+WHERE
+    "Type" = 4
+    AND "Permissions" IS NOT NULL
+    AND "Permissions" ~ '^\s*\{.*\}\s*$'  -- Check if Permissions is a valid JSON object
+    AND jsonb_typeof("Permissions"::jsonb) = 'object'
+    AND (
+        ("Permissions"::jsonb)->>'editAssignedCollections' = 'true'
+        OR ("Permissions"::jsonb)->>'deleteAssignedCollections' = 'true'
+    )
+    AND ("Permissions"::jsonb)->>'accessEventLogs' = 'false'
+    AND ("Permissions"::jsonb)->>'accessImportExport' = 'false'
+    AND ("Permissions"::jsonb)->>'accessReports' = 'false'
+    AND ("Permissions"::jsonb)->>'createNewCollections' = 'false'
+    AND ("Permissions"::jsonb)->>'editAnyCollection' = 'false'
+    AND ("Permissions"::jsonb)->>'deleteAnyCollection' = 'false'
+    AND ("Permissions"::jsonb)->>'manageGroups' = 'false'
+    AND ("Permissions"::jsonb)->>'managePolicies' = 'false'
+    AND ("Permissions"::jsonb)->>'manageSso' = 'false'
+    AND ("Permissions"::jsonb)->>'manageUsers' = 'false'
+    AND ("Permissions"::jsonb)->>'manageResetPassword' = 'false'
+    AND ("Permissions"::jsonb)->>'manageScim' = 'false';
+
+-- Remove 'editAssignedCollections' and 'deleteAssignedCollections' properties from Permissions
+UPDATE "OrganizationUser"
+SET
+    "Permissions" = "Permissions"::jsonb - 'editAssignedCollections' - 'deleteAssignedCollections'
+WHERE
+    "Permissions" IS NOT NULL
+    AND "Permissions" ~ '^\s*\{.*\}\s*$'  -- Check if Permissions is a valid JSON object
+    AND jsonb_typeof("Permissions"::jsonb) = 'object';

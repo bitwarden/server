@@ -1,12 +1,17 @@
-﻿using Bit.Core.Entities;
-using Bit.Core.Entities.Provider;
-using Bit.Core.Models.Data;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Models.Data.Provider;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 
 namespace Bit.Core.Services;
 
-public class InMemoryApplicationCacheService : IApplicationCacheService
+public class InMemoryApplicationCacheService : IVCurrentInMemoryApplicationCacheService
 {
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IProviderRepository _providerRepository;
@@ -29,6 +34,15 @@ public class InMemoryApplicationCacheService : IApplicationCacheService
         return _orgAbilities;
     }
 
+#nullable enable
+    public async Task<OrganizationAbility?> GetOrganizationAbilityAsync(Guid organizationId)
+    {
+        (await GetOrganizationAbilitiesAsync())
+            .TryGetValue(organizationId, out var organizationAbility);
+        return organizationAbility;
+    }
+#nullable disable
+
     public virtual async Task<IDictionary<Guid, ProviderAbility>> GetProviderAbilitiesAsync()
     {
         await InitProviderAbilitiesAsync();
@@ -40,14 +54,7 @@ public class InMemoryApplicationCacheService : IApplicationCacheService
         await InitProviderAbilitiesAsync();
         var newAbility = new ProviderAbility(provider);
 
-        if (_providerAbilities.ContainsKey(provider.Id))
-        {
-            _providerAbilities[provider.Id] = newAbility;
-        }
-        else
-        {
-            _providerAbilities.Add(provider.Id, newAbility);
-        }
+        _providerAbilities[provider.Id] = newAbility;
     }
 
     public virtual async Task UpsertOrganizationAbilityAsync(Organization organization)
@@ -55,22 +62,19 @@ public class InMemoryApplicationCacheService : IApplicationCacheService
         await InitOrganizationAbilitiesAsync();
         var newAbility = new OrganizationAbility(organization);
 
-        if (_orgAbilities.ContainsKey(organization.Id))
-        {
-            _orgAbilities[organization.Id] = newAbility;
-        }
-        else
-        {
-            _orgAbilities.Add(organization.Id, newAbility);
-        }
+        _orgAbilities[organization.Id] = newAbility;
     }
 
     public virtual Task DeleteOrganizationAbilityAsync(Guid organizationId)
     {
-        if (_orgAbilities != null && _orgAbilities.ContainsKey(organizationId))
-        {
-            _orgAbilities.Remove(organizationId);
-        }
+        _orgAbilities?.Remove(organizationId);
+
+        return Task.FromResult(0);
+    }
+
+    public virtual Task DeleteProviderAbilityAsync(Guid providerId)
+    {
+        _providerAbilities?.Remove(providerId);
 
         return Task.FromResult(0);
     }

@@ -1,5 +1,7 @@
-﻿using System.Net;
-using Bit.Core.Utilities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Net;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Primitives;
@@ -28,7 +30,7 @@ public static class WebApplicationFactoryExtensions
             {
                 foreach (var header in content.Headers)
                 {
-                    httpContext.Request.Headers.Add(header.Key, new StringValues(header.Value.ToArray()));
+                    httpContext.Request.Headers.Append(header.Key, new StringValues(header.Value.ToArray()));
                 }
 
                 httpContext.Request.Body = content.ReadAsStream();
@@ -61,12 +63,6 @@ public static class WebApplicationFactoryExtensions
         HttpContent content,
         Action<HttpContext> extraConfiguration = null)
         => SendAsync(server, HttpMethod.Delete, requestUri, content: content, extraConfiguration);
-
-    public static HttpContext SetAuthEmail(this HttpContext context, string username)
-    {
-        context.Request.Headers.Add("Auth-Email", CoreHelpers.Base64UrlEncodeString(username));
-        return context;
-    }
 
     public static HttpContext SetIp(this HttpContext context, string ip)
     {

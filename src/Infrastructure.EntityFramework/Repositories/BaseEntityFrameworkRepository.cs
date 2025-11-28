@@ -1,11 +1,13 @@
 ﻿using System.Text.Json;
 using AutoMapper;
-using Bit.Infrastructure.EntityFramework.Models;
+using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using LinqToDB.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using User = Bit.Core.Entities.User;
+
+#nullable enable
 
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 

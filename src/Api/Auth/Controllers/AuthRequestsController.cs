@@ -1,64 +1,50 @@
-﻿using Bit.Api.Auth.Models.Request;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
 using Bit.Api.Auth.Models.Response;
 using Bit.Api.Models.Response;
-using Bit.Core.Auth.Entities;
-using Bit.Core.Auth.Exceptions;
-using Bit.Core.Context;
+using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Identity;
+using Bit.Core.Auth.Models.Api.Request.AuthRequest;
+using Bit.Core.Auth.Services;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Auth.Controllers;
 
 [Route("auth-requests")]
-[Authorize("Application")]
-public class AuthRequestsController : Controller
+[Authorize(Policies.Application)]
+public class AuthRequestsController(
+    IUserService userService,
+    IAuthRequestRepository authRequestRepository,
+    IGlobalSettings globalSettings,
+    IAuthRequestService authRequestService) : Controller
 {
-    private readonly IUserRepository _userRepository;
-    private readonly IDeviceRepository _deviceRepository;
-    private readonly IUserService _userService;
-    private readonly IAuthRequestRepository _authRequestRepository;
-    private readonly ICurrentContext _currentContext;
-    private readonly IPushNotificationService _pushNotificationService;
-    private readonly IGlobalSettings _globalSettings;
-
-    public AuthRequestsController(
-        IUserRepository userRepository,
-        IDeviceRepository deviceRepository,
-        IUserService userService,
-        IAuthRequestRepository authRequestRepository,
-        ICurrentContext currentContext,
-        IPushNotificationService pushNotificationService,
-        IGlobalSettings globalSettings)
-    {
-        _userRepository = userRepository;
-        _deviceRepository = deviceRepository;
-        _userService = userService;
-        _authRequestRepository = authRequestRepository;
-        _currentContext = currentContext;
-        _pushNotificationService = pushNotificationService;
-        _globalSettings = globalSettings;
-    }
+    private readonly IUserService _userService = userService;
+    private readonly IAuthRequestRepository _authRequestRepository = authRequestRepository;
+    private readonly IGlobalSettings _globalSettings = globalSettings;
+    private readonly IAuthRequestService _authRequestService = authRequestService;
 
     [HttpGet("")]
-    public async Task<ListResponseModel<AuthRequestResponseModel>> Get()
+    public async Task<ListResponseModel<AuthRequestResponseModel>> GetAll()
     {
         var userId = _userService.GetProperUserId(User).Value;
         var authRequests = await _authRequestRepository.GetManyByUserIdAsync(userId);
-        var responses = authRequests.Select(a => new AuthRequestResponseModel(a, _globalSettings.BaseServiceUri.Vault)).ToList();
+        var responses = authRequests.Select(a => new AuthRequestResponseModel(a, _globalSettings.BaseServiceUri.Vault));
         return new ListResponseModel<AuthRequestResponseModel>(responses);
     }
 
     [HttpGet("{id}")]
-    public async Task<AuthRequestResponseModel> Get(string id)
+    public async Task<AuthRequestResponseModel> Get(Guid id)
     {
         var userId = _userService.GetProperUserId(User).Value;
-        var authRequest = await _authRequestRepository.GetByIdAsync(new Guid(id));
-        if (authRequest == null || authRequest.UserId != userId)
+        var authRequest = await _authRequestService.GetAuthRequestAsync(id, userId);
+
+        if (authRequest == null)
         {
             throw new NotFoundException();
         }
@@ -66,12 +52,22 @@ public class AuthRequestsController : Controller
         return new AuthRequestResponseModel(authRequest, _globalSettings.BaseServiceUri.Vault);
     }
 
+    [HttpGet("pending")]
+    public async Task<ListResponseModel<PendingAuthRequestResponseModel>> GetPendingAuthRequestsAsync()
+    {
+        var userId = _userService.GetProperUserId(User).Value;
+        var rawResponse = await _authRequestRepository.GetManyPendingAuthRequestByUserId(userId);
+        var responses = rawResponse.Select(a => new PendingAuthRequestResponseModel(a, _globalSettings.BaseServiceUri.Vault));
+        return new ListResponseModel<PendingAuthRequestResponseModel>(responses);
+    }
+
     [HttpGet("{id}/response")]
     [AllowAnonymous]
-    public async Task<AuthRequestResponseModel> GetResponse(string id, [FromQuery] string code)
+    public async Task<AuthRequestResponseModel> GetResponse(Guid id, [FromQuery] string code)
     {
-        var authRequest = await _authRequestRepository.GetByIdAsync(new Guid(id));
-        if (authRequest == null || !CoreHelpers.FixedTimeEquals(authRequest.AccessCode, code) || authRequest.GetExpirationDate() < DateTime.UtcNow)
+        var authRequest = await _authRequestService.GetValidatedAuthRequestAsync(id, code);
+
+        if (authRequest == null)
         {
             throw new NotFoundException();
         }
@@ -83,80 +79,58 @@ public class AuthRequestsController : Controller
     [AllowAnonymous]
     public async Task<AuthRequestResponseModel> Post([FromBody] AuthRequestCreateRequestModel model)
     {
-        var user = await _userRepository.GetByEmailAsync(model.Email);
-        if (user == null)
+        if (model.Type == AuthRequestType.AdminApproval)
         {
-            throw new NotFoundException();
+            throw new BadRequestException("You must be authenticated to create a request of that type.");
         }
-        if (!_currentContext.DeviceType.HasValue)
-        {
-            throw new BadRequestException("Device type not provided.");
-        }
-        if (_globalSettings.PasswordlessAuth.KnownDevicesOnly)
-        {
-            var devices = await _deviceRepository.GetManyByUserIdAsync(user.Id);
-            if (devices == null || !devices.Any(d => d.Identifier == model.DeviceIdentifier))
-            {
-                throw new BadRequestException("Login with device is only available on devices that have been previously logged in.");
-            }
-        }
+        var authRequest = await _authRequestService.CreateAuthRequestAsync(model);
+        var r = new AuthRequestResponseModel(authRequest, _globalSettings.BaseServiceUri.Vault);
+        return r;
+    }
 
-        var authRequest = new AuthRequest
-        {
-            RequestDeviceIdentifier = model.DeviceIdentifier,
-            RequestDeviceType = _currentContext.DeviceType.Value,
-            RequestIpAddress = _currentContext.IpAddress,
-            AccessCode = model.AccessCode,
-            PublicKey = model.PublicKey,
-            UserId = user.Id,
-            Type = model.Type.Value
-        };
-        authRequest = await _authRequestRepository.CreateAsync(authRequest);
-        await _pushNotificationService.PushAuthRequestAsync(authRequest);
+    [HttpPost("admin-request")]
+    public async Task<AuthRequestResponseModel> PostAdminRequest([FromBody] AuthRequestCreateRequestModel model)
+    {
+        var authRequest = await _authRequestService.CreateAuthRequestAsync(model);
         var r = new AuthRequestResponseModel(authRequest, _globalSettings.BaseServiceUri.Vault);
         return r;
     }
 
     [HttpPut("{id}")]
-    public async Task<AuthRequestResponseModel> Put(string id, [FromBody] AuthRequestUpdateRequestModel model)
+    public async Task<AuthRequestResponseModel> Put(Guid id, [FromBody] AuthRequestUpdateRequestModel model)
     {
         var userId = _userService.GetProperUserId(User).Value;
-        var authRequest = await _authRequestRepository.GetByIdAsync(new Guid(id));
-        if (authRequest == null || authRequest.UserId != userId || authRequest.GetExpirationDate() < DateTime.UtcNow)
+
+        // If the Approving Device is attempting to approve a request, validate the approval
+        if (model.RequestApproved == true)
+        {
+            await ValidateApprovalOfMostRecentAuthRequest(id, userId);
+        }
+
+        var authRequest = await _authRequestService.UpdateAuthRequestAsync(id, userId, model);
+        return new AuthRequestResponseModel(authRequest, _globalSettings.BaseServiceUri.Vault);
+    }
+
+    private async Task ValidateApprovalOfMostRecentAuthRequest(Guid id, Guid userId)
+    {
+        // Get the current auth request to find the device identifier
+        var currentAuthRequest = await _authRequestService.GetAuthRequestAsync(id, userId);
+        if (currentAuthRequest == null)
         {
             throw new NotFoundException();
         }
 
-        if (authRequest.Approved is not null)
+        // Get all pending auth requests for this user (returns most recent per device)
+        var pendingRequests = await _authRequestRepository.GetManyPendingAuthRequestByUserId(userId);
+
+        // Find the most recent request for the same device
+        var mostRecentForDevice = pendingRequests
+            .FirstOrDefault(pendingRequest => pendingRequest.RequestDeviceIdentifier == currentAuthRequest.RequestDeviceIdentifier);
+
+        var isMostRecentRequestForDevice = mostRecentForDevice?.Id == id;
+        if (!isMostRecentRequestForDevice)
         {
-            throw new DuplicateAuthRequestException();
+            throw new BadRequestException("This request is no longer valid. Make sure to approve the most recent request.");
         }
-
-        var device = await _deviceRepository.GetByIdentifierAsync(model.DeviceIdentifier, userId);
-        if (device == null)
-        {
-            throw new BadRequestException("Invalid device.");
-        }
-
-        authRequest.ResponseDeviceId = device.Id;
-        authRequest.ResponseDate = DateTime.UtcNow;
-        authRequest.Approved = model.RequestApproved;
-
-        if (model.RequestApproved)
-        {
-            authRequest.Key = model.Key;
-            authRequest.MasterPasswordHash = model.MasterPasswordHash;
-        }
-
-        await _authRequestRepository.ReplaceAsync(authRequest);
-
-        // We only want to send an approval notification if the request is approved (or null), 
-        // to not leak that it was denied to the originating client if it was originated by a malicious actor.
-        if (authRequest.Approved ?? true)
-        {
-            await _pushNotificationService.PushAuthRequestResponseAsync(authRequest);
-        }
-
-        return new AuthRequestResponseModel(authRequest, _globalSettings.BaseServiceUri.Vault);
     }
 }

@@ -1,16 +1,32 @@
-﻿using Bit.Core.Auth.Enums;
+﻿#nullable enable
+
+using System.Diagnostics;
+using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Enums;
-using Bit.Core.Enums.Provider;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using Microsoft.EntityFrameworkCore;
+
+#nullable enable
 
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public static class DatabaseContextExtensions
 {
+    /// <summary>
+    /// Bump the account revision date for the user.
+    /// The caller is responsible for providing a valid UserId (not a null or default Guid) for a user that exists
+    /// in the database.
+    /// </summary>
     public static async Task UserBumpAccountRevisionDateAsync(this DatabaseContext context, Guid userId)
     {
+        if (userId == Guid.Empty)
+        {
+            throw new ArgumentException("Invalid UserId.");
+        }
+
         var user = await context.Users.FindAsync(userId);
+        Debug.Assert(user is not null, "The user id is expected to be validated as a true-in database user before making this call.");
         user.AccountRevisionDate = DateTime.UtcNow;
     }
 
@@ -48,25 +64,55 @@ public static class DatabaseContextExtensions
                     join ou in context.OrganizationUsers
                         on u.Id equals ou.UserId
                     join cu in context.CollectionUsers
-                        on new { ou.AccessAll, OrganizationUserId = ou.Id, CollectionId = collectionId } equals
-                        new { AccessAll = false, cu.OrganizationUserId, cu.CollectionId } into cu_g
+                        on new { OrganizationUserId = ou.Id, CollectionId = collectionId } equals
+                        new { cu.OrganizationUserId, cu.CollectionId } into cu_g
                     from cu in cu_g.DefaultIfEmpty()
                     join gu in context.GroupUsers
-                        on new { CollectionId = (Guid?)cu.CollectionId, ou.AccessAll, OrganizationUserId = ou.Id } equals
-                        new { CollectionId = (Guid?)null, AccessAll = false, gu.OrganizationUserId } into gu_g
+                        on new { CollectionId = (Guid?)cu.CollectionId, OrganizationUserId = ou.Id } equals
+                        new { CollectionId = (Guid?)null, gu.OrganizationUserId } into gu_g
                     from gu in gu_g.DefaultIfEmpty()
                     join g in context.Groups
                         on gu.GroupId equals g.Id into g_g
                     from g in g_g.DefaultIfEmpty()
                     join cg in context.CollectionGroups
-                        on new { g.AccessAll, gu.GroupId, CollectionId = collectionId } equals
-                        new { AccessAll = false, cg.GroupId, cg.CollectionId } into cg_g
+                        on new { gu.GroupId, CollectionId = collectionId } equals
+                        new { cg.GroupId, cg.CollectionId } into cg_g
                     from cg in cg_g.DefaultIfEmpty()
                     where ou.OrganizationId == organizationId &&
                       ou.Status == OrganizationUserStatusType.Confirmed &&
-                      cg.CollectionId != null &&
-                      ou.AccessAll == true &&
-                      g.AccessAll == true
+                        ((cu == null ? (Guid?)null : cu.CollectionId) != null ||
+                        (cg == null ? (Guid?)null : cg.CollectionId) != null)
+                    select u;
+
+        var users = await query.ToListAsync();
+        UpdateUserRevisionDate(users);
+    }
+
+    public static async Task UserBumpAccountRevisionDateByCollectionIdsAsync(this DatabaseContext context, IEnumerable<Guid> collectionIds, Guid organizationId)
+    {
+        var query = from u in context.Users
+                    from c in context.Collections
+                    join ou in context.OrganizationUsers
+                        on u.Id equals ou.UserId
+                    join cu in context.CollectionUsers
+                        on new { OrganizationUserId = ou.Id, CollectionId = c.Id } equals
+                        new { cu.OrganizationUserId, cu.CollectionId } into cu_g
+                    from cu in cu_g.DefaultIfEmpty()
+                    join gu in context.GroupUsers
+                        on new { CollectionId = (Guid?)cu.CollectionId, OrganizationUserId = ou.Id } equals
+                        new { CollectionId = (Guid?)null, gu.OrganizationUserId } into gu_g
+                    from gu in gu_g.DefaultIfEmpty()
+                    join g in context.Groups
+                        on gu.GroupId equals g.Id into g_g
+                    from g in g_g.DefaultIfEmpty()
+                    join cg in context.CollectionGroups
+                        on new { gu.GroupId, CollectionId = c.Id } equals
+                        new { cg.GroupId, cg.CollectionId } into cg_g
+                    from cg in cg_g.DefaultIfEmpty()
+                    where ou.OrganizationId == organizationId && collectionIds.Contains(c.Id) &&
+                      ou.Status == OrganizationUserStatusType.Confirmed &&
+                        ((cu == null ? (Guid?)null : cu.CollectionId) != null ||
+                        (cg == null ? (Guid?)null : cg.CollectionId) != null)
                     select u;
 
         var users = await query.ToListAsync();

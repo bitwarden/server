@@ -1,4 +1,7 @@
-﻿using Bit.Core.Auth.Enums;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Auth.Enums;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 
@@ -22,7 +25,25 @@ public class SsoConfigurationData
 
     public SsoType ConfigType { get; set; }
 
-    public bool KeyConnectorEnabled { get; set; }
+    public MemberDecryptionType MemberDecryptionType { get; set; }
+
+    /// <summary>
+    /// Legacy property to determine if KeyConnector was enabled.
+    /// Kept for backwards compatibility with old configs that will not have
+    /// the new <see cref="MemberDecryptionType"/> when deserialized from the database.
+    /// </summary>
+    [Obsolete("Use MemberDecryptionType instead")]
+    public bool KeyConnectorEnabled
+    {
+        get => MemberDecryptionType == MemberDecryptionType.KeyConnector;
+        set
+        {
+            if (value)
+            {
+                MemberDecryptionType = MemberDecryptionType.KeyConnector;
+            }
+        }
+    }
     public string KeyConnectorUrl { get; set; }
 
     // OIDC
@@ -52,6 +73,7 @@ public class SsoConfigurationData
     public bool IdpWantAuthnRequestsSigned { get; set; }
 
     // SAML2 SP
+    public bool SpUniqueEntityId { get; set; }
     public Saml2NameIdFormat SpNameIdFormat { get; set; }
     public string SpOutboundSigningAlgorithm { get; set; }
     public Saml2SigningBehavior SpSigningBehavior { get; set; }

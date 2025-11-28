@@ -2,13 +2,14 @@ version: "3.9"
 
 services:
   mssql:
-    image: mcr.microsoft.com/azure-sql-edge:latest
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_SA_PASSWORD: ${MSSQL_PASSWORD}
       MSSQL_PID: Developer
     volumes:
-      - edgesql_dev_data:/var/opt/mssql
+      - mssql_dev_data:/var/opt/mssql
       - ../util/Migrator:/mnt/migrator/
       - ./helpers/mssql:/mnt/helpers
       - ./.data/mssql:/mnt/data
@@ -52,13 +53,15 @@ services:
       - ./.data/postgres/log:/var/log/postgresql
     profiles:
       - postgres
+      - ef
 
   mysql:
-    image: mysql:8
-    container_name: bw-mysql
+    image: mysql:8.0
     ports:
       - "3306:3306"
-    command: --default-authentication-plugin=mysql_native_password
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      - --innodb-print-all-deadlocks=ON
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: vault_dev
@@ -66,10 +69,24 @@ services:
       - mysql_dev_data:/var/lib/mysql
     profiles:
       - mysql
+      - ef
+
+  mariadb:
+    image: mariadb:10
+    ports:
+      - 4306:3306
+    environment:
+      MARIADB_USER: maria
+      MARIADB_DATABASE: vault_dev
+      MARIADB_RANDOM_ROOT_PASSWORD: "true"
+    volumes:
+      - mariadb_dev_data:/var/lib/mysql
+    profiles:
+      - mariadb
+      - ef
 
   idp:
-    image: kenchan0130/simplesamlphp:1.19.3
-    container_name: idp
+    image: kenchan0130/simplesamlphp:1.19.8
     ports:
       - "8090:8080"
     environment:
@@ -81,23 +98,21 @@ services:
     profiles:
       - idp
 
-  open-ldap:
-    image: osixia/openldap:1.5.0
-    command: --copy-service
-    environment:
-      LDAP_ORGANISATION: "Bitwarden"
-      LDAP_DOMAIN: "bitwarden.com"
-    volumes:
-      - ./directory.ldif:/container/service/slapd/assets/config/bootstrap/ldif/output.ldif
+  rabbitmq:
+    image: rabbitmq:4.1.3-management
     ports:
-      - "389:389"
-      - "636:636"
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
     profiles:
-      - ldap
+      - rabbitmq
 
   reverse-proxy:
     image: nginx:alpine
-    container_name: reverse-proxy
     volumes:
       - "./reverse-proxy.conf:/etc/nginx/conf.d/default.conf"
     ports:
@@ -106,7 +121,34 @@ services:
     profiles:
       - proxy
 
+  service-bus:
+    image: mcr.microsoft.com/azure-messaging/servicebus-emulator:latest
+    pull_policy: always
+    volumes:
+      - "./servicebusemulator_config.json:/ServiceBus_Emulator/ConfigFiles/Config.json"
+    ports:
+      - "5672:5672"
+    environment:
+      SQL_SERVER: mssql
+      MSSQL_SA_PASSWORD: "${MSSQL_PASSWORD}"
+      ACCEPT_EULA: "Y"
+    profiles:
+      - servicebus
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    profiles:
+      - redis
+
 volumes:
-  edgesql_dev_data:
+  mssql_dev_data:
   postgres_dev_data:
   mysql_dev_data:
+  mariadb_dev_data:
+  rabbitmq_data:
+  redis_data:

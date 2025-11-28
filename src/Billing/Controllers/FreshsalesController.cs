@@ -1,6 +1,9 @@
-﻿using System.Net.Http.Headers;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Net.Http.Headers;
 using System.Text.Json.Serialization;
-using Bit.Core.Enums;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -95,7 +98,7 @@ public class FreshsalesController : Controller
 
             foreach (var org in orgs)
             {
-                noteItems.Add($"Org, {org.Name}: {_globalSettings.BaseServiceUri.Admin}/organizations/edit/{org.Id}");
+                noteItems.Add($"Org, {org.DisplayName()}: {_globalSettings.BaseServiceUri.Admin}/organizations/edit/{org.Id}");
                 if (TryGetPlanName(org.PlanType, out var planName))
                 {
                     newTags.Add($"Org: {planName}");
@@ -155,18 +158,29 @@ public class FreshsalesController : Controller
                 planName = "Free";
                 return true;
             case PlanType.FamiliesAnnually:
+            case PlanType.FamiliesAnnually2025:
             case PlanType.FamiliesAnnually2019:
                 planName = "Families";
                 return true;
             case PlanType.TeamsAnnually:
+            case PlanType.TeamsAnnually2023:
+            case PlanType.TeamsAnnually2020:
             case PlanType.TeamsAnnually2019:
             case PlanType.TeamsMonthly:
+            case PlanType.TeamsMonthly2023:
+            case PlanType.TeamsMonthly2020:
             case PlanType.TeamsMonthly2019:
+            case PlanType.TeamsStarter:
+            case PlanType.TeamsStarter2023:
                 planName = "Teams";
                 return true;
             case PlanType.EnterpriseAnnually:
+            case PlanType.EnterpriseAnnually2023:
+            case PlanType.EnterpriseAnnually2020:
             case PlanType.EnterpriseAnnually2019:
             case PlanType.EnterpriseMonthly:
+            case PlanType.EnterpriseMonthly2023:
+            case PlanType.EnterpriseMonthly2020:
             case PlanType.EnterpriseMonthly2019:
                 planName = "Enterprise";
                 return true;

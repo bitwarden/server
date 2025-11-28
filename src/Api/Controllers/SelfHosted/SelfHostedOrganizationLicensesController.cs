@@ -1,13 +1,18 @@
-﻿using Bit.Api.Models.Request;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.AdminConsole.Models.Response.Organizations;
+using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Organizations;
-using Bit.Api.Models.Response.Organizations;
 using Bit.Api.Utilities;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
+using Bit.Core.Billing.Organizations.Commands;
+using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Business;
 using Bit.Core.Models.OrganizationConnectionConfigs;
-using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -22,33 +27,33 @@ namespace Bit.Api.Controllers.SelfHosted;
 public class SelfHostedOrganizationLicensesController : Controller
 {
     private readonly ICurrentContext _currentContext;
-    private readonly ISelfHostedGetOrganizationLicenseQuery _selfHostedGetOrganizationLicenseQuery;
+    private readonly IGetSelfHostedOrganizationLicenseQuery _getSelfHostedOrganizationLicenseQuery;
     private readonly IOrganizationConnectionRepository _organizationConnectionRepository;
-    private readonly IOrganizationService _organizationService;
+    private readonly ISelfHostedOrganizationSignUpCommand _selfHostedOrganizationSignUpCommand;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IUserService _userService;
     private readonly IUpdateOrganizationLicenseCommand _updateOrganizationLicenseCommand;
 
     public SelfHostedOrganizationLicensesController(
         ICurrentContext currentContext,
-        ISelfHostedGetOrganizationLicenseQuery selfHostedGetOrganizationLicenseQuery,
+        IGetSelfHostedOrganizationLicenseQuery getSelfHostedOrganizationLicenseQuery,
         IOrganizationConnectionRepository organizationConnectionRepository,
-        IOrganizationService organizationService,
+        ISelfHostedOrganizationSignUpCommand selfHostedOrganizationSignUpCommand,
         IOrganizationRepository organizationRepository,
         IUserService userService,
         IUpdateOrganizationLicenseCommand updateOrganizationLicenseCommand)
     {
         _currentContext = currentContext;
-        _selfHostedGetOrganizationLicenseQuery = selfHostedGetOrganizationLicenseQuery;
+        _getSelfHostedOrganizationLicenseQuery = getSelfHostedOrganizationLicenseQuery;
         _organizationConnectionRepository = organizationConnectionRepository;
-        _organizationService = organizationService;
+        _selfHostedOrganizationSignUpCommand = selfHostedOrganizationSignUpCommand;
         _organizationRepository = organizationRepository;
         _userService = userService;
         _updateOrganizationLicenseCommand = updateOrganizationLicenseCommand;
     }
 
     [HttpPost("")]
-    public async Task<OrganizationResponseModel> PostLicenseAsync(OrganizationCreateLicenseRequestModel model)
+    public async Task<OrganizationResponseModel> CreateLicenseAsync(OrganizationCreateLicenseRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -62,13 +67,14 @@ public class SelfHostedOrganizationLicensesController : Controller
             throw new BadRequestException("Invalid license");
         }
 
-        var result = await _organizationService.SignUpAsync(license, user, model.Key,
+        var result = await _selfHostedOrganizationSignUpCommand.SignUpAsync(license, user, model.Key,
             model.CollectionName, model.Keys?.PublicKey, model.Keys?.EncryptedPrivateKey);
-        return new OrganizationResponseModel(result.Item1);
+
+        return new OrganizationResponseModel(result.Item1, null);
     }
 
     [HttpPost("{id}")]
-    public async Task PostLicenseAsync(string id, LicenseRequestModel model)
+    public async Task UpdateLicenseAsync(string id, LicenseRequestModel model)
     {
         var orgIdGuid = new Guid(id);
         if (!await _currentContext.OrganizationOwner(orgIdGuid))
@@ -116,7 +122,7 @@ public class SelfHostedOrganizationLicensesController : Controller
         }
 
         var license =
-            await _selfHostedGetOrganizationLicenseQuery.GetLicenseAsync(selfHostedOrganizationDetails, billingSyncConnection);
+            await _getSelfHostedOrganizationLicenseQuery.GetLicenseAsync(selfHostedOrganizationDetails, billingSyncConnection);
         var currentOrganization = await _organizationRepository.GetByLicenseKeyAsync(license.LicenseKey);
 
         await _updateOrganizationLicenseCommand.UpdateLicenseAsync(selfHostedOrganizationDetails, license, currentOrganization);

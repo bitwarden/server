@@ -1,13 +1,24 @@
-﻿using Bit.Api.Vault.Models.Response;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.Vault.Models.Response;
+using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Enums.Provider;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Models.Data;
+using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Repositories;
+using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -28,6 +39,12 @@ public class SyncController : Controller
     private readonly IPolicyRepository _policyRepository;
     private readonly ISendRepository _sendRepository;
     private readonly GlobalSettings _globalSettings;
+    private readonly ICurrentContext _currentContext;
+    private readonly Version _sshKeyCipherMinimumVersion = new(Constants.SSHKeyCipherMinimumVersion);
+    private readonly IFeatureService _featureService;
+    private readonly IApplicationCacheService _applicationCacheService;
+    private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
+    private readonly IUserAccountKeysQuery _userAccountKeysQuery;
 
     public SyncController(
         IUserService userService,
@@ -39,7 +56,12 @@ public class SyncController : Controller
         IProviderUserRepository providerUserRepository,
         IPolicyRepository policyRepository,
         ISendRepository sendRepository,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings,
+        ICurrentContext currentContext,
+        IFeatureService featureService,
+        IApplicationCacheService applicationCacheService,
+        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
+        IUserAccountKeysQuery userAccountKeysQuery)
     {
         _userService = userService;
         _folderRepository = folderRepository;
@@ -51,6 +73,11 @@ public class SyncController : Controller
         _policyRepository = policyRepository;
         _sendRepository = sendRepository;
         _globalSettings = globalSettings;
+        _currentContext = currentContext;
+        _featureService = featureService;
+        _applicationCacheService = applicationCacheService;
+        _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
+        _userAccountKeysQuery = userAccountKeysQuery;
     }
 
     [HttpGet("")]
@@ -70,8 +97,10 @@ public class SyncController : Controller
             await _providerUserRepository.GetManyOrganizationDetailsByUserAsync(user.Id,
                 ProviderUserStatusType.Confirmed);
         var hasEnabledOrgs = organizationUserDetails.Any(o => o.Enabled);
+
         var folders = await _folderRepository.GetManyByUserIdAsync(user.Id);
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(user.Id, hasEnabledOrgs);
+        var allCiphers = await _cipherRepository.GetManyByUserIdAsync(user.Id, withOrganizations: hasEnabledOrgs);
+        var ciphers = FilterSSHKeys(allCiphers);
         var sends = await _sendRepository.GetManyByUserIdAsync(user.Id);
 
         IEnumerable<CollectionDetails> collections = null;
@@ -85,11 +114,35 @@ public class SyncController : Controller
             collectionCiphersGroupDict = collectionCiphers.GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
         }
 
-        var userTwoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
+        var userTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
         var userHasPremiumFromOrganization = await _userService.HasPremiumFromOrganization(user);
-        var response = new SyncResponseModel(_globalSettings, user, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationUserDetails,
-            providerUserDetails, providerUserOrganizationDetails, folders, collections, ciphers,
-            collectionCiphersGroupDict, excludeDomains, policies, sends);
+        var organizationClaimingActiveUser = await _userService.GetOrganizationsClaimingUserAsync(user.Id);
+        var organizationIdsClaimingActiveUser = organizationClaimingActiveUser.Select(o => o.Id);
+
+        var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+
+        UserAccountKeysData userAccountKeys = null;
+        // JIT TDE users and some broken/old users may not have a private key.
+        if (!string.IsNullOrWhiteSpace(user.PrivateKey))
+        {
+            userAccountKeys = await _userAccountKeysQuery.Run(user);
+        }
+
+        var response = new SyncResponseModel(_globalSettings, user, userAccountKeys, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationAbilities,
+            organizationIdsClaimingActiveUser, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,
+            folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains, policies, sends);
         return response;
+    }
+
+    private ICollection<CipherDetails> FilterSSHKeys(ICollection<CipherDetails> ciphers)
+    {
+        if (_currentContext.ClientVersion >= _sshKeyCipherMinimumVersion || _featureService.IsEnabled(FeatureFlagKeys.SSHVersionCheckQAOverride))
+        {
+            return ciphers;
+        }
+        else
+        {
+            return ciphers.Where(c => c.Type != Core.Vault.Enums.CipherType.SSHKey).ToList();
+        }
     }
 }

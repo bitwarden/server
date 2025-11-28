@@ -36,12 +36,15 @@
     @UsesKeyConnector BIT = 0,
     @FailedLoginCount INT = 0,
     @LastFailedLoginDate DATETIME2(7),
-    @UnknownDeviceVerificationEnabled BIT = 1,
     @AvatarColor VARCHAR(7) = NULL,
     @LastPasswordChangeDate DATETIME2(7) = NULL,
     @LastKdfChangeDate DATETIME2(7) = NULL,
     @LastKeyRotationDate DATETIME2(7) = NULL,
-    @LastEmailChangeDate DATETIME2(7) = NULL
+    @LastEmailChangeDate DATETIME2(7) = NULL,
+    @VerifyDevices BIT = 1,
+    @SecurityState VARCHAR(MAX) = NULL,
+    @SecurityVersion INT = NULL,
+    @SignedPublicKey VARCHAR(MAX) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -83,14 +86,17 @@ BEGIN
         [UsesKeyConnector],
         [FailedLoginCount],
         [LastFailedLoginDate],
-        [UnknownDeviceVerificationEnabled],
         [AvatarColor],
         [KdfMemory],
         [KdfParallelism],
         [LastPasswordChangeDate],
         [LastKdfChangeDate],
         [LastKeyRotationDate],
-        [LastEmailChangeDate]
+        [LastEmailChangeDate],
+        [VerifyDevices],
+        [SecurityState],
+        [SecurityVersion],
+        [SignedPublicKey]
     )
     VALUES
     (
@@ -129,13 +135,16 @@ BEGIN
         @UsesKeyConnector,
         @FailedLoginCount,
         @LastFailedLoginDate,
-        @UnknownDeviceVerificationEnabled,
         @AvatarColor,
         @KdfMemory,
         @KdfParallelism,
         @LastPasswordChangeDate,
         @LastKdfChangeDate,
         @LastKeyRotationDate,
-        @LastEmailChangeDate
+        @LastEmailChangeDate,
+        @VerifyDevices,
+        @SecurityState,
+        @SecurityVersion,
+        @SignedPublicKey
     )
 END

@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Entities;
 using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Infrastructure.EFIntegration.Test.AutoFixture;
 using Bit.Infrastructure.EFIntegration.Test.Repositories.EqualityComparers;
@@ -11,7 +12,7 @@ namespace Bit.Infrastructure.EFIntegration.Test.Repositories;
 public class OrganizationSponsorshipRepositoryTests
 {
     [CiSkippedTheory, EfOrganizationSponsorshipAutoData]
-    public async void CreateAsync_Works_DataMatches(
+    public async Task CreateAsync_Works_DataMatches(
         OrganizationSponsorship organizationSponsorship, Organization sponsoringOrg,
         List<EfRepo.OrganizationRepository> efOrgRepos,
         SqlRepo.OrganizationRepository sqlOrganizationRepo,
@@ -46,7 +47,7 @@ public class OrganizationSponsorshipRepositoryTests
     }
 
     [CiSkippedTheory, EfOrganizationSponsorshipAutoData]
-    public async void ReplaceAsync_Works_DataMatches(OrganizationSponsorship postOrganizationSponsorship,
+    public async Task ReplaceAsync_Works_DataMatches(OrganizationSponsorship postOrganizationSponsorship,
         OrganizationSponsorship replaceOrganizationSponsorship, Organization sponsoringOrg,
         List<EfRepo.OrganizationRepository> efOrgRepos,
         SqlRepo.OrganizationRepository sqlOrganizationRepo,
@@ -88,7 +89,7 @@ public class OrganizationSponsorshipRepositoryTests
     }
 
     [CiSkippedTheory, EfOrganizationSponsorshipAutoData]
-    public async void DeleteAsync_Works_DataMatches(OrganizationSponsorship organizationSponsorship,
+    public async Task DeleteAsync_Works_DataMatches(OrganizationSponsorship organizationSponsorship,
         Organization sponsoringOrg,
         List<EfRepo.OrganizationRepository> efOrgRepos,
         SqlRepo.OrganizationRepository sqlOrganizationRepo,

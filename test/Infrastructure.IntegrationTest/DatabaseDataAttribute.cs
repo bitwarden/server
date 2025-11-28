@@ -3,84 +3,214 @@ using Bit.Core.Enums;
 using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper;
 using Bit.Infrastructure.EntityFramework;
+using Bit.Infrastructure.EntityFramework.Repositories;
+using Bit.Infrastructure.IntegrationTest.Services;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Time.Testing;
+using Xunit;
 using Xunit.Sdk;
+using Xunit.v3;
 
 namespace Bit.Infrastructure.IntegrationTest;
 
 public class DatabaseDataAttribute : DataAttribute
 {
-    public bool SelfHosted { get; set; }
-
-    public override IEnumerable<object[]> GetData(MethodInfo testMethod)
+    private static IConfiguration? _cachedConfiguration;
+    private static IConfiguration GetConfiguration()
     {
-        var parameters = testMethod.GetParameters();
+        return _cachedConfiguration ??= new ConfigurationBuilder()
+            .AddUserSecrets<DatabaseDataAttribute>(optional: true, reloadOnChange: false)
+            .AddEnvironmentVariables("BW_TEST_")
+            .AddCommandLine(Environment.GetCommandLineArgs())
+            .Build();
+    }
 
-        var config = DatabaseTheoryAttribute.GetConfiguration();
 
-        var serviceProviders = GetDatabaseProviders(config);
+    public bool SelfHosted { get; set; }
+    public bool UseFakeTimeProvider { get; set; }
+    public string? MigrationName { get; set; }
 
-        foreach (var provider in serviceProviders)
+    private void AddSqlMigrationTester(IServiceCollection services, string connectionString, string migrationName)
+    {
+        services.AddSingleton<IMigrationTesterService, SqlMigrationTesterService>(_ => new SqlMigrationTesterService(connectionString, migrationName));
+    }
+
+    private void AddEfMigrationTester(IServiceCollection services, SupportedDatabaseProviders databaseType, string migrationName)
+    {
+        services.AddSingleton<IMigrationTesterService, EfMigrationTesterService>(sp =>
         {
-            var objects = new object[parameters.Length];
-            for (var i = 0; i < parameters.Length; i++)
+            var dbContext = sp.GetRequiredService<DatabaseContext>();
+            return new EfMigrationTesterService(dbContext, databaseType, migrationName);
+        });
+    }
+
+    public override ValueTask<IReadOnlyCollection<ITheoryDataRow>> GetData(MethodInfo testMethod, DisposalTracker disposalTracker)
+    {
+        var config = GetConfiguration();
+
+        HashSet<SupportedDatabaseProviders> unconfiguredDatabases =
+        [
+            SupportedDatabaseProviders.MySql,
+            SupportedDatabaseProviders.Postgres,
+            SupportedDatabaseProviders.Sqlite,
+            SupportedDatabaseProviders.SqlServer
+        ];
+
+        var theories = new List<ITheoryDataRow>();
+
+        foreach (var database in config.GetDatabases())
+        {
+            unconfiguredDatabases.Remove(database.Type);
+
+            if (!database.Enabled)
             {
-                objects[i] = provider.GetRequiredService(parameters[i].ParameterType);
+                var theory = new TheoryDataRow()
+                    .WithSkip("Not-Enabled")
+                    .WithTrait("Database", database.Type.ToString());
+                theory.Label = database.Type.ToString();
+                theories.Add(theory);
+                continue;
             }
-            yield return objects;
+
+            var services = new ServiceCollection();
+            AddCommonServices(services);
+
+            if (database.Type == SupportedDatabaseProviders.SqlServer && !database.UseEf)
+            {
+                // Dapper services
+                AddDapperServices(services, database);
+            }
+            else
+            {
+                // Ef services
+                AddEfServices(services, database);
+            }
+
+            var serviceProvider = services.BuildServiceProvider();
+            disposalTracker.Add(serviceProvider);
+
+            var serviceTheory = new ServiceBasedTheoryDataRow(serviceProvider, testMethod)
+                .WithTrait("Database", database.Type.ToString())
+                .WithTrait("ConnectionString", database.ConnectionString);
+
+            serviceTheory.Label = database.Type.ToString();
+            theories.Add(serviceTheory);
+        }
+
+        foreach (var unconfiguredDatabase in unconfiguredDatabases)
+        {
+            var theory = new TheoryDataRow()
+                .WithSkip("Unconfigured")
+                .WithTrait("Database", unconfiguredDatabase.ToString());
+            theory.Label = unconfiguredDatabase.ToString();
+            theories.Add(theory);
+        }
+
+        return new(theories);
+    }
+
+    private void AddCommonServices(IServiceCollection services)
+    {
+        // Common services
+        services.AddDataProtection();
+        services.AddLogging(logging =>
+        {
+            logging.AddProvider(new XUnitLoggerProvider());
+        });
+        if (UseFakeTimeProvider)
+        {
+            services.AddSingleton<TimeProvider, FakeTimeProvider>();
         }
     }
 
-    private IEnumerable<IServiceProvider> GetDatabaseProviders(IConfiguration config)
+    private void AddDapperServices(IServiceCollection services, Database database)
     {
-        var configureLogging = (ILoggingBuilder builder) =>
+        services.AddDapperRepositories(SelfHosted);
+        var globalSettings = new GlobalSettings
         {
-            if (!config.GetValue<bool>("Quiet"))
+            DatabaseProvider = "sqlServer",
+            SqlServer = new GlobalSettings.SqlSettings
             {
-                builder.AddConfiguration(config);
-                builder.AddConsole();
-                builder.AddDebug();
+                ConnectionString = database.ConnectionString,
+            },
+            PasswordlessAuth = new GlobalSettings.PasswordlessAuthSettings
+            {
+                UserRequestExpiration = TimeSpan.FromMinutes(15),
             }
         };
-
-        if (config.TryGetConnectionString(DatabaseTheoryAttribute.DapperSqlServerKey, out var dapperSqlServerConnectionString))
+        services.AddSingleton(globalSettings);
+        services.AddSingleton<IGlobalSettings>(globalSettings);
+        services.AddSingleton(database);
+        services.AddDistributedSqlServerCache(o =>
         {
-            var dapperSqlServerCollection = new ServiceCollection();
-            dapperSqlServerCollection.AddLogging(configureLogging);
-            dapperSqlServerCollection.AddDapperRepositories(SelfHosted);
-            var globalSettings = new GlobalSettings
+            o.ConnectionString = database.ConnectionString;
+            o.SchemaName = "dbo";
+            o.TableName = "Cache";
+        });
+
+        if (!string.IsNullOrEmpty(MigrationName))
+        {
+            AddSqlMigrationTester(services, database.ConnectionString, MigrationName);
+        }
+    }
+
+    private void AddEfServices(IServiceCollection services, Database database)
+    {
+        services.SetupEntityFramework(database.ConnectionString, database.Type);
+        services.AddPasswordManagerEFRepositories(SelfHosted);
+
+        var globalSettings = new GlobalSettings
+        {
+            PasswordlessAuth = new GlobalSettings.PasswordlessAuthSettings
             {
-                DatabaseProvider = "sqlServer",
-                SqlServer = new GlobalSettings.SqlSettings
-                {
-                    ConnectionString = dapperSqlServerConnectionString,
-                },
-            };
-            dapperSqlServerCollection.AddSingleton(globalSettings);
-            dapperSqlServerCollection.AddSingleton<IGlobalSettings>(globalSettings);
-            yield return dapperSqlServerCollection.BuildServiceProvider();
+                UserRequestExpiration = TimeSpan.FromMinutes(15),
+            },
+        };
+        services.AddSingleton(globalSettings);
+        services.AddSingleton<IGlobalSettings>(globalSettings);
+
+        services.AddSingleton(database);
+        services.AddSingleton<IDistributedCache, EntityFrameworkCache>();
+
+        if (!string.IsNullOrEmpty(MigrationName))
+        {
+            AddEfMigrationTester(services, database.Type, MigrationName);
+        }
+    }
+
+    public override bool SupportsDiscoveryEnumeration()
+    {
+        return true;
+    }
+
+    private class ServiceBasedTheoryDataRow : TheoryDataRowBase
+    {
+        private readonly IServiceProvider _serviceProvider;
+        private readonly MethodInfo _testMethod;
+
+        public ServiceBasedTheoryDataRow(IServiceProvider serviceProvider, MethodInfo testMethod)
+        {
+            _serviceProvider = serviceProvider;
+            _testMethod = testMethod;
         }
 
-        if (config.TryGetConnectionString(DatabaseTheoryAttribute.EfPostgresKey, out var efPostgresConnectionString))
+        protected override object?[] GetData()
         {
-            var efPostgresCollection = new ServiceCollection();
-            efPostgresCollection.AddLogging(configureLogging);
-            efPostgresCollection.SetupEntityFramework(efPostgresConnectionString, SupportedDatabaseProviders.Postgres);
-            efPostgresCollection.AddPasswordManagerEFRepositories(SelfHosted);
-            efPostgresCollection.AddTransient<ITestDatabaseHelper, EfTestDatabaseHelper>();
-            yield return efPostgresCollection.BuildServiceProvider();
-        }
+            var parameters = _testMethod.GetParameters();
 
-        if (config.TryGetConnectionString(DatabaseTheoryAttribute.EfMySqlKey, out var efMySqlConnectionString))
-        {
-            var efMySqlCollection = new ServiceCollection();
-            efMySqlCollection.AddLogging(configureLogging);
-            efMySqlCollection.SetupEntityFramework(efMySqlConnectionString, SupportedDatabaseProviders.MySql);
-            efMySqlCollection.AddPasswordManagerEFRepositories(SelfHosted);
-            efMySqlCollection.AddTransient<ITestDatabaseHelper, EfTestDatabaseHelper>();
-            yield return efMySqlCollection.BuildServiceProvider();
+            var services = new object?[parameters.Length];
+
+            for (var i = 0; i < parameters.Length; i++)
+            {
+                var parameter = parameters[i];
+                // TODO: Could support keyed services/optional/nullable
+                services[i] = _serviceProvider.GetRequiredService(parameter.ParameterType);
+            }
+
+            return services;
         }
     }
 }

@@ -1,5 +1,8 @@
-﻿using Bit.Core.Entities;
-using Bit.Core.Repositories;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Scim.Groups.Interfaces;
 
 namespace Bit.Scim.Groups;
