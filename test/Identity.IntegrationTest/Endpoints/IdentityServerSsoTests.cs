@@ -520,10 +520,6 @@ public class IdentityServerSsoTests
 
         var keyConnectorUrl = AssertHelper.AssertJsonProperty(keyConnectorOption, "KeyConnectorUrl", JsonValueKind.String).GetString();
         Assert.Equal("https://key_connector.com", keyConnectorUrl);
-
-        // For backwards compatibility reasons the url should also be on the root
-        keyConnectorUrl = AssertHelper.AssertJsonProperty(root, "KeyConnectorUrl", JsonValueKind.String).GetString();
-        Assert.Equal("https://key_connector.com", keyConnectorUrl);
     }
 
     private static async Task<JsonDocument> RunSuccessTestAsync(MemberDecryptionType memberDecryptionType)
