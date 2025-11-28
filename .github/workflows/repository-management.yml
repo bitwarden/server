@@ -22,9 +22,7 @@ on:
         required: false
         type: string
 
-permissions:
-  pull-requests: write
-  contents: write
+permissions: {}
 
 jobs:
   setup:
@@ -32,6 +30,7 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       branch: ${{ steps.set-branch.outputs.branch }}
+    permissions: {}
     steps:
       - name: Set branch
         id: set-branch
@@ -89,6 +88,7 @@ jobs:
         with:
           app-id: ${{ steps.get-kv-secrets.outputs.BW-GHAPP-ID }}
           private-key: ${{ steps.get-kv-secrets.outputs.BW-GHAPP-KEY }}
+          permission-contents: write
 
       - name: Check out branch
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -212,6 +212,7 @@ jobs:
         with:
           app-id: ${{ steps.get-kv-secrets.outputs.BW-GHAPP-ID }}
           private-key: ${{ steps.get-kv-secrets.outputs.BW-GHAPP-KEY }}
+          permission-contents: write
 
       - name: Check out target ref
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -240,10 +241,5 @@ jobs:
   move_edd_db_scripts:
     name: Move EDD database scripts
     needs: cut_branch
-    permissions:
-      actions: read
-      contents: write
-      id-token: write
-      pull-requests: write
+    permissions: {}
     uses: ./.github/workflows/_move_edd_db_scripts.yml
-    secrets: inherit
