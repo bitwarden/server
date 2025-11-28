@@ -3,6 +3,7 @@ using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Identity;
@@ -90,7 +91,7 @@ public class TdeOffboardingPasswordCommand : ITdeOffboardingPasswordCommand
         user.MasterPasswordHint = hint;
 
         await _userRepository.ReplaceAsync(user);
-        await _eventService.LogUserEventAsync(user.Id, EventType.User_UpdatedTempPassword);
+        await _eventService.LogUserEventAsync(user.Id, EventType.User_TdeOffboardingPasswordSet);
         await _pushService.PushLogOutAsync(user.Id);
 
         return IdentityResult.Success;

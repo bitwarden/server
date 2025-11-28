@@ -1,11 +1,13 @@
 ﻿using System.Security.Claims;
 using System.Text.Json;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
@@ -13,12 +15,11 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
-using Bit.Identity.Models.Request.Accounts;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.Helpers;
+using Duende.IdentityModel;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Stores;
-using IdentityModel;
 using Microsoft.EntityFrameworkCore;
 using NSubstitute;
 using Xunit;
@@ -35,7 +36,15 @@ public class IdentityServerSsoTests
     public async Task Test_MasterPassword_DecryptionType()
     {
         // Arrange
-        using var responseBody = await RunSuccessTestAsync(MemberDecryptionType.MasterPassword);
+        User? expectedUser = null;
+        using var responseBody = await RunSuccessTestAsync(async factory =>
+        {
+            var database = factory.GetDatabaseContext();
+
+            expectedUser = await database.Users.SingleAsync(u => u.Email == TestEmail);
+            Assert.NotNull(expectedUser);
+        }, MemberDecryptionType.MasterPassword);
+        Assert.NotNull(expectedUser);
 
         // Assert
         // If the organization has a member decryption type of MasterPassword that should be the only option in the reply
@@ -46,13 +55,33 @@ public class IdentityServerSsoTests
         // Expected to look like:
         // "UserDecryptionOptions": {
         //   "Object": "userDecryptionOptions"
-        //   "HasMasterPassword": true
+        //   "HasMasterPassword": true,
+        //   "MasterPasswordUnlock": {
+        //     "Kdf": {
+        //       "KdfType": 0,
+        //       "Iterations": 600000
+        //     },
+        //     "MasterKeyEncryptedUserKey": "2.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==",
+        //     "Salt": "sso_user@email.com"
+        //   }
         // }
 
         AssertHelper.AssertJsonProperty(userDecryptionOptions, "HasMasterPassword", JsonValueKind.True);
-
-        // One property for the Object and one for master password
-        Assert.Equal(2, userDecryptionOptions.EnumerateObject().Count());
+        var objectString = AssertHelper.AssertJsonProperty(userDecryptionOptions, "Object", JsonValueKind.String).ToString();
+        Assert.Equal("userDecryptionOptions", objectString);
+        var masterPasswordUnlock = AssertHelper.AssertJsonProperty(userDecryptionOptions, "MasterPasswordUnlock", JsonValueKind.Object);
+        // MasterPasswordUnlock.Kdf
+        var kdf = AssertHelper.AssertJsonProperty(masterPasswordUnlock, "Kdf", JsonValueKind.Object);
+        var kdfType = AssertHelper.AssertJsonProperty(kdf, "KdfType", JsonValueKind.Number).GetInt32();
+        Assert.Equal((int)expectedUser.Kdf, kdfType);
+        var kdfIterations = AssertHelper.AssertJsonProperty(kdf, "Iterations", JsonValueKind.Number).GetInt32();
+        Assert.Equal(expectedUser.KdfIterations, kdfIterations);
+        // MasterPasswordUnlock.MasterKeyEncryptedUserKey
+        var masterKeyEncryptedUserKey = AssertHelper.AssertJsonProperty(masterPasswordUnlock, "MasterKeyEncryptedUserKey", JsonValueKind.String).ToString();
+        Assert.Equal(expectedUser.Key, masterKeyEncryptedUserKey);
+        // MasterPasswordUnlock.Salt
+        var salt = AssertHelper.AssertJsonProperty(masterPasswordUnlock, "Salt", JsonValueKind.String).ToString();
+        Assert.Equal(TestEmail, salt);
     }
 
     [Fact]
@@ -545,16 +574,15 @@ public class IdentityServerSsoTests
     {
         var factory = new IdentityApplicationFactory();
 
-
         var authorizationCode = new AuthorizationCode
         {
             ClientId = "web",
             CreationTime = DateTime.UtcNow,
             Lifetime = (int)TimeSpan.FromMinutes(5).TotalSeconds,
             RedirectUri = "https://localhost:8080/sso-connector.html",
-            RequestedScopes = new[] { "api", "offline_access" },
+            RequestedScopes = ["api", "offline_access"],
             CodeChallenge = challenge.Sha256(),
-            CodeChallengeMethod = "plain", //
+            CodeChallengeMethod = "plain",
             Subject = null!, // Temporarily set it to null
         };
 
@@ -564,16 +592,20 @@ public class IdentityServerSsoTests
                 .Returns(authorizationCode);
         });
 
-        // This starts the server and finalizes services
-        var registerResponse = await factory.RegisterAsync(new RegisterRequestModel
-        {
-            Email = TestEmail,
-            MasterPasswordHash = "master_password_hash",
-        });
-
-        var userRepository = factory.Services.GetRequiredService<IUserRepository>();
-        var user = await userRepository.GetByEmailAsync(TestEmail);
-        Assert.NotNull(user);
+        var user = await factory.RegisterNewIdentityFactoryUserAsync(
+            new RegisterFinishRequestModel
+            {
+                Email = TestEmail,
+                MasterPasswordHash = "masterPasswordHash",
+                Kdf = KdfType.PBKDF2_SHA256,
+                KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+                UserAsymmetricKeys = new KeysRequestModel()
+                {
+                    PublicKey = "public_key",
+                    EncryptedPrivateKey = "private_key"
+                },
+                UserSymmetricKey = "sym_key",
+            });
 
         var organizationRepository = factory.Services.GetRequiredService<IOrganizationRepository>();
         var organization = await organizationRepository.CreateAsync(new Organization

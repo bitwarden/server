@@ -11,6 +11,10 @@
     <PackageReference Include="Microsoft.AspNetCore.SignalR.StackExchangeRedis" Version="8.0.8" />
   </ItemGroup>
 
+  <ItemGroup Label="Pinned transitive dependencies">
+    <PackageReference Include="MessagePack" Version="2.5.192" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\Core\Core.csproj" />
     <ProjectReference Include="..\SharedWeb\SharedWeb.csproj" />

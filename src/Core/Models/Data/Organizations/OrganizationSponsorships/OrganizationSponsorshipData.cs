@@ -1,4 +1,7 @@
-﻿using Bit.Core.Entities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 
 namespace Bit.Core.Models.Data.Organizations.OrganizationSponsorships;
@@ -16,6 +19,8 @@ public class OrganizationSponsorshipData
         LastSyncDate = sponsorship.LastSyncDate;
         ValidUntil = sponsorship.ValidUntil;
         ToDelete = sponsorship.ToDelete;
+        IsAdminInitiated = sponsorship.IsAdminInitiated;
+        Notes = sponsorship.Notes;
     }
     public Guid SponsoringOrganizationUserId { get; set; }
     public Guid? SponsoredOrganizationId { get; set; }
@@ -25,6 +30,8 @@ public class OrganizationSponsorshipData
     public DateTime? LastSyncDate { get; set; }
     public DateTime? ValidUntil { get; set; }
     public bool ToDelete { get; set; }
+    public bool IsAdminInitiated { get; set; }
+    public string Notes { get; set; }
 
     public bool CloudSponsorshipRemoved { get; set; }
 }

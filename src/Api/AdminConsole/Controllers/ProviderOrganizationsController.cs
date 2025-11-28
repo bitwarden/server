@@ -1,4 +1,7 @@
-﻿using Bit.Api.AdminConsole.Models.Request.Providers;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.AdminConsole.Models.Request.Providers;
 using Bit.Api.AdminConsole.Models.Response.Providers;
 using Bit.Api.Models.Response;
 using Bit.Core.AdminConsole.Providers.Interfaces;
@@ -84,12 +87,12 @@ public class ProviderOrganizationsController : Controller
         }
 
         var organizationSignup = model.OrganizationCreateRequest.ToOrganizationSignup(user);
+        organizationSignup.IsFromProvider = true;
         var result = await _providerService.CreateOrganizationAsync(providerId, organizationSignup, model.ClientOwnerEmail, user);
         return new ProviderOrganizationResponseModel(result);
     }
 
     [HttpDelete("{id:guid}")]
-    [HttpPost("{id:guid}/delete")]
     public async Task Delete(Guid providerId, Guid id)
     {
         if (!_currentContext.ManageProviderOrganizations(providerId))
@@ -107,5 +110,12 @@ public class ProviderOrganizationsController : Controller
             provider,
             providerOrganization,
             organization);
+    }
+
+    [HttpPost("{id:guid}/delete")]
+    [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
+    public async Task PostDelete(Guid providerId, Guid id)
+    {
+        await Delete(providerId, id);
     }
 }

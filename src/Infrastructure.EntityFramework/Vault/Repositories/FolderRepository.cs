@@ -1,5 +1,8 @@
-﻿using AutoMapper;
-using Bit.Core.Auth.UserFeatures.UserKey;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using AutoMapper;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Vault.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.EntityFramework.Vault.Models;

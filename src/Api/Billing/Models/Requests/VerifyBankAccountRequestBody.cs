@@ -1,11 +1,12 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 
 namespace Bit.Api.Billing.Models.Requests;
 
 public class VerifyBankAccountRequestBody
 {
-    [Range(0, 99)]
-    public long Amount1 { get; set; }
-    [Range(0, 99)]
-    public long Amount2 { get; set; }
+    [Required]
+    public string DescriptorCode { get; set; }
 }

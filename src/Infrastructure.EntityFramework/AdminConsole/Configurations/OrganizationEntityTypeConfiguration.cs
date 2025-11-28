@@ -12,10 +12,6 @@ public class OrganizationEntityTypeConfiguration : IEntityTypeConfiguration<Orga
             .Property(o => o.Id)
             .ValueGeneratedNever();
 
-        builder.Property(c => c.LimitCollectionCreationDeletion)
-            .ValueGeneratedNever()
-            .HasDefaultValue(true);
-
         builder.Property(c => c.AllowAdminAccessToAllCollectionItems)
             .ValueGeneratedNever()
             .HasDefaultValue(true);

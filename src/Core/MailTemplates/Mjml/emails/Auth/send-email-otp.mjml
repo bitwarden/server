@@ -1,0 +1,69 @@
+<mjml>
+  <mj-head>
+    <mj-include path="../../components/head.mjml" />
+    <mj-style>
+      .send-bubble {
+        padding-left: 20px;
+        padding-right: 20px;
+        width: 90% !important;
+      }
+    </mj-style>
+  </mj-head>
+
+  <mj-body css-class="border-fix">
+    <!-- Blue Header Section -->
+    <mj-wrapper css-class="border-fix" padding="20px 20px 10px 20px">
+      <mj-bw-hero
+        img-src="https://assets.bitwarden.com/email/v1/spot-secure-send-round.png"
+        title="Verify your email to access this Bitwarden Send"
+      />
+    </mj-wrapper>
+
+    <!-- Main Content -->
+    <mj-wrapper padding="5px 20px 10px 20px">
+      <mj-section background-color="#fff">
+        <mj-column padding="0px">
+          <mj-text> Your verification code is: </mj-text>
+          <mj-text font-size="32px">
+            <b>{{Token}}</b>
+          </mj-text>
+          <mj-spacer height="20px" />
+          <mj-text>
+            This code expires in {{Expiry}} minutes. After that, you'll need
+            to verify your email again.
+          </mj-text>
+        </mj-column>
+      </mj-section>
+      <mj-section background-color="#fff" padding="0px 0px 20px 0px">
+        <mj-column
+          css-class="send-bubble"
+          width="90%"
+          inner-background-color="#DBE5F6"
+          inner-border-radius="16px"
+          padding="0px"
+        >
+          <mj-text>
+            <p>
+              Bitwarden Send transmits sensitive, temporary information to
+              others easily and securely. Learn more about
+              <a href="https://bitwarden.com/help/send" class="link"
+                >Bitwarden Send</a
+              >
+              or
+              <a href="https://bitwarden.com/signup" class="link">sign up</a>
+              to try it today.
+            </p>
+          </mj-text>
+        </mj-column>
+      </mj-section>
+    </mj-wrapper>
+
+    <!-- Learn More Section -->
+    <mj-wrapper padding="5px 20px 10px 20px">
+      <mj-bw-learn-more-footer />
+    </mj-wrapper>
+
+    <!-- Footer -->
+    <mj-include path="../../components/footer.mjml" />
+  </mj-body>
+</mjml>

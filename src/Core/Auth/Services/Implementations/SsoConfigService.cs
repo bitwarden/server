@@ -1,8 +1,14 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
@@ -17,31 +23,31 @@ public class SsoConfigService : ISsoConfigService
 {
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly IPolicyRepository _policyRepository;
-    private readonly IPolicyService _policyService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IUserService _userService;
-    private readonly IOrganizationService _organizationService;
     private readonly IEventService _eventService;
+    private readonly IFeatureService _featureService;
+    private readonly ISavePolicyCommand _savePolicyCommand;
+    private readonly IVNextSavePolicyCommand _vNextSavePolicyCommand;
 
     public SsoConfigService(
         ISsoConfigRepository ssoConfigRepository,
         IPolicyRepository policyRepository,
-        IPolicyService policyService,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
-        IUserService userService,
-        IOrganizationService organizationService,
-        IEventService eventService)
+        IEventService eventService,
+        IFeatureService featureService,
+        ISavePolicyCommand savePolicyCommand,
+        IVNextSavePolicyCommand vNextSavePolicyCommand)
     {
         _ssoConfigRepository = ssoConfigRepository;
         _policyRepository = policyRepository;
-        _policyService = policyService;
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
-        _userService = userService;
-        _organizationService = organizationService;
         _eventService = eventService;
+        _featureService = featureService;
+        _savePolicyCommand = savePolicyCommand;
+        _vNextSavePolicyCommand = vNextSavePolicyCommand;
     }
 
     public async Task SaveAsync(SsoConfig config, Organization organization)
@@ -69,25 +75,41 @@ public class SsoConfigService : ISsoConfigService
         // Automatically enable account recovery, SSO required, and single org policies if trusted device encryption is selected
         if (config.GetData().MemberDecryptionType == MemberDecryptionType.TrustedDeviceEncryption)
         {
-            var singleOrgPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(config.OrganizationId, PolicyType.SingleOrg) ??
-                                  new Policy { OrganizationId = config.OrganizationId, Type = PolicyType.SingleOrg };
+            var singleOrgPolicy = new PolicyUpdate
+            {
+                OrganizationId = config.OrganizationId,
+                Type = PolicyType.SingleOrg,
+                Enabled = true
+            };
 
-            singleOrgPolicy.Enabled = true;
+            var resetPasswordPolicy = new PolicyUpdate
+            {
+                OrganizationId = config.OrganizationId,
+                Type = PolicyType.ResetPassword,
+                Enabled = true,
+            };
+            resetPasswordPolicy.SetDataModel(new ResetPasswordDataModel { AutoEnrollEnabled = true });
 
-            await _policyService.SaveAsync(singleOrgPolicy, _userService, _organizationService, null);
+            var requireSsoPolicy = new PolicyUpdate
+            {
+                OrganizationId = config.OrganizationId,
+                Type = PolicyType.RequireSso,
+                Enabled = true
+            };
 
-            var resetPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(config.OrganizationId, PolicyType.ResetPassword) ??
-                              new Policy { OrganizationId = config.OrganizationId, Type = PolicyType.ResetPassword, };
-
-            resetPolicy.Enabled = true;
-            resetPolicy.SetDataModel(new ResetPasswordDataModel { AutoEnrollEnabled = true });
-            await _policyService.SaveAsync(resetPolicy, _userService, _organizationService, null);
-
-            var ssoRequiredPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(config.OrganizationId, PolicyType.RequireSso) ??
-                              new Policy { OrganizationId = config.OrganizationId, Type = PolicyType.RequireSso, };
-
-            ssoRequiredPolicy.Enabled = true;
-            await _policyService.SaveAsync(ssoRequiredPolicy, _userService, _organizationService, null);
+            if (_featureService.IsEnabled(FeatureFlagKeys.PolicyValidatorsRefactor))
+            {
+                var performedBy = new SystemUser(EventSystemUser.Unknown);
+                await _vNextSavePolicyCommand.SaveAsync(new SavePolicyModel(singleOrgPolicy, performedBy));
+                await _vNextSavePolicyCommand.SaveAsync(new SavePolicyModel(resetPasswordPolicy, performedBy));
+                await _vNextSavePolicyCommand.SaveAsync(new SavePolicyModel(requireSsoPolicy, performedBy));
+            }
+            else
+            {
+                await _savePolicyCommand.SaveAsync(singleOrgPolicy);
+                await _savePolicyCommand.SaveAsync(resetPasswordPolicy);
+                await _savePolicyCommand.SaveAsync(requireSsoPolicy);
+            }
         }
 
         await LogEventsAsync(config, oldConfig);

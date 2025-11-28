@@ -1,4 +1,7 @@
-﻿using Azure;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Azure;
 using Azure.Data.Tables;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
@@ -32,7 +35,9 @@ public class AzureEvent : ITableEntity
     public int? SystemUser { get; set; }
     public string DomainName { get; set; }
     public Guid? SecretId { get; set; }
+    public Guid? ProjectId { get; set; }
     public Guid? ServiceAccountId { get; set; }
+    public Guid? GrantedServiceAccountId { get; set; }
 
     public EventTableEntity ToEventTableEntity()
     {
@@ -62,7 +67,9 @@ public class AzureEvent : ITableEntity
             SystemUser = SystemUser.HasValue ? (EventSystemUser)SystemUser.Value : null,
             DomainName = DomainName,
             SecretId = SecretId,
-            ServiceAccountId = ServiceAccountId
+            ServiceAccountId = ServiceAccountId,
+            ProjectId = ProjectId,
+            GrantedServiceAccountId = GrantedServiceAccountId
         };
     }
 }
@@ -92,7 +99,9 @@ public class EventTableEntity : IEvent
         SystemUser = e.SystemUser;
         DomainName = e.DomainName;
         SecretId = e.SecretId;
+        ProjectId = e.ProjectId;
         ServiceAccountId = e.ServiceAccountId;
+        GrantedServiceAccountId = e.GrantedServiceAccountId;
     }
 
     public string PartitionKey { get; set; }
@@ -119,7 +128,9 @@ public class EventTableEntity : IEvent
     public EventSystemUser? SystemUser { get; set; }
     public string DomainName { get; set; }
     public Guid? SecretId { get; set; }
+    public Guid? ProjectId { get; set; }
     public Guid? ServiceAccountId { get; set; }
+    public Guid? GrantedServiceAccountId { get; set; }
 
     public AzureEvent ToAzureEvent()
     {
@@ -149,7 +160,9 @@ public class EventTableEntity : IEvent
             SystemUser = SystemUser.HasValue ? (int)SystemUser.Value : null,
             DomainName = DomainName,
             SecretId = SecretId,
-            ServiceAccountId = ServiceAccountId
+            ProjectId = ProjectId,
+            ServiceAccountId = ServiceAccountId,
+            GrantedServiceAccountId = GrantedServiceAccountId
         };
     }
 
@@ -211,7 +224,25 @@ public class EventTableEntity : IEvent
             entities.Add(new EventTableEntity(e)
             {
                 PartitionKey = pKey,
-                RowKey = $"SecretId={e.CipherId}__Date={dateKey}__Uniquifier={uniquifier}"
+                RowKey = $"SecretId={e.SecretId}__Date={dateKey}__Uniquifier={uniquifier}"
+            });
+        }
+
+        if (e.ProjectId.HasValue)
+        {
+            entities.Add(new EventTableEntity(e)
+            {
+                PartitionKey = pKey,
+                RowKey = $"ProjectId={e.ProjectId}__Date={dateKey}__Uniquifier={uniquifier}"
+            });
+        }
+
+        if (e.GrantedServiceAccountId.HasValue)
+        {
+            entities.Add(new EventTableEntity(e)
+            {
+                PartitionKey = pKey,
+                RowKey = $"GrantedServiceAccountId={e.GrantedServiceAccountId}__Date={dateKey}__Uniquifier={uniquifier}"
             });
         }
 

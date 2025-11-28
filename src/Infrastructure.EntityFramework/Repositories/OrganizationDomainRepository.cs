@@ -46,27 +46,17 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        var domains = await dbContext.OrganizationDomains
-            .Where(x => x.VerifiedDate == null
-                        && x.JobRunCount != 3
-                        && x.NextRunDate.Year == date.Year
-                        && x.NextRunDate.Month == date.Month
-                        && x.NextRunDate.Day == date.Day
-                        && x.NextRunDate.Hour == date.Hour)
-            .AsNoTracking()
+        var start36HoursWindow = date.AddHours(-36);
+        var end36HoursWindow = date;
+
+        var pastDomains = await dbContext.OrganizationDomains
+            .Where(x => x.NextRunDate >= start36HoursWindow
+                       && x.NextRunDate <= end36HoursWindow
+                       && x.VerifiedDate == null
+                       && x.JobRunCount != 3)
             .ToListAsync();
 
-        //Get records that have ignored/failed by the background service
-        var pastDomains = dbContext.OrganizationDomains
-            .AsEnumerable()
-            .Where(x => (date - x.NextRunDate).TotalHours > 36
-                        && x.VerifiedDate == null
-                        && x.JobRunCount != 3)
-            .ToList();
-
-        var results = domains.Union(pastDomains);
-
-        return Mapper.Map<List<Core.Entities.OrganizationDomain>>(results);
+        return Mapper.Map<List<Core.Entities.OrganizationDomain>>(pastDomains);
     }
 
     public async Task<OrganizationDomainSsoDetailsData?> GetOrganizationDomainSsoDetailsAsync(string email)
@@ -93,6 +83,29 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
             .SingleOrDefaultAsync();
 
         return ssoDetails;
+    }
+
+    public async Task<IEnumerable<VerifiedOrganizationDomainSsoDetail>> GetVerifiedOrganizationDomainSsoDetailsAsync(string email)
+    {
+        var domainName = new MailAddress(email).Host;
+
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        return await (from o in dbContext.Organizations
+                      from od in o.Domains
+                      join s in dbContext.SsoConfigs on o.Id equals s.OrganizationId into sJoin
+                      from s in sJoin.DefaultIfEmpty()
+                      where od.DomainName == domainName
+                            && o.Enabled
+                            && s.Enabled
+                            && od.VerifiedDate != null
+                      select new VerifiedOrganizationDomainSsoDetail(
+                          o.Id,
+                          o.Name,
+                          od.DomainName,
+                          o.Identifier))
+            .AsNoTracking()
+            .ToListAsync();
     }
 
     public async Task<Core.Entities.OrganizationDomain?> GetDomainByIdOrganizationIdAsync(Guid id, Guid orgId)
@@ -124,14 +137,13 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        //Get domains that have not been verified after 72 hours
-        var domains = await dbContext.OrganizationDomains
-            .Where(x => (DateTime.UtcNow - x.CreationDate).Days == 4
-                        && x.VerifiedDate == null)
+        var threeDaysOldUnverifiedDomains = await dbContext.OrganizationDomains
+            .Where(x => x.CreationDate.Date == DateTime.UtcNow.AddDays(-4).Date
+                      && x.VerifiedDate == null)
             .AsNoTracking()
             .ToListAsync();
 
-        return Mapper.Map<List<Core.Entities.OrganizationDomain>>(domains);
+        return Mapper.Map<List<Core.Entities.OrganizationDomain>>(threeDaysOldUnverifiedDomains);
     }
 
     public async Task<bool> DeleteExpiredAsync(int expirationPeriod)
@@ -140,9 +152,50 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
         var dbContext = GetDatabaseContext(scope);
 
         var expiredDomains = await dbContext.OrganizationDomains
-            .Where(x => x.LastCheckedDate < DateTime.UtcNow.AddDays(-expirationPeriod))
+            .Where(x => x.LastCheckedDate < DateTime.UtcNow.AddDays(-expirationPeriod) && x.VerifiedDate == null)
             .ToListAsync();
         dbContext.OrganizationDomains.RemoveRange(expiredDomains);
         return await dbContext.SaveChangesAsync() > 0;
     }
+
+    public async Task<IEnumerable<Core.Entities.OrganizationDomain>> GetVerifiedDomainsByOrganizationIdsAsync(
+        IEnumerable<Guid> organizationIds)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var verifiedDomains = await (from d in dbContext.OrganizationDomains
+                                     where organizationIds.Contains(d.OrganizationId) && d.VerifiedDate != null
+                                     select new OrganizationDomain
+                                     {
+                                         OrganizationId = d.OrganizationId,
+                                         DomainName = d.DomainName
+                                     })
+            .AsNoTracking()
+            .ToListAsync();
+
+        return Mapper.Map<List<OrganizationDomain>>(verifiedDomains);
+    }
+
+    public async Task<bool> HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(string domainName, Guid? excludeOrganizationId = null)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var query = from od in dbContext.OrganizationDomains
+                    join o in dbContext.Organizations on od.OrganizationId equals o.Id
+                    join p in dbContext.Policies on o.Id equals p.OrganizationId
+                    where od.DomainName == domainName
+                        && od.VerifiedDate != null
+                        && o.Enabled
+                        && o.UsePolicies
+                        && o.UseOrganizationDomains
+                        && (!excludeOrganizationId.HasValue || o.Id != excludeOrganizationId.Value)
+                        && p.Type == Core.AdminConsole.Enums.PolicyType.BlockClaimedDomainAccountCreation
+                        && p.Enabled
+                    select od;
+
+        return await query.AnyAsync();
+    }
 }
+

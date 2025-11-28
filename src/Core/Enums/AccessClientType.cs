@@ -1,4 +1,4 @@
-﻿using Bit.Core.Identity;
+﻿using Bit.Core.Auth.Identity;
 
 namespace Bit.Core.Enums;
 
@@ -12,19 +12,19 @@ public enum AccessClientType
 
 public static class AccessClientHelper
 {
-    public static AccessClientType ToAccessClient(ClientType clientType, bool bypassAccessCheck = false)
+    public static AccessClientType ToAccessClient(IdentityClientType identityClientType, bool bypassAccessCheck = false)
     {
         if (bypassAccessCheck)
         {
             return AccessClientType.NoAccessCheck;
         }
 
-        return clientType switch
+        return identityClientType switch
         {
-            ClientType.User => AccessClientType.User,
-            ClientType.Organization => AccessClientType.Organization,
-            ClientType.ServiceAccount => AccessClientType.ServiceAccount,
-            _ => throw new ArgumentOutOfRangeException(nameof(clientType), clientType, null),
+            IdentityClientType.User => AccessClientType.User,
+            IdentityClientType.Organization => AccessClientType.Organization,
+            IdentityClientType.ServiceAccount => AccessClientType.ServiceAccount,
+            _ => throw new ArgumentOutOfRangeException(nameof(identityClientType), identityClientType, null),
         };
     }
 }

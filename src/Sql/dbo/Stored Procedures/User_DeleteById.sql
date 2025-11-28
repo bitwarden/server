@@ -52,6 +52,16 @@ BEGIN
     WHERE
         [UserId] = @Id
 
+    -- Migrate DefaultUserCollection to SharedCollection before deleting CollectionUser records
+    DECLARE @OrgUserIds [dbo].[GuidIdArray]
+    INSERT INTO @OrgUserIds (Id)
+    SELECT [Id] FROM [dbo].[OrganizationUser] WHERE [UserId] = @Id
+    
+    IF EXISTS (SELECT 1 FROM @OrgUserIds)
+    BEGIN
+        EXEC [dbo].[OrganizationUser_MigrateDefaultCollection] @OrgUserIds
+    END
+
     -- Delete collection users
     DELETE
         CU
@@ -119,6 +129,20 @@ BEGIN
     WHERE 
         [UserId] = @Id
 
+    -- Delete Notification Status
+    DELETE
+    FROM
+        [dbo].[NotificationStatus]
+    WHERE
+        [UserId] = @Id
+
+    -- Delete Notification
+    DELETE
+    FROM
+        [dbo].[Notification]
+    WHERE
+        [UserId] = @Id
+    
     -- Finally, delete the user
     DELETE
     FROM

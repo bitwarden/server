@@ -9,4 +9,5 @@ public enum ScimProviderType : byte
     JumpCloud = 4,
     GoogleWorkspace = 5,
     Rippling = 6,
+    Ping = 7,
 }

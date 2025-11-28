@@ -4,8 +4,10 @@ using Bit.Api.Auth.Models.Response.WebAuthn;
 using Bit.Api.Models.Response;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Models.Api.Response.Accounts;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
@@ -19,7 +21,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Bit.Api.Auth.Controllers;
 
 [Route("webauthn")]
-[Authorize("Web")]
+[Authorize(Policies.Web)]
 public class WebAuthnController : Controller
 {
     private readonly IUserService _userService;
@@ -31,6 +33,8 @@ public class WebAuthnController : Controller
     private readonly ICreateWebAuthnLoginCredentialCommand _createWebAuthnLoginCredentialCommand;
     private readonly IAssertWebAuthnLoginCredentialCommand _assertWebAuthnLoginCredentialCommand;
     private readonly IGetWebAuthnLoginCredentialAssertionOptionsCommand _getWebAuthnLoginCredentialAssertionOptionsCommand;
+    private readonly IPolicyRequirementQuery _policyRequirementQuery;
+    private readonly IFeatureService _featureService;
 
     public WebAuthnController(
         IUserService userService,
@@ -41,7 +45,9 @@ public class WebAuthnController : Controller
         IGetWebAuthnLoginCredentialCreateOptionsCommand getWebAuthnLoginCredentialCreateOptionsCommand,
         ICreateWebAuthnLoginCredentialCommand createWebAuthnLoginCredentialCommand,
         IAssertWebAuthnLoginCredentialCommand assertWebAuthnLoginCredentialCommand,
-        IGetWebAuthnLoginCredentialAssertionOptionsCommand getWebAuthnLoginCredentialAssertionOptionsCommand)
+        IGetWebAuthnLoginCredentialAssertionOptionsCommand getWebAuthnLoginCredentialAssertionOptionsCommand,
+        IPolicyRequirementQuery policyRequirementQuery,
+        IFeatureService featureService)
     {
         _userService = userService;
         _policyService = policyService;
@@ -52,7 +58,8 @@ public class WebAuthnController : Controller
         _createWebAuthnLoginCredentialCommand = createWebAuthnLoginCredentialCommand;
         _assertWebAuthnLoginCredentialCommand = assertWebAuthnLoginCredentialCommand;
         _getWebAuthnLoginCredentialAssertionOptionsCommand = getWebAuthnLoginCredentialAssertionOptionsCommand;
-
+        _policyRequirementQuery = policyRequirementQuery;
+        _featureService = featureService;
     }
 
     [HttpGet("")]
@@ -68,7 +75,7 @@ public class WebAuthnController : Controller
     public async Task<WebAuthnCredentialCreateOptionsResponseModel> AttestationOptions([FromBody] SecretVerificationRequestModel model)
     {
         var user = await VerifyUserAsync(model);
-        await ValidateRequireSsoPolicyDisabledOrNotApplicable(user.Id);
+        await ValidateIfUserCanUsePasskeyLogin(user.Id);
         var options = await _getWebAuthnLoginCredentialCreateOptionsCommand.GetWebAuthnLoginCredentialCreateOptionsAsync(user);
 
         var tokenable = new WebAuthnCredentialCreateOptionsTokenable(user, options);
@@ -101,7 +108,7 @@ public class WebAuthnController : Controller
     public async Task Post([FromBody] WebAuthnLoginCredentialCreateRequestModel model)
     {
         var user = await GetUserAsync();
-        await ValidateRequireSsoPolicyDisabledOrNotApplicable(user.Id);
+        await ValidateIfUserCanUsePasskeyLogin(user.Id);
         var tokenable = _createOptionsDataProtector.Unprotect(model.Token);
 
         if (!tokenable.TokenIsValid(user))
@@ -121,6 +128,22 @@ public class WebAuthnController : Controller
         var requireSsoLogin = await _policyService.AnyPoliciesApplicableToUserAsync(userId, PolicyType.RequireSso);
 
         if (requireSsoLogin)
+        {
+            throw new BadRequestException("Passkeys cannot be created for your account. SSO login is required.");
+        }
+    }
+
+    private async Task ValidateIfUserCanUsePasskeyLogin(Guid userId)
+    {
+        if (!_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
+        {
+            await ValidateRequireSsoPolicyDisabledOrNotApplicable(userId);
+            return;
+        }
+
+        var requireSsoPolicyRequirement = await _policyRequirementQuery.GetAsync<RequireSsoPolicyRequirement>(userId);
+
+        if (!requireSsoPolicyRequirement.CanUsePasskeyLogin)
         {
             throw new BadRequestException("Passkeys cannot be created for your account. SSO login is required.");
         }

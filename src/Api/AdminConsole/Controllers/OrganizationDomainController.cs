@@ -46,7 +46,7 @@ public class OrganizationDomainController : Controller
     }
 
     [HttpGet("{orgId}/domain")]
-    public async Task<ListResponseModel<OrganizationDomainResponseModel>> Get(Guid orgId)
+    public async Task<ListResponseModel<OrganizationDomainResponseModel>> GetAll(Guid orgId)
     {
         await ValidateOrganizationAccessAsync(orgId);
 
@@ -99,13 +99,12 @@ public class OrganizationDomainController : Controller
             throw new NotFoundException();
         }
 
-        organizationDomain = await _verifyOrganizationDomainCommand.VerifyOrganizationDomainAsync(organizationDomain);
+        organizationDomain = await _verifyOrganizationDomainCommand.UserVerifyOrganizationDomainAsync(organizationDomain);
 
         return new OrganizationDomainResponseModel(organizationDomain);
     }
 
     [HttpDelete("{orgId}/domain/{id}")]
-    [HttpPost("{orgId}/domain/{id}/remove")]
     public async Task RemoveDomain(Guid orgId, Guid id)
     {
         await ValidateOrganizationAccessAsync(orgId);
@@ -117,6 +116,13 @@ public class OrganizationDomainController : Controller
         }
 
         await _deleteOrganizationDomainCommand.DeleteAsync(domain);
+    }
+
+    [HttpPost("{orgId}/domain/{id}/remove")]
+    [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
+    public async Task PostRemoveDomain(Guid orgId, Guid id)
+    {
+        await RemoveDomain(orgId, id);
     }
 
     [AllowAnonymous]
@@ -131,6 +137,19 @@ public class OrganizationDomainController : Controller
         }
 
         return new OrganizationDomainSsoDetailsResponseModel(ssoResult);
+    }
+
+    [AllowAnonymous]
+    [HttpPost("domain/sso/verified")]
+    public async Task<VerifiedOrganizationDomainSsoDetailsResponseModel> GetVerifiedOrgDomainSsoDetailsAsync(
+        [FromBody] OrganizationDomainSsoDetailsRequestModel model)
+    {
+        var ssoResults = (await _organizationDomainRepository
+            .GetVerifiedOrganizationDomainSsoDetailsAsync(model.Email))
+            .ToList();
+
+        return new VerifiedOrganizationDomainSsoDetailsResponseModel(
+            ssoResults.Select(ssoResult => new VerifiedOrganizationDomainSsoDetailResponseModel(ssoResult)));
     }
 
     private async Task ValidateOrganizationAccessAsync(Guid orgIdGuid)

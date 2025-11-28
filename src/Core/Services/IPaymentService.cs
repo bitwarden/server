@@ -1,8 +1,12 @@
-﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Entities.Provider;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Tax.Requests;
+using Bit.Core.Billing.Tax.Responses;
 using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.StaticStore;
 
@@ -11,15 +15,8 @@ namespace Bit.Core.Services;
 public interface IPaymentService
 {
     Task CancelAndRecoverChargesAsync(ISubscriber subscriber);
-    Task<string> PurchaseOrganizationAsync(Organization org, PaymentMethodType paymentMethodType,
-        string paymentToken, Plan plan, short additionalStorageGb, int additionalSeats,
-        bool premiumAccessAddon, TaxInfo taxInfo, bool provider = false, int additionalSmSeats = 0,
-        int additionalServiceAccount = 0, bool signupIsFromSecretsManagerTrial = false);
     Task SponsorOrganizationAsync(Organization org, OrganizationSponsorship sponsorship);
     Task RemoveOrganizationSponsorshipAsync(Organization org, OrganizationSponsorship sponsorship);
-    Task<string> UpgradeFreeOrganizationAsync(Organization org, Plan plan, OrganizationUpgrade upgrade);
-    Task<string> PurchasePremiumAsync(User user, PaymentMethodType paymentMethodType, string paymentToken,
-        short additionalStorageGb, TaxInfo taxInfo);
     Task<string> AdjustSubscription(
         Organization organization,
         Plan updatedPlan,
@@ -28,32 +25,50 @@ public interface IPaymentService
         int? newlyPurchasedSecretsManagerSeats,
         int? newlyPurchasedAdditionalSecretsManagerServiceAccounts,
         int newlyPurchasedAdditionalStorage);
+
+    /// <summary>
+    /// Used to update the organization's password manager subscription
+    /// </summary>
+    /// <param name="organization"></param>
+    /// <param name="plan"></param>
+    /// <param name="additionalSeats">New seat total</param>
+    /// <returns></returns>
     Task<string> AdjustSeatsAsync(Organization organization, Plan plan, int additionalSeats);
-    Task<string> AdjustSeats(
-        Provider provider,
-        Plan plan,
-        int currentlySubscribedSeats,
-        int newlySubscribedSeats);
     Task<string> AdjustSmSeatsAsync(Organization organization, Plan plan, int additionalSeats);
     Task<string> AdjustStorageAsync(IStorableSubscriber storableSubscriber, int additionalStorage, string storagePlanId);
 
     Task<string> AdjustServiceAccountsAsync(Organization organization, Plan plan, int additionalServiceAccounts);
     Task CancelSubscriptionAsync(ISubscriber subscriber, bool endOfPeriod = false);
     Task ReinstateSubscriptionAsync(ISubscriber subscriber);
-    Task<bool> UpdatePaymentMethodAsync(ISubscriber subscriber, PaymentMethodType paymentMethodType,
-        string paymentToken, TaxInfo taxInfo = null);
     Task<bool> CreditAccountAsync(ISubscriber subscriber, decimal creditAmount);
     Task<BillingInfo> GetBillingAsync(ISubscriber subscriber);
     Task<BillingHistoryInfo> GetBillingHistoryAsync(ISubscriber subscriber);
     Task<SubscriptionInfo> GetSubscriptionAsync(ISubscriber subscriber);
     Task<TaxInfo> GetTaxInfoAsync(ISubscriber subscriber);
     Task SaveTaxInfoAsync(ISubscriber subscriber, TaxInfo taxInfo);
-    Task<TaxRate> CreateTaxRateAsync(TaxRate taxRate);
-    Task UpdateTaxRateAsync(TaxRate taxRate);
-    Task ArchiveTaxRateAsync(TaxRate taxRate);
-    Task<string> AddSecretsManagerToSubscription(Organization org, Plan plan, int additionalSmSeats,
-        int additionalServiceAccount);
-    Task<bool> RisksSubscriptionFailure(Organization organization);
+    Task<string> AddSecretsManagerToSubscription(Organization org, Plan plan, int additionalSmSeats, int additionalServiceAccount);
+    /// <summary>
+    /// Secrets Manager Standalone is a discount in Stripe that is used to give an organization access to Secrets Manager.
+    /// Usually, this also implies that when they invite a user to their organization, they are doing so for both Password
+    /// Manager and Secrets Manger.
+    ///
+    /// This will not call out to Stripe if they don't have a GatewayId or if they don't have Secrets Manager.
+    /// </summary>
+    /// <param name="organization">Organization Entity</param>
+    /// <returns>If the organization has Secrets Manager and has the Standalone Stripe Discount</returns>
     Task<bool> HasSecretsManagerStandalone(Organization organization);
-    Task<(DateTime?, DateTime?)> GetSuspensionDateAsync(Stripe.Subscription subscription);
+
+    /// <summary>
+    /// Secrets Manager Standalone is a discount in Stripe that is used to give an organization access to Secrets Manager.
+    /// Usually, this also implies that when they invite a user to their organization, they are doing so for both Password
+    /// Manager and Secrets Manger.
+    ///
+    /// This will not call out to Stripe if they don't have a GatewayId or if they don't have Secrets Manager.
+    /// </summary>
+    /// <param name="organization">Organization Representation used for Inviting Organization Users</param>
+    /// <returns>If the organization has Secrets Manager and has the Standalone Stripe Discount</returns>
+    Task<bool> HasSecretsManagerStandalone(InviteOrganization organization);
+    Task<PreviewInvoiceResponseModel> PreviewInvoiceAsync(PreviewIndividualInvoiceRequestBody parameters, string gatewayCustomerId, string gatewaySubscriptionId);
+    Task<PreviewInvoiceResponseModel> PreviewInvoiceAsync(PreviewOrganizationInvoiceRequestBody parameters, string gatewayCustomerId, string gatewaySubscriptionId);
+
 }

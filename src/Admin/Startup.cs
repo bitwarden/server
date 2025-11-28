@@ -88,7 +88,9 @@ public class Startup
         services.AddBaseServices(globalSettings);
         services.AddDefaultServices(globalSettings);
         services.AddScoped<IAccessControlService, AccessControlService>();
+        services.AddDistributedCache(globalSettings);
         services.AddBillingOperations();
+        services.AddHttpClient();
 
 #if OSS
         services.AddOosServices();
@@ -108,6 +110,7 @@ public class Startup
          {
              o.ViewLocationFormats.Add("/Auth/Views/{1}/{0}.cshtml");
              o.ViewLocationFormats.Add("/AdminConsole/Views/{1}/{0}.cshtml");
+             o.ViewLocationFormats.Add("/Billing/Views/{1}/{0}.cshtml");
          });
 
         // Jobs service
@@ -129,11 +132,8 @@ public class Startup
     public void Configure(
         IApplicationBuilder app,
         IWebHostEnvironment env,
-        IHostApplicationLifetime appLifetime,
         GlobalSettings globalSettings)
     {
-        app.UseSerilog(env, appLifetime, globalSettings);
-
         // Add general security headers
         app.UseMiddleware<SecurityHeadersMiddleware>();
 

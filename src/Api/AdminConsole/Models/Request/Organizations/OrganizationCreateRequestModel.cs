@@ -1,5 +1,9 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
+using Bit.Core;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -14,45 +18,68 @@ public class OrganizationCreateRequestModel : IValidatableObject
     [StringLength(50, ErrorMessage = "The field Name exceeds the maximum length.")]
     [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string Name { get; set; }
+
     [StringLength(50, ErrorMessage = "The field Business Name exceeds the maximum length.")]
     [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string BusinessName { get; set; }
+
     [Required]
     [StringLength(256)]
     [EmailAddress]
     public string BillingEmail { get; set; }
+
     public PlanType PlanType { get; set; }
+
     [Required]
     public string Key { get; set; }
+
     public OrganizationKeysRequestModel Keys { get; set; }
     public PaymentMethodType? PaymentMethodType { get; set; }
     public string PaymentToken { get; set; }
+
     [Range(0, int.MaxValue)]
     public int AdditionalSeats { get; set; }
+
     [Range(0, 99)]
     public short? AdditionalStorageGb { get; set; }
+
     public bool PremiumAccessAddon { get; set; }
+
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string CollectionName { get; set; }
+
     public string TaxIdNumber { get; set; }
+
     public string BillingAddressLine1 { get; set; }
+
     public string BillingAddressLine2 { get; set; }
+
     public string BillingAddressCity { get; set; }
+
     public string BillingAddressState { get; set; }
+
     public string BillingAddressPostalCode { get; set; }
+
     [StringLength(2)]
     public string BillingAddressCountry { get; set; }
+
     public int? MaxAutoscaleSeats { get; set; }
+
     [Range(0, int.MaxValue)]
     public int? AdditionalSmSeats { get; set; }
+
     [Range(0, int.MaxValue)]
     public int? AdditionalServiceAccounts { get; set; }
+
     [Required]
     public bool UseSecretsManager { get; set; }
+
     public bool IsFromSecretsManagerTrial { get; set; }
 
     public string InitiationPath { get; set; }
+
+    public bool SkipTrial { get; set; }
 
     public virtual OrganizationSignup ToOrganizationSignup(User user)
     {
@@ -86,6 +113,7 @@ public class OrganizationCreateRequestModel : IValidatableObject
                 BillingAddressCountry = BillingAddressCountry,
             },
             InitiationPath = InitiationPath,
+            SkipTrial = SkipTrial
         };
 
         Keys?.ToOrganizationSignup(orgSignup);
@@ -99,17 +127,20 @@ public class OrganizationCreateRequestModel : IValidatableObject
         {
             yield return new ValidationResult("Payment required.", new string[] { nameof(PaymentToken) });
         }
+
         if (PlanType != PlanType.Free && !PaymentMethodType.HasValue)
         {
             yield return new ValidationResult("Payment method type required.",
                 new string[] { nameof(PaymentMethodType) });
         }
+
         if (PlanType != PlanType.Free && string.IsNullOrWhiteSpace(BillingAddressCountry))
         {
             yield return new ValidationResult("Country required.",
                 new string[] { nameof(BillingAddressCountry) });
         }
-        if (PlanType != PlanType.Free && BillingAddressCountry == "US" &&
+
+        if (PlanType != PlanType.Free && BillingAddressCountry == Constants.CountryAbbreviations.UnitedStates &&
             string.IsNullOrWhiteSpace(BillingAddressPostalCode))
         {
             yield return new ValidationResult("Zip / postal code is required.",
@@ -117,3 +148,4 @@ public class OrganizationCreateRequestModel : IValidatableObject
         }
     }
 }
+

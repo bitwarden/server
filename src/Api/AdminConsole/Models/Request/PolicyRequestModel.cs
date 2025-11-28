@@ -1,31 +1,30 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using System.Text.Json;
-using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
+using Bit.Core.AdminConsole.Utilities;
+using Bit.Core.Context;
 
 namespace Bit.Api.AdminConsole.Models.Request;
 
 public class PolicyRequestModel
 {
     [Required]
-    public PolicyType? Type { get; set; }
-    [Required]
     public bool? Enabled { get; set; }
-    public Dictionary<string, object> Data { get; set; }
+    public Dictionary<string, object>? Data { get; set; }
 
-    public Policy ToPolicy(Guid orgId)
+    public async Task<PolicyUpdate> ToPolicyUpdateAsync(Guid organizationId, PolicyType type, ICurrentContext currentContext)
     {
-        return ToPolicy(new Policy
+        var serializedData = PolicyDataValidator.ValidateAndSerialize(Data, type);
+        var performedBy = new StandardUser(currentContext.UserId!.Value, await currentContext.OrganizationOwner(organizationId));
+
+        return new()
         {
-            Type = Type.Value,
-            OrganizationId = orgId
-        });
-    }
-
-    public Policy ToPolicy(Policy existingPolicy)
-    {
-        existingPolicy.Enabled = Enabled.GetValueOrDefault();
-        existingPolicy.Data = Data != null ? JsonSerializer.Serialize(Data) : null;
-        return existingPolicy;
+            Type = type,
+            OrganizationId = organizationId,
+            Data = serializedData,
+            Enabled = Enabled.GetValueOrDefault(),
+            PerformedBy = performedBy
+        };
     }
 }

@@ -1,4 +1,7 @@
-﻿using System.Data;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Data;
 using System.Reflection;
 using System.Text;
 using Bit.Core;
@@ -14,13 +17,15 @@ public class DbMigrator
     private readonly string _connectionString;
     private readonly ILogger<DbMigrator> _logger;
     private readonly bool _skipDatabasePreparation;
+    private readonly bool _noTransactionMigration;
 
     public DbMigrator(string connectionString, ILogger<DbMigrator> logger = null,
-        bool skipDatabasePreparation = false)
+       bool skipDatabasePreparation = false, bool noTransactionMigration = false)
     {
         _connectionString = connectionString;
         _logger = logger ?? CreateLogger();
         _skipDatabasePreparation = skipDatabasePreparation;
+        _noTransactionMigration = noTransactionMigration;
     }
 
     public bool MigrateMsSqlDatabaseWithRetries(bool enableLogging = true,
@@ -30,6 +35,7 @@ public class DbMigrator
         CancellationToken cancellationToken = default)
     {
         var attempt = 1;
+
         while (attempt < 10)
         {
             try
@@ -47,7 +53,7 @@ public class DbMigrator
                 if (ex.Message.Contains("Server is in script upgrade mode."))
                 {
                     attempt++;
-                    _logger.LogInformation($"Database is in script upgrade mode, trying again (attempt #{attempt}).");
+                    _logger.LogInformation("Database is in script upgrade mode, trying again (attempt #{Attempt}).", attempt);
                     Thread.Sleep(20000);
                 }
                 else
@@ -69,6 +75,7 @@ public class DbMigrator
         using (var connection = new SqlConnection(masterConnectionString))
         {
             var databaseName = new SqlConnectionStringBuilder(_connectionString).InitialCatalog;
+
             if (string.IsNullOrWhiteSpace(databaseName))
             {
                 databaseName = "vault";
@@ -105,10 +112,10 @@ public class DbMigrator
     }
 
     private bool MigrateDatabase(bool enableLogging = true,
-        bool repeatable = false,
-        string folderName = MigratorConstants.DefaultMigrationsFolderName,
-        bool dryRun = false,
-        CancellationToken cancellationToken = default)
+    bool repeatable = false,
+    string folderName = MigratorConstants.DefaultMigrationsFolderName,
+    bool dryRun = false,
+    CancellationToken cancellationToken = default)
     {
         if (enableLogging)
         {
@@ -121,8 +128,17 @@ public class DbMigrator
             .SqlDatabase(_connectionString)
             .WithScriptsAndCodeEmbeddedInAssembly(Assembly.GetExecutingAssembly(),
                 s => s.Contains($".{folderName}.") && !s.Contains(".Archive."))
-            .WithTransaction()
-            .WithExecutionTimeout(new TimeSpan(0, 5, 0));
+            .WithExecutionTimeout(TimeSpan.FromMinutes(5));
+
+        if (_noTransactionMigration)
+        {
+            builder = builder.WithoutTransaction()
+                .WithExecutionTimeout(TimeSpan.FromMinutes(60));
+        }
+        else
+        {
+            builder = builder.WithTransaction();
+        }
 
         if (repeatable)
         {
@@ -144,11 +160,12 @@ public class DbMigrator
         {
             var scriptsToExec = upgrader.GetScriptsToExecute();
             var stringBuilder = new StringBuilder("Scripts that will be applied:");
+
             foreach (var script in scriptsToExec)
             {
                 stringBuilder.AppendLine(script.Name);
             }
-            _logger.LogInformation(Constants.BypassFiltersEventId, stringBuilder.ToString());
+            _logger.LogInformation(Constants.BypassFiltersEventId, "{Scripts}", stringBuilder.ToString());
             return true;
         }
 

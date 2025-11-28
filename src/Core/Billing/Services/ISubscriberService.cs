@@ -1,4 +1,8 @@
-﻿using Bit.Core.Billing.Models;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Stripe;
@@ -21,6 +25,19 @@ public interface ISubscriberService
         ISubscriber subscriber,
         OffboardingSurveyResponse offboardingSurveyResponse,
         bool cancelImmediately);
+
+    /// <summary>
+    /// Creates a Braintree <see cref="Braintree.Customer"/> for the provided <paramref name="subscriber"/> while attaching the provided <paramref name="paymentMethodNonce"/>.
+    /// </summary>
+    /// <param name="subscriber">The subscriber to create a Braintree customer for.</param>
+    /// <param name="paymentMethodNonce">A nonce representing the PayPal payment method the customer will use for payments.</param>
+    /// <returns>The <see cref="Braintree.Customer.Id"/> of the created Braintree customer.</returns>
+    Task<string> CreateBraintreeCustomer(
+        ISubscriber subscriber,
+        string paymentMethodNonce);
+
+    Task<Customer> CreateStripeCustomer(
+        ISubscriber subscriber);
 
     /// <summary>
     /// Retrieves a Stripe <see cref="Customer"/> using the <paramref name="subscriber"/>'s <see cref="ISubscriber.GatewayCustomerId"/> property.
@@ -131,13 +148,31 @@ public interface ISubscriberService
         TaxInformation taxInformation);
 
     /// <summary>
-    /// Verifies the subscriber's pending bank account using the provided <paramref name="microdeposits"/>.
+    /// Verifies the subscriber's pending bank account using the provided <paramref name="descriptorCode"/>.
     /// </summary>
     /// <param name="subscriber">The subscriber to verify the bank account for.</param>
-    /// <param name="microdeposits">Deposits made to the subscriber's bank account in order to ensure they have access to it.
+    /// <param name="descriptorCode">The code attached to a deposit made to the subscriber's bank account in order to ensure they have access to it.
     /// <a href="https://docs.stripe.com/payments/ach-debit/set-up-payment">Learn more.</a></param>
     /// <returns></returns>
     Task VerifyBankAccount(
         ISubscriber subscriber,
-        (long, long) microdeposits);
+        string descriptorCode);
+
+    /// <summary>
+    /// Validates whether the <paramref name="subscriber"/>'s <see cref="ISubscriber.GatewayCustomerId"/> exists in the gateway.
+    /// If the <paramref name="subscriber"/>'s <see cref="ISubscriber.GatewayCustomerId"/> is <see langword="null"/> or empty, returns <see langword="true"/>.
+    /// </summary>
+    /// <param name="subscriber">The subscriber whose gateway customer ID should be validated.</param>
+    /// <returns><see langword="true"/> if the gateway customer ID is valid or empty; <see langword="false"/> if the customer doesn't exist in the gateway.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when the <paramref name="subscriber"/> is <see langword="null"/>.</exception>
+    Task<bool> IsValidGatewayCustomerIdAsync(ISubscriber subscriber);
+
+    /// <summary>
+    /// Validates whether the <paramref name="subscriber"/>'s <see cref="ISubscriber.GatewaySubscriptionId"/> exists in the gateway.
+    /// If the <paramref name="subscriber"/>'s <see cref="ISubscriber.GatewaySubscriptionId"/> is <see langword="null"/> or empty, returns <see langword="true"/>.
+    /// </summary>
+    /// <param name="subscriber">The subscriber whose gateway subscription ID should be validated.</param>
+    /// <returns><see langword="true"/> if the gateway subscription ID is valid or empty; <see langword="false"/> if the subscription doesn't exist in the gateway.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when the <paramref name="subscriber"/> is <see langword="null"/>.</exception>
+    Task<bool> IsValidGatewaySubscriptionIdAsync(ISubscriber subscriber);
 }

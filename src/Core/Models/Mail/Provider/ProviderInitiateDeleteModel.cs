@@ -1,4 +1,7 @@
-﻿namespace Bit.Core.Models.Mail.Provider;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+namespace Bit.Core.Models.Mail.Provider;
 
 public class ProviderInitiateDeleteModel : BaseMailModel
 {
@@ -8,10 +11,8 @@ public class ProviderInitiateDeleteModel : BaseMailModel
         Token,
         ProviderNameUrlEncoded);
 
-    public string WebVaultUrl { get; set; }
     public string Token { get; set; }
     public Guid ProviderId { get; set; }
-    public string SiteName { get; set; }
     public string ProviderName { get; set; }
     public string ProviderNameUrlEncoded { get; set; }
     public string ProviderBillingEmail { get; set; }

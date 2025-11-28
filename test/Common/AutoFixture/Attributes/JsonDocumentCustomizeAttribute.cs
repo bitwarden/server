@@ -1,4 +1,7 @@
-﻿using AutoFixture;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using AutoFixture;
 using Bit.Test.Common.AutoFixture.JsonDocumentFixtures;
 
 namespace Bit.Test.Common.AutoFixture.Attributes;

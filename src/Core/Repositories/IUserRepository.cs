@@ -1,5 +1,5 @@
-﻿using Bit.Core.Auth.UserFeatures.UserKey;
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 
 #nullable enable
@@ -25,6 +25,16 @@ public interface IUserRepository : IRepository<User, Guid>
     /// </summary>
     Task<IEnumerable<UserWithCalculatedPremium>> GetManyWithCalculatedPremiumAsync(IEnumerable<Guid> ids);
     /// <summary>
+    /// Retrieves the data for the requested user ID and includes additional property indicating
+    /// whether the user has premium access directly or through an organization.
+    ///
+    /// Calls the same stored procedure as GetManyWithCalculatedPremiumAsync but handles the query
+    /// for a single user.
+    /// </summary>
+    /// <param name="userId">The user ID to retrieve data for.</param>
+    /// <returns>User data with calculated premium access; null if nothing is found</returns>
+    Task<UserWithCalculatedPremium?> GetCalculatedPremiumAsync(Guid userId);
+    /// <summary>
     /// Sets a new user key and updates all encrypted data.
     /// <para>Warning: Any user key encrypted data not included will be lost.</para>
     /// </summary>
@@ -32,4 +42,7 @@ public interface IUserRepository : IRepository<User, Guid>
     /// <param name="updateDataActions">Registered database calls to update re-encrypted data.</param>
     Task UpdateUserKeyAndEncryptedDataAsync(User user,
         IEnumerable<UpdateEncryptedDataForKeyRotation> updateDataActions);
+    Task UpdateUserKeyAndEncryptedDataV2Async(User user,
+        IEnumerable<UpdateEncryptedDataForKeyRotation> updateDataActions);
+    Task DeleteManyAsync(IEnumerable<User> users);
 }

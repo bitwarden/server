@@ -1,4 +1,5 @@
 ﻿using Bit.Core;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Context;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.SecretsManager.Repositories.Noop;
@@ -80,6 +81,7 @@ public class Startup
         services.AddBaseServices(globalSettings);
         services.AddDefaultServices(globalSettings);
         services.AddCoreLocalizationServices();
+        services.AddBillingOperations();
 
         // TODO: Remove when OrganizationUser methods are moved out of OrganizationService, this noop dependency should
         // TODO: no longer be required - see PM-1880
@@ -97,8 +99,6 @@ public class Startup
         {
             IdentityModelEventSource.ShowPII = true;
         }
-
-        app.UseSerilog(env, appLifetime, globalSettings);
 
         // Add general security headers
         app.UseMiddleware<SecurityHeadersMiddleware>();
@@ -155,6 +155,6 @@ public class Startup
         app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());
 
         // Log startup
-        logger.LogInformation(Constants.BypassFiltersEventId, globalSettings.ProjectName + " started.");
+        logger.LogInformation(Constants.BypassFiltersEventId, "{Project} started.", globalSettings.ProjectName);
     }
 }

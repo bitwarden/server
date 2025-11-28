@@ -10,7 +10,6 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
-using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
 using Xunit;
 
@@ -40,7 +39,7 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         await _factory.LoginWithNewAccount(_ownerEmail);
 
         // Create the organization
-        (_organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseAnnually2023,
+        (_organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseAnnually,
             ownerEmail: _ownerEmail, passwordManagerSeats: 10, paymentMethod: PaymentMethodType.Card);
 
         // Authorize with the organization api key
@@ -65,6 +64,17 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         var (userEmail4, orgUser4) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory, _organization.Id,
             OrganizationUserType.Admin);
 
+        var collection1 = await OrganizationTestHelpers.CreateCollectionAsync(_factory, _organization.Id, "Test Collection 1", users:
+        [
+            new CollectionAccessSelection { Id = orgUser1.Id, ReadOnly = false, HidePasswords = false, Manage = true },
+            new CollectionAccessSelection { Id = orgUser3.Id, ReadOnly = true, HidePasswords = false, Manage = false }
+        ]);
+
+        var collection2 = await OrganizationTestHelpers.CreateCollectionAsync(_factory, _organization.Id, "Test Collection 2", users:
+        [
+            new CollectionAccessSelection { Id = orgUser1.Id, ReadOnly = false, HidePasswords = true, Manage = false }
+        ]);
+
         var response = await _client.GetAsync($"/public/members");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var result = await response.Content.ReadFromJsonAsync<ListResponseModel<MemberResponseModel>>();
@@ -72,23 +82,47 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Equal(5, result.Data.Count());
 
         // The owner
-        Assert.NotNull(result.Data.SingleOrDefault(m =>
-            m.Email == _ownerEmail && m.Type == OrganizationUserType.Owner));
+        var ownerResult = result.Data.SingleOrDefault(m => m.Email == _ownerEmail && m.Type == OrganizationUserType.Owner);
+        Assert.NotNull(ownerResult);
+        Assert.Empty(ownerResult.Collections);
 
-        // The custom user
+        // The custom user with collections
         var user1Result = result.Data.Single(m => m.Email == userEmail1);
         Assert.Equal(OrganizationUserType.Custom, user1Result.Type);
         AssertHelper.AssertPropertyEqual(
             new PermissionsModel { AccessImportExport = true, ManagePolicies = true, AccessReports = true },
             user1Result.Permissions);
+        // Verify collections
+        Assert.NotNull(user1Result.Collections);
+        Assert.Equal(2, user1Result.Collections.Count());
+        var user1Collection1 = user1Result.Collections.Single(c => c.Id == collection1.Id);
+        Assert.False(user1Collection1.ReadOnly);
+        Assert.False(user1Collection1.HidePasswords);
+        Assert.True(user1Collection1.Manage);
+        var user1Collection2 = user1Result.Collections.Single(c => c.Id == collection2.Id);
+        Assert.False(user1Collection2.ReadOnly);
+        Assert.True(user1Collection2.HidePasswords);
+        Assert.False(user1Collection2.Manage);
 
-        // Everyone else
-        Assert.NotNull(result.Data.SingleOrDefault(m =>
-            m.Email == userEmail2 && m.Type == OrganizationUserType.Owner));
-        Assert.NotNull(result.Data.SingleOrDefault(m =>
-            m.Email == userEmail3 && m.Type == OrganizationUserType.User));
-        Assert.NotNull(result.Data.SingleOrDefault(m =>
-            m.Email == userEmail4 && m.Type == OrganizationUserType.Admin));
+        // The other owner
+        var user2Result = result.Data.SingleOrDefault(m => m.Email == userEmail2 && m.Type == OrganizationUserType.Owner);
+        Assert.NotNull(user2Result);
+        Assert.Empty(user2Result.Collections);
+
+        // The user with one collection
+        var user3Result = result.Data.SingleOrDefault(m => m.Email == userEmail3 && m.Type == OrganizationUserType.User);
+        Assert.NotNull(user3Result);
+        Assert.NotNull(user3Result.Collections);
+        Assert.Single(user3Result.Collections);
+        var user3Collection1 = user3Result.Collections.Single(c => c.Id == collection1.Id);
+        Assert.True(user3Collection1.ReadOnly);
+        Assert.False(user3Collection1.HidePasswords);
+        Assert.False(user3Collection1.Manage);
+
+        // The admin with no collections
+        var user4Result = result.Data.SingleOrDefault(m => m.Email == userEmail4 && m.Type == OrganizationUserType.Admin);
+        Assert.NotNull(user4Result);
+        Assert.Empty(user4Result.Collections);
     }
 
     [Fact]
@@ -107,26 +141,6 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Equal(OrganizationUserType.Custom, result.Type);
         AssertHelper.AssertPropertyEqual(new PermissionsModel { AccessReports = true, ManageScim = true },
             result.Permissions);
-    }
-
-    [Theory]
-    [BitAutoData(true, true)]
-    [BitAutoData(false, true)]
-    [BitAutoData(true, false)]
-    public async Task Get_CustomMember_WithDeprecatedPermissions_TreatsAsUser(bool editAssignedCollections, bool deleteAssignedCollections)
-    {
-        var (email, orgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory, _organization.Id,
-            OrganizationUserType.Custom, new Permissions { EditAssignedCollections = editAssignedCollections, DeleteAssignedCollections = deleteAssignedCollections });
-
-        var response = await _client.GetAsync($"/public/members/{orgUser.Id}");
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var result = await response.Content.ReadFromJsonAsync<MemberResponseModel>();
-        Assert.NotNull(result);
-        Assert.Equal(email, result.Email);
-
-        Assert.Equal(OrganizationUserType.User, result.Type);
-        Assert.Null(result.Permissions);
     }
 
     [Fact]

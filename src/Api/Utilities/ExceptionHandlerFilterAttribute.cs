@@ -1,4 +1,7 @@
-﻿using System.Text;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.Billing;
 using Bit.Core.Exceptions;
@@ -149,7 +152,7 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
         else
         {
             var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<ExceptionHandlerFilterAttribute>>();
-            logger.LogError(0, exception, exception.Message);
+            logger.LogError(0, exception, "Unhandled exception");
             errorMessage = "An unhandled server error has occurred.";
             context.HttpContext.Response.StatusCode = 500;
         }

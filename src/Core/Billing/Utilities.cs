@@ -1,4 +1,8 @@
-﻿using Bit.Core.Billing.Models;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Services;
 using Stripe;
 
@@ -7,6 +11,7 @@ namespace Bit.Core.Billing;
 public static class Utilities
 {
     public const string BraintreeCustomerIdKey = "btCustomerId";
+    public const string BraintreeCustomerIdOldKey = "btCustomerId_old";
 
     public static async Task<SubscriptionSuspension> GetSubscriptionSuspensionAsync(
         IStripeAdapter stripeAdapter,
@@ -82,6 +87,7 @@ public static class Utilities
             customer.Address.Country,
             customer.Address.PostalCode,
             customer.TaxIds?.FirstOrDefault()?.Value,
+            customer.TaxIds?.FirstOrDefault()?.Type,
             customer.Address.Line1,
             customer.Address.Line2,
             customer.Address.City,

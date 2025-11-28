@@ -1,4 +1,7 @@
-﻿using Microsoft.Data.SqlClient;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Microsoft.Data.SqlClient;
 
 namespace Bit.Setup;
 
@@ -49,6 +52,12 @@ public class EnvironmentFileBuilder
             _globalOverrideValues["globalSettings__pushRelayBaseUri"] == "REPLACE")
         {
             _globalOverrideValues.Remove("globalSettings__pushRelayBaseUri");
+        }
+
+        if (_globalOverrideValues.TryGetValue("globalSettings__baseServiceUri__vault", out var vaultUri) && vaultUri != _context.Config.Url)
+        {
+            _globalOverrideValues["globalSettings__baseServiceUri__vault"] = _context.Config.Url;
+            Helpers.WriteLine(_context, "Updated globalSettings__baseServiceUri__vault to match value in config.yml");
         }
 
         Build();

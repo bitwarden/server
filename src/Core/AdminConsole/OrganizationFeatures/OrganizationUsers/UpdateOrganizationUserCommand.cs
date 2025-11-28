@@ -1,6 +1,8 @@
 ﻿#nullable enable
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -22,6 +24,8 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly ICollectionRepository _collectionRepository;
     private readonly IGroupRepository _groupRepository;
+    private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
+    private readonly IPricingClient _pricingClient;
 
     public UpdateOrganizationUserCommand(
         IEventService eventService,
@@ -31,7 +35,9 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
         ICountNewSmSeatsRequiredQuery countNewSmSeatsRequiredQuery,
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
         ICollectionRepository collectionRepository,
-        IGroupRepository groupRepository)
+        IGroupRepository groupRepository,
+        IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
+        IPricingClient pricingClient)
     {
         _eventService = eventService;
         _organizationService = organizationService;
@@ -41,60 +47,73 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
         _collectionRepository = collectionRepository;
         _groupRepository = groupRepository;
+        _hasConfirmedOwnersExceptQuery = hasConfirmedOwnersExceptQuery;
+        _pricingClient = pricingClient;
     }
 
     /// <summary>
     /// Update an organization user.
     /// </summary>
-    /// <param name="user">The modified user to save.</param>
+    /// <param name="organizationUser">The modified organization user to save.</param>
+    /// <param name="existingUserType">The current type (member role) of the user.</param>
     /// <param name="savingUserId">The userId of the currently logged in user who is making the change.</param>
     /// <param name="collectionAccess">The user's updated collection access. If set to null, this removes all collection access.</param>
     /// <param name="groupAccess">The user's updated group access. If set to null, groups are not updated.</param>
     /// <exception cref="BadRequestException"></exception>
-    public async Task UpdateUserAsync(OrganizationUser user, Guid? savingUserId,
+    public async Task UpdateUserAsync(OrganizationUser organizationUser, OrganizationUserType existingUserType,
+        Guid? savingUserId,
         List<CollectionAccessSelection>? collectionAccess, IEnumerable<Guid>? groupAccess)
     {
         // Avoid multiple enumeration
-        collectionAccess = collectionAccess?.ToList();
+        var collectionAccessList = collectionAccess?.ToList() ?? [];
         groupAccess = groupAccess?.ToList();
 
-        if (user.Id.Equals(default(Guid)))
+        if (organizationUser.Id.Equals(Guid.Empty))
         {
             throw new BadRequestException("Invite the user first.");
         }
 
-        var originalUser = await _organizationUserRepository.GetByIdAsync(user.Id);
-        if (originalUser == null || user.OrganizationId != originalUser.OrganizationId)
+        var originalOrganizationUser = await _organizationUserRepository.GetByIdAsync(organizationUser.Id);
+        if (originalOrganizationUser == null || organizationUser.OrganizationId != originalOrganizationUser.OrganizationId)
         {
             throw new NotFoundException();
         }
 
-        if (collectionAccess?.Any() == true)
+        var organization = await _organizationRepository.GetByIdAsync(organizationUser.OrganizationId);
+        if (organization == null)
         {
-            await ValidateCollectionAccessAsync(originalUser, collectionAccess.ToList());
+            throw new NotFoundException();
+        }
+
+        await EnsureUserCannotBeAdminOrOwnerForMultipleFreeOrganizationAsync(organizationUser, existingUserType, organization);
+
+        if (collectionAccessList.Count != 0)
+        {
+            collectionAccessList = await ValidateAccessAndFilterDefaultUserCollectionsAsync(originalOrganizationUser, collectionAccessList);
         }
 
         if (groupAccess?.Any() == true)
         {
-            await ValidateGroupAccessAsync(originalUser, groupAccess.ToList());
+            await ValidateGroupAccessAsync(originalOrganizationUser, groupAccess.ToList());
         }
 
         if (savingUserId.HasValue)
         {
-            await _organizationService.ValidateOrganizationUserUpdatePermissions(user.OrganizationId, user.Type, originalUser.Type, user.GetPermissions());
+            await _organizationService.ValidateOrganizationUserUpdatePermissions(organizationUser.OrganizationId, organizationUser.Type, originalOrganizationUser.Type, organizationUser.GetPermissions());
         }
 
-        await _organizationService.ValidateOrganizationCustomPermissionsEnabledAsync(user.OrganizationId, user.Type);
+        await _organizationService.ValidateOrganizationCustomPermissionsEnabledAsync(organizationUser.OrganizationId, organizationUser.Type);
 
-        if (user.Type != OrganizationUserType.Owner &&
-            !await _organizationService.HasConfirmedOwnersExceptAsync(user.OrganizationId, new[] { user.Id }))
+        if (organizationUser.Type != OrganizationUserType.Owner &&
+            !await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(organizationUser.OrganizationId,
+                [organizationUser.Id]))
         {
             throw new BadRequestException("Organization must have at least one confirmed owner.");
         }
 
-        if (collectionAccess?.Count > 0)
+        if (collectionAccessList.Count > 0)
         {
-            var invalidAssociations = collectionAccess.Where(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords));
+            var invalidAssociations = collectionAccessList.Where(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords));
             if (invalidAssociations.Any())
             {
                 throw new BadRequestException("The Manage property is mutually exclusive and cannot be true while the ReadOnly or HidePasswords properties are also true.");
@@ -103,33 +122,76 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
 
         // Only autoscale (if required) after all validation has passed so that we know it's a valid request before
         // updating Stripe
-        if (!originalUser.AccessSecretsManager && user.AccessSecretsManager)
+        if (!originalOrganizationUser.AccessSecretsManager && organizationUser.AccessSecretsManager)
         {
-            var additionalSmSeatsRequired = await _countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(user.OrganizationId, 1);
+            var additionalSmSeatsRequired = await _countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(organizationUser.OrganizationId, 1);
             if (additionalSmSeatsRequired > 0)
             {
-                var organization = await _organizationRepository.GetByIdAsync(user.OrganizationId);
-                var update = new SecretsManagerSubscriptionUpdate(organization, true)
+                // TODO: https://bitwarden.atlassian.net/browse/PM-17012
+                var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
+                var update = new SecretsManagerSubscriptionUpdate(organization, plan, true)
                     .AdjustSeats(additionalSmSeatsRequired);
                 await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(update);
             }
         }
 
-        await _organizationUserRepository.ReplaceAsync(user, collectionAccess);
+        await _organizationUserRepository.ReplaceAsync(organizationUser, collectionAccessList);
 
         if (groupAccess != null)
         {
-            await _organizationUserRepository.UpdateGroupsAsync(user.Id, groupAccess);
+            await _organizationUserRepository.UpdateGroupsAsync(organizationUser.Id, groupAccess);
         }
 
-        await _eventService.LogOrganizationUserEventAsync(user, EventType.OrganizationUser_Updated);
+        await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Updated);
     }
 
-    private async Task ValidateCollectionAccessAsync(OrganizationUser originalUser,
-        ICollection<CollectionAccessSelection> collectionAccess)
+    private async Task EnsureUserCannotBeAdminOrOwnerForMultipleFreeOrganizationAsync(OrganizationUser updatedOrgUser, OrganizationUserType existingUserType, Entities.Organization organization)
+    {
+
+        if (organization.PlanType != PlanType.Free)
+        {
+            return;
+        }
+        if (!updatedOrgUser.UserId.HasValue)
+        {
+            return;
+        }
+        if (updatedOrgUser.Type is not (OrganizationUserType.Admin or OrganizationUserType.Owner))
+        {
+            return;
+        }
+
+        // Since free organizations only supports a few users there is not much point in avoiding N+1 queries for this.
+        var adminCount = await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(updatedOrgUser.UserId!.Value);
+
+        var isCurrentAdminOrOwner = existingUserType is OrganizationUserType.Admin or OrganizationUserType.Owner;
+
+        if (isCurrentAdminOrOwner && adminCount <= 1)
+        {
+            return;
+        }
+
+        if (!isCurrentAdminOrOwner && adminCount == 0)
+        {
+            return;
+        }
+
+        throw new BadRequestException("User can only be an admin of one free organization.");
+    }
+
+    private async Task<List<CollectionAccessSelection>> ValidateAccessAndFilterDefaultUserCollectionsAsync(
+        OrganizationUser originalUser, List<CollectionAccessSelection> collectionAccess)
     {
         var collections = await _collectionRepository
             .GetManyByManyIdsAsync(collectionAccess.Select(c => c.Id));
+
+        ValidateCollections(originalUser, collectionAccess, collections);
+
+        return ExcludeDefaultUserCollections(collectionAccess, collections);
+    }
+
+    private static void ValidateCollections(OrganizationUser originalUser, List<CollectionAccessSelection> collectionAccess, ICollection<Collection> collections)
+    {
         var collectionIds = collections.Select(c => c.Id);
 
         var missingCollection = collectionAccess
@@ -146,6 +208,12 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
             throw new NotFoundException();
         }
     }
+
+    private static List<CollectionAccessSelection> ExcludeDefaultUserCollections(
+        List<CollectionAccessSelection> collectionAccess, ICollection<Collection> collections) =>
+            collectionAccess
+                .Where(cas => collections.Any(c => c.Id == cas.Id && c.Type != CollectionType.DefaultUserCollection))
+                .ToList();
 
     private async Task ValidateGroupAccessAsync(OrganizationUser originalUser,
         ICollection<Guid> groupAccess)

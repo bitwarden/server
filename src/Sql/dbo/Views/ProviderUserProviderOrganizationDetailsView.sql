@@ -1,4 +1,4 @@
-﻿CREATE VIEW [dbo].[ProviderUserProviderOrganizationDetailsView]
+CREATE VIEW [dbo].[ProviderUserProviderOrganizationDetailsView]
 AS
 SELECT
     PU.[UserId],
@@ -16,12 +16,14 @@ SELECT
     O.[Use2fa],
     O.[UseApi],
     O.[UseResetPassword],
+    O.[UseSecretsManager],
+    O.[UsePasswordManager],
     O.[SelfHost],
     O.[UsersGetPremium],
     O.[UseCustomPermissions],
     O.[Seats],
     O.[MaxCollections],
-    O.[MaxStorageGb],
+    COALESCE(O.[MaxStorageGbIncreased], O.[MaxStorageGb]) AS [MaxStorageGb],
     O.[Identifier],
     PO.[Key],
     O.[PublicKey],
@@ -32,8 +34,17 @@ SELECT
     PU.[Id] ProviderUserId,
     P.[Name] ProviderName,
     O.[PlanType],
-    O.[LimitCollectionCreationDeletion],
-    O.[AllowAdminAccessToAllCollectionItems]
+    O.[LimitCollectionCreation],
+    O.[LimitCollectionDeletion],
+    O.[AllowAdminAccessToAllCollectionItems],
+    O.[UseRiskInsights],
+    O.[UseAdminSponsoredFamilies],
+    P.[Type] ProviderType,
+    O.[LimitItemDeletion],
+    O.[UseOrganizationDomains],
+    O.[UseAutomaticUserConfirmation],
+    SS.[Enabled] SsoEnabled,
+    SS.[Data] SsoConfig
 FROM
     [dbo].[ProviderUser] PU
 INNER JOIN
@@ -42,3 +53,5 @@ INNER JOIN
     [dbo].[Organization] O ON O.[Id] = PO.[OrganizationId]
 INNER JOIN
     [dbo].[Provider] P ON P.[Id] = PU.[ProviderId]
+LEFT JOIN
+    [dbo].[SsoConfig] SS ON SS.[OrganizationId] = O.[Id]

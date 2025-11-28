@@ -1,6 +1,7 @@
 ﻿using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
-using Bit.Core;
+using Bit.Core.Billing.Organizations.Services;
+using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Repositories;
@@ -14,17 +15,18 @@ namespace Bit.Api.Billing.Controllers;
 [Route("organizations/{organizationId:guid}/billing")]
 [Authorize("Application")]
 public class OrganizationBillingController(
+    IBusinessUnitConverter businessUnitConverter,
     ICurrentContext currentContext,
-    IFeatureService featureService,
     IOrganizationBillingService organizationBillingService,
     IOrganizationRepository organizationRepository,
     IPaymentService paymentService,
-    ISubscriberService subscriberService) : BaseBillingController
+    ISubscriberService subscriberService,
+    IPaymentHistoryService paymentHistoryService) : BaseBillingController
 {
     [HttpGet("metadata")]
     public async Task<IResult> GetMetadataAsync([FromRoute] Guid organizationId)
     {
-        if (!await currentContext.AccessMembersTab(organizationId))
+        if (!await currentContext.OrganizationUser(organizationId))
         {
             return Error.Unauthorized();
         }
@@ -36,9 +38,7 @@ public class OrganizationBillingController(
             return Error.NotFound();
         }
 
-        var response = OrganizationMetadataResponse.From(metadata);
-
-        return TypedResults.Ok(response);
+        return TypedResults.Ok(metadata);
     }
 
     [HttpGet("history")]
@@ -59,6 +59,53 @@ public class OrganizationBillingController(
         var billingInfo = await paymentService.GetBillingHistoryAsync(organization);
 
         return TypedResults.Ok(billingInfo);
+    }
+
+    [HttpGet("invoices")]
+    public async Task<IResult> GetInvoicesAsync([FromRoute] Guid organizationId, [FromQuery] string? status = null, [FromQuery] string? startAfter = null)
+    {
+        if (!await currentContext.ViewBillingHistory(organizationId))
+        {
+            return TypedResults.Unauthorized();
+        }
+
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
+
+        if (organization == null)
+        {
+            return TypedResults.NotFound();
+        }
+
+        var invoices = await paymentHistoryService.GetInvoiceHistoryAsync(
+            organization,
+            5,
+            status,
+            startAfter);
+
+        return TypedResults.Ok(invoices);
+    }
+
+    [HttpGet("transactions")]
+    public async Task<IResult> GetTransactionsAsync([FromRoute] Guid organizationId, [FromQuery] DateTime? startAfter = null)
+    {
+        if (!await currentContext.ViewBillingHistory(organizationId))
+        {
+            return TypedResults.Unauthorized();
+        }
+
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
+
+        if (organization == null)
+        {
+            return TypedResults.NotFound();
+        }
+
+        var transactions = await paymentHistoryService.GetTransactionHistoryAsync(
+            organization,
+            5,
+            startAfter);
+
+        return TypedResults.Ok(transactions);
     }
 
     [HttpGet]
@@ -87,11 +134,6 @@ public class OrganizationBillingController(
     [HttpGet("payment-method")]
     public async Task<IResult> GetPaymentMethodAsync([FromRoute] Guid organizationId)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.AC2476_DeprecateStripeSourcesAPI))
-        {
-            return Error.NotFound();
-        }
-
         if (!await currentContext.EditPaymentMethods(organizationId))
         {
             return Error.Unauthorized();
@@ -116,11 +158,6 @@ public class OrganizationBillingController(
         [FromRoute] Guid organizationId,
         [FromBody] UpdatePaymentMethodRequestBody requestBody)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.AC2476_DeprecateStripeSourcesAPI))
-        {
-            return Error.NotFound();
-        }
-
         if (!await currentContext.EditPaymentMethods(organizationId))
         {
             return Error.Unauthorized();
@@ -135,11 +172,9 @@ public class OrganizationBillingController(
 
         var tokenizedPaymentSource = requestBody.PaymentSource.ToDomain();
 
-        await subscriberService.UpdatePaymentSource(organization, tokenizedPaymentSource);
-
         var taxInformation = requestBody.TaxInformation.ToDomain();
 
-        await subscriberService.UpdateTaxInformation(organization, taxInformation);
+        await organizationBillingService.UpdatePaymentMethod(organization, tokenizedPaymentSource, taxInformation);
 
         return TypedResults.Ok();
     }
@@ -149,14 +184,14 @@ public class OrganizationBillingController(
         [FromRoute] Guid organizationId,
         [FromBody] VerifyBankAccountRequestBody requestBody)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.AC2476_DeprecateStripeSourcesAPI))
-        {
-            return Error.NotFound();
-        }
-
         if (!await currentContext.EditPaymentMethods(organizationId))
         {
             return Error.Unauthorized();
+        }
+
+        if (requestBody.DescriptorCode.Length != 6 || !requestBody.DescriptorCode.StartsWith("SM"))
+        {
+            return Error.BadRequest("Statement descriptor should be a 6-character value that starts with 'SM'");
         }
 
         var organization = await organizationRepository.GetByIdAsync(organizationId);
@@ -166,7 +201,7 @@ public class OrganizationBillingController(
             return Error.NotFound();
         }
 
-        await subscriberService.VerifyBankAccount(organization, (requestBody.Amount1, requestBody.Amount2));
+        await subscriberService.VerifyBankAccount(organization, requestBody.DescriptorCode);
 
         return TypedResults.Ok();
     }
@@ -174,11 +209,6 @@ public class OrganizationBillingController(
     [HttpGet("tax-information")]
     public async Task<IResult> GetTaxInformationAsync([FromRoute] Guid organizationId)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.AC2476_DeprecateStripeSourcesAPI))
-        {
-            return Error.NotFound();
-        }
-
         if (!await currentContext.EditPaymentMethods(organizationId))
         {
             return Error.Unauthorized();
@@ -203,11 +233,6 @@ public class OrganizationBillingController(
         [FromRoute] Guid organizationId,
         [FromBody] TaxInformationRequestBody requestBody)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.AC2476_DeprecateStripeSourcesAPI))
-        {
-            return Error.NotFound();
-        }
-
         if (!await currentContext.EditPaymentMethods(organizationId))
         {
             return Error.Unauthorized();
@@ -223,6 +248,64 @@ public class OrganizationBillingController(
         var taxInformation = requestBody.ToDomain();
 
         await subscriberService.UpdateTaxInformation(organization, taxInformation);
+
+        return TypedResults.Ok();
+    }
+
+    [HttpPost("setup-business-unit")]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public async Task<IResult> SetupBusinessUnitAsync(
+        [FromRoute] Guid organizationId,
+        [FromBody] SetupBusinessUnitRequestBody requestBody)
+    {
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
+
+        if (organization == null)
+        {
+            return Error.NotFound();
+        }
+
+        if (!await currentContext.OrganizationUser(organizationId))
+        {
+            return Error.Unauthorized();
+        }
+
+        var providerId = await businessUnitConverter.FinalizeConversion(
+            organization,
+            requestBody.UserId,
+            requestBody.Token,
+            requestBody.ProviderKey,
+            requestBody.OrganizationKey);
+
+        return TypedResults.Ok(providerId);
+    }
+
+    [HttpPost("change-frequency")]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public async Task<IResult> ChangePlanSubscriptionFrequencyAsync(
+        [FromRoute] Guid organizationId,
+        [FromBody] ChangePlanFrequencyRequest request)
+    {
+        if (!await currentContext.EditSubscription(organizationId))
+        {
+            return Error.Unauthorized();
+        }
+
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
+
+        if (organization == null)
+        {
+            return Error.NotFound();
+        }
+
+        if (organization.PlanType == request.NewPlanType)
+        {
+            return Error.BadRequest("Organization is already on the requested plan frequency.");
+        }
+
+        await organizationBillingService.UpdateSubscriptionPlanFrequency(
+            organization,
+            request.NewPlanType);
 
         return TypedResults.Ok();
     }

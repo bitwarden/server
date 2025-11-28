@@ -45,11 +45,11 @@ BEGIN
         [OrganizationId] = @Id
 
     DELETE CU
-    FROM 
+    FROM
         [dbo].[CollectionUser] CU
-    INNER JOIN 
+    INNER JOIN
         [dbo].[OrganizationUser] OU ON [CU].[OrganizationUserId] = [OU].[Id]
-    WHERE 
+    WHERE
         [OU].[OrganizationId] = @Id
 
     DELETE AP
@@ -69,9 +69,9 @@ BEGIN
         [OU].[OrganizationId] = @Id
 
     DELETE
-    FROM 
+    FROM
         [dbo].[OrganizationUser]
-    WHERE 
+    WHERE
         [OrganizationId] = @Id
 
     DELETE
@@ -84,6 +84,7 @@ BEGIN
     EXEC [dbo].[OrganizationConnection_OrganizationDeleted] @Id
     EXEC [dbo].[OrganizationSponsorship_OrganizationDeleted] @Id
     EXEC [dbo].[OrganizationDomain_OrganizationDeleted] @Id
+    EXEC [dbo].[OrganizationIntegration_OrganizationDeleted] @Id
 
     DELETE
     FROM
@@ -116,6 +117,37 @@ BEGIN
     DELETE
     FROM
         [dbo].[ServiceAccount]
+    WHERE
+        [OrganizationId] = @Id
+
+    -- Delete Notification Status
+    DELETE
+        NS
+    FROM
+        [dbo].[NotificationStatus] NS
+    INNER JOIN
+        [dbo].[Notification] N ON N.[Id] = NS.[NotificationId]
+    WHERE
+        N.[OrganizationId] = @Id
+
+    -- Delete Notification
+    DELETE
+    FROM
+        [dbo].[Notification]
+    WHERE
+        [OrganizationId] = @Id
+
+    -- Delete Organization Application
+    DELETE
+    FROM
+        [dbo].[OrganizationApplication]
+    WHERE
+        [OrganizationId] = @Id
+
+    -- Delete Organization Report
+    DELETE
+    FROM
+        [dbo].[OrganizationReport]
     WHERE
         [OrganizationId] = @Id
 

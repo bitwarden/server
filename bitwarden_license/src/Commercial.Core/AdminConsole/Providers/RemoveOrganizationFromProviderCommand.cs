@@ -1,17 +1,20 @@
-﻿using Bit.Core;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
-using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
 using Stripe;
 
 namespace Bit.Commercial.Core.AdminConsole.Providers;
@@ -21,33 +24,36 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
     private readonly IEventService _eventService;
     private readonly IMailService _mailService;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IOrganizationService _organizationService;
     private readonly IProviderOrganizationRepository _providerOrganizationRepository;
     private readonly IStripeAdapter _stripeAdapter;
     private readonly IFeatureService _featureService;
     private readonly IProviderBillingService _providerBillingService;
     private readonly ISubscriberService _subscriberService;
+    private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
+    private readonly IPricingClient _pricingClient;
 
     public RemoveOrganizationFromProviderCommand(
         IEventService eventService,
         IMailService mailService,
         IOrganizationRepository organizationRepository,
-        IOrganizationService organizationService,
         IProviderOrganizationRepository providerOrganizationRepository,
         IStripeAdapter stripeAdapter,
         IFeatureService featureService,
         IProviderBillingService providerBillingService,
-        ISubscriberService subscriberService)
+        ISubscriberService subscriberService,
+        IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
+        IPricingClient pricingClient)
     {
         _eventService = eventService;
         _mailService = mailService;
         _organizationRepository = organizationRepository;
-        _organizationService = organizationService;
         _providerOrganizationRepository = providerOrganizationRepository;
         _stripeAdapter = stripeAdapter;
         _featureService = featureService;
         _providerBillingService = providerBillingService;
         _subscriberService = subscriberService;
+        _hasConfirmedOwnersExceptQuery = hasConfirmedOwnersExceptQuery;
+        _pricingClient = pricingClient;
     }
 
     public async Task RemoveOrganizationFromProvider(
@@ -63,9 +69,9 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
             throw new BadRequestException("Failed to remove organization. Please contact support.");
         }
 
-        if (!await _organizationService.HasConfirmedOwnersExceptAsync(
+        if (!await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(
                 providerOrganization.OrganizationId,
-                Array.Empty<Guid>(),
+                [],
                 includeProvider: false))
         {
             throw new BadRequestException("Organization must have at least one confirmed owner.");
@@ -90,7 +96,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
     /// <summary>
     /// When a client organization is unlinked from a provider, we have to check if they're Stripe-enabled
     /// and, if they are, we remove their MSP discount and set their Subscription to `send_invoice`. This is because
-    /// the provider's payment method will be removed from their Stripe customer causing ensuing charges to fail. Lastly,
+    /// the provider's payment method will be removed from their Stripe customer, causing ensuing charges to fail. Lastly,
     /// we email the organization owners letting them know they need to add a new payment method.
     /// </summary>
     private async Task ResetOrganizationBillingAsync(
@@ -98,61 +104,74 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         Provider provider,
         IEnumerable<string> organizationOwnerEmails)
     {
-        var isConsolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
-
-        if (isConsolidatedBillingEnabled &&
-            provider.Status == ProviderStatusType.Billable &&
-            organization.Status == OrganizationStatusType.Managed &&
-            !string.IsNullOrEmpty(organization.GatewayCustomerId))
+        if (provider.IsBillable() &&
+            organization.IsValidClient())
         {
-            await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, new CustomerUpdateOptions
+            // An organization converted to a business unit will not have a Customer since it was given to the business unit.
+            if (string.IsNullOrEmpty(organization.GatewayCustomerId))
+            {
+                await _providerBillingService.CreateCustomerForClientOrganization(provider, organization);
+            }
+
+            var customer = await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, new CustomerUpdateOptions
             {
                 Description = string.Empty,
-                Email = organization.BillingEmail
+                Email = organization.BillingEmail,
+                Expand = ["tax", "tax_ids"]
             });
 
-            var plan = StaticStore.GetPlan(organization.PlanType).PasswordManager;
+            var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
 
             var subscriptionCreateOptions = new SubscriptionCreateOptions
             {
                 Customer = organization.GatewayCustomerId,
                 CollectionMethod = StripeConstants.CollectionMethod.SendInvoice,
                 DaysUntilDue = 30,
-                AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true },
                 Metadata = new Dictionary<string, string>
                 {
                     { "organizationId", organization.Id.ToString() }
                 },
                 OffSession = true,
                 ProrationBehavior = StripeConstants.ProrationBehavior.CreateProrations,
-                Items = [new SubscriptionItemOptions { Price = plan.StripeSeatPlanId, Quantity = organization.Seats }]
+                Items = [new SubscriptionItemOptions { Price = plan.PasswordManager.StripeSeatPlanId, Quantity = organization.Seats }]
             };
+
+            subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
 
             var subscription = await _stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
 
             organization.GatewaySubscriptionId = subscription.Id;
             organization.Status = OrganizationStatusType.Created;
+            organization.Enabled = true;
 
             await _providerBillingService.ScaleSeats(provider, organization.PlanType, -organization.Seats ?? 0);
         }
         else if (organization.IsStripeEnabled())
         {
-            var subscription = await _stripeAdapter.SubscriptionGetAsync(organization.GatewaySubscriptionId);
+            var subscription = await _stripeAdapter.SubscriptionGetAsync(organization.GatewaySubscriptionId, new SubscriptionGetOptions
+            {
+                Expand = ["customer"]
+            });
+
             if (subscription.Status is StripeConstants.SubscriptionStatus.Canceled or StripeConstants.SubscriptionStatus.IncompleteExpired)
             {
                 return;
             }
 
-            await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, new CustomerUpdateOptions
+            await _stripeAdapter.CustomerUpdateAsync(subscription.CustomerId, new CustomerUpdateOptions
             {
-                Coupon = string.Empty,
                 Email = organization.BillingEmail
             });
+
+            if (subscription.Customer.Discount?.Coupon != null)
+            {
+                await _stripeAdapter.CustomerDeleteDiscountAsync(subscription.CustomerId);
+            }
 
             await _stripeAdapter.SubscriptionUpdateAsync(organization.GatewaySubscriptionId, new SubscriptionUpdateOptions
             {
                 CollectionMethod = StripeConstants.CollectionMethod.SendInvoice,
-                DaysUntilDue = 30
+                DaysUntilDue = 30,
             });
 
             await _subscriberService.RemovePaymentSource(organization);
@@ -161,7 +180,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         await _mailService.SendProviderUpdatePaymentMethod(
             organization.Id,
             organization.Name,
-            provider.Name,
+            provider.Name!,
             organizationOwnerEmails);
     }
 }

@@ -18,8 +18,6 @@ public class OrganizationTwoFactorDuoRequestModelTests
         {
             ClientId = "clientId",
             ClientSecret = "clientSecret",
-            IntegrationKey = "integrationKey",
-            SecretKey = "secretKey",
             Host = "example.com"
         };
 
@@ -30,8 +28,6 @@ public class OrganizationTwoFactorDuoRequestModelTests
         Assert.True(result.GetTwoFactorProviders().ContainsKey(TwoFactorProviderType.OrganizationDuo));
         Assert.Equal("clientId", result.GetTwoFactorProviders()[TwoFactorProviderType.OrganizationDuo].MetaData["ClientId"]);
         Assert.Equal("clientSecret", result.GetTwoFactorProviders()[TwoFactorProviderType.OrganizationDuo].MetaData["ClientSecret"]);
-        Assert.Equal("clientId", result.GetTwoFactorProviders()[TwoFactorProviderType.OrganizationDuo].MetaData["IKey"]);
-        Assert.Equal("clientSecret", result.GetTwoFactorProviders()[TwoFactorProviderType.OrganizationDuo].MetaData["SKey"]);
         Assert.Equal("example.com", result.GetTwoFactorProviders()[TwoFactorProviderType.OrganizationDuo].MetaData["Host"]);
         Assert.True(result.GetTwoFactorProviders()[TwoFactorProviderType.OrganizationDuo].Enabled);
     }
@@ -49,8 +45,6 @@ public class OrganizationTwoFactorDuoRequestModelTests
         {
             ClientId = "newClientId",
             ClientSecret = "newClientSecret",
-            IntegrationKey = "newIntegrationKey",
-            SecretKey = "newSecretKey",
             Host = "newExample.com"
         };
 
@@ -61,61 +55,7 @@ public class OrganizationTwoFactorDuoRequestModelTests
         Assert.True(result.GetTwoFactorProviders().ContainsKey(TwoFactorProviderType.OrganizationDuo));
         Assert.Equal("newClientId", result.GetTwoFactorProviders()[TwoFactorProviderType.OrganizationDuo].MetaData["ClientId"]);
         Assert.Equal("newClientSecret", result.GetTwoFactorProviders()[TwoFactorProviderType.OrganizationDuo].MetaData["ClientSecret"]);
-        Assert.Equal("newClientId", result.GetTwoFactorProviders()[TwoFactorProviderType.OrganizationDuo].MetaData["IKey"]);
-        Assert.Equal("newClientSecret", result.GetTwoFactorProviders()[TwoFactorProviderType.OrganizationDuo].MetaData["SKey"]);
         Assert.Equal("newExample.com", result.GetTwoFactorProviders()[TwoFactorProviderType.OrganizationDuo].MetaData["Host"]);
-        Assert.True(result.GetTwoFactorProviders()[TwoFactorProviderType.OrganizationDuo].Enabled);
-    }
-
-    [Fact]
-    public void DuoV2ParamsSync_WhenExistingProviderDoesNotExist()
-    {
-        // Arrange
-        var existingOrg = new Organization();
-        var model = new UpdateTwoFactorDuoRequestModel
-        {
-            IntegrationKey = "integrationKey",
-            SecretKey = "secretKey",
-            Host = "example.com"
-        };
-
-        // Act
-        var result = model.ToOrganization(existingOrg);
-
-        // Assert
-        // IKey and SKey should be the same as ClientId and ClientSecret
-        Assert.True(result.GetTwoFactorProviders().ContainsKey(TwoFactorProviderType.OrganizationDuo));
-        Assert.Equal("integrationKey", result.GetTwoFactorProviders()[TwoFactorProviderType.OrganizationDuo].MetaData["ClientId"]);
-        Assert.Equal("secretKey", result.GetTwoFactorProviders()[TwoFactorProviderType.OrganizationDuo].MetaData["ClientSecret"]);
-        Assert.Equal("integrationKey", result.GetTwoFactorProviders()[TwoFactorProviderType.OrganizationDuo].MetaData["IKey"]);
-        Assert.Equal("secretKey", result.GetTwoFactorProviders()[TwoFactorProviderType.OrganizationDuo].MetaData["SKey"]);
-        Assert.Equal("example.com", result.GetTwoFactorProviders()[TwoFactorProviderType.OrganizationDuo].MetaData["Host"]);
-        Assert.True(result.GetTwoFactorProviders()[TwoFactorProviderType.OrganizationDuo].Enabled);
-    }
-
-    [Fact]
-    public void DuoV4ParamsSync_WhenExistingProviderDoesNotExist()
-    {
-        // Arrange
-        var existingOrg = new Organization();
-        var model = new UpdateTwoFactorDuoRequestModel
-        {
-            ClientId = "clientId",
-            ClientSecret = "clientSecret",
-            Host = "example.com"
-        };
-
-        // Act
-        var result = model.ToOrganization(existingOrg);
-
-        // Assert
-        // IKey and SKey should be the same as ClientId and ClientSecret
-        Assert.True(result.GetTwoFactorProviders().ContainsKey(TwoFactorProviderType.OrganizationDuo));
-        Assert.Equal("clientId", result.GetTwoFactorProviders()[TwoFactorProviderType.OrganizationDuo].MetaData["ClientId"]);
-        Assert.Equal("clientSecret", result.GetTwoFactorProviders()[TwoFactorProviderType.OrganizationDuo].MetaData["ClientSecret"]);
-        Assert.Equal("clientId", result.GetTwoFactorProviders()[TwoFactorProviderType.OrganizationDuo].MetaData["IKey"]);
-        Assert.Equal("clientSecret", result.GetTwoFactorProviders()[TwoFactorProviderType.OrganizationDuo].MetaData["SKey"]);
-        Assert.Equal("example.com", result.GetTwoFactorProviders()[TwoFactorProviderType.OrganizationDuo].MetaData["Host"]);
         Assert.True(result.GetTwoFactorProviders()[TwoFactorProviderType.OrganizationDuo].Enabled);
     }
 }

@@ -1,4 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using Bit.Api.Utilities;
 using Bit.Core.Billing.Enums;
 
@@ -12,7 +15,7 @@ public class CreateClientOrganizationRequestBody
     [Required(ErrorMessage = "'ownerEmail' must be provided")]
     public string OwnerEmail { get; set; }
 
-    [EnumMatches<PlanType>(PlanType.TeamsMonthly, PlanType.EnterpriseMonthly, ErrorMessage = "'planType' must be Teams (Monthly) or Enterprise (Monthly)")]
+    [EnumMatches<PlanType>(PlanType.TeamsMonthly, PlanType.EnterpriseMonthly, PlanType.EnterpriseAnnually, ErrorMessage = "'planType' must be Teams (Monthly), Enterprise (Monthly) or Enterprise (Annually)")]
     public PlanType PlanType { get; set; }
 
     [Range(1, int.MaxValue, ErrorMessage = "'seats' must be greater than 0")]

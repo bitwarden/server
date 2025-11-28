@@ -1,4 +1,3 @@
----
 name: Staleness
 on:
   workflow_dispatch:
@@ -9,9 +8,14 @@ jobs:
   stale:
     name: Check for stale issues and PRs
     runs-on: ubuntu-22.04
+    permissions:
+      actions: write
+      contents: read
+      issues: write
+      pull-requests: write
     steps:
       - name: Check
-        uses: actions/stale@28ca1036281a5e5922ead5184a1bbf96e5fc984e # v9.0.0
+        uses: actions/stale@5bef64f19d7facfb25b37b414482c7164d639639 # v9.1.0
         with:
           stale-issue-label: "needs-reply"
           stale-pr-label: "needs-changes"

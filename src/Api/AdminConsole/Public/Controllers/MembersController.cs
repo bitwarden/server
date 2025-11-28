@@ -2,12 +2,11 @@
 using Bit.Api.AdminConsole.Public.Models.Request;
 using Bit.Api.AdminConsole.Public.Models.Response;
 using Bit.Api.Models.Public.Response;
-using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Context;
-using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -22,42 +21,39 @@ public class MembersController : Controller
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IGroupRepository _groupRepository;
     private readonly IOrganizationService _organizationService;
-    private readonly IUserService _userService;
     private readonly ICurrentContext _currentContext;
     private readonly IUpdateOrganizationUserCommand _updateOrganizationUserCommand;
     private readonly IUpdateOrganizationUserGroupsCommand _updateOrganizationUserGroupsCommand;
-    private readonly IApplicationCacheService _applicationCacheService;
     private readonly IPaymentService _paymentService;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IFeatureService _featureService;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
+    private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
+    private readonly IResendOrganizationInviteCommand _resendOrganizationInviteCommand;
 
     public MembersController(
         IOrganizationUserRepository organizationUserRepository,
         IGroupRepository groupRepository,
         IOrganizationService organizationService,
-        IUserService userService,
         ICurrentContext currentContext,
         IUpdateOrganizationUserCommand updateOrganizationUserCommand,
         IUpdateOrganizationUserGroupsCommand updateOrganizationUserGroupsCommand,
-        IApplicationCacheService applicationCacheService,
         IPaymentService paymentService,
         IOrganizationRepository organizationRepository,
-        IFeatureService featureService,
-        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery)
+        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
+        IRemoveOrganizationUserCommand removeOrganizationUserCommand,
+        IResendOrganizationInviteCommand resendOrganizationInviteCommand)
     {
         _organizationUserRepository = organizationUserRepository;
         _groupRepository = groupRepository;
         _organizationService = organizationService;
-        _userService = userService;
         _currentContext = currentContext;
         _updateOrganizationUserCommand = updateOrganizationUserCommand;
         _updateOrganizationUserGroupsCommand = updateOrganizationUserGroupsCommand;
-        _applicationCacheService = applicationCacheService;
         _paymentService = paymentService;
         _organizationRepository = organizationRepository;
-        _featureService = featureService;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
+        _removeOrganizationUserCommand = removeOrganizationUserCommand;
+        _resendOrganizationInviteCommand = resendOrganizationInviteCommand;
     }
 
     /// <summary>
@@ -73,14 +69,13 @@ public class MembersController : Controller
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
     public async Task<IActionResult> Get(Guid id)
     {
-        var userDetails = await _organizationUserRepository.GetDetailsByIdWithCollectionsAsync(id);
-        var orgUser = userDetails?.Item1;
+        var (orgUser, collections) = await _organizationUserRepository.GetDetailsByIdWithCollectionsAsync(id);
         if (orgUser == null || orgUser.OrganizationId != _currentContext.OrganizationId)
         {
             return new NotFoundResult();
         }
-        var response = new MemberResponseModel(orgUser, await _userService.TwoFactorIsEnabledAsync(orgUser),
-            userDetails.Item2);
+        var response = new MemberResponseModel(orgUser, await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(orgUser),
+            collections);
         return new JsonResult(response);
     }
 
@@ -111,25 +106,19 @@ public class MembersController : Controller
     /// </summary>
     /// <remarks>
     /// Returns a list of your organization's members.
-    /// Member objects listed in this call do not include information about their associated collections.
+    /// Member objects listed in this call include information about their associated collections.
     /// </remarks>
     [HttpGet]
     [ProducesResponseType(typeof(ListResponseModel<MemberResponseModel>), (int)HttpStatusCode.OK)]
     public async Task<IActionResult> List()
     {
-        var organizationUserUserDetails = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(_currentContext.OrganizationId.Value);
-        // TODO: Get all CollectionUser associations for the organization and marry them up here for the response.
+        var organizationUserUserDetails = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(_currentContext.OrganizationId!.Value, includeCollections: true);
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization))
+        var orgUsersTwoFactorIsEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(organizationUserUserDetails);
+        var memberResponses = organizationUserUserDetails.Select(u =>
         {
-            return await List_vNext(organizationUserUserDetails);
-        }
-
-        var memberResponsesTasks = organizationUserUserDetails.Select(async u =>
-        {
-            return new MemberResponseModel(u, await _userService.TwoFactorIsEnabledAsync(u), null);
+            return new MemberResponseModel(u, orgUsersTwoFactorIsEnabled.FirstOrDefault(tuple => tuple.user == u).twoFactorIsEnabled, u.Collections);
         });
-        var memberResponses = await Task.WhenAll(memberResponsesTasks);
         var response = new ListResponseModel<MemberResponseModel>(memberResponses);
         return new JsonResult(response);
     }
@@ -159,7 +148,7 @@ public class MembersController : Controller
 
         invite.AccessSecretsManager = hasStandaloneSecretsManager;
 
-        var user = await _organizationService.InviteUserAsync(_currentContext.OrganizationId.Value, null,
+        var user = await _organizationService.InviteUserAsync(_currentContext.OrganizationId!.Value, null,
             systemUser: null, invite, model.ExternalId);
         var response = new MemberResponseModel(user, invite.Collections);
         return new JsonResult(response);
@@ -185,15 +174,16 @@ public class MembersController : Controller
         {
             return new NotFoundResult();
         }
+        var existingUserType = existingUser.Type;
         var updatedUser = model.ToOrganizationUser(existingUser);
         var associations = model.Collections?.Select(c => c.ToCollectionAccessSelection()).ToList();
-        await _updateOrganizationUserCommand.UpdateUserAsync(updatedUser, null, associations, model.Groups);
-        MemberResponseModel response = null;
+        await _updateOrganizationUserCommand.UpdateUserAsync(updatedUser, existingUserType, null, associations, model.Groups);
+        MemberResponseModel response;
         if (existingUser.UserId.HasValue)
         {
             var existingUserDetails = await _organizationUserRepository.GetDetailsByIdAsync(id);
-            response = new MemberResponseModel(existingUserDetails,
-                await _userService.TwoFactorIsEnabledAsync(existingUserDetails), associations);
+            response = new MemberResponseModel(existingUserDetails!,
+                await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(existingUserDetails!), associations);
         }
         else
         {
@@ -221,29 +211,28 @@ public class MembersController : Controller
         {
             return new NotFoundResult();
         }
-        await _updateOrganizationUserGroupsCommand.UpdateUserGroupsAsync(existingUser, model.GroupIds, null);
+        await _updateOrganizationUserGroupsCommand.UpdateUserGroupsAsync(existingUser, model.GroupIds);
         return new OkResult();
     }
 
     /// <summary>
-    /// Delete a member.
+    /// Remove a member.
     /// </summary>
     /// <remarks>
-    /// Permanently deletes a member from the organization. This cannot be undone.
-    /// The user account will still remain. The user is only removed from the organization.
+    /// Removes a member from the organization. This cannot be undone. The user account will still remain.
     /// </remarks>
-    /// <param name="id">The identifier of the member to be deleted.</param>
+    /// <param name="id">The identifier of the member to be removed.</param>
     [HttpDelete("{id}")]
     [ProducesResponseType((int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
-    public async Task<IActionResult> Delete(Guid id)
+    public async Task<IActionResult> Remove(Guid id)
     {
         var user = await _organizationUserRepository.GetByIdAsync(id);
         if (user == null || user.OrganizationId != _currentContext.OrganizationId)
         {
             return new NotFoundResult();
         }
-        await _organizationService.DeleteUserAsync(_currentContext.OrganizationId.Value, id, null);
+        await _removeOrganizationUserCommand.RemoveUserAsync(_currentContext.OrganizationId!.Value, id, null);
         return new OkResult();
     }
 
@@ -265,18 +254,7 @@ public class MembersController : Controller
         {
             return new NotFoundResult();
         }
-        await _organizationService.ResendInviteAsync(_currentContext.OrganizationId.Value, null, id);
+        await _resendOrganizationInviteCommand.ResendInviteAsync(_currentContext.OrganizationId!.Value, null, id);
         return new OkResult();
-    }
-
-    private async Task<JsonResult> List_vNext(ICollection<OrganizationUserUserDetails> organizationUserUserDetails)
-    {
-        var orgUsersTwoFactorIsEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(organizationUserUserDetails);
-        var memberResponses = organizationUserUserDetails.Select(u =>
-        {
-            return new MemberResponseModel(u, orgUsersTwoFactorIsEnabled.FirstOrDefault(tuple => tuple.user == u).twoFactorIsEnabled, null);
-        });
-        var response = new ListResponseModel<MemberResponseModel>(memberResponses);
-        return new JsonResult(response);
     }
 }

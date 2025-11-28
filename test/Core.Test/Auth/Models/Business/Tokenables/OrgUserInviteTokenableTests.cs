@@ -109,7 +109,7 @@ public class OrgUserInviteTokenableTests
     [Theory]
     [InlineData(null)]
     [InlineData("")]
-    public void Valid_NullOrEmptyOrgUserEmail_ReturnsFalse(string email)
+    public void Valid_NullOrEmptyOrgUserEmail_ReturnsFalse(string? email)
     {
         var token = new OrgUserInviteTokenable
         {

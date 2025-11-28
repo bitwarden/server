@@ -1,4 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using System.Net;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
@@ -8,6 +11,7 @@ using Bit.Core.Billing.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.Models.StaticStore;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
@@ -17,15 +21,18 @@ namespace Bit.Admin.AdminConsole.Models;
 
 public class OrganizationEditModel : OrganizationViewModel
 {
+    private readonly List<Plan> _plans;
+
     public OrganizationEditModel() { }
 
-    public OrganizationEditModel(Provider provider)
+    public OrganizationEditModel(Provider provider, List<Plan> plans)
     {
         Provider = provider;
         BillingEmail = provider.Type == ProviderType.Reseller ? provider.BillingEmail : string.Empty;
         PlanType = Core.Billing.Enums.PlanType.TeamsMonthly;
         Plan = Core.Billing.Enums.PlanType.TeamsMonthly.GetDisplayAttribute()?.GetName();
         LicenseKey = RandomLicenseKey;
+        _plans = plans;
     }
 
     public OrganizationEditModel(
@@ -40,6 +47,7 @@ public class OrganizationEditModel : OrganizationViewModel
         BillingHistoryInfo billingHistoryInfo,
         IEnumerable<OrganizationConnection> connections,
         GlobalSettings globalSettings,
+        List<Plan> plans,
         int secrets,
         int projects,
         int serviceAccounts,
@@ -80,6 +88,8 @@ public class OrganizationEditModel : OrganizationViewModel
         Use2fa = org.Use2fa;
         UseApi = org.UseApi;
         UseSecretsManager = org.UseSecretsManager;
+        UseRiskInsights = org.UseRiskInsights;
+        UseAdminSponsoredFamilies = org.UseAdminSponsoredFamilies;
         UseResetPassword = org.UseResetPassword;
         SelfHost = org.SelfHost;
         UsersGetPremium = org.UsersGetPremium;
@@ -95,6 +105,10 @@ public class OrganizationEditModel : OrganizationViewModel
         MaxAutoscaleSmSeats = org.MaxAutoscaleSmSeats;
         SmServiceAccounts = org.SmServiceAccounts;
         MaxAutoscaleSmServiceAccounts = org.MaxAutoscaleSmServiceAccounts;
+        UseOrganizationDomains = org.UseOrganizationDomains;
+        UseAutomaticUserConfirmation = org.UseAutomaticUserConfirmation;
+
+        _plans = plans;
     }
 
     public BillingInfo BillingInfo { get; set; }
@@ -143,7 +157,11 @@ public class OrganizationEditModel : OrganizationViewModel
     [Display(Name = "SCIM")]
     public bool UseScim { get; set; }
     [Display(Name = "Secrets Manager")]
-    public bool UseSecretsManager { get; set; }
+    public new bool UseSecretsManager { get; set; }
+    [Display(Name = "Risk Insights")]
+    public new bool UseRiskInsights { get; set; }
+    [Display(Name = "Admin Sponsored Families")]
+    public bool UseAdminSponsoredFamilies { get; set; }
     [Display(Name = "Self Host")]
     public bool SelfHost { get; set; }
     [Display(Name = "Users Get Premium")]
@@ -173,15 +191,18 @@ public class OrganizationEditModel : OrganizationViewModel
     public int? SmServiceAccounts { get; set; }
     [Display(Name = "Max Autoscale Machine Accounts")]
     public int? MaxAutoscaleSmServiceAccounts { get; set; }
+    [Display(Name = "Use Organization Domains")]
+    public bool UseOrganizationDomains { get; set; }
 
+    [Display(Name = "Automatic User Confirmation")]
+    public bool UseAutomaticUserConfirmation { get; set; }
     /**
      * Creates a Plan[] object for use in Javascript
      * This is mapped manually below to provide some type safety in case the plan objects change
      * Add mappings for individual properties as you need them
      */
     public object GetPlansHelper() =>
-        StaticStore.Plans
-            .Where(p => p.SupportsSecretsManager)
+        _plans
             .Select(p =>
             {
                 var plan = new
@@ -203,6 +224,7 @@ public class OrganizationEditModel : OrganizationViewModel
                     Has2fa = p.Has2fa,
                     HasApi = p.HasApi,
                     HasSso = p.HasSso,
+                    HasOrganizationDomains = p.HasOrganizationDomains,
                     HasKeyConnector = p.HasKeyConnector,
                     HasScim = p.HasScim,
                     HasResetPassword = p.HasResetPassword,
@@ -213,6 +235,7 @@ public class OrganizationEditModel : OrganizationViewModel
                     LegacyYear = p.LegacyYear,
                     Disabled = p.Disabled,
                     SupportsSecretsManager = p.SupportsSecretsManager,
+                    AutomaticUserConfirmation = p.AutomaticUserConfirmation,
                     PasswordManager =
                         new
                         {
@@ -285,6 +308,8 @@ public class OrganizationEditModel : OrganizationViewModel
         existingOrganization.Use2fa = Use2fa;
         existingOrganization.UseApi = UseApi;
         existingOrganization.UseSecretsManager = UseSecretsManager;
+        existingOrganization.UseRiskInsights = UseRiskInsights;
+        existingOrganization.UseAdminSponsoredFamilies = UseAdminSponsoredFamilies;
         existingOrganization.UseResetPassword = UseResetPassword;
         existingOrganization.SelfHost = SelfHost;
         existingOrganization.UsersGetPremium = UsersGetPremium;
@@ -301,6 +326,7 @@ public class OrganizationEditModel : OrganizationViewModel
         existingOrganization.MaxAutoscaleSmSeats = MaxAutoscaleSmSeats;
         existingOrganization.SmServiceAccounts = SmServiceAccounts;
         existingOrganization.MaxAutoscaleSmServiceAccounts = MaxAutoscaleSmServiceAccounts;
+        existingOrganization.UseOrganizationDomains = UseOrganizationDomains;
         return existingOrganization;
     }
 }

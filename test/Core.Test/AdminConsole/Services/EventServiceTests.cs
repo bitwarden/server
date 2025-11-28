@@ -169,7 +169,6 @@ public class EventServiceTests
             new EventMessage()
             {
                 IpAddress = ipAddress,
-                DeviceType = DeviceType.Server,
                 OrganizationId = orgUser.OrganizationId,
                 UserId = orgUser.UserId,
                 OrganizationUserId = orgUser.Id,

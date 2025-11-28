@@ -4,30 +4,55 @@
 #
 # https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 
-# DevOps for Actions and other workflow changes
-.github/workflows @bitwarden/dept-devops
+## Docker-related files
+**/Dockerfile @bitwarden/team-appsec @bitwarden/dept-bre
+**/*.Dockerfile @bitwarden/team-appsec @bitwarden/dept-bre
+**/*.dockerignore @bitwarden/team-appsec @bitwarden/dept-bre
+**/docker-compose.yml @bitwarden/team-appsec @bitwarden/dept-bre
+**/entrypoint.sh @bitwarden/team-appsec @bitwarden/dept-bre
 
-# DevOps for Docker changes
-**/Dockerfile @bitwarden/dept-devops
-**/*.Dockerfile @bitwarden/dept-devops
-**/.dockerignore @bitwarden/dept-devops
+## BRE team owns these workflows ##
+.github/workflows/publish.yml @bitwarden/dept-bre
+
+## These are shared workflows ##
+.github/workflows/_move_edd_db_scripts.yml
+.github/workflows/release.yml
 
 # Database Operations for database changes
 src/Sql/** @bitwarden/dept-dbops
 util/EfShared/** @bitwarden/dept-dbops
-util/Migrator/** @bitwarden/dept-dbops
+util/Migrator/** @bitwarden/team-platform-dev # The Platform team owns the Migrator project code
+util/Migrator/DbScripts/** @bitwarden/dept-dbops
+util/Migrator/DbScripts_finalization/** @bitwarden/dept-dbops
+util/Migrator/DbScripts_transition/** @bitwarden/dept-dbops
+util/Migrator/MySql/** @bitwarden/dept-dbops
 util/MySqlMigrations/** @bitwarden/dept-dbops
 util/PostgresMigrations/** @bitwarden/dept-dbops
 util/SqlServerEFScaffold/** @bitwarden/dept-dbops
 util/SqliteMigrations/** @bitwarden/dept-dbops
 
+# Shared util projects
+util/Setup/** @bitwarden/dept-bre @bitwarden/team-platform-dev
+
+# UIF
+src/Core/MailTemplates/Mjml @bitwarden/team-ui-foundation # Teams are expected to own sub-directories of this project
+src/Core/MailTemplates/Mjml/.mjmlconfig # This change allows teams to add components within their own subdirectories without requiring a code review from UIF.
+
 # Auth team
 **/Auth @bitwarden/team-auth-dev
 bitwarden_license/src/Sso @bitwarden/team-auth-dev
 src/Identity @bitwarden/team-auth-dev
+src/Core/Identity @bitwarden/team-auth-dev
+src/Core/IdentityServer @bitwarden/team-auth-dev
 
-**/SecretsManager @bitwarden/team-secrets-manager-dev
+# Key Management team
+**/KeyManagement @bitwarden/team-key-management-dev
+
+# Tools team
 **/Tools @bitwarden/team-tools-dev
+
+# Dirt (Data Insights & Reporting) team
+**/Dirt @bitwarden/team-data-insights-and-reporting-dev
 
 # Vault team
 **/Vault @bitwarden/team-vault-dev
@@ -57,6 +82,29 @@ src/EventsProcessor @bitwarden/team-admin-console-dev
 src/Admin/Controllers/ToolsController.cs @bitwarden/team-billing-dev
 src/Admin/Views/Tools @bitwarden/team-billing-dev
 
-# Multiple owners - DO NOT REMOVE (DevOps)
+# Platform team
+.github/workflows/build.yml @bitwarden/team-platform-dev
+.github/workflows/build_target.yml @bitwarden/team-platform-dev
+.github/workflows/cleanup-after-pr.yml @bitwarden/team-platform-dev
+.github/workflows/cleanup-rc-branch.yml @bitwarden/team-platform-dev
+.github/workflows/repository-management.yml @bitwarden/team-platform-dev
+.github/workflows/test-database.yml @bitwarden/team-platform-dev
+.github/workflows/test.yml @bitwarden/team-platform-dev
+**/*Platform* @bitwarden/team-platform-dev
+**/.dockerignore @bitwarden/team-platform-dev
+**/Dockerfile @bitwarden/team-platform-dev
+**/entrypoint.sh @bitwarden/team-platform-dev
+# The PushType enum is expected to be editted by anyone without need for Platform review
+src/Core/Platform/Push/PushType.cs
+
+# SDK
+util/RustSdk @bitwarden/team-sdk-sme
+
+# Multiple owners - DO NOT REMOVE (BRE)
 **/packages.lock.json
 Directory.Build.props
+
+# Claude related files
+.claude/ @bitwarden/team-ai-sme
+.github/workflows/respond.yml @bitwarden/team-ai-sme
+.github/workflows/review-code.yml @bitwarden/team-ai-sme

@@ -1,4 +1,3 @@
----
 name: Cleanup RC Branch
 
 on:
@@ -10,11 +9,16 @@ jobs:
   delete-rc:
     name: Delete RC Branch
     runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+      id-token: write
     steps:
-      - name: Login to Azure - CI Subscription
-        uses: Azure/login@e15b166166a8746d1a47596803bd8c1b595455cf # v1.6.0
+      - name: Log in to Azure
+        uses: bitwarden/gh-actions/azure-login@main
         with:
-          creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
+          subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+          client_id: ${{ secrets.AZURE_CLIENT_ID }}
 
       - name: Retrieve bot secrets
         id: retrieve-bot-secrets
@@ -23,11 +27,16 @@ jobs:
           keyvault: bitwarden-ci
           secrets: "github-pat-bitwarden-devops-bot-repo-scope"
 
+      - name: Log out from Azure
+        uses: bitwarden/gh-actions/azure-logout@main
+
       - name: Checkout main
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           ref: main
           token: ${{ steps.retrieve-bot-secrets.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
+          persist-credentials: false
+          fetch-depth: 0
 
       - name: Check if a RC branch exists
         id: branch-check
@@ -36,11 +45,11 @@ jobs:
           rc_branch_check=$(git ls-remote --heads origin rc | wc -l)
 
           if [[ "${hotfix_rc_branch_check}" -gt 0 ]]; then
-            echo "hotfix-rc branch exists." | tee -a $GITHUB_STEP_SUMMARY
-            echo "name=hotfix-rc" >> $GITHUB_OUTPUT
+            echo "hotfix-rc branch exists." | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "name=hotfix-rc" >> "$GITHUB_OUTPUT"
           elif [[ "${rc_branch_check}" -gt 0 ]]; then
-            echo "rc branch exists." | tee -a $GITHUB_STEP_SUMMARY
-            echo "name=rc" >> $GITHUB_OUTPUT
+            echo "rc branch exists." | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "name=rc" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Delete RC branch
@@ -48,6 +57,6 @@ jobs:
           BRANCH_NAME: ${{ steps.branch-check.outputs.name }}
         run: |
           if ! [[ -z "$BRANCH_NAME" ]]; then
-            git push --quiet origin --delete $BRANCH_NAME
-            echo "Deleted $BRANCH_NAME branch." | tee -a $GITHUB_STEP_SUMMARY
+            git push --quiet origin --delete "$BRANCH_NAME"
+            echo "Deleted $BRANCH_NAME branch." | tee -a "$GITHUB_STEP_SUMMARY"
           fi

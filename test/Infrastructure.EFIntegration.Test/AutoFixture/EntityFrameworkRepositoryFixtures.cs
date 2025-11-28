@@ -7,7 +7,9 @@ using Bit.Infrastructure.EFIntegration.Test.Helpers;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider;
 using Bit.Infrastructure.EntityFramework.Auth.Models;
+using Bit.Infrastructure.EntityFramework.Dirt.Models;
 using Bit.Infrastructure.EntityFramework.Models;
+using Bit.Infrastructure.EntityFramework.Platform;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.EntityFramework.Vault.Models;
 using Microsoft.EntityFrameworkCore;
@@ -89,6 +91,9 @@ public class EfRepositoryListBuilder<T> : ISpecimenBuilder where T : BaseEntityF
                     cfg.AddProfile<TaxRateMapperProfile>();
                     cfg.AddProfile<TransactionMapperProfile>();
                     cfg.AddProfile<UserMapperProfile>();
+                    cfg.AddProfile<PasswordHealthReportApplicationProfile>();
+                    cfg.AddProfile<UserSignatureKeyPairMapperProfile>();
+                    cfg.AddProfile<OrganizationReportProfile>();
                 })
             .CreateMapper()));
 

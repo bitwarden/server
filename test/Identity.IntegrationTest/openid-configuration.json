@@ -15,6 +15,7 @@
     "api.installation",
     "internal",
     "api.secrets",
+    "api.send.access",
     "offline_access"
   ],
   "claims_supported": [
@@ -24,6 +25,7 @@
     "sstamp",
     "premium",
     "device",
+    "devicetype",
     "orgowner",
     "orgadmin",
     "orguser",
@@ -32,6 +34,7 @@
     "providerserviceuser",
     "accesssecretsmanager",
     "sub",
+    "send_id",
     "organization"
   ],
   "grant_types_supported": [
@@ -42,7 +45,8 @@
     "password",
     "urn:ietf:params:oauth:grant-type:device_code",
     "urn:openid:params:grant-type:ciba",
-    "webauthn"
+    "webauthn",
+    "send_access"
   ],
   "response_types_supported": [
     "code",

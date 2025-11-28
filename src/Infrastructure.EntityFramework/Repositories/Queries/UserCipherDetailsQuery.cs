@@ -1,4 +1,7 @@
-﻿using System.Text.Json;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text.Json;
 using Bit.Core.Enums;
 using Bit.Core.Vault.Models.Data;
 using Bit.Infrastructure.EntityFramework.Vault.Models;
@@ -50,11 +53,51 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
 
                     where (cu == null ? (Guid?)null : cu.CollectionId) != null || (cg == null ? (Guid?)null : cg.CollectionId) != null
 
-                    select c;
+                    select new
+                    {
+                        c.Id,
+                        c.UserId,
+                        c.OrganizationId,
+                        c.Type,
+                        c.Data,
+                        c.Attachments,
+                        c.CreationDate,
+                        c.RevisionDate,
+                        c.DeletedDate,
+                        c.Favorites,
+                        c.Folders,
+                        Edit = cu == null ? (cg != null && cg.ReadOnly == false) : cu.ReadOnly == false,
+                        ViewPassword = cu == null ? (cg != null && cg.HidePasswords == false) : cu.HidePasswords == false,
+                        Manage = cu == null ? (cg != null && cg.Manage == true) : cu.Manage == true,
+                        OrganizationUseTotp = o.UseTotp,
+                        c.Reprompt,
+                        c.Key,
+                        c.ArchivedDate
+                    };
 
         var query2 = from c in dbContext.Ciphers
                      where c.UserId == _userId
-                     select c;
+                     select new
+                     {
+                         c.Id,
+                         c.UserId,
+                         c.OrganizationId,
+                         c.Type,
+                         c.Data,
+                         c.Attachments,
+                         c.CreationDate,
+                         c.RevisionDate,
+                         c.DeletedDate,
+                         c.Favorites,
+                         c.Folders,
+                         Edit = true,
+                         ViewPassword = true,
+                         Manage = true,
+                         OrganizationUseTotp = false,
+                         c.Reprompt,
+                         c.Key,
+                         c.ArchivedDate
+                     };
 
         var union = query.Union(query2).Select(c => new CipherDetails
         {
@@ -68,12 +111,14 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
             RevisionDate = c.RevisionDate,
             DeletedDate = c.DeletedDate,
             Favorite = _userId.HasValue && c.Favorites != null && c.Favorites.ToLowerInvariant().Contains($"\"{_userId}\":true"),
-            FolderId = GetFolderId(_userId, c),
-            Edit = true,
+            FolderId = GetFolderId(_userId, new Cipher { Id = c.Id, Folders = c.Folders }),
+            Edit = c.Edit,
             Reprompt = c.Reprompt,
-            ViewPassword = true,
-            OrganizationUseTotp = false,
-            Key = c.Key
+            ViewPassword = c.ViewPassword,
+            Manage = c.Manage,
+            OrganizationUseTotp = c.OrganizationUseTotp,
+            Key = c.Key,
+            ArchivedDate = c.ArchivedDate
         });
         return union;
     }

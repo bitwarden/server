@@ -1,9 +1,7 @@
-﻿using System.Collections.Immutable;
-using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Models.StaticStore.Plans;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
 using Bit.Core.Enums;
-using Bit.Core.Models.Data.Organizations.OrganizationUsers;
-using Bit.Core.Models.StaticStore;
 
 namespace Bit.Core.Utilities;
 
@@ -106,69 +104,7 @@ public static class StaticStore
         GlobalDomains.Add(GlobalEquivalentDomainsType.Atlassian, new List<string> { "atlassian.com", "bitbucket.org", "trello.com", "statuspage.io", "atlassian.net", "jira.com" });
         GlobalDomains.Add(GlobalEquivalentDomainsType.Pinterest, new List<string> { "pinterest.com", "pinterest.com.au", "pinterest.cl", "pinterest.de", "pinterest.dk", "pinterest.es", "pinterest.fr", "pinterest.co.uk", "pinterest.jp", "pinterest.co.kr", "pinterest.nz", "pinterest.pt", "pinterest.se" });
         #endregion
-
-        Plans = new List<Plan>
-        {
-            new EnterprisePlan(true),
-            new EnterprisePlan(false),
-            new TeamsStarterPlan(),
-            new TeamsPlan(true),
-            new TeamsPlan(false),
-
-            new Enterprise2023Plan(true),
-            new Enterprise2023Plan(false),
-            new Enterprise2020Plan(true),
-            new Enterprise2020Plan(false),
-            new TeamsStarterPlan2023(),
-            new Teams2023Plan(true),
-            new Teams2023Plan(false),
-            new Teams2020Plan(true),
-            new Teams2020Plan(false),
-            new FamiliesPlan(),
-            new FreePlan(),
-            new CustomPlan(),
-
-            new Enterprise2019Plan(true),
-            new Enterprise2019Plan(false),
-            new Teams2019Plan(true),
-            new Teams2019Plan(false),
-            new Families2019Plan(),
-        }.ToImmutableList();
     }
 
     public static IDictionary<GlobalEquivalentDomainsType, IEnumerable<string>> GlobalDomains { get; set; }
-    public static IEnumerable<Plan> Plans { get; }
-    public static IEnumerable<SponsoredPlan> SponsoredPlans { get; set; } = new[]
-        {
-            new SponsoredPlan
-            {
-                PlanSponsorshipType = PlanSponsorshipType.FamiliesForEnterprise,
-                SponsoredProductTierType = ProductTierType.Families,
-                SponsoringProductTierType = ProductTierType.Enterprise,
-                StripePlanId = "2021-family-for-enterprise-annually",
-                UsersCanSponsor = (OrganizationUserOrganizationDetails org) =>
-                    GetPlan(org.PlanType).ProductTier == ProductTierType.Enterprise,
-            }
-        };
-
-    public static Plan GetPlan(PlanType planType) => Plans.SingleOrDefault(p => p.Type == planType);
-
-    public static SponsoredPlan GetSponsoredPlan(PlanSponsorshipType planSponsorshipType) =>
-        SponsoredPlans.FirstOrDefault(p => p.PlanSponsorshipType == planSponsorshipType);
-
-    /// <summary>
-    /// Determines if the stripe plan id is an addon item by checking if the provided stripe plan id
-    /// matches either the <see cref="Plan.PasswordManagerPlanFeatures.StripeStoragePlanId"/> or <see cref="Plan.SecretsManagerPlanFeatures.StripeServiceAccountPlanId"/>
-    /// in any <see cref="Plans"/>.
-    /// </summary>
-    /// <param name="stripePlanId"></param>
-    /// <returns>
-    /// True if the stripePlanId is a addon product, false otherwise
-    /// </returns>
-    public static bool IsAddonSubscriptionItem(string stripePlanId)
-    {
-        return Plans.Any(p =>
-                p.PasswordManager.StripeStoragePlanId == stripePlanId ||
-                (p.SecretsManager?.StripeServiceAccountPlanId == stripePlanId));
-    }
 }

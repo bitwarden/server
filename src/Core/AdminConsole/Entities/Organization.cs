@@ -4,17 +4,17 @@ using System.Text.Json;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Business;
-using Bit.Core.Tools.Entities;
+using Bit.Core.Services;
 using Bit.Core.Utilities;
 
 #nullable enable
 
 namespace Bit.Core.AdminConsole.Entities;
 
-public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable, IReferenceable
+public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
 {
     private Dictionary<TwoFactorProviderType, TwoFactorProvider>? _twoFactorProviders;
 
@@ -30,6 +30,7 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
     /// This value is HTML encoded. For display purposes use the method DisplayBusinessName() instead.
     /// </summary>
     [MaxLength(50)]
+    [Obsolete("This property has been deprecated. Use the 'Name' property instead.")]
     public string? BusinessName { get; set; }
     [MaxLength(50)]
     public string? BusinessAddress1 { get; set; }
@@ -93,12 +94,45 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
     /// If set to false, any organization member can create a collection, and any member can delete a collection that
     /// they have Can Manage permissions for.
     /// </summary>
-    public bool LimitCollectionCreationDeletion { get; set; }
+    public bool LimitCollectionCreation { get; set; }
+    public bool LimitCollectionDeletion { get; set; }
+
     /// <summary>
     /// If set to true, admins, owners, and some custom users can read/write all collections and items in the Admin Console.
     /// If set to false, users generally need collection-level permissions to read/write a collection or its items.
     /// </summary>
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
+
+    /// <summary>
+    /// If set to true, members can only delete items when they have a Can Manage permission over the collection.
+    /// If set to false, members can delete items when they have a Can Manage OR Can Edit permission over the collection.
+    /// </summary>
+    public bool LimitItemDeletion { get; set; }
+
+    /// <summary>
+    /// Risk Insights is a reporting feature that provides insights into the security of an organization's vault.
+    /// </summary>
+    public bool UseRiskInsights { get; set; }
+
+    /// <summary>
+    /// If true, the organization can claim domains, which unlocks additional enterprise features
+    /// </summary>
+    public bool UseOrganizationDomains { get; set; }
+
+    /// <summary>
+    /// If set to true, admins can initiate organization-issued sponsorships.
+    /// </summary>
+    public bool UseAdminSponsoredFamilies { get; set; }
+
+    /// <summary>
+    /// If set to true, organization needs their seat count synced with their subscription
+    /// </summary>
+    public bool SyncSeats { get; set; }
+
+    /// <summary>
+    /// If set to true,  user accounts created within the organization are automatically confirmed without requiring additional verification steps.
+    /// </summary>
+    public bool UseAutomaticUserConfirmation { get; set; }
 
     public void SetNewId()
     {
@@ -119,6 +153,8 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
     /// <summary>
     /// Returns the business name of the organization, HTML decoded ready for display.
     /// </summary>
+    ///
+    [Obsolete("This method has been deprecated. Use the 'DisplayName()' method instead.")]
     public string? DisplayBusinessName()
     {
         return WebUtility.HtmlDecode(BusinessName);
@@ -234,12 +270,12 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
     public bool TwoFactorProviderIsEnabled(TwoFactorProviderType provider)
     {
         var providers = GetTwoFactorProviders();
-        if (providers == null || !providers.ContainsKey(provider))
+        if (providers == null || !providers.TryGetValue(provider, out var twoFactorProvider))
         {
             return false;
         }
 
-        return providers[provider].Enabled && Use2fa;
+        return twoFactorProvider.Enabled && Use2fa;
     }
 
     public bool TwoFactorIsEnabled()
@@ -256,15 +292,10 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
     public TwoFactorProvider? GetTwoFactorProvider(TwoFactorProviderType provider)
     {
         var providers = GetTwoFactorProviders();
-        if (providers == null || !providers.ContainsKey(provider))
-        {
-            return null;
-        }
-
-        return providers[provider];
+        return providers?.GetValueOrDefault(provider);
     }
 
-    public void UpdateFromLicense(OrganizationLicense license)
+    public void UpdateFromLicense(OrganizationLicense license, IFeatureService featureService)
     {
         // The following properties are intentionally excluded from being updated:
         // - Id - self-hosted org will have its own unique Guid
@@ -299,7 +330,9 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
         UseSecretsManager = license.UseSecretsManager;
         SmSeats = license.SmSeats;
         SmServiceAccounts = license.SmServiceAccounts;
-        LimitCollectionCreationDeletion = license.LimitCollectionCreationDeletion;
-        AllowAdminAccessToAllCollectionItems = license.AllowAdminAccessToAllCollectionItems;
+        UseRiskInsights = license.UseRiskInsights;
+        UseOrganizationDomains = license.UseOrganizationDomains;
+        UseAdminSponsoredFamilies = license.UseAdminSponsoredFamilies;
+        UseAutomaticUserConfirmation = license.UseAutomaticUserConfirmation;
     }
 }

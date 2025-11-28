@@ -1,8 +1,8 @@
 ﻿using Bit.Api.Billing.Controllers;
-using Bit.Api.Billing.Models.Responses;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Models;
-using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Context;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -37,7 +37,7 @@ public class OrganizationBillingControllerTests
         Guid organizationId,
         SutProvider<OrganizationBillingController> sutProvider)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessMembersTab(organizationId).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationUser(organizationId).Returns(true);
         sutProvider.GetDependency<IOrganizationBillingService>().GetMetadata(organizationId).Returns((OrganizationMetadata)null);
 
         var result = await sutProvider.Sut.GetMetadataAsync(organizationId);
@@ -50,17 +50,18 @@ public class OrganizationBillingControllerTests
         Guid organizationId,
         SutProvider<OrganizationBillingController> sutProvider)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessMembersTab(organizationId).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationUser(organizationId).Returns(true);
         sutProvider.GetDependency<IOrganizationBillingService>().GetMetadata(organizationId)
-            .Returns(new OrganizationMetadata(true));
+            .Returns(new OrganizationMetadata(true, 10));
 
         var result = await sutProvider.Sut.GetMetadataAsync(organizationId);
 
-        Assert.IsType<Ok<OrganizationMetadataResponse>>(result);
+        Assert.IsType<Ok<OrganizationMetadata>>(result);
 
-        var organizationMetadataResponse = ((Ok<OrganizationMetadataResponse>)result).Value;
+        var response = ((Ok<OrganizationMetadata>)result).Value;
 
-        Assert.True(organizationMetadataResponse.IsOnSecretsManagerStandalone);
+        Assert.True(response.IsOnSecretsManagerStandalone);
+        Assert.Equal(10, response.OrganizationOccupiedSeats);
     }
 
     [Theory, BitAutoData]

@@ -1,8 +1,8 @@
 ﻿using System.Data;
 using System.Text.Json;
 using Bit.Core;
-using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Entities;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
@@ -172,6 +172,18 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                 commandTimeout: 180);
         }
     }
+    public async Task DeleteManyAsync(IEnumerable<User> users)
+    {
+        var ids = users.Select(user => user.Id);
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            await connection.ExecuteAsync(
+                $"[{Schema}].[{Table}_DeleteByIds]",
+                new { Ids = JsonSerializer.Serialize(ids) },
+                commandType: CommandType.StoredProcedure,
+                commandTimeout: 180);
+        }
+    }
 
     public async Task UpdateStorageAsync(Guid id)
     {
@@ -241,6 +253,40 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         }
     }
 
+    public async Task UpdateUserKeyAndEncryptedDataV2Async(
+        User user,
+        IEnumerable<UpdateEncryptedDataForKeyRotation> updateDataActions)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        connection.Open();
+
+        await using var transaction = connection.BeginTransaction();
+        try
+        {
+            user.AccountRevisionDate = user.RevisionDate;
+
+            ProtectData(user);
+            await connection.ExecuteAsync(
+                $"[{Schema}].[{Table}_Update]",
+                user,
+                transaction: transaction,
+                commandType: CommandType.StoredProcedure);
+
+            //  Update re-encrypted data
+            foreach (var action in updateDataActions)
+            {
+                await action(connection, transaction);
+            }
+            transaction.Commit();
+        }
+        catch
+        {
+            transaction.Rollback();
+            UnprotectData(user);
+            throw;
+        }
+        UnprotectData(user);
+    }
 
     public async Task<IEnumerable<User>> GetManyAsync(IEnumerable<Guid> ids)
     {
@@ -270,6 +316,14 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         }
     }
 
+    public async Task<UserWithCalculatedPremium?> GetCalculatedPremiumAsync(Guid userId)
+    {
+        var result = await GetManyWithCalculatedPremiumAsync([userId]);
+
+        UnprotectData(result);
+        return result.SingleOrDefault();
+    }
+
     private async Task ProtectDataAndSaveAsync(User user, Func<Task> saveTask)
     {
         if (user == null)
@@ -283,6 +337,18 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         var originalKey = user.Key;
 
         // Protect values
+        ProtectData(user);
+
+        // Save
+        await saveTask();
+
+        // Restore original values
+        user.MasterPassword = originalMasterPassword;
+        user.Key = originalKey;
+    }
+
+    private void ProtectData(User user)
+    {
         if (!user.MasterPassword?.StartsWith(Constants.DatabaseFieldProtectedPrefix) ?? false)
         {
             user.MasterPassword = string.Concat(Constants.DatabaseFieldProtectedPrefix,
@@ -294,13 +360,6 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
             user.Key = string.Concat(Constants.DatabaseFieldProtectedPrefix,
                 _dataProtector.Protect(user.Key!));
         }
-
-        // Save
-        await saveTask();
-
-        // Restore original values
-        user.MasterPassword = originalMasterPassword;
-        user.Key = originalKey;
     }
 
     private void UnprotectData(User? user)

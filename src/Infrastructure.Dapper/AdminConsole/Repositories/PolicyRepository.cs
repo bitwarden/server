@@ -1,6 +1,7 @@
 ﻿using System.Data;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper.Repositories;
@@ -54,6 +55,34 @@ public class PolicyRepository : Repository<Policy, Guid>, IPolicyRepository
             var results = await connection.QueryAsync<Policy>(
                 $"[{Schema}].[{Table}_ReadByUserId]",
                 new { UserId = userId },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
+
+    public async Task<IEnumerable<OrganizationPolicyDetails>> GetPolicyDetailsByUserIdsAndPolicyType(IEnumerable<Guid> userIds, PolicyType type)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        var results = await connection.QueryAsync<OrganizationPolicyDetails>(
+            $"[{Schema}].[PolicyDetails_ReadByUserIdsPolicyType]",
+            new
+            {
+                UserIds = userIds.ToGuidIdArrayTVP(),
+                PolicyType = (byte)type
+            },
+            commandType: CommandType.StoredProcedure);
+
+        return results.ToList();
+    }
+
+    public async Task<IEnumerable<OrganizationPolicyDetails>> GetPolicyDetailsByOrganizationIdAsync(Guid organizationId, PolicyType policyType)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<OrganizationPolicyDetails>(
+                $"[{Schema}].[PolicyDetails_ReadByOrganizationId]",
+                new { @OrganizationId = organizationId, @PolicyType = policyType },
                 commandType: CommandType.StoredProcedure);
 
             return results.ToList();

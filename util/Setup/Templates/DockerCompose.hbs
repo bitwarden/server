@@ -1,8 +1,8 @@
 ﻿#
 # Useful references:
-# https://docs.docker.com/compose/compose-file/
-# https://docs.docker.com/compose/reference/overview/#use--f-to-specify-name-and-path-of-one-or-more-compose-files
-# https://docs.docker.com/compose/reference/envvars/
+# https://docs.docker.com/reference/compose-file/
+# https://docs.docker.com/reference/cli/docker/compose/#use--f-to-specify-the-name-and-path-of-one-or-more-compose-files
+# https://docs.docker.com/compose/how-tos/environment-variables/envvars/
 #
 #########################################################################
 # WARNING: This file is generated. Do not make changes to this file.    #
@@ -14,8 +14,9 @@
 #########################################################################
 
 services:
+{{#if EnableBuiltInMsSql}}
   mssql:
-    image: bitwarden/mssql:{{{CoreVersion}}}
+    image: ghcr.io/bitwarden/mssql:{{{CoreVersion}}}
     container_name: bitwarden-mssql
     restart: always
     stop_grace_period: 60s
@@ -32,8 +33,9 @@ services:
       - ../env/uid.env
       - ../env/mssql.override.env
 
+{{/if}}
   web:
-    image: bitwarden/web:{{{WebVersion}}}
+    image: ghcr.io/bitwarden/web:{{{WebVersion}}}
     container_name: bitwarden-web
     restart: always
     volumes:
@@ -43,7 +45,7 @@ services:
       - ../env/uid.env
 
   attachments:
-    image: bitwarden/attachments:{{{CoreVersion}}}
+    image: ghcr.io/bitwarden/attachments:{{{CoreVersion}}}
     container_name: bitwarden-attachments
     restart: always
     volumes:
@@ -53,7 +55,7 @@ services:
       - ../env/uid.env
 
   api:
-    image: bitwarden/api:{{{CoreVersion}}}
+    image: ghcr.io/bitwarden/api:{{{CoreVersion}}}
     container_name: bitwarden-api
     restart: always
     volumes:
@@ -69,7 +71,7 @@ services:
       - public
 
   identity:
-    image: bitwarden/identity:{{{CoreVersion}}}
+    image: ghcr.io/bitwarden/identity:{{{CoreVersion}}}
     container_name: bitwarden-identity
     restart: always
     volumes:
@@ -86,7 +88,7 @@ services:
       - public
 
   sso:
-    image: bitwarden/sso:{{{CoreVersion}}}
+    image: ghcr.io/bitwarden/sso:{{{CoreVersion}}}
     container_name: bitwarden-sso
     restart: always
     volumes:
@@ -103,11 +105,13 @@ services:
       - public
 
   admin:
-    image: bitwarden/admin:{{{CoreVersion}}}
+    image: ghcr.io/bitwarden/admin:{{{CoreVersion}}}
     container_name: bitwarden-admin
     restart: always
+{{#if EnableBuiltInMsSql}}
     depends_on:
       - mssql
+{{/if}}
     volumes:
       - ../core:/etc/bitwarden/core
       - ../ca-certificates:/etc/bitwarden/ca-certificates
@@ -121,7 +125,7 @@ services:
       - public
 
   icons:
-    image: bitwarden/icons:{{{CoreVersion}}}
+    image: ghcr.io/bitwarden/icons:{{{CoreVersion}}}
     container_name: bitwarden-icons
     restart: always
     volumes:
@@ -135,7 +139,7 @@ services:
       - public
 
   notifications:
-    image: bitwarden/notifications:{{{CoreVersion}}}
+    image: ghcr.io/bitwarden/notifications:{{{CoreVersion}}}
     container_name: bitwarden-notifications
     restart: always
     volumes:
@@ -150,7 +154,7 @@ services:
       - public
 
   events:
-    image: bitwarden/events:{{{CoreVersion}}}
+    image: ghcr.io/bitwarden/events:{{{CoreVersion}}}
     container_name: bitwarden-events
     restart: always
     volumes:
@@ -165,7 +169,7 @@ services:
       - public
 
   nginx:
-    image: bitwarden/nginx:{{{CoreVersion}}}
+    image: ghcr.io/bitwarden/nginx:{{{CoreVersion}}}
     container_name: bitwarden-nginx
     restart: always
     depends_on:
@@ -195,7 +199,7 @@ services:
 
 {{#if EnableKeyConnector}}
   key-connector:
-    image: bitwarden/key-connector:{{{KeyConnectorVersion}}}
+    image: ghcr.io/bitwarden/key-connector:{{{KeyConnectorVersion}}}
     container_name: bitwarden-key-connector
     restart: always
     volumes:
@@ -212,7 +216,7 @@ services:
 {{#if EnableScim}}
 
   scim:
-    image: bitwarden/scim:{{{CoreVersion}}}
+    image: ghcr.io/bitwarden/scim:{{{CoreVersion}}}
     container_name: bitwarden-scim
     restart: always
     volumes:

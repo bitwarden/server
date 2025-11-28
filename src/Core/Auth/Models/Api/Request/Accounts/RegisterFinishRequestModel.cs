@@ -6,6 +6,14 @@ using Bit.Core.Utilities;
 namespace Bit.Core.Auth.Models.Api.Request.Accounts;
 using System.ComponentModel.DataAnnotations;
 
+public enum RegisterFinishTokenType : byte
+{
+    EmailVerification = 1,
+    OrganizationInvite = 2,
+    OrgSponsoredFreeFamilyPlan = 3,
+    EmergencyAccessInvite = 4,
+    ProviderInvite = 5,
+}
 
 public class RegisterFinishRequestModel : IValidatableObject
 {
@@ -31,6 +39,14 @@ public class RegisterFinishRequestModel : IValidatableObject
     public Guid? OrganizationUserId { get; set; }
     public string? OrgInviteToken { get; set; }
 
+    public string? OrgSponsoredFreeFamilyPlanToken { get; set; }
+
+    public string? AcceptEmergencyAccessInviteToken { get; set; }
+    public Guid? AcceptEmergencyAccessId { get; set; }
+
+    public string? ProviderInviteToken { get; set; }
+
+    public Guid? ProviderUserId { get; set; }
 
     public User ToUser()
     {
@@ -48,6 +64,32 @@ public class RegisterFinishRequestModel : IValidatableObject
         UserAsymmetricKeys.ToUser(user);
 
         return user;
+    }
+
+    public RegisterFinishTokenType GetTokenType()
+    {
+        if (!string.IsNullOrWhiteSpace(EmailVerificationToken))
+        {
+            return RegisterFinishTokenType.EmailVerification;
+        }
+        if (!string.IsNullOrEmpty(OrgInviteToken) && OrganizationUserId.HasValue)
+        {
+            return RegisterFinishTokenType.OrganizationInvite;
+        }
+        if (!string.IsNullOrWhiteSpace(OrgSponsoredFreeFamilyPlanToken))
+        {
+            return RegisterFinishTokenType.OrgSponsoredFreeFamilyPlan;
+        }
+        if (!string.IsNullOrWhiteSpace(AcceptEmergencyAccessInviteToken) && AcceptEmergencyAccessId.HasValue)
+        {
+            return RegisterFinishTokenType.EmergencyAccessInvite;
+        }
+        if (!string.IsNullOrWhiteSpace(ProviderInviteToken) && ProviderUserId.HasValue)
+        {
+            return RegisterFinishTokenType.ProviderInvite;
+        }
+
+        throw new InvalidOperationException("Invalid token type.");
     }
 
 

@@ -1,116 +1,79 @@
 ﻿using System.Globalization;
 using Bit.Billing.Models;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Payment.Clients;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using BitPayLight.Models.Invoice;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.Options;
 
 namespace Bit.Billing.Controllers;
 
+using static BitPayConstants;
+using static StripeConstants;
+
 [Route("bitpay")]
-public class BitPayController : Controller
+[ApiExplorerSettings(IgnoreApi = true)]
+public class BitPayController(
+    GlobalSettings globalSettings,
+    IBitPayClient bitPayClient,
+    ITransactionRepository transactionRepository,
+    IOrganizationRepository organizationRepository,
+    IUserRepository userRepository,
+    IProviderRepository providerRepository,
+    IMailService mailService,
+    IPaymentService paymentService,
+    ILogger<BitPayController> logger,
+    IPremiumUserBillingService premiumUserBillingService)
+    : Controller
 {
-    private readonly BillingSettings _billingSettings;
-    private readonly BitPayClient _bitPayClient;
-    private readonly ITransactionRepository _transactionRepository;
-    private readonly IOrganizationRepository _organizationRepository;
-    private readonly IUserRepository _userRepository;
-    private readonly IProviderRepository _providerRepository;
-    private readonly IMailService _mailService;
-    private readonly IPaymentService _paymentService;
-    private readonly ILogger<BitPayController> _logger;
-
-    public BitPayController(
-        IOptions<BillingSettings> billingSettings,
-        BitPayClient bitPayClient,
-        ITransactionRepository transactionRepository,
-        IOrganizationRepository organizationRepository,
-        IUserRepository userRepository,
-        IProviderRepository providerRepository,
-        IMailService mailService,
-        IPaymentService paymentService,
-        ILogger<BitPayController> logger)
-    {
-        _billingSettings = billingSettings?.Value;
-        _bitPayClient = bitPayClient;
-        _transactionRepository = transactionRepository;
-        _organizationRepository = organizationRepository;
-        _userRepository = userRepository;
-        _providerRepository = providerRepository;
-        _mailService = mailService;
-        _paymentService = paymentService;
-        _logger = logger;
-    }
-
     [HttpPost("ipn")]
     public async Task<IActionResult> PostIpn([FromBody] BitPayEventModel model, [FromQuery] string key)
     {
-        if (!CoreHelpers.FixedTimeEquals(key, _billingSettings.BitPayWebhookKey))
+        if (!CoreHelpers.FixedTimeEquals(key, globalSettings.BitPay.WebhookKey))
         {
-            return new BadRequestResult();
-        }
-        if (model == null || string.IsNullOrWhiteSpace(model.Data?.Id) ||
-            string.IsNullOrWhiteSpace(model.Event?.Name))
-        {
-            return new BadRequestResult();
+            return new BadRequestObjectResult("Invalid key");
         }
 
-        if (model.Event.Name != "invoice_confirmed")
-        {
-            // Only processing confirmed invoice events for now.
-            return new OkResult();
-        }
-
-        var invoice = await _bitPayClient.GetInvoiceAsync(model.Data.Id);
-        if (invoice == null)
-        {
-            // Request forged...?
-            _logger.LogWarning("Invoice not found. #" + model.Data.Id);
-            return new BadRequestResult();
-        }
-
-        if (invoice.Status != "confirmed" && invoice.Status != "completed")
-        {
-            _logger.LogWarning("Invoice status of '" + invoice.Status + "' is not acceptable. #" + invoice.Id);
-            return new BadRequestResult();
-        }
+        var invoice = await bitPayClient.GetInvoice(model.Data.Id);
 
         if (invoice.Currency != "USD")
         {
-            // Only process USD payments
-            _logger.LogWarning("Non USD payment received. #" + invoice.Id);
-            return new OkResult();
+            logger.LogWarning("Received BitPay invoice webhook for invoice ({InvoiceID}) with non-USD currency: {Currency}", invoice.Id, invoice.Currency);
+            return new BadRequestObjectResult("Cannot process non-USD payments");
         }
 
         var (organizationId, userId, providerId) = GetIdsFromPosData(invoice);
-        if (!organizationId.HasValue && !userId.HasValue && !providerId.HasValue)
+        if ((!organizationId.HasValue && !userId.HasValue && !providerId.HasValue) || !invoice.PosData.Contains(PosDataKeys.AccountCredit))
         {
-            return new OkResult();
+            logger.LogWarning("Received BitPay invoice webhook for invoice ({InvoiceID}) that had invalid POS data: {PosData}", invoice.Id, invoice.PosData);
+            return new BadRequestObjectResult("Invalid POS data");
         }
 
-        var isAccountCredit = IsAccountCredit(invoice);
-        if (!isAccountCredit)
+        if (invoice.Status != InvoiceStatuses.Complete)
         {
-            // Only processing credits
-            _logger.LogWarning("Non-credit payment received. #{InvoiceId}", invoice.Id);
-            return new OkResult();
+            logger.LogInformation("Received valid BitPay invoice webhook for invoice ({InvoiceID}) that is not yet complete: {Status}",
+                invoice.Id, invoice.Status);
+            return new OkObjectResult("Waiting for invoice to be completed");
         }
 
-        var transaction = await _transactionRepository.GetByGatewayIdAsync(GatewayType.BitPay, invoice.Id);
-        if (transaction != null)
+        var existingTransaction = await transactionRepository.GetByGatewayIdAsync(GatewayType.BitPay, invoice.Id);
+        if (existingTransaction != null)
         {
-            _logger.LogWarning("Already processed this invoice. #{InvoiceId}", invoice.Id);
-            return new OkResult();
+            logger.LogWarning("Already processed BitPay invoice webhook for invoice ({InvoiceID})", invoice.Id);
+            return new OkObjectResult("Invoice already processed");
         }
 
         try
         {
-            var tx = new Transaction
+            var transaction = new Transaction
             {
                 Amount = Convert.ToDecimal(invoice.Price),
                 CreationDate = GetTransactionDate(invoice),
@@ -123,53 +86,47 @@ public class BitPayController : Controller
                 PaymentMethodType = PaymentMethodType.BitPay,
                 Details = $"{invoice.Currency}, BitPay {invoice.Id}"
             };
-            await _transactionRepository.CreateAsync(tx);
 
-            string billingEmail = null;
-            if (tx.OrganizationId.HasValue)
+            await transactionRepository.CreateAsync(transaction);
+
+            var billingEmail = "";
+            if (transaction.OrganizationId.HasValue)
             {
-                var org = await _organizationRepository.GetByIdAsync(tx.OrganizationId.Value);
-                if (org != null)
+                var organization = await organizationRepository.GetByIdAsync(transaction.OrganizationId.Value);
+                if (organization != null)
                 {
-                    billingEmail = org.BillingEmailAddress();
-                    if (await _paymentService.CreditAccountAsync(org, tx.Amount))
+                    billingEmail = organization.BillingEmailAddress();
+                    if (await paymentService.CreditAccountAsync(organization, transaction.Amount))
                     {
-                        await _organizationRepository.ReplaceAsync(org);
+                        await organizationRepository.ReplaceAsync(organization);
                     }
                 }
             }
-            else if (tx.UserId.HasValue)
+            else if (transaction.UserId.HasValue)
             {
-                var user = await _userRepository.GetByIdAsync(tx.UserId.Value);
+                var user = await userRepository.GetByIdAsync(transaction.UserId.Value);
                 if (user != null)
                 {
                     billingEmail = user.BillingEmailAddress();
-                    if (await _paymentService.CreditAccountAsync(user, tx.Amount))
-                    {
-                        await _userRepository.ReplaceAsync(user);
-                    }
+                    await premiumUserBillingService.Credit(user, transaction.Amount);
                 }
             }
-            else if (tx.ProviderId.HasValue)
+            else if (transaction.ProviderId.HasValue)
             {
-                var provider = await _providerRepository.GetByIdAsync(tx.ProviderId.Value);
+                var provider = await providerRepository.GetByIdAsync(transaction.ProviderId.Value);
                 if (provider != null)
                 {
                     billingEmail = provider.BillingEmailAddress();
-                    if (await _paymentService.CreditAccountAsync(provider, tx.Amount))
+                    if (await paymentService.CreditAccountAsync(provider, transaction.Amount))
                     {
-                        await _providerRepository.ReplaceAsync(provider);
+                        await providerRepository.ReplaceAsync(provider);
                     }
                 }
-            }
-            else
-            {
-                _logger.LogError("Received BitPay account credit transaction that didn't have a user, org, or provider. Invoice#{InvoiceId}", invoice.Id);
             }
 
             if (!string.IsNullOrWhiteSpace(billingEmail))
             {
-                await _mailService.SendAddedCreditAsync(billingEmail, tx.Amount);
+                await mailService.SendAddedCreditAsync(billingEmail, transaction.Amount);
             }
         }
         // Catch foreign key violations because user/org could have been deleted.
@@ -180,58 +137,34 @@ public class BitPayController : Controller
         return new OkResult();
     }
 
-    private bool IsAccountCredit(BitPayLight.Models.Invoice.Invoice invoice)
+    private static DateTime GetTransactionDate(Invoice invoice)
     {
-        return invoice != null && invoice.PosData != null && invoice.PosData.Contains("accountCredit:1");
+        var transactions = invoice.Transactions?.Where(transaction =>
+            transaction.Type == null && !string.IsNullOrWhiteSpace(transaction.Confirmations) &&
+            transaction.Confirmations != "0").ToList();
+
+        return transactions?.Count == 1
+            ? DateTime.Parse(transactions.First().ReceivedTime, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind)
+            : CoreHelpers.FromEpocMilliseconds(invoice.CurrentTime);
     }
 
-    private DateTime GetTransactionDate(BitPayLight.Models.Invoice.Invoice invoice)
+    public (Guid? OrganizationId, Guid? UserId, Guid? ProviderId) GetIdsFromPosData(Invoice invoice)
     {
-        var transactions = invoice.Transactions?.Where(t => t.Type == null &&
-            !string.IsNullOrWhiteSpace(t.Confirmations) && t.Confirmations != "0");
-        if (transactions != null && transactions.Count() == 1)
+        if (invoice.PosData is null or { Length: 0 } || !invoice.PosData.Contains(':'))
         {
-            return DateTime.Parse(transactions.First().ReceivedTime, CultureInfo.InvariantCulture,
-                DateTimeStyles.RoundtripKind);
-        }
-        return CoreHelpers.FromEpocMilliseconds(invoice.CurrentTime);
-    }
-
-    public Tuple<Guid?, Guid?, Guid?> GetIdsFromPosData(BitPayLight.Models.Invoice.Invoice invoice)
-    {
-        Guid? orgId = null;
-        Guid? userId = null;
-        Guid? providerId = null;
-
-        if (invoice == null || string.IsNullOrWhiteSpace(invoice.PosData) || !invoice.PosData.Contains(':'))
-        {
-            return new Tuple<Guid?, Guid?, Guid?>(null, null, null);
+            return new ValueTuple<Guid?, Guid?, Guid?>(null, null, null);
         }
 
-        var mainParts = invoice.PosData.Split(',');
-        foreach (var mainPart in mainParts)
-        {
-            var parts = mainPart.Split(':');
+        var ids = invoice.PosData
+            .Split(',')
+            .Select(part => part.Split(':'))
+            .Where(parts => parts.Length == 2 && Guid.TryParse(parts[1], out _))
+            .ToDictionary(parts => parts[0], parts => Guid.Parse(parts[1]));
 
-            if (parts.Length <= 1 || !Guid.TryParse(parts[1], out var id))
-            {
-                continue;
-            }
-
-            switch (parts[0])
-            {
-                case "userId":
-                    userId = id;
-                    break;
-                case "organizationId":
-                    orgId = id;
-                    break;
-                case "providerId":
-                    providerId = id;
-                    break;
-            }
-        }
-
-        return new Tuple<Guid?, Guid?, Guid?>(orgId, userId, providerId);
+        return new ValueTuple<Guid?, Guid?, Guid?>(
+            ids.TryGetValue(MetadataKeys.OrganizationId, out var id) ? id : null,
+            ids.TryGetValue(MetadataKeys.UserId, out id) ? id : null,
+            ids.TryGetValue(MetadataKeys.ProviderId, out id) ? id : null
+        );
     }
 }

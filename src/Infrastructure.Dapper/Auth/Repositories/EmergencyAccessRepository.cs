@@ -1,7 +1,7 @@
 ﻿using System.Data;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Data;
-using Bit.Core.Auth.UserFeatures.UserKey;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper.Auth.Helpers;

@@ -1,6 +1,9 @@
-﻿using Bit.Core.Context;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Auth.Identity;
+using Bit.Core.Context;
 using Bit.Core.Exceptions;
-using Bit.Core.Identity;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Commands.Projects.Interfaces;
 using Bit.Core.SecretsManager.Entities;
@@ -28,16 +31,16 @@ public class CreateProjectCommand : ICreateProjectCommand
         _currentContext = currentContext;
     }
 
-    public async Task<Project> CreateAsync(Project project, Guid id, ClientType clientType)
+    public async Task<Project> CreateAsync(Project project, Guid id, IdentityClientType identityClientType)
     {
-        if (clientType != ClientType.User && clientType != ClientType.ServiceAccount)
+        if (identityClientType != IdentityClientType.User && identityClientType != IdentityClientType.ServiceAccount)
         {
             throw new NotFoundException();
         }
 
         var createdProject = await _projectRepository.CreateAsync(project);
 
-        if (clientType == ClientType.User)
+        if (identityClientType == IdentityClientType.User)
         {
             var orgUser = await _organizationUserRepository.GetByOrganizationAsync(createdProject.OrganizationId, id);
 
@@ -52,7 +55,7 @@ public class CreateProjectCommand : ICreateProjectCommand
             await _accessPolicyRepository.CreateManyAsync(new List<BaseAccessPolicy> { accessPolicy });
 
         }
-        else if (clientType == ClientType.ServiceAccount)
+        else if (identityClientType == IdentityClientType.ServiceAccount)
         {
             var serviceAccountProjectAccessPolicy = new ServiceAccountProjectAccessPolicy()
             {

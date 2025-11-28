@@ -6,7 +6,6 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
-using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains;
 
@@ -14,21 +13,15 @@ public class CreateOrganizationDomainCommand : ICreateOrganizationDomainCommand
 {
     private readonly IOrganizationDomainRepository _organizationDomainRepository;
     private readonly IEventService _eventService;
-    private readonly IDnsResolverService _dnsResolverService;
-    private readonly ILogger<VerifyOrganizationDomainCommand> _logger;
     private readonly IGlobalSettings _globalSettings;
 
     public CreateOrganizationDomainCommand(
         IOrganizationDomainRepository organizationDomainRepository,
         IEventService eventService,
-        IDnsResolverService dnsResolverService,
-        ILogger<VerifyOrganizationDomainCommand> logger,
         IGlobalSettings globalSettings)
     {
         _organizationDomainRepository = organizationDomainRepository;
         _eventService = eventService;
-        _dnsResolverService = dnsResolverService;
-        _logger = logger;
         _globalSettings = globalSettings;
     }
 

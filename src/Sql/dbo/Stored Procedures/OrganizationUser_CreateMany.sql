@@ -13,7 +13,6 @@ BEGIN
         [Key],
         [Status],
         [Type],
-        [AccessAll],
         [ExternalId],
         [CreationDate],
         [RevisionDate],
@@ -29,7 +28,6 @@ BEGIN
         OUI.[Key],
         OUI.[Status],
         OUI.[Type],
-        0,  -- AccessAll will be removed shortly
         OUI.[ExternalId],
         OUI.[CreationDate],
         OUI.[RevisionDate],

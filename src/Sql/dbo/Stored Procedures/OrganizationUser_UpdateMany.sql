@@ -63,7 +63,6 @@ BEGIN
         [Key] = OUI.[Key],
         [Status] = OUI.[Status],
         [Type] = OUI.[Type],
-        [AccessAll] = 0, -- AccessAll will be removed shortly
         [ExternalId] = OUI.[ExternalId],
         [CreationDate] = OUI.[CreationDate],
         [RevisionDate] = OUI.[RevisionDate],

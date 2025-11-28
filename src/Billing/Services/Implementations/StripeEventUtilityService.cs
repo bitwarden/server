@@ -1,10 +1,14 @@
-﻿using Bit.Billing.Constants;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Billing.Constants;
+using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Models;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Braintree;
 using Stripe;
 using Customer = Stripe.Customer;
@@ -84,25 +88,6 @@ public class StripeEventUtilityService : IStripeEventUtilityService
     /// <returns></returns>
     public async Task<(Guid?, Guid?, Guid?)> GetEntityIdsFromChargeAsync(Charge charge)
     {
-        Guid? organizationId = null;
-        Guid? userId = null;
-        Guid? providerId = null;
-
-        if (charge.InvoiceId != null)
-        {
-            var invoice = await _stripeFacade.GetInvoice(charge.InvoiceId);
-            if (invoice?.SubscriptionId != null)
-            {
-                var subscription = await _stripeFacade.GetSubscription(invoice.SubscriptionId);
-                (organizationId, userId, providerId) = GetIdsFromMetadata(subscription?.Metadata);
-            }
-        }
-
-        if (organizationId.HasValue || userId.HasValue || providerId.HasValue)
-        {
-            return (organizationId, userId, providerId);
-        }
-
         var subscriptions = await _stripeFacade.ListSubscriptions(new SubscriptionListOptions
         {
             Customer = charge.CustomerId
@@ -115,7 +100,7 @@ public class StripeEventUtilityService : IStripeEventUtilityService
                 continue;
             }
 
-            (organizationId, userId, providerId) = GetIdsFromMetadata(subscription.Metadata);
+            var (organizationId, userId, providerId) = GetIdsFromMetadata(subscription.Metadata);
 
             if (organizationId.HasValue || userId.HasValue || providerId.HasValue)
             {
@@ -127,7 +112,7 @@ public class StripeEventUtilityService : IStripeEventUtilityService
     }
 
     public bool IsSponsoredSubscription(Subscription subscription) =>
-        StaticStore.SponsoredPlans
+        SponsoredPlans.All
             .Any(p => subscription.Items
                 .Any(i => i.Plan.Id == p.StripePlanId));
 
@@ -206,6 +191,12 @@ public class StripeEventUtilityService : IStripeEventUtilityService
                         transaction.PaymentMethodType = PaymentMethodType.Card;
                         transaction.Details = $"{card.Brand?.ToUpperInvariant()}, *{card.Last4}";
                     }
+                    else if (charge.PaymentMethodDetails.UsBankAccount != null)
+                    {
+                        var usBankAccount = charge.PaymentMethodDetails.UsBankAccount;
+                        transaction.PaymentMethodType = PaymentMethodType.BankAccount;
+                        transaction.Details = $"{usBankAccount.BankName}, *{usBankAccount.Last4}";
+                    }
                     else if (charge.PaymentMethodDetails.AchDebit != null)
                     {
                         var achDebit = charge.PaymentMethodDetails.AchDebit;
@@ -247,10 +238,10 @@ public class StripeEventUtilityService : IStripeEventUtilityService
         invoice is
         {
             AmountDue: > 0,
-            Paid: false,
+            Status: not StripeConstants.InvoiceStatus.Paid,
             CollectionMethod: "charge_automatically",
             BillingReason: "subscription_cycle" or "automatic_pending_invoice_item_invoice",
-            SubscriptionId: not null
+            Parent.SubscriptionDetails: not null
         };
 
     private async Task<bool> AttemptToPayInvoiceWithBraintreeAsync(Invoice invoice, Customer customer)
@@ -263,7 +254,13 @@ public class StripeEventUtilityService : IStripeEventUtilityService
             return false;
         }
 
-        var subscription = await _stripeFacade.GetSubscription(invoice.SubscriptionId);
+        if (invoice.Parent?.SubscriptionDetails == null)
+        {
+            _logger.LogWarning("Invoice parent was not a subscription.");
+            return false;
+        }
+
+        var subscription = await _stripeFacade.GetSubscription(invoice.Parent.SubscriptionDetails.SubscriptionId);
         var (organizationId, userId, providerId) = GetIdsFromMetadata(subscription?.Metadata);
         if (!organizationId.HasValue && !userId.HasValue && !providerId.HasValue)
         {
@@ -290,7 +287,7 @@ public class StripeEventUtilityService : IStripeEventUtilityService
             btObjIdField = "provider_id";
             btObjId = providerId.Value;
         }
-        var btInvoiceAmount = invoice.AmountDue / 100M;
+        var btInvoiceAmount = Math.Round(invoice.AmountDue / 100M, 2);
 
         var existingTransactions = organizationId.HasValue
             ? await _transactionRepository.GetManyByOrganizationIdAsync(organizationId.Value)
@@ -312,26 +309,34 @@ public class StripeEventUtilityService : IStripeEventUtilityService
         Result<Braintree.Transaction> transactionResult;
         try
         {
-            transactionResult = await _btGateway.Transaction.SaleAsync(
-                new Braintree.TransactionRequest
+            var transactionRequest = new Braintree.TransactionRequest
+            {
+                Amount = btInvoiceAmount,
+                CustomerId = customer.Metadata["btCustomerId"],
+                Options = new Braintree.TransactionOptionsRequest
                 {
-                    Amount = btInvoiceAmount,
-                    CustomerId = customer.Metadata["btCustomerId"],
-                    Options = new Braintree.TransactionOptionsRequest
+                    SubmitForSettlement = true,
+                    PayPal = new Braintree.TransactionOptionsPayPalRequest
                     {
-                        SubmitForSettlement = true,
-                        PayPal = new Braintree.TransactionOptionsPayPalRequest
-                        {
-                            CustomField =
-                                $"{btObjIdField}:{btObjId},region:{_globalSettings.BaseServiceUri.CloudRegion}"
-                        }
-                    },
-                    CustomFields = new Dictionary<string, string>
-                    {
-                        [btObjIdField] = btObjId.ToString(),
-                        ["region"] = _globalSettings.BaseServiceUri.CloudRegion
+                        CustomField =
+                            $"{btObjIdField}:{btObjId},region:{_globalSettings.BaseServiceUri.CloudRegion}"
                     }
-                });
+                },
+                CustomFields = new Dictionary<string, string>
+                {
+                    [btObjIdField] = btObjId.ToString(),
+                    ["region"] = _globalSettings.BaseServiceUri.CloudRegion
+                }
+            };
+
+            _logger.LogInformation("Creating Braintree transaction with Amount: {Amount}, CustomerId: {CustomerId}, " +
+                "CustomField: {CustomField}, CustomFields: {@CustomFields}",
+                transactionRequest.Amount,
+                transactionRequest.CustomerId,
+                transactionRequest.Options.PayPal.CustomField,
+                transactionRequest.CustomFields);
+
+            transactionResult = await _btGateway.Transaction.SaleAsync(transactionRequest);
         }
         catch (NotFoundException e)
         {
@@ -339,9 +344,19 @@ public class StripeEventUtilityService : IStripeEventUtilityService
                 "Attempted to make a payment with Braintree, but customer did not exist for the given btCustomerId present on the Stripe metadata");
             throw;
         }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Exception occurred while trying to pay invoice with Braintree");
+            throw;
+        }
 
         if (!transactionResult.IsSuccess())
         {
+            _logger.LogWarning("Braintree transaction failed. Error: {ErrorMessage}, Transaction Status: {Status}, Validation Errors: {ValidationErrors}",
+                transactionResult.Message,
+                transactionResult.Target?.Status,
+                string.Join(", ", transactionResult.Errors.DeepAll().Select(e => $"Code: {e.Code}, Message: {e.Message}, Attribute: {e.Attribute}")));
+
             if (invoice.AttemptCount < 4)
             {
                 await _mailService.SendPaymentFailedAsync(customer.Email, btInvoiceAmount, true);

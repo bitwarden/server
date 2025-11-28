@@ -1,4 +1,7 @@
-﻿using Bit.Core.Entities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 
 namespace Bit.Core.Models.Business;
@@ -14,4 +17,7 @@ public class OrganizationSignup : OrganizationUpgrade
     public string PaymentToken { get; set; }
     public int? MaxAutoscaleSeats { get; set; } = null;
     public string InitiationPath { get; set; }
+    public bool IsFromSecretsManagerTrial { get; set; }
+    public bool IsFromProvider { get; set; }
+    public bool SkipTrial { get; set; }
 }

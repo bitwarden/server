@@ -1,9 +1,19 @@
-﻿using Bit.Api.AdminConsole.Models.Request;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.AdminConsole.Authorization;
+using Bit.Api.AdminConsole.Authorization.Requirements;
+using Bit.Api.AdminConsole.Models.Request;
+using Bit.Api.AdminConsole.Models.Response.Helpers;
+using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Response;
+using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.Models.Api.Response;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -23,59 +33,70 @@ namespace Bit.Api.AdminConsole.Controllers;
 [Authorize("Application")]
 public class PoliciesController : Controller
 {
-    private readonly IPolicyRepository _policyRepository;
-    private readonly IPolicyService _policyService;
-    private readonly IOrganizationService _organizationService;
-    private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IUserService _userService;
     private readonly ICurrentContext _currentContext;
     private readonly GlobalSettings _globalSettings;
+    private readonly IOrganizationHasVerifiedDomainsQuery _organizationHasVerifiedDomainsQuery;
+    private readonly IOrganizationRepository _organizationRepository;
     private readonly IDataProtector _organizationServiceDataProtector;
+    private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
+    private readonly IPolicyRepository _policyRepository;
+    private readonly IUserService _userService;
+    private readonly IFeatureService _featureService;
+    private readonly ISavePolicyCommand _savePolicyCommand;
+    private readonly IVNextSavePolicyCommand _vNextSavePolicyCommand;
 
-    public PoliciesController(
-        IPolicyRepository policyRepository,
-        IPolicyService policyService,
-        IOrganizationService organizationService,
+    public PoliciesController(IPolicyRepository policyRepository,
         IOrganizationUserRepository organizationUserRepository,
         IUserService userService,
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
         IDataProtectionProvider dataProtectionProvider,
-        IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory)
+        IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
+        IOrganizationHasVerifiedDomainsQuery organizationHasVerifiedDomainsQuery,
+        IOrganizationRepository organizationRepository,
+        IFeatureService featureService,
+        ISavePolicyCommand savePolicyCommand,
+        IVNextSavePolicyCommand vNextSavePolicyCommand)
     {
         _policyRepository = policyRepository;
-        _policyService = policyService;
-        _organizationService = organizationService;
         _organizationUserRepository = organizationUserRepository;
         _userService = userService;
         _currentContext = currentContext;
         _globalSettings = globalSettings;
         _organizationServiceDataProtector = dataProtectionProvider.CreateProtector(
             "OrganizationServiceDataProtector");
-
+        _organizationRepository = organizationRepository;
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
+        _organizationHasVerifiedDomainsQuery = organizationHasVerifiedDomainsQuery;
+        _featureService = featureService;
+        _savePolicyCommand = savePolicyCommand;
+        _vNextSavePolicyCommand = vNextSavePolicyCommand;
     }
 
     [HttpGet("{type}")]
-    public async Task<PolicyResponseModel> Get(string orgId, int type)
+    public async Task<PolicyDetailResponseModel> Get(Guid orgId, int type)
     {
-        var orgIdGuid = new Guid(orgId);
-        if (!await _currentContext.ManagePolicies(orgIdGuid))
+        if (!await _currentContext.ManagePolicies(orgId))
         {
             throw new NotFoundException();
         }
-        var policy = await _policyRepository.GetByOrganizationIdTypeAsync(orgIdGuid, (PolicyType)type);
+        var policy = await _policyRepository.GetByOrganizationIdTypeAsync(orgId, (PolicyType)type);
         if (policy == null)
         {
-            throw new NotFoundException();
+            return new PolicyDetailResponseModel(new Policy { Type = (PolicyType)type });
         }
 
-        return new PolicyResponseModel(policy);
+        if (policy.Type is PolicyType.SingleOrg)
+        {
+            return await policy.GetSingleOrgPolicyDetailResponseAsync(_organizationHasVerifiedDomainsQuery);
+        }
+
+        return new PolicyDetailResponseModel(policy);
     }
 
     [HttpGet("")]
-    public async Task<ListResponseModel<PolicyResponseModel>> Get(string orgId)
+    public async Task<ListResponseModel<PolicyResponseModel>> GetAll(string orgId)
     {
         var orgIdGuid = new Guid(orgId);
         if (!await _currentContext.ManagePolicies(orgIdGuid))
@@ -84,8 +105,8 @@ public class PoliciesController : Controller
         }
 
         var policies = await _policyRepository.GetManyByOrganizationIdAsync(orgIdGuid);
-        var responses = policies.Select(p => new PolicyResponseModel(p));
-        return new ListResponseModel<PolicyResponseModel>(responses);
+
+        return new ListResponseModel<PolicyResponseModel>(policies.Select(p => new PolicyResponseModel(p)));
     }
 
     [AllowAnonymous]
@@ -93,6 +114,13 @@ public class PoliciesController : Controller
     public async Task<ListResponseModel<PolicyResponseModel>> GetByToken(Guid orgId, [FromQuery] string email,
         [FromQuery] string token, [FromQuery] Guid organizationUserId)
     {
+        var organization = await _organizationRepository.GetByIdAsync(orgId);
+
+        if (organization is not { UsePolicies: true })
+        {
+            throw new NotFoundException();
+        }
+
         // TODO: PM-4142 - remove old token validation logic once 3 releases of backwards compatibility are complete
         var newTokenValid = OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
             _orgUserInviteTokenDataFactory, token, organizationUserId, email);
@@ -147,6 +175,13 @@ public class PoliciesController : Controller
     [HttpGet("master-password")]
     public async Task<PolicyResponseModel> GetMasterPasswordPolicy(Guid orgId)
     {
+        var organization = await _organizationRepository.GetByIdAsync(orgId);
+
+        if (organization is not { UsePolicies: true })
+        {
+            throw new NotFoundException();
+        }
+
         var userId = _userService.GetProperUserId(User).Value;
 
         var orgUser = await _organizationUserRepository.GetByOrganizationAsync(orgId, userId);
@@ -167,25 +202,29 @@ public class PoliciesController : Controller
     }
 
     [HttpPut("{type}")]
-    public async Task<PolicyResponseModel> Put(string orgId, int type, [FromBody] PolicyRequestModel model)
+    public async Task<PolicyResponseModel> Put(Guid orgId, PolicyType type, [FromBody] PolicyRequestModel model)
     {
-        var orgIdGuid = new Guid(orgId);
-        if (!await _currentContext.ManagePolicies(orgIdGuid))
+        if (!await _currentContext.ManagePolicies(orgId))
         {
             throw new NotFoundException();
         }
-        var policy = await _policyRepository.GetByOrganizationIdTypeAsync(new Guid(orgId), (PolicyType)type);
-        if (policy == null)
-        {
-            policy = model.ToPolicy(orgIdGuid);
-        }
-        else
-        {
-            policy = model.ToPolicy(policy);
-        }
 
-        var userId = _userService.GetProperUserId(User);
-        await _policyService.SaveAsync(policy, _userService, _organizationService, userId);
+        var policyUpdate = await model.ToPolicyUpdateAsync(orgId, type, _currentContext);
+        var policy = await _savePolicyCommand.SaveAsync(policyUpdate);
+        return new PolicyResponseModel(policy);
+    }
+
+    [HttpPut("{type}/vnext")]
+    [RequireFeatureAttribute(FeatureFlagKeys.CreateDefaultLocation)]
+    [Authorize<ManagePoliciesRequirement>]
+    public async Task<PolicyResponseModel> PutVNext(Guid orgId, PolicyType type, [FromBody] SavePolicyRequest model)
+    {
+        var savePolicyRequest = await model.ToSavePolicyModelAsync(orgId, type, _currentContext);
+
+        var policy = _featureService.IsEnabled(FeatureFlagKeys.PolicyValidatorsRefactor) ?
+            await _vNextSavePolicyCommand.SaveAsync(savePolicyRequest) :
+            await _savePolicyCommand.VNextSaveAsync(savePolicyRequest);
+
         return new PolicyResponseModel(policy);
     }
 }

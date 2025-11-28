@@ -3,6 +3,7 @@ using System.IdentityModel.Tokens.Jwt;
 using AspNetCoreRateLimit;
 using Bit.Core;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Context;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.SecretsManager.Repositories.Noop;
@@ -63,10 +64,11 @@ public class Startup
             config.Filters.Add(new ModelStateValidationFilterAttribute());
         });
 
-        services.AddSwaggerGen(c =>
+        services.AddSwaggerGen(config =>
         {
-            c.SchemaFilter<EnumSchemaFilter>();
-            c.SwaggerDoc("v1", new OpenApiInfo { Title = "Bitwarden Identity", Version = "v1" });
+            config.InitializeSwaggerFilters(Environment);
+
+            config.SwaggerDoc("v1", new OpenApiInfo { Title = "Bitwarden Identity", Version = "v1" });
         });
 
         if (!globalSettings.SelfHosted)
@@ -119,9 +121,9 @@ public class Startup
                         // Pass domain_hint onto the sso idp
                         context.ProtocolMessage.DomainHint = context.Properties.Items["domain_hint"];
                         context.ProtocolMessage.Parameters.Add("organizationId", context.Properties.Items["organizationId"]);
-                        if (context.Properties.Items.ContainsKey("user_identifier"))
+                        if (context.Properties.Items.TryGetValue("user_identifier", out var userIdentifier))
                         {
-                            context.ProtocolMessage.SessionState = context.Properties.Items["user_identifier"];
+                            context.ProtocolMessage.SessionState = userIdentifier;
                         }
 
                         if (context.Properties.Parameters.Count > 0 &&
@@ -144,7 +146,9 @@ public class Startup
         // Services
         services.AddBaseServices(globalSettings);
         services.AddDefaultServices(globalSettings);
+        services.AddOptionality();
         services.AddCoreLocalizationServices();
+        services.AddBillingOperations();
 
         // TODO: Remove when OrganizationUser methods are moved out of OrganizationService, this noop dependency should
         // TODO: no longer be required - see PM-1880
@@ -166,13 +170,10 @@ public class Startup
     public void Configure(
         IApplicationBuilder app,
         IWebHostEnvironment env,
-        IHostApplicationLifetime appLifetime,
         GlobalSettings globalSettings,
         ILogger<Startup> logger)
     {
         IdentityModelEventSource.ShowPII = true;
-
-        app.UseSerilog(env, appLifetime, globalSettings);
 
         // Add general security headers
         app.UseMiddleware<SecurityHeadersMiddleware>();
@@ -236,6 +237,6 @@ public class Startup
         app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());
 
         // Log startup
-        logger.LogInformation(Constants.BypassFiltersEventId, globalSettings.ProjectName + " started.");
+        logger.LogInformation(Constants.BypassFiltersEventId, "{Project} started.", globalSettings.ProjectName);
     }
 }
