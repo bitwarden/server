@@ -299,49 +299,6 @@ public class Startup
             app.UseSwagger(config =>
             {
                 config.RouteTemplate = "specs/{documentName}/swagger.json";
-
-                // Remove all Bitwarden cloud servers and only register the local server
-                config.PreSerializeFilters.Add((swaggerDoc, httpReq) =>
-                {
-                    swaggerDoc.Servers.Clear();
-                    swaggerDoc.Servers.Add(new OpenApiServer
-                    {
-                        Url = globalSettings.BaseServiceUri.Api,
-                    });
-
-                    swaggerDoc.Components.SecuritySchemes.Clear();
-                    swaggerDoc.Components.SecuritySchemes.Add("oauth2-client-credentials", new OpenApiSecurityScheme
-                    {
-                        Type = SecuritySchemeType.OAuth2,
-                        Flows = new OpenApiOAuthFlows
-                        {
-                            ClientCredentials = new OpenApiOAuthFlow
-                            {
-                                TokenUrl = new Uri($"{globalSettings.BaseServiceUri.Identity}/connect/token"),
-                                Scopes = new Dictionary<string, string>
-                                {
-                                    { ApiScopes.ApiOrganization, "Organization APIs" }
-                                }
-                            }
-                        }
-                    });
-
-                    swaggerDoc.SecurityRequirements.Clear();
-                    swaggerDoc.SecurityRequirements.Add(new OpenApiSecurityRequirement
-                    {
-                        {
-                            new OpenApiSecurityScheme
-                            {
-                                Reference = new OpenApiReference
-                                {
-                                    Type = ReferenceType.SecurityScheme,
-                                    Id = "oauth2-client-credentials"
-                                }
-                            },
-                            [ApiScopes.ApiOrganization]
-                        }
-                    });
-                });
             });
 
             // adds the middleware to display the web UI

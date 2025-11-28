@@ -1074,7 +1074,7 @@ public static class ServiceCollectionExtensions
     /// Adds a server with its corresponding OAuth2 client credentials security definition and requirement.
     /// </summary>
     /// <param name="config">The SwaggerGen configuration</param>
-    /// <param name="serverId">Unique identifier for this server (e.g., "us-server", "eu-server")</param>
+    /// <param name="serverId">Unique identifier for this server, without spaces (e.g., "us-server", "eu-server")</param>
     /// <param name="serverUrl">The API server URL</param>
     /// <param name="identityTokenUrl">The identity server token URL</param>
     /// <param name="serverDescription">Human-readable description for the server</param>
