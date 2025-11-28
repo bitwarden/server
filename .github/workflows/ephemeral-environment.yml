@@ -1,0 +1,20 @@
+name: Ephemeral Environment
+
+on:
+  pull_request:
+    types: [labeled]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  setup-ephemeral-environment:
+    name: Setup Ephemeral Environment
+    if: github.event.label.name == 'ephemeral-environment'
+    uses: bitwarden/gh-actions/.github/workflows/_ephemeral_environment_manager.yml@main
+    with:
+      project: server
+      pull_request_number: ${{ github.event.number }}
+      sync_environment: false
+    secrets: inherit

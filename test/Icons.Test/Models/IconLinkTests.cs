@@ -45,7 +45,7 @@ public class IconLinkTests
     [InlineData(" ", false)]
     [InlineData("unusable", false)]
     [InlineData("ico", true)]
-    public void WithNoRel_IsUsable(string extension, bool expectedResult)
+    public void WithNoRel_IsUsable(string? extension, bool expectedResult)
     {
         SetAttributeValue("href", $"/favicon.{extension}");
 

@@ -1,4 +1,7 @@
-﻿using System.Text.Json.Serialization;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text.Json.Serialization;
 using Bit.Api.Models.Response;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -66,24 +69,34 @@ public class OrganizationUserDetailsResponseModel : OrganizationUserResponseMode
 {
     public OrganizationUserDetailsResponseModel(
         OrganizationUser organizationUser,
-        bool managedByOrganization,
+        bool claimedByOrganization,
+        string ssoExternalId,
         IEnumerable<CollectionAccessSelection> collections)
         : base(organizationUser, "organizationUserDetails")
     {
-        ManagedByOrganization = managedByOrganization;
+        ClaimedByOrganization = claimedByOrganization;
+        SsoExternalId = ssoExternalId;
         Collections = collections.Select(c => new SelectionReadOnlyResponseModel(c));
     }
 
     public OrganizationUserDetailsResponseModel(OrganizationUserUserDetails organizationUser,
-        bool managedByOrganization,
+        bool claimedByOrganization,
         IEnumerable<CollectionAccessSelection> collections)
         : base(organizationUser, "organizationUserDetails")
     {
-        ManagedByOrganization = managedByOrganization;
+        ClaimedByOrganization = claimedByOrganization;
+        SsoExternalId = organizationUser.SsoExternalId;
         Collections = collections.Select(c => new SelectionReadOnlyResponseModel(c));
     }
 
-    public bool ManagedByOrganization { get; set; }
+    [Obsolete("Please use ClaimedByOrganization instead. This property will be removed in a future version.")]
+    public bool ManagedByOrganization
+    {
+        get => ClaimedByOrganization;
+        set => ClaimedByOrganization = value;
+    }
+    public bool ClaimedByOrganization { get; set; }
+    public string SsoExternalId { get; set; }
 
     public IEnumerable<SelectionReadOnlyResponseModel> Collections { get; set; }
 
@@ -116,8 +129,28 @@ public class OrganizationUserUserMiniDetailsResponseModel : ResponseModel
 
 public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponseModel
 {
+    public OrganizationUserUserDetailsResponseModel((OrganizationUserUserDetails OrgUser, bool TwoFactorEnabled, bool ClaimedByOrganization) data, string obj = "organizationUserUserDetails")
+        : base(data.OrgUser, obj)
+    {
+        if (data.OrgUser == null)
+        {
+            throw new ArgumentNullException(nameof(data.OrgUser));
+        }
+
+        Name = data.OrgUser.Name;
+        Email = data.OrgUser.Email;
+        AvatarColor = data.OrgUser.AvatarColor;
+        TwoFactorEnabled = data.TwoFactorEnabled;
+        SsoBound = !string.IsNullOrWhiteSpace(data.OrgUser.SsoExternalId);
+        Collections = data.OrgUser.Collections.Select(c => new SelectionReadOnlyResponseModel(c));
+        Groups = data.OrgUser.Groups;
+        // Prevent reset password when using key connector.
+        ResetPasswordEnrolled = ResetPasswordEnrolled && !data.OrgUser.UsesKeyConnector;
+        ClaimedByOrganization = data.ClaimedByOrganization;
+    }
+
     public OrganizationUserUserDetailsResponseModel(OrganizationUserUserDetails organizationUser,
-        bool twoFactorEnabled, bool managedByOrganization, string obj = "organizationUserUserDetails")
+        bool twoFactorEnabled, bool claimedByOrganization, string obj = "organizationUserUserDetails")
         : base(organizationUser, obj)
     {
         if (organizationUser == null)
@@ -134,7 +167,7 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
         Groups = organizationUser.Groups;
         // Prevent reset password when using key connector.
         ResetPasswordEnrolled = ResetPasswordEnrolled && !organizationUser.UsesKeyConnector;
-        ManagedByOrganization = managedByOrganization;
+        ClaimedByOrganization = claimedByOrganization;
     }
 
     public string Name { get; set; }
@@ -142,11 +175,17 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
     public string AvatarColor { get; set; }
     public bool TwoFactorEnabled { get; set; }
     public bool SsoBound { get; set; }
+    [Obsolete("Please use ClaimedByOrganization instead. This property will be removed in a future version.")]
+    public bool ManagedByOrganization
+    {
+        get => ClaimedByOrganization;
+        set => ClaimedByOrganization = value;
+    }
     /// <summary>
-    /// Indicates if the organization manages the user. If a user is "managed" by an organization,
+    /// Indicates if the organization claimed the user. If a user is "claimed" by an organization,
     /// the organization has greater control over their account, and some user actions are restricted.
     /// </summary>
-    public bool ManagedByOrganization { get; set; }
+    public bool ClaimedByOrganization { get; set; }
     public IEnumerable<SelectionReadOnlyResponseModel> Collections { get; set; }
     public IEnumerable<Guid> Groups { get; set; }
 }
@@ -197,8 +236,8 @@ public class OrganizationUserPublicKeyResponseModel : ResponseModel
 
 public class OrganizationUserBulkResponseModel : ResponseModel
 {
-    public OrganizationUserBulkResponseModel(Guid id, string error,
-        string obj = "OrganizationBulkConfirmResponseModel") : base(obj)
+    public OrganizationUserBulkResponseModel(Guid id, string error)
+        : base("OrganizationBulkConfirmResponseModel")
     {
         Id = id;
         Error = error;

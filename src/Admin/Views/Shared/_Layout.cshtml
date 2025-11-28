@@ -1,10 +1,8 @@
 @using Bit.Admin.Enums;
-@using Bit.Core
 
 @inject SignInManager<IdentityUser> SignInManager
 @inject Bit.Core.Settings.GlobalSettings GlobalSettings
 @inject Bit.Admin.Services.IAccessControlService AccessControlService
-@inject Bit.Core.Services.IFeatureService FeatureService
 
 @{
     var canViewUsers = AccessControlService.UserHasPermission(Permission.User_List_View);
@@ -13,16 +11,12 @@
     var canChargeBraintree = AccessControlService.UserHasPermission(Permission.Tools_ChargeBrainTreeCustomer);
     var canCreateTransaction = AccessControlService.UserHasPermission(Permission.Tools_CreateEditTransaction);
     var canPromoteAdmin = AccessControlService.UserHasPermission(Permission.Tools_PromoteAdmin);
-    var canPromoteProviderServiceUser = FeatureService.IsEnabled(FeatureFlagKeys.PromoteProviderServiceUserTool) &&
-                                        AccessControlService.UserHasPermission(Permission.Tools_PromoteProviderServiceUser);
+    var canPromoteProviderServiceUser = AccessControlService.UserHasPermission(Permission.Tools_PromoteProviderServiceUser);
     var canGenerateLicense = AccessControlService.UserHasPermission(Permission.Tools_GenerateLicenseFile);
-    var canManageTaxRates = AccessControlService.UserHasPermission(Permission.Tools_ManageTaxRates);
-    var canManageStripeSubscriptions = AccessControlService.UserHasPermission(Permission.Tools_ManageStripeSubscriptions);
     var canProcessStripeEvents = AccessControlService.UserHasPermission(Permission.Tools_ProcessStripeEvents);
-    var canMigrateProviders = AccessControlService.UserHasPermission(Permission.Tools_MigrateProviders);
 
     var canViewTools = canChargeBraintree || canCreateTransaction || canPromoteAdmin || canPromoteProviderServiceUser ||
-                        canGenerateLicense || canManageTaxRates || canManageStripeSubscriptions;
+                        canGenerateLicense;
 }
 
 <!DOCTYPE html>
@@ -92,7 +86,7 @@
                                         @if (canPromoteAdmin)
                                         {
                                             <a class="dropdown-item" asp-controller="Tools" asp-action="PromoteAdmin">
-                                                Promote Admin
+                                                Promote Organization Admin
                                             </a>
                                         }
                                         @if (canPromoteProviderServiceUser)
@@ -107,28 +101,10 @@
                                                 Generate License
                                             </a>
                                         }
-                                        @if (canManageTaxRates)
-                                        {
-                                            <a class="dropdown-item" asp-controller="Tools" asp-action="TaxRate">
-                                                Manage Tax Rates
-                                            </a>
-                                        }
-                                        @if (canManageStripeSubscriptions)
-                                        {
-                                            <a class="dropdown-item" asp-controller="Tools" asp-action="StripeSubscriptions">
-                                                Manage Stripe Subscriptions
-                                            </a>
-                                        }
                                          @if (canProcessStripeEvents)
                                         {
                                             <a class="dropdown-item" asp-controller="ProcessStripeEvents" asp-action="Index">
                                                 Process Stripe Events
-                                            </a>
-                                        }
-                                        @if (canMigrateProviders)
-                                        {
-                                            <a class="dropdown-item" asp-controller="MigrateProviders" asp-action="index">
-                                                Migrate Providers
                                             </a>
                                         }
                                     </ul>

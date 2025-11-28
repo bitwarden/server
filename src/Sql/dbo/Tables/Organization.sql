@@ -51,11 +51,16 @@ CREATE TABLE [dbo].[Organization] (
     [MaxAutoscaleSmSeats]           INT              NULL,
     [MaxAutoscaleSmServiceAccounts] INT              NULL,
     [SecretsManagerBeta]            BIT              NOT NULL CONSTRAINT [DF_Organization_SecretsManagerBeta] DEFAULT (0),
-    [LimitCollectionCreationDeletion]   BIT              NOT NULL CONSTRAINT [DF_Organization_LimitCollectionCreationDeletion] DEFAULT (0),
     [LimitCollectionCreation]       BIT              NOT NULL CONSTRAINT [DF_Organization_LimitCollectionCreation] DEFAULT (0),
     [LimitCollectionDeletion]       BIT              NOT NULL CONSTRAINT [DF_Organization_LimitCollectionDeletion] DEFAULT (0),
+    [LimitItemDeletion]             BIT              NOT NULL CONSTRAINT [DF_Organization_LimitItemDeletion] DEFAULT (0),
     [AllowAdminAccessToAllCollectionItems]   BIT              NOT NULL CONSTRAINT [DF_Organization_AllowAdminAccessToAllCollectionItems] DEFAULT (0),
     [UseRiskInsights]               BIT              NOT NULL CONSTRAINT [DF_Organization_UseRiskInsights] DEFAULT (0),
+    [UseOrganizationDomains]        BIT              NOT NULL CONSTRAINT [DF_Organization_UseOrganizationDomains] DEFAULT (0),
+    [UseAdminSponsoredFamilies]     BIT              NOT NULL CONSTRAINT [DF_Organization_UseAdminSponsoredFamilies] DEFAULT (0),
+    [SyncSeats]                     BIT              NOT NULL CONSTRAINT [DF_Organization_SyncSeats] DEFAULT (0),
+    [UseAutomaticUserConfirmation]  BIT              NOT NULL CONSTRAINT [DF_Organization_UseAutomaticUserConfirmation] DEFAULT (0),
+    [MaxStorageGbIncreased]         SMALLINT         NULL,
     CONSTRAINT [PK_Organization] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 

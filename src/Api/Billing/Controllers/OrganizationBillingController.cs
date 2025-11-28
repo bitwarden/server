@@ -1,7 +1,7 @@
-﻿#nullable enable
-using Bit.Api.Billing.Models.Requests;
+﻿using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
-using Bit.Core;
+using Bit.Core.Billing.Organizations.Services;
+using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Repositories;
@@ -15,8 +15,8 @@ namespace Bit.Api.Billing.Controllers;
 [Route("organizations/{organizationId:guid}/billing")]
 [Authorize("Application")]
 public class OrganizationBillingController(
+    IBusinessUnitConverter businessUnitConverter,
     ICurrentContext currentContext,
-    IFeatureService featureService,
     IOrganizationBillingService organizationBillingService,
     IOrganizationRepository organizationRepository,
     IPaymentService paymentService,
@@ -38,9 +38,7 @@ public class OrganizationBillingController(
             return Error.NotFound();
         }
 
-        var response = OrganizationMetadataResponse.From(metadata);
-
-        return TypedResults.Ok(response);
+        return TypedResults.Ok(metadata);
     }
 
     [HttpGet("history")]
@@ -136,11 +134,6 @@ public class OrganizationBillingController(
     [HttpGet("payment-method")]
     public async Task<IResult> GetPaymentMethodAsync([FromRoute] Guid organizationId)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.AC2476_DeprecateStripeSourcesAPI))
-        {
-            return Error.NotFound();
-        }
-
         if (!await currentContext.EditPaymentMethods(organizationId))
         {
             return Error.Unauthorized();
@@ -165,11 +158,6 @@ public class OrganizationBillingController(
         [FromRoute] Guid organizationId,
         [FromBody] UpdatePaymentMethodRequestBody requestBody)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.AC2476_DeprecateStripeSourcesAPI))
-        {
-            return Error.NotFound();
-        }
-
         if (!await currentContext.EditPaymentMethods(organizationId))
         {
             return Error.Unauthorized();
@@ -196,11 +184,6 @@ public class OrganizationBillingController(
         [FromRoute] Guid organizationId,
         [FromBody] VerifyBankAccountRequestBody requestBody)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.AC2476_DeprecateStripeSourcesAPI))
-        {
-            return Error.NotFound();
-        }
-
         if (!await currentContext.EditPaymentMethods(organizationId))
         {
             return Error.Unauthorized();
@@ -226,11 +209,6 @@ public class OrganizationBillingController(
     [HttpGet("tax-information")]
     public async Task<IResult> GetTaxInformationAsync([FromRoute] Guid organizationId)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.AC2476_DeprecateStripeSourcesAPI))
-        {
-            return Error.NotFound();
-        }
-
         if (!await currentContext.EditPaymentMethods(organizationId))
         {
             return Error.Unauthorized();
@@ -255,11 +233,6 @@ public class OrganizationBillingController(
         [FromRoute] Guid organizationId,
         [FromBody] TaxInformationRequestBody requestBody)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.AC2476_DeprecateStripeSourcesAPI))
-        {
-            return Error.NotFound();
-        }
-
         if (!await currentContext.EditPaymentMethods(organizationId))
         {
             return Error.Unauthorized();
@@ -275,6 +248,64 @@ public class OrganizationBillingController(
         var taxInformation = requestBody.ToDomain();
 
         await subscriberService.UpdateTaxInformation(organization, taxInformation);
+
+        return TypedResults.Ok();
+    }
+
+    [HttpPost("setup-business-unit")]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public async Task<IResult> SetupBusinessUnitAsync(
+        [FromRoute] Guid organizationId,
+        [FromBody] SetupBusinessUnitRequestBody requestBody)
+    {
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
+
+        if (organization == null)
+        {
+            return Error.NotFound();
+        }
+
+        if (!await currentContext.OrganizationUser(organizationId))
+        {
+            return Error.Unauthorized();
+        }
+
+        var providerId = await businessUnitConverter.FinalizeConversion(
+            organization,
+            requestBody.UserId,
+            requestBody.Token,
+            requestBody.ProviderKey,
+            requestBody.OrganizationKey);
+
+        return TypedResults.Ok(providerId);
+    }
+
+    [HttpPost("change-frequency")]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public async Task<IResult> ChangePlanSubscriptionFrequencyAsync(
+        [FromRoute] Guid organizationId,
+        [FromBody] ChangePlanFrequencyRequest request)
+    {
+        if (!await currentContext.EditSubscription(organizationId))
+        {
+            return Error.Unauthorized();
+        }
+
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
+
+        if (organization == null)
+        {
+            return Error.NotFound();
+        }
+
+        if (organization.PlanType == request.NewPlanType)
+        {
+            return Error.BadRequest("Organization is already on the requested plan frequency.");
+        }
+
+        await organizationBillingService.UpdateSubscriptionPlanFrequency(
+            organization,
+            request.NewPlanType);
 
         return TypedResults.Ok();
     }

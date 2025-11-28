@@ -1,4 +1,4 @@
-﻿using Bit.Core.Models.StaticStore;
+﻿using Bit.Core.Billing.Enums;
 
 namespace Bit.Core.Billing.Models.Sales;
 
@@ -6,9 +6,11 @@ namespace Bit.Core.Billing.Models.Sales;
 
 public class SubscriptionSetup
 {
-    public required Plan Plan { get; set; }
+    public required PlanType PlanType { get; set; }
     public required PasswordManager PasswordManagerOptions { get; set; }
     public SecretsManager? SecretsManagerOptions { get; set; }
+    public bool SkipTrial = false;
+    public string? InitiationPath { get; set; }
 
     public class PasswordManager
     {

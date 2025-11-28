@@ -1,4 +1,7 @@
-﻿using Bit.Core.Context;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Context;
 using Bit.Core.Enums;
 
 namespace Bit.Core.Models.Data;
@@ -34,5 +37,7 @@ public class EventMessage : IEvent
     public EventSystemUser? SystemUser { get; set; }
     public string DomainName { get; set; }
     public Guid? SecretId { get; set; }
+    public Guid? ProjectId { get; set; }
     public Guid? ServiceAccountId { get; set; }
+    public Guid? GrantedServiceAccountId { get; set; }
 }

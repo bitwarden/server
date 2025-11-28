@@ -1,18 +1,22 @@
 ﻿using System.Diagnostics;
 using System.Security.Claims;
+using Bit.Core;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
-using Bit.Core.IdentityServer;
+using Bit.Core.KeyManagement.Queries.Interfaces;
+using Bit.Core.Platform.Installations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Duende.IdentityModel;
 using Duende.IdentityServer.Extensions;
 using Duende.IdentityServer.Validation;
 using HandlebarsDotNet;
-using IdentityModel;
 using Microsoft.AspNetCore.Identity;
 
 #nullable enable
@@ -23,6 +27,8 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
     ICustomTokenRequestValidator
 {
     private readonly UserManager<User> _userManager;
+    private readonly IUpdateInstallationCommand _updateInstallationCommand;
+    private readonly Version _denyLegacyUserMinimumVersion = new(Constants.DenyLegacyUserMinimumVersion);
 
     public CustomTokenRequestValidator(
         UserManager<User> userManager,
@@ -31,7 +37,6 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         IDeviceValidator deviceValidator,
         ITwoFactorAuthenticationValidator twoFactorAuthenticationValidator,
         IOrganizationUserRepository organizationUserRepository,
-        IMailService mailService,
         ILogger<CustomTokenRequestValidator> logger,
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
@@ -39,8 +44,12 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         IPolicyService policyService,
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
-        IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder
-        )
+        IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
+        IUpdateInstallationCommand updateInstallationCommand,
+        IPolicyRequirementQuery policyRequirementQuery,
+        IAuthRequestRepository authRequestRepository,
+        IMailService mailService,
+        IUserAccountKeysQuery userAccountKeysQuery)
         : base(
             userManager,
             userService,
@@ -48,7 +57,6 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             deviceValidator,
             twoFactorAuthenticationValidator,
             organizationUserRepository,
-            mailService,
             logger,
             currentContext,
             globalSettings,
@@ -56,9 +64,14 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             policyService,
             featureService,
             ssoConfigRepository,
-            userDecryptionOptionsBuilder)
+            userDecryptionOptionsBuilder,
+            policyRequirementQuery,
+            authRequestRepository,
+            mailService,
+            userAccountKeysQuery)
     {
         _userManager = userManager;
+        _updateInstallationCommand = updateInstallationCommand;
     }
 
     public async Task ValidateAsync(CustomTokenRequestValidationContext context)
@@ -68,7 +81,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         {
             // Force legacy users to the web for migration
             if (await _userService.IsLegacyUser(GetSubject(context)?.GetSubjectId()) &&
-                context.Result.ValidatedRequest.ClientId != "web")
+                (context.Result.ValidatedRequest.ClientId != "web" || CurrentContext.ClientVersion >= _denyLegacyUserMinimumVersion))
             {
                 await FailAuthForLegacyUserAsync(null, context);
                 return;
@@ -76,16 +89,22 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         }
 
         string[] allowedGrantTypes = ["authorization_code", "client_credentials"];
+        string clientId = context.Result.ValidatedRequest.ClientId;
         if (!allowedGrantTypes.Contains(context.Result.ValidatedRequest.GrantType)
-            || context.Result.ValidatedRequest.ClientId.StartsWith("organization")
-            || context.Result.ValidatedRequest.ClientId.StartsWith("installation")
-            || context.Result.ValidatedRequest.ClientId.StartsWith("internal")
+            || clientId.StartsWith("organization")
+            || clientId.StartsWith("installation")
+            || clientId.StartsWith("internal")
             || context.Result.ValidatedRequest.Client.AllowedScopes.Contains(ApiScopes.ApiSecrets))
         {
             if (context.Result.ValidatedRequest.Client.Properties.TryGetValue("encryptedPayload", out var payload) &&
                 !string.IsNullOrWhiteSpace(payload))
             {
                 context.Result.CustomResponse = new Dictionary<string, object> { { "encrypted_payload", payload } };
+
+            }
+            if (context.Result.ValidatedRequest.ClientId.StartsWith("installation"))
+            {
+                await RecordActivityForInstallation(clientId.Split(".")[1]);
             }
             return;
         }
@@ -152,6 +171,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             context.Result.CustomResponse["KeyConnectorUrl"] = userDecryptionOptions.KeyConnectorOption.KeyConnectorUrl;
             context.Result.CustomResponse["ResetMasterPassword"] = false;
         }
+
         return Task.CompletedTask;
     }
 
@@ -201,5 +221,26 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         context.Result.IsError = requestContext.ValidationErrorResult.IsError;
         context.Result.ErrorDescription = requestContext.ValidationErrorResult.ErrorDescription;
         context.Result.CustomResponse = requestContext.CustomResponse;
+    }
+
+    /// <summary>
+    /// To help mentally separate organizations that self host from abandoned
+    /// organizations we hook in to the token refresh event for installations
+    /// to write a simple `DateTime.Now` to the database.
+    /// </summary>
+    /// <remarks>
+    /// This works well because installations don't phone home very often.
+    /// Currently self hosted installations only refresh tokens every 24
+    /// hours or so for the sake of hooking in to cloud's push relay service.
+    /// If installations ever start refreshing tokens more frequently we may need to
+    /// adjust this to avoid making a bunch of unnecessary database calls!
+    /// </remarks>
+    private async Task RecordActivityForInstallation(string? installationIdString)
+    {
+        if (!Guid.TryParse(installationIdString, out var installationId))
+        {
+            return;
+        }
+        await _updateInstallationCommand.UpdateLastActivityDateAsync(installationId);
     }
 }

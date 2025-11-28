@@ -8,6 +8,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using LaunchDarkly.Sdk.Server.Interfaces;
 using NSubstitute;
 using Xunit;
+using GlobalSettings = Bit.Core.Settings.GlobalSettings;
 
 namespace Bit.Core.Test.Services;
 
@@ -22,6 +23,7 @@ public class LaunchDarklyFeatureServiceTests
         globalSettings.ProjectName = "LaunchDarkly Tests";
 
         var currentContext = Substitute.For<ICurrentContext>();
+        currentContext.DeviceIdentifier.Returns(Guid.NewGuid().ToString());
         currentContext.UserId.Returns(Guid.NewGuid());
         currentContext.ClientVersion.Returns(new Version(AssemblyHelpers.GetVersion()));
         currentContext.ClientVersionIsPrerelease.Returns(true);
@@ -40,7 +42,7 @@ public class LaunchDarklyFeatureServiceTests
     [Theory, BitAutoData]
     public void DefaultFeatureValue_WhenSelfHost(string key)
     {
-        var sutProvider = GetSutProvider(new Settings.GlobalSettings { SelfHosted = true });
+        var sutProvider = GetSutProvider(new GlobalSettings { SelfHosted = true });
 
         Assert.False(sutProvider.Sut.IsEnabled(key));
     }
@@ -48,7 +50,7 @@ public class LaunchDarklyFeatureServiceTests
     [Fact]
     public void DefaultFeatureValue_NoSdkKey()
     {
-        var sutProvider = GetSutProvider(new Settings.GlobalSettings());
+        var sutProvider = GetSutProvider(new GlobalSettings());
 
         Assert.False(sutProvider.Sut.IsEnabled(_fakeFeatureKey));
     }
@@ -56,7 +58,7 @@ public class LaunchDarklyFeatureServiceTests
     [Fact(Skip = "For local development")]
     public void FeatureValue_Boolean()
     {
-        var settings = new Settings.GlobalSettings { LaunchDarkly = { SdkKey = _fakeSdkKey } };
+        var settings = new GlobalSettings { LaunchDarkly = { SdkKey = _fakeSdkKey } };
 
         var sutProvider = GetSutProvider(settings);
 
@@ -66,7 +68,7 @@ public class LaunchDarklyFeatureServiceTests
     [Fact(Skip = "For local development")]
     public void FeatureValue_Int()
     {
-        var settings = new Settings.GlobalSettings { LaunchDarkly = { SdkKey = _fakeSdkKey } };
+        var settings = new GlobalSettings { LaunchDarkly = { SdkKey = _fakeSdkKey } };
 
         var sutProvider = GetSutProvider(settings);
 
@@ -76,7 +78,7 @@ public class LaunchDarklyFeatureServiceTests
     [Fact(Skip = "For local development")]
     public void FeatureValue_String()
     {
-        var settings = new Settings.GlobalSettings { LaunchDarkly = { SdkKey = _fakeSdkKey } };
+        var settings = new GlobalSettings { LaunchDarkly = { SdkKey = _fakeSdkKey } };
 
         var sutProvider = GetSutProvider(settings);
 
@@ -86,7 +88,7 @@ public class LaunchDarklyFeatureServiceTests
     [Fact(Skip = "For local development")]
     public void GetAll()
     {
-        var sutProvider = GetSutProvider(new Settings.GlobalSettings());
+        var sutProvider = GetSutProvider(new GlobalSettings());
 
         var results = sutProvider.Sut.GetAll();
 

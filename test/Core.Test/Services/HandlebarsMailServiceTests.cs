@@ -2,10 +2,16 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Business;
 using Bit.Core.Entities;
+using Bit.Core.Models.Mail;
+using Bit.Core.Platform.Mail.Delivery;
+using Bit.Core.Platform.Mail.Enqueuing;
 using Bit.Core.Services;
+using Bit.Core.Services.Mail;
 using Bit.Core.Settings;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
@@ -19,17 +25,96 @@ public class HandlebarsMailServiceTests
     private readonly GlobalSettings _globalSettings;
     private readonly IMailDeliveryService _mailDeliveryService;
     private readonly IMailEnqueuingService _mailEnqueuingService;
+    private readonly IDistributedCache _distributedCache;
+    private readonly ILogger<HandlebarsMailService> _logger;
 
     public HandlebarsMailServiceTests()
     {
         _globalSettings = new GlobalSettings();
         _mailDeliveryService = Substitute.For<IMailDeliveryService>();
         _mailEnqueuingService = Substitute.For<IMailEnqueuingService>();
+        _distributedCache = Substitute.For<IDistributedCache>();
+        _logger = Substitute.For<ILogger<HandlebarsMailService>>();
 
         _sut = new HandlebarsMailService(
             _globalSettings,
             _mailDeliveryService,
-            _mailEnqueuingService
+            _mailEnqueuingService,
+            _distributedCache,
+            _logger
+        );
+    }
+
+    [Fact]
+    public async Task SendFailedTwoFactorAttemptEmailAsync_FirstCall_SendsEmail()
+    {
+        // Arrange
+        var email = "test@example.com";
+        var failedType = TwoFactorProviderType.Email;
+        var utcNow = DateTime.UtcNow;
+        var ip = "192.168.1.1";
+
+        _distributedCache.GetAsync(Arg.Any<string>()).Returns((byte[])null);
+
+        // Act
+        await _sut.SendFailedTwoFactorAttemptEmailAsync(email, failedType, utcNow, ip);
+
+        // Assert
+        await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Any<MailMessage>());
+        await _distributedCache.Received(1).SetAsync(
+            Arg.Is<string>(key => key == $"FailedTwoFactorAttemptEmail_{email}"),
+            Arg.Any<byte[]>(),
+            Arg.Any<DistributedCacheEntryOptions>()
+        );
+    }
+
+    [Fact]
+    public async Task SendFailedTwoFactorAttemptEmailAsync_SecondCallWithinHour_DoesNotSendEmail()
+    {
+        // Arrange
+        var email = "test@example.com";
+        var failedType = TwoFactorProviderType.Email;
+        var utcNow = DateTime.UtcNow;
+        var ip = "192.168.1.1";
+
+        // Simulate cache hit (email was already sent)
+        _distributedCache.GetAsync(Arg.Any<string>()).Returns([1]);
+
+        // Act
+        await _sut.SendFailedTwoFactorAttemptEmailAsync(email, failedType, utcNow, ip);
+
+        // Assert
+        await _mailDeliveryService.DidNotReceive().SendEmailAsync(Arg.Any<MailMessage>());
+        await _distributedCache.DidNotReceive().SetAsync(Arg.Any<string>(), Arg.Any<byte[]>(), Arg.Any<DistributedCacheEntryOptions>());
+    }
+
+    [Fact]
+    public async Task SendFailedTwoFactorAttemptEmailAsync_DifferentEmails_SendsBothEmails()
+    {
+        // Arrange
+        var email1 = "test1@example.com";
+        var email2 = "test2@example.com";
+        var failedType = TwoFactorProviderType.Email;
+        var utcNow = DateTime.UtcNow;
+        var ip = "192.168.1.1";
+
+        _distributedCache.GetAsync(Arg.Any<string>()).Returns((byte[])null);
+
+        // Act
+        await _sut.SendFailedTwoFactorAttemptEmailAsync(email1, failedType, utcNow, ip);
+        await _sut.SendFailedTwoFactorAttemptEmailAsync(email2, failedType, utcNow, ip);
+
+        // Assert
+        await _mailDeliveryService.Received(2).SendEmailAsync(Arg.Any<MailMessage>());
+        await _distributedCache.Received(1).SetAsync(
+            Arg.Is<string>(key => key == $"FailedTwoFactorAttemptEmail_{email1}"),
+            Arg.Any<byte[]>(),
+            Arg.Any<DistributedCacheEntryOptions>()
+        );
+        await _distributedCache.Received(1).SetAsync(
+            Arg.Is<string>(key => key == $"FailedTwoFactorAttemptEmail_{email2}"),
+            Arg.Any<byte[]>(),
+            Arg.Any<DistributedCacheEntryOptions>()
         );
     }
 
@@ -137,8 +222,10 @@ public class HandlebarsMailServiceTests
         };
 
         var mailDeliveryService = new MailKitSmtpMailDeliveryService(globalSettings, Substitute.For<ILogger<MailKitSmtpMailDeliveryService>>());
+        var distributedCache = Substitute.For<IDistributedCache>();
+        var logger = Substitute.For<ILogger<HandlebarsMailService>>();
 
-        var handlebarsService = new HandlebarsMailService(globalSettings, mailDeliveryService, new BlockingMailEnqueuingService());
+        var handlebarsService = new HandlebarsMailService(globalSettings, mailDeliveryService, new BlockingMailEnqueuingService(), distributedCache, logger);
 
         var sendMethods = typeof(IMailService).GetMethods(BindingFlags.Public | BindingFlags.Instance)
             .Where(m => m.Name.StartsWith("Send") && m.Name != "SendEnqueuedMailMessageAsync");
@@ -167,11 +254,129 @@ public class HandlebarsMailServiceTests
         }
     }
 
-    // Remove this test when we add actual tests. It only proves that
-    // we've properly constructed the system under test.
     [Fact]
-    public void ServiceExists()
+    public async Task SendSendEmailOtpEmailAsync_SendsEmail()
     {
-        Assert.NotNull(_sut);
+        // Arrange
+        var email = "test@example.com";
+        var token = "aToken";
+        var subject = string.Format("Your Bitwarden Send verification code is {0}", token);
+
+        // Act
+        await _sut.SendSendEmailOtpEmailAsync(email, token, subject);
+
+        // Assert
+        await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Any<MailMessage>());
+    }
+
+    [Fact]
+    public async Task SendIndividualUserWelcomeEmailAsync_SendsCorrectEmail()
+    {
+        // Arrange
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "test@example.com"
+        };
+
+        // Act
+        await _sut.SendIndividualUserWelcomeEmailAsync(user);
+
+        // Assert
+        await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m =>
+            m.MetaData != null &&
+            m.ToEmails.Contains("test@example.com") &&
+            m.Subject == "Welcome to Bitwarden!" &&
+            m.Category == "Welcome"));
+    }
+
+    [Fact]
+    public async Task SendOrganizationUserWelcomeEmailAsync_SendsCorrectEmailWithOrganizationName()
+    {
+        // Arrange
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "user@company.com"
+        };
+        var organizationName = "Bitwarden Corp";
+
+        // Act
+        await _sut.SendOrganizationUserWelcomeEmailAsync(user, organizationName);
+
+        // Assert
+        await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m =>
+            m.MetaData != null &&
+            m.ToEmails.Contains("user@company.com") &&
+            m.Subject == "Welcome to Bitwarden!" &&
+            m.HtmlContent.Contains("Bitwarden Corp") &&
+            m.Category == "Welcome"));
+    }
+
+    [Fact]
+    public async Task SendFreeOrgOrFamilyOrgUserWelcomeEmailAsync_SendsCorrectEmailWithFamilyTemplate()
+    {
+        // Arrange
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "family@example.com"
+        };
+        var familyOrganizationName = "Smith Family";
+
+        // Act
+        await _sut.SendFreeOrgOrFamilyOrgUserWelcomeEmailAsync(user, familyOrganizationName);
+
+        // Assert
+        await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m =>
+            m.MetaData != null &&
+            m.ToEmails.Contains("family@example.com") &&
+            m.Subject == "Welcome to Bitwarden!" &&
+            m.HtmlContent.Contains("Smith Family") &&
+            m.Category == "Welcome"));
+    }
+
+    [Theory]
+    [InlineData("Acme Corp", "Acme Corp")]
+    [InlineData("Company & Associates", "Company &amp; Associates")]
+    [InlineData("Test \"Quoted\" Org", "Test &quot;Quoted&quot; Org")]
+    public async Task SendOrganizationUserWelcomeEmailAsync_SanitizesOrganizationNameForEmail(string inputOrgName, string expectedSanitized)
+    {
+        // Arrange
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "test@example.com"
+        };
+
+        // Act
+        await _sut.SendOrganizationUserWelcomeEmailAsync(user, inputOrgName);
+
+        // Assert
+        await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m =>
+            m.HtmlContent.Contains(expectedSanitized) &&
+            !m.HtmlContent.Contains("<script>") && // Ensure script tags are removed
+            m.Category == "Welcome"));
+    }
+
+    [Theory]
+    [InlineData("test@example.com")]
+    [InlineData("user+tag@domain.co.uk")]
+    [InlineData("admin@organization.org")]
+    public async Task SendIndividualUserWelcomeEmailAsync_HandlesVariousEmailFormats(string email)
+    {
+        // Arrange
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = email
+        };
+
+        // Act
+        await _sut.SendIndividualUserWelcomeEmailAsync(user);
+
+        // Assert
+        await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m =>
+            m.ToEmails.Contains(email)));
     }
 }

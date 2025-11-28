@@ -1,7 +1,8 @@
 @using Bit.Admin.Enums;
 @using Bit.Admin.Models
+@using Bit.Core.AdminConsole.Enums.Provider
 @using Bit.Core.Billing.Enums
-@using Bit.Core.Enums
+@using Bit.Core.Billing.Extensions
 @inject Bit.Admin.Services.IAccessControlService AccessControlService
 @model OrganizationEditModel
 @{
@@ -10,8 +11,14 @@
     var canViewOrganizationInformation = AccessControlService.UserHasPermission(Permission.Org_OrgInformation_View);
     var canViewBillingInformation = AccessControlService.UserHasPermission(Permission.Org_BillingInformation_View);
     var canInitiateTrial = AccessControlService.UserHasPermission(Permission.Org_InitiateTrial);
+    var canRequestDelete = AccessControlService.UserHasPermission(Permission.Org_RequestDelete);
     var canDelete = AccessControlService.UserHasPermission(Permission.Org_Delete);
     var canUnlinkFromProvider = AccessControlService.UserHasPermission(Permission.Provider_Edit);
+
+    var canConvertToBusinessUnit = AccessControlService.UserHasPermission(Permission.Org_Billing_ConvertToBusinessUnit) &&
+                                   Model.Organization.PlanType.GetProductTier() == ProductTierType.Enterprise &&
+                                   !string.IsNullOrEmpty(Model.Organization.GatewaySubscriptionId) &&
+                                   Model.Provider is null or { Type: ProviderType.BusinessUnit, Status: ProviderStatusType.Pending };
 }
 
 @section Scripts {
@@ -113,6 +120,15 @@
                 Enterprise Trial
             </button>
         }
+        @if (canConvertToBusinessUnit)
+        {
+            <a asp-controller="BusinessUnitConversion"
+               asp-action="Index"
+               asp-route-organizationId="@Model.Organization.Id"
+               class="btn btn-secondary me-2">
+                Convert to Business Unit
+            </a>
+        }
         @if (canUnlinkFromProvider && Model.Provider is not null)
         {
             <button class="btn btn-outline-danger me-2"
@@ -120,12 +136,15 @@
                 Unlink provider
             </button>
         }
-        @if (canDelete)
+        @if (canRequestDelete)
         {
             <form asp-action="DeleteInitiation" asp-route-id="@Model.Organization.Id" id="initiate-delete-form">
                 <input type="hidden" name="AdminEmail" id="AdminEmail" />
                 <button class="btn btn-danger me-2" type="submit">Request Delete</button>
             </form>
+        }
+        @if (canDelete)
+        {
             <form asp-action="Delete" asp-route-id="@Model.Organization.Id"
                   onsubmit="return confirm('Are you sure you want to hard delete this organization?')">
                 <button class="btn btn-outline-danger" type="submit">Delete</button>

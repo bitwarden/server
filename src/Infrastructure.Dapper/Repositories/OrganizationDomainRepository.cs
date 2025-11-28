@@ -46,6 +46,20 @@ public class OrganizationDomainRepository : Repository<OrganizationDomain, Guid>
         }
     }
 
+    public async Task<IEnumerable<OrganizationDomain>> GetVerifiedDomainsByOrganizationIdsAsync(IEnumerable<Guid> organizationIds)
+    {
+
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<OrganizationDomain>(
+                $"[{Schema}].[OrganizationDomain_ReadByOrganizationIds]",
+                new { OrganizationIds = organizationIds.ToGuidIdArrayTVP() },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
+
     public async Task<ICollection<OrganizationDomain>> GetManyByNextRunDateAsync(DateTime date)
     {
         using var connection = new SqlConnection(ConnectionString);
@@ -133,5 +147,17 @@ public class OrganizationDomainRepository : Repository<OrganizationDomain, Guid>
                 new { ExpirationPeriod = expirationPeriod },
                 commandType: CommandType.StoredProcedure) > 0;
         }
+    }
+
+    public async Task<bool> HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(string domainName, Guid? excludeOrganizationId = null)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        var result = await connection.QueryFirstOrDefaultAsync<bool>(
+            $"[{Schema}].[OrganizationDomain_HasVerifiedDomainWithBlockPolicy]",
+            new { DomainName = domainName, ExcludeOrganizationId = excludeOrganizationId },
+            commandType: CommandType.StoredProcedure);
+
+        return result;
     }
 }

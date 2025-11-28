@@ -1,4 +1,7 @@
-﻿using System.Net.Http.Headers;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Net.Http.Headers;
 using System.Text.Json.Serialization;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Repositories;
@@ -155,6 +158,7 @@ public class FreshsalesController : Controller
                 planName = "Free";
                 return true;
             case PlanType.FamiliesAnnually:
+            case PlanType.FamiliesAnnually2025:
             case PlanType.FamiliesAnnually2019:
                 planName = "Families";
                 return true;

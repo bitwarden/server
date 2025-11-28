@@ -17,6 +17,9 @@ on:
 env:
   _AZ_REGISTRY: "bitwardenprod.azurecr.io"
 
+permissions:
+  contents: read
+
 jobs:
   setup:
     name: Setup
@@ -37,6 +40,9 @@ jobs:
 
       - name: Check out repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
 
       - name: Check release version
         id: version
@@ -49,13 +55,15 @@ jobs:
       - name: Get branch name
         id: branch
         run: |
-          BRANCH_NAME=$(basename ${{ github.ref }})
-          echo "branch-name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          BRANCH_NAME=$(basename "${GITHUB_REF}")
+          echo "branch-name=$BRANCH_NAME" >> "$GITHUB_OUTPUT"
 
   release:
     name: Create GitHub release
     runs-on: ubuntu-22.04
     needs: setup
+    permissions:
+      contents: write
     steps:
       - name: Download latest release Docker stubs
         if: ${{ inputs.release_type != 'Dry Run' }}
@@ -65,9 +73,7 @@ jobs:
           workflow_conclusion: success
           branch: ${{ needs.setup.outputs.branch-name }}
           artifacts: "docker-stub-US.zip,
-            docker-stub-US-sha256.txt,
             docker-stub-EU.zip,
-            docker-stub-EU-sha256.txt,
             swagger.json"
 
       - name: Dry Run - Download latest release Docker stubs
@@ -78,19 +84,15 @@ jobs:
           workflow_conclusion: success
           branch: main
           artifacts: "docker-stub-US.zip,
-            docker-stub-US-sha256.txt,
             docker-stub-EU.zip,
-            docker-stub-EU-sha256.txt,
             swagger.json"
 
       - name: Create release
         if: ${{ inputs.release_type != 'Dry Run' }}
-        uses: ncipollo/release-action@2c591bcc8ecdcd2db72b97d6147f871fcd833ba5 # v1.14.0
+        uses: ncipollo/release-action@440c8c1cb0ed28b9f43e4d1d670870f059653174 # v1.16.0
         with:
           artifacts: "docker-stub-US.zip,
-            docker-stub-US-sha256.txt,
             docker-stub-EU.zip,
-            docker-stub-EU-sha256.txt,
             swagger.json"
           commit: ${{ github.sha }}
           tag: "v${{ needs.setup.outputs.release_version }}"

@@ -1,4 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 using Bit.Api.Models.Public.Response;
@@ -30,7 +33,7 @@ public class MemberResponseModel : MemberBaseModel, IResponseModel
         Email = user.Email;
         Status = user.Status;
         Collections = collections?.Select(c => new AssociationWithPermissionsResponseModel(c));
-        ResetPasswordEnrolled = user.ResetPasswordKey != null;
+        ResetPasswordEnrolled = !string.IsNullOrWhiteSpace(user.ResetPasswordKey);
     }
 
     [SetsRequiredMembers]
@@ -49,7 +52,8 @@ public class MemberResponseModel : MemberBaseModel, IResponseModel
         TwoFactorEnabled = twoFactorEnabled;
         Status = user.Status;
         Collections = collections?.Select(c => new AssociationWithPermissionsResponseModel(c));
-        ResetPasswordEnrolled = user.ResetPasswordKey != null;
+        ResetPasswordEnrolled = !string.IsNullOrWhiteSpace(user.ResetPasswordKey);
+        SsoExternalId = user.SsoExternalId;
     }
 
     /// <summary>
@@ -104,4 +108,10 @@ public class MemberResponseModel : MemberBaseModel, IResponseModel
     /// </summary>
     [Required]
     public bool ResetPasswordEnrolled { get; }
+
+    /// <summary>
+    /// SSO external identifier for linking this member to an identity provider.
+    /// </summary>
+    /// <example>sso_external_id_123456</example>
+    public string SsoExternalId { get; set; }
 }

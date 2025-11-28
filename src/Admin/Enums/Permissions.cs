@@ -17,13 +17,16 @@ public enum Permission
     User_Billing_View,
     User_Billing_Edit,
     User_Billing_LaunchGateway,
+    User_NewDeviceException_Edit,
 
     Org_List_View,
     Org_OrgInformation_View,
     Org_GeneralDetails_View,
+    Org_Name_Edit,
     Org_CheckEnabledBox,
     Org_BusinessInformation_View,
     Org_InitiateTrial,
+    Org_RequestDelete,
     Org_Delete,
     Org_BillingInformation_View,
     Org_BillingInformation_DownloadInvoice,
@@ -35,20 +38,20 @@ public enum Permission
     Org_Billing_View,
     Org_Billing_Edit,
     Org_Billing_LaunchGateway,
+    Org_Billing_ConvertToBusinessUnit,
 
     Provider_List_View,
     Provider_Create,
     Provider_Edit,
     Provider_View,
     Provider_ResendEmailInvite,
+    Provider_CheckEnabledBox,
 
     Tools_ChargeBrainTreeCustomer,
     Tools_PromoteAdmin,
     Tools_PromoteProviderServiceUser,
     Tools_GenerateLicenseFile,
     Tools_ManageTaxRates,
-    Tools_ManageStripeSubscriptions,
     Tools_CreateEditTransaction,
-    Tools_ProcessStripeEvents,
-    Tools_MigrateProviders
+    Tools_ProcessStripeEvents
 }

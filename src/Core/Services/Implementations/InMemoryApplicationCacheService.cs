@@ -1,4 +1,8 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.Repositories;
@@ -7,7 +11,7 @@ using Bit.Core.Repositories;
 
 namespace Bit.Core.Services;
 
-public class InMemoryApplicationCacheService : IApplicationCacheService
+public class InMemoryApplicationCacheService : IVCurrentInMemoryApplicationCacheService
 {
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IProviderRepository _providerRepository;
@@ -50,14 +54,7 @@ public class InMemoryApplicationCacheService : IApplicationCacheService
         await InitProviderAbilitiesAsync();
         var newAbility = new ProviderAbility(provider);
 
-        if (_providerAbilities.ContainsKey(provider.Id))
-        {
-            _providerAbilities[provider.Id] = newAbility;
-        }
-        else
-        {
-            _providerAbilities.Add(provider.Id, newAbility);
-        }
+        _providerAbilities[provider.Id] = newAbility;
     }
 
     public virtual async Task UpsertOrganizationAbilityAsync(Organization organization)
@@ -65,32 +62,19 @@ public class InMemoryApplicationCacheService : IApplicationCacheService
         await InitOrganizationAbilitiesAsync();
         var newAbility = new OrganizationAbility(organization);
 
-        if (_orgAbilities.ContainsKey(organization.Id))
-        {
-            _orgAbilities[organization.Id] = newAbility;
-        }
-        else
-        {
-            _orgAbilities.Add(organization.Id, newAbility);
-        }
+        _orgAbilities[organization.Id] = newAbility;
     }
 
     public virtual Task DeleteOrganizationAbilityAsync(Guid organizationId)
     {
-        if (_orgAbilities != null && _orgAbilities.ContainsKey(organizationId))
-        {
-            _orgAbilities.Remove(organizationId);
-        }
+        _orgAbilities?.Remove(organizationId);
 
         return Task.FromResult(0);
     }
 
     public virtual Task DeleteProviderAbilityAsync(Guid providerId)
     {
-        if (_providerAbilities != null && _providerAbilities.ContainsKey(providerId))
-        {
-            _providerAbilities.Remove(providerId);
-        }
+        _providerAbilities?.Remove(providerId);
 
         return Task.FromResult(0);
     }

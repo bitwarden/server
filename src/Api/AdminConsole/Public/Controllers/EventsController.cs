@@ -1,9 +1,13 @@
-﻿using System.Net;
+﻿
+using System.Net;
 using Bit.Api.Models.Public.Request;
 using Bit.Api.Models.Public.Response;
+using Bit.Api.Utilities.DiagnosticTools;
 using Bit.Core.Context;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.SecretsManager.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Vault.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -17,15 +21,30 @@ public class EventsController : Controller
     private readonly IEventRepository _eventRepository;
     private readonly ICipherRepository _cipherRepository;
     private readonly ICurrentContext _currentContext;
+    private readonly ISecretRepository _secretRepository;
+    private readonly IProjectRepository _projectRepository;
+    private readonly IUserService _userService;
+    private readonly ILogger<EventsController> _logger;
+    private readonly IFeatureService _featureService;
 
     public EventsController(
         IEventRepository eventRepository,
         ICipherRepository cipherRepository,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        ISecretRepository secretRepository,
+        IProjectRepository projectRepository,
+        IUserService userService,
+        ILogger<EventsController> logger,
+        IFeatureService featureService)
     {
         _eventRepository = eventRepository;
         _cipherRepository = cipherRepository;
         _currentContext = currentContext;
+        _secretRepository = secretRepository;
+        _projectRepository = projectRepository;
+        _userService = userService;
+        _logger = logger;
+        _featureService = featureService;
     }
 
     /// <summary>
@@ -36,36 +55,79 @@ public class EventsController : Controller
     /// If no filters are provided, it will return the last 30 days of event for the organization.
     /// </remarks>
     [HttpGet]
-    [ProducesResponseType(typeof(ListResponseModel<EventResponseModel>), (int)HttpStatusCode.OK)]
+    [ProducesResponseType(typeof(PagedListResponseModel<EventResponseModel>), (int)HttpStatusCode.OK)]
     public async Task<IActionResult> List([FromQuery] EventFilterRequestModel request)
     {
+        if (!_currentContext.OrganizationId.HasValue)
+        {
+            return new JsonResult(new PagedListResponseModel<EventResponseModel>([], ""));
+        }
+
+        var organizationId = _currentContext.OrganizationId.Value;
         var dateRange = request.ToDateRange();
         var result = new PagedResult<IEvent>();
         if (request.ActingUserId.HasValue)
         {
             result = await _eventRepository.GetManyByOrganizationActingUserAsync(
-                _currentContext.OrganizationId.Value, request.ActingUserId.Value, dateRange.Item1, dateRange.Item2,
+                organizationId, request.ActingUserId.Value, dateRange.Item1, dateRange.Item2,
                 new PageOptions { ContinuationToken = request.ContinuationToken });
         }
         else if (request.ItemId.HasValue)
         {
             var cipher = await _cipherRepository.GetByIdAsync(request.ItemId.Value);
-            if (cipher != null && cipher.OrganizationId == _currentContext.OrganizationId.Value)
+            if (cipher != null && cipher.OrganizationId == organizationId)
             {
                 result = await _eventRepository.GetManyByCipherAsync(
                     cipher, dateRange.Item1, dateRange.Item2,
                     new PageOptions { ContinuationToken = request.ContinuationToken });
             }
         }
+        else if (request.SecretId.HasValue)
+        {
+            var secret = await _secretRepository.GetByIdAsync(request.SecretId.Value);
+
+            if (secret == null)
+            {
+                secret = new Core.SecretsManager.Entities.Secret { Id = request.SecretId.Value, OrganizationId = organizationId };
+            }
+
+            if (secret.OrganizationId == organizationId)
+            {
+                result = await _eventRepository.GetManyBySecretAsync(
+                    secret, dateRange.Item1, dateRange.Item2,
+                    new PageOptions { ContinuationToken = request.ContinuationToken });
+            }
+            else
+            {
+                return new JsonResult(new PagedListResponseModel<EventResponseModel>([], ""));
+            }
+        }
+        else if (request.ProjectId.HasValue)
+        {
+            var project = await _projectRepository.GetByIdAsync(request.ProjectId.Value);
+            if (project != null && project.OrganizationId == organizationId)
+            {
+                result = await _eventRepository.GetManyByProjectAsync(
+                    project, dateRange.Item1, dateRange.Item2,
+                    new PageOptions { ContinuationToken = request.ContinuationToken });
+            }
+            else
+            {
+                return new JsonResult(new PagedListResponseModel<EventResponseModel>([], ""));
+            }
+        }
         else
         {
             result = await _eventRepository.GetManyByOrganizationAsync(
-                _currentContext.OrganizationId.Value, dateRange.Item1, dateRange.Item2,
+                organizationId, dateRange.Item1, dateRange.Item2,
                 new PageOptions { ContinuationToken = request.ContinuationToken });
         }
 
         var eventResponses = result.Data.Select(e => new EventResponseModel(e));
-        var response = new ListResponseModel<EventResponseModel>(eventResponses, result.ContinuationToken);
+        var response = new PagedListResponseModel<EventResponseModel>(eventResponses, result.ContinuationToken ?? "");
+
+        _logger.LogAggregateData(_featureService, organizationId, response, request);
+
         return new JsonResult(response);
     }
 }

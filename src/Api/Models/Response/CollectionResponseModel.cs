@@ -1,4 +1,8 @@
-﻿using Bit.Core.Entities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
 
@@ -18,12 +22,16 @@ public class CollectionResponseModel : ResponseModel
         OrganizationId = collection.OrganizationId;
         Name = collection.Name;
         ExternalId = collection.ExternalId;
+        Type = collection.Type;
+        DefaultUserCollectionEmail = collection.DefaultUserCollectionEmail;
     }
 
     public Guid Id { get; set; }
     public Guid OrganizationId { get; set; }
     public string Name { get; set; }
     public string ExternalId { get; set; }
+    public CollectionType Type { get; set; }
+    public string DefaultUserCollectionEmail { get; set; }
 }
 
 /// <summary>
@@ -41,6 +49,7 @@ public class CollectionDetailsResponseModel : CollectionResponseModel
         ReadOnly = collectionDetails.ReadOnly;
         HidePasswords = collectionDetails.HidePasswords;
         Manage = collectionDetails.Manage;
+        DefaultUserCollectionEmail = collectionDetails.DefaultUserCollectionEmail;
     }
 
     public bool ReadOnly { get; set; }

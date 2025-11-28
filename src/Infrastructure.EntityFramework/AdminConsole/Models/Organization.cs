@@ -1,4 +1,7 @@
-﻿using AutoMapper;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using AutoMapper;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Infrastructure.EntityFramework.Auth.Models;
@@ -9,11 +12,6 @@ namespace Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 
 public class Organization : Core.AdminConsole.Entities.Organization
 {
-    // Shadow property. To be removed by
-    // https://bitwarden.atlassian.net/browse/PM-10863.
-    // This was replaced with `LimitCollectionCreation` and
-    // `LimitCollectionDeletion`.
-    public bool LimitCollectionCreationDeletion { get; set; }
     public virtual ICollection<Cipher> Ciphers { get; set; }
     public virtual ICollection<OrganizationUser> OrganizationUsers { get; set; }
     public virtual ICollection<Group> Groups { get; set; }
@@ -43,7 +41,6 @@ public class OrganizationMapperProfile : Profile
             .ForMember(org => org.ApiKeys, opt => opt.Ignore())
             .ForMember(org => org.Connections, opt => opt.Ignore())
             .ForMember(org => org.Domains, opt => opt.Ignore())
-            .ForMember(org => org.LimitCollectionCreationDeletion, opt => opt.Ignore())
             .ReverseMap();
 
         CreateProjection<Organization, SelfHostedOrganizationDetails>()

@@ -81,7 +81,7 @@ public class DataTableBuilder<T>
             return true;
         }
 
-        // Value type properties will implicitly box into the object so 
+        // Value type properties will implicitly box into the object so
         // we need to look past the Convert expression
         // i => (System.Object?)i.Id
         if (
@@ -150,6 +150,8 @@ public static class DapperHelpers
             os => os.LastSyncDate,
             os => os.ValidUntil,
             os => os.ToDelete,
+            os => os.IsAdminInitiated,
+            os => os.Notes,
         ]
     );
 

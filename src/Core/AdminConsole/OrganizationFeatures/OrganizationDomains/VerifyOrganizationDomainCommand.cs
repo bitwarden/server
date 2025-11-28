@@ -1,8 +1,12 @@
-﻿using Bit.Core.AdminConsole.Enums;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -20,9 +24,10 @@ public class VerifyOrganizationDomainCommand(
     IDnsResolverService dnsResolverService,
     IEventService eventService,
     IGlobalSettings globalSettings,
-    IFeatureService featureService,
     ICurrentContext currentContext,
+    IFeatureService featureService,
     ISavePolicyCommand savePolicyCommand,
+    IVNextSavePolicyCommand vNextSavePolicyCommand,
     IMailService mailService,
     IOrganizationUserRepository organizationUserRepository,
     IOrganizationRepository organizationRepository,
@@ -125,22 +130,30 @@ public class VerifyOrganizationDomainCommand(
 
     private async Task DomainVerificationSideEffectsAsync(OrganizationDomain domain, IActingUser actingUser)
     {
-        if (featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
-        {
-            await EnableSingleOrganizationPolicyAsync(domain.OrganizationId, actingUser);
-            await SendVerifiedDomainUserEmailAsync(domain);
-        }
+        await EnableSingleOrganizationPolicyAsync(domain.OrganizationId, actingUser);
+        await SendVerifiedDomainUserEmailAsync(domain);
     }
 
-    private async Task EnableSingleOrganizationPolicyAsync(Guid organizationId, IActingUser actingUser) =>
-        await savePolicyCommand.SaveAsync(
-            new PolicyUpdate
-            {
-                OrganizationId = organizationId,
-                Type = PolicyType.SingleOrg,
-                Enabled = true,
-                PerformedBy = actingUser
-            });
+    private async Task EnableSingleOrganizationPolicyAsync(Guid organizationId, IActingUser actingUser)
+    {
+        var policyUpdate = new PolicyUpdate
+        {
+            OrganizationId = organizationId,
+            Type = PolicyType.SingleOrg,
+            Enabled = true,
+            PerformedBy = actingUser
+        };
+
+        if (featureService.IsEnabled(FeatureFlagKeys.PolicyValidatorsRefactor))
+        {
+            var savePolicyModel = new SavePolicyModel(policyUpdate, actingUser);
+            await vNextSavePolicyCommand.SaveAsync(savePolicyModel);
+        }
+        else
+        {
+            await savePolicyCommand.SaveAsync(policyUpdate);
+        }
+    }
 
     private async Task SendVerifiedDomainUserEmailAsync(OrganizationDomain domain)
     {
@@ -154,6 +167,6 @@ public class VerifyOrganizationDomainCommand(
 
         var organization = await organizationRepository.GetByIdAsync(domain.OrganizationId);
 
-        await mailService.SendClaimedDomainUserEmailAsync(new ManagedUserDomainClaimedEmails(domainUserEmails, organization));
+        await mailService.SendClaimedDomainUserEmailAsync(new ClaimedUserDomainClaimedEmails(domainUserEmails, organization));
     }
 }

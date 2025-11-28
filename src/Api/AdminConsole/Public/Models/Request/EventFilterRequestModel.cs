@@ -1,4 +1,7 @@
-﻿using Bit.Core.Exceptions;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Exceptions;
 
 namespace Bit.Api.Models.Public.Request;
 
@@ -20,6 +23,14 @@ public class EventFilterRequestModel
     /// The unique identifier of the related item that the event describes.
     /// </summary>
     public Guid? ItemId { get; set; }
+    /// <summary>
+    /// The unique identifier of the related secret that the event describes.
+    /// </summary>
+    public Guid? SecretId { get; set; }
+    /// <summary>
+    /// The unique identifier of the related project that the event describes.
+    /// </summary>
+    public Guid? ProjectId { get; set; }
     /// <summary>
     /// A cursor for use in pagination.
     /// </summary>

@@ -1,14 +1,15 @@
 ﻿using Bit.Billing.Services;
 using Bit.Billing.Services.Implementations;
-using Bit.Billing.Test.Utilities;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Repositories;
+using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Providers.Entities;
+using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Enums;
-using Bit.Core.Utilities;
-using Microsoft.Extensions.Logging;
+using Bit.Core.Repositories;
+using Bit.Core.Test.Billing.Mocks;
 using NSubstitute;
 using Stripe;
 using Xunit;
@@ -17,6 +18,12 @@ namespace Bit.Billing.Test.Services;
 
 public class ProviderEventServiceTests
 {
+    private readonly IOrganizationRepository _organizationRepository =
+        Substitute.For<IOrganizationRepository>();
+
+    private readonly IPricingClient _pricingClient =
+        Substitute.For<IPricingClient>();
+
     private readonly IProviderInvoiceItemRepository _providerInvoiceItemRepository =
         Substitute.For<IProviderInvoiceItemRepository>();
 
@@ -37,7 +44,8 @@ public class ProviderEventServiceTests
     public ProviderEventServiceTests()
     {
         _providerEventService = new ProviderEventService(
-            Substitute.For<ILogger<ProviderEventService>>(),
+            _organizationRepository,
+            _pricingClient,
             _providerInvoiceItemRepository,
             _providerOrganizationRepository,
             _providerPlanRepository,
@@ -50,29 +58,69 @@ public class ProviderEventServiceTests
     public async Task TryRecordInvoiceLineItems_EventTypeNotInvoiceCreatedOrInvoiceFinalized_NoOp()
     {
         // Arrange
-        var stripeEvent = await StripeTestEvents.GetAsync(StripeEventType.PaymentMethodAttached);
+        var stripeEvent = new Event { Type = "payment_method.attached" };
 
         // Act
         await _providerEventService.TryRecordInvoiceLineItems(stripeEvent);
 
         // Assert
-        await _stripeEventService.DidNotReceiveWithAnyArgs().GetInvoice(Arg.Any<Event>());
+        await _stripeEventService.DidNotReceiveWithAnyArgs().GetInvoice(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>?>());
+    }
+
+    [Fact]
+    public async Task TryRecordInvoiceLineItems_InvoiceParentTypeNotSubscriptionDetails_NoOp()
+    {
+        // Arrange
+        var stripeEvent = new Event
+        {
+            Type = "invoice.created"
+        };
+
+        var invoice = new Invoice
+        {
+            Parent = new InvoiceParent
+            {
+                Type = "credit_note",
+                SubscriptionDetails = new InvoiceParentSubscriptionDetails
+                {
+                    SubscriptionId = "sub_1"
+                }
+            }
+        };
+
+        _stripeEventService.GetInvoice(stripeEvent, true, Arg.Any<List<string>?>()).Returns(invoice);
+
+        // Act
+        await _providerEventService.TryRecordInvoiceLineItems(stripeEvent);
+
+        // Assert
+        await _stripeFacade.DidNotReceiveWithAnyArgs().GetSubscription(Arg.Any<string>());
     }
 
     [Fact]
     public async Task TryRecordInvoiceLineItems_EventNotProviderRelated_NoOp()
     {
         // Arrange
-        var stripeEvent = await StripeTestEvents.GetAsync(StripeEventType.InvoiceCreated);
+        var stripeEvent = new Event
+        {
+            Type = "invoice.created"
+        };
 
         const string subscriptionId = "sub_1";
 
         var invoice = new Invoice
         {
-            SubscriptionId = subscriptionId
+            Parent = new InvoiceParent
+            {
+                Type = "subscription_details",
+                SubscriptionDetails = new InvoiceParentSubscriptionDetails
+                {
+                    SubscriptionId = subscriptionId
+                }
+            }
         };
 
-        _stripeEventService.GetInvoice(stripeEvent).Returns(invoice);
+        _stripeEventService.GetInvoice(stripeEvent, true, Arg.Any<List<string>?>()).Returns(invoice);
 
         var subscription = new Subscription
         {
@@ -92,7 +140,10 @@ public class ProviderEventServiceTests
     public async Task TryRecordInvoiceLineItems_InvoiceCreated_Succeeds()
     {
         // Arrange
-        var stripeEvent = await StripeTestEvents.GetAsync(StripeEventType.InvoiceCreated);
+        var stripeEvent = new Event
+        {
+            Type = "invoice.created"
+        };
 
         const string subscriptionId = "sub_1";
         var providerId = Guid.NewGuid();
@@ -101,17 +152,26 @@ public class ProviderEventServiceTests
         {
             Id = "invoice_1",
             Number = "A",
-            SubscriptionId = subscriptionId,
-            Discount = new Discount
+            Parent = new InvoiceParent
             {
-                Coupon = new Coupon
+                Type = "subscription_details",
+                SubscriptionDetails = new InvoiceParentSubscriptionDetails
                 {
-                    PercentOff = 35
+                    SubscriptionId = subscriptionId
                 }
-            }
+            },
+            Discounts = [
+                new Discount
+                {
+                    Coupon = new Coupon
+                    {
+                        PercentOff = 35
+                    }
+                }
+            ]
         };
 
-        _stripeEventService.GetInvoice(stripeEvent).Returns(invoice);
+        _stripeEventService.GetInvoice(stripeEvent, true, Arg.Any<List<string>?>()).Returns(invoice);
 
         var subscription = new Subscription
         {
@@ -147,6 +207,12 @@ public class ProviderEventServiceTests
 
         _providerOrganizationRepository.GetManyDetailsByProviderAsync(providerId).Returns(clients);
 
+        _organizationRepository.GetByIdAsync(client1Id)
+            .Returns(new Organization { PlanType = PlanType.TeamsMonthly });
+
+        _organizationRepository.GetByIdAsync(client2Id)
+            .Returns(new Organization { PlanType = PlanType.EnterpriseMonthly });
+
         var providerPlans = new List<ProviderPlan>
         {
             new ()
@@ -169,14 +235,19 @@ public class ProviderEventServiceTests
             }
         };
 
+        foreach (var providerPlan in providerPlans)
+        {
+            _pricingClient.GetPlanOrThrow(providerPlan.PlanType).Returns(MockPlans.Get(providerPlan.PlanType));
+        }
+
         _providerPlanRepository.GetByProviderId(providerId).Returns(providerPlans);
 
         // Act
         await _providerEventService.TryRecordInvoiceLineItems(stripeEvent);
 
         // Assert
-        var teamsPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
-        var enterprisePlan = StaticStore.GetPlan(PlanType.EnterpriseMonthly);
+        var teamsPlan = MockPlans.Get(PlanType.TeamsMonthly);
+        var enterprisePlan = MockPlans.Get(PlanType.EnterpriseMonthly);
 
         await _providerInvoiceItemRepository.Received(1).CreateAsync(Arg.Is<ProviderInvoiceItem>(
             options =>
@@ -229,7 +300,10 @@ public class ProviderEventServiceTests
     public async Task TryRecordInvoiceLineItems_InvoiceFinalized_Succeeds()
     {
         // Arrange
-        var stripeEvent = await StripeTestEvents.GetAsync(StripeEventType.InvoiceFinalized);
+        var stripeEvent = new Event
+        {
+            Type = "invoice.finalized"
+        };
 
         const string subscriptionId = "sub_1";
         var providerId = Guid.NewGuid();
@@ -238,10 +312,17 @@ public class ProviderEventServiceTests
         {
             Id = "invoice_1",
             Number = "A",
-            SubscriptionId = subscriptionId
+            Parent = new InvoiceParent
+            {
+                Type = "subscription_details",
+                SubscriptionDetails = new InvoiceParentSubscriptionDetails
+                {
+                    SubscriptionId = subscriptionId
+                }
+            },
         };
 
-        _stripeEventService.GetInvoice(stripeEvent).Returns(invoice);
+        _stripeEventService.GetInvoice(stripeEvent, true, Arg.Any<List<string>?>()).Returns(invoice);
 
         var subscription = new Subscription
         {

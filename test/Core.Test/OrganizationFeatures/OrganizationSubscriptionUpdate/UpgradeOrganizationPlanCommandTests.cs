@@ -1,12 +1,14 @@
 ﻿using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
-using Bit.Core.Utilities;
+using Bit.Core.Test.Billing.Mocks;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -43,6 +45,7 @@ public class UpgradeOrganizationPlanCommandTests
             SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
     {
         upgrade.Plan = organization.PlanType;
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType).Returns(MockPlans.Get(organization.PlanType));
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade));
@@ -58,6 +61,7 @@ public class UpgradeOrganizationPlanCommandTests
         upgrade.AdditionalSmSeats = 10;
         upgrade.AdditionalServiceAccounts = 10;
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType).Returns(MockPlans.Get(organization.PlanType));
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade));
         Assert.Contains("already on this plan", exception.Message);
@@ -69,9 +73,17 @@ public class UpgradeOrganizationPlanCommandTests
             SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType).Returns(MockPlans.Get(organization.PlanType));
         upgrade.AdditionalSmSeats = 10;
         upgrade.AdditionalSeats = 10;
         upgrade.Plan = PlanType.TeamsAnnually;
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(upgrade.Plan).Returns(MockPlans.Get(upgrade.Plan));
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
+            {
+                Sponsored = 0,
+                Users = 1
+            });
         await sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade);
         await sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(organization);
     }
@@ -92,6 +104,8 @@ public class UpgradeOrganizationPlanCommandTests
 
         organization.PlanType = PlanType.FamiliesAnnually;
 
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType).Returns(MockPlans.Get(organization.PlanType));
+
         organizationUpgrade.AdditionalSeats = 30;
         organizationUpgrade.UseSecretsManager = true;
         organizationUpgrade.AdditionalSmSeats = 20;
@@ -99,10 +113,17 @@ public class UpgradeOrganizationPlanCommandTests
         organizationUpgrade.AdditionalStorageGb = 3;
         organizationUpgrade.Plan = planType;
 
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organizationUpgrade.Plan).Returns(MockPlans.Get(organizationUpgrade.Plan));
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
+            {
+                Sponsored = 0,
+                Users = 1
+            });
         await sutProvider.Sut.UpgradePlanAsync(organization.Id, organizationUpgrade);
         await sutProvider.GetDependency<IPaymentService>().Received(1).AdjustSubscription(
             organization,
-            StaticStore.GetPlan(planType),
+            MockPlans.Get(planType),
             organizationUpgrade.AdditionalSeats,
             organizationUpgrade.UseSecretsManager,
             organizationUpgrade.AdditionalSmSeats,
@@ -120,16 +141,24 @@ public class UpgradeOrganizationPlanCommandTests
     public async Task UpgradePlan_SM_Passes(PlanType planType, Organization organization, OrganizationUpgrade upgrade,
         SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
     {
-        upgrade.Plan = planType;
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType).Returns(MockPlans.Get(organization.PlanType));
 
-        var plan = StaticStore.GetPlan(upgrade.Plan);
+        upgrade.Plan = planType;
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(upgrade.Plan).Returns(MockPlans.Get(upgrade.Plan));
+
+        var plan = MockPlans.Get(upgrade.Plan);
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
 
         upgrade.AdditionalSeats = 15;
         upgrade.AdditionalSmSeats = 10;
         upgrade.AdditionalServiceAccounts = 20;
-
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
+            {
+                Sponsored = 0,
+                Users = 1
+            });
         var result = await sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade);
 
         await sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(
@@ -139,7 +168,7 @@ public class UpgradeOrganizationPlanCommandTests
                 && o.SmServiceAccounts == plan.SecretsManager.BaseServiceAccount + upgrade.AdditionalServiceAccounts));
 
         Assert.True(result.Item1);
-        Assert.NotNull(result.Item2);
+        Assert.Null(result.Item2);
     }
 
     [Theory, FreeOrganizationUpgradeCustomize]
@@ -155,10 +184,18 @@ public class UpgradeOrganizationPlanCommandTests
         upgrade.AdditionalSeats = 15;
         upgrade.AdditionalSmSeats = 1;
         upgrade.AdditionalServiceAccounts = 0;
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(upgrade.Plan).Returns(MockPlans.Get(upgrade.Plan));
 
         organization.SmSeats = 2;
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType).Returns(MockPlans.Get(organization.PlanType));
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
+            {
+                Sponsored = 0,
+                Users = 1
+            });
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id).Returns(2);
 
@@ -181,11 +218,19 @@ public class UpgradeOrganizationPlanCommandTests
         upgrade.AdditionalSeats = 15;
         upgrade.AdditionalSmSeats = 1;
         upgrade.AdditionalServiceAccounts = 0;
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(upgrade.Plan).Returns(MockPlans.Get(upgrade.Plan));
 
         organization.SmSeats = 1;
         organization.SmServiceAccounts = currentServiceAccounts;
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType).Returns(MockPlans.Get(organization.PlanType));
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
+            {
+                Sponsored = 0,
+                Users = 1
+            });
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id).Returns(1);
         sutProvider.GetDependency<IServiceAccountRepository>()

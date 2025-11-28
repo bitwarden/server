@@ -1,9 +1,13 @@
-﻿using System.Text.Json;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations;
@@ -16,56 +20,25 @@ using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Identity.IdentityServer.RequestValidators;
 
-public interface ITwoFactorAuthenticationValidator
-{
-    /// <summary>
-    /// Check if the user is required to use two-factor authentication to login. This is based on the user's
-    /// enabled two-factor providers, the user's organizations enabled two-factor providers, and the grant type.
-    /// Client credentials and webauthn grant types do not require two-factor authentication.
-    /// </summary>
-    /// <param name="user">the active user for the request</param>
-    /// <param name="request">the request that contains the grant types</param>
-    /// <returns>boolean</returns>
-    Task<Tuple<bool, Organization>> RequiresTwoFactorAsync(User user, ValidatedTokenRequest request);
-    /// <summary>
-    /// Builds the two-factor authentication result for the user based on the available two-factor providers
-    /// from either their user account or Organization.
-    /// </summary>
-    /// <param name="user">user trying to login</param>
-    /// <param name="organization">organization associated with the user; Can be null</param>
-    /// <returns>Dictionary with the TwoFactorProviderType as the Key and the Provider Metadata as the Value</returns>
-    Task<Dictionary<string, object>> BuildTwoFactorResultAsync(User user, Organization organization);
-    /// <summary>
-    /// Uses the built in userManager methods to verify the two-factor token for the user. If the organization uses
-    /// organization duo, it will use the organization duo token provider to verify the token.
-    /// </summary>
-    /// <param name="user">the active User</param>
-    /// <param name="organization">organization of user; can be null</param>
-    /// <param name="twoFactorProviderType">Two Factor Provider to use to verify the token</param>
-    /// <param name="token">secret passed from the user and consumed by the two-factor provider's verify method</param>
-    /// <returns>boolean</returns>
-    Task<bool> VerifyTwoFactor(User user, Organization organization, TwoFactorProviderType twoFactorProviderType, string token);
-}
-
 public class TwoFactorAuthenticationValidator(
     IUserService userService,
     UserManager<User> userManager,
     IOrganizationDuoUniversalTokenProvider organizationDuoWebTokenProvider,
-    IFeatureService featureService,
     IApplicationCacheService applicationCacheService,
     IOrganizationUserRepository organizationUserRepository,
     IOrganizationRepository organizationRepository,
     IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> ssoEmail2faSessionTokeFactory,
+    ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
     ICurrentContext currentContext) : ITwoFactorAuthenticationValidator
 {
     private readonly IUserService _userService = userService;
     private readonly UserManager<User> _userManager = userManager;
     private readonly IOrganizationDuoUniversalTokenProvider _organizationDuoUniversalTokenProvider = organizationDuoWebTokenProvider;
-    private readonly IFeatureService _featureService = featureService;
     private readonly IApplicationCacheService _applicationCacheService = applicationCacheService;
     private readonly IOrganizationUserRepository _organizationUserRepository = organizationUserRepository;
     private readonly IOrganizationRepository _organizationRepository = organizationRepository;
     private readonly IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> _ssoEmail2faSessionTokeFactory = ssoEmail2faSessionTokeFactory;
+    private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
     private readonly ICurrentContext _currentContext = currentContext;
 
     public async Task<Tuple<bool, Organization>> RequiresTwoFactorAsync(User user, ValidatedTokenRequest request)
@@ -121,7 +94,10 @@ public class TwoFactorAuthenticationValidator(
             { "TwoFactorProviders2", providers },
         };
 
-        // If we have email as a 2FA provider, we might need an SsoEmail2fa Session Token
+        // If we have an Email 2FA provider we need this session token so SSO users
+        // can re-request an email TOTP. The TwoFactorController.SendEmailLoginAsync
+        // endpoint requires a way to authenticate the user before sending another email with
+        // a TOTP, this token acts as the authentication mechanism.
         if (enabledProviders.Any(p => p.Key == TwoFactorProviderType.Email))
         {
             twoFactorResultDict.Add("SsoEmail2faSessionToken",
@@ -130,16 +106,10 @@ public class TwoFactorAuthenticationValidator(
             twoFactorResultDict.Add("Email", user.Email);
         }
 
-        if (enabledProviders.Count == 1 && enabledProviders.First().Key == TwoFactorProviderType.Email)
-        {
-            // Send email now if this is their only 2FA method
-            await _userService.SendTwoFactorEmailAsync(user);
-        }
-
         return twoFactorResultDict;
     }
 
-    public async Task<bool> VerifyTwoFactor(
+    public async Task<bool> VerifyTwoFactorAsync(
         User user,
         Organization organization,
         TwoFactorProviderType type,
@@ -154,24 +124,36 @@ public class TwoFactorAuthenticationValidator(
             return false;
         }
 
-        switch (type)
+        if (type is TwoFactorProviderType.RecoveryCode)
         {
-            case TwoFactorProviderType.Authenticator:
-            case TwoFactorProviderType.Email:
-            case TwoFactorProviderType.Duo:
-            case TwoFactorProviderType.YubiKey:
-            case TwoFactorProviderType.WebAuthn:
-            case TwoFactorProviderType.Remember:
-                if (type != TwoFactorProviderType.Remember &&
-                    !await _userService.TwoFactorProviderIsEnabledAsync(type, user))
-                {
-                    return false;
-                }
-                return await _userManager.VerifyTwoFactorTokenAsync(user,
-                    CoreHelpers.CustomProviderName(type), token);
-            default:
-                return false;
+            return await _userService.RecoverTwoFactorAsync(user, token);
         }
+
+        // These cases we want to always return false, U2f is deprecated and OrganizationDuo
+        // uses a different flow than the other two factor providers, it follows the same
+        // structure of a UserTokenProvider but has it's logic runs outside the usual token
+        // provider flow. See IOrganizationDuoUniversalTokenProvider.cs
+        if (type is TwoFactorProviderType.U2f or TwoFactorProviderType.OrganizationDuo)
+        {
+            return false;
+        }
+
+        // Now we are concerning the rest of the Two Factor Provider Types
+
+        // The intent of this check is to make sure that the user is using a 2FA provider that
+        // is enabled and allowed by their premium status.
+        // The exception for Remember is because it is a "special" 2FA type that isn't ever explicitly
+        // enabled by a user, so we can't check the user's 2FA providers to see if they're
+        // enabled. We just have to check if the token is valid.
+        if (type != TwoFactorProviderType.Remember &&
+            user.GetTwoFactorProvider(type) == null)
+        {
+            return false;
+        }
+
+        // Finally, verify the token based on the provider type.
+        return await _userManager.VerifyTwoFactorTokenAsync(
+            user, CoreHelpers.CustomProviderName(type), token);
     }
 
     private async Task<List<KeyValuePair<TwoFactorProviderType, TwoFactorProvider>>> GetEnabledTwoFactorProvidersAsync(
@@ -261,7 +243,7 @@ public class TwoFactorAuthenticationValidator(
 
     private bool OrgUsing2fa(IDictionary<Guid, OrganizationAbility> orgAbilities, Guid orgId)
     {
-        return orgAbilities != null && orgAbilities.ContainsKey(orgId) &&
-               orgAbilities[orgId].Enabled && orgAbilities[orgId].Using2fa;
+        return orgAbilities != null && orgAbilities.TryGetValue(orgId, out var orgAbility) &&
+               orgAbility.Enabled && orgAbility.Using2fa;
     }
 }

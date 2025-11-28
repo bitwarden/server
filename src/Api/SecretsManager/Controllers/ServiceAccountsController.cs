@@ -1,6 +1,10 @@
-﻿using Bit.Api.Models.Response;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.Models.Response;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.SecretsManager.Models.Response;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -37,6 +41,9 @@ public class ServiceAccountsController : Controller
     private readonly IUpdateServiceAccountCommand _updateServiceAccountCommand;
     private readonly IDeleteServiceAccountsCommand _deleteServiceAccountsCommand;
     private readonly IRevokeAccessTokensCommand _revokeAccessTokensCommand;
+    private readonly IPricingClient _pricingClient;
+    private readonly IEventService _eventService;
+    private readonly IOrganizationUserRepository _organizationUserRepository;
 
     public ServiceAccountsController(
         ICurrentContext currentContext,
@@ -52,7 +59,10 @@ public class ServiceAccountsController : Controller
         ICreateServiceAccountCommand createServiceAccountCommand,
         IUpdateServiceAccountCommand updateServiceAccountCommand,
         IDeleteServiceAccountsCommand deleteServiceAccountsCommand,
-        IRevokeAccessTokensCommand revokeAccessTokensCommand)
+        IRevokeAccessTokensCommand revokeAccessTokensCommand,
+        IPricingClient pricingClient,
+        IEventService eventService,
+        IOrganizationUserRepository organizationUserRepository)
     {
         _currentContext = currentContext;
         _userService = userService;
@@ -66,8 +76,11 @@ public class ServiceAccountsController : Controller
         _updateServiceAccountCommand = updateServiceAccountCommand;
         _deleteServiceAccountsCommand = deleteServiceAccountsCommand;
         _revokeAccessTokensCommand = revokeAccessTokensCommand;
+        _pricingClient = pricingClient;
         _createAccessTokenCommand = createAccessTokenCommand;
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
+        _eventService = eventService;
+        _organizationUserRepository = organizationUserRepository;
     }
 
     [HttpGet("/organizations/{organizationId}/service-accounts")]
@@ -124,14 +137,23 @@ public class ServiceAccountsController : Controller
         if (newServiceAccountSlotsRequired > 0)
         {
             var org = await _organizationRepository.GetByIdAsync(organizationId);
-            var update = new SecretsManagerSubscriptionUpdate(org, true)
+            // TODO: https://bitwarden.atlassian.net/browse/PM-17002
+            var plan = await _pricingClient.GetPlanOrThrow(org!.PlanType);
+            var update = new SecretsManagerSubscriptionUpdate(org, plan, true)
                 .AdjustServiceAccounts(newServiceAccountSlotsRequired);
             await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(update);
         }
 
         var userId = _userService.GetProperUserId(User).Value;
+
         var result =
-            await _createServiceAccountCommand.CreateAsync(createRequest.ToServiceAccount(organizationId), userId);
+            await _createServiceAccountCommand.CreateAsync(serviceAccount, userId);
+
+        if (result != null)
+        {
+            await _eventService.LogServiceAccountEventAsync(userId, [serviceAccount], EventType.ServiceAccount_Created, _currentContext.IdentityClientType);
+        }
+
         return new ServiceAccountResponseModel(result);
     }
 
@@ -188,6 +210,9 @@ public class ServiceAccountsController : Controller
         }
 
         await _deleteServiceAccountsCommand.DeleteServiceAccounts(serviceAccountsToDelete);
+        var userId = _userService.GetProperUserId(User)!.Value;
+        await _eventService.LogServiceAccountEventAsync(userId, serviceAccountsToDelete, EventType.ServiceAccount_Deleted, _currentContext.IdentityClientType);
+
         var responses = results.Select(r => new BulkDeleteResponseModel(r.ServiceAccount.Id, r.Error));
         return new ListResponseModel<BulkDeleteResponseModel>(responses);
     }

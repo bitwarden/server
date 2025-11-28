@@ -1,8 +1,12 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 
@@ -17,14 +21,15 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
     private readonly IPushRegistrationService _pushRegistrationService;
     private readonly ICurrentContext _currentContext;
     private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
-    private readonly IGetOrganizationUsersManagementStatusQuery _getOrganizationUsersManagementStatusQuery;
+    private readonly IGetOrganizationUsersClaimedStatusQuery _getOrganizationUsersClaimedStatusQuery;
     private readonly IFeatureService _featureService;
     private readonly TimeProvider _timeProvider;
 
     public const string UserNotFoundErrorMessage = "User not found.";
     public const string UsersInvalidErrorMessage = "Users invalid.";
     public const string RemoveYourselfErrorMessage = "You cannot remove yourself.";
-    public const string RemoveOwnerByNonOwnerErrorMessage = "Only owners can delete other owners.";
+    public const string RemoveOwnerByNonOwnerErrorMessage = "Only owners can remove other owners.";
+    public const string RemoveAdminByCustomUserErrorMessage = "Custom users can not remove admins.";
     public const string RemoveLastConfirmedOwnerErrorMessage = "Organization must have at least one confirmed owner.";
     public const string RemoveClaimedAccountErrorMessage = "Cannot remove member accounts claimed by the organization. To offboard a member, revoke or delete the account.";
 
@@ -36,7 +41,7 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
         IPushRegistrationService pushRegistrationService,
         ICurrentContext currentContext,
         IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
-        IGetOrganizationUsersManagementStatusQuery getOrganizationUsersManagementStatusQuery,
+        IGetOrganizationUsersClaimedStatusQuery getOrganizationUsersClaimedStatusQuery,
         IFeatureService featureService,
         TimeProvider timeProvider)
     {
@@ -47,7 +52,7 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
         _pushRegistrationService = pushRegistrationService;
         _currentContext = currentContext;
         _hasConfirmedOwnersExceptQuery = hasConfirmedOwnersExceptQuery;
-        _getOrganizationUsersManagementStatusQuery = getOrganizationUsersManagementStatusQuery;
+        _getOrganizationUsersClaimedStatusQuery = getOrganizationUsersClaimedStatusQuery;
         _featureService = featureService;
         _timeProvider = timeProvider;
     }
@@ -152,10 +157,15 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
             }
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning) && deletingUserId.HasValue && eventSystemUser == null)
+        if (orgUser.Type == OrganizationUserType.Admin && await _currentContext.OrganizationCustom(orgUser.OrganizationId))
         {
-            var managementStatus = await _getOrganizationUsersManagementStatusQuery.GetUsersOrganizationManagementStatusAsync(orgUser.OrganizationId, new[] { orgUser.Id });
-            if (managementStatus.TryGetValue(orgUser.Id, out var isManaged) && isManaged)
+            throw new BadRequestException(RemoveAdminByCustomUserErrorMessage);
+        }
+
+        if (deletingUserId.HasValue && eventSystemUser == null)
+        {
+            var claimedStatus = await _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(orgUser.OrganizationId, new[] { orgUser.Id });
+            if (claimedStatus.TryGetValue(orgUser.Id, out var isClaimed) && isClaimed)
             {
                 throw new BadRequestException(RemoveClaimedAccountErrorMessage);
             }
@@ -207,8 +217,8 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
             deletingUserIsOwner = await _currentContext.OrganizationOwner(organizationId);
         }
 
-        var managementStatus = _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning) && deletingUserId.HasValue && eventSystemUser == null
-            ? await _getOrganizationUsersManagementStatusQuery.GetUsersOrganizationManagementStatusAsync(organizationId, filteredUsers.Select(u => u.Id))
+        var claimedStatus = deletingUserId.HasValue && eventSystemUser == null
+            ? await _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(organizationId, filteredUsers.Select(u => u.Id))
             : filteredUsers.ToDictionary(u => u.Id, u => false);
         var result = new List<(OrganizationUser OrganizationUser, string ErrorMessage)>();
         foreach (var orgUser in filteredUsers)
@@ -225,7 +235,7 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
                     throw new BadRequestException(RemoveOwnerByNonOwnerErrorMessage);
                 }
 
-                if (managementStatus.TryGetValue(orgUser.Id, out var isManaged) && isManaged)
+                if (claimedStatus.TryGetValue(orgUser.Id, out var isClaimed) && isClaimed)
                 {
                     throw new BadRequestException(RemoveClaimedAccountErrorMessage);
                 }

@@ -100,8 +100,6 @@ public class Startup
             IdentityModelEventSource.ShowPII = true;
         }
 
-        app.UseSerilog(env, appLifetime, globalSettings);
-
         // Add general security headers
         app.UseMiddleware<SecurityHeadersMiddleware>();
 
@@ -157,6 +155,6 @@ public class Startup
         app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());
 
         // Log startup
-        logger.LogInformation(Constants.BypassFiltersEventId, globalSettings.ProjectName + " started.");
+        logger.LogInformation(Constants.BypassFiltersEventId, "{Project} started.", globalSettings.ProjectName);
     }
 }

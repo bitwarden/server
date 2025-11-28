@@ -1,4 +1,8 @@
-﻿using Bit.Core.Billing.Models;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Services;
 using Stripe;
 
@@ -83,6 +87,7 @@ public static class Utilities
             customer.Address.Country,
             customer.Address.PostalCode,
             customer.TaxIds?.FirstOrDefault()?.Value,
+            customer.TaxIds?.FirstOrDefault()?.Type,
             customer.Address.Line1,
             customer.Address.Line2,
             customer.Address.City,

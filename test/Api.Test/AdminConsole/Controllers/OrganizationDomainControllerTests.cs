@@ -28,7 +28,7 @@ public class OrganizationDomainControllerTests
     {
         sutProvider.GetDependency<ICurrentContext>().ManageSso(orgId).Returns(false);
 
-        var requestAction = async () => await sutProvider.Sut.Get(orgId);
+        var requestAction = async () => await sutProvider.Sut.GetAll(orgId);
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(requestAction);
     }
@@ -40,7 +40,7 @@ public class OrganizationDomainControllerTests
         sutProvider.GetDependency<ICurrentContext>().ManageSso(orgId).Returns(true);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).ReturnsNull();
 
-        var requestAction = async () => await sutProvider.Sut.Get(orgId);
+        var requestAction = async () => await sutProvider.Sut.GetAll(orgId);
 
         await Assert.ThrowsAsync<NotFoundException>(requestAction);
     }
@@ -64,7 +64,7 @@ public class OrganizationDomainControllerTests
                 }
             });
 
-        var result = await sutProvider.Sut.Get(orgId);
+        var result = await sutProvider.Sut.GetAll(orgId);
 
         Assert.IsType<ListResponseModel<OrganizationDomainResponseModel>>(result);
         Assert.Equal(orgId, result.Data.Select(x => x.OrganizationId).FirstOrDefault());

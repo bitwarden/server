@@ -1,4 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using Bit.Core.Billing.Models;
 using Bit.Core.Entities;
 using Bit.Core.Settings;
@@ -18,9 +21,12 @@ public class UserEditModel
         BillingInfo billingInfo,
         BillingHistoryInfo billingHistoryInfo,
         GlobalSettings globalSettings,
-        bool? claimedAccount)
+        bool? claimedAccount,
+        bool? activeNewDeviceVerificationException)
     {
         User = UserViewModel.MapViewModel(user, isTwoFactorEnabled, ciphers, claimedAccount);
+
+        ActiveNewDeviceVerificationException = activeNewDeviceVerificationException ?? false;
 
         BillingInfo = billingInfo;
         BillingHistoryInfo = billingHistoryInfo;
@@ -44,6 +50,8 @@ public class UserEditModel
     public string RandomLicenseKey => CoreHelpers.SecureRandomString(20);
     public string OneYearExpirationDate => DateTime.Now.AddYears(1).ToString("yyyy-MM-ddTHH:mm");
     public string BraintreeMerchantId { get; init; }
+    public bool ActiveNewDeviceVerificationException { get; init; }
+
 
     [Display(Name = "Name")]
     public string Name { get; init; }

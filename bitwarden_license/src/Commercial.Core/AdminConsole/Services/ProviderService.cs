@@ -1,14 +1,20 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business.Provider;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Payment.Models;
+using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -29,8 +35,9 @@ public class ProviderService : IProviderService
 {
     private static readonly PlanType[] _resellerDisallowedOrganizationTypes = [
         PlanType.Free,
-        PlanType.FamiliesAnnually,
-        PlanType.FamiliesAnnually2019
+        PlanType.FamiliesAnnually2025,
+        PlanType.FamiliesAnnually2019,
+        PlanType.FamiliesAnnually
     ];
 
     private readonly IDataProtector _dataProtector;
@@ -50,6 +57,8 @@ public class ProviderService : IProviderService
     private readonly IDataProtectorTokenFactory<ProviderDeleteTokenable> _providerDeleteTokenDataFactory;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IProviderBillingService _providerBillingService;
+    private readonly IPricingClient _pricingClient;
+    private readonly IProviderClientOrganizationSignUpCommand _providerClientOrganizationSignUpCommand;
 
     public ProviderService(IProviderRepository providerRepository, IProviderUserRepository providerUserRepository,
         IProviderOrganizationRepository providerOrganizationRepository, IUserRepository userRepository,
@@ -58,7 +67,8 @@ public class ProviderService : IProviderService
         IOrganizationRepository organizationRepository, GlobalSettings globalSettings,
         ICurrentContext currentContext, IStripeAdapter stripeAdapter, IFeatureService featureService,
         IDataProtectorTokenFactory<ProviderDeleteTokenable> providerDeleteTokenDataFactory,
-        IApplicationCacheService applicationCacheService, IProviderBillingService providerBillingService)
+        IApplicationCacheService applicationCacheService, IProviderBillingService providerBillingService, IPricingClient pricingClient,
+        IProviderClientOrganizationSignUpCommand providerClientOrganizationSignUpCommand)
     {
         _providerRepository = providerRepository;
         _providerUserRepository = providerUserRepository;
@@ -77,9 +87,11 @@ public class ProviderService : IProviderService
         _providerDeleteTokenDataFactory = providerDeleteTokenDataFactory;
         _applicationCacheService = applicationCacheService;
         _providerBillingService = providerBillingService;
+        _pricingClient = pricingClient;
+        _providerClientOrganizationSignUpCommand = providerClientOrganizationSignUpCommand;
     }
 
-    public async Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key, TaxInfo taxInfo = null)
+    public async Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key, TokenizedPaymentMethod paymentMethod, BillingAddress billingAddress)
     {
         var owner = await _userService.GetUserByIdAsync(ownerUserId);
         if (owner == null)
@@ -104,11 +116,7 @@ public class ProviderService : IProviderService
             throw new BadRequestException("Invalid owner.");
         }
 
-        if (taxInfo == null || string.IsNullOrEmpty(taxInfo.BillingAddressCountry) || string.IsNullOrEmpty(taxInfo.BillingAddressPostalCode))
-        {
-            throw new BadRequestException("Both address and postal code are required to set up your provider.");
-        }
-        var customer = await _providerBillingService.SetupCustomer(provider, taxInfo);
+        var customer = await _providerBillingService.SetupCustomer(provider, paymentMethod, billingAddress);
         provider.GatewayCustomerId = customer.Id;
         var subscription = await _providerBillingService.SetupSubscription(provider);
         provider.GatewaySubscriptionId = subscription.Id;
@@ -128,7 +136,15 @@ public class ProviderService : IProviderService
             throw new ArgumentException("Cannot create provider this way.");
         }
 
+        var existingProvider = await _providerRepository.GetByIdAsync(provider.Id);
+        var enabledStatusChanged = existingProvider != null && existingProvider.Enabled != provider.Enabled;
+
         await _providerRepository.ReplaceAsync(provider);
+
+        if (enabledStatusChanged && (provider.Type == ProviderType.Msp || provider.Type == ProviderType.BusinessUnit))
+        {
+            await UpdateClientOrganizationsEnabledStatusAsync(provider.Id, provider.Enabled);
+        }
     }
 
     public async Task<List<ProviderUser>> InviteUserAsync(ProviderUserInvite<string> invite)
@@ -266,11 +282,10 @@ public class ProviderService : IProviderService
 
         foreach (var user in users)
         {
-            if (!keyedFilteredUsers.ContainsKey(user.Id))
+            if (!keyedFilteredUsers.TryGetValue(user.Id, out var providerUser))
             {
                 continue;
             }
-            var providerUser = keyedFilteredUsers[user.Id];
             try
             {
                 if (providerUser.Status != ProviderUserStatusType.Accepted || providerUser.ProviderId != providerId)
@@ -452,30 +467,31 @@ public class ProviderService : IProviderService
 
         if (!string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
         {
-            var subscriptionItem = await GetSubscriptionItemAsync(organization.GatewaySubscriptionId,
-                GetStripeSeatPlanId(organization.PlanType));
+            var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
+
+            var subscriptionItem = await GetSubscriptionItemAsync(
+                organization.GatewaySubscriptionId,
+                plan.PasswordManager.StripeSeatPlanId);
+
             var extractedPlanType = PlanTypeMappings(organization);
+            var extractedPlan = await _pricingClient.GetPlanOrThrow(extractedPlanType);
+
             if (subscriptionItem != null)
             {
-                await UpdateSubscriptionAsync(subscriptionItem, GetStripeSeatPlanId(extractedPlanType), organization);
+                await UpdateSubscriptionAsync(subscriptionItem, extractedPlan.PasswordManager.StripeSeatPlanId, organization);
             }
         }
 
         await _organizationRepository.UpsertAsync(organization);
     }
 
-    private async Task<Stripe.SubscriptionItem> GetSubscriptionItemAsync(string subscriptionId, string oldPlanId)
+    private async Task<SubscriptionItem> GetSubscriptionItemAsync(string subscriptionId, string oldPlanId)
     {
         var subscriptionDetails = await _stripeAdapter.SubscriptionGetAsync(subscriptionId);
         return subscriptionDetails.Items.Data.FirstOrDefault(item => item.Price.Id == oldPlanId);
     }
 
-    private static string GetStripeSeatPlanId(PlanType planType)
-    {
-        return StaticStore.GetPlan(planType).PasswordManager.StripeSeatPlanId;
-    }
-
-    private async Task UpdateSubscriptionAsync(Stripe.SubscriptionItem subscriptionItem, string extractedPlanType, Organization organization)
+    private async Task UpdateSubscriptionAsync(SubscriptionItem subscriptionItem, string extractedPlanType, Organization organization)
     {
         try
         {
@@ -542,12 +558,12 @@ public class ProviderService : IProviderService
 
         ThrowOnInvalidPlanType(provider.Type, organizationSignup.Plan);
 
-        var (organization, _, defaultCollection) = await _organizationService.SignupClientAsync(organizationSignup);
+        var signUpResponse = await _providerClientOrganizationSignUpCommand.SignUpClientOrganizationAsync(organizationSignup);
 
         var providerOrganization = new ProviderOrganization
         {
             ProviderId = providerId,
-            OrganizationId = organization.Id,
+            OrganizationId = signUpResponse.Organization.Id,
             Key = organizationSignup.OwnerKey,
         };
 
@@ -556,12 +572,12 @@ public class ProviderService : IProviderService
 
         // Give the owner Can Manage access over the default collection
         // The orgUser is not available when the org is created so we have to do it here as part of the invite
-        var defaultOwnerAccess = defaultCollection != null
+        var defaultOwnerAccess = signUpResponse.DefaultCollection != null
             ?
             [
                 new CollectionAccessSelection
                 {
-                    Id = defaultCollection.Id,
+                    Id = signUpResponse.DefaultCollection.Id,
                     HidePasswords = false,
                     ReadOnly = false,
                     Manage = true
@@ -569,7 +585,7 @@ public class ProviderService : IProviderService
             ]
             : Array.Empty<CollectionAccessSelection>();
 
-        await _organizationService.InviteUsersAsync(organization.Id, user.Id, systemUser: null,
+        await _organizationService.InviteUsersAsync(signUpResponse.Organization.Id, user.Id, systemUser: null,
             new (OrganizationUserInvite, string)[]
             {
                 (
@@ -688,10 +704,10 @@ public class ProviderService : IProviderService
                     throw new BadRequestException($"Managed Service Providers cannot manage organizations with the plan type {requestedType}. Only Teams (Monthly) and Enterprise (Monthly) are allowed.");
                 }
                 break;
-            case ProviderType.MultiOrganizationEnterprise:
+            case ProviderType.BusinessUnit:
                 if (requestedType is not (PlanType.EnterpriseMonthly or PlanType.EnterpriseAnnually))
                 {
-                    throw new BadRequestException($"Multi-organization Enterprise Providers cannot manage organizations with the plan type {requestedType}. Only Enterprise (Monthly) and Enterprise (Annually) are allowed.");
+                    throw new BadRequestException($"Business Unit Providers cannot manage organizations with the plan type {requestedType}. Only Enterprise (Monthly) and Enterprise (Annually) are allowed.");
                 }
                 break;
             case ProviderType.Reseller:
@@ -702,6 +718,22 @@ public class ProviderService : IProviderService
                 break;
             default:
                 throw new BadRequestException($"Unsupported provider type {providerType}.");
+        }
+    }
+
+    private async Task UpdateClientOrganizationsEnabledStatusAsync(Guid providerId, bool enabled)
+    {
+        var providerOrganizations = await _providerOrganizationRepository.GetManyDetailsByProviderAsync(providerId);
+
+        foreach (var providerOrganization in providerOrganizations)
+        {
+            var organization = await _organizationRepository.GetByIdAsync(providerOrganization.OrganizationId);
+            if (organization != null && organization.Enabled != enabled)
+            {
+                organization.Enabled = enabled;
+                await _organizationRepository.ReplaceAsync(organization);
+                await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
+            }
         }
     }
 }

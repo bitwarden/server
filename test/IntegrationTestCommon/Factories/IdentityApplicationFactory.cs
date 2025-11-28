@@ -1,23 +1,52 @@
-﻿using System.Net.Http.Json;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Collections.Concurrent;
+using System.Net.Http.Json;
 using System.Text.Json;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Utilities;
+using Bit.Core.Services;
 using Bit.Identity;
-using Bit.Identity.Models.Request.Accounts;
 using Bit.Test.Common.Helpers;
-using HandlebarsDotNet;
+using LinqToDB;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using NSubstitute;
+using Xunit;
 
 namespace Bit.IntegrationTestCommon.Factories;
 
 public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
 {
     public const string DefaultDeviceIdentifier = "92b9d953-b9b6-4eaf-9d3e-11d57144dfeb";
+    public const string DefaultUserEmail = "DefaultEmail@bitwarden.com";
+    public const string DefaultUserPasswordHash = "default_password_hash";
 
-    public async Task<HttpContext> RegisterAsync(RegisterRequestModel model)
+    /// <summary>
+    /// A dictionary to store registration tokens for email verification. We cannot substitute the IMailService more than once, so
+    /// we capture the email tokens for new user registration in the constructor. The email must be unique otherwise an error will be thrown.
+    /// </summary>
+    public ConcurrentDictionary<string, string> RegistrationTokens { get; private set; } = new ConcurrentDictionary<string, string>();
+
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        return await Server.PostAsync("/accounts/register", JsonContent.Create(model));
+        // This allows us to use the official registration flow
+        SubstituteService<IMailService>(service =>
+        {
+            service.SendRegistrationVerificationEmailAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
+                .ReturnsForAnyArgs(Task.CompletedTask)
+                .AndDoes(call =>
+                {
+                    if (!RegistrationTokens.TryAdd(call.ArgAt<string>(0), call.ArgAt<string>(1)))
+                    {
+                        throw new InvalidOperationException("This email was already registered for new user registration.");
+                    }
+                });
+        });
+
+        base.ConfigureWebHost(builder);
     }
 
     public async Task<HttpContext> PostRegisterSendEmailVerificationAsync(RegisterSendVerificationEmailRequestModel model)
@@ -70,7 +99,7 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
             { "grant_type", "password" },
             { "username", username },
             { "password", password },
-        }), context => context.Request.Headers.Append("Auth-Email", CoreHelpers.Base64UrlEncodeString(username)));
+        }));
 
         return context;
     }
@@ -98,7 +127,7 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
             { "TwoFactorToken", twoFactorToken },
             { "TwoFactorProvider", twoFactorProviderType },
             { "TwoFactorRemember", "1" },
-        }), context => context.Request.Headers.Append("Auth-Email", CoreHelpers.Base64UrlEncodeString(username)));
+        }));
 
         return context;
     }
@@ -154,5 +183,43 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
                 { "deviceType", ((int)deviceType).ToString() }
             }));
         return context;
+    }
+
+    /// <summary>
+    /// Registers a new user to the Identity Application Factory based on the RegisterFinishRequestModel
+    /// </summary>
+    /// <param name="requestModel">RegisterFinishRequestModel needed to seed data to the test user</param>
+    /// <param name="marketingEmails">optional parameter that is tracked during the inital steps of registration.</param>
+    /// <returns>returns the newly created user</returns>
+    public async Task<User> RegisterNewIdentityFactoryUserAsync(
+        RegisterFinishRequestModel requestModel,
+        bool marketingEmails = true)
+    {
+        var sendVerificationEmailReqModel = new RegisterSendVerificationEmailRequestModel
+        {
+            Email = requestModel.Email,
+            Name = "name",
+            ReceiveMarketingEmails = marketingEmails
+        };
+
+        var sendEmailVerificationResponseHttpContext = await PostRegisterSendEmailVerificationAsync(sendVerificationEmailReqModel);
+
+        Assert.Equal(StatusCodes.Status204NoContent, sendEmailVerificationResponseHttpContext.Response.StatusCode);
+        Assert.NotNull(RegistrationTokens[requestModel.Email]);
+
+        // Now we call the finish registration endpoint with the email verification token
+        requestModel.EmailVerificationToken = RegistrationTokens[requestModel.Email];
+
+        var postRegisterFinishHttpContext = await PostRegisterFinishAsync(requestModel);
+
+        Assert.Equal(StatusCodes.Status200OK, postRegisterFinishHttpContext.Response.StatusCode);
+
+        var database = GetDatabaseContext();
+        var user = await database.Users
+            .SingleAsync(u => u.Email == requestModel.Email);
+
+        Assert.NotNull(user);
+
+        return user;
     }
 }

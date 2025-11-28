@@ -109,9 +109,13 @@ public class GroupRepository : Repository<Group, Guid>, IGroupRepository
         }
     }
 
-    public async Task<ICollection<Guid>> GetManyUserIdsByIdAsync(Guid id)
+    public async Task<ICollection<Guid>> GetManyUserIdsByIdAsync(Guid id, bool useReadOnlyReplica = false)
     {
-        using (var connection = new SqlConnection(ConnectionString))
+        var connectionString = useReadOnlyReplica
+            ? ReadOnlyConnectionString
+            : ConnectionString;
+
+        using (var connection = new SqlConnection(connectionString))
         {
             var results = await connection.QueryAsync<Guid>(
                 $"[{Schema}].[GroupUser_ReadOrganizationUserIdsByGroupId]",
@@ -181,6 +185,17 @@ public class GroupRepository : Repository<Group, Guid>, IGroupRepository
         {
             var results = await connection.ExecuteAsync(
                 "[dbo].[GroupUser_UpdateUsers]",
+                new { GroupId = groupId, OrganizationUserIds = organizationUserIds.ToGuidIdArrayTVP() },
+                commandType: CommandType.StoredProcedure);
+        }
+    }
+
+    public async Task AddGroupUsersByIdAsync(Guid groupId, IEnumerable<Guid> organizationUserIds)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.ExecuteAsync(
+                "[dbo].[GroupUser_AddUsers]",
                 new { GroupId = groupId, OrganizationUserIds = organizationUserIds.ToGuidIdArrayTVP() },
                 commandType: CommandType.StoredProcedure);
         }

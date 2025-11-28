@@ -17,6 +17,7 @@ on:
       - "src/Infrastructure.Dapper/**" # Changes to SQL Server Dapper Repository Layer
       - "src/Infrastructure.EntityFramework/**" # Changes to Entity Framework Repository Layer
       - "test/Infrastructure.IntegrationTest/**" # Any changes to the tests
+      - "src/**/Entities/**/*.cs" # Database entity definitions
   pull_request:
     paths:
       - ".github/workflows/test-database.yml" # This file
@@ -28,36 +29,27 @@ on:
       - "src/Infrastructure.Dapper/**" # Changes to SQL Server Dapper Repository Layer
       - "src/Infrastructure.EntityFramework/**" # Changes to Entity Framework Repository Layer
       - "test/Infrastructure.IntegrationTest/**" # Any changes to the tests
+      - "src/**/Entities/**/*.cs" # Database entity definitions
+
+permissions:
+  contents: read
 
 jobs:
-  check-test-secrets:
-    name: Check for test secrets
-    runs-on: ubuntu-22.04
-    outputs:
-      available: ${{ steps.check-test-secrets.outputs.available }}
-    permissions:
-      contents: read
-
-    steps:
-      - name: Check
-        id: check-test-secrets
-        run: |
-          if [ "${{ secrets.CODECOV_TOKEN }}" != '' ]; then
-            echo "available=true" >> $GITHUB_OUTPUT;
-          else
-            echo "available=false" >> $GITHUB_OUTPUT;
-          fi
-
   test:
     name: Run tests
     runs-on: ubuntu-22.04
-    needs: check-test-secrets
+    permissions:
+      contents: read
+      actions: read
+      checks: write
     steps:
       - name: Check out repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@3e891b0cb619bf60e2c25674b222b8940e2c1c25 # v4.1.0
+        uses: actions/setup-dotnet@d4c94342e560b34958eacfc5d055d21461ed1c5d # v5.0.0
 
       - name: Restore tools
         run: dotnet tool restore
@@ -70,7 +62,7 @@ jobs:
           docker compose --profile mssql --profile postgres --profile mysql up -d
         shell: pwsh
 
-      - name: Add MariaDB for unified
+      - name: Add MariaDB for Bitwarden Lite
         # Use a different port than MySQL
         run: |
           docker run --detach --name mariadb --env MARIADB_ROOT_PASSWORD=mariadb-password -p 4306:3306 mariadb:10
@@ -107,7 +99,7 @@ jobs:
         run: 'dotnet ef database update --connection "$CONN_STR" -- --GlobalSettings:MySql:ConnectionString="$CONN_STR"'
         env:
           CONN_STR: "server=localhost;uid=root;pwd=SET_A_PASSWORD_HERE_123;database=vault_dev;Allow User Variables=true"
-      
+
       - name: Migrate MariaDB
         working-directory: "util/MySqlMigrations"
         run: 'dotnet ef database update --connection "$CONN_STR" -- --GlobalSettings:MySql:ConnectionString="$CONN_STR"'
@@ -141,36 +133,39 @@ jobs:
           # Default Sqlite
           BW_TEST_DATABASES__3__TYPE: "Sqlite"
           BW_TEST_DATABASES__3__CONNECTIONSTRING: "Data Source=${{ runner.temp }}/test.db"
-          # Unified MariaDB
+          # Bitwarden Lite MariaDB
           BW_TEST_DATABASES__4__TYPE: "MySql"
           BW_TEST_DATABASES__4__CONNECTIONSTRING: "server=localhost;port=4306;uid=root;pwd=mariadb-password;database=vault_dev;Allow User Variables=true"
-        run: dotnet test --logger "trx;LogFileName=infrastructure-test-results.trx"
+        run: dotnet test --logger "trx;LogFileName=infrastructure-test-results.trx" /p:CoverletOutputFormatter="cobertura" --collect:"XPlat Code Coverage"
         shell: pwsh
 
       - name: Print MySQL Logs
         if: failure()
-        run: 'docker logs $(docker ps --quiet --filter "name=mysql")'
+        run: 'docker logs "$(docker ps --quiet --filter "name=mysql")"'
 
       - name: Print MariaDB Logs
         if: failure()
-        run: 'docker logs $(docker ps --quiet --filter "name=mariadb")'
+        run: 'docker logs "$(docker ps --quiet --filter "name=mariadb")"'
 
       - name: Print Postgres Logs
         if: failure()
-        run: 'docker logs $(docker ps --quiet --filter "name=postgres")'
+        run: 'docker logs "$(docker ps --quiet --filter "name=postgres")"'
 
       - name: Print MSSQL Logs
         if: failure()
-        run: 'docker logs $(docker ps --quiet --filter "name=mssql")'
+        run: 'docker logs "$(docker ps --quiet --filter "name=mssql")"'
 
       - name: Report test results
-        uses: dorny/test-reporter@31a54ee7ebcacc03a09ea97a7e5465a47b84aea5 # v1.9.1
-        if: ${{ needs.check-test-secrets.outputs.available == 'true' && !cancelled() }}
+        uses: dorny/test-reporter@890a17cecf52a379fc869ab770a71657660be727 # v2.1.0
+        if: ${{ github.event.pull_request.head.repo.full_name == github.repository && !cancelled() }}
         with:
           name: Test Results
-          path: "**/*-test-results.trx"
+          path: "./**/*-test-results.trx"
           reporter: dotnet-trx
           fail-on-error: true
+
+      - name: Upload to codecov.io
+        uses: codecov/codecov-action@18283e04ce6e62d37312384ff67231eb8fd56d24 # v5.4.3
 
       - name: Docker Compose down
         if: always()
@@ -184,9 +179,11 @@ jobs:
     steps:
       - name: Check out repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@3e891b0cb619bf60e2c25674b222b8940e2c1c25 # v4.1.0
+        uses: actions/setup-dotnet@d4c94342e560b34958eacfc5d055d21461ed1c5d # v5.0.0
 
       - name: Print environment
         run: |
@@ -200,7 +197,7 @@ jobs:
         shell: pwsh
 
       - name: Upload DACPAC
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: sql.dacpac
           path: Sql.dacpac
@@ -226,7 +223,7 @@ jobs:
         shell: pwsh
 
       - name: Report validation results
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: report.xml
           path: |
@@ -236,11 +233,27 @@ jobs:
       - name: Validate XML
         run: |
           if grep -q "<Operations>" "report.xml"; then
-             echo
-             echo "Migrations are out of sync with sqlproj!"
+             echo "ERROR: Migration files are not in sync with the SQL project"
+             echo ""
+             echo "Check these locations:"
+             echo "  - Migration scripts: util/Migrator/DbScripts/"
+             echo "  - SQL project files: src/Sql/"
+             echo "  - Download 'report.xml' artifact for full details"
+             echo ""
+             
+             # Show actual SQL differences - exclude database setup commands
+             if [ -s "diff.sql" ]; then
+               echo "Key SQL differences:"
+               # Show meaningful schema differences, filtering out database setup noise
+               grep -E "^(CREATE|DROP|ALTER)" diff.sql | grep -v "ALTER DATABASE" | grep -v "DatabaseName" | head -5
+               echo ""
+             fi
+             
+             echo "Common causes: naming differences (underscores, case), missing objects, or definition mismatches"
+             
              exit 1
            else
-             echo "Report looks good"
+             echo "SUCCESS: Database validation passed"
            fi
         shell: bash
 

@@ -11,14 +11,18 @@ jobs:
   build-docker:
     name: Remove branch-specific Docker images
     runs-on: ubuntu-22.04
+    permissions:
+      id-token: write
     steps:
-      - name: Log in to Azure - production subscription
-        uses: Azure/login@e15b166166a8746d1a47596803bd8c1b595455cf # v1.6.0
+      - name: Log in to Azure
+        uses: bitwarden/gh-actions/azure-login@main
         with:
-          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+          subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+          client_id: ${{ secrets.AZURE_CLIENT_ID }}
 
       - name: Log in to Azure ACR
-        run: az acr login -n $_AZ_REGISTRY --only-show-errors
+        run: az acr login -n "$_AZ_REGISTRY" --only-show-errors
 
       ########## Remove Docker images ##########
       - name: Remove the Docker image from ACR
@@ -41,20 +45,20 @@ jobs:
               - Setup
               - Sso
         run: |
-          for SERVICE in $(echo "${{ env.SERVICES }}" | yq e ".services[]" - )
+          for SERVICE in $(echo "${SERVICES}" | yq e ".services[]" - )
           do
-            SERVICE_NAME=$(echo $SERVICE | awk '{print tolower($0)}')
+            SERVICE_NAME=$(echo "$SERVICE" | awk '{print tolower($0)}')
             IMAGE_TAG=$(echo "${REF}" | sed "s#/#-#g")  # slash safe branch name
 
             echo "[*] Checking if remote exists: $_AZ_REGISTRY/$SERVICE_NAME:$IMAGE_TAG"
             TAG_EXISTS=$(
-              az acr repository show-tags --name $_AZ_REGISTRY --repository $SERVICE_NAME \
-              | jq --arg $TAG "$IMAGE_TAG" -e '. | any(. == "$TAG")'
+              az acr repository show-tags --name "$_AZ_REGISTRY" --repository "$SERVICE_NAME" \
+              | jq --arg TAG "$IMAGE_TAG" -e '. | any(. == $TAG)'
             )
 
             if [[ "$TAG_EXISTS" == "true" ]]; then
               echo "[*] Tag exists. Removing tag"
-              az acr repository delete --name $_AZ_REGISTRY --image $SERVICE_NAME:$IMAGE_TAG --yes
+              az acr repository delete --name "$_AZ_REGISTRY" --image "$SERVICE_NAME:$IMAGE_TAG" --yes
             else
               echo "[*] Tag does not exist. No action needed"
             fi
@@ -62,3 +66,6 @@ jobs:
 
       - name: Log out of Docker
         run: docker logout
+
+      - name: Log out from Azure
+        uses: bitwarden/gh-actions/azure-logout@main

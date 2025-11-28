@@ -8,10 +8,8 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Tokens;
 using Bit.Core.Utilities;
-using Bit.Identity.Models.Request.Accounts;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.DataProtection;
@@ -29,24 +27,6 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
     public AccountsControllerTests(IdentityApplicationFactory factory)
     {
         _factory = factory;
-    }
-
-    [Fact]
-    public async Task PostRegister_Success()
-    {
-        var context = await _factory.RegisterAsync(new RegisterRequestModel
-        {
-            Email = "test+register@email.com",
-            MasterPasswordHash = "master_password_hash"
-        });
-
-        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
-
-        var database = _factory.GetDatabaseContext();
-        var user = await database.Users
-            .SingleAsync(u => u.Email == "test+register@email.com");
-
-        Assert.NotNull(user);
     }
 
     [Theory]
@@ -154,22 +134,13 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
     }
 
     [Theory, BitAutoData]
+    // marketing emails can stay at top level
     public async Task RegistrationWithEmailVerification_WithEmailVerificationToken_Succeeds([Required] string name, bool receiveMarketingEmails,
          [StringLength(1000), Required] string masterPasswordHash, [StringLength(50)] string masterPasswordHint, [Required] string userSymmetricKey,
          [Required] KeysRequestModel userAsymmetricKeys, int kdfMemory, int kdfParallelism)
     {
         // Localize substitutions to this test.
         var localFactory = new IdentityApplicationFactory();
-
-        // First we must substitute the mail service in order to be able to get a valid email verification token
-        // for the complete registration step
-        string capturedEmailVerificationToken = null;
-        localFactory.SubstituteService<IMailService>(mailService =>
-        {
-            mailService.SendRegistrationVerificationEmailAsync(Arg.Any<string>(), Arg.Do<string>(t => capturedEmailVerificationToken = t))
-                .Returns(Task.CompletedTask);
-
-        });
 
         // we must first call the send verification email endpoint to trigger the first part of the process
         var email = $"test+register+{name}@email.com";
@@ -183,7 +154,7 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
         var sendEmailVerificationResponseHttpContext = await localFactory.PostRegisterSendEmailVerificationAsync(sendVerificationEmailReqModel);
 
         Assert.Equal(StatusCodes.Status204NoContent, sendEmailVerificationResponseHttpContext.Response.StatusCode);
-        Assert.NotNull(capturedEmailVerificationToken);
+        Assert.NotNull(localFactory.RegistrationTokens[email]);
 
         // Now we call the finish registration endpoint with the email verification token
         var registerFinishReqModel = new RegisterFinishRequestModel
@@ -191,7 +162,7 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
             Email = email,
             MasterPasswordHash = masterPasswordHash,
             MasterPasswordHint = masterPasswordHint,
-            EmailVerificationToken = capturedEmailVerificationToken,
+            EmailVerificationToken = localFactory.RegistrationTokens[email],
             Kdf = KdfType.PBKDF2_SHA256,
             KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
             UserSymmetricKey = userSymmetricKey,
@@ -271,7 +242,7 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
         var orgInviteToken = "BwOrgUserInviteToken_CfDJ8HOzu6wr6nVLouuDxgOHsMwPcj9Guuip5k_XLD1bBGpwQS1f66c9kB6X4rvKGxNdywhgimzgvG9SgLwwJU70O8P879XyP94W6kSoT4N25a73kgW3nU3vl3fAtGSS52xdBjNU8o4sxmomRvhOZIQ0jwtVjdMC2IdybTbxwCZhvN0hKIFs265k6wFRSym1eu4NjjZ8pmnMneG0PlKnNZL93tDe8FMcqStJXoddIEgbA99VJp8z1LQmOMfEdoMEM7Zs8W5bZ34N4YEGu8XCrVau59kGtWQk7N4rPV5okzQbTpeoY_4FeywgLFGm-tDtTPEdSEBJkRjexANri7CGdg3dpnMifQc_bTmjZd32gOjw8N8v";
         var orgUserId = new Guid("5e45fbdc-a080-4a77-93ff-b19c0161e81e");
 
-        var orgUser = new OrganizationUser { Id = orgUserId, Email = email };
+        var orgUser = new OrganizationUser { Id = orgUserId, Email = email, OrganizationId = Guid.NewGuid() };
 
         var orgInviteTokenable = new OrgUserInviteTokenable(orgUser)
         {
@@ -286,6 +257,12 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
                     callInfo[1] = orgInviteTokenable;
                     return true;
                 });
+        });
+
+        localFactory.SubstituteService<IOrganizationUserRepository>(orgUserRepository =>
+        {
+            orgUserRepository.GetByIdAsync(orgUserId)
+                .Returns(orgUser);
         });
 
         var registerFinishReqModel = new RegisterFinishRequestModel

@@ -1,9 +1,13 @@
 ﻿using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Repositories;
-using Bit.Core.Billing.Repositories;
+using Bit.Core.Billing.Organizations.Repositories;
+using Bit.Core.Billing.Providers.Repositories;
+using Bit.Core.Dirt.Reports.Repositories;
+using Bit.Core.Dirt.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Repositories;
 using Bit.Core.NotificationCenter.Repositories;
+using Bit.Core.Platform.Installations;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Tools.Repositories;
@@ -11,8 +15,11 @@ using Bit.Core.Vault.Repositories;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
 using Bit.Infrastructure.EntityFramework.Auth.Repositories;
 using Bit.Infrastructure.EntityFramework.Billing.Repositories;
+using Bit.Infrastructure.EntityFramework.Dirt;
+using Bit.Infrastructure.EntityFramework.Dirt.Repositories;
 using Bit.Infrastructure.EntityFramework.KeyManagement.Repositories;
 using Bit.Infrastructure.EntityFramework.NotificationCenter.Repositories;
+using Bit.Infrastructure.EntityFramework.Platform;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.EntityFramework.SecretsManager.Repositories;
 using Bit.Infrastructure.EntityFramework.Tools.Repositories;
@@ -76,6 +83,8 @@ public static class EntityFrameworkServiceCollectionExtensions
         services.AddSingleton<IMaintenanceRepository, MaintenanceRepository>();
         services.AddSingleton<IOrganizationApiKeyRepository, OrganizationApiKeyRepository>();
         services.AddSingleton<IOrganizationConnectionRepository, OrganizationConnectionRepository>();
+        services.AddSingleton<IOrganizationIntegrationRepository, OrganizationIntegrationRepository>();
+        services.AddSingleton<IOrganizationIntegrationConfigurationRepository, OrganizationIntegrationConfigurationRepository>();
         services.AddSingleton<IOrganizationRepository, OrganizationRepository>();
         services.AddSingleton<IOrganizationSponsorshipRepository, OrganizationSponsorshipRepository>();
         services.AddSingleton<IOrganizationUserRepository, OrganizationUserRepository>();
@@ -86,7 +95,6 @@ public static class EntityFrameworkServiceCollectionExtensions
         services.AddSingleton<ISendRepository, SendRepository>();
         services.AddSingleton<ISsoConfigRepository, SsoConfigRepository>();
         services.AddSingleton<ISsoUserRepository, SsoUserRepository>();
-        services.AddSingleton<ITaxRateRepository, TaxRateRepository>();
         services.AddSingleton<ITransactionRepository, TransactionRepository>();
         services.AddSingleton<IUserRepository, UserRepository>();
         services.AddSingleton<IOrganizationDomainRepository, OrganizationDomainRepository>();
@@ -100,6 +108,11 @@ public static class EntityFrameworkServiceCollectionExtensions
         services.AddSingleton<IPasswordHealthReportApplicationRepository, PasswordHealthReportApplicationRepository>();
         services.AddSingleton<ISecurityTaskRepository, SecurityTaskRepository>();
         services.AddSingleton<IUserAsymmetricKeysRepository, UserAsymmetricKeysRepository>();
+        services.AddSingleton<IUserSignatureKeyPairRepository, UserSignatureKeyPairRepository>();
+        services.AddSingleton<IOrganizationInstallationRepository, OrganizationInstallationRepository>();
+        services.AddSingleton<IOrganizationReportRepository, OrganizationReportRepository>();
+        services.AddSingleton<IOrganizationApplicationRepository, OrganizationApplicationRepository>();
+        services.AddSingleton<IOrganizationMemberBaseDetailRepository, OrganizationMemberBaseDetailRepository>();
 
         if (selfHosted)
         {

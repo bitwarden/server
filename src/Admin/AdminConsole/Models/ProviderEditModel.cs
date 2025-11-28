@@ -1,9 +1,13 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
-using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Providers.Entities;
 using Bit.Core.Enums;
 using Bit.SharedWeb.Utilities;
 
@@ -18,8 +22,9 @@ public class ProviderEditModel : ProviderViewModel, IValidatableObject
         IEnumerable<ProviderUserUserDetails> providerUsers,
         IEnumerable<ProviderOrganizationOrganizationDetails> organizations,
         IReadOnlyCollection<ProviderPlan> providerPlans,
+        bool payByInvoice,
         string gatewayCustomerUrl = null,
-        string gatewaySubscriptionUrl = null) : base(provider, providerUsers, organizations)
+        string gatewaySubscriptionUrl = null) : base(provider, providerUsers, organizations, providerPlans)
     {
         Name = provider.DisplayName();
         BusinessName = provider.DisplayBusinessName();
@@ -33,8 +38,10 @@ public class ProviderEditModel : ProviderViewModel, IValidatableObject
         GatewayCustomerUrl = gatewayCustomerUrl;
         GatewaySubscriptionUrl = gatewaySubscriptionUrl;
         Type = provider.Type;
+        PayByInvoice = payByInvoice;
+        Enabled = provider.Enabled;
 
-        if (Type == ProviderType.MultiOrganizationEnterprise)
+        if (Type == ProviderType.BusinessUnit)
         {
             var plan = providerPlans.SingleOrDefault();
             EnterpriseMinimumSeats = plan?.SeatMinimum ?? 0;
@@ -62,6 +69,8 @@ public class ProviderEditModel : ProviderViewModel, IValidatableObject
     public string GatewaySubscriptionId { get; set; }
     public string GatewayCustomerUrl { get; }
     public string GatewaySubscriptionUrl { get; }
+    [Display(Name = "Pay By Invoice")]
+    public bool PayByInvoice { get; set; }
     [Display(Name = "Provider Type")]
     public ProviderType Type { get; set; }
 
@@ -71,18 +80,21 @@ public class ProviderEditModel : ProviderViewModel, IValidatableObject
     [Display(Name = "Enterprise Seats Minimum")]
     public int? EnterpriseMinimumSeats { get; set; }
 
+    [Display(Name = "Enabled")]
+    public bool Enabled { get; set; }
+
     public virtual Provider ToProvider(Provider existingProvider)
     {
         existingProvider.BillingEmail = BillingEmail?.ToLowerInvariant().Trim();
         existingProvider.BillingPhone = BillingPhone?.ToLowerInvariant().Trim();
-        switch (Type)
+        existingProvider.Enabled = Enabled;
+        if (Type.IsStripeSupported())
         {
-            case ProviderType.Msp:
-                existingProvider.Gateway = Gateway;
-                existingProvider.GatewayCustomerId = GatewayCustomerId;
-                existingProvider.GatewaySubscriptionId = GatewaySubscriptionId;
-                break;
+            existingProvider.Gateway = Gateway;
+            existingProvider.GatewayCustomerId = GatewayCustomerId;
+            existingProvider.GatewaySubscriptionId = GatewaySubscriptionId;
         }
+
         return existingProvider;
     }
 
@@ -100,7 +112,7 @@ public class ProviderEditModel : ProviderViewModel, IValidatableObject
                     yield return new ValidationResult($"The {billingEmailDisplayName} field is required.");
                 }
                 break;
-            case ProviderType.MultiOrganizationEnterprise:
+            case ProviderType.BusinessUnit:
                 if (Plan == null)
                 {
                     var displayName = nameof(Plan).GetDisplayAttribute<CreateProviderModel>()?.GetName() ?? nameof(Plan);

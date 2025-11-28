@@ -12,8 +12,10 @@ public interface IOrganizationDomainRepository : IRepository<OrganizationDomain,
     Task<ICollection<OrganizationDomain>> GetManyByNextRunDateAsync(DateTime date);
     Task<OrganizationDomainSsoDetailsData?> GetOrganizationDomainSsoDetailsAsync(string email);
     Task<IEnumerable<VerifiedOrganizationDomainSsoDetail>> GetVerifiedOrganizationDomainSsoDetailsAsync(string email);
+    Task<IEnumerable<OrganizationDomain>> GetVerifiedDomainsByOrganizationIdsAsync(IEnumerable<Guid> organizationIds);
     Task<OrganizationDomain?> GetDomainByIdOrganizationIdAsync(Guid id, Guid organizationId);
     Task<OrganizationDomain?> GetDomainByOrgIdAndDomainNameAsync(Guid orgId, string domainName);
     Task<ICollection<OrganizationDomain>> GetExpiredOrganizationDomainsAsync();
     Task<bool> DeleteExpiredAsync(int expirationPeriod);
+    Task<bool> HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(string domainName, Guid? excludeOrganizationId = null);
 }
