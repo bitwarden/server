@@ -35,8 +35,13 @@ public abstract class BaseJobsHostedService : IHostedService, IDisposable
 
     public virtual async Task StartAsync(CancellationToken cancellationToken)
     {
+        var fullName = GetType().FullName;
+        if (fullName == null)
+        {
+            throw new InvalidOperationException("Hosted service must have a valid type name.");
+        }
         var schedulerBuilder = SchedulerBuilder.Create()
-            .WithName(GetType().FullName) // Ensure each project has a unique instanceName
+            .WithName(fullName) // Ensure each project has a unique instanceName
             .WithId("AUTO")
             .UseJobFactory<JobFactory>();
 
