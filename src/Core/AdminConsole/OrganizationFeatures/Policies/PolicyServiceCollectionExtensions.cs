@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
@@ -23,6 +24,8 @@ public static class PolicyServiceCollectionExtensions
         services.AddPolicyRequirements();
         services.AddPolicySideEffects();
         services.AddPolicyUpdateEvents();
+
+        services.AddScoped<IAutomaticUserConfirmationPolicyEnforcementQuery, AutomaticUserConfirmationPolicyEnforcementQuery>();
     }
 
     [Obsolete("Use AddPolicyUpdateEvents instead.")]
@@ -67,5 +70,6 @@ public static class PolicyServiceCollectionExtensions
         services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, RequireTwoFactorPolicyRequirementFactory>();
         services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, MasterPasswordPolicyRequirementFactory>();
         services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, SingleOrganizationPolicyRequirementFactory>();
+        services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, AutomaticUserConfirmationPolicyRequirementFactory>();
     }
 }

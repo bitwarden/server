@@ -1,5 +1,6 @@
 ﻿using Bit.Commercial.Core.AdminConsole.Services;
 using Bit.Commercial.Core.Test.AdminConsole.AutoFixture;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -7,6 +8,9 @@ using Bit.Core.AdminConsole.Models.Business.Provider;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Payment.Models;
@@ -849,6 +853,126 @@ public class ProviderServiceTests
                 EventType.ProviderOrganization_Added);
 
         Assert.Equal(organization.PlanType, expectedPlanType);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AddOrganization_WithAutoConfirmEnabledAndPolicyExists_Throws(
+        Provider provider,
+        Organization organization,
+        string key,
+        SutProvider<ProviderService> sutProvider)
+    {
+        // Arrange
+        organization.PlanType = PlanType.EnterpriseMonthly;
+        organization.UseSecretsManager = false;
+
+        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
+        providerRepository.GetByIdAsync(provider.Id).Returns(provider);
+
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+        providerOrganizationRepository.GetByOrganizationId(organization.Id).ReturnsNull();
+
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
+
+        // Feature flag enabled
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(true);
+
+        // Organization has automatic user confirmation policy (returns user IDs affected by the policy)
+        var userIds = new List<Guid> { Guid.NewGuid() };
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetManyByOrganizationIdAsync<AutomaticUserConfirmationPolicyRequirement>(organization.Id)
+            .Returns(userIds);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.AddOrganization(provider.Id, organization.Id, key));
+
+        Assert.Equal(new ProviderUsersCannotJoin().Message, exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AddOrganization_WithAutoConfirmEnabledButNoPolicyExists_Success(
+        Provider provider,
+        Organization organization,
+        string key,
+        SutProvider<ProviderService> sutProvider)
+    {
+        // Arrange
+        organization.PlanType = PlanType.EnterpriseMonthly;
+        organization.UseSecretsManager = false;
+
+        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
+        providerRepository.GetByIdAsync(provider.Id).Returns(provider);
+
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+        providerOrganizationRepository.GetByOrganizationId(organization.Id).ReturnsNull();
+
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
+
+        // Feature flag enabled
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(true);
+
+        // Organization has NO automatic user confirmation policy (returns empty list)
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetManyByOrganizationIdAsync<AutomaticUserConfirmationPolicyRequirement>(organization.Id)
+            .Returns(new List<Guid>());
+
+        // Act
+        await sutProvider.Sut.AddOrganization(provider.Id, organization.Id, key);
+
+        // Assert
+        await providerOrganizationRepository.Received(1)
+            .CreateAsync(Arg.Is<ProviderOrganization>(providerOrganization =>
+                providerOrganization.ProviderId == provider.Id &&
+                providerOrganization.OrganizationId == organization.Id &&
+                providerOrganization.Key == key));
+    }
+
+    [Theory, BitAutoData]
+    public async Task AddOrganization_WithAutoConfirmDisabledAndPolicyExists_Success(
+        Provider provider,
+        Organization organization,
+        string key,
+        SutProvider<ProviderService> sutProvider)
+    {
+        // Arrange
+        organization.PlanType = PlanType.EnterpriseMonthly;
+        organization.UseSecretsManager = false;
+
+        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
+        providerRepository.GetByIdAsync(provider.Id).Returns(provider);
+
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+        providerOrganizationRepository.GetByOrganizationId(organization.Id).ReturnsNull();
+
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
+
+        // Feature flag DISABLED
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(false);
+
+        // Act
+        await sutProvider.Sut.AddOrganization(provider.Id, organization.Id, key);
+
+        // Assert - Should succeed because feature flag is disabled
+        await providerOrganizationRepository.Received(1)
+            .CreateAsync(Arg.Is<ProviderOrganization>(providerOrganization =>
+                providerOrganization.ProviderId == provider.Id &&
+                providerOrganization.OrganizationId == organization.Id &&
+                providerOrganization.Key == key));
+
+        // Verify that policy check was never called when feature flag is disabled
+        await sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .DidNotReceive()
+            .GetManyByOrganizationIdAsync<AutomaticUserConfirmationPolicyRequirement>(organization.Id);
     }
 
     [Theory, BitAutoData]
