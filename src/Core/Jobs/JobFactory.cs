@@ -1,27 +1,29 @@
-﻿using System;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Quartz;
 using Quartz.Spi;
 
-namespace Bit.Core.Jobs
+namespace Bit.Core.Jobs;
+
+#nullable enable
+
+public class JobFactory : IJobFactory
 {
-    public class JobFactory : IJobFactory
+    private readonly IServiceProvider _container;
+
+    public JobFactory(IServiceProvider container)
     {
-        private readonly IServiceProvider _container;
+        _container = container;
+    }
 
-        public JobFactory(IServiceProvider container)
-        {
-            _container = container;
-        }
+    public IJob NewJob(TriggerFiredBundle bundle, IScheduler scheduler)
+    {
+        var scope = _container.CreateScope();
+        return (scope.ServiceProvider.GetService(bundle.JobDetail.JobType) as IJob)!;
+    }
 
-        public IJob NewJob(TriggerFiredBundle bundle, IScheduler scheduler)
-        {
-            return _container.GetService(bundle.JobDetail.JobType) as IJob;
-        }
-
-        public void ReturnJob(IJob job)
-        {
-            var disposable = job as IDisposable;
-            disposable?.Dispose();
-        }
+    public void ReturnJob(IJob job)
+    {
+        var disposable = job as IDisposable;
+        disposable?.Dispose();
     }
 }

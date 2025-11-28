@@ -1,22 +1,20 @@
-﻿using System;
-using Bit.Core.Utilities;
+﻿using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Bit.Icons.Controllers
-{
-    public class InfoController : Controller
-    {
-        [HttpGet("~/alive")]
-        [HttpGet("~/now")]
-        public DateTime GetAlive()
-        {
-            return DateTime.UtcNow;
-        }
+namespace Bit.Icons.Controllers;
 
-        [HttpGet("~/version")]
-        public JsonResult GetVersion()
-        {
-            return Json(CoreHelpers.GetVersion());
-        }
+public class InfoController : Controller
+{
+    [HttpGet("~/alive")]
+    [HttpGet("~/now")]
+    public DateTime GetAlive()
+    {
+        return DateTime.UtcNow;
+    }
+
+    [HttpGet("~/version")]
+    public JsonResult GetVersion()
+    {
+        return Json(AssemblyHelpers.GetVersion());
     }
 }

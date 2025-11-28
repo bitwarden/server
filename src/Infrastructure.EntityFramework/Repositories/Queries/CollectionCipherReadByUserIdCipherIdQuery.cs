@@ -1,22 +1,19 @@
-﻿using System;
-using System.Linq;
-using Bit.Infrastructure.EntityFramework.Models;
+﻿using Bit.Infrastructure.EntityFramework.Models;
 
-namespace Bit.Infrastructure.EntityFramework.Repositories.Queries
+namespace Bit.Infrastructure.EntityFramework.Repositories.Queries;
+
+public class CollectionCipherReadByUserIdCipherIdQuery : CollectionCipherReadByUserIdQuery
 {
-    public class CollectionCipherReadByUserIdCipherIdQuery : CollectionCipherReadByUserIdQuery
+    private readonly Guid _cipherId;
+
+    public CollectionCipherReadByUserIdCipherIdQuery(Guid userId, Guid cipherId) : base(userId)
     {
-        private readonly Guid _cipherId;
+        _cipherId = cipherId;
+    }
 
-        public CollectionCipherReadByUserIdCipherIdQuery(Guid userId, Guid cipherId) : base(userId)
-        {
-            _cipherId = cipherId;
-        }
-
-        public override IQueryable<CollectionCipher> Run(DatabaseContext dbContext)
-        {
-            var query = base.Run(dbContext);
-            return query.Where(x => x.CipherId == _cipherId);
-        }
+    public override IQueryable<CollectionCipher> Run(DatabaseContext dbContext)
+    {
+        var query = base.Run(dbContext);
+        return query.Where(x => x.CipherId == _cipherId);
     }
 }

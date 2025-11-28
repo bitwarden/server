@@ -1,138 +1,150 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text.Json;
 using Azure.Storage.Queues;
 using Bit.Core;
 using Bit.Core.Models.Data;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
-namespace Bit.EventsProcessor
+namespace Bit.EventsProcessor;
+
+public class AzureQueueHostedService : IHostedService, IDisposable
 {
-    public class AzureQueueHostedService : IHostedService, IDisposable
+    private readonly ILogger<AzureQueueHostedService> _logger;
+    private readonly IConfiguration _configuration;
+
+    private Task _executingTask;
+    private CancellationTokenSource _cts;
+    private QueueClient _queueClient;
+    private IEventWriteService _eventWriteService;
+
+    public AzureQueueHostedService(
+        ILogger<AzureQueueHostedService> logger,
+        IConfiguration configuration)
     {
-        private readonly ILogger<AzureQueueHostedService> _logger;
-        private readonly IConfiguration _configuration;
+        _logger = logger;
+        _configuration = configuration;
+    }
 
-        private Task _executingTask;
-        private CancellationTokenSource _cts;
-        private QueueClient _queueClient;
-        private IEventWriteService _eventWriteService;
+    public Task StartAsync(CancellationToken cancellationToken)
+    {
+        _logger.LogInformation(Constants.BypassFiltersEventId, "Starting service.");
+        _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        _executingTask = ExecuteAsync(_cts.Token);
 
-        public AzureQueueHostedService(
-            ILogger<AzureQueueHostedService> logger,
-            IConfiguration configuration)
+        return _executingTask.IsCompleted ? _executingTask : Task.CompletedTask;
+    }
+
+    public async Task StopAsync(CancellationToken cancellationToken)
+    {
+        if (_executingTask == null)
         {
-            _logger = logger;
-            _configuration = configuration;
+            return;
         }
 
-        public Task StartAsync(CancellationToken cancellationToken)
+        _logger.LogWarning("Stopping service.");
+
+        await _cts.CancelAsync();
+        await Task.WhenAny(_executingTask, Task.Delay(-1, cancellationToken));
+        cancellationToken.ThrowIfCancellationRequested();
+    }
+
+    public void Dispose()
+    { }
+
+    private async Task ExecuteAsync(CancellationToken cancellationToken)
+    {
+        var storageConnectionString = _configuration["azureStorageConnectionString"];
+        if (string.IsNullOrWhiteSpace(storageConnectionString))
         {
-            _logger.LogInformation(Constants.BypassFiltersEventId, "Starting service.");
-            _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            _executingTask = ExecuteAsync(_cts.Token);
-            return _executingTask.IsCompleted ? _executingTask : Task.CompletedTask;
+            return;
         }
 
-        public async Task StopAsync(CancellationToken cancellationToken)
+        var repo = new Core.Repositories.TableStorage.EventRepository(storageConnectionString);
+        _eventWriteService = new RepositoryEventWriteService(repo);
+        _queueClient = new QueueClient(storageConnectionString, "event");
+
+        while (!cancellationToken.IsCancellationRequested)
         {
-            if (_executingTask == null)
+            try
             {
-                return;
-            }
-            _logger.LogWarning("Stopping service.");
-            _cts.Cancel();
-            await Task.WhenAny(_executingTask, Task.Delay(-1, cancellationToken));
-            cancellationToken.ThrowIfCancellationRequested();
-        }
-
-        public void Dispose()
-        { }
-
-        private async Task ExecuteAsync(CancellationToken cancellationToken)
-        {
-            var storageConnectionString = _configuration["azureStorageConnectionString"];
-            if (string.IsNullOrWhiteSpace(storageConnectionString))
-            {
-                return;
-            }
-
-            var repo = new Core.Repositories.TableStorage.EventRepository(storageConnectionString);
-            _eventWriteService = new RepositoryEventWriteService(repo);
-            _queueClient = new QueueClient(storageConnectionString, "event");
-
-            while (!cancellationToken.IsCancellationRequested)
-            {
-                try
+                var messages = await _queueClient.ReceiveMessagesAsync(32,
+                    cancellationToken: cancellationToken);
+                if (messages.Value?.Any() ?? false)
                 {
-                    var messages = await _queueClient.ReceiveMessagesAsync(32);
-                    if (messages.Value?.Any() ?? false)
+                    foreach (var message in messages.Value)
                     {
-                        foreach (var message in messages.Value)
-                        {
-                            await ProcessQueueMessageAsync(message.DecodeMessageText(), cancellationToken);
-                            await _queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt);
-                        }
-                    }
-                    else
-                    {
-                        await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+                        await ProcessQueueMessageAsync(message.DecodeMessageText(), cancellationToken);
+                        await _queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt,
+                            cancellationToken);
                     }
                 }
-                catch (Exception e)
+                else
                 {
-                    _logger.LogError(e, "Exception occurred: " + e.Message);
                     await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
                 }
             }
+            catch (TaskCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                _logger.LogDebug("Task.Delay cancelled during Alpine container shutdown");
+                break;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred processing message block.");
 
-            _logger.LogWarning("Done processing.");
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+                }
+                catch (TaskCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    _logger.LogDebug("Task.Delay cancelled during Alpine container shutdown");
+                    break;
+                }
+            }
         }
 
-        public async Task ProcessQueueMessageAsync(string message, CancellationToken cancellationToken)
+        _logger.LogWarning("Done processing messages.");
+    }
+
+    public async Task ProcessQueueMessageAsync(string message, CancellationToken cancellationToken)
+    {
+        if (_eventWriteService == null || message == null || message.Length == 0)
         {
-            if (_eventWriteService == null || message == null || message.Length == 0)
+            return;
+        }
+
+        try
+        {
+            _logger.LogInformation("Processing message.");
+
+            var events = new List<IEvent>();
+            using var jsonDocument = JsonDocument.Parse(message);
+            var root = jsonDocument.RootElement;
+            if (root.ValueKind == JsonValueKind.Array)
             {
-                return;
+                var indexedEntities = root.Deserialize<List<EventMessage>>()
+                    .SelectMany(EventTableEntity.IndexEvent);
+                events.AddRange(indexedEntities);
+            }
+            else if (root.ValueKind == JsonValueKind.Object)
+            {
+                var eventMessage = root.Deserialize<EventMessage>();
+                events.AddRange(EventTableEntity.IndexEvent(eventMessage));
             }
 
-            try
-            {
-                _logger.LogInformation("Processing message.");
-                var events = new List<IEvent>();
+            cancellationToken.ThrowIfCancellationRequested();
 
-                var token = JToken.Parse(message);
-                if (token is JArray)
-                {
-                    var indexedEntities = token.ToObject<List<EventMessage>>()
-                        .SelectMany(e => EventTableEntity.IndexEvent(e));
-                    events.AddRange(indexedEntities);
-                }
-                else if (token is JObject)
-                {
-                    var eventMessage = token.ToObject<EventMessage>();
-                    events.AddRange(EventTableEntity.IndexEvent(eventMessage));
-                }
+            await _eventWriteService.CreateManyAsync(events);
 
-                await _eventWriteService.CreateManyAsync(events);
-                _logger.LogInformation("Processed message.");
-            }
-            catch (JsonReaderException)
-            {
-                _logger.LogError("JsonReaderException: Unable to parse message.");
-            }
-            catch (JsonSerializationException)
-            {
-                _logger.LogError("JsonSerializationException: Unable to serialize token.");
-            }
+            _logger.LogInformation("Processed message.");
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Unable to parse message.");
         }
     }
 }

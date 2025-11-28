@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # Setup
 
@@ -19,26 +19,42 @@ then
     LGID=65534
 fi
 
-# Create user and group
+if [ "$(id -u)" = "0" ]
+then
+    # Create user and group
 
-groupadd -o -g $LGID $GROUPNAME >/dev/null 2>&1 ||
-groupmod -o -g $LGID $GROUPNAME >/dev/null 2>&1
-useradd -o -u $LUID -g $GROUPNAME -s /bin/false $USERNAME >/dev/null 2>&1 ||
-usermod -o -u $LUID -g $GROUPNAME -s /bin/false $USERNAME >/dev/null 2>&1
-mkhomedir_helper $USERNAME
+    groupadd -o -g $LGID $GROUPNAME >/dev/null 2>&1 ||
+    groupmod -o -g $LGID $GROUPNAME >/dev/null 2>&1
+    useradd -o -u $LUID -g $GROUPNAME -s /bin/false $USERNAME >/dev/null 2>&1 ||
+    usermod -o -u $LUID -g $GROUPNAME -s /bin/false $USERNAME >/dev/null 2>&1
+    mkhomedir_helper $USERNAME
 
-# The rest...
+    # The rest...
 
-mkdir -p /etc/bitwarden/identity
-mkdir -p /etc/bitwarden/core
-mkdir -p /etc/bitwarden/logs
-mkdir -p /etc/bitwarden/ca-certificates
-chown -R $USERNAME:$GROUPNAME /etc/bitwarden
+    chown -R $USERNAME:$GROUPNAME /app
+    mkdir -p /etc/bitwarden/core
+    mkdir -p /etc/bitwarden/logs
+    mkdir -p /etc/bitwarden/ca-certificates
+    chown -R $USERNAME:$GROUPNAME /etc/bitwarden
 
-cp /etc/bitwarden/identity/identity.pfx /app/identity.pfx
-chown -R $USERNAME:$GROUPNAME /app
+    if [ -f "/etc/bitwarden/kerberos/bitwarden.keytab" ] && [ -f "/etc/bitwarden/kerberos/krb5.conf" ]; then
+      chown -R $USERNAME:$GROUPNAME /etc/bitwarden/kerberos
+    fi
 
-cp /etc/bitwarden/ca-certificates/*.crt /usr/local/share/ca-certificates/ >/dev/null 2>&1 \
-    && update-ca-certificates
+    gosu_cmd="gosu $USERNAME:$GROUPNAME"
+else
+    gosu_cmd=""
+fi
 
-exec gosu $USERNAME:$GROUPNAME dotnet /app/Sso.dll
+if [ -f "/etc/bitwarden/kerberos/bitwarden.keytab" ] && [ -f "/etc/bitwarden/kerberos/krb5.conf" ]; then
+    cp -f /etc/bitwarden/kerberos/krb5.conf /etc/krb5.conf
+    $gosu_cmd kinit $globalSettings__kerberosUser -k -t /etc/bitwarden/kerberos/bitwarden.keytab
+fi
+
+if [ "$globalSettings__selfHosted" = "true" ]; then
+    if [ -z "$globalSettings__identityServer__certificateLocation" ]; then
+        export globalSettings__identityServer__certificateLocation=/etc/bitwarden/identity/identity.pfx
+    fi
+fi
+
+exec $gosu_cmd /app/Sso

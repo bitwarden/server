@@ -1,11 +1,12 @@
-﻿using System.ComponentModel.DataAnnotations;
-using Microsoft.AspNetCore.Http;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
 
-namespace Bit.Api.Models.Request
+using System.ComponentModel.DataAnnotations;
+
+namespace Bit.Api.Models.Request;
+
+public class LicenseRequestModel
 {
-    public class LicenseRequestModel
-    {
-        [Required]
-        public IFormFile License { get; set; }
-    }
+    [Required]
+    public IFormFile License { get; set; }
 }

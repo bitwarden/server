@@ -5,14 +5,17 @@ root = true
 
 # Don't use tabs for indentation.
 [*]
-end_of_line = lf
 indent_style = space
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+guidelines = 120
 # (Please don't specify an indent_size here; that has too many unintended consequences.)
 
 # Code files
 [*.{cs,csx,vb,vbx}]
 indent_size = 4
-insert_final_newline = true
 charset = utf-8-bom
 
 # Xml project files
@@ -73,6 +76,15 @@ dotnet_naming_style.end_in_async.required_suffix = Async
 dotnet_naming_style.end_in_async.capitalization = pascal_case
 dotnet_naming_style.end_in_async.word_separator = 
 
+# Obsolete warnings, this should be removed or changed to warning once we address some of the obsolete items.
+dotnet_diagnostic.CS0618.severity = suggestion
+
+# Obsolete warnings, this should be removed or changed to warning once we address some of the obsolete items.
+dotnet_diagnostic.CS0612.severity = suggestion
+
+# Remove unnecessary using directives https://docs.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/ide0005
+dotnet_diagnostic.IDE0005.severity = warning
+
 # CSharp code style settings:
 [*.cs]
 # Prefer "var" everywhere
@@ -105,6 +117,18 @@ csharp_new_line_before_finally = true
 csharp_new_line_before_members_in_object_initializers = true
 csharp_new_line_before_members_in_anonymous_types = true
 
-# All files
-[*]
-guidelines = 120
+# Namespace settings
+csharp_style_namespace_declarations = file_scoped:warning
+
+# Switch expression
+dotnet_diagnostic.CS8509.severity = error # missing switch case for named enum value
+dotnet_diagnostic.CS8524.severity = none # missing switch case for unnamed enum value
+
+# CA2253: Named placeholders should nto be numeric values
+dotnet_diagnostic.CA2253.severity = suggestion
+
+# CA2254: Template should be a static expression
+dotnet_diagnostic.CA2254.severity = warning
+
+# CA1727: Use PascalCase for named placeholders
+dotnet_diagnostic.CA1727.severity = suggestion

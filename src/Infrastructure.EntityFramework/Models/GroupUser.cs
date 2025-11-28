@@ -1,19 +1,21 @@
-﻿using AutoMapper;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
 
-namespace Bit.Infrastructure.EntityFramework.Models
+using AutoMapper;
+
+namespace Bit.Infrastructure.EntityFramework.Models;
+
+public class GroupUser : Core.AdminConsole.Entities.GroupUser
 {
-    public class GroupUser : Core.Entities.GroupUser
-    {
-        public virtual Group Group { get; set; }
-        public virtual OrganizationUser OrganizationUser { get; set; }
-    }
+    public virtual Group Group { get; set; }
+    public virtual OrganizationUser OrganizationUser { get; set; }
+}
 
-    public class GroupUserMapperProfile : Profile
+public class GroupUserMapperProfile : Profile
+{
+    public GroupUserMapperProfile()
     {
-        public GroupUserMapperProfile()
-        {
-            CreateMap<Core.Entities.GroupUser, GroupUser>().ReverseMap();
-        }
+        CreateMap<Core.AdminConsole.Entities.GroupUser, GroupUser>().ReverseMap();
     }
 }
 

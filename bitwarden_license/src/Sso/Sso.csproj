@@ -5,9 +5,12 @@
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Sso' " />
+  <PropertyGroup Condition=" '$(RunConfiguration)' == 'Sso-SelfHost' " />
   <ItemGroup>
-    <PackageReference Include="NewRelic.Agent" Version="8.41.0" />
-    <PackageReference Include="Sustainsys.Saml2.AspNetCore2" Version="2.8.0" />
+    <!-- This is a transitive dependency to Sustainsys.Saml2.AspNetCore2 -->
+    <PackageReference Include="Microsoft.AspNetCore.Http" Version="2.2.2" />
+
+    <PackageReference Include="Sustainsys.Saml2.AspNetCore2" Version="2.11.0" />
   </ItemGroup>
 
   <ItemGroup>

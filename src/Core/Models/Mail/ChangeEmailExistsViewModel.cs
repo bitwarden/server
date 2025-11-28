@@ -1,8 +1,10 @@
-﻿namespace Bit.Core.Models.Mail
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+namespace Bit.Core.Models.Mail;
+
+public class ChangeEmailExistsViewModel : BaseMailModel
 {
-    public class ChangeEmailExistsViewModel : BaseMailModel
-    {
-        public string FromEmail { get; set; }
-        public string ToEmail { get; set; }
-    }
+    public string FromEmail { get; set; }
+    public string ToEmail { get; set; }
 }

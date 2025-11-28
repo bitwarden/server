@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Organization_ReadAbilities]
+CREATE PROCEDURE [dbo].[Organization_ReadAbilities]
 AS
 BEGIN
     SET NOCOUNT ON
@@ -14,10 +14,21 @@ BEGIN
             0
         END AS [Using2fa],
         [UsersGetPremium],
+        [UseCustomPermissions],
         [UseSso],
         [UseKeyConnector],
+        [UseScim],
         [UseResetPassword],
-        [Enabled]
+        [UsePolicies],
+        [Enabled],
+        [LimitCollectionCreation],
+        [LimitCollectionDeletion],
+        [AllowAdminAccessToAllCollectionItems],
+        [UseRiskInsights],
+        [LimitItemDeletion],
+        [UseOrganizationDomains],
+        [UseAdminSponsoredFamilies],
+        [UseAutomaticUserConfirmation]
     FROM
         [dbo].[Organization]
 END

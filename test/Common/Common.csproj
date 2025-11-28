@@ -1,25 +1,23 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <IsPackable>false</IsPackable>
     <RootNamespace>Bit.Test.Common</RootNamespace>
   </PropertyGroup>
 
     <ItemGroup>
-    <PackageReference Include="NSubstitute" Version="4.2.2" />
-    <PackageReference Include="xunit" Version="2.4.1" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="2.4.2">
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" Version="8.10.0" />
+    <PackageReference Include="NSubstitute" Version="$(NSubstituteVersion)" />
+    <PackageReference Include="xunit" Version="$(XUnitVersion)" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="$(XUnitRunnerVisualStudioVersion)">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="AutoFixture.Xunit2" Version="4.14.0" />
-    <PackageReference Include="AutoFixture.AutoNSubstitute" Version="4.14.0" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.6.1" />
+    <PackageReference Include="AutoFixture.Xunit2" Version="$(AutoFixtureXUnit2Version)" />
+    <PackageReference Include="AutoFixture.AutoNSubstitute" Version="$(AutoFixtureAutoNSubstituteVersion)" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(MicrosoftNetTestSdkVersion)" />
+    <PackageReference Include="Kralizek.AutoFixture.Extensions.MockHttp" Version="2.1.0" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\..\src\Core\Core.csproj" />
-    <ProjectReference Include="..\..\src\Api\Api.csproj" />
   </ItemGroup>
-
 </Project>

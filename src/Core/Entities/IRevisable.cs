@@ -1,10 +1,9 @@
-﻿using System;
+﻿namespace Bit.Core.Entities;
 
-namespace Bit.Core.Entities
+#nullable enable
+
+public interface IRevisable
 {
-    public interface IRevisable
-    {
-        DateTime CreationDate { get; }
-        DateTime RevisionDate { get; }
-    }
+    DateTime CreationDate { get; }
+    DateTime RevisionDate { get; }
 }

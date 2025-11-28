@@ -1,29 +1,35 @@
-## Type of change
-- [ ] Bug fix
-- [ ] New feature development
-- [ ] Tech debt (refactoring, code cleanup, dependency upgrades, etc)
-- [ ] Build/deploy pipeline (DevOps)
-- [ ] Other
+## 🎟️ Tracking
 
-## Objective
-<!--Describe what the purpose of this PR is. For example: what bug you're fixing or what new feature you're adding-->
+<!-- Paste the link to the Jira or GitHub issue or otherwise describe / point to where this change is coming from. -->
 
+## 📔 Objective
 
+<!-- Describe what the purpose of this PR is, for example what bug you're fixing or new feature you're adding. -->
 
-## Code changes
-<!--Explain the changes you've made to each file or major component. This should help the reviewer understand your changes-->
-<!--Also refer to any related changes or PRs in other repositories-->
+## 📸 Screenshots
 
-* **file.ext:** Description of what was changed and why
+<!-- Required for any UI changes; delete if not applicable. Use fixed width images for better display. -->
 
-## Testing requirements
-<!--What functionality requires testing by QA? This includes testing new behavior and regression testing-->
+## ⏰ Reminders before review
 
+- Contributor guidelines followed
+- All formatters and local linters executed and passed
+- Written new unit and / or integration tests where applicable
+- Protected functional changes with optionality (feature flags)
+- Used internationalization (i18n) for all UI strings
+- CI builds passed
+- Communicated to DevOps any deployment requirements
+- Updated any necessary documentation (Confluence, contributing docs) or informed the documentation team
 
+## 🦮 Reviewer guidelines
 
-## Before you submit
-- [ ] I have checked for formatting errors (`dotnet tool run dotnet-format --check`) (required)
-- [ ] If making database changes - I have also updated Entity Framework queries and/or migrations
-- [ ] I have added **unit tests** where it makes sense to do so (encouraged but not required)
-- [ ] This change requires a **documentation update** (notify the documentation team)
-- [ ] This change has particular **deployment requirements** (notify the DevOps team)
+<!-- Suggested interactions but feel free to use (or not) as you desire! -->
+
+- 👍 (`:+1:`) or similar for great changes
+- 📝 (`:memo:`) or ℹ️ (`:information_source:`) for notes or general info
+- ❓ (`:question:`) for questions
+- 🤔 (`:thinking:`) or 💭 (`:thought_balloon:`) for more open inquiry that's not quite a confirmed issue and could potentially benefit from discussion
+- 🎨 (`:art:`) for suggestions / improvements
+- ❌ (`:x:`) or ⚠️ (`:warning:`) for more significant problems or concerns needing attention
+- 🌱 (`:seedling:`) or ♻️ (`:recycle:`) for future improvements or indications of technical debt
+- ⛏ (`:pick:`) for minor or nitpick changes

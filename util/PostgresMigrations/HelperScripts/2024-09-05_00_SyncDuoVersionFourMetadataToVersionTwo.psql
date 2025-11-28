@@ -1,0 +1,28 @@
+-- Update User table
+update
+	"User"
+set
+	"TwoFactorProviders" = jsonb_set(
+                jsonb_set("TwoFactorProviders"::jsonb,
+	'{2,MetaData,ClientSecret}',
+	("TwoFactorProviders"::jsonb -> '2' -> 'MetaData' -> 'SKey')),
+	'{2,MetaData,ClientId}',
+	("TwoFactorProviders"::jsonb -> '2' -> 'MetaData' -> 'IKey'))
+where
+	"TwoFactorProviders" like '%"2":%'
+	and jsonb_typeof("TwoFactorProviders"::jsonb) = 'object';
+
+-- Update Organization table
+update
+	"Organization"
+set
+	"TwoFactorProviders" = jsonb_set(
+                jsonb_set("TwoFactorProviders"::jsonb,
+	'{6,MetaData,ClientSecret}',
+	("TwoFactorProviders"::jsonb -> '6' -> 'MetaData' -> 'SKey')),
+	'{6,MetaData,ClientId}',
+	("TwoFactorProviders"::jsonb -> '6' -> 'MetaData' -> 'IKey'))
+where
+	"TwoFactorProviders" like '%"6":%'
+	and jsonb_typeof("TwoFactorProviders"::jsonb) = 'object';
+	

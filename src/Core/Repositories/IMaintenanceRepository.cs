@@ -1,12 +1,12 @@
-﻿using System.Threading.Tasks;
+﻿namespace Bit.Core.Repositories;
 
-namespace Bit.Core.Repositories
+#nullable enable
+
+public interface IMaintenanceRepository
 {
-    public interface IMaintenanceRepository
-    {
-        Task UpdateStatisticsAsync();
-        Task DisableCipherAutoStatsAsync();
-        Task RebuildIndexesAsync();
-        Task DeleteExpiredGrantsAsync();
-    }
+    Task UpdateStatisticsAsync();
+    Task DisableCipherAutoStatsAsync();
+    Task RebuildIndexesAsync();
+    Task DeleteExpiredGrantsAsync();
+    Task DeleteExpiredSponsorshipsAsync(DateTime validUntilBeforeDate);
 }

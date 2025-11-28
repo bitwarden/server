@@ -1,38 +1,54 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
 
-namespace Bit.Core.Services
+using Bit.Core.Models.BitStripe;
+using Stripe;
+using Stripe.Tax;
+
+namespace Bit.Core.Services;
+
+public interface IStripeAdapter
 {
-    public interface IStripeAdapter
-    {
-        Task<Stripe.Customer> CustomerCreateAsync(Stripe.CustomerCreateOptions customerCreateOptions);
-        Task<Stripe.Customer> CustomerGetAsync(string id, Stripe.CustomerGetOptions options = null);
-        Task<Stripe.Customer> CustomerUpdateAsync(string id, Stripe.CustomerUpdateOptions options = null);
-        Task<Stripe.Customer> CustomerDeleteAsync(string id);
-        Task<Stripe.Subscription> SubscriptionCreateAsync(Stripe.SubscriptionCreateOptions subscriptionCreateOptions);
-        Task<Stripe.Subscription> SubscriptionGetAsync(string id, Stripe.SubscriptionGetOptions options = null);
-        Task<Stripe.Subscription> SubscriptionUpdateAsync(string id, Stripe.SubscriptionUpdateOptions options = null);
-        Task<Stripe.Subscription> SubscriptionCancelAsync(string Id, Stripe.SubscriptionCancelOptions options);
-        Task<Stripe.Invoice> InvoiceUpcomingAsync(Stripe.UpcomingInvoiceOptions options);
-        Task<Stripe.Invoice> InvoiceGetAsync(string id, Stripe.InvoiceGetOptions options);
-        Task<Stripe.StripeList<Stripe.Invoice>> InvoiceListAsync(Stripe.InvoiceListOptions options);
-        Task<Stripe.Invoice> InvoiceUpdateAsync(string id, Stripe.InvoiceUpdateOptions options);
-        Task<Stripe.Invoice> InvoiceFinalizeInvoiceAsync(string id, Stripe.InvoiceFinalizeOptions options);
-        Task<Stripe.Invoice> InvoiceSendInvoiceAsync(string id, Stripe.InvoiceSendOptions options);
-        Task<Stripe.Invoice> InvoicePayAsync(string id, Stripe.InvoicePayOptions options = null);
-        Task<Stripe.Invoice> InvoiceDeleteAsync(string id, Stripe.InvoiceDeleteOptions options = null);
-        Task<Stripe.Invoice> InvoiceVoidInvoiceAsync(string id, Stripe.InvoiceVoidOptions options = null);
-        IEnumerable<Stripe.PaymentMethod> PaymentMethodListAutoPaging(Stripe.PaymentMethodListOptions options);
-        Task<Stripe.PaymentMethod> PaymentMethodAttachAsync(string id, Stripe.PaymentMethodAttachOptions options = null);
-        Task<Stripe.PaymentMethod> PaymentMethodDetachAsync(string id, Stripe.PaymentMethodDetachOptions options = null);
-        Task<Stripe.TaxRate> TaxRateCreateAsync(Stripe.TaxRateCreateOptions options);
-        Task<Stripe.TaxRate> TaxRateUpdateAsync(string id, Stripe.TaxRateUpdateOptions options);
-        Task<Stripe.TaxId> TaxIdCreateAsync(string id, Stripe.TaxIdCreateOptions options);
-        Task<Stripe.TaxId> TaxIdDeleteAsync(string customerId, string taxIdId, Stripe.TaxIdDeleteOptions options = null);
-        Task<Stripe.StripeList<Stripe.Charge>> ChargeListAsync(Stripe.ChargeListOptions options);
-        Task<Stripe.Refund> RefundCreateAsync(Stripe.RefundCreateOptions options);
-        Task<Stripe.Card> CardDeleteAsync(string customerId, string cardId, Stripe.CardDeleteOptions options = null);
-        Task<Stripe.BankAccount> BankAccountCreateAsync(string customerId, Stripe.BankAccountCreateOptions options = null);
-        Task<Stripe.BankAccount> BankAccountDeleteAsync(string customerId, string bankAccount, Stripe.BankAccountDeleteOptions options = null);
-    }
+    Task<Customer> CustomerCreateAsync(CustomerCreateOptions customerCreateOptions);
+    Task CustomerDeleteDiscountAsync(string customerId, CustomerDeleteDiscountOptions options = null);
+    Task<Customer> CustomerGetAsync(string id, CustomerGetOptions options = null);
+    Task<Customer> CustomerUpdateAsync(string id, CustomerUpdateOptions options = null);
+    Task<Customer> CustomerDeleteAsync(string id);
+    Task<List<PaymentMethod>> CustomerListPaymentMethods(string id, CustomerPaymentMethodListOptions options = null);
+    Task<CustomerBalanceTransaction> CustomerBalanceTransactionCreate(string customerId,
+        CustomerBalanceTransactionCreateOptions options);
+    Task<Subscription> SubscriptionCreateAsync(SubscriptionCreateOptions subscriptionCreateOptions);
+    Task<Subscription> SubscriptionGetAsync(string id, SubscriptionGetOptions options = null);
+    Task<Subscription> SubscriptionUpdateAsync(string id, SubscriptionUpdateOptions options = null);
+    Task<Subscription> SubscriptionCancelAsync(string Id, SubscriptionCancelOptions options = null);
+    Task<Invoice> InvoiceGetAsync(string id, InvoiceGetOptions options);
+    Task<List<Invoice>> InvoiceListAsync(StripeInvoiceListOptions options);
+    Task<Invoice> InvoiceCreatePreviewAsync(InvoiceCreatePreviewOptions options);
+    Task<List<Invoice>> InvoiceSearchAsync(InvoiceSearchOptions options);
+    Task<Invoice> InvoiceUpdateAsync(string id, InvoiceUpdateOptions options);
+    Task<Invoice> InvoiceFinalizeInvoiceAsync(string id, InvoiceFinalizeOptions options);
+    Task<Invoice> InvoiceSendInvoiceAsync(string id, InvoiceSendOptions options);
+    Task<Invoice> InvoicePayAsync(string id, InvoicePayOptions options = null);
+    Task<Invoice> InvoiceDeleteAsync(string id, InvoiceDeleteOptions options = null);
+    Task<Invoice> InvoiceVoidInvoiceAsync(string id, InvoiceVoidOptions options = null);
+    IEnumerable<PaymentMethod> PaymentMethodListAutoPaging(PaymentMethodListOptions options);
+    IAsyncEnumerable<PaymentMethod> PaymentMethodListAutoPagingAsync(PaymentMethodListOptions options);
+    Task<PaymentMethod> PaymentMethodAttachAsync(string id, PaymentMethodAttachOptions options = null);
+    Task<PaymentMethod> PaymentMethodDetachAsync(string id, PaymentMethodDetachOptions options = null);
+    Task<TaxId> TaxIdCreateAsync(string id, TaxIdCreateOptions options);
+    Task<TaxId> TaxIdDeleteAsync(string customerId, string taxIdId, TaxIdDeleteOptions options = null);
+    Task<StripeList<Registration>> TaxRegistrationsListAsync(RegistrationListOptions options = null);
+    Task<StripeList<Charge>> ChargeListAsync(ChargeListOptions options);
+    Task<Refund> RefundCreateAsync(RefundCreateOptions options);
+    Task<Card> CardDeleteAsync(string customerId, string cardId, CardDeleteOptions options = null);
+    Task<BankAccount> BankAccountCreateAsync(string customerId, BankAccountCreateOptions options = null);
+    Task<BankAccount> BankAccountDeleteAsync(string customerId, string bankAccount, BankAccountDeleteOptions options = null);
+    Task<StripeList<Price>> PriceListAsync(PriceListOptions options = null);
+    Task<SetupIntent> SetupIntentCreate(SetupIntentCreateOptions options);
+    Task<List<SetupIntent>> SetupIntentList(SetupIntentListOptions options);
+    Task SetupIntentCancel(string id, SetupIntentCancelOptions options = null);
+    Task<SetupIntent> SetupIntentGet(string id, SetupIntentGetOptions options = null);
+    Task SetupIntentVerifyMicroDeposit(string id, SetupIntentVerifyMicrodepositsOptions options);
+    Task<List<Stripe.TestHelpers.TestClock>> TestClockListAsync();
+    Task<Price> PriceGetAsync(string id, PriceGetOptions options = null);
 }

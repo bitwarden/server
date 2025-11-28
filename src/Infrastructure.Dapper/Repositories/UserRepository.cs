@@ -1,176 +1,397 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Data.SqlClient;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Data;
+using System.Text.Json;
+using Bit.Core;
 using Bit.Core.Entities;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Dapper;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Data.SqlClient;
 
-namespace Bit.Infrastructure.Dapper.Repositories
+#nullable enable
+
+namespace Bit.Infrastructure.Dapper.Repositories;
+
+public class UserRepository : Repository<User, Guid>, IUserRepository
 {
-    public class UserRepository : Repository<User, Guid>, IUserRepository
+    private readonly IDataProtector _dataProtector;
+
+    public UserRepository(
+        GlobalSettings globalSettings,
+        IDataProtectionProvider dataProtectionProvider)
+        : base(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
     {
-        public UserRepository(GlobalSettings globalSettings)
-            : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
-        { }
+        _dataProtector = dataProtectionProvider.CreateProtector(Constants.DatabaseFieldProtectorPurpose);
+    }
 
-        public UserRepository(string connectionString, string readOnlyConnectionString)
-            : base(connectionString, readOnlyConnectionString)
-        { }
+    public override async Task<User?> GetByIdAsync(Guid id)
+    {
+        var user = await base.GetByIdAsync(id);
+        UnprotectData(user);
+        return user;
+    }
 
-        public override async Task<User> GetByIdAsync(Guid id)
+    public async Task<User?> GetByEmailAsync(string email)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
         {
-            return await base.GetByIdAsync(id);
+            var results = await connection.QueryAsync<User>(
+                $"[{Schema}].[{Table}_ReadByEmail]",
+                new { Email = email },
+                commandType: CommandType.StoredProcedure);
+
+            UnprotectData(results);
+            return results.SingleOrDefault();
+        }
+    }
+
+    public async Task<IEnumerable<User>> GetManyByEmailsAsync(IEnumerable<string> emails)
+    {
+        var emailTable = new DataTable();
+        emailTable.Columns.Add("Email", typeof(string));
+        foreach (var email in emails)
+        {
+            emailTable.Rows.Add(email);
         }
 
-        public async Task<User> GetByEmailAsync(string email)
+        using (var connection = new SqlConnection(ConnectionString))
         {
-            using (var connection = new SqlConnection(ConnectionString))
+            var results = await connection.QueryAsync<User>(
+                $"[{Schema}].[{Table}_ReadByEmails]",
+                new { Emails = emailTable.AsTableValuedParameter("dbo.EmailArray") },
+                commandType: CommandType.StoredProcedure);
+
+            UnprotectData(results);
+            return results.ToList();
+        }
+    }
+
+    public async Task<User?> GetBySsoUserAsync(string externalId, Guid? organizationId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<User>(
+                $"[{Schema}].[{Table}_ReadBySsoUserOrganizationIdExternalId]",
+                new { OrganizationId = organizationId, ExternalId = externalId },
+                commandType: CommandType.StoredProcedure);
+
+            UnprotectData(results);
+            return results.SingleOrDefault();
+        }
+    }
+
+    public async Task<UserKdfInformation?> GetKdfInformationByEmailAsync(string email)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<UserKdfInformation>(
+                $"[{Schema}].[{Table}_ReadKdfByEmail]",
+                new { Email = email },
+                commandType: CommandType.StoredProcedure);
+
+            return results.SingleOrDefault();
+        }
+    }
+
+    public async Task<ICollection<User>> SearchAsync(string email, int skip, int take)
+    {
+        using (var connection = new SqlConnection(ReadOnlyConnectionString))
+        {
+            var results = await connection.QueryAsync<User>(
+                $"[{Schema}].[{Table}_Search]",
+                new { Email = email, Skip = skip, Take = take },
+                commandType: CommandType.StoredProcedure,
+                commandTimeout: 120);
+
+            UnprotectData(results);
+            return results.ToList();
+        }
+    }
+
+    public async Task<ICollection<User>> GetManyByPremiumAsync(bool premium)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<User>(
+                "[dbo].[User_ReadByPremium]",
+                new { Premium = premium },
+                commandType: CommandType.StoredProcedure);
+
+            UnprotectData(results);
+            return results.ToList();
+        }
+    }
+
+    public async Task<string?> GetPublicKeyAsync(Guid id)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<string>(
+                $"[{Schema}].[{Table}_ReadPublicKeyById]",
+                new { Id = id },
+                commandType: CommandType.StoredProcedure);
+
+            return results.SingleOrDefault();
+        }
+    }
+
+    public async Task<DateTime> GetAccountRevisionDateAsync(Guid id)
+    {
+        using (var connection = new SqlConnection(ReadOnlyConnectionString))
+        {
+            var results = await connection.QueryAsync<DateTime>(
+                $"[{Schema}].[{Table}_ReadAccountRevisionDateById]",
+                new { Id = id },
+                commandType: CommandType.StoredProcedure);
+
+            return results.SingleOrDefault();
+        }
+    }
+
+    public override async Task<User> CreateAsync(User user)
+    {
+        await ProtectDataAndSaveAsync(user, async () => await base.CreateAsync(user));
+        return user;
+    }
+
+    public override async Task ReplaceAsync(User user)
+    {
+        await ProtectDataAndSaveAsync(user, async () => await base.ReplaceAsync(user));
+    }
+
+    public override async Task DeleteAsync(User user)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            await connection.ExecuteAsync(
+                $"[{Schema}].[{Table}_DeleteById]",
+                new { Id = user.Id },
+                commandType: CommandType.StoredProcedure,
+                commandTimeout: 180);
+        }
+    }
+    public async Task DeleteManyAsync(IEnumerable<User> users)
+    {
+        var ids = users.Select(user => user.Id);
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            await connection.ExecuteAsync(
+                $"[{Schema}].[{Table}_DeleteByIds]",
+                new { Ids = JsonSerializer.Serialize(ids) },
+                commandType: CommandType.StoredProcedure,
+                commandTimeout: 180);
+        }
+    }
+
+    public async Task UpdateStorageAsync(Guid id)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            await connection.ExecuteAsync(
+                $"[{Schema}].[{Table}_UpdateStorage]",
+                new { Id = id },
+                commandType: CommandType.StoredProcedure,
+                commandTimeout: 180);
+        }
+    }
+
+    public async Task UpdateRenewalReminderDateAsync(Guid id, DateTime renewalReminderDate)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            await connection.ExecuteAsync(
+                $"[{Schema}].[User_UpdateRenewalReminderDate]",
+                new { Id = id, RenewalReminderDate = renewalReminderDate },
+                commandType: CommandType.StoredProcedure);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task UpdateUserKeyAndEncryptedDataAsync(
+        User user,
+        IEnumerable<UpdateEncryptedDataForKeyRotation> updateDataActions)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        connection.Open();
+
+        await using var transaction = connection.BeginTransaction();
+        try
+        {
+            // Update user
+            await using (var cmd = new SqlCommand("[dbo].[User_UpdateKeys]", connection, transaction))
             {
-                var results = await connection.QueryAsync<User>(
-                    $"[{Schema}].[{Table}_ReadByEmail]",
-                    new { Email = email },
-                    commandType: CommandType.StoredProcedure);
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@Id", SqlDbType.UniqueIdentifier).Value = user.Id;
+                cmd.Parameters.Add("@SecurityStamp", SqlDbType.NVarChar).Value = user.SecurityStamp;
+                cmd.Parameters.Add("@Key", SqlDbType.VarChar).Value = user.Key;
 
-                return results.SingleOrDefault();
+                cmd.Parameters.Add("@PrivateKey", SqlDbType.VarChar).Value =
+                    string.IsNullOrWhiteSpace(user.PrivateKey) ? DBNull.Value : user.PrivateKey;
+
+                cmd.Parameters.Add("@RevisionDate", SqlDbType.DateTime2).Value = user.RevisionDate;
+                cmd.Parameters.Add("@AccountRevisionDate", SqlDbType.DateTime2).Value =
+                    user.AccountRevisionDate;
+                cmd.Parameters.Add("@LastKeyRotationDate", SqlDbType.DateTime2).Value =
+                    user.LastKeyRotationDate;
+                cmd.ExecuteNonQuery();
             }
-        }
 
-        public async Task<User> GetBySsoUserAsync(string externalId, Guid? organizationId)
-        {
-            using (var connection = new SqlConnection(ConnectionString))
+            //  Update re-encrypted data
+            foreach (var action in updateDataActions)
             {
-                var results = await connection.QueryAsync<User>(
-                    $"[{Schema}].[{Table}_ReadBySsoUserOrganizationIdExternalId]",
-                    new { OrganizationId = organizationId, ExternalId = externalId },
-                    commandType: CommandType.StoredProcedure);
-
-                return results.SingleOrDefault();
+                await action(connection, transaction);
             }
-        }
 
-        public async Task<UserKdfInformation> GetKdfInformationByEmailAsync(string email)
+            transaction.Commit();
+        }
+        catch
         {
-            using (var connection = new SqlConnection(ConnectionString))
+            transaction.Rollback();
+            throw;
+        }
+    }
+
+    public async Task UpdateUserKeyAndEncryptedDataV2Async(
+        User user,
+        IEnumerable<UpdateEncryptedDataForKeyRotation> updateDataActions)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        connection.Open();
+
+        await using var transaction = connection.BeginTransaction();
+        try
+        {
+            user.AccountRevisionDate = user.RevisionDate;
+
+            ProtectData(user);
+            await connection.ExecuteAsync(
+                $"[{Schema}].[{Table}_Update]",
+                user,
+                transaction: transaction,
+                commandType: CommandType.StoredProcedure);
+
+            //  Update re-encrypted data
+            foreach (var action in updateDataActions)
             {
-                var results = await connection.QueryAsync<UserKdfInformation>(
-                    $"[{Schema}].[{Table}_ReadKdfByEmail]",
-                    new { Email = email },
-                    commandType: CommandType.StoredProcedure);
-
-                return results.SingleOrDefault();
+                await action(connection, transaction);
             }
+            transaction.Commit();
+        }
+        catch
+        {
+            transaction.Rollback();
+            UnprotectData(user);
+            throw;
+        }
+        UnprotectData(user);
+    }
+
+    public async Task<IEnumerable<User>> GetManyAsync(IEnumerable<Guid> ids)
+    {
+        using (var connection = new SqlConnection(ReadOnlyConnectionString))
+        {
+            var results = await connection.QueryAsync<User>(
+                $"[{Schema}].[{Table}_ReadByIds]",
+                new { Ids = ids.ToGuidIdArrayTVP() },
+                commandType: CommandType.StoredProcedure);
+
+            UnprotectData(results);
+            return results.ToList();
+        }
+    }
+
+    public async Task<IEnumerable<UserWithCalculatedPremium>> GetManyWithCalculatedPremiumAsync(IEnumerable<Guid> ids)
+    {
+        using (var connection = new SqlConnection(ReadOnlyConnectionString))
+        {
+            var results = await connection.QueryAsync<UserWithCalculatedPremium>(
+                $"[{Schema}].[{Table}_ReadByIdsWithCalculatedPremium]",
+                new { Ids = JsonSerializer.Serialize(ids) },
+                commandType: CommandType.StoredProcedure);
+
+            UnprotectData(results);
+            return results.ToList();
+        }
+    }
+
+    public async Task<UserWithCalculatedPremium?> GetCalculatedPremiumAsync(Guid userId)
+    {
+        var result = await GetManyWithCalculatedPremiumAsync([userId]);
+
+        UnprotectData(result);
+        return result.SingleOrDefault();
+    }
+
+    private async Task ProtectDataAndSaveAsync(User user, Func<Task> saveTask)
+    {
+        if (user == null)
+        {
+            await saveTask();
+            return;
         }
 
-        public async Task<ICollection<User>> SearchAsync(string email, int skip, int take)
-        {
-            using (var connection = new SqlConnection(ReadOnlyConnectionString))
-            {
-                var results = await connection.QueryAsync<User>(
-                    $"[{Schema}].[{Table}_Search]",
-                    new { Email = email, Skip = skip, Take = take },
-                    commandType: CommandType.StoredProcedure,
-                    commandTimeout: 120);
+        // Capture original values
+        var originalMasterPassword = user.MasterPassword;
+        var originalKey = user.Key;
 
-                return results.ToList();
-            }
+        // Protect values
+        ProtectData(user);
+
+        // Save
+        await saveTask();
+
+        // Restore original values
+        user.MasterPassword = originalMasterPassword;
+        user.Key = originalKey;
+    }
+
+    private void ProtectData(User user)
+    {
+        if (!user.MasterPassword?.StartsWith(Constants.DatabaseFieldProtectedPrefix) ?? false)
+        {
+            user.MasterPassword = string.Concat(Constants.DatabaseFieldProtectedPrefix,
+                _dataProtector.Protect(user.MasterPassword!));
         }
 
-        public async Task<ICollection<User>> GetManyByPremiumAsync(bool premium)
+        if (!user.Key?.StartsWith(Constants.DatabaseFieldProtectedPrefix) ?? false)
         {
-            using (var connection = new SqlConnection(ConnectionString))
-            {
-                var results = await connection.QueryAsync<User>(
-                    "[dbo].[User_ReadByPremium]",
-                    new { Premium = premium },
-                    commandType: CommandType.StoredProcedure);
+            user.Key = string.Concat(Constants.DatabaseFieldProtectedPrefix,
+                _dataProtector.Protect(user.Key!));
+        }
+    }
 
-                return results.ToList();
-            }
+    private void UnprotectData(User? user)
+    {
+        if (user == null)
+        {
+            return;
         }
 
-        public async Task<string> GetPublicKeyAsync(Guid id)
+        if (user.MasterPassword?.StartsWith(Constants.DatabaseFieldProtectedPrefix) ?? false)
         {
-            using (var connection = new SqlConnection(ConnectionString))
-            {
-                var results = await connection.QueryAsync<string>(
-                    $"[{Schema}].[{Table}_ReadPublicKeyById]",
-                    new { Id = id },
-                    commandType: CommandType.StoredProcedure);
-
-                return results.SingleOrDefault();
-            }
+            user.MasterPassword = _dataProtector.Unprotect(
+                user.MasterPassword.Substring(Constants.DatabaseFieldProtectedPrefix.Length));
         }
 
-        public async Task<DateTime> GetAccountRevisionDateAsync(Guid id)
+        if (user.Key?.StartsWith(Constants.DatabaseFieldProtectedPrefix) ?? false)
         {
-            using (var connection = new SqlConnection(ConnectionString))
-            {
-                var results = await connection.QueryAsync<DateTime>(
-                    $"[{Schema}].[{Table}_ReadAccountRevisionDateById]",
-                    new { Id = id },
-                    commandType: CommandType.StoredProcedure);
+            user.Key = _dataProtector.Unprotect(
+                user.Key.Substring(Constants.DatabaseFieldProtectedPrefix.Length));
+        }
+    }
 
-                return results.SingleOrDefault();
-            }
+    private void UnprotectData(IEnumerable<User> users)
+    {
+        if (users == null)
+        {
+            return;
         }
 
-        public override async Task ReplaceAsync(User user)
+        foreach (var user in users)
         {
-            await base.ReplaceAsync(user);
-        }
-
-        public override async Task DeleteAsync(User user)
-        {
-            using (var connection = new SqlConnection(ConnectionString))
-            {
-                await connection.ExecuteAsync(
-                    $"[{Schema}].[{Table}_DeleteById]",
-                    new { Id = user.Id },
-                    commandType: CommandType.StoredProcedure,
-                    commandTimeout: 180);
-            }
-        }
-
-        public async Task UpdateStorageAsync(Guid id)
-        {
-            using (var connection = new SqlConnection(ConnectionString))
-            {
-                await connection.ExecuteAsync(
-                    $"[{Schema}].[{Table}_UpdateStorage]",
-                    new { Id = id },
-                    commandType: CommandType.StoredProcedure,
-                    commandTimeout: 180);
-            }
-        }
-
-        public async Task UpdateRenewalReminderDateAsync(Guid id, DateTime renewalReminderDate)
-        {
-            using (var connection = new SqlConnection(ConnectionString))
-            {
-                await connection.ExecuteAsync(
-                    $"[{Schema}].[User_UpdateRenewalReminderDate]",
-                    new { Id = id, RenewalReminderDate = renewalReminderDate },
-                    commandType: CommandType.StoredProcedure);
-            }
-        }
-
-        public async Task<IEnumerable<User>> GetManyAsync(IEnumerable<Guid> ids)
-        {
-            using (var connection = new SqlConnection(ReadOnlyConnectionString))
-            {
-                var results = await connection.QueryAsync<User>(
-                    $"[{Schema}].[{Table}_ReadByIds]",
-                    new { Ids = ids.ToGuidIdArrayTVP() },
-                    commandType: CommandType.StoredProcedure);
-
-                return results.ToList();
-            }
+            UnprotectData(user);
         }
     }
 }

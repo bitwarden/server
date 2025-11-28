@@ -1,24 +1,24 @@
-﻿using System;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Models.Data;
 
-namespace Bit.Api.Models.Request
-{
-    public class SelectionReadOnlyRequestModel
-    {
-        [Required]
-        public string Id { get; set; }
-        public bool ReadOnly { get; set; }
-        public bool HidePasswords { get; set; }
+namespace Bit.Api.Models.Request;
 
-        public SelectionReadOnly ToSelectionReadOnly()
+public class SelectionReadOnlyRequestModel
+{
+    [Required]
+    public Guid Id { get; set; }
+    public bool ReadOnly { get; set; }
+    public bool HidePasswords { get; set; }
+    public bool Manage { get; set; }
+
+    public CollectionAccessSelection ToSelectionReadOnly()
+    {
+        return new CollectionAccessSelection
         {
-            return new SelectionReadOnly
-            {
-                Id = new Guid(Id),
-                ReadOnly = ReadOnly,
-                HidePasswords = HidePasswords,
-            };
-        }
+            Id = Id,
+            ReadOnly = ReadOnly,
+            HidePasswords = HidePasswords,
+            Manage = Manage,
+        };
     }
 }

@@ -1,55 +1,64 @@
-﻿using System;
-using System.Linq;
-using Bit.Core.Enums;
+﻿using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 
-namespace Bit.Infrastructure.EntityFramework.Repositories.Queries
+namespace Bit.Infrastructure.EntityFramework.Repositories.Queries;
+
+public class UserCollectionDetailsQuery : IQuery<CollectionDetails>
 {
-    public class UserCollectionDetailsQuery : IQuery<CollectionDetails>
+    private readonly Guid? _userId;
+
+    public UserCollectionDetailsQuery(Guid? userId)
     {
-        private readonly Guid? _userId;
-        public UserCollectionDetailsQuery(Guid? userId)
+        _userId = userId;
+    }
+
+    public virtual IQueryable<CollectionDetails> Run(DatabaseContext dbContext)
+    {
+        var query = from c in dbContext.Collections
+
+                    join ou in dbContext.OrganizationUsers
+                        on c.OrganizationId equals ou.OrganizationId
+
+                    join o in dbContext.Organizations
+                        on c.OrganizationId equals o.Id
+
+                    join cu in dbContext.CollectionUsers
+                        on new { CollectionId = c.Id, OrganizationUserId = ou.Id } equals
+                           new { cu.CollectionId, cu.OrganizationUserId } into cu_g
+                    from cu in cu_g.DefaultIfEmpty()
+
+                    join gu in dbContext.GroupUsers
+                        on new { CollectionId = (Guid?)cu.CollectionId, OrganizationUserId = ou.Id } equals
+                           new { CollectionId = (Guid?)null, gu.OrganizationUserId } into gu_g
+                    from gu in gu_g.DefaultIfEmpty()
+
+                    join g in dbContext.Groups
+                        on gu.GroupId equals g.Id into g_g
+                    from g in g_g.DefaultIfEmpty()
+
+                    join cg in dbContext.CollectionGroups
+                        on new { CollectionId = c.Id, gu.GroupId } equals
+                           new { cg.CollectionId, cg.GroupId } into cg_g
+                    from cg in cg_g.DefaultIfEmpty()
+
+                    where ou.UserId == _userId &&
+                        ou.Status == OrganizationUserStatusType.Confirmed &&
+                        o.Enabled &&
+                        ((cu == null ? (Guid?)null : cu.CollectionId) != null || (cg == null ? (Guid?)null : cg.CollectionId) != null)
+                    select new { c, ou, o, cu, gu, g, cg };
+
+        return query.Select(row => new CollectionDetails
         {
-            _userId = userId;
-        }
-        public virtual IQueryable<CollectionDetails> Run(DatabaseContext dbContext)
-        {
-            var query = from c in dbContext.Collections
-                        join ou in dbContext.OrganizationUsers
-                            on c.OrganizationId equals ou.OrganizationId
-                        join o in dbContext.Organizations
-                            on c.OrganizationId equals o.Id
-                        join cu in dbContext.CollectionUsers
-                            on c.Id equals cu.CollectionId into cu_g
-                        from cu in cu_g.DefaultIfEmpty()
-                        where ou.AccessAll && cu.OrganizationUserId == ou.Id
-                        join gu in dbContext.GroupUsers
-                            on ou.Id equals gu.OrganizationUserId into gu_g
-                        from gu in gu_g.DefaultIfEmpty()
-                        where cu.CollectionId == null && !ou.AccessAll
-                        join g in dbContext.Groups
-                            on gu.GroupId equals g.Id into g_g
-                        from g in g_g.DefaultIfEmpty()
-                        join cg in dbContext.CollectionGroups
-                            on gu.GroupId equals cg.GroupId into cg_g
-                        from cg in cg_g.DefaultIfEmpty()
-                        where !g.AccessAll && cg.CollectionId == c.Id &&
-                            ou.UserId == _userId &&
-                            ou.Status == OrganizationUserStatusType.Confirmed &&
-                            o.Enabled &&
-                            (ou.AccessAll || cu.CollectionId != null || g.AccessAll || cg.CollectionId != null)
-                        select new { c, ou, o, cu, gu, g, cg };
-            return query.Select(x => new CollectionDetails
-            {
-                Id = x.c.Id,
-                OrganizationId = x.c.OrganizationId,
-                Name = x.c.Name,
-                ExternalId = x.c.ExternalId,
-                CreationDate = x.c.CreationDate,
-                RevisionDate = x.c.RevisionDate,
-                ReadOnly = !x.ou.AccessAll || !x.g.AccessAll || (x.cu.ReadOnly || x.cg.ReadOnly),
-                HidePasswords = !x.ou.AccessAll || !x.g.AccessAll || (x.cu.HidePasswords || x.cg.HidePasswords),
-            });
-        }
+            Id = row.c.Id,
+            OrganizationId = row.c.OrganizationId,
+            Name = row.c.Name,
+            ExternalId = row.c.ExternalId,
+            CreationDate = row.c.CreationDate,
+            RevisionDate = row.c.RevisionDate,
+            ReadOnly = (bool?)row.cu.ReadOnly ?? (bool?)row.cg.ReadOnly ?? false,
+            HidePasswords = (bool?)row.cu.HidePasswords ?? (bool?)row.cg.HidePasswords ?? false,
+            Manage = (bool?)row.cu.Manage ?? (bool?)row.cg.Manage ?? false,
+            Type = row.c.Type
+        });
     }
 }

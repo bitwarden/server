@@ -1,91 +1,106 @@
-﻿using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
+﻿using System.Globalization;
+using Microsoft.AspNetCore.StaticFiles;
 
-namespace Bit.Server
+namespace Bit.Server;
+
+public class Startup
 {
-    public class Startup
+    private readonly List<string> _longCachedPaths = new List<string>
     {
-        private readonly List<string> _longCachedPaths = new List<string>
-        {
-            "/app/", "/locales/", "/fonts/", "/connectors/", "/scripts/"
-        };
-        private readonly List<string> _mediumCachedPaths = new List<string>
-        {
-            "/images/"
-        };
+        "/app/", "/locales/", "/fonts/", "/connectors/", "/scripts/"
+    };
+    private readonly List<string> _mediumCachedPaths = new List<string>
+    {
+        "/images/"
+    };
 
-        public Startup()
-        {
-            CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-US");
-        }
+    public Startup()
+    {
+        CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-US");
+    }
 
-        public void ConfigureServices(IServiceCollection services)
-        {
-            services.AddRouting();
-        }
+    public void ConfigureServices(IServiceCollection services)
+    {
+        services.AddRouting();
+    }
 
-        public void Configure(
-            IApplicationBuilder app,
-            IConfiguration configuration)
+    public void Configure(
+        IApplicationBuilder app,
+        IConfiguration configuration,
+        ILogger<Startup> logger)
+    {
+        if (configuration.GetValue<bool?>("serveUnknown") ?? false)
         {
-            if (configuration.GetValue<bool?>("serveUnknown") ?? false)
+            app.UseStaticFiles(new StaticFileOptions
             {
-                app.UseStaticFiles(new StaticFileOptions
-                {
-                    ServeUnknownFileTypes = true,
-                    DefaultContentType = "application/octet-stream"
-                });
+                ServeUnknownFileTypes = true,
+                DefaultContentType = "application/octet-stream"
+            });
+            app.UseRouting();
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapGet("/alive",
+                    async context => await context.Response.WriteAsync(System.DateTime.UtcNow.ToString()));
+            });
+        }
+        else if (configuration.GetValue<bool?>("webVault") ?? false)
+        {
+            var appIdLocation = configuration.GetValue<string>("appIdLocation");
+
+            if (!string.IsNullOrEmpty(appIdLocation))
+            {
                 app.UseRouting();
                 app.UseEndpoints(endpoints =>
                 {
-                    endpoints.MapGet("/alive",
-                        async context => await context.Response.WriteAsync(System.DateTime.UtcNow.ToString()));
-                });
-            }
-            else if (configuration.GetValue<bool?>("webVault") ?? false)
-            {
-                var options = new DefaultFilesOptions();
-                options.DefaultFileNames.Clear();
-                options.DefaultFileNames.Add("index.html");
-                app.UseDefaultFiles(options);
-                app.UseStaticFiles(new StaticFileOptions
-                {
-                    OnPrepareResponse = ctx =>
+                    endpoints.MapGet("/app-id.json", async context =>
                     {
-                        if (!ctx.Context.Request.Path.HasValue ||
-                            ctx.Context.Response.Headers.ContainsKey("Cache-Control"))
-                        {
-                            return;
-                        }
-                        var path = ctx.Context.Request.Path.Value;
-                        if (_longCachedPaths.Any(ext => path.StartsWith(ext)))
-                        {
-                            // 14 days
-                            ctx.Context.Response.Headers.Append("Cache-Control", "max-age=1209600");
-                        }
-                        if (_mediumCachedPaths.Any(ext => path.StartsWith(ext)))
-                        {
-                            // 7 days
-                            ctx.Context.Response.Headers.Append("Cache-Control", "max-age=604800");
-                        }
-                    }
+                        var appId = await File.ReadAllTextAsync(appIdLocation);
+                        context.Response.ContentType = "application/json";
+                        await context.Response.WriteAsync(appId);
+                    });
                 });
             }
-            else
+
+            // TODO: This should be removed when asp.net natively support avif
+            var provider = new FileExtensionContentTypeProvider { Mappings = { [".avif"] = "image/avif" } };
+
+            var options = new DefaultFilesOptions();
+            options.DefaultFileNames.Clear();
+            options.DefaultFileNames.Add("index.html");
+            app.UseDefaultFiles(options);
+            app.UseStaticFiles(new StaticFileOptions
             {
-                app.UseFileServer();
-                app.UseRouting();
-                app.UseEndpoints(endpoints =>
+                ContentTypeProvider = provider,
+                OnPrepareResponse = ctx =>
                 {
-                    endpoints.MapGet("/alive",
-                        async context => await context.Response.WriteAsync(System.DateTime.UtcNow.ToString()));
-                });
-            }
+                    if (!ctx.Context.Request.Path.HasValue ||
+                        ctx.Context.Response.Headers.ContainsKey("Cache-Control"))
+                    {
+                        return;
+                    }
+                    var path = ctx.Context.Request.Path.Value;
+                    if (_longCachedPaths.Any(ext => path.StartsWith(ext)))
+                    {
+                        // 14 days
+                        ctx.Context.Response.Headers.Append("Cache-Control", "max-age=1209600");
+                    }
+                    if (_mediumCachedPaths.Any(ext => path.StartsWith(ext)))
+                    {
+                        // 7 days
+                        ctx.Context.Response.Headers.Append("Cache-Control", "max-age=604800");
+                    }
+                }
+            });
+        }
+        else
+        {
+            app.UseFileServer();
+            app.UseRouting();
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapGet("/alive",
+                    async context => await context.Response.WriteAsync(System.DateTime.UtcNow.ToString()));
+            });
         }
     }
 }

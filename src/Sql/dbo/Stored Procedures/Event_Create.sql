@@ -3,6 +3,7 @@
     @Type INT,
     @UserId UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
+    @InstallationId UNIQUEIDENTIFIER,
     @ProviderId UNIQUEIDENTIFIER,
     @CipherId UNIQUEIDENTIFIER,
     @CollectionId UNIQUEIDENTIFIER,
@@ -14,7 +15,13 @@
     @ActingUserId UNIQUEIDENTIFIER,
     @DeviceType SMALLINT,
     @IpAddress VARCHAR(50),
-    @Date DATETIME2(7)
+    @Date DATETIME2(7),
+    @SystemUser TINYINT = null,
+    @DomainName VARCHAR(256),
+    @SecretId UNIQUEIDENTIFIER = null,
+    @ServiceAccountId UNIQUEIDENTIFIER = null,
+    @ProjectId UNIQUEIDENTIFIER = null,
+    @GrantedServiceAccountId UNIQUEIDENTIFIER = null
 AS
 BEGIN
     SET NOCOUNT ON
@@ -25,6 +32,7 @@ BEGIN
         [Type],
         [UserId],
         [OrganizationId],
+        [InstallationId],
         [ProviderId],
         [CipherId],
         [CollectionId],
@@ -36,7 +44,13 @@ BEGIN
         [ActingUserId],
         [DeviceType],
         [IpAddress],
-        [Date]
+        [Date],
+        [SystemUser],
+        [DomainName],
+        [SecretId],
+        [ServiceAccountId],
+        [ProjectId],
+        [GrantedServiceAccountId]
     )
     VALUES
     (
@@ -44,6 +58,7 @@ BEGIN
         @Type,
         @UserId,
         @OrganizationId,
+        @InstallationId,
         @ProviderId,
         @CipherId,
         @CollectionId,
@@ -55,6 +70,12 @@ BEGIN
         @ActingUserId,
         @DeviceType,
         @IpAddress,
-        @Date
+        @Date,
+        @SystemUser,
+        @DomainName,
+        @SecretId,
+        @ServiceAccountId,
+        @ProjectId,
+        @GrantedServiceAccountId
     )
 END

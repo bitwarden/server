@@ -1,35 +1,30 @@
-﻿using System.IO;
+﻿#nullable enable
 using System.Text;
-using System.Threading.Tasks;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.SignalR;
 
-namespace Bit.Notifications
+namespace Bit.Notifications.Controllers;
+
+[Authorize("Internal")]
+public class SendController : Controller
 {
-    [Authorize("Internal")]
-    public class SendController : Controller
+    private readonly HubHelpers _hubHelpers;
+
+    public SendController(HubHelpers hubHelpers)
     {
-        private readonly IHubContext<NotificationsHub> _hubContext;
+        _hubHelpers = hubHelpers;
+    }
 
-        public SendController(IHubContext<NotificationsHub> hubContext)
+    [HttpPost("~/send")]
+    [SelfHosted(SelfHostedOnly = true)]
+    public async Task PostSendAsync()
+    {
+        using var reader = new StreamReader(Request.Body, Encoding.UTF8);
+        var notificationJson = await reader.ReadToEndAsync();
+        if (!string.IsNullOrWhiteSpace(notificationJson))
         {
-            _hubContext = hubContext;
-        }
-
-        [HttpPost("~/send")]
-        [SelfHosted(SelfHostedOnly = true)]
-        public async Task PostSend()
-        {
-            using (var reader = new StreamReader(Request.Body, Encoding.UTF8))
-            {
-                var notificationJson = await reader.ReadToEndAsync();
-                if (!string.IsNullOrWhiteSpace(notificationJson))
-                {
-                    await HubHelpers.SendNotificationToHubAsync(notificationJson, _hubContext);
-                }
-            }
+            await _hubHelpers.SendNotificationToHubAsync(notificationJson);
         }
     }
 }

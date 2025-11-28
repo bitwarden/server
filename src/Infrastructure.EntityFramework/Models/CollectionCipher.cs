@@ -1,18 +1,21 @@
-﻿using AutoMapper;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
 
-namespace Bit.Infrastructure.EntityFramework.Models
+using AutoMapper;
+using Bit.Infrastructure.EntityFramework.Vault.Models;
+
+namespace Bit.Infrastructure.EntityFramework.Models;
+
+public class CollectionCipher : Core.Entities.CollectionCipher
 {
-    public class CollectionCipher : Core.Entities.CollectionCipher
-    {
-        public virtual Cipher Cipher { get; set; }
-        public virtual Collection Collection { get; set; }
-    }
+    public virtual Cipher Cipher { get; set; }
+    public virtual Collection Collection { get; set; }
+}
 
-    public class CollectionCipherMapperProfile : Profile
+public class CollectionCipherMapperProfile : Profile
+{
+    public CollectionCipherMapperProfile()
     {
-        public CollectionCipherMapperProfile()
-        {
-            CreateMap<Core.Entities.CollectionCipher, CollectionCipher>().ReverseMap();
-        }
+        CreateMap<Core.Entities.CollectionCipher, CollectionCipher>().ReverseMap();
     }
 }

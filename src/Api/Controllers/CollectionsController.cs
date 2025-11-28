@@ -1,278 +1,269 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
+using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data;
+using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Bit.Api.Controllers
+namespace Bit.Api.Controllers;
+
+[Route("organizations/{orgId}/collections")]
+[Authorize("Application")]
+public class CollectionsController : Controller
 {
-    [Route("organizations/{orgId}/collections")]
-    [Authorize("Application")]
-    public class CollectionsController : Controller
+    private readonly ICollectionRepository _collectionRepository;
+    private readonly ICreateCollectionCommand _createCollectionCommand;
+    private readonly IUpdateCollectionCommand _updateCollectionCommand;
+    private readonly IDeleteCollectionCommand _deleteCollectionCommand;
+    private readonly IUserService _userService;
+    private readonly IAuthorizationService _authorizationService;
+    private readonly ICurrentContext _currentContext;
+    private readonly IBulkAddCollectionAccessCommand _bulkAddCollectionAccessCommand;
+
+    public CollectionsController(
+        ICollectionRepository collectionRepository,
+        ICreateCollectionCommand createCollectionCommand,
+        IUpdateCollectionCommand updateCollectionCommand,
+        IDeleteCollectionCommand deleteCollectionCommand,
+        IUserService userService,
+        IAuthorizationService authorizationService,
+        ICurrentContext currentContext,
+        IBulkAddCollectionAccessCommand bulkAddCollectionAccessCommand)
     {
-        private readonly ICollectionRepository _collectionRepository;
-        private readonly ICollectionService _collectionService;
-        private readonly IUserService _userService;
-        private readonly ICurrentContext _currentContext;
+        _collectionRepository = collectionRepository;
+        _createCollectionCommand = createCollectionCommand;
+        _updateCollectionCommand = updateCollectionCommand;
+        _deleteCollectionCommand = deleteCollectionCommand;
+        _userService = userService;
+        _authorizationService = authorizationService;
+        _currentContext = currentContext;
+        _bulkAddCollectionAccessCommand = bulkAddCollectionAccessCommand;
+    }
 
-        public CollectionsController(
-            ICollectionRepository collectionRepository,
-            ICollectionService collectionService,
-            IUserService userService,
-            ICurrentContext currentContext)
+    [HttpGet("{id}")]
+    public async Task<CollectionResponseModel> Get(Guid orgId, Guid id)
+    {
+        var collection = await _collectionRepository.GetByIdAsync(id);
+        var authorized = (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.Read)).Succeeded;
+        if (!authorized)
         {
-            _collectionRepository = collectionRepository;
-            _collectionService = collectionService;
-            _userService = userService;
-            _currentContext = currentContext;
+            throw new NotFoundException();
         }
 
-        [HttpGet("{id}")]
-        public async Task<CollectionResponseModel> Get(string orgId, string id)
-        {
-            if (!await CanViewCollectionAsync(orgId, id))
-            {
-                throw new NotFoundException();
-            }
+        return new CollectionResponseModel(collection);
+    }
 
-            var collection = await GetCollectionAsync(new Guid(id), new Guid(orgId));
-            return new CollectionResponseModel(collection);
+    [HttpGet("{id}/details")]
+    public async Task<CollectionAccessDetailsResponseModel> GetDetails(Guid orgId, Guid id)
+    {
+        var collectionAdminDetails =
+            await _collectionRepository.GetByIdWithPermissionsAsync(id, _currentContext.UserId, true);
+
+        var authorized = (await _authorizationService.AuthorizeAsync(User, collectionAdminDetails, BulkCollectionOperations.ReadWithAccess)).Succeeded;
+        if (!authorized)
+        {
+            throw new NotFoundException();
         }
 
-        [HttpGet("{id}/details")]
-        public async Task<CollectionGroupDetailsResponseModel> GetDetails(string orgId, string id)
-        {
-            var orgIdGuid = new Guid(orgId);
-            if (!await ViewAtLeastOneCollectionAsync(orgIdGuid) && !await _currentContext.ManageUsers(orgIdGuid))
-            {
-                throw new NotFoundException();
-            }
+        return new CollectionAccessDetailsResponseModel(collectionAdminDetails);
+    }
 
-            var idGuid = new Guid(id);
-            if (await _currentContext.ViewAllCollections(orgIdGuid))
-            {
-                var collectionDetails = await _collectionRepository.GetByIdWithGroupsAsync(idGuid);
-                if (collectionDetails?.Item1 == null || collectionDetails.Item1.OrganizationId != orgIdGuid)
-                {
-                    throw new NotFoundException();
-                }
-                return new CollectionGroupDetailsResponseModel(collectionDetails.Item1, collectionDetails.Item2);
-            }
-            else
-            {
-                var collectionDetails = await _collectionRepository.GetByIdWithGroupsAsync(idGuid,
-                    _currentContext.UserId.Value);
-                if (collectionDetails?.Item1 == null || collectionDetails.Item1.OrganizationId != orgIdGuid)
-                {
-                    throw new NotFoundException();
-                }
-                return new CollectionGroupDetailsResponseModel(collectionDetails.Item1, collectionDetails.Item2);
-            }
+    [HttpGet("details")]
+    public async Task<ListResponseModel<CollectionAccessDetailsResponseModel>> GetManyWithDetails(Guid orgId)
+    {
+        var allOrgCollections = await _collectionRepository.GetManyByOrganizationIdWithPermissionsAsync(
+            orgId, _currentContext.UserId.Value, true);
+
+        var readAllAuthorized =
+            (await _authorizationService.AuthorizeAsync(User, CollectionOperations.ReadAllWithAccess(orgId))).Succeeded;
+        if (readAllAuthorized)
+        {
+            return new ListResponseModel<CollectionAccessDetailsResponseModel>(
+                allOrgCollections.Select(c => new CollectionAccessDetailsResponseModel(c))
+            );
         }
 
-        [HttpGet("")]
-        public async Task<ListResponseModel<CollectionResponseModel>> Get(string orgId)
-        {
-            var orgIdGuid = new Guid(orgId);
-            if (!await _currentContext.ViewAllCollections(orgIdGuid) && !await _currentContext.ManageUsers(orgIdGuid))
-            {
-                throw new NotFoundException();
-            }
+        // Filter collections to only return those where the user has Manage permission
+        var manageableOrgCollections = allOrgCollections.Where(c => c.Manage).ToList();
 
-            var collections = await _collectionRepository.GetManyByOrganizationIdAsync(orgIdGuid);
-            var responses = collections.Select(c => new CollectionResponseModel(c));
-            return new ListResponseModel<CollectionResponseModel>(responses);
+        return new ListResponseModel<CollectionAccessDetailsResponseModel>(manageableOrgCollections.Select(c =>
+            new CollectionAccessDetailsResponseModel(c)
+        ));
+    }
+
+    [HttpGet("")]
+    public async Task<ListResponseModel<CollectionResponseModel>> GetAll(Guid orgId)
+    {
+        IEnumerable<Collection> orgCollections;
+
+        var readAllAuthorized = (await _authorizationService.AuthorizeAsync(User, CollectionOperations.ReadAll(orgId))).Succeeded;
+        if (readAllAuthorized)
+        {
+            orgCollections = await _collectionRepository.GetManySharedCollectionsByOrganizationIdAsync(orgId);
+        }
+        else
+        {
+            var assignedCollections = await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId.Value);
+            orgCollections = assignedCollections.Where(c => c.OrganizationId == orgId && c.Manage).ToList();
         }
 
-        [HttpGet("~/collections")]
-        public async Task<ListResponseModel<CollectionDetailsResponseModel>> GetUser()
+        var responses = orgCollections.Select(c => new CollectionResponseModel(c));
+        return new ListResponseModel<CollectionResponseModel>(responses);
+    }
+
+    [HttpGet("~/collections")]
+    public async Task<ListResponseModel<CollectionDetailsResponseModel>> GetUser()
+    {
+        var collections = await _collectionRepository.GetManyByUserIdAsync(
+            _userService.GetProperUserId(User).Value);
+        var responses = collections.Select(c => new CollectionDetailsResponseModel(c));
+        return new ListResponseModel<CollectionDetailsResponseModel>(responses);
+    }
+
+    [HttpGet("{id}/users")]
+    public async Task<IEnumerable<SelectionReadOnlyResponseModel>> GetUsers(Guid orgId, Guid id)
+    {
+        var collection = await _collectionRepository.GetByIdAsync(id);
+        var authorized = (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.ReadAccess)).Succeeded;
+        if (!authorized)
         {
-            var collections = await _collectionRepository.GetManyByUserIdAsync(
-                _userService.GetProperUserId(User).Value);
-            var responses = collections.Select(c => new CollectionDetailsResponseModel(c));
-            return new ListResponseModel<CollectionDetailsResponseModel>(responses);
+            throw new NotFoundException();
         }
 
-        [HttpGet("{id}/users")]
-        public async Task<IEnumerable<SelectionReadOnlyResponseModel>> GetUsers(string orgId, string id)
+        var collectionUsers = await _collectionRepository.GetManyUsersByIdAsync(collection.Id);
+        var responses = collectionUsers.Select(cu => new SelectionReadOnlyResponseModel(cu));
+        return responses;
+    }
+
+    [HttpPost("")]
+    public async Task<CollectionResponseModel> Post(Guid orgId, [FromBody] CreateCollectionRequestModel model)
+    {
+        var collection = model.ToCollection(orgId);
+
+        var authorized = (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.Create)).Succeeded;
+        if (!authorized)
         {
-            var collection = await GetCollectionAsync(new Guid(id), new Guid(orgId));
-            var collectionUsers = await _collectionRepository.GetManyUsersByIdAsync(collection.Id);
-            var responses = collectionUsers.Select(cu => new SelectionReadOnlyResponseModel(cu));
-            return responses;
+            throw new NotFoundException();
         }
 
-        [HttpPost("")]
-        public async Task<CollectionResponseModel> Post(string orgId, [FromBody] CollectionRequestModel model)
+        var groups = model.Groups?.Select(g => g.ToSelectionReadOnly());
+        var users = model.Users?.Select(g => g.ToSelectionReadOnly()).ToList() ?? new List<CollectionAccessSelection>();
+
+        await _createCollectionCommand.CreateAsync(collection, groups, users);
+
+        if (!_currentContext.UserId.HasValue || (_currentContext.GetOrganization(orgId) == null && await _currentContext.ProviderUserForOrgAsync(orgId)))
         {
-            var orgIdGuid = new Guid(orgId);
-            var collection = model.ToCollection(orgIdGuid);
-
-            if (!await CanCreateCollection(orgIdGuid, collection.Id) &&
-                !await CanEditCollectionAsync(orgIdGuid, collection.Id))
-            {
-                throw new NotFoundException();
-            }
-
-            var assignUserToCollection = !(await _currentContext.EditAnyCollection(orgIdGuid)) &&
-                await _currentContext.EditAssignedCollections(orgIdGuid);
-
-            await _collectionService.SaveAsync(collection, model.Groups?.Select(g => g.ToSelectionReadOnly()),
-                assignUserToCollection ? _currentContext.UserId : null);
-            return new CollectionResponseModel(collection);
+            return new CollectionAccessDetailsResponseModel(collection);
         }
 
-        [HttpPut("{id}")]
-        [HttpPost("{id}")]
-        public async Task<CollectionResponseModel> Put(string orgId, string id, [FromBody] CollectionRequestModel model)
-        {
-            if (!await CanEditCollectionAsync(orgId, id))
-            {
-                throw new NotFoundException();
-            }
+        // If we have a user, fetch the latest collection permission details
+        var collectionWithPermissions = await _collectionRepository.GetByIdWithPermissionsAsync(collection.Id, _currentContext.UserId.Value, false);
 
-            var collection = await GetCollectionAsync(new Guid(id), new Guid(orgId));
-            await _collectionService.SaveAsync(model.ToCollection(collection),
-                model.Groups?.Select(g => g.ToSelectionReadOnly()));
-            return new CollectionResponseModel(collection);
+        return new CollectionAccessDetailsResponseModel(collectionWithPermissions);
+    }
+
+    [HttpPut("{id}")]
+    public async Task<CollectionResponseModel> Put(Guid orgId, Guid id, [FromBody] UpdateCollectionRequestModel model)
+    {
+        var collection = await _collectionRepository.GetByIdAsync(id);
+        var authorized = (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.Update)).Succeeded;
+        if (!authorized)
+        {
+            throw new NotFoundException();
         }
 
-        [HttpPut("{id}/users")]
-        public async Task PutUsers(string orgId, string id, [FromBody] IEnumerable<SelectionReadOnlyRequestModel> model)
+        var groups = model.Groups?.Select(g => g.ToSelectionReadOnly());
+        var users = model.Users?.Select(g => g.ToSelectionReadOnly());
+        await _updateCollectionCommand.UpdateAsync(model.ToCollection(collection), groups, users);
+
+        if (!_currentContext.UserId.HasValue || (_currentContext.GetOrganization(collection.OrganizationId) == null && await _currentContext.ProviderUserForOrgAsync(collection.OrganizationId)))
         {
-            var collection = await GetCollectionAsync(new Guid(id), new Guid(orgId));
-            await _collectionRepository.UpdateUsersAsync(collection.Id, model?.Select(g => g.ToSelectionReadOnly()));
+            return new CollectionAccessDetailsResponseModel(collection);
         }
 
-        [HttpDelete("{id}")]
-        [HttpPost("{id}/delete")]
-        public async Task Delete(string orgId, string id)
-        {
-            if (!await CanDeleteCollectionAsync(orgId, id))
-            {
-                throw new NotFoundException();
-            }
+        // If we have a user, fetch the latest collection permission details
+        var collectionWithPermissions = await _collectionRepository.GetByIdWithPermissionsAsync(collection.Id, _currentContext.UserId.Value, false);
 
-            var collection = await GetCollectionAsync(new Guid(id), new Guid(orgId));
-            await _collectionService.DeleteAsync(collection);
+        return new CollectionAccessDetailsResponseModel(collectionWithPermissions);
+    }
+
+    [HttpPost("{id}")]
+    [Obsolete("This endpoint is deprecated. Use PUT /{id} instead.")]
+    public async Task<CollectionResponseModel> PostPut(Guid orgId, Guid id, [FromBody] UpdateCollectionRequestModel model)
+    {
+        return await Put(orgId, id, model);
+    }
+
+    [HttpPost("bulk-access")]
+    public async Task PostBulkCollectionAccess(Guid orgId, [FromBody] BulkCollectionAccessRequestModel model)
+    {
+        var collections = await _collectionRepository.GetManyByManyIdsAsync(model.CollectionIds);
+        if (collections.Count(c => c.OrganizationId == orgId) != model.CollectionIds.Count())
+        {
+            throw new NotFoundException("One or more collections not found.");
         }
 
-        [HttpDelete("{id}/user/{orgUserId}")]
-        [HttpPost("{id}/delete-user/{orgUserId}")]
-        public async Task Delete(string orgId, string id, string orgUserId)
+        var result = await _authorizationService.AuthorizeAsync(User, collections,
+            new[] { BulkCollectionOperations.ModifyUserAccess, BulkCollectionOperations.ModifyGroupAccess });
+
+        if (!result.Succeeded)
         {
-            var collection = await GetCollectionAsync(new Guid(id), new Guid(orgId));
-            await _collectionService.DeleteUserAsync(collection, new Guid(orgUserId));
+            throw new NotFoundException();
         }
 
-        private async Task<Collection> GetCollectionAsync(Guid id, Guid orgId)
+        await _bulkAddCollectionAccessCommand.AddAccessAsync(
+            collections,
+            model.Users?.Select(u => u.ToSelectionReadOnly()).ToList(),
+            model.Groups?.Select(g => g.ToSelectionReadOnly()).ToList());
+    }
+
+    [HttpDelete("{id}")]
+    public async Task Delete(Guid orgId, Guid id)
+    {
+        var collection = await _collectionRepository.GetByIdAsync(id);
+        var authorized = (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.Delete)).Succeeded;
+        if (!authorized)
         {
-            Collection collection = default;
-            if (await _currentContext.ViewAllCollections(orgId))
-            {
-                collection = await _collectionRepository.GetByIdAsync(id);
-            }
-            else if (await _currentContext.ViewAssignedCollections(orgId))
-            {
-                collection = await _collectionRepository.GetByIdAsync(id, _currentContext.UserId.Value);
-            }
-
-            if (collection == null || collection.OrganizationId != orgId)
-            {
-                throw new NotFoundException();
-            }
-
-            return collection;
+            throw new NotFoundException();
         }
 
+        await _deleteCollectionCommand.DeleteAsync(collection);
+    }
 
-        public async Task<bool> CanCreateCollection(Guid orgId, Guid collectionId)
+    [HttpPost("{id}/delete")]
+    [Obsolete("This endpoint is deprecated. Use DELETE /{id} instead.")]
+    public async Task PostDelete(Guid orgId, Guid id)
+    {
+        await Delete(orgId, id);
+    }
+
+    [HttpDelete("")]
+    public async Task DeleteMany(Guid orgId, [FromBody] CollectionBulkDeleteRequestModel model)
+    {
+        var collections = await _collectionRepository.GetManyByManyIdsAsync(model.Ids);
+        var result = await _authorizationService.AuthorizeAsync(User, collections, BulkCollectionOperations.Delete);
+        if (!result.Succeeded)
         {
-            if (collectionId != default)
-            {
-                return false;
-            }
-
-            return await _currentContext.CreateNewCollections(orgId);
+            throw new NotFoundException();
         }
 
-        private async Task<bool> CanEditCollectionAsync(string orgId, string collectionId) =>
-            await CanEditCollectionAsync(new Guid(orgId), new Guid(collectionId));
-        private async Task<bool> CanEditCollectionAsync(Guid orgId, Guid collectionId)
-        {
-            if (collectionId == default)
-            {
-                return false;
-            }
+        await _deleteCollectionCommand.DeleteManyAsync(collections);
+    }
 
-            if (await _currentContext.EditAnyCollection(orgId))
-            {
-                return true;
-            }
-
-            if (await _currentContext.EditAssignedCollections(orgId))
-            {
-                return null != _collectionRepository.GetByIdAsync(collectionId, _currentContext.UserId.Value);
-            }
-
-            return false;
-        }
-
-        private async Task<bool> CanDeleteCollectionAsync(string orgId, string collectionId) =>
-            await CanDeleteCollectionAsync(new Guid(orgId), new Guid(collectionId));
-        private async Task<bool> CanDeleteCollectionAsync(Guid orgId, Guid collectionId)
-        {
-            if (collectionId == default)
-            {
-                return false;
-            }
-
-            if (await _currentContext.DeleteAnyCollection(orgId))
-            {
-                return true;
-            }
-
-            if (await _currentContext.DeleteAssignedCollections(orgId))
-            {
-                return null != _collectionRepository.GetByIdAsync(collectionId, _currentContext.UserId.Value);
-            }
-
-            return false;
-        }
-
-        private async Task<bool> CanViewCollectionAsync(string orgId, string collectionId) =>
-            await CanViewCollectionAsync(new Guid(orgId), new Guid(collectionId));
-        private async Task<bool> CanViewCollectionAsync(Guid orgId, Guid collectionId)
-        {
-            if (collectionId == default)
-            {
-                return false;
-            }
-
-            if (await _currentContext.ViewAllCollections(orgId))
-            {
-                return true;
-            }
-
-            if (await _currentContext.ViewAssignedCollections(orgId))
-            {
-                return null != _collectionRepository.GetByIdAsync(collectionId, _currentContext.UserId.Value);
-            }
-
-            return false;
-        }
-
-        private async Task<bool> ViewAtLeastOneCollectionAsync(Guid orgId)
-        {
-            return await _currentContext.ViewAllCollections(orgId) || await _currentContext.ViewAssignedCollections(orgId);
-        }
+    [HttpPost("delete")]
+    [Obsolete("This endpoint is deprecated. Use DELETE / instead.")]
+    public async Task PostDeleteMany(Guid orgId, [FromBody] CollectionBulkDeleteRequestModel model)
+    {
+        await DeleteMany(orgId, model);
     }
 }

@@ -1,36 +1,32 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using Bit.Core.Enums.Provider;
-using Bit.Core.Models.Data;
+﻿using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Models.Data.Provider;
 
-namespace Bit.Infrastructure.EntityFramework.Repositories.Queries
+namespace Bit.Infrastructure.EntityFramework.Repositories.Queries;
+
+public class UserReadPublicKeysByProviderUserIdsQuery : IQuery<ProviderUserPublicKey>
 {
-    public class UserReadPublicKeysByProviderUserIdsQuery : IQuery<ProviderUserPublicKey>
+    private readonly Guid _providerId;
+    private readonly IEnumerable<Guid> _ids;
+
+    public UserReadPublicKeysByProviderUserIdsQuery(Guid providerId, IEnumerable<Guid> Ids)
     {
-        private readonly Guid _providerId;
-        private readonly IEnumerable<Guid> _ids;
+        _providerId = providerId;
+        _ids = Ids;
+    }
 
-        public UserReadPublicKeysByProviderUserIdsQuery(Guid providerId, IEnumerable<Guid> Ids)
+    public virtual IQueryable<ProviderUserPublicKey> Run(DatabaseContext dbContext)
+    {
+        var query = from pu in dbContext.ProviderUsers
+                    join u in dbContext.Users
+                        on pu.UserId equals u.Id
+                    where _ids.Contains(pu.Id) &&
+                        pu.Status == ProviderUserStatusType.Accepted &&
+                        pu.ProviderId == _providerId
+                    select new { pu, u };
+        return query.Select(x => new ProviderUserPublicKey
         {
-            _providerId = providerId;
-            _ids = Ids;
-        }
-
-        public virtual IQueryable<ProviderUserPublicKey> Run(DatabaseContext dbContext)
-        {
-            var query = from pu in dbContext.ProviderUsers
-                        join u in dbContext.Users
-                            on pu.UserId equals u.Id
-                        where _ids.Contains(pu.Id) &&
-                            pu.Status == ProviderUserStatusType.Accepted &&
-                            pu.ProviderId == _providerId
-                        select new { pu, u };
-            return query.Select(x => new ProviderUserPublicKey
-            {
-                Id = x.pu.Id,
-                PublicKey = x.u.PublicKey,
-            });
-        }
+            Id = x.pu.Id,
+            PublicKey = x.u.PublicKey,
+        });
     }
 }

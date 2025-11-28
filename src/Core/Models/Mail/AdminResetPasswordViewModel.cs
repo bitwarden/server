@@ -1,8 +1,10 @@
-﻿namespace Bit.Core.Models.Mail
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+namespace Bit.Core.Models.Mail;
+
+public class AdminResetPasswordViewModel : BaseMailModel
 {
-    public class AdminResetPasswordViewModel : BaseMailModel
-    {
-        public string UserName { get; set; }
-        public string OrgName { get; set; }
-    }
+    public string UserName { get; set; }
+    public string OrgName { get; set; }
 }

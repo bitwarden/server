@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "Identity.IntegrationTest": {
+      "commandName": "Project",
+      "applicationUrl": "https://localhost:55088;http://localhost:55089",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

@@ -1,14 +1,11 @@
-﻿using System.Collections.Generic;
+﻿namespace Bit.Core.Models.Mail;
 
-namespace Bit.Core.Models.Mail
+public interface IMailQueueMessage
 {
-    public interface IMailQueueMessage
-    {
-        string Subject { get; set; }
-        IEnumerable<string> ToEmails { get; set; }
-        IEnumerable<string> BccEmails { get; set; }
-        string Category { get; set; }
-        string TemplateName { get; set; }
-        dynamic Model { get; set; }
-    }
+    string Subject { get; set; }
+    IEnumerable<string> ToEmails { get; set; }
+    IEnumerable<string> BccEmails { get; set; }
+    string Category { get; set; }
+    string TemplateName { get; set; }
+    object Model { get; set; }
 }

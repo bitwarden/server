@@ -1,71 +1,122 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using Bit.Api.AdminConsole.Jobs;
+using Bit.Api.Auth.Jobs;
 using Bit.Core.Jobs;
 using Bit.Core.Settings;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Quartz;
 
-namespace Bit.Api.Jobs
+namespace Bit.Api.Jobs;
+
+public class JobsHostedService : BaseJobsHostedService
 {
-    public class JobsHostedService : BaseJobsHostedService
+    public JobsHostedService(
+        GlobalSettings globalSettings,
+        IServiceProvider serviceProvider,
+        ILogger<JobsHostedService> logger,
+        ILogger<JobListener> listenerLogger)
+        : base(globalSettings, serviceProvider, logger, listenerLogger) { }
+
+    public override async Task StartAsync(CancellationToken cancellationToken)
     {
-        public JobsHostedService(
-            GlobalSettings globalSettings,
-            IServiceProvider serviceProvider,
-            ILogger<JobsHostedService> logger,
-            ILogger<JobListener> listenerLogger)
-            : base(globalSettings, serviceProvider, logger, listenerLogger) { }
+        var everyTopOfTheHourTrigger = TriggerBuilder.Create()
+            .WithIdentity("EveryTopOfTheHourTrigger")
+            .StartNow()
+            .WithCronSchedule("0 0 * * * ?")
+            .Build();
+        var emergencyAccessNotificationTrigger = TriggerBuilder.Create()
+            .WithIdentity("EmergencyAccessNotificationTrigger")
+            .StartNow()
+            .WithCronSchedule("0 0 * * * ?")
+            .Build();
+        var emergencyAccessTimeoutTrigger = TriggerBuilder.Create()
+            .WithIdentity("EmergencyAccessTimeoutTrigger")
+            .StartNow()
+            .WithCronSchedule("0 0 * * * ?")
+            .Build();
+        var everyTopOfTheSixthHourTrigger = TriggerBuilder.Create()
+            .WithIdentity("EveryTopOfTheSixthHourTrigger")
+            .StartNow()
+            .WithCronSchedule("0 0 */6 * * ?")
+            .Build();
+        var everyTwelfthHourAndThirtyMinutesTrigger = TriggerBuilder.Create()
+            .WithIdentity("EveryTwelfthHourAndThirtyMinutesTrigger")
+            .StartNow()
+            .WithCronSchedule("0 30 */12 * * ?")
+            .Build();
+        var smTrashCleanupTrigger = TriggerBuilder.Create()
+            .WithIdentity("SMTrashCleanupTrigger")
+            .StartNow()
+            .WithCronSchedule("0 0 22 * * ?")
+            .Build();
+        var randomDailySponsorshipSyncTrigger = TriggerBuilder.Create()
+            .WithIdentity("RandomDailySponsorshipSyncTrigger")
+            .StartAt(DateBuilder.FutureDate(new Random().Next(24), IntervalUnit.Hour))
+            .WithSimpleSchedule(x => x
+                .WithIntervalInHours(24)
+                .RepeatForever())
+            .Build();
+        var validateOrganizationDomainTrigger = TriggerBuilder.Create()
+            .WithIdentity("ValidateOrganizationDomainTrigger")
+            .StartNow()
+            .WithCronSchedule("0 0 * * * ?")
+            .Build();
+        var updatePhishingDomainsTrigger = TriggerBuilder.Create()
+            .WithIdentity("UpdatePhishingDomainsTrigger")
+            .StartNow()
+            .WithSimpleSchedule(x => x
+                .WithIntervalInHours(24)
+                .RepeatForever())
+            .Build();
+        var updateOrgSubscriptionsTrigger = TriggerBuilder.Create()
+            .WithIdentity("UpdateOrgSubscriptionsTrigger")
+            .StartNow()
+            .WithCronSchedule("0 0 */3 * * ?") // top of every 3rd hour
+            .Build();
 
-        public override async Task StartAsync(CancellationToken cancellationToken)
+
+        var jobs = new List<Tuple<Type, ITrigger>>
         {
-            var everyTopOfTheHourTrigger = TriggerBuilder.Create()
-                .WithIdentity("EveryTopOfTheHourTrigger")
-                .StartNow()
-                .WithCronSchedule("0 0 * * * ?")
-                .Build();
-            var emergencyAccessNotificationTrigger = TriggerBuilder.Create()
-                .WithIdentity("EmergencyAccessNotificationTrigger")
-                .StartNow()
-                .WithCronSchedule("0 0 * * * ?")
-                .Build();
-            var emergencyAccessTimeoutTrigger = TriggerBuilder.Create()
-                .WithIdentity("EmergencyAccessTimeoutTrigger")
-                .StartNow()
-                .WithCronSchedule("0 0 * * * ?")
-                .Build();
-            var everyTopOfTheSixthHourTrigger = TriggerBuilder.Create()
-                .WithIdentity("EveryTopOfTheSixthHourTrigger")
-                .StartNow()
-                .WithCronSchedule("0 0 */6 * * ?")
-                .Build();
-            var everyTwelfthHourAndThirtyMinutesTrigger = TriggerBuilder.Create()
-                .WithIdentity("EveryTwelfthHourAndThirtyMinutesTrigger")
-                .StartNow()
-                .WithCronSchedule("0 30 */12 * * ?")
-                .Build();
+            new Tuple<Type, ITrigger>(typeof(AliveJob), everyTopOfTheHourTrigger),
+            new Tuple<Type, ITrigger>(typeof(EmergencyAccessNotificationJob), emergencyAccessNotificationTrigger),
+            new Tuple<Type, ITrigger>(typeof(EmergencyAccessTimeoutJob), emergencyAccessTimeoutTrigger),
+            new Tuple<Type, ITrigger>(typeof(ValidateUsersJob), everyTopOfTheSixthHourTrigger),
+            new Tuple<Type, ITrigger>(typeof(ValidateOrganizationsJob), everyTwelfthHourAndThirtyMinutesTrigger),
+            new Tuple<Type, ITrigger>(typeof(ValidateOrganizationDomainJob), validateOrganizationDomainTrigger),
+            new Tuple<Type, ITrigger>(typeof(UpdatePhishingDomainsJob), updatePhishingDomainsTrigger),
+            new (typeof(OrganizationSubscriptionUpdateJob), updateOrgSubscriptionsTrigger),
+        };
 
-            Jobs = new List<Tuple<Type, ITrigger>>
-            {
-                new Tuple<Type, ITrigger>(typeof(AliveJob), everyTopOfTheHourTrigger),
-                new Tuple<Type, ITrigger>(typeof(EmergencyAccessNotificationJob), emergencyAccessNotificationTrigger),
-                new Tuple<Type, ITrigger>(typeof(EmergencyAccessTimeoutJob), emergencyAccessTimeoutTrigger),
-                new Tuple<Type, ITrigger>(typeof(ValidateUsersJob), everyTopOfTheSixthHourTrigger),
-                new Tuple<Type, ITrigger>(typeof(ValidateOrganizationsJob), everyTwelfthHourAndThirtyMinutesTrigger)
-            };
-
-            await base.StartAsync(cancellationToken);
+        if (_globalSettings.SelfHosted && _globalSettings.EnableCloudCommunication)
+        {
+            jobs.Add(new Tuple<Type, ITrigger>(typeof(SelfHostedSponsorshipSyncJob), randomDailySponsorshipSyncTrigger));
         }
 
-        public static void AddJobsServices(IServiceCollection services)
+#if !OSS
+        jobs.Add(new Tuple<Type, ITrigger>(typeof(EmptySecretsManagerTrashJob), smTrashCleanupTrigger));
+#endif
+
+        Jobs = jobs;
+
+        await base.StartAsync(cancellationToken);
+    }
+
+    public static void AddJobsServices(IServiceCollection services, bool selfHosted)
+    {
+        if (selfHosted)
         {
-            services.AddTransient<AliveJob>();
-            services.AddTransient<EmergencyAccessNotificationJob>();
-            services.AddTransient<EmergencyAccessTimeoutJob>();
-            services.AddTransient<ValidateUsersJob>();
-            services.AddTransient<ValidateOrganizationsJob>();
+            services.AddTransient<SelfHostedSponsorshipSyncJob>();
         }
+        services.AddTransient<AliveJob>();
+        services.AddTransient<EmergencyAccessNotificationJob>();
+        services.AddTransient<EmergencyAccessTimeoutJob>();
+        services.AddTransient<ValidateUsersJob>();
+        services.AddTransient<ValidateOrganizationsJob>();
+        services.AddTransient<ValidateOrganizationDomainJob>();
+        services.AddTransient<UpdatePhishingDomainsJob>();
+        services.AddTransient<OrganizationSubscriptionUpdateJob>();
+    }
+
+    public static void AddCommercialSecretsManagerJobServices(IServiceCollection services)
+    {
+        services.AddTransient<EmptySecretsManagerTrashJob>();
     }
 }

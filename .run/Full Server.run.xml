@@ -1,0 +1,14 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Full Server" type="CompoundRunConfigurationType">
+    <toRun name="Admin" type="LaunchSettings" />
+    <toRun name="Api" type="LaunchSettings" />
+    <toRun name="Billing" type="LaunchSettings" />
+    <toRun name="Events" type="LaunchSettings" />
+    <toRun name="EventsProcessor" type="LaunchSettings" />
+    <toRun name="Icons" type="LaunchSettings" />
+    <toRun name="Identity" type="LaunchSettings" />
+    <toRun name="Notifications" type="LaunchSettings" />
+    <toRun name="Sso" type="LaunchSettings" />
+    <method v="2" />
+  </configuration>
+</component>

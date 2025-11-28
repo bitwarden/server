@@ -1,5 +1,6 @@
 ﻿CREATE PROCEDURE [dbo].[Organization_DeleteById]
     @Id UNIQUEIDENTIFIER
+WITH RECOMPILE
 AS
 BEGIN
     SET NOCOUNT ON
@@ -27,6 +28,12 @@ BEGIN
 
     DELETE
     FROM
+        [dbo].[AuthRequest]
+    WHERE
+        [OrganizationId] = @Id
+
+    DELETE
+    FROM
         [dbo].[SsoUser]
     WHERE
         [OrganizationId] = @Id
@@ -38,17 +45,33 @@ BEGIN
         [OrganizationId] = @Id
 
     DELETE CU
-    FROM 
+    FROM
         [dbo].[CollectionUser] CU
-    INNER JOIN 
+    INNER JOIN
         [dbo].[OrganizationUser] OU ON [CU].[OrganizationUserId] = [OU].[Id]
-    WHERE 
+    WHERE
+        [OU].[OrganizationId] = @Id
+
+    DELETE AP
+    FROM
+        [dbo].[AccessPolicy] AP
+    INNER JOIN
+        [dbo].[OrganizationUser] OU ON [AP].[OrganizationUserId] = [OU].[Id]
+    WHERE
+        [OU].[OrganizationId] = @Id
+
+    DELETE GU
+    FROM
+        [dbo].[GroupUser] GU
+    INNER JOIN
+        [dbo].[OrganizationUser] OU ON [GU].[OrganizationUserId] = [OU].[Id]
+    WHERE
         [OU].[OrganizationId] = @Id
 
     DELETE
-    FROM 
+    FROM
         [dbo].[OrganizationUser]
-    WHERE 
+    WHERE
         [OrganizationId] = @Id
 
     DELETE
@@ -57,7 +80,76 @@ BEGIN
     WHERE
         [OrganizationId] = @Id
 
-    EXEC[dbo].[OrganizationSponsorship_OrganizationDeleted] @Id
+    EXEC [dbo].[OrganizationApiKey_OrganizationDeleted] @Id
+    EXEC [dbo].[OrganizationConnection_OrganizationDeleted] @Id
+    EXEC [dbo].[OrganizationSponsorship_OrganizationDeleted] @Id
+    EXEC [dbo].[OrganizationDomain_OrganizationDeleted] @Id
+    EXEC [dbo].[OrganizationIntegration_OrganizationDeleted] @Id
+
+    DELETE
+    FROM
+        [dbo].[Project]
+    WHERE
+        [OrganizationId] = @Id
+
+    DELETE
+    FROM
+        [dbo].[Secret]
+    WHERE
+        [OrganizationId] = @Id
+
+    DELETE AK
+    FROM
+        [dbo].[ApiKey] AK
+    INNER JOIN
+        [dbo].[ServiceAccount] SA ON [AK].[ServiceAccountId] = [SA].[Id]
+    WHERE
+        [SA].[OrganizationId] = @Id
+
+    DELETE AP
+    FROM
+        [dbo].[AccessPolicy] AP
+    INNER JOIN
+        [dbo].[ServiceAccount] SA ON [AP].[GrantedServiceAccountId] = [SA].[Id]
+    WHERE
+        [SA].[OrganizationId] = @Id
+
+    DELETE
+    FROM
+        [dbo].[ServiceAccount]
+    WHERE
+        [OrganizationId] = @Id
+
+    -- Delete Notification Status
+    DELETE
+        NS
+    FROM
+        [dbo].[NotificationStatus] NS
+    INNER JOIN
+        [dbo].[Notification] N ON N.[Id] = NS.[NotificationId]
+    WHERE
+        N.[OrganizationId] = @Id
+
+    -- Delete Notification
+    DELETE
+    FROM
+        [dbo].[Notification]
+    WHERE
+        [OrganizationId] = @Id
+
+    -- Delete Organization Application
+    DELETE
+    FROM
+        [dbo].[OrganizationApplication]
+    WHERE
+        [OrganizationId] = @Id
+
+    -- Delete Organization Report
+    DELETE
+    FROM
+        [dbo].[OrganizationReport]
+    WHERE
+        [OrganizationId] = @Id
 
     DELETE
     FROM

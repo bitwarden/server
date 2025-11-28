@@ -1,25 +1,25 @@
-﻿using System.Collections.Generic;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
 using AutoMapper;
+using Bit.Infrastructure.EntityFramework.Auth.Models;
+using Bit.Infrastructure.EntityFramework.Vault.Models;
 
-namespace Bit.Infrastructure.EntityFramework.Models
+namespace Bit.Infrastructure.EntityFramework.Models;
+
+public class User : Core.Entities.User
 {
-    public class User : Core.Entities.User
-    {
-        public virtual ICollection<Cipher> Ciphers { get; set; }
-        public virtual ICollection<Folder> Folders { get; set; }
-        public virtual ICollection<CollectionUser> CollectionUsers { get; set; }
-        public virtual ICollection<GroupUser> GroupUsers { get; set; }
-        public virtual ICollection<OrganizationUser> OrganizationUsers { get; set; }
-        public virtual ICollection<SsoUser> SsoUsers { get; set; }
-        public virtual ICollection<Transaction> Transactions { get; set; }
-        public virtual ICollection<U2f> U2fs { get; set; }
-    }
+    public virtual ICollection<Cipher> Ciphers { get; set; }
+    public virtual ICollection<Folder> Folders { get; set; }
+    public virtual ICollection<OrganizationUser> OrganizationUsers { get; set; }
+    public virtual ICollection<SsoUser> SsoUsers { get; set; }
+    public virtual ICollection<Transaction> Transactions { get; set; }
+}
 
-    public class UserMapperProfile : Profile
+public class UserMapperProfile : Profile
+{
+    public UserMapperProfile()
     {
-        public UserMapperProfile()
-        {
-            CreateMap<Core.Entities.User, User>().ReverseMap();
-        }
+        CreateMap<Core.Entities.User, User>().ReverseMap();
     }
 }

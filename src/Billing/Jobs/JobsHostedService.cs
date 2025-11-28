@@ -1,51 +1,84 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using Bit.Core.Exceptions;
 using Bit.Core.Jobs;
 using Bit.Core.Settings;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Quartz;
 
-namespace Bit.Billing.Jobs
+namespace Bit.Billing.Jobs;
+
+public class JobsHostedService(
+    GlobalSettings globalSettings,
+    IServiceProvider serviceProvider,
+    ILogger<JobsHostedService> logger,
+    ILogger<JobListener> listenerLogger,
+    ISchedulerFactory schedulerFactory)
+    : BaseJobsHostedService(globalSettings, serviceProvider, logger, listenerLogger)
 {
-    public class JobsHostedService : BaseJobsHostedService
+    private List<JobKey> AdHocJobKeys { get; } = [];
+    private IScheduler? _adHocScheduler;
+
+    public override async Task StartAsync(CancellationToken cancellationToken)
     {
-        public JobsHostedService(
-            GlobalSettings globalSettings,
-            IServiceProvider serviceProvider,
-            ILogger<JobsHostedService> logger,
-            ILogger<JobListener> listenerLogger)
-            : base(globalSettings, serviceProvider, logger, listenerLogger) { }
-
-        public override async Task StartAsync(CancellationToken cancellationToken)
+        Jobs = new List<Tuple<Type, ITrigger>>
         {
-            var timeZone = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ?
-                   TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time") :
-                   TimeZoneInfo.FindSystemTimeZoneById("America/New_York");
-            if (_globalSettings.SelfHosted)
-            {
-                timeZone = TimeZoneInfo.Local;
-            }
+            new(typeof(AliveJob), AliveJob.GetTrigger()),
+            new(typeof(ReconcileAdditionalStorageJob), ReconcileAdditionalStorageJob.GetTrigger())
+        };
 
-            var everyDayAtNinePmTrigger = TriggerBuilder.Create()
-                .WithIdentity("EveryDayAtNinePmTrigger")
-                .StartNow()
-                .WithCronSchedule("0 0 21 * * ?", x => x.InTimeZone(timeZone))
-                .Build();
+        await base.StartAsync(cancellationToken);
+    }
 
-            Jobs = new List<Tuple<Type, ITrigger>>();
+    public static void AddJobsServices(IServiceCollection services)
+    {
+        services.AddTransient<AliveJob>();
+        services.AddTransient<SubscriptionCancellationJob>();
+        services.AddTransient<ReconcileAdditionalStorageJob>();
+        // add this service as a singleton so we can inject it where needed
+        services.AddSingleton<JobsHostedService>();
+        services.AddHostedService(sp => sp.GetRequiredService<JobsHostedService>());
+    }
 
-            // Add jobs here
-
-            await base.StartAsync(cancellationToken);
+    public async Task InterruptAdHocJobAsync<T>(CancellationToken cancellationToken = default) where T : class, IJob
+    {
+        if (_adHocScheduler == null)
+        {
+            throw new InvalidOperationException("AdHocScheduler is null, cannot interrupt ad-hoc job.");
         }
 
-        public static void AddJobsServices(IServiceCollection services)
+        var jobKey = AdHocJobKeys.FirstOrDefault(j => j.Name == typeof(T).ToString());
+        if (jobKey == null)
         {
-            // Register jobs here
+            throw new NotFoundException($"Cannot find job key: {typeof(T)}, not running?");
         }
+        logger.LogInformation("CANCELLING ad-hoc job with key: {JobKey}", jobKey);
+        AdHocJobKeys.Remove(jobKey);
+        await _adHocScheduler.Interrupt(jobKey, cancellationToken);
+    }
+
+    public async Task RunJobAdHocAsync<T>(CancellationToken cancellationToken = default) where T : class, IJob
+    {
+        _adHocScheduler ??= await schedulerFactory.GetScheduler(cancellationToken);
+
+        var jobKey = new JobKey(typeof(T).ToString());
+
+        var currentlyExecuting = await _adHocScheduler.GetCurrentlyExecutingJobs(cancellationToken);
+        if (currentlyExecuting.Any(j => j.JobDetail.Key.Equals(jobKey)))
+        {
+            throw new InvalidOperationException($"Job {jobKey} is already running");
+        }
+
+        AdHocJobKeys.Add(jobKey);
+
+        var job = JobBuilder.Create<T>()
+            .WithIdentity(jobKey)
+            .Build();
+
+        var trigger = TriggerBuilder.Create()
+            .WithIdentity(typeof(T).ToString())
+            .StartNow()
+            .Build();
+
+        logger.LogInformation("Scheduling ad-hoc job with key: {JobKey}", jobKey);
+
+        await _adHocScheduler.ScheduleJob(job, trigger, cancellationToken);
     }
 }

@@ -27,11 +27,24 @@
     @LicenseKey VARCHAR(100),
     @Kdf TINYINT,
     @KdfIterations INT,
+    @KdfMemory INT = NULL,
+    @KdfParallelism INT = NULL,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
     @ApiKey VARCHAR(30),
     @ForcePasswordReset BIT = 0,
-    @UsesKeyConnector BIT = 0
+    @UsesKeyConnector BIT = 0,
+    @FailedLoginCount INT = 0,
+    @LastFailedLoginDate DATETIME2(7),
+    @AvatarColor VARCHAR(7) = NULL,
+    @LastPasswordChangeDate DATETIME2(7) = NULL,
+    @LastKdfChangeDate DATETIME2(7) = NULL,
+    @LastKeyRotationDate DATETIME2(7) = NULL,
+    @LastEmailChangeDate DATETIME2(7) = NULL,
+    @VerifyDevices BIT = 1,
+    @SecurityState VARCHAR(MAX) = NULL,
+    @SecurityVersion INT = NULL,
+    @SignedPublicKey VARCHAR(MAX) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -70,7 +83,20 @@ BEGIN
         [RevisionDate],
         [ApiKey],
         [ForcePasswordReset],
-        [UsesKeyConnector]
+        [UsesKeyConnector],
+        [FailedLoginCount],
+        [LastFailedLoginDate],
+        [AvatarColor],
+        [KdfMemory],
+        [KdfParallelism],
+        [LastPasswordChangeDate],
+        [LastKdfChangeDate],
+        [LastKeyRotationDate],
+        [LastEmailChangeDate],
+        [VerifyDevices],
+        [SecurityState],
+        [SecurityVersion],
+        [SignedPublicKey]
     )
     VALUES
     (
@@ -106,6 +132,19 @@ BEGIN
         @RevisionDate,
         @ApiKey,
         @ForcePasswordReset,
-        @UsesKeyConnector
+        @UsesKeyConnector,
+        @FailedLoginCount,
+        @LastFailedLoginDate,
+        @AvatarColor,
+        @KdfMemory,
+        @KdfParallelism,
+        @LastPasswordChangeDate,
+        @LastKdfChangeDate,
+        @LastKeyRotationDate,
+        @LastEmailChangeDate,
+        @VerifyDevices,
+        @SecurityState,
+        @SecurityVersion,
+        @SignedPublicKey
     )
 END

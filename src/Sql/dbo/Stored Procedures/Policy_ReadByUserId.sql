@@ -15,5 +15,4 @@ BEGIN
     WHERE
         OU.[UserId] = @UserId
         AND OU.[Status] = 2 -- 2 = Confirmed
-        AND O.[Enabled] = 1
 END

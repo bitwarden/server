@@ -1,110 +1,205 @@
-﻿using System;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
 using System.Data;
-using System.Data.SqlClient;
 using System.Reflection;
-using System.Threading;
+using System.Text;
 using Bit.Core;
 using DbUp;
+using DbUp.Helpers;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 
-namespace Bit.Migrator
+namespace Bit.Migrator;
+
+public class DbMigrator
 {
-    public class DbMigrator
+    private readonly string _connectionString;
+    private readonly ILogger<DbMigrator> _logger;
+    private readonly bool _skipDatabasePreparation;
+    private readonly bool _noTransactionMigration;
+
+    public DbMigrator(string connectionString, ILogger<DbMigrator> logger = null,
+       bool skipDatabasePreparation = false, bool noTransactionMigration = false)
     {
-        private readonly string _connectionString;
-        private readonly ILogger<DbMigrator> _logger;
-        private readonly string _masterConnectionString;
+        _connectionString = connectionString;
+        _logger = logger ?? CreateLogger();
+        _skipDatabasePreparation = skipDatabasePreparation;
+        _noTransactionMigration = noTransactionMigration;
+    }
 
-        public DbMigrator(string connectionString, ILogger<DbMigrator> logger)
+    public bool MigrateMsSqlDatabaseWithRetries(bool enableLogging = true,
+        bool repeatable = false,
+        string folderName = MigratorConstants.DefaultMigrationsFolderName,
+        bool dryRun = false,
+        CancellationToken cancellationToken = default)
+    {
+        var attempt = 1;
+
+        while (attempt < 10)
         {
-            _connectionString = connectionString;
-            _logger = logger;
-            _masterConnectionString = new SqlConnectionStringBuilder(connectionString)
+            try
             {
-                InitialCatalog = "master"
-            }.ConnectionString;
-        }
-
-        public bool MigrateMsSqlDatabase(bool enableLogging = true,
-            CancellationToken cancellationToken = default(CancellationToken))
-        {
-            if (enableLogging && _logger != null)
-            {
-                _logger.LogInformation(Constants.BypassFiltersEventId, "Migrating database.");
-            }
-
-            using (var connection = new SqlConnection(_masterConnectionString))
-            {
-                var databaseName = new SqlConnectionStringBuilder(_connectionString).InitialCatalog;
-                if (string.IsNullOrWhiteSpace(databaseName))
+                if (!_skipDatabasePreparation)
                 {
-                    databaseName = "vault";
+                    PrepareDatabase(cancellationToken);
                 }
 
-                var databaseNameQuoted = new SqlCommandBuilder().QuoteIdentifier(databaseName);
-                var command = new SqlCommand(
-                    "IF ((SELECT COUNT(1) FROM sys.databases WHERE [name] = @DatabaseName) = 0) " +
-                    "CREATE DATABASE " + databaseNameQuoted + ";", connection);
-                command.Parameters.Add("@DatabaseName", SqlDbType.VarChar).Value = databaseName;
-                command.Connection.Open();
-                command.ExecuteNonQuery();
-
-                command.CommandText = "IF ((SELECT DATABASEPROPERTYEX([name], 'IsAutoClose') " +
-                    "FROM sys.databases WHERE [name] = @DatabaseName) = 1) " +
-                    "ALTER DATABASE " + databaseNameQuoted + " SET AUTO_CLOSE OFF;";
-                command.ExecuteNonQuery();
+                var success = MigrateDatabase(enableLogging, repeatable, folderName, dryRun, cancellationToken);
+                return success;
             }
-
-            cancellationToken.ThrowIfCancellationRequested();
-            using (var connection = new SqlConnection(_connectionString))
+            catch (SqlException ex)
             {
-                // Rename old migration scripts to new namespace.
-                var command = new SqlCommand(
-                    "IF OBJECT_ID('Migration','U') IS NOT NULL " +
-                    "UPDATE [dbo].[Migration] SET " +
-                    "[ScriptName] = REPLACE([ScriptName], 'Bit.Setup.', 'Bit.Migrator.');", connection);
-                command.Connection.Open();
-                command.ExecuteNonQuery();
-            }
-
-            cancellationToken.ThrowIfCancellationRequested();
-            var builder = DeployChanges.To
-                .SqlDatabase(_connectionString)
-                .JournalToSqlTable("dbo", "Migration")
-                .WithScriptsAndCodeEmbeddedInAssembly(Assembly.GetExecutingAssembly(),
-                    s => s.Contains($".DbScripts.") && !s.Contains(".Archive."))
-                .WithTransaction()
-                .WithExecutionTimeout(new TimeSpan(0, 5, 0));
-
-            if (enableLogging)
-            {
-                if (_logger != null)
+                if (ex.Message.Contains("Server is in script upgrade mode."))
                 {
-                    builder.LogTo(new DbUpLogger(_logger));
+                    attempt++;
+                    _logger.LogInformation("Database is in script upgrade mode, trying again (attempt #{Attempt}).", attempt);
+                    Thread.Sleep(20000);
                 }
                 else
                 {
-                    builder.LogToConsole();
+                    throw;
                 }
             }
-
-            var upgrader = builder.Build();
-            var result = upgrader.PerformUpgrade();
-
-            if (enableLogging && _logger != null)
-            {
-                if (result.Successful)
-                {
-                    _logger.LogInformation(Constants.BypassFiltersEventId, "Migration successful.");
-                }
-                else
-                {
-                    _logger.LogError(Constants.BypassFiltersEventId, result.Error, "Migration failed.");
-                }
-            }
-
-            cancellationToken.ThrowIfCancellationRequested();
-            return result.Successful;
         }
+        return false;
+    }
+
+    private void PrepareDatabase(CancellationToken cancellationToken = default)
+    {
+        var masterConnectionString = new SqlConnectionStringBuilder(_connectionString)
+        {
+            InitialCatalog = "master"
+        }.ConnectionString;
+
+        using (var connection = new SqlConnection(masterConnectionString))
+        {
+            var databaseName = new SqlConnectionStringBuilder(_connectionString).InitialCatalog;
+
+            if (string.IsNullOrWhiteSpace(databaseName))
+            {
+                databaseName = "vault";
+            }
+
+            var databaseNameQuoted = new SqlCommandBuilder().QuoteIdentifier(databaseName);
+            var command = new SqlCommand(
+                "IF ((SELECT COUNT(1) FROM sys.databases WHERE [name] = @DatabaseName) = 0) " +
+                "CREATE DATABASE " + databaseNameQuoted + ";", connection);
+            command.Parameters.Add("@DatabaseName", SqlDbType.VarChar).Value = databaseName;
+            command.Connection.Open();
+            command.ExecuteNonQuery();
+
+            command.CommandText = "IF ((SELECT DATABASEPROPERTYEX([name], 'IsAutoClose') " +
+                "FROM sys.databases WHERE [name] = @DatabaseName) = 1) " +
+                "ALTER DATABASE " + databaseNameQuoted + " SET AUTO_CLOSE OFF;";
+            command.ExecuteNonQuery();
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        using (var connection = new SqlConnection(_connectionString))
+        {
+            // rename old migration scripts to new namespace
+            var command = new SqlCommand(
+                "IF OBJECT_ID('Migration','U') IS NOT NULL " +
+                "UPDATE [dbo].[Migration] SET " +
+                "[ScriptName] = REPLACE([ScriptName], 'Bit.Setup.', 'Bit.Migrator.');", connection);
+            command.Connection.Open();
+            command.ExecuteNonQuery();
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+    }
+
+    private bool MigrateDatabase(bool enableLogging = true,
+    bool repeatable = false,
+    string folderName = MigratorConstants.DefaultMigrationsFolderName,
+    bool dryRun = false,
+    CancellationToken cancellationToken = default)
+    {
+        if (enableLogging)
+        {
+            _logger.LogInformation(Constants.BypassFiltersEventId, "Migrating database.");
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var builder = DeployChanges.To
+            .SqlDatabase(_connectionString)
+            .WithScriptsAndCodeEmbeddedInAssembly(Assembly.GetExecutingAssembly(),
+                s => s.Contains($".{folderName}.") && !s.Contains(".Archive."))
+            .WithExecutionTimeout(TimeSpan.FromMinutes(5));
+
+        if (_noTransactionMigration)
+        {
+            builder = builder.WithoutTransaction()
+                .WithExecutionTimeout(TimeSpan.FromMinutes(60));
+        }
+        else
+        {
+            builder = builder.WithTransaction();
+        }
+
+        if (repeatable)
+        {
+            builder.JournalTo(new NullJournal());
+        }
+        else
+        {
+            builder.JournalToSqlTable("dbo", MigratorConstants.SqlTableJournalName);
+        }
+
+        if (enableLogging)
+        {
+            builder.LogTo(new DbUpLogger(_logger));
+        }
+
+        var upgrader = builder.Build();
+
+        if (dryRun)
+        {
+            var scriptsToExec = upgrader.GetScriptsToExecute();
+            var stringBuilder = new StringBuilder("Scripts that will be applied:");
+
+            foreach (var script in scriptsToExec)
+            {
+                stringBuilder.AppendLine(script.Name);
+            }
+            _logger.LogInformation(Constants.BypassFiltersEventId, "{Scripts}", stringBuilder.ToString());
+            return true;
+        }
+
+        var result = upgrader.PerformUpgrade();
+
+        if (enableLogging)
+        {
+            if (result.Successful)
+            {
+                _logger.LogInformation(Constants.BypassFiltersEventId, "Migration successful.");
+            }
+            else
+            {
+                _logger.LogError(Constants.BypassFiltersEventId, result.Error, "Migration failed.");
+            }
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        return result.Successful;
+    }
+
+    private ILogger<DbMigrator> CreateLogger()
+    {
+        var loggerFactory = LoggerFactory.Create(builder =>
+        {
+            builder
+                .AddFilter("Microsoft", LogLevel.Warning)
+                .AddFilter("System", LogLevel.Warning)
+                .AddConsole();
+
+            builder.AddFilter("DbMigrator.DbMigrator", LogLevel.Information);
+        });
+
+        return loggerFactory.CreateLogger<DbMigrator>();
     }
 }

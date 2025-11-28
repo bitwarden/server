@@ -1,5 +1,6 @@
-﻿namespace Bit.Core.Entities
-{
-    public interface IStorableSubscriber : IStorable, ISubscriber
-    { }
-}
+﻿namespace Bit.Core.Entities;
+
+#nullable enable
+
+public interface IStorableSubscriber : IStorable, ISubscriber
+{ }

@@ -1,52 +1,55 @@
-﻿using System;
-using System.Threading.Tasks;
-using Bit.Api.Models.Request;
+﻿using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Bit.Api.Controllers
+namespace Bit.Api.Controllers;
+
+[Route("settings")]
+[Authorize("Application")]
+public class SettingsController : Controller
 {
-    [Route("settings")]
-    [Authorize("Application")]
-    public class SettingsController : Controller
+    private readonly IUserService _userService;
+
+    public SettingsController(
+        IUserService userService)
     {
-        private readonly IUserService _userService;
+        _userService = userService;
+    }
 
-        public SettingsController(
-            IUserService userService)
+    [HttpGet("domains")]
+    public async Task<DomainsResponseModel> GetDomains(bool excluded = true)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        if (user == null)
         {
-            _userService = userService;
+            throw new UnauthorizedAccessException();
         }
 
-        [HttpGet("domains")]
-        public async Task<DomainsResponseModel> GetDomains(bool excluded = true)
-        {
-            var user = await _userService.GetUserByPrincipalAsync(User);
-            if (user == null)
-            {
-                throw new UnauthorizedAccessException();
-            }
+        var response = new DomainsResponseModel(user, excluded);
+        return response;
+    }
 
-            var response = new DomainsResponseModel(user, excluded);
-            return response;
+    [HttpPut("domains")]
+    public async Task<DomainsResponseModel> PutDomains([FromBody] UpdateDomainsRequestModel model)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
         }
 
-        [HttpPut("domains")]
-        [HttpPost("domains")]
-        public async Task<DomainsResponseModel> PutDomains([FromBody] UpdateDomainsRequestModel model)
-        {
-            var user = await _userService.GetUserByPrincipalAsync(User);
-            if (user == null)
-            {
-                throw new UnauthorizedAccessException();
-            }
+        await _userService.SaveUserAsync(model.ToUser(user), true);
 
-            await _userService.SaveUserAsync(model.ToUser(user), true);
+        var response = new DomainsResponseModel(user);
+        return response;
+    }
 
-            var response = new DomainsResponseModel(user);
-            return response;
-        }
+    [HttpPost("domains")]
+    [Obsolete("This endpoint is deprecated. Use PUT /domains instead.")]
+    public async Task<DomainsResponseModel> PostDomains([FromBody] UpdateDomainsRequestModel model)
+    {
+        return await PutDomains(model);
     }
 }

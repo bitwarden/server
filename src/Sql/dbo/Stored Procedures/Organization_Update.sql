@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Organization_Update]
+CREATE PROCEDURE [dbo].[Organization_Update]
     @Id UNIQUEIDENTIFIER,
     @Identifier NVARCHAR(50),
     @Name NVARCHAR(50),
@@ -32,7 +32,6 @@
     @ReferenceData VARCHAR(MAX),
     @Enabled BIT,
     @LicenseKey VARCHAR(100),
-    @ApiKey VARCHAR(30),
     @PublicKey VARCHAR(MAX),
     @PrivateKey VARCHAR(MAX),
     @TwoFactorProviders NVARCHAR(MAX),
@@ -41,7 +40,26 @@
     @RevisionDate DATETIME2(7),
     @OwnersNotifiedOfAutoscaling DATETIME2(7),
     @MaxAutoscaleSeats INT,
-    @UseKeyConnector BIT = 0
+    @UseKeyConnector BIT = 0,
+    @UseScim BIT = 0,
+    @UseCustomPermissions BIT = 0,
+    @UseSecretsManager BIT = 0,
+    @Status TINYINT = 0,
+    @UsePasswordManager BIT = 1,
+    @SmSeats INT = null,
+    @SmServiceAccounts INT = null,
+    @MaxAutoscaleSmSeats INT = null,
+    @MaxAutoscaleSmServiceAccounts INT = null,
+    @SecretsManagerBeta BIT = 0,
+    @LimitCollectionCreation BIT = null,
+    @LimitCollectionDeletion BIT = null,
+    @AllowAdminAccessToAllCollectionItems BIT = 0,
+    @UseRiskInsights BIT = 0,
+    @LimitItemDeletion BIT = 0,
+    @UseOrganizationDomains BIT = 0,
+    @UseAdminSponsoredFamilies BIT = 0,
+    @SyncSeats BIT = 0,
+    @UseAutomaticUserConfirmation BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -81,7 +99,6 @@ BEGIN
         [ReferenceData] = @ReferenceData,
         [Enabled] = @Enabled,
         [LicenseKey] = @LicenseKey,
-        [ApiKey] = @ApiKey,
         [PublicKey] = @PublicKey,
         [PrivateKey] = @PrivateKey,
         [TwoFactorProviders] = @TwoFactorProviders,
@@ -90,7 +107,26 @@ BEGIN
         [RevisionDate] = @RevisionDate,
         [OwnersNotifiedOfAutoscaling] = @OwnersNotifiedOfAutoscaling,
         [MaxAutoscaleSeats] = @MaxAutoscaleSeats,
-        [UseKeyConnector] = @UseKeyConnector
+        [UseKeyConnector] = @UseKeyConnector,
+        [UseScim] = @UseScim,
+        [UseCustomPermissions] = @UseCustomPermissions,
+        [UseSecretsManager] = @UseSecretsManager,
+        [Status] = @Status,
+        [UsePasswordManager] = @UsePasswordManager,
+        [SmSeats] = @SmSeats,
+        [SmServiceAccounts] = @SmServiceAccounts,
+        [MaxAutoscaleSmSeats] = @MaxAutoscaleSmSeats,
+        [MaxAutoscaleSmServiceAccounts] = @MaxAutoscaleSmServiceAccounts,
+        [SecretsManagerBeta] = @SecretsManagerBeta,
+        [LimitCollectionCreation] = @LimitCollectionCreation,
+        [LimitCollectionDeletion] = @LimitCollectionDeletion,
+        [AllowAdminAccessToAllCollectionItems] = @AllowAdminAccessToAllCollectionItems,
+        [UseRiskInsights] = @UseRiskInsights,
+        [LimitItemDeletion] = @LimitItemDeletion,
+        [UseOrganizationDomains] = @UseOrganizationDomains,
+        [UseAdminSponsoredFamilies] = @UseAdminSponsoredFamilies,
+        [SyncSeats] = @SyncSeats,
+        [UseAutomaticUserConfirmation] = @UseAutomaticUserConfirmation
     WHERE
-        [Id] = @Id
+        [Id] = @Id;
 END

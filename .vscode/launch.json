@@ -1,0 +1,605 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "compounds": [
+        {
+            "name": "Min Server",
+            "configurations": [
+                "run-Identity",
+                "run-API"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "AA_compounds",
+                "order": 1
+            },
+            "preLaunchTask": "buildIdentityApi",
+            "stopAll": true
+        },
+        {
+            "name": "Admin, API, Identity",
+            "configurations": [
+                "run-Admin",
+                "run-API",
+                "run-Identity"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "AA_compounds",
+                "order": 3
+            },
+            "preLaunchTask": "buildIdentityApiAdmin",
+            "stopAll": true
+        },
+        {
+            "name": "API, Identity, SSO",
+            "configurations": [
+                "run-API",
+                "run-Identity",
+                "run-Sso"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "AA_compounds",
+                "order": 4
+            },
+            "preLaunchTask": "buildIdentityApiSso",
+            "stopAll": true
+        },
+        {
+            "name": "Full Server",
+            "configurations": [
+                "run-Admin",
+                "run-API",
+                "run-Events",
+                "run-EventsProcessor",
+                "run-Identity",
+                "run-Sso",
+                "run-Icons",
+                "run-Billing",
+                "run-Notifications"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "AA_compounds",
+                "order": 5
+            },
+            "preLaunchTask": "buildFullServer",
+            "stopAll": true
+        },
+        {
+            "name": "Self Host: Bit",
+            "configurations": [
+                "run-Admin-SelfHost",
+                "run-API-SelfHost",
+                "run-Events-SelfHost",
+                "run-EventsProcessor-SelfHost",
+                "run-Identity-SelfHost",
+                "run-Sso-SelfHost",
+                "run-Notifications-SelfHost"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "AA_compounds",
+                "order": 2
+            },
+            "preLaunchTask": "buildSelfHostBit",
+            "stopAll": true
+        },
+        {
+            "name": "Self Host: OSS",
+            "configurations": [
+                "run-Admin-SelfHost",
+                "run-API-SelfHost",
+                "run-Events-SelfHost",
+                "run-EventsProcessor-SelfHost",
+                "run-Identity-SelfHost",
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "AA_compounds",
+                "order": 99
+            },
+            "preLaunchTask": "buildSelfHostOss",
+            "stopAll": true
+        },
+        {
+            "name": "Admin",
+            "configurations": [
+                "run-Admin"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "cloud",
+            },
+            "preLaunchTask": "buildAdmin",
+        },
+        {
+            "name": "API",
+            "configurations": [
+                "run-API"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "cloud",
+            },
+            "preLaunchTask": "buildAPI",
+        },
+        {
+            "name": "Billing",
+            "configurations": [
+                "run-Billing"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "cloud",
+            },
+            "preLaunchTask": "buildBilling",
+        },
+        {
+            "name": "Events",
+            "configurations": [
+                "run-Events"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "cloud",
+            },
+            "preLaunchTask": "buildEvents",
+        },
+        {
+            "name": "Events Processor",
+            "configurations": [
+                "run-EventsProcessor"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "cloud",
+            },
+            "preLaunchTask": "buildEventsProcessor",
+        },
+        {
+            "name": "Icons",
+            "configurations": [
+                "run-Icons"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "cloud",
+            },
+            "preLaunchTask": "buildIcons",
+        },
+        {
+            "name": "Identity",
+            "configurations": [
+                "run-Identity"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "cloud",
+            },
+            "preLaunchTask": "buildIdentity",
+        },
+        {
+            "name": "Notifications",
+            "configurations": [
+                "run-Notifications"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "cloud",
+            },
+            "preLaunchTask": "buildNotifications",
+        },
+        {
+            "name": "SSO",
+            "configurations": [
+                "run-Sso"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "cloud",
+            },
+            "preLaunchTask": "buildSso",
+        },
+        {
+            "name": "Admin Self Host",
+            "configurations": [
+                "run-Admin-SelfHost"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "self-host",
+            },
+            "preLaunchTask": "buildAdmin",
+        },
+        {
+            "name": "API Self Host",
+            "configurations": [
+                "run-API-SelfHost"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "self-host",
+            },
+            "preLaunchTask": "buildAPI",
+        },
+        {
+            "name": "Events Processor Self Host",
+            "configurations": [
+                "run-EventsProcessor-SelfHost"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "self-host",
+            },
+            "preLaunchTask": "buildEventsProcessor",
+        },
+        {
+            "name": "Identity Self Host",
+            "configurations": [
+                "run-Identity-SelfHost"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "self-host",
+            },
+            "preLaunchTask": "buildIdentity",
+        },
+        {
+            "name": "Notifications Self Host",
+            "configurations": [
+                "run-Notifications-SelfHost"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "self-host",
+            },
+            "preLaunchTask": "buildNotifications",
+        },
+        {
+            "name": "SSO Self Host",
+            "configurations": [
+                "run-Sso-SelfHost"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "self-host",
+            },
+            "preLaunchTask": "buildSso",
+        },
+    ],
+    "configurations": [
+        // Configurations represent run-only scenarios so that they can be used in multiple compounds
+        {
+            "name": "run-Identity",
+            "presentation": {
+                "hidden": true,
+            },
+            "requireExactSource": true,
+            "type": "coreclr",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/Identity/bin/Debug/net8.0/Identity.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/Identity",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/Views"
+            }
+        },
+        {
+            "name": "run-API",
+            "presentation": {
+                "hidden": true,
+            },
+            "requireExactSource": true,
+            "type": "coreclr",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/Api/bin/Debug/net8.0/Api.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/Api",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/Views"
+            }
+        },
+        {
+            "name": "run-Billing",
+            "presentation": {
+                "hidden": true,
+            },
+            "requireExactSource": true,
+            "type": "coreclr",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/Billing/bin/Debug/net8.0/Billing.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/Billing",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/Views"
+            }
+        },
+        {
+            "name": "run-Admin",
+            "presentation": {
+                "hidden": true,
+            },
+            "requireExactSource": true,
+            "type": "coreclr",
+            "request": "launch",
+            "OS-COMMENT4": "If you have changed target frameworks, make sure to update the program path.",
+            "program": "${workspaceFolder}/src/Admin/bin/Debug/net8.0/Admin.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/Admin",
+            "stopAtEntry": false,
+            "OS-COMMENT5": "Enable launching a web browser when ASP.NET Core starts. For more information: https://aka.ms/VSCode-CS-LaunchJson-WebBrowser",
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/Views"
+            }
+        },
+        {
+            "name": "run-Sso",
+            "presentation": {
+                "hidden": true,
+            },
+            "requireExactSource": true,
+            "type": "coreclr",
+            "request": "launch",
+            "program": "${workspaceFolder}/bitwarden_license/src/Sso/bin/Debug/net8.0/Sso.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/bitwarden_license/src/Sso",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/Views"
+            }
+        },
+        {
+            "name": "run-Events",
+            "presentation": {
+                "hidden": true,
+            },
+            "requireExactSource": true,
+            "type": "coreclr",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/Events/bin/Debug/net8.0/Events.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/Events",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/Views"
+            }
+        },
+        {
+            "name": "run-EventsProcessor",
+            "presentation": {
+                "hidden": true,
+            },
+            "requireExactSource": true,
+            "type": "coreclr",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/EventsProcessor/bin/Debug/net8.0/EventsProcessor.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/EventsProcessor",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/Views"
+            }
+        },
+        {
+            "name": "run-Icons",
+            "presentation": {
+                "hidden": true,
+            },
+            "requireExactSource": true,
+            "type": "coreclr",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/Icons/bin/Debug/net8.0/Icons.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/Icons",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/Views"
+            }
+        },
+        {
+            "name": "run-Notifications",
+            "presentation": {
+                "hidden": true,
+            },
+            "requireExactSource": true,
+            "type": "coreclr",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/Notifications/bin/Debug/net8.0/Notifications.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/Notifications",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/Views"
+            }
+        },
+        {
+            "name": "run-Identity-SelfHost",
+            "presentation": {
+                "hidden": true,
+            },
+            "requireExactSource": true,
+            "type": "coreclr",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/Identity/bin/Debug/net8.0/Identity.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/Identity",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ASPNETCORE_URLS": "http://localhost:33657",
+                "developSelfHosted": "true",
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/Views"
+            }
+        },
+        {
+            "name": "run-API-SelfHost",
+            "presentation": {
+                "hidden": true,
+            },
+            "requireExactSource": true,
+            "type": "coreclr",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/Api/bin/Debug/net8.0/Api.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/Api",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ASPNETCORE_URLS": "http://localhost:4001",
+                "developSelfHosted": "true",
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/Views"
+            }
+        },
+        {
+            "name": "run-Admin-SelfHost",
+            "presentation": {
+                "hidden": true,
+            },
+            "requireExactSource": true,
+            "type": "coreclr",
+            "request": "launch",
+            "OS-COMMENT4": "If you have changed target frameworks, make sure to update the program path.",
+            "program": "${workspaceFolder}/src/Admin/bin/Debug/net8.0/Admin.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/Admin",
+            "stopAtEntry": false,
+            "OS-COMMENT5": "Enable launching a web browser when ASP.NET Core starts. For more information: https://aka.ms/VSCode-CS-LaunchJson-WebBrowser",
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ASPNETCORE_URLS": "http://localhost:62912",
+                "developSelfHosted": "true",
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/Views"
+            }
+        },
+        {
+            "name": "run-Sso-SelfHost",
+            "presentation": {
+                "hidden": true,
+            },
+            "requireExactSource": true,
+            "type": "coreclr",
+            "request": "launch",
+            "program": "${workspaceFolder}/bitwarden_license/src/Sso/bin/Debug/net8.0/Sso.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/bitwarden_license/src/Sso",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ASPNETCORE_URLS": "http://localhost:51822",
+                "developSelfHosted": "true",
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/Views"
+            }
+        },
+        {
+            "name": "run-Notifications-SelfHost",
+            "presentation": {
+                "hidden": true,
+            },
+            "requireExactSource": true,
+            "type": "coreclr",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/Notifications/bin/Debug/net8.0/Notifications.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/Notifications",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ASPNETCORE_URLS": "http://localhost:61841",
+                "developSelfHosted": "true",
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/Views"
+            }
+        },
+        {
+            "name": "run-Events-SelfHost",
+            "presentation": {
+                "hidden": true,
+            },
+            "requireExactSource": true,
+            "type": "coreclr",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/Events/bin/Debug/net8.0/Events.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/Events",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ASPNETCORE_URLS": "http://localhost:46274",
+                "developSelfHosted": "true",
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/Views"
+            }
+        },
+        {
+            "name": "run-EventsProcessor-SelfHost",
+            "presentation": {
+                "hidden": true,
+            },
+            "requireExactSource": true,
+            "type": "coreclr",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/EventsProcessor/bin/Debug/net8.0/EventsProcessor.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/EventsProcessor",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ASPNETCORE_URLS": "http://localhost:54103",
+                "developSelfHosted": "true",
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/Views"
+            }
+        },
+        {
+            "name": ".NET Core Attach",
+            "type": "coreclr",
+            "request": "attach",
+            "processId": "${command:pickProcess}"
+        }
+    ],
+}

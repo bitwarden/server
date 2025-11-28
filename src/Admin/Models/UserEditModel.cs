@@ -1,76 +1,77 @@
-﻿using System;
-using System.Collections.Generic;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
 using System.ComponentModel.DataAnnotations;
+using Bit.Core.Billing.Models;
 using Bit.Core.Entities;
-using Bit.Core.Models.Business;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Bit.Core.Vault.Entities;
 
-namespace Bit.Admin.Models
+namespace Bit.Admin.Models;
+
+public class UserEditModel
 {
-    public class UserEditModel : UserViewModel
+    public UserEditModel() { }
+
+    public UserEditModel(
+        User user,
+        bool isTwoFactorEnabled,
+        IEnumerable<Cipher> ciphers,
+        BillingInfo billingInfo,
+        BillingHistoryInfo billingHistoryInfo,
+        GlobalSettings globalSettings,
+        bool? claimedAccount,
+        bool? activeNewDeviceVerificationException)
     {
-        public UserEditModel() { }
+        User = UserViewModel.MapViewModel(user, isTwoFactorEnabled, ciphers, claimedAccount);
 
-        public UserEditModel(User user, IEnumerable<Cipher> ciphers, BillingInfo billingInfo,
-            GlobalSettings globalSettings)
-            : base(user, ciphers)
-        {
-            BillingInfo = billingInfo;
-            BraintreeMerchantId = globalSettings.Braintree.MerchantId;
+        ActiveNewDeviceVerificationException = activeNewDeviceVerificationException ?? false;
 
-            Name = user.Name;
-            Email = user.Email;
-            EmailVerified = user.EmailVerified;
-            Premium = user.Premium;
-            MaxStorageGb = user.MaxStorageGb;
-            Gateway = user.Gateway;
-            GatewayCustomerId = user.GatewayCustomerId;
-            GatewaySubscriptionId = user.GatewaySubscriptionId;
-            LicenseKey = user.LicenseKey;
-            PremiumExpirationDate = user.PremiumExpirationDate;
-        }
+        BillingInfo = billingInfo;
+        BillingHistoryInfo = billingHistoryInfo;
+        BraintreeMerchantId = globalSettings.Braintree.MerchantId;
 
-        public BillingInfo BillingInfo { get; set; }
-        public string RandomLicenseKey => CoreHelpers.SecureRandomString(20);
-        public string OneYearExpirationDate => DateTime.Now.AddYears(1).ToString("yyyy-MM-ddTHH:mm");
-        public string BraintreeMerchantId { get; set; }
-
-        [Display(Name = "Name")]
-        public string Name { get; set; }
-        [Required]
-        [Display(Name = "Email")]
-        public string Email { get; set; }
-        [Display(Name = "Email Verified")]
-        public bool EmailVerified { get; set; }
-        [Display(Name = "Premium")]
-        public bool Premium { get; set; }
-        [Display(Name = "Max. Storage GB")]
-        public short? MaxStorageGb { get; set; }
-        [Display(Name = "Gateway")]
-        public Core.Enums.GatewayType? Gateway { get; set; }
-        [Display(Name = "Gateway Customer Id")]
-        public string GatewayCustomerId { get; set; }
-        [Display(Name = "Gateway Subscription Id")]
-        public string GatewaySubscriptionId { get; set; }
-        [Display(Name = "License Key")]
-        public string LicenseKey { get; set; }
-        [Display(Name = "Premium Expiration Date")]
-        public DateTime? PremiumExpirationDate { get; set; }
-
-        public User ToUser(User existingUser)
-        {
-            existingUser.Name = Name;
-            existingUser.Email = Email;
-            existingUser.EmailVerified = EmailVerified;
-            existingUser.Premium = Premium;
-            existingUser.MaxStorageGb = MaxStorageGb;
-            existingUser.Gateway = Gateway;
-            existingUser.GatewayCustomerId = GatewayCustomerId;
-            existingUser.GatewaySubscriptionId = GatewaySubscriptionId;
-            existingUser.LicenseKey = LicenseKey;
-            existingUser.PremiumExpirationDate = PremiumExpirationDate;
-            return existingUser;
-        }
+        Name = user.Name;
+        Email = user.Email;
+        EmailVerified = user.EmailVerified;
+        Premium = user.Premium;
+        MaxStorageGb = user.MaxStorageGb;
+        Gateway = user.Gateway;
+        GatewayCustomerId = user.GatewayCustomerId;
+        GatewaySubscriptionId = user.GatewaySubscriptionId;
+        LicenseKey = user.LicenseKey;
+        PremiumExpirationDate = user.PremiumExpirationDate;
     }
+
+    public UserViewModel User { get; init; }
+    public BillingInfo BillingInfo { get; init; }
+    public BillingHistoryInfo BillingHistoryInfo { get; init; }
+    public string RandomLicenseKey => CoreHelpers.SecureRandomString(20);
+    public string OneYearExpirationDate => DateTime.Now.AddYears(1).ToString("yyyy-MM-ddTHH:mm");
+    public string BraintreeMerchantId { get; init; }
+    public bool ActiveNewDeviceVerificationException { get; init; }
+
+
+    [Display(Name = "Name")]
+    public string Name { get; init; }
+    [Required]
+    [Display(Name = "Email")]
+    public string Email { get; init; }
+    [Display(Name = "Email Verified")]
+    public bool EmailVerified { get; init; }
+    [Display(Name = "Premium")]
+    public bool Premium { get; init; }
+    [Display(Name = "Max. Storage GB")]
+    public short? MaxStorageGb { get; init; }
+    [Display(Name = "Gateway")]
+    public Core.Enums.GatewayType? Gateway { get; init; }
+    [Display(Name = "Gateway Customer Id")]
+    public string GatewayCustomerId { get; init; }
+    [Display(Name = "Gateway Subscription Id")]
+    public string GatewaySubscriptionId { get; init; }
+    [Display(Name = "License Key")]
+    public string LicenseKey { get; init; }
+    [Display(Name = "Premium Expiration Date")]
+    public DateTime? PremiumExpirationDate { get; init; }
 }

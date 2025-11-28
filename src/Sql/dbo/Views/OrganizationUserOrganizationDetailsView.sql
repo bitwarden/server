@@ -1,13 +1,16 @@
-﻿CREATE VIEW [dbo].[OrganizationUserOrganizationDetailsView]
+CREATE VIEW [dbo].[OrganizationUserOrganizationDetailsView]
 AS
 SELECT
     OU.[UserId],
     OU.[OrganizationId],
+    OU.[Id] OrganizationUserId,
     O.[Name],
     O.[Enabled],
+    O.[PlanType],
     O.[UsePolicies],
     O.[UseSso],
     O.[UseKeyConnector],
+    O.[UseScim],
     O.[UseGroups],
     O.[UseDirectory],
     O.[UseEvents],
@@ -17,9 +20,11 @@ SELECT
     O.[UseResetPassword],
     O.[SelfHost],
     O.[UsersGetPremium],
+    O.[UseCustomPermissions],
+    O.[UseSecretsManager],
     O.[Seats],
     O.[MaxCollections],
-    O.[MaxStorageGb],
+    COALESCE(O.[MaxStorageGbIncreased], O.[MaxStorageGb]) AS [MaxStorageGb],
     O.[Identifier],
     OU.[Key],
     OU.[ResetPasswordKey],
@@ -31,10 +36,29 @@ SELECT
     OU.[Permissions],
     PO.[ProviderId],
     P.[Name] ProviderName,
-    SS.[Data] SsoConfig
+    P.[Type] ProviderType,
+    SS.[Enabled] SsoEnabled,
+    SS.[Data] SsoConfig,
+    OS.[FriendlyName] FamilySponsorshipFriendlyName,
+    OS.[LastSyncDate] FamilySponsorshipLastSyncDate,
+    OS.[ToDelete] FamilySponsorshipToDelete,
+    OS.[ValidUntil] FamilySponsorshipValidUntil,
+    OU.[AccessSecretsManager],
+    O.[UsePasswordManager],
+    O.[SmSeats],
+    O.[SmServiceAccounts],
+    O.[LimitCollectionCreation],
+    O.[LimitCollectionDeletion],
+    O.[AllowAdminAccessToAllCollectionItems],
+    O.[UseRiskInsights],
+    O.[LimitItemDeletion],
+    O.[UseAdminSponsoredFamilies],
+    O.[UseOrganizationDomains],
+    OS.[IsAdminInitiated],
+    O.[UseAutomaticUserConfirmation]
 FROM
     [dbo].[OrganizationUser] OU
-INNER JOIN
+LEFT JOIN
     [dbo].[Organization] O ON O.[Id] = OU.[OrganizationId]
 LEFT JOIN
     [dbo].[SsoUser] SU ON SU.[UserId] = OU.[UserId] AND SU.[OrganizationId] = OU.[OrganizationId]
@@ -44,3 +68,5 @@ LEFT JOIN
     [dbo].[Provider] P ON P.[Id] = PO.[ProviderId]
 LEFT JOIN
     [dbo].[SsoConfig] SS ON SS.[OrganizationId] = OU.[OrganizationId]
+LEFT JOIN
+    [dbo].[OrganizationSponsorship] OS ON OS.[SponsoringOrganizationUserID] = OU.[Id]

@@ -1,0 +1,10 @@
+START TRANSACTION;
+
+ALTER TABLE "Provider" ADD "BillingPhone" text NULL;
+
+ALTER TABLE "Provider" ADD "Type" smallint NOT NULL DEFAULT 0;
+
+INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+VALUES ('20221227100237_ProviderAddProviderTypeBillingPhone', '6.0.12');
+
+COMMIT;

@@ -1,22 +1,23 @@
-﻿using System.Collections.Generic;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
 using System.ComponentModel.DataAnnotations;
 
-namespace Bit.Core.Models.Api
+namespace Bit.Core.Models.Api;
+
+public class PushUpdateRequestModel
 {
-    public class PushUpdateRequestModel
+    public PushUpdateRequestModel()
+    { }
+
+    public PushUpdateRequestModel(IEnumerable<string> deviceIds, string organizationId)
     {
-        public PushUpdateRequestModel()
-        { }
-
-        public PushUpdateRequestModel(IEnumerable<string> deviceIds, string organizationId)
-        {
-            DeviceIds = deviceIds;
-            OrganizationId = organizationId;
-        }
-
-        [Required]
-        public IEnumerable<string> DeviceIds { get; set; }
-        [Required]
-        public string OrganizationId { get; set; }
+        Devices = deviceIds.Select(d => new PushDeviceRequestModel { Id = d });
+        OrganizationId = organizationId;
     }
+
+    [Required]
+    public IEnumerable<PushDeviceRequestModel> Devices { get; set; }
+    [Required]
+    public string OrganizationId { get; set; }
 }

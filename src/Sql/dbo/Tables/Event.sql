@@ -3,6 +3,7 @@
     [Type]                   INT              NOT NULL,
     [UserId]                 UNIQUEIDENTIFIER NULL,
     [OrganizationId]         UNIQUEIDENTIFIER NULL,
+    [InstallationId]         UNIQUEIDENTIFIER NULL,
     [CipherId]               UNIQUEIDENTIFIER NULL,
     [CollectionId]           UNIQUEIDENTIFIER NULL,
     [PolicyId]               UNIQUEIDENTIFIER NULL,
@@ -15,11 +16,17 @@
     [ProviderId]             UNIQUEIDENTIFIER NULL,
     [ProviderUserId]         UNIQUEIDENTIFIER NULL,
     [ProviderOrganizationId] UNIQUEIDENTIFIER NULL,
+    [SystemUser]             TINYINT          NULL,
+    [DomainName]             VARCHAR(256)     NULL,
+    [SecretId]               UNIQUEIDENTIFIER NULL,
+    [ServiceAccountId]       UNIQUEIDENTIFIER NULL,
+    [ProjectId]              UNIQUEIDENTIFIER NULL,
+    [GrantedServiceAccountId] UNIQUEIDENTIFIER NULL,
     CONSTRAINT [PK_Event] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 
 
 GO
 CREATE NONCLUSTERED INDEX [IX_Event_DateOrganizationIdUserId]
-    ON [dbo].[Event]([Date] DESC, [OrganizationId] ASC, [ActingUserId] ASC, [CipherId] ASC);
+    ON [dbo].[Event]([Date] DESC, [OrganizationId] ASC, [ActingUserId] ASC, [CipherId] ASC) INCLUDE ([ServiceAccountId], [GrantedServiceAccountId]);
 

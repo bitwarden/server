@@ -1,13 +1,15 @@
-﻿using IdentityModel;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Duende.IdentityModel;
 using Microsoft.AspNetCore.SignalR;
 
-namespace Bit.Notifications
+namespace Bit.Notifications;
+
+public class SubjectUserIdProvider : IUserIdProvider
 {
-    public class SubjectUserIdProvider : IUserIdProvider
+    public string GetUserId(HubConnectionContext connection)
     {
-        public string GetUserId(HubConnectionContext connection)
-        {
-            return connection.User?.FindFirst(JwtClaimTypes.Subject)?.Value;
-        }
+        return connection.User?.FindFirst(JwtClaimTypes.Subject)?.Value;
     }
 }

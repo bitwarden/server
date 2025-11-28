@@ -12,7 +12,10 @@ BEGIN
         RevisionDate,
         ExternalId,
         MIN([ReadOnly]) AS [ReadOnly],
-        MIN([HidePasswords]) AS [HidePasswords]
+        MIN([HidePasswords]) AS [HidePasswords],
+        MAX([Manage]) AS [Manage],
+        [DefaultUserCollectionEmail],
+        [Type]
     FROM
         [dbo].[UserCollectionDetails](@UserId)
     GROUP BY
@@ -21,5 +24,7 @@ BEGIN
         [Name],
         CreationDate,
         RevisionDate,
-        ExternalId
+        ExternalId,
+        [DefaultUserCollectionEmail],
+        [Type]
 END

@@ -1,0 +1,280 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "buildIdentityApi",
+            "hide": true,
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "buildIdentity",
+                "buildAPI"
+            ],
+            "problemMatcher": [
+                "$msCompile"
+            ]
+        },
+        {
+            "label": "buildIdentityApiAdmin",
+            "hide": true,
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "buildIdentity",
+                "buildAPI",
+                "buildAdmin"
+            ],
+            "problemMatcher": [
+                "$msCompile"
+            ]
+        },
+        {
+            "label": "buildIdentityApiSso",
+            "hide": true,
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "buildIdentity",
+                "buildAPI",
+                "buildSso"
+            ],
+            "problemMatcher": [
+                "$msCompile"
+            ]
+        },
+        {
+            "label": "buildFullServer",
+            "hide": true,
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "buildAdmin",
+                "buildAPI",
+                "buildEventsProcessor",
+                "buildIdentity",
+                "buildSso",
+                "buildIcons",
+                "buildBilling",
+                "buildNotifications",
+            ],
+        },
+        {
+            "label": "buildSelfHostBit",
+            "hide": true,
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "buildAdmin",
+                "buildAPI",
+                "buildEventsProcessor",
+                "buildIdentity",
+                "buildSso",
+                "buildNotifications",
+            ],
+        },
+        {
+            "label": "buildSelfHostOss",
+            "hide": true,
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "buildAdmin",
+                "buildAPI",
+                "buildEventsProcessor",
+                "buildIdentity",
+            ],
+        },
+        {
+            "label": "buildIcons",
+            "hide": true,
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "${workspaceFolder}/src/Icons/Icons.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "buildPortal",
+            "hide": true,
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "${workspaceFolder}/bitwarden_license/src/Portal/Portal.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "buildSso",
+            "hide": true,
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "${workspaceFolder}/bitwarden_license/src/Sso/Sso.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "buildEvents",
+            "hide": true,
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "${workspaceFolder}/src/Events/Events.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "buildEventsProcessor",
+            "hide": true,
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "${workspaceFolder}/src/EventsProcessor/EventsProcessor.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "buildAdmin",
+            "hide": true,
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "${workspaceFolder}/src/Admin/Admin.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "buildIdentity",
+            "hide": true,
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "${workspaceFolder}/src/Identity/Identity.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "buildAPI",
+            "hide": true,
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "${workspaceFolder}/src/Api/Api.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "buildNotifications",
+            "hide": true,
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "${workspaceFolder}/src/Notifications/Notifications.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "buildBilling",
+            "hide": true,
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "${workspaceFolder}/src/Billing/Billing.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "test",
+            "type": "shell",
+            "command": "dotnet test",
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "Set Up Secrets",
+            "detail": "A task to run setup_secrets.ps1",
+            "type": "shell",
+            "command": "pwsh -WorkingDirectory ${workspaceFolder}/dev -Command '${workspaceFolder}/dev/setup_secrets.ps1 -clear:$${input:setupSecretsClear}'",
+            "problemMatcher": []
+        },
+        {
+            "label": "Install Dev Cert",
+            "detail": "A task to install the Bitwarden developer cert to run your local install as an admin.",
+            "type": "shell",
+            "command": "dotnet tool install -g dotnet-certificate-tool -g && certificate-tool add --file ${workspaceFolder}/dev/dev.pfx --password '${input:certPassword}'",
+            "problemMatcher": []
+        }
+    ],
+    "inputs": [
+        {
+            "id": "setupSecretsClear",
+            "type": "pickString",
+            "default": "true",
+            "description": "Whether or not to clear existing secrets",
+            "options": [
+                {
+                    "label": "true",
+                    "value": "true"
+                },
+                {
+                    "label": "false",
+                    "value": "false"
+                }
+            ]
+        },
+        {
+            "id": "certPassword",
+            "type": "promptString",
+            "description": "Password for your dev certificate.",
+            "password": true
+        }
+    ]
+}

@@ -1,5 +1,24 @@
-﻿@inject SignInManager<IdentityUser> SignInManager
+@using Bit.Admin.Enums;
+
+@inject SignInManager<IdentityUser> SignInManager
 @inject Bit.Core.Settings.GlobalSettings GlobalSettings
+@inject Bit.Admin.Services.IAccessControlService AccessControlService
+
+@{
+    var canViewUsers = AccessControlService.UserHasPermission(Permission.User_List_View);
+    var canViewOrgs = AccessControlService.UserHasPermission(Permission.Org_List_View);
+    var canViewProviders = AccessControlService.UserHasPermission(Permission.Provider_List_View);
+    var canChargeBraintree = AccessControlService.UserHasPermission(Permission.Tools_ChargeBrainTreeCustomer);
+    var canCreateTransaction = AccessControlService.UserHasPermission(Permission.Tools_CreateEditTransaction);
+    var canPromoteAdmin = AccessControlService.UserHasPermission(Permission.Tools_PromoteAdmin);
+    var canPromoteProviderServiceUser = AccessControlService.UserHasPermission(Permission.Tools_PromoteProviderServiceUser);
+    var canGenerateLicense = AccessControlService.UserHasPermission(Permission.Tools_GenerateLicenseFile);
+    var canProcessStripeEvents = AccessControlService.UserHasPermission(Permission.Tools_ProcessStripeEvents);
+
+    var canViewTools = canChargeBraintree || canCreateTransaction || canPromoteAdmin || canPromoteProviderServiceUser ||
+                        canGenerateLicense;
+}
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -8,17 +27,7 @@
     <meta name="robots" content="noindex,nofollow" />
     <title>@ViewData["Title"] - Bitwarden Admin Portal</title>
 
-    <link rel="stylesheet" href="~/css/webfonts.css" />
-    <environment include="Development">
-        <link rel="stylesheet" href="~/lib/font-awesome/css/font-awesome.css" />
-        <link rel="stylesheet" href="~/css/site.css" />
-        <link rel="stylesheet" href="~/lib/toastr/toastr.css" />
-    </environment>
-    <environment exclude="Development">
-        <link rel="stylesheet" href="~/lib/font-awesome/css/font-awesome.min.css" asp-append-version="true" />
-        <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-        <link rel="stylesheet" href="~/lib/toastr/toastr.min.css" />
-    </environment>
+    <link rel="stylesheet" href="~/assets/site.css" asp-append-version="true" />
 </head>
 <body>
     <nav class="navbar navbar-expand-md navbar-dark bg-dark mb-4">
@@ -26,61 +35,92 @@
             <a class="navbar-brand" asp-controller="Home" asp-action="Index">
                 <i class="fa fa-lg fa-fw fa-shield"></i> Admin
             </a>
-            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse"
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse"
                     aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarCollapse">
-                <ul class="navbar-nav mr-auto">
-                    @if(SignInManager.IsSignedIn(User))
+                <ul class="navbar-nav me-auto mb-2 mb-md-0">
+                    @if (SignInManager.IsSignedIn(User))
                     {
-                        <li class="nav-item" active-controller="Users">
-                            <a class="nav-link" asp-controller="Users" asp-action="Index">Users</a>
-                        </li>
-                        <li class="nav-item" active-controller="Organizations">
-                            <a class="nav-link" asp-controller="Organizations" asp-action="Index">Organizations</a>
-                        </li>
-                        @if(!GlobalSettings.SelfHosted)
+                        @if (canViewUsers)
                         {
-                            <li class="nav-item" active-controller="Providers">
-                                <a class="nav-link" asp-controller="Providers" asp-action="Index">Providers</a>
-                            </li>
-                            <li class="nav-item dropdown" active-controller="tools">
-                                <a class="nav-link dropdown-toggle" href="#" id="toolsDropdown" role="button"
-                                   data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                    Tools
-                                </a>
-                                <div class="dropdown-menu" aria-labelledby="toolsDropdown">
-                                    <a class="dropdown-item" asp-controller="Tools" asp-action="ChargeBraintree">
-                                        Charge Braintree Customer
-                                    </a>
-                                    <a class="dropdown-item" asp-controller="Tools" asp-action="CreateTransaction">
-                                        Create Transaction
-                                    </a>
-                                    <a class="dropdown-item" asp-controller="Tools" asp-action="PromoteAdmin">
-                                        Promote Admin
-                                    </a>
-                                    <a class="dropdown-item" asp-controller="Tools" asp-action="GenerateLicense">
-                                        Generate License
-                                    </a>
-                                    <a class="dropdown-item" asp-controller="Tools" asp-action="TaxRate">
-                                        Manage Tax Rates
-                                    </a>
-                                </div>
-                            </li>
-                            <li class="nav-item" active-controller="Logs">
-                                <a class="nav-link" asp-controller="Logs" asp-action="Index">Logs</a>
+                            <li class="nav-item" active-controller="Users">
+                                <a class="nav-link" asp-controller="Users" asp-action="Index">Users</a>
                             </li>
                         }
+                        @if (canViewOrgs)
+                        {
+                            <li class="nav-item" active-controller="Organizations">
+                                <a class="nav-link" asp-controller="Organizations" asp-action="Index">Organizations</a>
+                            </li>
+                        }
+                        @if (!GlobalSettings.SelfHosted)
+                        {
+                            @if (canViewProviders)
+                            {
+                                <li class="nav-item" active-controller="Providers">
+                                    <a class="nav-link" asp-controller="Providers" asp-action="Index">Providers</a>
+                                </li>
+                            }
+                            @if (canViewTools)
+                            {
+                                <li class="nav-item dropdown" active-controller="tools">
+                                    <a class="nav-link dropdown-toggle" href="#" id="toolsDropdown" role="button"
+                                    data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                        Tools
+                                    </a>
+                                    <ul class="dropdown-menu" aria-labelledby="toolsDropdown">
+                                        @if (canChargeBraintree)
+                                        {
+                                            <a class="dropdown-item" asp-controller="Tools" asp-action="ChargeBraintree">
+                                                Charge Braintree Customer
+                                            </a>
+                                        }
+                                        @if (canCreateTransaction)
+                                        {
+                                            <a class="dropdown-item" asp-controller="Tools" asp-action="CreateTransaction">
+                                                Create Transaction
+                                            </a>
+                                        }
+                                        @if (canPromoteAdmin)
+                                        {
+                                            <a class="dropdown-item" asp-controller="Tools" asp-action="PromoteAdmin">
+                                                Promote Organization Admin
+                                            </a>
+                                        }
+                                        @if (canPromoteProviderServiceUser)
+                                        {
+                                            <a class="dropdown-item" asp-controller="Tools" asp-action="PromoteProviderServiceUser">
+                                                Promote Provider Service User
+                                            </a>
+                                        }
+                                        @if (canGenerateLicense)
+                                        {
+                                            <a class="dropdown-item" asp-controller="Tools" asp-action="GenerateLicense">
+                                                Generate License
+                                            </a>
+                                        }
+                                         @if (canProcessStripeEvents)
+                                        {
+                                            <a class="dropdown-item" asp-controller="ProcessStripeEvents" asp-action="Index">
+                                                Process Stripe Events
+                                            </a>
+                                        }
+                                    </ul>
+                                </li>
+                            }
+                        }
                     }
-                    @if(GlobalSettings.SelfHosted)
+                    @if (GlobalSettings.SelfHosted)
                     {
                         <li class="nav-item">
-                            <a class="nav-link" href="https://help.bitwarden.com/hosting/" target="_blank">Docs</a>
+                            <a class="nav-link" href="https://help.bitwarden.com/hosting/" target="_blank"
+                                rel="noreferrer">Docs</a>
                         </li>
                     }
                 </ul>
-                @if(SignInManager.IsSignedIn(User))
+                @if (SignInManager.IsSignedIn(User))
                 {
                     <form asp-controller="Login" asp-action="Logout" method="post">
                         <button type="submit" class="btn btn-sm btn-secondary">Log Out</button>
@@ -103,24 +143,21 @@
         &copy; @DateTime.Now.Year, Bitwarden Inc.
     </footer>
 
-    <environment include="Development">
-        <script src="~/lib/jquery/jquery.js"></script>
-        <script src="~/lib/popper/popper.js"></script>
-        <script src="~/lib/bootstrap/js/bootstrap.js"></script>
-        <script src="~/lib/toastr/toastr.min.js"></script>
-    </environment>
-    <environment exclude="Development">
-        <script src="~/lib/jquery/jquery.min.js" asp-append-version="true"></script>
-        <script src="~/lib/popper/popper.min.js" asp-append-version="true"></script>
-        <script src="~/lib/bootstrap/js/bootstrap.min.js" asp-append-version="true"></script>
-        <script src="~/lib/toastr/toastr.min.js" asp-append-version="true"></script>
-    </environment>
+    <script src="~/assets/site.js" asp-append-version="true"></script>
 
     @if (TempData["Error"] != null)
     {
         <script>
             $(document).ready(function () {
                 toastr.error("@TempData["Error"]")
+            });
+        </script>
+    }
+    @if (TempData["Success"] != null)
+    {
+        <script>
+            $(document).ready(function () {
+                toastr.success("@TempData["Success"]")
             });
         </script>
     }

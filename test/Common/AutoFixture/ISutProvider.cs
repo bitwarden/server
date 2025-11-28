@@ -1,10 +1,7 @@
-﻿using System;
+﻿namespace Bit.Test.Common.AutoFixture;
 
-namespace Bit.Test.Common.AutoFixture
+public interface ISutProvider
 {
-    public interface ISutProvider
-    {
-        Type SutType { get; }
-        ISutProvider Create();
-    }
+    Type SutType { get; }
+    ISutProvider Create();
 }
