@@ -18,16 +18,16 @@ class MjBwIconRow extends BodyComponent {
 
   static defaultAttributes = {};
 
-  componentHeadStyle = (breakpoint) => {
+  headStyle = (breakpoint) => {
     return `
-      @media only screen and (max-width:${breakpoint}): {
-        ".mj-bw-icon-row-text": {
-          padding-left: "5px !important",
-          line-height: "20px",
-        },
-        ".mj-bw-icon-row": {
-          padding: "10px 15px",
-          width: "fit-content !important",
+      @media only screen and (max-width:${breakpoint}) {
+        .mj-bw-icon-row-text {
+          padding-left: 5px !important;
+          line-height: 20px;
+        }
+        .mj-bw-icon-row {
+          padding: 10px 15px;
+          width: fit-content !important;
         }
       }
     `;
