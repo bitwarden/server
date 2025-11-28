@@ -15,6 +15,7 @@ using Bit.Api.Vault.Models.Request;
 using Bit.Core.Auth.Entities;
 using Bit.SharedWeb.Health;
 using Microsoft.IdentityModel.Logging;
+using Microsoft.OpenApi.Models;
 using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection.Extensions;
