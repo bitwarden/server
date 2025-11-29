@@ -600,6 +600,25 @@
             "type": "coreclr",
             "request": "attach",
             "processId": "${command:pickProcess}"
+        },
+        {
+            "name": "DbSeeder Utility",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "buildDbSeeder",
+            "program": "${workspaceFolder}/util/DbSeederUtility/bin/Debug/net8.0/DbSeeder.dll",
+            "args": ["organization", "-n", "testorg", "-u", "100", "-d", "test.local"],
+            "cwd": "${workspaceFolder}/util/DbSeederUtility",
+            "stopAtEntry": false,
+            "console": "internalConsole",
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            },
+            "presentation": {
+                "hidden": false,
+                "group": "utilities",
+                "order": 1
+            }
         }
     ],
 }
