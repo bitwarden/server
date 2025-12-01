@@ -1,4 +1,5 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Enums;
 using Bit.Core.NotificationCenter.Enums;
 
 namespace Bit.Core.Models;
@@ -102,4 +103,10 @@ public class LogOutPushNotification
 {
     public Guid UserId { get; set; }
     public PushNotificationLogOutReason? Reason { get; set; }
+}
+
+public class SyncPolicyPushNotification
+{
+    public Guid OrganizationId { get; set; }
+    public required Policy Policy { get; set; }
 }

@@ -1,4 +1,4 @@
-name: Bitwarden Lite Deployment Bug Report
+name: Bitwarden lite Deployment Bug Report
 description: File a bug report
 labels: [bug, bw-lite-deploy]
 body:
@@ -74,7 +74,7 @@ body:
     id: epic-label
     attributes:
       label: Issue-Link
-      description: Link to our pinned issue, tracking all Bitwarden Lite
+      description: Link to our pinned issue, tracking all Bitwarden lite
       value: |
         https://github.com/bitwarden/server/issues/2480
     validations:

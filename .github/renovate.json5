@@ -63,7 +63,6 @@
     },
     {
       matchPackageNames: [
-        "Azure.Extensions.AspNetCore.DataProtection.Blobs",
         "DuoUniversal",
         "Fido2.AspNet",
         "Duende.IdentityServer",
@@ -137,6 +136,7 @@
         "AspNetCoreRateLimit",
         "AspNetCoreRateLimit.Redis",
         "Azure.Data.Tables",
+        "Azure.Extensions.AspNetCore.DataProtection.Blobs",
         "Azure.Messaging.EventGrid",
         "Azure.Messaging.ServiceBus",
         "Azure.Storage.Blobs",
