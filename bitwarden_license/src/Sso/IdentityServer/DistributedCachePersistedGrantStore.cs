@@ -1,4 +1,5 @@
-﻿using Duende.IdentityServer.Models;
+﻿using Bit.Sso.Utilities;
+using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Stores;
 using ZiggyCreatures.Caching.Fusion;
 
@@ -23,7 +24,7 @@ public class DistributedCachePersistedGrantStore : IPersistedGrantStore
     private readonly IFusionCache _cache;
 
     public DistributedCachePersistedGrantStore(
-        [FromKeyedServices("sso-grants")] IFusionCache cache)
+        [FromKeyedServices(PersistedGrantsDistributedCacheConstants.CacheKey)] IFusionCache cache)
     {
         _cache = cache;
     }
@@ -96,11 +97,6 @@ public class DistributedCachePersistedGrantStore : IPersistedGrantStore
         await _cache.SetAsync(
             grant.Key,
             grant,
-            new FusionCacheEntryOptions
-            {
-                Duration = duration,
-                // Keep distributed cache enabled for multi-instance scenarios
-                // When Redis isn't configured, FusionCache gracefully uses only L1 (in-memory)
-            }.SetSkipDistributedCache(false, false));
+            new FusionCacheEntryOptions { Duration = duration });
     }
 }

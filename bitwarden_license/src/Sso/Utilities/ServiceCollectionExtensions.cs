@@ -79,11 +79,11 @@ public static class ServiceCollectionExtensions
             .AddIdentityServerCertificate(env, globalSettings);
 
         // PM-23572
-        // Register named FusionCache for SSO authorization code grants
+        // Register named FusionCache for SSO authorization code grants.
         // Provides separation of concerns and automatic Redis/in-memory negotiation
         // .AddInMemoryCaching should still persist above; this handles configuration caching, etc.,
         // and is separate from this keyed service, which only serves grant negotiation.
-        services.AddExtendedCache("sso-grants", globalSettings);
+        services.AddExtendedCache(PersistedGrantsDistributedCacheConstants.CacheKey, globalSettings);
 
         // Store authorization codes in distributed cache for horizontal scaling
         // Uses named FusionCache which gracefully degrades to in-memory when Redis isn't configured
