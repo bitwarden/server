@@ -11,6 +11,7 @@ using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
@@ -783,5 +784,69 @@ public class OrganizationUsersControllerTests
         // Assert
         var problemResult = Assert.IsType<JsonHttpResult<ErrorResponseModel>>(result);
         Assert.Equal(StatusCodes.Status500InternalServerError, problemResult.StatusCode);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task BulkReinvite_WhenFeatureFlagEnabled_UsesBulkResendOrganizationInvitesCommand(
+        Guid organizationId,
+        OrganizationUserBulkRequestModel bulkRequestModel,
+        List<OrganizationUser> organizationUsers,
+        Guid userId,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<ICurrentContext>().ManageUsers(organizationId).Returns(true);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.IncreaseBulkReinviteLimitForCloud)
+            .Returns(true);
+
+        var expectedResults = organizationUsers.Select(u => Tuple.Create(u, "")).ToList();
+        sutProvider.GetDependency<IBulkResendOrganizationInvitesCommand>()
+            .BulkResendInvitesAsync(organizationId, userId, bulkRequestModel.Ids)
+            .Returns(expectedResults);
+
+        // Act
+        var response = await sutProvider.Sut.BulkReinvite(organizationId, bulkRequestModel);
+
+        // Assert
+        Assert.Equal(organizationUsers.Count, response.Data.Count());
+
+        await sutProvider.GetDependency<IBulkResendOrganizationInvitesCommand>()
+            .Received(1)
+            .BulkResendInvitesAsync(organizationId, userId, bulkRequestModel.Ids);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task BulkReinvite_WhenFeatureFlagDisabled_UsesLegacyOrganizationService(
+        Guid organizationId,
+        OrganizationUserBulkRequestModel bulkRequestModel,
+        List<OrganizationUser> organizationUsers,
+        Guid userId,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<ICurrentContext>().ManageUsers(organizationId).Returns(true);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.IncreaseBulkReinviteLimitForCloud)
+            .Returns(false);
+
+        var expectedResults = organizationUsers.Select(u => Tuple.Create(u, "")).ToList();
+        sutProvider.GetDependency<IOrganizationService>()
+            .ResendInvitesAsync(organizationId, userId, bulkRequestModel.Ids)
+            .Returns(expectedResults);
+
+        // Act
+        var response = await sutProvider.Sut.BulkReinvite(organizationId, bulkRequestModel);
+
+        // Assert
+        Assert.Equal(organizationUsers.Count, response.Data.Count());
+
+        await sutProvider.GetDependency<IOrganizationService>()
+            .Received(1)
+            .ResendInvitesAsync(organizationId, userId, bulkRequestModel.Ids);
     }
 }
