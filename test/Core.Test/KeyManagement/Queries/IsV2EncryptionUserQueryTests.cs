@@ -5,6 +5,7 @@ using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Queries;
 using Bit.Core.KeyManagement.Repositories;
 using Bit.Core.KeyManagement.UserKey;
+using Bit.Test.Common.Constants;
 using Xunit;
 
 namespace Bit.Core.Test.KeyManagement.Queries;
@@ -16,7 +17,7 @@ public class IsV2EncryptionUserQueryTests
         private readonly bool _hasKeys;
         public FakeSigRepo(bool hasKeys) { _hasKeys = hasKeys; }
         public Task<SignatureKeyPairData?> GetByUserIdAsync(Guid userId)
-            => Task.FromResult(_hasKeys ? new SignatureKeyPairData(SignatureAlgorithm.Ed25519, "7.cose_signing", "vk") : null);
+            => Task.FromResult(_hasKeys ? new SignatureKeyPairData(SignatureAlgorithm.Ed25519, TestEncryptionConstants.V2WrappedSigningKey, TestEncryptionConstants.V2VerifyingKey) : null);
 
         // Unused in tests
         public Task<IEnumerable<UserSignatureKeyPair>> GetManyAsync(IEnumerable<Guid> ids) => throw new NotImplementedException();
@@ -33,7 +34,7 @@ public class IsV2EncryptionUserQueryTests
     [Fact]
     public async Task Run_ReturnsTrue_ForV2State()
     {
-        var user = new User { Id = Guid.NewGuid(), PrivateKey = "7.cose" };
+        var user = new User { Id = Guid.NewGuid(), PrivateKey = TestEncryptionConstants.V2PrivateKey };
         var sut = new IsV2EncryptionUserQuery(new FakeSigRepo(true));
 
         var result = await sut.Run(user);
@@ -44,7 +45,7 @@ public class IsV2EncryptionUserQueryTests
     [Fact]
     public async Task Run_ReturnsFalse_ForV1State()
     {
-        var user = new User { Id = Guid.NewGuid(), PrivateKey = "2.iv|ct|mac" };
+        var user = new User { Id = Guid.NewGuid(), PrivateKey = TestEncryptionConstants.V1EncryptedBase64 };
         var sut = new IsV2EncryptionUserQuery(new FakeSigRepo(false));
 
         var result = await sut.Run(user);
@@ -55,7 +56,7 @@ public class IsV2EncryptionUserQueryTests
     [Fact]
     public async Task Run_ThrowsForInvalidMixedState()
     {
-        var user = new User { Id = Guid.NewGuid(), PrivateKey = "7.cose" };
+        var user = new User { Id = Guid.NewGuid(), PrivateKey = TestEncryptionConstants.V2PrivateKey };
         var sut = new IsV2EncryptionUserQuery(new FakeSigRepo(false));
 
         await Assert.ThrowsAsync<InvalidOperationException>(async () => await sut.Run(user));

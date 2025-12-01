@@ -15,7 +15,10 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
+using Bit.Identity.IdentityServer;
+using Bit.Identity.IdentityServer.RequestValidators;
 using Bit.IntegrationTestCommon.Factories;
+using Bit.Test.Common.Constants;
 using Bit.Test.Common.Helpers;
 using Duende.IdentityModel;
 using Duende.IdentityServer.Models;
@@ -310,8 +313,8 @@ public class IdentityServerSsoTests
         var user = await factory.Services.GetRequiredService<IUserRepository>().GetByEmailAsync(TestEmail);
         Assert.NotNull(user);
 
-        const string expectedPrivateKey = "2.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==";
-        const string expectedUserKey = "2.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==";
+        const string expectedPrivateKey = TestEncryptionConstants.V1EncryptedBase64;
+        const string expectedUserKey = TestEncryptionConstants.V1EncryptedBase64;
 
         var device = await deviceRepository.CreateAsync(new Device
         {
@@ -320,7 +323,7 @@ public class IdentityServerSsoTests
             Name = "Thing",
             UserId = user.Id,
             EncryptedPrivateKey = expectedPrivateKey,
-            EncryptedPublicKey = "2.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==",
+            EncryptedPublicKey = TestEncryptionConstants.V1EncryptedBase64,
             EncryptedUserKey = expectedUserKey,
         });
 
@@ -339,7 +342,8 @@ public class IdentityServerSsoTests
             { "code", "test_code" },
             { "code_verifier", challenge },
             { "redirect_uri", "https://localhost:8080/sso-connector.html" }
-        }));
+        }),
+        http => { http.Request.Headers.Append("Bitwarden-Client-Version", "2025.11.0"); });
 
         // Assert
         // If the organization has selected TrustedDeviceEncryption but the user still has their master password
@@ -408,7 +412,12 @@ public class IdentityServerSsoTests
             { "code", "test_code" },
             { "code_verifier", challenge },
             { "redirect_uri", "https://localhost:8080/sso-connector.html" }
-        }));
+        }),
+        http =>
+        {
+            http.Request.Headers.Append("Bitwarden-Client-Version", "2025.11.0");
+            http.Request.Headers.Append("Accept", "application/json");
+        });
 
         // Assert
         // If the organization has selected TrustedDeviceEncryption but the user still has their master password
@@ -481,7 +490,8 @@ public class IdentityServerSsoTests
             { "code", "test_code" },
             { "code_verifier", challenge },
             { "redirect_uri", "https://localhost:8080/sso-connector.html" }
-        }));
+        }),
+        http => { http.Request.Headers.Append("Bitwarden-Client-Version", "2025.11.0"); });
 
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
         using var responseBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
@@ -558,10 +568,56 @@ public class IdentityServerSsoTests
             { "code", "test_code" },
             { "code_verifier", challenge },
             { "redirect_uri", "https://localhost:8080/sso-connector.html" }
-        }));
+        }),
+        http => { http.Request.Headers.Append("Bitwarden-Client-Version", "2025.11.0"); });
 
-        // Only calls that result in a 200 OK should call this helper
-        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+        // If this fails, surface detailed error information to aid debugging
+        if (context.Response.StatusCode != StatusCodes.Status200OK)
+        {
+            string contentType = context.Response.ContentType ?? string.Empty;
+            string rawBody = "<unreadable>";
+            try
+            {
+                if (context.Response.Body.CanSeek)
+                {
+                    context.Response.Body.Position = 0;
+                }
+                using var reader = new StreamReader(context.Response.Body, leaveOpen: true);
+                rawBody = await reader.ReadToEndAsync();
+            }
+            catch
+            {
+                // leave rawBody as unreadable
+            }
+
+            string? error = null;
+            string? errorDesc = null;
+            string? errorModelMsg = null;
+            try
+            {
+                using var doc = JsonDocument.Parse(rawBody);
+                var root = doc.RootElement;
+                if (root.TryGetProperty("error", out var e)) error = e.GetString();
+                if (root.TryGetProperty("error_description", out var ed)) errorDesc = ed.GetString();
+                if (root.TryGetProperty("ErrorModel", out var em) && em.ValueKind == JsonValueKind.Object)
+                {
+                    if (em.TryGetProperty("Message", out var msg) && msg.ValueKind == JsonValueKind.String)
+                    {
+                        errorModelMsg = msg.GetString();
+                    }
+                }
+            }
+            catch
+            {
+                // Not JSON, continue with raw body
+            }
+
+            var message =
+                $"Unexpected status {context.Response.StatusCode}." +
+                $" error='{error}' error_description='{errorDesc}' ErrorModel.Message='{errorModelMsg}'" +
+                $" ContentType='{contentType}' RawBody='{rawBody}'";
+            Assert.Fail(message);
+        }
 
         return await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
     }
@@ -574,6 +630,18 @@ public class IdentityServerSsoTests
     {
         var factory = new IdentityApplicationFactory();
 
+        // Bypass client version gating to isolate SSO test behavior
+        factory.SubstituteService<IClientVersionValidator>(svc =>
+        {
+            svc.ValidateAsync(Arg.Any<User>(), Arg.Any<CustomValidatorRequestContext>())
+                .Returns(Task.FromResult(true));
+        });
+
+        // Compute PKCE S256 code challenge explicitly (base64url of SHA256)
+        var challengeBytes = System.Text.Encoding.ASCII.GetBytes(challenge);
+        var hash = System.Security.Cryptography.SHA256.HashData(challengeBytes);
+        var codeChallenge = Duende.IdentityModel.Base64Url.Encode(hash);
+
         var authorizationCode = new AuthorizationCode
         {
             ClientId = "web",
@@ -581,8 +649,8 @@ public class IdentityServerSsoTests
             Lifetime = (int)TimeSpan.FromMinutes(5).TotalSeconds,
             RedirectUri = "https://localhost:8080/sso-connector.html",
             RequestedScopes = ["api", "offline_access"],
-            CodeChallenge = challenge.Sha256(),
-            CodeChallengeMethod = "plain",
+            CodeChallenge = codeChallenge,
+            CodeChallengeMethod = "S256",
             Subject = null!, // Temporarily set it to null
         };
 
@@ -601,10 +669,10 @@ public class IdentityServerSsoTests
                 KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
                 UserAsymmetricKeys = new KeysRequestModel()
                 {
-                    PublicKey = "public_key",
-                    EncryptedPrivateKey = "private_key"
+                    PublicKey = TestEncryptionConstants.PublicKey,
+                    EncryptedPrivateKey = TestEncryptionConstants.V1EncryptedBase64 // v1-format so parsing succeeds and user is treated as v1
                 },
-                UserSymmetricKey = "sym_key",
+                UserSymmetricKey = TestEncryptionConstants.V1EncryptedBase64,
             });
 
         var organizationRepository = factory.Services.GetRequiredService<IOrganizationRepository>();
