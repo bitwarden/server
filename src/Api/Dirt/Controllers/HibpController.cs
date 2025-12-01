@@ -66,7 +66,9 @@ public class HibpController : Controller
         }
         else if (response.StatusCode == HttpStatusCode.NotFound)
         {
-            return new NotFoundResult();
+            // Return 200 OK with empty array per REST semantics
+            // 404 should mean endpoint doesn't exist, not "no results found"
+            return Content("[]", "application/json");
         }
         else if (response.StatusCode == HttpStatusCode.TooManyRequests && retry)
         {
