@@ -91,6 +91,7 @@ public class PolicyService : IPolicyService
         var organizationUserPolicyDetails = await _organizationUserRepository.GetByUserIdWithPolicyDetailsAsync(userId, policyType);
 
         OrganizationUserType[] excludedUserTypes;
+        var appliesToProviders = false;
 
         if (policyType == PolicyType.SingleOrg
             && _featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
@@ -98,6 +99,7 @@ public class PolicyService : IPolicyService
         {
             minStatus = OrganizationUserStatusType.Revoked;
             excludedUserTypes = [];
+            appliesToProviders = true;
         }
         else
         {
@@ -105,12 +107,13 @@ public class PolicyService : IPolicyService
         }
 
         var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+
         return organizationUserPolicyDetails.Where(o =>
             (!orgAbilities.TryGetValue(o.OrganizationId, out var orgAbility) || orgAbility.UsePolicies) &&
             o.PolicyEnabled &&
             !excludedUserTypes.Contains(o.OrganizationUserType) &&
             o.OrganizationUserStatus >= minStatus &&
-            !o.IsProvider);
+            (o.IsProvider && appliesToProviders || !o.IsProvider)); // the user is a provider and the policy applies to providers, or they are not a provider
     }
 
     private OrganizationUserType[] GetUserTypesExcludedFromPolicy(PolicyType policyType)
