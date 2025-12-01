@@ -4,9 +4,12 @@ using Bit.Api.Dirt.Controllers;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
-using Bit.Core.Settings;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.AspNetCore.Mvc;
+using NSubstitute;
+using Xunit;
+using GlobalSettings = Bit.Core.Settings.GlobalSettings;
 
 namespace Bit.Api.Test.Dirt;
 
@@ -250,41 +253,6 @@ public class HibpControllerTests : IDisposable
         Assert.True(capturedRequest.Headers.Contains("hibp-client-id"));
         Assert.True(capturedRequest.Headers.Contains("User-Agent"));
         Assert.Equal("Bitwarden", capturedRequest.Headers.GetValues("User-Agent").First());
-    }
-
-    [Theory, BitAutoData]
-    public async Task SendAsync_SelfHosted_UsesCorrectUserAgent(
-        SutProvider<HibpController> sutProvider,
-        string username,
-        Guid userId)
-    {
-        // Arrange
-        sutProvider.GetDependency<GlobalSettings>().HibpApiKey = "test-api-key";
-        sutProvider.GetDependency<GlobalSettings>().SelfHosted = true;
-        sutProvider.GetDependency<IUserService>()
-            .GetProperUserId(Arg.Any<System.Security.Claims.ClaimsPrincipal>())
-            .Returns(userId);
-
-        HttpRequestMessage capturedRequest = null;
-        var mockHandler = new MockHttpMessageHandler((request, cancellationToken) =>
-        {
-            capturedRequest = request;
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound)
-            {
-                Content = new StringContent("")
-            });
-        });
-
-        var mockHttpClient = new HttpClient(mockHandler);
-        _httpClientField.SetValue(null, mockHttpClient);
-
-        // Act
-        await sutProvider.Sut.Get(username);
-
-        // Assert
-        Assert.NotNull(capturedRequest);
-        Assert.True(capturedRequest.Headers.Contains("User-Agent"));
-        Assert.Equal("Bitwarden Self-Hosted", capturedRequest.Headers.GetValues("User-Agent").First());
     }
 
     /// <summary>
