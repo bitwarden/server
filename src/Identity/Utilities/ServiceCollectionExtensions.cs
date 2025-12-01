@@ -27,6 +27,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IDeviceValidator, DeviceValidator>();
         services.AddTransient<IClientVersionValidator, ClientVersionValidator>();
         services.AddTransient<ITwoFactorAuthenticationValidator, TwoFactorAuthenticationValidator>();
+        services.AddTransient<ISsoRequestValidator, SsoRequestValidator>();
         services.AddTransient<ILoginApprovingClientTypes, LoginApprovingClientTypes>();
         services.AddTransient<ISendAuthenticationMethodValidator<ResourcePassword>, SendPasswordRequestValidator>();
         services.AddTransient<ISendAuthenticationMethodValidator<EmailOtp>, SendEmailOtpRequestValidator>();
