@@ -5,6 +5,8 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Int
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models;
+using Bit.Core.Platform.Push;
 using Bit.Core.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
@@ -15,7 +17,8 @@ public class VNextSavePolicyCommand(
     IPolicyRepository policyRepository,
     IEnumerable<IPolicyUpdateEvent> policyUpdateEventHandlers,
     TimeProvider timeProvider,
-    IPolicyEventHandlerFactory policyEventHandlerFactory)
+    IPolicyEventHandlerFactory policyEventHandlerFactory,
+    IPushNotificationService pushNotificationService)
     : IVNextSavePolicyCommand
 {
 
@@ -74,7 +77,7 @@ public class VNextSavePolicyCommand(
         policy.RevisionDate = timeProvider.GetUtcNow().UtcDateTime;
 
         await policyRepository.UpsertAsync(policy);
-
+        await PushPolicyUpdateToClients(policyUpdateRequest.OrganizationId, policy);
         return policy;
     }
 
@@ -192,4 +195,17 @@ public class VNextSavePolicyCommand(
         var savedPoliciesDict = savedPolicies.ToDictionary(p => p.Type);
         return savedPoliciesDict;
     }
+
+    Task PushPolicyUpdateToClients(Guid organizationId, Policy policy) => pushNotificationService.PushAsync(new PushNotification<SyncPolicyPushNotification>
+    {
+        Type = PushType.PolicyChanged,
+        Target = NotificationTarget.Organization,
+        TargetId = organizationId,
+        ExcludeCurrentContext = false,
+        Payload = new SyncPolicyPushNotification
+        {
+            Policy = policy,
+            OrganizationId = organizationId
+        }
+    });
 }
