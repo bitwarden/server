@@ -92,12 +92,12 @@ public class PolicyService : IPolicyService
 
         OrganizationUserType[] excludedUserTypes;
 
-        if (policyType == PolicyType.SingleOrg // looking for single org
-            && _featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers) // if autoconfirm is enabled
-            && (await _organizationUserRepository.GetByUserIdWithPolicyDetailsAsync(userId, PolicyType.AutomaticUserConfirmation)).Any()) // any auto confirm details associated with user id
+        if (policyType == PolicyType.SingleOrg
+            && _featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            && (await _organizationUserRepository.GetByUserIdWithPolicyDetailsAsync(userId, PolicyType.AutomaticUserConfirmation)).Any())
         {
-            minStatus = OrganizationUserStatusType.Revoked; // all statuses count
-            excludedUserTypes = []; // no excluded types
+            minStatus = OrganizationUserStatusType.Revoked;
+            excludedUserTypes = [];
         }
         else
         {

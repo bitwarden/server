@@ -680,100 +680,26 @@ public class AcceptOrgUserCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task AcceptOrgUserAsync_WithAutoConfirmEnabledOnOrgAndUserBelongsToAnotherOrg_ThrowsBadRequest(
-        SutProvider<AcceptOrgUserCommand> sutProvider,
-        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails,
-        OrganizationUser otherOrgUser)
-    {
-        // Arrange
-        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
-
-        // User belongs to another organization
-        otherOrgUser.UserId = user.Id;
-        otherOrgUser.OrganizationId = Guid.NewGuid(); // Different org
-        var allOrgUsers = new List<OrganizationUser> { otherOrgUser };
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByUserAsync(user.Id)
-            .Returns(Task.FromResult<ICollection<OrganizationUser>>(allOrgUsers));
-
-        // Mock auto-confirm enforcement query to return error
-        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementQuery>()
-            .IsCompliantAsync(Arg.Is<AutomaticUserConfirmationPolicyEnforcementRequest>(r =>
-                r.OrganizationUser == orgUser &&
-                r.User == user))
-            .Returns(Invalid(
-                new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser, allOrgUsers, user),
-                new OrganizationEnforcesSingleOrgPolicy()));
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService));
-
-        Assert.Equal(new OrganizationEnforcesSingleOrgPolicy().Message, exception.Message);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task AcceptOrgUserAsync_WithAutoConfirmEnabledOnOtherOrgAndUserBelongsToAnotherOrg_ThrowsBadRequest(
-        SutProvider<AcceptOrgUserCommand> sutProvider,
-        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails,
-        OrganizationUser otherOrgUser)
-    {
-        // Arrange
-        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
-
-        // User belongs to another organization
-        otherOrgUser.UserId = user.Id;
-        otherOrgUser.OrganizationId = Guid.NewGuid(); // Different org
-        var allOrgUsers = new List<OrganizationUser> { otherOrgUser };
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByUserAsync(user.Id)
-            .Returns(Task.FromResult<ICollection<OrganizationUser>>(allOrgUsers));
-
-        // Mock auto-confirm enforcement query to return error for other org having auto-confirm
-        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementQuery>()
-            .IsCompliantAsync(Arg.Is<AutomaticUserConfirmationPolicyEnforcementRequest>(r =>
-                r.OrganizationUser == orgUser &&
-                r.User == user))
-            .Returns(Invalid(
-                new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser, allOrgUsers, user),
-                new OtherOrganizationEnforcesSingleOrgPolicy()));
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService));
-
-        Assert.Equal(new OtherOrganizationEnforcesSingleOrgPolicy().Message, exception.Message);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task AcceptOrgUserAsync_WithAutoConfirmEnabledAndUserIsProvider_ThrowsBadRequest(
+    public async Task AcceptOrgUserAsync_WithAutoConfirmIsNotEnabled_DoesNotCheckCompliance(
         SutProvider<AcceptOrgUserCommand> sutProvider,
         User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
     {
         // Arrange
         SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
 
-        // Mock auto-confirm enforcement query to return provider error
-        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementQuery>()
-            .IsCompliantAsync(Arg.Is<AutomaticUserConfirmationPolicyEnforcementRequest>(r =>
-                r.OrganizationUser == orgUser &&
-                r.User == user))
-            .Returns(Invalid(
-                new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser, [], user),
-                new ProviderUsersCannotJoin()));
+        // Act
+        var resultOrgUser = await sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService);
 
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService));
+        // Assert
+        AssertValidAcceptedOrgUser(resultOrgUser, orgUser, user);
 
-        Assert.Equal(new ProviderUsersCannotJoin().Message, exception.Message);
+        await sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementQuery>().DidNotReceiveWithAnyArgs()
+            .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>());
     }
 
     [Theory]
     [BitAutoData]
-    public async Task AcceptOrgUserAsync_WithAutoConfirmNotApplicable_AcceptsUser(
+    public async Task AcceptOrgUserAsync_WithUserThatIsCompliantWithAutoConfirm_AcceptsUser(
         SutProvider<AcceptOrgUserCommand> sutProvider,
         User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
     {
@@ -797,7 +723,7 @@ public class AcceptOrgUserCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task AcceptOrgUserAsync_WithAutoConfirmValidationBeforeSingleOrgPolicy_ChecksAutoConfirmFirst(
+    public async Task AcceptOrgUserAsync_WithAutoConfirmIsEnabledAndFailsCompliance_ThrowsBadRequestException(
         SutProvider<AcceptOrgUserCommand> sutProvider,
         User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails,
         OrganizationUser otherOrgUser)
@@ -805,36 +731,22 @@ public class AcceptOrgUserCommandTests
         // Arrange
         SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
 
-        // Setup conditions that would fail BOTH auto-confirm AND single org policy checks
-        otherOrgUser.UserId = user.Id;
-        otherOrgUser.OrganizationId = Guid.NewGuid();
-        var allOrgUsers = new List<OrganizationUser> { otherOrgUser };
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByUserAsync(user.Id)
-            .Returns(Task.FromResult<ICollection<OrganizationUser>>(allOrgUsers));
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(true);
 
-        // Make organization they are trying to join have the single org policy (would fail single org check)
-        var singleOrgPolicy = new OrganizationUserPolicyDetails { OrganizationId = orgUser.OrganizationId };
-        sutProvider.GetDependency<IPolicyService>()
-            .GetPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg, OrganizationUserStatusType.Invited)
-            .Returns(Task.FromResult<ICollection<OrganizationUserPolicyDetails>>(
-                new List<OrganizationUserPolicyDetails> { singleOrgPolicy }));
-
-        // Mock auto-confirm to fail FIRST (should be checked before single org policy)
         sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementQuery>()
             .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>())
             .Returns(Invalid(
-                new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser, allOrgUsers, user),
+                new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser, [otherOrgUser], user),
                 new OrganizationEnforcesSingleOrgPolicy()));
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService));
 
-        // Should get auto-confirm error (OrganizationEnforcesSingleOrgPolicy) NOT the regular single org policy error
+        // Should get auto-confirm error
         Assert.Equal(new OrganizationEnforcesSingleOrgPolicy().Message, exception.Message);
-        Assert.NotEqual("You may not join this organization until you leave or remove all other organizations.",
-            exception.Message);
     }
 
     // Private helpers -------------------------------------------------------------------------------------------------
@@ -880,7 +792,7 @@ public class AcceptOrgUserCommandTests
     /// - Provides mock data for an admin to validate email functionality.
     /// - Returns the corresponding organization for the given org ID.
     /// </summary>
-    private void SetupCommonAcceptOrgUserMocks(SutProvider<AcceptOrgUserCommand> sutProvider, User user,
+    private static void SetupCommonAcceptOrgUserMocks(SutProvider<AcceptOrgUserCommand> sutProvider, User user,
         Organization org,
         OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
     {
@@ -893,18 +805,12 @@ public class AcceptOrgUserCommandTests
         // User is not part of any other orgs
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetManyByUserAsync(user.Id)
-            .Returns(
-                Task.FromResult<ICollection<OrganizationUser>>(new List<OrganizationUser>())
-            );
+            .Returns([]);
 
         // Org they are trying to join does not have single org policy
         sutProvider.GetDependency<IPolicyService>()
             .GetPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg, OrganizationUserStatusType.Invited)
-            .Returns(
-                Task.FromResult<ICollection<OrganizationUserPolicyDetails>>(
-                    new List<OrganizationUserPolicyDetails>()
-                )
-            );
+            .Returns([]);
 
         // User is not part of any organization that applies the single org policy
         sutProvider.GetDependency<IPolicyService>()
@@ -914,29 +820,24 @@ public class AcceptOrgUserCommandTests
         // Org does not require 2FA
         sutProvider.GetDependency<IPolicyService>().GetPoliciesApplicableToUserAsync(user.Id,
                 PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Invited)
-            .Returns(Task.FromResult<ICollection<OrganizationUserPolicyDetails>>(
-                new List<OrganizationUserPolicyDetails>()));
+            .Returns([]);
 
         // Provide at least 1 admin to test email functionality
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetManyByMinimumRoleAsync(orgUser.OrganizationId, OrganizationUserType.Admin)
-            .Returns(Task.FromResult<IEnumerable<OrganizationUserUserDetails>>(
-                new List<OrganizationUserUserDetails>() { adminUserDetails }
-            ));
+            .Returns([adminUserDetails]);
 
         // Return org
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(org.Id)
-            .Returns(Task.FromResult(org));
+            .Returns(org);
 
         // Auto-confirm enforcement query returns valid by default (no restrictions)
+        var request = new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser, [], user);
+
         sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementQuery>()
-            .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>())
-            .Returns(callInfo =>
-            {
-                var request = callInfo.Arg<AutomaticUserConfirmationPolicyEnforcementRequest>();
-                return Valid(request);
-            });
+            .IsCompliantAsync(request)
+            .Returns(Valid(request));
     }
 
 
