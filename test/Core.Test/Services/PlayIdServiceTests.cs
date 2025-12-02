@@ -39,7 +39,7 @@ public class PlayIdServiceTests
         var result = sutProvider.Sut.InPlay(out var resultPlayId);
 
         Assert.False(result);
-        Assert.Empty(resultPlayId);
+        Assert.Equal(playId, resultPlayId);
     }
 
     [Theory]
@@ -101,8 +101,35 @@ public class NeverPlayIdServicesTests
 [SutProviderCustomize]
 public class PlayIdSingletonServiceTests
 {
+    public static IEnumerable<object[]> SutProvider()
+    {
+        var sutProvider = new SutProvider<PlayIdSingletonService>();
+        var httpContext = sutProvider.CreateDependency<HttpContext>();
+        var serviceProvider = sutProvider.CreateDependency<IServiceProvider>();
+        var hostEnvironment = sutProvider.CreateDependency<IHostEnvironment>();
+        var playIdService = new PlayIdService(hostEnvironment);
+        sutProvider.SetDependency(playIdService);
+        httpContext.RequestServices.Returns(serviceProvider);
+        serviceProvider.GetService<PlayIdService>().Returns(playIdService);
+        serviceProvider.GetRequiredService<PlayIdService>().Returns(playIdService);
+        sutProvider.CreateDependency<IHttpContextAccessor>().HttpContext.Returns(httpContext);
+        sutProvider.Create();
+        return [[sutProvider]];
+    }
+
+    private void PrepHttpContext(
+        SutProvider<PlayIdSingletonService> sutProvider)
+    {
+        var httpContext = sutProvider.CreateDependency<HttpContext>();
+        var serviceProvider = sutProvider.CreateDependency<IServiceProvider>();
+        var PlayIdService = sutProvider.CreateDependency<PlayIdService>();
+        httpContext.RequestServices.Returns(serviceProvider);
+        serviceProvider.GetRequiredService<PlayIdService>().Returns(PlayIdService);
+        sutProvider.GetDependency<IHttpContextAccessor>().HttpContext.Returns(httpContext);
+    }
+
     [Theory]
-    [BitAutoData]
+    [BitMemberAutoData(nameof(SutProvider))]
     public void InPlay_WhenNoHttpContext_ReturnsFalse(
         SutProvider<PlayIdSingletonService> sutProvider)
     {
@@ -116,25 +143,13 @@ public class PlayIdSingletonServiceTests
     }
 
     [Theory]
-    [BitAutoData]
+    [BitMemberAutoData(nameof(SutProvider))]
     public void InPlay_WhenNotDevelopment_ReturnsFalse(
-        string playIdValue,
-        SutProvider<PlayIdSingletonService> sutProvider)
+        SutProvider<PlayIdSingletonService> sutProvider,
+        string playIdValue)
     {
-        var httpContext = Substitute.For<HttpContext>();
-        var serviceProvider = Substitute.For<IServiceProvider>();
-        var scopedPlayIdService = Substitute.For<PlayIdService>(Substitute.For<IHostEnvironment>());
+        var scopedPlayIdService = sutProvider.GetDependency<PlayIdService>();
         scopedPlayIdService.PlayId = playIdValue;
-        scopedPlayIdService.InPlay(out Arg.Any<string>()).Returns(x =>
-        {
-            x[0] = playIdValue;
-            return true;
-        });
-
-        httpContext.RequestServices.Returns(serviceProvider);
-        serviceProvider.GetRequiredService<PlayIdService>().Returns(scopedPlayIdService);
-
-        sutProvider.GetDependency<IHttpContextAccessor>().HttpContext.Returns(httpContext);
         sutProvider.GetDependency<IHostEnvironment>().EnvironmentName.Returns(Environments.Production);
 
         var result = sutProvider.Sut.InPlay(out var playId);
@@ -144,21 +159,12 @@ public class PlayIdSingletonServiceTests
     }
 
     [Theory]
-    [BitAutoData]
+    [BitMemberAutoData(nameof(SutProvider))]
     public void InPlay_WhenDevelopmentAndHttpContextWithPlayId_ReturnsTrue(
-        string playIdValue,
-        SutProvider<PlayIdSingletonService> sutProvider)
+        SutProvider<PlayIdSingletonService> sutProvider,
+        string playIdValue)
     {
-        var httpContext = Substitute.For<HttpContext>();
-        var serviceProvider = Substitute.For<IServiceProvider>();
-        var hostEnvironment = Substitute.For<IHostEnvironment>();
-        hostEnvironment.EnvironmentName.Returns(Environments.Development);
-        var scopedPlayIdService = new PlayIdService(hostEnvironment) { PlayId = playIdValue };
-
-        httpContext.RequestServices.Returns(serviceProvider);
-        serviceProvider.GetRequiredService<PlayIdService>().Returns(scopedPlayIdService);
-
-        sutProvider.GetDependency<IHttpContextAccessor>().HttpContext.Returns(httpContext);
+        sutProvider.GetDependency<PlayIdService>().PlayId = playIdValue;
         sutProvider.GetDependency<IHostEnvironment>().EnvironmentName.Returns(Environments.Development);
 
         var result = sutProvider.Sut.InPlay(out var playId);
@@ -168,41 +174,12 @@ public class PlayIdSingletonServiceTests
     }
 
     [Theory]
-    [BitAutoData]
-    public void PlayId_GetterRetrievesFromScopedService(
-        string playIdValue,
-        SutProvider<PlayIdSingletonService> sutProvider)
-    {
-        var httpContext = Substitute.For<HttpContext>();
-        var serviceProvider = Substitute.For<IServiceProvider>();
-        var hostEnvironment = Substitute.For<IHostEnvironment>();
-        var scopedPlayIdService = new PlayIdService(hostEnvironment) { PlayId = playIdValue };
-
-        httpContext.RequestServices.Returns(serviceProvider);
-        serviceProvider.GetRequiredService<PlayIdService>().Returns(scopedPlayIdService);
-
-        sutProvider.GetDependency<IHttpContextAccessor>().HttpContext.Returns(httpContext);
-
-        var result = sutProvider.Sut.PlayId;
-
-        Assert.Equal(playIdValue, result);
-    }
-
-    [Theory]
-    [BitAutoData]
+    [BitMemberAutoData(nameof(SutProvider))]
     public void PlayId_SetterSetsOnScopedService(
-        string playIdValue,
-        SutProvider<PlayIdSingletonService> sutProvider)
+        SutProvider<PlayIdSingletonService> sutProvider,
+        string playIdValue)
     {
-        var httpContext = Substitute.For<HttpContext>();
-        var serviceProvider = Substitute.For<IServiceProvider>();
-        var hostEnvironment = Substitute.For<IHostEnvironment>();
-        var scopedPlayIdService = new PlayIdService(hostEnvironment);
-
-        httpContext.RequestServices.Returns(serviceProvider);
-        serviceProvider.GetRequiredService<PlayIdService>().Returns(scopedPlayIdService);
-
-        sutProvider.GetDependency<IHttpContextAccessor>().HttpContext.Returns(httpContext);
+        var scopedPlayIdService = sutProvider.GetDependency<PlayIdService>();
 
         sutProvider.Sut.PlayId = playIdValue;
 
@@ -210,7 +187,7 @@ public class PlayIdSingletonServiceTests
     }
 
     [Theory]
-    [BitAutoData]
+    [BitMemberAutoData(nameof(SutProvider))]
     public void PlayId_WhenNoHttpContext_GetterReturnsNull(
         SutProvider<PlayIdSingletonService> sutProvider)
     {
@@ -222,10 +199,10 @@ public class PlayIdSingletonServiceTests
     }
 
     [Theory]
-    [BitAutoData]
+    [BitMemberAutoData(nameof(SutProvider))]
     public void PlayId_WhenNoHttpContext_SetterDoesNotThrow(
-        string playIdValue,
-        SutProvider<PlayIdSingletonService> sutProvider)
+        SutProvider<PlayIdSingletonService> sutProvider,
+        string playIdValue)
     {
         sutProvider.GetDependency<IHttpContextAccessor>().HttpContext.Returns((HttpContext?)null);
 
