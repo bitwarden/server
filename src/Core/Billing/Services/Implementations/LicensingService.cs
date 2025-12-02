@@ -125,6 +125,12 @@ public class LicensingService : ILicensingService
                     await DisableOrganizationAsync(org, license, "Invalid data.");
                     continue;
                 }
+
+                if (string.IsNullOrWhiteSpace(license.Token) && !license.VerifySignature(_certificate))
+                {
+                    await DisableOrganizationAsync(org, license, "Invalid signature.");
+                    continue;
+                }
             }
             catch (Exception ex)
             {
