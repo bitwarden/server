@@ -20,16 +20,14 @@ public class SetAccountKeysForUserCommandTests
         Guid userId,
         AccountKeysRequestModel accountKeys)
     {
-        var command = new SetAccountKeysForUserCommand();
         var userRepository = Substitute.For<IUserRepository>();
         var userSignatureKeyPairRepository = Substitute.For<IUserSignatureKeyPairRepository>();
+        var command = new SetAccountKeysForUserCommand(userRepository, userSignatureKeyPairRepository);
 
         userRepository.GetByIdAsync(userId).ReturnsNullForAnyArgs();
 
         var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
-            command.SetAccountKeysForUserAsync(userId, accountKeys,
-                userRepository,
-                userSignatureKeyPairRepository));
+            command.SetAccountKeysForUserAsync(userId, accountKeys));
 
         Assert.Equal("userId", exception.ParamName);
         Assert.Contains("User not found", exception.Message);
@@ -50,15 +48,13 @@ public class SetAccountKeysForUserCommandTests
         user.SecurityState = null;
         user.SecurityVersion = null;
 
-        var command = new SetAccountKeysForUserCommand();
         var userRepository = Substitute.For<IUserRepository>();
         var userSignatureKeyPairRepository = Substitute.For<IUserSignatureKeyPairRepository>();
+        var command = new SetAccountKeysForUserCommand(userRepository, userSignatureKeyPairRepository);
 
         userRepository.GetByIdAsync(user.Id).Returns(user);
 
-        await command.SetAccountKeysForUserAsync(user.Id, accountKeys,
-            userRepository,
-            userSignatureKeyPairRepository);
+        await command.SetAccountKeysForUserAsync(user.Id, accountKeys);
 
         Assert.Equal(accountKeys.UserKeyEncryptedAccountPrivateKey, user.PrivateKey);
         Assert.Equal(accountKeys.AccountPublicKey, user.PublicKey);
@@ -109,15 +105,13 @@ public class SetAccountKeysForUserCommandTests
             SecurityState = securityState
         };
 
-        var command = new SetAccountKeysForUserCommand();
         var userRepository = Substitute.For<IUserRepository>();
         var userSignatureKeyPairRepository = Substitute.For<IUserSignatureKeyPairRepository>();
+        var command = new SetAccountKeysForUserCommand(userRepository, userSignatureKeyPairRepository);
 
         userRepository.GetByIdAsync(user.Id).Returns(user);
 
-        await command.SetAccountKeysForUserAsync(user.Id, accountKeys,
-            userRepository,
-            userSignatureKeyPairRepository);
+        await command.SetAccountKeysForUserAsync(user.Id, accountKeys);
 
         Assert.Equal(publicKeyEncryptionKeyPair.WrappedPrivateKey, user.PrivateKey);
         Assert.Equal(publicKeyEncryptionKeyPair.PublicKey, user.PublicKey);

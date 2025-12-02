@@ -9,9 +9,19 @@ namespace Bit.Core.KeyManagement.Commands;
 
 public class SetAccountKeysForUserCommand : ISetAccountKeysForUserCommand
 {
-    public async Task SetAccountKeysForUserAsync(Guid userId, AccountKeysRequestModel accountKeys, IUserRepository userRepository, IUserSignatureKeyPairRepository userSignatureKeyPairRepository)
+    private readonly IUserRepository _userRepository;
+    private readonly IUserSignatureKeyPairRepository _userSignatureKeyPairRepository;
+    public SetAccountKeysForUserCommand(
+        IUserRepository userRepository,
+        IUserSignatureKeyPairRepository userSignatureKeyPairRepository)
     {
-        var user = await userRepository.GetByIdAsync(userId);
+        _userRepository = userRepository;
+        _userSignatureKeyPairRepository = userSignatureKeyPairRepository;
+    }
+
+    public async Task SetAccountKeysForUserAsync(Guid userId, AccountKeysRequestModel accountKeys)
+    {
+        var user = await _userRepository.GetByIdAsync(userId);
         if (user == null)
         {
             throw new ArgumentException("User not found", nameof(userId));
@@ -29,7 +39,7 @@ public class SetAccountKeysForUserCommand : ISetAccountKeysForUserCommand
             user.SignedPublicKey = accountKeysData.PublicKeyEncryptionKeyPairData.SignedPublicKey;
             user.SecurityState = accountKeysData.SecurityStateData.SecurityState;
             user.SecurityVersion = accountKeysData.SecurityStateData.SecurityVersion;
-            await userSignatureKeyPairRepository.UpsertAsync(new UserSignatureKeyPair
+            await _userSignatureKeyPairRepository.UpsertAsync(new UserSignatureKeyPair
             {
                 Id = CoreHelpers.GenerateComb(),
                 UserId = userId,
@@ -40,6 +50,6 @@ public class SetAccountKeysForUserCommand : ISetAccountKeysForUserCommand
                 RevisionDate = DateTime.UtcNow,
             });
         }
-        await userRepository.ReplaceAsync(user);
+        await _userRepository.ReplaceAsync(user);
     }
 }

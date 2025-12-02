@@ -21,6 +21,7 @@ public static class KeyManagementServiceCollectionExtensions
     {
         services.AddScoped<IRegenerateUserAsymmetricKeysCommand, RegenerateUserAsymmetricKeysCommand>();
         services.AddScoped<IChangeKdfCommand, ChangeKdfCommand>();
+        services.AddScoped<ISetAccountKeysForUserCommand, SetAccountKeysForUserCommand>();
     }
 
     private static void AddKeyManagementQueries(this IServiceCollection services)
