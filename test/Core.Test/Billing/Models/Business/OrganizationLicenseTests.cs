@@ -28,6 +28,7 @@ public class OrganizationLicenseTests
         var license = OrganizationLicenseFileFixtures.GetVersion(licenseVersion);
 
         // These licenses will naturally expire over time, but we still want them to be able to test
+        license.Expires = DateTime.MaxValue;
 
         var organization = OrganizationLicenseFileFixtures.OrganizationFactory();
         var globalSettings = Substitute.For<IGlobalSettings>();
