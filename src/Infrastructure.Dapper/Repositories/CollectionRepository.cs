@@ -363,6 +363,27 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         }
     }
 
+    public async Task<bool> UpsertDefaultCollectionAsync(Guid organizationId, Guid organizationUserId, string defaultCollectionName)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var parameters = new DynamicParameters();
+            parameters.Add("@OrganizationId", organizationId);
+            parameters.Add("@OrganizationUserId", organizationUserId);
+            parameters.Add("@Name", defaultCollectionName);
+            parameters.Add("@CreationDate", DateTime.UtcNow);
+            parameters.Add("@RevisionDate", DateTime.UtcNow);
+            parameters.Add("@WasCreated", dbType: DbType.Boolean, direction: ParameterDirection.Output);
+
+            await connection.ExecuteAsync(
+                $"[{Schema}].[Collection_UpsertDefaultCollection]",
+                parameters,
+                commandType: CommandType.StoredProcedure);
+
+            return parameters.Get<bool>("@WasCreated");
+        }
+    }
+
     private async Task<HashSet<Guid>> GetOrgUserIdsWithDefaultCollectionAsync(SqlConnection connection, SqlTransaction transaction, Guid organizationId)
     {
         const string sql = @"

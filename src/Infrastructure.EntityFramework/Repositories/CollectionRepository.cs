@@ -821,6 +821,69 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         await dbContext.SaveChangesAsync();
     }
 
+    public async Task<bool> UpsertDefaultCollectionAsync(Guid organizationId, Guid organizationUserId, string defaultCollectionName)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        // Check if this organization user already has a default collection
+        var existingDefaultCollection = await dbContext.OrganizationUsers
+            .Where(ou => ou.Id == organizationUserId && ou.OrganizationId == organizationId)
+            .Join(
+                dbContext.CollectionUsers,
+                ou => ou.Id,
+                cu => cu.OrganizationUserId,
+                (ou, cu) => cu)
+            .Join(
+                dbContext.Collections,
+                cu => cu.CollectionId,
+                c => c.Id,
+                (cu, c) => c)
+            .Where(c => c.Type == CollectionType.DefaultUserCollection)
+            .FirstOrDefaultAsync();
+
+        // If collection already exists, return false (not created)
+        if (existingDefaultCollection != null)
+        {
+            return false;
+        }
+
+        // Create new default collection
+        var collectionId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+
+        var collection = new Collection
+        {
+            Id = collectionId,
+            OrganizationId = organizationId,
+            Name = defaultCollectionName,
+            ExternalId = null,
+            CreationDate = now,
+            RevisionDate = now,
+            Type = CollectionType.DefaultUserCollection,
+            DefaultUserCollectionEmail = null
+        };
+
+        var collectionUser = new CollectionUser
+        {
+            CollectionId = collectionId,
+            OrganizationUserId = organizationUserId,
+            ReadOnly = false,
+            HidePasswords = false,
+            Manage = true
+        };
+
+        await dbContext.Collections.AddAsync(collection);
+        await dbContext.CollectionUsers.AddAsync(collectionUser);
+        await dbContext.SaveChangesAsync();
+
+        // Bump user account revision dates
+        await dbContext.UserBumpAccountRevisionDateByCollectionIdAsync(collectionId, organizationId);
+        await dbContext.SaveChangesAsync();
+
+        return true;
+    }
+
     private async Task<HashSet<Guid>> GetOrgUserIdsWithDefaultCollectionAsync(DatabaseContext dbContext, Guid organizationId)
     {
         var results = await dbContext.OrganizationUsers

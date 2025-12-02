@@ -79,19 +79,10 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
                 return;
             }
 
-            await collectionRepository.CreateAsync(
-                new Collection
-                {
-                    OrganizationId = request.Organization!.Id,
-                    Name = request.DefaultUserCollectionName,
-                    Type = CollectionType.DefaultUserCollection
-                },
-                groups: null,
-                [new CollectionAccessSelection
-                {
-                    Id = request.OrganizationUser!.Id,
-                    Manage = true
-                }]);
+            await collectionRepository.UpsertDefaultCollectionAsync(
+                request.Organization!.Id,
+                request.OrganizationUser!.Id,
+                request.DefaultUserCollectionName);
         }
         catch (Exception ex)
         {
