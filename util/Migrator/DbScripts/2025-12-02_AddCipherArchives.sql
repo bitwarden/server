@@ -1,4 +1,72 @@
-﻿CREATE FUNCTION [dbo].[UserCipherDetails](@UserId UNIQUEIDENTIFIER)
+-- Add new JSON column for Archives (similar to Favorites/Folders pattern)
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.columns
+    WHERE object_id = OBJECT_ID(N'[dbo].[Cipher]')
+    AND name = 'Archives'
+)
+BEGIN
+    ALTER TABLE [dbo].[Cipher]
+    ADD [Archives] NVARCHAR(MAX) NULL;
+END;
+GO
+
+-- Update CipherDetails function to use JSON column approach
+IF OBJECT_ID('[dbo].[CipherDetails]') IS NOT NULL
+BEGIN
+    DROP FUNCTION [dbo].[CipherDetails];
+END
+GO
+
+CREATE FUNCTION [dbo].[CipherDetails](@UserId UNIQUEIDENTIFIER)
+RETURNS TABLE
+AS RETURN
+SELECT
+    C.[Id],
+    C.[UserId],
+    C.[OrganizationId],
+    C.[Type],
+    C.[Data],
+    C.[Attachments],
+    C.[CreationDate],
+    C.[RevisionDate],
+    CASE
+        WHEN
+            @UserId IS NULL
+            OR C.[Favorites] IS NULL
+            OR JSON_VALUE(C.[Favorites], CONCAT('$."', @UserId, '"')) IS NULL
+        THEN 0
+        ELSE 1
+    END [Favorite],
+    CASE
+        WHEN
+            @UserId IS NULL
+            OR C.[Folders] IS NULL
+        THEN NULL
+        ELSE TRY_CONVERT(UNIQUEIDENTIFIER, JSON_VALUE(C.[Folders], CONCAT('$."', @UserId, '"')))
+    END [FolderId],
+    C.[DeletedDate],
+    C.[Reprompt],
+    C.[Key],
+    CASE
+        WHEN
+            @UserId IS NULL
+            OR C.[Archives] IS NULL
+        THEN NULL
+        ELSE TRY_CONVERT(DATETIME2(7), JSON_VALUE(C.[Archives], CONCAT('$."', @UserId, '"')))
+    END [ArchivedDate]
+FROM
+    [dbo].[Cipher] C;
+GO
+
+-- Update UserCipherDetails function
+IF OBJECT_ID('[dbo].[UserCipherDetails]') IS NOT NULL
+BEGIN
+    DROP FUNCTION [dbo].[UserCipherDetails];
+END
+GO
+
+CREATE FUNCTION [dbo].[UserCipherDetails](@UserId UNIQUEIDENTIFIER)
 RETURNS TABLE
 AS RETURN
 WITH [CTE] AS (
@@ -91,3 +159,4 @@ FROM
     [dbo].[CipherDetails](@UserId) AS C
 WHERE
     C.[UserId] = @UserId;
+GO
