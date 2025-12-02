@@ -11,6 +11,7 @@ using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Pricing.Premium;
 using Bit.Core.Entities;
+using Bit.Core.Models.Mail.Billing.Renewal.Families2019Renewal;
 using Bit.Core.Models.Mail.Billing.Renewal.Families2020Renewal;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Platform.Mail.Mailer;
@@ -1006,8 +1007,11 @@ public class UpcomingInvoiceHandlerTests
             PlanType = PlanType.FamiliesAnnually2019
         };
 
+        var coupon = new Coupon { PercentOff = 25, Id = CouponIDs.Milestone3SubscriptionDiscount };
+
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
         _stripeFacade.GetCustomer(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeFacade.GetCoupon(CouponIDs.Milestone3SubscriptionDiscount).Returns(coupon);
         _stripeEventUtilityService
             .GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
@@ -1033,6 +1037,8 @@ public class UpcomingInvoiceHandlerTests
                 o.Discounts[0].Coupon == CouponIDs.Milestone3SubscriptionDiscount &&
                 o.ProrationBehavior == ProrationBehavior.None));
 
+        await _stripeFacade.Received(1).GetCoupon(CouponIDs.Milestone3SubscriptionDiscount);
+
         await _organizationRepository.Received(1).ReplaceAsync(
             Arg.Is<Organization>(org =>
                 org.Id == _organizationId &&
@@ -1042,10 +1048,13 @@ public class UpcomingInvoiceHandlerTests
                 org.Seats == familiesPlan.PasswordManager.BaseSeats));
 
         await _mailer.Received(1).SendEmail(
-            Arg.Is<Families2020RenewalMail>(email =>
+            Arg.Is<Families2019RenewalMail>(email =>
                 email.ToEmails.Contains("org@example.com") &&
                 email.Subject == "Your Bitwarden Families renewal is updating" &&
-                email.View.MonthlyRenewalPrice == (familiesPlan.PasswordManager.BasePrice / 12).ToString("C", new CultureInfo("en-US"))));
+                email.View.BaseMonthlyRenewalPrice == (familiesPlan.PasswordManager.BasePrice / 12).ToString("C", new CultureInfo("en-US")) &&
+                email.View.BaseAnnualRenewalPrice == familiesPlan.PasswordManager.BasePrice.ToString("C", new CultureInfo("en-US")) &&
+                email.View.DiscountAmount == $"{coupon.PercentOff}%"
+                ));
     }
 
     [Fact]
@@ -1529,8 +1538,11 @@ public class UpcomingInvoiceHandlerTests
             PlanType = PlanType.FamiliesAnnually2019
         };
 
+        var coupon = new Coupon { PercentOff = 25, Id = CouponIDs.Milestone3SubscriptionDiscount };
+
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
         _stripeFacade.GetCustomer(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeFacade.GetCoupon(CouponIDs.Milestone3SubscriptionDiscount).Returns(coupon);
         _stripeEventUtilityService
             .GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
@@ -1556,6 +1568,8 @@ public class UpcomingInvoiceHandlerTests
                 o.Discounts[0].Coupon == CouponIDs.Milestone3SubscriptionDiscount &&
                 o.ProrationBehavior == ProrationBehavior.None));
 
+        await _stripeFacade.Received(1).GetCoupon(CouponIDs.Milestone3SubscriptionDiscount);
+
         await _organizationRepository.Received(1).ReplaceAsync(
             Arg.Is<Organization>(org =>
                 org.Id == _organizationId &&
@@ -1565,10 +1579,13 @@ public class UpcomingInvoiceHandlerTests
                 org.Seats == familiesPlan.PasswordManager.BaseSeats));
 
         await _mailer.Received(1).SendEmail(
-            Arg.Is<Families2020RenewalMail>(email =>
+            Arg.Is<Families2019RenewalMail>(email =>
                 email.ToEmails.Contains("org@example.com") &&
                 email.Subject == "Your Bitwarden Families renewal is updating" &&
-                email.View.MonthlyRenewalPrice == (familiesPlan.PasswordManager.BasePrice / 12).ToString("C", new CultureInfo("en-US"))));
+                email.View.BaseMonthlyRenewalPrice == (familiesPlan.PasswordManager.BasePrice / 12).ToString("C", new CultureInfo("en-US")) &&
+                email.View.BaseAnnualRenewalPrice == familiesPlan.PasswordManager.BasePrice.ToString("C", new CultureInfo("en-US")) &&
+                email.View.DiscountAmount == $"{coupon.PercentOff}%"
+            ));
     }
 
     [Fact]
@@ -1635,8 +1652,11 @@ public class UpcomingInvoiceHandlerTests
             PlanType = PlanType.FamiliesAnnually2019
         };
 
+        var coupon = new Coupon { PercentOff = 25, Id = CouponIDs.Milestone3SubscriptionDiscount };
+
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
         _stripeFacade.GetCustomer(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeFacade.GetCoupon(CouponIDs.Milestone3SubscriptionDiscount).Returns(coupon);
         _stripeEventUtilityService
             .GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
@@ -1662,6 +1682,8 @@ public class UpcomingInvoiceHandlerTests
                 o.Discounts[0].Coupon == CouponIDs.Milestone3SubscriptionDiscount &&
                 o.ProrationBehavior == ProrationBehavior.None));
 
+        await _stripeFacade.Received(1).GetCoupon(CouponIDs.Milestone3SubscriptionDiscount);
+
         await _organizationRepository.Received(1).ReplaceAsync(
             Arg.Is<Organization>(org =>
                 org.Id == _organizationId &&
@@ -1671,10 +1693,13 @@ public class UpcomingInvoiceHandlerTests
                 org.Seats == familiesPlan.PasswordManager.BaseSeats));
 
         await _mailer.Received(1).SendEmail(
-            Arg.Is<Families2020RenewalMail>(email =>
+            Arg.Is<Families2019RenewalMail>(email =>
                 email.ToEmails.Contains("org@example.com") &&
                 email.Subject == "Your Bitwarden Families renewal is updating" &&
-                email.View.MonthlyRenewalPrice == (familiesPlan.PasswordManager.BasePrice / 12).ToString("C", new CultureInfo("en-US"))));
+                email.View.BaseMonthlyRenewalPrice == (familiesPlan.PasswordManager.BasePrice / 12).ToString("C", new CultureInfo("en-US")) &&
+                email.View.BaseAnnualRenewalPrice == familiesPlan.PasswordManager.BasePrice.ToString("C", new CultureInfo("en-US")) &&
+                email.View.DiscountAmount == $"{coupon.PercentOff}%"
+            ));
     }
 
     [Fact]
@@ -1748,8 +1773,11 @@ public class UpcomingInvoiceHandlerTests
             PlanType = PlanType.FamiliesAnnually2019
         };
 
+        var coupon = new Coupon { PercentOff = 25, Id = CouponIDs.Milestone3SubscriptionDiscount };
+
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
         _stripeFacade.GetCustomer(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeFacade.GetCoupon(CouponIDs.Milestone3SubscriptionDiscount).Returns(coupon);
         _stripeEventUtilityService
             .GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
@@ -1777,6 +1805,8 @@ public class UpcomingInvoiceHandlerTests
                 o.Discounts[0].Coupon == CouponIDs.Milestone3SubscriptionDiscount &&
                 o.ProrationBehavior == ProrationBehavior.None));
 
+        await _stripeFacade.Received(1).GetCoupon(CouponIDs.Milestone3SubscriptionDiscount);
+
         await _organizationRepository.Received(1).ReplaceAsync(
             Arg.Is<Organization>(org =>
                 org.Id == _organizationId &&
@@ -1786,10 +1816,13 @@ public class UpcomingInvoiceHandlerTests
                 org.Seats == familiesPlan.PasswordManager.BaseSeats));
 
         await _mailer.Received(1).SendEmail(
-            Arg.Is<Families2020RenewalMail>(email =>
+            Arg.Is<Families2019RenewalMail>(email =>
                 email.ToEmails.Contains("org@example.com") &&
                 email.Subject == "Your Bitwarden Families renewal is updating" &&
-                email.View.MonthlyRenewalPrice == (familiesPlan.PasswordManager.BasePrice / 12).ToString("C", new CultureInfo("en-US"))));
+                email.View.BaseMonthlyRenewalPrice == (familiesPlan.PasswordManager.BasePrice / 12).ToString("C", new CultureInfo("en-US")) &&
+                email.View.BaseAnnualRenewalPrice == familiesPlan.PasswordManager.BasePrice.ToString("C", new CultureInfo("en-US")) &&
+                email.View.DiscountAmount == $"{coupon.PercentOff}%"
+            ));
     }
 
     [Fact]
@@ -1879,6 +1912,12 @@ public class UpcomingInvoiceHandlerTests
                 org.Plan == familiesPlan.Name &&
                 org.UsersGetPremium == familiesPlan.UsersGetPremium &&
                 org.Seats == familiesPlan.PasswordManager.BaseSeats));
+
+        await _mailer.Received(1).SendEmail(
+            Arg.Is<Families2020RenewalMail>(email =>
+                email.ToEmails.Contains("org@example.com") &&
+                email.Subject == "Your Bitwarden Families renewal is updating" &&
+                email.View.MonthlyRenewalPrice == (familiesPlan.PasswordManager.BasePrice / 12).ToString("C", new CultureInfo("en-US"))));
     }
 
     [Fact]
