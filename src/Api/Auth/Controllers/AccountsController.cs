@@ -17,6 +17,7 @@ using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Commands;
 using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Models.Api.Response;
@@ -44,6 +45,7 @@ public class AccountsController : Controller
     private readonly IUserAccountKeysQuery _userAccountKeysQuery;
     private readonly ITwoFactorEmailService _twoFactorEmailService;
     private readonly IChangeKdfCommand _changeKdfCommand;
+    private readonly SetAccountKeysForUserCommand _setAccountKeysForUserCommand;
 
     public AccountsController(
         IOrganizationService organizationService,
@@ -57,7 +59,8 @@ public class AccountsController : Controller
         IFeatureService featureService,
         IUserAccountKeysQuery userAccountKeysQuery,
         ITwoFactorEmailService twoFactorEmailService,
-        IChangeKdfCommand changeKdfCommand
+        IChangeKdfCommand changeKdfCommand,
+        SetAccountKeysForUserCommand setAccountKeysForUserCommand
         )
     {
         _organizationService = organizationService;
@@ -72,6 +75,7 @@ public class AccountsController : Controller
         _userAccountKeysQuery = userAccountKeysQuery;
         _twoFactorEmailService = twoFactorEmailService;
         _changeKdfCommand = changeKdfCommand;
+        _setAccountKeysForUserCommand = setAccountKeysForUserCommand;
     }
 
 
@@ -440,7 +444,15 @@ public class AccountsController : Controller
             }
         }
 
-        await _userService.SaveUserAsync(model.ToUser(user));
+        if (model.AccountKeys != null)
+        {
+            await _setAccountKeysForUserCommand.SetAccountKeysForUserAsync(user.Id, model.AccountKeys);
+        }
+        else
+        {
+            await _userService.SaveUserAsync(model.ToUser(user));
+        }
+
         return new KeysResponseModel(user);
     }
 
