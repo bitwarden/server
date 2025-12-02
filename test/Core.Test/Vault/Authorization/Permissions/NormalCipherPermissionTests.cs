@@ -74,7 +74,7 @@ public class NormalCipherPermissionTests
         var cipherDetails = new CipherDetails { UserId = null, OrganizationId = Guid.NewGuid() };
 
         // Act
-        var exception = Assert.Throws<Exception>(() => NormalCipherPermissions.CanDelete(user, cipherDetails, organizationAbility));
+        var exception = Assert.Throws<Exception>(() => NormalCipherPermissions.CanRestore(user, cipherDetails, organizationAbility));
 
         // Assert
         Assert.Equal("Cipher does not belong to the input organization.", exception.Message);
