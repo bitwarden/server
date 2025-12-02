@@ -2005,4 +2005,332 @@ public class UpcomingInvoiceHandlerTests
         await _organizationRepository.DidNotReceive().ReplaceAsync(
             Arg.Is<Organization>(org => org.PlanType == PlanType.FamiliesAnnually));
     }
+
+    #region Premium Renewal Email Tests
+
+    [Fact]
+    public async Task HandleAsync_WhenMilestone2Enabled_AndCouponNotFound_LogsErrorAndSendsTraditionalEmail()
+    {
+        // Arrange
+        var parsedEvent = new Event { Id = "evt_123" };
+        var customerId = "cus_123";
+        var invoice = new Invoice
+        {
+            CustomerId = customerId,
+            AmountDue = 10000,
+            NextPaymentAttempt = DateTime.UtcNow.AddDays(7),
+            Lines = new StripeList<InvoiceLineItem>
+            {
+                Data = [new() { Description = "Test Item" }]
+            }
+        };
+        var subscription = new Subscription
+        {
+            Id = "sub_123",
+            CustomerId = customerId,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new() { Id = "si_123", Price = new Price { Id = Prices.PremiumAnnually } }]
+            },
+            AutomaticTax = new SubscriptionAutomaticTax { Enabled = false },
+            Customer = new Customer { Id = customerId },
+            Metadata = new Dictionary<string, string>()
+        };
+        var user = new User { Id = _userId, Email = "user@example.com", Premium = true };
+        var plan = new PremiumPlan
+        {
+            Name = "Premium",
+            Available = true,
+            LegacyYear = null,
+            Seat = new Purchasable { Price = 10M, StripePriceId = Prices.PremiumAnnually },
+            Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
+        };
+        var customer = new Customer
+        {
+            Id = customerId,
+            Tax = new CustomerTax { AutomaticTax = AutomaticTaxStatus.Supported },
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] }
+        };
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeFacade.GetCustomer(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
+        _userRepository.GetByIdAsync(_userId).Returns(user);
+        _pricingClient.GetAvailablePremiumPlan().Returns(plan);
+        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
+        _stripeFacade.GetCoupon(CouponIDs.Milestone2SubscriptionDiscount).Returns((Coupon)null);
+        _stripeFacade.UpdateSubscription(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
+            .Returns(subscription);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert - Exception is caught, error is logged, and traditional email is sent
+        _logger.Received(1).Log(
+            LogLevel.Error,
+            Arg.Any<EventId>(),
+            Arg.Is<object>(o =>
+                o.ToString().Contains($"Failed to update user's ({user.Id}) subscription price id") &&
+                o.ToString().Contains(parsedEvent.Id)),
+            Arg.Is<Exception>(e => e is InvalidOperationException
+                                   && e.Message == $"Coupon for sending premium renewal email id:{CouponIDs.Milestone3SubscriptionDiscount} not found"),
+            Arg.Any<Func<object, Exception, string>>());
+
+        await _mailer.DidNotReceive().SendEmail(Arg.Any<PremiumRenewalMail>());
+
+        await _mailService.Received(1).SendInvoiceUpcoming(
+            Arg.Is<IEnumerable<string>>(emails => emails.Contains("user@example.com")),
+            Arg.Is<decimal>(amount => amount == invoice.AmountDue / 100M),
+            Arg.Is<DateTime>(dueDate => dueDate == invoice.NextPaymentAttempt.Value),
+            Arg.Is<List<string>>(items => items.Count == invoice.Lines.Data.Count),
+            Arg.Is<bool>(b => b == true));
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenMilestone2Enabled_AndCouponPercentOffIsNull_LogsErrorAndSendsTraditionalEmail()
+    {
+        // Arrange
+        var parsedEvent = new Event { Id = "evt_123" };
+        var customerId = "cus_123";
+        var invoice = new Invoice
+        {
+            CustomerId = customerId,
+            AmountDue = 10000,
+            NextPaymentAttempt = DateTime.UtcNow.AddDays(7),
+            Lines = new StripeList<InvoiceLineItem>
+            {
+                Data = [new() { Description = "Test Item" }]
+            }
+        };
+        var subscription = new Subscription
+        {
+            Id = "sub_123",
+            CustomerId = customerId,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new() { Id = "si_123", Price = new Price { Id = Prices.PremiumAnnually } }]
+            },
+            AutomaticTax = new SubscriptionAutomaticTax { Enabled = false },
+            Customer = new Customer { Id = customerId },
+            Metadata = new Dictionary<string, string>()
+        };
+        var user = new User { Id = _userId, Email = "user@example.com", Premium = true };
+        var plan = new PremiumPlan
+        {
+            Name = "Premium",
+            Available = true,
+            LegacyYear = null,
+            Seat = new Purchasable { Price = 10M, StripePriceId = Prices.PremiumAnnually },
+            Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
+        };
+        var customer = new Customer
+        {
+            Id = customerId,
+            Tax = new CustomerTax { AutomaticTax = AutomaticTaxStatus.Supported },
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] }
+        };
+        var coupon = new Coupon
+        {
+            Id = CouponIDs.Milestone2SubscriptionDiscount,
+            PercentOff = null
+        };
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeFacade.GetCustomer(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
+        _userRepository.GetByIdAsync(_userId).Returns(user);
+        _pricingClient.GetAvailablePremiumPlan().Returns(plan);
+        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
+        _stripeFacade.GetCoupon(CouponIDs.Milestone2SubscriptionDiscount).Returns(coupon);
+        _stripeFacade.UpdateSubscription(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
+            .Returns(subscription);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert - Exception is caught, error is logged, and traditional email is sent
+        _logger.Received(1).Log(
+            LogLevel.Error,
+            Arg.Any<EventId>(),
+            Arg.Is<object>(o =>
+                o.ToString().Contains($"Failed to update user's ({user.Id}) subscription price id") &&
+                o.ToString().Contains(parsedEvent.Id)),
+            Arg.Is<Exception>(e => e is InvalidOperationException
+                                   && e.Message == $"coupon.PercentOff for sending premium renewal email id:{CouponIDs.Milestone3SubscriptionDiscount} is null"),
+            Arg.Any<Func<object, Exception, string>>());
+
+        await _mailer.DidNotReceive().SendEmail(Arg.Any<PremiumRenewalMail>());
+
+        await _mailService.Received(1).SendInvoiceUpcoming(
+            Arg.Is<IEnumerable<string>>(emails => emails.Contains("user@example.com")),
+            Arg.Is<decimal>(amount => amount == invoice.AmountDue / 100M),
+            Arg.Is<DateTime>(dueDate => dueDate == invoice.NextPaymentAttempt.Value),
+            Arg.Is<List<string>>(items => items.Count == invoice.Lines.Data.Count),
+            Arg.Is<bool>(b => b == true));
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenMilestone2Enabled_AndValidCoupon_SendsPremiumRenewalEmail()
+    {
+        // Arrange
+        var parsedEvent = new Event { Id = "evt_123" };
+        var customerId = "cus_123";
+        var invoice = new Invoice
+        {
+            CustomerId = customerId,
+            AmountDue = 10000,
+            NextPaymentAttempt = DateTime.UtcNow.AddDays(7),
+            Lines = new StripeList<InvoiceLineItem>
+            {
+                Data = [new() { Description = "Test Item" }]
+            }
+        };
+        var subscription = new Subscription
+        {
+            Id = "sub_123",
+            CustomerId = customerId,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new() { Id = "si_123", Price = new Price { Id = Prices.PremiumAnnually } }]
+            },
+            AutomaticTax = new SubscriptionAutomaticTax { Enabled = false },
+            Customer = new Customer { Id = customerId },
+            Metadata = new Dictionary<string, string>()
+        };
+        var user = new User { Id = _userId, Email = "user@example.com", Premium = true };
+        var plan = new PremiumPlan
+        {
+            Name = "Premium",
+            Available = true,
+            LegacyYear = null,
+            Seat = new Purchasable { Price = 10M, StripePriceId = Prices.PremiumAnnually },
+            Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
+        };
+        var customer = new Customer
+        {
+            Id = customerId,
+            Tax = new CustomerTax { AutomaticTax = AutomaticTaxStatus.Supported },
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] }
+        };
+        var coupon = new Coupon
+        {
+            Id = CouponIDs.Milestone2SubscriptionDiscount,
+            PercentOff = 30
+        };
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeFacade.GetCustomer(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
+        _userRepository.GetByIdAsync(_userId).Returns(user);
+        _pricingClient.GetAvailablePremiumPlan().Returns(plan);
+        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
+        _stripeFacade.GetCoupon(CouponIDs.Milestone2SubscriptionDiscount).Returns(coupon);
+        _stripeFacade.UpdateSubscription(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
+            .Returns(subscription);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        var expectedDiscountedPrice = plan.Seat.Price * (100 - coupon.PercentOff.Value) / 100;
+        await _mailer.Received(1).SendEmail(
+            Arg.Is<PremiumRenewalMail>(email =>
+                email.ToEmails.Contains("user@example.com") &&
+                email.Subject == "Your Bitwarden Premium renewal is updating" &&
+                email.View.BaseMonthlyRenewalPrice == (plan.Seat.Price / 12).ToString("C", new CultureInfo("en-US")) &&
+                email.View.DiscountAmount == "30%" &&
+                email.View.DiscountedMonthlyRenewalPrice == (expectedDiscountedPrice / 12).ToString("C", new CultureInfo("en-US"))
+            ));
+
+        await _mailService.DidNotReceive().SendInvoiceUpcoming(
+            Arg.Any<IEnumerable<string>>(),
+            Arg.Any<decimal>(),
+            Arg.Any<DateTime>(),
+            Arg.Any<List<string>>(),
+            Arg.Any<bool>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenMilestone2Enabled_AndGetCouponThrowsException_LogsErrorAndSendsTraditionalEmail()
+    {
+        // Arrange
+        var parsedEvent = new Event { Id = "evt_123" };
+        var customerId = "cus_123";
+        var invoice = new Invoice
+        {
+            CustomerId = customerId,
+            AmountDue = 10000,
+            NextPaymentAttempt = DateTime.UtcNow.AddDays(7),
+            Lines = new StripeList<InvoiceLineItem>
+            {
+                Data = [new() { Description = "Test Item" }]
+            }
+        };
+        var subscription = new Subscription
+        {
+            Id = "sub_123",
+            CustomerId = customerId,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new() { Id = "si_123", Price = new Price { Id = Prices.PremiumAnnually } }]
+            },
+            AutomaticTax = new SubscriptionAutomaticTax { Enabled = false },
+            Customer = new Customer { Id = customerId },
+            Metadata = new Dictionary<string, string>()
+        };
+        var user = new User { Id = _userId, Email = "user@example.com", Premium = true };
+        var plan = new PremiumPlan
+        {
+            Name = "Premium",
+            Available = true,
+            LegacyYear = null,
+            Seat = new Purchasable { Price = 10M, StripePriceId = Prices.PremiumAnnually },
+            Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
+        };
+        var customer = new Customer
+        {
+            Id = customerId,
+            Tax = new CustomerTax { AutomaticTax = AutomaticTaxStatus.Supported },
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] }
+        };
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeFacade.GetCustomer(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
+        _userRepository.GetByIdAsync(_userId).Returns(user);
+        _pricingClient.GetAvailablePremiumPlan().Returns(plan);
+        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
+        _stripeFacade.GetCoupon(CouponIDs.Milestone2SubscriptionDiscount)
+            .ThrowsAsync(new StripeException("Stripe API error"));
+        _stripeFacade.UpdateSubscription(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
+            .Returns(subscription);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert - Exception is caught, error is logged, and traditional email is sent
+        _logger.Received(1).Log(
+            LogLevel.Error,
+            Arg.Any<EventId>(),
+            Arg.Is<object>(o =>
+                o.ToString().Contains($"Failed to update user's ({user.Id}) subscription price id") &&
+                o.ToString().Contains(parsedEvent.Id)),
+            Arg.Is<Exception>(e => e is StripeException),
+            Arg.Any<Func<object, Exception, string>>());
+
+        await _mailer.DidNotReceive().SendEmail(Arg.Any<PremiumRenewalMail>());
+
+        await _mailService.Received(1).SendInvoiceUpcoming(
+            Arg.Is<IEnumerable<string>>(emails => emails.Contains("user@example.com")),
+            Arg.Is<decimal>(amount => amount == invoice.AmountDue / 100M),
+            Arg.Is<DateTime>(dueDate => dueDate == invoice.NextPaymentAttempt.Value),
+            Arg.Is<List<string>>(items => items.Count == invoice.Lines.Data.Count),
+            Arg.Is<bool>(b => b == true));
+    }
+
+    #endregion
 }
