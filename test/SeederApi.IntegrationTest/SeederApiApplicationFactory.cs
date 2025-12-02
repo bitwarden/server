@@ -12,6 +12,7 @@ public class SeederApiApplicationFactory : WebApplicationFactoryBase<Startup>
         _configureTestServices.Add(serviceCollection =>
         {
             serviceCollection.AddSingleton<IPlayIdService, NeverPlayIdServices>();
+            serviceCollection.AddHttpContextAccessor();
         });
     }
 }
