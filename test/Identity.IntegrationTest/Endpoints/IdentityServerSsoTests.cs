@@ -342,8 +342,7 @@ public class IdentityServerSsoTests
             { "code", "test_code" },
             { "code_verifier", challenge },
             { "redirect_uri", "https://localhost:8080/sso-connector.html" }
-        }),
-        http => { http.Request.Headers.Append("Bitwarden-Client-Version", "2025.10.0"); });
+        }));
 
         // Assert
         // If the organization has selected TrustedDeviceEncryption but the user still has their master password
@@ -412,12 +411,7 @@ public class IdentityServerSsoTests
             { "code", "test_code" },
             { "code_verifier", challenge },
             { "redirect_uri", "https://localhost:8080/sso-connector.html" }
-        }),
-        http =>
-        {
-            http.Request.Headers.Append("Bitwarden-Client-Version", "2025.10.0");
-            http.Request.Headers.Append("Accept", "application/json");
-        });
+        }));
 
         // Assert
         // If the organization has selected TrustedDeviceEncryption but the user still has their master password
@@ -490,8 +484,7 @@ public class IdentityServerSsoTests
             { "code", "test_code" },
             { "code_verifier", challenge },
             { "redirect_uri", "https://localhost:8080/sso-connector.html" }
-        }),
-        http => { http.Request.Headers.Append("Bitwarden-Client-Version", "2025.10.0"); });
+        }));
 
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
         using var responseBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
@@ -554,22 +547,22 @@ public class IdentityServerSsoTests
         }, challenge, trustedDeviceEnabled);
 
         await configureFactory(factory);
-        var context = await factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
-        {
-            { "scope", "api offline_access" },
-            { "client_id", "web" },
-            { "deviceType", "10" },
-            { "deviceIdentifier", "test_id" },
-            { "deviceName", "firefox" },
-            { "twoFactorToken", "TEST"},
-            { "twoFactorProvider", "5" }, // RememberMe Provider
-            { "twoFactorRemember", "0" },
-            { "grant_type", "authorization_code" },
-            { "code", "test_code" },
-            { "code_verifier", challenge },
-            { "redirect_uri", "https://localhost:8080/sso-connector.html" }
-        }),
-        http => { http.Request.Headers.Append("Bitwarden-Client-Version", "2025.10.0"); });
+        var context = await factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(
+            new Dictionary<string, string>
+            {
+                { "scope", "api offline_access" },
+                { "client_id", "web" },
+                { "deviceType", "10" },
+                { "deviceIdentifier", "test_id" },
+                { "deviceName", "firefox" },
+                { "twoFactorToken", "TEST" },
+                { "twoFactorProvider", "5" }, // RememberMe Provider
+                { "twoFactorRemember", "0" },
+                { "grant_type", "authorization_code" },
+                { "code", "test_code" },
+                { "code_verifier", challenge },
+                { "redirect_uri", "https://localhost:8080/sso-connector.html" }
+            }));
 
         // If this fails, surface detailed error information to aid debugging
         if (context.Response.StatusCode != StatusCodes.Status200OK)

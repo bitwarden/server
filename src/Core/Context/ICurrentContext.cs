@@ -32,7 +32,7 @@ public interface ICurrentContext
     Guid? OrganizationId { get; set; }
     IdentityClientType IdentityClientType { get; set; }
     string ClientId { get; set; }
-    Version ClientVersion { get; set; }
+    Version? ClientVersion { get; set; }
     bool ClientVersionIsPrerelease { get; set; }
 
     Task BuildAsync(HttpContext httpContext, GlobalSettings globalSettings);

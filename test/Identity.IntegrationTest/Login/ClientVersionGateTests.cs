@@ -4,6 +4,7 @@ using Bit.Core.KeyManagement.Enums;
 using Bit.Core.Test.Auth.AutoFixture;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Bit.Test.Common.Constants;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 
@@ -29,14 +30,14 @@ public class ClientVersionGateTests : IClassFixture<IdentityApplicationFactory>
         // Make user V2: set private key to COSE and add signature key pair
         var db = localFactory.GetDatabaseContext();
         var efUser = await db.Users.FirstAsync(u => u.Email == user.Email);
-        efUser.PrivateKey = "7.cose";
+        efUser.PrivateKey = TestEncryptionConstants.V2PrivateKey;
         db.UserSignatureKeyPairs.Add(new Bit.Infrastructure.EntityFramework.Models.UserSignatureKeyPair
         {
             Id = Core.Utilities.CoreHelpers.GenerateComb(),
             UserId = efUser.Id,
             SignatureAlgorithm = SignatureAlgorithm.Ed25519,
-            SigningKey = "7.cose_signing",
-            VerifyingKey = "vk"
+            SigningKey = TestEncryptionConstants.V2WrappedSigningKey,
+            VerifyingKey = TestEncryptionConstants.V2VerifyingKey,
         });
         await db.SaveChangesAsync();
 
@@ -74,14 +75,14 @@ public class ClientVersionGateTests : IClassFixture<IdentityApplicationFactory>
         // Make user V2
         var db = localFactory.GetDatabaseContext();
         var efUser = await db.Users.FirstAsync(u => u.Email == user.Email);
-        efUser.PrivateKey = "7.cose";
+        efUser.PrivateKey = TestEncryptionConstants.V2PrivateKey;
         db.UserSignatureKeyPairs.Add(new Bit.Infrastructure.EntityFramework.Models.UserSignatureKeyPair
         {
             Id = Core.Utilities.CoreHelpers.GenerateComb(),
             UserId = efUser.Id,
             SignatureAlgorithm = SignatureAlgorithm.Ed25519,
-            SigningKey = "7.cose_signing",
-            VerifyingKey = "vk"
+            SigningKey = TestEncryptionConstants.V2WrappedSigningKey,
+            VerifyingKey = TestEncryptionConstants.V2VerifyingKey,
         });
         await db.SaveChangesAsync();
 

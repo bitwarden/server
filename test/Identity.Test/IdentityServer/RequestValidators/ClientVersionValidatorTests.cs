@@ -54,7 +54,7 @@ public class ClientVersionValidatorTests
     [Fact]
     public async Task Allows_When_ClientVersionHeaderMissing()
     {
-        // Do not set ClientVersion on the context (remains null) and ensure we fail open
+        // Do not set ClientVersion on the context (remains null) and ensure
         var ctx = Substitute.For<ICurrentContext>();
         var minQuery = MakeMinQuery(new Version("2025.11.0"));
         var sut = new ClientVersionValidator(ctx, minQuery);

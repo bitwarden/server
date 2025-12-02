@@ -25,11 +25,14 @@ public class ClientVersionValidator(
             return true;
         }
 
-        Version clientVersion = currentContext.ClientVersion;
+        Version? clientVersion = currentContext.ClientVersion;
         Version? minVersion = await getMinimumClientVersionForUserQuery.Run(user);
 
         // Allow through if headers are missing.
-        if (minVersion == null)
+        // The minVersion should never be null because of where this validator is run. The user would
+        // have been determined to be null prior to reaching this point, but it is defensive programming
+        // to check for nullish values in case validators were to ever be reordered.
+        if (clientVersion == null || minVersion == null)
         {
             return true;
         }
