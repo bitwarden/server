@@ -23,10 +23,12 @@ public class SetAccountKeysForUserCommand : ISetAccountKeysForUserCommand
         user.PrivateKey = accountKeysData.PublicKeyEncryptionKeyPairData.WrappedPrivateKey;
         user.PublicKey = accountKeysData.PublicKeyEncryptionKeyPairData.PublicKey;
         user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
-        await userRepository.ReplaceAsync(user);
         // Update the signature key pair data
-        if (accountKeysData.SignatureKeyPairData != null)
+        if (accountKeysData.SignatureKeyPairData != null && accountKeysData.SecurityStateData != null)
         {
+            user.SignedPublicKey = accountKeysData.PublicKeyEncryptionKeyPairData.SignedPublicKey;
+            user.SecurityState = accountKeysData.SecurityStateData.SecurityState;
+            user.SecurityVersion = accountKeysData.SecurityStateData.SecurityVersion;
             await userSignatureKeyPairRepository.UpsertAsync(new UserSignatureKeyPair
             {
                 Id = CoreHelpers.GenerateComb(),
@@ -38,5 +40,6 @@ public class SetAccountKeysForUserCommand : ISetAccountKeysForUserCommand
                 RevisionDate = DateTime.UtcNow,
             });
         }
+        await userRepository.ReplaceAsync(user);
     }
 }
