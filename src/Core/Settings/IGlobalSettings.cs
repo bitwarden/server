@@ -6,7 +6,7 @@ public interface IGlobalSettings
 {
     // This interface exists for testing. Add settings here as needed for testing
     bool SelfHosted { get; set; }
-    bool UnifiedDeployment { get; set; }
+    bool LiteDeployment { get; set; }
     string KnownProxies { get; set; }
     string ProjectName { get; set; }
     bool EnableCloudCommunication { get; set; }
@@ -20,7 +20,6 @@ public interface IGlobalSettings
     IConnectionStringSettings Storage { get; set; }
     IBaseServiceUriSettings BaseServiceUri { get; set; }
     ISsoSettings Sso { get; set; }
-    ILogLevelSettings MinLogLevel { get; set; }
     IPasswordlessAuthSettings PasswordlessAuth { get; set; }
     IDomainVerificationSettings DomainVerification { get; set; }
     ILaunchDarklySettings LaunchDarkly { get; set; }

@@ -6,7 +6,6 @@ using Bit.Core.Billing.Pricing.Organizations;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Billing.Pricing;
@@ -28,13 +27,6 @@ public class PricingClient(
             return null;
         }
 
-        var usePricingService = featureService.IsEnabled(FeatureFlagKeys.UsePricingService);
-
-        if (!usePricingService)
-        {
-            return StaticStore.GetPlan(planType);
-        }
-
         var lookupKey = GetLookupKey(planType);
 
         if (lookupKey == null)
@@ -50,7 +42,7 @@ public class PricingClient(
             var plan = await response.Content.ReadFromJsonAsync<Plan>();
             return plan == null
                 ? throw new BillingException(message: "Deserialization of Pricing Service response resulted in null")
-                : new PlanAdapter(plan);
+                : new PlanAdapter(PreProcessFamiliesPreMigrationPlan(plan));
         }
 
         if (response.StatusCode == HttpStatusCode.NotFound)
@@ -77,13 +69,6 @@ public class PricingClient(
             return [];
         }
 
-        var usePricingService = featureService.IsEnabled(FeatureFlagKeys.UsePricingService);
-
-        if (!usePricingService)
-        {
-            return StaticStore.Plans.ToList();
-        }
-
         var response = await httpClient.GetAsync("plans/organization");
 
         if (response.IsSuccessStatusCode)
@@ -91,7 +76,7 @@ public class PricingClient(
             var plans = await response.Content.ReadFromJsonAsync<List<Plan>>();
             return plans == null
                 ? throw new BillingException(message: "Deserialization of Pricing Service response resulted in null")
-                : plans.Select(OrganizationPlan (plan) => new PlanAdapter(plan)).ToList();
+                : plans.Select(OrganizationPlan (plan) => new PlanAdapter(PreProcessFamiliesPreMigrationPlan(plan))).ToList();
         }
 
         throw new BillingException(
@@ -114,11 +99,10 @@ public class PricingClient(
             return [];
         }
 
-        var usePricingService = featureService.IsEnabled(FeatureFlagKeys.UsePricingService);
         var fetchPremiumPriceFromPricingService =
             featureService.IsEnabled(FeatureFlagKeys.PM26793_FetchPremiumPriceFromPricingService);
 
-        if (!usePricingService || !fetchPremiumPriceFromPricingService)
+        if (!fetchPremiumPriceFromPricingService)
         {
             return [CurrentPremiumPlan];
         }
@@ -135,7 +119,7 @@ public class PricingClient(
             message: $"Request to the Pricing Service failed with status {response.StatusCode}");
     }
 
-    private static string? GetLookupKey(PlanType planType)
+    private string? GetLookupKey(PlanType planType)
         => planType switch
         {
             PlanType.EnterpriseAnnually => "enterprise-annually",
@@ -147,6 +131,10 @@ public class PricingClient(
             PlanType.EnterpriseMonthly2020 => "enterprise-monthly-2020",
             PlanType.EnterpriseMonthly2023 => "enterprise-monthly-2023",
             PlanType.FamiliesAnnually => "families",
+            PlanType.FamiliesAnnually2025 =>
+                featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3)
+                    ? "families-2025"
+                    : "families",
             PlanType.FamiliesAnnually2019 => "families-2019",
             PlanType.Free => "free",
             PlanType.TeamsAnnually => "teams-annually",
@@ -162,12 +150,26 @@ public class PricingClient(
             _ => null
         };
 
+    /// <summary>
+    /// Safeguard used until the feature flag is enabled. Pricing service will return the
+    /// 2025PreMigration plan with "families" lookup key. When that is detected and the FF
+    /// is still disabled, set the lookup key to families-2025 so PlanAdapter will assign
+    /// the correct plan.
+    /// </summary>
+    /// <param name="plan">The plan to preprocess</param>
+    private Plan PreProcessFamiliesPreMigrationPlan(Plan plan)
+    {
+        if (plan.LookupKey == "families" && !featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3))
+            plan.LookupKey = "families-2025";
+        return plan;
+    }
+
     private static PremiumPlan CurrentPremiumPlan => new()
     {
         Name = "Premium",
         Available = true,
         LegacyYear = null,
         Seat = new Purchasable { Price = 10M, StripePriceId = StripeConstants.Prices.PremiumAnnually },
-        Storage = new Purchasable { Price = 4M, StripePriceId = StripeConstants.Prices.StoragePlanPersonal }
+        Storage = new Purchasable { Price = 4M, StripePriceId = StripeConstants.Prices.StoragePlanPersonal, Provided = 1 }
     };
 }

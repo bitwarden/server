@@ -15,6 +15,7 @@ jobs:
       AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
     permissions:
+      actions: read
       contents: read
       id-token: write
       pull-requests: write

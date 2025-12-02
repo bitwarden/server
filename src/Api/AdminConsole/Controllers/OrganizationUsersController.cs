@@ -1,4 +1,5 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
+// NOTE: This file is partially migrated to nullable reference types. Remove inline #nullable directives when addressing the FIXME.
 #nullable disable
 
 using Bit.Api.AdminConsole.Authorization;
@@ -10,7 +11,10 @@ using Bit.Api.Models.Response;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
@@ -18,6 +22,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Billing.Pricing;
@@ -41,7 +46,7 @@ namespace Bit.Api.AdminConsole.Controllers;
 
 [Route("organizations/{orgId}/users")]
 [Authorize("Application")]
-public class OrganizationUsersController : Controller
+public class OrganizationUsersController : BaseAdminConsoleController
 {
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
@@ -66,10 +71,12 @@ public class OrganizationUsersController : Controller
     private readonly IFeatureService _featureService;
     private readonly IPricingClient _pricingClient;
     private readonly IResendOrganizationInviteCommand _resendOrganizationInviteCommand;
+    private readonly IAutomaticallyConfirmOrganizationUserCommand _automaticallyConfirmOrganizationUserCommand;
     private readonly IConfirmOrganizationUserCommand _confirmOrganizationUserCommand;
     private readonly IRestoreOrganizationUserCommand _restoreOrganizationUserCommand;
     private readonly IInitPendingOrganizationCommand _initPendingOrganizationCommand;
     private readonly IRevokeOrganizationUserCommand _revokeOrganizationUserCommand;
+    private readonly IAdminRecoverAccountCommand _adminRecoverAccountCommand;
 
     public OrganizationUsersController(IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -97,7 +104,9 @@ public class OrganizationUsersController : Controller
         IRestoreOrganizationUserCommand restoreOrganizationUserCommand,
         IInitPendingOrganizationCommand initPendingOrganizationCommand,
         IRevokeOrganizationUserCommand revokeOrganizationUserCommand,
-        IResendOrganizationInviteCommand resendOrganizationInviteCommand)
+        IResendOrganizationInviteCommand resendOrganizationInviteCommand,
+        IAdminRecoverAccountCommand adminRecoverAccountCommand,
+        IAutomaticallyConfirmOrganizationUserCommand automaticallyConfirmOrganizationUserCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -122,10 +131,12 @@ public class OrganizationUsersController : Controller
         _featureService = featureService;
         _pricingClient = pricingClient;
         _resendOrganizationInviteCommand = resendOrganizationInviteCommand;
+        _automaticallyConfirmOrganizationUserCommand = automaticallyConfirmOrganizationUserCommand;
         _confirmOrganizationUserCommand = confirmOrganizationUserCommand;
         _restoreOrganizationUserCommand = restoreOrganizationUserCommand;
         _initPendingOrganizationCommand = initPendingOrganizationCommand;
         _revokeOrganizationUserCommand = revokeOrganizationUserCommand;
+        _adminRecoverAccountCommand = adminRecoverAccountCommand;
     }
 
     [HttpGet("{id}")]
@@ -474,21 +485,27 @@ public class OrganizationUsersController : Controller
 
     [HttpPut("{id}/reset-password")]
     [Authorize<ManageAccountRecoveryRequirement>]
-    public async Task PutResetPassword(Guid orgId, Guid id, [FromBody] OrganizationUserResetPasswordRequestModel model)
+    public async Task<IResult> PutResetPassword(Guid orgId, Guid id, [FromBody] OrganizationUserResetPasswordRequestModel model)
     {
+        if (_featureService.IsEnabled(FeatureFlagKeys.AccountRecoveryCommand))
+        {
+            // TODO: remove legacy implementation after feature flag is enabled.
+            return await PutResetPasswordNew(orgId, id, model);
+        }
+
         // Get the users role, since provider users aren't a member of the organization we use the owner check
         var orgUserType = await _currentContext.OrganizationOwner(orgId)
             ? OrganizationUserType.Owner
             : _currentContext.Organizations?.FirstOrDefault(o => o.Id == orgId)?.Type;
         if (orgUserType == null)
         {
-            throw new NotFoundException();
+            return TypedResults.NotFound();
         }
 
         var result = await _userService.AdminResetPasswordAsync(orgUserType.Value, orgId, id, model.NewMasterPasswordHash, model.Key);
         if (result.Succeeded)
         {
-            return;
+            return TypedResults.Ok();
         }
 
         foreach (var error in result.Errors)
@@ -497,8 +514,44 @@ public class OrganizationUsersController : Controller
         }
 
         await Task.Delay(2000);
-        throw new BadRequestException(ModelState);
+        return TypedResults.BadRequest(ModelState);
     }
+
+#nullable enable
+    // TODO: make sure the route and authorize attributes are maintained when the legacy implementation is removed.
+    private async Task<IResult> PutResetPasswordNew(Guid orgId, Guid id, [FromBody] OrganizationUserResetPasswordRequestModel model)
+    {
+        var targetOrganizationUser = await _organizationUserRepository.GetByIdAsync(id);
+        if (targetOrganizationUser == null || targetOrganizationUser.OrganizationId != orgId)
+        {
+            return TypedResults.NotFound();
+        }
+
+        var authorizationResult = await _authorizationService.AuthorizeAsync(User, targetOrganizationUser, new RecoverAccountAuthorizationRequirement());
+        if (!authorizationResult.Succeeded)
+        {
+            // Return an informative error to show in the UI.
+            // The Authorize attribute already prevents enumeration by users outside the organization, so this can be specific.
+            var failureReason = authorizationResult.Failure?.FailureReasons.FirstOrDefault()?.Message ?? RecoverAccountAuthorizationHandler.FailureReason;
+            // This should be a 403 Forbidden, but that causes a logout on our client apps so we're using 400 Bad Request instead
+            return TypedResults.BadRequest(new ErrorResponseModel(failureReason));
+        }
+
+        var result = await _adminRecoverAccountCommand.RecoverAccountAsync(orgId, targetOrganizationUser, model.NewMasterPasswordHash, model.Key);
+        if (result.Succeeded)
+        {
+            return TypedResults.Ok();
+        }
+
+        foreach (var error in result.Errors)
+        {
+            ModelState.AddModelError(string.Empty, error.Description);
+        }
+
+        await Task.Delay(2000);
+        return TypedResults.BadRequest(ModelState);
+    }
+#nullable disable
 
     [HttpDelete("{id}")]
     [Authorize<ManageUsersRequirement>]
@@ -689,6 +742,31 @@ public class OrganizationUsersController : Controller
         [FromBody] OrganizationUserBulkRequestModel model)
     {
         await BulkEnableSecretsManagerAsync(orgId, model);
+    }
+
+    [HttpPost("{id}/auto-confirm")]
+    [Authorize<ManageUsersRequirement>]
+    [RequireFeature(FeatureFlagKeys.AutomaticConfirmUsers)]
+    public async Task<IResult> AutomaticallyConfirmOrganizationUserAsync([FromRoute] Guid orgId,
+        [FromRoute] Guid id,
+        [FromBody] OrganizationUserConfirmRequestModel model)
+    {
+        var userId = _userService.GetProperUserId(User);
+
+        if (userId is null || userId.Value == Guid.Empty)
+        {
+            return TypedResults.Unauthorized();
+        }
+
+        return Handle(await _automaticallyConfirmOrganizationUserCommand.AutomaticallyConfirmOrganizationUserAsync(
+            new AutomaticallyConfirmOrganizationUserRequest
+            {
+                OrganizationId = orgId,
+                OrganizationUserId = id,
+                Key = model.Key,
+                DefaultUserCollectionName = model.DefaultUserCollectionName,
+                PerformedBy = new StandardUser(userId.Value, await _currentContext.OrganizationOwner(orgId)),
+            }));
     }
 
     private async Task RestoreOrRevokeUserAsync(
