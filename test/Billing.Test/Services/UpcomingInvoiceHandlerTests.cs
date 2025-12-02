@@ -1484,6 +1484,200 @@ public class UpcomingInvoiceHandlerTests
     }
 
     [Fact]
+    public async Task HandleAsync_WhenMilestone3Enabled_AndCouponNotFound_LogsErrorAndSendsTraditionalEmail()
+    {
+        // Arrange
+        var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
+        var customerId = "cus_123";
+        var subscriptionId = "sub_123";
+        var passwordManagerItemId = "si_pm_123";
+
+        var invoice = new Invoice
+        {
+            CustomerId = customerId,
+            AmountDue = 40000,
+            NextPaymentAttempt = DateTime.UtcNow.AddDays(7),
+            Lines = new StripeList<InvoiceLineItem>
+            {
+                Data = [new() { Description = "Test Item" }]
+            }
+        };
+
+        var families2019Plan = new Families2019Plan();
+        var familiesPlan = new FamiliesPlan();
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            CustomerId = customerId,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new()
+                    {
+                        Id = passwordManagerItemId,
+                        Price = new Price { Id = families2019Plan.PasswordManager.StripePlanId }
+                    }
+                ]
+            },
+            AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
+            Metadata = new Dictionary<string, string>()
+        };
+
+        var customer = new Customer
+        {
+            Id = customerId,
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
+            Address = new Address { Country = "US" }
+        };
+
+        var organization = new Organization
+        {
+            Id = _organizationId,
+            BillingEmail = "org@example.com",
+            PlanType = PlanType.FamiliesAnnually2019
+        };
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeFacade.GetCustomer(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService
+            .GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
+        _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019).Returns(families2019Plan);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesPlan);
+        _featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3).Returns(true);
+        _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
+        _stripeFacade.GetCoupon(CouponIDs.Milestone3SubscriptionDiscount).Returns((Coupon)null);
+        _stripeFacade.UpdateSubscription(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
+            .Returns(subscription);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert - Exception is caught, error is logged, and traditional email is sent
+        _logger.Received(1).Log(
+            LogLevel.Error,
+            Arg.Any<EventId>(),
+            Arg.Is<object>(o =>
+                o.ToString().Contains($"Failed to align subscription concerns for Organization ({_organizationId})") &&
+                o.ToString().Contains(parsedEvent.Type) &&
+                o.ToString().Contains(parsedEvent.Id)),
+            Arg.Is<Exception>(e => e is InvalidOperationException && e.Message.Contains("Coupon for sending families 2019 email")),
+            Arg.Any<Func<object, Exception, string>>());
+
+        await _mailer.DidNotReceive().SendEmail(Arg.Any<Families2019RenewalMail>());
+
+        await _mailService.Received(1).SendInvoiceUpcoming(
+            Arg.Is<IEnumerable<string>>(emails => emails.Contains("org@example.com")),
+            Arg.Is<decimal>(amount => amount == invoice.AmountDue / 100M),
+            Arg.Is<DateTime>(dueDate => dueDate == invoice.NextPaymentAttempt.Value),
+            Arg.Is<List<string>>(items => items.Count == invoice.Lines.Data.Count),
+            Arg.Is<bool>(b => b == true));
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenMilestone3Enabled_AndCouponPercentOffIsNull_LogsErrorAndSendsTraditionalEmail()
+    {
+        // Arrange
+        var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
+        var customerId = "cus_123";
+        var subscriptionId = "sub_123";
+        var passwordManagerItemId = "si_pm_123";
+
+        var invoice = new Invoice
+        {
+            CustomerId = customerId,
+            AmountDue = 40000,
+            NextPaymentAttempt = DateTime.UtcNow.AddDays(7),
+            Lines = new StripeList<InvoiceLineItem>
+            {
+                Data = [new() { Description = "Test Item" }]
+            }
+        };
+
+        var families2019Plan = new Families2019Plan();
+        var familiesPlan = new FamiliesPlan();
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            CustomerId = customerId,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new()
+                    {
+                        Id = passwordManagerItemId,
+                        Price = new Price { Id = families2019Plan.PasswordManager.StripePlanId }
+                    }
+                ]
+            },
+            AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
+            Metadata = new Dictionary<string, string>()
+        };
+
+        var customer = new Customer
+        {
+            Id = customerId,
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
+            Address = new Address { Country = "US" }
+        };
+
+        var organization = new Organization
+        {
+            Id = _organizationId,
+            BillingEmail = "org@example.com",
+            PlanType = PlanType.FamiliesAnnually2019
+        };
+
+        var coupon = new Coupon
+        {
+            Id = CouponIDs.Milestone3SubscriptionDiscount,
+            PercentOff = null
+        };
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeFacade.GetCustomer(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService
+            .GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
+        _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019).Returns(families2019Plan);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesPlan);
+        _featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3).Returns(true);
+        _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
+        _stripeFacade.GetCoupon(CouponIDs.Milestone3SubscriptionDiscount).Returns(coupon);
+        _stripeFacade.UpdateSubscription(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
+            .Returns(subscription);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert - Exception is caught, error is logged, and traditional email is sent
+        _logger.Received(1).Log(
+            LogLevel.Error,
+            Arg.Any<EventId>(),
+            Arg.Is<object>(o =>
+                o.ToString().Contains($"Failed to align subscription concerns for Organization ({_organizationId})") &&
+                o.ToString().Contains(parsedEvent.Type) &&
+                o.ToString().Contains(parsedEvent.Id)),
+            Arg.Is<Exception>(e => e is InvalidOperationException && e.Message.Contains("coupon.PercentOff")),
+            Arg.Any<Func<object, Exception, string>>());
+
+        await _mailer.DidNotReceive().SendEmail(Arg.Any<Families2019RenewalMail>());
+
+        await _mailService.Received(1).SendInvoiceUpcoming(
+            Arg.Is<IEnumerable<string>>(emails => emails.Contains("org@example.com")),
+            Arg.Is<decimal>(amount => amount == invoice.AmountDue / 100M),
+            Arg.Is<DateTime>(dueDate => dueDate == invoice.NextPaymentAttempt.Value),
+            Arg.Is<List<string>>(items => items.Count == invoice.Lines.Data.Count),
+            Arg.Is<bool>(b => b == true));
+    }
+
+    [Fact]
     public async Task HandleAsync_WhenMilestone3Enabled_AndSeatAddOnExists_DeletesItem()
     {
         // Arrange
@@ -2074,7 +2268,7 @@ public class UpcomingInvoiceHandlerTests
                 o.ToString().Contains($"Failed to update user's ({user.Id}) subscription price id") &&
                 o.ToString().Contains(parsedEvent.Id)),
             Arg.Is<Exception>(e => e is InvalidOperationException
-                                   && e.Message == $"Coupon for sending premium renewal email id:{CouponIDs.Milestone3SubscriptionDiscount} not found"),
+                                   && e.Message == $"Coupon for sending premium renewal email id:{CouponIDs.Milestone2SubscriptionDiscount} not found"),
             Arg.Any<Func<object, Exception, string>>());
 
         await _mailer.DidNotReceive().SendEmail(Arg.Any<PremiumRenewalMail>());
@@ -2158,7 +2352,7 @@ public class UpcomingInvoiceHandlerTests
                 o.ToString().Contains($"Failed to update user's ({user.Id}) subscription price id") &&
                 o.ToString().Contains(parsedEvent.Id)),
             Arg.Is<Exception>(e => e is InvalidOperationException
-                                   && e.Message == $"coupon.PercentOff for sending premium renewal email id:{CouponIDs.Milestone3SubscriptionDiscount} is null"),
+                                   && e.Message == $"coupon.PercentOff for sending premium renewal email id:{CouponIDs.Milestone2SubscriptionDiscount} is null"),
             Arg.Any<Func<object, Exception, string>>());
 
         await _mailer.DidNotReceive().SendEmail(Arg.Any<PremiumRenewalMail>());

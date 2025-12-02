@@ -610,12 +610,12 @@ public class UpcomingInvoiceHandler(
         var coupon = await stripeFacade.GetCoupon(CouponIDs.Milestone2SubscriptionDiscount);
         if (coupon == null)
         {
-            throw new InvalidOperationException($"Coupon for sending premium renewal email id:{CouponIDs.Milestone3SubscriptionDiscount} not found");
+            throw new InvalidOperationException($"Coupon for sending premium renewal email id:{CouponIDs.Milestone2SubscriptionDiscount} not found");
         }
 
         if (coupon.PercentOff == null)
         {
-            throw new InvalidOperationException($"coupon.PercentOff for sending premium renewal email id:{CouponIDs.Milestone3SubscriptionDiscount} is null");
+            throw new InvalidOperationException($"coupon.PercentOff for sending premium renewal email id:{CouponIDs.Milestone2SubscriptionDiscount} is null");
         }
 
         var discountedAnnualRenewalPrice = premiumPlan.Seat.Price * (100 - coupon.PercentOff.Value) / 100;
