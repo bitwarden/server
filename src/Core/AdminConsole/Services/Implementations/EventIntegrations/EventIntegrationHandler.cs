@@ -147,7 +147,8 @@ public class EventIntegrationHandler<T>(
                 integrationType: integrationType,
                 eventType: eventMessage.Type
             ),
-            options: new FusionCacheEntryOptions(duration: TimeSpan.FromDays(1)),
+            options: new FusionCacheEntryOptions(
+                duration: EventIntegrationsCacheConstants.DurationForOrganizationIntegrationConfigurationDetails),
             tags: [integrationTag]
         ));
         configurations.AddRange(await cache.GetOrSetAsync<List<OrganizationIntegrationConfigurationDetails>>(
@@ -155,11 +156,12 @@ public class EventIntegrationHandler<T>(
                 organizationId: organizationId,
                 integrationType: integrationType,
                 eventType: null),
-            factory: async _ => await configurationRepository.GetWildcardConfigurationDetailsAsync(
+            factory: async _ => await configurationRepository.GetManyConfigurationDetailsByOrganizationIdIntegrationTypeAsync(
                 organizationId,
                 integrationType
             ),
-            options: new FusionCacheEntryOptions(duration: TimeSpan.FromDays(1)),
+            options: new FusionCacheEntryOptions(
+                duration: EventIntegrationsCacheConstants.DurationForOrganizationIntegrationConfigurationDetails),
             tags: [integrationTag]
         ));
 

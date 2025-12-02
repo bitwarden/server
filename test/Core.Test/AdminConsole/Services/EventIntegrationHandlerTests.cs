@@ -654,7 +654,7 @@ public class EventIntegrationHandlerTests
             integrationType: IntegrationType.Webhook,
             eventType: eventMessage.Type).Returns(eventTypeConfigs);
 
-        configurationRepository.GetWildcardConfigurationDetailsAsync(
+        configurationRepository.GetManyConfigurationDetailsByOrganizationIdIntegrationTypeAsync(
             organizationId: _organizationId,
             integrationType: IntegrationType.Webhook).Returns(wildcardConfigs);
 
@@ -683,13 +683,13 @@ public class EventIntegrationHandlerTests
             organizationId: _organizationId,
             integrationType: IntegrationType.Webhook,
             eventType: eventMessage.Type);
-        await configurationRepository.Received(1).GetWildcardConfigurationDetailsAsync(
+        await configurationRepository.Received(1).GetManyConfigurationDetailsByOrganizationIdIntegrationTypeAsync(
             organizationId: _organizationId,
             integrationType: IntegrationType.Webhook);
     }
 
     [Theory, BitAutoData]
-    public async Task HandleEventAsync_ConfigurationCacheOptions_SetsDurationToOneDay(EventMessage eventMessage)
+    public async Task HandleEventAsync_ConfigurationCacheOptions_SetsDurationToConstant(EventMessage eventMessage)
     {
         eventMessage.OrganizationId = _organizationId;
         var sutProvider = GetSutProvider(NoConfigurations());
@@ -709,7 +709,8 @@ public class EventIntegrationHandlerTests
         Assert.All(capturedOptions, opt =>
         {
             Assert.NotNull(opt);
-            Assert.Equal(TimeSpan.FromDays(1), opt.Duration);
+            Assert.Equal(EventIntegrationsCacheConstants.DurationForOrganizationIntegrationConfigurationDetails,
+                         opt.Duration);
         });
     }
 

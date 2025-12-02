@@ -34,12 +34,12 @@ public class OrganizationIntegrationConfigurationRepository : Repository<Core.Ad
         }
     }
 
-    public async Task<List<OrganizationIntegrationConfigurationDetails>> GetWildcardConfigurationDetailsAsync(Guid organizationId, IntegrationType integrationType)
+    public async Task<List<OrganizationIntegrationConfigurationDetails>> GetManyConfigurationDetailsByOrganizationIdIntegrationTypeAsync(Guid organizationId, IntegrationType integrationType)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var query = new OrganizationIntegrationConfigurationDetailsReadManyWildcardByOrganizationIdIntegrationTypeQuery(
+            var query = new OrganizationIntegrationConfigurationDetailsReadManyByOrganizationIdIntegrationTypeQuery(
                 organizationId,
                 integrationType
             );

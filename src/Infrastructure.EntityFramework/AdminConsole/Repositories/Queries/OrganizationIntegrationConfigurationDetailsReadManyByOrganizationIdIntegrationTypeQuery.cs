@@ -3,12 +3,12 @@ using Bit.Core.Models.Data.Organizations;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories.Queries;
 
-public class OrganizationIntegrationConfigurationDetailsReadManyWildcardByOrganizationIdIntegrationTypeQuery : IQuery<OrganizationIntegrationConfigurationDetails>
+public class OrganizationIntegrationConfigurationDetailsReadManyByOrganizationIdIntegrationTypeQuery : IQuery<OrganizationIntegrationConfigurationDetails>
 {
     private readonly Guid _organizationId;
     private readonly IntegrationType _integrationType;
 
-    public OrganizationIntegrationConfigurationDetailsReadManyWildcardByOrganizationIdIntegrationTypeQuery(Guid organizationId, IntegrationType integrationType)
+    public OrganizationIntegrationConfigurationDetailsReadManyByOrganizationIdIntegrationTypeQuery(Guid organizationId, IntegrationType integrationType)
     {
         _organizationId = organizationId;
         _integrationType = integrationType;

@@ -110,4 +110,13 @@ public class EventIntegrationsCacheConstantsTests
     {
         Assert.Equal("EventIntegrations", EventIntegrationsCacheConstants.CacheName);
     }
+
+    [Fact]
+    public void DurationForOrganizationIntegrationConfigurationDetails_ReturnsExpected()
+    {
+        Assert.Equal(
+            TimeSpan.FromDays(1),
+            EventIntegrationsCacheConstants.DurationForOrganizationIntegrationConfigurationDetails
+        );
+    }
 }

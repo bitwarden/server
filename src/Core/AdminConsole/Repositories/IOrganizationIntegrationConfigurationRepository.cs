@@ -21,15 +21,12 @@ public interface IOrganizationIntegrationConfigurationRepository : IRepository<O
 
     /// <summary>
     /// Retrieve the list of configuration details for the organization and
-    /// integration type that are wildcards (i.e. match all events). By design, rows in the
-    /// IOrganizationIntegrationConfigurationRepository that have null EventType are considered
-    /// wildcards and match all events that occur. This method fetches only those wildcard
-    /// configurations.
+    /// integration type that have a null event type (i.e. match all events).
     /// </summary>
     /// <param name="organizationId">The id of the organization</param>
     /// <param name="integrationType">The integration type</param>
     /// <returns>A List of <see cref="OrganizationIntegrationConfigurationDetails"/> that match</returns>
-    Task<List<OrganizationIntegrationConfigurationDetails>> GetWildcardConfigurationDetailsAsync(
+    Task<List<OrganizationIntegrationConfigurationDetails>> GetManyConfigurationDetailsByOrganizationIdIntegrationTypeAsync(
         Guid organizationId,
         IntegrationType integrationType);
 

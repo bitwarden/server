@@ -16,6 +16,11 @@ public static class EventIntegrationsCacheConstants
     public const string CacheName = "EventIntegrations";
 
     /// <summary>
+    /// Duration TimeSpan for adding OrganizationIntegrationConfigurationDetails to the cache.
+    /// </summary>
+    public static readonly TimeSpan DurationForOrganizationIntegrationConfigurationDetails = TimeSpan.FromDays(1);
+
+    /// <summary>
     /// Builds a deterministic cache key for a <see cref="Group"/>.
     /// </summary>
     /// <param name="groupId">The unique identifier of the group.</param>

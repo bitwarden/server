@@ -1,4 +1,4 @@
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationIntegrationConfigurationDetails_ReadManyWildcardByOrganizationIdIntegrationType]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationIntegrationConfigurationDetails_ReadManyConfigurationDetailsByOrganizationIdIntegrationType]
     @OrganizationId UNIQUEIDENTIFIER,
     @IntegrationType SMALLINT
 AS
