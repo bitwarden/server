@@ -166,7 +166,6 @@ public class OrganizationLicense : ILicense
     /// getting out of date license errors
     /// </remarks>
     public const int CurrentLicenseFileVersion = 15;
-
     private bool ValidLicenseVersion
     {
         get => Version is >= 1 and <= 16;
@@ -397,7 +396,6 @@ public class OrganizationLicense : ILicense
 
         var issued = claimsPrincipal.GetValue<DateTime>(nameof(Issued));
         var expires = claimsPrincipal.GetValue<DateTime>(nameof(Expires));
-
         var installationId = claimsPrincipal.GetValue<Guid>(nameof(InstallationId));
         var licenseKey = claimsPrincipal.GetValue<string>(nameof(LicenseKey));
         var enabled = claimsPrincipal.GetValue<bool>(nameof(Enabled));
