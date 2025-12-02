@@ -1,4 +1,5 @@
-﻿using Bit.Core;
+﻿using System.Globalization;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Repositories;
@@ -8,7 +9,8 @@ using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Entities;
-using Bit.Core.Models.Mail.UpdatedInvoiceIncoming;
+using Bit.Core.Models.Mail.Billing.Renewal.Families2019Renewal;
+using Bit.Core.Models.Mail.Billing.Renewal.Families2020Renewal;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
@@ -16,6 +18,7 @@ using Bit.Core.Services;
 using Stripe;
 using Event = Stripe.Event;
 using Plan = Bit.Core.Models.StaticStore.Plan;
+using PremiumPlan = Bit.Core.Billing.Pricing.Premium.Plan;
 
 namespace Bit.Billing.Services.Implementations;
 
@@ -107,12 +110,21 @@ public class UpcomingInvoiceHandler(
 
         var milestone3 = featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3);
 
-        await AlignOrganizationSubscriptionConcernsAsync(
+        var subscriptionAligned = await AlignOrganizationSubscriptionConcernsAsync(
             organization,
             @event,
             subscription,
             plan,
             milestone3);
+
+        /*
+         * Subscription alignment sends out a different version of our Upcoming Invoice email, so we don't need to continue
+         * with processing.
+         */
+        if (subscriptionAligned)
+        {
+            return;
+        }
 
         // Don't send the upcoming invoice email unless the organization's on an annual plan.
         if (!plan.IsAnnual)
@@ -135,9 +147,7 @@ public class UpcomingInvoiceHandler(
             }
         }
 
-        await (milestone3
-            ? SendUpdatedUpcomingInvoiceEmailsAsync([organization.BillingEmail])
-            : SendUpcomingInvoiceEmailsAsync([organization.BillingEmail], invoice));
+        await SendUpcomingInvoiceEmailsAsync([organization.BillingEmail], invoice);
     }
 
     private async Task AlignOrganizationTaxConcernsAsync(
@@ -188,7 +198,16 @@ public class UpcomingInvoiceHandler(
         }
     }
 
-    private async Task AlignOrganizationSubscriptionConcernsAsync(
+    /// <summary>
+    /// Aligns the organization's subscription details with the specified plan and milestone requirements.
+    /// </summary>
+    /// <param name="organization">The organization whose subscription is being updated.</param>
+    /// <param name="event">The Stripe event associated with this operation.</param>
+    /// <param name="subscription">The organization's subscription.</param>
+    /// <param name="plan">The organization's current plan.</param>
+    /// <param name="milestone3">A flag indicating whether the third milestone is enabled.</param>
+    /// <returns>Whether the operation resulted in an updated subscription.</returns>
+    private async Task<bool> AlignOrganizationSubscriptionConcernsAsync(
         Organization organization,
         Event @event,
         Subscription subscription,
@@ -198,7 +217,7 @@ public class UpcomingInvoiceHandler(
         // currently these are the only plans that need aligned and both require the same flag and share most of the logic
         if (!milestone3 || plan.Type is not (PlanType.FamiliesAnnually2019 or PlanType.FamiliesAnnually2025))
         {
-            return;
+            return false;
         }
 
         var passwordManagerItem =
@@ -208,15 +227,15 @@ public class UpcomingInvoiceHandler(
         {
             logger.LogWarning("Could not find Organization's ({OrganizationId}) password manager item while processing '{EventType}' event ({EventID})",
                 organization.Id, @event.Type, @event.Id);
-            return;
+            return false;
         }
 
-        var families = await pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually);
+        var familiesPlan = await pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually);
 
-        organization.PlanType = families.Type;
-        organization.Plan = families.Name;
-        organization.UsersGetPremium = families.UsersGetPremium;
-        organization.Seats = families.PasswordManager.BaseSeats;
+        organization.PlanType = familiesPlan.Type;
+        organization.Plan = familiesPlan.Name;
+        organization.UsersGetPremium = familiesPlan.UsersGetPremium;
+        organization.Seats = familiesPlan.PasswordManager.BaseSeats;
 
         var options = new SubscriptionUpdateOptions
         {
@@ -225,7 +244,7 @@ public class UpcomingInvoiceHandler(
                 new SubscriptionItemOptions
                 {
                     Id = passwordManagerItem.Id,
-                    Price = families.PasswordManager.StripePlanId
+                    Price = familiesPlan.PasswordManager.StripePlanId
                 }
             ],
             ProrationBehavior = ProrationBehavior.None
@@ -266,6 +285,8 @@ public class UpcomingInvoiceHandler(
         {
             await organizationRepository.ReplaceAsync(organization);
             await stripeFacade.UpdateSubscription(subscription.Id, options);
+            await SendFamiliesRenewalEmailAsync(organization, familiesPlan, plan);
+            return true;
         }
         catch (Exception exception)
         {
@@ -275,6 +296,7 @@ public class UpcomingInvoiceHandler(
                 organization.Id,
                 @event.Type,
                 @event.Id);
+            return false;
         }
     }
 
@@ -303,14 +325,21 @@ public class UpcomingInvoiceHandler(
         var milestone2Feature = featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2);
         if (milestone2Feature)
         {
-            await AlignPremiumUsersSubscriptionConcernsAsync(user, @event, subscription);
+            var subscriptionAligned = await AlignPremiumUsersSubscriptionConcernsAsync(user, @event, subscription);
+
+            /*
+             * Subscription alignment sends out a different version of our Upcoming Invoice email, so we don't need to continue
+             * with processing.
+             */
+            if (subscriptionAligned)
+            {
+                return;
+            }
         }
 
         if (user.Premium)
         {
-            await (milestone2Feature
-                ? SendUpdatedUpcomingInvoiceEmailsAsync(new List<string> { user.Email })
-                : SendUpcomingInvoiceEmailsAsync(new List<string> { user.Email }, invoice));
+            await SendUpcomingInvoiceEmailsAsync(new List<string> { user.Email }, invoice);
         }
     }
 
@@ -341,7 +370,7 @@ public class UpcomingInvoiceHandler(
         }
     }
 
-    private async Task AlignPremiumUsersSubscriptionConcernsAsync(
+    private async Task<bool> AlignPremiumUsersSubscriptionConcernsAsync(
         User user,
         Event @event,
         Subscription subscription)
@@ -352,7 +381,7 @@ public class UpcomingInvoiceHandler(
         {
             logger.LogWarning("Could not find User's ({UserID}) premium subscription item while processing '{EventType}' event ({EventID})",
                 user.Id, @event.Type, @event.Id);
-            return;
+            return false;
         }
 
         try
@@ -371,6 +400,8 @@ public class UpcomingInvoiceHandler(
                     ],
                     ProrationBehavior = ProrationBehavior.None
                 });
+            await SendPremiumRenewalEmailAsync(user, plan);
+            return true;
         }
         catch (Exception exception)
         {
@@ -379,6 +410,7 @@ public class UpcomingInvoiceHandler(
                 "Failed to update user's ({UserID}) subscription price id while processing event with ID {EventID}",
                 user.Id,
                 @event.Id);
+            return false;
         }
     }
 
@@ -513,15 +545,79 @@ public class UpcomingInvoiceHandler(
         }
     }
 
-    private async Task SendUpdatedUpcomingInvoiceEmailsAsync(IEnumerable<string> emails)
+    private async Task SendFamiliesRenewalEmailAsync(
+        Organization organization,
+        Plan familiesPlan,
+        Plan planBeforeAlignment)
     {
-        var validEmails = emails.Where(e => !string.IsNullOrEmpty(e));
-        var updatedUpcomingEmail = new UpdatedInvoiceUpcomingMail
+        await (planBeforeAlignment switch
         {
-            ToEmails = validEmails,
-            View = new UpdatedInvoiceUpcomingView()
+            { Type: PlanType.FamiliesAnnually2025 } => SendFamilies2020RenewalEmailAsync(organization, familiesPlan),
+            { Type: PlanType.FamiliesAnnually2019 } => SendFamilies2019RenewalEmailAsync(organization, familiesPlan),
+            _ => throw new InvalidOperationException("Unsupported families plan in SendFamiliesRenewalEmailAsync().")
+        });
+    }
+
+    private async Task SendFamilies2020RenewalEmailAsync(Organization organization, Plan familiesPlan)
+    {
+        var email = new Families2020RenewalMail
+        {
+            ToEmails = [organization.BillingEmail],
+            View = new Families2020RenewalMailView
+            {
+                MonthlyRenewalPrice = (familiesPlan.PasswordManager.BasePrice / 12).ToString("C", new CultureInfo("en-US"))
+            }
         };
-        await mailer.SendEmail(updatedUpcomingEmail);
+
+        await mailer.SendEmail(email);
+    }
+
+    private async Task SendFamilies2019RenewalEmailAsync(Organization organization, Plan familiesPlan)
+    {
+        var coupon = await stripeFacade.GetCoupon(CouponIDs.Milestone3SubscriptionDiscount);
+        if (coupon == null)
+        {
+            throw new InvalidOperationException($"Coupon for sending families 2019 email id:{CouponIDs.Milestone3SubscriptionDiscount} not found");
+        }
+
+        if (coupon.PercentOff == null)
+        {
+            throw new InvalidOperationException($"coupon.PercentOff for sending families 2019 email id:{CouponIDs.Milestone3SubscriptionDiscount} is null");
+        }
+
+        var discountedAnnualRenewalPrice = familiesPlan.PasswordManager.BasePrice * (100 - coupon.PercentOff.Value) / 100;
+
+        var email = new Families2019RenewalMail
+        {
+            ToEmails = [organization.BillingEmail],
+            View = new Families2019RenewalMailView
+            {
+                BaseMonthlyRenewalPrice = (familiesPlan.PasswordManager.BasePrice / 12).ToString("C", new CultureInfo("en-US")),
+                BaseAnnualRenewalPrice = familiesPlan.PasswordManager.BasePrice.ToString("C", new CultureInfo("en-US")),
+                DiscountAmount = $"{coupon.PercentOff}%",
+                DiscountedAnnualRenewalPrice = discountedAnnualRenewalPrice.ToString("C", new CultureInfo("en-US"))
+            }
+        };
+
+        await mailer.SendEmail(email);
+    }
+
+    private async Task SendPremiumRenewalEmailAsync(
+        User user,
+        PremiumPlan premiumPlan)
+    {
+        /* TODO: Replace with proper premium renewal email template once finalized.
+           Using Families2020RenewalMail as a temporary stop-gap. */
+        var email = new Families2020RenewalMail
+        {
+            ToEmails = [user.Email],
+            View = new Families2020RenewalMailView
+            {
+                MonthlyRenewalPrice = (premiumPlan.Seat.Price / 12).ToString("C", new CultureInfo("en-US"))
+            }
+        };
+
+        await mailer.SendEmail(email);
     }
 
     #endregion
