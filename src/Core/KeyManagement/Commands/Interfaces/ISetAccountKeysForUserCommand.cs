@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Bit.Core.KeyManagement.Models.Api.Request;
+﻿using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.KeyManagement.Repositories;
 using Bit.Core.Repositories;
 
