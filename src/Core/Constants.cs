@@ -166,6 +166,7 @@ public static class FeatureFlagKeys
     public const string MJMLBasedEmailTemplates = "mjml-based-email-templates";
     public const string MjmlWelcomeEmailTemplates = "pm-21741-mjml-welcome-email";
     public const string MarketingInitiatedPremiumFlow = "pm-26140-marketing-initiated-premium-flow";
+    public const string RedirectOnSsoRequired = "pm-1632-redirect-on-sso-required";
 
     /* Autofill Team */
     public const string IdpAutoSubmitLogin = "idp-auto-submit-login";
@@ -187,7 +188,6 @@ public static class FeatureFlagKeys
 
     /* Billing Team */
     public const string TrialPayment = "PM-8163-trial-payment";
-    public const string PM21821_ProviderPortalTakeover = "pm-21821-provider-portal-takeover";
     public const string PM22415_TaxIDWarnings = "pm-22415-tax-id-warnings";
     public const string PM25379_UseNewOrganizationMetadataStructure = "pm-25379-use-new-organization-metadata-structure";
     public const string PM24996ImplementUpgradeFromFreeDialog = "pm-24996-implement-upgrade-from-free-dialog";
@@ -202,14 +202,11 @@ public static class FeatureFlagKeys
 
     /* Key Management Team */
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
-    public const string PM4154BulkEncryptionService = "PM-4154-bulk-encryption-service";
     public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
     public const string Argon2Default = "argon2-default";
     public const string UserkeyRotationV2 = "userkey-rotation-v2";
     public const string SSHKeyItemVaultItem = "ssh-key-vault-item";
-    public const string UserSdkForDecryption = "use-sdk-for-decryption";
     public const string EnrollAeadOnKeyRotation = "enroll-aead-on-key-rotation";
-    public const string PM17987_BlockType0 = "pm-17987-block-type-0";
     public const string ForceUpdateKDFSettings = "pm-18021-force-update-kdf-settings";
     public const string UnlockWithMasterPasswordUnlockData = "pm-23246-unlock-with-master-password-unlock-data";
     public const string WindowsBiometricsV2 = "pm-25373-windows-biometrics-v2";
