@@ -3,6 +3,7 @@
 
 using System.ComponentModel.DataAnnotations;
 using Bit.Core.Entities;
+using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.Auth.Models.Api.Request.Accounts;
@@ -13,6 +14,7 @@ public class KeysRequestModel
     public string PublicKey { get; set; }
     [Required]
     public string EncryptedPrivateKey { get; set; }
+    public AccountKeysRequestModel accountKeys { get; set; }
 
     public User ToUser(User existingUser)
     {
