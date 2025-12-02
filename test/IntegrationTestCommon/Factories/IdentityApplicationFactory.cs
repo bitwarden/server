@@ -25,6 +25,7 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
     public const string DefaultDeviceIdentifier = "92b9d953-b9b6-4eaf-9d3e-11d57144dfeb";
     public const string DefaultUserEmail = "DefaultEmail@bitwarden.com";
     public const string DefaultUserPasswordHash = "default_password_hash";
+    public bool UseMockClientVersionValidator { get; set; } = true;
 
     /// <summary>
     /// A dictionary to store registration tokens for email verification. We cannot substitute the IMailService more than once, so
@@ -48,12 +49,15 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
                 });
         });
 
-        // Bypass client version gating to isolate tests from client version behavior
-        SubstituteService<IClientVersionValidator>(svc =>
+        if (UseMockClientVersionValidator)
         {
-            svc.ValidateAsync(Arg.Any<User>(), Arg.Any<CustomValidatorRequestContext>())
-                .Returns(Task.FromResult(true));
-        });
+            // Bypass client version gating to isolate tests from client version behavior
+            SubstituteService<IClientVersionValidator>(svc =>
+            {
+                svc.ValidateAsync(Arg.Any<User>(), Arg.Any<CustomValidatorRequestContext>())
+                    .Returns(Task.FromResult(true));
+            });
+        }
 
         base.ConfigureWebHost(builder);
     }

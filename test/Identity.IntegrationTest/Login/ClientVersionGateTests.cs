@@ -23,7 +23,10 @@ public class ClientVersionGateTests : IClassFixture<IdentityApplicationFactory>
     [Theory, BitAutoData, RegisterFinishRequestModelCustomize]
     public async Task TokenEndpoint_GrantTypePassword_V2User_OnOldClientVersion_Blocked(RegisterFinishRequestModel requestModel)
     {
-        var localFactory = new IdentityApplicationFactory();
+        var localFactory = new IdentityApplicationFactory
+        {
+            UseMockClientVersionValidator = false
+        };
         var server = localFactory.Server;
         var user = await localFactory.RegisterNewIdentityFactoryUserAsync(requestModel);
 
@@ -68,7 +71,10 @@ public class ClientVersionGateTests : IClassFixture<IdentityApplicationFactory>
     [Theory, BitAutoData, RegisterFinishRequestModelCustomize]
     public async Task TokenEndpoint_GrantTypePassword_V2User_OnMinClientVersion_Succeeds(RegisterFinishRequestModel requestModel)
     {
-        var localFactory = new IdentityApplicationFactory();
+        var localFactory = new IdentityApplicationFactory
+        {
+            UseMockClientVersionValidator = false
+        };
         var server = localFactory.Server;
         var user = await localFactory.RegisterNewIdentityFactoryUserAsync(requestModel);
 
