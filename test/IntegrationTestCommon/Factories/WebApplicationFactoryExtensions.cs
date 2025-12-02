@@ -23,9 +23,6 @@ public static class WebApplicationFactoryExtensions
             // it runs after this so it will take precedence.
             httpContext.Connection.RemoteIpAddress = IPAddress.Parse(FactoryConstants.WhitelistedIp);
 
-            // Ensure response body is bufferable and seekable for tests to read later
-            httpContext.Response.Body = new MemoryStream();
-
             httpContext.Request.Path = new PathString(requestUri);
             httpContext.Request.Method = method.Method;
 

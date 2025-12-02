@@ -16,7 +16,7 @@ public class ClientVersionValidator(
     IGetMinimumClientVersionForUserQuery getMinimumClientVersionForUserQuery)
     : IClientVersionValidator
 {
-    private static readonly string UpgradeMessage = "Please update your app to continue using Bitwarden";
+    private const string _upgradeMessage = "Please update your app to continue using Bitwarden";
 
     public async Task<bool> ValidateAsync(User? user, CustomValidatorRequestContext requestContext)
     {
@@ -25,10 +25,10 @@ public class ClientVersionValidator(
             return true;
         }
 
-        var clientVersion = currentContext.ClientVersion;
-        var minVersion = await getMinimumClientVersionForUserQuery.Run(user);
+        Version clientVersion = currentContext.ClientVersion;
+        Version? minVersion = await getMinimumClientVersionForUserQuery.Run(user);
 
-        // Fail-open if headers are missing or no restriction
+        // Allow through if headers are missing.
         if (minVersion == null)
         {
             return true;
@@ -39,12 +39,12 @@ public class ClientVersionValidator(
             requestContext.ValidationErrorResult = new ValidationResult
             {
                 Error = "invalid_client_version",
-                ErrorDescription = UpgradeMessage,
+                ErrorDescription = _upgradeMessage,
                 IsError = true
             };
             requestContext.CustomResponse = new Dictionary<string, object>
             {
-                { "ErrorModel", new ErrorResponseModel(UpgradeMessage) }
+                { "ErrorModel", new ErrorResponseModel(_upgradeMessage) }
             };
             return false;
         }

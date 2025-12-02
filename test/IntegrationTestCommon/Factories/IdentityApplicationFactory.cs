@@ -75,8 +75,20 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
         var context = await ContextFromPasswordAsync(
             username, password, deviceIdentifier, clientId, deviceType, deviceName);
 
-        using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
-        var root = body.RootElement;
+        // Provide clearer diagnostics on failure
+        if (context.Response.StatusCode != StatusCodes.Status200OK)
+        {
+            var contentType = context.Response.ContentType ?? string.Empty;
+            if (context.Response.Body.CanSeek)
+            {
+                context.Response.Body.Position = 0;
+            }
+            string rawBody = await new StreamReader(context.Response.Body).ReadToEndAsync();
+            throw new Xunit.Sdk.XunitException($"Login failed: status={context.Response.StatusCode}, contentType='{contentType}', body='{rawBody}'");
+        }
+
+        using var jsonDoc = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        var root = jsonDoc.RootElement;
 
         return (root.GetProperty("access_token").GetString(), root.GetProperty("refresh_token").GetString());
     }
@@ -99,7 +111,13 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
             { "grant_type", "password" },
             { "username", username },
             { "password", password },
-        }));
+        }),
+        http =>
+        {
+            // Ensure JSON content negotiation for errors and set a sane client version
+            http.Request.Headers.Append("Accept", "application/json");
+            http.Request.Headers.Append("Bitwarden-Client-Version", "2025.11.0");
+        });
 
         return context;
     }

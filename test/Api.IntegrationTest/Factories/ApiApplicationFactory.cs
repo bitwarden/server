@@ -68,7 +68,7 @@ public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
                 UserAsymmetricKeys = new KeysRequestModel()
                 {
                     PublicKey = TestEncryptionConstants.PublicKey,
-                    EncryptedPrivateKey = TestEncryptionConstants.V1EncryptedBase64 // v1-format so parsing succeeds and user is treated as v1
+                    EncryptedPrivateKey = TestEncryptionConstants.V1EncryptedBase64
                 },
                 UserSymmetricKey = TestEncryptionConstants.V1EncryptedBase64,
             });

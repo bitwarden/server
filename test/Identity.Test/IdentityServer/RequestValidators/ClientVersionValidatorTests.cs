@@ -50,4 +50,17 @@ public class ClientVersionValidatorTests
         var ok = await sut.ValidateAsync(new User(), new Bit.Identity.IdentityServer.CustomValidatorRequestContext());
         Assert.True(ok);
     }
+
+    [Fact]
+    public async Task Allows_When_ClientVersionHeaderMissing()
+    {
+        // Do not set ClientVersion on the context (remains null) and ensure we fail open
+        var ctx = Substitute.For<ICurrentContext>();
+        var minQuery = MakeMinQuery(new Version("2025.11.0"));
+        var sut = new ClientVersionValidator(ctx, minQuery);
+
+        var ok = await sut.ValidateAsync(new User(), new Bit.Identity.IdentityServer.CustomValidatorRequestContext());
+
+        Assert.True(ok);
+    }
 }

@@ -2,5 +2,5 @@
 
 public static class Constants
 {
-    public static readonly Version MinimumClientVersion = new Version("2025.11.0");
+    public static readonly Version MinimumClientVersionForV2Encryption = new Version("2025.11.0");
 }

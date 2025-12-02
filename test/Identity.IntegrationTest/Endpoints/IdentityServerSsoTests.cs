@@ -343,7 +343,7 @@ public class IdentityServerSsoTests
             { "code_verifier", challenge },
             { "redirect_uri", "https://localhost:8080/sso-connector.html" }
         }),
-        http => { http.Request.Headers.Append("Bitwarden-Client-Version", "2025.11.0"); });
+        http => { http.Request.Headers.Append("Bitwarden-Client-Version", "2025.10.0"); });
 
         // Assert
         // If the organization has selected TrustedDeviceEncryption but the user still has their master password
@@ -415,7 +415,7 @@ public class IdentityServerSsoTests
         }),
         http =>
         {
-            http.Request.Headers.Append("Bitwarden-Client-Version", "2025.11.0");
+            http.Request.Headers.Append("Bitwarden-Client-Version", "2025.10.0");
             http.Request.Headers.Append("Accept", "application/json");
         });
 
@@ -491,7 +491,7 @@ public class IdentityServerSsoTests
             { "code_verifier", challenge },
             { "redirect_uri", "https://localhost:8080/sso-connector.html" }
         }),
-        http => { http.Request.Headers.Append("Bitwarden-Client-Version", "2025.11.0"); });
+        http => { http.Request.Headers.Append("Bitwarden-Client-Version", "2025.10.0"); });
 
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
         using var responseBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
@@ -569,7 +569,7 @@ public class IdentityServerSsoTests
             { "code_verifier", challenge },
             { "redirect_uri", "https://localhost:8080/sso-connector.html" }
         }),
-        http => { http.Request.Headers.Append("Bitwarden-Client-Version", "2025.11.0"); });
+        http => { http.Request.Headers.Append("Bitwarden-Client-Version", "2025.10.0"); });
 
         // If this fails, surface detailed error information to aid debugging
         if (context.Response.StatusCode != StatusCodes.Status200OK)
@@ -656,8 +656,11 @@ public class IdentityServerSsoTests
 
         factory.SubstituteService<IAuthorizationCodeStore>(service =>
         {
-            service.GetAuthorizationCodeAsync("test_code")
+            // Return our pre-built authorization code regardless of handle representation
+            service.GetAuthorizationCodeAsync(Arg.Any<string>())
                 .Returns(authorizationCode);
+            service.RemoveAuthorizationCodeAsync(Arg.Any<string>())
+                .Returns(Task.CompletedTask);
         });
 
         var user = await factory.RegisterNewIdentityFactoryUserAsync(

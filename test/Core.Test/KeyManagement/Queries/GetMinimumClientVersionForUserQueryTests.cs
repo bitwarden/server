@@ -19,7 +19,7 @@ public class GetMinimumClientVersionForUserQueryTests
     {
         var sut = new GetMinimumClientVersionForUserQuery(new FakeIsV2Query(true));
         var version = await sut.Run(new User());
-        Assert.Equal(Core.KeyManagement.Constants.MinimumClientVersion, version);
+        Assert.Equal(Core.KeyManagement.Constants.MinimumClientVersionForV2Encryption, version);
     }
 
     [Fact]

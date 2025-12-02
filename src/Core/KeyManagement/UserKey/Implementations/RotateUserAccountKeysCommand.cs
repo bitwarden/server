@@ -260,6 +260,4 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
             throw new InvalidOperationException("No signed security state provider for V2 user");
         }
     }
-
-    // Parsing moved to Bit.Core.KeyManagement.Utilities.EncryptionParsing
 }

@@ -15,7 +15,7 @@ public class GetMinimumClientVersionForUserQuery(IIsV2EncryptionUserQuery isV2En
 
         if (await isV2EncryptionUserQuery.Run(user))
         {
-            return Constants.MinimumClientVersion;
+            return Constants.MinimumClientVersionForV2Encryption;
         }
 
         return null;
