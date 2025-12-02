@@ -10,7 +10,9 @@ using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Commands;
 using Bit.Core.KeyManagement.Kdf;
+using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Repositories;
@@ -38,6 +40,7 @@ public class AccountsControllerTests : IDisposable
     private readonly IUserAccountKeysQuery _userAccountKeysQuery;
     private readonly ITwoFactorEmailService _twoFactorEmailService;
     private readonly IChangeKdfCommand _changeKdfCommand;
+    private readonly SetAccountKeysForUserCommand _setAccountKeysForUserCommand;
 
     public AccountsControllerTests()
     {
@@ -53,6 +56,7 @@ public class AccountsControllerTests : IDisposable
         _userAccountKeysQuery = Substitute.For<IUserAccountKeysQuery>();
         _twoFactorEmailService = Substitute.For<ITwoFactorEmailService>();
         _changeKdfCommand = Substitute.For<IChangeKdfCommand>();
+        _setAccountKeysForUserCommand = Substitute.For<SetAccountKeysForUserCommand>();
 
         _sut = new AccountsController(
             _organizationService,
@@ -66,7 +70,8 @@ public class AccountsControllerTests : IDisposable
             _featureService,
             _userAccountKeysQuery,
             _twoFactorEmailService,
-            _changeKdfCommand
+            _changeKdfCommand,
+            _setAccountKeysForUserCommand
         );
     }
 
@@ -737,6 +742,63 @@ public class AccountsControllerTests : IDisposable
     {
         _userService.GetUserByIdAsync(Arg.Any<Guid>())
                     .Returns(Task.FromResult((User)null));
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostKeys_WithAccountKeys_CallsSetAccountKeysCommand(
+        User user,
+        KeysRequestModel model)
+    {
+        // Arrange
+        user.PublicKey = null;
+        user.PrivateKey = null;
+        model.AccountKeys = new AccountKeysRequestModel
+        {
+            UserKeyEncryptedAccountPrivateKey = "wrapped-private-key",
+            AccountPublicKey = "public-key"
+        };
+
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        _featureService.IsEnabled(Bit.Core.FeatureFlagKeys.ReturnErrorOnExistingKeypair).Returns(false);
+
+        // Act
+        var result = await _sut.PostKeys(model);
+
+        // Assert
+        await _setAccountKeysForUserCommand.Received(1).SetAccountKeysForUserAsync(
+            user.Id,
+            model.AccountKeys);
+        await _userService.DidNotReceiveWithAnyArgs().SaveUserAsync(Arg.Any<User>());
+        Assert.NotNull(result);
+        Assert.Equal("keys", result.Object);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostKeys_WithoutAccountKeys_CallsSaveUser(
+        User user,
+        KeysRequestModel model)
+    {
+        // Arrange
+        user.PublicKey = null;
+        user.PrivateKey = null;
+        model.AccountKeys = null;
+        model.PublicKey = "public-key";
+        model.EncryptedPrivateKey = "encrypted-private-key";
+
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        _featureService.IsEnabled(Bit.Core.FeatureFlagKeys.ReturnErrorOnExistingKeypair).Returns(false);
+
+        // Act
+        var result = await _sut.PostKeys(model);
+
+        // Assert
+        await _userService.Received(1).SaveUserAsync(Arg.Is<User>(u =>
+            u.PublicKey == model.PublicKey &&
+            u.PrivateKey == model.EncryptedPrivateKey));
+        await _setAccountKeysForUserCommand.DidNotReceiveWithAnyArgs()
+            .SetAccountKeysForUserAsync(Arg.Any<Guid>(), Arg.Any<AccountKeysRequestModel>());
+        Assert.NotNull(result);
+        Assert.Equal("keys", result.Object);
     }
 }
 
