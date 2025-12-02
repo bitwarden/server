@@ -84,13 +84,13 @@ public class UpdateOrganizationLicenseCommandTests
                 .Received(1)
                 .ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(
                     org => AssertPropertyEqual(license, org,
-                            "Id", "MaxStorageGb", "Issued", "Refresh", "Version", "Trial", "LicenseType",
-                            "Hash", "Signature", "SignatureBytes", "InstallationId", "Expires",
-                            "ExpirationWithoutGracePeriod", "Token", "LimitCollectionCreationDeletion",
-                            "LimitCollectionCreation", "LimitCollectionDeletion", "AllowAdminAccessToAllCollectionItems",
-                            "UseOrganizationDomains", "UseAdminSponsoredFamilies", "UseAutomaticUserConfirmation") &&
-                           // Same property but different name, use explicit mapping
-                        org.ExpirationDate == license.Expires));
+                        "Id", "MaxStorageGb", "Issued", "Refresh", "Version", "Trial", "LicenseType",
+                        "Hash", "Signature", "SignatureBytes", "InstallationId", "Expires",
+                        "ExpirationWithoutGracePeriod", "Token", "LimitCollectionCreationDeletion",
+                        "LimitCollectionCreation", "LimitCollectionDeletion", "AllowAdminAccessToAllCollectionItems",
+                        "UseOrganizationDomains", "UseAdminSponsoredFamilies", "UseAutomaticUserConfirmation") &&
+                        // Same property but different name, use explicit mapping
+                    org.ExpirationDate == license.Expires));
         }
         finally
         {
@@ -98,7 +98,7 @@ public class UpdateOrganizationLicenseCommandTests
             Directory.Delete(OrganizationLicenseDirectory.Value, true);
         }
     }
-    
+
     // Wrapper to compare 2 objects that are different types
     private bool AssertPropertyEqual(OrganizationLicense expected, Organization actual, params string[] excludedPropertyStrings)
     {
