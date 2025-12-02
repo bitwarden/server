@@ -1,0 +1,48 @@
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.EventIntegrations.OrganizationIntegrationConfigurations.Interfaces;
+using Bit.Core.AdminConsole.Services;
+using Bit.Core.Exceptions;
+using Bit.Core.Repositories;
+using Bit.Core.Utilities;
+using Microsoft.Extensions.DependencyInjection;
+using ZiggyCreatures.Caching.Fusion;
+
+namespace Bit.Core.AdminConsole.EventIntegrations.OrganizationIntegrationConfigurations;
+
+public class CreateOrganizationIntegrationConfigurationCommand(
+    IOrganizationIntegrationRepository integrationRepository,
+    IOrganizationIntegrationConfigurationRepository configurationRepository,
+    [FromKeyedServices(EventIntegrationsCacheConstants.CacheName)] IFusionCache cache,
+    IOrganizationIntegrationConfigurationValidator validator)
+    : ICreateOrganizationIntegrationConfigurationCommand
+{
+    public async Task<OrganizationIntegrationConfiguration> CreateAsync(
+        Guid organizationId,
+        Guid integrationId,
+        OrganizationIntegrationConfiguration configuration)
+    {
+        var integration = await integrationRepository.GetByIdAsync(integrationId);
+        if (integration == null || integration.OrganizationId != organizationId)
+        {
+            throw new NotFoundException();
+        }
+        if (!validator.ValidateConfiguration(integration.Type, configuration))
+        {
+            throw new BadRequestException(
+                $"Invalid Configuration and/or Filters for integration type {integration.Type}");
+        }
+
+        var created = await configurationRepository.CreateAsync(configuration);
+
+        // Invalidate the cached configuration details
+        // Even though this is a new record, the cache could hold a stale empty list for this
+        await cache.RemoveAsync(
+            EventIntegrationsCacheConstants.BuildCacheKeyForOrganizationIntegrationConfigurationDetails(
+                organizationId: organizationId,
+                integrationType: integration.Type,
+                eventType: created.EventType
+            ));
+
+        return created;
+    }
+}

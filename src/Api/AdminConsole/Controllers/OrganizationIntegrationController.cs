@@ -1,12 +1,10 @@
 ﻿using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationIntegrations.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
-using Bit.Core.Repositories;
-using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using ZiggyCreatures.Caching.Fusion;
 
 namespace Bit.Api.AdminConsole.Controllers;
 
@@ -14,8 +12,10 @@ namespace Bit.Api.AdminConsole.Controllers;
 [Authorize("Application")]
 public class OrganizationIntegrationController(
     ICurrentContext currentContext,
-    [FromKeyedServices(EventIntegrationsCacheConstants.CacheName)] IFusionCache cache,
-    IOrganizationIntegrationRepository integrationRepository) : Controller
+    ICreateOrganizationIntegrationCommand createCommand,
+    IUpdateOrganizationIntegrationCommand updateCommand,
+    IDeleteOrganizationIntegrationCommand deleteCommand,
+    IGetOrganizationIntegrationsQuery getQuery) : Controller
 {
     [HttpGet("")]
     public async Task<List<OrganizationIntegrationResponseModel>> GetAsync(Guid organizationId)
@@ -25,7 +25,7 @@ public class OrganizationIntegrationController(
             throw new NotFoundException();
         }
 
-        var integrations = await integrationRepository.GetManyByOrganizationAsync(organizationId);
+        var integrations = await getQuery.GetManyByOrganizationAsync(organizationId);
         return integrations
             .Select(integration => new OrganizationIntegrationResponseModel(integration))
             .ToList();
@@ -39,22 +39,10 @@ public class OrganizationIntegrationController(
             throw new NotFoundException();
         }
 
-        var integrations = await integrationRepository.GetManyByOrganizationAsync(organizationId: organizationId);
-        if (integrations.Any(i => i.Type == model.Type))
-        {
-            throw new BadRequestException("An integration of this type already exists for this organization.");
-        }
+        var integration = model.ToOrganizationIntegration(organizationId);
+        var created = await createCommand.CreateAsync(integration);
 
-        var integration = await integrationRepository.CreateAsync(model.ToOrganizationIntegration(organizationId));
-
-        // Invalidate all cached configuration details for this integration
-        // Even though this is a new record, the cache could hold a stale empty list for this
-        await cache.RemoveByTagAsync(EventIntegrationsCacheConstants.BuildCacheTagForOrganizationIntegration(
-            organizationId: organizationId,
-            integrationType: integration.Type
-        ));
-
-        return new OrganizationIntegrationResponseModel(integration);
+        return new OrganizationIntegrationResponseModel(created);
     }
 
     [HttpPut("{integrationId:guid}")]
@@ -65,21 +53,10 @@ public class OrganizationIntegrationController(
             throw new NotFoundException();
         }
 
-        var integration = await integrationRepository.GetByIdAsync(integrationId);
-        if (integration is null || integration.OrganizationId != organizationId)
-        {
-            throw new NotFoundException();
-        }
+        var integration = model.ToOrganizationIntegration(organizationId);
+        var updated = await updateCommand.UpdateAsync(organizationId, integrationId, integration);
 
-        await integrationRepository.ReplaceAsync(model.ToOrganizationIntegration(integration));
-
-        // Invalidate all cached configuration details for this integration
-        await cache.RemoveByTagAsync(EventIntegrationsCacheConstants.BuildCacheTagForOrganizationIntegration(
-            organizationId: organizationId,
-            integrationType: integration.Type
-        ));
-
-        return new OrganizationIntegrationResponseModel(integration);
+        return new OrganizationIntegrationResponseModel(updated);
     }
 
     [HttpDelete("{integrationId:guid}")]
@@ -90,19 +67,7 @@ public class OrganizationIntegrationController(
             throw new NotFoundException();
         }
 
-        var integration = await integrationRepository.GetByIdAsync(integrationId);
-        if (integration is null || integration.OrganizationId != organizationId)
-        {
-            throw new NotFoundException();
-        }
-
-        await integrationRepository.DeleteAsync(integration);
-
-        // Invalidate all cached configuration details for this integration
-        await cache.RemoveByTagAsync(EventIntegrationsCacheConstants.BuildCacheTagForOrganizationIntegration(
-            organizationId: organizationId,
-            integrationType: integration.Type
-        ));
+        await deleteCommand.DeleteAsync(organizationId, integrationId);
     }
 
     [HttpPost("{integrationId:guid}/delete")]
