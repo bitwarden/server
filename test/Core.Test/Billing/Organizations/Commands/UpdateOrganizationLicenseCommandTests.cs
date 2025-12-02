@@ -43,7 +43,6 @@ public class UpdateOrganizationLicenseCommandTests
 
         // Passing values for OrganizationLicense.CanUse
         // NSubstitute cannot override non-virtual members so we have to ensure the real method passes
-
         license.Enabled = true;
         license.Issued = DateTime.Now.AddDays(-1);
         license.Expires = DateTime.Now.AddDays(1);
@@ -75,7 +74,9 @@ public class UpdateOrganizationLicenseCommandTests
             var filePath = Path.Combine(LicenseDirectory, "organization", $"{selfHostedOrg.Id}.json");
             await using var fs = File.OpenRead(filePath);
             var licenseFromFile = await JsonSerializer.DeserializeAsync<OrganizationLicense>(fs);
+
             AssertHelper.AssertPropertyEqual(license, licenseFromFile, "SignatureBytes");
+
             // Assertion: should have updated and saved the organization
             // Properties excluded from the comparison below are exceptions to the rule that the Organization mirrors
             // the OrganizationLicense
@@ -83,13 +84,13 @@ public class UpdateOrganizationLicenseCommandTests
                 .Received(1)
                 .ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(
                     org => AssertPropertyEqual(license, org,
-                               "Id", "MaxStorageGb", "Issued", "Refresh", "Version", "Trial", "LicenseType",
-                               "Hash", "Signature", "SignatureBytes", "InstallationId", "Expires",
-                               "ExpirationWithoutGracePeriod", "Token", "LimitCollectionCreationDeletion",
-                               "LimitCollectionCreation", "LimitCollectionDeletion", "AllowAdminAccessToAllCollectionItems",
-                               "UseOrganizationDomains", "UseAdminSponsoredFamilies", "UseAutomaticUserConfirmation") &&
+                            "Id", "MaxStorageGb", "Issued", "Refresh", "Version", "Trial", "LicenseType",
+                            "Hash", "Signature", "SignatureBytes", "InstallationId", "Expires",
+                            "ExpirationWithoutGracePeriod", "Token", "LimitCollectionCreationDeletion",
+                            "LimitCollectionCreation", "LimitCollectionDeletion", "AllowAdminAccessToAllCollectionItems",
+                            "UseOrganizationDomains", "UseAdminSponsoredFamilies", "UseAutomaticUserConfirmation") &&
                            // Same property but different name, use explicit mapping
-                           org.ExpirationDate == license.Expires));
+                        org.ExpirationDate == license.Expires));
         }
         finally
         {
@@ -97,6 +98,7 @@ public class UpdateOrganizationLicenseCommandTests
             Directory.Delete(OrganizationLicenseDirectory.Value, true);
         }
     }
+    
     // Wrapper to compare 2 objects that are different types
     private bool AssertPropertyEqual(OrganizationLicense expected, Organization actual, params string[] excludedPropertyStrings)
     {
