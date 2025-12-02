@@ -630,11 +630,6 @@ public class IdentityServerSsoTests
                 .Returns(Task.FromResult(true));
         });
 
-        // Compute PKCE S256 code challenge explicitly (base64url of SHA256)
-        var challengeBytes = System.Text.Encoding.ASCII.GetBytes(challenge);
-        var hash = System.Security.Cryptography.SHA256.HashData(challengeBytes);
-        var codeChallenge = Duende.IdentityModel.Base64Url.Encode(hash);
-
         var authorizationCode = new AuthorizationCode
         {
             ClientId = "web",
@@ -642,8 +637,8 @@ public class IdentityServerSsoTests
             Lifetime = (int)TimeSpan.FromMinutes(5).TotalSeconds,
             RedirectUri = "https://localhost:8080/sso-connector.html",
             RequestedScopes = ["api", "offline_access"],
-            CodeChallenge = codeChallenge,
-            CodeChallengeMethod = "S256",
+            CodeChallenge = challenge.Sha256(),
+            CodeChallengeMethod = "plain",
             Subject = null!, // Temporarily set it to null
         };
 

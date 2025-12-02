@@ -9,6 +9,8 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Services;
 using Bit.Identity;
+using Bit.Identity.IdentityServer;
+using Bit.Identity.IdentityServer.RequestValidators;
 using Bit.Test.Common.Helpers;
 using LinqToDB;
 using Microsoft.AspNetCore.Hosting;
@@ -44,6 +46,13 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
                         throw new InvalidOperationException("This email was already registered for new user registration.");
                     }
                 });
+        });
+
+        // Bypass client version gating to isolate tests from client version behavior
+        SubstituteService<IClientVersionValidator>(svc =>
+        {
+            svc.ValidateAsync(Arg.Any<User>(), Arg.Any<CustomValidatorRequestContext>())
+                .Returns(Task.FromResult(true));
         });
 
         base.ConfigureWebHost(builder);

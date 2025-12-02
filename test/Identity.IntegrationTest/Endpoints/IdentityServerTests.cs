@@ -9,11 +9,14 @@ using Bit.Core.Enums;
 using Bit.Core.Platform.Installations;
 using Bit.Core.Repositories;
 using Bit.Core.Test.Auth.AutoFixture;
+using Bit.Identity.IdentityServer;
+using Bit.Identity.IdentityServer.RequestValidators;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
+using NSubstitute;
 using Xunit;
 
 namespace Bit.Identity.IntegrationTest.Endpoints;
@@ -29,6 +32,14 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
     public IdentityServerTests(IdentityApplicationFactory factory)
     {
         _factory = factory;
+
+        // Bypass client version gating to isolate SSO test behavior
+        _factory.SubstituteService<IClientVersionValidator>(svc =>
+        {
+            svc.ValidateAsync(Arg.Any<User>(), Arg.Any<CustomValidatorRequestContext>())
+                .Returns(Task.FromResult(true));
+        });
+
         ReinitializeDbForTests(_factory);
     }
 

@@ -131,6 +131,10 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
             { "globalSettings:databaseProvider", "postgres" },
             { "globalSettings:postgreSql:connectionString", "Host=localhost;Username=test;Password=test;Database=test" },
 
+            // Ensure base service URIs are defined for tests (used for client redirect URIs)
+            { "globalSettings:baseServiceUri:vault", "https://localhost:8080" },
+            { "globalSettings:baseServiceUri:internalVault", "https://localhost:8080" },
+
             // Clear the redis connection string for distributed caching, forcing an in-memory implementation
             { "globalSettings:redis:connectionString", "" },
 
