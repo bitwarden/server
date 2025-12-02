@@ -143,6 +143,7 @@ public class OrganizationLicense : ILicense
     public int? SmSeats { get; set; }
     public int? SmServiceAccounts { get; set; }
     public bool UseRiskInsights { get; set; }
+    public bool UsePhishingBlocker { get; set; }
 
     // Deprecated. Left for backwards compatibility with old license versions.
     public bool LimitCollectionCreationDeletion { get; set; } = true;
@@ -228,7 +229,8 @@ public class OrganizationLicense : ILicense
                     !p.Name.Equals(nameof(UseRiskInsights)) &&
                     !p.Name.Equals(nameof(UseAdminSponsoredFamilies)) &&
                     !p.Name.Equals(nameof(UseOrganizationDomains)) &&
-                    !p.Name.Equals(nameof(UseAutomaticUserConfirmation)))
+                    !p.Name.Equals(nameof(UseAutomaticUserConfirmation)) &&
+                    !p.Name.Equals(nameof(UsePhishingBlocker)))
                 .OrderBy(p => p.Name)
                 .Select(p => $"{p.Name}:{Core.Utilities.CoreHelpers.FormatLicenseSignatureValue(p.GetValue(this, null))}")
                 .Aggregate((c, n) => $"{c}|{n}");

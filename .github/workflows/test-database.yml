@@ -262,3 +262,26 @@ jobs:
         working-directory: "dev"
         run: docker compose down
         shell: pwsh
+
+  validate-migration-naming:
+    name: Validate new migration naming and order
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate new migrations for pull request
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch origin main:main
+          pwsh dev/verify_migrations.ps1 -BaseRef main
+        shell: pwsh
+
+      - name: Validate new migrations for push
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        run: pwsh dev/verify_migrations.ps1 -BaseRef HEAD~1
+        shell: pwsh
