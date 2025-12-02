@@ -612,6 +612,9 @@ public class IdentityServerSsoTests
             Assert.Fail(message);
         }
 
+        // Only calls that result in a 200 OK should call this helper
+        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+
         return await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
     }
 
@@ -645,10 +648,8 @@ public class IdentityServerSsoTests
         factory.SubstituteService<IAuthorizationCodeStore>(service =>
         {
             // Return our pre-built authorization code regardless of handle representation
-            service.GetAuthorizationCodeAsync(Arg.Any<string>())
+            service.GetAuthorizationCodeAsync("test_code")
                 .Returns(authorizationCode);
-            service.RemoveAuthorizationCodeAsync(Arg.Any<string>())
-                .Returns(Task.CompletedTask);
         });
 
         var user = await factory.RegisterNewIdentityFactoryUserAsync(
