@@ -15,28 +15,30 @@ public class OrganizationIntegrationConfigurationValidator : IOrganizationIntegr
         {
             return false;
         }
+        // If Filters are present, they must be valid
+        if (!IsFiltersValid(configuration.Filters))
+        {
+            return false;
+        }
 
         switch (integrationType)
         {
             case IntegrationType.CloudBillingSync or IntegrationType.Scim:
                 return false;
             case IntegrationType.Slack:
-                return IsConfigurationValid<SlackIntegrationConfiguration>(configuration.Configuration) &&
-                       IsFiltersValid(configuration.Filters);
+                return IsConfigurationValid<SlackIntegrationConfiguration>(configuration.Configuration);
             case IntegrationType.Webhook:
-                return IsConfigurationValid<WebhookIntegrationConfiguration>(configuration.Configuration) &&
-                       IsFiltersValid(configuration.Filters);
+                return IsConfigurationValid<WebhookIntegrationConfiguration>(configuration.Configuration);
             case IntegrationType.Hec:
             case IntegrationType.Datadog:
             case IntegrationType.Teams:
-                return configuration.Configuration is null &&
-                       IsFiltersValid(configuration.Filters);
+                return configuration.Configuration is null;
             default:
                 return false;
         }
     }
 
-    private bool IsConfigurationValid<T>(string? configuration)
+    private static bool IsConfigurationValid<T>(string? configuration)
     {
         if (string.IsNullOrWhiteSpace(configuration))
         {
@@ -54,7 +56,7 @@ public class OrganizationIntegrationConfigurationValidator : IOrganizationIntegr
         }
     }
 
-    private bool IsFiltersValid(string? filters)
+    private static bool IsFiltersValid(string? filters)
     {
         if (filters is null)
         {

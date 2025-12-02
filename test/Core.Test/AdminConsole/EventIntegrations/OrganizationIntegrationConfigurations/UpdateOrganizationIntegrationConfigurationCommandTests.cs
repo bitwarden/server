@@ -126,7 +126,7 @@ public class UpdateOrganizationIntegrationConfigurationCommandTests
         existingConfiguration.EventType = EventType.User_LoggedIn;
         updatedConfiguration.Id = configurationId;
         updatedConfiguration.OrganizationIntegrationId = integrationId;
-        existingConfiguration.EventType = EventType.Cipher_Created;
+        updatedConfiguration.EventType = EventType.Cipher_Created;
 
         sutProvider.GetDependency<IOrganizationIntegrationRepository>()
             .GetByIdAsync(integrationId)
