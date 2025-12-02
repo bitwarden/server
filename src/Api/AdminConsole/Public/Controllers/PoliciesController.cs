@@ -6,12 +6,9 @@ using Bit.Api.AdminConsole.Public.Models.Request;
 using Bit.Api.AdminConsole.Public.Models.Response;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Context;
-using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -27,10 +24,7 @@ public class PoliciesController : Controller
 
     public PoliciesController(
         IPolicyRepository policyRepository,
-        IPolicyService policyService,
         ICurrentContext currentContext,
-        IFeatureService featureService,
-        ISavePolicyCommand savePolicyCommand,
         IVNextSavePolicyCommand vNextSavePolicyCommand)
     {
         _policyRepository = policyRepository;
