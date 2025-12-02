@@ -171,7 +171,7 @@ public class SelfHostedOrganizationSignUpCommandTests
     [Theory, BitAutoData]
     public async Task SignUpAsync_WithClaimsPrincipal_UsesClaimsPrincipalToCreateOrganization(
         User owner, string ownerKey, string collectionName,
-        string publicKey, string privateKey,ClaimsPrincipal claimsPrincipal,
+        string publicKey, string privateKey, ClaimsPrincipal claimsPrincipal,
         SutProvider<SelfHostedOrganizationSignUpCommand> sutProvider)
     {
         // Arrange
@@ -336,7 +336,6 @@ public class SelfHostedOrganizationSignUpCommandTests
         IGlobalSettings globalSettings,
         LicenseType licenseType = LicenseType.Organization)
     {
-
         return new OrganizationLicense
         {
             LicenseType = licenseType,
