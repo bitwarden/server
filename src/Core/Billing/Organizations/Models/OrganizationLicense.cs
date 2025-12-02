@@ -167,17 +167,6 @@ public class OrganizationLicense : ILicense
     /// </remarks>
     public const int CurrentLicenseFileVersion = 15;
 
-    /// <summary>
-    /// Maximum tolerance in seconds for comparing file expiration date with token expiration claim.
-    /// Allows for clock skew between systems.
-    /// </summary>
-    private const int ExpirationToleranceSeconds = 60;
-
-    /// <summary>
-    /// Maximum reasonable expiration period in years from the current date.
-    /// Used to prevent unreasonably far future dates (e.g., year 3000) from being accepted.
-    /// </summary>
-    private const int MaxReasonableExpirationYears = 10;
     private bool ValidLicenseVersion
     {
         get => Version is >= 1 and <= 16;
@@ -409,29 +398,6 @@ public class OrganizationLicense : ILicense
         var issued = claimsPrincipal.GetValue<DateTime>(nameof(Issued));
         var expires = claimsPrincipal.GetValue<DateTime>(nameof(Expires));
 
-        // CRITICAL SECURITY CHECK: File Expires must match token Expires
-        // This is the PRIMARY defense against tampering when hash doesn't include Expires
-        // Check this FIRST before any other validation
-        // Note: expires comes from the token (authoritative source), Expires comes from the file (may be tampered)
-
-        // If token has Expires claim, file Expires must match it
-        if (expires != default(DateTime))
-        {
-            if (Expires.HasValue)
-            {
-                var timeDifference = Math.Abs((Expires.Value - expires).TotalSeconds);
-                if (timeDifference >= ExpirationToleranceSeconds)
-                {
-                    // File expiration doesn't match token expiration - this is tampering
-                    // The file has been modified after being signed
-                    return false;
-                }
-            }
-            // If token has Expires but file doesn't, that's also suspicious (though less critical)
-        }
-        // If token doesn't have Expires claim, we can't validate file Expires against it
-        // In this case, we rely on other validations (hash, 10-year limit, etc.)
-
         var installationId = claimsPrincipal.GetValue<Guid>(nameof(InstallationId));
         var licenseKey = claimsPrincipal.GetValue<string>(nameof(LicenseKey));
         var enabled = claimsPrincipal.GetValue<bool>(nameof(Enabled));
@@ -466,25 +432,8 @@ public class OrganizationLicense : ILicense
             ? organization.PlanType is PlanType.FamiliesAnnually or PlanType.FamiliesAnnually2025
             : organization.PlanType == claimedPlanType;
 
-        // Validate that the expiration date is not unreasonably far in the future
-        // This prevents dates like year 3000 from being accepted
-        var maxReasonableExpiration = DateTime.UtcNow.AddYears(MaxReasonableExpirationYears);
-        var expirationIsReasonable = expires != default(DateTime) && expires <= maxReasonableExpiration;
-
-        // If Expires is set in the file, also validate it's not unreasonably far in the future
-        // This is a critical check to prevent tampering with expiration dates
-        if (Expires.HasValue)
-        {
-            if (Expires.Value > maxReasonableExpiration)
-            {
-                // File expiration is unreasonably far in the future - this is tampering
-                return false;
-            }
-        }
-
         return issued <= DateTime.UtcNow &&
                expires >= DateTime.UtcNow &&
-               expirationIsReasonable &&
                installationId == globalSettings.Installation.Id &&
                licenseKey == organization.LicenseKey &&
                enabled == organization.Enabled &&
@@ -527,15 +476,7 @@ public class OrganizationLicense : ILicense
     private bool ObsoleteVerifyData(Organization organization, IGlobalSettings globalSettings)
     {
         // Do not extend this method. It is only here for backwards compatibility with old licenses.
-        if (Issued > DateTime.UtcNow || !Expires.HasValue || Expires.Value < DateTime.UtcNow)
-        {
-            return false;
-        }
-
-        // Validate that the expiration date is not unreasonably far in the future
-        // This prevents dates like year 3000 from being accepted
-        var maxReasonableExpiration = DateTime.UtcNow.AddYears(MaxReasonableExpirationYears);
-        if (Expires.Value > maxReasonableExpiration)
+        if (Issued > DateTime.UtcNow || Expires < DateTime.UtcNow)
         {
             return false;
         }

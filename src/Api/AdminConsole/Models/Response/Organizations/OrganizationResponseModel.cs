@@ -1,10 +1,12 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using System.Security.Claims;
 using System.Text.Json.Serialization;
 using Bit.Api.Models.Response;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Licenses.Extensions;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Business;
@@ -172,6 +174,47 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
             ExpirationWithoutGracePeriod = license.ExpirationWithoutGracePeriod ?? (license.Trial
                 ? license.Expires
                 : license.Expires?.AddDays(-Constants.OrganizationSelfHostSubscriptionGracePeriodDays));
+        }
+    }
+
+    public OrganizationSubscriptionResponseModel(Organization organization, OrganizationLicense license, ClaimsPrincipal claimsPrincipal) :
+        this(organization, (Plan)null)
+    {
+        if (license != null)
+        {
+            // CRITICAL: When a license has a Token (JWT), ALWAYS use the expiration from the token claim
+            // The token's expiration is cryptographically secured and cannot be tampered with
+            // The file's Expires property can be manually edited and should NOT be trusted for display
+            if (claimsPrincipal != null)
+            {
+                var tokenExpires = claimsPrincipal.GetValue<DateTime>("Expires");
+                if (tokenExpires != default(DateTime))
+                {
+                    // Use the cryptographically secure expiration from the token
+                    Expiration = tokenExpires;
+
+                    // Calculate ExpirationWithoutGracePeriod based on token expiration
+                    ExpirationWithoutGracePeriod = license.ExpirationWithoutGracePeriod ?? (license.Trial
+                        ? tokenExpires
+                        : tokenExpires.AddDays(-Constants.OrganizationSelfHostSubscriptionGracePeriodDays));
+                }
+                else
+                {
+                    // Token exists but doesn't have Expires claim - fall back to license file values
+                    Expiration = license.Expires;
+                    ExpirationWithoutGracePeriod = license.ExpirationWithoutGracePeriod ?? (license.Trial
+                        ? license.Expires
+                        : license.Expires?.AddDays(-Constants.OrganizationSelfHostSubscriptionGracePeriodDays));
+                }
+            }
+            else
+            {
+                // No token - use the license file expiration (for older licenses without tokens)
+                Expiration = license.Expires;
+                ExpirationWithoutGracePeriod = license.ExpirationWithoutGracePeriod ?? (license.Trial
+                    ? license.Expires
+                    : license.Expires?.AddDays(-Constants.OrganizationSelfHostSubscriptionGracePeriodDays));
+            }
         }
     }
 

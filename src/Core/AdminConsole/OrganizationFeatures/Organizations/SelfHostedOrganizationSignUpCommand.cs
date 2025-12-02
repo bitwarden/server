@@ -70,17 +70,6 @@ public class SelfHostedOrganizationSignUpCommand : ISelfHostedOrganizationSignUp
                                           "Upload this license from your personal account settings page.");
         }
 
-        // Verify hash FIRST to detect tampering with license file content before any other validation
-        // This is critical because if the file is tampered, all subsequent validations are meaningless
-        if (!string.IsNullOrWhiteSpace(license.Hash))
-        {
-            var computedHash = Convert.ToBase64String(license.ComputeHash());
-            if (!computedHash.Equals(license.Hash, StringComparison.Ordinal))
-            {
-                throw new BadRequestException("License file has been tampered with (hash mismatch). The license file content does not match the original hash.");
-            }
-        }
-
         var claimsPrincipal = _licensingService.GetClaimsPrincipalFromLicense(license);
         var canUse = license.CanUse(_globalSettings, _licensingService, claimsPrincipal, out var exception);
 
@@ -102,13 +91,6 @@ public class SelfHostedOrganizationSignUpCommand : ISelfHostedOrganizationSignUp
             ? OrganizationFactory.Create(owner, claimsPrincipal, publicKey, privateKey)
             // If there's no ClaimsPrincipal (there's no token on the license), use the license to build the organization.
             : OrganizationFactory.Create(owner, license, publicKey, privateKey);
-
-        // Validate license data including expiration date to prevent tampering
-        // This is critical to ensure the license file hasn't been modified
-        if (claimsPrincipal != null && !license.VerifyData(organization, claimsPrincipal, _globalSettings))
-        {
-            throw new BadRequestException("Invalid license data. The license file may have been tampered with.");
-        }
 
         var result = await SignUpAsync(organization, owner.Id, ownerKey, collectionName, false);
 

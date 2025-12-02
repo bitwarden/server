@@ -28,8 +28,6 @@ public class OrganizationLicenseTests
         var license = OrganizationLicenseFileFixtures.GetVersion(licenseVersion);
 
         // These licenses will naturally expire over time, but we still want them to be able to test
-        // Set expiration to a reasonable future date (within 10 years) to pass validation
-        license.Expires = DateTime.UtcNow.AddYears(5);
 
         var organization = OrganizationLicenseFileFixtures.OrganizationFactory();
         var globalSettings = Substitute.For<IGlobalSettings>();

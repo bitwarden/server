@@ -3,8 +3,6 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.Services;
-using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Licenses.Extensions;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
@@ -173,7 +171,7 @@ public class SelfHostedOrganizationSignUpCommandTests
     [Theory, BitAutoData]
     public async Task SignUpAsync_WithClaimsPrincipal_UsesClaimsPrincipalToCreateOrganization(
         User owner, string ownerKey, string collectionName,
-        string publicKey, string privateKey,
+        string publicKey, string privateKey,ClaimsPrincipal claimsPrincipal,
         SutProvider<SelfHostedOrganizationSignUpCommand> sutProvider)
     {
         // Arrange
@@ -181,14 +179,7 @@ public class SelfHostedOrganizationSignUpCommandTests
         var license = CreateValidOrganizationLicense(globalSettings);
 
         SetupCommonMocks(sutProvider, owner);
-
-        // Create a ClaimsPrincipal that matches the license for VerifyData validation
-        var claims = CreateMatchingClaims(license, globalSettings);
-        var claimsPrincipal = new ClaimsPrincipal(new ClaimsIdentity(claims));
-
-        sutProvider.GetDependency<ILicensingService>()
-            .VerifyLicense(license)
-            .Returns(true);
+        SetupLicenseValidation(sutProvider, license);
 
         sutProvider.GetDependency<ILicensingService>()
             .GetClaimsPrincipalFromLicense(license)
@@ -293,8 +284,6 @@ public class SelfHostedOrganizationSignUpCommandTests
             .Throws(new Exception("Test exception"));
 
         // Act & Assert
-        // VerifyData should pass (SetupLicenseValidation sets up matching claims)
-        // The exception should be thrown when creating the API key, which happens after VerifyData
         await Assert.ThrowsAsync<Exception>(
             () => sutProvider.Sut.SignUpAsync(license, owner, ownerKey, collectionName, publicKey, privateKey));
 
@@ -341,180 +330,23 @@ public class SelfHostedOrganizationSignUpCommandTests
 
         license.CanUse(globalSettings, sutProvider.GetDependency<ILicensingService>(), null, out _)
             .Returns(true);
-
-        // Create a ClaimsPrincipal that matches the license for VerifyData validation
-        var claims = CreateMatchingClaims(license, globalSettings);
-        var claimsPrincipal = new ClaimsPrincipal(new ClaimsIdentity(claims));
-
-        sutProvider.GetDependency<ILicensingService>()
-            .GetClaimsPrincipalFromLicense(license)
-            .Returns(claimsPrincipal);
-    }
-
-    private List<Claim> CreateMatchingClaims(OrganizationLicense license, IGlobalSettings globalSettings)
-    {
-        var issued = license.Issued;
-        var expires = license.Expires ?? DateTime.UtcNow.AddYears(1);
-
-        var claims = new List<Claim>
-        {
-            new Claim("LicenseType", LicenseType.Organization.ToString()),
-            new Claim("Id", Guid.NewGuid().ToString()),
-            new Claim("Enabled", license.Enabled.ToString()),
-            new Claim("PlanType", ((int)(license.PlanType != 0 ? license.PlanType : PlanType.EnterpriseAnnually)).ToString()),
-            new Claim("UsePolicies", (license.UsePolicies || false).ToString()),
-            new Claim("UseSso", (license.UseSso || false).ToString()),
-            new Claim("UseKeyConnector", (license.UseKeyConnector || false).ToString()),
-            new Claim("UseScim", (license.UseScim || false).ToString()),
-            new Claim("UseGroups", (license.UseGroups || false).ToString()),
-            new Claim("UseEvents", (license.UseEvents || false).ToString()),
-            new Claim("UseDirectory", (license.UseDirectory || false).ToString()),
-            new Claim("UseTotp", (license.UseTotp || false).ToString()),
-            new Claim("Use2fa", (license.Use2fa || false).ToString()),
-            new Claim("UseApi", (license.UseApi || false).ToString()),
-            new Claim("UseResetPassword", (license.UseResetPassword || false).ToString()),
-            new Claim("SelfHost", license.SelfHost.ToString()),
-            new Claim("UsersGetPremium", (license.UsersGetPremium || false).ToString()),
-            new Claim("UseCustomPermissions", (license.UseCustomPermissions || false).ToString()),
-            new Claim("UsePasswordManager", (license.UsePasswordManager || true).ToString()),
-            new Claim("UseSecretsManager", (license.UseSecretsManager || false).ToString()),
-            new Claim("UseOrganizationDomains", (license.UseOrganizationDomains || false).ToString()),
-            new Claim("UseAdminSponsoredFamilies", (license.UseAdminSponsoredFamilies || false).ToString()),
-            new Claim("UseAutomaticUserConfirmation", (license.UseAutomaticUserConfirmation || false).ToString()),
-            new Claim("Issued", issued.ToString("O")),
-            new Claim("Expires", expires.ToString("O")),
-            new Claim("InstallationId", license.InstallationId.ToString()),
-            new Claim("LicenseKey", license.LicenseKey ?? Guid.NewGuid().ToString()),
-            new Claim("Name", license.Name ?? "Test Organization")
-        };
-
-        if (license.Seats.HasValue)
-        {
-            claims.Add(new Claim("Seats", license.Seats.Value.ToString()));
-        }
-
-        if (license.MaxCollections.HasValue)
-        {
-            claims.Add(new Claim("MaxCollections", license.MaxCollections.Value.ToString()));
-        }
-
-        if (license.SmSeats.HasValue)
-        {
-            claims.Add(new Claim("SmSeats", license.SmSeats.Value.ToString()));
-        }
-
-        if (license.SmServiceAccounts.HasValue)
-        {
-            claims.Add(new Claim("SmServiceAccounts", license.SmServiceAccounts.Value.ToString()));
-        }
-
-        return claims;
     }
 
     private OrganizationLicense CreateValidOrganizationLicense(
         IGlobalSettings globalSettings,
         LicenseType licenseType = LicenseType.Organization)
     {
-        var issued = DateTime.UtcNow.AddDays(-1);
-        var expires = DateTime.UtcNow.AddDays(10);
 
         return new OrganizationLicense
         {
             LicenseType = licenseType,
             Signature = Guid.NewGuid().ToString().Replace('-', '+'),
-            Issued = issued,
-            Expires = expires,
+            Issued = DateTime.UtcNow.AddDays(-1),
+            Expires = DateTime.UtcNow.AddDays(10),
             Version = OrganizationLicense.CurrentLicenseFileVersion,
             InstallationId = globalSettings.Installation.Id,
             Enabled = true,
-            SelfHost = true,
-            LicenseKey = Guid.NewGuid().ToString(),
-            Name = "Test Organization",
-            PlanType = PlanType.EnterpriseAnnually,
-            Seats = 10,
-            MaxCollections = null,
-            UsePolicies = true,
-            UseSso = true,
-            UseKeyConnector = false,
-            UseScim = true,
-            UseGroups = true,
-            UseEvents = true,
-            UseDirectory = true,
-            UseTotp = true,
-            Use2fa = true,
-            UseApi = true,
-            UseResetPassword = true,
-            UsersGetPremium = true,
-            UseCustomPermissions = true,
-            UsePasswordManager = true,
-            UseSecretsManager = false,
-            SmSeats = null,
-            SmServiceAccounts = null,
-            UseOrganizationDomains = false,
-            UseAdminSponsoredFamilies = false,
-            UseAutomaticUserConfirmation = false,
-            Token = "mock-token" // Ensure token exists so VerifyData is called
+            SelfHost = true
         };
-    }
-
-    private void UpdateLicenseFromClaims(OrganizationLicense license, ClaimsPrincipal claimsPrincipal, IGlobalSettings globalSettings)
-    {
-        // Update license properties to match claims for VerifyData validation
-        var expires = claimsPrincipal.GetValue<DateTime>("Expires");
-        var issued = claimsPrincipal.GetValue<DateTime>("Issued");
-
-        if (expires != default(DateTime))
-        {
-            license.Expires = expires;
-        }
-
-        if (issued != default(DateTime))
-        {
-            license.Issued = issued;
-        }
-
-        var licenseKey = claimsPrincipal.GetValue<string>("LicenseKey");
-        if (!string.IsNullOrEmpty(licenseKey))
-        {
-            license.LicenseKey = licenseKey;
-        }
-
-        var name = claimsPrincipal.GetValue<string>("Name");
-        if (!string.IsNullOrEmpty(name))
-        {
-            license.Name = name;
-        }
-
-        var planType = claimsPrincipal.GetValue<PlanType>("PlanType");
-        if (planType != 0)
-        {
-            license.PlanType = planType;
-        }
-
-        // Update other properties to match claims
-        license.Enabled = claimsPrincipal.GetValue<bool>("Enabled");
-        license.SelfHost = claimsPrincipal.GetValue<bool>("SelfHost");
-        license.Seats = claimsPrincipal.GetValue<int?>("Seats");
-        license.MaxCollections = claimsPrincipal.GetValue<short?>("MaxCollections");
-        license.UseGroups = claimsPrincipal.GetValue<bool>("UseGroups");
-        license.UseDirectory = claimsPrincipal.GetValue<bool>("UseDirectory");
-        license.UseTotp = claimsPrincipal.GetValue<bool>("UseTotp");
-        license.UsersGetPremium = claimsPrincipal.GetValue<bool>("UsersGetPremium");
-        license.UseEvents = claimsPrincipal.GetValue<bool>("UseEvents");
-        license.Use2fa = claimsPrincipal.GetValue<bool>("Use2fa");
-        license.UseApi = claimsPrincipal.GetValue<bool>("UseApi");
-        license.UsePolicies = claimsPrincipal.GetValue<bool>("UsePolicies");
-        license.UseSso = claimsPrincipal.GetValue<bool>("UseSso");
-        license.UseResetPassword = claimsPrincipal.GetValue<bool>("UseResetPassword");
-        license.UseKeyConnector = claimsPrincipal.GetValue<bool>("UseKeyConnector");
-        license.UseScim = claimsPrincipal.GetValue<bool>("UseScim");
-        license.UseCustomPermissions = claimsPrincipal.GetValue<bool>("UseCustomPermissions");
-        license.UseSecretsManager = claimsPrincipal.GetValue<bool>("UseSecretsManager");
-        license.UsePasswordManager = claimsPrincipal.GetValue<bool>("UsePasswordManager");
-        license.SmSeats = claimsPrincipal.GetValue<int?>("SmSeats");
-        license.SmServiceAccounts = claimsPrincipal.GetValue<int?>("SmServiceAccounts");
-        license.UseAdminSponsoredFamilies = claimsPrincipal.GetValue<bool>("UseAdminSponsoredFamilies");
-        license.UseOrganizationDomains = claimsPrincipal.GetValue<bool>("UseOrganizationDomains");
-        license.UseAutomaticUserConfirmation = claimsPrincipal.GetValue<bool>("UseAutomaticUserConfirmation");
     }
 }
