@@ -92,11 +92,11 @@ public class NormalCipherPermissionTests
         // Arrange
         var user = new User { Id = Guid.Empty };
         var organizationId = Guid.NewGuid();
-        var cipherDetails = new CipherDetails { Manage = manage, Edit = edit, UserId = null, OrganizationId = organizationId };
+        var cipherDetails = new CipherDetails { Manage = manage, Edit = edit, UserId = user.Id, OrganizationId = organizationId };
         var organizationAbility = new OrganizationAbility { Id = organizationId, LimitItemDeletion = limitItemDeletion };
 
         // Act
-        var result = NormalCipherPermissions.CanRestore(user, cipherDetails, organizationAbility);
+        var result = NormalCipherPermissions.CanDelete(user, cipherDetails, organizationAbility);
 
         // Assert
         Assert.Equal(result, expectedResult);
