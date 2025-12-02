@@ -59,13 +59,6 @@ public class JobsHostedService : BaseJobsHostedService
             .StartNow()
             .WithCronSchedule("0 0 * * * ?")
             .Build();
-        var updatePhishingDomainsTrigger = TriggerBuilder.Create()
-            .WithIdentity("UpdatePhishingDomainsTrigger")
-            .StartNow()
-            .WithSimpleSchedule(x => x
-                .WithIntervalInHours(24)
-                .RepeatForever())
-            .Build();
         var updateOrgSubscriptionsTrigger = TriggerBuilder.Create()
             .WithIdentity("UpdateOrgSubscriptionsTrigger")
             .StartNow()
@@ -81,7 +74,6 @@ public class JobsHostedService : BaseJobsHostedService
             new Tuple<Type, ITrigger>(typeof(ValidateUsersJob), everyTopOfTheSixthHourTrigger),
             new Tuple<Type, ITrigger>(typeof(ValidateOrganizationsJob), everyTwelfthHourAndThirtyMinutesTrigger),
             new Tuple<Type, ITrigger>(typeof(ValidateOrganizationDomainJob), validateOrganizationDomainTrigger),
-            new Tuple<Type, ITrigger>(typeof(UpdatePhishingDomainsJob), updatePhishingDomainsTrigger),
             new (typeof(OrganizationSubscriptionUpdateJob), updateOrgSubscriptionsTrigger),
         };
 
@@ -111,7 +103,6 @@ public class JobsHostedService : BaseJobsHostedService
         services.AddTransient<ValidateUsersJob>();
         services.AddTransient<ValidateOrganizationsJob>();
         services.AddTransient<ValidateOrganizationDomainJob>();
-        services.AddTransient<UpdatePhishingDomainsJob>();
         services.AddTransient<OrganizationSubscriptionUpdateJob>();
     }
 
