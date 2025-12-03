@@ -214,7 +214,7 @@ If you believe you need to change the version for a valid reason, please discuss
             AllowAdminAccessToAllCollectionItems = true,
             UseOrganizationDomains = true,
             UseAdminSponsoredFamilies = false,
-            UseDisableSmAdsForUsers = false
+            UseDisableSmAdsForUsers = false,
             UsePhishingBlocker = false,
         };
     }

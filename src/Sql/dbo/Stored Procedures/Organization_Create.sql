@@ -60,7 +60,7 @@ CREATE PROCEDURE [dbo].[Organization_Create]
     @UseAdminSponsoredFamilies BIT = 0,
     @SyncSeats BIT = 0,
     @UseAutomaticUserConfirmation BIT = 0,
-    @UseDisableSmAdsForUsers BIT = 0
+    @UseDisableSmAdsForUsers BIT = 0,
     @UsePhishingBlocker BIT = 0
 AS
 BEGIN
@@ -129,7 +129,7 @@ BEGIN
         [UseAdminSponsoredFamilies],
         [SyncSeats],
         [UseAutomaticUserConfirmation],
-        [UseDisableSmAdsForUsers]
+        [UseDisableSmAdsForUsers],
         [UsePhishingBlocker]
     )
     VALUES
@@ -195,7 +195,7 @@ BEGIN
             @UseAdminSponsoredFamilies,
             @SyncSeats,
             @UseAutomaticUserConfirmation,
-            @UseDisableSmAdsForUsers
+            @UseDisableSmAdsForUsers,
             @UsePhishingBlocker
         );
 END
