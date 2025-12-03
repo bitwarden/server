@@ -5,6 +5,7 @@ using Bit.Api.AdminConsole.Models.Request.Providers;
 using Bit.Api.AdminConsole.Models.Response.Providers;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
@@ -23,15 +24,20 @@ public class ProvidersController : Controller
     private readonly IProviderService _providerService;
     private readonly ICurrentContext _currentContext;
     private readonly GlobalSettings _globalSettings;
+    private readonly IProviderBillingService _providerBillingService;
+    private readonly ILogger<ProvidersController> _logger;
 
     public ProvidersController(IUserService userService, IProviderRepository providerRepository,
-        IProviderService providerService, ICurrentContext currentContext, GlobalSettings globalSettings)
+        IProviderService providerService, ICurrentContext currentContext, GlobalSettings globalSettings,
+        IProviderBillingService providerBillingService, ILogger<ProvidersController> logger)
     {
         _userService = userService;
         _providerRepository = providerRepository;
         _providerService = providerService;
         _currentContext = currentContext;
         _globalSettings = globalSettings;
+        _providerBillingService = providerBillingService;
+        _logger = logger;
     }
 
     [HttpGet("{id:guid}")]
@@ -65,7 +71,29 @@ public class ProvidersController : Controller
             throw new NotFoundException();
         }
 
+        // Capture original values before modifications for Stripe sync
+        var originalName = provider.Name;
+        var originalBillingEmail = provider.BillingEmail;
+        var hasGatewayCustomerId = !string.IsNullOrWhiteSpace(provider.GatewayCustomerId);
+
         await _providerService.UpdateAsync(model.ToProvider(provider, _globalSettings));
+
+        // Sync name/email changes to Stripe
+        if (hasGatewayCustomerId &&
+            (originalName != provider.Name || originalBillingEmail != provider.BillingEmail))
+        {
+            try
+            {
+                await _providerBillingService.UpdateProviderNameAndEmail(provider);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to update Stripe customer for provider {ProviderId}. Database was updated successfully.",
+                    provider.Id);
+            }
+        }
+
         return new ProviderResponseModel(provider);
     }
 

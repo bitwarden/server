@@ -796,6 +796,44 @@ public class ProviderBillingService(
         }
     }
 
+    public async Task UpdateProviderNameAndEmail(Provider provider)
+    {
+        if (string.IsNullOrWhiteSpace(provider.GatewayCustomerId))
+        {
+            logger.LogWarning(
+                "Provider ({ProviderId}) has no Stripe customer to update",
+                provider.Id);
+            return;
+        }
+
+        var newDisplayName = provider.DisplayName();
+
+        // Provider.DisplayName() can return null - handle gracefully
+        if (string.IsNullOrWhiteSpace(newDisplayName))
+        {
+            logger.LogWarning(
+                "Provider ({ProviderId}) has no name to update in Stripe",
+                provider.Id);
+            return;
+        }
+
+        await stripeAdapter.CustomerUpdateAsync(provider.GatewayCustomerId,
+            new CustomerUpdateOptions
+            {
+                Email = provider.BillingEmail,
+                Description = newDisplayName,
+                InvoiceSettings = new CustomerInvoiceSettingsOptions
+                {
+                    CustomFields = [
+                        new CustomerInvoiceSettingsCustomFieldOptions
+                        {
+                            Name = provider.SubscriberType(),
+                            Value = newDisplayName
+                        }]
+                },
+            });
+    }
+
     private Func<int, Task> CurrySeatScalingUpdate(
         Provider provider,
         ProviderPlan providerPlan,
