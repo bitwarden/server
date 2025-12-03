@@ -2320,6 +2320,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<DateTime?>("ArchivedDate")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("Archives")
+                        .HasColumnType("text");
+
                     b.Property<string>("Attachments")
                         .HasColumnType("text");
 
