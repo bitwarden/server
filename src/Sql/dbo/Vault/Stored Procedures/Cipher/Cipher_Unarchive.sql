@@ -26,7 +26,11 @@ BEGIN
     UPDATE
         [dbo].[Cipher]
     SET
-        [ArchivedDate] = NULL,
+        [Archives] = JSON_MODIFY(
+            COALESCE([Archives], N'{}'),
+            '$."' + CONVERT(NVARCHAR(36), @UserId) + '"',
+            NULL
+        ),
         [RevisionDate] = @UtcNow
     WHERE
         [Id] IN (SELECT [Id] FROM #Temp)
