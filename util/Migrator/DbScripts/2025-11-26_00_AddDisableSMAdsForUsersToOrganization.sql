@@ -79,7 +79,8 @@ CREATE OR ALTER PROCEDURE [dbo].[Organization_Create]
     @UseAdminSponsoredFamilies BIT = 0,
     @SyncSeats BIT = 0,
     @UseAutomaticUserConfirmation BIT = 0,
-    @UseDisableSmAdsForUsers BIT = 0
+    @UseDisableSmAdsForUsers BIT = 0,
+    @UsePhishingBlocker BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -147,7 +148,8 @@ BEGIN
         [UseAdminSponsoredFamilies],
         [SyncSeats],
         [UseAutomaticUserConfirmation],
-        [UseDisableSmAdsForUsers]
+        [UseDisableSmAdsForUsers],
+        [UsePhishingBlocker]
     )
     VALUES
         (
@@ -212,7 +214,8 @@ BEGIN
             @UseAdminSponsoredFamilies,
             @SyncSeats,
             @UseAutomaticUserConfirmation,
-            @UseDisableSmAdsForUsers
+            @UseDisableSmAdsForUsers,
+            @UsePhishingBlocker
         )
 END
 GO
@@ -279,7 +282,8 @@ CREATE OR ALTER PROCEDURE [dbo].[Organization_Update]
     @UseAdminSponsoredFamilies BIT = 0,
     @SyncSeats BIT = 0,
     @UseAutomaticUserConfirmation BIT = 0,
-    @UseDisableSmAdsForUsers BIT = 0
+    @UseDisableSmAdsForUsers BIT = 0,
+    @UsePhishingBlocker BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -347,7 +351,8 @@ BEGIN
         [UseAdminSponsoredFamilies] = @UseAdminSponsoredFamilies,
         [SyncSeats] = @SyncSeats,
         [UseAutomaticUserConfirmation] = @UseAutomaticUserConfirmation,
-        [UseDisableSmAdsForUsers] = @UseDisableSmAdsForUsers
+        [UseDisableSmAdsForUsers] = @UseDisableSmAdsForUsers,
+        [UsePhishingBlocker] = @UsePhishingBlocker
     WHERE
         [Id] = @Id
 END
@@ -384,7 +389,8 @@ BEGIN
         [UseOrganizationDomains],
         [UseAdminSponsoredFamilies],
         [UseAutomaticUserConfirmation],
-        [UseDisableSmAdsForUsers]
+        [UseDisableSmAdsForUsers],
+        [UsePhishingBlocker]
     FROM
         [dbo].[Organization]
 END
