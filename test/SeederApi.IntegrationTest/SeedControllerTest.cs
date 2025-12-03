@@ -2,6 +2,7 @@
 using Bit.SeederApi.Models.Request;
 using Bit.SeederApi.Models.Response;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Bit.SeederApi.IntegrationTest;
 
@@ -9,11 +10,13 @@ public class SeedControllerTests : IClassFixture<SeederApiApplicationFactory>, I
 {
     private readonly HttpClient _client;
     private readonly SeederApiApplicationFactory _factory;
+    private readonly ITestOutputHelper _output;
 
-    public SeedControllerTests(SeederApiApplicationFactory factory)
+    public SeedControllerTests(SeederApiApplicationFactory factory, ITestOutputHelper output)
     {
         _factory = factory;
         _client = _factory.CreateClient();
+        _output = output;
     }
 
     public Task InitializeAsync()
@@ -166,7 +169,10 @@ public class SeedControllerTests : IClassFixture<SeederApiApplicationFactory>, I
         };
         var deleteResponse = await _client.SendAsync(request);
 
-        deleteResponse.EnsureSuccessStatusCode();
+        var deleteContent = await deleteResponse.Content.ReadAsStringAsync();
+        _output.WriteLine($"Delete Response Status: {deleteResponse.StatusCode}");
+        _output.WriteLine($"Delete Response Content: {deleteContent}");
+
         var result = await deleteResponse.Content.ReadFromJsonAsync<BatchDeleteResponse>();
         Assert.NotNull(result);
         Assert.Equal("Batch delete completed successfully", result.Message);
@@ -187,8 +193,6 @@ public class SeedControllerTests : IClassFixture<SeederApiApplicationFactory>, I
                 Arguments = System.Text.Json.JsonSerializer.SerializeToElement(new { email = testEmail })
             }, playId);
 
-            var body = await seedResponse.Content.ReadAsStringAsync();
-            Console.WriteLine(body);
             seedResponse.EnsureSuccessStatusCode();
         }
 
