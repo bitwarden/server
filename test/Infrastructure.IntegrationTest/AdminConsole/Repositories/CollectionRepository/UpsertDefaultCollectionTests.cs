@@ -1,6 +1,4 @@
-using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Entities;
-using Bit.Core.Enums;
+﻿using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Xunit;
 
