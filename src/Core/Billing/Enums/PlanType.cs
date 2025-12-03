@@ -1,12 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Bit.Core.Auth.UserFeatures.Registration.Implementations;
 
 namespace Bit.Core.Billing.Enums;
 
-/// <summary>
-/// This is utilized by Auth to control which welcome email is sent based on the user's subscription plan. <see cref="RegisterUserCommand"/>
-/// If a change is made to the Families plan types, ensure to update the welcome email logic accordingly.
-/// </summary>
 public enum PlanType : byte
 {
     [Display(Name = "Free")]

@@ -5,6 +5,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -43,18 +44,6 @@ public class RegisterUserCommand : IRegisterUserCommand
     private readonly IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> _emergencyAccessInviteTokenDataFactory;
 
     private readonly string _disabledUserRegistrationExceptionMsg = "Open registration has been disabled by the system administrator.";
-
-
-    /// <summary>
-    /// A list of plan types that are considered Family or Free plans. <see cref="PlanType"/>
-    /// </summary>
-    private static PlanType[] FamilyAndFreePlanTypes =>
-    [
-        PlanType.Free,
-        PlanType.FamiliesAnnually,
-        PlanType.FamiliesAnnually2019,
-        PlanType.FamiliesAnnually2025
-    ];
 
     public RegisterUserCommand(
             ILogger<RegisterUserCommand> logger,
@@ -467,7 +456,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         else if (!string.IsNullOrEmpty(organization.DisplayName()))
         {
             // If the organization is Free or Families plan, send families welcome email
-            if (FamilyAndFreePlanTypes.Contains(organization.PlanType))
+            if (organization.PlanType.GetProductTier() is ProductTierType.Free or ProductTierType.Families)
             {
                 await _mailService.SendFreeOrgOrFamilyOrgUserWelcomeEmailAsync(user, organization.DisplayName());
             }
