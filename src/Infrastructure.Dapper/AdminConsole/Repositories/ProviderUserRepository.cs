@@ -66,7 +66,7 @@ public class ProviderUserRepository : Repository<ProviderUser, Guid>, IProviderU
         await using var connection = new SqlConnection(ConnectionString);
 
         var results = await connection.QueryAsync<ProviderUser>(
-            "[dbo].[ProviderUser_ReadyManyByManyUserIds]",
+            "[dbo].[ProviderUser_ReadManyByManyUserIds]",
             new { UserIds = userIds.ToGuidIdArrayTVP() },
             commandType: CommandType.StoredProcedure);
 
