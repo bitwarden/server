@@ -32,8 +32,6 @@ public class AutomaticUserConfirmationPolicyEventHandler(
     private const string _providerUsersExistErrorMessage =
         "The organization has users with the Provider user type. Please remove provider users before enabling the Automatically confirm invited users policy.";
 
-    private const string _failedToFindOrganizationUsers = "Failed to find any organization users.";
-
     public IEnumerable<PolicyType> RequiredPolicies => [PolicyType.SingleOrg];
 
     public async Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
