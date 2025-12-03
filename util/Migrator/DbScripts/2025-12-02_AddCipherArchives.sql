@@ -390,6 +390,7 @@ BEGIN
         EXEC [dbo].[User_BumpAccountRevisionDate] @UserId
     END
 END
+GO
 
 CREATE OR ALTER PROCEDURE [dbo].[Cipher_CreateWithCollections]
     @Id UNIQUEIDENTIFIER,
