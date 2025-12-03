@@ -26,7 +26,7 @@ BEGIN
     UPDATE
         [dbo].[Cipher]
     SET
-        [ArchivedDate] = JSON_MODIFY(
+        [Archives] = JSON_MODIFY(
             COALESCE([Archives], N'{}'),
             '$."' + CONVERT(NVARCHAR(36), @UserId) + '"',
             @UtcNow
