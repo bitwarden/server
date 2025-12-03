@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.KeyManagement.Queries;
+using Bit.Test.Common.Constants;
 using Xunit;
 
 namespace Bit.Core.Test.KeyManagement.Queries;
@@ -12,7 +13,8 @@ public class GetMinimumClientVersionForUserQueryTests
         var sut = new GetMinimumClientVersionForUserQuery();
         var version = await sut.Run(new User
         {
-            SecurityVersion = 2
+            SecurityVersion = 2,
+            PrivateKey = TestEncryptionConstants.V2PrivateKey,
         });
         Assert.Equal(Core.KeyManagement.Constants.MinimumClientVersionForV2Encryption, version);
     }
@@ -23,7 +25,8 @@ public class GetMinimumClientVersionForUserQueryTests
         var sut = new GetMinimumClientVersionForUserQuery();
         var version = await sut.Run(new User
         {
-            SecurityVersion = 1
+            SecurityVersion = 1,
+            PrivateKey = TestEncryptionConstants.V2PrivateKey,
         });
         Assert.Null(version);
     }

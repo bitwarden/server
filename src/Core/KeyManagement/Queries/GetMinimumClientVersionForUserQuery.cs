@@ -13,7 +13,7 @@ public class GetMinimumClientVersionForUserQuery()
             return Task.FromResult<Version?>(null);
         }
 
-        if (user.IsSecurityVersionTwo())
+        if (user.IsSetupForV2Encryption())
         {
             return Task.FromResult(Constants.MinimumClientVersionForV2Encryption)!;
         }

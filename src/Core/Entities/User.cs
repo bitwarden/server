@@ -4,6 +4,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Data;
+using Bit.Core.KeyManagement.Utilities;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Identity;
 
@@ -211,7 +212,17 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
         return SecurityVersion ?? 1;
     }
 
-    public bool IsSecurityVersionTwo()
+    public bool IsSetupForV2Encryption()
+    {
+        return HasV2KeyShape() && IsSecurityVersionTwo();
+    }
+
+    private bool HasV2KeyShape()
+    {
+        return EncryptionParsing.GetEncryptionType(PrivateKey) == EncryptionType.XChaCha20Poly1305_B64;
+    }
+
+    private bool IsSecurityVersionTwo()
     {
         return SecurityVersion == 2;
     }
