@@ -35,7 +35,7 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
         // This allows us to use the official registration flow
         SubstituteService<IMailService>(service =>
         {
-            service.SendRegistrationVerificationEmailAsync(Arg.Any<string>(), Arg.Any<string>())
+            service.SendRegistrationVerificationEmailAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
                 .ReturnsForAnyArgs(Task.CompletedTask)
                 .AndDoes(call =>
                 {

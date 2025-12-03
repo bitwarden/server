@@ -140,10 +140,9 @@ public static class FeatureFlagKeys
     public const string CreateDefaultLocation = "pm-19467-create-default-location";
     public const string AutomaticConfirmUsers = "pm-19934-auto-confirm-organization-users";
     public const string PM23845_VNextApplicationCache = "pm-24957-refactor-memory-application-cache";
-    public const string AccountRecoveryCommand = "pm-25581-prevent-provider-account-recovery";
     public const string BlockClaimedDomainAccountCreation = "pm-28297-block-uninvited-claimed-domain-registration";
+    public const string IncreaseBulkReinviteLimitForCloud = "pm-28251-increase-bulk-reinvite-limit-for-cloud";
     public const string BulkRevokeUsersV2 = "pm-28456-bulk-revoke-users-v2";
-    public const string PolicyValidatorsRefactor = "pm-26423-refactor-policy-side-effects";
 
     /* Architecture */
     public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";
@@ -164,8 +163,9 @@ public static class FeatureFlagKeys
         "pm-23174-manage-account-recovery-permission-drives-the-need-to-set-master-password";
     public const string RecoveryCodeSupportForSsoRequiredUsers = "pm-21153-recovery-code-support-for-sso-required";
     public const string MJMLBasedEmailTemplates = "mjml-based-email-templates";
-    public const string MjmlWelcomeEmailTemplates = "mjml-welcome-email-templates";
+    public const string MjmlWelcomeEmailTemplates = "pm-21741-mjml-welcome-email";
     public const string MarketingInitiatedPremiumFlow = "pm-26140-marketing-initiated-premium-flow";
+    public const string RedirectOnSsoRequired = "pm-1632-redirect-on-sso-required";
 
     /* Autofill Team */
     public const string IdpAutoSubmitLogin = "idp-auto-submit-login";
@@ -187,8 +187,6 @@ public static class FeatureFlagKeys
 
     /* Billing Team */
     public const string TrialPayment = "PM-8163-trial-payment";
-    public const string PM19422_AllowAutomaticTaxUpdates = "pm-19422-allow-automatic-tax-updates";
-    public const string PM21821_ProviderPortalTakeover = "pm-21821-provider-portal-takeover";
     public const string PM22415_TaxIDWarnings = "pm-22415-tax-id-warnings";
     public const string PM25379_UseNewOrganizationMetadataStructure = "pm-25379-use-new-organization-metadata-structure";
     public const string PM24996ImplementUpgradeFromFreeDialog = "pm-24996-implement-upgrade-from-free-dialog";
@@ -198,17 +196,16 @@ public static class FeatureFlagKeys
     public const string PM26793_FetchPremiumPriceFromPricingService = "pm-26793-fetch-premium-price-from-pricing-service";
     public const string PM23341_Milestone_2 = "pm-23341-milestone-2";
     public const string PM26462_Milestone_3 = "pm-26462-milestone-3";
+    public const string PM28265_EnableReconcileAdditionalStorageJob = "pm-28265-enable-reconcile-additional-storage-job";
+    public const string PM28265_ReconcileAdditionalStorageJobEnableLiveMode = "pm-28265-reconcile-additional-storage-job-enable-live-mode";
 
     /* Key Management Team */
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
-    public const string PM4154BulkEncryptionService = "PM-4154-bulk-encryption-service";
     public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
     public const string Argon2Default = "argon2-default";
     public const string UserkeyRotationV2 = "userkey-rotation-v2";
     public const string SSHKeyItemVaultItem = "ssh-key-vault-item";
-    public const string UserSdkForDecryption = "use-sdk-for-decryption";
     public const string EnrollAeadOnKeyRotation = "enroll-aead-on-key-rotation";
-    public const string PM17987_BlockType0 = "pm-17987-block-type-0";
     public const string ForceUpdateKDFSettings = "pm-18021-force-update-kdf-settings";
     public const string UnlockWithMasterPasswordUnlockData = "pm-23246-unlock-with-master-password-unlock-data";
     public const string WindowsBiometricsV2 = "pm-25373-windows-biometrics-v2";
@@ -216,6 +213,7 @@ public static class FeatureFlagKeys
     public const string NoLogoutOnKdfChange = "pm-23995-no-logout-on-kdf-change";
     public const string DisableType0Decryption = "pm-25174-disable-type-0-decryption";
     public const string ConsolidatedSessionTimeoutComponent = "pm-26056-consolidated-session-timeout-component";
+    public const string DataRecoveryTool = "pm-28813-data-recovery-tool";
 
     /* Mobile Team */
     public const string AndroidImportLoginsFlow = "import-logins-flow";
@@ -243,7 +241,6 @@ public static class FeatureFlagKeys
     public const string ChromiumImporterWithABE = "pm-25855-chromium-importer-abe";
 
     /* Vault Team */
-    public const string PM8851_BrowserOnboardingNudge = "pm-8851-browser-onboarding-nudge";
     public const string CipherKeyEncryption = "cipher-key-encryption";
     public const string PM19941MigrateCipherDomainToSdk = "pm-19941-migrate-cipher-domain-to-sdk";
     public const string EndUserNotifications = "pm-10609-end-user-notifications";
@@ -263,6 +260,9 @@ public static class FeatureFlagKeys
     public const string PM22887_RiskInsightsActivityTab = "pm-22887-risk-insights-activity-tab";
     public const string EventManagementForDataDogAndCrowdStrike = "event-management-for-datadog-and-crowdstrike";
     public const string EventDiagnosticLogging = "pm-27666-siem-event-log-debugging";
+
+    /* UIF Team */
+    public const string RouterFocusManagement = "router-focus-management";
 
     public static List<string> GetAllKeys()
     {
