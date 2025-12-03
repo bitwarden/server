@@ -1,5 +1,4 @@
 ﻿using System.Net;
-using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
@@ -41,8 +40,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         collectionsSeeder.AddToOrganization(orgId, 10, orgUserIds);
         groupsSeeder.AddToOrganization(orgId, 5, orgUserIds);
 
-        var tokens = await factory.LoginAsync($"owner@{domain}", "c55hlJ/cfdvTd4awTXUqow6X3cOQCfGwn11o3HblnPs=");
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
+        await PerformanceTestHelpers.AuthenticateClientAsync(factory, client, $"owner@{domain}");
 
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
@@ -77,8 +75,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         collectionsSeeder.AddToOrganization(orgId, 10, orgUserIds);
         groupsSeeder.AddToOrganization(orgId, 5, orgUserIds);
 
-        var tokens = await factory.LoginAsync($"owner@{domain}", "c55hlJ/cfdvTd4awTXUqow6X3cOQCfGwn11o3HblnPs=");
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
+        await PerformanceTestHelpers.AuthenticateClientAsync(factory, client, $"owner@{domain}");
 
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
@@ -110,8 +107,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var orgUserId = db.OrganizationUsers.Select(ou => ou.Id).FirstOrDefault();
         groupsSeeder.AddToOrganization(orgId, 2, [orgUserId]);
 
-        var tokens = await factory.LoginAsync($"owner@{domain}", "c55hlJ/cfdvTd4awTXUqow6X3cOQCfGwn11o3HblnPs=");
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
+        await PerformanceTestHelpers.AuthenticateClientAsync(factory, client, $"owner@{domain}");
 
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
@@ -141,8 +137,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
 
         var orgUserId = db.OrganizationUsers.Select(ou => ou.Id).FirstOrDefault();
 
-        var tokens = await factory.LoginAsync($"owner@{domain}", "c55hlJ/cfdvTd4awTXUqow6X3cOQCfGwn11o3HblnPs=");
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
+        await PerformanceTestHelpers.AuthenticateClientAsync(factory, client, $"owner@{domain}");
 
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
@@ -177,8 +172,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
             users: userCount,
             usersStatus: OrganizationUserStatusType.Accepted);
 
-        var tokens = await factory.LoginAsync($"owner@{domain}", "c55hlJ/cfdvTd4awTXUqow6X3cOQCfGwn11o3HblnPs=");
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
+        await PerformanceTestHelpers.AuthenticateClientAsync(factory, client, $"owner@{domain}");
 
         var acceptedUserIds = db.OrganizationUsers
             .Where(ou => ou.OrganizationId == orgId && ou.Status == OrganizationUserStatusType.Accepted)
@@ -222,8 +216,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var domain = OrganizationTestHelpers.GenerateRandomDomain();
         var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: userCount);
 
-        var tokens = await factory.LoginAsync($"owner@{domain}", "c55hlJ/cfdvTd4awTXUqow6X3cOQCfGwn11o3HblnPs=");
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
+        await PerformanceTestHelpers.AuthenticateClientAsync(factory, client, $"owner@{domain}");
 
         var usersToRemove = db.OrganizationUsers
             .Where(ou => ou.OrganizationId == orgId && ou.Type == OrganizationUserType.User)
@@ -267,8 +260,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
             users: userCount,
             usersStatus: OrganizationUserStatusType.Confirmed);
 
-        var tokens = await factory.LoginAsync($"owner@{domain}", "c55hlJ/cfdvTd4awTXUqow6X3cOQCfGwn11o3HblnPs=");
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
+        await PerformanceTestHelpers.AuthenticateClientAsync(factory, client, $"owner@{domain}");
 
         var usersToRevoke = db.OrganizationUsers
             .Where(ou => ou.OrganizationId == orgId && ou.Type == OrganizationUserType.User)
@@ -312,8 +304,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
             users: userCount,
             usersStatus: OrganizationUserStatusType.Revoked);
 
-        var tokens = await factory.LoginAsync($"owner@{domain}", "c55hlJ/cfdvTd4awTXUqow6X3cOQCfGwn11o3HblnPs=");
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
+        await PerformanceTestHelpers.AuthenticateClientAsync(factory, client, $"owner@{domain}");
 
         var usersToRestore = db.OrganizationUsers
             .Where(ou => ou.OrganizationId == orgId && ou.Type == OrganizationUserType.User)
@@ -361,8 +352,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
 
         domainSeeder.AddVerifiedDomainToOrganization(orgId, domain);
 
-        var tokens = await factory.LoginAsync($"owner@{domain}", "c55hlJ/cfdvTd4awTXUqow6X3cOQCfGwn11o3HblnPs=");
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
+        await PerformanceTestHelpers.AuthenticateClientAsync(factory, client, $"owner@{domain}");
 
         var usersToDelete = db.OrganizationUsers
             .Where(ou => ou.OrganizationId == orgId && ou.Type == OrganizationUserType.User)
@@ -405,8 +395,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var collectionIds = collectionsSeeder.AddToOrganization(orgId, 3, orgUserIds, 0);
         var groupIds = groupsSeeder.AddToOrganization(orgId, 2, orgUserIds, 0);
 
-        var tokens = await factory.LoginAsync($"owner@{domain}", "c55hlJ/cfdvTd4awTXUqow6X3cOQCfGwn11o3HblnPs=");
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
+        await PerformanceTestHelpers.AuthenticateClientAsync(factory, client, $"owner@{domain}");
 
         var userToUpdate = db.OrganizationUsers
             .FirstOrDefault(ou => ou.OrganizationId == orgId && ou.Type == OrganizationUserType.User);
@@ -450,8 +439,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var domain = OrganizationTestHelpers.GenerateRandomDomain();
         var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: userCount);
 
-        var tokens = await factory.LoginAsync($"owner@{domain}", "c55hlJ/cfdvTd4awTXUqow6X3cOQCfGwn11o3HblnPs=");
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
+        await PerformanceTestHelpers.AuthenticateClientAsync(factory, client, $"owner@{domain}");
 
         var usersToEnable = db.OrganizationUsers
             .Where(ou => ou.OrganizationId == orgId && ou.Type == OrganizationUserType.User)
@@ -495,8 +483,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
 
         domainSeeder.AddVerifiedDomainToOrganization(orgId, domain);
 
-        var tokens = await factory.LoginAsync($"owner@{domain}", "c55hlJ/cfdvTd4awTXUqow6X3cOQCfGwn11o3HblnPs=");
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
+        await PerformanceTestHelpers.AuthenticateClientAsync(factory, client, $"owner@{domain}");
 
         var userToDelete = db.OrganizationUsers
             .FirstOrDefault(ou => ou.OrganizationId == orgId && ou.Type == OrganizationUserType.User);
@@ -534,8 +521,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var orgUserIds = db.OrganizationUsers.Where(ou => ou.OrganizationId == orgId).Select(ou => ou.Id).ToList();
         var collectionIds = collectionsSeeder.AddToOrganization(orgId, 2, orgUserIds, 0);
 
-        var tokens = await factory.LoginAsync($"owner@{domain}", "c55hlJ/cfdvTd4awTXUqow6X3cOQCfGwn11o3HblnPs=");
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
+        await PerformanceTestHelpers.AuthenticateClientAsync(factory, client, $"owner@{domain}");
 
         var emails = Enumerable.Range(0, emailCount).Select(i => $"{i:D4}@{domain}").ToArray();
         var inviteRequest = new OrganizationUserInviteRequestModel
@@ -583,8 +569,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
             users: userCount,
             usersStatus: OrganizationUserStatusType.Invited);
 
-        var tokens = await factory.LoginAsync($"owner@{domain}", "c55hlJ/cfdvTd4awTXUqow6X3cOQCfGwn11o3HblnPs=");
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
+        await PerformanceTestHelpers.AuthenticateClientAsync(factory, client, $"owner@{domain}");
 
         var usersToReinvite = db.OrganizationUsers
             .Where(ou => ou.OrganizationId == orgId && ou.Status == OrganizationUserStatusType.Invited)

@@ -1,5 +1,4 @@
 ﻿using System.Net;
-using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
@@ -41,8 +40,7 @@ public class OrganizationsControllerPerformanceTests(ITestOutputHelper testOutpu
         collectionsSeeder.AddToOrganization(orgId, collectionCount, orgUserIds, 0);
         groupsSeeder.AddToOrganization(orgId, groupCount, orgUserIds, 0);
 
-        var tokens = await factory.LoginAsync($"owner@{domain}", "c55hlJ/cfdvTd4awTXUqow6X3cOQCfGwn11o3HblnPs=");
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
+        await PerformanceTestHelpers.AuthenticateClientAsync(factory, client, $"owner@{domain}");
 
         var deleteRequest = new SecretVerificationRequestModel
         {
@@ -90,6 +88,8 @@ public class OrganizationsControllerPerformanceTests(ITestOutputHelper testOutpu
         collectionsSeeder.AddToOrganization(orgId, collectionCount, orgUserIds, 0);
         groupsSeeder.AddToOrganization(orgId, groupCount, orgUserIds, 0);
 
+        await PerformanceTestHelpers.AuthenticateClientAsync(factory, client, $"owner@{domain}");
+
         var organization = db.Organizations.FirstOrDefault(o => o.Id == orgId);
         Assert.NotNull(organization);
 
@@ -129,8 +129,7 @@ public class OrganizationsControllerPerformanceTests(ITestOutputHelper testOutpu
 
         await factory.LoginWithNewAccount(email, masterPasswordHash);
 
-        var tokens = await factory.LoginAsync(email, masterPasswordHash);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
+        await PerformanceTestHelpers.AuthenticateClientAsync(factory, client, email, masterPasswordHash);
 
         var createRequest = new OrganizationNoPaymentCreateRequest
         {

@@ -1,5 +1,4 @@
 ﻿using System.Net;
-using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using Bit.Api.AdminConsole.Models.Request;
@@ -40,8 +39,7 @@ public class GroupsControllerPerformanceTests(ITestOutputHelper testOutputHelper
 
         var groupId = groupIds.First();
 
-        var tokens = await factory.LoginAsync($"owner@{domain}", "c55hlJ/cfdvTd4awTXUqow6X3cOQCfGwn11o3HblnPs=");
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
+        await PerformanceTestHelpers.AuthenticateClientAsync(factory, client, $"owner@{domain}");
 
         var updateRequest = new GroupRequestModel
         {
