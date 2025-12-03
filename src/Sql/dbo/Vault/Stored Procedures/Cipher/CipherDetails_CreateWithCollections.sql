@@ -20,13 +20,14 @@
     @Key VARCHAR(MAX) = NULL,
     @CollectionIds AS [dbo].[GuidIdArray] READONLY,
     @ArchivedDate DATETIME2(7) = NULL
+    @Archives NVARCHAR(MAX)
 AS
 BEGIN
     SET NOCOUNT ON
 
     EXEC [dbo].[CipherDetails_Create] @Id, @UserId, @OrganizationId, @Type, @Data, @Favorites, @Folders,
         @Attachments, @CreationDate, @RevisionDate, @FolderId, @Favorite, @Edit, @ViewPassword, @Manage,
-        @OrganizationUseTotp, @DeletedDate, @Reprompt, @Key, @ArchivedDate
+        @OrganizationUseTotp, @DeletedDate, @Reprompt, @Key, @ArchivedDate, @Archives
 
     DECLARE @UpdateCollectionsSuccess INT
     EXEC @UpdateCollectionsSuccess = [dbo].[Cipher_UpdateCollections] @Id, @UserId, @OrganizationId, @CollectionIds

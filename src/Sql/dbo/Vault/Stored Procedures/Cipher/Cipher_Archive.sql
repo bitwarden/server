@@ -29,7 +29,7 @@ BEGIN
         [Archives] = JSON_MODIFY(
             COALESCE([Archives], N'{}'),
             '$."' + CONVERT(NVARCHAR(36), @UserId) + '"',
-            @UtcNow
+            CONVERT(NVARCHAR(30), @UtcNow, 127)
         ),
         [RevisionDate] = @UtcNow
     WHERE
