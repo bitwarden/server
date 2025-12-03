@@ -231,7 +231,7 @@ public class OrganizationLicense : ILicense
                     !p.Name.Equals(nameof(UseAdminSponsoredFamilies)) &&
                     !p.Name.Equals(nameof(UseOrganizationDomains)) &&
                     !p.Name.Equals(nameof(UseAutomaticUserConfirmation)) &&
-                    !p.Name.Equals(nameof(UseDisableSmAdsForUsers)))
+                    !p.Name.Equals(nameof(UseDisableSmAdsForUsers))) &&
                     !p.Name.Equals(nameof(UsePhishingBlocker)))
                 .OrderBy(p => p.Name)
                 .Select(p => $"{p.Name}:{Core.Utilities.CoreHelpers.FormatLicenseSignatureValue(p.GetValue(this, null))}")
