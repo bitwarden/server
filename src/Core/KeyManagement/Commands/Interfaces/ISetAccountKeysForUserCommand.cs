@@ -1,4 +1,5 @@
-﻿using Bit.Core.KeyManagement.Models.Api.Request;
+﻿using Bit.Core.Entities;
+using Bit.Core.KeyManagement.Models.Api.Request;
 
 namespace Bit.Core.KeyManagement.Commands.Interfaces;
 
@@ -8,6 +9,10 @@ namespace Bit.Core.KeyManagement.Commands.Interfaces;
 /// </summary>
 public interface ISetAccountKeysForUserCommand
 {
-    Task SetAccountKeysForUserAsync(Guid userId,
+    /// <summary>
+    /// Sets the account keys for the specified user. The passed in user 
+    /// will be mutated and saved to the database.
+    /// </summary>
+    Task SetAccountKeysForUserAsync(User user,
         AccountKeysRequestModel accountKeys);
 }

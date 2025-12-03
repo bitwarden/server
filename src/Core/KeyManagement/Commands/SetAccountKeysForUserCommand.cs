@@ -1,4 +1,5 @@
-﻿using Bit.Core.KeyManagement.Commands.Interfaces;
+﻿using Bit.Core.Entities;
+using Bit.Core.KeyManagement.Commands.Interfaces;
 using Bit.Core.KeyManagement.Entities;
 using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.KeyManagement.Repositories;
@@ -19,14 +20,8 @@ public class SetAccountKeysForUserCommand : ISetAccountKeysForUserCommand
         _userSignatureKeyPairRepository = userSignatureKeyPairRepository;
     }
 
-    public async Task SetAccountKeysForUserAsync(Guid userId, AccountKeysRequestModel accountKeys)
+    public async Task SetAccountKeysForUserAsync(User user, AccountKeysRequestModel accountKeys)
     {
-        var user = await _userRepository.GetByIdAsync(userId);
-        if (user == null)
-        {
-            throw new ArgumentException("User not found", nameof(userId));
-        }
-
         var accountKeysData = accountKeys.ToAccountKeysData();
 
         // Update the public key encryption key pair data
@@ -42,7 +37,7 @@ public class SetAccountKeysForUserCommand : ISetAccountKeysForUserCommand
             await _userSignatureKeyPairRepository.CreateAsync(new UserSignatureKeyPair
             {
                 Id = CoreHelpers.GenerateComb(),
-                UserId = userId,
+                UserId = user.Id,
                 SignatureAlgorithm = accountKeysData.SignatureKeyPairData.SignatureAlgorithm,
                 SigningKey = accountKeysData.SignatureKeyPairData.WrappedSigningKey,
                 VerifyingKey = accountKeysData.SignatureKeyPairData.VerifyingKey,
