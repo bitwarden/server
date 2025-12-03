@@ -1,4 +1,5 @@
-﻿using Bit.Api.Models.Public.Request;
+﻿using Bit.Api.Dirt.Public.Models;
+using Bit.Api.Models.Public.Request;
 using Bit.Api.Models.Public.Response;
 using Bit.Core;
 using Bit.Core.Services;
@@ -49,7 +50,7 @@ public static class EventDiagnosticLogger
         this ILogger logger,
         IFeatureService featureService,
         Guid organizationId,
-        IEnumerable<Bit.Api.Models.Response.EventResponseModel> data,
+        IEnumerable<Dirt.Models.Response.EventResponseModel> data,
         string? continuationToken,
         DateTime? queryStart = null,
         DateTime? queryEnd = null)

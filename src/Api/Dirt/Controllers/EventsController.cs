@@ -1,6 +1,8 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Api.Dirt.Models;
+using Bit.Api.Dirt.Models.Response;
 using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
 using Bit.Api.Utilities.DiagnosticTools;
@@ -17,7 +19,7 @@ using Bit.Core.Vault.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Bit.Api.Controllers;
+namespace Bit.Api.Dirt.Controllers;
 
 [Route("events")]
 [Authorize("Application")]
