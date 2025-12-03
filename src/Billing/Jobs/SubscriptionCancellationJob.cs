@@ -35,7 +35,7 @@ public class SubscriptionCancellationJob(
         if (subscription is not
             {
                 Status: SubscriptionStatus.Unpaid,
-                LatestInvoice.BillingReason: "subscription_cycle" or "subscription_create"
+                LatestInvoice: { BillingReason: BillingReasons.SubscriptionCreate or BillingReasons.SubscriptionCycle }
             })
         {
             logger.LogWarning("{Job} skipped for subscription ({SubscriptionID}) because subscription is not unpaid or does not have a cancellable billing reason", nameof(SubscriptionCancellationJob), subscriptionId);
