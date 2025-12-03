@@ -52,6 +52,10 @@ public class OrganizationSeeder
 
 public static class OrgnaizationExtensions
 {
+    /// <summary>
+    /// Creates an OrganizationUser with fields populated based on status.
+    /// For Invited status, only user.Email is used. For other statuses, user.Id is used.
+    /// </summary>
     public static OrganizationUser CreateOrganizationUser(
         this Organization organization, User user, OrganizationUserType type, OrganizationUserStatusType status)
     {
