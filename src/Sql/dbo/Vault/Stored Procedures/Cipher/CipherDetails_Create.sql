@@ -41,7 +41,8 @@ BEGIN
         [DeletedDate],
         [Reprompt],
         [Key],
-        [ArchivedDate]
+        [ArchivedDate],
+        [Archives]
     )
     VALUES
     (

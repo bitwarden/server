@@ -391,14 +391,7 @@ BEGIN
     END
 END
 
-
-IF OBJECT_ID('[dbo].[Cipher_CreateWithCollections]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[Cipher_CreateWithCollections];
-END
-GO
-
-CREATE PROCEDURE [dbo].[Cipher_CreateWithCollections]
+CREATE OR ALTER PROCEDURE [dbo].[Cipher_CreateWithCollections]
     @Id UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
@@ -481,7 +474,8 @@ BEGIN
         [DeletedDate],
         [Reprompt],
         [Key],
-        [ArchivedDate]
+        [ArchivedDate],
+        [Archives]
     )
     VALUES
     (
