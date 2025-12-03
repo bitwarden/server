@@ -55,14 +55,16 @@ public static class OrgnaizationExtensions
     public static OrganizationUser CreateOrganizationUser(
         this Organization organization, User user, OrganizationUserType type, OrganizationUserStatusType status)
     {
+        var isInvited = status == OrganizationUserStatusType.Invited;
+        var isConfirmed = status == OrganizationUserStatusType.Confirmed || status == OrganizationUserStatusType.Revoked;
+
         return new OrganizationUser
         {
             Id = Guid.NewGuid(),
             OrganizationId = organization.Id,
-            UserId = user.Id,
-
-            Key = "4.rY01mZFXHOsBAg5Fq4gyXuklWfm6mQASm42DJpx05a+e2mmp+P5W6r54WU2hlREX0uoTxyP91bKKwickSPdCQQ58J45LXHdr9t2uzOYyjVzpzebFcdMw1eElR9W2DW8wEk9+mvtWvKwu7yTebzND+46y1nRMoFydi5zPVLSlJEf81qZZ4Uh1UUMLwXz+NRWfixnGXgq2wRq1bH0n3mqDhayiG4LJKgGdDjWXC8W8MMXDYx24SIJrJu9KiNEMprJE+XVF9nQVNijNAjlWBqkDpsfaWTUfeVLRLctfAqW1blsmIv4RQ91PupYJZDNc8nO9ZTF3TEVM+2KHoxzDJrLs2Q==",
-            Email = status == OrganizationUserStatusType.Invited ? user.Email : null,
+            UserId = isInvited ? null : user.Id,
+            Email = isInvited ? user.Email : null,
+            Key = isConfirmed ? "4.rY01mZFXHOsBAg5Fq4gyXuklWfm6mQASm42DJpx05a+e2mmp+P5W6r54WU2hlREX0uoTxyP91bKKwickSPdCQQ58J45LXHdr9t2uzOYyjVzpzebFcdMw1eElR9W2DW8wEk9+mvtWvKwu7yTebzND+46y1nRMoFydi5zPVLSlJEf81qZZ4Uh1UUMLwXz+NRWfixnGXgq2wRq1bH0n3mqDhayiG4LJKgGdDjWXC8W8MMXDYx24SIJrJu9KiNEMprJE+XVF9nQVNijNAjlWBqkDpsfaWTUfeVLRLctfAqW1blsmIv4RQ91PupYJZDNc8nO9ZTF3TEVM+2KHoxzDJrLs2Q==" : null,
             Type = type,
             Status = status
         };
