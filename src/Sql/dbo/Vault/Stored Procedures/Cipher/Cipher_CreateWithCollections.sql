@@ -14,7 +14,7 @@
     @Key VARCHAR(MAX) = NULL,
     @CollectionIds AS [dbo].[GuidIdArray] READONLY,
     @ArchivedDate DATETIME2(7) = NULL,
-    @Archives NVARCHAR(MAX) = NULL
+    @Archives NVARCHAR(MAX)
 AS
 BEGIN
     SET NOCOUNT ON
