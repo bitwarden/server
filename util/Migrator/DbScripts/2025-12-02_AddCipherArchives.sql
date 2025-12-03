@@ -262,3 +262,116 @@ BEGIN
     SELECT @UtcNow
 END
 GO
+
+IF OBJECT_ID('[dbo].[Cipher_Create]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Cipher_Create];
+END
+GO
+
+CREATE PROCEDURE [dbo].[Cipher_Create]
+    @Id UNIQUEIDENTIFIER OUTPUT,
+    @UserId UNIQUEIDENTIFIER,
+    @OrganizationId UNIQUEIDENTIFIER,
+    @Type TINYINT,
+    @Data NVARCHAR(MAX),
+    @Favorites NVARCHAR(MAX),
+    @Folders NVARCHAR(MAX),
+    @Attachments NVARCHAR(MAX), -- not used
+    @CreationDate DATETIME2(7),
+    @RevisionDate DATETIME2(7),
+    @DeletedDate DATETIME2(7),
+    @Reprompt TINYINT,
+    @Key VARCHAR(MAX) = NULL,
+    @ArchivedDate DATETIME2(7) = NULL
+    @Archives NVARCHAR(MAX) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    INSERT INTO [dbo].[Cipher]
+    (
+        [Id],
+        [UserId],
+        [OrganizationId],
+        [Type],
+        [Data],
+        [Favorites],
+        [Folders],
+        [CreationDate],
+        [RevisionDate],
+        [DeletedDate],
+        [Reprompt],
+        [Key],
+        [ArchivedDate],
+        [Archives]
+    )
+    VALUES
+    (
+        @Id,
+        CASE WHEN @OrganizationId IS NULL THEN @UserId ELSE NULL END,
+        @OrganizationId,
+        @Type,
+        @Data,
+        @Favorites,
+        @Folders,
+        @CreationDate,
+        @RevisionDate,
+        @DeletedDate,
+        @Reprompt,
+        @Key,
+        @ArchivedDate,
+        @Archives
+    )
+
+    IF @OrganizationId IS NOT NULL
+    BEGIN
+        EXEC [dbo].[User_BumpAccountRevisionDateByCipherId] @Id, @OrganizationId
+    END
+    ELSE IF @UserId IS NOT NULL
+    BEGIN
+        EXEC [dbo].[User_BumpAccountRevisionDate] @UserId
+    END
+END
+GO
+
+IF OBJECT_ID('[dbo].[Cipher_CreateWithCollections]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Cipher_CreateWithCollections];
+END
+GO
+
+CREATE PROCEDURE [dbo].[Cipher_CreateWithCollections]
+    @Id UNIQUEIDENTIFIER,
+    @UserId UNIQUEIDENTIFIER,
+    @OrganizationId UNIQUEIDENTIFIER,
+    @Type TINYINT,
+    @Data NVARCHAR(MAX),
+    @Favorites NVARCHAR(MAX),
+    @Folders NVARCHAR(MAX),
+    @Attachments NVARCHAR(MAX),
+    @CreationDate DATETIME2(7),
+    @RevisionDate DATETIME2(7),
+    @DeletedDate DATETIME2(7),
+    @Reprompt TINYINT,
+    @Key VARCHAR(MAX) = NULL,
+    @CollectionIds AS [dbo].[GuidIdArray] READONLY,
+    @ArchivedDate DATETIME2(7) = NULL,
+    @Archives NVARCHAR(MAX) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    EXEC [dbo].[Cipher_Create] @Id, @UserId, @OrganizationId, @Type, @Data, @Favorites, @Folders,
+        @Attachments, @CreationDate, @RevisionDate, @DeletedDate, @Reprompt, @Key, @ArchivedDate
+
+    DECLARE @UpdateCollectionsSuccess INT
+    EXEC @UpdateCollectionsSuccess = [dbo].[Cipher_UpdateCollections] @Id, @UserId, @OrganizationId, @CollectionIds
+
+    -- Bump the account revision date AFTER collections are assigned.
+    IF @UpdateCollectionsSuccess = 0
+    BEGIN
+        EXEC [dbo].[User_BumpAccountRevisionDateByCipherId] @Id, @OrganizationId
+    END
+END
+GO
