@@ -646,12 +646,10 @@ public class OrganizationUsersController : BaseAdminConsoleController
         }
 
         var results = await _revokeOrganizationUserCommandVNext.RevokeUsersAsync(
-            new V2_RevokeOrganizationUserCommand.RevokeOrganizationUsersRequest
-            {
-                OrganizationId = orgId,
-                OrganizationUserIdsToRevoke = model.Ids.ToArray(),
-                PerformedBy = new StandardUser(currentUserId.Value, await _currentContext.OrganizationOwner(orgId))
-            });
+            new V2_RevokeOrganizationUserCommand.RevokeOrganizationUsersRequest(
+                orgId,
+                model.Ids.ToArray(),
+                new StandardUser(currentUserId.Value, await _currentContext.OrganizationOwner(orgId))));
 
         return new ListResponseModel<OrganizationUserBulkResponseModel>(results
             .Select(result => new OrganizationUserBulkResponseModel(result.Id,

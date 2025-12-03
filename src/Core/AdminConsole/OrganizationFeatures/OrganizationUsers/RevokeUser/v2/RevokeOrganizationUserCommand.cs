@@ -15,7 +15,6 @@ public class RevokeOrganizationUserCommand(
     IEventService eventService,
     IPushNotificationService pushNotificationService,
     IRevokeOrganizationUserValidator validator,
-    IOrganizationRepository organizationRepository,
     TimeProvider timeProvider,
     ILogger<RevokeOrganizationUserCommand> logger)
     : IRevokeOrganizationUserCommand
@@ -47,16 +46,11 @@ public class RevokeOrganizationUserCommand(
         var organizationUserToRevoke = await organizationUserRepository
             .GetManyAsync(request.OrganizationUserIdsToRevoke);
 
-        var organization = await organizationRepository.GetByIdAsync(request.OrganizationId);
-
-        return new RevokeOrganizationUsersValidationRequest
-        {
-            OrganizationId = request.OrganizationId,
-            OrganizationUserIdsToRevoke = request.OrganizationUserIdsToRevoke,
-            PerformedBy = request.PerformedBy,
-            OrganizationUsersToRevoke = organizationUserToRevoke,
-            Organization = organization
-        };
+        return new RevokeOrganizationUsersValidationRequest(
+            request.OrganizationId,
+            request.OrganizationUserIdsToRevoke,
+            request.PerformedBy,
+            organizationUserToRevoke);
     }
 
     private async Task RevokeValidUsersAsync(ICollection<OrganizationUser> validUsers)

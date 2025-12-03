@@ -1,5 +1,4 @@
-﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Models.Data;
+﻿using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Entities;
@@ -25,7 +24,6 @@ public class RevokeOrganizationUserCommandTests
         SutProvider<RevokeOrganizationUserCommand> sutProvider,
         Guid organizationId,
         Guid actingUserId,
-        Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser1,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser2)
     {
@@ -35,14 +33,12 @@ public class RevokeOrganizationUserCommandTests
         orgUser2.UserId = Guid.NewGuid();
 
         var actingUser = CreateActingUser(actingUserId, false, null);
-        var request = new RevokeOrganizationUsersRequest
-        {
-            OrganizationId = organizationId,
-            OrganizationUserIdsToRevoke = [orgUser1.Id, orgUser2.Id],
-            PerformedBy = actingUser
-        };
+        var request = new RevokeOrganizationUsersRequest(
+            organizationId,
+            [orgUser1.Id, orgUser2.Id],
+            actingUser);
 
-        SetupRepositoryMocks(sutProvider, organizationId, organization, [orgUser1, orgUser2]);
+        SetupRepositoryMocks(sutProvider, [orgUser1, orgUser2]);
         SetupValidatorMock(sutProvider, [
             ValidationResultHelpers.Valid(orgUser1),
             ValidationResultHelpers.Valid(orgUser2)
@@ -79,7 +75,6 @@ public class RevokeOrganizationUserCommandTests
     public async Task RevokeUsersAsync_WithSystemUser_LogsEventsWithSystemUserType(
         SutProvider<RevokeOrganizationUserCommand> sutProvider,
         Guid organizationId,
-        Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
     {
         // Arrange
@@ -87,14 +82,13 @@ public class RevokeOrganizationUserCommandTests
         orgUser.UserId = Guid.NewGuid();
 
         var actingUser = CreateActingUser(null, false, EventSystemUser.SCIM);
-        var request = new RevokeOrganizationUsersRequest
-        {
-            OrganizationId = organizationId,
-            OrganizationUserIdsToRevoke = [orgUser.Id],
-            PerformedBy = actingUser
-        };
 
-        SetupRepositoryMocks(sutProvider, organizationId, organization, [orgUser]);
+        var request = new RevokeOrganizationUsersRequest(
+            organizationId,
+            [orgUser.Id],
+            actingUser);
+
+        SetupRepositoryMocks(sutProvider, [orgUser]);
         SetupValidatorMock(sutProvider, [ValidationResultHelpers.Valid(orgUser)]);
 
         // Act
@@ -113,7 +107,6 @@ public class RevokeOrganizationUserCommandTests
         SutProvider<RevokeOrganizationUserCommand> sutProvider,
         Guid organizationId,
         Guid actingUserId,
-        Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Revoked, OrganizationUserType.User)] OrganizationUser orgUser1,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser2)
     {
@@ -121,14 +114,13 @@ public class RevokeOrganizationUserCommandTests
         orgUser1.OrganizationId = orgUser2.OrganizationId = organizationId;
 
         var actingUser = CreateActingUser(actingUserId, false, null);
-        var request = new RevokeOrganizationUsersRequest
-        {
-            OrganizationId = organizationId,
-            OrganizationUserIdsToRevoke = [orgUser1.Id, orgUser2.Id],
-            PerformedBy = actingUser
-        };
 
-        SetupRepositoryMocks(sutProvider, organizationId, organization, [orgUser1, orgUser2]);
+        var request = new RevokeOrganizationUsersRequest(
+            organizationId,
+            [orgUser1.Id, orgUser2.Id],
+            actingUser);
+
+        SetupRepositoryMocks(sutProvider, [orgUser1, orgUser2]);
         SetupValidatorMock(sutProvider, [
             ValidationResultHelpers.Invalid(orgUser1, new UserAlreadyRevoked()),
             ValidationResultHelpers.Valid(orgUser2)
@@ -158,7 +150,6 @@ public class RevokeOrganizationUserCommandTests
         SutProvider<RevokeOrganizationUserCommand> sutProvider,
         Guid organizationId,
         Guid actingUserId,
-        Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
     {
         // Arrange
@@ -166,14 +157,13 @@ public class RevokeOrganizationUserCommandTests
         orgUser.UserId = Guid.NewGuid();
 
         var actingUser = CreateActingUser(actingUserId, false, null);
-        var request = new RevokeOrganizationUsersRequest
-        {
-            OrganizationId = organizationId,
-            OrganizationUserIdsToRevoke = [orgUser.Id],
-            PerformedBy = actingUser
-        };
 
-        SetupRepositoryMocks(sutProvider, organizationId, organization, [orgUser]);
+        var request = new RevokeOrganizationUsersRequest(
+            organizationId,
+            [orgUser.Id],
+            actingUser);
+
+        SetupRepositoryMocks(sutProvider, [orgUser]);
         SetupValidatorMock(sutProvider, [ValidationResultHelpers.Valid(orgUser)]);
 
         sutProvider.GetDependency<IPushNotificationService>()
@@ -207,17 +197,11 @@ public class RevokeOrganizationUserCommandTests
 
     private static void SetupRepositoryMocks(
         SutProvider<RevokeOrganizationUserCommand> sutProvider,
-        Guid organizationId,
-        Organization organization,
         ICollection<OrganizationUser> organizationUsers)
     {
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetManyAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(organizationUsers);
-
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(organizationId)
-            .Returns(organization);
     }
 
     private static void SetupValidatorMock(
