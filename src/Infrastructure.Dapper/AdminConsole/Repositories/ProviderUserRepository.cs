@@ -61,6 +61,18 @@ public class ProviderUserRepository : Repository<ProviderUser, Guid>, IProviderU
         }
     }
 
+    public async Task<ICollection<ProviderUser>> GetManyByManyUsersAsync(IEnumerable<Guid> userIds)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        var results = await connection.QueryAsync<ProviderUser>(
+            "[dbo].[ProviderUser_ReadyManyByManyUserIds]",
+            new { UserIds = userIds.ToGuidIdArrayTVP() },
+            commandType: CommandType.StoredProcedure);
+
+        return results.ToList();
+    }
+
     public async Task<ProviderUser?> GetByProviderUserAsync(Guid providerId, Guid userId)
     {
         using (var connection = new SqlConnection(ConnectionString))
