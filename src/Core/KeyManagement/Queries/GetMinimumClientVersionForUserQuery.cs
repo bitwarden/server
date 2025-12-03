@@ -3,21 +3,21 @@ using Bit.Core.KeyManagement.Queries.Interfaces;
 
 namespace Bit.Core.KeyManagement.Queries;
 
-public class GetMinimumClientVersionForUserQuery(IIsV2EncryptionUserQuery isV2EncryptionUserQuery)
+public class GetMinimumClientVersionForUserQuery()
     : IGetMinimumClientVersionForUserQuery
 {
-    public async Task<Version?> Run(User? user)
+    public Task<Version?> Run(User? user)
     {
         if (user == null)
         {
-            return null;
+            return Task.FromResult<Version?>(null);
         }
 
-        if (await isV2EncryptionUserQuery.Run(user))
+        if (user.IsSecurityVersionTwo())
         {
-            return Constants.MinimumClientVersionForV2Encryption;
+            return Task.FromResult(Constants.MinimumClientVersionForV2Encryption)!;
         }
 
-        return null;
+        return Task.FromResult<Version?>(null);
     }
 }

@@ -26,7 +26,6 @@ public static class KeyManagementServiceCollectionExtensions
     private static void AddKeyManagementQueries(this IServiceCollection services)
     {
         services.AddScoped<IUserAccountKeysQuery, UserAccountKeysQuery>();
-        services.AddScoped<IIsV2EncryptionUserQuery, IsV2EncryptionUserQuery>();
         services.AddScoped<IGetMinimumClientVersionForUserQuery, GetMinimumClientVersionForUserQuery>();
     }
 }

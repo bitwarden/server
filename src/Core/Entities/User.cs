@@ -51,7 +51,7 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     public string? Key { get; set; }
     /// <summary>
     /// The raw public key, without a signature from the user's signature key.
-    /// </summary> 
+    /// </summary>
     public string? PublicKey { get; set; }
     /// <summary>
     /// User key wrapped private key.
@@ -209,6 +209,11 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     {
         // If no security version is set, it is version 1. The minimum initialized version is 2.
         return SecurityVersion ?? 1;
+    }
+
+    public bool IsSecurityVersionTwo()
+    {
+        return SecurityVersion == 2;
     }
 
     /// <summary>

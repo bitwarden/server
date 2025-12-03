@@ -11,6 +11,16 @@ public interface IClientVersionValidator
     Task<bool> ValidateAsync(User user, CustomValidatorRequestContext requestContext);
 }
 
+/// <summary>
+/// This validator will use the Client Version on a request, which currently maps
+/// to the "Bitwarden-Client-Version" header, to determine if a user meets minimum
+/// required client version for issuing tokens on an old client. This is done to
+/// incentivize users getting on an updated client when their password encryption
+/// method has already been updated. Currently this validator looks for the version
+/// defined by MinimumClientVersionForV2Encryption.
+///
+/// If the header is omitted, then the validator returns that this request is valid.
+/// </summary>
 public class ClientVersionValidator(
     ICurrentContext currentContext,
     IGetMinimumClientVersionForUserQuery getMinimumClientVersionForUserQuery)
