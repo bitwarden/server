@@ -47,22 +47,34 @@ public static class EntityFrameworkServiceCollectionExtensions
         {
             if (provider == SupportedDatabaseProviders.Postgres)
             {
-                options.UseNpgsql(connectionString, b => b.MigrationsAssembly("PostgresMigrations"));
+                options.UseNpgsql(connectionString, b =>
+                {
+                    b.MigrationsAssembly("PostgresMigrations");
+                    b.EnableRetryOnFailure();
+                });
                 // Handle NpgSql Legacy Support for `timestamp without timezone` issue
                 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
             }
             else if (provider == SupportedDatabaseProviders.MySql)
             {
                 options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString),
-                    b => b.MigrationsAssembly("MySqlMigrations"));
+                    b =>
+                    {
+                        b.MigrationsAssembly("MySqlMigrations");
+                        b.EnableRetryOnFailure();
+                    });
             }
             else if (provider == SupportedDatabaseProviders.Sqlite)
             {
+                // SQLite doesn't support EnableRetryOnFailure
                 options.UseSqlite(connectionString, b => b.MigrationsAssembly("SqliteMigrations"));
             }
             else if (provider == SupportedDatabaseProviders.SqlServer)
             {
-                options.UseSqlServer(connectionString);
+                options.UseSqlServer(connectionString, b =>
+                {
+                    b.EnableRetryOnFailure();
+                });
             }
         });
     }
