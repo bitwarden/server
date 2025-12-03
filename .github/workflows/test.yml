@@ -61,7 +61,7 @@ jobs:
         run: dotnet sln bitwarden-server.sln remove src/Sql/Sql.sqlproj
 
       - name: Test OSS solution
-        run: dotnet test ./test --configuration Debug --logger "trx;LogFileName=oss-test-results.trx" /p:CoverletOutputFormatter="cobertura" --collect:"XPlat Code Coverage"
+        run: dotnet test ./test --configuration Debug --logger "console;verbosity=detailed"
 
       - name: Test Bitwarden solution
         run: dotnet test ./bitwarden_license/test --configuration Debug --logger "trx;LogFileName=bw-test-results.trx" /p:CoverletOutputFormatter="cobertura" --collect:"XPlat Code Coverage"
