@@ -828,11 +828,11 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
 
         // Check if this organization user already has a default collection
         var existingDefaultCollection = await (
-            from ou in dbContext.OrganizationUsers
-            where ou.Id == organizationUserId && ou.OrganizationId == organizationId
-            join cu in dbContext.CollectionUsers on ou.Id equals cu.OrganizationUserId
-            join c in dbContext.Collections on cu.CollectionId equals c.Id
-            where c.Type == CollectionType.DefaultUserCollection
+            from c in dbContext.Collections
+            join cu in dbContext.CollectionUsers on c.Id equals cu.CollectionId
+            where cu.OrganizationUserId == organizationUserId
+                && c.OrganizationId == organizationId
+                && c.Type == CollectionType.DefaultUserCollection
             select c
         ).FirstOrDefaultAsync();
 

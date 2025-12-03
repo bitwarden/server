@@ -367,12 +367,15 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
+            var collectionId = CoreHelpers.GenerateComb();
+            var now = DateTime.UtcNow;
             var parameters = new DynamicParameters();
+            parameters.Add("@CollectionId", collectionId);
             parameters.Add("@OrganizationId", organizationId);
             parameters.Add("@OrganizationUserId", organizationUserId);
             parameters.Add("@Name", defaultCollectionName);
-            parameters.Add("@CreationDate", DateTime.UtcNow);
-            parameters.Add("@RevisionDate", DateTime.UtcNow);
+            parameters.Add("@CreationDate", now);
+            parameters.Add("@RevisionDate", now);
             parameters.Add("@WasCreated", dbType: DbType.Boolean, direction: ParameterDirection.Output);
 
             await connection.ExecuteAsync(
