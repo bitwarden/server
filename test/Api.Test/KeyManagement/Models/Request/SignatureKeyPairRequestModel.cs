@@ -1,6 +1,6 @@
 ﻿#nullable enable
 
-using Bit.Api.KeyManagement.Models.Requests;
+using Bit.Core.KeyManagement.Models.Api.Request;
 using Xunit;
 
 namespace Bit.Api.Test.KeyManagement.Models.Request;

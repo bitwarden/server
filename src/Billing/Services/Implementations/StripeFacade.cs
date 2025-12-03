@@ -18,6 +18,7 @@ public class StripeFacade : IStripeFacade
     private readonly DiscountService _discountService = new();
     private readonly SetupIntentService _setupIntentService = new();
     private readonly TestClockService _testClockService = new();
+    private readonly CouponService _couponService = new();
 
     public async Task<Charge> GetCharge(
         string chargeId,
@@ -98,6 +99,12 @@ public class StripeFacade : IStripeFacade
         CancellationToken cancellationToken = default) =>
         await _subscriptionService.ListAsync(options, requestOptions, cancellationToken);
 
+    public IAsyncEnumerable<Subscription> ListSubscriptionsAutoPagingAsync(
+        SubscriptionListOptions options = null,
+        RequestOptions requestOptions = null,
+        CancellationToken cancellationToken = default) =>
+        _subscriptionService.ListAutoPagingAsync(options, requestOptions, cancellationToken);
+
     public async Task<Subscription> GetSubscription(
         string subscriptionId,
         SubscriptionGetOptions subscriptionGetOptions = null,
@@ -137,4 +144,11 @@ public class StripeFacade : IStripeFacade
         RequestOptions requestOptions = null,
         CancellationToken cancellationToken = default) =>
         _testClockService.GetAsync(testClockId, testClockGetOptions, requestOptions, cancellationToken);
+
+    public Task<Coupon> GetCoupon(
+        string couponId,
+        CouponGetOptions couponGetOptions = null,
+        RequestOptions requestOptions = null,
+        CancellationToken cancellationToken = default) =>
+        _couponService.GetAsync(couponId, couponGetOptions, requestOptions, cancellationToken);
 }
