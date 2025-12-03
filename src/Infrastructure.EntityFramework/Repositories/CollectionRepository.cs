@@ -827,20 +827,14 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         var dbContext = GetDatabaseContext(scope);
 
         // Check if this organization user already has a default collection
-        var existingDefaultCollection = await dbContext.OrganizationUsers
-            .Where(ou => ou.Id == organizationUserId && ou.OrganizationId == organizationId)
-            .Join(
-                dbContext.CollectionUsers,
-                ou => ou.Id,
-                cu => cu.OrganizationUserId,
-                (ou, cu) => cu)
-            .Join(
-                dbContext.Collections,
-                cu => cu.CollectionId,
-                c => c.Id,
-                (cu, c) => c)
-            .Where(c => c.Type == CollectionType.DefaultUserCollection)
-            .FirstOrDefaultAsync();
+        var existingDefaultCollection = await (
+            from ou in dbContext.OrganizationUsers
+            where ou.Id == organizationUserId && ou.OrganizationId == organizationId
+            join cu in dbContext.CollectionUsers on ou.Id equals cu.OrganizationUserId
+            join c in dbContext.Collections on cu.CollectionId equals c.Id
+            where c.Type == CollectionType.DefaultUserCollection
+            select c
+        ).FirstOrDefaultAsync();
 
         // If collection already exists, return false (not created)
         if (existingDefaultCollection != null)
@@ -849,7 +843,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         }
 
         // Create new default collection
-        var collectionId = Guid.NewGuid();
+        var collectionId = CoreHelpers.GenerateComb();
         var now = DateTime.UtcNow;
 
         var collection = new Collection
