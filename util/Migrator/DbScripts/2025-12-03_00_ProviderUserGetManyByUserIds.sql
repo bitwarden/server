@@ -1,4 +1,4 @@
-CREATE OR ALTER PROCEDURE [dbo].[ProviderUser_ReadyManyByManyUserIds]
+CREATE OR ALTER PROCEDURE [dbo].[ProviderUser_ReadManyByManyUserIds]
     @UserIds AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN
