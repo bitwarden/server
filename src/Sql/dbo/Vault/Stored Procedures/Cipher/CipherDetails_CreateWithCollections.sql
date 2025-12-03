@@ -18,9 +18,9 @@
     @DeletedDate DATETIME2(7),
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
-    @CollectionIds AS [dbo].[GuidIdArray] READONLY,
-    @ArchivedDate DATETIME2(7) = NULL
-    @Archives NVARCHAR(MAX)
+    @ArchivedDate DATETIME2(7) = NULL,
+    @Archives NVARCHAR(MAX),
+    @CollectionIds AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN
     SET NOCOUNT ON
