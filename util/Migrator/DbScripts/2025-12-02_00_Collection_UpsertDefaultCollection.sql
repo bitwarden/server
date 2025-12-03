@@ -14,69 +14,84 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    DECLARE @ExistingCollectionId UNIQUEIDENTIFIER;
+    -- Use SERIALIZABLE isolation level to prevent race conditions during concurrent calls
+    SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+    BEGIN TRANSACTION;
 
-    -- Check if this organization user already has a default collection
-    SELECT @ExistingCollectionId = c.Id
-    FROM [dbo].[Collection] c
-    INNER JOIN [dbo].[CollectionUser] cu ON cu.CollectionId = c.Id
-    WHERE cu.OrganizationUserId = @OrganizationUserId
-        AND c.OrganizationId = @OrganizationId
-        AND c.Type = 1; -- CollectionType.DefaultUserCollection
+    BEGIN TRY
+        DECLARE @ExistingCollectionId UNIQUEIDENTIFIER;
 
-    -- If collection already exists, return early
-    IF @ExistingCollectionId IS NOT NULL
-    BEGIN
-        SET @WasCreated = 0;
-        RETURN;
-    END
+        -- Check if this organization user already has a default collection
+        -- SERIALIZABLE ensures range locks prevent concurrent insertions
+        SELECT @ExistingCollectionId = c.Id
+        FROM [dbo].[Collection] c
+        INNER JOIN [dbo].[CollectionUser] cu ON cu.CollectionId = c.Id
+        WHERE cu.OrganizationUserId = @OrganizationUserId
+            AND c.OrganizationId = @OrganizationId
+            AND c.Type = 1; -- CollectionType.DefaultUserCollection
 
-    -- Create new default collection
-    SET @WasCreated = 1;
+        -- If collection already exists, return early
+        IF @ExistingCollectionId IS NOT NULL
+        BEGIN
+            SET @WasCreated = 0;
+            COMMIT TRANSACTION;
+            RETURN;
+        END
 
-    -- Insert Collection
-    INSERT INTO [dbo].[Collection]
-    (
-        [Id],
-        [OrganizationId],
-        [Name],
-        [ExternalId],
-        [CreationDate],
-        [RevisionDate],
-        [DefaultUserCollectionEmail],
-        [Type]
-    )
-    VALUES
-    (
-        @CollectionId,
-        @OrganizationId,
-        @Name,
-        NULL, -- ExternalId
-        @CreationDate,
-        @RevisionDate,
-        NULL, -- DefaultUserCollectionEmail
-        1 -- CollectionType.DefaultUserCollection
-    );
+        -- Create new default collection
+        SET @WasCreated = 1;
 
-    -- Insert CollectionUser
-    INSERT INTO [dbo].[CollectionUser]
-    (
-        [CollectionId],
-        [OrganizationUserId],
-        [ReadOnly],
-        [HidePasswords],
-        [Manage]
-    )
-    VALUES
-    (
-        @CollectionId,
-        @OrganizationUserId,
-        0, -- ReadOnly = false
-        0, -- HidePasswords = false
-        1  -- Manage = true
-    );
+        -- Insert Collection
+        INSERT INTO [dbo].[Collection]
+        (
+            [Id],
+            [OrganizationId],
+            [Name],
+            [ExternalId],
+            [CreationDate],
+            [RevisionDate],
+            [DefaultUserCollectionEmail],
+            [Type]
+        )
+        VALUES
+        (
+            @CollectionId,
+            @OrganizationId,
+            @Name,
+            NULL, -- ExternalId
+            @CreationDate,
+            @RevisionDate,
+            NULL, -- DefaultUserCollectionEmail
+            1 -- CollectionType.DefaultUserCollection
+        );
 
-    -- Bump user account revision dates
-    EXEC [dbo].[User_BumpAccountRevisionDateByCollectionId] @CollectionId, @OrganizationId;
+        -- Insert CollectionUser
+        INSERT INTO [dbo].[CollectionUser]
+        (
+            [CollectionId],
+            [OrganizationUserId],
+            [ReadOnly],
+            [HidePasswords],
+            [Manage]
+        )
+        VALUES
+        (
+            @CollectionId,
+            @OrganizationUserId,
+            0, -- ReadOnly = false
+            0, -- HidePasswords = false
+            1  -- Manage = true
+        );
+
+        -- Bump user account revision dates
+        EXEC [dbo].[User_BumpAccountRevisionDateByCollectionId] @CollectionId, @OrganizationId;
+
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
 END
 GO
