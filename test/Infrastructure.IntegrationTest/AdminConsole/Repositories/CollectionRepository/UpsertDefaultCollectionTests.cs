@@ -40,9 +40,6 @@ public class UpsertDefaultCollectionTests
         Assert.True(defaultCollection.Manage);
         Assert.False(defaultCollection.ReadOnly);
         Assert.False(defaultCollection.HidePasswords);
-
-        // Cleanup
-        await CleanupAsync(organizationRepository, userRepository, organization, orgUser);
     }
 
     [Theory, DatabaseData]
@@ -81,9 +78,6 @@ public class UpsertDefaultCollectionTests
             c.Type == CollectionType.DefaultUserCollection).ToList();
 
         Assert.Single(defaultCollections);
-
-        // Cleanup
-        await CleanupAsync(organizationRepository, userRepository, organization, orgUser);
     }
 
     [Theory, DatabaseData]
@@ -100,76 +94,19 @@ public class UpsertDefaultCollectionTests
         var defaultCollectionName = $"My Items - {organization.Id}";
 
         // Act - Call method 5 times
-        var results = new List<bool>();
-        for (int i = 0; i < 5; i++)
-        {
-            var wasCreated = await collectionRepository.UpsertDefaultCollectionAsync(
-                organization.Id,
-                orgUser.Id,
-                defaultCollectionName);
-            results.Add(wasCreated);
-        }
+        var tasks = Enumerable.Range(1, 5).Select(i => collectionRepository.UpsertDefaultCollectionAsync(
+            organization.Id,
+            orgUser.Id,
+            defaultCollectionName));
+        var results = await Task.WhenAll(tasks);
 
         // Assert
-        Assert.True(results[0]); // First call should create
-        Assert.All(results.Skip(1), wasCreated => Assert.False(wasCreated)); // Rest should return false
+        Assert.Single(results, r => r); // First call should create successfully; all other results are implicitly false
 
         // Verify only one collection exists
         var collectionDetails = await collectionRepository.GetManyByUserIdAsync(user.Id);
-        var defaultCollections = collectionDetails.Where(c =>
-            c.OrganizationId == organization.Id &&
-            c.Type == CollectionType.DefaultUserCollection).ToList();
-
-        Assert.Single(defaultCollections);
-
-        // Cleanup
-        await CleanupAsync(organizationRepository, userRepository, organization, orgUser);
-    }
-
-    [Theory, DatabaseData]
-    public async Task UpsertDefaultCollectionAsync_ShouldSetCorrectPermissions_ForNewCollection(
-        IOrganizationRepository organizationRepository,
-        IUserRepository userRepository,
-        IOrganizationUserRepository organizationUserRepository,
-        ICollectionRepository collectionRepository)
-    {
-        // Arrange
-        var organization = await organizationRepository.CreateTestOrganizationAsync();
-        var user = await userRepository.CreateTestUserAsync();
-        var orgUser = await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user);
-        var defaultCollectionName = $"My Items - {organization.Id}";
-
-        // Act
-        await collectionRepository.UpsertDefaultCollectionAsync(
-            organization.Id,
-            orgUser.Id,
-            defaultCollectionName);
-
-        // Assert
-        var collectionDetails = await collectionRepository.GetManyByUserIdAsync(user.Id);
-        var defaultCollection = collectionDetails.Single(c =>
+        Assert.Single(collectionDetails, c =>
             c.OrganizationId == organization.Id &&
             c.Type == CollectionType.DefaultUserCollection);
-
-        Assert.True(defaultCollection.Manage);
-        Assert.False(defaultCollection.ReadOnly);
-        Assert.False(defaultCollection.HidePasswords);
-
-        // Cleanup
-        await CleanupAsync(organizationRepository, userRepository, organization, orgUser);
-    }
-
-    private static async Task CleanupAsync(
-        IOrganizationRepository organizationRepository,
-        IUserRepository userRepository,
-        Organization organization,
-        OrganizationUser organizationUser)
-    {
-        await organizationRepository.DeleteAsync(organization);
-
-        if (organizationUser.UserId != null)
-        {
-            await userRepository.DeleteAsync(new User { Id = organizationUser.UserId.Value });
-        }
     }
 }
