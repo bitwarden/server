@@ -72,7 +72,8 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
                         OrganizationUseTotp = o.UseTotp,
                         c.Reprompt,
                         c.Key,
-                        c.ArchivedDate
+                        c.ArchivedDate,
+                        c.Archives
                     };
 
         var query2 = from c in dbContext.Ciphers
@@ -96,7 +97,8 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
                          OrganizationUseTotp = false,
                          c.Reprompt,
                          c.Key,
-                         c.ArchivedDate
+                         c.ArchivedDate,
+                         c.Archives
                      };
 
         var union = query.Union(query2).Select(c => new CipherDetails
@@ -118,7 +120,8 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
             Manage = c.Manage,
             OrganizationUseTotp = c.OrganizationUseTotp,
             Key = c.Key,
-            ArchivedDate = c.ArchivedDate
+            ArchivedDate = c.ArchivedDate,
+            Archives = c.Archives
         });
         return union;
     }

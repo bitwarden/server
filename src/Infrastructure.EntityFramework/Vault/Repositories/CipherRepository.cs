@@ -808,7 +808,31 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
             await cipherEntitiesToModify.ForEachAsync(cipher =>
             {
                 dbContext.Attach(cipher);
-                cipher.ArchivedDate = action == CipherStateAction.Unarchive ? null : utcNow;
+
+                Dictionary<Guid, DateTime> archives;
+                if (string.IsNullOrWhiteSpace(cipher.Archives))
+                {
+                    archives = new Dictionary<Guid, DateTime>();
+                }
+                else
+                {
+                    archives = JsonSerializer.Deserialize<Dictionary<Guid, DateTime>>(cipher.Archives)
+                            ?? new Dictionary<Guid, DateTime>();
+                }
+
+                if (action == CipherStateAction.Unarchive)
+                {
+                    archives.Remove(userId);
+                }
+                else if (action == CipherStateAction.Archive)
+                {
+                    archives[userId] = utcNow;
+                }
+
+                cipher.Archives = archives.Count == 0
+                    ? null
+                    : JsonSerializer.Serialize(archives);
+
                 cipher.RevisionDate = utcNow;
             });
 

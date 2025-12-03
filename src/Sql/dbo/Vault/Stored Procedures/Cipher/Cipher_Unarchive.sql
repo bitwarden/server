@@ -28,7 +28,7 @@ BEGIN
     SET
         [Archives] = JSON_MODIFY(
             COALESCE([Archives], N'{}'),
-            '$."' + CONVERT(NVARCHAR(36), @UserId) + '"',
+            CONCAT('$."', CONVERT(NVARCHAR(36), @UserId), '"'),
             NULL
         ),
         [RevisionDate] = @UtcNow
