@@ -425,6 +425,7 @@ BEGIN
         EXEC [dbo].[User_BumpAccountRevisionDateByCipherId] @Id, @OrganizationId
     END
 END
+GO
 
 IF OBJECT_ID('[dbo].[CipherDetails_Create]') IS NOT NULL
 BEGIN
