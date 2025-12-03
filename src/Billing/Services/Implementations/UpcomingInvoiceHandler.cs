@@ -11,6 +11,7 @@ using Bit.Core.Billing.Pricing;
 using Bit.Core.Entities;
 using Bit.Core.Models.Mail.Billing.Renewal.Families2019Renewal;
 using Bit.Core.Models.Mail.Billing.Renewal.Families2020Renewal;
+using Bit.Core.Models.Mail.Billing.Renewal.Premium;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
@@ -606,14 +607,27 @@ public class UpcomingInvoiceHandler(
         User user,
         PremiumPlan premiumPlan)
     {
-        /* TODO: Replace with proper premium renewal email template once finalized.
-           Using Families2020RenewalMail as a temporary stop-gap. */
-        var email = new Families2020RenewalMail
+        var coupon = await stripeFacade.GetCoupon(CouponIDs.Milestone2SubscriptionDiscount);
+        if (coupon == null)
+        {
+            throw new InvalidOperationException($"Coupon for sending premium renewal email id:{CouponIDs.Milestone2SubscriptionDiscount} not found");
+        }
+
+        if (coupon.PercentOff == null)
+        {
+            throw new InvalidOperationException($"coupon.PercentOff for sending premium renewal email id:{CouponIDs.Milestone2SubscriptionDiscount} is null");
+        }
+
+        var discountedAnnualRenewalPrice = premiumPlan.Seat.Price * (100 - coupon.PercentOff.Value) / 100;
+
+        var email = new PremiumRenewalMail
         {
             ToEmails = [user.Email],
-            View = new Families2020RenewalMailView
+            View = new PremiumRenewalMailView
             {
-                MonthlyRenewalPrice = (premiumPlan.Seat.Price / 12).ToString("C", new CultureInfo("en-US"))
+                BaseMonthlyRenewalPrice = (premiumPlan.Seat.Price / 12).ToString("C", new CultureInfo("en-US")),
+                DiscountAmount = $"{coupon.PercentOff}%",
+                DiscountedMonthlyRenewalPrice = (discountedAnnualRenewalPrice / 12).ToString("C", new CultureInfo("en-US"))
             }
         };
 
