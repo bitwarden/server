@@ -114,7 +114,7 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 UseOrganizationDomains = e.UseOrganizationDomains,
                 UseAdminSponsoredFamilies = e.UseAdminSponsoredFamilies,
                 UseAutomaticUserConfirmation = e.UseAutomaticUserConfirmation,
-                UseDisableSmAdsForUsers = e.UseDisableSmAdsForUsers
+                UseDisableSmAdsForUsers = e.UseDisableSmAdsForUsers,
                 UsePhishingBlocker = e.UsePhishingBlocker
             }).ToListAsync();
         }

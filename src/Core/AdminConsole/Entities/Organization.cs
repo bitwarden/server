@@ -138,6 +138,8 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
     /// If set to true, disables Secrets Manager ads for users in the organization
     /// </summary>
     public bool UseDisableSmAdsForUsers { get; set; }
+
+    /// <summary>
     /// If set to true, the organization has phishing protection enabled.
     /// </summary>
     public bool UsePhishingBlocker { get; set; }
