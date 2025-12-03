@@ -1,7 +1,13 @@
 <mjml>
   <mj-head>
     <mj-include path="../../components/head.mjml" />
-    <mj-style> </mj-style>
+    <mj-style>
+      .send-bubble {
+        padding-left: 20px;
+        padding-right: 20px;
+        width: 90% !important;
+      }
+    </mj-style>
   </mj-head>
 
   <mj-body css-class="border-fix">
@@ -18,18 +24,17 @@
       <mj-section background-color="#fff">
         <mj-column padding="0px">
           <mj-text> Your verification code is: </mj-text>
-          <mj-text font-size="32px"> <b>{{Token}}</b> </mj-text>
+          <mj-text font-size="32px">
+            <b>{{Token}}</b>
+          </mj-text>
           <mj-spacer height="20px" />
           <mj-text>
-            This code expires in {{Expiry}} minutes. After that, you'll need to
-            verify your email again.
+            This code expires in {{Expiry}} minutes. After that, you'll need
+            to verify your email again.
           </mj-text>
         </mj-column>
       </mj-section>
-      <mj-section
-        background-color="#fff"
-        padding="0px 0px 20px 0px"
-      >
+      <mj-section background-color="#fff" padding="0px 0px 20px 0px">
         <mj-column
           css-class="send-bubble"
           width="90%"
@@ -55,7 +60,7 @@
 
     <!-- Learn More Section -->
     <mj-wrapper padding="5px 20px 10px 20px">
-      <mj-include path="../../components/learn-more-footer.mjml" />
+      <mj-bw-learn-more-footer />
     </mj-wrapper>
 
     <!-- Footer -->

@@ -474,6 +474,7 @@ public class OrganizationsController : Controller
             organization.UseAdminSponsoredFamilies = model.UseAdminSponsoredFamilies;
             organization.UseAutomaticUserConfirmation = model.UseAutomaticUserConfirmation;
             organization.UseDisableSmAdsForUsers = model.UseDisableSmAdsForUsers;
+            organization.UsePhishingBlocker = model.UsePhishingBlocker;
 
             //secrets
             organization.SmSeats = model.SmSeats;

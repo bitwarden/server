@@ -215,6 +215,7 @@ If you believe you need to change the version for a valid reason, please discuss
             UseOrganizationDomains = true,
             UseAdminSponsoredFamilies = false,
             UseDisableSmAdsForUsers = false
+            UsePhishingBlocker = false,
         };
     }
 

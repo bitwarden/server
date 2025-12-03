@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -93,7 +94,18 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     ///
     /// This is an idempotent operation.
     /// </summary>
-    /// <param name="organizationUser">Accepted OrganizationUser to confirm</param>
+    /// <param name="organizationUserToConfirm">Accepted OrganizationUser to confirm</param>
     /// <returns>True, if the user was updated. False, if not performed.</returns>
-    Task<bool> ConfirmOrganizationUserAsync(OrganizationUser organizationUser);
+    Task<bool> ConfirmOrganizationUserAsync(AcceptedOrganizationUserToConfirm organizationUserToConfirm);
+
+    /// <summary>
+    /// Returns the OrganizationUserUserDetails if found.
+    /// </summary>
+    /// <param name="organizationId">The id of the organization</param>
+    /// <param name="userId">The id of the User to fetch</param>
+    /// <returns>OrganizationUserUserDetails of the specified user or null if not found</returns>
+    /// <remarks>
+    /// Similar to GetByOrganizationAsync, but returns the user details.
+    /// </remarks>
+    Task<OrganizationUserUserDetails?> GetDetailsByOrganizationIdUserIdAsync(Guid organizationId, Guid userId);
 }

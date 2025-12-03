@@ -138,6 +138,9 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
     /// If set to true, disables Secrets Manager ads for users in the organization
     /// </summary>
     public bool UseDisableSmAdsForUsers { get; set; }
+    /// If set to true, the organization has phishing protection enabled.
+    /// </summary>
+    public bool UsePhishingBlocker { get; set; }
 
     public void SetNewId()
     {
@@ -340,5 +343,6 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
         UseAdminSponsoredFamilies = license.UseAdminSponsoredFamilies;
         UseDisableSmAdsForUsers = license.UseDisableSmAdsForUsers;
         UseAutomaticUserConfirmation = license.UseAutomaticUserConfirmation;
+        UsePhishingBlocker = license.UsePhishingBlocker;
     }
 }

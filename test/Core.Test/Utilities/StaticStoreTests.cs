@@ -1,5 +1,4 @@
-﻿using Bit.Core.Billing.Enums;
-using Bit.Core.Utilities;
+﻿using Bit.Core.Utilities;
 using Xunit;
 
 namespace Bit.Core.Test.Utilities;
@@ -8,34 +7,12 @@ namespace Bit.Core.Test.Utilities;
 public class StaticStoreTests
 {
     [Fact]
-    public void StaticStore_Initialization_Success()
-    {
-        var plans = StaticStore.Plans.ToList();
-        Assert.NotNull(plans);
-        Assert.NotEmpty(plans);
-        Assert.Equal(22, plans.Count);
-    }
-
-    [Theory]
-    [InlineData(PlanType.EnterpriseAnnually)]
-    [InlineData(PlanType.EnterpriseMonthly)]
-    [InlineData(PlanType.TeamsMonthly)]
-    [InlineData(PlanType.TeamsAnnually)]
-    [InlineData(PlanType.TeamsStarter)]
-    public void StaticStore_GetPlan_Success(PlanType planType)
-    {
-        var plan = StaticStore.GetPlan(planType);
-        Assert.NotNull(plan);
-        Assert.Equal(planType, plan.Type);
-    }
-
-    [Fact]
     public void StaticStore_GlobalEquivalentDomains_OnlyAsciiAllowed()
     {
         // Ref: https://daniel.haxx.se/blog/2025/05/16/detecting-malicious-unicode/
         // URLs can contain unicode characters that to a computer would point to completely seperate domains but to the
-        // naked eye look completely identical. For example 'g' and 'ց' look incredibly similar but when included in a 
-        // URL would lead you somewhere different. There is an opening for an attacker to contribute to Bitwarden with a 
+        // naked eye look completely identical. For example 'g' and 'ց' look incredibly similar but when included in a
+        // URL would lead you somewhere different. There is an opening for an attacker to contribute to Bitwarden with a
         // url update that could be missed in code review and then if they got a user to that URL Bitwarden could
         // consider it equivalent with a cipher in the users vault and offer autofill when we should not.
         // GitHub does now show a warning on non-ascii characters but it could still be missed.

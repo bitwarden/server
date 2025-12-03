@@ -61,6 +61,7 @@ CREATE PROCEDURE [dbo].[Organization_Update]
     @SyncSeats BIT = 0,
     @UseAutomaticUserConfirmation BIT = 0,
     @UseDisableSmAdsForUsers BIT = 0
+    @UsePhishingBlocker BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -129,6 +130,7 @@ BEGIN
         [SyncSeats] = @SyncSeats,
         [UseAutomaticUserConfirmation] = @UseAutomaticUserConfirmation,
         [UseDisableSmAdsForUsers] = @UseDisableSmAdsForUsers
+        [UsePhishingBlocker] = @UsePhishingBlocker
     WHERE
         [Id] = @Id;
 END

@@ -242,6 +242,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool>("UsePasswordManager")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("UsePhishingBlocker")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("UsePolicies")
                         .HasColumnType("INTEGER");
 

@@ -30,6 +30,7 @@ BEGIN
         [UseAdminSponsoredFamilies],
         [UseAutomaticUserConfirmation],
         [UseDisableSmAdsForUsers]
+        [UsePhishingBlocker]
     FROM
         [dbo].[Organization]
 END

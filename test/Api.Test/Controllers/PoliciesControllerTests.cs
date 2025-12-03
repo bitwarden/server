@@ -487,14 +487,14 @@ public class PoliciesControllerTests
             .Returns(policy);
 
         // Act
-        var result = await sutProvider.Sut.PutVNext(orgId, model);
+        var result = await sutProvider.Sut.PutVNext(orgId, policy.Type, model);
 
         // Assert
         await sutProvider.GetDependency<IVNextSavePolicyCommand>()
             .Received(1)
             .SaveAsync(Arg.Is<SavePolicyModel>(
                 m => m.PolicyUpdate.OrganizationId == orgId &&
-                     m.PolicyUpdate.Type == model.Policy.Type &&
+                     m.PolicyUpdate.Type == policy.Type &&
                      m.PolicyUpdate.Enabled == model.Policy.Enabled &&
                      m.PerformedBy.UserId == userId &&
                      m.PerformedBy.IsOrganizationOwnerOrProvider == true));
@@ -534,14 +534,14 @@ public class PoliciesControllerTests
             .Returns(policy);
 
         // Act
-        var result = await sutProvider.Sut.PutVNext(orgId, model);
+        var result = await sutProvider.Sut.PutVNext(orgId, policy.Type, model);
 
         // Assert
         await sutProvider.GetDependency<ISavePolicyCommand>()
             .Received(1)
             .VNextSaveAsync(Arg.Is<SavePolicyModel>(
                 m => m.PolicyUpdate.OrganizationId == orgId &&
-                     m.PolicyUpdate.Type == model.Policy.Type &&
+                     m.PolicyUpdate.Type == policy.Type &&
                      m.PolicyUpdate.Enabled == model.Policy.Enabled &&
                      m.PerformedBy.UserId == userId &&
                      m.PerformedBy.IsOrganizationOwnerOrProvider == true));

@@ -247,6 +247,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("UsePasswordManager")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<bool>("UsePhishingBlocker")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<bool>("UsePolicies")
                         .HasColumnType("tinyint(1)");
 

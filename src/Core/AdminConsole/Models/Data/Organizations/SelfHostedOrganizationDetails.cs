@@ -155,6 +155,7 @@ public class SelfHostedOrganizationDetails : Organization
             UseRiskInsights = UseRiskInsights,
             UseAdminSponsoredFamilies = UseAdminSponsoredFamilies,
             UseDisableSmAdsForUsers = UseDisableSmAdsForUsers,
+            UsePhishingBlocker = UsePhishingBlocker,
         };
     }
 }
