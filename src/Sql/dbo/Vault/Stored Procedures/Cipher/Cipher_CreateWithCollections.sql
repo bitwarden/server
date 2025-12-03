@@ -13,7 +13,7 @@
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
     @ArchivedDate DATETIME2(7) = NULL,
-    @Archives NVARCHAR(MAX) = NULL,
+    @Archives NVARCHAR(MAX),
     @CollectionIds AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN

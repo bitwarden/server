@@ -198,7 +198,7 @@ BEGIN
         [Archives] = JSON_MODIFY(
             COALESCE([Archives], N'{}'),
             '$."' + CONVERT(NVARCHAR(36), @UserId) + '"',
-            @UtcNow
+            CONVERT(NVARCHAR(30), @UtcNow, 127)
         ),
         [RevisionDate] = @UtcNow
     WHERE
@@ -392,7 +392,13 @@ BEGIN
 END
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[Cipher_CreateWithCollections]
+IF OBJECT_ID('[dbo].[Cipher_CreateWithCollections]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Cipher_CreateWithCollections];
+END
+GO
+
+CREATE PROCEDURE [dbo].[Cipher_CreateWithCollections]
     @Id UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
@@ -407,7 +413,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Cipher_CreateWithCollections]
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
     @ArchivedDate DATETIME2(7) = NULL,
-    @Archives NVARCHAR(MAX) = NULL,
+    @Archives NVARCHAR(MAX),
     @CollectionIds AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN
