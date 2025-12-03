@@ -36,7 +36,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
 
         var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: seats);
 
-        var orgUserIds = db.OrganizationUsers.Select(ou => ou.Id).ToList();
+        var orgUserIds = db.OrganizationUsers.Where(ou => ou.OrganizationId == orgId).Select(ou => ou.Id).ToList();
         collectionsSeeder.AddToOrganization(orgId, 10, orgUserIds);
         groupsSeeder.AddToOrganization(orgId, 5, orgUserIds);
 
@@ -71,7 +71,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var domain = OrganizationTestHelpers.GenerateRandomDomain();
         var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: seats);
 
-        var orgUserIds = db.OrganizationUsers.Select(ou => ou.Id).ToList();
+        var orgUserIds = db.OrganizationUsers.Where(ou => ou.OrganizationId == orgId).Select(ou => ou.Id).ToList();
         collectionsSeeder.AddToOrganization(orgId, 10, orgUserIds);
         groupsSeeder.AddToOrganization(orgId, 5, orgUserIds);
 
@@ -104,7 +104,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var domain = OrganizationTestHelpers.GenerateRandomDomain();
         var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: 1);
 
-        var orgUserId = db.OrganizationUsers.Select(ou => ou.Id).FirstOrDefault();
+        var orgUserId = db.OrganizationUsers.Where(ou => ou.OrganizationId == orgId).Select(ou => ou.Id).FirstOrDefault();
         groupsSeeder.AddToOrganization(orgId, 2, [orgUserId]);
 
         await PerformanceTestHelpers.AuthenticateClientAsync(factory, client, $"owner@{domain}");
@@ -135,7 +135,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var domain = OrganizationTestHelpers.GenerateRandomDomain();
         var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: 1);
 
-        var orgUserId = db.OrganizationUsers.Select(ou => ou.Id).FirstOrDefault();
+        var orgUserId = db.OrganizationUsers.Where(ou => ou.OrganizationId == orgId).Select(ou => ou.Id).FirstOrDefault();
 
         await PerformanceTestHelpers.AuthenticateClientAsync(factory, client, $"owner@{domain}");
 
