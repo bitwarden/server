@@ -1,5 +1,4 @@
-﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Models.Data;
+﻿using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v2;
 using Bit.Core.Entities;
@@ -21,7 +20,6 @@ public class RevokeOrganizationUsersValidatorTests
         SutProvider<RevokeOrganizationUsersValidator> sutProvider,
         Guid organizationId,
         Guid actingUserId,
-        Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser1,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser2)
     {
@@ -34,8 +32,7 @@ public class RevokeOrganizationUsersValidatorTests
         var request = CreateValidationRequest(
             organizationId,
             [orgUser1, orgUser2],
-            actingUser,
-            organization);
+            actingUser);
 
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
@@ -55,7 +52,6 @@ public class RevokeOrganizationUsersValidatorTests
         SutProvider<RevokeOrganizationUsersValidator> sutProvider,
         Guid organizationId,
         Guid actingUserId,
-        Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Revoked, OrganizationUserType.User)] OrganizationUser revokedUser)
     {
         // Arrange
@@ -66,8 +62,7 @@ public class RevokeOrganizationUsersValidatorTests
         var request = CreateValidationRequest(
             organizationId,
             [revokedUser],
-            actingUser,
-            organization);
+            actingUser);
 
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
@@ -88,7 +83,6 @@ public class RevokeOrganizationUsersValidatorTests
         SutProvider<RevokeOrganizationUsersValidator> sutProvider,
         Guid organizationId,
         Guid actingUserId,
-        Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
     {
         // Arrange
@@ -99,8 +93,7 @@ public class RevokeOrganizationUsersValidatorTests
         var request = CreateValidationRequest(
             organizationId,
             [orgUser],
-            actingUser,
-            organization);
+            actingUser);
 
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
@@ -121,7 +114,6 @@ public class RevokeOrganizationUsersValidatorTests
         SutProvider<RevokeOrganizationUsersValidator> sutProvider,
         Guid organizationId,
         Guid actingUserId,
-        Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser ownerUser)
     {
         // Arrange
@@ -132,8 +124,7 @@ public class RevokeOrganizationUsersValidatorTests
         var request = CreateValidationRequest(
             organizationId,
             [ownerUser],
-            actingUser,
-            organization);
+            actingUser);
 
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
@@ -154,7 +145,6 @@ public class RevokeOrganizationUsersValidatorTests
         SutProvider<RevokeOrganizationUsersValidator> sutProvider,
         Guid organizationId,
         Guid actingUserId,
-        Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser ownerUser)
     {
         // Arrange
@@ -165,8 +155,7 @@ public class RevokeOrganizationUsersValidatorTests
         var request = CreateValidationRequest(
             organizationId,
             [ownerUser],
-            actingUser,
-            organization);
+            actingUser);
 
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
@@ -186,7 +175,6 @@ public class RevokeOrganizationUsersValidatorTests
         SutProvider<RevokeOrganizationUsersValidator> sutProvider,
         Guid organizationId,
         Guid actingUserId,
-        Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser validUser,
         [OrganizationUser(OrganizationUserStatusType.Revoked, OrganizationUserType.User)] OrganizationUser revokedUser)
     {
@@ -199,8 +187,7 @@ public class RevokeOrganizationUsersValidatorTests
         var request = CreateValidationRequest(
             organizationId,
             [validUser, revokedUser],
-            actingUser,
-            organization);
+            actingUser);
 
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
@@ -225,7 +212,6 @@ public class RevokeOrganizationUsersValidatorTests
     public async Task ValidateAsync_WithSystemUser_DoesNotRequireActingUserId(
         SutProvider<RevokeOrganizationUsersValidator> sutProvider,
         Guid organizationId,
-        Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
     {
         // Arrange
@@ -236,8 +222,7 @@ public class RevokeOrganizationUsersValidatorTests
         var request = CreateValidationRequest(
             organizationId,
             [orgUser],
-            actingUser,
-            organization);
+            actingUser);
 
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
@@ -257,7 +242,6 @@ public class RevokeOrganizationUsersValidatorTests
         SutProvider<RevokeOrganizationUsersValidator> sutProvider,
         Guid organizationId,
         Guid actingUserId,
-        Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser lastOwner)
     {
         // Arrange
@@ -268,8 +252,7 @@ public class RevokeOrganizationUsersValidatorTests
         var request = CreateValidationRequest(
             organizationId,
             [lastOwner],
-            actingUser,
-            organization);
+            actingUser);
 
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
@@ -290,7 +273,6 @@ public class RevokeOrganizationUsersValidatorTests
         SutProvider<RevokeOrganizationUsersValidator> sutProvider,
         Guid organizationId,
         Guid actingUserId,
-        Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Revoked, OrganizationUserType.User)] OrganizationUser revokedUser,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser ownerUser)
     {
@@ -303,8 +285,7 @@ public class RevokeOrganizationUsersValidatorTests
         var request = CreateValidationRequest(
             organizationId,
             [revokedUser, ownerUser],
-            actingUser,
-            organization);
+            actingUser);
 
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
@@ -332,16 +313,13 @@ public class RevokeOrganizationUsersValidatorTests
     private static RevokeOrganizationUsersValidationRequest CreateValidationRequest(
         Guid organizationId,
         ICollection<OrganizationUser> organizationUsers,
-        IActingUser actingUser,
-        Organization organization)
+        IActingUser actingUser)
     {
-        return new RevokeOrganizationUsersValidationRequest
-        {
-            OrganizationId = organizationId,
-            OrganizationUserIdsToRevoke = organizationUsers.Select(u => u.Id).ToList(),
-            PerformedBy = actingUser,
-            OrganizationUsersToRevoke = organizationUsers,
-            Organization = organization
-        };
+        return new RevokeOrganizationUsersValidationRequest(
+            organizationId,
+            organizationUsers.Select(u => u.Id).ToList(),
+            actingUser,
+            organizationUsers
+        );
     }
 }
