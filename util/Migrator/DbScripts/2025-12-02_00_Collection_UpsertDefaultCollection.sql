@@ -2,7 +2,7 @@
 -- This procedure prevents duplicate "My Items" collections for users by checking
 -- if a default collection already exists before attempting to create one.
 
-CREATE PROCEDURE [dbo].[Collection_UpsertDefaultCollection]
+CREATE OR ALTER PROCEDURE [dbo].[Collection_UpsertDefaultCollection]
     @CollectionId UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
     @OrganizationUserId UNIQUEIDENTIFIER,
