@@ -34,6 +34,7 @@ public class ClientVersionGateTests : IClassFixture<IdentityApplicationFactory>
         var db = localFactory.GetDatabaseContext();
         var efUser = await db.Users.FirstAsync(u => u.Email == user.Email);
         efUser.PrivateKey = TestEncryptionConstants.V2PrivateKey;
+        efUser.SecurityVersion = 2;
         db.UserSignatureKeyPairs.Add(new Bit.Infrastructure.EntityFramework.Models.UserSignatureKeyPair
         {
             Id = Core.Utilities.CoreHelpers.GenerateComb(),
@@ -82,6 +83,7 @@ public class ClientVersionGateTests : IClassFixture<IdentityApplicationFactory>
         var db = localFactory.GetDatabaseContext();
         var efUser = await db.Users.FirstAsync(u => u.Email == user.Email);
         efUser.PrivateKey = TestEncryptionConstants.V2PrivateKey;
+        efUser.SecurityVersion = 2;
         db.UserSignatureKeyPairs.Add(new Bit.Infrastructure.EntityFramework.Models.UserSignatureKeyPair
         {
             Id = Core.Utilities.CoreHelpers.GenerateComb(),
