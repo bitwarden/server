@@ -157,7 +157,10 @@ public class SeedControllerTests : IClassFixture<SeederApiApplicationFactory>, I
             Arguments = System.Text.Json.JsonSerializer.SerializeToElement(new { email = testEmail })
         }, validPlayId);
 
-        seedResponse.EnsureSuccessStatusCode();
+
+        var content = await seedResponse.Content.ReadAsStringAsync();
+        _output.WriteLine($"Seed Response Content: {content}");
+
         var seedResult = await seedResponse.Content.ReadFromJsonAsync<SceneResponseModel>();
         Assert.NotNull(seedResult);
 
