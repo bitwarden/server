@@ -55,6 +55,9 @@ src/Core/IdentityServer @bitwarden/team-auth-dev
 **/Dirt @bitwarden/team-data-insights-and-reporting-dev
 src/Events @bitwarden/team-data-insights-and-reporting-dev
 src/EventsProcessor @bitwarden/team-data-insights-and-reporting-dev
+test/Events.Test @bitwarden/team-data-insights-and-reporting-dev
+test/Events.IntegrationTest @bitwarden/team-data-insights-and-reporting-dev
+test/EventsProcessor.Test @bitwarden/team-data-insights-and-reporting-dev
 
 # Vault team
 **/Vault @bitwarden/team-vault-dev
