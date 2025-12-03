@@ -39,7 +39,7 @@ public class SetAccountKeysForUserCommand : ISetAccountKeysForUserCommand
             user.SignedPublicKey = accountKeysData.PublicKeyEncryptionKeyPairData.SignedPublicKey;
             user.SecurityState = accountKeysData.SecurityStateData.SecurityState;
             user.SecurityVersion = accountKeysData.SecurityStateData.SecurityVersion;
-            await _userSignatureKeyPairRepository.UpsertAsync(new UserSignatureKeyPair
+            await _userSignatureKeyPairRepository.CreateAsync(new UserSignatureKeyPair
             {
                 Id = CoreHelpers.GenerateComb(),
                 UserId = userId,
