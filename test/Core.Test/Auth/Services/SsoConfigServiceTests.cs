@@ -2,7 +2,6 @@
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
@@ -341,26 +340,26 @@ public class SsoConfigServiceTests
 
         await sutProvider.Sut.SaveAsync(ssoConfig, organization);
 
-        await sutProvider.GetDependency<ISavePolicyCommand>().Received(1)
+        await sutProvider.GetDependency<IVNextSavePolicyCommand>().Received(1)
             .SaveAsync(
-                Arg.Is<PolicyUpdate>(t => t.Type == PolicyType.SingleOrg &&
-                    t.OrganizationId == organization.Id &&
-                    t.Enabled)
+                Arg.Is<SavePolicyModel>(t => t.PolicyUpdate.Type == PolicyType.SingleOrg &&
+                                             t.PolicyUpdate.OrganizationId == organization.Id &&
+                                             t.PolicyUpdate.Enabled)
             );
 
-        await sutProvider.GetDependency<ISavePolicyCommand>().Received(1)
+        await sutProvider.GetDependency<IVNextSavePolicyCommand>().Received(1)
             .SaveAsync(
-                Arg.Is<PolicyUpdate>(t => t.Type == PolicyType.ResetPassword &&
-                    t.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled &&
-                    t.OrganizationId == organization.Id &&
-                    t.Enabled)
+                Arg.Is<SavePolicyModel>(t => t.PolicyUpdate.Type == PolicyType.ResetPassword &&
+                                             t.PolicyUpdate.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled &&
+                                             t.PolicyUpdate.OrganizationId == organization.Id &&
+                                             t.PolicyUpdate.Enabled)
             );
 
-        await sutProvider.GetDependency<ISavePolicyCommand>().Received(1)
+        await sutProvider.GetDependency<IVNextSavePolicyCommand>().Received(1)
             .SaveAsync(
-                Arg.Is<PolicyUpdate>(t => t.Type == PolicyType.RequireSso &&
-                    t.OrganizationId == organization.Id &&
-                    t.Enabled)
+                Arg.Is<SavePolicyModel>(t => t.PolicyUpdate.Type == PolicyType.RequireSso &&
+                                             t.PolicyUpdate.OrganizationId == organization.Id &&
+                                             t.PolicyUpdate.Enabled)
             );
 
         await sutProvider.GetDependency<ISsoConfigRepository>().ReceivedWithAnyArgs()
