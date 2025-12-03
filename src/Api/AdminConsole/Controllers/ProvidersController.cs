@@ -74,12 +74,11 @@ public class ProvidersController : Controller
         // Capture original values before modifications for Stripe sync
         var originalName = provider.Name;
         var originalBillingEmail = provider.BillingEmail;
-        var hasGatewayCustomerId = !string.IsNullOrWhiteSpace(provider.GatewayCustomerId);
 
         await _providerService.UpdateAsync(model.ToProvider(provider, _globalSettings));
 
         // Sync name/email changes to Stripe
-        if (hasGatewayCustomerId &&
+        if (!string.IsNullOrEmpty(provider.GatewayCustomerId) &&
             (originalName != provider.Name || originalBillingEmail != provider.BillingEmail))
         {
             try
