@@ -46,4 +46,36 @@ public class ArchiveCiphersCommandTest
         await sutProvider.GetDependency<IPushNotificationService>().Received(pushNotificationsCalls)
             .PushSyncCiphersAsync(user.Id);
     }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ArchiveAsync_SetsArchivedDateOnReturnedCiphers(
+        SutProvider<ArchiveCiphersCommand> sutProvider,
+        CipherDetails cipher,
+        User user)
+    {
+        // Arrange: make it archivable
+        cipher.Edit = true;
+        cipher.OrganizationId = null;
+        cipher.ArchivedDate = null;
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(user.Id)
+            .Returns(new List<CipherDetails> { cipher });
+
+        var repoRevisionDate = DateTime.UtcNow;
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .ArchiveAsync(Arg.Any<IEnumerable<Guid>>(), user.Id)
+            .Returns(repoRevisionDate);
+
+        // Act
+        var result = await sutProvider.Sut.ArchiveManyAsync(new[] { cipher.Id }, user.Id);
+
+        // Assert
+        var archivedCipher = Assert.Single(result);
+        Assert.Equal(repoRevisionDate, archivedCipher.RevisionDate);
+        Assert.Equal(repoRevisionDate, archivedCipher.ArchivedDate);
+    }
+
 }

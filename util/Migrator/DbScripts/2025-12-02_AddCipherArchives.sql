@@ -363,7 +363,7 @@ BEGIN
     SET NOCOUNT ON
 
     EXEC [dbo].[Cipher_Create] @Id, @UserId, @OrganizationId, @Type, @Data, @Favorites, @Folders,
-        @Attachments, @CreationDate, @RevisionDate, @DeletedDate, @Reprompt, @Key, @ArchivedDate
+        @Attachments, @CreationDate, @RevisionDate, @DeletedDate, @Reprompt, @Key, @ArchivedDate, @Archives
 
     DECLARE @UpdateCollectionsSuccess INT
     EXEC @UpdateCollectionsSuccess = [dbo].[Cipher_UpdateCollections] @Id, @UserId, @OrganizationId, @CollectionIds
