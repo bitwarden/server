@@ -246,6 +246,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("UsePasswordManager")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("UsePhishingBlocker")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("UsePolicies")
                         .HasColumnType("boolean");
 

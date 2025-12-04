@@ -9,7 +9,9 @@ using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Entities;
+using Bit.Core.Models.Mail.Billing.Renewal.Families2019Renewal;
 using Bit.Core.Models.Mail.Billing.Renewal.Families2020Renewal;
+using Bit.Core.Models.Mail.Billing.Renewal.Premium;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
@@ -284,7 +286,7 @@ public class UpcomingInvoiceHandler(
         {
             await organizationRepository.ReplaceAsync(organization);
             await stripeFacade.UpdateSubscription(subscription.Id, options);
-            await SendFamiliesRenewalEmailAsync(organization, familiesPlan);
+            await SendFamiliesRenewalEmailAsync(organization, familiesPlan, plan);
             return true;
         }
         catch (Exception exception)
@@ -546,7 +548,18 @@ public class UpcomingInvoiceHandler(
 
     private async Task SendFamiliesRenewalEmailAsync(
         Organization organization,
-        Plan familiesPlan)
+        Plan familiesPlan,
+        Plan planBeforeAlignment)
+    {
+        await (planBeforeAlignment switch
+        {
+            { Type: PlanType.FamiliesAnnually2025 } => SendFamilies2020RenewalEmailAsync(organization, familiesPlan),
+            { Type: PlanType.FamiliesAnnually2019 } => SendFamilies2019RenewalEmailAsync(organization, familiesPlan),
+            _ => throw new InvalidOperationException("Unsupported families plan in SendFamiliesRenewalEmailAsync().")
+        });
+    }
+
+    private async Task SendFamilies2020RenewalEmailAsync(Organization organization, Plan familiesPlan)
     {
         var email = new Families2020RenewalMail
         {
@@ -560,18 +573,61 @@ public class UpcomingInvoiceHandler(
         await mailer.SendEmail(email);
     }
 
+    private async Task SendFamilies2019RenewalEmailAsync(Organization organization, Plan familiesPlan)
+    {
+        var coupon = await stripeFacade.GetCoupon(CouponIDs.Milestone3SubscriptionDiscount);
+        if (coupon == null)
+        {
+            throw new InvalidOperationException($"Coupon for sending families 2019 email id:{CouponIDs.Milestone3SubscriptionDiscount} not found");
+        }
+
+        if (coupon.PercentOff == null)
+        {
+            throw new InvalidOperationException($"coupon.PercentOff for sending families 2019 email id:{CouponIDs.Milestone3SubscriptionDiscount} is null");
+        }
+
+        var discountedAnnualRenewalPrice = familiesPlan.PasswordManager.BasePrice * (100 - coupon.PercentOff.Value) / 100;
+
+        var email = new Families2019RenewalMail
+        {
+            ToEmails = [organization.BillingEmail],
+            View = new Families2019RenewalMailView
+            {
+                BaseMonthlyRenewalPrice = (familiesPlan.PasswordManager.BasePrice / 12).ToString("C", new CultureInfo("en-US")),
+                BaseAnnualRenewalPrice = familiesPlan.PasswordManager.BasePrice.ToString("C", new CultureInfo("en-US")),
+                DiscountAmount = $"{coupon.PercentOff}%",
+                DiscountedAnnualRenewalPrice = discountedAnnualRenewalPrice.ToString("C", new CultureInfo("en-US"))
+            }
+        };
+
+        await mailer.SendEmail(email);
+    }
+
     private async Task SendPremiumRenewalEmailAsync(
         User user,
         PremiumPlan premiumPlan)
     {
-        /* TODO: Replace with proper premium renewal email template once finalized.
-           Using Families2020RenewalMail as a temporary stop-gap. */
-        var email = new Families2020RenewalMail
+        var coupon = await stripeFacade.GetCoupon(CouponIDs.Milestone2SubscriptionDiscount);
+        if (coupon == null)
+        {
+            throw new InvalidOperationException($"Coupon for sending premium renewal email id:{CouponIDs.Milestone2SubscriptionDiscount} not found");
+        }
+
+        if (coupon.PercentOff == null)
+        {
+            throw new InvalidOperationException($"coupon.PercentOff for sending premium renewal email id:{CouponIDs.Milestone2SubscriptionDiscount} is null");
+        }
+
+        var discountedAnnualRenewalPrice = premiumPlan.Seat.Price * (100 - coupon.PercentOff.Value) / 100;
+
+        var email = new PremiumRenewalMail
         {
             ToEmails = [user.Email],
-            View = new Families2020RenewalMailView
+            View = new PremiumRenewalMailView
             {
-                MonthlyRenewalPrice = (premiumPlan.Seat.Price / 12).ToString("C", new CultureInfo("en-US"))
+                BaseMonthlyRenewalPrice = (premiumPlan.Seat.Price / 12).ToString("C", new CultureInfo("en-US")),
+                DiscountAmount = $"{coupon.PercentOff}%",
+                DiscountedMonthlyRenewalPrice = (discountedAnnualRenewalPrice / 12).ToString("C", new CultureInfo("en-US"))
             }
         };
 

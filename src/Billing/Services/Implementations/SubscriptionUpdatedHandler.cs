@@ -1,7 +1,5 @@
-﻿using System.Globalization;
-using Bit.Billing.Constants;
+﻿using Bit.Billing.Constants;
 using Bit.Billing.Jobs;
-using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
@@ -147,11 +145,6 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 }
             case StripeSubscriptionStatus.Active when providerId.HasValue:
                 {
-                    var providerPortalTakeover = _featureService.IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover);
-                    if (!providerPortalTakeover)
-                    {
-                        break;
-                    }
                     var provider = await _providerRepository.GetByIdAsync(providerId.Value);
                     if (provider != null)
                     {
@@ -341,13 +334,6 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         Event parsedEvent,
         Subscription currentSubscription)
     {
-        var providerPortalTakeover = _featureService.IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover);
-
-        if (!providerPortalTakeover)
-        {
-            return;
-        }
-
         var provider = await _providerRepository.GetByIdAsync(providerId);
         if (provider == null)
         {
@@ -363,22 +349,17 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             {
                 var previousSubscription = parsedEvent.Data.PreviousAttributes.ToObject<Subscription>() as Subscription;
 
-                var updateIsSubscriptionGoingUnpaid = previousSubscription is
-                {
-                    Status:
+                if (previousSubscription is
+                    {
+                        Status:
                         StripeSubscriptionStatus.Trialing or
                         StripeSubscriptionStatus.Active or
                         StripeSubscriptionStatus.PastDue
-                } && currentSubscription is
-                {
-                    Status: StripeSubscriptionStatus.Unpaid,
-                    LatestInvoice.BillingReason: "subscription_cycle" or "subscription_create"
-                };
-
-                var updateIsManualSuspensionViaMetadata = CheckForManualSuspensionViaMetadata(
-                    previousSubscription, currentSubscription);
-
-                if (updateIsSubscriptionGoingUnpaid || updateIsManualSuspensionViaMetadata)
+                    } && currentSubscription is
+                    {
+                        Status: StripeSubscriptionStatus.Unpaid,
+                        LatestInvoice.BillingReason: "subscription_cycle" or "subscription_create"
+                    })
                 {
                     if (currentSubscription.TestClock != null)
                     {
@@ -388,14 +369,6 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                     var now = currentSubscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
 
                     var subscriptionUpdateOptions = new SubscriptionUpdateOptions { CancelAt = now.AddDays(7) };
-
-                    if (updateIsManualSuspensionViaMetadata)
-                    {
-                        subscriptionUpdateOptions.Metadata = new Dictionary<string, string>
-                        {
-                            ["suspended_provider_via_webhook_at"] = DateTime.UtcNow.ToString(CultureInfo.InvariantCulture)
-                        };
-                    }
 
                     await _stripeFacade.UpdateSubscription(currentSubscription.Id, subscriptionUpdateOptions);
                 }
@@ -418,38 +391,5 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 throw new Exception("Stripe Test Clock encountered an internal failure");
             }
         }
-    }
-
-    private static bool CheckForManualSuspensionViaMetadata(
-        Subscription? previousSubscription,
-        Subscription currentSubscription)
-    {
-        /*
-         * When metadata on a subscription is updated, we'll receive an event that has:
-         * Previous Metadata: { newlyAddedKey: null }
-         * Current Metadata: { newlyAddedKey: newlyAddedValue }
-         *
-         * As such, our check for a manual suspension must ensure that the 'previous_attributes' does contain the
-         * 'metadata' property, but also that the "suspend_provider" key in that metadata is set to null.
-         *
-         * If we don't do this and instead do a null coalescing check on 'previous_attributes?.metadata?.TryGetValue',
-         * we'll end up marking an event where 'previous_attributes.metadata' = null (which could be any subscription update
-         * that does not update the metadata) the same as a manual suspension.
-         */
-        const string key = "suspend_provider";
-
-        if (previousSubscription is not { Metadata: not null } ||
-            !previousSubscription.Metadata.TryGetValue(key, out var previousValue))
-        {
-            return false;
-        }
-
-        if (previousValue == null)
-        {
-            return !string.IsNullOrEmpty(
-                currentSubscription.Metadata.TryGetValue(key, out var currentValue) ? currentValue : null);
-        }
-
-        return false;
     }
 }
