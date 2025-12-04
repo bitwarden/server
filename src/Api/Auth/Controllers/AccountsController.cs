@@ -446,14 +446,14 @@ public class AccountsController : Controller
 
         if (model.AccountKeys != null)
         {
-            await _setAccountKeysForUserCommand.SetAccountKeysForUserAsync(user.Id, model.AccountKeys);
+            await _setAccountKeysForUserCommand.SetAccountKeysForUserAsync(user, model.AccountKeys);
         }
         else
         {
             await _userService.SaveUserAsync(model.ToUser(user));
         }
 
-        return new KeysResponseModel(user);
+        return new KeysResponseModel(model.AccountKeys.ToAccountKeysData(), user.Key);
     }
 
     [HttpGet("keys")]
@@ -465,7 +465,8 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        return new KeysResponseModel(user);
+        var accountKeys = await _userAccountKeysQuery.Run(user);
+        return new KeysResponseModel(accountKeys, user.Key);
     }
 
     [HttpDelete]
