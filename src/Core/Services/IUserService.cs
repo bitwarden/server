@@ -4,7 +4,6 @@
 using System.Security.Claims;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Enums;
-using Bit.Core.Auth.Models;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -63,8 +62,8 @@ public interface IUserService
     /// </summary>
     /// <param name="user">user being acted on</param>
     /// <returns>true if they can access premium; false otherwise.</returns>
-    Task<bool> CanAccessPremium(ITwoFactorProvidersUser user);
-    Task<bool> HasPremiumFromOrganization(ITwoFactorProvidersUser user);
+    Task<bool> CanAccessPremium(User user);
+    Task<bool> HasPremiumFromOrganization(User user);
     Task<string> GenerateSignInTokenAsync(User user, string purpose);
 
     Task<IdentityResult> UpdatePasswordHash(User user, string newPassword,
