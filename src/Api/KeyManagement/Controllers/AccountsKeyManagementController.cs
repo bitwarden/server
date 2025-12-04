@@ -80,7 +80,7 @@ public class AccountsKeyManagementController : Controller
     [HttpPost("key-management/regenerate-keys")]
     public async Task RegenerateKeysAsync([FromBody] KeyRegenerationRequestModel request)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.PrivateKeyRegeneration))
+        if (!_featureService.IsEnabled(FeatureFlagKeys.PrivateKeyRegeneration) && !_featureService.IsEnabled(FeatureFlagKeys.DataRecoveryTool))
         {
             throw new NotFoundException();
         }
