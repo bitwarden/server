@@ -10,7 +10,7 @@ using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
-using Bit.Core.KeyManagement.Commands;
+using Bit.Core.KeyManagement.Commands.Interfaces;
 using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.KeyManagement.Models.Data;
@@ -40,7 +40,7 @@ public class AccountsControllerTests : IDisposable
     private readonly IUserAccountKeysQuery _userAccountKeysQuery;
     private readonly ITwoFactorEmailService _twoFactorEmailService;
     private readonly IChangeKdfCommand _changeKdfCommand;
-    private readonly SetAccountKeysForUserCommand _setAccountKeysForUserCommand;
+    private readonly ISetAccountKeysForUserCommand _setAccountKeysForUserCommand;
 
     public AccountsControllerTests()
     {
@@ -56,7 +56,7 @@ public class AccountsControllerTests : IDisposable
         _userAccountKeysQuery = Substitute.For<IUserAccountKeysQuery>();
         _twoFactorEmailService = Substitute.For<ITwoFactorEmailService>();
         _changeKdfCommand = Substitute.For<IChangeKdfCommand>();
-        _setAccountKeysForUserCommand = Substitute.For<SetAccountKeysForUserCommand>();
+        _setAccountKeysForUserCommand = Substitute.For<ISetAccountKeysForUserCommand>();
 
         _sut = new AccountsController(
             _organizationService,
