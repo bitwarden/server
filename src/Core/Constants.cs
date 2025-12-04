@@ -144,6 +144,7 @@ public static class FeatureFlagKeys
     public const string BlockClaimedDomainAccountCreation = "pm-28297-block-uninvited-claimed-domain-registration";
     public const string PolicyValidatorsRefactor = "pm-26423-refactor-policy-side-effects";
     public const string IncreaseBulkReinviteLimitForCloud = "pm-28251-increase-bulk-reinvite-limit-for-cloud";
+    public const string PremiumAccessCacheCheck = "pm-21411-premium-access-cache-check";
 
     /* Architecture */
     public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";
