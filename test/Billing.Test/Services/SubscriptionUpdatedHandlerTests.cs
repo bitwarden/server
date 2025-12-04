@@ -9,7 +9,6 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
-using Bit.Core.Billing.Pricing.Premium;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
