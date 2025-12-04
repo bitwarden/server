@@ -8,6 +8,6 @@ BEGIN
         [pu].*
     FROM
         [dbo].[ProviderUserView] AS [pu]
-            JOIN
+    INNER JOIN
         @UserIds [u] ON [u].[Id] = [pu].[UserId]
 END
