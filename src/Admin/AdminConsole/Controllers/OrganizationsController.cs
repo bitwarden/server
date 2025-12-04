@@ -293,8 +293,7 @@ public class OrganizationsController : Controller
         await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
 
         // Sync name/email changes to Stripe
-        if (!string.IsNullOrEmpty(organization.GatewayCustomerId) &&
-            (existingOrganizationData.Name != organization.Name || existingOrganizationData.BillingEmail != organization.BillingEmail))
+        if (existingOrganizationData.Name != organization.Name || existingOrganizationData.BillingEmail != organization.BillingEmail)
         {
             try
             {

@@ -78,8 +78,7 @@ public class ProvidersController : Controller
         await _providerService.UpdateAsync(model.ToProvider(provider, _globalSettings));
 
         // Sync name/email changes to Stripe
-        if (!string.IsNullOrEmpty(provider.GatewayCustomerId) &&
-            (originalName != provider.Name || originalBillingEmail != provider.BillingEmail))
+        if (originalName != provider.Name || originalBillingEmail != provider.BillingEmail)
         {
             try
             {
