@@ -30,9 +30,12 @@ public class ClientVersionValidator(
 
     public async Task<bool> ValidateAsync(User? user, CustomValidatorRequestContext requestContext)
     {
+        // Do this nullish check because the base request validator currently is not
+        // strict null checking. Once that gets fixed then we can see about making
+        // the user not nullish checked. If they are null then the validator should fail.
         if (user == null)
         {
-            return true;
+            return false;
         }
 
         Version? clientVersion = currentContext.ClientVersion;
