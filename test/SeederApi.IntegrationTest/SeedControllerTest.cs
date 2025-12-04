@@ -2,7 +2,6 @@
 using Bit.SeederApi.Models.Request;
 using Bit.SeederApi.Models.Response;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Bit.SeederApi.IntegrationTest;
 
@@ -10,13 +9,11 @@ public class SeedControllerTests : IClassFixture<SeederApiApplicationFactory>, I
 {
     private readonly HttpClient _client;
     private readonly SeederApiApplicationFactory _factory;
-    private readonly ITestOutputHelper _output;
 
-    public SeedControllerTests(SeederApiApplicationFactory factory, ITestOutputHelper output)
+    public SeedControllerTests(SeederApiApplicationFactory factory)
     {
         _factory = factory;
         _client = _factory.CreateClient();
-        _output = output;
     }
 
     public Task InitializeAsync()
@@ -157,10 +154,7 @@ public class SeedControllerTests : IClassFixture<SeederApiApplicationFactory>, I
             Arguments = System.Text.Json.JsonSerializer.SerializeToElement(new { email = testEmail })
         }, validPlayId);
 
-
-        var content = await seedResponse.Content.ReadAsStringAsync();
-        _output.WriteLine($"Seed Response Content: {content}");
-
+        seedResponse.EnsureSuccessStatusCode();
         var seedResult = await seedResponse.Content.ReadFromJsonAsync<SceneResponseModel>();
         Assert.NotNull(seedResult);
 
@@ -172,10 +166,7 @@ public class SeedControllerTests : IClassFixture<SeederApiApplicationFactory>, I
         };
         var deleteResponse = await _client.SendAsync(request);
 
-        var deleteContent = await deleteResponse.Content.ReadAsStringAsync();
-        _output.WriteLine($"Delete Response Status: {deleteResponse.StatusCode}");
-        _output.WriteLine($"Delete Response Content: {deleteContent}");
-
+        deleteResponse.EnsureSuccessStatusCode();
         var result = await deleteResponse.Content.ReadFromJsonAsync<BatchDeleteResponse>();
         Assert.NotNull(result);
         Assert.Equal("Batch delete completed successfully", result.Message);
