@@ -17,7 +17,7 @@ using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.KeyManagement.Commands;
+using Bit.Core.KeyManagement.Commands.Interfaces;
 using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Models.Api.Response;
@@ -45,7 +45,7 @@ public class AccountsController : Controller
     private readonly IUserAccountKeysQuery _userAccountKeysQuery;
     private readonly ITwoFactorEmailService _twoFactorEmailService;
     private readonly IChangeKdfCommand _changeKdfCommand;
-    private readonly SetAccountKeysForUserCommand _setAccountKeysForUserCommand;
+    private readonly ISetAccountKeysForUserCommand _setAccountKeysForUserCommand;
 
     public AccountsController(
         IOrganizationService organizationService,
@@ -60,7 +60,7 @@ public class AccountsController : Controller
         IUserAccountKeysQuery userAccountKeysQuery,
         ITwoFactorEmailService twoFactorEmailService,
         IChangeKdfCommand changeKdfCommand,
-        SetAccountKeysForUserCommand setAccountKeysForUserCommand
+        ISetAccountKeysForUserCommand setAccountKeysForUserCommand
         )
     {
         _organizationService = organizationService;
