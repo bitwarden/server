@@ -1,12 +1,12 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationIntegrations.Interfaces;
+using Bit.Core.AdminConsole.EventIntegrations.OrganizationIntegrations.Interfaces;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.DependencyInjection;
 using ZiggyCreatures.Caching.Fusion;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationIntegrations;
+namespace Bit.Core.AdminConsole.EventIntegrations.OrganizationIntegrations;
 
 public class CreateOrganizationIntegrationCommand(
     IOrganizationIntegrationRepository integrationRepository,

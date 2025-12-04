@@ -1,4 +1,4 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationIntegrations.Interfaces;
+﻿using Bit.Core.AdminConsole.EventIntegrations.OrganizationIntegrations.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;

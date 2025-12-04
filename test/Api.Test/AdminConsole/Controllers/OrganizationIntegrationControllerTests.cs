@@ -2,7 +2,7 @@
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationIntegrations.Interfaces;
+using Bit.Core.AdminConsole.EventIntegrations.OrganizationIntegrations.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;

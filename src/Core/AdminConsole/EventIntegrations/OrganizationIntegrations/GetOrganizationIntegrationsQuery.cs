@@ -1,8 +1,8 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationIntegrations.Interfaces;
+using Bit.Core.AdminConsole.EventIntegrations.OrganizationIntegrations.Interfaces;
 using Bit.Core.Repositories;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationIntegrations;
+namespace Bit.Core.AdminConsole.EventIntegrations.OrganizationIntegrations;
 
 public class GetOrganizationIntegrationsQuery(IOrganizationIntegrationRepository integrationRepository)
     : IGetOrganizationIntegrationsQuery

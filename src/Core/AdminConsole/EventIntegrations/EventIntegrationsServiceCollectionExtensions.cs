@@ -1,5 +1,5 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationIntegrations;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationIntegrations.Interfaces;
+﻿using Bit.Core.AdminConsole.EventIntegrations.OrganizationIntegrations;
+using Bit.Core.AdminConsole.EventIntegrations.OrganizationIntegrations.Interfaces;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.DependencyInjection.Extensions;
