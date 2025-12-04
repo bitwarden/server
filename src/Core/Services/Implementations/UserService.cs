@@ -1112,7 +1112,7 @@ public class UserService : UserManager<User>, IUserService
             return false;
         }
 
-        return user.Premium || await this.HasPremiumFromOrganization(user);
+        return user.Premium || await HasPremiumFromOrganization(user);
     }
 
     public async Task<bool> HasPremiumFromOrganization(User user)
@@ -1138,6 +1138,7 @@ public class UserService : UserManager<User>, IUserService
             orgAbility.UsersGetPremium &&
             orgAbility.Enabled);
     }
+
     public async Task<string> GenerateSignInTokenAsync(User user, string purpose)
     {
         var token = await GenerateUserTokenAsync(user, Options.Tokens.PasswordResetTokenProvider,

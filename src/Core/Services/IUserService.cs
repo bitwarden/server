@@ -59,10 +59,21 @@ public interface IUserService
     Task<bool> CheckPasswordAsync(User user, string password);
     /// <summary>
     /// Checks if the user has access to premium features, either through a personal subscription or through an organization.
+    ///
+    /// This is the preferred way to definitively know if a user has access to premium features.
     /// </summary>
     /// <param name="user">user being acted on</param>
     /// <returns>true if they can access premium; false otherwise.</returns>
     Task<bool> CanAccessPremium(User user);
+
+    /// <summary>
+    /// Checks if the user has inherited access to premium features through an organization.
+    ///
+    /// This primarily serves as a means to communicate to the client when a user has inherited their premium status
+    /// through an organization. Feature gating logic probably should not be behind this check.
+    /// </summary>
+    /// <param name="user"></param>
+    /// <returns></returns>
     Task<bool> HasPremiumFromOrganization(User user);
     Task<string> GenerateSignInTokenAsync(User user, string purpose);
 
