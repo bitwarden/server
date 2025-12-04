@@ -116,4 +116,10 @@ public interface IStripeFacade
         TestClockGetOptions testClockGetOptions = null,
         RequestOptions requestOptions = null,
         CancellationToken cancellationToken = default);
+
+    Task<Coupon> GetCoupon(
+        string couponId,
+        CouponGetOptions couponGetOptions = null,
+        RequestOptions requestOptions = null,
+        CancellationToken cancellationToken = default);
 }
