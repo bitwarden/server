@@ -878,9 +878,9 @@ public class ProviderServiceTests
     public async Task SaveUserAsync_UserIdIsInvalid_Throws(ProviderUser providerUser,
         SutProvider<ProviderService> sutProvider)
     {
-        providerUser.Id = default;
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SaveUserAsync(providerUser, default));
+        providerUser.Id = Guid.Empty;
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.SaveUserAsync(providerUser, Guid.Empty));
         Assert.Equal("Invite the user first.", exception.Message);
     }
 
