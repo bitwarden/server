@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Auth.Sso;
 using Bit.Core.Auth.UserFeatures.DeviceTrust;
+using Bit.Core.Auth.UserFeatures.PremiumAccess;
 using Bit.Core.Auth.UserFeatures.Registration;
 using Bit.Core.Auth.UserFeatures.Registration.Implementations;
 using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
@@ -27,6 +28,7 @@ public static class UserServiceCollectionExtensions
         services.AddUserRegistrationCommands();
         services.AddWebAuthnLoginCommands();
         services.AddTdeOffboardingPasswordCommands();
+        services.AddPremiumAccessQueries();
         services.AddTwoFactorQueries();
         services.AddSsoQueries();
     }
@@ -63,6 +65,11 @@ public static class UserServiceCollectionExtensions
         services.AddScoped<ICreateWebAuthnLoginCredentialCommand, CreateWebAuthnLoginCredentialCommand>();
         services.AddScoped<IGetWebAuthnLoginCredentialAssertionOptionsCommand, GetWebAuthnLoginCredentialAssertionOptionsCommand>();
         services.AddScoped<IAssertWebAuthnLoginCredentialCommand, AssertWebAuthnLoginCredentialCommand>();
+    }
+
+    private static void AddPremiumAccessQueries(this IServiceCollection services)
+    {
+        services.AddScoped<IPremiumAccessQuery, PremiumAccessQuery>();
     }
 
     private static void AddTwoFactorQueries(this IServiceCollection services)
