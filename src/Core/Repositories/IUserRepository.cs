@@ -23,6 +23,7 @@ public interface IUserRepository : IRepository<User, Guid>
     /// Retrieves the data for the requested user IDs and includes an additional property indicating
     /// whether the user has premium access directly or through an organization.
     /// </summary>
+    [Obsolete("Use IUserService.CanAccessPremiumBulk instead. This method is only used when feature flag 'PremiumAccessCacheCheck' is disabled.")]
     Task<IEnumerable<UserWithCalculatedPremium>> GetManyWithCalculatedPremiumAsync(IEnumerable<Guid> ids);
     /// <summary>
     /// Retrieves the data for the requested user ID and includes additional property indicating
@@ -33,6 +34,7 @@ public interface IUserRepository : IRepository<User, Guid>
     /// </summary>
     /// <param name="userId">The user ID to retrieve data for.</param>
     /// <returns>User data with calculated premium access; null if nothing is found</returns>
+    [Obsolete("Use IUserService.CanAccessPremium instead. This method is only used when feature flag 'PremiumAccessCacheCheck' is disabled.")]
     Task<UserWithCalculatedPremium?> GetCalculatedPremiumAsync(Guid userId);
     /// <summary>
     /// Sets a new user key and updates all encrypted data.
