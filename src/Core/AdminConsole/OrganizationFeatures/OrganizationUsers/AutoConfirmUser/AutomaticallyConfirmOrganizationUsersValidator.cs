@@ -18,7 +18,7 @@ public class AutomaticallyConfirmOrganizationUsersValidator(
     IOrganizationUserRepository organizationUserRepository,
     ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
     IPolicyRequirementQuery policyRequirementQuery,
-    IAutomaticUserConfirmationPolicyEnforcementQuery automaticUserConfirmationPolicyEnforcementQuery,
+    IAutomaticUserConfirmationPolicyEnforcementValidator automaticUserConfirmationPolicyEnforcementValidator,
     IUserService userService,
     IProviderUserRepository providerUserRepository,
     IPolicyRepository policyRepository) : IAutomaticallyConfirmOrganizationUsersValidator
@@ -112,7 +112,7 @@ public class AutomaticallyConfirmOrganizationUsersValidator(
 
         var user = await userService.GetUserByIdAsync(request.OrganizationUser!.UserId!.Value);
 
-        return (await automaticUserConfirmationPolicyEnforcementQuery.IsCompliantAsync(
+        return (await automaticUserConfirmationPolicyEnforcementValidator.IsCompliantAsync(
                 new AutomaticUserConfirmationPolicyEnforcementRequest(
                     request.OrganizationUser,
                     allOrganizationUsersForUser.Where(x => x.OrganizationId != request.OrganizationId),

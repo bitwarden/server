@@ -693,7 +693,7 @@ public class AcceptOrgUserCommandTests
         // Assert
         AssertValidAcceptedOrgUser(resultOrgUser, orgUser, user);
 
-        await sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementQuery>().DidNotReceiveWithAnyArgs()
+        await sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>().DidNotReceiveWithAnyArgs()
             .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>());
     }
 
@@ -707,7 +707,7 @@ public class AcceptOrgUserCommandTests
         SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
 
         // Mock auto-confirm enforcement query to return valid (no auto-confirm restrictions)
-        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementQuery>()
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
             .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>())
             .Returns(Valid(new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser, [], user)));
 
@@ -735,7 +735,7 @@ public class AcceptOrgUserCommandTests
             .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
             .Returns(true);
 
-        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementQuery>()
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
             .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>())
             .Returns(Invalid(
                 new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser, [otherOrgUser], user),
@@ -835,7 +835,7 @@ public class AcceptOrgUserCommandTests
         // Auto-confirm enforcement query returns valid by default (no restrictions)
         var request = new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser, [], user);
 
-        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementQuery>()
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
             .IsCompliantAsync(request)
             .Returns(Valid(request));
     }

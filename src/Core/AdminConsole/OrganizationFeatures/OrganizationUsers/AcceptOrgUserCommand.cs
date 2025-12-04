@@ -35,7 +35,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IFeatureService _featureService;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
-    private readonly IAutomaticUserConfirmationPolicyEnforcementQuery _automaticUserConfirmationPolicyEnforcementQuery;
+    private readonly IAutomaticUserConfirmationPolicyEnforcementValidator _automaticUserConfirmationPolicyEnforcementValidator;
 
     public AcceptOrgUserCommand(
         IDataProtectionProvider dataProtectionProvider,
@@ -49,7 +49,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
         IFeatureService featureService,
         IPolicyRequirementQuery policyRequirementQuery,
-        IAutomaticUserConfirmationPolicyEnforcementQuery automaticUserConfirmationPolicyEnforcementQuery)
+        IAutomaticUserConfirmationPolicyEnforcementValidator automaticUserConfirmationPolicyEnforcementValidator)
     {
         // TODO: remove data protector when old token validation removed
         _dataProtector = dataProtectionProvider.CreateProtector(OrgUserInviteTokenable.DataProtectorPurpose);
@@ -63,7 +63,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
         _featureService = featureService;
         _policyRequirementQuery = policyRequirementQuery;
-        _automaticUserConfirmationPolicyEnforcementQuery = automaticUserConfirmationPolicyEnforcementQuery;
+        _automaticUserConfirmationPolicyEnforcementValidator = automaticUserConfirmationPolicyEnforcementValidator;
     }
 
     public async Task<OrganizationUser> AcceptOrgUserByEmailTokenAsync(Guid organizationUserId, User user, string emailToken,
@@ -269,7 +269,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
     private async Task ValidateAutomaticUserConfirmationPolicyAsync(OrganizationUser orgUser,
         ICollection<OrganizationUser> allOrgUsers, User user)
     {
-        var error = (await _automaticUserConfirmationPolicyEnforcementQuery.IsCompliantAsync(
+        var error = (await _automaticUserConfirmationPolicyEnforcementValidator.IsCompliantAsync(
                 new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser, allOrgUsers, user)))
             .Match(
                 error => error.Message,

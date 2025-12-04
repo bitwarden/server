@@ -25,7 +25,7 @@ public static class PolicyServiceCollectionExtensions
         services.AddPolicySideEffects();
         services.AddPolicyUpdateEvents();
 
-        services.AddScoped<IAutomaticUserConfirmationPolicyEnforcementQuery, AutomaticUserConfirmationPolicyEnforcementQuery>();
+        services.AddScoped<IAutomaticUserConfirmationPolicyEnforcementValidator, AutomaticUserConfirmationPolicyEnforcementValidator>();
     }
 
     [Obsolete("Use AddPolicyUpdateEvents instead.")]

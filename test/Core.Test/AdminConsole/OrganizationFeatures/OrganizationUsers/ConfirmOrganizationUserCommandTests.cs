@@ -587,7 +587,7 @@ public class ConfirmOrganizationUserCommandTests
             .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
             .Returns(true);
 
-        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementQuery>()
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
             .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>())
             .Returns(Invalid(
                 new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser, [otherOrgUser], user),
@@ -624,7 +624,7 @@ public class ConfirmOrganizationUserCommandTests
             .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
             .Returns(true);
 
-        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementQuery>()
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
             .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>())
             .Returns(Invalid(
                 new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser, [otherOrgUser], user),
@@ -660,7 +660,7 @@ public class ConfirmOrganizationUserCommandTests
             .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
             .Returns(true);
 
-        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementQuery>()
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
             .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>())
             .Returns(Invalid(
                 new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser, [], user),
@@ -696,7 +696,7 @@ public class ConfirmOrganizationUserCommandTests
             .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
             .Returns(true);
 
-        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementQuery>()
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
             .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>())
             .Returns(Valid(new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser, [], user)));
 
@@ -742,7 +742,7 @@ public class ConfirmOrganizationUserCommandTests
             .GetPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg)
             .Returns([singleOrgPolicy]);
 
-        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementQuery>()
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
             .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>())
             .Returns(Invalid(
                 new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser, [otherOrgUser], user),
@@ -789,15 +789,15 @@ public class ConfirmOrganizationUserCommandTests
             .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
             .Returns(true);
 
-        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementQuery>()
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
             .IsCompliantAsync(Arg.Is<AutomaticUserConfirmationPolicyEnforcementRequest>(r => r.User.Id == user1.Id))
             .Returns(Valid(new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser1, [], user1)));
 
-        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementQuery>()
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
             .IsCompliantAsync(Arg.Is<AutomaticUserConfirmationPolicyEnforcementRequest>(r => r.User.Id == user2.Id))
             .Returns(Valid(new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser2, [], user2)));
 
-        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementQuery>()
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
             .IsCompliantAsync(Arg.Is<AutomaticUserConfirmationPolicyEnforcementRequest>(r => r.User.Id == user3.Id))
             .Returns(Invalid(
                 new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser3, [otherOrgUser], user3),

@@ -3,7 +3,7 @@
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 
 /// <summary>
-/// Request object for <see cref="AutomaticUserConfirmationPolicyEnforcementQuery"/>
+/// Request object for <see cref="AutomaticUserConfirmationPolicyEnforcementValidator"/>
 /// </summary>
 public record AutomaticUserConfirmationPolicyEnforcementRequest
 {
@@ -22,7 +22,7 @@ public record AutomaticUserConfirmationPolicyEnforcementRequest
     public User User { get; }
 
     /// <summary>
-    /// Request object for <see cref="AutomaticUserConfirmationPolicyEnforcementQuery"/>.
+    /// Request object for <see cref="AutomaticUserConfirmationPolicyEnforcementValidator"/>.
     /// </summary>
     /// <remarks>
     /// This record is used to encapsulate the data required for handling the automatic confirmation policy enforcement.

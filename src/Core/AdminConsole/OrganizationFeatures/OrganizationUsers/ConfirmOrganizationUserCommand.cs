@@ -34,7 +34,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IFeatureService _featureService;
     private readonly ICollectionRepository _collectionRepository;
-    private readonly IAutomaticUserConfirmationPolicyEnforcementQuery _automaticUserConfirmationPolicyEnforcementQuery;
+    private readonly IAutomaticUserConfirmationPolicyEnforcementValidator _automaticUserConfirmationPolicyEnforcementValidator;
 
     public ConfirmOrganizationUserCommand(
         IOrganizationRepository organizationRepository,
@@ -50,7 +50,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         IPolicyRequirementQuery policyRequirementQuery,
         IFeatureService featureService,
         ICollectionRepository collectionRepository,
-        IAutomaticUserConfirmationPolicyEnforcementQuery automaticUserConfirmationPolicyEnforcementQuery)
+        IAutomaticUserConfirmationPolicyEnforcementValidator automaticUserConfirmationPolicyEnforcementValidator)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -65,7 +65,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         _policyRequirementQuery = policyRequirementQuery;
         _featureService = featureService;
         _collectionRepository = collectionRepository;
-        _automaticUserConfirmationPolicyEnforcementQuery = automaticUserConfirmationPolicyEnforcementQuery;
+        _automaticUserConfirmationPolicyEnforcementValidator = automaticUserConfirmationPolicyEnforcementValidator;
     }
 
     public async Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key,
@@ -196,7 +196,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
 
         if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
         {
-            var error = (await _automaticUserConfirmationPolicyEnforcementQuery.IsCompliantAsync(
+            var error = (await _automaticUserConfirmationPolicyEnforcementValidator.IsCompliantAsync(
                     new AutomaticUserConfirmationPolicyEnforcementRequest(
                         userOrgs.First(x => x.OrganizationId == organizationId),
                         userOrgs.Where(x => x.OrganizationId != organizationId),

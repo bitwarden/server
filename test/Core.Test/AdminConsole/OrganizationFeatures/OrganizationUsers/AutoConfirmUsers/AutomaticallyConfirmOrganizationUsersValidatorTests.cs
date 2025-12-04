@@ -459,7 +459,7 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
             .GetAsync<SingleOrganizationPolicyRequirement>(userId)
             .Returns(new SingleOrganizationPolicyRequirement([singleOrgPolicyDetails]));
 
-        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementQuery>()
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
             .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>())
             .Returns(Task.FromResult(
                 Invalid<AutomaticUserConfirmationPolicyEnforcementRequest>(
@@ -528,7 +528,7 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
             .GetAsync<SingleOrganizationPolicyRequirement>(userId)
             .Returns(new SingleOrganizationPolicyRequirement([singleOrgPolicyDetails]));
 
-        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementQuery>()
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
             .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>())
             .Returns(Task.FromResult(
                 Invalid<AutomaticUserConfirmationPolicyEnforcementRequest>(
@@ -635,7 +635,7 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
             .GetAsync<SingleOrganizationPolicyRequirement>(userId)
             .Returns(new SingleOrganizationPolicyRequirement([]));
 
-        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementQuery>()
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
             .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>())
             .Returns(Task.FromResult(
                 Valid<AutomaticUserConfirmationPolicyEnforcementRequest>(null!)));

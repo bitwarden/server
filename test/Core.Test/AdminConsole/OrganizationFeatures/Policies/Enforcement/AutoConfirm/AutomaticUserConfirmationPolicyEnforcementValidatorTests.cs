@@ -15,12 +15,12 @@ using Xunit;
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 
 [SutProviderCustomize]
-public class AutomaticUserConfirmationPolicyEnforcementQueryTests
+public class AutomaticUserConfirmationPolicyEnforcementValidatorTests
 {
     [Theory]
     [BitAutoData]
     public async Task IsCompliantAsync_WithNoOtherOrganizations_ReturnsValid(
-        SutProvider<AutomaticUserConfirmationPolicyEnforcementQuery> sutProvider,
+        SutProvider<AutomaticUserConfirmationPolicyEnforcementValidator> sutProvider,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
         User user)
     {
@@ -44,7 +44,7 @@ public class AutomaticUserConfirmationPolicyEnforcementQueryTests
     [Theory]
     [BitAutoData]
     public async Task IsCompliantAsync_WithPolicyEnabledOnSameOrganizationButNoOtherOrgs_ReturnsValid(
-        SutProvider<AutomaticUserConfirmationPolicyEnforcementQuery> sutProvider,
+        SutProvider<AutomaticUserConfirmationPolicyEnforcementValidator> sutProvider,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
         User user)
     {
@@ -75,7 +75,7 @@ public class AutomaticUserConfirmationPolicyEnforcementQueryTests
     [Theory]
     [BitAutoData]
     public async Task IsCompliantAsync_WithPolicyEnabledOnSameOrgAndUserHasOtherOrgs_ReturnsOrganizationEnforcesSingleOrgPolicyError(
-        SutProvider<AutomaticUserConfirmationPolicyEnforcementQuery> sutProvider,
+        SutProvider<AutomaticUserConfirmationPolicyEnforcementValidator> sutProvider,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
         OrganizationUser otherOrgUser,
         User user)
@@ -108,7 +108,7 @@ public class AutomaticUserConfirmationPolicyEnforcementQueryTests
     [Theory]
     [BitAutoData]
     public async Task IsCompliantAsync_WithUserIsProvider_ReturnsProviderUsersCannotJoinError(
-        SutProvider<AutomaticUserConfirmationPolicyEnforcementQuery> sutProvider,
+        SutProvider<AutomaticUserConfirmationPolicyEnforcementValidator> sutProvider,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
         User user)
     {
@@ -140,7 +140,7 @@ public class AutomaticUserConfirmationPolicyEnforcementQueryTests
     [Theory]
     [BitAutoData]
     public async Task IsCompliantAsync_WithPolicyEnabledOnOtherOrganization_ReturnsOtherOrganizationEnforcesSingleOrgPolicyError(
-        SutProvider<AutomaticUserConfirmationPolicyEnforcementQuery> sutProvider,
+        SutProvider<AutomaticUserConfirmationPolicyEnforcementValidator> sutProvider,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
         User user)
     {
@@ -173,7 +173,7 @@ public class AutomaticUserConfirmationPolicyEnforcementQueryTests
     [Theory]
     [BitAutoData]
     public async Task IsCompliantAsync_WithOtherOrganizationsButNoPolicyEnabled_ReturnsValid(
-        SutProvider<AutomaticUserConfirmationPolicyEnforcementQuery> sutProvider,
+        SutProvider<AutomaticUserConfirmationPolicyEnforcementValidator> sutProvider,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
         OrganizationUser otherOrgUser,
         User user)
@@ -199,7 +199,7 @@ public class AutomaticUserConfirmationPolicyEnforcementQueryTests
     [Theory]
     [BitAutoData]
     public async Task IsCompliantAsync_WithEmptyOtherOrganizationsAndSingleOrg_ReturnsValid(
-        SutProvider<AutomaticUserConfirmationPolicyEnforcementQuery> sutProvider,
+        SutProvider<AutomaticUserConfirmationPolicyEnforcementValidator> sutProvider,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
         User user)
     {
@@ -224,7 +224,7 @@ public class AutomaticUserConfirmationPolicyEnforcementQueryTests
     [Theory]
     [BitAutoData]
     public async Task IsCompliantAsync_ChecksConditionsInCorrectOrder_ReturnsFirstFailure(
-        SutProvider<AutomaticUserConfirmationPolicyEnforcementQuery> sutProvider,
+        SutProvider<AutomaticUserConfirmationPolicyEnforcementValidator> sutProvider,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
         OrganizationUser otherOrgUser,
         User user)
@@ -257,7 +257,7 @@ public class AutomaticUserConfirmationPolicyEnforcementQueryTests
     [Theory]
     [BitAutoData]
     public async Task IsCompliantAsync_WithNullOtherOrganizations_ReturnsValidWhenNoOtherOrgs(
-        SutProvider<AutomaticUserConfirmationPolicyEnforcementQuery> sutProvider,
+        SutProvider<AutomaticUserConfirmationPolicyEnforcementValidator> sutProvider,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
         User user)
     {

@@ -9,7 +9,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoCo
 /// valid for the Automatic User Confirmation policy. It also validates that the given user is not a provider
 /// or a member of another organization regardless of status or type.
 /// </summary>
-public interface IAutomaticUserConfirmationPolicyEnforcementQuery
+public interface IAutomaticUserConfirmationPolicyEnforcementValidator
 {
 
     /// <summary>
