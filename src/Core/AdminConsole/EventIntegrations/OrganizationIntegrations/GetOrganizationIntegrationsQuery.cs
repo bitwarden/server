@@ -4,6 +4,9 @@ using Bit.Core.Repositories;
 
 namespace Bit.Core.AdminConsole.EventIntegrations.OrganizationIntegrations;
 
+/// <summary>
+/// Query implementation for retrieving organization integrations.
+/// </summary>
 public class GetOrganizationIntegrationsQuery(IOrganizationIntegrationRepository integrationRepository)
     : IGetOrganizationIntegrationsQuery
 {

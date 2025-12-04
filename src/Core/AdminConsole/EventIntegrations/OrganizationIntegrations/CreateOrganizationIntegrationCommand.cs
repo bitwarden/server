@@ -8,6 +8,9 @@ using ZiggyCreatures.Caching.Fusion;
 
 namespace Bit.Core.AdminConsole.EventIntegrations.OrganizationIntegrations;
 
+/// <summary>
+/// Command implementation for creating organization integrations with cache invalidation support.
+/// </summary>
 public class CreateOrganizationIntegrationCommand(
     IOrganizationIntegrationRepository integrationRepository,
     [FromKeyedServices(EventIntegrationsCacheConstants.CacheName)]

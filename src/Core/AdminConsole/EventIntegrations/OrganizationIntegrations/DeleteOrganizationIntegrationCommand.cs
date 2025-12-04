@@ -7,6 +7,9 @@ using ZiggyCreatures.Caching.Fusion;
 
 namespace Bit.Core.AdminConsole.EventIntegrations.OrganizationIntegrations;
 
+/// <summary>
+/// Command implementation for deleting organization integrations with cache invalidation support.
+/// </summary>
 public class DeleteOrganizationIntegrationCommand(
     IOrganizationIntegrationRepository integrationRepository,
     [FromKeyedServices(EventIntegrationsCacheConstants.CacheName)] IFusionCache cache)
