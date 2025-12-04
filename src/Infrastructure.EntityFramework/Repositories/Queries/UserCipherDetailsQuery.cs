@@ -3,9 +3,9 @@
 
 using System.Text.Json;
 using Bit.Core.Enums;
+using Bit.Core.Utilities;
 using Bit.Core.Vault.Models.Data;
 using Bit.Infrastructure.EntityFramework.Vault.Models;
-
 namespace Bit.Infrastructure.EntityFramework.Repositories.Queries;
 
 public class UserCipherDetailsQuery : IQuery<CipherDetails>
@@ -120,8 +120,11 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
             Manage = c.Manage,
             OrganizationUseTotp = c.OrganizationUseTotp,
             Key = c.Key,
-            ArchivedDate = c.ArchivedDate,
-            Archives = c.Archives
+            ArchivedDate = !_userId.HasValue
+                || c.Archives == null
+                || !c.Archives.ToLowerInvariant().Contains(_userId.Value.ToString())
+                    ? null
+                    : CoreHelpers.LoadClassFromJsonData<Dictionary<Guid, DateTime>>(c.Archives)[_userId.Value]
         });
         return union;
     }
