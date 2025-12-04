@@ -1,5 +1,4 @@
 ﻿using Bit.Api.Dirt.Public.Models;
-using Bit.Api.Models.Public.Request;
 using Bit.Api.Models.Public.Response;
 using Bit.Core;
 using Bit.Core.Services;

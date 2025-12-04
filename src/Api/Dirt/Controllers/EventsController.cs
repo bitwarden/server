@@ -1,7 +1,6 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
-using Bit.Api.Dirt.Models;
 using Bit.Api.Dirt.Models.Response;
 using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
