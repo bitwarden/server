@@ -809,29 +809,29 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
             {
                 dbContext.Attach(cipher);
 
-                Dictionary<Guid, DateTime> archives;
-                if (string.IsNullOrWhiteSpace(cipher.Archives))
-                {
-                    archives = new Dictionary<Guid, DateTime>();
-                }
-                else
-                {
-                    archives = JsonSerializer.Deserialize<Dictionary<Guid, DateTime>>(cipher.Archives)
-                            ?? new Dictionary<Guid, DateTime>();
-                }
+                // Build or load the per-user archives map
+                var archives = string.IsNullOrWhiteSpace(cipher.Archives)
+                    ? new Dictionary<Guid, DateTime>()
+                    : CoreHelpers.LoadClassFromJsonData<Dictionary<Guid, DateTime>>(cipher.Archives)
+                      ?? new Dictionary<Guid, DateTime>();
 
                 if (action == CipherStateAction.Unarchive)
                 {
+                    // Remove this user's archive record
                     archives.Remove(userId);
+                    cipher.ArchivedDate = null;
                 }
                 else if (action == CipherStateAction.Archive)
                 {
+                    // Set this user's archive date
                     archives[userId] = utcNow;
+                    cipher.ArchivedDate = utcNow;
                 }
 
+                // Persist the updated JSON or clear it if empty
                 cipher.Archives = archives.Count == 0
                     ? null
-                    : JsonSerializer.Serialize(archives);
+                    : CoreHelpers.ClassToJsonData(archives);
 
                 cipher.RevisionDate = utcNow;
             });
