@@ -26,6 +26,7 @@ public class SutProvider<TSut> : ISutProvider
 
     public TSut Sut { get; private set; }
     public Type SutType => typeof(TSut);
+    public IFixture Fixture => _fixture;
 
     public SutProvider() : this(new Fixture()) { }
 
@@ -63,6 +64,19 @@ public class SutProvider<TSut> : ISutProvider
         }
 
         return this;
+    }
+
+    /// <summary>
+    /// Creates and registers a dependency to be injected when the sut is created.
+    /// </summary>
+    /// <typeparam name="TDep">The Dependency type to create</typeparam>
+    /// <param name="parameterName">The (optional) parameter name to register the dependency under</param>
+    /// <returns>The created dependency value</returns>
+    public TDep CreateDependency<TDep>(string parameterName = "")
+    {
+        var dependency = _fixture.Create<TDep>();
+        SetDependency(dependency, parameterName);
+        return dependency;
     }
 
     /// <summary>

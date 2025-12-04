@@ -104,11 +104,11 @@ public static class ServiceCollectionExtensions
 
         if (provider != SupportedDatabaseProviders.SqlServer)
         {
-            services.AddPasswordManagerEFRepositories(globalSettings.SelfHosted);
+            services.AddPasswordManagerEFRepositories(globalSettings.SelfHosted, globalSettings);
         }
         else
         {
-            services.AddDapperRepositories(globalSettings.SelfHosted);
+            services.AddDapperRepositories(globalSettings.SelfHosted, globalSettings);
         }
 
         if (globalSettings.SelfHosted)
@@ -120,6 +120,21 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<IEventRepository, TableStorageRepos.EventRepository>();
             services.AddSingleton<IInstallationDeviceRepository, TableStorageRepos.InstallationDeviceRepository>();
             services.AddKeyedSingleton<IGrantRepository, Core.Auth.Repositories.Cosmos.GrantRepository>("cosmos");
+        }
+
+        if (globalSettings.TestPlayIdTrackingEnabled)
+        {
+            // Include PlayIdService for tracking Play Ids in repositories
+            // We need the http context accessor to use the Singleton version, which pulls from the scoped version
+            services.AddHttpContextAccessor();
+
+            services.AddSingleton<IPlayDataService, PlayDataService>();
+            services.AddSingleton<IPlayIdService, PlayIdSingletonService>();
+            services.AddScoped<PlayIdService>();
+        }
+        else
+        {
+            services.AddSingleton<IPlayIdService, NeverPlayIdServices>();
         }
 
         return provider;
@@ -641,6 +656,10 @@ public static class ServiceCollectionExtensions
         IWebHostEnvironment env, GlobalSettings globalSettings)
     {
         app.UseMiddleware<RequestLoggingMiddleware>();
+        if (globalSettings.TestPlayIdTrackingEnabled)
+        {
+            app.UseMiddleware<PlayIdMiddleware>();
+        }
     }
 
     public static void UseForwardedHeaders(this IApplicationBuilder app, IGlobalSettings globalSettings)
