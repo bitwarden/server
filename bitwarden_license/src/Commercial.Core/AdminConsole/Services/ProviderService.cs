@@ -254,6 +254,18 @@ public class ProviderService : IProviderService
             throw new BadRequestException("User email does not match invite.");
         }
 
+        if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
+        {
+            var organizationAutoConfirmPolicyRequirement = await _policyRequirementQuery
+                .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id);
+
+            if (organizationAutoConfirmPolicyRequirement
+                .UserBelongsToOrganizationWithAutomaticUserConfirmationEnabled())
+            {
+                throw new BadRequestException(new ProviderUsersCannotJoin().Message);
+            }
+        }
+
         providerUser.Status = ProviderUserStatusType.Accepted;
         providerUser.UserId = user.Id;
         providerUser.Email = null;
@@ -297,6 +309,19 @@ public class ProviderService : IProviderService
                 if (providerUser.Status != ProviderUserStatusType.Accepted || providerUser.ProviderId != providerId)
                 {
                     throw new BadRequestException("Invalid user.");
+                }
+
+                if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
+                {
+                    var organizationAutoConfirmPolicyRequirement = await _policyRequirementQuery
+                        .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id);
+
+                    if (organizationAutoConfirmPolicyRequirement
+                        .UserBelongsToOrganizationWithAutomaticUserConfirmationEnabled())
+                    {
+                        result.Add(Tuple.Create(providerUser, new ProviderUsersCannotJoin().Message));
+                        continue;
+                    }
                 }
 
                 providerUser.Status = ProviderUserStatusType.Confirmed;
@@ -416,17 +441,6 @@ public class ProviderService : IProviderService
         {
             throw new BadRequestException(
                 "The organization is subscribed to Secrets Manager. Please contact Customer Support to manage the subscription.");
-        }
-
-        if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
-        {
-            var organizationAutoConfirmPolicyRequirement = await _policyRequirementQuery
-                .GetManyByOrganizationIdAsync<AutomaticUserConfirmationPolicyRequirement>(organizationId);
-
-            if (organizationAutoConfirmPolicyRequirement.Any())
-            {
-                throw new BadRequestException(new ProviderUsersCannotJoin().Message);
-            }
         }
 
         var providerOrganization = new ProviderOrganization
