@@ -723,6 +723,7 @@ public class CipherService : ICipherService
             // If the cipher was archived, clear the archived date when soft deleting
             // If a user were to restore an archived cipher, it should go back to the vault not the archive vault
             cipherDetails.ArchivedDate = null;
+            cipherDetails.Archives = null;
         }
 
         await _securityTaskRepository.MarkAsCompleteByCipherIds([cipherDetails.Id]);
