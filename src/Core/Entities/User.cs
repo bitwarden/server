@@ -222,6 +222,11 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
         return EncryptionParsing.GetEncryptionType(PrivateKey) == EncryptionType.XChaCha20Poly1305_B64;
     }
 
+    /// <summary>
+    /// This technically is correct but all versions after 1 are considered v2 encryption. Leaving for now with
+    /// KM's blessing that when a new version comes along they will handle migration.
+    /// </summary>
+    /// <returns></returns>
     private bool IsSecurityVersionTwo()
     {
         return SecurityVersion == 2;
