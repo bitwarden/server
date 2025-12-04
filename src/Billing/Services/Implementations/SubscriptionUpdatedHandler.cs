@@ -111,8 +111,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                         break;
                     }
 
-                    if ((subscription.Status is StripeSubscriptionStatus.Unpaid or StripeSubscriptionStatus.IncompleteExpired) &&
-                        subscription.Items.Any(i => i.Price.Id is IStripeEventUtilityService.PremiumPlanId or IStripeEventUtilityService.PremiumPlanIdAppStore))
+                    if (await IsPremiumSubscriptionAsync(subscription))
                     {
                         await CancelSubscription(subscription.Id);
                         await VoidOpenInvoices(subscription.Id);
@@ -126,7 +125,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 {
                     // Handle Incomplete subscriptions for Premium users that have open invoices from failed payments
                     // This prevents duplicate subscriptions when users retry the subscription flow
-                    if (subscription.Items.Any(i => i.Price.Id is IStripeEventUtilityService.PremiumPlanId or IStripeEventUtilityService.PremiumPlanIdAppStore) &&
+                    if (await IsPremiumSubscriptionAsync(subscription) &&
                         subscription.LatestInvoice is { Status: StripeInvoiceStatus.Open })
                     {
                         await CancelSubscription(subscription.Id);
@@ -209,6 +208,13 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         {
             await _stripeFacade.VoidInvoice(invoice.Id);
         }
+    }
+
+    private async Task<bool> IsPremiumSubscriptionAsync(Subscription subscription)
+    {
+        var premiumPlans = await _pricingClient.ListPremiumPlans();
+        var premiumPriceIds = premiumPlans.SelectMany(p => new[] { p.Seat.StripePriceId, p.Storage.StripePriceId }).ToHashSet();
+        return subscription.Items.Any(i => premiumPriceIds.Contains(i.Price.Id));
     }
 
     /// <summary>
