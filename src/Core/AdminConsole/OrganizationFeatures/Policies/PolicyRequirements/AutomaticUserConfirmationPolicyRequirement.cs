@@ -25,9 +25,6 @@ public class AutomaticUserConfirmationPolicyRequirement(IEnumerable<PolicyDetail
 
     public bool IsEnabled(Guid organizationId) => policyDetails.Any(p => p.OrganizationId == organizationId);
 
-    public bool IsEnabledAndUserIsAProvider(Guid organizationId) =>
-        policyDetails.Any(p => p.OrganizationId == organizationId && p.IsProvider);
-
     public bool IsEnabledForOrganizationsOtherThan(Guid organizationId) =>
         policyDetails.Any(p => p.OrganizationId != organizationId);
 }

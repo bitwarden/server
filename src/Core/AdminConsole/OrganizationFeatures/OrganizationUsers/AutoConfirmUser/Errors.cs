@@ -12,3 +12,4 @@ public record OrganizationEnforcesSingleOrgPolicy() : BadRequestError("Cannot co
 public record OtherOrganizationEnforcesSingleOrgPolicy() : BadRequestError("Cannot confirm this member to the organization because they are in another organization which forbids it.");
 public record AutomaticallyConfirmUsersPolicyIsNotEnabled() : BadRequestError("Cannot confirm this member because the Automatically Confirm Users policy is not enabled.");
 public record ProviderUsersCannotJoin() : BadRequestError("An organization the user is a part of has enabled Automatic User Confirmation policy and it does not support provider users joining.");
+public record CurrentOrganizationUserIsNotPresentInRequest() : BadRequestError("The current organization user does not exist in the request.");

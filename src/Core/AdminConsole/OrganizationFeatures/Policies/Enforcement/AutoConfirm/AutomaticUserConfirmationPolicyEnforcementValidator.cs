@@ -1,12 +1,14 @@
 ﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpers;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 
 public class AutomaticUserConfirmationPolicyEnforcementValidator(
-    IPolicyRequirementQuery policyRequirementQuery)
+    IPolicyRequirementQuery policyRequirementQuery,
+    IProviderUserRepository providerUserRepository)
     : IAutomaticUserConfirmationPolicyEnforcementValidator
 {
     public async Task<ValidationResult<AutomaticUserConfirmationPolicyEnforcementRequest>> IsCompliantAsync(
@@ -15,27 +17,31 @@ public class AutomaticUserConfirmationPolicyEnforcementValidator(
         var automaticUserConfirmationPolicyRequirement = await policyRequirementQuery
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(request.User.Id);
 
-        if (automaticUserConfirmationPolicyRequirement.IsEnabled(request.OrganizationUser.OrganizationId)
-            && OrganizationUserBelongsToAnotherOrganization(request))
+        var currentOrganizationUser = request.AllOrganizationUsers
+            .FirstOrDefault(x => x.Id == request.OrganizationUserId);
+
+        if (currentOrganizationUser is null)
+        {
+            return Invalid(request, new CurrentOrganizationUserIsNotPresentInRequest());
+        }
+
+        if (automaticUserConfirmationPolicyRequirement.IsEnabled(currentOrganizationUser.OrganizationId)
+            && automaticUserConfirmationPolicyRequirement.UserBelongsToOrganizationWithAutomaticUserConfirmationEnabled())
         {
             return Invalid(request, new OrganizationEnforcesSingleOrgPolicy());
         }
 
-        if (automaticUserConfirmationPolicyRequirement.IsEnabledAndUserIsAProvider(request.OrganizationUser.OrganizationId))
-        {
-            return Invalid(request, new ProviderUsersCannotJoin());
-        }
-
         if (automaticUserConfirmationPolicyRequirement
-            .IsEnabledForOrganizationsOtherThan(request.OrganizationUser.OrganizationId))
+            .IsEnabledForOrganizationsOtherThan(currentOrganizationUser.OrganizationId))
         {
             return Invalid(request, new OtherOrganizationEnforcesSingleOrgPolicy());
         }
 
+        if ((await providerUserRepository.GetManyByUserAsync(request.User.Id)).Count != 0)
+        {
+            return Invalid(request, new ProviderUsersCannotJoin());
+        }
+
         return Valid(request);
     }
-
-    private static bool OrganizationUserBelongsToAnotherOrganization(AutomaticUserConfirmationPolicyEnforcementRequest request) =>
-        request.OtherOrganizationsOrganizationUsers.Any(ou =>
-            ou.OrganizationId != request.OrganizationUser.OrganizationId);
 }

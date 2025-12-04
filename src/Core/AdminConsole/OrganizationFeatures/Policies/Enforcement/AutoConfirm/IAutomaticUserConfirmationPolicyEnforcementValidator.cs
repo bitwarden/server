@@ -15,9 +15,9 @@ public interface IAutomaticUserConfirmationPolicyEnforcementValidator
     /// <summary>
     /// Checks if the given user is compliant with the Automatic User Confirmation policy.
     ///
-    /// To be compliant a user must
-    /// - not be a provider
-    /// - not be a member of another organization (similar to Single Organization Policy)
+    /// To be compliant, a user must
+    /// - not be a member of a provider
+    /// - not be a member of another organization
     /// </summary>
     /// <param name="request"></param>
     /// <remarks>

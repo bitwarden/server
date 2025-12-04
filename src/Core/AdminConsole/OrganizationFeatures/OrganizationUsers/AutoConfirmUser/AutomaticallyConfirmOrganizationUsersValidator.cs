@@ -82,10 +82,8 @@ public class AutomaticallyConfirmOrganizationUsersValidator(
     private async Task<bool> OrganizationUserIsProviderAsync(AutomaticallyConfirmOrganizationUserValidationRequest request) =>
         (await providerUserRepository.GetManyByUserAsync(request.OrganizationUser!.UserId!.Value)).Count != 0;
 
-    private async Task<bool> OrganizationHasAutomaticallyConfirmUsersPolicyEnabledAsync(
-            AutomaticallyConfirmOrganizationUserValidationRequest request) =>
-        await policyRepository.GetByOrganizationIdTypeAsync(request.OrganizationId,
-            PolicyType.AutomaticUserConfirmation) is { Enabled: true }
+    private async Task<bool> OrganizationHasAutomaticallyConfirmUsersPolicyEnabledAsync(AutomaticallyConfirmOrganizationUserValidationRequest request) =>
+        await policyRepository.GetByOrganizationIdTypeAsync(request.OrganizationId, PolicyType.AutomaticUserConfirmation) is { Enabled: true }
         && request.Organization is { UseAutomaticUserConfirmation: true };
 
     private async Task<bool> OrganizationUserConformsToTwoFactorRequiredPolicyAsync(AutomaticallyConfirmOrganizationUserValidationRequest request)
