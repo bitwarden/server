@@ -140,9 +140,7 @@ public static class FeatureFlagKeys
     public const string CreateDefaultLocation = "pm-19467-create-default-location";
     public const string AutomaticConfirmUsers = "pm-19934-auto-confirm-organization-users";
     public const string PM23845_VNextApplicationCache = "pm-24957-refactor-memory-application-cache";
-    public const string AccountRecoveryCommand = "pm-25581-prevent-provider-account-recovery";
     public const string BlockClaimedDomainAccountCreation = "pm-28297-block-uninvited-claimed-domain-registration";
-    public const string PolicyValidatorsRefactor = "pm-26423-refactor-policy-side-effects";
     public const string IncreaseBulkReinviteLimitForCloud = "pm-28251-increase-bulk-reinvite-limit-for-cloud";
 
     /* Architecture */
@@ -214,6 +212,7 @@ public static class FeatureFlagKeys
     public const string NoLogoutOnKdfChange = "pm-23995-no-logout-on-kdf-change";
     public const string DisableType0Decryption = "pm-25174-disable-type-0-decryption";
     public const string ConsolidatedSessionTimeoutComponent = "pm-26056-consolidated-session-timeout-component";
+    public const string DataRecoveryTool = "pm-28813-data-recovery-tool";
 
     /* Mobile Team */
     public const string AndroidImportLoginsFlow = "import-logins-flow";
