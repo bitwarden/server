@@ -1,9 +1,18 @@
-﻿using Bit.Core.KeyManagement.Models.Api.Request;
+﻿using Bit.Core.Entities;
+using Bit.Core.KeyManagement.Models.Api.Request;
 
 namespace Bit.Core.KeyManagement.Commands.Interfaces;
 
+/// <summary>
+/// Command to set account keys for a new user that does not have keys yet. This supports both V1 user and V2 user initialization.
+/// This is intended for the TDE and Key-connector account registration flows.
+/// </summary>
 public interface ISetAccountKeysForUserCommand
 {
-    Task SetAccountKeysForUserAsync(Guid userId,
+    /// <summary>
+    /// Sets the account keys for the specified user. The passed in user 
+    /// will be mutated and saved to the database.
+    /// </summary>
+    Task SetAccountKeysForUserAsync(User user,
         AccountKeysRequestModel accountKeys);
 }

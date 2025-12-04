@@ -7,32 +7,12 @@ using Bit.Core.KeyManagement.Repositories;
 using Bit.Core.Repositories;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
-using NSubstitute.ReturnsExtensions;
 using Xunit;
 
 namespace Bit.Core.Test.KeyManagement.Commands;
 
 public class SetAccountKeysForUserCommandTests
 {
-    [Theory]
-    [BitAutoData]
-    public async Task SetAccountKeysForUserAsync_UserNotFound_ThrowsArgumentExceptionAsync(
-        Guid userId,
-        AccountKeysRequestModel accountKeys)
-    {
-        var userRepository = Substitute.For<IUserRepository>();
-        var userSignatureKeyPairRepository = Substitute.For<IUserSignatureKeyPairRepository>();
-        var command = new SetAccountKeysForUserCommand(userRepository, userSignatureKeyPairRepository);
-
-        userRepository.GetByIdAsync(userId).ReturnsNullForAnyArgs();
-
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
-            command.SetAccountKeysForUserAsync(userId, accountKeys));
-
-        Assert.Equal("userId", exception.ParamName);
-        Assert.Contains("User not found", exception.Message);
-    }
-
     [Theory]
     [BitAutoData]
     public async Task SetAccountKeysForUserAsync_WithV1Keys_UpdatesUserCorrectlyAsync(
@@ -52,9 +32,7 @@ public class SetAccountKeysForUserCommandTests
         var userSignatureKeyPairRepository = Substitute.For<IUserSignatureKeyPairRepository>();
         var command = new SetAccountKeysForUserCommand(userRepository, userSignatureKeyPairRepository);
 
-        userRepository.GetByIdAsync(user.Id).Returns(user);
-
-        await command.SetAccountKeysForUserAsync(user.Id, accountKeys);
+        await command.SetAccountKeysForUserAsync(user, accountKeys);
 
         Assert.Equal(accountKeys.UserKeyEncryptedAccountPrivateKey, user.PrivateKey);
         Assert.Equal(accountKeys.AccountPublicKey, user.PublicKey);
@@ -68,7 +46,7 @@ public class SetAccountKeysForUserCommandTests
 
         await userSignatureKeyPairRepository
             .DidNotReceiveWithAnyArgs()
-            .UpsertAsync(Arg.Any<UserSignatureKeyPair>());
+            .CreateAsync(Arg.Any<UserSignatureKeyPair>());
     }
 
     [Theory]
@@ -109,9 +87,7 @@ public class SetAccountKeysForUserCommandTests
         var userSignatureKeyPairRepository = Substitute.For<IUserSignatureKeyPairRepository>();
         var command = new SetAccountKeysForUserCommand(userRepository, userSignatureKeyPairRepository);
 
-        userRepository.GetByIdAsync(user.Id).Returns(user);
-
-        await command.SetAccountKeysForUserAsync(user.Id, accountKeys);
+        await command.SetAccountKeysForUserAsync(user, accountKeys);
 
         Assert.Equal(publicKeyEncryptionKeyPair.WrappedPrivateKey, user.PrivateKey);
         Assert.Equal(publicKeyEncryptionKeyPair.PublicKey, user.PublicKey);
@@ -125,7 +101,7 @@ public class SetAccountKeysForUserCommandTests
 
         await userSignatureKeyPairRepository
             .Received(1)
-            .UpsertAsync(Arg.Is<UserSignatureKeyPair>(pair =>
+            .CreateAsync(Arg.Is<UserSignatureKeyPair>(pair =>
                 pair.UserId == user.Id &&
                 pair.SignatureAlgorithm == SignatureAlgorithm.Ed25519 &&
                 pair.SigningKey == signatureKeyPair.WrappedSigningKey &&

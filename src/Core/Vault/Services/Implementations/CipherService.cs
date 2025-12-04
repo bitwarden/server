@@ -990,11 +990,6 @@ public class CipherService : ICipherService
             throw new BadRequestException("One or more ciphers do not belong to you.");
         }
 
-        if (cipher.ArchivedDate.HasValue)
-        {
-            throw new BadRequestException("Cipher cannot be shared with organization because it is archived.");
-        }
-
         var attachments = cipher.GetAttachments();
         var hasAttachments = attachments?.Any() ?? false;
         var org = await _organizationRepository.GetByIdAsync(organizationId);
