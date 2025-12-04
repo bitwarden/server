@@ -124,7 +124,7 @@ public class StripeEventUtilityService : IStripeEventUtilityService
     /// <param name="userId"></param>
     /// /// <param name="providerId"></param>
     /// <returns></returns>
-    public Transaction FromChargeToTransaction(Charge charge, Guid? organizationId, Guid? userId, Guid? providerId)
+    public async Task<Transaction> FromChargeToTransactionAsync(Charge charge, Guid? organizationId, Guid? userId, Guid? providerId)
     {
         var transaction = new Transaction
         {
@@ -208,6 +208,24 @@ public class StripeEventUtilityService : IStripeEventUtilityService
                         var achCreditTransfer = charge.PaymentMethodDetails.AchCreditTransfer;
                         transaction.PaymentMethodType = PaymentMethodType.BankAccount;
                         transaction.Details = $"ACH => {achCreditTransfer.BankName}, {achCreditTransfer.AccountNumber}";
+                    }
+                    else if (charge.PaymentMethodDetails.CustomerBalance != null)
+                    {
+                        var bankTransferType = await GetFundingBankTransferTypeAsync(charge);
+
+                        if (!string.IsNullOrEmpty(bankTransferType))
+                        {
+                            transaction.PaymentMethodType = PaymentMethodType.BankAccount;
+                            transaction.Details = bankTransferType switch
+                            {
+                                "eu_bank_transfer" => "EU Bank Transfer",
+                                "gb_bank_transfer" => "GB Bank Transfer",
+                                "jp_bank_transfer" => "JP Bank Transfer",
+                                "mx_bank_transfer" => "MX Bank Transfer",
+                                "us_bank_transfer" => "US Bank Transfer",
+                                _ => "Bank Transfer"
+                            };
+                        }
                     }
 
                     break;
@@ -412,5 +430,42 @@ public class StripeEventUtilityService : IStripeEventUtilityService
 
             throw;
         }
+    }
+
+    private async Task<string> GetFundingBankTransferTypeAsync(Charge charge)
+    {
+        if (charge is not
+            {
+                CustomerId: not null,
+                PaymentIntentId: not null,
+                PaymentMethodDetails: { Type: "customer_balance" }
+            })
+        {
+            return null;
+        }
+
+        var cashBalanceTransactions = _stripeFacade.GetCustomerCashBalanceTransactions(charge.CustomerId);
+
+        string bankTransferType = null;
+        var fundedCharge = false;
+
+        await foreach (var cashBalanceTransaction in cashBalanceTransactions)
+        {
+            switch (cashBalanceTransaction)
+            {
+                case { Type: "funded", Funded: not null }:
+                {
+                    bankTransferType = cashBalanceTransaction.Funded.BankTransfer.Type;
+                    break;
+                }
+                case { Type: "applied_to_payment", AppliedToPayment: not null }:
+                {
+                    fundedCharge = charge.PaymentIntentId == cashBalanceTransaction.AppliedToPayment.PaymentIntentId;
+                    break;
+                }
+            }
+        }
+
+        return !fundedCharge ? null : bankTransferType;
     }
 }

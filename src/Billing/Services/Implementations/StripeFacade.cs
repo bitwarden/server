@@ -11,6 +11,7 @@ public class StripeFacade : IStripeFacade
 {
     private readonly ChargeService _chargeService = new();
     private readonly CustomerService _customerService = new();
+    private readonly CustomerCashBalanceTransactionService _customerCashBalanceTransactionService = new();
     private readonly EventService _eventService = new();
     private readonly InvoiceService _invoiceService = new();
     private readonly PaymentMethodService _paymentMethodService = new();
@@ -40,6 +41,13 @@ public class StripeFacade : IStripeFacade
         RequestOptions requestOptions = null,
         CancellationToken cancellationToken = default) =>
         await _customerService.GetAsync(customerId, customerGetOptions, requestOptions, cancellationToken);
+
+    public IAsyncEnumerable<CustomerCashBalanceTransaction> GetCustomerCashBalanceTransactions(
+        string customerId,
+        CustomerCashBalanceTransactionListOptions customerCashBalanceTransactionListOptions,
+        RequestOptions requestOptions = null,
+        CancellationToken cancellationToken = default)
+        => _customerCashBalanceTransactionService.ListAutoPagingAsync(customerId, customerCashBalanceTransactionListOptions, requestOptions, cancellationToken);
 
     public async Task<Customer> UpdateCustomer(
         string customerId,
