@@ -93,6 +93,7 @@ public class Startup
         // Caching
         services.AddMemoryCache();
         services.AddDistributedCache(globalSettings);
+        services.AddExtendedCache(EventIntegrationsCacheConstants.CacheName, globalSettings);
 
         if (!globalSettings.SelfHosted)
         {
@@ -226,7 +227,8 @@ public class Startup
             services.AddHostedService<Core.HostedServices.ApplicationCacheHostedService>();
         }
 
-        // Add Slack / Teams Services for OAuth API requests - if configured
+        // Add Event Integrations services
+        services.AddEventIntegrationsCommandsQueries(globalSettings);
         services.AddSlackService(globalSettings);
         services.AddTeamsService(globalSettings);
     }
