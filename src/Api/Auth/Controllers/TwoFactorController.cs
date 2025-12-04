@@ -9,7 +9,6 @@ using Bit.Api.Models.Response;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Identity.TokenProviders;
-using Bit.Core.Auth.LoginFeatures.PasswordlessLogin.Interfaces;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Services;
 using Bit.Core.Context;
@@ -35,7 +34,7 @@ public class TwoFactorController : Controller
     private readonly IOrganizationService _organizationService;
     private readonly UserManager<User> _userManager;
     private readonly ICurrentContext _currentContext;
-    private readonly IVerifyAuthRequestCommand _verifyAuthRequestCommand;
+    private readonly IAuthRequestRepository _authRequestRepository;
     private readonly IDuoUniversalTokenService _duoUniversalTokenService;
     private readonly IDataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable> _twoFactorAuthenticatorDataProtector;
     private readonly IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> _ssoEmailTwoFactorSessionDataProtector;
@@ -47,7 +46,7 @@ public class TwoFactorController : Controller
         IOrganizationService organizationService,
         UserManager<User> userManager,
         ICurrentContext currentContext,
-        IVerifyAuthRequestCommand verifyAuthRequestCommand,
+        IAuthRequestRepository authRequestRepository,
         IDuoUniversalTokenService duoUniversalConfigService,
         IDataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable> twoFactorAuthenticatorDataProtector,
         IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> ssoEmailTwoFactorSessionDataProtector,
@@ -58,7 +57,7 @@ public class TwoFactorController : Controller
         _organizationService = organizationService;
         _userManager = userManager;
         _currentContext = currentContext;
-        _verifyAuthRequestCommand = verifyAuthRequestCommand;
+        _authRequestRepository = authRequestRepository;
         _duoUniversalTokenService = duoUniversalConfigService;
         _twoFactorAuthenticatorDataProtector = twoFactorAuthenticatorDataProtector;
         _ssoEmailTwoFactorSessionDataProtector = ssoEmailTwoFactorSessionDataProtector;
@@ -353,9 +352,9 @@ public class TwoFactorController : Controller
             // Check if 2FA email is from Passwordless.
             if (!string.IsNullOrEmpty(requestModel.AuthRequestAccessCode))
             {
-                if (await _verifyAuthRequestCommand
-                        .VerifyAuthRequestAsync(new Guid(requestModel.AuthRequestId),
-                            requestModel.AuthRequestAccessCode))
+                var authRequest = await _authRequestRepository.GetByIdAsync(new Guid(requestModel.AuthRequestId));
+                if (authRequest != null &&
+                    authRequest.IsValidForAuthentication(user.Id, requestModel.AuthRequestAccessCode))
                 {
                     await _twoFactorEmailService.SendTwoFactorEmailAsync(user);
                 }
