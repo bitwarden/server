@@ -9,6 +9,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Pricing.Premium;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -21,6 +22,8 @@ using Quartz;
 using Stripe;
 using Xunit;
 using Event = Stripe.Event;
+using PremiumPlan = Bit.Core.Billing.Pricing.Premium.Plan;
+using PremiumPurchasable = Bit.Core.Billing.Pricing.Premium.Purchasable;
 
 namespace Bit.Billing.Test.Services;
 
@@ -530,6 +533,16 @@ public class SubscriptionUpdatedHandlerTests
 
         var parsedEvent = new Event { Data = new EventData() };
 
+        var premiumPlan = new PremiumPlan
+        {
+            Name = "Premium",
+            Available = true,
+            LegacyYear = null,
+            Seat = new PremiumPurchasable { Price = 10M, StripePriceId = IStripeEventUtilityService.PremiumPlanId },
+            Storage = new PremiumPurchasable { Price = 4M, StripePriceId = "storage-plan-personal" }
+        };
+        _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { premiumPlan });
+
         _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
             .Returns(subscription);
 
@@ -578,6 +591,16 @@ public class SubscriptionUpdatedHandlerTests
         };
 
         var parsedEvent = new Event { Data = new EventData() };
+
+        var premiumPlan = new PremiumPlan
+        {
+            Name = "Premium",
+            Available = true,
+            LegacyYear = null,
+            Seat = new PremiumPurchasable { Price = 10M, StripePriceId = IStripeEventUtilityService.PremiumPlanId },
+            Storage = new PremiumPurchasable { Price = 4M, StripePriceId = "storage-plan-personal" }
+        };
+        _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { premiumPlan });
 
         _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
             .Returns(subscription);
@@ -744,7 +767,7 @@ public class SubscriptionUpdatedHandlerTests
                     new SubscriptionItem
                     {
                         CurrentPeriodEnd = DateTime.UtcNow.AddDays(10),
-                        Plan = new Plan { Id = "2023-enterprise-org-seat-annually" }
+                        Plan = new Stripe.Plan { Id = "2023-enterprise-org-seat-annually" }
                     }
                 ]
             },
@@ -778,7 +801,7 @@ public class SubscriptionUpdatedHandlerTests
                     {
                         Data =
                         [
-                            new SubscriptionItem { Plan = new Plan { Id = "secrets-manager-enterprise-seat-annually" } }
+                            new SubscriptionItem { Plan = new Stripe.Plan { Id = "secrets-manager-enterprise-seat-annually" } }
                         ]
                     }
                 })
@@ -1180,6 +1203,16 @@ public class SubscriptionUpdatedHandlerTests
 
         var parsedEvent = new Event { Data = new EventData() };
 
+        var premiumPlan = new PremiumPlan
+        {
+            Name = "Premium",
+            Available = true,
+            LegacyYear = null,
+            Seat = new PremiumPurchasable { Price = 10M, StripePriceId = IStripeEventUtilityService.PremiumPlanId },
+            Storage = new PremiumPurchasable { Price = 4M, StripePriceId = "storage-plan-personal" }
+        };
+        _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { premiumPlan });
+
         _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
             .Returns(subscription);
 
@@ -1236,6 +1269,16 @@ public class SubscriptionUpdatedHandlerTests
         };
 
         var parsedEvent = new Event { Data = new EventData() };
+
+        var premiumPlan = new PremiumPlan
+        {
+            Name = "Premium",
+            Available = true,
+            LegacyYear = null,
+            Seat = new PremiumPurchasable { Price = 10M, StripePriceId = IStripeEventUtilityService.PremiumPlanId },
+            Storage = new PremiumPurchasable { Price = 4M, StripePriceId = "storage-plan-personal" }
+        };
+        _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { premiumPlan });
 
         _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
             .Returns(subscription);
