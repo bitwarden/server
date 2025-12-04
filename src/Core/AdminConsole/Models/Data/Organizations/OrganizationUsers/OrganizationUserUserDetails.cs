@@ -20,6 +20,10 @@ public class OrganizationUserUserDetails : IExternal, ITwoFactorProvidersUser, I
     public string Email { get; set; }
     public string AvatarColor { get; set; }
     public string TwoFactorProviders { get; set; }
+    /// <summary>
+    /// User's personal premium subscription status. Does not reflect organization premium access.
+    /// Null when the organization user is in Invited status (UserId is null).
+    /// </summary>
     public bool? Premium { get; set; }
     public OrganizationUserStatusType Status { get; set; }
     public OrganizationUserType Type { get; set; }
