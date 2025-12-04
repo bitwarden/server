@@ -6,7 +6,7 @@ BEGIN
     SET NOCOUNT ON
 
     CREATE TABLE #Temp
-    ( 
+    (
         [Id] UNIQUEIDENTIFIER NOT NULL,
         [UserId] UNIQUEIDENTIFIER NULL,
         [OrganizationId] UNIQUEIDENTIFIER NULL
@@ -30,7 +30,9 @@ BEGIN
         [dbo].[Cipher]
     SET
         [DeletedDate] = @UtcNow,
-        [RevisionDate] = @UtcNow
+        [RevisionDate] = @UtcNow,
+        [ArchivedDate] = NULL,
+        [Archives] = NULL
     WHERE
         [Id] IN (SELECT [Id] FROM #Temp)
 

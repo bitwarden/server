@@ -879,6 +879,12 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
                 {
                     dbContext.Attach(cipher);
                     cipher.DeletedDate = action == CipherStateAction.Restore ? null : utcNow;
+                    if (action == CipherStateAction.SoftDelete && (!string.IsNullOrWhiteSpace(cipher.Archives) || cipher.ArchivedDate != null))
+                    {
+                        // Clear out any per-user archive records on soft delete
+                        cipher.Archives = null;
+                        cipher.ArchivedDate = null;
+                    }
                     cipher.RevisionDate = utcNow;
                 });
             }
