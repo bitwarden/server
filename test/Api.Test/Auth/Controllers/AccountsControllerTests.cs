@@ -766,7 +766,7 @@ public class AccountsControllerTests : IDisposable
 
         // Assert
         await _setAccountKeysForUserCommand.Received(1).SetAccountKeysForUserAsync(
-            user.Id,
+            user,
             model.AccountKeys);
         await _userService.DidNotReceiveWithAnyArgs().SaveUserAsync(Arg.Any<User>());
         Assert.NotNull(result);
@@ -796,7 +796,7 @@ public class AccountsControllerTests : IDisposable
             u.PublicKey == model.PublicKey &&
             u.PrivateKey == model.EncryptedPrivateKey));
         await _setAccountKeysForUserCommand.DidNotReceiveWithAnyArgs()
-            .SetAccountKeysForUserAsync(Arg.Any<Guid>(), Arg.Any<AccountKeysRequestModel>());
+            .SetAccountKeysForUserAsync(Arg.Any<User>(), Arg.Any<AccountKeysRequestModel>());
         Assert.NotNull(result);
         Assert.Equal("keys", result.Object);
     }
