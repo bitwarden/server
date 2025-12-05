@@ -4,6 +4,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Data;
+using Bit.Core.KeyManagement.Utilities;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Identity;
 
@@ -51,7 +52,7 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     public string? Key { get; set; }
     /// <summary>
     /// The raw public key, without a signature from the user's signature key.
-    /// </summary> 
+    /// </summary>
     public string? PublicKey { get; set; }
     /// <summary>
     /// User key wrapped private key.
@@ -209,6 +210,25 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     {
         // If no security version is set, it is version 1. The minimum initialized version is 2.
         return SecurityVersion ?? 1;
+    }
+
+    public bool IsSetupForV2Encryption()
+    {
+        return HasV2KeyShape() && IsSecurityVersionTwo();
+    }
+
+    private bool HasV2KeyShape()
+    {
+        return EncryptionParsing.GetEncryptionType(PrivateKey) == EncryptionType.XChaCha20Poly1305_B64;
+    }
+
+    /// <summary>
+    /// This technically is correct but all versions after 1 are considered v2 encryption. Leaving for now with
+    /// KM's blessing that when a new version comes along they will handle migration.
+    /// </summary>
+    private bool IsSecurityVersionTwo()
+    {
+        return SecurityVersion == 2;
     }
 
     /// <summary>

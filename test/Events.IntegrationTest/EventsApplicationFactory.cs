@@ -3,6 +3,7 @@ using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Enums;
 using Bit.IntegrationTestCommon;
 using Bit.IntegrationTestCommon.Factories;
+using Bit.Test.Common.Constants;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
@@ -58,10 +59,10 @@ public class EventsApplicationFactory : WebApplicationFactoryBase<Startup>
                 KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
                 UserAsymmetricKeys = new KeysRequestModel()
                 {
-                    PublicKey = "public_key",
-                    EncryptedPrivateKey = "private_key"
+                    PublicKey = TestEncryptionConstants.PublicKey,
+                    EncryptedPrivateKey = TestEncryptionConstants.V1EncryptedBase64
                 },
-                UserSymmetricKey = "sym_key",
+                UserSymmetricKey = TestEncryptionConstants.V1EncryptedBase64,
             });
 
         return await _identityApplicationFactory.TokenFromPasswordAsync(email, masterPasswordHash);
