@@ -1,4 +1,7 @@
-﻿using Bit.Core.AdminConsole.Enums;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Services;
@@ -55,11 +58,11 @@ public class ImportCiphersCommand : IImportCiphersCommand
         Guid importingUserId)
     {
         // Make sure the user can save new ciphers to their personal vault
-        var isPersonalVaultRestricted = _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements)
-            ? (await _policyRequirementQuery.GetAsync<PersonalOwnershipPolicyRequirement>(importingUserId)).DisablePersonalOwnership
-            : await _policyService.AnyPoliciesApplicableToUserAsync(importingUserId, PolicyType.PersonalOwnership);
+        var organizationDataOwnershipEnabled = _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements)
+            ? (await _policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(importingUserId)).State == OrganizationDataOwnershipState.Enabled
+            : await _policyService.AnyPoliciesApplicableToUserAsync(importingUserId, PolicyType.OrganizationDataOwnership);
 
-        if (isPersonalVaultRestricted)
+        if (organizationDataOwnershipEnabled)
         {
             throw new BadRequestException("You cannot import items into your personal vault because you are " +
                 "a member of an organization which forbids it.");
@@ -147,17 +150,34 @@ public class ImportCiphersCommand : IImportCiphersCommand
 
         foreach (var collection in collections)
         {
-            if (!organizationCollectionsIds.Contains(collection.Id))
+            // If the collection already exists, skip it
+            if (organizationCollectionsIds.Contains(collection.Id))
             {
-                collection.SetNewId();
-                newCollections.Add(collection);
-                newCollectionUsers.Add(new CollectionUser
-                {
-                    CollectionId = collection.Id,
-                    OrganizationUserId = importingOrgUser.Id,
-                    Manage = true
-                });
+                continue;
             }
+
+            // Create new collections if not already present
+            collection.SetNewId();
+            newCollections.Add(collection);
+
+            /*
+             * If the organization was created by a Provider, the organization may have zero members (users)
+             * In this situation importingOrgUser will be null, and accessing importingOrgUser.Id will
+             * result in a null reference exception.
+             *
+             * Avoid user assignment, but proceed with adding the collection.
+             */
+            if (importingOrgUser == null)
+            {
+                continue;
+            }
+
+            newCollectionUsers.Add(new CollectionUser
+            {
+                CollectionId = collection.Id,
+                OrganizationUserId = importingOrgUser.Id,
+                Manage = true
+            });
         }
 
         // Create associations based on the newly assigned ids

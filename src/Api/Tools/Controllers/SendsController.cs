@@ -1,4 +1,7 @@
-﻿using System.Text.Json;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text.Json;
 using Azure.Messaging.EventGrid;
 using Bit.Api.Models.Response;
 using Bit.Api.Tools.Models.Request;
@@ -163,7 +166,7 @@ public class SendsController : Controller
                     }
                     catch (Exception e)
                     {
-                        _logger.LogError(e, $"Uncaught exception occurred while handling event grid event: {JsonSerializer.Serialize(eventGridEvent)}");
+                        _logger.LogError(e, "Uncaught exception occurred while handling event grid event: {Event}", JsonSerializer.Serialize(eventGridEvent));
                         return;
                     }
                 }
@@ -189,7 +192,7 @@ public class SendsController : Controller
     }
 
     [HttpGet("")]
-    public async Task<ListResponseModel<SendResponseModel>> Get()
+    public async Task<ListResponseModel<SendResponseModel>> GetAll()
     {
         var userId = _userService.GetProperUserId(User).Value;
         var sends = await _sendRepository.GetManyByUserIdAsync(userId);

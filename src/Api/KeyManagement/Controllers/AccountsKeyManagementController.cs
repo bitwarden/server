@@ -80,7 +80,7 @@ public class AccountsKeyManagementController : Controller
     [HttpPost("key-management/regenerate-keys")]
     public async Task RegenerateKeysAsync([FromBody] KeyRegenerationRequestModel request)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.PrivateKeyRegeneration))
+        if (!_featureService.IsEnabled(FeatureFlagKeys.PrivateKeyRegeneration) && !_featureService.IsEnabled(FeatureFlagKeys.DataRecoveryTool))
         {
             throw new NotFoundException();
         }
@@ -106,8 +106,7 @@ public class AccountsKeyManagementController : Controller
         {
             OldMasterKeyAuthenticationHash = model.OldMasterKeyAuthenticationHash,
 
-            UserKeyEncryptedAccountPrivateKey = model.AccountKeys.UserKeyEncryptedAccountPrivateKey,
-            AccountPublicKey = model.AccountKeys.AccountPublicKey,
+            AccountKeys = model.AccountKeys.ToAccountKeysData(),
 
             MasterPasswordUnlockData = model.AccountUnlockData.MasterPasswordUnlockData.ToUnlockData(),
             EmergencyAccesses = await _emergencyAccessValidator.ValidateAsync(user, model.AccountUnlockData.EmergencyAccessUnlockData),

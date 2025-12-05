@@ -1,4 +1,7 @@
-﻿using AutoMapper;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Constants;
@@ -109,7 +112,9 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 AllowAdminAccessToAllCollectionItems = e.AllowAdminAccessToAllCollectionItems,
                 UseRiskInsights = e.UseRiskInsights,
                 UseOrganizationDomains = e.UseOrganizationDomains,
-                UseAdminSponsoredFamilies = e.UseAdminSponsoredFamilies
+                UseAdminSponsoredFamilies = e.UseAdminSponsoredFamilies,
+                UseAutomaticUserConfirmation = e.UseAutomaticUserConfirmation,
+                UsePhishingBlocker = e.UsePhishingBlocker
             }).ToListAsync();
         }
     }
@@ -125,6 +130,7 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             PlanType.Free,
             PlanType.Custom,
             PlanType.FamiliesAnnually2019,
+            PlanType.FamiliesAnnually2025,
             PlanType.FamiliesAnnually
         };
 
@@ -372,11 +378,6 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
         return await query.ToArrayAsync();
     }
 
-    public Task EnableCollectionEnhancements(Guid organizationId)
-    {
-        throw new NotImplementedException("Collection enhancements migration is not yet supported for Entity Framework.");
-    }
-
     public async Task<OrganizationSeatCounts> GetOccupiedSeatCountByOrganizationIdAsync(Guid organizationId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -399,5 +400,42 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 Sponsored = sponsored
             };
         }
+    }
+
+    public async Task<IEnumerable<Core.AdminConsole.Entities.Organization>> GetOrganizationsForSubscriptionSyncAsync()
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        await using var dbContext = GetDatabaseContext(scope);
+
+        var organizations = await dbContext.Organizations
+            .Where(o => o.SyncSeats == true && o.Seats != null)
+            .ToArrayAsync();
+
+        return organizations;
+    }
+
+    public async Task UpdateSuccessfulOrganizationSyncStatusAsync(IEnumerable<Guid> successfulOrganizations, DateTime syncDate)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        await using var dbContext = GetDatabaseContext(scope);
+
+        await dbContext.Organizations
+            .Where(o => successfulOrganizations.Contains(o.Id))
+            .ExecuteUpdateAsync(o => o
+                .SetProperty(x => x.SyncSeats, false)
+                .SetProperty(x => x.RevisionDate, syncDate.Date));
+    }
+
+    public async Task IncrementSeatCountAsync(Guid organizationId, int increaseAmount, DateTime requestDate)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        await using var dbContext = GetDatabaseContext(scope);
+
+        await dbContext.Organizations
+            .Where(o => o.Id == organizationId)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(o => o.Seats, o => o.Seats + increaseAmount)
+                .SetProperty(o => o.SyncSeats, true)
+                .SetProperty(o => o.RevisionDate, requestDate));
     }
 }

@@ -3,7 +3,7 @@ using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Models.Data.Integrations;
+using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -42,6 +42,36 @@ public class OrganizationIntegrationsConfigurationControllerTests
             .Returns(organizationIntegrationConfiguration);
 
         await sutProvider.Sut.DeleteAsync(organizationId, organizationIntegration.Id, organizationIntegrationConfiguration.Id);
+
+        await sutProvider.GetDependency<IOrganizationIntegrationRepository>().Received(1)
+            .GetByIdAsync(organizationIntegration.Id);
+        await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().Received(1)
+            .GetByIdAsync(organizationIntegrationConfiguration.Id);
+        await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().Received(1)
+            .DeleteAsync(organizationIntegrationConfiguration);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostDeleteAsync_AllParamsProvided_Succeeds(
+        SutProvider<OrganizationIntegrationConfigurationController> sutProvider,
+        Guid organizationId,
+        OrganizationIntegration organizationIntegration,
+        OrganizationIntegrationConfiguration organizationIntegrationConfiguration)
+    {
+        organizationIntegration.OrganizationId = organizationId;
+        organizationIntegrationConfiguration.OrganizationIntegrationId = organizationIntegration.Id;
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(organizationIntegration);
+        sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(organizationIntegrationConfiguration);
+
+        await sutProvider.Sut.PostDeleteAsync(organizationId, organizationIntegration.Id, organizationIntegrationConfiguration.Id);
 
         await sutProvider.GetDependency<IOrganizationIntegrationRepository>().Received(1)
             .GetByIdAsync(organizationIntegration.Id);
@@ -142,6 +172,110 @@ public class OrganizationIntegrationsConfigurationControllerTests
     }
 
     [Theory, BitAutoData]
+    public async Task GetAsync_ConfigurationsExist_Succeeds(
+        SutProvider<OrganizationIntegrationConfigurationController> sutProvider,
+        Guid organizationId,
+        OrganizationIntegration organizationIntegration,
+        List<OrganizationIntegrationConfiguration> organizationIntegrationConfigurations)
+    {
+        organizationIntegration.OrganizationId = organizationId;
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(organizationIntegration);
+        sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>()
+            .GetManyByIntegrationAsync(Arg.Any<Guid>())
+            .Returns(organizationIntegrationConfigurations);
+
+        var result = await sutProvider.Sut.GetAsync(organizationId, organizationIntegration.Id);
+        Assert.NotNull(result);
+        Assert.Equal(organizationIntegrationConfigurations.Count, result.Count);
+        Assert.All(result, r => Assert.IsType<OrganizationIntegrationConfigurationResponseModel>(r));
+
+        await sutProvider.GetDependency<IOrganizationIntegrationRepository>().Received(1)
+            .GetByIdAsync(organizationIntegration.Id);
+        await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().Received(1)
+            .GetManyByIntegrationAsync(organizationIntegration.Id);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAsync_NoConfigurationsExist_ReturnsEmptyList(
+        SutProvider<OrganizationIntegrationConfigurationController> sutProvider,
+        Guid organizationId,
+        OrganizationIntegration organizationIntegration)
+    {
+        organizationIntegration.OrganizationId = organizationId;
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(organizationIntegration);
+        sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>()
+            .GetManyByIntegrationAsync(Arg.Any<Guid>())
+            .Returns([]);
+
+        var result = await sutProvider.Sut.GetAsync(organizationId, organizationIntegration.Id);
+        Assert.NotNull(result);
+        Assert.Empty(result);
+
+        await sutProvider.GetDependency<IOrganizationIntegrationRepository>().Received(1)
+            .GetByIdAsync(organizationIntegration.Id);
+        await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().Received(1)
+            .GetManyByIntegrationAsync(organizationIntegration.Id);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAsync_IntegrationDoesNotExist_ThrowsNotFound(
+        SutProvider<OrganizationIntegrationConfigurationController> sutProvider,
+        Guid organizationId)
+    {
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .ReturnsNull();
+
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.GetAsync(organizationId, Guid.NewGuid()));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAsync_IntegrationDoesNotBelongToOrganization_ThrowsNotFound(
+        SutProvider<OrganizationIntegrationConfigurationController> sutProvider,
+        Guid organizationId,
+        OrganizationIntegration organizationIntegration)
+    {
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(organizationIntegration);
+
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.GetAsync(organizationId, organizationIntegration.Id));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAsync_UserIsNotOrganizationAdmin_ThrowsNotFound(
+        SutProvider<OrganizationIntegrationConfigurationController> sutProvider,
+        Guid organizationId)
+    {
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(false);
+
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.GetAsync(organizationId, Guid.NewGuid()));
+    }
+
+    [Theory, BitAutoData]
     public async Task PostAsync_AllParamsProvided_Slack_Succeeds(
         SutProvider<OrganizationIntegrationConfigurationController> sutProvider,
         Guid organizationId,
@@ -151,9 +285,10 @@ public class OrganizationIntegrationsConfigurationControllerTests
     {
         organizationIntegration.OrganizationId = organizationId;
         organizationIntegration.Type = IntegrationType.Slack;
-        var slackConfig = new SlackIntegrationConfiguration(channelId: "C123456");
+        var slackConfig = new SlackIntegrationConfiguration(ChannelId: "C123456");
         model.Configuration = JsonSerializer.Serialize(slackConfig);
         model.Template = "Template String";
+        model.Filters = null;
 
         var expected = new OrganizationIntegrationConfigurationResponseModel(organizationIntegrationConfiguration);
 
@@ -167,15 +302,16 @@ public class OrganizationIntegrationsConfigurationControllerTests
         sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>()
             .CreateAsync(Arg.Any<OrganizationIntegrationConfiguration>())
             .Returns(organizationIntegrationConfiguration);
-        var requestAction = await sutProvider.Sut.CreateAsync(organizationId, organizationIntegration.Id, model);
+        var createResponse = await sutProvider.Sut.CreateAsync(organizationId, organizationIntegration.Id, model);
 
         await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().Received(1)
             .CreateAsync(Arg.Any<OrganizationIntegrationConfiguration>());
-        Assert.IsType<OrganizationIntegrationConfigurationResponseModel>(requestAction);
-        Assert.Equal(expected.Id, requestAction.Id);
-        Assert.Equal(expected.Configuration, requestAction.Configuration);
-        Assert.Equal(expected.EventType, requestAction.EventType);
-        Assert.Equal(expected.Template, requestAction.Template);
+        Assert.IsType<OrganizationIntegrationConfigurationResponseModel>(createResponse);
+        Assert.Equal(expected.Id, createResponse.Id);
+        Assert.Equal(expected.Configuration, createResponse.Configuration);
+        Assert.Equal(expected.EventType, createResponse.EventType);
+        Assert.Equal(expected.Filters, createResponse.Filters);
+        Assert.Equal(expected.Template, createResponse.Template);
     }
 
     [Theory, BitAutoData]
@@ -188,9 +324,10 @@ public class OrganizationIntegrationsConfigurationControllerTests
     {
         organizationIntegration.OrganizationId = organizationId;
         organizationIntegration.Type = IntegrationType.Webhook;
-        var webhookConfig = new WebhookIntegrationConfiguration(url: "https://localhost");
+        var webhookConfig = new WebhookIntegrationConfiguration(Uri: new Uri("https://localhost"), Scheme: "Bearer", Token: "AUTH-TOKEN");
         model.Configuration = JsonSerializer.Serialize(webhookConfig);
         model.Template = "Template String";
+        model.Filters = null;
 
         var expected = new OrganizationIntegrationConfigurationResponseModel(organizationIntegrationConfiguration);
 
@@ -204,15 +341,55 @@ public class OrganizationIntegrationsConfigurationControllerTests
         sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>()
             .CreateAsync(Arg.Any<OrganizationIntegrationConfiguration>())
             .Returns(organizationIntegrationConfiguration);
-        var requestAction = await sutProvider.Sut.CreateAsync(organizationId, organizationIntegration.Id, model);
+        var createResponse = await sutProvider.Sut.CreateAsync(organizationId, organizationIntegration.Id, model);
 
         await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().Received(1)
             .CreateAsync(Arg.Any<OrganizationIntegrationConfiguration>());
-        Assert.IsType<OrganizationIntegrationConfigurationResponseModel>(requestAction);
-        Assert.Equal(expected.Id, requestAction.Id);
-        Assert.Equal(expected.Configuration, requestAction.Configuration);
-        Assert.Equal(expected.EventType, requestAction.EventType);
-        Assert.Equal(expected.Template, requestAction.Template);
+        Assert.IsType<OrganizationIntegrationConfigurationResponseModel>(createResponse);
+        Assert.Equal(expected.Id, createResponse.Id);
+        Assert.Equal(expected.Configuration, createResponse.Configuration);
+        Assert.Equal(expected.EventType, createResponse.EventType);
+        Assert.Equal(expected.Filters, createResponse.Filters);
+        Assert.Equal(expected.Template, createResponse.Template);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostAsync_OnlyUrlProvided_Webhook_Succeeds(
+        SutProvider<OrganizationIntegrationConfigurationController> sutProvider,
+        Guid organizationId,
+        OrganizationIntegration organizationIntegration,
+        OrganizationIntegrationConfiguration organizationIntegrationConfiguration,
+        OrganizationIntegrationConfigurationRequestModel model)
+    {
+        organizationIntegration.OrganizationId = organizationId;
+        organizationIntegration.Type = IntegrationType.Webhook;
+        var webhookConfig = new WebhookIntegrationConfiguration(Uri: new Uri("https://localhost"));
+        model.Configuration = JsonSerializer.Serialize(webhookConfig);
+        model.Template = "Template String";
+        model.Filters = null;
+
+        var expected = new OrganizationIntegrationConfigurationResponseModel(organizationIntegrationConfiguration);
+
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(organizationIntegration);
+        sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>()
+            .CreateAsync(Arg.Any<OrganizationIntegrationConfiguration>())
+            .Returns(organizationIntegrationConfiguration);
+        var createResponse = await sutProvider.Sut.CreateAsync(organizationId, organizationIntegration.Id, model);
+
+        await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().Received(1)
+            .CreateAsync(Arg.Any<OrganizationIntegrationConfiguration>());
+        Assert.IsType<OrganizationIntegrationConfigurationResponseModel>(createResponse);
+        Assert.Equal(expected.Id, createResponse.Id);
+        Assert.Equal(expected.Configuration, createResponse.Configuration);
+        Assert.Equal(expected.EventType, createResponse.EventType);
+        Assert.Equal(expected.Filters, createResponse.Filters);
+        Assert.Equal(expected.Template, createResponse.Template);
     }
 
     [Theory, BitAutoData]
@@ -350,7 +527,7 @@ public class OrganizationIntegrationsConfigurationControllerTests
     {
         organizationIntegration.OrganizationId = organizationId;
         organizationIntegration.Type = IntegrationType.Webhook;
-        var webhookConfig = new WebhookIntegrationConfiguration(url: "https://localhost");
+        var webhookConfig = new WebhookIntegrationConfiguration(Uri: new Uri("https://localhost"), Scheme: "Bearer", Token: "AUTH-TOKEN");
         model.Configuration = JsonSerializer.Serialize(webhookConfig);
         model.Template = null;
 
@@ -393,9 +570,10 @@ public class OrganizationIntegrationsConfigurationControllerTests
         organizationIntegration.OrganizationId = organizationId;
         organizationIntegrationConfiguration.OrganizationIntegrationId = organizationIntegration.Id;
         organizationIntegration.Type = IntegrationType.Slack;
-        var slackConfig = new SlackIntegrationConfiguration(channelId: "C123456");
+        var slackConfig = new SlackIntegrationConfiguration(ChannelId: "C123456");
         model.Configuration = JsonSerializer.Serialize(slackConfig);
         model.Template = "Template String";
+        model.Filters = null;
 
         var expected = new OrganizationIntegrationConfigurationResponseModel(model.ToOrganizationIntegrationConfiguration(organizationIntegrationConfiguration));
 
@@ -409,7 +587,7 @@ public class OrganizationIntegrationsConfigurationControllerTests
         sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>()
             .GetByIdAsync(Arg.Any<Guid>())
             .Returns(organizationIntegrationConfiguration);
-        var requestAction = await sutProvider.Sut.UpdateAsync(
+        var updateResponse = await sutProvider.Sut.UpdateAsync(
             organizationId,
             organizationIntegration.Id,
             organizationIntegrationConfiguration.Id,
@@ -417,11 +595,12 @@ public class OrganizationIntegrationsConfigurationControllerTests
 
         await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().Received(1)
             .ReplaceAsync(Arg.Any<OrganizationIntegrationConfiguration>());
-        Assert.IsType<OrganizationIntegrationConfigurationResponseModel>(requestAction);
-        Assert.Equal(expected.Id, requestAction.Id);
-        Assert.Equal(expected.Configuration, requestAction.Configuration);
-        Assert.Equal(expected.EventType, requestAction.EventType);
-        Assert.Equal(expected.Template, requestAction.Template);
+        Assert.IsType<OrganizationIntegrationConfigurationResponseModel>(updateResponse);
+        Assert.Equal(expected.Id, updateResponse.Id);
+        Assert.Equal(expected.Configuration, updateResponse.Configuration);
+        Assert.Equal(expected.EventType, updateResponse.EventType);
+        Assert.Equal(expected.Filters, updateResponse.Filters);
+        Assert.Equal(expected.Template, updateResponse.Template);
     }
 
 
@@ -436,9 +615,10 @@ public class OrganizationIntegrationsConfigurationControllerTests
         organizationIntegration.OrganizationId = organizationId;
         organizationIntegrationConfiguration.OrganizationIntegrationId = organizationIntegration.Id;
         organizationIntegration.Type = IntegrationType.Webhook;
-        var webhookConfig = new WebhookIntegrationConfiguration(url: "https://localhost");
+        var webhookConfig = new WebhookIntegrationConfiguration(Uri: new Uri("https://localhost"), Scheme: "Bearer", Token: "AUTH-TOKEN");
         model.Configuration = JsonSerializer.Serialize(webhookConfig);
         model.Template = "Template String";
+        model.Filters = null;
 
         var expected = new OrganizationIntegrationConfigurationResponseModel(model.ToOrganizationIntegrationConfiguration(organizationIntegrationConfiguration));
 
@@ -452,7 +632,7 @@ public class OrganizationIntegrationsConfigurationControllerTests
         sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>()
             .GetByIdAsync(Arg.Any<Guid>())
             .Returns(organizationIntegrationConfiguration);
-        var requestAction = await sutProvider.Sut.UpdateAsync(
+        var updateResponse = await sutProvider.Sut.UpdateAsync(
             organizationId,
             organizationIntegration.Id,
             organizationIntegrationConfiguration.Id,
@@ -460,11 +640,56 @@ public class OrganizationIntegrationsConfigurationControllerTests
 
         await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().Received(1)
             .ReplaceAsync(Arg.Any<OrganizationIntegrationConfiguration>());
-        Assert.IsType<OrganizationIntegrationConfigurationResponseModel>(requestAction);
-        Assert.Equal(expected.Id, requestAction.Id);
-        Assert.Equal(expected.Configuration, requestAction.Configuration);
-        Assert.Equal(expected.EventType, requestAction.EventType);
-        Assert.Equal(expected.Template, requestAction.Template);
+        Assert.IsType<OrganizationIntegrationConfigurationResponseModel>(updateResponse);
+        Assert.Equal(expected.Id, updateResponse.Id);
+        Assert.Equal(expected.Configuration, updateResponse.Configuration);
+        Assert.Equal(expected.EventType, updateResponse.EventType);
+        Assert.Equal(expected.Filters, updateResponse.Filters);
+        Assert.Equal(expected.Template, updateResponse.Template);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_OnlyUrlProvided_Webhook_Succeeds(
+        SutProvider<OrganizationIntegrationConfigurationController> sutProvider,
+        Guid organizationId,
+        OrganizationIntegration organizationIntegration,
+        OrganizationIntegrationConfiguration organizationIntegrationConfiguration,
+        OrganizationIntegrationConfigurationRequestModel model)
+    {
+        organizationIntegration.OrganizationId = organizationId;
+        organizationIntegrationConfiguration.OrganizationIntegrationId = organizationIntegration.Id;
+        organizationIntegration.Type = IntegrationType.Webhook;
+        var webhookConfig = new WebhookIntegrationConfiguration(Uri: new Uri("https://localhost"));
+        model.Configuration = JsonSerializer.Serialize(webhookConfig);
+        model.Template = "Template String";
+        model.Filters = null;
+
+        var expected = new OrganizationIntegrationConfigurationResponseModel(model.ToOrganizationIntegrationConfiguration(organizationIntegrationConfiguration));
+
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(organizationIntegration);
+        sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(organizationIntegrationConfiguration);
+        var updateResponse = await sutProvider.Sut.UpdateAsync(
+            organizationId,
+            organizationIntegration.Id,
+            organizationIntegrationConfiguration.Id,
+            model);
+
+        await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().Received(1)
+            .ReplaceAsync(Arg.Any<OrganizationIntegrationConfiguration>());
+        Assert.IsType<OrganizationIntegrationConfigurationResponseModel>(updateResponse);
+        Assert.Equal(expected.Id, updateResponse.Id);
+        Assert.Equal(expected.Configuration, updateResponse.Configuration);
+        Assert.Equal(expected.EventType, updateResponse.EventType);
+        Assert.Equal(expected.Filters, updateResponse.Filters);
+        Assert.Equal(expected.Template, updateResponse.Template);
     }
 
     [Theory, BitAutoData]
@@ -476,9 +701,10 @@ public class OrganizationIntegrationsConfigurationControllerTests
     {
         organizationIntegration.OrganizationId = organizationId;
         organizationIntegration.Type = IntegrationType.Webhook;
-        var webhookConfig = new WebhookIntegrationConfiguration(url: "https://localhost");
+        var webhookConfig = new WebhookIntegrationConfiguration(Uri: new Uri("https://localhost"), Scheme: "Bearer", Token: "AUTH-TOKEN");
         model.Configuration = JsonSerializer.Serialize(webhookConfig);
         model.Template = "Template String";
+        model.Filters = null;
 
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.GetDependency<ICurrentContext>()
@@ -582,7 +808,7 @@ public class OrganizationIntegrationsConfigurationControllerTests
         organizationIntegration.OrganizationId = organizationId;
         organizationIntegrationConfiguration.OrganizationIntegrationId = organizationIntegration.Id;
         organizationIntegration.Type = IntegrationType.Slack;
-        var slackConfig = new SlackIntegrationConfiguration(channelId: "C123456");
+        var slackConfig = new SlackIntegrationConfiguration(ChannelId: "C123456");
         model.Configuration = JsonSerializer.Serialize(slackConfig);
         model.Template = null;
 

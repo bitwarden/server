@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -53,6 +54,7 @@ IBaseRequestValidatorTestWrapper
         IEventService eventService,
         IDeviceValidator deviceValidator,
         ITwoFactorAuthenticationValidator twoFactorAuthenticationValidator,
+        ISsoRequestValidator ssoRequestValidator,
         IOrganizationUserRepository organizationUserRepository,
         ILogger logger,
         ICurrentContext currentContext,
@@ -62,13 +64,17 @@ IBaseRequestValidatorTestWrapper
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
-        IPolicyRequirementQuery policyRequirementQuery) :
+        IPolicyRequirementQuery policyRequirementQuery,
+        IAuthRequestRepository authRequestRepository,
+        IMailService mailService,
+        IUserAccountKeysQuery userAccountKeysQuery) :
          base(
             userManager,
             userService,
             eventService,
             deviceValidator,
             twoFactorAuthenticationValidator,
+            ssoRequestValidator,
             organizationUserRepository,
             logger,
             currentContext,
@@ -78,7 +84,10 @@ IBaseRequestValidatorTestWrapper
             featureService,
             ssoConfigRepository,
             userDecryptionOptionsBuilder,
-            policyRequirementQuery)
+            policyRequirementQuery,
+            authRequestRepository,
+            mailService,
+            userAccountKeysQuery)
     {
     }
 
@@ -125,12 +134,17 @@ IBaseRequestValidatorTestWrapper
     protected override void SetTwoFactorResult(
         BaseRequestValidationContextFake context,
         Dictionary<string, object> customResponse)
-    { }
+    {
+        context.GrantResult = new GrantValidationResult(
+            TokenRequestErrors.InvalidGrant, "Two-factor authentication required.", customResponse);
+    }
 
     protected override void SetValidationErrorResult(
         BaseRequestValidationContextFake context,
         CustomValidatorRequestContext requestContext)
-    { }
+    {
+        context.GrantResult.IsError = true;
+    }
 
     protected override Task<bool> ValidateContextAsync(
         BaseRequestValidationContextFake context,

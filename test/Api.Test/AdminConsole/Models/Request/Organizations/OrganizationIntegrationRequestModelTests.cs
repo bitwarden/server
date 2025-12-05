@@ -1,12 +1,47 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.Enums;
+using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
 
 namespace Bit.Api.Test.AdminConsole.Models.Request.Organizations;
 
 public class OrganizationIntegrationRequestModelTests
 {
+    [Fact]
+    public void ToOrganizationIntegration_CreatesNewOrganizationIntegration()
+    {
+        var model = new OrganizationIntegrationRequestModel
+        {
+            Type = IntegrationType.Hec,
+            Configuration = JsonSerializer.Serialize(new HecIntegration(Uri: new Uri("http://localhost"), Scheme: "Bearer", Token: "Token"))
+        };
+
+        var organizationId = Guid.NewGuid();
+        var organizationIntegration = model.ToOrganizationIntegration(organizationId);
+
+        Assert.Equal(organizationIntegration.Type, model.Type);
+        Assert.Equal(organizationIntegration.Configuration, model.Configuration);
+        Assert.Equal(organizationIntegration.OrganizationId, organizationId);
+    }
+
+    [Theory, BitAutoData]
+    public void ToOrganizationIntegration_UpdatesExistingOrganizationIntegration(OrganizationIntegration integration)
+    {
+        var model = new OrganizationIntegrationRequestModel
+        {
+            Type = IntegrationType.Hec,
+            Configuration = JsonSerializer.Serialize(new HecIntegration(Uri: new Uri("http://localhost"), Scheme: "Bearer", Token: "Token"))
+        };
+
+        var organizationIntegration = model.ToOrganizationIntegration(integration);
+
+        Assert.Equal(organizationIntegration.Configuration, model.Configuration);
+    }
+
     [Fact]
     public void Validate_CloudBillingSync_ReturnsNotYetSupportedError()
     {
@@ -56,6 +91,22 @@ public class OrganizationIntegrationRequestModelTests
     }
 
     [Fact]
+    public void Validate_Teams_ReturnsCannotBeCreatedDirectlyError()
+    {
+        var model = new OrganizationIntegrationRequestModel
+        {
+            Type = IntegrationType.Teams,
+            Configuration = null
+        };
+
+        var results = model.Validate(new ValidationContext(model)).ToList();
+
+        Assert.Single(results);
+        Assert.Contains(nameof(model.Type), results[0].MemberNames);
+        Assert.Contains("cannot be created directly", results[0].ErrorMessage);
+    }
+
+    [Fact]
     public void Validate_Webhook_WithNullConfiguration_ReturnsNoErrors()
     {
         var model = new OrganizationIntegrationRequestModel
@@ -70,7 +121,7 @@ public class OrganizationIntegrationRequestModelTests
     }
 
     [Fact]
-    public void Validate_Webhook_WithConfiguration_ReturnsConfigurationError()
+    public void Validate_Webhook_WithInvalidConfiguration_ReturnsConfigurationError()
     {
         var model = new OrganizationIntegrationRequestModel
         {
@@ -82,7 +133,115 @@ public class OrganizationIntegrationRequestModelTests
 
         Assert.Single(results);
         Assert.Contains(nameof(model.Configuration), results[0].MemberNames);
-        Assert.Contains("must not include configuration", results[0].ErrorMessage);
+        Assert.Contains("Must include valid", results[0].ErrorMessage);
+    }
+
+    [Fact]
+    public void Validate_Webhook_WithValidConfiguration_ReturnsNoErrors()
+    {
+        var model = new OrganizationIntegrationRequestModel
+        {
+            Type = IntegrationType.Webhook,
+            Configuration = JsonSerializer.Serialize(new WebhookIntegration(new Uri("https://example.com")))
+        };
+
+        var results = model.Validate(new ValidationContext(model)).ToList();
+
+        Assert.Empty(results);
+    }
+
+    [Fact]
+    public void Validate_Hec_WithNullConfiguration_ReturnsError()
+    {
+        var model = new OrganizationIntegrationRequestModel
+        {
+            Type = IntegrationType.Hec,
+            Configuration = null
+        };
+
+        var results = model.Validate(new ValidationContext(model)).ToList();
+
+        Assert.Single(results);
+        Assert.Contains(nameof(model.Configuration), results[0].MemberNames);
+        Assert.Contains("Must include valid", results[0].ErrorMessage);
+    }
+
+    [Fact]
+    public void Validate_Hec_WithInvalidConfiguration_ReturnsError()
+    {
+        var model = new OrganizationIntegrationRequestModel
+        {
+            Type = IntegrationType.Hec,
+            Configuration = "Not valid"
+        };
+
+        var results = model.Validate(new ValidationContext(model)).ToList();
+
+        Assert.Single(results);
+        Assert.Contains(nameof(model.Configuration), results[0].MemberNames);
+        Assert.Contains("Must include valid", results[0].ErrorMessage);
+    }
+
+    [Fact]
+    public void Validate_Hec_WithValidConfiguration_ReturnsNoErrors()
+    {
+        var model = new OrganizationIntegrationRequestModel
+        {
+            Type = IntegrationType.Hec,
+            Configuration = JsonSerializer.Serialize(new HecIntegration(Uri: new Uri("http://localhost"), Scheme: "Bearer", Token: "Token"))
+        };
+
+        var results = model.Validate(new ValidationContext(model)).ToList();
+
+        Assert.Empty(results);
+    }
+
+    [Fact]
+    public void Validate_Datadog_WithNullConfiguration_ReturnsError()
+    {
+        var model = new OrganizationIntegrationRequestModel
+        {
+            Type = IntegrationType.Datadog,
+            Configuration = null
+        };
+
+        var results = model.Validate(new ValidationContext(model)).ToList();
+
+        Assert.Single(results);
+        Assert.Contains(nameof(model.Configuration), results[0].MemberNames);
+        Assert.Contains("Must include valid", results[0].ErrorMessage);
+    }
+
+    [Fact]
+    public void Validate_Datadog_WithInvalidConfiguration_ReturnsError()
+    {
+        var model = new OrganizationIntegrationRequestModel
+        {
+            Type = IntegrationType.Datadog,
+            Configuration = "Not valid"
+        };
+
+        var results = model.Validate(new ValidationContext(model)).ToList();
+
+        Assert.Single(results);
+        Assert.Contains(nameof(model.Configuration), results[0].MemberNames);
+        Assert.Contains("Must include valid", results[0].ErrorMessage);
+    }
+
+    [Fact]
+    public void Validate_Datadog_WithValidConfiguration_ReturnsNoErrors()
+    {
+        var model = new OrganizationIntegrationRequestModel
+        {
+            Type = IntegrationType.Datadog,
+            Configuration = JsonSerializer.Serialize(
+                new DatadogIntegration(ApiKey: "API1234", Uri: new Uri("http://localhost"))
+            )
+        };
+
+        var results = model.Validate(new ValidationContext(model)).ToList();
+
+        Assert.Empty(results);
     }
 
     [Fact]

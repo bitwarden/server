@@ -1,7 +1,6 @@
 ﻿using System.Text.Json.Serialization;
+using Bit.Core.KeyManagement.Models.Api.Response;
 using Bit.Core.Models.Api;
-
-#nullable enable
 
 namespace Bit.Core.Auth.Models.Api.Response;
 
@@ -14,7 +13,14 @@ public class UserDecryptionOptions : ResponseModel
     /// <summary>
     /// Gets or sets whether the current user has a master password that can be used to decrypt their vault.
     /// </summary>
+    [Obsolete("Use MasterPasswordUnlock instead. This will be removed in a future version.")]
     public bool HasMasterPassword { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the current user has master password unlock data available.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public MasterPasswordUnlockResponseModel? MasterPasswordUnlock { get; set; }
 
     /// <summary>
     /// Gets or sets the WebAuthn PRF decryption keys.

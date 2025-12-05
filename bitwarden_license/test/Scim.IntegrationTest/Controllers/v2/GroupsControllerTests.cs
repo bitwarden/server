@@ -201,6 +201,38 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
     }
 
     [Fact]
+    public async Task GetList_SearchDisplayNameWithoutOptionalParameters_Success()
+    {
+        string filter = "displayName eq Test Group 2";
+        int? itemsPerPage = null;
+        int? startIndex = null;
+        var expectedResponse = new ScimListResponseModel<ScimGroupResponseModel>
+        {
+            ItemsPerPage = 50, //default value
+            TotalResults = 1,
+            StartIndex = 1, //default value
+            Resources = new List<ScimGroupResponseModel>
+            {
+                new ScimGroupResponseModel
+                {
+                    Id = ScimApplicationFactory.TestGroupId2,
+                    DisplayName = "Test Group 2",
+                    ExternalId = "B",
+                    Schemas = new List<string> { ScimConstants.Scim2SchemaGroup }
+                }
+            },
+            Schemas = new List<string> { ScimConstants.Scim2SchemaListResponse }
+        };
+
+        var context = await _factory.GroupsGetListAsync(ScimApplicationFactory.TestOrganizationId1, filter, itemsPerPage, startIndex);
+
+        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+
+        var responseModel = JsonSerializer.Deserialize<ScimListResponseModel<ScimGroupResponseModel>>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        AssertHelper.AssertPropertyEqual(expectedResponse, responseModel);
+    }
+
+    [Fact]
     public async Task Post_Success()
     {
         var organizationId = ScimApplicationFactory.TestOrganizationId1;

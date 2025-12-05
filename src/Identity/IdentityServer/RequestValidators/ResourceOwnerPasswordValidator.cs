@@ -1,14 +1,17 @@
-﻿using System.Security.Claims;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Security.Claims;
 using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Validation;
 using Microsoft.AspNetCore.Identity;
@@ -28,6 +31,7 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         IEventService eventService,
         IDeviceValidator deviceValidator,
         ITwoFactorAuthenticationValidator twoFactorAuthenticationValidator,
+        ISsoRequestValidator ssoRequestValidator,
         IOrganizationUserRepository organizationUserRepository,
         ILogger<ResourceOwnerPasswordValidator> logger,
         ICurrentContext currentContext,
@@ -38,13 +42,16 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
-        IPolicyRequirementQuery policyRequirementQuery)
+        IPolicyRequirementQuery policyRequirementQuery,
+        IMailService mailService,
+        IUserAccountKeysQuery userAccountKeysQuery)
         : base(
             userManager,
             userService,
             eventService,
             deviceValidator,
             twoFactorAuthenticationValidator,
+            ssoRequestValidator,
             organizationUserRepository,
             logger,
             currentContext,
@@ -54,7 +61,10 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
             featureService,
             ssoConfigRepository,
             userDecryptionOptionsBuilder,
-            policyRequirementQuery)
+            policyRequirementQuery,
+            authRequestRepository,
+            mailService,
+            userAccountKeysQuery)
     {
         _userManager = userManager;
         _currentContext = currentContext;
@@ -87,21 +97,33 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
             return false;
         }
 
-        var authRequestId = context.Request.Raw["AuthRequest"]?.ToString()?.ToLowerInvariant();
-        if (!string.IsNullOrWhiteSpace(authRequestId) && Guid.TryParse(authRequestId, out var authRequestGuid))
+        var authRequestId = context.Request.Raw["AuthRequest"]?.ToLowerInvariant();
+        if (!string.IsNullOrEmpty(authRequestId))
         {
-            var authRequest = await _authRequestRepository.GetByIdAsync(authRequestGuid);
-            if (authRequest != null)
+            // only allow valid guids
+            if (!Guid.TryParse(authRequestId, out var authRequestGuid))
             {
-                var requestAge = DateTime.UtcNow - authRequest.CreationDate;
-                if (requestAge < TimeSpan.FromHours(1) &&
-                    CoreHelpers.FixedTimeEquals(authRequest.AccessCode, context.Password))
-                {
-                    authRequest.AuthenticationDate = DateTime.UtcNow;
-                    await _authRequestRepository.ReplaceAsync(authRequest);
-                    return true;
-                }
+                return false;
             }
+
+            var authRequest = await _authRequestRepository.GetByIdAsync(authRequestGuid);
+
+            if (authRequest == null)
+            {
+                return false;
+            }
+
+            // Auth request is non-null so validate it
+            if (authRequest.IsValidForAuthentication(validatorContext.User.Id, context.Password))
+            {
+                // We save the validated auth request so that we can set it's authentication date
+                // later on only upon successful authentication.
+                // For example, 2FA requires a resubmission so we can't mark the auth request
+                // as authenticated here.
+                validatorContext.ValidatedAuthRequest = authRequest;
+                return true;
+            }
+
             return false;
         }
 

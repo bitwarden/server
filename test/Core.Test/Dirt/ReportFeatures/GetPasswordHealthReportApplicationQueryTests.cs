@@ -1,7 +1,7 @@
 ﻿using AutoFixture;
-using Bit.Core.Dirt.Reports.Entities;
+using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Reports.ReportFeatures;
-using Bit.Core.Dirt.Reports.Repositories;
+using Bit.Core.Dirt.Repositories;
 using Bit.Core.Exceptions;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;

@@ -2,6 +2,7 @@
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
   extends: ["github>bitwarden/renovate-config"], // Extends our default configuration for pinned dependencies
   enabledManagers: [
+    "cargo",
     "dockerfile",
     "docker-compose",
     "github-actions",
@@ -10,16 +11,9 @@
   ],
   packageRules: [
     {
-      // Group all release-related workflows for GitHub Actions together for BRE.
-      groupName: "github-action",
-      matchManagers: ["github-actions"],
-      matchFileNames: [
-        ".github/workflows/publish.yml",
-        ".github/workflows/release.yml"
-      ],
-      commitMessagePrefix: "[deps] BRE:",
-      reviewers: ["team:dept-bre"],
-      addLabels: ["hold"],
+      groupName: "cargo minor",
+      matchManagers: ["cargo"],
+      matchUpdateTypes: ["minor"],
     },
     {
       groupName: "dockerfile minor",
@@ -35,6 +29,7 @@
       groupName: "github-action minor",
       matchManagers: ["github-actions"],
       matchUpdateTypes: ["minor"],
+      addLabels: ["hold"],
     },
     {
       // For any Microsoft.Extensions.* and Microsoft.AspNetCore.* packages, we want to create PRs for patch updates.
@@ -45,6 +40,10 @@
       ],
       matchUpdateTypes: ["patch"],
       dependencyDashboardApproval: false,
+    },
+    {
+      matchPackageNames: ["https://github.com/bitwarden/sdk-internal.git"],
+      groupName: "sdk-internal",
     },
     {
       matchManagers: ["dockerfile", "docker-compose"],
@@ -64,7 +63,6 @@
     },
     {
       matchPackageNames: [
-        "Azure.Extensions.AspNetCore.DataProtection.Blobs",
         "DuoUniversal",
         "Fido2.AspNet",
         "Duende.IdentityServer",
@@ -91,12 +89,7 @@
         "Microsoft.AspNetCore.Mvc.Testing",
         "Newtonsoft.Json",
         "NSubstitute",
-        "Sentry.Serilog",
-        "Serilog.AspNetCore",
-        "Serilog.Extensions.Logging",
         "Serilog.Extensions.Logging.File",
-        "Serilog.Sinks.AzureCosmosDB",
-        "Serilog.Sinks.SyslogMessages",
         "Stripe.net",
         "Swashbuckle.AspNetCore",
         "Swashbuckle.AspNetCore.SwaggerGen",
@@ -143,6 +136,7 @@
         "AspNetCoreRateLimit",
         "AspNetCoreRateLimit.Redis",
         "Azure.Data.Tables",
+        "Azure.Extensions.AspNetCore.DataProtection.Blobs",
         "Azure.Messaging.EventGrid",
         "Azure.Messaging.ServiceBus",
         "Azure.Storage.Blobs",

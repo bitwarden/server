@@ -1,4 +1,7 @@
-﻿using AutoMapper;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using AutoMapper;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
@@ -93,6 +96,20 @@ public class ProviderUserRepository :
             return await query.ToArrayAsync();
         }
     }
+
+    public async Task<ICollection<ProviderUser>> GetManyByManyUsersAsync(IEnumerable<Guid> userIds)
+    {
+        await using var scope = ServiceScopeFactory.CreateAsyncScope();
+
+        var dbContext = GetDatabaseContext(scope);
+
+        var query = from pu in dbContext.ProviderUsers
+                    where pu.UserId != null && userIds.Contains(pu.UserId.Value)
+                    select pu;
+
+        return await query.ToArrayAsync();
+    }
+
     public async Task<ProviderUser> GetByProviderUserAsync(Guid providerId, Guid userId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())

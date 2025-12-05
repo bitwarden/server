@@ -1,4 +1,7 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -70,7 +73,7 @@ public class ProviderClientOrganizationSignUpCommand : IProviderClientOrganizati
             PlanType = plan!.Type,
             Seats = signup.AdditionalSeats,
             MaxCollections = plan.PasswordManager.MaxCollections,
-            MaxStorageGb = 1,
+            MaxStorageGb = plan.PasswordManager.BaseStorageGb,
             UsePolicies = plan.HasPolicies,
             UseSso = plan.HasSso,
             UseOrganizationDomains = plan.HasOrganizationDomains,

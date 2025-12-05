@@ -20,6 +20,7 @@ using NSubstitute;
 using NSubstitute.ClearExtensions;
 using Xunit;
 using GlobalSettings = Bit.Core.Settings.GlobalSettings;
+using ImportCiphersLimitationSettings = Bit.Core.Settings.GlobalSettings.ImportCiphersLimitationSettings;
 
 namespace Bit.Api.Test.Tools.Controllers;
 
@@ -27,6 +28,12 @@ namespace Bit.Api.Test.Tools.Controllers;
 [SutProviderCustomize]
 public class ImportCiphersControllerTests
 {
+    private readonly ImportCiphersLimitationSettings _organizationCiphersLimitations = new()
+    {
+        CiphersLimit = 40000,
+        CollectionRelationshipsLimit = 80000,
+        CollectionsLimit = 2000
+    };
 
     /*************************
      * PostImport - Individual
@@ -35,7 +42,7 @@ public class ImportCiphersControllerTests
     public async Task PostImportIndividual_ImportCiphersRequestModel_BadRequestException(SutProvider<ImportCiphersController> sutProvider, IFixture fixture)
     {
         // Arrange
-        sutProvider.GetDependency<Core.Settings.GlobalSettings>()
+        sutProvider.GetDependency<GlobalSettings>()
             .SelfHosted = false;
         var ciphers = fixture.CreateMany<CipherRequestModel>(7001).ToArray();
         var model = new ImportCiphersRequestModel
@@ -68,6 +75,7 @@ public class ImportCiphersControllerTests
             .With(x => x.Ciphers, fixture.Build<CipherRequestModel>()
                 .With(c => c.OrganizationId, Guid.NewGuid().ToString())
                 .With(c => c.FolderId, Guid.NewGuid().ToString())
+                .With(c => c.ArchivedDate, (DateTime?)null)
                 .CreateMany(1).ToArray())
             .Create();
 
@@ -85,29 +93,63 @@ public class ImportCiphersControllerTests
             );
     }
 
+    [Theory, BitAutoData]
+    public async Task PostImportIndividual_WithArchivedDate_SavesArchivedDate(User user,
+        IFixture fixture, SutProvider<ImportCiphersController> sutProvider)
+    {
+        var archivedDate = DateTime.UtcNow;
+        sutProvider.GetDependency<GlobalSettings>()
+            .SelfHosted = false;
+
+        sutProvider.GetDependency<Core.Services.IUserService>()
+            .GetProperUserId(Arg.Any<ClaimsPrincipal>())
+            .Returns(user.Id);
+
+        var request = fixture.Build<ImportCiphersRequestModel>()
+            .With(x => x.Ciphers, fixture.Build<CipherRequestModel>()
+                .With(c => c.ArchivedDate, archivedDate)
+                .With(c => c.FolderId, (string)null)
+                .CreateMany(1).ToArray())
+            .Create();
+
+        await sutProvider.Sut.PostImport(request);
+
+        await sutProvider.GetDependency<IImportCiphersCommand>()
+            .Received()
+            .ImportIntoIndividualVaultAsync(
+                Arg.Any<List<Folder>>(),
+                Arg.Is<List<CipherDetails>>(ciphers => ciphers.First().ArchivedDate == archivedDate),
+                Arg.Any<IEnumerable<KeyValuePair<int, int>>>(),
+                user.Id
+            );
+    }
+
     /****************************
      * PostImport - Organization
      ****************************/
 
     [Theory, BitAutoData]
-    public async Task PostImportOrganization_ImportOrganizationCiphersRequestModel_BadRequestException(SutProvider<ImportCiphersController> sutProvider, IFixture fixture)
+    public async Task PostImportOrganization_ImportOrganizationCiphersRequestModel_BadRequestException(
+        SutProvider<ImportCiphersController> sutProvider,
+        IFixture fixture)
     {
         // Arrange
-        var globalSettings = sutProvider.GetDependency<Core.Settings.GlobalSettings>();
-        globalSettings.SelfHosted = false;
+        sutProvider.GetDependency<GlobalSettings>()
+            .SelfHosted = false;
+        // Limits are set in appsettings.json, making values small for test to run faster.
+        sutProvider.GetDependency<GlobalSettings>()
+            .ImportCiphersLimitation = new()
+            {
+                CiphersLimit = 4,
+                CollectionRelationshipsLimit = 8,
+                CollectionsLimit = 2
+            };
 
         var userService = sutProvider.GetDependency<Bit.Core.Services.IUserService>();
         userService.GetProperUserId(Arg.Any<ClaimsPrincipal>())
             .Returns(null as Guid?);
 
-        globalSettings.ImportCiphersLimitation = new GlobalSettings.ImportCiphersLimitationSettings()
-        { // limits are set in appsettings.json, making values small for test to run faster.
-            CiphersLimit = 200,
-            CollectionsLimit = 400,
-            CollectionRelationshipsLimit = 20
-        };
-
-        var ciphers = fixture.CreateMany<CipherRequestModel>(201).ToArray();
+        var ciphers = fixture.CreateMany<CipherRequestModel>(5).ToArray();
         var model = new ImportOrganizationCiphersRequestModel
         {
             Collections = null,
@@ -116,7 +158,7 @@ public class ImportCiphersControllerTests
         };
 
         // Act
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PostImport(Arg.Any<string>(), model));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PostImportOrganization(Arg.Any<string>(), model));
 
         // Assert
         Assert.Equal("You cannot import this much data at once.", exception.Message);
@@ -133,7 +175,10 @@ public class ImportCiphersControllerTests
         var orgIdGuid = Guid.Parse(orgId);
         var existingCollections = fixture.CreateMany<CollectionWithIdRequestModel>(2).ToArray();
 
-        sutProvider.GetDependency<GlobalSettings>().SelfHosted = false;
+        sutProvider.GetDependency<GlobalSettings>()
+            .SelfHosted = false;
+        sutProvider.GetDependency<GlobalSettings>()
+            .ImportCiphersLimitation = _organizationCiphersLimitations;
 
         sutProvider.GetDependency<Bit.Core.Services.IUserService>()
             .GetProperUserId(Arg.Any<ClaimsPrincipal>())
@@ -143,6 +188,7 @@ public class ImportCiphersControllerTests
             .With(x => x.Ciphers, fixture.Build<CipherRequestModel>()
                 .With(c => c.OrganizationId, Guid.NewGuid().ToString())
                 .With(c => c.FolderId, Guid.NewGuid().ToString())
+                .With(c => c.ArchivedDate, (DateTime?)null)
                 .CreateMany(1).ToArray())
             .With(y => y.Collections, fixture.Build<CollectionWithIdRequestModel>()
                 .With(c => c.Id, orgIdGuid)
@@ -173,7 +219,7 @@ public class ImportCiphersControllerTests
             .Returns(existingCollections.Select(c => new Collection { Id = orgIdGuid }).ToList());
 
         // Act
-        await sutProvider.Sut.PostImport(orgId, request);
+        await sutProvider.Sut.PostImportOrganization(orgId, request);
 
         // Assert
         await sutProvider.GetDependency<IImportCiphersCommand>()
@@ -196,7 +242,15 @@ public class ImportCiphersControllerTests
         var orgIdGuid = Guid.Parse(orgId);
         var existingCollections = fixture.CreateMany<CollectionWithIdRequestModel>(2).ToArray();
 
-        sutProvider.GetDependency<GlobalSettings>().SelfHosted = false;
+        sutProvider.GetDependency<GlobalSettings>()
+            .SelfHosted = false;
+        sutProvider.GetDependency<GlobalSettings>()
+            .ImportCiphersLimitation = _organizationCiphersLimitations;
+
+        var importCiphersLimitation = new GlobalSettings.ImportCiphersLimitationSettings();
+        importCiphersLimitation.CiphersLimit = 40000;
+        importCiphersLimitation.CollectionRelationshipsLimit = 80000;
+        importCiphersLimitation.CollectionsLimit = 2000;
 
         sutProvider.GetDependency<Bit.Core.Services.IUserService>()
             .GetProperUserId(Arg.Any<ClaimsPrincipal>())
@@ -206,6 +260,7 @@ public class ImportCiphersControllerTests
             .With(x => x.Ciphers, fixture.Build<CipherRequestModel>()
                 .With(c => c.OrganizationId, Guid.NewGuid().ToString())
                 .With(c => c.FolderId, Guid.NewGuid().ToString())
+                .With(c => c.ArchivedDate, (DateTime?)null)
                 .CreateMany(1).ToArray())
             .With(y => y.Collections, fixture.Build<CollectionWithIdRequestModel>()
                 .With(c => c.Id, orgIdGuid)
@@ -236,7 +291,7 @@ public class ImportCiphersControllerTests
             .Returns(existingCollections.Select(c => new Collection { Id = orgIdGuid }).ToList());
 
         // Act
-        await sutProvider.Sut.PostImport(orgId, request);
+        await sutProvider.Sut.PostImportOrganization(orgId, request);
 
         // Assert
         await sutProvider.GetDependency<IImportCiphersCommand>()
@@ -259,7 +314,10 @@ public class ImportCiphersControllerTests
         var orgIdGuid = Guid.Parse(orgId);
         var existingCollections = fixture.CreateMany<CollectionWithIdRequestModel>(2).ToArray();
 
-        sutProvider.GetDependency<GlobalSettings>().SelfHosted = false;
+        sutProvider.GetDependency<GlobalSettings>()
+            .SelfHosted = false;
+        sutProvider.GetDependency<GlobalSettings>()
+            .ImportCiphersLimitation = _organizationCiphersLimitations;
 
         SetupUserService(sutProvider, user);
 
@@ -267,6 +325,7 @@ public class ImportCiphersControllerTests
             .With(x => x.Ciphers, fixture.Build<CipherRequestModel>()
                 .With(c => c.OrganizationId, Guid.NewGuid().ToString())
                 .With(c => c.FolderId, Guid.NewGuid().ToString())
+                .With(c => c.ArchivedDate, (DateTime?)null)
                 .CreateMany(1).ToArray())
             .With(y => y.Collections, fixture.Build<CollectionWithIdRequestModel>()
                 .With(c => c.Id, orgIdGuid)
@@ -300,7 +359,7 @@ public class ImportCiphersControllerTests
 
         // Act
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.PostImport(orgId, request));
+            sutProvider.Sut.PostImportOrganization(orgId, request));
 
         // Assert
         Assert.IsType<Bit.Core.Exceptions.BadRequestException>(exception);
@@ -317,7 +376,10 @@ public class ImportCiphersControllerTests
         var orgIdGuid = Guid.Parse(orgId);
         var existingCollections = fixture.CreateMany<CollectionWithIdRequestModel>(2).ToArray();
 
-        sutProvider.GetDependency<GlobalSettings>().SelfHosted = false;
+        sutProvider.GetDependency<GlobalSettings>()
+            .SelfHosted = false;
+        sutProvider.GetDependency<GlobalSettings>()
+            .ImportCiphersLimitation = _organizationCiphersLimitations;
 
         sutProvider.GetDependency<Bit.Core.Services.IUserService>()
             .GetProperUserId(Arg.Any<ClaimsPrincipal>())
@@ -327,6 +389,7 @@ public class ImportCiphersControllerTests
             .With(x => x.Ciphers, fixture.Build<CipherRequestModel>()
                 .With(c => c.OrganizationId, Guid.NewGuid().ToString())
                 .With(c => c.FolderId, Guid.NewGuid().ToString())
+                .With(c => c.ArchivedDate, (DateTime?)null)
                 .CreateMany(1).ToArray())
             .With(y => y.Collections, fixture.Build<CollectionWithIdRequestModel>()
                 .With(c => c.Id, orgIdGuid)
@@ -360,7 +423,7 @@ public class ImportCiphersControllerTests
 
         // Act
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.PostImport(orgId, request));
+            sutProvider.Sut.PostImportOrganization(orgId, request));
 
         // Assert
         Assert.IsType<Bit.Core.Exceptions.BadRequestException>(exception);
@@ -375,7 +438,10 @@ public class ImportCiphersControllerTests
         // Arrange
         var orgId = Guid.NewGuid();
 
-        sutProvider.GetDependency<GlobalSettings>().SelfHosted = false;
+        sutProvider.GetDependency<GlobalSettings>()
+            .SelfHosted = false;
+        sutProvider.GetDependency<GlobalSettings>()
+            .ImportCiphersLimitation = _organizationCiphersLimitations;
 
         SetupUserService(sutProvider, user);
 
@@ -393,6 +459,7 @@ public class ImportCiphersControllerTests
             Ciphers = fixture.Build<CipherRequestModel>()
                 .With(_ => _.OrganizationId, orgId.ToString())
                 .With(_ => _.FolderId, Guid.NewGuid().ToString())
+                .With(_ => _.ArchivedDate, (DateTime?)null)
                 .CreateMany(2).ToArray(),
             CollectionRelationships = new List<KeyValuePair<int, int>>().ToArray(),
         };
@@ -427,7 +494,7 @@ public class ImportCiphersControllerTests
         // Act
         // User imports into collections and creates new collections
         // User has ImportCiphers and Create ciphers permission
-        await sutProvider.Sut.PostImport(orgId.ToString(), request);
+        await sutProvider.Sut.PostImportOrganization(orgId.ToString(), request);
 
         // Assert
         await sutProvider.GetDependency<IImportCiphersCommand>()
@@ -448,7 +515,10 @@ public class ImportCiphersControllerTests
         // Arrange
         var orgId = Guid.NewGuid();
 
-        sutProvider.GetDependency<GlobalSettings>().SelfHosted = false;
+        sutProvider.GetDependency<GlobalSettings>()
+            .SelfHosted = false;
+        sutProvider.GetDependency<GlobalSettings>()
+            .ImportCiphersLimitation = _organizationCiphersLimitations;
 
         SetupUserService(sutProvider, user);
 
@@ -466,6 +536,7 @@ public class ImportCiphersControllerTests
             Ciphers = fixture.Build<CipherRequestModel>()
                 .With(_ => _.OrganizationId, orgId.ToString())
                 .With(_ => _.FolderId, Guid.NewGuid().ToString())
+                .With(_ => _.ArchivedDate, (DateTime?)null)
                 .CreateMany(2).ToArray(),
             CollectionRelationships = new List<KeyValuePair<int, int>>().ToArray(),
         };
@@ -502,7 +573,7 @@ public class ImportCiphersControllerTests
         // User has ImportCiphers permission only and doesn't have Create permission
         var exception = await Assert.ThrowsAsync<BadRequestException>(async () =>
         {
-            await sutProvider.Sut.PostImport(orgId.ToString(), request);
+            await sutProvider.Sut.PostImportOrganization(orgId.ToString(), request);
         });
 
         // Assert
@@ -525,7 +596,11 @@ public class ImportCiphersControllerTests
         // Arrange
         var orgId = Guid.NewGuid();
 
-        sutProvider.GetDependency<GlobalSettings>().SelfHosted = false;
+        sutProvider.GetDependency<GlobalSettings>()
+            .SelfHosted = false;
+        sutProvider.GetDependency<GlobalSettings>()
+            .ImportCiphersLimitation = _organizationCiphersLimitations;
+
         SetupUserService(sutProvider, user);
 
         // Create new collections
@@ -541,6 +616,7 @@ public class ImportCiphersControllerTests
             Ciphers = fixture.Build<CipherRequestModel>()
                 .With(_ => _.OrganizationId, orgId.ToString())
                 .With(_ => _.FolderId, Guid.NewGuid().ToString())
+                .With(_ => _.ArchivedDate, (DateTime?)null)
                 .CreateMany(2).ToArray(),
             CollectionRelationships = new List<KeyValuePair<int, int>>().ToArray(),
         };
@@ -573,7 +649,7 @@ public class ImportCiphersControllerTests
         // Act
         // User imports/creates a new collection - existing collections not affected
         // User has create permissions and doesn't need import permissions
-        await sutProvider.Sut.PostImport(orgId.ToString(), request);
+        await sutProvider.Sut.PostImportOrganization(orgId.ToString(), request);
 
         // Assert
         await sutProvider.GetDependency<IImportCiphersCommand>()
@@ -594,7 +670,10 @@ public class ImportCiphersControllerTests
         // Arrange
         var orgId = Guid.NewGuid();
 
-        sutProvider.GetDependency<GlobalSettings>().SelfHosted = false;
+        sutProvider.GetDependency<GlobalSettings>()
+            .SelfHosted = false;
+        sutProvider.GetDependency<GlobalSettings>()
+            .ImportCiphersLimitation = _organizationCiphersLimitations;
 
         SetupUserService(sutProvider, user);
 
@@ -611,6 +690,7 @@ public class ImportCiphersControllerTests
             Ciphers = fixture.Build<CipherRequestModel>()
                 .With(_ => _.OrganizationId, orgId.ToString())
                 .With(_ => _.FolderId, Guid.NewGuid().ToString())
+                .With(_ => _.ArchivedDate, (DateTime?)null)
                 .CreateMany(2).ToArray(),
             CollectionRelationships = new List<KeyValuePair<int, int>>().ToArray(),
         };
@@ -645,7 +725,7 @@ public class ImportCiphersControllerTests
         // Act
         // User import into existing collection
         // User has ImportCiphers permission only and doesn't need create permission
-        await sutProvider.Sut.PostImport(orgId.ToString(), request);
+        await sutProvider.Sut.PostImportOrganization(orgId.ToString(), request);
 
         // Assert
         await sutProvider.GetDependency<IImportCiphersCommand>()
@@ -666,7 +746,10 @@ public class ImportCiphersControllerTests
         // Arrange
         var orgId = Guid.NewGuid();
 
-        sutProvider.GetDependency<GlobalSettings>().SelfHosted = false;
+        sutProvider.GetDependency<GlobalSettings>()
+            .SelfHosted = false;
+        sutProvider.GetDependency<GlobalSettings>()
+            .ImportCiphersLimitation = _organizationCiphersLimitations;
 
         SetupUserService(sutProvider, user);
 
@@ -677,6 +760,7 @@ public class ImportCiphersControllerTests
             Ciphers = fixture.Build<CipherRequestModel>()
                 .With(_ => _.OrganizationId, orgId.ToString())
                 .With(_ => _.FolderId, Guid.NewGuid().ToString())
+                .With(_ => _.ArchivedDate, (DateTime?)null)
                 .CreateMany(2).ToArray(),
             CollectionRelationships = new List<KeyValuePair<int, int>>().ToArray(),
         };
@@ -710,7 +794,7 @@ public class ImportCiphersControllerTests
         // import ciphers only and no collections
         // User has Create permissions
         // expected to be successful
-        await sutProvider.Sut.PostImport(orgId.ToString(), request);
+        await sutProvider.Sut.PostImportOrganization(orgId.ToString(), request);
 
         // Assert
         await sutProvider.GetDependency<IImportCiphersCommand>()
@@ -720,6 +804,63 @@ public class ImportCiphersControllerTests
                 Arg.Any<List<CipherDetails>>(),
                 Arg.Any<IEnumerable<KeyValuePair<int, int>>>(),
                 Arg.Any<Guid>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostImportOrganization_ThrowsException_WhenAnyCipherIsArchived(
+        SutProvider<ImportCiphersController> sutProvider,
+        IFixture fixture,
+        User user
+    )
+    {
+        var orgId = Guid.NewGuid();
+
+        sutProvider.GetDependency<GlobalSettings>()
+            .SelfHosted = false;
+        sutProvider.GetDependency<GlobalSettings>()
+            .ImportCiphersLimitation = _organizationCiphersLimitations;
+
+        SetupUserService(sutProvider, user);
+
+        var ciphers = fixture.Build<CipherRequestModel>()
+                .With(_ => _.ArchivedDate, DateTime.UtcNow)
+                .CreateMany(2).ToArray();
+
+        var request = new ImportOrganizationCiphersRequestModel
+        {
+            Collections = new List<CollectionWithIdRequestModel>().ToArray(),
+            Ciphers = ciphers,
+            CollectionRelationships = new List<KeyValuePair<int, int>>().ToArray(),
+        };
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .AccessImportExport(Arg.Any<Guid>())
+            .Returns(false);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<IEnumerable<Collection>>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs =>
+                    reqs.Contains(BulkCollectionOperations.ImportCiphers)))
+            .Returns(AuthorizationResult.Failed());
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<IEnumerable<Collection>>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs =>
+                    reqs.Contains(BulkCollectionOperations.Create)))
+            .Returns(AuthorizationResult.Success());
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByOrganizationIdAsync(orgId)
+            .Returns(new List<Collection>());
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(async () =>
+        {
+            await sutProvider.Sut.PostImportOrganization(orgId.ToString(), request);
+        });
+
+        Assert.Equal("You cannot import archived items into an organization.", exception.Message);
     }
 
     private static void SetupUserService(SutProvider<ImportCiphersController> sutProvider, User user)

@@ -6,12 +6,13 @@
     @Data NVARCHAR(MAX),
     @Favorites NVARCHAR(MAX),
     @Folders NVARCHAR(MAX),
-    @Attachments NVARCHAR(MAX), -- not used
+    @Attachments NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
     @DeletedDate DATETIME2(7),
     @Reprompt TINYINT,
-    @Key VARCHAR(MAX) = NULL
+    @Key VARCHAR(MAX) = NULL,
+    @ArchivedDate DATETIME2(7) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -25,11 +26,13 @@ BEGIN
         [Data] = @Data,
         [Favorites] = @Favorites,
         [Folders] = @Folders,
+        [Attachments] = @Attachments,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate,
         [DeletedDate] = @DeletedDate,
         [Reprompt] = @Reprompt,
-        [Key] = @Key
+        [Key] = @Key,
+        [ArchivedDate] = @ArchivedDate
     WHERE
         [Id] = @Id
 

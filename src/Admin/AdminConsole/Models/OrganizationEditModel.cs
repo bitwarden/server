@@ -1,4 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using System.Net;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
@@ -103,6 +106,9 @@ public class OrganizationEditModel : OrganizationViewModel
         SmServiceAccounts = org.SmServiceAccounts;
         MaxAutoscaleSmServiceAccounts = org.MaxAutoscaleSmServiceAccounts;
         UseOrganizationDomains = org.UseOrganizationDomains;
+        UseAutomaticUserConfirmation = org.UseAutomaticUserConfirmation;
+        UsePhishingBlocker = org.UsePhishingBlocker;
+
         _plans = plans;
     }
 
@@ -155,6 +161,8 @@ public class OrganizationEditModel : OrganizationViewModel
     public new bool UseSecretsManager { get; set; }
     [Display(Name = "Risk Insights")]
     public new bool UseRiskInsights { get; set; }
+    [Display(Name = "Phishing Blocker")]
+    public new bool UsePhishingBlocker { get; set; }
     [Display(Name = "Admin Sponsored Families")]
     public bool UseAdminSponsoredFamilies { get; set; }
     [Display(Name = "Self Host")]
@@ -189,6 +197,8 @@ public class OrganizationEditModel : OrganizationViewModel
     [Display(Name = "Use Organization Domains")]
     public bool UseOrganizationDomains { get; set; }
 
+    [Display(Name = "Automatic User Confirmation")]
+    public bool UseAutomaticUserConfirmation { get; set; }
     /**
      * Creates a Plan[] object for use in Javascript
      * This is mapped manually below to provide some type safety in case the plan objects change
@@ -228,6 +238,7 @@ public class OrganizationEditModel : OrganizationViewModel
                     LegacyYear = p.LegacyYear,
                     Disabled = p.Disabled,
                     SupportsSecretsManager = p.SupportsSecretsManager,
+                    AutomaticUserConfirmation = p.AutomaticUserConfirmation,
                     PasswordManager =
                         new
                         {
@@ -319,6 +330,7 @@ public class OrganizationEditModel : OrganizationViewModel
         existingOrganization.SmServiceAccounts = SmServiceAccounts;
         existingOrganization.MaxAutoscaleSmServiceAccounts = MaxAutoscaleSmServiceAccounts;
         existingOrganization.UseOrganizationDomains = UseOrganizationDomains;
+        existingOrganization.UsePhishingBlocker = UsePhishingBlocker;
         return existingOrganization;
     }
 }

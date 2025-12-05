@@ -1,4 +1,7 @@
-﻿using Bit.Api.AdminConsole.Models.Request.Organizations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Request;
@@ -6,16 +9,17 @@ using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Constants;
-using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Organizations.Entities;
+using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Billing.Organizations.Queries;
+using Bit.Core.Billing.Organizations.Repositories;
 using Bit.Core.Billing.Pricing;
-using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
-using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -35,7 +39,7 @@ public class OrganizationsController(
     IUserService userService,
     IPaymentService paymentService,
     ICurrentContext currentContext,
-    ICloudGetOrganizationLicenseQuery cloudGetOrganizationLicenseQuery,
+    IGetCloudOrganizationLicenseQuery getCloudOrganizationLicenseQuery,
     GlobalSettings globalSettings,
     ILicensingService licensingService,
     IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
@@ -63,7 +67,8 @@ public class OrganizationsController(
         if (globalSettings.SelfHosted)
         {
             var orgLicense = await licensingService.ReadOrganizationLicenseAsync(organization);
-            return new OrganizationSubscriptionResponseModel(organization, orgLicense);
+            var claimsPrincipal = licensingService.GetClaimsPrincipalFromLicense(orgLicense);
+            return new OrganizationSubscriptionResponseModel(organization, orgLicense, claimsPrincipal);
         }
 
         var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
@@ -94,7 +99,7 @@ public class OrganizationsController(
         }
 
         var org = await organizationRepository.GetByIdAsync(id);
-        var license = await cloudGetOrganizationLicenseQuery.GetLicenseAsync(org, installationId);
+        var license = await getCloudOrganizationLicenseQuery.GetLicenseAsync(org, installationId);
         if (license == null)
         {
             throw new NotFoundException();
@@ -205,18 +210,6 @@ public class OrganizationsController(
 
         var result = await organizationService.AdjustSeatsAsync(id, model.SeatAdjustment.Value);
         return new PaymentResponseModel { Success = true, PaymentIntentClientSecret = result };
-    }
-
-    [HttpPost("{id:guid}/verify-bank")]
-    [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PostVerifyBank(Guid id, [FromBody] OrganizationVerifyBankRequestModel model)
-    {
-        if (!await currentContext.EditSubscription(id))
-        {
-            throw new NotFoundException();
-        }
-
-        await organizationService.VerifyBankAsync(id, model.Amount1.Value, model.Amount2.Value);
     }
 
     [HttpPost("{id}/cancel")]

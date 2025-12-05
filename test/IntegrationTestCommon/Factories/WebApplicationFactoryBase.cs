@@ -1,7 +1,9 @@
 ﻿using AspNetCoreRateLimit;
+using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Services;
+using Bit.Core.Platform.Mail.Delivery;
 using Bit.Core.Platform.Push;
-using Bit.Core.Platform.Push.Internal;
+using Bit.Core.Platform.PushRegistration.Internal;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Infrastructure.EntityFramework.Repositories;
@@ -152,7 +154,6 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
 
             // Web push notifications
             { "globalSettings:webPush:vapidPublicKey", "BGBtAM0bU3b5jsB14IjBYarvJZ6rWHilASLudTTYDDBi7a-3kebo24Yus_xYeOMZ863flAXhFAbkL6GVSrxgErg" },
-            { "globalSettings:launchDarkly:flagValues:web-push", "true" },
         };
 
         // Some database drivers modify the connection string

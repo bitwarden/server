@@ -64,10 +64,11 @@ public class Startup
             config.Filters.Add(new ModelStateValidationFilterAttribute());
         });
 
-        services.AddSwaggerGen(c =>
+        services.AddSwaggerGen(config =>
         {
-            c.SchemaFilter<EnumSchemaFilter>();
-            c.SwaggerDoc("v1", new OpenApiInfo { Title = "Bitwarden Identity", Version = "v1" });
+            config.InitializeSwaggerFilters(Environment);
+
+            config.SwaggerDoc("v1", new OpenApiInfo { Title = "Bitwarden Identity", Version = "v1" });
         });
 
         if (!globalSettings.SelfHosted)
@@ -169,13 +170,10 @@ public class Startup
     public void Configure(
         IApplicationBuilder app,
         IWebHostEnvironment env,
-        IHostApplicationLifetime appLifetime,
         GlobalSettings globalSettings,
         ILogger<Startup> logger)
     {
         IdentityModelEventSource.ShowPII = true;
-
-        app.UseSerilog(env, appLifetime, globalSettings);
 
         // Add general security headers
         app.UseMiddleware<SecurityHeadersMiddleware>();
@@ -239,6 +237,6 @@ public class Startup
         app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());
 
         // Log startup
-        logger.LogInformation(Constants.BypassFiltersEventId, globalSettings.ProjectName + " started.");
+        logger.LogInformation(Constants.BypassFiltersEventId, "{Project} started.", globalSettings.ProjectName);
     }
 }

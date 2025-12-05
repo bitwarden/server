@@ -1,4 +1,7 @@
-﻿using Bit.Core.AdminConsole.Enums;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
@@ -122,7 +125,7 @@ public class SendValidationService : ISendValidationService
             {
                 // Users that get access to file storage/premium from their organization get the default
                 // 1 GB max storage.
-                short limit = _globalSettings.SelfHosted ? (short)10240 : (short)1;
+                short limit = _globalSettings.SelfHosted ? Constants.SelfHostedMaxStorageGb : (short)1;
                 storageBytesRemaining = user.StorageBytesRemaining(limit);
             }
         }

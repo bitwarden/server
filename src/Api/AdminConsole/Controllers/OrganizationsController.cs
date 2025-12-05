@@ -1,4 +1,7 @@
-﻿using System.Text.Json;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text.Json;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
@@ -66,6 +69,7 @@ public class OrganizationsController : Controller
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IPricingClient _pricingClient;
     private readonly IOrganizationUpdateKeysCommand _organizationUpdateKeysCommand;
+    private readonly IOrganizationUpdateCommand _organizationUpdateCommand;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -90,7 +94,8 @@ public class OrganizationsController : Controller
         IOrganizationDeleteCommand organizationDeleteCommand,
         IPolicyRequirementQuery policyRequirementQuery,
         IPricingClient pricingClient,
-        IOrganizationUpdateKeysCommand organizationUpdateKeysCommand)
+        IOrganizationUpdateKeysCommand organizationUpdateKeysCommand,
+        IOrganizationUpdateCommand organizationUpdateCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -115,6 +120,7 @@ public class OrganizationsController : Controller
         _policyRequirementQuery = policyRequirementQuery;
         _pricingClient = pricingClient;
         _organizationUpdateKeysCommand = organizationUpdateKeysCommand;
+        _organizationUpdateCommand = organizationUpdateCommand;
     }
 
     [HttpGet("{id}")]
@@ -220,33 +226,33 @@ public class OrganizationsController : Controller
         return new OrganizationResponseModel(result.Organization, plan);
     }
 
-    [HttpPut("{id}")]
-    [HttpPost("{id}")]
-    public async Task<OrganizationResponseModel> Put(string id, [FromBody] OrganizationUpdateRequestModel model)
+    [HttpPut("{organizationId:guid}")]
+    public async Task<IResult> Put(Guid organizationId, [FromBody] OrganizationUpdateRequestModel model)
     {
-        var orgIdGuid = new Guid(id);
+        // If billing email is being changed, require subscription editing permissions.
+        // Otherwise, organization owner permissions are sufficient.
+        var requiresBillingPermission = model.BillingEmail is not null;
+        var authorized = requiresBillingPermission
+            ? await _currentContext.EditSubscription(organizationId)
+            : await _currentContext.OrganizationOwner(organizationId);
 
-        var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
-        if (organization == null)
+        if (!authorized)
         {
-            throw new NotFoundException();
+            return TypedResults.Unauthorized();
         }
 
-        var updateBilling = !_globalSettings.SelfHosted && (model.BusinessName != organization.DisplayBusinessName() ||
-                                                            model.BillingEmail != organization.BillingEmail);
+        var commandRequest = model.ToCommandRequest(organizationId);
+        var updatedOrganization = await _organizationUpdateCommand.UpdateAsync(commandRequest);
 
-        var hasRequiredPermissions = updateBilling
-            ? await _currentContext.EditSubscription(orgIdGuid)
-            : await _currentContext.OrganizationOwner(orgIdGuid);
+        var plan = await _pricingClient.GetPlan(updatedOrganization.PlanType);
+        return TypedResults.Ok(new OrganizationResponseModel(updatedOrganization, plan));
+    }
 
-        if (!hasRequiredPermissions)
-        {
-            throw new NotFoundException();
-        }
-
-        await _organizationService.UpdateAsync(model.ToOrganization(organization, _globalSettings), updateBilling);
-        var plan = await _pricingClient.GetPlan(organization.PlanType);
-        return new OrganizationResponseModel(organization, plan);
+    [HttpPost("{id}")]
+    [Obsolete("This endpoint is deprecated. Use PUT method instead")]
+    public async Task<IResult> PostPut(Guid id, [FromBody] OrganizationUpdateRequestModel model)
+    {
+        return await Put(id, model);
     }
 
     [HttpPost("{id}/storage")]
@@ -288,7 +294,6 @@ public class OrganizationsController : Controller
     }
 
     [HttpDelete("{id}")]
-    [HttpPost("{id}/delete")]
     public async Task Delete(string id, [FromBody] SecretVerificationRequestModel model)
     {
         var orgIdGuid = new Guid(id);
@@ -329,6 +334,13 @@ public class OrganizationsController : Controller
         }
 
         await _organizationDeleteCommand.DeleteAsync(organization);
+    }
+
+    [HttpPost("{id}/delete")]
+    [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
+    public async Task PostDelete(string id, [FromBody] SecretVerificationRequestModel model)
+    {
+        await Delete(id, model);
     }
 
     [HttpPost("{id}/delete-recover-token")]
@@ -551,18 +563,12 @@ public class OrganizationsController : Controller
     [HttpPut("{id}/collection-management")]
     public async Task<OrganizationResponseModel> PutCollectionManagement(Guid id, [FromBody] OrganizationCollectionManagementUpdateRequestModel model)
     {
-        var organization = await _organizationRepository.GetByIdAsync(id);
-        if (organization == null)
-        {
-            throw new NotFoundException();
-        }
-
         if (!await _currentContext.OrganizationOwner(id))
         {
             throw new NotFoundException();
         }
 
-        await _organizationService.UpdateAsync(model.ToOrganization(organization, _featureService), eventType: EventType.Organization_CollectionManagement_Updated);
+        var organization = await _organizationService.UpdateCollectionManagementSettingsAsync(id, model.ToSettings());
         var plan = await _pricingClient.GetPlan(organization.PlanType);
         return new OrganizationResponseModel(organization, plan);
     }

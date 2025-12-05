@@ -1,4 +1,7 @@
-﻿using Bit.Api.Vault.Models.Response;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.Vault.Models.Response;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -8,6 +11,8 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Models.Data;
+using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -39,6 +44,7 @@ public class SyncController : Controller
     private readonly IFeatureService _featureService;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
+    private readonly IUserAccountKeysQuery _userAccountKeysQuery;
 
     public SyncController(
         IUserService userService,
@@ -54,7 +60,8 @@ public class SyncController : Controller
         ICurrentContext currentContext,
         IFeatureService featureService,
         IApplicationCacheService applicationCacheService,
-        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery)
+        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
+        IUserAccountKeysQuery userAccountKeysQuery)
     {
         _userService = userService;
         _folderRepository = folderRepository;
@@ -70,6 +77,7 @@ public class SyncController : Controller
         _featureService = featureService;
         _applicationCacheService = applicationCacheService;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
+        _userAccountKeysQuery = userAccountKeysQuery;
     }
 
     [HttpGet("")]
@@ -113,7 +121,14 @@ public class SyncController : Controller
 
         var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
 
-        var response = new SyncResponseModel(_globalSettings, user, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationAbilities,
+        UserAccountKeysData userAccountKeys = null;
+        // JIT TDE users and some broken/old users may not have a private key.
+        if (!string.IsNullOrWhiteSpace(user.PrivateKey))
+        {
+            userAccountKeys = await _userAccountKeysQuery.Run(user);
+        }
+
+        var response = new SyncResponseModel(_globalSettings, user, userAccountKeys, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationAbilities,
             organizationIdsClaimingActiveUser, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,
             folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains, policies, sends);
         return response;

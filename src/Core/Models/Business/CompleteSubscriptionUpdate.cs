@@ -1,4 +1,7 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Exceptions;
 using Stripe;
 using Plan = Bit.Core.Models.StaticStore.Plan;
@@ -296,7 +299,7 @@ public class CompleteSubscriptionUpdate : SubscriptionUpdate
                 ? organization.SmServiceAccounts - plan.SecretsManager.BaseServiceAccount
                 : 0,
             PurchasedAdditionalStorage = organization.MaxStorageGb.HasValue
-                ? organization.MaxStorageGb.Value - (plan.PasswordManager.BaseStorageGb ?? 0) :
+                ? organization.MaxStorageGb.Value - plan.PasswordManager.BaseStorageGb :
                 0
         };
 }

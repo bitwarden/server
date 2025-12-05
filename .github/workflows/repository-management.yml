@@ -22,6 +22,10 @@ on:
         required: false
         type: string
 
+permissions:
+  pull-requests: write
+  contents: write
+
 jobs:
   setup:
     name: Setup
@@ -42,55 +46,37 @@ jobs:
             BRANCH="hotfix-rc"
           fi
 
-          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
-
-
-  cut_branch:
-    name: Cut branch
-    if: ${{ needs.setup.outputs.branch != 'none' }}
-    needs: setup
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Generate GH App token
-        uses: actions/create-github-app-token@c1a285145b9d317df6ced56c09f525b5c2b6f755 # v1.11.1
-        id: app-token
-        with:
-          app-id: ${{ secrets.BW_GHAPP_ID }}
-          private-key: ${{ secrets.BW_GHAPP_KEY }}
-
-      - name: Check out target ref
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          ref: ${{ inputs.target_ref }}
-          token: ${{ steps.app-token.outputs.token }}
-
-      - name: Check if ${{ needs.setup.outputs.branch }} branch exists
-        env:
-          BRANCH_NAME: ${{ needs.setup.outputs.branch }}
-        run: |
-          if [[ $(git ls-remote --heads origin $BRANCH_NAME) ]]; then
-            echo "$BRANCH_NAME already exists! Please delete $BRANCH_NAME before running again." >> $GITHUB_STEP_SUMMARY
-            exit 1
-          fi
-
-      - name: Cut branch
-        env:
-          BRANCH_NAME: ${{ needs.setup.outputs.branch }}
-        run: |
-          git switch --quiet --create $BRANCH_NAME
-          git push --quiet --set-upstream origin $BRANCH_NAME
-
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
 
   bump_version:
     name: Bump Version
     if: ${{ always() }}
     runs-on: ubuntu-24.04
     needs:
-      - cut_branch
       - setup
     outputs:
       version: ${{ steps.set-final-version-output.outputs.version }}
+    permissions:
+      id-token: write
+
     steps:
+      - name: Log in to Azure
+        uses: bitwarden/gh-actions/azure-login@main
+        with:
+          subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+          client_id: ${{ secrets.AZURE_CLIENT_ID }}
+
+      - name: Get Azure Key Vault secrets
+        id: get-kv-secrets
+        uses: bitwarden/gh-actions/get-keyvault-secrets@main
+        with:
+          keyvault: gh-org-bitwarden
+          secrets: "BW-GHAPP-ID,BW-GHAPP-KEY"
+
+      - name: Log out from Azure
+        uses: bitwarden/gh-actions/azure-logout@main
+
       - name: Validate version input format
         if: ${{ inputs.version_number_override != '' }}
         uses: bitwarden/gh-actions/version-check@main
@@ -98,17 +84,18 @@ jobs:
           version: ${{ inputs.version_number_override }}
 
       - name: Generate GH App token
-        uses: actions/create-github-app-token@c1a285145b9d317df6ced56c09f525b5c2b6f755 # v1.11.1
+        uses: actions/create-github-app-token@a8d616148505b5069dccd32f177bb87d7f39123b # v2.1.1
         id: app-token
         with:
-          app-id: ${{ secrets.BW_GHAPP_ID }}
-          private-key: ${{ secrets.BW_GHAPP_KEY }}
+          app-id: ${{ steps.get-kv-secrets.outputs.BW-GHAPP-ID }}
+          private-key: ${{ steps.get-kv-secrets.outputs.BW-GHAPP-KEY }}
 
       - name: Check out branch
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           ref: main
           token: ${{ steps.app-token.outputs.token }}
+          persist-credentials: true
 
       - name: Configure Git
         run: |
@@ -124,7 +111,7 @@ jobs:
         id: current-version
         run: |
           CURRENT_VERSION=$(xmllint -xpath "/Project/PropertyGroup/Version/text()" Directory.Build.props)
-          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "version=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Verify input version
         if: ${{ inputs.version_number_override != '' }}
@@ -134,16 +121,15 @@ jobs:
         run: |
           # Error if version has not changed.
           if [[ "$NEW_VERSION" == "$CURRENT_VERSION" ]]; then
-            echo "Specified override version is the same as the current version." >> $GITHUB_STEP_SUMMARY
+            echo "Specified override version is the same as the current version." >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
 
           # Check if version is newer.
-          printf '%s\n' "${CURRENT_VERSION}" "${NEW_VERSION}" | sort -C -V
-          if [ $? -eq 0 ]; then
+          if printf '%s\n' "${CURRENT_VERSION}" "${NEW_VERSION}" | sort -C -V; then
             echo "Version is newer than the current version."
           else
-            echo "Version is older than the current version." >> $GITHUB_STEP_SUMMARY
+            echo "Version is older than the current version." >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
 
@@ -174,107 +160,90 @@ jobs:
         id: set-final-version-output
         env:
           VERSION: ${{ inputs.version_number_override }}
+          BUMP_VERSION_OVERRIDE_OUTCOME: ${{ steps.bump-version-override.outcome }}
+          BUMP_VERSION_AUTOMATIC_OUTCOME: ${{ steps.bump-version-automatic.outcome }}
+          CALCULATE_NEXT_VERSION: ${{ steps.calculate-next-version.outputs.version }}
         run: |
-          if [[ "${{ steps.bump-version-override.outcome }}" = "success" ]]; then
-            echo "version=$VERSION" >> $GITHUB_OUTPUT
-          elif [[ "${{ steps.bump-version-automatic.outcome }}" = "success" ]]; then
-            echo "version=${{ steps.calculate-next-version.outputs.version }}" >> $GITHUB_OUTPUT
+          if [[ "${BUMP_VERSION_OVERRIDE_OUTCOME}" = "success" ]]; then
+            echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          elif [[ "${BUMP_VERSION_AUTOMATIC_OUTCOME}" = "success" ]]; then
+            echo "version=${CALCULATE_NEXT_VERSION}" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Commit files
-        run: git commit -m "Bumped version to ${{ steps.set-final-version-output.outputs.version }}" -a
+        env:
+          FINAL_VERSION: ${{ steps.set-final-version-output.outputs.version }}
+        run: git commit -m "Bumped version to $FINAL_VERSION" -a
 
       - name: Push changes
         run: git push
 
-
-  cherry_pick:
-    name: Cherry-Pick Commit(s)
+  cut_branch:
+    name: Cut branch
     if: ${{ needs.setup.outputs.branch != 'none' }}
-    runs-on: ubuntu-24.04
     needs:
-      - bump_version
       - setup
+      - bump_version
+    runs-on: ubuntu-24.04
+    permissions:
+      id-token: write
+
     steps:
+      - name: Log in to Azure
+        uses: bitwarden/gh-actions/azure-login@main
+        with:
+          subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+          client_id: ${{ secrets.AZURE_CLIENT_ID }}
+
+      - name: Get Azure Key Vault secrets
+        id: get-kv-secrets
+        uses: bitwarden/gh-actions/get-keyvault-secrets@main
+        with:
+          keyvault: gh-org-bitwarden
+          secrets: "BW-GHAPP-ID,BW-GHAPP-KEY"
+
+      - name: Log out from Azure
+        uses: bitwarden/gh-actions/azure-logout@main
+
       - name: Generate GH App token
-        uses: actions/create-github-app-token@c1a285145b9d317df6ced56c09f525b5c2b6f755 # v1.11.1
+        uses: actions/create-github-app-token@a8d616148505b5069dccd32f177bb87d7f39123b # v2.1.1
         id: app-token
         with:
-          app-id: ${{ secrets.BW_GHAPP_ID }}
-          private-key: ${{ secrets.BW_GHAPP_KEY }}
+          app-id: ${{ steps.get-kv-secrets.outputs.BW-GHAPP-ID }}
+          private-key: ${{ steps.get-kv-secrets.outputs.BW-GHAPP-KEY }}
 
-      - name: Check out main branch
+      - name: Check out target ref
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          fetch-depth: 0
-          ref: main
+          ref: ${{ inputs.target_ref }}
           token: ${{ steps.app-token.outputs.token }}
+          persist-credentials: true
+          fetch-depth: 0
 
-      - name: Configure Git
-        run: |
-          git config --local user.email "actions@github.com"
-          git config --local user.name "Github Actions"
-
-      - name: Install xmllint
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libxml2-utils
-
-      - name: Perform cherry-pick(s)
+      - name: Check if ${{ needs.setup.outputs.branch }} branch exists
         env:
-          CUT_BRANCH: ${{ needs.setup.outputs.branch }}
+          BRANCH_NAME: ${{ needs.setup.outputs.branch }}
         run: |
-          # Function for cherry-picking
-          cherry_pick () {
-            local source_branch=$1
-            local destination_branch=$2
-
-            # Get project commit/version from source branch
-            git switch $source_branch
-            SOURCE_COMMIT=$(git log --reverse --pretty=format:"%H" --max-count=1 Directory.Build.props)
-            SOURCE_VERSION=$(xmllint -xpath "/Project/PropertyGroup/Version/text()" Directory.Build.props)
-
-            # Get project commit/version from destination branch
-            git switch $destination_branch
-            DESTINATION_VERSION=$(xmllint -xpath "/Project/PropertyGroup/Version/text()" Directory.Build.props)
-
-            if [[ "$DESTINATION_VERSION" != "$SOURCE_VERSION" ]]; then
-              git cherry-pick --strategy-option=theirs -x $SOURCE_COMMIT
-              git push -u origin $destination_branch
-            fi
-          }
-
-          # If we are cutting 'hotfix-rc':
-          if [[ "$CUT_BRANCH" == "hotfix-rc" ]]; then
-
-            # If the 'rc' branch exists:
-            if [[ $(git ls-remote --heads origin rc) ]]; then
-
-              # Chery-pick from 'rc' into 'hotfix-rc'
-              cherry_pick rc hotfix-rc
-
-              # Cherry-pick from 'main' into 'rc'
-              cherry_pick main rc
-
-            # If the 'rc' branch does not exist:
-            else
-
-              # Cherry-pick from 'main' into 'hotfix-rc'
-              cherry_pick main hotfix-rc
-
-            fi
-
-          # If we are cutting 'rc':
-          elif [[ "$CUT_BRANCH" == "rc" ]]; then
-
-            # Cherry-pick from 'main' into 'rc'
-            cherry_pick main rc
-
+          if [[ $(git ls-remote --heads origin "$BRANCH_NAME") ]]; then
+            echo "$BRANCH_NAME already exists! Please delete $BRANCH_NAME before running again." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
           fi
 
+      - name: Cut branch
+        env:
+          BRANCH_NAME: ${{ needs.setup.outputs.branch }}
+        run: |
+          git switch --quiet --create "$BRANCH_NAME"
+          git push --quiet --set-upstream origin "$BRANCH_NAME"
 
-  move_future_db_scripts:
-    name: Move finalization database scripts
-    needs: cherry_pick
-    uses: ./.github/workflows/_move_finalization_db_scripts.yml
+  move_edd_db_scripts:
+    name: Move EDD database scripts
+    needs: cut_branch
+    permissions:
+      actions: read
+      contents: write
+      id-token: write
+      pull-requests: write
+    uses: ./.github/workflows/_move_edd_db_scripts.yml
     secrets: inherit

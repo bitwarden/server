@@ -4,9 +4,9 @@ using System.Text.Json;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Business;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 
@@ -30,6 +30,7 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
     /// This value is HTML encoded. For display purposes use the method DisplayBusinessName() instead.
     /// </summary>
     [MaxLength(50)]
+    [Obsolete("This property has been deprecated. Use the 'Name' property instead.")]
     public string? BusinessName { get; set; }
     [MaxLength(50)]
     public string? BusinessAddress1 { get; set; }
@@ -123,6 +124,21 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
     /// </summary>
     public bool UseAdminSponsoredFamilies { get; set; }
 
+    /// <summary>
+    /// If set to true, organization needs their seat count synced with their subscription
+    /// </summary>
+    public bool SyncSeats { get; set; }
+
+    /// <summary>
+    /// If set to true,  user accounts created within the organization are automatically confirmed without requiring additional verification steps.
+    /// </summary>
+    public bool UseAutomaticUserConfirmation { get; set; }
+
+    /// <summary>
+    /// If set to true, the organization has phishing protection enabled.
+    /// </summary>
+    public bool UsePhishingBlocker { get; set; }
+
     public void SetNewId()
     {
         if (Id == default(Guid))
@@ -142,6 +158,8 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
     /// <summary>
     /// Returns the business name of the organization, HTML decoded ready for display.
     /// </summary>
+    ///
+    [Obsolete("This method has been deprecated. Use the 'DisplayName()' method instead.")]
     public string? DisplayBusinessName()
     {
         return WebUtility.HtmlDecode(BusinessName);
@@ -320,5 +338,7 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
         UseRiskInsights = license.UseRiskInsights;
         UseOrganizationDomains = license.UseOrganizationDomains;
         UseAdminSponsoredFamilies = license.UseAdminSponsoredFamilies;
+        UseAutomaticUserConfirmation = license.UseAutomaticUserConfirmation;
+        UsePhishingBlocker = license.UsePhishingBlocker;
     }
 }

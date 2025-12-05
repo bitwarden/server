@@ -1,7 +1,12 @@
-﻿using Bit.Core.Billing.Caches;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -26,7 +31,8 @@ public class PremiumUserBillingService(
     ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService,
-    IUserRepository userRepository) : IPremiumUserBillingService
+    IUserRepository userRepository,
+    IPricingClient pricingClient) : IPremiumUserBillingService
 {
     public async Task Credit(User user, decimal amount)
     {
@@ -95,7 +101,9 @@ public class PremiumUserBillingService(
          */
         customer = await ReconcileBillingLocationAsync(customer, customerSetup.TaxInformation);
 
-        var subscription = await CreateSubscriptionAsync(user.Id, customer, storage);
+        var premiumPlan = await pricingClient.GetAvailablePremiumPlan();
+
+        var subscription = await CreateSubscriptionAsync(user.Id, customer, premiumPlan, storage);
 
         switch (customerSetup.TokenizedPaymentSource)
         {
@@ -105,7 +113,7 @@ public class PremiumUserBillingService(
                 when subscription.Status == StripeConstants.SubscriptionStatus.Active:
                 {
                     user.Premium = true;
-                    user.PremiumExpirationDate = subscription.CurrentPeriodEnd;
+                    user.PremiumExpirationDate = subscription.GetCurrentPeriodEnd();
                     break;
                 }
         }
@@ -113,6 +121,7 @@ public class PremiumUserBillingService(
         user.Gateway = GatewayType.Stripe;
         user.GatewayCustomerId = customer.Id;
         user.GatewaySubscriptionId = subscription.Id;
+        user.MaxStorageGb = (short)(premiumPlan.Storage.Provided + (storage ?? 0));
 
         await userRepository.ReplaceAsync(user);
     }
@@ -280,7 +289,7 @@ public class PremiumUserBillingService(
             {
                 case PaymentMethodType.BankAccount:
                     {
-                        await setupIntentCache.Remove(user.Id);
+                        await setupIntentCache.RemoveSetupIntentForSubscriber(user.Id);
                         break;
                     }
                 case PaymentMethodType.PayPal when !string.IsNullOrEmpty(braintreeCustomerId):
@@ -295,13 +304,15 @@ public class PremiumUserBillingService(
     private async Task<Subscription> CreateSubscriptionAsync(
         Guid userId,
         Customer customer,
+        Pricing.Premium.Plan premiumPlan,
         int? storage)
     {
+
         var subscriptionItemOptionsList = new List<SubscriptionItemOptions>
         {
             new ()
             {
-                Price = "premium-annually",
+                Price = premiumPlan.Seat.StripePriceId,
                 Quantity = 1
             }
         };
@@ -310,7 +321,7 @@ public class PremiumUserBillingService(
         {
             subscriptionItemOptionsList.Add(new SubscriptionItemOptions
             {
-                Price = StripeConstants.Prices.StoragePlanPersonal,
+                Price = premiumPlan.Storage.StripePriceId,
                 Quantity = storage
             });
         }

@@ -1,41 +1,35 @@
-﻿using Bit.Api.AdminConsole.Models.Request.Organizations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
 using Bit.Api.AdminConsole.Models.Response;
-using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Request.Accounts;
-using Bit.Api.Auth.Models.Request.WebAuthn;
-using Bit.Api.KeyManagement.Validators;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Response;
-using Bit.Api.Tools.Models.Request;
-using Bit.Api.Vault.Models.Request;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
-using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
-using Bit.Core.Auth.Models.Data;
+using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.KeyManagement.Models.Data;
-using Bit.Core.KeyManagement.UserKey;
+using Bit.Core.KeyManagement.Kdf;
+using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Models.Api.Response;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Tools.Entities;
 using Bit.Core.Utilities;
-using Bit.Core.Vault.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Auth.Controllers;
 
 [Route("accounts")]
-[Authorize("Application")]
+[Authorize(Policies.Application)]
 public class AccountsController : Controller
 {
     private readonly IOrganizationService _organizationService;
@@ -45,21 +39,11 @@ public class AccountsController : Controller
     private readonly IPolicyService _policyService;
     private readonly ISetInitialMasterPasswordCommand _setInitialMasterPasswordCommand;
     private readonly ITdeOffboardingPasswordCommand _tdeOffboardingPasswordCommand;
-    private readonly IRotateUserKeyCommand _rotateUserKeyCommand;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IFeatureService _featureService;
-
-    private readonly IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>> _cipherValidator;
-    private readonly IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>> _folderValidator;
-    private readonly IRotationValidator<IEnumerable<SendWithIdRequestModel>, IReadOnlyList<Send>> _sendValidator;
-    private readonly IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>
-        _emergencyAccessValidator;
-    private readonly IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>,
-            IReadOnlyList<OrganizationUser>>
-        _organizationUserValidator;
-    private readonly IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>>
-        _webauthnKeyValidator;
-
+    private readonly IUserAccountKeysQuery _userAccountKeysQuery;
+    private readonly ITwoFactorEmailService _twoFactorEmailService;
+    private readonly IChangeKdfCommand _changeKdfCommand;
 
     public AccountsController(
         IOrganizationService organizationService,
@@ -69,17 +53,11 @@ public class AccountsController : Controller
         IPolicyService policyService,
         ISetInitialMasterPasswordCommand setInitialMasterPasswordCommand,
         ITdeOffboardingPasswordCommand tdeOffboardingPasswordCommand,
-        IRotateUserKeyCommand rotateUserKeyCommand,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IFeatureService featureService,
-        IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>> cipherValidator,
-        IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>> folderValidator,
-        IRotationValidator<IEnumerable<SendWithIdRequestModel>, IReadOnlyList<Send>> sendValidator,
-        IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>
-            emergencyAccessValidator,
-        IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>, IReadOnlyList<OrganizationUser>>
-            organizationUserValidator,
-        IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>> webAuthnKeyValidator
+        IUserAccountKeysQuery userAccountKeysQuery,
+        ITwoFactorEmailService twoFactorEmailService,
+        IChangeKdfCommand changeKdfCommand
         )
     {
         _organizationService = organizationService;
@@ -89,15 +67,11 @@ public class AccountsController : Controller
         _policyService = policyService;
         _setInitialMasterPasswordCommand = setInitialMasterPasswordCommand;
         _tdeOffboardingPasswordCommand = tdeOffboardingPasswordCommand;
-        _rotateUserKeyCommand = rotateUserKeyCommand;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _featureService = featureService;
-        _cipherValidator = cipherValidator;
-        _folderValidator = folderValidator;
-        _sendValidator = sendValidator;
-        _emergencyAccessValidator = emergencyAccessValidator;
-        _organizationUserValidator = organizationUserValidator;
-        _webauthnKeyValidator = webAuthnKeyValidator;
+        _userAccountKeysQuery = userAccountKeysQuery;
+        _twoFactorEmailService = twoFactorEmailService;
+        _changeKdfCommand = changeKdfCommand;
     }
 
 
@@ -289,7 +263,7 @@ public class AccountsController : Controller
     }
 
     [HttpPost("kdf")]
-    public async Task PostKdf([FromBody] KdfRequestModel model)
+    public async Task PostKdf([FromBody] PasswordRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -297,47 +271,12 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var result = await _userService.ChangeKdfAsync(user, model.MasterPasswordHash,
-            model.NewMasterPasswordHash, model.Key, model.Kdf.Value, model.KdfIterations.Value, model.KdfMemory, model.KdfParallelism);
-        if (result.Succeeded)
+        if (model.AuthenticationData == null || model.UnlockData == null)
         {
-            return;
+            throw new BadRequestException("AuthenticationData and UnlockData must be provided.");
         }
 
-        foreach (var error in result.Errors)
-        {
-            ModelState.AddModelError(string.Empty, error.Description);
-        }
-
-        await Task.Delay(2000);
-        throw new BadRequestException(ModelState);
-    }
-
-    [Obsolete("Replaced by the safer rotate-user-account-keys endpoint.")]
-    [HttpPost("key")]
-    public async Task PostKey([FromBody] UpdateKeyRequestModel model)
-    {
-        var user = await _userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        var dataModel = new RotateUserKeyData
-        {
-            MasterPasswordHash = model.MasterPasswordHash,
-            Key = model.Key,
-            PrivateKey = model.PrivateKey,
-            Ciphers = await _cipherValidator.ValidateAsync(user, model.Ciphers),
-            Folders = await _folderValidator.ValidateAsync(user, model.Folders),
-            Sends = await _sendValidator.ValidateAsync(user, model.Sends),
-            EmergencyAccesses = await _emergencyAccessValidator.ValidateAsync(user, model.EmergencyAccessKeys),
-            OrganizationUsers = await _organizationUserValidator.ValidateAsync(user, model.ResetPasswordKeys),
-            WebAuthnKeys = await _webauthnKeyValidator.ValidateAsync(user, model.WebAuthnKeys)
-        };
-
-        var result = await _rotateUserKeyCommand.RotateUserKeyAsync(user, dataModel);
-
+        var result = await _changeKdfCommand.ChangeKdfAsync(user, model.MasterPasswordHash, model.AuthenticationData.ToData(), model.UnlockData.ToData());
         if (result.Succeeded)
         {
             return;
@@ -397,7 +336,9 @@ public class AccountsController : Controller
         var hasPremiumFromOrg = await _userService.HasPremiumFromOrganization(user);
         var organizationIdsClaimingActiveUser = await GetOrganizationIdsClaimingUserAsync(user.Id);
 
-        var response = new ProfileResponseModel(user, organizationUserDetails, providerUserDetails,
+        var accountKeys = await _userAccountKeysQuery.Run(user);
+
+        var response = new ProfileResponseModel(user, accountKeys, organizationUserDetails, providerUserDetails,
             providerUserOrganizationDetails, twoFactorEnabled,
             hasPremiumFromOrg, organizationIdsClaimingActiveUser);
         return response;
@@ -416,7 +357,6 @@ public class AccountsController : Controller
     }
 
     [HttpPut("profile")]
-    [HttpPost("profile")]
     public async Task<ProfileResponseModel> PutProfile([FromBody] UpdateProfileRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
@@ -430,13 +370,20 @@ public class AccountsController : Controller
         var twoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
         var hasPremiumFromOrg = await _userService.HasPremiumFromOrganization(user);
         var organizationIdsClaimingActiveUser = await GetOrganizationIdsClaimingUserAsync(user.Id);
+        var userAccountKeys = await _userAccountKeysQuery.Run(user);
 
-        var response = new ProfileResponseModel(user, null, null, null, twoFactorEnabled, hasPremiumFromOrg, organizationIdsClaimingActiveUser);
+        var response = new ProfileResponseModel(user, userAccountKeys, null, null, null, twoFactorEnabled, hasPremiumFromOrg, organizationIdsClaimingActiveUser);
         return response;
     }
 
+    [HttpPost("profile")]
+    [Obsolete("This endpoint is deprecated. Use PUT /profile instead.")]
+    public async Task<ProfileResponseModel> PostProfile([FromBody] UpdateProfileRequestModel model)
+    {
+        return await PutProfile(model);
+    }
+
     [HttpPut("avatar")]
-    [HttpPost("avatar")]
     public async Task<ProfileResponseModel> PutAvatar([FromBody] UpdateAvatarRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
@@ -449,9 +396,17 @@ public class AccountsController : Controller
         var userTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
         var userHasPremiumFromOrganization = await _userService.HasPremiumFromOrganization(user);
         var organizationIdsClaimingActiveUser = await GetOrganizationIdsClaimingUserAsync(user.Id);
+        var accountKeys = await _userAccountKeysQuery.Run(user);
 
-        var response = new ProfileResponseModel(user, null, null, null, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationIdsClaimingActiveUser);
+        var response = new ProfileResponseModel(user, accountKeys, null, null, null, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationIdsClaimingActiveUser);
         return response;
+    }
+
+    [HttpPost("avatar")]
+    [Obsolete("This endpoint is deprecated. Use PUT /avatar instead.")]
+    public async Task<ProfileResponseModel> PostAvatar([FromBody] UpdateAvatarRequestModel model)
+    {
+        return await PutAvatar(model);
     }
 
     [HttpGet("revision-date")]
@@ -502,7 +457,6 @@ public class AccountsController : Controller
     }
 
     [HttpDelete]
-    [HttpPost("delete")]
     public async Task Delete([FromBody] SecretVerificationRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
@@ -537,6 +491,13 @@ public class AccountsController : Controller
         }
 
         throw new BadRequestException(ModelState);
+    }
+
+    [HttpPost("delete")]
+    [Obsolete("This endpoint is deprecated. Use DELETE / instead.")]
+    public async Task PostDelete([FromBody] SecretVerificationRequestModel model)
+    {
+        await Delete(model);
     }
 
     [AllowAnonymous]
@@ -700,10 +661,16 @@ public class AccountsController : Controller
     [HttpPost("resend-new-device-otp")]
     public async Task ResendNewDeviceOtpAsync([FromBody] UnauthenticatedSecretVerificationRequestModel request)
     {
-        await _userService.ResendNewDeviceVerificationEmail(request.Email, request.Secret);
+        var user = await _userService.GetUserByPrincipalAsync(User) ?? throw new UnauthorizedAccessException();
+        if (!await _userService.VerifySecretAsync(user, request.Secret))
+        {
+            await Task.Delay(2000);
+            throw new BadRequestException(string.Empty, "User verification failed.");
+        }
+
+        await _twoFactorEmailService.SendNewDeviceVerificationEmailAsync(user);
     }
 
-    [HttpPost("verify-devices")]
     [HttpPut("verify-devices")]
     public async Task SetUserVerifyDevicesAsync([FromBody] SetVerifyDevicesRequestModel request)
     {
@@ -717,6 +684,13 @@ public class AccountsController : Controller
         user.VerifyDevices = request.VerifyDevices;
 
         await _userService.SaveUserAsync(user);
+    }
+
+    [HttpPost("verify-devices")]
+    [Obsolete("This endpoint is deprecated. Use PUT /verify-devices instead.")]
+    public async Task PostSetUserVerifyDevicesAsync([FromBody] SetVerifyDevicesRequestModel request)
+    {
+        await SetUserVerifyDevicesAsync(request);
     }
 
     private async Task<IEnumerable<Guid>> GetOrganizationIdsClaimingUserAsync(Guid userId)

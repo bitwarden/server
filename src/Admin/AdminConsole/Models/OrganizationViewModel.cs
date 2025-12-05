@@ -1,4 +1,7 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -72,6 +75,7 @@ public class OrganizationViewModel
     public int OccupiedSmSeatsCount { get; set; }
     public bool UseSecretsManager => Organization.UseSecretsManager;
     public bool UseRiskInsights => Organization.UseRiskInsights;
+    public bool UsePhishingBlocker => Organization.UsePhishingBlocker;
     public IEnumerable<OrganizationUserUserDetails> OwnersDetails { get; set; }
     public IEnumerable<OrganizationUserUserDetails> AdminsDetails { get; set; }
 }

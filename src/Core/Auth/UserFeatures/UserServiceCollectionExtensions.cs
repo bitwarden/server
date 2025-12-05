@@ -1,5 +1,4 @@
-﻿
-
+﻿using Bit.Core.Auth.Sso;
 using Bit.Core.Auth.UserFeatures.DeviceTrust;
 using Bit.Core.Auth.UserFeatures.Registration;
 using Bit.Core.Auth.UserFeatures.Registration.Implementations;
@@ -29,6 +28,7 @@ public static class UserServiceCollectionExtensions
         services.AddWebAuthnLoginCommands();
         services.AddTdeOffboardingPasswordCommands();
         services.AddTwoFactorQueries();
+        services.AddSsoQueries();
     }
 
     public static void AddDeviceTrustCommands(this IServiceCollection services)
@@ -38,7 +38,6 @@ public static class UserServiceCollectionExtensions
 
     public static void AddUserKeyCommands(this IServiceCollection services, IGlobalSettings globalSettings)
     {
-        services.AddScoped<IRotateUserKeyCommand, RotateUserKeyCommand>();
         services.AddScoped<IRotateUserAccountKeysCommand, RotateUserAccountKeysCommand>();
     }
 
@@ -69,5 +68,10 @@ public static class UserServiceCollectionExtensions
     private static void AddTwoFactorQueries(this IServiceCollection services)
     {
         services.AddScoped<ITwoFactorIsEnabledQuery, TwoFactorIsEnabledQuery>();
+    }
+
+    private static void AddSsoQueries(this IServiceCollection services)
+    {
+        services.AddScoped<IUserSsoOrganizationIdentifierQuery, UserSsoOrganizationIdentifierQuery>();
     }
 }

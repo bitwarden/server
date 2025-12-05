@@ -40,6 +40,9 @@ jobs:
 
       - name: Check out repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
 
       - name: Check release version
         id: version
@@ -52,13 +55,15 @@ jobs:
       - name: Get branch name
         id: branch
         run: |
-          BRANCH_NAME=$(basename ${{ github.ref }})
-          echo "branch-name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          BRANCH_NAME=$(basename "${GITHUB_REF}")
+          echo "branch-name=$BRANCH_NAME" >> "$GITHUB_OUTPUT"
 
   release:
     name: Create GitHub release
     runs-on: ubuntu-22.04
     needs: setup
+    permissions:
+      contents: write
     steps:
       - name: Download latest release Docker stubs
         if: ${{ inputs.release_type != 'Dry Run' }}
@@ -84,7 +89,7 @@ jobs:
 
       - name: Create release
         if: ${{ inputs.release_type != 'Dry Run' }}
-        uses: ncipollo/release-action@cdcc88a9acf3ca41c16c37bb7d21b9ad48560d87 # v1.15.0
+        uses: ncipollo/release-action@440c8c1cb0ed28b9f43e4d1d670870f059653174 # v1.16.0
         with:
           artifacts: "docker-stub-US.zip,
             docker-stub-EU.zip,

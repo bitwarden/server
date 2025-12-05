@@ -11,15 +11,10 @@
     <TargetFrameworkProfile />
   </PropertyGroup>
   <ItemGroup>
-    <Build Remove="dbo_future/**/*" />
-
     <!-- Remove file just so we can add it back with some suppressions -->
     <Build Remove="dbo/Stored Procedures/AzureSQLMaintenance.sql" />
     <Build Include="dbo/Stored Procedures/AzureSQLMaintenance.sql">
       <SuppressTSqlWarnings>71502</SuppressTSqlWarnings>
     </Build>
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Billing\dbo\" />
   </ItemGroup>
 </Project>

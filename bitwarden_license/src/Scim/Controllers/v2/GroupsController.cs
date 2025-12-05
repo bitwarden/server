@@ -1,4 +1,7 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -58,17 +61,15 @@ public class GroupsController : Controller
     [HttpGet("")]
     public async Task<IActionResult> Get(
         Guid organizationId,
-        [FromQuery] string filter,
-        [FromQuery] int? count,
-        [FromQuery] int? startIndex)
+        [FromQuery] GetGroupsQueryParamModel model)
     {
-        var groupsListQueryResult = await _getGroupsListQuery.GetGroupsListAsync(organizationId, filter, count, startIndex);
+        var groupsListQueryResult = await _getGroupsListQuery.GetGroupsListAsync(organizationId, model);
         var scimListResponseModel = new ScimListResponseModel<ScimGroupResponseModel>
         {
             Resources = groupsListQueryResult.groupList.Select(g => new ScimGroupResponseModel(g)).ToList(),
-            ItemsPerPage = count.GetValueOrDefault(groupsListQueryResult.groupList.Count()),
+            ItemsPerPage = model.Count,
             TotalResults = groupsListQueryResult.totalResults,
-            StartIndex = startIndex.GetValueOrDefault(1),
+            StartIndex = model.StartIndex,
         };
         return Ok(scimListResponseModel);
     }

@@ -1,12 +1,15 @@
-﻿using System.Security.Claims;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Security.Claims;
 using Bit.Core.AdminConsole.Context;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Identity;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
@@ -15,10 +18,10 @@ using Microsoft.AspNetCore.Http;
 
 namespace Bit.Core.Context;
 
-public class CurrentContext : ICurrentContext
+public class CurrentContext(
+    IProviderOrganizationRepository _providerOrganizationRepository,
+    IProviderUserRepository _providerUserRepository) : ICurrentContext
 {
-    private readonly IProviderOrganizationRepository _providerOrganizationRepository;
-    private readonly IProviderUserRepository _providerUserRepository;
     private bool _builtHttpContext;
     private bool _builtClaimsPrincipal;
     private IEnumerable<ProviderOrganizationProviderDetails> _providerOrganizationProviderDetails;
@@ -35,23 +38,11 @@ public class CurrentContext : ICurrentContext
     public virtual List<CurrentContextProvider> Providers { get; set; }
     public virtual Guid? InstallationId { get; set; }
     public virtual Guid? OrganizationId { get; set; }
-    public virtual bool CloudflareWorkerProxied { get; set; }
-    public virtual bool IsBot { get; set; }
-    public virtual bool MaybeBot { get; set; }
-    public virtual int? BotScore { get; set; }
     public virtual string ClientId { get; set; }
     public virtual Version ClientVersion { get; set; }
     public virtual bool ClientVersionIsPrerelease { get; set; }
     public virtual IdentityClientType IdentityClientType { get; set; }
     public virtual Guid? ServiceAccountOrganizationId { get; set; }
-
-    public CurrentContext(
-        IProviderOrganizationRepository providerOrganizationRepository,
-        IProviderUserRepository providerUserRepository)
-    {
-        _providerOrganizationRepository = providerOrganizationRepository;
-        _providerUserRepository = providerUserRepository;
-    }
 
     public async virtual Task BuildAsync(HttpContext httpContext, GlobalSettings globalSettings)
     {
@@ -73,27 +64,6 @@ public class CurrentContext : ICurrentContext
             Enum.TryParse(deviceType.ToString(), out DeviceType dType))
         {
             DeviceType = dType;
-        }
-
-        if (!BotScore.HasValue && httpContext.Request.Headers.TryGetValue("X-Cf-Bot-Score", out var cfBotScore) &&
-            int.TryParse(cfBotScore, out var parsedBotScore))
-        {
-            BotScore = parsedBotScore;
-        }
-
-        if (httpContext.Request.Headers.TryGetValue("X-Cf-Worked-Proxied", out var cfWorkedProxied))
-        {
-            CloudflareWorkerProxied = cfWorkedProxied == "1";
-        }
-
-        if (httpContext.Request.Headers.TryGetValue("X-Cf-Is-Bot", out var cfIsBot))
-        {
-            IsBot = cfIsBot == "1";
-        }
-
-        if (httpContext.Request.Headers.TryGetValue("X-Cf-Maybe-Bot", out var cfMaybeBot))
-        {
-            MaybeBot = cfMaybeBot == "1";
         }
 
         if (httpContext.Request.Headers.TryGetValue("Bitwarden-Client-Version", out var bitWardenClientVersion) && Version.TryParse(bitWardenClientVersion, out var cVersion))
@@ -134,6 +104,24 @@ public class CurrentContext : ICurrentContext
 
         var claimsDict = user.Claims.GroupBy(c => c.Type).ToDictionary(c => c.Key, c => c.Select(v => v));
 
+        ClientId = GetClaimValue(claimsDict, "client_id");
+
+        var clientType = GetClaimValue(claimsDict, Claims.Type);
+        if (clientType != null)
+        {
+            if (Enum.TryParse(clientType, out IdentityClientType c))
+            {
+                IdentityClientType = c;
+            }
+        }
+
+        if (IdentityClientType == IdentityClientType.Send)
+        {
+            // For the Send client, we don't need to set any User specific properties on the context
+            // so just short circuit and return here.
+            return Task.FromResult(0);
+        }
+
         var subject = GetClaimValue(claimsDict, "sub");
         if (Guid.TryParse(subject, out var subIdGuid))
         {
@@ -160,13 +148,6 @@ public class CurrentContext : ICurrentContext
                     orgApi = true;
                 }
             }
-        }
-
-        var clientType = GetClaimValue(claimsDict, Claims.Type);
-        if (clientType != null)
-        {
-            Enum.TryParse(clientType, out IdentityClientType c);
-            IdentityClientType = c;
         }
 
         if (IdentityClientType == IdentityClientType.ServiceAccount)

@@ -1,8 +1,11 @@
-﻿using Bit.Core.AdminConsole.Enums;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -21,7 +24,7 @@ public class VerifyOrganizationDomainCommand(
     IEventService eventService,
     IGlobalSettings globalSettings,
     ICurrentContext currentContext,
-    ISavePolicyCommand savePolicyCommand,
+    IVNextSavePolicyCommand vNextSavePolicyCommand,
     IMailService mailService,
     IOrganizationUserRepository organizationUserRepository,
     IOrganizationRepository organizationRepository,
@@ -128,15 +131,19 @@ public class VerifyOrganizationDomainCommand(
         await SendVerifiedDomainUserEmailAsync(domain);
     }
 
-    private async Task EnableSingleOrganizationPolicyAsync(Guid organizationId, IActingUser actingUser) =>
-        await savePolicyCommand.SaveAsync(
-            new PolicyUpdate
-            {
-                OrganizationId = organizationId,
-                Type = PolicyType.SingleOrg,
-                Enabled = true,
-                PerformedBy = actingUser
-            });
+    private async Task EnableSingleOrganizationPolicyAsync(Guid organizationId, IActingUser actingUser)
+    {
+        var policyUpdate = new PolicyUpdate
+        {
+            OrganizationId = organizationId,
+            Type = PolicyType.SingleOrg,
+            Enabled = true,
+            PerformedBy = actingUser
+        };
+
+        var savePolicyModel = new SavePolicyModel(policyUpdate, actingUser);
+        await vNextSavePolicyCommand.SaveAsync(savePolicyModel);
+    }
 
     private async Task SendVerifiedDomainUserEmailAsync(OrganizationDomain domain)
     {
