@@ -17,10 +17,9 @@ public class OrganizationIntegrationConfigurationRepository : Repository<Core.Ad
         : base(serviceScopeFactory, mapper, context => context.OrganizationIntegrationConfigurations)
     { }
 
-    public async Task<List<OrganizationIntegrationConfigurationDetails>> GetConfigurationDetailsAsync(
-        Guid organizationId,
-        IntegrationType integrationType,
-        EventType eventType)
+    public async Task<List<OrganizationIntegrationConfigurationDetails>>
+        GetManyByEventTypeOrganizationIdIntegrationType(EventType eventType, Guid organizationId,
+            IntegrationType integrationType)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -30,19 +29,6 @@ public class OrganizationIntegrationConfigurationRepository : Repository<Core.Ad
                 eventType,
                 integrationType
                 );
-            return await query.Run(dbContext).ToListAsync();
-        }
-    }
-
-    public async Task<List<OrganizationIntegrationConfigurationDetails>> GetManyConfigurationDetailsByOrganizationIdIntegrationTypeAsync(Guid organizationId, IntegrationType integrationType)
-    {
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
-            var query = new OrganizationIntegrationConfigurationDetailsReadManyByOrganizationIdIntegrationTypeQuery(
-                organizationId,
-                integrationType
-            );
             return await query.Run(dbContext).ToListAsync();
         }
     }

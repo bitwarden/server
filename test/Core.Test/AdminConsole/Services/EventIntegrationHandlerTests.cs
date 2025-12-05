@@ -45,16 +45,6 @@ public class EventIntegrationHandlerTests
             factory: Arg.Any<Func<object, CancellationToken, Task<List<OrganizationIntegrationConfigurationDetails>>>>(),
             options: Arg.Any<FusionCacheEntryOptions>(),
             tags: Arg.Any<IEnumerable<string>>()
-        ).Returns([]);
-        cache.GetOrSetAsync(
-            key: EventIntegrationsCacheConstants.BuildCacheKeyForOrganizationIntegrationConfigurationDetails(
-                organizationId: _organizationId,
-                integrationType: IntegrationType.Webhook,
-                eventType: null
-            ),
-            factory: Arg.Any<Func<object, CancellationToken, Task<List<OrganizationIntegrationConfigurationDetails>>>>(),
-            options: Arg.Any<FusionCacheEntryOptions>(),
-            tags: Arg.Any<IEnumerable<string>>()
         ).Returns(configurations);
 
         return new SutProvider<EventIntegrationHandler<WebhookIntegrationConfigurationDetails>>()
@@ -646,46 +636,29 @@ public class EventIntegrationHandlerTests
         var cache = sutProvider.GetDependency<IFusionCache>();
         var configurationRepository = sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>();
 
-        var eventTypeConfigs = OneConfiguration(_templateBase);
-        var wildcardConfigs = OneConfiguration(_templateBase);
+        var configs = OneConfiguration(_templateBase);
 
-        configurationRepository.GetConfigurationDetailsAsync(
-            organizationId: _organizationId,
-            integrationType: IntegrationType.Webhook,
-            eventType: eventMessage.Type).Returns(eventTypeConfigs);
+        configurationRepository.GetManyByEventTypeOrganizationIdIntegrationType(eventType: eventMessage.Type, organizationId: _organizationId, integrationType: IntegrationType.Webhook).Returns(configs);
 
-        configurationRepository.GetManyConfigurationDetailsByOrganizationIdIntegrationTypeAsync(
-            organizationId: _organizationId,
-            integrationType: IntegrationType.Webhook).Returns(wildcardConfigs);
-
-        // Capture all factory functions - there will be 2: one for event-specific, one for wildcard
-        var capturedFactories = new List<Func<FusionCacheFactoryExecutionContext<List<OrganizationIntegrationConfigurationDetails>>, CancellationToken, Task<List<OrganizationIntegrationConfigurationDetails>>>>();
+        // Capture the factory function - there will be 1 call that returns both specific and wildcard matches
+        Func<FusionCacheFactoryExecutionContext<List<OrganizationIntegrationConfigurationDetails>>, CancellationToken, Task<List<OrganizationIntegrationConfigurationDetails>>>? capturedFactory = null;
         cache.GetOrSetAsync(
             key: Arg.Any<string>(),
             factory: Arg.Do<Func<FusionCacheFactoryExecutionContext<List<OrganizationIntegrationConfigurationDetails>>, CancellationToken, Task<List<OrganizationIntegrationConfigurationDetails>>>>(f
-                => capturedFactories.Add(f)),
+                => capturedFactory = f),
             options: Arg.Any<FusionCacheEntryOptions>(),
             tags: Arg.Any<IEnumerable<string>>()
         ).Returns(new List<OrganizationIntegrationConfigurationDetails>());
 
         await sutProvider.Sut.HandleEventAsync(eventMessage);
 
-        // Verify both factories were captured
-        Assert.Equal(2, capturedFactories.Count);
+        // Verify factory was captured
+        Assert.NotNull(capturedFactory);
 
-        // Execute each captured factory to trigger repository calls
-        foreach (var factory in capturedFactories)
-        {
-            await factory(null!, CancellationToken.None);
-        }
+        // Execute the captured factory to trigger repository call
+        await capturedFactory(null!, CancellationToken.None);
 
-        await configurationRepository.Received(1).GetConfigurationDetailsAsync(
-            organizationId: _organizationId,
-            integrationType: IntegrationType.Webhook,
-            eventType: eventMessage.Type);
-        await configurationRepository.Received(1).GetManyConfigurationDetailsByOrganizationIdIntegrationTypeAsync(
-            organizationId: _organizationId,
-            integrationType: IntegrationType.Webhook);
+        await configurationRepository.Received(1).GetManyByEventTypeOrganizationIdIntegrationType(eventType: eventMessage.Type, organizationId: _organizationId, integrationType: IntegrationType.Webhook);
     }
 
     [Theory, BitAutoData]
@@ -695,23 +668,19 @@ public class EventIntegrationHandlerTests
         var sutProvider = GetSutProvider(NoConfigurations());
         var cache = sutProvider.GetDependency<IFusionCache>();
 
-        var capturedOptions = new List<FusionCacheEntryOptions>();
+        FusionCacheEntryOptions? capturedOption = null;
         cache.GetOrSetAsync(
             key: Arg.Any<string>(),
             factory: Arg.Any<Func<FusionCacheFactoryExecutionContext<List<OrganizationIntegrationConfigurationDetails>>, CancellationToken, Task<List<OrganizationIntegrationConfigurationDetails>>>>(),
-            options: Arg.Do<FusionCacheEntryOptions>(opt => capturedOptions.Add(opt)),
+            options: Arg.Do<FusionCacheEntryOptions>(opt => capturedOption = opt),
             tags: Arg.Any<IEnumerable<string>?>()
         ).Returns(new List<OrganizationIntegrationConfigurationDetails>());
 
         await sutProvider.Sut.HandleEventAsync(eventMessage);
 
-        Assert.Equal(2, capturedOptions.Count);
-        Assert.All(capturedOptions, opt =>
-        {
-            Assert.NotNull(opt);
-            Assert.Equal(EventIntegrationsCacheConstants.DurationForOrganizationIntegrationConfigurationDetails,
-                         opt.Duration);
-        });
+        Assert.NotNull(capturedOption);
+        Assert.Equal(EventIntegrationsCacheConstants.DurationForOrganizationIntegrationConfigurationDetails,
+                     capturedOption.Duration);
     }
 
     [Theory, BitAutoData]
@@ -721,12 +690,12 @@ public class EventIntegrationHandlerTests
         var sutProvider = GetSutProvider(NoConfigurations());
         var cache = sutProvider.GetDependency<IFusionCache>();
 
-        var capturedTags = new List<IEnumerable<string>>();
+        IEnumerable<string>? capturedTags = null;
         cache.GetOrSetAsync(
             key: Arg.Any<string>(),
             factory: Arg.Any<Func<FusionCacheFactoryExecutionContext<List<OrganizationIntegrationConfigurationDetails>>, CancellationToken, Task<List<OrganizationIntegrationConfigurationDetails>>>>(),
             options: Arg.Any<FusionCacheEntryOptions>(),
-            tags: Arg.Do<IEnumerable<string>>(t => capturedTags.Add(t))
+            tags: Arg.Do<IEnumerable<string>>(t => capturedTags = t)
         ).Returns(new List<OrganizationIntegrationConfigurationDetails>());
 
         await sutProvider.Sut.HandleEventAsync(eventMessage);
@@ -735,11 +704,7 @@ public class EventIntegrationHandlerTests
             _organizationId,
             IntegrationType.Webhook
         );
-        Assert.Equal(2, capturedTags.Count);
-        Assert.All(capturedTags, tags =>
-        {
-            Assert.NotNull(tags);
-            Assert.Contains(expectedTag, tags);
-        });
+        Assert.NotNull(capturedTags);
+        Assert.Contains(expectedTag, capturedTags);
     }
 }

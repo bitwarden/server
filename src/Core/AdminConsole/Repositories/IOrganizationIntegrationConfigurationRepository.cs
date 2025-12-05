@@ -8,25 +8,19 @@ public interface IOrganizationIntegrationConfigurationRepository : IRepository<O
 {
     /// <summary>
     /// Retrieve the list of available configuration details for a specific event for the organization and
-    /// integration type.
+    /// integration type.<br/>
+    /// <br/>
+    /// <b>Note:</b> This returns all configurations that match the event type explicitly <b>and</b>
+    /// all the configurations that have a null event type - null event type is considered a
+    /// wildcard that matches all events.
+    ///
     /// </summary>
-    /// <param name="organizationId">The id of the organization</param>
-    /// <param name="integrationType">The integration type</param>
     /// <param name="eventType">The specific event type</param>
-    /// <returns>A List of <see cref="OrganizationIntegrationConfigurationDetails"/> that match</returns>
-    Task<List<OrganizationIntegrationConfigurationDetails>> GetConfigurationDetailsAsync(
-        Guid organizationId,
-        IntegrationType integrationType,
-        EventType eventType);
-
-    /// <summary>
-    /// Retrieve the list of configuration details for the organization and
-    /// integration type that have a null event type (i.e. match all events).
-    /// </summary>
     /// <param name="organizationId">The id of the organization</param>
     /// <param name="integrationType">The integration type</param>
     /// <returns>A List of <see cref="OrganizationIntegrationConfigurationDetails"/> that match</returns>
-    Task<List<OrganizationIntegrationConfigurationDetails>> GetManyConfigurationDetailsByOrganizationIdIntegrationTypeAsync(
+    Task<List<OrganizationIntegrationConfigurationDetails>> GetManyByEventTypeOrganizationIdIntegrationType(
+        EventType eventType,
         Guid organizationId,
         IntegrationType integrationType);
 
