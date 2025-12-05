@@ -225,4 +225,58 @@ public class CipherRepositoryTests
             Assert.True(savedCipher == null);
         }
     }
+
+    [CiSkippedTheory, EfOrganizationCipherCustomize, BitAutoData]
+    public async Task ReplaceAsync_WithCollections_UpdatesFoldersFavoritesRepromptAndArchivedDateAsync(
+        Cipher cipher,
+        User user,
+        Organization org,
+        Collection collection,
+        List<EfVaultRepo.CipherRepository> suts,
+        List<EfRepo.UserRepository> efUserRepos,
+        List<EfRepo.OrganizationRepository> efOrgRepos,
+        List<EfRepo.CollectionRepository> efCollectionRepos)
+    {
+        foreach (var sut in suts)
+        {
+            var i = suts.IndexOf(sut);
+
+            var postEfOrg = await efOrgRepos[i].CreateAsync(org);
+            efOrgRepos[i].ClearChangeTracking();
+            var postEfUser = await efUserRepos[i].CreateAsync(user);
+            efUserRepos[i].ClearChangeTracking();
+
+            collection.OrganizationId = postEfOrg.Id;
+            var postEfCollection = await efCollectionRepos[i].CreateAsync(collection);
+            efCollectionRepos[i].ClearChangeTracking();
+
+            cipher.UserId = postEfUser.Id;
+            cipher.OrganizationId = null;
+            cipher.Folders = $"{{\"{postEfUser.Id}\":\"some-folder-id\"}}";
+            cipher.Favorites = $"{{\"{postEfUser.Id}\":true}}";
+            cipher.Reprompt = Core.Vault.Enums.CipherRepromptType.Password;
+
+            var createdCipher = await sut.CreateAsync(cipher);
+            sut.ClearChangeTracking();
+
+            var updatedCipher = await sut.GetByIdAsync(createdCipher.Id);
+            updatedCipher.UserId = postEfUser.Id;
+            updatedCipher.OrganizationId = postEfOrg.Id;
+            updatedCipher.Folders = $"{{\"{postEfUser.Id}\":\"new-folder-id\"}}";
+            updatedCipher.Favorites = $"{{\"{postEfUser.Id}\":true}}";
+            updatedCipher.Reprompt = Core.Vault.Enums.CipherRepromptType.Password;
+
+            await sut.ReplaceAsync(updatedCipher, new List<Guid> { postEfCollection.Id });
+            sut.ClearChangeTracking();
+
+
+            var savedCipher = await sut.GetByIdAsync(createdCipher.Id);
+            Assert.NotNull(savedCipher);
+            Assert.Null(savedCipher.UserId);
+            Assert.Equal(postEfOrg.Id, savedCipher.OrganizationId);
+            Assert.Equal($"{{\"{postEfUser.Id}\":\"new-folder-id\"}}", savedCipher.Folders);
+            Assert.Equal($"{{\"{postEfUser.Id}\":true}}", savedCipher.Favorites);
+            Assert.Equal(Core.Vault.Enums.CipherRepromptType.Password, savedCipher.Reprompt);
+        }
+    }
 }
