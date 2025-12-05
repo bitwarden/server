@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using Bit.Api.Models.Request;
+﻿using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
@@ -29,6 +27,7 @@ public class AccountsController(
     IFeatureService featureService,
     ILicensingService licensingService) : Controller
 {
+    // TODO: Remove when pm-24996-implement-upgrade-from-free-dialog is removed
     [HttpPost("premium")]
     public async Task<PaymentResponseModel> PostPremiumAsync(
         PremiumRequestModel model,
@@ -76,6 +75,7 @@ public class AccountsController(
         };
     }
 
+    // TODO: Migrate to Query / AccountBillingVNextController as part of Premium -> Organization upgrade work.
     [HttpGet("subscription")]
     public async Task<SubscriptionResponseModel> GetSubscriptionAsync(
         [FromServices] GlobalSettings globalSettings,
@@ -114,29 +114,7 @@ public class AccountsController(
         }
     }
 
-    [HttpPost("payment")]
-    [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PostPaymentAsync([FromBody] PaymentRequestModel model)
-    {
-        var user = await userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        await userService.ReplacePaymentMethodAsync(user, model.PaymentToken, model.PaymentMethodType!.Value,
-            new TaxInfo
-            {
-                BillingAddressLine1 = model.Line1,
-                BillingAddressLine2 = model.Line2,
-                BillingAddressCity = model.City,
-                BillingAddressState = model.State,
-                BillingAddressCountry = model.Country,
-                BillingAddressPostalCode = model.PostalCode,
-                TaxIdNumber = model.TaxId
-            });
-    }
-
+    // TODO: Migrate to Command / AccountBillingVNextController as PUT /account/billing/vnext/subscription
     [HttpPost("storage")]
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<PaymentResponseModel> PostStorageAsync([FromBody] StorageRequestModel model)
@@ -151,8 +129,11 @@ public class AccountsController(
         return new PaymentResponseModel { Success = true, PaymentIntentClientSecret = result };
     }
 
-
-
+    /*
+     * TODO: A new version of this exists in the AccountBillingVNextController.
+     * The individual-self-hosting-license-uploader.component needs to be updated to use it.
+     * Then, this can be removed.
+     */
     [HttpPost("license")]
     [SelfHosted(SelfHostedOnly = true)]
     public async Task PostLicenseAsync(LicenseRequestModel model)
@@ -172,6 +153,7 @@ public class AccountsController(
         await userService.UpdateLicenseAsync(user, license);
     }
 
+    // TODO: Migrate to Command / AccountBillingVNextController as DELETE /account/billing/vnext/subscription
     [HttpPost("cancel")]
     public async Task PostCancelAsync(
         [FromBody] SubscriptionCancellationRequestModel request,
@@ -189,6 +171,7 @@ public class AccountsController(
             user.IsExpired());
     }
 
+    // TODO: Migrate to Command / AccountBillingVNextController as POST /account/billing/vnext/subscription/reinstate
     [HttpPost("reinstate-premium")]
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task PostReinstateAsync()
@@ -200,41 +183,6 @@ public class AccountsController(
         }
 
         await userService.ReinstatePremiumAsync(user);
-    }
-
-    [HttpGet("tax")]
-    [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task<TaxInfoResponseModel> GetTaxInfoAsync(
-        [FromServices] IPaymentService paymentService)
-    {
-        var user = await userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        var taxInfo = await paymentService.GetTaxInfoAsync(user);
-        return new TaxInfoResponseModel(taxInfo);
-    }
-
-    [HttpPut("tax")]
-    [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PutTaxInfoAsync(
-        [FromBody] TaxInfoUpdateRequestModel model,
-        [FromServices] IPaymentService paymentService)
-    {
-        var user = await userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        var taxInfo = new TaxInfo
-        {
-            BillingAddressPostalCode = model.PostalCode,
-            BillingAddressCountry = model.Country,
-        };
-        await paymentService.SaveTaxInfoAsync(user, taxInfo);
     }
 
     private async Task<IEnumerable<Guid>> GetOrganizationIdsClaimingUserAsync(Guid userId)

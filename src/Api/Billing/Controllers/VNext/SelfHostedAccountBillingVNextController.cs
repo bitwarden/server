@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Bit.Api.Billing.Attributes;
+﻿using Bit.Api.Billing.Attributes;
 using Bit.Api.Billing.Models.Requests.Premium;
 using Bit.Api.Utilities;
 using Bit.Core;
@@ -17,7 +16,7 @@ namespace Bit.Api.Billing.Controllers.VNext;
 [Authorize("Application")]
 [Route("account/billing/vnext/self-host")]
 [SelfHosted(SelfHostedOnly = true)]
-public class SelfHostedAccountBillingController(
+public class SelfHostedAccountBillingVNextController(
     ICreatePremiumSelfHostedSubscriptionCommand createPremiumSelfHostedSubscriptionCommand) : BaseBillingController
 {
     [HttpPost("license")]

@@ -24,7 +24,6 @@ using Stripe;
 
 using static Bit.Core.Billing.Utilities;
 using Customer = Stripe.Customer;
-using PaymentMethod = Bit.Core.Billing.Models.PaymentMethod;
 using Subscription = Stripe.Subscription;
 
 namespace Bit.Core.Billing.Services.Implementations;
@@ -330,38 +329,6 @@ public class SubscriberService(
         }
     }
 
-    public async Task<PaymentMethod> GetPaymentMethod(
-        ISubscriber subscriber)
-    {
-        ArgumentNullException.ThrowIfNull(subscriber);
-
-        var customer = await GetCustomer(subscriber, new CustomerGetOptions
-        {
-            Expand = ["default_source", "invoice_settings.default_payment_method", "subscriptions", "tax_ids"]
-        });
-
-        if (customer == null)
-        {
-            return PaymentMethod.Empty;
-        }
-
-        var accountCredit = customer.Balance * -1 / 100M;
-
-        var paymentMethod = await GetPaymentSourceAsync(subscriber.Id, customer);
-
-        var subscriptionStatus = customer.Subscriptions
-            .FirstOrDefault(subscription => subscription.Id == subscriber.GatewaySubscriptionId)?
-            .Status;
-
-        var taxInformation = GetTaxInformation(customer);
-
-        return new PaymentMethod(
-            accountCredit,
-            paymentMethod,
-            subscriptionStatus,
-            taxInformation);
-    }
-
     public async Task<PaymentSource> GetPaymentSource(
         ISubscriber subscriber)
     {
@@ -447,16 +414,6 @@ public class SubscriberService(
                 message: "An error occurred while trying to retrieve a Stripe subscription",
                 innerException: stripeException);
         }
-    }
-
-    public async Task<TaxInformation> GetTaxInformation(
-        ISubscriber subscriber)
-    {
-        ArgumentNullException.ThrowIfNull(subscriber);
-
-        var customer = await GetCustomerOrThrow(subscriber, new CustomerGetOptions { Expand = ["tax_ids"] });
-
-        return GetTaxInformation(customer);
     }
 
     public async Task RemovePaymentSource(
@@ -823,57 +780,6 @@ public class SubscriberService(
         }
     }
 
-    public async Task VerifyBankAccount(
-        ISubscriber subscriber,
-        string descriptorCode)
-    {
-        var setupIntentId = await setupIntentCache.GetSetupIntentIdForSubscriber(subscriber.Id);
-
-        if (string.IsNullOrEmpty(setupIntentId))
-        {
-            logger.LogError("No setup intent ID exists to verify for subscriber with ID ({SubscriberID})", subscriber.Id);
-            throw new BillingException();
-        }
-
-        try
-        {
-            await stripeAdapter.SetupIntentVerifyMicroDeposit(setupIntentId,
-                new SetupIntentVerifyMicrodepositsOptions { DescriptorCode = descriptorCode });
-
-            var setupIntent = await stripeAdapter.SetupIntentGet(setupIntentId);
-
-            await stripeAdapter.PaymentMethodAttachAsync(setupIntent.PaymentMethodId,
-                new PaymentMethodAttachOptions { Customer = subscriber.GatewayCustomerId });
-
-            await stripeAdapter.CustomerUpdateAsync(subscriber.GatewayCustomerId,
-                new CustomerUpdateOptions
-                {
-                    InvoiceSettings = new CustomerInvoiceSettingsOptions
-                    {
-                        DefaultPaymentMethod = setupIntent.PaymentMethodId
-                    }
-                });
-        }
-        catch (StripeException stripeException)
-        {
-            if (!string.IsNullOrEmpty(stripeException.StripeError?.Code))
-            {
-                var message = stripeException.StripeError.Code switch
-                {
-                    StripeConstants.ErrorCodes.PaymentMethodMicroDepositVerificationAttemptsExceeded => "You have exceeded the number of allowed verification attempts. Please contact support.",
-                    StripeConstants.ErrorCodes.PaymentMethodMicroDepositVerificationDescriptorCodeMismatch => "The verification code you provided does not match the one sent to your bank account. Please try again.",
-                    StripeConstants.ErrorCodes.PaymentMethodMicroDepositVerificationTimeout => "Your bank account was not verified within the required time period. Please contact support.",
-                    _ => BillingException.DefaultMessage
-                };
-
-                throw new BadRequestException(message);
-            }
-
-            logger.LogError(stripeException, "An unhandled Stripe exception was thrown while verifying subscriber's ({SubscriberID}) bank account", subscriber.Id);
-            throw new BillingException();
-        }
-    }
-
     public async Task<bool> IsValidGatewayCustomerIdAsync(ISubscriber subscriber)
     {
         ArgumentNullException.ThrowIfNull(subscriber);
@@ -968,25 +874,6 @@ public class SubscriberService(
         });
 
         return PaymentSource.From(setupIntent);
-    }
-
-    private static TaxInformation GetTaxInformation(
-        Customer customer)
-    {
-        if (customer.Address == null)
-        {
-            return null;
-        }
-
-        return new TaxInformation(
-            customer.Address.Country,
-            customer.Address.PostalCode,
-            customer.TaxIds?.FirstOrDefault()?.Value,
-            customer.TaxIds?.FirstOrDefault()?.Type,
-            customer.Address.Line1,
-            customer.Address.Line2,
-            customer.Address.City,
-            customer.Address.State);
     }
 
     private async Task RemoveBraintreeCustomerIdAsync(
