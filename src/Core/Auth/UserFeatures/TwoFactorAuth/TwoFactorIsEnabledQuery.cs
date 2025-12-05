@@ -8,7 +8,6 @@ using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 
 namespace Bit.Core.Auth.UserFeatures.TwoFactorAuth;
 
@@ -16,16 +15,13 @@ public class TwoFactorIsEnabledQuery : ITwoFactorIsEnabledQuery
 {
     private readonly IUserRepository _userRepository;
     private readonly IPremiumAccessQuery _premiumAccessQuery;
-    private readonly IFeatureService _featureService;
 
     public TwoFactorIsEnabledQuery(
         IUserRepository userRepository,
-        IPremiumAccessQuery premiumAccessQuery,
-        IFeatureService featureService)
+        IPremiumAccessQuery premiumAccessQuery)
     {
         _userRepository = userRepository;
         _premiumAccessQuery = premiumAccessQuery;
-        _featureService = featureService;
     }
 
     public async Task<IEnumerable<(Guid userId, bool twoFactorIsEnabled)>> TwoFactorIsEnabledAsync(IEnumerable<Guid> userIds)
@@ -36,34 +32,15 @@ public class TwoFactorIsEnabledQuery : ITwoFactorIsEnabledQuery
             return result;
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.PremiumAccessCacheCheck))
+        var userDetails = await _userRepository.GetManyWithCalculatedPremiumAsync([.. userIds]);
+        foreach (var userDetail in userDetails)
         {
-            var users = await _userRepository.GetManyAsync([.. userIds]);
-            var premiumStatus = await _premiumAccessQuery.CanAccessPremiumAsync(users);
-
-            foreach (var user in users)
-            {
-                result.Add(
-                    (user.Id,
-                     await TwoFactorEnabledAsync(
-                         user.GetTwoFactorProviders(),
-                         () => Task.FromResult(premiumStatus.GetValueOrDefault(user.Id, false))
-                     ))
-                );
-            }
-        }
-        else
-        {
-            var userDetails = await _userRepository.GetManyWithCalculatedPremiumAsync([.. userIds]);
-            foreach (var userDetail in userDetails)
-            {
-                result.Add(
-                    (userDetail.Id,
-                     await TwoFactorEnabledAsync(userDetail.GetTwoFactorProviders(),
-                                    () => Task.FromResult(userDetail.HasPremiumAccess))
-                    )
-                );
-            }
+            result.Add(
+                (userDetail.Id,
+                 await TwoFactorEnabledAsync(userDetail.GetTwoFactorProviders(),
+                                () => Task.FromResult(userDetail.HasPremiumAccess))
+                )
+            );
         }
 
         return result;
@@ -106,43 +83,102 @@ public class TwoFactorIsEnabledQuery : ITwoFactorIsEnabledQuery
             return false;
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.PremiumAccessCacheCheck))
+        return await TwoFactorEnabledAsync(
+            user.GetTwoFactorProviders(),
+            async () =>
+            {
+                var calcUser = await _userRepository.GetCalculatedPremiumAsync(userId.Value);
+                return calcUser?.HasPremiumAccess ?? false;
+            });
+    }
+
+    public async Task<IEnumerable<(Guid userId, bool twoFactorIsEnabled)>> TwoFactorIsEnabledVNextAsync(IEnumerable<Guid> userIds)
+    {
+        var result = new List<(Guid userId, bool hasTwoFactor)>();
+        if (userIds == null || !userIds.Any())
         {
-            // Try to get premium status without fetching User entity if possible
-            bool hasPersonalPremium;
-            if (user is User userEntity)
+            return result;
+        }
+
+        var users = await _userRepository.GetManyAsync([.. userIds]);
+        var premiumStatus = await _premiumAccessQuery.CanAccessPremiumAsync(users);
+
+        foreach (var user in users)
+        {
+            result.Add(
+                (user.Id,
+                 await TwoFactorEnabledAsync(
+                     user.GetTwoFactorProviders(),
+                     () => Task.FromResult(premiumStatus.GetValueOrDefault(user.Id, false))
+                 ))
+            );
+        }
+
+        return result;
+    }
+
+    public async Task<IEnumerable<(T user, bool twoFactorIsEnabled)>> TwoFactorIsEnabledVNextAsync<T>(IEnumerable<T> users)
+        where T : ITwoFactorProvidersUser
+    {
+        var userIds = users
+            .Select(u => u.GetUserId())
+            .Where(u => u.HasValue)
+            .Select(u => u.Value)
+            .ToList();
+
+        var twoFactorResults = await TwoFactorIsEnabledVNextAsync(userIds);
+
+        var result = new List<(T user, bool twoFactorIsEnabled)>();
+
+        foreach (var user in users)
+        {
+            var userId = user.GetUserId();
+            if (userId.HasValue)
             {
-                hasPersonalPremium = userEntity.Premium;
-            }
-            else if (user is OrganizationUserUserDetails orgUserDetails)
-            {
-                hasPersonalPremium = orgUserDetails.Premium.GetValueOrDefault(false);
+                var hasTwoFactor = twoFactorResults.FirstOrDefault(res => res.userId == userId.Value).twoFactorIsEnabled;
+                result.Add((user, hasTwoFactor));
             }
             else
             {
-                // Fallback: fetch the User entity
-                var fetchedUser = await _userRepository.GetByIdAsync(userId.Value);
-                if (fetchedUser == null)
-                {
-                    return false;
-                }
-                hasPersonalPremium = fetchedUser.Premium;
+                result.Add((user, false));
             }
+        }
 
-            return await TwoFactorEnabledAsync(
-                user.GetTwoFactorProviders(),
-                async () => await _premiumAccessQuery.CanAccessPremiumAsync(userId.Value, hasPersonalPremium));
+        return result;
+    }
+
+    public async Task<bool> TwoFactorIsEnabledVNextAsync(ITwoFactorProvidersUser user)
+    {
+        var userId = user.GetUserId();
+        if (!userId.HasValue)
+        {
+            return false;
+        }
+
+        // Try to get premium status without fetching User entity if possible
+        bool hasPersonalPremium;
+        if (user is User userEntity)
+        {
+            hasPersonalPremium = userEntity.Premium;
+        }
+        else if (user is OrganizationUserUserDetails orgUserDetails)
+        {
+            hasPersonalPremium = orgUserDetails.Premium.GetValueOrDefault(false);
         }
         else
         {
-            return await TwoFactorEnabledAsync(
-                user.GetTwoFactorProviders(),
-                async () =>
-                {
-                    var calcUser = await _userRepository.GetCalculatedPremiumAsync(userId.Value);
-                    return calcUser?.HasPremiumAccess ?? false;
-                });
+            // Fallback: fetch the User entity
+            var fetchedUser = await _userRepository.GetByIdAsync(userId.Value);
+            if (fetchedUser == null)
+            {
+                return false;
+            }
+            hasPersonalPremium = fetchedUser.Premium;
         }
+
+        return await TwoFactorEnabledAsync(
+            user.GetTwoFactorProviders(),
+            async () => await _premiumAccessQuery.CanAccessPremiumAsync(userId.Value, hasPersonalPremium));
     }
 
     /// <summary>
