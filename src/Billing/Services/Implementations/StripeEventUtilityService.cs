@@ -432,6 +432,14 @@ public class StripeEventUtilityService : IStripeEventUtilityService
         }
     }
 
+    /// <summary>
+    /// Retrieves the bank transfer type that funded a charge paid via customer balance.
+    /// </summary>
+    /// <param name="charge">The charge to analyze.</param>
+    /// <returns>
+    /// The bank transfer type (e.g., "us_bank_transfer", "eu_bank_transfer") if the charge was funded
+    /// by a bank transfer via customer balance, otherwise null.
+    /// </returns>
     private async Task<string> GetFundingBankTransferTypeAsync(Charge charge)
     {
         if (charge is not
@@ -447,7 +455,7 @@ public class StripeEventUtilityService : IStripeEventUtilityService
         var cashBalanceTransactions = _stripeFacade.GetCustomerCashBalanceTransactions(charge.CustomerId);
 
         string bankTransferType = null;
-        var fundedCharge = false;
+        var matchingPaymentIntentFound = false;
 
         await foreach (var cashBalanceTransaction in cashBalanceTransactions)
         {
@@ -458,14 +466,20 @@ public class StripeEventUtilityService : IStripeEventUtilityService
                     bankTransferType = cashBalanceTransaction.Funded.BankTransfer.Type;
                     break;
                 }
-                case { Type: "applied_to_payment", AppliedToPayment: not null }:
+                case { Type: "applied_to_payment", AppliedToPayment: not null }
+                    when cashBalanceTransaction.AppliedToPayment.PaymentIntentId == charge.PaymentIntentId:
                 {
-                    fundedCharge = charge.PaymentIntentId == cashBalanceTransaction.AppliedToPayment.PaymentIntentId;
+                    matchingPaymentIntentFound = true;
                     break;
                 }
             }
+
+            if (matchingPaymentIntentFound && !string.IsNullOrEmpty(bankTransferType))
+            {
+                return bankTransferType;
+            }
         }
 
-        return !fundedCharge ? null : bankTransferType;
+        return null;
     }
 }

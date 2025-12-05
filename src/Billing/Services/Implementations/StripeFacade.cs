@@ -44,7 +44,7 @@ public class StripeFacade : IStripeFacade
 
     public IAsyncEnumerable<CustomerCashBalanceTransaction> GetCustomerCashBalanceTransactions(
         string customerId,
-        CustomerCashBalanceTransactionListOptions customerCashBalanceTransactionListOptions,
+        CustomerCashBalanceTransactionListOptions customerCashBalanceTransactionListOptions = null,
         RequestOptions requestOptions = null,
         CancellationToken cancellationToken = default)
         => _customerCashBalanceTransactionService.ListAutoPagingAsync(customerId, customerCashBalanceTransactionListOptions, requestOptions, cancellationToken);
