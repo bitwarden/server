@@ -296,7 +296,7 @@ graph TD
 ## Caching
 
 To reduce database load and improve performance, event integrations uses its own named extended cache (see
-the [README in Utilities](https://github.com/bitwarden/server/blob/main/src/Core/Utilities/README.md#extended-cache)
+[CACHING in Utilities](https://github.com/bitwarden/server/blob/main/src/Core/Utilities/CACHING.md)
 for more information). Without caching, for instance, each incoming `EventMessage` would trigger a database
 query to retrieve the relevant `OrganizationIntegrationConfigurationDetails`.
 
@@ -335,7 +335,8 @@ rather than using a string literal (i.e. "EventIntegrations") in code.
 - There are two places in the code that are both aware of the tagging functionality
     - The `EventIntegrationHandler` must use the tag when fetching relevant configuration details. This tells the cache
       to store the entry with the tag when it successfully loads from the repository.
-    - The `OrganizationIntegrationController` needs to use the tag to remove all the tagged entries when and admin
+    - The `CreateOrganizationIntegrationCommand`, `UpdateOrganizationIntegrationCommand`, and
+      `DeleteOrganizationIntegrationCommand` commands need to use the tag to remove all the tagged entries when an admin
       creates, updates, or deletes an integration.
     - To ensure both places are synchronized on how to tag entries, they both use
       `EventIntegrationsCacheConstants.BuildCacheTagForOrganizationIntegration` to build the tag.
