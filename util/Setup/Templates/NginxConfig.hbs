@@ -32,6 +32,9 @@ server {
 
   ssl_protocols {{{SslProtocols}}};
   ssl_ciphers "{{{SslCiphers}}}";
+{{$if SslCurves}}
+  ssl_ecdh_curve {{{SslCurves}}};
+{{/if}}
   # Enables server-side protection from BEAST attacks
   ssl_prefer_server_ciphers on;
 {{#if CaPath}}
