@@ -349,7 +349,8 @@ public class TwoFactorController : Controller
 
         if (user != null)
         {
-            // Check if 2FA email is from Passwordless.
+            // Check if 2FA email is from a device approval ("Log in with device") scenario.
+            // 2FA is required for an unknown device.
             if (!string.IsNullOrEmpty(requestModel.AuthRequestAccessCode))
             {
                 var authRequest = await _authRequestRepository.GetByIdAsync(new Guid(requestModel.AuthRequestId));
