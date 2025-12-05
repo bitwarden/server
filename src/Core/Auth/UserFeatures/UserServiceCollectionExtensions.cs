@@ -1,6 +1,5 @@
 ﻿using Bit.Core.Auth.Sso;
 using Bit.Core.Auth.UserFeatures.DeviceTrust;
-using Bit.Core.Auth.UserFeatures.PremiumAccess;
 using Bit.Core.Auth.UserFeatures.Registration;
 using Bit.Core.Auth.UserFeatures.Registration.Implementations;
 using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
@@ -10,6 +9,7 @@ using Bit.Core.Auth.UserFeatures.UserMasterPassword;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.WebAuthnLogin;
 using Bit.Core.Auth.UserFeatures.WebAuthnLogin.Implementations;
+using Bit.Core.Billing.Premium.Queries;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.KeyManagement.UserKey.Implementations;
 using Bit.Core.Services;
@@ -69,7 +69,7 @@ public static class UserServiceCollectionExtensions
 
     private static void AddPremiumAccessQueries(this IServiceCollection services)
     {
-        services.AddScoped<IPremiumAccessQuery, PremiumAccessQuery>();
+        services.AddScoped<IHasPremiumAccessQuery, HasPremiumAccessQuery>();
     }
 
     private static void AddTwoFactorQueries(this IServiceCollection services)

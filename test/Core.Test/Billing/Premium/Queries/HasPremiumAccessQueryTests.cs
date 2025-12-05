@@ -1,4 +1,4 @@
-﻿using Bit.Core.Auth.UserFeatures.PremiumAccess;
+﻿using Bit.Core.Billing.Premium.Queries;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Test.Common.AutoFixture;
@@ -6,15 +6,15 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.Auth.UserFeatures.PremiumAccess;
+namespace Bit.Core.Test.Billing.Premium.Queries;
 
 [SutProviderCustomize]
-public class PremiumAccessQueryTests
+public class HasPremiumAccessQueryTests
 {
     [Theory, BitAutoData]
-    public async Task CanAccessPremiumAsync_WhenUserHasPersonalPremium_ReturnsTrue(
+    public async Task HasPremiumAccessAsync_WhenUserHasPersonalPremium_ReturnsTrue(
         UserWithCalculatedPremium user,
-        SutProvider<PremiumAccessQuery> sutProvider)
+        SutProvider<HasPremiumAccessQuery> sutProvider)
     {
         // Arrange
         user.Premium = true;
@@ -25,16 +25,16 @@ public class PremiumAccessQueryTests
             .Returns(user);
 
         // Act
-        var result = await sutProvider.Sut.CanAccessPremiumAsync(user.Id);
+        var result = await sutProvider.Sut.HasPremiumAccessAsync(user.Id);
 
         // Assert
         Assert.True(result);
     }
 
     [Theory, BitAutoData]
-    public async Task CanAccessPremiumAsync_WhenUserHasNoPersonalPremiumButHasOrgPremium_ReturnsTrue(
+    public async Task HasPremiumAccessAsync_WhenUserHasNoPersonalPremiumButHasOrgPremium_ReturnsTrue(
         UserWithCalculatedPremium user,
-        SutProvider<PremiumAccessQuery> sutProvider)
+        SutProvider<HasPremiumAccessQuery> sutProvider)
     {
         // Arrange
         user.Premium = false;
@@ -45,16 +45,16 @@ public class PremiumAccessQueryTests
             .Returns(user);
 
         // Act
-        var result = await sutProvider.Sut.CanAccessPremiumAsync(user.Id);
+        var result = await sutProvider.Sut.HasPremiumAccessAsync(user.Id);
 
         // Assert
         Assert.True(result);
     }
 
     [Theory, BitAutoData]
-    public async Task CanAccessPremiumAsync_WhenUserHasNoPersonalPremiumAndNoOrgPremium_ReturnsFalse(
+    public async Task HasPremiumAccessAsync_WhenUserHasNoPersonalPremiumAndNoOrgPremium_ReturnsFalse(
         UserWithCalculatedPremium user,
-        SutProvider<PremiumAccessQuery> sutProvider)
+        SutProvider<HasPremiumAccessQuery> sutProvider)
     {
         // Arrange
         user.Premium = false;
@@ -65,16 +65,16 @@ public class PremiumAccessQueryTests
             .Returns(user);
 
         // Act
-        var result = await sutProvider.Sut.CanAccessPremiumAsync(user.Id);
+        var result = await sutProvider.Sut.HasPremiumAccessAsync(user.Id);
 
         // Assert
         Assert.False(result);
     }
 
     [Theory, BitAutoData]
-    public async Task CanAccessPremiumAsync_WhenUserNotFound_ReturnsFalse(
+    public async Task HasPremiumAccessAsync_WhenUserNotFound_ReturnsFalse(
         Guid userId,
-        SutProvider<PremiumAccessQuery> sutProvider)
+        SutProvider<HasPremiumAccessQuery> sutProvider)
     {
         // Arrange
         sutProvider.GetDependency<IUserRepository>()
@@ -82,7 +82,7 @@ public class PremiumAccessQueryTests
             .Returns((UserWithCalculatedPremium)null);
 
         // Act
-        var result = await sutProvider.Sut.CanAccessPremiumAsync(userId);
+        var result = await sutProvider.Sut.HasPremiumAccessAsync(userId);
 
         // Assert
         Assert.False(result);
@@ -91,7 +91,7 @@ public class PremiumAccessQueryTests
     [Theory, BitAutoData]
     public async Task HasPremiumFromOrganizationAsync_WhenUserHasNoOrganizations_ReturnsFalse(
         UserWithCalculatedPremium user,
-        SutProvider<PremiumAccessQuery> sutProvider)
+        SutProvider<HasPremiumAccessQuery> sutProvider)
     {
         // Arrange
         user.Premium = false;
@@ -111,7 +111,7 @@ public class PremiumAccessQueryTests
     [Theory, BitAutoData]
     public async Task HasPremiumFromOrganizationAsync_WhenUserHasPremiumFromOrg_ReturnsTrue(
         UserWithCalculatedPremium user,
-        SutProvider<PremiumAccessQuery> sutProvider)
+        SutProvider<HasPremiumAccessQuery> sutProvider)
     {
         // Arrange
         user.Premium = false; // No personal premium
@@ -131,7 +131,7 @@ public class PremiumAccessQueryTests
     [Theory, BitAutoData]
     public async Task HasPremiumFromOrganizationAsync_WhenUserHasOnlyPersonalPremium_ReturnsFalse(
         UserWithCalculatedPremium user,
-        SutProvider<PremiumAccessQuery> sutProvider)
+        SutProvider<HasPremiumAccessQuery> sutProvider)
     {
         // Arrange
         user.Premium = true; // Has personal premium
@@ -151,7 +151,7 @@ public class PremiumAccessQueryTests
     [Theory, BitAutoData]
     public async Task HasPremiumFromOrganizationAsync_WhenUserNotFound_ReturnsFalse(
         Guid userId,
-        SutProvider<PremiumAccessQuery> sutProvider)
+        SutProvider<HasPremiumAccessQuery> sutProvider)
     {
         // Arrange
         sutProvider.GetDependency<IUserRepository>()
@@ -166,8 +166,8 @@ public class PremiumAccessQueryTests
     }
 
     [Theory, BitAutoData]
-    public async Task CanAccessPremiumAsync_Bulk_WhenEmptyList_ReturnsEmptyDictionary(
-        SutProvider<PremiumAccessQuery> sutProvider)
+    public async Task HasPremiumAccessAsync_Bulk_WhenEmptyList_ReturnsEmptyDictionary(
+        SutProvider<HasPremiumAccessQuery> sutProvider)
     {
         // Arrange
         var userIds = new List<Guid>();
@@ -177,16 +177,16 @@ public class PremiumAccessQueryTests
             .Returns(new List<UserWithCalculatedPremium>());
 
         // Act
-        var result = await sutProvider.Sut.CanAccessPremiumAsync(userIds);
+        var result = await sutProvider.Sut.HasPremiumAccessAsync(userIds);
 
         // Assert
         Assert.Empty(result);
     }
 
     [Theory, BitAutoData]
-    public async Task CanAccessPremiumAsync_Bulk_ReturnsCorrectStatus(
+    public async Task HasPremiumAccessAsync_Bulk_ReturnsCorrectStatus(
         List<UserWithCalculatedPremium> users,
-        SutProvider<PremiumAccessQuery> sutProvider)
+        SutProvider<HasPremiumAccessQuery> sutProvider)
     {
         // Arrange
         users[0].HasPremiumAccess = true;
@@ -200,7 +200,7 @@ public class PremiumAccessQueryTests
             .Returns(users);
 
         // Act
-        var result = await sutProvider.Sut.CanAccessPremiumAsync(userIds);
+        var result = await sutProvider.Sut.HasPremiumAccessAsync(userIds);
 
         // Assert
         Assert.Equal(users.Count, result.Count);
@@ -209,3 +209,5 @@ public class PremiumAccessQueryTests
         Assert.True(result[users[2].Id]);
     }
 }
+
+

@@ -3,8 +3,8 @@
 
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
-using Bit.Core.Auth.UserFeatures.PremiumAccess;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+using Bit.Core.Billing.Premium.Queries;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
 
@@ -13,14 +13,14 @@ namespace Bit.Core.Auth.UserFeatures.TwoFactorAuth;
 public class TwoFactorIsEnabledQuery : ITwoFactorIsEnabledQuery
 {
     private readonly IUserRepository _userRepository;
-    private readonly IPremiumAccessQuery _premiumAccessQuery;
+    private readonly IHasPremiumAccessQuery _hasPremiumAccessQuery;
 
     public TwoFactorIsEnabledQuery(
         IUserRepository userRepository,
-        IPremiumAccessQuery premiumAccessQuery)
+        IHasPremiumAccessQuery hasPremiumAccessQuery)
     {
         _userRepository = userRepository;
-        _premiumAccessQuery = premiumAccessQuery;
+        _hasPremiumAccessQuery = hasPremiumAccessQuery;
     }
 
     public async Task<IEnumerable<(Guid userId, bool twoFactorIsEnabled)>> TwoFactorIsEnabledAsync(IEnumerable<Guid> userIds)
@@ -100,7 +100,7 @@ public class TwoFactorIsEnabledQuery : ITwoFactorIsEnabledQuery
         }
 
         var users = await _userRepository.GetManyAsync([.. userIds]);
-        var premiumStatus = await _premiumAccessQuery.CanAccessPremiumAsync(userIds);
+        var premiumStatus = await _hasPremiumAccessQuery.HasPremiumAccessAsync(userIds);
 
         foreach (var user in users)
         {
@@ -147,7 +147,7 @@ public class TwoFactorIsEnabledQuery : ITwoFactorIsEnabledQuery
     public async Task<bool> TwoFactorIsEnabledVNextAsync(User user)
     {
         var providers = user.GetTwoFactorProviders();
-        var hasPremium = await _premiumAccessQuery.CanAccessPremiumAsync(user.Id);
+        var hasPremium = await _hasPremiumAccessQuery.HasPremiumAccessAsync(user.Id);
 
         return TwoFactorIsEnabled(providers, hasPremium);
     }
