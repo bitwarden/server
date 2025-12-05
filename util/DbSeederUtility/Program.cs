@@ -34,6 +34,6 @@ public class Program
         var db = scopedServices.GetRequiredService<DatabaseContext>();
 
         var recipe = new OrganizationWithUsersRecipe(db);
-        recipe.Seed(name, users, domain);
+        recipe.Seed(name: name, domain: domain, users: users);
     }
 }
