@@ -46,4 +46,35 @@ public class UnarchiveCiphersCommandTest
         await sutProvider.GetDependency<IPushNotificationService>().Received(pushNotificationsCalls)
             .PushSyncCiphersAsync(user.Id);
     }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UnarchiveAsync_ClearsArchivedDateOnReturnedCiphers(
+        SutProvider<UnarchiveCiphersCommand> sutProvider,
+        CipherDetails cipher,
+        User user)
+    {
+        // Arrange: make it unarchivable
+        cipher.Edit = true;
+        cipher.OrganizationId = null;
+        cipher.ArchivedDate = DateTime.UtcNow;
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(user.Id)
+            .Returns(new List<CipherDetails> { cipher });
+
+        var repoRevisionDate = DateTime.UtcNow.AddMinutes(1);
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .UnarchiveAsync(Arg.Any<IEnumerable<Guid>>(), user.Id)
+            .Returns(repoRevisionDate);
+
+        // Act
+        var result = await sutProvider.Sut.UnarchiveManyAsync(new[] { cipher.Id }, user.Id);
+
+        // Assert
+        var unarchivedCipher = Assert.Single(result);
+        Assert.Equal(repoRevisionDate, unarchivedCipher.RevisionDate);
+        Assert.Null(unarchivedCipher.ArchivedDate);
+    }
 }

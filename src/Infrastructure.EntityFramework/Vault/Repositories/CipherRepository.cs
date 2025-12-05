@@ -808,7 +808,31 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
             await cipherEntitiesToModify.ForEachAsync(cipher =>
             {
                 dbContext.Attach(cipher);
-                cipher.ArchivedDate = action == CipherStateAction.Unarchive ? null : utcNow;
+
+                // Build or load the per-user archives map
+                var archives = string.IsNullOrWhiteSpace(cipher.Archives)
+                    ? new Dictionary<Guid, DateTime>()
+                    : CoreHelpers.LoadClassFromJsonData<Dictionary<Guid, DateTime>>(cipher.Archives)
+                      ?? new Dictionary<Guid, DateTime>();
+
+                if (action == CipherStateAction.Unarchive)
+                {
+                    // Remove this user's archive record
+                    archives.Remove(userId);
+                    cipher.ArchivedDate = null;
+                }
+                else if (action == CipherStateAction.Archive)
+                {
+                    // Set this user's archive date
+                    archives[userId] = utcNow;
+                    cipher.ArchivedDate = utcNow;
+                }
+
+                // Persist the updated JSON or clear it if empty
+                cipher.Archives = archives.Count == 0
+                    ? null
+                    : CoreHelpers.ClassToJsonData(archives);
+
                 cipher.RevisionDate = utcNow;
             });
 
@@ -855,6 +879,12 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
                 {
                     dbContext.Attach(cipher);
                     cipher.DeletedDate = action == CipherStateAction.Restore ? null : utcNow;
+                    if (action == CipherStateAction.SoftDelete && (!string.IsNullOrWhiteSpace(cipher.Archives) || cipher.ArchivedDate != null))
+                    {
+                        // Clear out any per-user archive records on soft delete
+                        cipher.Archives = null;
+                        cipher.ArchivedDate = null;
+                    }
                     cipher.RevisionDate = utcNow;
                 });
             }

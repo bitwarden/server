@@ -12,7 +12,8 @@
     @DeletedDate DATETIME2(7),
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
-    @ArchivedDate DATETIME2(7) = NULL
+    @ArchivedDate DATETIME2(7) = NULL,
+    @Archives NVARCHAR(MAX)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -31,7 +32,8 @@ BEGIN
         [DeletedDate],
         [Reprompt],
         [Key],
-        [ArchivedDate]
+        [ArchivedDate],
+        [Archives]
     )
     VALUES
     (
@@ -47,7 +49,8 @@ BEGIN
         @DeletedDate,
         @Reprompt,
         @Key,
-        @ArchivedDate
+        @ArchivedDate,
+        @Archives
     )
 
     IF @OrganizationId IS NOT NULL
