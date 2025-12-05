@@ -71,7 +71,8 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     public string? SecurityState { get; set; }
     /// <summary>
     /// Indicates whether the user has a personal premium subscription.
-    /// Does not include premium access from organizations.
+    /// Does not include premium access from organizations -
+    /// do not use this to check whether the user can access premium features.
     /// </summary>
     public bool Premium { get; set; }
     public DateTime? PremiumExpirationDate { get; set; }

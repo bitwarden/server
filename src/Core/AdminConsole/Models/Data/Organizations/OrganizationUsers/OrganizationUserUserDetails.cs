@@ -21,7 +21,9 @@ public class OrganizationUserUserDetails : IExternal, ITwoFactorProvidersUser, I
     public string AvatarColor { get; set; }
     public string TwoFactorProviders { get; set; }
     /// <summary>
-    /// User's personal premium subscription status. Does not reflect organization premium access.
+    /// Indicates whether the user has a personal premium subscription.
+    /// Does not include premium access from organizations -
+    /// do not use this to check whether the user can access premium features.
     /// Null when the organization user is in Invited status (UserId is null).
     /// </summary>
     public bool? Premium { get; set; }
