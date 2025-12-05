@@ -231,6 +231,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("UseDirectory")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("UseDisableSmAdsForUsers")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("UseEvents")
                         .HasColumnType("boolean");
 

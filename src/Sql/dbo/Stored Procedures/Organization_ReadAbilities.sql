@@ -29,6 +29,7 @@ BEGIN
         [UseOrganizationDomains],
         [UseAdminSponsoredFamilies],
         [UseAutomaticUserConfirmation],
+        [UseDisableSmAdsForUsers],
         [UsePhishingBlocker]
     FROM
         [dbo].[Organization]
