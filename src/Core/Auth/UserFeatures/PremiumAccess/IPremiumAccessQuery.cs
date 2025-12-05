@@ -23,15 +23,6 @@ public interface IPremiumAccessQuery
     Task<bool> CanAccessPremiumAsync(User user);
 
     /// <summary>
-    /// Checks if a user has access to premium features (personal subscription or organization).
-    /// Use this overload when you already know the personal premium status and only need to check organization premium.
-    /// </summary>
-    /// <param name="userId">The user ID to check for premium access</param>
-    /// <param name="hasPersonalPremium">Whether the user has a personal premium subscription</param>
-    /// <returns>True if user can access premium features; false otherwise</returns>
-    Task<bool> CanAccessPremiumAsync(Guid userId, bool hasPersonalPremium);
-
-    /// <summary>
     /// Checks if a user has access to premium features through organization membership only.
     /// This is useful for determining the source of premium access (personal vs organization).
     /// </summary>

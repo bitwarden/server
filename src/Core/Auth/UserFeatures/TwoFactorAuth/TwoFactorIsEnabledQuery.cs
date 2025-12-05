@@ -6,7 +6,6 @@ using Bit.Core.Auth.Models;
 using Bit.Core.Auth.UserFeatures.PremiumAccess;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Entities;
-using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 
 namespace Bit.Core.Auth.UserFeatures.TwoFactorAuth;
@@ -147,38 +146,11 @@ public class TwoFactorIsEnabledQuery : ITwoFactorIsEnabledQuery
         return result;
     }
 
-    public async Task<bool> TwoFactorIsEnabledVNextAsync(ITwoFactorProvidersUser user)
+    public async Task<bool> TwoFactorIsEnabledVNextAsync(User user)
     {
-        var userId = user.GetUserId();
-        if (!userId.HasValue)
-        {
-            return false;
-        }
-
-        // Try to get premium status without fetching User entity if possible
-        bool hasPersonalPremium;
-        if (user is User userEntity)
-        {
-            hasPersonalPremium = userEntity.Premium;
-        }
-        else if (user is OrganizationUserUserDetails orgUserDetails)
-        {
-            hasPersonalPremium = orgUserDetails.Premium.GetValueOrDefault(false);
-        }
-        else
-        {
-            // Fallback: fetch the User entity
-            var fetchedUser = await _userRepository.GetByIdAsync(userId.Value);
-            if (fetchedUser == null)
-            {
-                return false;
-            }
-            hasPersonalPremium = fetchedUser.Premium;
-        }
-
         return await TwoFactorEnabledAsync(
             user.GetTwoFactorProviders(),
-            async () => await _premiumAccessQuery.CanAccessPremiumAsync(userId.Value, hasPersonalPremium));
+            async () => await _premiumAccessQuery.CanAccessPremiumAsync(user));
     }
 
     /// <summary>

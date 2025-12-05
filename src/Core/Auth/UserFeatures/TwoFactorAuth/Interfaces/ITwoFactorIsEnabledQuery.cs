@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Auth.Models;
+using Bit.Core.Entities;
 
 namespace Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 
@@ -42,5 +43,5 @@ public interface ITwoFactorIsEnabledQuery
     /// This version uses PremiumAccessQuery with cached organization abilities for better performance.
     /// </summary>
     /// <param name="user">The user to check.</param>
-    Task<bool> TwoFactorIsEnabledVNextAsync(ITwoFactorProvidersUser user);
+    Task<bool> TwoFactorIsEnabledVNextAsync(User user);
 }

@@ -22,17 +22,12 @@ public class PremiumAccessQuery : IPremiumAccessQuery
 
     public async Task<bool> CanAccessPremiumAsync(User user)
     {
-        return await CanAccessPremiumAsync(user.Id, user.Premium);
-    }
-
-    public async Task<bool> CanAccessPremiumAsync(Guid userId, bool hasPersonalPremium)
-    {
-        if (hasPersonalPremium)
+        if (user.Premium)
         {
             return true;
         }
 
-        return await HasPremiumFromOrganizationAsync(userId);
+        return await HasPremiumFromOrganizationAsync(user.Id);
     }
 
     public async Task<bool> HasPremiumFromOrganizationAsync(Guid userId)

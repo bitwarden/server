@@ -635,24 +635,6 @@ public class TwoFactorIsEnabledQueryTests
     }
 
     [Theory]
-    [BitAutoData]
-    public async Task TwoFactorIsEnabledVNextAsync_SingleUser_UserIdNull_ReturnsFalse(
-        SutProvider<TwoFactorIsEnabledQuery> sutProvider)
-    {
-        // Arrange
-        var user = new TestTwoFactorProviderUser
-        {
-            Id = null
-        };
-
-        // Act
-        var result = await sutProvider.Sut.TwoFactorIsEnabledVNextAsync(user);
-
-        // Assert
-        Assert.False(result);
-    }
-
-    [Theory]
     [BitAutoData(TwoFactorProviderType.Authenticator)]
     [BitAutoData(TwoFactorProviderType.Email)]
     [BitAutoData(TwoFactorProviderType.Remember)]
@@ -681,7 +663,7 @@ public class TwoFactorIsEnabledQueryTests
         // Should not need to check premium access for free providers
         await sutProvider.GetDependency<IPremiumAccessQuery>()
             .DidNotReceiveWithAnyArgs()
-            .CanAccessPremiumAsync(default(Guid), default);
+            .CanAccessPremiumAsync(Arg.Any<User>());
     }
 
     [Theory]
@@ -706,7 +688,7 @@ public class TwoFactorIsEnabledQueryTests
 
         await sutProvider.GetDependency<IPremiumAccessQuery>()
             .DidNotReceiveWithAnyArgs()
-            .CanAccessPremiumAsync(default(Guid), default);
+            .CanAccessPremiumAsync(Arg.Any<User>());
     }
 
     [Theory]
@@ -727,7 +709,7 @@ public class TwoFactorIsEnabledQueryTests
         user.SetTwoFactorProviders(twoFactorProviders);
 
         sutProvider.GetDependency<IPremiumAccessQuery>()
-            .CanAccessPremiumAsync(user.Id, false)
+            .CanAccessPremiumAsync(user)
             .Returns(false);
 
         // Act
@@ -738,7 +720,7 @@ public class TwoFactorIsEnabledQueryTests
 
         await sutProvider.GetDependency<IPremiumAccessQuery>()
             .Received(1)
-            .CanAccessPremiumAsync(user.Id, false);
+            .CanAccessPremiumAsync(user);
     }
 
     [Theory]
@@ -759,7 +741,7 @@ public class TwoFactorIsEnabledQueryTests
         user.SetTwoFactorProviders(twoFactorProviders);
 
         sutProvider.GetDependency<IPremiumAccessQuery>()
-            .CanAccessPremiumAsync(user.Id, true)
+            .CanAccessPremiumAsync(user)
             .Returns(true);
 
         // Act
@@ -770,7 +752,7 @@ public class TwoFactorIsEnabledQueryTests
 
         await sutProvider.GetDependency<IPremiumAccessQuery>()
             .Received(1)
-            .CanAccessPremiumAsync(user.Id, true);
+            .CanAccessPremiumAsync(user);
     }
 
     [Theory]
@@ -791,7 +773,7 @@ public class TwoFactorIsEnabledQueryTests
         user.SetTwoFactorProviders(twoFactorProviders);
 
         sutProvider.GetDependency<IPremiumAccessQuery>()
-            .CanAccessPremiumAsync(user.Id, false)
+            .CanAccessPremiumAsync(user)
             .Returns(true); // Has premium from org
 
         // Act
@@ -802,7 +784,7 @@ public class TwoFactorIsEnabledQueryTests
 
         await sutProvider.GetDependency<IPremiumAccessQuery>()
             .Received(1)
-            .CanAccessPremiumAsync(user.Id, false);
+            .CanAccessPremiumAsync(user);
     }
 
     [Theory]
@@ -821,85 +803,7 @@ public class TwoFactorIsEnabledQueryTests
         Assert.False(result);
         await sutProvider.GetDependency<IPremiumAccessQuery>()
             .DidNotReceiveWithAnyArgs()
-            .CanAccessPremiumAsync(default(Guid), default);
-    }
-
-    [Theory]
-    [BitAutoData(TwoFactorProviderType.Duo)]
-    [BitAutoData(TwoFactorProviderType.YubiKey)]
-    public async Task TwoFactorIsEnabledVNextAsync_SingleUser_OrganizationUserUserDetails_WithPremium_ReturnsTrue(
-        TwoFactorProviderType premiumProviderType,
-        SutProvider<TwoFactorIsEnabledQuery> sutProvider,
-        OrganizationUserUserDetails orgUserDetails)
-    {
-        // Arrange
-        var twoFactorProviders = new Dictionary<TwoFactorProviderType, TwoFactorProvider>
-        {
-            { premiumProviderType, new TwoFactorProvider { Enabled = true } }
-        };
-
-        orgUserDetails.Premium = false;
-        orgUserDetails.TwoFactorProviders = JsonHelpers.LegacySerialize(twoFactorProviders, JsonHelpers.LegacyEnumKeyResolver);
-
-        sutProvider.GetDependency<IPremiumAccessQuery>()
-            .CanAccessPremiumAsync(orgUserDetails.UserId!.Value, false)
-            .Returns(true);
-
-        // Act
-        var result = await sutProvider.Sut.TwoFactorIsEnabledVNextAsync(orgUserDetails);
-
-        // Assert
-        Assert.True(result);
-
-        await sutProvider.GetDependency<IPremiumAccessQuery>()
-            .Received(1)
-            .CanAccessPremiumAsync(orgUserDetails.UserId.Value, false);
-    }
-
-    [Theory]
-    [BitAutoData(TwoFactorProviderType.Duo)]
-    [BitAutoData(TwoFactorProviderType.YubiKey)]
-    public async Task TwoFactorIsEnabledVNextAsync_SingleUser_UnknownType_FetchesUser(
-        TwoFactorProviderType premiumProviderType,
-        SutProvider<TwoFactorIsEnabledQuery> sutProvider,
-        User fetchedUser)
-    {
-        // Arrange
-        var twoFactorProviders = new Dictionary<TwoFactorProviderType, TwoFactorProvider>
-        {
-            { premiumProviderType, new TwoFactorProvider { Enabled = true } }
-        };
-
-        var testUser = new TestTwoFactorProviderUser
-        {
-            Id = fetchedUser.Id,
-            Premium = false,
-            TwoFactorProviders = JsonHelpers.LegacySerialize(twoFactorProviders, JsonHelpers.LegacyEnumKeyResolver)
-        };
-
-        fetchedUser.Premium = false;
-
-        sutProvider.GetDependency<IUserRepository>()
-            .GetByIdAsync(fetchedUser.Id)
-            .Returns(fetchedUser);
-
-        sutProvider.GetDependency<IPremiumAccessQuery>()
-            .CanAccessPremiumAsync(fetchedUser.Id, false)
-            .Returns(true);
-
-        // Act
-        var result = await sutProvider.Sut.TwoFactorIsEnabledVNextAsync(testUser);
-
-        // Assert
-        Assert.True(result);
-
-        await sutProvider.GetDependency<IUserRepository>()
-            .Received(1)
-            .GetByIdAsync(fetchedUser.Id);
-
-        await sutProvider.GetDependency<IPremiumAccessQuery>()
-            .Received(1)
-            .CanAccessPremiumAsync(fetchedUser.Id, false);
+            .CanAccessPremiumAsync(Arg.Any<User>());
     }
 
     private class TestTwoFactorProviderUser : ITwoFactorProvidersUser
