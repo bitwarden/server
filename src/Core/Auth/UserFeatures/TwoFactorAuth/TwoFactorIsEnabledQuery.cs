@@ -39,7 +39,7 @@ public class TwoFactorIsEnabledQuery : ITwoFactorIsEnabledQuery
         if (_featureService.IsEnabled(FeatureFlagKeys.PremiumAccessCacheCheck))
         {
             var users = await _userRepository.GetManyAsync([.. userIds]);
-            var premiumStatus = await _premiumAccessQuery.CanAccessPremiumBulkAsync(users);
+            var premiumStatus = await _premiumAccessQuery.CanAccessPremiumAsync(users);
 
             foreach (var user in users)
             {
