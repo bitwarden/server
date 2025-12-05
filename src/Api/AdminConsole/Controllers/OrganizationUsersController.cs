@@ -71,6 +71,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly IFeatureService _featureService;
     private readonly IPricingClient _pricingClient;
     private readonly IResendOrganizationInviteCommand _resendOrganizationInviteCommand;
+    private readonly IBulkResendOrganizationInvitesCommand _bulkResendOrganizationInvitesCommand;
     private readonly IAutomaticallyConfirmOrganizationUserCommand _automaticallyConfirmOrganizationUserCommand;
     private readonly IConfirmOrganizationUserCommand _confirmOrganizationUserCommand;
     private readonly IRestoreOrganizationUserCommand _restoreOrganizationUserCommand;
@@ -105,6 +106,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         IInitPendingOrganizationCommand initPendingOrganizationCommand,
         IRevokeOrganizationUserCommand revokeOrganizationUserCommand,
         IResendOrganizationInviteCommand resendOrganizationInviteCommand,
+        IBulkResendOrganizationInvitesCommand bulkResendOrganizationInvitesCommand,
         IAdminRecoverAccountCommand adminRecoverAccountCommand,
         IAutomaticallyConfirmOrganizationUserCommand automaticallyConfirmOrganizationUserCommand)
     {
@@ -131,6 +133,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _featureService = featureService;
         _pricingClient = pricingClient;
         _resendOrganizationInviteCommand = resendOrganizationInviteCommand;
+        _bulkResendOrganizationInvitesCommand = bulkResendOrganizationInvitesCommand;
         _automaticallyConfirmOrganizationUserCommand = automaticallyConfirmOrganizationUserCommand;
         _confirmOrganizationUserCommand = confirmOrganizationUserCommand;
         _restoreOrganizationUserCommand = restoreOrganizationUserCommand;
@@ -273,7 +276,17 @@ public class OrganizationUsersController : BaseAdminConsoleController
     public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkReinvite(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
     {
         var userId = _userService.GetProperUserId(User);
-        var result = await _organizationService.ResendInvitesAsync(orgId, userId.Value, model.Ids);
+
+        IEnumerable<Tuple<Core.Entities.OrganizationUser, string>> result;
+        if (_featureService.IsEnabled(FeatureFlagKeys.IncreaseBulkReinviteLimitForCloud))
+        {
+            result = await _bulkResendOrganizationInvitesCommand.BulkResendInvitesAsync(orgId, userId.Value, model.Ids);
+        }
+        else
+        {
+            result = await _organizationService.ResendInvitesAsync(orgId, userId.Value, model.Ids);
+        }
+
         return new ListResponseModel<OrganizationUserBulkResponseModel>(
             result.Select(t => new OrganizationUserBulkResponseModel(t.Item1.Id, t.Item2)));
     }
