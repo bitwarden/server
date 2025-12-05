@@ -67,7 +67,8 @@ public class OrganizationsController(
         if (globalSettings.SelfHosted)
         {
             var orgLicense = await licensingService.ReadOrganizationLicenseAsync(organization);
-            return new OrganizationSubscriptionResponseModel(organization, orgLicense);
+            var claimsPrincipal = licensingService.GetClaimsPrincipalFromLicense(orgLicense);
+            return new OrganizationSubscriptionResponseModel(organization, orgLicense, claimsPrincipal);
         }
 
         var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
