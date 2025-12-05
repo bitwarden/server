@@ -1,5 +1,4 @@
 ﻿using Bit.Api.Billing.Controllers;
-using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -11,8 +10,6 @@ using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Entities;
 using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Billing.Providers.Services;
-using Bit.Core.Billing.Services;
-using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Context;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.BitStripe;
