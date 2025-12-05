@@ -5,6 +5,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -455,9 +456,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         else if (!string.IsNullOrEmpty(organization.DisplayName()))
         {
             // If the organization is Free or Families plan, send families welcome email
-            if (organization.PlanType is PlanType.FamiliesAnnually
-                or PlanType.FamiliesAnnually2019
-                or PlanType.Free)
+            if (organization.PlanType.GetProductTier() is ProductTierType.Free or ProductTierType.Families)
             {
                 await _mailService.SendFreeOrgOrFamilyOrgUserWelcomeEmailAsync(user, organization.DisplayName());
             }
