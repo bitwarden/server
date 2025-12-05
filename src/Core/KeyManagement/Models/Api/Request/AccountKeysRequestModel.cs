@@ -1,8 +1,7 @@
-﻿using Bit.Core.KeyManagement.Models.Api.Request;
-using Bit.Core.KeyManagement.Models.Data;
+﻿using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Utilities;
 
-namespace Bit.Api.KeyManagement.Models.Requests;
+namespace Bit.Core.KeyManagement.Models.Api.Request;
 
 public class AccountKeysRequestModel
 {

@@ -140,7 +140,7 @@ services.AddExtendedCache("MyFeatureCache", globalSettings, new GlobalSettings.E
 // Option 4: Isolated Redis for specialized features
 services.AddExtendedCache("SpecializedCache", globalSettings, new GlobalSettings.ExtendedCacheSettings
 {
-    UseSharedRedisCache = false,
+    UseSharedDistributedCache = false,
     Redis = new GlobalSettings.ConnectionStringSettings
     {
         ConnectionString = "localhost:6379,ssl=false"

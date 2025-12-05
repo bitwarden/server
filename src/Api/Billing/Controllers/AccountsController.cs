@@ -26,7 +26,8 @@ public class AccountsController(
     IUserService userService,
     ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
     IUserAccountKeysQuery userAccountKeysQuery,
-    IFeatureService featureService) : Controller
+    IFeatureService featureService,
+    ILicensingService licensingService) : Controller
 {
     [HttpPost("premium")]
     public async Task<PaymentResponseModel> PostPremiumAsync(
@@ -97,12 +98,14 @@ public class AccountsController(
                 var includeMilestone2Discount = featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2);
                 var subscriptionInfo = await paymentService.GetSubscriptionAsync(user);
                 var license = await userService.GenerateLicenseAsync(user, subscriptionInfo);
-                return new SubscriptionResponseModel(user, subscriptionInfo, license, includeMilestone2Discount);
+                var claimsPrincipal = licensingService.GetClaimsPrincipalFromLicense(license);
+                return new SubscriptionResponseModel(user, subscriptionInfo, license, claimsPrincipal, includeMilestone2Discount);
             }
             else
             {
                 var license = await userService.GenerateLicenseAsync(user);
-                return new SubscriptionResponseModel(user, license);
+                var claimsPrincipal = licensingService.GetClaimsPrincipalFromLicense(license);
+                return new SubscriptionResponseModel(user, null, license, claimsPrincipal);
             }
         }
         else

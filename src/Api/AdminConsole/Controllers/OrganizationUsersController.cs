@@ -496,43 +496,10 @@ public class OrganizationUsersController : BaseAdminConsoleController
         }
     }
 
+#nullable enable
     [HttpPut("{id}/reset-password")]
     [Authorize<ManageAccountRecoveryRequirement>]
     public async Task<IResult> PutResetPassword(Guid orgId, Guid id, [FromBody] OrganizationUserResetPasswordRequestModel model)
-    {
-        if (_featureService.IsEnabled(FeatureFlagKeys.AccountRecoveryCommand))
-        {
-            // TODO: remove legacy implementation after feature flag is enabled.
-            return await PutResetPasswordNew(orgId, id, model);
-        }
-
-        // Get the users role, since provider users aren't a member of the organization we use the owner check
-        var orgUserType = await _currentContext.OrganizationOwner(orgId)
-            ? OrganizationUserType.Owner
-            : _currentContext.Organizations?.FirstOrDefault(o => o.Id == orgId)?.Type;
-        if (orgUserType == null)
-        {
-            return TypedResults.NotFound();
-        }
-
-        var result = await _userService.AdminResetPasswordAsync(orgUserType.Value, orgId, id, model.NewMasterPasswordHash, model.Key);
-        if (result.Succeeded)
-        {
-            return TypedResults.Ok();
-        }
-
-        foreach (var error in result.Errors)
-        {
-            ModelState.AddModelError(string.Empty, error.Description);
-        }
-
-        await Task.Delay(2000);
-        return TypedResults.BadRequest(ModelState);
-    }
-
-#nullable enable
-    // TODO: make sure the route and authorize attributes are maintained when the legacy implementation is removed.
-    private async Task<IResult> PutResetPasswordNew(Guid orgId, Guid id, [FromBody] OrganizationUserResetPasswordRequestModel model)
     {
         var targetOrganizationUser = await _organizationUserRepository.GetByIdAsync(id);
         if (targetOrganizationUser == null || targetOrganizationUser.OrganizationId != orgId)
