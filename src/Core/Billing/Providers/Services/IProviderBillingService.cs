@@ -113,4 +113,11 @@ public interface IProviderBillingService
         TaxInformation taxInformation);
 
     Task UpdateSeatMinimums(UpdateProviderSeatMinimumsCommand command);
+
+    /// <summary>
+    /// Updates the provider name and email on the Stripe customer entry.
+    /// This only updates Stripe, not the Bitwarden database.
+    /// </summary>
+    /// <param name="provider">The provider to update in Stripe.</param>
+    Task UpdateProviderNameAndEmail(Provider provider);
 }
