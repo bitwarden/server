@@ -17,7 +17,9 @@ using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Commands.Interfaces;
 using Bit.Core.KeyManagement.Kdf;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Models.Api.Response;
 using Bit.Core.Repositories;
@@ -44,6 +46,7 @@ public class AccountsController : Controller
     private readonly IUserAccountKeysQuery _userAccountKeysQuery;
     private readonly ITwoFactorEmailService _twoFactorEmailService;
     private readonly IChangeKdfCommand _changeKdfCommand;
+    private readonly ISetAccountKeysForUserCommand _setAccountKeysForUserCommand;
 
     public AccountsController(
         IOrganizationService organizationService,
@@ -57,7 +60,8 @@ public class AccountsController : Controller
         IFeatureService featureService,
         IUserAccountKeysQuery userAccountKeysQuery,
         ITwoFactorEmailService twoFactorEmailService,
-        IChangeKdfCommand changeKdfCommand
+        IChangeKdfCommand changeKdfCommand,
+        ISetAccountKeysForUserCommand setAccountKeysForUserCommand
         )
     {
         _organizationService = organizationService;
@@ -72,6 +76,7 @@ public class AccountsController : Controller
         _userAccountKeysQuery = userAccountKeysQuery;
         _twoFactorEmailService = twoFactorEmailService;
         _changeKdfCommand = changeKdfCommand;
+        _setAccountKeysForUserCommand = setAccountKeysForUserCommand;
     }
 
 
@@ -440,8 +445,23 @@ public class AccountsController : Controller
             }
         }
 
-        await _userService.SaveUserAsync(model.ToUser(user));
-        return new KeysResponseModel(user);
+        if (model.AccountKeys != null)
+        {
+            await _setAccountKeysForUserCommand.SetAccountKeysForUserAsync(user, model.AccountKeys);
+            return new KeysResponseModel(model.AccountKeys?.ToAccountKeysData(), user.Key);
+        }
+        else
+        {
+            await _userService.SaveUserAsync(model.ToUser(user));
+            return new KeysResponseModel(new UserAccountKeysData
+            {
+                PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData(
+                    user.PrivateKey,
+                    user.PublicKey
+                )
+            }, user.Key);
+        }
+
     }
 
     [HttpGet("keys")]
@@ -453,7 +473,8 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        return new KeysResponseModel(user);
+        var accountKeys = await _userAccountKeysQuery.Run(user);
+        return new KeysResponseModel(accountKeys, user.Key);
     }
 
     [HttpDelete]
