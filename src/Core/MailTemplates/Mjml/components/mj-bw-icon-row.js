@@ -1,4 +1,12 @@
 const { BodyComponent } = require("mjml-core");
+
+const BODY_TEXT_STYLES = `
+  font-family="Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif"
+  font-size="16px"
+  font-weight="400"
+  line-height="24px"
+`;
+
 class MjBwIconRow extends BodyComponent {
   static dependencies = {
     "mj-column": ["mj-bw-icon-row"],
@@ -18,7 +26,7 @@ class MjBwIconRow extends BodyComponent {
 
   static defaultAttributes = {};
 
-  headStyle = (breakpoint) => {
+HeadStyle = (breakpoint) => {
     return `
       @media only screen and (max-width:${breakpoint}) {
         .mj-bw-icon-row-text {
@@ -37,7 +45,7 @@ class MjBwIconRow extends BodyComponent {
     const headAnchorElement =
       this.getAttribute("head-url-text") && this.getAttribute("head-url")
         ? `
-            <mj-text css-class="mj-bw-icon-row-text" padding="5px 10px 0px 10px">
+            <mj-text css-class="mj-bw-icon-row-text" padding="5px 10px 0px 10px" ${BODY_TEXT_STYLES}>
                 <a href="${this.getAttribute("head-url")}" class="link">
                     ${this.getAttribute("head-url-text")}
                     <span style="text-decoration: none">
@@ -53,7 +61,7 @@ class MjBwIconRow extends BodyComponent {
 
     const footAnchorElement =
       this.getAttribute("foot-url-text") && this.getAttribute("foot-url")
-        ? ` <mj-text css-class="mj-bw-icon-row-text" padding="5px 10px 0px 10px">
+        ? ` <mj-text css-class="mj-bw-icon-row-text" padding="5px 10px 0px 10px" ${BODY_TEXT_STYLES}>
                 <a href="${this.getAttribute("foot-url")}" class="link">
                     ${this.getAttribute("foot-url-text")}
                     <span style="text-decoration: none">
@@ -84,7 +92,7 @@ class MjBwIconRow extends BodyComponent {
 
               `+ headAnchorElement +`
 
-              <mj-text css-class="mj-bw-icon-row-text" padding="5px 10px 0px 10px">
+              <mj-text css-class="mj-bw-icon-row-text" padding="5px 10px 0px 10px" ${BODY_TEXT_STYLES}>
                 ${this.getAttribute("text")}
               </mj-text>
 
