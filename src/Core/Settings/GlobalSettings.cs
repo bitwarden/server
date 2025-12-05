@@ -732,7 +732,7 @@ public class GlobalSettings : IGlobalSettings
     public class ExtendedCacheSettings
     {
         public bool EnableDistributedCache { get; set; } = true;
-        public bool UseSharedRedisCache { get; set; } = true;
+        public bool UseSharedDistributedCache { get; set; } = true;
         public IConnectionStringSettings Redis { get; set; } = new ConnectionStringSettings();
         public TimeSpan Duration { get; set; } = TimeSpan.FromMinutes(30);
         public bool IsFailSafeEnabled { get; set; } = true;
