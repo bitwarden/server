@@ -100,7 +100,7 @@ public class TwoFactorIsEnabledQuery : ITwoFactorIsEnabledQuery
         }
 
         var users = await _userRepository.GetManyAsync([.. userIds]);
-        var premiumStatus = await _premiumAccessQuery.CanAccessPremiumAsync(users);
+        var premiumStatus = await _premiumAccessQuery.CanAccessPremiumAsync(userIds);
 
         foreach (var user in users)
         {
@@ -147,10 +147,9 @@ public class TwoFactorIsEnabledQuery : ITwoFactorIsEnabledQuery
     public async Task<bool> TwoFactorIsEnabledVNextAsync(User user)
     {
         var providers = user.GetTwoFactorProviders();
-        var hasPremiumAccess = await _premiumAccessQuery.CanAccessPremiumAsync(user);
-        var twoFactorIsEnabled = TwoFactorIsEnabled(providers, hasPremiumAccess);
+        var hasPremium = await _premiumAccessQuery.CanAccessPremiumAsync(user.Id);
 
-        return twoFactorIsEnabled;
+        return TwoFactorIsEnabled(providers, hasPremium);
     }
 
     /// <summary>

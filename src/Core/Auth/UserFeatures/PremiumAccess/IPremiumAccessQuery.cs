@@ -1,6 +1,4 @@
-﻿using Bit.Core.Entities;
-
-namespace Bit.Core.Auth.UserFeatures.PremiumAccess;
+﻿namespace Bit.Core.Auth.UserFeatures.PremiumAccess;
 
 /// <summary>
 /// Query for checking premium access status for users.
@@ -18,9 +16,9 @@ public interface IPremiumAccessQuery
     /// Checks if a user has access to premium features (personal subscription or organization).
     /// This is the definitive way to check premium access for a single user.
     /// </summary>
-    /// <param name="user">The user to check for premium access</param>
+    /// <param name="userId">The user ID to check for premium access</param>
     /// <returns>True if user can access premium features; false otherwise</returns>
-    Task<bool> CanAccessPremiumAsync(User user);
+    Task<bool> CanAccessPremiumAsync(Guid userId);
 
     /// <summary>
     /// Checks if a user has access to premium features through organization membership only.
@@ -32,10 +30,10 @@ public interface IPremiumAccessQuery
 
     /// <summary>
     /// Checks if multiple users have access to premium features (optimized bulk operation).
-    /// Uses cached organization abilities and minimizes database queries.
+    /// Uses existing stored procedure that calculates premium from personal subscriptions and organizations.
     /// </summary>
-    /// <param name="users">The users to check for premium access</param>
+    /// <param name="userIds">The user IDs to check for premium access</param>
     /// <returns>Dictionary mapping user IDs to their premium access status (personal or through organization)</returns>
-    Task<Dictionary<Guid, bool>> CanAccessPremiumAsync(IEnumerable<User> users);
+    Task<Dictionary<Guid, bool>> CanAccessPremiumAsync(IEnumerable<Guid> userIds);
 }
 
