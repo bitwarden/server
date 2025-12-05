@@ -357,6 +357,7 @@ public class TwoFactorController : Controller
                     authRequest.IsValidForAuthentication(user.Id, requestModel.AuthRequestAccessCode))
                 {
                     await _twoFactorEmailService.SendTwoFactorEmailAsync(user);
+                    return;
                 }
             }
             else if (!string.IsNullOrEmpty(requestModel.SsoEmail2FaSessionToken))
