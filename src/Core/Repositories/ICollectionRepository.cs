@@ -71,4 +71,14 @@ public interface ICollectionRepository : IRepository<Collection, Guid>
     /// <param name="defaultCollectionName">The encrypted string to use as the default collection name.</param>
     /// <returns></returns>
     Task UpsertDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName);
+
+    /// <summary>
+    /// Creates a default user collection for the specified organization user if they do not already have one.
+    /// This operation is idempotent - calling it multiple times will not create duplicate collections.
+    /// </summary>
+    /// <param name="organizationId">The Organization ID.</param>
+    /// <param name="organizationUserId">The Organization User ID to create/find a default collection for.</param>
+    /// <param name="defaultCollectionName">The encrypted string to use as the default collection name.</param>
+    /// <returns>True if a new collection was created; false if the user already had a default collection.</returns>
+    Task<bool> UpsertDefaultCollectionAsync(Guid organizationId, Guid organizationUserId, string defaultCollectionName);
 }
