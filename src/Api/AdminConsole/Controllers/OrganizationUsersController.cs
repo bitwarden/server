@@ -41,6 +41,8 @@ using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using V1_RevokeOrganizationUserCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v1.IRevokeOrganizationUserCommand;
+using V2_RevokeOrganizationUserCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v2;
 
 namespace Bit.Api.AdminConsole.Controllers;
 
@@ -73,10 +75,11 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly IResendOrganizationInviteCommand _resendOrganizationInviteCommand;
     private readonly IBulkResendOrganizationInvitesCommand _bulkResendOrganizationInvitesCommand;
     private readonly IAutomaticallyConfirmOrganizationUserCommand _automaticallyConfirmOrganizationUserCommand;
+    private readonly V2_RevokeOrganizationUserCommand.IRevokeOrganizationUserCommand _revokeOrganizationUserCommandVNext;
     private readonly IConfirmOrganizationUserCommand _confirmOrganizationUserCommand;
     private readonly IRestoreOrganizationUserCommand _restoreOrganizationUserCommand;
     private readonly IInitPendingOrganizationCommand _initPendingOrganizationCommand;
-    private readonly IRevokeOrganizationUserCommand _revokeOrganizationUserCommand;
+    private readonly V1_RevokeOrganizationUserCommand _revokeOrganizationUserCommand;
     private readonly IAdminRecoverAccountCommand _adminRecoverAccountCommand;
 
     public OrganizationUsersController(IOrganizationRepository organizationRepository,
@@ -104,11 +107,12 @@ public class OrganizationUsersController : BaseAdminConsoleController
         IConfirmOrganizationUserCommand confirmOrganizationUserCommand,
         IRestoreOrganizationUserCommand restoreOrganizationUserCommand,
         IInitPendingOrganizationCommand initPendingOrganizationCommand,
-        IRevokeOrganizationUserCommand revokeOrganizationUserCommand,
+        V1_RevokeOrganizationUserCommand revokeOrganizationUserCommand,
         IResendOrganizationInviteCommand resendOrganizationInviteCommand,
         IBulkResendOrganizationInvitesCommand bulkResendOrganizationInvitesCommand,
         IAdminRecoverAccountCommand adminRecoverAccountCommand,
-        IAutomaticallyConfirmOrganizationUserCommand automaticallyConfirmOrganizationUserCommand)
+        IAutomaticallyConfirmOrganizationUserCommand automaticallyConfirmOrganizationUserCommand,
+        V2_RevokeOrganizationUserCommand.IRevokeOrganizationUserCommand revokeOrganizationUserCommandVNext)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -135,6 +139,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _resendOrganizationInviteCommand = resendOrganizationInviteCommand;
         _bulkResendOrganizationInvitesCommand = bulkResendOrganizationInvitesCommand;
         _automaticallyConfirmOrganizationUserCommand = automaticallyConfirmOrganizationUserCommand;
+        _revokeOrganizationUserCommandVNext = revokeOrganizationUserCommandVNext;
         _confirmOrganizationUserCommand = confirmOrganizationUserCommand;
         _restoreOrganizationUserCommand = restoreOrganizationUserCommand;
         _initPendingOrganizationCommand = initPendingOrganizationCommand;
@@ -642,7 +647,29 @@ public class OrganizationUsersController : BaseAdminConsoleController
     [Authorize<ManageUsersRequirement>]
     public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkRevokeAsync(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
     {
-        return await RestoreOrRevokeUsersAsync(orgId, model, _revokeOrganizationUserCommand.RevokeUsersAsync);
+        if (!_featureService.IsEnabled(FeatureFlagKeys.BulkRevokeUsersV2))
+        {
+            return await RestoreOrRevokeUsersAsync(orgId, model, _revokeOrganizationUserCommand.RevokeUsersAsync);
+        }
+
+        var currentUserId = _userService.GetProperUserId(User);
+        if (currentUserId == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        var results = await _revokeOrganizationUserCommandVNext.RevokeUsersAsync(
+            new V2_RevokeOrganizationUserCommand.RevokeOrganizationUsersRequest(
+                orgId,
+                model.Ids.ToArray(),
+                new StandardUser(currentUserId.Value, await _currentContext.OrganizationOwner(orgId))));
+
+        return new ListResponseModel<OrganizationUserBulkResponseModel>(results
+            .Select(result => new OrganizationUserBulkResponseModel(result.Id,
+                result.Result.Match(
+                    error => error.Message,
+                    _ => string.Empty
+                ))));
     }
 
     [HttpPatch("revoke")]
