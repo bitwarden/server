@@ -89,31 +89,14 @@ public class PolicyService : IPolicyService
     private async Task<IEnumerable<OrganizationUserPolicyDetails>> QueryOrganizationUserPolicyDetailsAsync(Guid userId, PolicyType policyType, OrganizationUserStatusType minStatus = OrganizationUserStatusType.Accepted)
     {
         var organizationUserPolicyDetails = await _organizationUserRepository.GetByUserIdWithPolicyDetailsAsync(userId, policyType);
-
-        OrganizationUserType[] excludedUserTypes;
-        var appliesToProviders = false;
-
-        if (policyType == PolicyType.SingleOrg
-            && _featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
-            && (await _organizationUserRepository.GetByUserIdWithPolicyDetailsAsync(userId, PolicyType.AutomaticUserConfirmation)).Any())
-        {
-            minStatus = OrganizationUserStatusType.Revoked;
-            excludedUserTypes = [];
-            appliesToProviders = true;
-        }
-        else
-        {
-            excludedUserTypes = GetUserTypesExcludedFromPolicy(policyType);
-        }
-
+        var excludedUserTypes = GetUserTypesExcludedFromPolicy(policyType);
         var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
-
         return organizationUserPolicyDetails.Where(o =>
             (!orgAbilities.TryGetValue(o.OrganizationId, out var orgAbility) || orgAbility.UsePolicies) &&
             o.PolicyEnabled &&
             !excludedUserTypes.Contains(o.OrganizationUserType) &&
             o.OrganizationUserStatus >= minStatus &&
-            (o.IsProvider && appliesToProviders || !o.IsProvider)); // the user is a provider and the policy applies to providers, or they are not a provider
+            !o.IsProvider);
     }
 
     private OrganizationUserType[] GetUserTypesExcludedFromPolicy(PolicyType policyType)

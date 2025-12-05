@@ -202,13 +202,13 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
                         userOrgs,
                         user)))
                 .Match(
-                    error => error.Message,
-                    _ => string.Empty
+                    error => new BadRequestException(error.Message),
+                    _ => null
                 );
 
-            if (!string.IsNullOrEmpty(error))
+            if (error is not null)
             {
-                throw new BadRequestException(error);
+                throw error;
             }
         }
 
