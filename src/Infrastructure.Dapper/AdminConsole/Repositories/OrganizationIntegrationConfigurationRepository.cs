@@ -20,10 +20,9 @@ public class OrganizationIntegrationConfigurationRepository : Repository<Organiz
         : base(connectionString, readOnlyConnectionString)
     { }
 
-    public async Task<List<OrganizationIntegrationConfigurationDetails>> GetConfigurationDetailsAsync(
-        Guid organizationId,
-        IntegrationType integrationType,
-        EventType eventType)
+    public async Task<List<OrganizationIntegrationConfigurationDetails>>
+        GetManyByEventTypeOrganizationIdIntegrationType(EventType eventType, Guid organizationId,
+            IntegrationType integrationType)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -32,25 +31,6 @@ public class OrganizationIntegrationConfigurationRepository : Repository<Organiz
                 new
                 {
                     EventType = eventType,
-                    OrganizationId = organizationId,
-                    IntegrationType = integrationType
-                },
-                commandType: CommandType.StoredProcedure);
-
-            return results.ToList();
-        }
-    }
-
-    public async Task<List<OrganizationIntegrationConfigurationDetails>> GetManyConfigurationDetailsByOrganizationIdIntegrationTypeAsync(
-        Guid organizationId,
-        IntegrationType integrationType)
-    {
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            var results = await connection.QueryAsync<OrganizationIntegrationConfigurationDetails>(
-                "[dbo].[OrganizationIntegrationConfigurationDetails_ReadManyConfigurationDetailsByOrganizationIdIntegrationType]",
-                new
-                {
                     OrganizationId = organizationId,
                     IntegrationType = integrationType
                 },
