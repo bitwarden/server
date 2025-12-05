@@ -64,7 +64,7 @@ public interface IUserService
     /// </summary>
     /// <param name="user">user being acted on</param>
     /// <returns>true if they can access premium; false otherwise.</returns>
-    [Obsolete("Use IPremiumAccessQuery.CanAccessPremiumAsync instead. This method is only used when feature flag 'PremiumAccessCacheCheck' is disabled.")]
+    [Obsolete("Use IPremiumAccessQuery.CanAccessPremiumAsync instead. This method is only used when feature flag 'PremiumAccessQuery' is disabled.")]
     Task<bool> CanAccessPremium(User user);
 
     /// <summary>
@@ -75,7 +75,7 @@ public interface IUserService
     /// </summary>
     /// <param name="user"></param>
     /// <returns></returns>
-    [Obsolete("Use IPremiumAccessQuery.HasPremiumFromOrganizationAsync instead. This method is only used when feature flag 'PremiumAccessCacheCheck' is disabled.")]
+    [Obsolete("Use IPremiumAccessQuery.HasPremiumFromOrganizationAsync instead. This method is only used when feature flag 'PremiumAccessQuery' is disabled.")]
     Task<bool> HasPremiumFromOrganization(User user);
     Task<string> GenerateSignInTokenAsync(User user, string purpose);
 
