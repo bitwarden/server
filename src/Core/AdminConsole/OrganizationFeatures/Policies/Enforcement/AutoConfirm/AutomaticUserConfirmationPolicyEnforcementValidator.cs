@@ -18,23 +18,18 @@ public class AutomaticUserConfirmationPolicyEnforcementValidator(
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(request.User.Id);
 
         var currentOrganizationUser = request.AllOrganizationUsers
-            .FirstOrDefault(x => x.Id == request.OrganizationUserId);
+            .FirstOrDefault(x => x.OrganizationId == request.OrganizationId
+                                 && x.UserId == request.User.Id);
 
         if (currentOrganizationUser is null)
         {
             return Invalid(request, new CurrentOrganizationUserIsNotPresentInRequest());
         }
 
-        if (automaticUserConfirmationPolicyRequirement.IsEnabled(currentOrganizationUser.OrganizationId)
-            && automaticUserConfirmationPolicyRequirement.UserBelongsToOrganizationWithAutomaticUserConfirmationEnabled())
-        {
-            return Invalid(request, new OrganizationEnforcesSingleOrgPolicy());
-        }
-
         if (automaticUserConfirmationPolicyRequirement
             .IsEnabledForOrganizationsOtherThan(currentOrganizationUser.OrganizationId))
         {
-            return Invalid(request, new OtherOrganizationEnforcesSingleOrgPolicy());
+            return Invalid(request, new OtherOrganizationDoesNotAllowOtherMembership());
         }
 
         if ((await providerUserRepository.GetManyByUserAsync(request.User.Id)).Count != 0)

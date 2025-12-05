@@ -20,7 +20,6 @@ public class AutomaticallyConfirmOrganizationUsersValidator(
     IPolicyRequirementQuery policyRequirementQuery,
     IAutomaticUserConfirmationPolicyEnforcementValidator automaticUserConfirmationPolicyEnforcementValidator,
     IUserService userService,
-    IProviderUserRepository providerUserRepository,
     IPolicyRepository policyRepository) : IAutomaticallyConfirmOrganizationUsersValidator
 {
     public async Task<ValidationResult<AutomaticallyConfirmOrganizationUserValidationRequest>> ValidateAsync(
@@ -71,16 +70,8 @@ public class AutomaticallyConfirmOrganizationUsersValidator(
             return Invalid(request, error);
         }
 
-        if (await OrganizationUserIsProviderAsync(request))
-        {
-            return Invalid(request, new ProviderUsersCannotJoin());
-        }
-
         return Valid(request);
     }
-
-    private async Task<bool> OrganizationUserIsProviderAsync(AutomaticallyConfirmOrganizationUserValidationRequest request) =>
-        (await providerUserRepository.GetManyByUserAsync(request.OrganizationUser!.UserId!.Value)).Count != 0;
 
     private async Task<bool> OrganizationHasAutomaticallyConfirmUsersPolicyEnabledAsync(AutomaticallyConfirmOrganizationUserValidationRequest request) =>
         await policyRepository.GetByOrganizationIdTypeAsync(request.OrganizationId, PolicyType.AutomaticUserConfirmation) is { Enabled: true }
@@ -112,7 +103,7 @@ public class AutomaticallyConfirmOrganizationUsersValidator(
 
         return (await automaticUserConfirmationPolicyEnforcementValidator.IsCompliantAsync(
                 new AutomaticUserConfirmationPolicyEnforcementRequest(
-                    request.OrganizationUser,
+                    request.OrganizationId,
                     allOrganizationUsersForUser.Where(x => x.OrganizationId != request.OrganizationId),
                     user)))
             .Match<Error?>(

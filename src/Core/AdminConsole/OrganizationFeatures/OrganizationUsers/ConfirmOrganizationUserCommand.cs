@@ -198,8 +198,8 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         {
             var error = (await _automaticUserConfirmationPolicyEnforcementValidator.IsCompliantAsync(
                     new AutomaticUserConfirmationPolicyEnforcementRequest(
-                        userOrgs.First(x => x.OrganizationId == organizationId),
-                        userOrgs.Where(x => x.OrganizationId != organizationId),
+                        organizationId,
+                        userOrgs,
                         user)))
                 .Match(
                     error => error.Message,

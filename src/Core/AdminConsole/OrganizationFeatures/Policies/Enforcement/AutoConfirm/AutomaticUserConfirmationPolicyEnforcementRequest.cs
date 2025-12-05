@@ -8,14 +8,15 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoCo
 public record AutomaticUserConfirmationPolicyEnforcementRequest
 {
     /// <summary>
-    /// Organization user to be validated
+    /// Organization to be validated
     /// </summary>
-    public Guid OrganizationUserId { get; }
+    public Guid OrganizationId { get; }
 
     /// <summary>
     /// All organization users that match the provided user.
     /// </summary>
     public IEnumerable<OrganizationUser> AllOrganizationUsers { get; }
+
     /// <summary>
     /// User associated with the organization user to be confirmed
     /// </summary>
@@ -27,15 +28,15 @@ public record AutomaticUserConfirmationPolicyEnforcementRequest
     /// <remarks>
     /// This record is used to encapsulate the data required for handling the automatic confirmation policy enforcement.
     /// </remarks>
-    /// <param name="organizationUserId">The organization user id to be validated.</param>
+    /// <param name="organizationId">The organization to be validated.</param>
     /// <param name="organizationUsers">All organization users that match the provided user.</param>
-    /// <param name="user">The general user associated with the operation.</param>
+    /// <param name="user">The user entity connecting all org users provided.</param>
     public AutomaticUserConfirmationPolicyEnforcementRequest(
-        Guid organizationUserId,
+        Guid organizationId,
         IEnumerable<OrganizationUser> organizationUsers,
         User user)
     {
-        OrganizationUserId = organizationUserId;
+        OrganizationId = organizationId;
         AllOrganizationUsers = organizationUsers;
         User = user;
     }

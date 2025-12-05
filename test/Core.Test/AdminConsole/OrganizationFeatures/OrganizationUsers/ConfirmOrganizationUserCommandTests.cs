@@ -590,7 +590,7 @@ public class ConfirmOrganizationUserCommandTests
         sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
             .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>())
             .Returns(Invalid(
-                new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser, [otherOrgUser], user),
+                new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser.Id, [orgUser, otherOrgUser], user),
                 new OrganizationEnforcesSingleOrgPolicy()));
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
@@ -627,14 +627,14 @@ public class ConfirmOrganizationUserCommandTests
         sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
             .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>())
             .Returns(Invalid(
-                new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser, [otherOrgUser], user),
-                new OtherOrganizationEnforcesSingleOrgPolicy()));
+                new AutomaticUserConfirmationPolicyEnforcementRequest(org.Id, [orgUser, otherOrgUser], user),
+                new OtherOrganizationDoesNotAllowOtherMembership()));
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id));
 
-        Assert.Equal(new OtherOrganizationEnforcesSingleOrgPolicy().Message, exception.Message);
+        Assert.Equal(new OtherOrganizationDoesNotAllowOtherMembership().Message, exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -663,7 +663,7 @@ public class ConfirmOrganizationUserCommandTests
         sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
             .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>())
             .Returns(Invalid(
-                new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser, [], user),
+                new AutomaticUserConfirmationPolicyEnforcementRequest(org.Id, [orgUser], user),
                 new ProviderUsersCannotJoin()));
 
         // Act & Assert
@@ -698,7 +698,7 @@ public class ConfirmOrganizationUserCommandTests
 
         sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
             .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>())
-            .Returns(Valid(new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser, [], user)));
+            .Returns(Valid(new AutomaticUserConfirmationPolicyEnforcementRequest(org.Id, [orgUser], user)));
 
         // Act
         await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id);
@@ -745,7 +745,7 @@ public class ConfirmOrganizationUserCommandTests
         sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
             .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>())
             .Returns(Invalid(
-                new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser, [otherOrgUser], user),
+                new AutomaticUserConfirmationPolicyEnforcementRequest(org.Id, [orgUser, otherOrgUser], user),
                 new OrganizationEnforcesSingleOrgPolicy()));
 
         // Act & Assert
@@ -791,17 +791,17 @@ public class ConfirmOrganizationUserCommandTests
 
         sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
             .IsCompliantAsync(Arg.Is<AutomaticUserConfirmationPolicyEnforcementRequest>(r => r.User.Id == user1.Id))
-            .Returns(Valid(new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser1, [], user1)));
+            .Returns(Valid(new AutomaticUserConfirmationPolicyEnforcementRequest(org.Id, [orgUser1], user1)));
 
         sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
             .IsCompliantAsync(Arg.Is<AutomaticUserConfirmationPolicyEnforcementRequest>(r => r.User.Id == user2.Id))
-            .Returns(Valid(new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser2, [], user2)));
+            .Returns(Valid(new AutomaticUserConfirmationPolicyEnforcementRequest(org.Id, [orgUser2], user2)));
 
         sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
             .IsCompliantAsync(Arg.Is<AutomaticUserConfirmationPolicyEnforcementRequest>(r => r.User.Id == user3.Id))
             .Returns(Invalid(
-                new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser3, [otherOrgUser], user3),
-                new OtherOrganizationEnforcesSingleOrgPolicy()));
+                new AutomaticUserConfirmationPolicyEnforcementRequest(org.Id, [orgUser3, otherOrgUser], user3),
+                new OtherOrganizationDoesNotAllowOtherMembership()));
 
         var keys = orgUsers.ToDictionary(ou => ou.Id, _ => key);
 
@@ -812,6 +812,6 @@ public class ConfirmOrganizationUserCommandTests
         Assert.Equal(3, result.Count);
         Assert.Empty(result[0].Item2);
         Assert.Empty(result[1].Item2);
-        Assert.Equal(new OtherOrganizationEnforcesSingleOrgPolicy().Message, result[2].Item2);
+        Assert.Equal(new OtherOrganizationDoesNotAllowOtherMembership().Message, result[2].Item2);
     }
 }
