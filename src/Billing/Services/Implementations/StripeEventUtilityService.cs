@@ -462,16 +462,16 @@ public class StripeEventUtilityService : IStripeEventUtilityService
             switch (cashBalanceTransaction)
             {
                 case { Type: "funded", Funded: not null }:
-                {
-                    bankTransferType = cashBalanceTransaction.Funded.BankTransfer.Type;
-                    break;
-                }
+                    {
+                        bankTransferType = cashBalanceTransaction.Funded.BankTransfer.Type;
+                        break;
+                    }
                 case { Type: "applied_to_payment", AppliedToPayment: not null }
                     when cashBalanceTransaction.AppliedToPayment.PaymentIntentId == charge.PaymentIntentId:
-                {
-                    matchingPaymentIntentFound = true;
-                    break;
-                }
+                    {
+                        matchingPaymentIntentFound = true;
+                        break;
+                    }
             }
 
             if (matchingPaymentIntentFound && !string.IsNullOrEmpty(bankTransferType))
