@@ -19,6 +19,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Commands.Interfaces;
 using Bit.Core.KeyManagement.Kdf;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Models.Api.Response;
 using Bit.Core.Repositories;
@@ -447,13 +448,20 @@ public class AccountsController : Controller
         if (model.AccountKeys != null)
         {
             await _setAccountKeysForUserCommand.SetAccountKeysForUserAsync(user, model.AccountKeys);
+            return new KeysResponseModel(model.AccountKeys?.ToAccountKeysData(), user.Key);
         }
         else
         {
             await _userService.SaveUserAsync(model.ToUser(user));
+            return new KeysResponseModel(new UserAccountKeysData
+            {
+                PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData(
+                    user.PrivateKey,
+                    user.PublicKey
+                )
+            }, user.Key);
         }
 
-        return new KeysResponseModel(model.AccountKeys.ToAccountKeysData(), user.Key);
     }
 
     [HttpGet("keys")]
