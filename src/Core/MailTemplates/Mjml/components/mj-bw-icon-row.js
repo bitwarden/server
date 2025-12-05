@@ -26,7 +26,7 @@ class MjBwIconRow extends BodyComponent {
 
   static defaultAttributes = {};
 
-   headStyle = (breakpoint) => {
+HeadStyle = (breakpoint) => {
     return `
       @media only screen and (max-width:${breakpoint}) {
         .mj-bw-icon-row-text {
