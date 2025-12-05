@@ -378,14 +378,14 @@ public class PremiumAccessQueryTests
     }
 
     [Theory, BitAutoData]
-    public async Task CanAccessPremiumBulkAsync_WhenEmptyUsersList_ReturnsEmptyDictionary(
+    public async Task CanAccessPremiumAsync_WhenEmptyUsersList_ReturnsEmptyDictionary(
         SutProvider<PremiumAccessQuery> sutProvider)
     {
         // Arrange
         var users = new List<User>();
 
         // Act
-        var result = await sutProvider.Sut.CanAccessPremiumBulkAsync(users);
+        var result = await sutProvider.Sut.CanAccessPremiumAsync(users);
 
         // Assert
         Assert.Empty(result);
@@ -397,7 +397,7 @@ public class PremiumAccessQueryTests
     }
 
     [Theory, BitAutoData]
-    public async Task CanAccessPremiumBulkAsync_WhenAllUsersHavePersonalPremium_ReturnsAllTrue(
+    public async Task CanAccessPremiumAsync_WhenAllUsersHavePersonalPremium_ReturnsAllTrue(
         List<User> users,
         SutProvider<PremiumAccessQuery> sutProvider)
     {
@@ -416,7 +416,7 @@ public class PremiumAccessQueryTests
             .Returns(new Dictionary<Guid, OrganizationAbility>());
 
         // Act
-        var result = await sutProvider.Sut.CanAccessPremiumBulkAsync(users);
+        var result = await sutProvider.Sut.CanAccessPremiumAsync(users);
 
         // Assert
         Assert.Equal(users.Count, result.Count);
@@ -427,7 +427,7 @@ public class PremiumAccessQueryTests
     }
 
     [Theory, BitAutoData]
-    public async Task CanAccessPremiumBulkAsync_WhenNoUsersHavePremium_ReturnsAllFalse(
+    public async Task CanAccessPremiumAsync_WhenNoUsersHavePremium_ReturnsAllFalse(
         List<User> users,
         SutProvider<PremiumAccessQuery> sutProvider)
     {
@@ -446,7 +446,7 @@ public class PremiumAccessQueryTests
             .Returns(new Dictionary<Guid, OrganizationAbility>());
 
         // Act
-        var result = await sutProvider.Sut.CanAccessPremiumBulkAsync(users);
+        var result = await sutProvider.Sut.CanAccessPremiumAsync(users);
 
         // Assert
         Assert.Equal(users.Count, result.Count);
@@ -457,7 +457,7 @@ public class PremiumAccessQueryTests
     }
 
     [Theory, BitAutoData]
-    public async Task CanAccessPremiumBulkAsync_WhenSomeUsersHaveOrgPremium_ReturnsCorrectStatus(
+    public async Task CanAccessPremiumAsync_WhenSomeUsersHaveOrgPremium_ReturnsCorrectStatus(
         User user1,
         User user2,
         User user3,
@@ -501,7 +501,7 @@ public class PremiumAccessQueryTests
             .Returns(orgAbilities);
 
         // Act
-        var result = await sutProvider.Sut.CanAccessPremiumBulkAsync(users);
+        var result = await sutProvider.Sut.CanAccessPremiumAsync(users);
 
         // Assert
         Assert.Equal(3, result.Count);
@@ -511,7 +511,7 @@ public class PremiumAccessQueryTests
     }
 
     [Theory, BitAutoData]
-    public async Task CanAccessPremiumBulkAsync_WhenOrgUsersHaveNoUserId_FiltersThemOut(
+    public async Task CanAccessPremiumAsync_WhenOrgUsersHaveNoUserId_FiltersThemOut(
         User user1,
         OrganizationUser orgUser1,
         OrganizationUser orgUser2,
@@ -550,7 +550,7 @@ public class PremiumAccessQueryTests
             .Returns(orgAbilities);
 
         // Act
-        var result = await sutProvider.Sut.CanAccessPremiumBulkAsync(users);
+        var result = await sutProvider.Sut.CanAccessPremiumAsync(users);
 
         // Assert
         Assert.Single(result);
@@ -558,7 +558,7 @@ public class PremiumAccessQueryTests
     }
 
     [Theory, BitAutoData]
-    public async Task CanAccessPremiumBulkAsync_WhenOrgIsDisabled_DoesNotGrantPremium(
+    public async Task CanAccessPremiumAsync_WhenOrgIsDisabled_DoesNotGrantPremium(
         User user1,
         OrganizationUser orgUser1,
         Guid orgId,
@@ -593,7 +593,7 @@ public class PremiumAccessQueryTests
             .Returns(orgAbilities);
 
         // Act
-        var result = await sutProvider.Sut.CanAccessPremiumBulkAsync(users);
+        var result = await sutProvider.Sut.CanAccessPremiumAsync(users);
 
         // Assert
         Assert.Single(result);
@@ -601,7 +601,7 @@ public class PremiumAccessQueryTests
     }
 
     [Theory, BitAutoData]
-    public async Task CanAccessPremiumBulkAsync_WhenOrgDoesNotHaveUsersGetPremium_DoesNotGrantPremium(
+    public async Task CanAccessPremiumAsync_WhenOrgDoesNotHaveUsersGetPremium_DoesNotGrantPremium(
         User user1,
         OrganizationUser orgUser1,
         Guid orgId,
@@ -636,7 +636,7 @@ public class PremiumAccessQueryTests
             .Returns(orgAbilities);
 
         // Act
-        var result = await sutProvider.Sut.CanAccessPremiumBulkAsync(users);
+        var result = await sutProvider.Sut.CanAccessPremiumAsync(users);
 
         // Assert
         Assert.Single(result);
@@ -644,7 +644,7 @@ public class PremiumAccessQueryTests
     }
 
     [Theory, BitAutoData]
-    public async Task CanAccessPremiumBulkAsync_WhenUserInMultipleOrgs_OnlyOneHasPremium_GrantsPremium(
+    public async Task CanAccessPremiumAsync_WhenUserInMultipleOrgs_OnlyOneHasPremium_GrantsPremium(
         User user1,
         OrganizationUser orgUser1,
         OrganizationUser orgUser2,
@@ -692,7 +692,7 @@ public class PremiumAccessQueryTests
             .Returns(orgAbilities);
 
         // Act
-        var result = await sutProvider.Sut.CanAccessPremiumBulkAsync(users);
+        var result = await sutProvider.Sut.CanAccessPremiumAsync(users);
 
         // Assert
         Assert.Single(result);

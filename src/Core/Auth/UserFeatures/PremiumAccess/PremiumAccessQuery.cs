@@ -51,7 +51,7 @@ public class PremiumAccessQuery : IPremiumAccessQuery
             orgAbility.Enabled);
     }
 
-    public async Task<Dictionary<Guid, bool>> CanAccessPremiumBulkAsync(IEnumerable<User> users)
+    public async Task<Dictionary<Guid, bool>> CanAccessPremiumAsync(IEnumerable<User> users)
     {
         var result = new Dictionary<Guid, bool>();
         var usersList = users.ToList();

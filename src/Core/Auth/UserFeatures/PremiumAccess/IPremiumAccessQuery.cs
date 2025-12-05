@@ -45,6 +45,6 @@ public interface IPremiumAccessQuery
     /// </summary>
     /// <param name="users">The users to check for premium access</param>
     /// <returns>Dictionary mapping user IDs to their premium access status (personal or through organization)</returns>
-    Task<Dictionary<Guid, bool>> CanAccessPremiumBulkAsync(IEnumerable<User> users);
+    Task<Dictionary<Guid, bool>> CanAccessPremiumAsync(IEnumerable<User> users);
 }
 
