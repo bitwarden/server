@@ -104,7 +104,7 @@ public class AutomaticallyConfirmOrganizationUsersValidator(
         return (await automaticUserConfirmationPolicyEnforcementValidator.IsCompliantAsync(
                 new AutomaticUserConfirmationPolicyEnforcementRequest(
                     request.OrganizationId,
-                    allOrganizationUsersForUser.Where(x => x.OrganizationId != request.OrganizationId),
+                    allOrganizationUsersForUser,
                     user)))
             .Match<Error?>(
                 error => error,
