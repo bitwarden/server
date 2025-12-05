@@ -12,7 +12,7 @@ services:
       - mssql_dev_data:/var/opt/mssql
       - ../util/Migrator:/mnt/migrator/
       - ./helpers/mssql:/mnt/helpers
-      - ./.data/mssql:/mnt/data
+      - mssql_data:/mssql:/mnt/data
     ports:
       - "1433:1433"
     profiles:
@@ -26,7 +26,7 @@ services:
       - "10001:10001"
       - "10002:10002"
     volumes:
-      - ./.data/azurite:/data
+      - azurite_data:/azurite:/data
     profiles:
       - storage
       - cloud
@@ -152,3 +152,5 @@ volumes:
   mariadb_dev_data:
   rabbitmq_data:
   redis_data:
+  azurite_data:
+  mssql_data:
