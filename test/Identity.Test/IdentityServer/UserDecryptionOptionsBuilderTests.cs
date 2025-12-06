@@ -1,5 +1,4 @@
-﻿using Bit.Core;
-using Bit.Core.Auth.Entities;
+﻿using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Context;
@@ -25,7 +24,6 @@ public class UserDecryptionOptionsBuilderTests
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly ILoginApprovingClientTypes _loginApprovingClientTypes;
     private readonly UserDecryptionOptionsBuilder _builder;
-    private readonly IFeatureService _featureService;
 
     public UserDecryptionOptionsBuilderTests()
     {
@@ -33,8 +31,7 @@ public class UserDecryptionOptionsBuilderTests
         _deviceRepository = Substitute.For<IDeviceRepository>();
         _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
         _loginApprovingClientTypes = Substitute.For<ILoginApprovingClientTypes>();
-        _featureService = Substitute.For<IFeatureService>();
-        _builder = new UserDecryptionOptionsBuilder(_currentContext, _deviceRepository, _organizationUserRepository, _loginApprovingClientTypes, _featureService);
+        _builder = new UserDecryptionOptionsBuilder(_currentContext, _deviceRepository, _organizationUserRepository, _loginApprovingClientTypes);
         var user = new User();
         _builder.ForUser(user);
     }
@@ -274,8 +271,6 @@ public class UserDecryptionOptionsBuilderTests
         [OrganizationUserWithDefaultPermissions] OrganizationUser organizationUser,
         User user)
     {
-        _featureService.IsEnabled(FeatureFlagKeys.PM23174ManageAccountRecoveryPermissionDrivesTheNeedToSetMasterPassword)
-            .Returns(true);
         configurationData.MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption;
         ssoConfig.Data = configurationData.Serialize();
         ssoConfig.OrganizationId = organization.Id;
