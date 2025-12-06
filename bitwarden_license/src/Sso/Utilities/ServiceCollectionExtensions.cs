@@ -9,6 +9,7 @@ using Bit.Sso.IdentityServer;
 using Bit.Sso.Models;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.ResponseHandling;
+using Duende.IdentityServer.Stores;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Sustainsys.Saml2.AspNetCore2;
 
@@ -76,6 +77,17 @@ public static class ServiceCollectionExtensions
                 new IdentityResources.Profile()
             })
             .AddIdentityServerCertificate(env, globalSettings);
+
+        // PM-23572
+        // Register named FusionCache for SSO authorization code grants.
+        // Provides separation of concerns and automatic Redis/in-memory negotiation
+        // .AddInMemoryCaching should still persist above; this handles configuration caching, etc.,
+        // and is separate from this keyed service, which only serves grant negotiation.
+        services.AddExtendedCache(PersistedGrantsDistributedCacheConstants.CacheKey, globalSettings);
+
+        // Store authorization codes in distributed cache for horizontal scaling
+        // Uses named FusionCache which gracefully degrades to in-memory when Redis isn't configured
+        services.AddSingleton<IPersistedGrantStore, DistributedCachePersistedGrantStore>();
 
         return identityServerBuilder;
     }
