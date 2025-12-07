@@ -12,7 +12,9 @@ public class ProviderUserOrganizationDetailsViewQuery : IQuery<ProviderUserOrgan
                     join po in dbContext.ProviderOrganizations on pu.ProviderId equals po.ProviderId
                     join o in dbContext.Organizations on po.OrganizationId equals o.Id
                     join p in dbContext.Providers on pu.ProviderId equals p.Id
-                    select new { pu, po, o, p };
+                    join ss in dbContext.SsoConfigs on o.Id equals ss.OrganizationId into ss_g
+                    from ss in ss_g.DefaultIfEmpty()
+                    select new { pu, po, o, p, ss };
         return query.Select(x => new ProviderUserOrganizationDetails
         {
             OrganizationId = x.po.OrganizationId,
@@ -29,6 +31,9 @@ public class ProviderUserOrganizationDetailsViewQuery : IQuery<ProviderUserOrgan
             UseTotp = x.o.UseTotp,
             Use2fa = x.o.Use2fa,
             UseApi = x.o.UseApi,
+            UseResetPassword = x.o.UseResetPassword,
+            UseSecretsManager = x.o.UseSecretsManager,
+            UsePasswordManager = x.o.UsePasswordManager,
             SelfHost = x.o.SelfHost,
             UsersGetPremium = x.o.UsersGetPremium,
             UseCustomPermissions = x.o.UseCustomPermissions,
@@ -39,6 +44,7 @@ public class ProviderUserOrganizationDetailsViewQuery : IQuery<ProviderUserOrgan
             Key = x.po.Key,
             Status = x.pu.Status,
             Type = x.pu.Type,
+            ProviderUserId = x.pu.Id,
             PublicKey = x.o.PublicKey,
             PrivateKey = x.o.PrivateKey,
             ProviderId = x.p.Id,
@@ -52,7 +58,10 @@ public class ProviderUserOrganizationDetailsViewQuery : IQuery<ProviderUserOrgan
             ProviderType = x.p.Type,
             UseOrganizationDomains = x.o.UseOrganizationDomains,
             UseAdminSponsoredFamilies = x.o.UseAdminSponsoredFamilies,
-            UseAutomaticUserConfirmation = x.o.UseAutomaticUserConfirmation
+            UseAutomaticUserConfirmation = x.o.UseAutomaticUserConfirmation,
+            SsoEnabled = x.ss.Enabled,
+            SsoConfig = x.ss.Data,
+            UsePhishingBlocker = x.o.UsePhishingBlocker
         });
     }
 }

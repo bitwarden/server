@@ -4,6 +4,7 @@ using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
+using Bit.Core;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Business;
@@ -24,7 +25,9 @@ namespace Bit.Api.Billing.Controllers;
 public class AccountsController(
     IUserService userService,
     ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-    IUserAccountKeysQuery userAccountKeysQuery) : Controller
+    IUserAccountKeysQuery userAccountKeysQuery,
+    IFeatureService featureService,
+    ILicensingService licensingService) : Controller
 {
     [HttpPost("premium")]
     public async Task<PaymentResponseModel> PostPremiumAsync(
@@ -84,16 +87,26 @@ public class AccountsController(
             throw new UnauthorizedAccessException();
         }
 
-        if (!globalSettings.SelfHosted && user.Gateway != null)
+        // Only cloud-hosted users with payment gateways have subscription and discount information
+        if (!globalSettings.SelfHosted)
         {
-            var subscriptionInfo = await paymentService.GetSubscriptionAsync(user);
-            var license = await userService.GenerateLicenseAsync(user, subscriptionInfo);
-            return new SubscriptionResponseModel(user, subscriptionInfo, license);
-        }
-        else if (!globalSettings.SelfHosted)
-        {
-            var license = await userService.GenerateLicenseAsync(user);
-            return new SubscriptionResponseModel(user, license);
+            if (user.Gateway != null)
+            {
+                // Note: PM23341_Milestone_2 is the feature flag for the overall Milestone 2 initiative (PM-23341).
+                // This specific implementation (PM-26682) adds discount display functionality as part of that initiative.
+                // The feature flag controls the broader Milestone 2 feature set, not just this specific task.
+                var includeMilestone2Discount = featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2);
+                var subscriptionInfo = await paymentService.GetSubscriptionAsync(user);
+                var license = await userService.GenerateLicenseAsync(user, subscriptionInfo);
+                var claimsPrincipal = licensingService.GetClaimsPrincipalFromLicense(license);
+                return new SubscriptionResponseModel(user, subscriptionInfo, license, claimsPrincipal, includeMilestone2Discount);
+            }
+            else
+            {
+                var license = await userService.GenerateLicenseAsync(user);
+                var claimsPrincipal = licensingService.GetClaimsPrincipalFromLicense(license);
+                return new SubscriptionResponseModel(user, null, license, claimsPrincipal);
+            }
         }
         else
         {

@@ -246,6 +246,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("UsePasswordManager")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("UsePhishingBlocker")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("UsePolicies")
                         .HasColumnType("boolean");
 
@@ -1019,6 +1022,12 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<int?>("ApplicationAtRiskCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("ApplicationCount")
+                        .HasColumnType("integer");
+
                     b.Property<string>("ApplicationData")
                         .HasColumnType("text");
 
@@ -1029,8 +1038,38 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int?>("CriticalApplicationAtRiskCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("CriticalApplicationCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("CriticalMemberAtRiskCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("CriticalMemberCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("CriticalPasswordAtRiskCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("CriticalPasswordCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("MemberAtRiskCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("MemberCount")
+                        .HasColumnType("integer");
+
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid");
+
+                    b.Property<int?>("PasswordAtRiskCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("PasswordCount")
+                        .HasColumnType("integer");
 
                     b.Property<string>("ReportData")
                         .IsRequired()

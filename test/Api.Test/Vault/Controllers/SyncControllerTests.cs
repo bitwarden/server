@@ -18,9 +18,9 @@ using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Test.Billing.Mocks;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Repositories;
-using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
@@ -285,6 +285,10 @@ public class SyncControllerTests
         providerUserRepository
             .GetManyDetailsByUserAsync(user.Id, ProviderUserStatusType.Confirmed).Returns(providerUserDetails);
 
+        foreach (var p in providerUserOrganizationDetails)
+        {
+            p.SsoConfig = null;
+        }
         providerUserRepository
             .GetManyOrganizationDetailsByUserAsync(user.Id, ProviderUserStatusType.Confirmed)
             .Returns(providerUserOrganizationDetails);
@@ -331,7 +335,7 @@ public class SyncControllerTests
 
             if (matchedProviderUserOrgDetails != null)
             {
-                var providerOrgProductType = StaticStore.GetPlan(matchedProviderUserOrgDetails.PlanType).ProductTier;
+                var providerOrgProductType = MockPlans.Get(matchedProviderUserOrgDetails.PlanType).ProductTier;
                 Assert.Equal(providerOrgProductType, profProviderOrg.ProductTierType);
             }
         }

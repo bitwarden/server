@@ -8,6 +8,7 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Billing.Premium.Commands;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Tax.Requests;
 using Bit.Core.Billing.Tax.Responses;
@@ -66,7 +67,7 @@ public class StripePaymentService : IPaymentService
     {
         var existingPlan = await _pricingClient.GetPlanOrThrow(org.PlanType);
         var sponsoredPlan = sponsorship?.PlanSponsorshipType != null
-            ? Utilities.StaticStore.GetSponsoredPlan(sponsorship.PlanSponsorshipType.Value)
+            ? SponsoredPlans.Get(sponsorship.PlanSponsorshipType.Value)
             : null;
         var subscriptionUpdate =
             new SponsorOrganizationSubscriptionUpdate(existingPlan, sponsoredPlan, applySponsorship);
@@ -640,11 +641,23 @@ public class StripePaymentService : IPaymentService
         }
 
         var subscription = await _stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId,
-            new SubscriptionGetOptions { Expand = ["customer", "discounts", "test_clock"] });
+            new SubscriptionGetOptions { Expand = ["customer.discount.coupon.applies_to", "discounts.coupon.applies_to", "test_clock"] });
+
+        if (subscription == null)
+        {
+            return subscriptionInfo;
+        }
 
         subscriptionInfo.Subscription = new SubscriptionInfo.BillingSubscription(subscription);
 
-        var discount = subscription.Customer.Discount ?? subscription.Discounts.FirstOrDefault();
+        // Discount selection priority:
+        // 1. Customer-level discount (applies to all subscriptions for the customer)
+        // 2. First subscription-level discount (if multiple exist, FirstOrDefault() selects the first one)
+        // Note: When multiple subscription-level discounts exist, only the first one is used.
+        // This matches Stripe's behavior where the first discount in the list is applied.
+        // Defensive null checks: Even though we expand "customer" and "discounts", external APIs
+        // may not always return the expected data structure, so we use null-safe operators.
+        var discount = subscription.Customer?.Discount ?? subscription.Discounts?.FirstOrDefault();
 
         if (discount != null)
         {
@@ -896,11 +909,14 @@ public class StripePaymentService : IPaymentService
         }
     }
 
+    [Obsolete($"Use {nameof(PreviewPremiumTaxCommand)} instead.")]
     public async Task<PreviewInvoiceResponseModel> PreviewInvoiceAsync(
         PreviewIndividualInvoiceRequestBody parameters,
         string gatewayCustomerId,
         string gatewaySubscriptionId)
     {
+        var premiumPlan = await _pricingClient.GetAvailablePremiumPlan();
+
         var options = new InvoiceCreatePreviewOptions
         {
             AutomaticTax = new InvoiceAutomaticTaxOptions { Enabled = true, },
@@ -909,8 +925,17 @@ public class StripePaymentService : IPaymentService
             {
                 Items =
                 [
-                    new InvoiceSubscriptionDetailsItemOptions { Quantity = 1, Plan = StripeConstants.Prices.PremiumAnnually },
-                    new InvoiceSubscriptionDetailsItemOptions { Quantity = parameters.PasswordManager.AdditionalStorage, Plan = StripeConstants.Prices.StoragePlanPersonal }
+                    new InvoiceSubscriptionDetailsItemOptions
+                    {
+                        Quantity = 1,
+                        Plan = premiumPlan.Seat.StripePriceId
+                    },
+
+                    new InvoiceSubscriptionDetailsItemOptions
+                    {
+                        Quantity = parameters.PasswordManager.AdditionalStorage,
+                        Plan = premiumPlan.Storage.StripePriceId
+                    }
                 ]
             },
             CustomerDetails = new InvoiceCustomerDetailsOptions
@@ -1028,7 +1053,7 @@ public class StripePaymentService : IPaymentService
             {
                 Items =
                 [
-                    new()
+                    new InvoiceSubscriptionDetailsItemOptions
                     {
                         Quantity = parameters.PasswordManager.AdditionalStorage,
                         Plan = plan.PasswordManager.StripeStoragePlanId
@@ -1047,9 +1072,9 @@ public class StripePaymentService : IPaymentService
 
         if (isSponsored)
         {
-            var sponsoredPlan = Utilities.StaticStore.GetSponsoredPlan(parameters.PasswordManager.SponsoredPlan.Value);
+            var sponsoredPlan = SponsoredPlans.Get(parameters.PasswordManager.SponsoredPlan.Value);
             options.SubscriptionDetails.Items.Add(
-                new() { Quantity = 1, Plan = sponsoredPlan.StripePlanId }
+                new InvoiceSubscriptionDetailsItemOptions { Quantity = 1, Plan = sponsoredPlan.StripePlanId }
             );
         }
         else
@@ -1057,13 +1082,13 @@ public class StripePaymentService : IPaymentService
             if (plan.PasswordManager.HasAdditionalSeatsOption)
             {
                 options.SubscriptionDetails.Items.Add(
-                    new() { Quantity = parameters.PasswordManager.Seats, Plan = plan.PasswordManager.StripeSeatPlanId }
+                    new InvoiceSubscriptionDetailsItemOptions { Quantity = parameters.PasswordManager.Seats, Plan = plan.PasswordManager.StripeSeatPlanId }
                 );
             }
             else
             {
                 options.SubscriptionDetails.Items.Add(
-                    new() { Quantity = 1, Plan = plan.PasswordManager.StripePlanId }
+                    new InvoiceSubscriptionDetailsItemOptions { Quantity = 1, Plan = plan.PasswordManager.StripePlanId }
                 );
             }
 
@@ -1071,7 +1096,7 @@ public class StripePaymentService : IPaymentService
             {
                 if (plan.SecretsManager.HasAdditionalSeatsOption)
                 {
-                    options.SubscriptionDetails.Items.Add(new()
+                    options.SubscriptionDetails.Items.Add(new InvoiceSubscriptionDetailsItemOptions
                     {
                         Quantity = parameters.SecretsManager?.Seats ?? 0,
                         Plan = plan.SecretsManager.StripeSeatPlanId
@@ -1080,7 +1105,7 @@ public class StripePaymentService : IPaymentService
 
                 if (plan.SecretsManager.HasAdditionalServiceAccountOption)
                 {
-                    options.SubscriptionDetails.Items.Add(new()
+                    options.SubscriptionDetails.Items.Add(new InvoiceSubscriptionDetailsItemOptions
                     {
                         Quantity = parameters.SecretsManager?.AdditionalMachineAccounts ?? 0,
                         Plan = plan.SecretsManager.StripeServiceAccountPlanId
