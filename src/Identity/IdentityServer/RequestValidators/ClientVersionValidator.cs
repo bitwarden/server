@@ -35,7 +35,7 @@ public class ClientVersionValidator(
         // the user not nullish checked. If they are null then the validator should fail.
         if (user == null)
         {
-            FillContextWithErrorData(requestContext, "no_user", _noUserMessage);
+            FillRequestContextWithErrorData(requestContext, "no_user", _noUserMessage);
             return false;
         }
 
@@ -51,7 +51,7 @@ public class ClientVersionValidator(
         // with stale encryption architecture.
         if (clientVersion == null)
         {
-            FillContextWithErrorData(requestContext, "version_header_missing", _versionHeaderMissing);
+            FillRequestContextWithErrorData(requestContext, "version_header_missing", _versionHeaderMissing);
             return false;
         }
 
@@ -64,14 +64,14 @@ public class ClientVersionValidator(
 
         if (clientVersion < minVersion)
         {
-            FillContextWithErrorData(requestContext, "invalid_client_version", _upgradeMessage);
+            FillRequestContextWithErrorData(requestContext, "invalid_client_version", _upgradeMessage);
             return false;
         }
 
         return true;
     }
 
-    private void FillContextWithErrorData(
+    private void FillRequestContextWithErrorData(
         CustomValidatorRequestContext requestContext,
         string errorId,
         string errorMessage)
