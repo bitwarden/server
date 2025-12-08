@@ -278,8 +278,8 @@ public class AccountsKeyManagementControllerTests
                 Assert.Equal(data.KdfIterations, user.KdfIterations);
                 Assert.Equal(data.KdfMemory, user.KdfMemory);
                 Assert.Equal(data.KdfParallelism, user.KdfParallelism);
-                Assert.Equal(data.Keys.PublicKey, user.PublicKey);
-                Assert.Equal(data.Keys.EncryptedPrivateKey, user.PrivateKey);
+                Assert.Equal(data.Keys!.PublicKey, user.PublicKey);
+                Assert.Equal(data.Keys!.EncryptedPrivateKey, user.PrivateKey);
             }), Arg.Is(data.Key), Arg.Is(data.OrgIdentifier));
     }
 
@@ -308,9 +308,90 @@ public class AccountsKeyManagementControllerTests
                 Assert.Equal(data.KdfIterations, user.KdfIterations);
                 Assert.Equal(data.KdfMemory, user.KdfMemory);
                 Assert.Equal(data.KdfParallelism, user.KdfParallelism);
-                Assert.Equal(data.Keys.PublicKey, user.PublicKey);
-                Assert.Equal(data.Keys.EncryptedPrivateKey, user.PrivateKey);
+                Assert.Equal(data.Keys!.PublicKey, user.PublicKey);
+                Assert.Equal(data.Keys!.EncryptedPrivateKey, user.PrivateKey);
             }), Arg.Is(data.Key), Arg.Is(data.OrgIdentifier));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostSetKeyConnectorKeyAsync_V2_UserNull_Throws(
+        SutProvider<AccountsKeyManagementController> sutProvider)
+    {
+        var data = new SetKeyConnectorKeyRequestModel
+        {
+            KeyConnectorKeyWrappedUserKey = "wrapped-user-key",
+            AccountKeys = new AccountKeysRequestModel
+            {
+                AccountPublicKey = "public-key",
+                UserKeyEncryptedAccountPrivateKey = "encrypted-private-key"
+            },
+            OrgIdentifier = "test-org"
+        };
+
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsNull();
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sutProvider.Sut.PostSetKeyConnectorKeyAsync(data));
+
+        await sutProvider.GetDependency<ISetKeyConnectorKeyCommand>().DidNotReceive()
+            .SetKeyConnectorKeyForUserAsync(Arg.Any<User>(), Arg.Any<SetKeyConnectorKeyRequestModel>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostSetKeyConnectorKeyAsync_V2_Success(
+        SutProvider<AccountsKeyManagementController> sutProvider,
+        User expectedUser)
+    {
+        var data = new SetKeyConnectorKeyRequestModel
+        {
+            KeyConnectorKeyWrappedUserKey = "wrapped-user-key",
+            AccountKeys = new AccountKeysRequestModel
+            {
+                AccountPublicKey = "public-key",
+                UserKeyEncryptedAccountPrivateKey = "encrypted-private-key"
+            },
+            OrgIdentifier = "test-org"
+        };
+
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(expectedUser);
+
+        await sutProvider.Sut.PostSetKeyConnectorKeyAsync(data);
+
+        await sutProvider.GetDependency<ISetKeyConnectorKeyCommand>().Received(1)
+            .SetKeyConnectorKeyForUserAsync(Arg.Is(expectedUser), Arg.Is(data));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostSetKeyConnectorKeyAsync_V2_CommandThrows_PropagatesException(
+        SutProvider<AccountsKeyManagementController> sutProvider,
+        User expectedUser)
+    {
+        var data = new SetKeyConnectorKeyRequestModel
+        {
+            KeyConnectorKeyWrappedUserKey = "wrapped-user-key",
+            AccountKeys = new AccountKeysRequestModel
+            {
+                AccountPublicKey = "public-key",
+                UserKeyEncryptedAccountPrivateKey = "encrypted-private-key"
+            },
+            OrgIdentifier = "test-org"
+        };
+
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(expectedUser);
+        sutProvider.GetDependency<ISetKeyConnectorKeyCommand>()
+            .When(x => x.SetKeyConnectorKeyForUserAsync(Arg.Any<User>(), Arg.Any<SetKeyConnectorKeyRequestModel>()))
+            .Do(_ => throw new BadRequestException("Command failed"));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.PostSetKeyConnectorKeyAsync(data));
+
+        Assert.Equal("Command failed", exception.Message);
+        await sutProvider.GetDependency<ISetKeyConnectorKeyCommand>().Received(1)
+            .SetKeyConnectorKeyForUserAsync(Arg.Is(expectedUser), Arg.Is(data));
     }
 
     [Theory]

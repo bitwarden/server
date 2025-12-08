@@ -13,6 +13,7 @@ using Bit.Core.Auth.Models.Data;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Commands.Interfaces;
+using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.KeyManagement.UserKey;
@@ -47,6 +48,7 @@ public class AccountsKeyManagementController : Controller
         _webauthnKeyValidator;
     private readonly IRotationValidator<IEnumerable<OtherDeviceKeysUpdateRequestModel>, IEnumerable<Device>> _deviceValidator;
     private readonly IKeyConnectorConfirmationDetailsQuery _keyConnectorConfirmationDetailsQuery;
+    private readonly ISetKeyConnectorKeyCommand _setKeyConnectorKeyCommand;
 
     public AccountsKeyManagementController(IUserService userService,
         IFeatureService featureService,
@@ -62,8 +64,10 @@ public class AccountsKeyManagementController : Controller
             emergencyAccessValidator,
         IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>, IReadOnlyList<OrganizationUser>>
             organizationUserValidator,
-        IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>> webAuthnKeyValidator,
-        IRotationValidator<IEnumerable<OtherDeviceKeysUpdateRequestModel>, IEnumerable<Device>> deviceValidator)
+        IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>>
+            webAuthnKeyValidator,
+        IRotationValidator<IEnumerable<OtherDeviceKeysUpdateRequestModel>, IEnumerable<Device>> deviceValidator,
+        ISetKeyConnectorKeyCommand setKeyConnectorKeyCommand)
     {
         _userService = userService;
         _featureService = featureService;
@@ -79,6 +83,7 @@ public class AccountsKeyManagementController : Controller
         _webauthnKeyValidator = webAuthnKeyValidator;
         _deviceValidator = deviceValidator;
         _keyConnectorConfirmationDetailsQuery = keyConnectorConfirmationDetailsQuery;
+        _setKeyConnectorKeyCommand = setKeyConnectorKeyCommand;
     }
 
     [HttpPost("key-management/regenerate-keys")]
@@ -146,18 +151,28 @@ public class AccountsKeyManagementController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var result = await _userService.SetKeyConnectorKeyAsync(model.ToUser(user), model.Key, model.OrgIdentifier);
-        if (result.Succeeded)
+        if (model.IsV2Request())
         {
-            return;
+            // V2 account registration
+            await _setKeyConnectorKeyCommand.SetKeyConnectorKeyForUserAsync(user, model);
         }
-
-        foreach (var error in result.Errors)
+        else
         {
-            ModelState.AddModelError(string.Empty, error.Description);
-        }
+            // V1 account registration
+            // TODO removed with https://bitwarden.atlassian.net/browse/PM-27328
+            var result = await _userService.SetKeyConnectorKeyAsync(model.ToUser(user), model.Key, model.OrgIdentifier);
+            if (result.Succeeded)
+            {
+                return;
+            }
 
-        throw new BadRequestException(ModelState);
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
+
+            throw new BadRequestException(ModelState);
+        }
     }
 
     [HttpPost("convert-to-key-connector")]
