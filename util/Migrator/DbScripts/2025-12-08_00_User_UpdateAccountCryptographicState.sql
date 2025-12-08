@@ -1,10 +1,3 @@
--- Create the User_UpdateAccountCryptographicState stored procedure
--- This procedure updates a user's account cryptographic state including:
--- - Public key encryption key pair (public key, private key, signed public key)
--- - Security state and version
--- - Signature key pair (algorithm, signing key, verifying key)
--- All updates are performed in a single transaction
-
 IF OBJECT_ID('[dbo].[User_UpdateAccountCryptographicState]') IS NOT NULL
 BEGIN
     DROP PROCEDURE [dbo].[User_UpdateAccountCryptographicState]
