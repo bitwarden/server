@@ -156,7 +156,6 @@ public static class FeatureFlagKeys
     public const string SetInitialPasswordRefactor = "pm-16117-set-initial-password-refactor";
     public const string ChangeExistingPasswordRefactor = "pm-16117-change-existing-password-refactor";
     public const string Otp6Digits = "pm-18612-otp-6-digits";
-    public const string FailedTwoFactorEmail = "pm-24425-send-2fa-failed-email";
     public const string PM24579_PreventSsoOnExistingNonCompliantUsers = "pm-24579-prevent-sso-on-existing-non-compliant-users";
     public const string DisableAlternateLoginMethods = "pm-22110-disable-alternate-login-methods";
     public const string PM23174ManageAccountRecoveryPermissionDrivesTheNeedToSetMasterPassword =
