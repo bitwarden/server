@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Entities;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 
@@ -44,5 +45,10 @@ public interface IUserRepository : IRepository<User, Guid>
         IEnumerable<UpdateEncryptedDataForKeyRotation> updateDataActions);
     Task UpdateUserKeyAndEncryptedDataV2Async(User user,
         IEnumerable<UpdateEncryptedDataForKeyRotation> updateDataActions);
+    /// <summary>
+    /// Sets the account cryptographic state to a user in a single transaction. V1 and V2 account cryptographic states are supported,
+    /// and the data is created or replaced depending on whether it exists already.
+    /// </summary>
+    Task UpdateAccountCryptographicStateAsync(User user, UserAccountKeysData accountKeysData);
     Task DeleteManyAsync(IEnumerable<User> users);
 }
