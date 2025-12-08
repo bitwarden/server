@@ -109,7 +109,7 @@ public class BaseRequestValidatorTests
         // Default client version validator behavior: allow to pass unless a test overrides.
         _clientVersionValidator
             .ValidateAsync(Arg.Any<User>(), Arg.Any<CustomValidatorRequestContext>())
-            .Returns(Task.FromResult(true));
+            .Returns(true);
     }
 
     private void SetupRecoveryCodeSupportForSsoRequiredUsersFeatureFlag(bool recoveryCodeSupportEnabled)
@@ -1296,7 +1296,7 @@ public class BaseRequestValidatorTests
         // Make client version validation succeed but ensure it's invoked
         _clientVersionValidator
             .ValidateAsync(requestContext.User, requestContext)
-            .Returns(Task.FromResult(true));
+            .Returns(true);
 
         // Ensure SSO requirement triggers an early stop after version validation to avoid success path setup
         _policyService.AnyPoliciesApplicableToUserAsync(
@@ -1307,7 +1307,7 @@ public class BaseRequestValidatorTests
         await _sut.ValidateAsync(context);
 
         // Assert
-        await _clientVersionValidator.Received(1)
+        _clientVersionValidator.Received(1)
             .ValidateAsync(requestContext.User, requestContext);
     }
 

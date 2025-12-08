@@ -68,9 +68,9 @@ public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
                 UserAsymmetricKeys = new KeysRequestModel()
                 {
                     PublicKey = TestEncryptionConstants.PublicKey,
-                    EncryptedPrivateKey = TestEncryptionConstants.V1EncryptedBase64
+                    EncryptedPrivateKey = TestEncryptionConstants.AES256_CBC_HMAC_Encstring
                 },
-                UserSymmetricKey = TestEncryptionConstants.V1EncryptedBase64,
+                UserSymmetricKey = TestEncryptionConstants.AES256_CBC_HMAC_Encstring,
             });
 
         return await _identityApplicationFactory.TokenFromPasswordAsync(email, masterPasswordHash);

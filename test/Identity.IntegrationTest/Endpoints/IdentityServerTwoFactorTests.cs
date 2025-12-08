@@ -388,9 +388,9 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
                 UserAsymmetricKeys = new KeysRequestModel()
                 {
                     PublicKey = Bit.Test.Common.Constants.TestEncryptionConstants.PublicKey,
-                    EncryptedPrivateKey = Bit.Test.Common.Constants.TestEncryptionConstants.V1EncryptedBase64
+                    EncryptedPrivateKey = Bit.Test.Common.Constants.TestEncryptionConstants.AES256_CBC_HMAC_Encstring
                 },
-                UserSymmetricKey = Bit.Test.Common.Constants.TestEncryptionConstants.V1EncryptedBase64,
+                UserSymmetricKey = Bit.Test.Common.Constants.TestEncryptionConstants.AES256_CBC_HMAC_Encstring,
             });
         Assert.NotNull(user);
 
@@ -442,9 +442,9 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
                 UserAsymmetricKeys = new KeysRequestModel()
                 {
                     PublicKey = Bit.Test.Common.Constants.TestEncryptionConstants.PublicKey,
-                    EncryptedPrivateKey = Bit.Test.Common.Constants.TestEncryptionConstants.V1EncryptedBase64
+                    EncryptedPrivateKey = Bit.Test.Common.Constants.TestEncryptionConstants.AES256_CBC_HMAC_Encstring
                 },
-                UserSymmetricKey = Bit.Test.Common.Constants.TestEncryptionConstants.V1EncryptedBase64,
+                UserSymmetricKey = Bit.Test.Common.Constants.TestEncryptionConstants.AES256_CBC_HMAC_Encstring,
             });
 
         var userService = factory.GetService<IUserService>();

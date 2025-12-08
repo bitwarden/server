@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Context;
 using Bit.Core.Entities;
-using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Identity.IdentityServer.RequestValidators;
+using Bit.Test.Common.Constants;
 using NSubstitute;
 using Xunit;
 
@@ -9,34 +9,49 @@ namespace Bit.Identity.Test.IdentityServer.RequestValidators;
 
 public class ClientVersionValidatorTests
 {
-    private static ICurrentContext MakeContext(Version version)
+    private static ICurrentContext MakeContext(Version? version)
     {
         var ctx = Substitute.For<ICurrentContext>();
         ctx.ClientVersion = version;
         return ctx;
     }
 
-    private static IGetMinimumClientVersionForUserQuery MakeMinQuery(Version? v)
+    private static User MakeValidV2User()
     {
-        var q = Substitute.For<IGetMinimumClientVersionForUserQuery>();
-        q.Run(Arg.Any<User>()).Returns(Task.FromResult(v));
-        return q;
+        return new User
+        {
+            PrivateKey = TestEncryptionConstants.V2PrivateKey,
+            SecurityVersion = 2
+        };
     }
 
     [Fact]
-    public async Task Allows_When_NoMinVersion()
+    public void Allows_When_ClientMeetsMinimumVersion()
     {
-        var sut = new ClientVersionValidator(MakeContext(new Version("2025.1.0")), MakeMinQuery(null));
-        var ok = await sut.ValidateAsync(new User(), new Bit.Identity.IdentityServer.CustomValidatorRequestContext());
+        // Arrange
+        var sut = new ClientVersionValidator(MakeContext(new Version("2025.11.0")));
+        var ctx = new Bit.Identity.IdentityServer.CustomValidatorRequestContext();
+        var user = MakeValidV2User();
+
+        // Act
+        var ok = sut.ValidateAsync(user, ctx);
+
+        // Assert
         Assert.True(ok);
     }
 
     [Fact]
-    public async Task Blocks_When_ClientTooOld()
+    public void Blocks_When_ClientTooOld()
     {
-        var sut = new ClientVersionValidator(MakeContext(new Version("2025.10.0")), MakeMinQuery(new Version("2025.11.0")));
+        // Arrange
+        var sut = new ClientVersionValidator(MakeContext(new Version("2025.10.0")));
         var ctx = new Bit.Identity.IdentityServer.CustomValidatorRequestContext();
-        var ok = await sut.ValidateAsync(new User(), ctx);
+        var user = MakeValidV2User();
+
+        // Act
+        var ok = sut.ValidateAsync(user, ctx);
+
+        // Assert
         Assert.False(ok);
         Assert.NotNull(ctx.ValidationErrorResult);
         Assert.True(ctx.ValidationErrorResult.IsError);
@@ -44,23 +59,66 @@ public class ClientVersionValidatorTests
     }
 
     [Fact]
-    public async Task Allows_When_ClientMeetsMin()
+    public void Blocks_When_NullUser()
     {
-        var sut = new ClientVersionValidator(MakeContext(new Version("2025.11.0")), MakeMinQuery(new Version("2025.11.0")));
-        var ok = await sut.ValidateAsync(new User(), new Bit.Identity.IdentityServer.CustomValidatorRequestContext());
+        // Arrange
+        var sut = new ClientVersionValidator(MakeContext(new Version("2025.11.0")));
+        var ctx = new Bit.Identity.IdentityServer.CustomValidatorRequestContext();
+        User? user = null;
+
+        // Act
+        var ok = sut.ValidateAsync(user, ctx);
+
+        // Assert
+        Assert.False(ok);
+        Assert.NotNull(ctx.ValidationErrorResult);
+        Assert.True(ctx.ValidationErrorResult.IsError);
+        Assert.Equal("no_user", ctx.ValidationErrorResult.Error);
+    }
+
+    [Fact]
+    public void Allows_When_NoPrivateKey()
+    {
+        // Arrange
+        var sut = new ClientVersionValidator(MakeContext(new Version("2025.11.0")));
+        var ctx = new Bit.Identity.IdentityServer.CustomValidatorRequestContext();
+        var user = MakeValidV2User();
+        user.PrivateKey = null;
+
+        // Act
+        var ok = sut.ValidateAsync(user, ctx);
+
+        // Assert
         Assert.True(ok);
     }
 
     [Fact]
-    public async Task Allows_When_ClientVersionHeaderMissing()
+    public void Allows_When_NoSecurityVersion()
     {
-        // Do not set ClientVersion on the context (remains null) and ensure
-        var ctx = Substitute.For<ICurrentContext>();
-        var minQuery = MakeMinQuery(new Version("2025.11.0"));
-        var sut = new ClientVersionValidator(ctx, minQuery);
+        // Arrange
+        var sut = new ClientVersionValidator(MakeContext(new Version("2025.11.0")));
+        var ctx = new Bit.Identity.IdentityServer.CustomValidatorRequestContext();
 
-        var ok = await sut.ValidateAsync(new User(), new Bit.Identity.IdentityServer.CustomValidatorRequestContext());
+        var user = MakeValidV2User();
+        user.SecurityVersion = null;
+        // Act
+        var ok = sut.ValidateAsync(user, ctx);
+        // Assert
+        Assert.True(ok);
+    }
 
+    [Fact]
+    public void Allows_When_ClientVersionHeaderMissing()
+    {
+        // Arrange
+        var sut = new ClientVersionValidator(MakeContext(null));
+        var ctx = new Bit.Identity.IdentityServer.CustomValidatorRequestContext();
+        var user = MakeValidV2User();
+
+        // Act
+        var ok = sut.ValidateAsync(user, ctx);
+
+        // Assert
         Assert.True(ok);
     }
 }

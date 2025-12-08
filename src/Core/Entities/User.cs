@@ -212,14 +212,31 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
         return SecurityVersion ?? 1;
     }
 
-    public bool IsSetupForV2Encryption()
+    /// <summary>
+    /// Evaluates user state to determine if they are currently in a v2 encryption state.
+    /// </summary>
+    /// <returns>If the shape of their private key is v2 as well as has the proper security version then true, otherwise false</returns>
+    public bool HasV2Encryption()
     {
         return HasV2KeyShape() && IsSecurityVersionTwo();
     }
 
     private bool HasV2KeyShape()
     {
-        return EncryptionParsing.GetEncryptionType(PrivateKey) == EncryptionType.XChaCha20Poly1305_B64;
+        if (string.IsNullOrEmpty(PrivateKey))
+        {
+            return false;
+        }
+
+        try
+        {
+            return EncryptionParsing.GetEncryptionType(PrivateKey) == EncryptionType.XChaCha20Poly1305_B64;
+        }
+        catch (ArgumentException)
+        {
+            // Invalid encryption string format - treat as not v2
+            return false;
+        }
     }
 
     /// <summary>

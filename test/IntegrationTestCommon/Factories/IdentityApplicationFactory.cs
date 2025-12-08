@@ -55,7 +55,7 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
             SubstituteService<IClientVersionValidator>(svc =>
             {
                 svc.ValidateAsync(Arg.Any<User>(), Arg.Any<CustomValidatorRequestContext>())
-                    .Returns(Task.FromResult(true));
+                    .Returns(true);
             });
         }
 

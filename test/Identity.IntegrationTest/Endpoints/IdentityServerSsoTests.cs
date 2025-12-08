@@ -313,8 +313,8 @@ public class IdentityServerSsoTests
         var user = await factory.Services.GetRequiredService<IUserRepository>().GetByEmailAsync(TestEmail);
         Assert.NotNull(user);
 
-        const string expectedPrivateKey = TestEncryptionConstants.V1EncryptedBase64;
-        const string expectedUserKey = TestEncryptionConstants.V1EncryptedBase64;
+        const string expectedPrivateKey = TestEncryptionConstants.AES256_CBC_HMAC_Encstring;
+        const string expectedUserKey = TestEncryptionConstants.AES256_CBC_HMAC_Encstring;
 
         var device = await deviceRepository.CreateAsync(new Device
         {
@@ -323,7 +323,7 @@ public class IdentityServerSsoTests
             Name = "Thing",
             UserId = user.Id,
             EncryptedPrivateKey = expectedPrivateKey,
-            EncryptedPublicKey = TestEncryptionConstants.V1EncryptedBase64,
+            EncryptedPublicKey = TestEncryptionConstants.AES256_CBC_HMAC_Encstring,
             EncryptedUserKey = expectedUserKey,
         });
 
@@ -630,7 +630,7 @@ public class IdentityServerSsoTests
         factory.SubstituteService<IClientVersionValidator>(svc =>
         {
             svc.ValidateAsync(Arg.Any<User>(), Arg.Any<CustomValidatorRequestContext>())
-                .Returns(Task.FromResult(true));
+                .Returns(true);
         });
 
         var authorizationCode = new AuthorizationCode
@@ -662,9 +662,9 @@ public class IdentityServerSsoTests
                 UserAsymmetricKeys = new KeysRequestModel()
                 {
                     PublicKey = TestEncryptionConstants.PublicKey,
-                    EncryptedPrivateKey = TestEncryptionConstants.V1EncryptedBase64 // v1-format so parsing succeeds and user is treated as v1
+                    EncryptedPrivateKey = TestEncryptionConstants.AES256_CBC_HMAC_Encstring // v1-format so parsing succeeds and user is treated as v1
                 },
-                UserSymmetricKey = TestEncryptionConstants.V1EncryptedBase64,
+                UserSymmetricKey = TestEncryptionConstants.AES256_CBC_HMAC_Encstring,
             });
 
         var organizationRepository = factory.Services.GetRequiredService<IOrganizationRepository>();

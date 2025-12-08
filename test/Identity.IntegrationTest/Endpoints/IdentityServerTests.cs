@@ -37,7 +37,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         _factory.SubstituteService<IClientVersionValidator>(svc =>
         {
             svc.ValidateAsync(Arg.Any<User>(), Arg.Any<CustomValidatorRequestContext>())
-                .Returns(Task.FromResult(true));
+                .Returns(true);
         });
 
         ReinitializeDbForTests(_factory);

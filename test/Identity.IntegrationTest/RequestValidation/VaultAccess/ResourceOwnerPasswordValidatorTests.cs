@@ -614,9 +614,9 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
                 UserAsymmetricKeys = new KeysRequestModel
                 {
                     PublicKey = Bit.Test.Common.Constants.TestEncryptionConstants.PublicKey,
-                    EncryptedPrivateKey = Bit.Test.Common.Constants.TestEncryptionConstants.V1EncryptedBase64
+                    EncryptedPrivateKey = Bit.Test.Common.Constants.TestEncryptionConstants.AES256_CBC_HMAC_Encstring
                 },
-                UserSymmetricKey = Bit.Test.Common.Constants.TestEncryptionConstants.V1EncryptedBase64,
+                UserSymmetricKey = Bit.Test.Common.Constants.TestEncryptionConstants.AES256_CBC_HMAC_Encstring,
             });
     }
 

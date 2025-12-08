@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Context;
 using Bit.Core.Entities;
-using Bit.Core.KeyManagement.Queries.Interfaces;
+using Bit.Core.KeyManagement;
 using Bit.Core.Models.Api;
 using Duende.IdentityServer.Validation;
 
@@ -8,7 +8,7 @@ namespace Bit.Identity.IdentityServer.RequestValidators;
 
 public interface IClientVersionValidator
 {
-    Task<bool> ValidateAsync(User user, CustomValidatorRequestContext requestContext);
+    bool ValidateAsync(User user, CustomValidatorRequestContext requestContext);
 }
 
 /// <summary>
@@ -22,24 +22,34 @@ public interface IClientVersionValidator
 /// If the header is omitted, then the validator returns that this request is valid.
 /// </summary>
 public class ClientVersionValidator(
-    ICurrentContext currentContext,
-    IGetMinimumClientVersionForUserQuery getMinimumClientVersionForUserQuery)
+    ICurrentContext currentContext)
     : IClientVersionValidator
 {
     private const string _upgradeMessage = "Please update your app to continue using Bitwarden";
+    private const string _noUserMessage = "No user found while trying to validate client version";
 
-    public async Task<bool> ValidateAsync(User? user, CustomValidatorRequestContext requestContext)
+    public bool ValidateAsync(User? user, CustomValidatorRequestContext requestContext)
     {
         // Do this nullish check because the base request validator currently is not
         // strict null checking. Once that gets fixed then we can see about making
         // the user not nullish checked. If they are null then the validator should fail.
         if (user == null)
         {
+            requestContext.ValidationErrorResult = new ValidationResult
+            {
+                Error = "no_user",
+                ErrorDescription = _noUserMessage,
+                IsError = true
+            };
+            requestContext.CustomResponse = new Dictionary<string, object>
+            {
+                { "ErrorModel", new ErrorResponseModel(_noUserMessage) }
+            };
             return false;
         }
 
         Version? clientVersion = currentContext.ClientVersion;
-        Version? minVersion = await getMinimumClientVersionForUserQuery.Run(user);
+        Version? minVersion = user.HasV2Encryption() ? Constants.MinimumClientVersionForV2Encryption : null;
 
         // Allow through if headers are missing.
         // The minVersion should never be null because of where this validator is run. The user would

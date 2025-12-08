@@ -359,12 +359,11 @@ public abstract class BaseRequestValidator<T> where T : class
 
     /// <summary>
     /// Validates whether the client version is compatible for the user attempting to authenticate.
-    /// New authentications only; refresh/device grants are handled elsewhere.
     /// </summary>
     /// <returns>true if the scheme successfully passed validation, otherwise false.</returns>
     private async Task<bool> ValidateClientVersionAsync(T context, CustomValidatorRequestContext validatorContext)
     {
-        var ok = await _clientVersionValidator.ValidateAsync(validatorContext.User, validatorContext);
+        var ok = _clientVersionValidator.ValidateAsync(validatorContext.User, validatorContext);
         if (ok)
         {
             return true;

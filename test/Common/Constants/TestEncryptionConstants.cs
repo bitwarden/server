@@ -2,8 +2,8 @@
 
 public static class TestEncryptionConstants
 {
-    // V1-style encrypted strings (AES-CBC-HMAC formats) accepted by validators
-    public const string V1EncryptedBase64 = "2.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==";
+    // Intended for use as a V1 encrypted string, accepted by validators
+    public const string AES256_CBC_HMAC_Encstring = "2.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==";
 
     // Public key test placeholder
     public const string PublicKey = "pk_test";
@@ -15,5 +15,3 @@ public static class TestEncryptionConstants
     public const string V2WrappedSigningKey = "7.cose_signing";
     public const string V2VerifyingKey = "vk";
 }
-
-
