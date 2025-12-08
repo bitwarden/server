@@ -7,6 +7,7 @@ using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Premium.Queries;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 
 namespace Bit.Core.Auth.UserFeatures.TwoFactorAuth;
 
@@ -14,17 +15,25 @@ public class TwoFactorIsEnabledQuery : ITwoFactorIsEnabledQuery
 {
     private readonly IUserRepository _userRepository;
     private readonly IHasPremiumAccessQuery _hasPremiumAccessQuery;
+    private readonly IFeatureService _featureService;
 
     public TwoFactorIsEnabledQuery(
         IUserRepository userRepository,
-        IHasPremiumAccessQuery hasPremiumAccessQuery)
+        IHasPremiumAccessQuery hasPremiumAccessQuery,
+        IFeatureService featureService)
     {
         _userRepository = userRepository;
         _hasPremiumAccessQuery = hasPremiumAccessQuery;
+        _featureService = featureService;
     }
 
     public async Task<IEnumerable<(Guid userId, bool twoFactorIsEnabled)>> TwoFactorIsEnabledAsync(IEnumerable<Guid> userIds)
     {
+        if (_featureService.IsEnabled(FeatureFlagKeys.PremiumAccessQuery))
+        {
+            return await TwoFactorIsEnabledVNextAsync(userIds);
+        }
+
         var result = new List<(Guid userId, bool hasTwoFactor)>();
         if (userIds == null || !userIds.Any())
         {
@@ -47,6 +56,11 @@ public class TwoFactorIsEnabledQuery : ITwoFactorIsEnabledQuery
 
     public async Task<IEnumerable<(T user, bool twoFactorIsEnabled)>> TwoFactorIsEnabledAsync<T>(IEnumerable<T> users) where T : ITwoFactorProvidersUser
     {
+        if (_featureService.IsEnabled(FeatureFlagKeys.PremiumAccessQuery))
+        {
+            return await TwoFactorIsEnabledVNextAsync(users);
+        }
+
         var userIds = users
             .Select(u => u.GetUserId())
             .Where(u => u.HasValue)
@@ -76,8 +90,25 @@ public class TwoFactorIsEnabledQuery : ITwoFactorIsEnabledQuery
 
     public async Task<bool> TwoFactorIsEnabledAsync(ITwoFactorProvidersUser user)
     {
-        var userId = user.GetUserId();
-        if (!userId.HasValue)
+        if (_featureService.IsEnabled(FeatureFlagKeys.PremiumAccessQuery))
+        {
+            var userId = user.GetUserId();
+            if (!userId.HasValue)
+            {
+                return false;
+            }
+
+            var userEntity = user as User ?? await _userRepository.GetByIdAsync(userId.Value);
+            if (userEntity == null)
+            {
+                return false;
+            }
+
+            return await TwoFactorIsEnabledVNextAsync(userEntity);
+        }
+
+        var id = user.GetUserId();
+        if (!id.HasValue)
         {
             return false;
         }
@@ -86,12 +117,12 @@ public class TwoFactorIsEnabledQuery : ITwoFactorIsEnabledQuery
             user.GetTwoFactorProviders(),
             async () =>
             {
-                var calcUser = await _userRepository.GetCalculatedPremiumAsync(userId.Value);
+                var calcUser = await _userRepository.GetCalculatedPremiumAsync(id.Value);
                 return calcUser?.HasPremiumAccess ?? false;
             });
     }
 
-    public async Task<IEnumerable<(Guid userId, bool twoFactorIsEnabled)>> TwoFactorIsEnabledVNextAsync(IEnumerable<Guid> userIds)
+    private async Task<IEnumerable<(Guid userId, bool twoFactorIsEnabled)>> TwoFactorIsEnabledVNextAsync(IEnumerable<Guid> userIds)
     {
         var result = new List<(Guid userId, bool hasTwoFactor)>();
         if (userIds == null || !userIds.Any())
@@ -126,7 +157,7 @@ public class TwoFactorIsEnabledQuery : ITwoFactorIsEnabledQuery
         return result;
     }
 
-    public async Task<IEnumerable<(T user, bool twoFactorIsEnabled)>> TwoFactorIsEnabledVNextAsync<T>(IEnumerable<T> users)
+    private async Task<IEnumerable<(T user, bool twoFactorIsEnabled)>> TwoFactorIsEnabledVNextAsync<T>(IEnumerable<T> users)
         where T : ITwoFactorProvidersUser
     {
         var userIds = users
@@ -156,7 +187,7 @@ public class TwoFactorIsEnabledQuery : ITwoFactorIsEnabledQuery
         return result;
     }
 
-    public async Task<bool> TwoFactorIsEnabledVNextAsync(User user)
+    private async Task<bool> TwoFactorIsEnabledVNextAsync(User user)
     {
         var enabledProviders = GetEnabledTwoFactorProviders(user);
 

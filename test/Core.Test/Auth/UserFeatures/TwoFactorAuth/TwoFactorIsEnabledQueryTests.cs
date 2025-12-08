@@ -6,6 +6,7 @@ using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -408,12 +409,17 @@ public class TwoFactorIsEnabledQueryTests
     [Theory]
     [BitAutoData((IEnumerable<Guid>)null)]
     [BitAutoData([])]
-    public async Task TwoFactorIsEnabledVNextAsync_NullOrEmptyUserIds_ReturnsEmpty(
+    public async Task TwoFactorIsEnabledAsync_WhenPremiumAccessQueryEnabled_WithNoUserIds_ReturnsEmpty(
         IEnumerable<Guid> userIds,
         SutProvider<TwoFactorIsEnabledQuery> sutProvider)
     {
+        // Arrange
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PremiumAccessQuery)
+            .Returns(true);
+
         // Act
-        var result = await sutProvider.Sut.TwoFactorIsEnabledVNextAsync(userIds);
+        var result = await sutProvider.Sut.TwoFactorIsEnabledAsync(userIds);
 
         // Assert
         Assert.Empty(result);
@@ -422,7 +428,7 @@ public class TwoFactorIsEnabledQueryTests
     [Theory]
     [BitAutoData(TwoFactorProviderType.Duo)]
     [BitAutoData(TwoFactorProviderType.YubiKey)]
-    public async Task TwoFactorIsEnabledVNextAsync_MixedScenarios_ReturnsCorrectResults(
+    public async Task TwoFactorIsEnabledAsync_WhenPremiumAccessQueryEnabled_WithMixedScenarios_ReturnsCorrectResults(
         TwoFactorProviderType premiumProviderType,
         SutProvider<TwoFactorIsEnabledQuery> sutProvider,
         User user1,
@@ -430,6 +436,10 @@ public class TwoFactorIsEnabledQueryTests
         User user3)
     {
         // Arrange
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PremiumAccessQuery)
+            .Returns(true);
+
         var users = new List<User> { user1, user2, user3 };
         var userIds = users.Select(u => u.Id).ToList();
 
@@ -467,7 +477,7 @@ public class TwoFactorIsEnabledQueryTests
             .Returns(premiumStatus);
 
         // Act
-        var result = await sutProvider.Sut.TwoFactorIsEnabledVNextAsync(userIds);
+        var result = await sutProvider.Sut.TwoFactorIsEnabledAsync(userIds);
 
         // Assert
         Assert.Contains(result, res => res.userId == user1.Id && res.twoFactorIsEnabled == true);  // Non-premium provider
@@ -478,7 +488,7 @@ public class TwoFactorIsEnabledQueryTests
     [Theory]
     [BitAutoData(TwoFactorProviderType.Duo)]
     [BitAutoData(TwoFactorProviderType.YubiKey)]
-    public async Task TwoFactorIsEnabledVNextAsync_OnlyChecksPremiumAccessForUsersWhoNeedIt(
+    public async Task TwoFactorIsEnabledAsync_WhenPremiumAccessQueryEnabled_OnlyChecksPremiumAccessForUsersWhoNeedIt(
         TwoFactorProviderType premiumProviderType,
         SutProvider<TwoFactorIsEnabledQuery> sutProvider,
         User user1,
@@ -486,6 +496,10 @@ public class TwoFactorIsEnabledQueryTests
         User user3)
     {
         // Arrange
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PremiumAccessQuery)
+            .Returns(true);
+
         var users = new List<User> { user1, user2, user3 };
         var userIds = users.Select(u => u.Id).ToList();
 
@@ -521,7 +535,7 @@ public class TwoFactorIsEnabledQueryTests
             .Returns(premiumStatus);
 
         // Act
-        var result = await sutProvider.Sut.TwoFactorIsEnabledVNextAsync(userIds);
+        var result = await sutProvider.Sut.TwoFactorIsEnabledAsync(userIds);
 
         // Assert - Verify optimization: premium checked ONLY for users 2 and 3 (not user 1)
         await sutProvider.GetDependency<IHasPremiumAccessQuery>()
@@ -532,18 +546,22 @@ public class TwoFactorIsEnabledQueryTests
 
     [Theory]
     [BitAutoData]
-    public async Task TwoFactorIsEnabledVNextAsync_Generic_WithNoUserIds_ReturnsAllTwoFactorDisabled(
+    public async Task TwoFactorIsEnabledAsync_WhenPremiumAccessQueryEnabled_WithNoUserIds_ReturnsAllTwoFactorDisabled(
         SutProvider<TwoFactorIsEnabledQuery> sutProvider,
         List<OrganizationUserUserDetails> users)
     {
         // Arrange
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PremiumAccessQuery)
+            .Returns(true);
+
         foreach (var user in users)
         {
             user.UserId = null;
         }
 
         // Act
-        var result = await sutProvider.Sut.TwoFactorIsEnabledVNextAsync(users);
+        var result = await sutProvider.Sut.TwoFactorIsEnabledAsync(users);
 
         // Assert
         foreach (var user in users)
@@ -559,15 +577,19 @@ public class TwoFactorIsEnabledQueryTests
 
     [Theory]
     [BitAutoData(TwoFactorProviderType.Authenticator, true)]  // Non-premium provider
-    [BitAutoData(TwoFactorProviderType.Duo, true)]           // Premium provider with premium access
+    [BitAutoData(TwoFactorProviderType.Duo, true)]            // Premium provider with premium access
     [BitAutoData(TwoFactorProviderType.YubiKey, false)]       // Premium provider without premium access
-    public async Task TwoFactorIsEnabledVNextAsync_SingleUser_VariousScenarios(
+    public async Task TwoFactorIsEnabledAsync_WhenPremiumAccessQueryEnabled_SingleUser_VariousScenarios(
         TwoFactorProviderType providerType,
         bool hasPremiumAccess,
         SutProvider<TwoFactorIsEnabledQuery> sutProvider,
         User user)
     {
         // Arrange
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PremiumAccessQuery)
+            .Returns(true);
+
         user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
         {
             { providerType, new TwoFactorProvider { Enabled = true } }
@@ -578,7 +600,7 @@ public class TwoFactorIsEnabledQueryTests
             .Returns(hasPremiumAccess);
 
         // Act
-        var result = await sutProvider.Sut.TwoFactorIsEnabledVNextAsync(user);
+        var result = await sutProvider.Sut.TwoFactorIsEnabledAsync(user);
 
         // Assert
         var requiresPremium = TwoFactorProvider.RequiresPremium(providerType);
@@ -588,18 +610,22 @@ public class TwoFactorIsEnabledQueryTests
 
     [Theory]
     [BitAutoData]
-    public async Task TwoFactorIsEnabledVNextAsync_SingleUser_NoEnabledProviders_ReturnsFalse(
+    public async Task TwoFactorIsEnabledAsync_WhenPremiumAccessQueryEnabled_WithNoEnabledProviders_ReturnsFalse(
         SutProvider<TwoFactorIsEnabledQuery> sutProvider,
         User user)
     {
-        // Arrange - test both disabled and null providers
+        // Arrange
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PremiumAccessQuery)
+            .Returns(true);
+
         user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
         {
             { TwoFactorProviderType.Email, new TwoFactorProvider { Enabled = false } }
         });
 
         // Act
-        var result = await sutProvider.Sut.TwoFactorIsEnabledVNextAsync(user);
+        var result = await sutProvider.Sut.TwoFactorIsEnabledAsync(user);
 
         // Assert
         Assert.False(result);
@@ -607,15 +633,19 @@ public class TwoFactorIsEnabledQueryTests
 
     [Theory]
     [BitAutoData]
-    public async Task TwoFactorIsEnabledVNextAsync_SingleUser_NullProviders_ReturnsFalse(
+    public async Task TwoFactorIsEnabledAsync_WhenPremiumAccessQueryEnabled_WithNullProviders_ReturnsFalse(
         SutProvider<TwoFactorIsEnabledQuery> sutProvider,
         User user)
     {
         // Arrange
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PremiumAccessQuery)
+            .Returns(true);
+
         user.TwoFactorProviders = null;
 
         // Act
-        var result = await sutProvider.Sut.TwoFactorIsEnabledVNextAsync(user);
+        var result = await sutProvider.Sut.TwoFactorIsEnabledAsync(user);
 
         // Assert
         Assert.False(result);
