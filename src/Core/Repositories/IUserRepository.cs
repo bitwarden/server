@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.Billing.Premium.Models;
+using Bit.Core.Entities;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 
@@ -36,6 +37,18 @@ public interface IUserRepository : IRepository<User, Guid>
     /// <returns>User data with calculated premium access; null if nothing is found</returns>
     [Obsolete("Use IUserService.CanAccessPremium instead. This method is only used when feature flag 'PremiumAccessQuery' is disabled.")]
     Task<UserWithCalculatedPremium?> GetCalculatedPremiumAsync(Guid userId);
+    /// <summary>
+    /// Retrieves premium access status for multiple users.
+    /// </summary>
+    /// <param name="ids">The user IDs to check</param>
+    /// <returns>Collection of UserPremiumAccess objects containing premium status information</returns>
+    Task<IEnumerable<UserPremiumAccess>> GetPremiumAccessByIdsAsync(IEnumerable<Guid> ids);
+    /// <summary>
+    /// Retrieves premium access status for a single user.
+    /// </summary>
+    /// <param name="userId">The user ID to check</param>
+    /// <returns>UserPremiumAccess object containing premium status information, or null if user not found</returns>
+    Task<UserPremiumAccess?> GetPremiumAccessAsync(Guid userId);
     /// <summary>
     /// Sets a new user key and updates all encrypted data.
     /// <para>Warning: Any user key encrypted data not included will be lost.</para>
