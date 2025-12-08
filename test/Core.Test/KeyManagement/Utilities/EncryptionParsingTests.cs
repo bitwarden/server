@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Utilities;
+using Bit.Test.Common.Constants;
 using Xunit;
 
 namespace Bit.Core.Test.KeyManagement.Utilities;
@@ -23,15 +24,16 @@ public class EncryptionParsingTests
     }
 
     [Theory]
-    [InlineData("0.foo", EncryptionType.AesCbc256_B64)]
-    [InlineData("1.bar", EncryptionType.AesCbc128_HmacSha256_B64)]
-    [InlineData("2.qux", EncryptionType.AesCbc256_HmacSha256_B64)]
-    [InlineData("3.any", EncryptionType.Rsa2048_OaepSha256_B64)]
-    [InlineData("4.any", EncryptionType.Rsa2048_OaepSha1_B64)]
-    [InlineData("5.any", EncryptionType.Rsa2048_OaepSha256_HmacSha256_B64)]
-    [InlineData("6.any", EncryptionType.Rsa2048_OaepSha1_HmacSha256_B64)]
-    [InlineData("7.any", EncryptionType.XChaCha20Poly1305_B64)]
-    [InlineData("2.", EncryptionType.AesCbc256_HmacSha256_B64)] // empty suffix still valid
+    [InlineData(TestEncryptionConstants.AES256_CBC_B64_Encstring, EncryptionType.AesCbc256_B64)]
+    [InlineData(TestEncryptionConstants.AES128_CBC_HMACSHA256_B64_Encstring, EncryptionType.AesCbc128_HmacSha256_B64)]
+    [InlineData(TestEncryptionConstants.AES256_CBC_HMAC_Encstring, EncryptionType.AesCbc256_HmacSha256_B64)]
+    [InlineData(TestEncryptionConstants.RSA2048_OAEPSHA256_B64_Encstring, EncryptionType.Rsa2048_OaepSha256_B64)]
+    [InlineData(TestEncryptionConstants.RSA2048_OAEPSHA1_B64_Encstring, EncryptionType.Rsa2048_OaepSha1_B64)]
+    [InlineData(TestEncryptionConstants.RSA2048_OAEPSHA256_HMACSHA256_B64_Encstring, EncryptionType.Rsa2048_OaepSha256_HmacSha256_B64)]
+    [InlineData(TestEncryptionConstants.RSA2048_OAEPSHA1_HMACSHA256_B64_Encstring, EncryptionType.Rsa2048_OaepSha1_HmacSha256_B64)]
+    [InlineData(TestEncryptionConstants.V2PrivateKey, EncryptionType.XChaCha20Poly1305_B64)]
+    [InlineData(TestEncryptionConstants.V2WrappedSigningKey, EncryptionType.XChaCha20Poly1305_B64)]
+    [InlineData(TestEncryptionConstants.AES256_CBC_HMAC_EmptySuffix, EncryptionType.AesCbc256_HmacSha256_B64)] // empty suffix still valid
     public void GetEncryptionType_WithValidString_ReturnsExpected(string input, EncryptionType expected)
     {
         var result = EncryptionParsing.GetEncryptionType(input);
