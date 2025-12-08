@@ -24,7 +24,7 @@ public interface IUserRepository : IRepository<User, Guid>
     /// Retrieves the data for the requested user IDs and includes an additional property indicating
     /// whether the user has premium access directly or through an organization.
     /// </summary>
-    [Obsolete("Use IUserService.CanAccessPremiumBulk instead. This method is only used when feature flag 'PremiumAccessQuery' is disabled.")]
+    [Obsolete("Use GetPremiumAccessByIdsAsync instead. This method is only used when feature flag 'PremiumAccessQuery' is disabled.")]
     Task<IEnumerable<UserWithCalculatedPremium>> GetManyWithCalculatedPremiumAsync(IEnumerable<Guid> ids);
     /// <summary>
     /// Retrieves the data for the requested user ID and includes additional property indicating
@@ -35,16 +35,18 @@ public interface IUserRepository : IRepository<User, Guid>
     /// </summary>
     /// <param name="userId">The user ID to retrieve data for.</param>
     /// <returns>User data with calculated premium access; null if nothing is found</returns>
-    [Obsolete("Use IUserService.CanAccessPremium instead. This method is only used when feature flag 'PremiumAccessQuery' is disabled.")]
+    [Obsolete("Use GetPremiumAccessAsync instead. This method is only used when feature flag 'PremiumAccessQuery' is disabled.")]
     Task<UserWithCalculatedPremium?> GetCalculatedPremiumAsync(Guid userId);
     /// <summary>
     /// Retrieves premium access status for multiple users.
+    /// For internal use - consumers should use IHasPremiumAccessQuery instead.
     /// </summary>
     /// <param name="ids">The user IDs to check</param>
     /// <returns>Collection of UserPremiumAccess objects containing premium status information</returns>
     Task<IEnumerable<UserPremiumAccess>> GetPremiumAccessByIdsAsync(IEnumerable<Guid> ids);
     /// <summary>
     /// Retrieves premium access status for a single user.
+    /// For internal use - consumers should use IHasPremiumAccessQuery instead.
     /// </summary>
     /// <param name="userId">The user ID to check</param>
     /// <returns>UserPremiumAccess object containing premium status information, or null if user not found</returns>
