@@ -36,6 +36,3 @@ public interface IHasPremiumAccessQuery
     /// <returns>Dictionary mapping user IDs to their premium access status (personal or through organization)</returns>
     Task<Dictionary<Guid, bool>> HasPremiumAccessAsync(IEnumerable<Guid> userIds);
 }
-
-
-
