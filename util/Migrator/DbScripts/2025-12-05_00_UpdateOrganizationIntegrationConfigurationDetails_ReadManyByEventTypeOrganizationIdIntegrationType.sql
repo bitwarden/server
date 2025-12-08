@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[OrganizationIntegrationConfigurationDetails_ReadManyByEventTypeOrganizationIdIntegrationType]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationIntegrationConfigurationDetails_ReadManyByEventTypeOrganizationIdIntegrationType]
     @EventType SMALLINT,
     @OrganizationId UNIQUEIDENTIFIER,
     @IntegrationType SMALLINT

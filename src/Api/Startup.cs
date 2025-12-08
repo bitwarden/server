@@ -226,7 +226,8 @@ public class Startup
             services.AddHostedService<Core.HostedServices.ApplicationCacheHostedService>();
         }
 
-        // Add Slack / Teams Services for OAuth API requests - if configured
+        // Add Event Integrations services
+        services.AddEventIntegrationsCommandsQueries(globalSettings);
         services.AddSlackService(globalSettings);
         services.AddTeamsService(globalSettings);
     }
