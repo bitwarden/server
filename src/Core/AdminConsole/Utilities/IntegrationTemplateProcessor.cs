@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 
 namespace Bit.Core.AdminConsole.Utilities;
 

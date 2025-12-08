@@ -44,6 +44,7 @@
     {
       matchPackageNames: ["https://github.com/bitwarden/sdk-internal.git"],
       groupName: "sdk-internal",
+      dependencyDashboardApproval: true
     },
     {
       matchManagers: ["dockerfile", "docker-compose"],
@@ -63,7 +64,6 @@
     },
     {
       matchPackageNames: [
-        "Azure.Extensions.AspNetCore.DataProtection.Blobs",
         "DuoUniversal",
         "Fido2.AspNet",
         "Duende.IdentityServer",
@@ -137,6 +137,7 @@
         "AspNetCoreRateLimit",
         "AspNetCoreRateLimit.Redis",
         "Azure.Data.Tables",
+        "Azure.Extensions.AspNetCore.DataProtection.Blobs",
         "Azure.Messaging.EventGrid",
         "Azure.Messaging.ServiceBus",
         "Azure.Storage.Blobs",

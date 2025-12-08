@@ -35,6 +35,8 @@ public static class PolicyServiceCollectionExtensions
         services.AddScoped<IPolicyValidator, MaximumVaultTimeoutPolicyValidator>();
         services.AddScoped<IPolicyValidator, UriMatchDefaultPolicyValidator>();
         services.AddScoped<IPolicyValidator, FreeFamiliesForEnterprisePolicyValidator>();
+        services.AddScoped<IPolicyValidator, BlockClaimedDomainAccountCreationPolicyValidator>();
+        services.AddScoped<IPolicyValidator, AutomaticUserConfirmationPolicyEventHandler>();
     }
 
     [Obsolete("Use AddPolicyUpdateEvents instead.")]
