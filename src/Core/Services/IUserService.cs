@@ -72,8 +72,8 @@ public interface IUserService
     /// This primarily serves as a means to communicate to the client when a user has inherited their premium status
     /// through an organization. Feature gating logic probably should not be behind this check.
     /// </summary>
-    /// <param name="user"></param>
-    /// <returns></returns>
+    /// <param name="user">user being acted on</param>
+    /// <returns>true if they can access premium because of organization membership; false otherwise.</returns>
     Task<bool> HasPremiumFromOrganization(User user);
     Task<string> GenerateSignInTokenAsync(User user, string purpose);
 
