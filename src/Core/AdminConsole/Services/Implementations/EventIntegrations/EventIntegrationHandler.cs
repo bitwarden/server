@@ -5,6 +5,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
@@ -17,8 +18,8 @@ public class EventIntegrationHandler<T>(
     IntegrationType integrationType,
     IEventIntegrationPublisher eventIntegrationPublisher,
     IIntegrationFilterService integrationFilterService,
-    IIntegrationConfigurationDetailsCache configurationCache,
     IFusionCache cache,
+    IOrganizationIntegrationConfigurationRepository configurationRepository,
     IGroupRepository groupRepository,
     IOrganizationRepository organizationRepository,
     IOrganizationUserRepository organizationUserRepository,
@@ -27,17 +28,7 @@ public class EventIntegrationHandler<T>(
 {
     public async Task HandleEventAsync(EventMessage eventMessage)
     {
-        if (eventMessage.OrganizationId is not Guid organizationId)
-        {
-            return;
-        }
-
-        var configurations = configurationCache.GetConfigurationDetails(
-            organizationId,
-            integrationType,
-            eventMessage.Type);
-
-        foreach (var configuration in configurations)
+        foreach (var configuration in await GetConfigurationDetailsListAsync(eventMessage))
         {
             try
             {
@@ -64,7 +55,7 @@ public class EventIntegrationHandler<T>(
                 {
                     IntegrationType = integrationType,
                     MessageId = messageId.ToString(),
-                    OrganizationId = organizationId.ToString(),
+                    OrganizationId = eventMessage.OrganizationId?.ToString(),
                     Configuration = config,
                     RenderedTemplate = renderedTemplate,
                     RetryCount = 0,
@@ -130,6 +121,37 @@ public class EventIntegrationHandler<T>(
         }
 
         return context;
+    }
+
+    private async Task<List<OrganizationIntegrationConfigurationDetails>> GetConfigurationDetailsListAsync(EventMessage eventMessage)
+    {
+        if (eventMessage.OrganizationId is not Guid organizationId)
+        {
+            return [];
+        }
+
+        List<OrganizationIntegrationConfigurationDetails> configurations = [];
+
+        var integrationTag = EventIntegrationsCacheConstants.BuildCacheTagForOrganizationIntegration(
+            organizationId,
+            integrationType
+        );
+
+        configurations.AddRange(await cache.GetOrSetAsync<List<OrganizationIntegrationConfigurationDetails>>(
+            key: EventIntegrationsCacheConstants.BuildCacheKeyForOrganizationIntegrationConfigurationDetails(
+                organizationId: organizationId,
+                integrationType: integrationType,
+                eventType: eventMessage.Type),
+            factory: async _ => await configurationRepository.GetManyByEventTypeOrganizationIdIntegrationType(
+                eventType: eventMessage.Type,
+                organizationId: organizationId,
+                integrationType: integrationType),
+            options: new FusionCacheEntryOptions(
+                duration: EventIntegrationsCacheConstants.DurationForOrganizationIntegrationConfigurationDetails),
+            tags: [integrationTag]
+        ));
+
+        return configurations;
     }
 
     private async Task<OrganizationUserUserDetails?> GetUserFromCacheAsync(Guid organizationId, Guid userId) =>

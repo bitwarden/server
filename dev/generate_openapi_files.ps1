@@ -18,11 +18,11 @@ if ($LASTEXITCODE -ne 0) {
 # Api internal & public
 Set-Location "../../src/Api"
 dotnet build
-dotnet swagger tofile --output "../../api.json" --host "https://api.bitwarden.com" "./bin/Debug/net8.0/Api.dll" "internal"
+dotnet swagger tofile --output "../../api.json" "./bin/Debug/net8.0/Api.dll" "internal"
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
-dotnet swagger tofile --output "../../api.public.json" --host "https://api.bitwarden.com" "./bin/Debug/net8.0/Api.dll" "public"
+dotnet swagger tofile --output "../../api.public.json" "./bin/Debug/net8.0/Api.dll" "public"
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }

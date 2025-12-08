@@ -1,6 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-public class GetUsersQueryParamModel
+namespace Bit.Scim.Models;
+
+public class GetGroupsQueryParamModel
 {
     public string Filter { get; init; } = string.Empty;
 
