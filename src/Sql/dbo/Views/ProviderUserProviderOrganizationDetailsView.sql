@@ -23,7 +23,7 @@ SELECT
     O.[UseCustomPermissions],
     O.[Seats],
     O.[MaxCollections],
-    O.[MaxStorageGb],
+    COALESCE(O.[MaxStorageGbIncreased], O.[MaxStorageGb]) AS [MaxStorageGb],
     O.[Identifier],
     PO.[Key],
     O.[PublicKey],
@@ -44,7 +44,8 @@ SELECT
     O.[UseOrganizationDomains],
     O.[UseAutomaticUserConfirmation],
     SS.[Enabled] SsoEnabled,
-    SS.[Data] SsoConfig
+    SS.[Data] SsoConfig,
+    O.[UsePhishingBlocker]
 FROM
     [dbo].[ProviderUser] PU
 INNER JOIN

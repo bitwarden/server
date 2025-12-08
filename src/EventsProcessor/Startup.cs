@@ -1,5 +1,4 @@
 ﻿using System.Globalization;
-using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 using Microsoft.IdentityModel.Logging;
@@ -37,14 +36,9 @@ public class Startup
         services.AddHostedService<AzureQueueHostedService>();
     }
 
-    public void Configure(
-        IApplicationBuilder app,
-        IWebHostEnvironment env,
-        IHostApplicationLifetime appLifetime,
-        GlobalSettings globalSettings)
+    public void Configure(IApplicationBuilder app)
     {
         IdentityModelEventSource.ShowPII = true;
-        app.UseSerilog(env, appLifetime, globalSettings);
         // Add general security headers
         app.UseMiddleware<SecurityHeadersMiddleware>();
         app.UseRouting();

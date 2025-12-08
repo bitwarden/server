@@ -36,6 +36,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         IEventService eventService,
         IDeviceValidator deviceValidator,
         ITwoFactorAuthenticationValidator twoFactorAuthenticationValidator,
+        ISsoRequestValidator ssoRequestValidator,
         IOrganizationUserRepository organizationUserRepository,
         ILogger<CustomTokenRequestValidator> logger,
         ICurrentContext currentContext,
@@ -56,6 +57,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             eventService,
             deviceValidator,
             twoFactorAuthenticationValidator,
+            ssoRequestValidator,
             organizationUserRepository,
             logger,
             currentContext,
@@ -159,16 +161,16 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         }
 
         // Key connector data should have already been set in the decryption options
-        // for backwards compatibility we set them this way too. We can eventually get rid of this
-        // when all clients don't read them from the existing locations.
+        // for backwards compatibility we set them this way too. We can eventually get rid of this once we clean up
+        // ResetMasterPassword
         if (!context.Result.CustomResponse.TryGetValue("UserDecryptionOptions", out var userDecryptionOptionsObj) ||
             userDecryptionOptionsObj is not UserDecryptionOptions userDecryptionOptions)
         {
             return Task.CompletedTask;
         }
+
         if (userDecryptionOptions is { KeyConnectorOption: { } })
         {
-            context.Result.CustomResponse["KeyConnectorUrl"] = userDecryptionOptions.KeyConnectorOption.KeyConnectorUrl;
             context.Result.CustomResponse["ResetMasterPassword"] = false;
         }
 

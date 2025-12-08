@@ -17,16 +17,17 @@ public class OrganizationIntegrationConfigurationRepository : Repository<Core.Ad
         : base(serviceScopeFactory, mapper, context => context.OrganizationIntegrationConfigurations)
     { }
 
-    public async Task<List<OrganizationIntegrationConfigurationDetails>> GetConfigurationDetailsAsync(
-        Guid organizationId,
-        IntegrationType integrationType,
-        EventType eventType)
+    public async Task<List<OrganizationIntegrationConfigurationDetails>>
+        GetManyByEventTypeOrganizationIdIntegrationType(EventType eventType, Guid organizationId,
+            IntegrationType integrationType)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
             var query = new OrganizationIntegrationConfigurationDetailsReadManyByEventTypeOrganizationIdIntegrationTypeQuery(
-                organizationId, eventType, integrationType
+                organizationId,
+                eventType,
+                integrationType
                 );
             return await query.Run(dbContext).ToListAsync();
         }

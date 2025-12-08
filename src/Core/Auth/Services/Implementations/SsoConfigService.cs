@@ -5,7 +5,6 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
@@ -26,8 +25,6 @@ public class SsoConfigService : ISsoConfigService
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IEventService _eventService;
-    private readonly IFeatureService _featureService;
-    private readonly ISavePolicyCommand _savePolicyCommand;
     private readonly IVNextSavePolicyCommand _vNextSavePolicyCommand;
 
     public SsoConfigService(
@@ -36,8 +33,6 @@ public class SsoConfigService : ISsoConfigService
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         IEventService eventService,
-        IFeatureService featureService,
-        ISavePolicyCommand savePolicyCommand,
         IVNextSavePolicyCommand vNextSavePolicyCommand)
     {
         _ssoConfigRepository = ssoConfigRepository;
@@ -45,8 +40,6 @@ public class SsoConfigService : ISsoConfigService
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
         _eventService = eventService;
-        _featureService = featureService;
-        _savePolicyCommand = savePolicyCommand;
         _vNextSavePolicyCommand = vNextSavePolicyCommand;
     }
 
@@ -97,19 +90,10 @@ public class SsoConfigService : ISsoConfigService
                 Enabled = true
             };
 
-            if (_featureService.IsEnabled(FeatureFlagKeys.PolicyValidatorsRefactor))
-            {
-                var performedBy = new SystemUser(EventSystemUser.Unknown);
-                await _vNextSavePolicyCommand.SaveAsync(new SavePolicyModel(singleOrgPolicy, performedBy));
-                await _vNextSavePolicyCommand.SaveAsync(new SavePolicyModel(resetPasswordPolicy, performedBy));
-                await _vNextSavePolicyCommand.SaveAsync(new SavePolicyModel(requireSsoPolicy, performedBy));
-            }
-            else
-            {
-                await _savePolicyCommand.SaveAsync(singleOrgPolicy);
-                await _savePolicyCommand.SaveAsync(resetPasswordPolicy);
-                await _savePolicyCommand.SaveAsync(requireSsoPolicy);
-            }
+            var performedBy = new SystemUser(EventSystemUser.Unknown);
+            await _vNextSavePolicyCommand.SaveAsync(new SavePolicyModel(singleOrgPolicy, performedBy));
+            await _vNextSavePolicyCommand.SaveAsync(new SavePolicyModel(resetPasswordPolicy, performedBy));
+            await _vNextSavePolicyCommand.SaveAsync(new SavePolicyModel(requireSsoPolicy, performedBy));
         }
 
         await LogEventsAsync(config, oldConfig);
