@@ -366,7 +366,7 @@ public class UserRepositoryTests
             SecurityStateData = new SecurityStateData
             {
                 SecurityState = "v2-security-state",
-                SecurityVersion = 1
+                SecurityVersion = 2
             }
         };
 
@@ -381,6 +381,6 @@ public class UserRepositoryTests
         Assert.Equal("v2-wrapped-private-key", updatedSqlUser.PrivateKey);
         Assert.Equal("v2-signed-public-key", updatedSqlUser.SignedPublicKey);
         Assert.Equal("v2-security-state", updatedSqlUser.SecurityState);
-        Assert.Equal(1, updatedSqlUser.SecurityVersion);
+        Assert.Equal(2, updatedSqlUser.SecurityVersion);
     }
 }
