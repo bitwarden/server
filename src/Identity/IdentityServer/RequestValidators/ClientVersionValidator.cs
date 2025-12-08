@@ -41,10 +41,6 @@ public class ClientVersionValidator(
 
         Version? clientVersion = currentContext.ClientVersion;
 
-        // Determine the minimum version client that a user needs. If no V2 encryption detected then
-        // no validation needs to occur, which is why min version number can be null.
-        Version? minVersion = user.HasV2Encryption() ? Constants.MinimumClientVersionForV2Encryption : null;
-
         // Deny access if the client version headers are missing.
         // We want to establish a strict contract with clients that if they omit this header,
         // then the server cannot guarantee that a client won't do harm to a user's data
@@ -54,6 +50,10 @@ public class ClientVersionValidator(
             FillRequestContextWithErrorData(requestContext, "version_header_missing", _versionHeaderMissing);
             return false;
         }
+
+        // Determine the minimum version client that a user needs. If no V2 encryption detected then
+        // no validation needs to occur, which is why min version number can be null.
+        Version? minVersion = user.HasV2Encryption() ? Constants.MinimumClientVersionForV2Encryption : null;
 
         // If min version is null then we know that the user had an encryption
         // configuration that doesn't require a minimum version. Allowing through.
