@@ -142,6 +142,7 @@ public static class FeatureFlagKeys
     public const string PM23845_VNextApplicationCache = "pm-24957-refactor-memory-application-cache";
     public const string BlockClaimedDomainAccountCreation = "pm-28297-block-uninvited-claimed-domain-registration";
     public const string IncreaseBulkReinviteLimitForCloud = "pm-28251-increase-bulk-reinvite-limit-for-cloud";
+    public const string BulkRevokeUsersV2 = "pm-28456-bulk-revoke-users-v2";
 
     /* Architecture */
     public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";
@@ -155,7 +156,6 @@ public static class FeatureFlagKeys
     public const string SetInitialPasswordRefactor = "pm-16117-set-initial-password-refactor";
     public const string ChangeExistingPasswordRefactor = "pm-16117-change-existing-password-refactor";
     public const string Otp6Digits = "pm-18612-otp-6-digits";
-    public const string FailedTwoFactorEmail = "pm-24425-send-2fa-failed-email";
     public const string PM24579_PreventSsoOnExistingNonCompliantUsers = "pm-24579-prevent-sso-on-existing-non-compliant-users";
     public const string DisableAlternateLoginMethods = "pm-22110-disable-alternate-login-methods";
     public const string PM23174ManageAccountRecoveryPermissionDrivesTheNeedToSetMasterPassword =
@@ -242,15 +242,14 @@ public static class FeatureFlagKeys
     /* Vault Team */
     public const string CipherKeyEncryption = "cipher-key-encryption";
     public const string PM19941MigrateCipherDomainToSdk = "pm-19941-migrate-cipher-domain-to-sdk";
-    public const string EndUserNotifications = "pm-10609-end-user-notifications";
     public const string PhishingDetection = "phishing-detection";
     public const string RemoveCardItemTypePolicy = "pm-16442-remove-card-item-type-policy";
     public const string PM22134SdkCipherListView = "pm-22134-sdk-cipher-list-view";
-    public const string PM19315EndUserActivationMvp = "pm-19315-end-user-activation-mvp";
     public const string PM22136_SdkCipherEncryption = "pm-22136-sdk-cipher-encryption";
     public const string PM23904_RiskInsightsForPremium = "pm-23904-risk-insights-for-premium";
     public const string PM25083_AutofillConfirmFromSearch = "pm-25083-autofill-confirm-from-search";
     public const string VaultLoadingSkeletons = "pm-25081-vault-skeleton-loaders";
+    public const string BrowserPremiumSpotlight = "pm-23384-browser-premium-spotlight";
 
     /* Innovation Team */
     public const string ArchiveVaultItems = "pm-19148-innovation-archive";

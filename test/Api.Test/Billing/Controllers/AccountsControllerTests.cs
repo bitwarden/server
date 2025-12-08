@@ -4,6 +4,7 @@ using Bit.Core;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models.Business;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Queries.Interfaces;
@@ -30,6 +31,7 @@ public class AccountsControllerTests : IDisposable
     private readonly IPaymentService _paymentService;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IUserAccountKeysQuery _userAccountKeysQuery;
+    private readonly ILicensingService _licensingService;
     private readonly GlobalSettings _globalSettings;
     private readonly AccountsController _sut;
 
@@ -40,13 +42,15 @@ public class AccountsControllerTests : IDisposable
         _paymentService = Substitute.For<IPaymentService>();
         _twoFactorIsEnabledQuery = Substitute.For<ITwoFactorIsEnabledQuery>();
         _userAccountKeysQuery = Substitute.For<IUserAccountKeysQuery>();
+        _licensingService = Substitute.For<ILicensingService>();
         _globalSettings = new GlobalSettings { SelfHosted = false };
 
         _sut = new AccountsController(
             _userService,
             _twoFactorIsEnabledQuery,
             _userAccountKeysQuery,
-            _featureService
+            _featureService,
+            _licensingService
         );
     }
 

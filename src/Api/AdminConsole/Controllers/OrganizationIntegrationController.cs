@@ -1,8 +1,8 @@
 ﻿using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
+using Bit.Core.AdminConsole.EventIntegrations.OrganizationIntegrations.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
-using Bit.Core.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -12,7 +12,10 @@ namespace Bit.Api.AdminConsole.Controllers;
 [Authorize("Application")]
 public class OrganizationIntegrationController(
     ICurrentContext currentContext,
-    IOrganizationIntegrationRepository integrationRepository) : Controller
+    ICreateOrganizationIntegrationCommand createCommand,
+    IUpdateOrganizationIntegrationCommand updateCommand,
+    IDeleteOrganizationIntegrationCommand deleteCommand,
+    IGetOrganizationIntegrationsQuery getQuery) : Controller
 {
     [HttpGet("")]
     public async Task<List<OrganizationIntegrationResponseModel>> GetAsync(Guid organizationId)
@@ -22,7 +25,7 @@ public class OrganizationIntegrationController(
             throw new NotFoundException();
         }
 
-        var integrations = await integrationRepository.GetManyByOrganizationAsync(organizationId);
+        var integrations = await getQuery.GetManyByOrganizationAsync(organizationId);
         return integrations
             .Select(integration => new OrganizationIntegrationResponseModel(integration))
             .ToList();
@@ -36,8 +39,10 @@ public class OrganizationIntegrationController(
             throw new NotFoundException();
         }
 
-        var integration = await integrationRepository.CreateAsync(model.ToOrganizationIntegration(organizationId));
-        return new OrganizationIntegrationResponseModel(integration);
+        var integration = model.ToOrganizationIntegration(organizationId);
+        var created = await createCommand.CreateAsync(integration);
+
+        return new OrganizationIntegrationResponseModel(created);
     }
 
     [HttpPut("{integrationId:guid}")]
@@ -48,14 +53,10 @@ public class OrganizationIntegrationController(
             throw new NotFoundException();
         }
 
-        var integration = await integrationRepository.GetByIdAsync(integrationId);
-        if (integration is null || integration.OrganizationId != organizationId)
-        {
-            throw new NotFoundException();
-        }
+        var integration = model.ToOrganizationIntegration(organizationId);
+        var updated = await updateCommand.UpdateAsync(organizationId, integrationId, integration);
 
-        await integrationRepository.ReplaceAsync(model.ToOrganizationIntegration(integration));
-        return new OrganizationIntegrationResponseModel(integration);
+        return new OrganizationIntegrationResponseModel(updated);
     }
 
     [HttpDelete("{integrationId:guid}")]
@@ -66,13 +67,7 @@ public class OrganizationIntegrationController(
             throw new NotFoundException();
         }
 
-        var integration = await integrationRepository.GetByIdAsync(integrationId);
-        if (integration is null || integration.OrganizationId != organizationId)
-        {
-            throw new NotFoundException();
-        }
-
-        await integrationRepository.DeleteAsync(integration);
+        await deleteCommand.DeleteAsync(organizationId, integrationId);
     }
 
     [HttpPost("{integrationId:guid}/delete")]
