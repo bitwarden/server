@@ -89,15 +89,26 @@ public class AutomaticallyConfirmOrganizationUsersValidator(
             .IsTwoFactorRequiredForOrganization(request.Organization!.Id);
     }
 
-    private async Task<Error?> OrganizationUserConformsToAutomaticUserConfirmationPolicyAsync(AutomaticallyConfirmOrganizationUserValidationRequest request)
+    /// <summary>
+    /// Validates whether the specified organization user complies with the automatic user confirmation policy.
+    /// This includes checks across all organizations the user is associated with to ensure they meet the compliance criteria.
+    ///
+    /// We are not checking single organization policy compliance here because automatically confirm users policy enforces
+    /// a stricter version and applies to all users. If you are compliant with Auto Confirm, you'll be in compliance with
+    /// Single Org.
+    /// </summary>
+    /// <param name="request">
+    /// The request model encapsulates the current organization, the user being validated, and all organization users associated
+    /// with that user.
+    /// </param>
+    /// <returns>
+    /// An <see cref="Error"/> if the user fails to meet the automatic user confirmation policy, or null if the validation succeeds.
+    /// </returns>
+    private async Task<Error?> OrganizationUserConformsToAutomaticUserConfirmationPolicyAsync(
+        AutomaticallyConfirmOrganizationUserValidationRequest request)
     {
         var allOrganizationUsersForUser = await organizationUserRepository
             .GetManyByUserAsync(request.OrganizationUser!.UserId!.Value);
-
-        if (allOrganizationUsersForUser.Count == 1)
-        {
-            return null;
-        }
 
         var user = await userService.GetUserByIdAsync(request.OrganizationUser!.UserId!.Value);
 
@@ -111,6 +122,4 @@ public class AutomaticallyConfirmOrganizationUsersValidator(
                 _ => null
             );
     }
-
-
 }

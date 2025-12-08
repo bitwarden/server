@@ -42,6 +42,10 @@ public class AutomaticUserConfirmationPolicyEnforcementValidatorTests
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
             .Returns(new AutomaticUserConfirmationPolicyRequirement([policyDetails]));
 
+        sutProvider.GetDependency<IProviderUserRepository>()
+            .GetManyByUserAsync(user.Id)
+            .Returns([]);
+
         // Act
         var result = await sutProvider.Sut.IsCompliantAsync(request);
 
@@ -92,10 +96,12 @@ public class AutomaticUserConfirmationPolicyEnforcementValidatorTests
     public async Task IsCompliantAsync_WithPolicyEnabledOnOtherOrganization_ReturnsOtherOrganizationDoesNotAllowOtherMembershipError(
         SutProvider<AutomaticUserConfirmationPolicyEnforcementValidator> sutProvider,
         OrganizationUser organizationUser,
+        OrganizationUser otherOrganizationUser,
         User user)
     {
         // Arrange
         organizationUser.UserId = user.Id;
+        otherOrganizationUser.UserId = user.Id;
 
         var otherOrgId = Guid.NewGuid();
         var policyDetails = new PolicyDetails
@@ -106,12 +112,16 @@ public class AutomaticUserConfirmationPolicyEnforcementValidatorTests
 
         var request = new AutomaticUserConfirmationPolicyEnforcementRequest(
             organizationUser.OrganizationId,
-            [organizationUser],
+            [organizationUser, otherOrganizationUser],
             user);
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
             .Returns(new AutomaticUserConfirmationPolicyRequirement([policyDetails]));
+
+        sutProvider.GetDependency<IProviderUserRepository>()
+            .GetManyByUserAsync(user.Id)
+            .Returns([]);
 
         // Act
         var result = await sutProvider.Sut.IsCompliantAsync(request);
@@ -132,6 +142,7 @@ public class AutomaticUserConfirmationPolicyEnforcementValidatorTests
         // Arrange
         // No policy enabled, so even with other org memberships, it should be valid
         organizationUser.UserId = user.Id;
+        otherOrgUser.UserId = user.Id;
 
         var request = new AutomaticUserConfirmationPolicyEnforcementRequest(
             organizationUser.OrganizationId,
@@ -141,6 +152,10 @@ public class AutomaticUserConfirmationPolicyEnforcementValidatorTests
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
             .Returns(new AutomaticUserConfirmationPolicyRequirement([])); // no policy details
+
+        sutProvider.GetDependency<IProviderUserRepository>()
+            .GetManyByUserAsync(user.Id)
+            .Returns([]);
 
         // Act
         var result = await sutProvider.Sut.IsCompliantAsync(request);

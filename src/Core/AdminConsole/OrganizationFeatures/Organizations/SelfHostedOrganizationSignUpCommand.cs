@@ -115,7 +115,7 @@ public class SelfHostedOrganizationSignUpCommand : ISelfHostedOrganizationSignUp
         {
             var requirement = await _policyRequirementQuery.GetAsync<AutomaticUserConfirmationPolicyRequirement>(ownerId);
 
-            if (requirement.UserBelongsToOrganizationWithAutomaticUserConfirmationEnabled())
+            if (requirement.CanCreateNewOrganization())
             {
                 throw new BadRequestException("You may not create an organization. You belong to an organization " +
                                               "which has a policy that prohibits you from being a member of any other organization.");

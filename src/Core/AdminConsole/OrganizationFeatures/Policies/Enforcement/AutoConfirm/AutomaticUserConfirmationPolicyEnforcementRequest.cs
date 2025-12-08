@@ -15,7 +15,7 @@ public record AutomaticUserConfirmationPolicyEnforcementRequest
     /// <summary>
     /// All organization users that match the provided user.
     /// </summary>
-    public IEnumerable<OrganizationUser> AllOrganizationUsers { get; }
+    public ICollection<OrganizationUser> AllOrganizationUsers { get; }
 
     /// <summary>
     /// User associated with the organization user to be confirmed
@@ -37,7 +37,7 @@ public record AutomaticUserConfirmationPolicyEnforcementRequest
         User user)
     {
         OrganizationId = organizationId;
-        AllOrganizationUsers = organizationUsers;
+        AllOrganizationUsers = organizationUsers.ToArray();
         User = user;
     }
 }

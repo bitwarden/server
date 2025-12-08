@@ -21,7 +21,9 @@ public class AutomaticUserConfirmationPolicyRequirement(IEnumerable<PolicyDetail
 {
     public bool CanBeGrantedEmergencyAccess() => policyDetails.Any();
 
-    public bool UserBelongsToOrganizationWithAutomaticUserConfirmationEnabled() => policyDetails.Any();
+    public bool CanJoinProvider() => policyDetails.Any();
+
+    public bool CanCreateNewOrganization() => policyDetails.Any();
 
     public bool IsEnabled(Guid organizationId) => policyDetails.Any(p => p.OrganizationId == organizationId);
 
