@@ -35,16 +35,7 @@ public class ClientVersionValidator(
         // the user not nullish checked. If they are null then the validator should fail.
         if (user == null)
         {
-            requestContext.ValidationErrorResult = new ValidationResult
-            {
-                Error = "no_user",
-                ErrorDescription = _noUserMessage,
-                IsError = true
-            };
-            requestContext.CustomResponse = new Dictionary<string, object>
-            {
-                { "ErrorModel", new ErrorResponseModel(_noUserMessage) }
-            };
+            FillContextWithErrorData(requestContext, "no_user", _noUserMessage);
             return false;
         }
 
@@ -55,20 +46,12 @@ public class ClientVersionValidator(
         Version? minVersion = user.HasV2Encryption() ? Constants.MinimumClientVersionForV2Encryption : null;
 
         // Deny access if the client version headers are missing.
-        // We want to establish a contract with clients that if they omit this heading that they
-        // will be susceptible to encryption failures.
+        // We want to establish a strict contract with clients that if they omit this header,
+        // then the server cannot guarantee that a client won't do harm to a user's data
+        // with stale encryption architecture.
         if (clientVersion == null)
         {
-            requestContext.ValidationErrorResult = new ValidationResult
-            {
-                Error = "version_header_missing",
-                ErrorDescription = _versionHeaderMissing,
-                IsError = true
-            };
-            requestContext.CustomResponse = new Dictionary<string, object>
-            {
-                { "ErrorModel", new ErrorResponseModel(_versionHeaderMissing) }
-            };
+            FillContextWithErrorData(requestContext, "version_header_missing", _versionHeaderMissing);
             return false;
         }
 
@@ -81,20 +64,28 @@ public class ClientVersionValidator(
 
         if (clientVersion < minVersion)
         {
-            requestContext.ValidationErrorResult = new ValidationResult
-            {
-                Error = "invalid_client_version",
-                ErrorDescription = _upgradeMessage,
-                IsError = true
-            };
-            requestContext.CustomResponse = new Dictionary<string, object>
-            {
-                { "ErrorModel", new ErrorResponseModel(_upgradeMessage) }
-            };
+            FillContextWithErrorData(requestContext, "invalid_client_version", _upgradeMessage);
             return false;
         }
 
         return true;
+    }
+
+    private void FillContextWithErrorData(
+        CustomValidatorRequestContext requestContext,
+        string errorId,
+        string errorMessage)
+    {
+        requestContext.ValidationErrorResult = new ValidationResult
+        {
+            Error = errorId,
+            ErrorDescription = errorMessage,
+            IsError = true
+        };
+        requestContext.CustomResponse = new Dictionary<string, object>
+        {
+            { "ErrorModel", new ErrorResponseModel(errorMessage) }
+        };
     }
 }
 
