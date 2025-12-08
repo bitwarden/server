@@ -893,13 +893,11 @@ public static class ServiceCollectionExtensions
                 integrationType: listenerConfiguration.IntegrationType,
                 eventIntegrationPublisher: provider.GetRequiredService<IEventIntegrationPublisher>(),
                 integrationFilterService: provider.GetRequiredService<IIntegrationFilterService>(),
-                configurationCache: provider.GetRequiredService<IIntegrationConfigurationDetailsCache>(),
                 cache: provider.GetRequiredKeyedService<IFusionCache>(EventIntegrationsCacheConstants.CacheName),
+                configurationRepository: provider.GetRequiredService<IOrganizationIntegrationConfigurationRepository>(),
                 groupRepository: provider.GetRequiredService<IGroupRepository>(),
                 organizationRepository: provider.GetRequiredService<IOrganizationRepository>(),
-                organizationUserRepository: provider.GetRequiredService<IOrganizationUserRepository>(),
-                logger: provider.GetRequiredService<ILogger<EventIntegrationHandler<TConfig>>>()
-            )
+                organizationUserRepository: provider.GetRequiredService<IOrganizationUserRepository>(), logger: provider.GetRequiredService<ILogger<EventIntegrationHandler<TConfig>>>())
         );
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService,
             AzureServiceBusEventListenerService<TListenerConfig>>(provider =>
@@ -941,10 +939,6 @@ public static class ServiceCollectionExtensions
         // Add common services
         services.AddDistributedCache(globalSettings);
         services.AddExtendedCache(EventIntegrationsCacheConstants.CacheName, globalSettings);
-        services.TryAddSingleton<IntegrationConfigurationDetailsCacheService>();
-        services.TryAddSingleton<IIntegrationConfigurationDetailsCache>(provider =>
-            provider.GetRequiredService<IntegrationConfigurationDetailsCacheService>());
-        services.AddHostedService(provider => provider.GetRequiredService<IntegrationConfigurationDetailsCacheService>());
         services.TryAddSingleton<IIntegrationFilterService, IntegrationFilterService>();
         services.TryAddKeyedSingleton<IEventWriteService, RepositoryEventWriteService>("persistent");
 
@@ -1024,13 +1018,11 @@ public static class ServiceCollectionExtensions
                 integrationType: listenerConfiguration.IntegrationType,
                 eventIntegrationPublisher: provider.GetRequiredService<IEventIntegrationPublisher>(),
                 integrationFilterService: provider.GetRequiredService<IIntegrationFilterService>(),
-                configurationCache: provider.GetRequiredService<IIntegrationConfigurationDetailsCache>(),
                 cache: provider.GetRequiredKeyedService<IFusionCache>(EventIntegrationsCacheConstants.CacheName),
+                configurationRepository: provider.GetRequiredService<IOrganizationIntegrationConfigurationRepository>(),
                 groupRepository: provider.GetRequiredService<IGroupRepository>(),
                 organizationRepository: provider.GetRequiredService<IOrganizationRepository>(),
-                organizationUserRepository: provider.GetRequiredService<IOrganizationUserRepository>(),
-                logger: provider.GetRequiredService<ILogger<EventIntegrationHandler<TConfig>>>()
-            )
+                organizationUserRepository: provider.GetRequiredService<IOrganizationUserRepository>(), logger: provider.GetRequiredService<ILogger<EventIntegrationHandler<TConfig>>>())
         );
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService,
             RabbitMqEventListenerService<TListenerConfig>>(provider =>

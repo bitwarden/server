@@ -20,10 +20,9 @@ public class OrganizationIntegrationConfigurationRepository : Repository<Organiz
         : base(connectionString, readOnlyConnectionString)
     { }
 
-    public async Task<List<OrganizationIntegrationConfigurationDetails>> GetConfigurationDetailsAsync(
-        Guid organizationId,
-        IntegrationType integrationType,
-        EventType eventType)
+    public async Task<List<OrganizationIntegrationConfigurationDetails>>
+        GetManyByEventTypeOrganizationIdIntegrationType(EventType eventType, Guid organizationId,
+            IntegrationType integrationType)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
