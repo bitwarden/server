@@ -61,7 +61,7 @@ class MjBwIconRow extends BodyComponent {
 
     const footAnchorElement =
       this.getAttribute("foot-url-text") && this.getAttribute("foot-url")
-        ? ` <mj-text css-class="mj-bw-icon-row-text" padding="5px 10px 0px 10px" ${BODY_TEXT_STYLES}>
+        ? `<mj-text css-class="mj-bw-icon-row-text" padding="5px 10px 0px 10px" ${BODY_TEXT_STYLES}>
                 <a href="${this.getAttribute("foot-url")}" class="link">
                     ${this.getAttribute("foot-url-text")}
                     <span style="text-decoration: none">
@@ -89,15 +89,11 @@ class MjBwIconRow extends BodyComponent {
             />
           </mj-column>
           <mj-column width="85%" vertical-align="top">
-
-              `+ headAnchorElement +`
-
+              ${headAnchorElement}
               <mj-text css-class="mj-bw-icon-row-text" padding="5px 10px 0px 10px" ${BODY_TEXT_STYLES}>
                 ${this.getAttribute("text")}
               </mj-text>
-
-              `+ footAnchorElement +`
-
+              ${footAnchorElement}
           </mj-column>
         </mj-group>
       </mj-section>
