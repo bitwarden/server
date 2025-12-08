@@ -1,4 +1,5 @@
-﻿using Bit.Core.Repositories;
+﻿using Bit.Core.Exceptions;
+using Bit.Core.Repositories;
 
 namespace Bit.Core.Billing.Premium.Queries;
 
@@ -18,7 +19,11 @@ public class HasPremiumAccessQuery : IHasPremiumAccessQuery
     public async Task<bool> HasPremiumAccessAsync(Guid userId)
     {
         var user = await _userRepository.GetCalculatedPremiumAsync(userId);
-        return user?.HasPremiumAccess ?? false;
+        if (user == null)
+        {
+            throw new NotFoundException();
+        }
+        return user.HasPremiumAccess;
     }
 
     public async Task<Dictionary<Guid, bool>> HasPremiumAccessAsync(IEnumerable<Guid> userIds)
@@ -32,7 +37,7 @@ public class HasPremiumAccessQuery : IHasPremiumAccessQuery
         var user = await _userRepository.GetCalculatedPremiumAsync(userId);
         if (user == null)
         {
-            return false;
+            throw new NotFoundException();
         }
 
         // Has org premium if has premium access but not personal premium
