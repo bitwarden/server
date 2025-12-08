@@ -148,9 +148,15 @@ public class TwoFactorIsEnabledQuery : ITwoFactorIsEnabledQuery
         foreach (var user in users)
         {
             var userTwoFactorProviders = usersTwoFactorProvidersMap[user.Id];
-            var twoFactorIsEnabled = userTwoFactorProviders.Any() &&
-                            (!premiumStatusMap.TryGetValue(user.Id, out var hasPremium) || hasPremium);
 
+            if (!userTwoFactorProviders.Any())
+            {
+                result.Add((user.Id, false));
+                continue;
+            }
+
+            // User has providers. If they're in the premium check map, verify premium status
+            var twoFactorIsEnabled = !premiumStatusMap.TryGetValue(user.Id, out var hasPremium) || hasPremium;
             result.Add((user.Id, twoFactorIsEnabled));
         }
 
