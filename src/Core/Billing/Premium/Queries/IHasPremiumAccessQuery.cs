@@ -1,38 +1,30 @@
 ﻿namespace Bit.Core.Billing.Premium.Queries;
 
 /// <summary>
-/// Query for checking premium access status for users.
-/// This is the centralized location for determining if a user can access premium features
-/// (either through personal subscription or organization membership).
-/// 
-/// <para>
-/// <strong>Note:</strong> This is different from checking User.Premium, which only indicates
-/// personal subscription status. Use these methods to check actual premium feature access.
-/// </para>
+/// Centralized query for checking if users have premium access through personal subscriptions or organizations.
+/// Note: Different from User.Premium which only checks personal subscriptions.
 /// </summary>
 public interface IHasPremiumAccessQuery
 {
     /// <summary>
-    /// Checks if a user has access to premium features (personal subscription or organization).
-    /// This is the definitive way to check premium access for a single user.
+    /// Checks if a user has premium access (personal or organization).
     /// </summary>
-    /// <param name="userId">The user ID to check for premium access</param>
-    /// <returns>True if user can access premium features; false otherwise</returns>
+    /// <param name="userId">The user ID to check</param>
+    /// <returns>True if user can access premium features</returns>
     Task<bool> HasPremiumAccessAsync(Guid userId);
 
     /// <summary>
-    /// Checks if a user has access to premium features through organization membership only.
-    /// This is useful for determining the source of premium access (personal vs organization).
+    /// Checks premium access for multiple users.
     /// </summary>
-    /// <param name="userId">The user ID to check for organization premium access</param>
-    /// <returns>True if user has premium access through any organization; false otherwise</returns>
-    Task<bool> HasPremiumFromOrganizationAsync(Guid userId);
+    /// <param name="userIds">The user IDs to check</param>
+    /// <returns>Dictionary mapping user IDs to their premium access status</returns>
+    Task<Dictionary<Guid, bool>> HasPremiumAccessAsync(IEnumerable<Guid> userIds);
 
     /// <summary>
-    /// Checks if multiple users have access to premium features (optimized bulk operation).
-    /// Uses existing stored procedure that calculates premium from personal subscriptions and organizations.
+    /// Checks if a user belongs to any organization that grants premium (enabled org with UsersGetPremium).
+    /// Returns true regardless of personal subscription. Useful for UI decisions like showing subscription options.
     /// </summary>
-    /// <param name="userIds">The user IDs to check for premium access</param>
-    /// <returns>Dictionary mapping user IDs to their premium access status (personal or through organization)</returns>
-    Task<Dictionary<Guid, bool>> HasPremiumAccessAsync(IEnumerable<Guid> userIds);
+    /// <param name="userId">The user ID to check</param>
+    /// <returns>True if user is in any organization that grants premium</returns>
+    Task<bool> HasPremiumFromOrganizationAsync(Guid userId);
 }

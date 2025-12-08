@@ -3,10 +3,6 @@ using Bit.Core.Repositories;
 
 namespace Bit.Core.Billing.Premium.Queries;
 
-/// <summary>
-/// Query for checking premium access status for users using the existing stored procedure
-/// that calculates premium access from personal subscriptions and organization memberships.
-/// </summary>
 public class HasPremiumAccessQuery : IHasPremiumAccessQuery
 {
     private readonly IUserRepository _userRepository;
@@ -18,17 +14,18 @@ public class HasPremiumAccessQuery : IHasPremiumAccessQuery
 
     public async Task<bool> HasPremiumAccessAsync(Guid userId)
     {
-        var user = await _userRepository.GetCalculatedPremiumAsync(userId);
+        var user = await _userRepository.GetPremiumAccessAsync(userId);
         if (user == null)
         {
             throw new NotFoundException();
         }
+
         return user.HasPremiumAccess;
     }
 
     public async Task<Dictionary<Guid, bool>> HasPremiumAccessAsync(IEnumerable<Guid> userIds)
     {
-        var usersWithPremium = await _userRepository.GetManyWithCalculatedPremiumAsync(userIds);
+        var usersWithPremium = await _userRepository.GetPremiumAccessByIdsAsync(userIds);
 
         if (usersWithPremium.Count() != userIds.Count())
         {
@@ -40,16 +37,12 @@ public class HasPremiumAccessQuery : IHasPremiumAccessQuery
 
     public async Task<bool> HasPremiumFromOrganizationAsync(Guid userId)
     {
-        var user = await _userRepository.GetCalculatedPremiumAsync(userId);
+        var user = await _userRepository.GetPremiumAccessAsync(userId);
         if (user == null)
         {
             throw new NotFoundException();
         }
 
-        // Has org premium if has premium access but not personal premium
-        return user.HasPremiumAccess && !user.Premium;
+        return user.OrganizationPremium;
     }
 }
-
-
-
