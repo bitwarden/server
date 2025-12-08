@@ -18,10 +18,7 @@ public interface IClientVersionValidator
 /// incentivize users to get on an updated client when their password encryption
 /// method has already been updated.
 ///
-/// If the header is omitted, then the validator returns that this request is valid.
-/// We do this because clients can always just put whatever they want in the header,
-/// and all we can do is try to prevent legitimate clients from ending up in a scenario
-/// where they cannot log in due to stale encryption versions and newer client architecture.
+/// If the header is omitted, then the validator returns that this request is invalid.
 /// </summary>
 public class ClientVersionValidator(
     ICurrentContext currentContext)
@@ -29,6 +26,7 @@ public class ClientVersionValidator(
 {
     private const string _upgradeMessage = "Please update your app to continue using Bitwarden";
     private const string _noUserMessage = "No user found while trying to validate client version";
+    private const string _versionHeaderMissing = "No client version header found, required to prevent encryption errors. Please confirm your client is supplying the header: \"Bitwarden-Client-Version\"";
 
     public bool ValidateAsync(User? user, CustomValidatorRequestContext requestContext)
     {
@@ -51,13 +49,32 @@ public class ClientVersionValidator(
         }
 
         Version? clientVersion = currentContext.ClientVersion;
+
+        // Determine the minimum version client that a user needs. If no V2 encryption detected then
+        // no validation needs to occur, which is why min version number can be null.
         Version? minVersion = user.HasV2Encryption() ? Constants.MinimumClientVersionForV2Encryption : null;
 
-        // Allow through if headers are missing.
-        // The minVersion should never be null because of where this validator is run. The user would
-        // have been determined to be null prior to reaching this point, but it is defensive programming
-        // to check for nullish values in case validators were to ever be reordered.
-        if (clientVersion == null || minVersion == null)
+        // Deny access if the client version headers are missing.
+        // We want to establish a contract with clients that if they omit this heading that they
+        // will be susceptible to encryption failures.
+        if (clientVersion == null)
+        {
+            requestContext.ValidationErrorResult = new ValidationResult
+            {
+                Error = "version_header_missing",
+                ErrorDescription = _versionHeaderMissing,
+                IsError = true
+            };
+            requestContext.CustomResponse = new Dictionary<string, object>
+            {
+                { "ErrorModel", new ErrorResponseModel(_versionHeaderMissing) }
+            };
+            return false;
+        }
+
+        // If min version is null then we know that the user had an encryption
+        // configuration that doesn't require a minimum version. Allowing through.
+        if (minVersion == null)
         {
             return true;
         }

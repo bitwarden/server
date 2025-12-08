@@ -108,7 +108,7 @@ public class ClientVersionValidatorTests
     }
 
     [Fact]
-    public void Allows_When_ClientVersionHeaderMissing()
+    public void Blocks_When_ClientVersionHeaderMissing()
     {
         // Arrange
         var sut = new ClientVersionValidator(MakeContext(null));
@@ -119,6 +119,9 @@ public class ClientVersionValidatorTests
         var ok = sut.ValidateAsync(user, ctx);
 
         // Assert
-        Assert.True(ok);
+        Assert.False(ok);
+        Assert.NotNull(ctx.ValidationErrorResult);
+        Assert.True(ctx.ValidationErrorResult.IsError);
+        Assert.Equal("version_header_missing", ctx.ValidationErrorResult.Error);
     }
 }
