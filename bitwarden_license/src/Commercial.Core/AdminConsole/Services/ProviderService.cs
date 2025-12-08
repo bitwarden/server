@@ -260,7 +260,7 @@ public class ProviderService : IProviderService
                 .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id);
 
             if (organizationAutoConfirmPolicyRequirement
-                .CanJoinProvider())
+                .CannotJoinProvider())
             {
                 throw new BadRequestException(new ProviderUsersCannotJoin().Message);
             }
@@ -317,7 +317,7 @@ public class ProviderService : IProviderService
                         .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id);
 
                     if (organizationAutoConfirmPolicyRequirement
-                        .CanJoinProvider())
+                        .CannotJoinProvider())
                     {
                         result.Add(Tuple.Create(providerUser, new ProviderUsersCannotJoin().Message));
                         continue;

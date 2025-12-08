@@ -125,7 +125,7 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
         {
             var requirement = await _policyRequirementQuery.GetAsync<AutomaticUserConfirmationPolicyRequirement>(ownerId);
 
-            if (requirement.CanCreateNewOrganization())
+            if (requirement.CannotCreateNewOrganization())
             {
                 throw new BadRequestException("You may not create an organization. You belong to an organization " +
                                               "which has a policy that prohibits you from being a member of any other organization.");
