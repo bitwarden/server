@@ -20,7 +20,7 @@ public class ArchiveCiphersCommandTest
     [BitAutoData(false, false, 1, 0, 1)]
     [BitAutoData(false, true, 1, 0, 1)]
     [BitAutoData(true, true, 1, 0, 1)]
-    public async Task ArchiveAsync_Works(
+    public async Task ArchiveManyAsync_Works(
         bool isEditable, bool hasOrganizationId,
         int cipherRepoCalls, int resultCountFromQuery, int pushNotificationsCalls,
         SutProvider<ArchiveCiphersCommand> sutProvider, CipherDetails cipher, User user)
@@ -49,15 +49,15 @@ public class ArchiveCiphersCommandTest
 
     [Theory]
     [BitAutoData]
-    public async Task ArchiveAsync_SetsArchivedDateOnReturnedCiphers(
+    public async Task ArchiveManyAsync_SetsArchivedDateOnReturnedCiphers(
         SutProvider<ArchiveCiphersCommand> sutProvider,
         CipherDetails cipher,
         User user)
     {
         // Arrange: make it archivable
         cipher.Edit = true;
-        cipher.OrganizationId = null;
-        cipher.ArchivedDate = null;
+        // Allow organization cipher to be archived in this test
+        cipher.OrganizationId = Guid.Parse("3f2504e0-4f89-11d3-9a0c-0305e82c3301");
 
         sutProvider.GetDependency<ICipherRepository>()
             .GetManyByUserIdAsync(user.Id)
