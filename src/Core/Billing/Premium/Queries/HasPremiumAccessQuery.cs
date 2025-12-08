@@ -29,6 +29,12 @@ public class HasPremiumAccessQuery : IHasPremiumAccessQuery
     public async Task<Dictionary<Guid, bool>> HasPremiumAccessAsync(IEnumerable<Guid> userIds)
     {
         var usersWithPremium = await _userRepository.GetManyWithCalculatedPremiumAsync(userIds);
+
+        if (usersWithPremium.Count() != userIds.Count())
+        {
+            throw new NotFoundException();
+        }
+
         return usersWithPremium.ToDictionary(u => u.Id, u => u.HasPremiumAccess);
     }
 
