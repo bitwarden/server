@@ -17,6 +17,7 @@ using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Models.Sales;
+using Bit.Core.Billing.Premium.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Models;
@@ -73,6 +74,7 @@ public class UserService : UserManager<User>, IUserService
     private readonly IDistributedCache _distributedCache;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IPricingClient _pricingClient;
+    private readonly IHasPremiumAccessQuery _hasPremiumAccessQuery;
 
     public UserService(
         IUserRepository userRepository,
@@ -108,7 +110,8 @@ public class UserService : UserManager<User>, IUserService
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IDistributedCache distributedCache,
         IPolicyRequirementQuery policyRequirementQuery,
-        IPricingClient pricingClient)
+        IPricingClient pricingClient,
+        IHasPremiumAccessQuery hasPremiumAccessQuery)
         : base(
               store,
               optionsAccessor,
@@ -149,6 +152,7 @@ public class UserService : UserManager<User>, IUserService
         _distributedCache = distributedCache;
         _policyRequirementQuery = policyRequirementQuery;
         _pricingClient = pricingClient;
+        _hasPremiumAccessQuery = hasPremiumAccessQuery;
     }
 
     public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -1112,6 +1116,11 @@ public class UserService : UserManager<User>, IUserService
             return false;
         }
 
+        if (_featureService.IsEnabled(FeatureFlagKeys.PremiumAccessQuery))
+        {
+            return user.Premium || await _hasPremiumAccessQuery.HasPremiumFromOrganizationAsync(userId.Value);
+        }
+
         return user.Premium || await HasPremiumFromOrganization(user);
     }
 
@@ -1121,6 +1130,11 @@ public class UserService : UserManager<User>, IUserService
         if (!userId.HasValue)
         {
             return false;
+        }
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.PremiumAccessQuery))
+        {
+            return await _hasPremiumAccessQuery.HasPremiumFromOrganizationAsync(userId.Value);
         }
 
         // orgUsers in the Invited status are not associated with a userId yet, so this will get

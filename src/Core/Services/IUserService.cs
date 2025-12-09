@@ -60,11 +60,10 @@ public interface IUserService
     /// <summary>
     /// Checks if the user has access to premium features, either through a personal subscription or through an organization.
     ///
-    /// This is the preferred way to definitively know if a user has access to premium features.
+    /// This is the preferred way to definitively know if a user has access to premium features when you already have the User object.
     /// </summary>
     /// <param name="user">user being acted on</param>
     /// <returns>true if they can access premium; false otherwise.</returns>
-    [Obsolete("Use IHasPremiumAccessQuery.HasPremiumAccessAsync instead. This method is only used when feature flag 'PremiumAccessQuery' is disabled.")]
     Task<bool> CanAccessPremium(User user);
 
     /// <summary>
@@ -75,7 +74,7 @@ public interface IUserService
     /// </summary>
     /// <param name="user">user being acted on</param>
     /// <returns>true if they can access premium because of organization membership; false otherwise.</returns>
-    [Obsolete("Use IHasPremiumAccessQuery.HasPremiumFromOrganizationAsync instead. This method is only used when feature flag 'PremiumAccessQuery' is disabled.")]
+    [Obsolete("Use IHasPremiumAccessQuery.HasPremiumFromOrganizationAsync instead. Redirects to new query when feature flag 'PremiumAccessQuery' is enabled.")]
     Task<bool> HasPremiumFromOrganization(User user);
     Task<string> GenerateSignInTokenAsync(User user, string purpose);
 
