@@ -53,7 +53,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
             Available = true,
             LegacyYear = null,
             Seat = new PremiumPurchasable { Price = 10M, StripePriceId = StripeConstants.Prices.PremiumAnnually },
-            Storage = new PremiumPurchasable { Price = 4M, StripePriceId = StripeConstants.Prices.StoragePlanPersonal }
+            Storage = new PremiumPurchasable { Price = 4M, StripePriceId = StripeConstants.Prices.StoragePlanPersonal, Provided = 1 }
         };
         _pricingClient.GetAvailablePremiumPlan().Returns(premiumPlan);
 
@@ -720,4 +720,63 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         await _stripeAdapter.DidNotReceive().SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>());
         await _userService.DidNotReceive().SaveUserAsync(Arg.Any<User>());
     }
+
+    [Theory, BitAutoData]
+    public async Task Run_WithAdditionalStorage_SetsCorrectMaxStorageGb(
+        User user,
+        TokenizedPaymentMethod paymentMethod,
+        BillingAddress billingAddress)
+    {
+        // Arrange
+        user.Premium = false;
+        user.GatewayCustomerId = null;
+        user.Email = "test@example.com";
+        paymentMethod.Type = TokenizablePaymentMethodType.Card;
+        paymentMethod.Token = "card_token_123";
+        billingAddress.Country = "US";
+        billingAddress.PostalCode = "12345";
+        const short additionalStorage = 2;
+
+        // Setup premium plan with 5GB provided storage
+        var premiumPlan = new PremiumPlan
+        {
+            Name = "Premium",
+            Available = true,
+            LegacyYear = null,
+            Seat = new PremiumPurchasable { Price = 10M, StripePriceId = StripeConstants.Prices.PremiumAnnually },
+            Storage = new PremiumPurchasable { Price = 4M, StripePriceId = StripeConstants.Prices.StoragePlanPersonal, Provided = 1 }
+        };
+        _pricingClient.GetAvailablePremiumPlan().Returns(premiumPlan);
+
+        var mockCustomer = Substitute.For<StripeCustomer>();
+        mockCustomer.Id = "cust_123";
+        mockCustomer.Address = new Address { Country = "US", PostalCode = "12345" };
+        mockCustomer.Metadata = new Dictionary<string, string>();
+
+        var mockSubscription = Substitute.For<StripeSubscription>();
+        mockSubscription.Id = "sub_123";
+        mockSubscription.Status = "active";
+        mockSubscription.Items = new StripeList<SubscriptionItem>
+        {
+            Data =
+            [
+                new SubscriptionItem
+                {
+                    CurrentPeriodEnd = DateTime.UtcNow.AddDays(30)
+                }
+            ]
+        };
+
+        _stripeAdapter.CustomerCreateAsync(Arg.Any<CustomerCreateOptions>()).Returns(mockCustomer);
+        _stripeAdapter.SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(mockSubscription);
+
+        // Act
+        var result = await _command.Run(user, paymentMethod, billingAddress, additionalStorage);
+
+        // Assert
+        Assert.True(result.IsT0);
+        Assert.Equal((short)3, user.MaxStorageGb); // 1 (provided) + 2 (additional) = 3
+        await _userService.Received(1).SaveUserAsync(user);
+    }
+
 }

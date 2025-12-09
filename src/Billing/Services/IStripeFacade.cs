@@ -78,6 +78,11 @@ public interface IStripeFacade
         RequestOptions requestOptions = null,
         CancellationToken cancellationToken = default);
 
+    IAsyncEnumerable<Subscription> ListSubscriptionsAutoPagingAsync(
+        SubscriptionListOptions options = null,
+        RequestOptions requestOptions = null,
+        CancellationToken cancellationToken = default);
+
     Task<Subscription> GetSubscription(
         string subscriptionId,
         SubscriptionGetOptions subscriptionGetOptions = null,
@@ -109,6 +114,12 @@ public interface IStripeFacade
     Task<TestClock> GetTestClock(
         string testClockId,
         TestClockGetOptions testClockGetOptions = null,
+        RequestOptions requestOptions = null,
+        CancellationToken cancellationToken = default);
+
+    Task<Coupon> GetCoupon(
+        string couponId,
+        CouponGetOptions couponGetOptions = null,
         RequestOptions requestOptions = null,
         CancellationToken cancellationToken = default);
 }

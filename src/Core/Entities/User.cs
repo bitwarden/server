@@ -200,11 +200,6 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
         return Id;
     }
 
-    public bool GetPremium()
-    {
-        return Premium;
-    }
-
     public int GetSecurityVersion()
     {
         // If no security version is set, it is version 1. The minimum initialized version is 2.

@@ -757,11 +757,6 @@ public class CiphersController : Controller
             }
         }
 
-        if (cipher.ArchivedDate.HasValue)
-        {
-            throw new BadRequestException("Cannot move an archived item to an organization.");
-        }
-
         ValidateClientVersionForFido2CredentialSupport(cipher);
 
         var original = cipher.Clone();
@@ -1271,11 +1266,6 @@ public class CiphersController : Controller
                 _logger.LogError("Cipher was not encrypted for the current user. CipherId: {CipherId}, CurrentUser: {CurrentUserId}, EncryptedFor: {EncryptedFor}", cipher.Id, userId, cipher.EncryptedFor);
                 throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
             }
-
-            if (cipher.ArchivedDate.HasValue)
-            {
-                throw new BadRequestException("Cannot move archived items to an organization.");
-            }
         }
 
         var shareCiphers = new List<(CipherDetails, DateTime?)>();
@@ -1287,11 +1277,6 @@ public class CiphersController : Controller
             }
 
             ValidateClientVersionForFido2CredentialSupport(existingCipher);
-
-            if (existingCipher.ArchivedDate.HasValue)
-            {
-                throw new BadRequestException("Cannot move archived items to an organization.");
-            }
 
             shareCiphers.Add((cipher.ToCipherDetails(existingCipher), cipher.LastKnownRevisionDate));
         }
@@ -1422,11 +1407,9 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        // Extract lastKnownRevisionDate from form data if present
-        DateTime? lastKnownRevisionDate = GetLastKnownRevisionDateFromForm();
         await Request.GetFileAsync(async (stream) =>
         {
-            await _cipherService.UploadFileForExistingAttachmentAsync(stream, cipher, attachmentData, lastKnownRevisionDate);
+            await _cipherService.UploadFileForExistingAttachmentAsync(stream, cipher, attachmentData);
         });
     }
 
@@ -1525,13 +1508,10 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        // Extract lastKnownRevisionDate from form data if present
-        DateTime? lastKnownRevisionDate = GetLastKnownRevisionDateFromForm();
-
         await Request.GetFileAsync(async (stream, fileName, key) =>
         {
             await _cipherService.CreateAttachmentShareAsync(cipher, stream, fileName, key,
-                Request.ContentLength.GetValueOrDefault(0), attachmentId, organizationId, lastKnownRevisionDate);
+                Request.ContentLength.GetValueOrDefault(0), attachmentId, organizationId);
         });
     }
 
