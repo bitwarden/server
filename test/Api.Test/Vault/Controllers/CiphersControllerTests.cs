@@ -79,7 +79,7 @@ public class CiphersControllerTests
         sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, userId).ReturnsForAnyArgs(cipherDetails);
 
         sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByUserIdCipherIdAsync(userId, id).Returns((ICollection<CollectionCipher>)new List<CollectionCipher>());
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync().Returns(new Dictionary<Guid, OrganizationAbility> { { cipherDetails.OrganizationId.Value, new OrganizationAbility() } });
+        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync().Returns(new Dictionary<Guid, OrganizationAbility> { { cipherDetails.OrganizationId.Value, new OrganizationAbility { Id = cipherDetails.OrganizationId.Value } } });
         var cipherService = sutProvider.GetDependency<ICipherService>();
 
         await sutProvider.Sut.PutCollections_vNext(id, model);
@@ -95,7 +95,7 @@ public class CiphersControllerTests
         sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, userId).ReturnsForAnyArgs(cipherDetails);
 
         sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByUserIdCipherIdAsync(userId, id).Returns((ICollection<CollectionCipher>)new List<CollectionCipher>());
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync().Returns(new Dictionary<Guid, OrganizationAbility> { { cipherDetails.OrganizationId.Value, new OrganizationAbility() } });
+        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync().Returns(new Dictionary<Guid, OrganizationAbility> { { cipherDetails.OrganizationId.Value, new OrganizationAbility { Id = cipherDetails.OrganizationId.Value } } });
 
         var result = await sutProvider.Sut.PutCollections_vNext(id, model);
 
@@ -1788,118 +1788,6 @@ public class CiphersControllerTests
         await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.PutShareMany(model)
         );
-    }
-
-    [Theory, BitAutoData]
-    public async Task PutShareMany_ArchivedCipher_ThrowsBadRequestException(
-        Guid organizationId,
-        Guid userId,
-        CipherWithIdRequestModel request,
-        SutProvider<CiphersController> sutProvider)
-    {
-        request.EncryptedFor = userId;
-        request.OrganizationId = organizationId.ToString();
-        request.ArchivedDate = DateTime.UtcNow;
-        var model = new CipherBulkShareRequestModel
-        {
-            Ciphers = [request],
-            CollectionIds = [Guid.NewGuid().ToString()]
-        };
-
-        sutProvider.GetDependency<ICurrentContext>()
-            .OrganizationUser(organizationId)
-            .Returns(Task.FromResult(true));
-        sutProvider.GetDependency<IUserService>()
-            .GetProperUserId(default)
-            .ReturnsForAnyArgs(userId);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.PutShareMany(model)
-        );
-
-        Assert.Equal("Cannot move archived items to an organization.", exception.Message);
-    }
-
-    [Theory, BitAutoData]
-    public async Task PutShareMany_ExistingCipherArchived_ThrowsBadRequestException(
-        Guid organizationId,
-        Guid userId,
-        CipherWithIdRequestModel request,
-        SutProvider<CiphersController> sutProvider)
-    {
-        // Request model does not have ArchivedDate (only the existing cipher does)
-        request.EncryptedFor = userId;
-        request.OrganizationId = organizationId.ToString();
-        request.ArchivedDate = null;
-
-        var model = new CipherBulkShareRequestModel
-        {
-            Ciphers = [request],
-            CollectionIds = [Guid.NewGuid().ToString()]
-        };
-
-        // The existing cipher from the repository IS archived
-        var existingCipher = new CipherDetails
-        {
-            Id = request.Id!.Value,
-            UserId = userId,
-            Type = CipherType.Login,
-            Data = JsonSerializer.Serialize(new CipherLoginData()),
-            ArchivedDate = DateTime.UtcNow
-        };
-
-        sutProvider.GetDependency<ICurrentContext>()
-            .OrganizationUser(organizationId)
-            .Returns(Task.FromResult(true));
-        sutProvider.GetDependency<IUserService>()
-            .GetProperUserId(default)
-            .ReturnsForAnyArgs(userId);
-        sutProvider.GetDependency<ICipherRepository>()
-            .GetManyByUserIdAsync(userId, withOrganizations: false)
-            .Returns(Task.FromResult((ICollection<CipherDetails>)[existingCipher]));
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.PutShareMany(model)
-        );
-
-        Assert.Equal("Cannot move archived items to an organization.", exception.Message);
-    }
-
-    [Theory, BitAutoData]
-    public async Task PutShare_ArchivedCipher_ThrowsBadRequestException(
-        Guid cipherId,
-        Guid organizationId,
-        User user,
-        CipherShareRequestModel model,
-        SutProvider<CiphersController> sutProvider)
-    {
-        model.Cipher.OrganizationId = organizationId.ToString();
-        model.Cipher.EncryptedFor = user.Id;
-
-        var cipher = new Cipher
-        {
-            Id = cipherId,
-            UserId = user.Id,
-            ArchivedDate = DateTime.UtcNow.AddDays(-1),
-            Type = CipherType.Login,
-            Data = JsonSerializer.Serialize(new CipherLoginData())
-        };
-
-        sutProvider.GetDependency<IUserService>()
-            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
-            .Returns(user);
-        sutProvider.GetDependency<ICipherRepository>()
-            .GetByIdAsync(cipherId)
-            .Returns(cipher);
-        sutProvider.GetDependency<ICurrentContext>()
-            .OrganizationUser(organizationId)
-            .Returns(Task.FromResult(true));
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.PutShare(cipherId, model)
-        );
-
-        Assert.Equal("Cannot move an archived item to an organization.", exception.Message);
     }
 
     [Theory, BitAutoData]

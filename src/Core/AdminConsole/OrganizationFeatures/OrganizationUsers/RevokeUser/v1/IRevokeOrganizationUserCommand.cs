@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v1;
 
 public interface IRevokeOrganizationUserCommand
 {

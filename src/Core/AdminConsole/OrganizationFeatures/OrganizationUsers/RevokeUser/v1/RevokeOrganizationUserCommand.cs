@@ -7,7 +7,7 @@ using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v1;
 
 public class RevokeOrganizationUserCommand(
     IEventService eventService,
