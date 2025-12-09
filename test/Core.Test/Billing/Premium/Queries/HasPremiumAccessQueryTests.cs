@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Billing.Premium.Models;
 using Bit.Core.Billing.Premium.Queries;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -79,10 +80,10 @@ public class HasPremiumAccessQueryTests
         // Arrange
         sutProvider.GetDependency<IUserRepository>()
             .GetPremiumAccessAsync(userId)
-            .Returns<UserPremiumAccess>(_ => throw new Bit.Core.Exceptions.NotFoundException());
+            .Returns<UserPremiumAccess>(_ => throw new NotFoundException());
 
         // Act & Assert
-        await Assert.ThrowsAsync<Bit.Core.Exceptions.NotFoundException>(
+        await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.HasPremiumAccessAsync(userId));
     }
 
@@ -174,10 +175,10 @@ public class HasPremiumAccessQueryTests
         // Arrange
         sutProvider.GetDependency<IUserRepository>()
             .GetPremiumAccessAsync(userId)
-            .Returns<UserPremiumAccess>(_ => throw new Bit.Core.Exceptions.NotFoundException());
+            .Returns<UserPremiumAccess>(_ => throw new NotFoundException());
 
         // Act & Assert
-        await Assert.ThrowsAsync<Bit.Core.Exceptions.NotFoundException>(
+        await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.HasPremiumFromOrganizationAsync(userId));
     }
 
@@ -201,32 +202,33 @@ public class HasPremiumAccessQueryTests
 
     [Theory, BitAutoData]
     public async Task HasPremiumAccessAsync_Bulk_ReturnsCorrectStatus(
-        List<UserPremiumAccess> users,
+        UserPremiumAccess user1,
+        UserPremiumAccess user2,
+        UserPremiumAccess user3,
         SutProvider<HasPremiumAccessQuery> sutProvider)
     {
         // Arrange
-        users[0].PersonalPremium = true;
-        users[0].OrganizationPremium = false;
-        users[1].PersonalPremium = false;
-        users[1].OrganizationPremium = false;
-        users[2].PersonalPremium = false;
-        users[2].OrganizationPremium = true;
+        user1.PersonalPremium = true;
+        user1.OrganizationPremium = false;
+        user2.PersonalPremium = false;
+        user2.OrganizationPremium = false;
+        user3.PersonalPremium = false;
+        user3.OrganizationPremium = true;
 
+        var users = new List<UserPremiumAccess> { user1, user2, user3 };
         var userIds = users.Select(u => u.Id).ToList();
 
         sutProvider.GetDependency<IUserRepository>()
-            .GetPremiumAccessByIdsAsync(userIds)
+            .GetPremiumAccessByIdsAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(userIds)))
             .Returns(users);
 
         // Act
         var result = await sutProvider.Sut.HasPremiumAccessAsync(userIds);
 
         // Assert
-        Assert.Equal(users.Count, result.Count);
-        Assert.True(result[users[0].Id]);  // Personal premium
-        Assert.False(result[users[1].Id]); // No premium
-        Assert.True(result[users[2].Id]);  // Organization premium
+        Assert.Equal(3, result.Count);
+        Assert.True(result[user1.Id]);  // Personal premium
+        Assert.False(result[user2.Id]); // No premium
+        Assert.True(result[user3.Id]);  // Organization premium
     }
 }
-
-
