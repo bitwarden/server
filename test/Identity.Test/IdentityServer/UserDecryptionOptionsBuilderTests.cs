@@ -6,7 +6,6 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Identity.IdentityServer;
 using Bit.Identity.Test.AutoFixture;
 using Bit.Identity.Utilities;

@@ -140,7 +140,7 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
         // user and organization user will have been codified.
         var organizationUser = await _organizationUserRepository.GetByOrganizationAsync(_ssoConfig.OrganizationId, _user.Id);
         var hasManageResetPasswordPermission = await EvaluateHasManageResetPasswordPermission();
-     
+
         // They are only able to be approved by an admin if they have enrolled is reset password
         var hasAdminApproval = organizationUser != null && !string.IsNullOrEmpty(organizationUser.ResetPasswordKey);
 
