@@ -74,7 +74,7 @@ public interface IUserService
     /// </summary>
     /// <param name="user">user being acted on</param>
     /// <returns>true if they can access premium because of organization membership; false otherwise.</returns>
-    [Obsolete("Use IHasPremiumAccessQuery.HasPremiumFromOrganizationAsync instead. Redirects to new query when feature flag 'PremiumAccessQuery' is enabled.")]
+    [Obsolete("Use IHasPremiumAccessQuery.HasPremiumFromOrganizationAsync instead. This method will be removed in a future version.")]
     Task<bool> HasPremiumFromOrganization(User user);
     Task<string> GenerateSignInTokenAsync(User user, string purpose);
 
