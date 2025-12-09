@@ -7,8 +7,6 @@ using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Identity;
 
-#nullable enable
-
 namespace Bit.Core.Entities;
 
 public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFactorProvidersUser
@@ -51,7 +49,7 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     public string? Key { get; set; }
     /// <summary>
     /// The raw public key, without a signature from the user's signature key.
-    /// </summary> 
+    /// </summary>
     public string? PublicKey { get; set; }
     /// <summary>
     /// User key wrapped private key.
@@ -102,6 +100,8 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     public DateTime? LastKeyRotationDate { get; set; }
     public DateTime? LastEmailChangeDate { get; set; }
     public bool VerifyDevices { get; set; } = true;
+    // PM-28827 Uncomment below line.
+    // public string? MasterPasswordSalt { get; set; }
 
     public string GetMasterPasswordSalt()
     {
