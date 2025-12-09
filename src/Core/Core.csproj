@@ -23,8 +23,8 @@
 
   <ItemGroup>
     <PackageReference Include="AspNetCoreRateLimit.Redis" Version="2.0.0" />
-    <PackageReference Include="AWSSDK.SimpleEmail" Version="4.0.1.3" />
-    <PackageReference Include="AWSSDK.SQS" Version="4.0.1.5" />
+    <PackageReference Include="AWSSDK.SimpleEmail" Version="4.0.2.5" />
+    <PackageReference Include="AWSSDK.SQS" Version="4.0.2.5" />
     <PackageReference Include="Azure.Data.Tables" Version="12.11.0" />
     <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" Version="1.3.4" />
     <PackageReference Include="Microsoft.AspNetCore.DataProtection" Version="8.0.10" />
@@ -54,15 +54,15 @@
     <PackageReference Include="Duende.IdentityServer" Version="7.2.4" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="AspNetCoreRateLimit" Version="5.0.0" />
-    <PackageReference Include="Braintree" Version="5.28.0" />
+    <PackageReference Include="Braintree" Version="5.36.0" />
     <PackageReference Include="Stripe.net" Version="48.5.0" />
     <PackageReference Include="Otp.NET" Version="1.4.0" />
     <PackageReference Include="YubicoDotNetClient" Version="1.2.0" />
     <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="8.0.10" />
     <PackageReference Include="LaunchDarkly.ServerSdk" Version="8.10.4" />
-    <PackageReference Include="Quartz" Version="3.14.0" />
-    <PackageReference Include="Quartz.Extensions.Hosting" Version="3.14.0" />
-    <PackageReference Include="Quartz.Extensions.DependencyInjection" Version="3.14.0" />
+    <PackageReference Include="Quartz" Version="3.15.1" />
+    <PackageReference Include="Quartz.Extensions.Hosting" Version="3.15.1" />
+    <PackageReference Include="Quartz.Extensions.DependencyInjection" Version="3.15.1" />
     <PackageReference Include="RabbitMQ.Client" Version="7.1.2" />
     <PackageReference Include="ZiggyCreatures.FusionCache" Version="2.0.2" />
     <PackageReference Include="ZiggyCreatures.FusionCache.Backplane.StackExchangeRedis" Version="2.0.2" />

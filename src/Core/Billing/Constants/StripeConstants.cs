@@ -12,6 +12,12 @@ public static class StripeConstants
         public const string UnrecognizedLocation = "unrecognized_location";
     }
 
+    public static class BillingReasons
+    {
+        public const string SubscriptionCreate = "subscription_create";
+        public const string SubscriptionCycle = "subscription_cycle";
+    }
+
     public static class CollectionMethod
     {
         public const string ChargeAutomatically = "charge_automatically";
