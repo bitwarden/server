@@ -3,6 +3,7 @@ using Bit.Core.Auth.Models;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
 using Bit.Core.Billing.Premium.Queries;
 using Bit.Core.Entities;
+using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
@@ -649,6 +650,32 @@ public class TwoFactorIsEnabledQueryTests
 
         // Assert
         Assert.False(result);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task TwoFactorIsEnabledAsync_WhenPremiumAccessQueryEnabled_UserNotFound_ThrowsNotFoundException(
+        SutProvider<TwoFactorIsEnabledQuery> sutProvider,
+        Guid userId)
+    {
+        // Arrange
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PremiumAccessQuery)
+            .Returns(true);
+
+        var testUser = new TestTwoFactorProviderUser
+        {
+            Id = userId,
+            TwoFactorProviders = null
+        };
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByIdAsync(userId)
+            .Returns((User)null);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(
+            async () => await sutProvider.Sut.TwoFactorIsEnabledAsync(testUser));
     }
 
     private class TestTwoFactorProviderUser : ITwoFactorProvidersUser

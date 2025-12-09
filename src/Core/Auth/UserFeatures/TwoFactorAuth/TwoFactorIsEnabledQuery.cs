@@ -6,6 +6,7 @@ using Bit.Core.Auth.Models;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Premium.Queries;
 using Bit.Core.Entities;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 
@@ -101,7 +102,7 @@ public class TwoFactorIsEnabledQuery : ITwoFactorIsEnabledQuery
             var userEntity = user as User ?? await _userRepository.GetByIdAsync(userId.Value);
             if (userEntity == null)
             {
-                return false;
+                throw new NotFoundException();
             }
 
             return await TwoFactorIsEnabledVNextAsync(userEntity);
