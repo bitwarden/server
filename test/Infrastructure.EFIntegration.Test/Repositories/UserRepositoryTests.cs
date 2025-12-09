@@ -336,10 +336,7 @@ public class UserRepositoryTests
             var createdUser = await sut.CreateAsync(user);
             sut.ClearChangeTracking();
 
-            createdUser.RevisionDate = DateTime.UtcNow;
-            createdUser.AccountRevisionDate = DateTime.UtcNow;
-
-            await sut.SetV2AccountCryptographicStateAsync(createdUser, accountKeysDataV1);
+            await sut.SetV2AccountCryptographicStateAsync(createdUser.Id, accountKeysDataV1);
             sut.ClearChangeTracking();
 
             var updatedUser = await sut.GetByIdAsync(createdUser.Id);
@@ -371,10 +368,7 @@ public class UserRepositoryTests
         };
 
         var sqlUser = await sqlUserRepo.CreateAsync(user);
-        sqlUser.RevisionDate = DateTime.UtcNow;
-        sqlUser.AccountRevisionDate = DateTime.UtcNow;
-
-        await sqlUserRepo.SetV2AccountCryptographicStateAsync(sqlUser, accountKeysDataV2);
+        await sqlUserRepo.SetV2AccountCryptographicStateAsync(sqlUser.Id, accountKeysDataV2);
 
         var updatedSqlUser = await sqlUserRepo.GetByIdAsync(sqlUser.Id);
         Assert.Equal("v2-public-key", updatedSqlUser.PublicKey);
