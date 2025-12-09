@@ -21,63 +21,52 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    BEGIN TRANSACTION
+    UPDATE
+        [dbo].[User]
+    SET
+        [PublicKey] = @PublicKey,
+        [PrivateKey] = @PrivateKey,
+        [SignedPublicKey] = @SignedPublicKey,
+        [SecurityState] = @SecurityState,
+        [SecurityVersion] = @SecurityVersion,
+        [RevisionDate] = @RevisionDate,
+        [AccountRevisionDate] = @AccountRevisionDate
+    WHERE
+        [Id] = @Id
 
-    BEGIN TRY
-        UPDATE
-            [dbo].[User]
+    IF EXISTS (SELECT 1 FROM [dbo].[UserSignatureKeyPair] WHERE [UserId] = @Id)
+    BEGIN
+        UPDATE [dbo].[UserSignatureKeyPair]
         SET
-            [PublicKey] = @PublicKey,
-            [PrivateKey] = @PrivateKey,
-            [SignedPublicKey] = @SignedPublicKey,
-            [SecurityState] = @SecurityState,
-            [SecurityVersion] = @SecurityVersion,
-            [RevisionDate] = @RevisionDate,
-            [AccountRevisionDate] = @AccountRevisionDate
+            [SignatureAlgorithm] = @SignatureAlgorithm,
+            [SigningKey] = @SigningKey,
+            [VerifyingKey] = @VerifyingKey,
+            [RevisionDate] = @RevisionDate
         WHERE
-            [Id] = @Id
-
-        IF EXISTS (SELECT 1 FROM [dbo].[UserSignatureKeyPair] WHERE [UserId] = @Id)
-        BEGIN
-            UPDATE [dbo].[UserSignatureKeyPair]
-            SET
-                [SignatureAlgorithm] = @SignatureAlgorithm,
-                [SigningKey] = @SigningKey,
-                [VerifyingKey] = @VerifyingKey,
-                [RevisionDate] = @RevisionDate
-            WHERE
-                [UserId] = @Id
-        END
-        ELSE
-        BEGIN
-            INSERT INTO [dbo].[UserSignatureKeyPair]
-            (
-                [Id],
-                [UserId],
-                [SignatureAlgorithm],
-                [SigningKey],
-                [VerifyingKey],
-                [CreationDate],
-                [RevisionDate]
-            )
-            VALUES
-            (
-                @SignatureKeyPairId,
-                @Id,
-                @SignatureAlgorithm,
-                @SigningKey,
-                @VerifyingKey,
-                @RevisionDate,
-                @RevisionDate
-            )
-        END
-
-        COMMIT TRANSACTION
-    END TRY
-    BEGIN CATCH
-        IF @@TRANCOUNT > 0
-            ROLLBACK TRANSACTION
-        THROW
-    END CATCH
+            [UserId] = @Id
+    END
+    ELSE
+    BEGIN
+        INSERT INTO [dbo].[UserSignatureKeyPair]
+        (
+            [Id],
+            [UserId],
+            [SignatureAlgorithm],
+            [SigningKey],
+            [VerifyingKey],
+            [CreationDate],
+            [RevisionDate]
+        )
+        VALUES
+        (
+            @SignatureKeyPairId,
+            @Id,
+            @SignatureAlgorithm,
+            @SigningKey,
+            @VerifyingKey,
+            @RevisionDate,
+            @RevisionDate
+        )
+    END
 END
 GO

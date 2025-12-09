@@ -242,7 +242,10 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         await transaction.CommitAsync();
     }
 
-    public async Task SetV2AccountCryptographicStateAsync(Guid userId, UserAccountKeysData accountKeysData)
+    public async Task SetV2AccountCryptographicStateAsync(
+        Guid userId,
+        UserAccountKeysData accountKeysData,
+        IEnumerable<UpdateUserData>? updateUserDataActions = null)
     {
         if (!accountKeysData.IsV2Encryption())
         {
@@ -301,6 +304,15 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         }
 
         await dbContext.SaveChangesAsync();
+
+        // Update additional user data within the same transaction
+        if (updateUserDataActions != null)
+        {
+            foreach (var action in updateUserDataActions)
+            {
+                await action();
+            }
+        }
         await transaction.CommitAsync();
     }
 

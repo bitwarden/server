@@ -288,7 +288,10 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         UnprotectData(user);
     }
 
-    public async Task SetV2AccountCryptographicStateAsync(Guid userId, UserAccountKeysData accountKeysData)
+    public async Task SetV2AccountCryptographicStateAsync(
+        Guid userId,
+        UserAccountKeysData accountKeysData,
+        IEnumerable<UpdateUserData>? updateUserDataActions = null)
     {
         if (!accountKeysData.IsV2Encryption())
         {
@@ -299,27 +302,47 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         var signatureKeyPairId = CoreHelpers.GenerateComb();
 
         await using var connection = new SqlConnection(ConnectionString);
-        await using var cmd = new SqlCommand("[dbo].[User_UpdateAccountCryptographicState]", connection);
-        cmd.CommandType = CommandType.StoredProcedure;
-        cmd.Parameters.Add("@Id", SqlDbType.UniqueIdentifier).Value = userId;
-        cmd.Parameters.Add("@PublicKey", SqlDbType.NVarChar).Value = accountKeysData.PublicKeyEncryptionKeyPairData.PublicKey;
-        cmd.Parameters.Add("@PrivateKey", SqlDbType.NVarChar).Value = accountKeysData.PublicKeyEncryptionKeyPairData.WrappedPrivateKey;
-        cmd.Parameters.Add("@SignedPublicKey", SqlDbType.NVarChar).Value =
-            accountKeysData.PublicKeyEncryptionKeyPairData.SignedPublicKey;
-        cmd.Parameters.Add("@SecurityState", SqlDbType.NVarChar).Value =
-            accountKeysData.SecurityStateData!.SecurityState;
-        cmd.Parameters.Add("@SecurityVersion", SqlDbType.Int).Value =
-            accountKeysData.SecurityStateData!.SecurityVersion;
-        cmd.Parameters.Add("@SignatureKeyPairId", SqlDbType.UniqueIdentifier).Value = signatureKeyPairId;
-        cmd.Parameters.Add("@SignatureAlgorithm", SqlDbType.TinyInt).Value = accountKeysData.SignatureKeyPairData!.SignatureAlgorithm;
-        cmd.Parameters.Add("@SigningKey", SqlDbType.VarChar).Value =
-            accountKeysData.SignatureKeyPairData!.WrappedSigningKey;
-        cmd.Parameters.Add("@VerifyingKey", SqlDbType.VarChar).Value =
-            accountKeysData.SignatureKeyPairData!.VerifyingKey;
-        cmd.Parameters.Add("@RevisionDate", SqlDbType.DateTime2).Value = timestamp;
-        cmd.Parameters.Add("@AccountRevisionDate", SqlDbType.DateTime2).Value = timestamp;
         await connection.OpenAsync();
-        await cmd.ExecuteNonQueryAsync();
+
+        await using var transaction = connection.BeginTransaction();
+        try
+        {
+            await connection.ExecuteAsync(
+                "[dbo].[User_UpdateAccountCryptographicState]",
+                new
+                {
+                    Id = userId,
+                    PublicKey = accountKeysData.PublicKeyEncryptionKeyPairData.PublicKey,
+                    PrivateKey = accountKeysData.PublicKeyEncryptionKeyPairData.WrappedPrivateKey,
+                    SignedPublicKey = accountKeysData.PublicKeyEncryptionKeyPairData.SignedPublicKey,
+                    SecurityState = accountKeysData.SecurityStateData!.SecurityState,
+                    SecurityVersion = accountKeysData.SecurityStateData!.SecurityVersion,
+                    SignatureKeyPairId = signatureKeyPairId,
+                    SignatureAlgorithm = accountKeysData.SignatureKeyPairData!.SignatureAlgorithm,
+                    SigningKey = accountKeysData.SignatureKeyPairData!.WrappedSigningKey,
+                    VerifyingKey = accountKeysData.SignatureKeyPairData!.VerifyingKey,
+                    RevisionDate = timestamp,
+                    AccountRevisionDate = timestamp
+                },
+                transaction: transaction,
+                commandType: CommandType.StoredProcedure);
+
+            //  Update user data that depends on cryptographic state
+            if (updateUserDataActions != null)
+            {
+                foreach (var action in updateUserDataActions)
+                {
+                    await action(connection, transaction);
+                }
+            }
+
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 
     public async Task<IEnumerable<User>> GetManyAsync(IEnumerable<Guid> ids)
