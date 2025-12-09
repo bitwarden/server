@@ -250,6 +250,7 @@ public static class FeatureFlagKeys
     public const string PM25083_AutofillConfirmFromSearch = "pm-25083-autofill-confirm-from-search";
     public const string VaultLoadingSkeletons = "pm-25081-vault-skeleton-loaders";
     public const string BrowserPremiumSpotlight = "pm-23384-browser-premium-spotlight";
+    public const string MigrateMyVaultToMyItems = "pm-20558-migrate-myvault-to-myitems";
 
     /* Innovation Team */
     public const string ArchiveVaultItems = "pm-19148-innovation-archive";
