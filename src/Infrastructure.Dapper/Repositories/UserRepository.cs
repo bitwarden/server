@@ -7,6 +7,7 @@ using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Dapper;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Data.SqlClient;
@@ -287,44 +288,38 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         UnprotectData(user);
     }
 
-    public async Task UpdateAccountCryptographicStateAsync(User user, UserAccountKeysData accountKeysData)
+    public async Task SetV2AccountCryptographicStateAsync(Guid userId, UserAccountKeysData accountKeysData)
     {
+        if (!accountKeysData.IsV2Encryption())
+        {
+            throw new ArgumentException("Provided account keys data is not valid V2 encryption data.", nameof(accountKeysData));
+        }
+
+        var timestamp = DateTime.UtcNow;
+        var signatureKeyPairId = CoreHelpers.GenerateComb();
+
         await using var connection = new SqlConnection(ConnectionString);
+        await using var cmd = new SqlCommand("[dbo].[User_UpdateAccountCryptographicState]", connection);
+        cmd.CommandType = CommandType.StoredProcedure;
+        cmd.Parameters.Add("@Id", SqlDbType.UniqueIdentifier).Value = userId;
+        cmd.Parameters.Add("@PublicKey", SqlDbType.NVarChar).Value = accountKeysData.PublicKeyEncryptionKeyPairData.PublicKey;
+        cmd.Parameters.Add("@PrivateKey", SqlDbType.NVarChar).Value = accountKeysData.PublicKeyEncryptionKeyPairData.WrappedPrivateKey;
+        cmd.Parameters.Add("@SignedPublicKey", SqlDbType.NVarChar).Value =
+            accountKeysData.PublicKeyEncryptionKeyPairData.SignedPublicKey;
+        cmd.Parameters.Add("@SecurityState", SqlDbType.NVarChar).Value =
+            accountKeysData.SecurityStateData!.SecurityState;
+        cmd.Parameters.Add("@SecurityVersion", SqlDbType.Int).Value =
+            accountKeysData.SecurityStateData!.SecurityVersion;
+        cmd.Parameters.Add("@SignatureKeyPairId", SqlDbType.UniqueIdentifier).Value = signatureKeyPairId;
+        cmd.Parameters.Add("@SignatureAlgorithm", SqlDbType.TinyInt).Value = accountKeysData.SignatureKeyPairData!.SignatureAlgorithm;
+        cmd.Parameters.Add("@SigningKey", SqlDbType.VarChar).Value =
+            accountKeysData.SignatureKeyPairData!.WrappedSigningKey;
+        cmd.Parameters.Add("@VerifyingKey", SqlDbType.VarChar).Value =
+            accountKeysData.SignatureKeyPairData!.VerifyingKey;
+        cmd.Parameters.Add("@RevisionDate", SqlDbType.DateTime2).Value = timestamp;
+        cmd.Parameters.Add("@AccountRevisionDate", SqlDbType.DateTime2).Value = timestamp;
         await connection.OpenAsync();
-
-        await using var transaction = await connection.BeginTransactionAsync();
-        try
-        {
-            await using (var cmd = new SqlCommand("[dbo].[User_UpdateAccountCryptographicState]", connection, (SqlTransaction)transaction))
-            {
-                cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.Add("@Id", SqlDbType.UniqueIdentifier).Value = user.Id;
-                cmd.Parameters.Add("@PublicKey", SqlDbType.NVarChar).Value = accountKeysData.PublicKeyEncryptionKeyPairData.PublicKey;
-                cmd.Parameters.Add("@PrivateKey", SqlDbType.NVarChar).Value = accountKeysData.PublicKeyEncryptionKeyPairData.WrappedPrivateKey;
-                cmd.Parameters.Add("@SignedPublicKey", SqlDbType.NVarChar).Value =
-                    accountKeysData.PublicKeyEncryptionKeyPairData.SignedPublicKey ?? (object)DBNull.Value;
-                cmd.Parameters.Add("@SecurityState", SqlDbType.NVarChar).Value =
-                    accountKeysData.SecurityStateData?.SecurityState ?? (object)DBNull.Value;
-                cmd.Parameters.Add("@SecurityVersion", SqlDbType.Int).Value =
-                    accountKeysData.SecurityStateData?.SecurityVersion ?? (object)DBNull.Value;
-                cmd.Parameters.Add("@SignatureAlgorithm", SqlDbType.TinyInt).Value =
-                    accountKeysData.SignatureKeyPairData != null ? (object)accountKeysData.SignatureKeyPairData.SignatureAlgorithm : DBNull.Value;
-                cmd.Parameters.Add("@SigningKey", SqlDbType.VarChar).Value =
-                    accountKeysData.SignatureKeyPairData?.WrappedSigningKey ?? (object)DBNull.Value;
-                cmd.Parameters.Add("@VerifyingKey", SqlDbType.VarChar).Value =
-                    accountKeysData.SignatureKeyPairData?.VerifyingKey ?? (object)DBNull.Value;
-                cmd.Parameters.Add("@RevisionDate", SqlDbType.DateTime2).Value = user.RevisionDate;
-                cmd.Parameters.Add("@AccountRevisionDate", SqlDbType.DateTime2).Value = user.AccountRevisionDate;
-                await cmd.ExecuteNonQueryAsync();
-            }
-
-            await transaction.CommitAsync();
-        }
-        catch
-        {
-            await transaction.RollbackAsync();
-            throw;
-        }
+        await cmd.ExecuteNonQueryAsync();
     }
 
     public async Task<IEnumerable<User>> GetManyAsync(IEnumerable<Guid> ids)

@@ -46,9 +46,9 @@ public interface IUserRepository : IRepository<User, Guid>
     Task UpdateUserKeyAndEncryptedDataV2Async(User user,
         IEnumerable<UpdateEncryptedDataForKeyRotation> updateDataActions);
     /// <summary>
-    /// Sets the account cryptographic state to a user in a single transaction. V1 and V2 account cryptographic states are supported,
-    /// and the data is created or replaced depending on whether it exists already.
+    /// Sets the account cryptographic state to a user in a single transaction. The provided
+    /// MUST be a V2 encryption state. Passing in a V1 encryption state will throw.
     /// </summary>
-    Task UpdateAccountCryptographicStateAsync(User user, UserAccountKeysData accountKeysData);
+    Task SetV2AccountCryptographicStateAsync(Guid userId, UserAccountKeysData accountKeysData);
     Task DeleteManyAsync(IEnumerable<User> users);
 }

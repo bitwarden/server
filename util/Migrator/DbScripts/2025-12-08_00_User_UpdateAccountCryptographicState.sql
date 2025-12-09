@@ -11,6 +11,7 @@ CREATE PROCEDURE [dbo].[User_UpdateAccountCryptographicState]
     @SignedPublicKey NVARCHAR(MAX) = NULL,
     @SecurityState NVARCHAR(MAX) = NULL,
     @SecurityVersion INT = NULL,
+    @SignatureKeyPairId UNIQUEIDENTIFIER = NULL,
     @SignatureAlgorithm TINYINT = NULL,
     @SigningKey VARCHAR(MAX) = NULL,
     @VerifyingKey VARCHAR(MAX) = NULL,
@@ -20,22 +21,22 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    UPDATE
-        [dbo].[User]
-    SET
-        [PublicKey] = @PublicKey,
-        [PrivateKey] = @PrivateKey,
-        [SignedPublicKey] = @SignedPublicKey,
-        [SecurityState] = @SecurityState,
-        [SecurityVersion] = @SecurityVersion,
-        [RevisionDate] = @RevisionDate,
-        [AccountRevisionDate] = @AccountRevisionDate
-    WHERE
-        [Id] = @Id
+    BEGIN TRANSACTION
 
-    -- Update or insert signature key pair if provided
-    IF @SignatureAlgorithm IS NOT NULL AND @SigningKey IS NOT NULL AND @VerifyingKey IS NOT NULL
-    BEGIN
+    BEGIN TRY
+        UPDATE
+            [dbo].[User]
+        SET
+            [PublicKey] = @PublicKey,
+            [PrivateKey] = @PrivateKey,
+            [SignedPublicKey] = @SignedPublicKey,
+            [SecurityState] = @SecurityState,
+            [SecurityVersion] = @SecurityVersion,
+            [RevisionDate] = @RevisionDate,
+            [AccountRevisionDate] = @AccountRevisionDate
+        WHERE
+            [Id] = @Id
+
         IF EXISTS (SELECT 1 FROM [dbo].[UserSignatureKeyPair] WHERE [UserId] = @Id)
         BEGIN
             UPDATE [dbo].[UserSignatureKeyPair]
@@ -61,7 +62,7 @@ BEGIN
             )
             VALUES
             (
-                NEWID(),
+                @SignatureKeyPairId,
                 @Id,
                 @SignatureAlgorithm,
                 @SigningKey,
@@ -70,6 +71,13 @@ BEGIN
                 @RevisionDate
             )
         END
-    END
+
+        COMMIT TRANSACTION
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION
+        THROW
+    END CATCH
 END
 GO

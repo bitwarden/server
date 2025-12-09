@@ -339,7 +339,7 @@ public class UserRepositoryTests
             createdUser.RevisionDate = DateTime.UtcNow;
             createdUser.AccountRevisionDate = DateTime.UtcNow;
 
-            await sut.UpdateAccountCryptographicStateAsync(createdUser, accountKeysDataV1);
+            await sut.SetV2AccountCryptographicStateAsync(createdUser, accountKeysDataV1);
             sut.ClearChangeTracking();
 
             var updatedUser = await sut.GetByIdAsync(createdUser.Id);
@@ -374,7 +374,7 @@ public class UserRepositoryTests
         sqlUser.RevisionDate = DateTime.UtcNow;
         sqlUser.AccountRevisionDate = DateTime.UtcNow;
 
-        await sqlUserRepo.UpdateAccountCryptographicStateAsync(sqlUser, accountKeysDataV2);
+        await sqlUserRepo.SetV2AccountCryptographicStateAsync(sqlUser, accountKeysDataV2);
 
         var updatedSqlUser = await sqlUserRepo.GetByIdAsync(sqlUser.Id);
         Assert.Equal("v2-public-key", updatedSqlUser.PublicKey);
