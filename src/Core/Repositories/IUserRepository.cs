@@ -24,7 +24,7 @@ public interface IUserRepository : IRepository<User, Guid>
     /// Retrieves the data for the requested user IDs and includes an additional property indicating
     /// whether the user has premium access directly or through an organization.
     /// </summary>
-    [Obsolete("Use GetPremiumAccessByIdsAsync instead. This method is only used when feature flag 'PremiumAccessQuery' is disabled.")]
+    [Obsolete("Use GetPremiumAccessByIdsAsync instead. Callers should use the new method when feature flag 'PremiumAccessQuery' is enabled.")]
     Task<IEnumerable<UserWithCalculatedPremium>> GetManyWithCalculatedPremiumAsync(IEnumerable<Guid> ids);
     /// <summary>
     /// Retrieves the data for the requested user ID and includes additional property indicating
@@ -35,7 +35,7 @@ public interface IUserRepository : IRepository<User, Guid>
     /// </summary>
     /// <param name="userId">The user ID to retrieve data for.</param>
     /// <returns>User data with calculated premium access; null if nothing is found</returns>
-    [Obsolete("Use GetPremiumAccessAsync instead. This method is only used when feature flag 'PremiumAccessQuery' is disabled.")]
+    [Obsolete("Use GetPremiumAccessAsync instead. Callers should use the new method when feature flag 'PremiumAccessQuery' is enabled.")]
     Task<UserWithCalculatedPremium?> GetCalculatedPremiumAsync(Guid userId);
     /// <summary>
     /// Retrieves premium access status for multiple users.
