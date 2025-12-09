@@ -25,9 +25,9 @@ public class RegisterFinishRequestModel : IValidatableObject
     public MasterPasswordAuthenticationData? MasterPasswordAuthenticationData { get; set; }
     public MasterPasswordUnlockData? MasterPasswordUnlockData { get; set; }
 
-    // PM-28143 - Made to be optional as migrating to MasterPasswordUnlockData
+    // PM-28143 - Remove line below (made optional during migration to MasterPasswordUnlockData
     [StringLength(1000)]
-    public required string? MasterPasswordHash { get; set; }
+    public string? MasterPasswordHash { get; set; }
 
     [StringLength(50)]
     public string? MasterPasswordHint { get; set; }
@@ -62,8 +62,8 @@ public class RegisterFinishRequestModel : IValidatableObject
         {
             Email = Email,
             MasterPasswordHint = MasterPasswordHint,
-            Kdf = MasterPasswordUnlockData?.Kdf.KdfType ?? Kdf ?? throw new Exception($"{nameof(Kdf)} is required"),
-            KdfIterations = MasterPasswordUnlockData?.Kdf.Iterations ?? KdfIterations ?? throw new Exception($"{nameof(KdfIterations)} is required"),
+            Kdf = MasterPasswordUnlockData?.Kdf.KdfType ?? Kdf ?? throw new Exception("KdfType couldn't be found on either the MasterPasswordUnlockData or the Kdf property passed in."),
+            KdfIterations = MasterPasswordUnlockData?.Kdf.Iterations ?? KdfIterations ?? throw new Exception("KdfIterations couldn't be found on either the MasterPasswordUnlockData or the KdfIterations property passed in."),
             KdfMemory = MasterPasswordUnlockData?.Kdf.Memory ?? KdfMemory,
             KdfParallelism = MasterPasswordUnlockData?.Kdf.Parallelism ?? KdfParallelism,
             // PM-28827 To be added when MasterPasswordSalt is added to the user column

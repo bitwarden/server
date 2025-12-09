@@ -145,37 +145,59 @@ public class AccountsController : Controller
     [HttpPost("register/finish")]
     public async Task<RegisterFinishResponseModel> PostRegisterFinish([FromBody] RegisterFinishRequestModel model)
     {
-        var user = model.ToUser();
+        User user;
+
+        try
+        {
+            user = model.ToUser();
+        }
+        catch (Exception e)
+        {
+            throw new BadRequestException(e.Message);
+        }
 
         // Users will either have an emailed token or an email verification token - not both.
         IdentityResult identityResult = null;
 
+        // PM-28143 - Just use the MasterPasswordAuthenticationData.MasterPasswordAuthenticationHash
+        string masterPasswordHash = model.MasterPasswordAuthenticationData?.MasterPasswordAuthenticationHash
+                                 ?? model.MasterPasswordHash ?? throw new BadRequestException("MasterPasswordHash couldn't be found on either the MasterPasswordAuthenticationData or the MasterPasswordHash property passed in.");
+
         switch (model.GetTokenType())
         {
             case RegisterFinishTokenType.EmailVerification:
-                identityResult =
-                    await _registerUserCommand.RegisterUserViaEmailVerificationToken(user, model.MasterPasswordHash,
-                        model.EmailVerificationToken);
-
+                identityResult = await _registerUserCommand.RegisterUserViaEmailVerificationToken(
+                    user,
+                    masterPasswordHash,
+                    model.EmailVerificationToken);
                 return ProcessRegistrationResult(identityResult, user);
             case RegisterFinishTokenType.OrganizationInvite:
-                identityResult = await _registerUserCommand.RegisterUserViaOrganizationInviteToken(user, model.MasterPasswordHash,
+                identityResult = await _registerUserCommand.RegisterUserViaOrganizationInviteToken(
+                    user,
+                    masterPasswordHash,
                     model.OrgInviteToken, model.OrganizationUserId);
 
                 return ProcessRegistrationResult(identityResult, user);
             case RegisterFinishTokenType.OrgSponsoredFreeFamilyPlan:
-                identityResult = await _registerUserCommand.RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(user, model.MasterPasswordHash, model.OrgSponsoredFreeFamilyPlanToken);
+                identityResult = await _registerUserCommand.RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(
+                    user,
+                    masterPasswordHash,
+                    model.OrgSponsoredFreeFamilyPlanToken);
 
                 return ProcessRegistrationResult(identityResult, user);
             case RegisterFinishTokenType.EmergencyAccessInvite:
                 Debug.Assert(model.AcceptEmergencyAccessId.HasValue);
-                identityResult = await _registerUserCommand.RegisterUserViaAcceptEmergencyAccessInviteToken(user, model.MasterPasswordHash,
+                identityResult = await _registerUserCommand.RegisterUserViaAcceptEmergencyAccessInviteToken(
+                    user,
+                    masterPasswordHash,
                     model.AcceptEmergencyAccessInviteToken, model.AcceptEmergencyAccessId.Value);
 
                 return ProcessRegistrationResult(identityResult, user);
             case RegisterFinishTokenType.ProviderInvite:
                 Debug.Assert(model.ProviderUserId.HasValue);
-                identityResult = await _registerUserCommand.RegisterUserViaProviderInviteToken(user, model.MasterPasswordHash,
+                identityResult = await _registerUserCommand.RegisterUserViaProviderInviteToken(
+                    user,
+                    masterPasswordHash,
                     model.ProviderInviteToken, model.ProviderUserId.Value);
 
                 return ProcessRegistrationResult(identityResult, user);
