@@ -183,6 +183,7 @@ public static class FeatureFlagKeys
     public const string MacOsNativeCredentialSync = "macos-native-credential-sync";
     public const string InlineMenuTotp = "inline-menu-totp";
     public const string WindowsDesktopAutotype = "windows-desktop-autotype";
+    public const string WindowsDesktopAutotypeGA = "windows-desktop-autotype-ga";
 
     /* Billing Team */
     public const string TrialPayment = "PM-8163-trial-payment";
