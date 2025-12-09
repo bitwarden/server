@@ -7,9 +7,15 @@ license-file.workspace = true
 keywords.workspace = true
 
 [dependencies]
-akd = { workspace = true }
+akd.workspace = true
 blake3 = "1.8.2"
-uuid = "1.18.1"
+config = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
+uuid = { version = "1.18.1", features = ["serde"] }
 
 [lints]
 workspace = true
+
+[features]
+config = ["dep:config", "dep:serde"]
+default = ["config"]

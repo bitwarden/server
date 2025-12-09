@@ -29,13 +29,14 @@
 
 //! Define the Bitwarden V1 configuration
 
+#[cfg(feature = "config")]
+pub mod config;
+
 use akd::configuration::Configuration;
 use akd::hash::{Digest, DIGEST_BYTES};
-use akd::{
-    AkdLabel, AkdValue, AzksValue, AzksValueWithEpoch, NodeLabel, VersionFreshness,
-};
-use uuid::Uuid;
+use akd::{AkdLabel, AkdValue, AzksValue, AzksValueWithEpoch, NodeLabel, VersionFreshness};
 use std::sync::OnceLock;
+use uuid::Uuid;
 
 /// Bitwarden installation ID for instance separation
 static INSTALLATION_CONTEXT: OnceLock<Vec<u8>> = OnceLock::new();
@@ -99,11 +100,7 @@ impl Configuration for BitwardenV1Configuration {
         AzksValue([0u8; 32])
     }
 
-    fn hash_leaf_with_value(
-        value: &akd::AkdValue,
-        epoch: u64,
-        nonce: &[u8],
-    ) -> AzksValueWithEpoch {
+    fn hash_leaf_with_value(value: &akd::AkdValue, epoch: u64, nonce: &[u8]) -> AzksValueWithEpoch {
         let commitment = Self::generate_commitment_from_nonce_client(value, nonce);
         Self::hash_leaf_with_commitment(commitment, epoch)
     }
