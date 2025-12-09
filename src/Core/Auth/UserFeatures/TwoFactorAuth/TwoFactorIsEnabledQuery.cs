@@ -91,14 +91,14 @@ public class TwoFactorIsEnabledQuery : ITwoFactorIsEnabledQuery
 
     public async Task<bool> TwoFactorIsEnabledAsync(ITwoFactorProvidersUser user)
     {
+        var userId = user.GetUserId();
+        if (!userId.HasValue)
+        {
+            return false;
+        }
+
         if (_featureService.IsEnabled(FeatureFlagKeys.PremiumAccessQuery))
         {
-            var userId = user.GetUserId();
-            if (!userId.HasValue)
-            {
-                return false;
-            }
-
             var userEntity = user as User ?? await _userRepository.GetByIdAsync(userId.Value);
             if (userEntity == null)
             {
@@ -108,17 +108,11 @@ public class TwoFactorIsEnabledQuery : ITwoFactorIsEnabledQuery
             return await TwoFactorIsEnabledVNextAsync(userEntity);
         }
 
-        var id = user.GetUserId();
-        if (!id.HasValue)
-        {
-            return false;
-        }
-
         return await TwoFactorEnabledAsync(
             user.GetTwoFactorProviders(),
             async () =>
             {
-                var calcUser = await _userRepository.GetCalculatedPremiumAsync(id.Value);
+                var calcUser = await _userRepository.GetCalculatedPremiumAsync(userId.Value);
                 return calcUser?.HasPremiumAccess ?? false;
             });
     }
