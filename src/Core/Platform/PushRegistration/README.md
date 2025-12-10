@@ -69,7 +69,7 @@ When we register a device with Azure Notification Hub we include the following t
 
 - User ID
 - Client Type (Web, Desktop, Mobile, etc)
-- Organization ID's of the which the user is a confirmed member
+- Organization IDs of which the user is a confirmed member
 - ID of the self-hosted installation if this device was relayed to us
 - Device identifier
 
