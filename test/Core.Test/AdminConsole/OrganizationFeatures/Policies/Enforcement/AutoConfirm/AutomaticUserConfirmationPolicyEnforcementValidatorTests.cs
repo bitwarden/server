@@ -19,43 +19,7 @@ public class AutomaticUserConfirmationPolicyEnforcementValidatorTests
 {
     [Theory]
     [BitAutoData]
-    public async Task IsCompliantAsync_WithPolicyEnabledOnSameOrganizationButNoOtherOrgs_ReturnsValid(
-        SutProvider<AutomaticUserConfirmationPolicyEnforcementValidator> sutProvider,
-        OrganizationUser organizationUser,
-        User user)
-    {
-        // Arrange
-        organizationUser.UserId = user.Id;
-
-        var policyDetails = new PolicyDetails
-        {
-            OrganizationId = organizationUser.OrganizationId,
-            PolicyType = PolicyType.AutomaticUserConfirmation
-        };
-
-        var request = new AutomaticUserConfirmationPolicyEnforcementRequest(
-            organizationUser.OrganizationId,
-            [organizationUser],
-            user);
-
-        sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
-            .Returns(new AutomaticUserConfirmationPolicyRequirement([policyDetails]));
-
-        sutProvider.GetDependency<IProviderUserRepository>()
-            .GetManyByUserAsync(user.Id)
-            .Returns([]);
-
-        // Act
-        var result = await sutProvider.Sut.IsCompliantAsync(request);
-
-        // Assert
-        Assert.True(result.IsValid);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task IsCompliantAsync_WithUserIsAMemberOfAProvider_ReturnsProviderUsersCannotJoinError(
+    public async Task IsCompliantAsync_WithUserIsAMemberOfAProviderAndPolicyIsEnabled_ReturnsProviderUsersCannotJoinError(
         SutProvider<AutomaticUserConfirmationPolicyEnforcementValidator> sutProvider,
         OrganizationUser organizationUser,
         ProviderUser providerUser,
@@ -140,7 +104,6 @@ public class AutomaticUserConfirmationPolicyEnforcementValidatorTests
         User user)
     {
         // Arrange
-        // No policy enabled, so even with other org memberships, it should be valid
         organizationUser.UserId = user.Id;
         otherOrgUser.UserId = user.Id;
 
@@ -151,7 +114,7 @@ public class AutomaticUserConfirmationPolicyEnforcementValidatorTests
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
-            .Returns(new AutomaticUserConfirmationPolicyRequirement([])); // no policy details
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
 
         sutProvider.GetDependency<IProviderUserRepository>()
             .GetManyByUserAsync(user.Id)
@@ -173,7 +136,7 @@ public class AutomaticUserConfirmationPolicyEnforcementValidatorTests
         ProviderUser providerUser,
         User user)
     {
-        // Arrange - Set up conditions that would fail multiple checks
+        // Arrange
         var policyDetails = new PolicyDetails
         {
             OrganizationId = organizationUser.OrganizationId,
@@ -197,14 +160,14 @@ public class AutomaticUserConfirmationPolicyEnforcementValidatorTests
         // Act
         var result = await sutProvider.Sut.IsCompliantAsync(request);
 
-        // Assert - Should fail on the FIRST check Org user does not match request object
+        // Assert
         Assert.True(result.IsError);
         Assert.IsType<CurrentOrganizationUserIsNotPresentInRequest>(result.AsError);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task IsCompliantAsync_WithNoOtherOrganizationsAndNotAProvider_ReturnsValid(
+    public async Task IsCompliantAsync_WithPolicyIsEnabledNoOtherOrganizationsAndNotAProvider_ReturnsValid(
         SutProvider<AutomaticUserConfirmationPolicyEnforcementValidator> sutProvider,
         OrganizationUser organizationUser,
         User user)
@@ -231,6 +194,69 @@ public class AutomaticUserConfirmationPolicyEnforcementValidatorTests
         sutProvider.GetDependency<IProviderUserRepository>()
             .GetManyByUserAsync(user.Id)
             .Returns([]);
+
+        // Act
+        var result = await sutProvider.Sut.IsCompliantAsync(request);
+
+        // Assert
+        Assert.True(result.IsValid);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task IsCompliantAsync_WithNoPolicyEnabledForCurrentAndOtherOrg_ReturnsValid(
+        SutProvider<AutomaticUserConfirmationPolicyEnforcementValidator> sutProvider,
+        OrganizationUser organizationUser,
+        OrganizationUser otherOrgUser,
+        User user)
+    {
+        // Arrange
+        otherOrgUser.UserId = organizationUser.UserId = user.Id;
+
+        var request = new AutomaticUserConfirmationPolicyEnforcementRequest(
+            organizationUser.OrganizationId,
+            [organizationUser],
+            user);
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
+
+        sutProvider.GetDependency<IProviderUserRepository>()
+            .GetManyByUserAsync(user.Id)
+            .Returns([]);
+
+        // Act
+        var result = await sutProvider.Sut.IsCompliantAsync(request);
+
+        // Assert
+        Assert.True(result.IsValid);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task IsCompliantAsync_WithNoPolicyEnabledForCurrentAndOtherOrgAndIsProvider_ReturnsValid(
+        SutProvider<AutomaticUserConfirmationPolicyEnforcementValidator> sutProvider,
+        OrganizationUser organizationUser,
+        OrganizationUser otherOrgUser,
+        ProviderUser providerUser,
+        User user)
+    {
+        // Arrange
+        providerUser.UserId = otherOrgUser.UserId = organizationUser.UserId = user.Id;
+
+        var request = new AutomaticUserConfirmationPolicyEnforcementRequest(
+            organizationUser.OrganizationId,
+            [organizationUser],
+            user);
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
+
+        sutProvider.GetDependency<IProviderUserRepository>()
+            .GetManyByUserAsync(user.Id)
+            .Returns([providerUser]);
 
         // Act
         var result = await sutProvider.Sut.IsCompliantAsync(request);

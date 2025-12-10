@@ -26,14 +26,17 @@ public class AutomaticUserConfirmationPolicyEnforcementValidator(
             return Invalid(request, new CurrentOrganizationUserIsNotPresentInRequest());
         }
 
-        if ((await providerUserRepository.GetManyByUserAsync(request.User.Id)).Count != 0)
+        if (automaticUserConfirmationPolicyRequirement.IsEnabled(request.OrganizationId))
         {
-            return Invalid(request, new ProviderUsersCannotJoin());
-        }
+            if ((await providerUserRepository.GetManyByUserAsync(request.User.Id)).Count != 0)
+            {
+                return Invalid(request, new ProviderUsersCannotJoin());
+            }
 
-        if (request.AllOrganizationUsers.Count == 1)
-        {
-            return Valid(request);
+            if (request.AllOrganizationUsers.Count == 1)
+            {
+                return Valid(request);
+            }
         }
 
         if (automaticUserConfirmationPolicyRequirement
