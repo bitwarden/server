@@ -1,10 +1,16 @@
 ﻿using System.Text.Json;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace Bit.Core.Services;
 
@@ -12,25 +18,17 @@ public class EventIntegrationHandler<T>(
     IntegrationType integrationType,
     IEventIntegrationPublisher eventIntegrationPublisher,
     IIntegrationFilterService integrationFilterService,
-    IIntegrationConfigurationDetailsCache configurationCache,
-    IUserRepository userRepository,
+    IFusionCache cache,
+    IOrganizationIntegrationConfigurationRepository configurationRepository,
+    IGroupRepository groupRepository,
     IOrganizationRepository organizationRepository,
+    IOrganizationUserRepository organizationUserRepository,
     ILogger<EventIntegrationHandler<T>> logger)
     : IEventMessageHandler
 {
     public async Task HandleEventAsync(EventMessage eventMessage)
     {
-        if (eventMessage.OrganizationId is not Guid organizationId)
-        {
-            return;
-        }
-
-        var configurations = configurationCache.GetConfigurationDetails(
-            organizationId,
-            integrationType,
-            eventMessage.Type);
-
-        foreach (var configuration in configurations)
+        foreach (var configuration in await GetConfigurationDetailsListAsync(eventMessage))
         {
             try
             {
@@ -57,7 +55,7 @@ public class EventIntegrationHandler<T>(
                 {
                     IntegrationType = integrationType,
                     MessageId = messageId.ToString(),
-                    OrganizationId = organizationId.ToString(),
+                    OrganizationId = eventMessage.OrganizationId?.ToString(),
                     Configuration = config,
                     RenderedTemplate = renderedTemplate,
                     RetryCount = 0,
@@ -85,25 +83,83 @@ public class EventIntegrationHandler<T>(
         }
     }
 
-    private async Task<IntegrationTemplateContext> BuildContextAsync(EventMessage eventMessage, string template)
+    internal async Task<IntegrationTemplateContext> BuildContextAsync(EventMessage eventMessage, string template)
     {
+        // Note: All of these cache calls use the default options, including TTL of 30 minutes
+
         var context = new IntegrationTemplateContext(eventMessage);
+
+        if (IntegrationTemplateProcessor.TemplateRequiresGroup(template) && eventMessage.GroupId.HasValue)
+        {
+            context.Group = await cache.GetOrSetAsync<Group?>(
+                key: EventIntegrationsCacheConstants.BuildCacheKeyForGroup(eventMessage.GroupId.Value),
+                factory: async _ => await groupRepository.GetByIdAsync(eventMessage.GroupId.Value)
+            );
+        }
+
+        if (eventMessage.OrganizationId is not Guid organizationId)
+        {
+            return context;
+        }
 
         if (IntegrationTemplateProcessor.TemplateRequiresUser(template) && eventMessage.UserId.HasValue)
         {
-            context.User = await userRepository.GetByIdAsync(eventMessage.UserId.Value);
+            context.User = await GetUserFromCacheAsync(organizationId, eventMessage.UserId.Value);
         }
 
         if (IntegrationTemplateProcessor.TemplateRequiresActingUser(template) && eventMessage.ActingUserId.HasValue)
         {
-            context.ActingUser = await userRepository.GetByIdAsync(eventMessage.ActingUserId.Value);
+            context.ActingUser = await GetUserFromCacheAsync(organizationId, eventMessage.ActingUserId.Value);
         }
 
-        if (IntegrationTemplateProcessor.TemplateRequiresOrganization(template) && eventMessage.OrganizationId.HasValue)
+        if (IntegrationTemplateProcessor.TemplateRequiresOrganization(template))
         {
-            context.Organization = await organizationRepository.GetByIdAsync(eventMessage.OrganizationId.Value);
+            context.Organization = await cache.GetOrSetAsync<Organization?>(
+                key: EventIntegrationsCacheConstants.BuildCacheKeyForOrganization(organizationId),
+                factory: async _ => await organizationRepository.GetByIdAsync(organizationId)
+            );
         }
 
         return context;
     }
+
+    private async Task<List<OrganizationIntegrationConfigurationDetails>> GetConfigurationDetailsListAsync(EventMessage eventMessage)
+    {
+        if (eventMessage.OrganizationId is not Guid organizationId)
+        {
+            return [];
+        }
+
+        List<OrganizationIntegrationConfigurationDetails> configurations = [];
+
+        var integrationTag = EventIntegrationsCacheConstants.BuildCacheTagForOrganizationIntegration(
+            organizationId,
+            integrationType
+        );
+
+        configurations.AddRange(await cache.GetOrSetAsync<List<OrganizationIntegrationConfigurationDetails>>(
+            key: EventIntegrationsCacheConstants.BuildCacheKeyForOrganizationIntegrationConfigurationDetails(
+                organizationId: organizationId,
+                integrationType: integrationType,
+                eventType: eventMessage.Type),
+            factory: async _ => await configurationRepository.GetManyByEventTypeOrganizationIdIntegrationType(
+                eventType: eventMessage.Type,
+                organizationId: organizationId,
+                integrationType: integrationType),
+            options: new FusionCacheEntryOptions(
+                duration: EventIntegrationsCacheConstants.DurationForOrganizationIntegrationConfigurationDetails),
+            tags: [integrationTag]
+        ));
+
+        return configurations;
+    }
+
+    private async Task<OrganizationUserUserDetails?> GetUserFromCacheAsync(Guid organizationId, Guid userId) =>
+        await cache.GetOrSetAsync<OrganizationUserUserDetails?>(
+            key: EventIntegrationsCacheConstants.BuildCacheKeyForOrganizationUser(organizationId, userId),
+            factory: async _ => await organizationUserRepository.GetDetailsByOrganizationIdUserIdAsync(
+                organizationId: organizationId,
+                userId: userId
+            )
+        );
 }
