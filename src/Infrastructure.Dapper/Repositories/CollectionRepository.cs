@@ -226,7 +226,6 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
     {
         obj.SetNewId();
 
-
         var objWithGroupsAndUsers = JsonSerializer.Deserialize<CollectionWithGroupsAndUsers>(JsonSerializer.Serialize(obj))!;
 
         objWithGroupsAndUsers.Groups = groups != null ? groups.ToArrayTVP() : Enumerable.Empty<CollectionAccessSelection>().ToArrayTVP();
@@ -243,16 +242,34 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
 
     public async Task ReplaceAsync(Collection obj, IEnumerable<CollectionAccessSelection>? groups, IEnumerable<CollectionAccessSelection>? users)
     {
-        var objWithGroupsAndUsers = JsonSerializer.Deserialize<CollectionWithGroupsAndUsers>(JsonSerializer.Serialize(obj))!;
+        await using var connection = new SqlConnection(ConnectionString);
 
-        objWithGroupsAndUsers.Groups = groups != null ? groups.ToArrayTVP() : Enumerable.Empty<CollectionAccessSelection>().ToArrayTVP();
-        objWithGroupsAndUsers.Users = users != null ? users.ToArrayTVP() : Enumerable.Empty<CollectionAccessSelection>().ToArrayTVP();
-
-        using (var connection = new SqlConnection(ConnectionString))
+        if (groups == null && users == null)
         {
-            var results = await connection.ExecuteAsync(
+            await connection.ExecuteAsync(
+                $"[{Schema}].[Collection_Update]",
+                obj,
+                commandType: CommandType.StoredProcedure);
+        }
+        else if (groups != null && users == null)
+        {
+            await connection.ExecuteAsync(
+                $"[{Schema}].[Collection_UpdateWithGroups]",
+                new CollectionWithGroups(obj, groups),
+                commandType: CommandType.StoredProcedure);
+        }
+        else if (groups == null && users != null)
+        {
+            await connection.ExecuteAsync(
+                $"[{Schema}].[Collection_UpdateWithUsers]",
+                new CollectionWithUsers(obj, users),
+                commandType: CommandType.StoredProcedure);
+        }
+        else if (groups != null && users != null)
+        {
+            await connection.ExecuteAsync(
                 $"[{Schema}].[Collection_UpdateWithGroupsAndUsers]",
-                objWithGroupsAndUsers,
+                new CollectionWithGroupsAndUsers(obj, groups, users),
                 commandType: CommandType.StoredProcedure);
         }
     }
@@ -424,8 +441,69 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
 
     public class CollectionWithGroupsAndUsers : Collection
     {
+        public CollectionWithGroupsAndUsers() { }
+
+        public CollectionWithGroupsAndUsers(Collection collection,
+            IEnumerable<CollectionAccessSelection> groups,
+            IEnumerable<CollectionAccessSelection> users)
+        {
+            Id = collection.Id;
+            Name = collection.Name;
+            OrganizationId = collection.OrganizationId;
+            CreationDate = collection.CreationDate;
+            RevisionDate = collection.RevisionDate;
+            Type = collection.Type;
+            ExternalId = collection.ExternalId;
+            DefaultUserCollectionEmail = collection.DefaultUserCollectionEmail;
+            Groups = groups.ToArrayTVP();
+            Users = users.ToArrayTVP();
+        }
+
         [DisallowNull]
         public DataTable? Groups { get; set; }
+        [DisallowNull]
+        public DataTable? Users { get; set; }
+    }
+
+    public class CollectionWithGroups : Collection
+    {
+        public CollectionWithGroups() { }
+
+        public CollectionWithGroups(Collection collection, IEnumerable<CollectionAccessSelection> groups)
+        {
+            Id = collection.Id;
+            Name = collection.Name;
+            OrganizationId = collection.OrganizationId;
+            CreationDate = collection.CreationDate;
+            RevisionDate = collection.RevisionDate;
+            Type = collection.Type;
+            ExternalId = collection.ExternalId;
+            DefaultUserCollectionEmail = collection.DefaultUserCollectionEmail;
+            Groups = groups.ToArrayTVP();
+        }
+
+        [DisallowNull]
+        public DataTable? Groups { get; set; }
+    }
+
+    public class CollectionWithUsers : Collection
+    {
+        public CollectionWithUsers() { }
+
+        public CollectionWithUsers(Collection collection, IEnumerable<CollectionAccessSelection> users)
+        {
+
+            Id = collection.Id;
+            Name = collection.Name;
+            OrganizationId = collection.OrganizationId;
+            CreationDate = collection.CreationDate;
+            RevisionDate = collection.RevisionDate;
+            Type = collection.Type;
+            ExternalId = collection.ExternalId;
+            DefaultUserCollectionEmail = collection.DefaultUserCollectionEmail;
+            Users = users.ToArrayTVP();
+        }
+
         [DisallowNull]
         public DataTable? Users { get; set; }
     }
