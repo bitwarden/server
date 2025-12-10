@@ -41,7 +41,6 @@ BEGIN
         [DeletedDate],
         [Reprompt],
         [Key],
-        [ArchivedDate],
         [Archives]
     )
     VALUES
@@ -58,8 +57,7 @@ BEGIN
         @DeletedDate,
         @Reprompt,
         @Key,
-        @ArchivedDate,
-        @Archives
+        CASE WHEN @ArchivedDate IS NOT NULL THEN CONCAT('{', @UserIdKey, ':', CONVERT(NVARCHAR(30), @ArchivedDate, 127), '}') ELSE NULL END,
     )
 
     IF @OrganizationId IS NOT NULL

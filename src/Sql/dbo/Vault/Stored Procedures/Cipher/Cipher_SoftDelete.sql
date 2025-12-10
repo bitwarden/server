@@ -31,8 +31,6 @@ BEGIN
     SET
         [DeletedDate] = @UtcNow,
         [RevisionDate] = @UtcNow,
-        [ArchivedDate] = NULL,
-        [Archives] = NULL
     WHERE
         [Id] IN (SELECT [Id] FROM #Temp)
 

@@ -32,7 +32,6 @@ BEGIN
         [DeletedDate],
         [Reprompt],
         [Key],
-        [ArchivedDate],
         [Archives]
     )
     VALUES
@@ -49,7 +48,6 @@ BEGIN
         @DeletedDate,
         @Reprompt,
         @Key,
-        @ArchivedDate,
         @Archives
     )
 
