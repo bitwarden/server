@@ -1,6 +1,6 @@
-<mj-section>
+<mj-section padding="5px 20px 10px 20px">
   <mj-column>
-    <mj-social icon-size="30px" inner-padding="10px" padding="0">
+    <mj-social icon-size="24px" inner-padding="8px" padding="0">
       <mj-social-element
         href="https://x.com/bitwarden"
         src="https://assets.bitwarden.com/email/v1/mail-x.png"
@@ -38,7 +38,7 @@
     </mj-social>
 
     <mj-text align="center" font-size="12px" line-height="16px" color="#5A6D91">
-      <p style="margin-bottom: 5px">
+      <p style="margin-bottom: 5px; margin-top: 5px">
         © 2025 Bitwarden Inc. 1 N. Calle Cesar Chavez, Suite 102, Santa
         Barbara, CA, USA
       </p>
