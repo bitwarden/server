@@ -122,6 +122,18 @@ public class ProviderService : IProviderService
             throw new BadRequestException("Invalid owner.");
         }
 
+        if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
+        {
+            var organizationAutoConfirmPolicyRequirement = await _policyRequirementQuery
+                .GetAsync<AutomaticUserConfirmationPolicyRequirement>(ownerUserId);
+
+            if (organizationAutoConfirmPolicyRequirement
+                .CannotCreateProvider())
+            {
+                throw new BadRequestException(new UserCannotJoinProvider().Message);
+            }
+        }
+
         var customer = await _providerBillingService.SetupCustomer(provider, paymentMethod, billingAddress);
         provider.GatewayCustomerId = customer.Id;
         var subscription = await _providerBillingService.SetupSubscription(provider);
@@ -262,7 +274,7 @@ public class ProviderService : IProviderService
             if (organizationAutoConfirmPolicyRequirement
                 .CannotJoinProvider())
             {
-                throw new BadRequestException(new ProviderUsersCannotJoin().Message);
+                throw new BadRequestException(new UserCannotJoinProvider().Message);
             }
         }
 
@@ -319,7 +331,7 @@ public class ProviderService : IProviderService
                     if (organizationAutoConfirmPolicyRequirement
                         .CannotJoinProvider())
                     {
-                        result.Add(Tuple.Create(providerUser, new ProviderUsersCannotJoin().Message));
+                        result.Add(Tuple.Create(providerUser, new UserCannotJoinProvider().Message));
                         continue;
                     }
                 }

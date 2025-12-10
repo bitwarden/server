@@ -23,6 +23,8 @@ public class AutomaticUserConfirmationPolicyRequirement(IEnumerable<PolicyDetail
 
     public bool CannotJoinProvider() => policyDetails.Any();
 
+    public bool CannotCreateProvider() => policyDetails.Any();
+
     public bool CannotCreateNewOrganization() => policyDetails.Any();
 
     public bool IsEnabled(Guid organizationId) => policyDetails.Any(p => p.OrganizationId == organizationId);
