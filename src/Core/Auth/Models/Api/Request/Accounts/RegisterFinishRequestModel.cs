@@ -25,23 +25,25 @@ public class RegisterFinishRequestModel : IValidatableObject
     public MasterPasswordAuthenticationData? MasterPasswordAuthenticationData { get; set; }
     public MasterPasswordUnlockData? MasterPasswordUnlockData { get; set; }
 
-    // PM-28143 - Remove line below (made optional during migration to MasterPasswordUnlockData
+    // PM-28143 - Remove line below (made optional during migration to MasterPasswordUnlockData)
     [StringLength(1000)]
     public string? MasterPasswordHash { get; set; }
 
     [StringLength(50)]
     public string? MasterPasswordHint { get; set; }
 
-    // PM-28143 - Remove line below (made optional during migration to MasterPasswordUnlockData
+    // PM-28143 - Remove line below (made optional during migration to MasterPasswordUnlockData)
     public string? UserSymmetricKey { get; set; }
 
     public required KeysRequestModel UserAsymmetricKeys { get; set; }
 
-    // PM-28143 - Remove line below (made optional during migration to MasterPasswordUnlockData
+    // PM-28143 - Remove line below (made optional during migration to MasterPasswordUnlockData)
     public KdfType? Kdf { get; set; }
-    // PM-28143 - Remove line below (made optional during migration to MasterPasswordUnlockData
+    // PM-28143 - Remove line below (made optional during migration to MasterPasswordUnlockData)
     public int? KdfIterations { get; set; }
+    // PM-28143 - Remove line below
     public int? KdfMemory { get; set; }
+    // PM-28143 - Remove line below
     public int? KdfParallelism { get; set; }
 
     public Guid? OrganizationUserId { get; set; }
@@ -105,10 +107,16 @@ public class RegisterFinishRequestModel : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        var kdf = MasterPasswordUnlockData?.Kdf.KdfType ?? Kdf ?? throw new Exception($"{nameof(Kdf)} not found on RequestModel");
-        var kdfIterations = MasterPasswordUnlockData?.Kdf.Iterations ?? KdfIterations ?? throw new Exception($"{nameof(KdfIterations)} not found on RequestModel");
-        var kdfMemory = MasterPasswordUnlockData?.Kdf.Memory ?? KdfMemory;
-        var kdfParallelism = MasterPasswordUnlockData?.Kdf.Parallelism ?? KdfParallelism;
+        var kdf = MasterPasswordUnlockData?.Kdf.KdfType
+                  ?? Kdf
+                  ?? throw new Exception($"{nameof(Kdf)} not found on RequestModel");
+        var kdfIterations = MasterPasswordUnlockData?.Kdf.Iterations
+                            ?? KdfIterations
+                            ?? throw new Exception($"{nameof(KdfIterations)} not found on RequestModel");
+        var kdfMemory = MasterPasswordUnlockData?.Kdf.Memory
+                        ?? KdfMemory;
+        var kdfParallelism = MasterPasswordUnlockData?.Kdf.Parallelism
+                             ?? KdfParallelism;
 
         // PM-28143 - Remove line below in favor of using the unlock data.
         return KdfSettingsValidator.Validate(kdf, kdfIterations, kdfMemory, kdfParallelism);
