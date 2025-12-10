@@ -6,7 +6,6 @@ using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Stripe;
-using PaymentMethod = Bit.Core.Billing.Models.PaymentMethod;
 
 namespace Bit.Core.Billing.Services;
 
@@ -65,16 +64,6 @@ public interface ISubscriberService
         CustomerGetOptions customerGetOptions = null);
 
     /// <summary>
-    /// Retrieves the account credit, a masked representation of the default payment source and the tax information for the
-    /// provided <paramref name="subscriber"/>. This is essentially a consolidated invocation of the <see cref="GetPaymentSource"/>
-    /// and <see cref="GetTaxInformation"/> methods with a response that includes the customer's <see cref="Stripe.Customer.Balance"/> as account credit in order to cut down on Stripe API calls.
-    /// </summary>
-    /// <param name="subscriber">The subscriber to retrieve payment method for.</param>
-    /// <returns>A <see cref="Models.PaymentMethod"/> containing the subscriber's account credit, payment source and tax information.</returns>
-    Task<PaymentMethod> GetPaymentMethod(
-        ISubscriber subscriber);
-
-    /// <summary>
     /// Retrieves a masked representation of the subscriber's payment source for presentation to a client.
     /// </summary>
     /// <param name="subscriber">The subscriber to retrieve the payment source for.</param>
@@ -108,16 +97,6 @@ public interface ISubscriberService
         SubscriptionGetOptions subscriptionGetOptions = null);
 
     /// <summary>
-    /// Retrieves the <paramref name="subscriber"/>'s tax information using their Stripe <see cref="Stripe.Customer"/>'s <see cref="Stripe.Customer.Address"/>.
-    /// </summary>
-    /// <param name="subscriber">The subscriber to retrieve the tax information for.</param>
-    /// <returns>A <see cref="TaxInformation"/> representing the <paramref name="subscriber"/>'s tax information.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when the <paramref name="subscriber"/> is <see langword="null"/>.</exception>
-    /// <remarks>This method opts for returning <see langword="null"/> rather than throwing exceptions, making it ideal for surfacing data from API endpoints.</remarks>
-    Task<TaxInformation> GetTaxInformation(
-        ISubscriber subscriber);
-
-    /// <summary>
     /// Attempts to remove a subscriber's saved payment source. If the Stripe <see cref="Stripe.Customer"/> representing the
     /// <paramref name="subscriber"/> contains a valid <b>"btCustomerId"</b> key in its <see cref="Stripe.Customer.Metadata"/> property,
     /// this command will attempt to remove the Braintree <see cref="Braintree.PaymentMethod"/>. Otherwise, it will attempt to remove the
@@ -146,17 +125,6 @@ public interface ISubscriberService
     Task UpdateTaxInformation(
         ISubscriber subscriber,
         TaxInformation taxInformation);
-
-    /// <summary>
-    /// Verifies the subscriber's pending bank account using the provided <paramref name="descriptorCode"/>.
-    /// </summary>
-    /// <param name="subscriber">The subscriber to verify the bank account for.</param>
-    /// <param name="descriptorCode">The code attached to a deposit made to the subscriber's bank account in order to ensure they have access to it.
-    /// <a href="https://docs.stripe.com/payments/ach-debit/set-up-payment">Learn more.</a></param>
-    /// <returns></returns>
-    Task VerifyBankAccount(
-        ISubscriber subscriber,
-        string descriptorCode);
 
     /// <summary>
     /// Validates whether the <paramref name="subscriber"/>'s <see cref="ISubscriber.GatewayCustomerId"/> exists in the gateway.
