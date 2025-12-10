@@ -1,9 +1,10 @@
 use akd::errors::StorageError;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::DatabaseType;
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type")]
 pub enum DbConfig {
     MsSql {
         connection_string: String,
