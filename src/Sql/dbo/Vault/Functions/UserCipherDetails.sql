@@ -12,20 +12,7 @@ WITH [CTE] AS (
         AND [Status] = 2 -- Confirmed
 )
 SELECT
-    C.Id,
-    C.UserId,
-    C.OrganizationId,
-    C.Type,
-    C.Data,
-    C.Attachments,
-    C.CreationDate,
-    C.RevisionDate,
-    C.Favorite,
-    C.FolderId,
-    C.DeletedDate,
-    C.ArchivedDate,
-    C.Reprompt,
-    C.[Key],
+    C.*,
     CASE
         WHEN COALESCE(CU.[ReadOnly], CG.[ReadOnly], 0) = 0
         THEN 1
@@ -69,25 +56,12 @@ WHERE
 UNION ALL
 
 SELECT
-    C.Id,
-    C.UserId,
-    C.OrganizationId,
-    C.Type,
-    C.Data,
-    C.Attachments,
-    C.CreationDate,
-    C.RevisionDate,
-    C.Favorite,
-    C.FolderId,
-    C.DeletedDate,
-    C.ArchivedDate,
-    C.Reprompt,
-    C.[Key],
+    *,
     1 [Edit],
     1 [ViewPassword],
     1 [Manage],
     0 [OrganizationUseTotp]
 FROM
-    [dbo].[CipherDetails](@UserId) AS C
+    [dbo].[CipherDetails](@UserId)
 WHERE
-    C.[UserId] = @UserId;
+    [UserId] = @UserId;
