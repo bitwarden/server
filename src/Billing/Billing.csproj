@@ -14,6 +14,7 @@
 
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Billing' " />
   <ItemGroup>
+    <ProjectReference Include="..\..\ServiceDefaults\ServiceDefaults.csproj" Condition="'$(Configuration)' == 'Debug'" />
     <ProjectReference Include="..\..\bitwarden_license\src\Commercial.Core\Commercial.Core.csproj" />
     <ProjectReference Include="..\SharedWeb\SharedWeb.csproj" />
     <ProjectReference Include="..\Core\Core.csproj" />
