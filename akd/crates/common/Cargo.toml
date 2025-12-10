@@ -14,6 +14,7 @@ config = { workspace = true }
 serde = { workspace = true }
 thiserror = "2.0.17"
 tracing.workspace = true
+hex = "0.4.3"
 
 [lints]
 workspace = true
