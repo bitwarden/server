@@ -97,7 +97,7 @@ impl ManagedConnection {
         table: &'a str,
     ) -> Result<tiberius::BulkLoadRequest<'a, Stream>, tiberius::error::Error> {
         debug!(%table, "Starting bulk insert");
-        self.0.bulk_insert(&table).await
+        self.0.bulk_insert(table).await
     }
 
     async fn ping(&mut self) -> Result<i32, tiberius::error::Error> {
@@ -141,9 +141,8 @@ impl ManageConnection for ConnectionManager {
     }
 
     fn has_broken(&self, _conn: &mut Self::Connection) -> bool {
-        self.is_healthy
+        *self.is_healthy
             .read()
             .expect("poisoned is_healthy lock")
-            .clone()
     }
 }

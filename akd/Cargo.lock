@@ -555,6 +555,7 @@ dependencies = [
  "akd_storage",
  "async-trait",
  "config",
+ "hex",
  "serde",
  "thiserror 2.0.17",
  "tracing",

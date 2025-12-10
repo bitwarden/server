@@ -116,7 +116,7 @@ async fn main() -> Result<()> {
     // Otherwise, log to console
     if let Some(ref log_file) = args.log_file {
         let file = std::fs::File::create(log_file)
-            .with_context(|| format!("Failed to create log file: {}", log_file))?;
+            .with_context(|| format!("Failed to create log file: {log_file}"))?;
         let file_layer = tracing_subscriber::fmt::layer()
             .with_writer(file)
             .with_ansi(false)
@@ -125,7 +125,7 @@ async fn main() -> Result<()> {
         layers.push(file_layer.boxed());
 
         // Print a one-time message about logging to file
-        eprintln!("Logging to file: {}", log_file);
+        eprintln!("Logging to file: {log_file}");
     } else {
         // Console logging with colors (only when no file specified)
         let console_layer = tracing_subscriber::fmt::layer()
@@ -253,7 +253,7 @@ async fn bench_db_insert(num_users: u64, db: &DatabaseType) -> Result<()> {
     use owo_colors::OwoColorize;
 
     println!("{}", "======= Benchmark operation requested =======".cyan());
-    println!("Beginning DB INSERT benchmark of {} users", num_users);
+    println!("Beginning DB INSERT benchmark of {num_users} users");
 
     let mut values: Vec<String> = vec![];
     for i in 0..num_users {
@@ -306,8 +306,7 @@ async fn bench_publish(
 
     println!("{}", "======= Benchmark operation requested =======".cyan());
     println!(
-        "Beginning PUBLISH benchmark of {} users with {} updates/user",
-        num_users, num_updates_per_user
+        "Beginning PUBLISH benchmark of {num_users} users with {num_updates_per_user} updates/user"
     );
 
     let users: Vec<String> = (1..=num_users)
@@ -394,8 +393,7 @@ async fn bench_lookup(
 
     println!("{}", "======= Benchmark operation requested =======".cyan());
     println!(
-        "Beginning LOOKUP benchmark of {} users with {} lookups/user",
-        num_users, num_lookups_per_user
+        "Beginning LOOKUP benchmark of {num_users} users with {num_lookups_per_user} lookups/user"
     );
 
     let user_data: Vec<(String, String)> = (1..=num_users)
@@ -491,9 +489,9 @@ async fn repl_loop(
 
         match (db, Command::parse(&mut line)) {
             (_, Command::Unknown(other)) => {
-                println!("Input '{}' is not supported, enter 'help' for the help menu", other)
+                println!("Input '{other}' is not supported, enter 'help' for the help menu")
             }
-            (_,Command::InvalidArgs(message)) => println!("Invalid arguments: {}", message),
+            (_,Command::InvalidArgs(message)) => println!("Invalid arguments: {message}"),
             (_, Command::Exit) => {
                 info!("Exiting...");
                 break;
@@ -511,12 +509,12 @@ async fn repl_loop(
                                 println!("Database cleaned successfully");
                             }
                             Err(error) => {
-                                println!("Error running migrations: {}", error);
+                                println!("Error running migrations: {error}");
                             }
                         }
                     }
                     Err(error) => {
-                        println!("Error dropping tables: {}", error);
+                        println!("Error dropping tables: {error}");
                     }
                 }
             }
@@ -534,7 +532,7 @@ async fn repl_loop(
 
                 match timeout(Duration::from_secs(30), rpc_rx).await {
                     Ok(Ok(Ok(success))) => {
-                        println!("Response: {}", success);
+                        println!("Response: {success}");
                     }
                     Ok(Ok(Err(dir_err))) => {
                         error!("Error in directory processing command: {}", dir_err);

@@ -12,11 +12,11 @@ pub(crate) enum TempTable {
 impl std::fmt::Display for TempTable {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            TempTable::Ids(_) => write!(f, "{}", TEMP_IDS_TABLE),
-            TempTable::Azks => write!(f, "{}", TEMP_AZKS_TABLE),
-            TempTable::HistoryTreeNodes => write!(f, "{}", TEMP_HISTORY_TREE_NODES_TABLE),
-            TempTable::Values => write!(f, "{}", TEMP_VALUES_TABLE),
-            TempTable::RawLabelSearch => write!(f, "{}", TEMP_SEARCH_LABELS_TABLE),
+            TempTable::Ids(_) => write!(f, "{TEMP_IDS_TABLE}"),
+            TempTable::Azks => write!(f, "{TEMP_AZKS_TABLE}"),
+            TempTable::HistoryTreeNodes => write!(f, "{TEMP_HISTORY_TREE_NODES_TABLE}"),
+            TempTable::Values => write!(f, "{TEMP_VALUES_TABLE}"),
+            TempTable::RawLabelSearch => write!(f, "{TEMP_SEARCH_LABELS_TABLE}"),
         }
     }
 }
@@ -27,7 +27,7 @@ impl TempTable {
     }
 
     pub fn drop(&self) -> String {
-        format!("DROP TABLE IF EXISTS {}", self.to_string())
+        format!("DROP TABLE IF EXISTS {self}")
     }
 
     pub fn can_create(&self) -> bool {

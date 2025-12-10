@@ -75,7 +75,7 @@ impl MsSql {
             .await
             .map_err(|e| {
                 error!(error = %e, "Failed to create DB pool");
-                StorageError::Connection(format!("Failed to create DB pool: {}", e))
+                StorageError::Connection(format!("Failed to create DB pool: {e}"))
             })?;
 
         info!("Successfully created MS SQL storage connection pool");
@@ -89,14 +89,14 @@ impl MsSql {
         info!("Running database migrations");
         let mut conn = self.pool.get().await.map_err(|e| {
             error!(error = %e, "Failed to get DB connection for migrations");
-            StorageError::Connection(format!("Failed to get DB connection for migrations: {}", e))
+            StorageError::Connection(format!("Failed to get DB connection for migrations: {e}"))
         })?;
 
         ms_database::run_pending_migrations(&mut conn, MIGRATIONS)
             .await
             .map_err(|e| {
                 error!(error = %e, "Failed to run migrations");
-                StorageError::Connection(format!("Failed to run migrations: {}", e))
+                StorageError::Connection(format!("Failed to run migrations: {e}"))
             })?;
         info!("Successfully completed database migrations");
         Ok(())
@@ -107,8 +107,7 @@ impl MsSql {
         let mut conn = self.pool.get().await.map_err(|e| {
             error!(error = %e, "Failed to get DB connection for dropping tables");
             StorageError::Connection(format!(
-                "Failed to get DB connection for dropping tables: {}",
-                e
+                "Failed to get DB connection for dropping tables: {e}"
             ))
         })?;
 
@@ -122,7 +121,7 @@ impl MsSql {
 
         conn.simple_query(&drop_all).await.map_err(|e| {
             error!(error = ?e, sql = drop_all, "Failed to execute drop for all tables");
-            StorageError::Other(format!("Failed to drop AKD tables: {}", e))
+            StorageError::Other(format!("Failed to drop AKD tables: {e}"))
         })?;
 
         info!("Successfully dropped all AKD tables");
@@ -134,7 +133,7 @@ impl MsSql {
         trace!("Acquiring database connection from pool");
         self.pool.get().await.map_err(|e| {
             error!(error = %e, "Failed to get DB connection");
-            StorageError::Connection(format!("Failed to get DB connection: {}", e))
+            StorageError::Connection(format!("Failed to get DB connection: {e}"))
         })
     }
 
@@ -158,7 +157,7 @@ impl MsSql {
             .await
             .map_err(|e| {
                 error!(error = %e, "Failed to execute statement");
-                StorageError::Other(format!("Failed to execute statement: {}", e))
+                StorageError::Other(format!("Failed to execute statement: {e}"))
             })?;
         debug!("Statement executed successfully");
         Ok(())
@@ -326,8 +325,7 @@ impl Database for MsSql {
                 })?;
                 error!(error = %e, "batch_set rolled back");
                 Err(StorageError::Other(format!(
-                    "Failed to batch set records: {}",
-                    e
+                    "Failed to batch set records: {e}"
                 )))
             }
         }
@@ -404,7 +402,7 @@ impl Database for MsSql {
                 StorageError::Other(format!("Failed to create temp table: {e}"))
             })?;
             let mut bulk = conn
-                .bulk_insert(&temp_table_name)
+                .bulk_insert(temp_table_name)
                 .await
                 .map_err(|e| StorageError::Other(format!("Failed to start bulk insert: {e}")))?;
             for row in DbRecord::get_batch_temp_table_rows::<St>(ids)? {
@@ -520,8 +518,7 @@ impl Database for MsSql {
             Err(e) => {
                 error!(error = %e, "Failed to get all data for label");
                 Err(StorageError::Other(format!(
-                    "Failed to get all data for label: {}",
-                    e
+                    "Failed to get all data for label: {e}"
                 )))
             }
         }
@@ -555,9 +552,7 @@ impl Database for MsSql {
             statement.parse(&row)
         } else {
             debug!("Raw label not found");
-            Err(StorageError::NotFound(format!(
-                "ValueState for label not found"
-            )))
+            Err(StorageError::NotFound("ValueState for label not found".to_string()))
         }
     }
 
@@ -591,7 +586,7 @@ impl Database for MsSql {
 
             // Use bulk_insert to insert all the raw_labels into a temporary table
             let mut bulk = conn
-                .bulk_insert(&temp_table_name)
+                .bulk_insert(temp_table_name)
                 .await
                 .map_err(|e| StorageError::Other(format!("Failed to start bulk insert: {e}")))?;
             for raw_label in raw_labels {
@@ -605,7 +600,7 @@ impl Database for MsSql {
                 .map_err(|e| StorageError::Other(format!("Failed to finalize bulk insert: {e}")))?;
 
             // read rows matching the raw_labels from the temporary table
-            let statement = values::get_versions_by_flag(&temp_table_name, flag);
+            let statement = values::get_versions_by_flag(temp_table_name, flag);
             let query_stream = conn
                 .query(statement.sql(), &statement.params())
                 .await

@@ -16,8 +16,8 @@ use crate::ms_sql::{
     tables::{temp_table::TempTable, values},
 };
 
-const SELECT_AZKS_DATA: &'static [&str] = &["epoch", "num_nodes"];
-const SELECT_HISTORY_TREE_NODE_DATA: &'static [&str] = &[
+const SELECT_AZKS_DATA: &[&str] = &["epoch", "num_nodes"];
+const SELECT_HISTORY_TREE_NODE_DATA: &[&str] = &[
     "label_len",
     "label_val",
     "last_epoch",
@@ -41,7 +41,7 @@ const SELECT_HISTORY_TREE_NODE_DATA: &'static [&str] = &[
     "p_right_child_label_val",
     "p_hash",
 ];
-const SELECT_LABEL_DATA: &'static [&str] = &[
+const SELECT_LABEL_DATA: &[&str] = &[
     "raw_label",
     "epoch",
     "version",
@@ -326,7 +326,7 @@ impl AkdStorableForMsSql for DbRecord {
                     INSERT ([akd_key], [epoch], [num_nodes])
                     VALUES (source.[akd_key], source.[epoch], source.[num_nodes]);
                 "#,
-                TempTable::Azks.to_string()
+                TempTable::Azks
             ),
             StorageType::TreeNode => format!(
                 r#"
@@ -405,7 +405,7 @@ impl AkdStorableForMsSql for DbRecord {
                         , source.p_hash
                     );
                 "#,
-                TempTable::HistoryTreeNodes.to_string()
+                TempTable::HistoryTreeNodes
             ),
             StorageType::ValueState => format!(
                 r#"
@@ -422,7 +422,7 @@ impl AkdStorableForMsSql for DbRecord {
                         INSERT (raw_label, epoch, [version], node_label_val, node_label_len, [data])
                         VALUES (source.raw_label, source.epoch, source.[version], source.node_label_val, source.node_label_len, source.[data]);
                     "#,
-                TempTable::Values.to_string()
+                TempTable::Values
             ),
         }
     }
@@ -530,7 +530,7 @@ impl AkdStorableForMsSql for DbRecord {
                     .map(|s| format!("h.{s}"))
                     .collect::<Vec<_>>()
                     .join(", "),
-                TempTable::for_ids::<St>().to_string()
+                TempTable::for_ids::<St>()
             ),
             StorageType::ValueState => format!(
                 r#"
@@ -545,7 +545,7 @@ impl AkdStorableForMsSql for DbRecord {
                     .map(|s| format!("v.{s}"))
                     .collect::<Vec<_>>()
                     .join(", "),
-                TempTable::for_ids::<St>().to_string()
+                TempTable::for_ids::<St>()
             ),
         }
     }
@@ -641,10 +641,10 @@ impl AkdStorableForMsSql for DbRecord {
                     })?),
                     None => None,
                 };
-                let massaged_hash: akd::Digest = akd::hash::try_parse_digest(&hash.to_vec())
+                let massaged_hash: akd::Digest = akd::hash::try_parse_digest(hash)
                     .map_err(|_| StorageError::Other("hash has incorrect length".to_string()))?;
                 let massaged_p_hash: Option<akd::Digest> = match p_hash {
-                    Some(v) => Some(akd::hash::try_parse_digest(&v.to_vec()).map_err(|_| {
+                    Some(v) => Some(akd::hash::try_parse_digest(v).map_err(|_| {
                         StorageError::Other("p_hash has incorrect length".to_string())
                     })?),
                     None => None,

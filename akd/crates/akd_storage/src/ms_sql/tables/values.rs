@@ -151,14 +151,13 @@ pub fn get_versions_by_flag(
         SELECT t.raw_label, t.version, t.data
         FROM {TABLE_VALUES} t
         INNER JOIN (
-            SELECT tmp.raw_label as raw_label, {} as epoch
+            SELECT tmp.raw_label as raw_label, {epoch_col} as epoch
             FROM {TABLE_VALUES} tmp
             INNER JOIN {temp_table_name} s ON s.raw_label = tmp.raw_label
-            {}
+            {filter}
             GROUP BY tmp.raw_label
         ) epochs on epochs.raw_label = t.raw_label AND epochs.epoch = t.epoch
         "#,
-        epoch_col, filter,
     );
 
     QueryStatement::new(sql, params, version_from_row)

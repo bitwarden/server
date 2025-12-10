@@ -20,7 +20,7 @@ impl DbConfig {
                 pool_size,
             } => {
                 let db = crate::ms_sql::MsSql::builder(connection_string.clone())
-                    .pool_size(pool_size.clone())
+                    .pool_size(*pool_size)
                     .build()
                     .await?;
                 DatabaseType::MsSql(db)

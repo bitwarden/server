@@ -70,7 +70,7 @@ pub(crate) async fn run_migration(migration: &Migration, conn: &mut ManagedConne
         conn.simple_query("BEGIN TRANSACTION").await?;
 
         let result = async {
-            conn.simple_query(&migration.up).await?;
+            conn.simple_query(migration.up).await?;
             record_migration(conn, migration).await?;
             Ok::<_, MigrationError>(())
         }.await;
@@ -88,7 +88,7 @@ pub(crate) async fn run_migration(migration: &Migration, conn: &mut ManagedConne
             }
         }
     } else {
-        conn.simple_query(&migration.up).await?;
+        conn.simple_query(migration.up).await?;
         record_migration(conn, migration).await?;
         Ok(())
     }

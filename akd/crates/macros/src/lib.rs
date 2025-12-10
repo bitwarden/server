@@ -102,13 +102,13 @@ fn load_migration_from_path(full_path: &Path, relative_path: &str) -> (String, S
         );
     }
     let up_content = fs::read_to_string(&up_sql_path)
-        .unwrap_or_else(|e| panic!("Failed to read up.sql in {}: {}", relative_path, e));
+        .unwrap_or_else(|e| panic!("Failed to read up.sql in {relative_path}: {e}"));
 
     // Read down.sql (optional)
     let down_sql_path = full_path.join("down.sql");
     let down_content = if down_sql_path.exists() {
         let content = fs::read_to_string(&down_sql_path)
-            .unwrap_or_else(|e| panic!("Failed to read down.sql in {}: {}", relative_path, e));
+            .unwrap_or_else(|e| panic!("Failed to read down.sql in {relative_path}: {e}"));
         quote! { Some(#content) }
     } else {
         quote! { None }
@@ -307,7 +307,7 @@ pub fn load_migrations(input: TokenStream) -> TokenStream {
     // Read all directories in the migrations directory
     let mut migration_paths = Vec::new();
     for entry in fs::read_dir(&migrations_path)
-        .unwrap_or_else(|e| panic!("Failed to read migrations directory: {}", e))
+        .unwrap_or_else(|e| panic!("Failed to read migrations directory: {e}"))
     {
         let entry = entry.unwrap();
         let path = entry.path();

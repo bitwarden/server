@@ -32,9 +32,9 @@ impl SqlParam {
 
         match (starts_with_bracket, ends_with_bracket) {
             (true, true) => trimmed.to_string(),
-            (true, false) => format!("{}]", trimmed),
-            (false, true) => format!("[{}", trimmed),
-            (false, false) => format!("[{}]", trimmed),
+            (true, false) => format!("{trimmed}]"),
+            (false, true) => format!("[{trimmed}"),
+            (false, false) => format!("[{trimmed}]"),
         }
     }
 }

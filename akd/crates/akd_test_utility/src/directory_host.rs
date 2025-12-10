@@ -110,7 +110,7 @@ where
                             Ok(result) => {
                                 let value_hex = hex::encode(result.value.as_slice());
                                 let value_str = String::from_utf8(result.value.0.clone())
-                                    .unwrap_or_else(|_| format!("<binary: {}>", value_hex));
+                                    .unwrap_or_else(|_| format!("<binary: {value_hex}>"));
                                 let msg = format!(
                                     "Lookup verified for '{a}'\n  Epoch: {}\n  Version: {}\n  Value: {}",
                                     result.epoch, result.version, value_str
@@ -136,11 +136,11 @@ where
                             let msg = format!("Key history for '{a}': No updates found");
                             let _ = response.send(Ok(msg));
                         } else {
-                            let mut msg = format!("Key history for '{a}': {} update(s)\n", num_updates);
+                            let mut msg = format!("Key history for '{a}': {num_updates} update(s)\n");
                             for (i, update) in proof.update_proofs.iter().enumerate() {
                                 let value_hex = hex::encode(update.value.as_slice());
                                 let value_str = String::from_utf8(update.value.0.clone())
-                                    .unwrap_or_else(|_| format!("<binary: {}>", value_hex));
+                                    .unwrap_or_else(|_| format!("<binary: {value_hex}>"));
                                 msg.push_str(&format!(
                                     "  [{}] Epoch: {}, Version: {}, Value: {}\n",
                                     i + 1, update.epoch, update.version, value_str
