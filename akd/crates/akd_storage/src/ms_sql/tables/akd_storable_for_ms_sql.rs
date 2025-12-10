@@ -10,10 +10,11 @@ use akd::{
 use ms_database::{ColumnData, IntoRow, Row, ToSql, TokenRow};
 use tracing::debug;
 
-use crate::{migrations::{
-    TABLE_AZKS, TABLE_HISTORY_TREE_NODES, TABLE_VALUES
-}, temp_table::TempTable};
-use crate::sql_params::SqlParams;
+use crate::ms_sql::{
+    migrations::{TABLE_AZKS, TABLE_HISTORY_TREE_NODES, TABLE_VALUES},
+    sql_params::SqlParams,
+    tables::{temp_table::TempTable, values},
+};
 
 const SELECT_AZKS_DATA: &'static [&str] = &["epoch", "num_nodes"];
 const SELECT_HISTORY_TREE_NODE_DATA: &'static [&str] = &[
@@ -76,8 +77,16 @@ pub(crate) struct QueryStatement<Out> {
 }
 
 impl<Out> QueryStatement<Out> {
-    pub fn new(sql: String, params: SqlParams, parser: fn(&Row) -> Result<Out, StorageError>) -> Self {
-        Self { sql, params, parser }
+    pub fn new(
+        sql: String,
+        params: SqlParams,
+        parser: fn(&Row) -> Result<Out, StorageError>,
+    ) -> Self {
+        Self {
+            sql,
+            params,
+            parser,
+        }
     }
 
     pub fn sql(&self) -> &str {
@@ -93,7 +102,7 @@ impl<Out> QueryStatement<Out> {
     }
 }
 
-pub(crate) trait MsSqlStorable {
+pub(crate) trait AkdStorableForMsSql {
     fn set_statement(&self) -> Result<Statement, StorageError>;
 
     fn set_batch_statement(storage_type: &StorageType) -> String;
@@ -113,7 +122,7 @@ pub(crate) trait MsSqlStorable {
     fn into_row(&self) -> Result<TokenRow, StorageError>;
 }
 
-impl MsSqlStorable for DbRecord {
+impl AkdStorableForMsSql for DbRecord {
     fn set_statement(&self) -> Result<Statement, StorageError> {
         let record_type = match &self {
             DbRecord::Azks(_) => "Azks",
@@ -123,10 +132,14 @@ impl MsSqlStorable for DbRecord {
         debug!(record_type, "Generating set statement");
         match &self {
             DbRecord::Azks(azks) => {
-                debug!(epoch = azks.latest_epoch, num_nodes = azks.num_nodes, "Building AZKS set statement");
+                debug!(
+                    epoch = azks.latest_epoch,
+                    num_nodes = azks.num_nodes,
+                    "Building AZKS set statement"
+                );
                 let mut params = SqlParams::new();
                 params.add("akd_key", Box::new(1i16)); // constant key
-                // TODO: Fixup as conversions
+                                                       // TODO: Fixup as conversions
                 params.add("epoch", Box::new(azks.latest_epoch as i64));
                 params.add("num_nodes", Box::new(azks.num_nodes as i64));
 
@@ -142,7 +155,9 @@ impl MsSqlStorable for DbRecord {
                         VALUES ({});
                 "#,
                     params.keys_as_columns().join(", "),
-                    params.set_columns_equal_except("t.", "source.", vec!["akd_key"]).join(", "),
+                    params
+                        .set_columns_equal_except("t.", "source.", vec!["akd_key"])
+                        .join(", "),
                     params.columns().join(", "),
                     params.keys().join(", ")
                 );
@@ -264,11 +279,7 @@ impl MsSqlStorable for DbRecord {
                     "#,
                     params.keys_as_columns().join(", "),
                     params
-                        .set_columns_equal_except(
-                            "t.",
-                            "source.",
-                            vec!["label_len", "label_val"]
-                        )
+                        .set_columns_equal_except("t.", "source.", vec!["label_len", "label_val"])
                         .join(", "),
                     params.columns().join(", "),
                     params.keys().join(", "),
@@ -666,7 +677,7 @@ impl MsSqlStorable for DbRecord {
 
                 Ok(DbRecord::TreeNode(node))
             }
-            StorageType::ValueState => Ok(DbRecord::ValueState(crate::tables::values::from_row(row)?)),
+            StorageType::ValueState => Ok(DbRecord::ValueState(values::from_row(row)?)),
         }
     }
 

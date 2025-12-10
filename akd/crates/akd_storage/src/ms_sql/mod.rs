@@ -1,6 +1,9 @@
+pub(crate) mod migrations;
+pub(crate) mod sql_params;
+pub(crate) mod tables;
+
 use std::{cmp::Ordering, collections::HashMap, sync::Arc};
 
-use crate::migrations::{TABLE_AZKS, TABLE_HISTORY_TREE_NODES, TABLE_MIGRATIONS, TABLE_VALUES};
 use akd::{
     errors::StorageError,
     storage::{
@@ -13,11 +16,13 @@ use async_trait::async_trait;
 use ms_database::{IntoRow, MsSqlConnectionManager, Pool, PooledConnection};
 use tracing::{debug, error, info, instrument, trace, warn};
 
-use crate::{
-    migrations::MIGRATIONS,
-    ms_sql_storable::{MsSqlStorable, Statement},
-    tables::values,
+use migrations::{
+    MIGRATIONS, TABLE_AZKS, TABLE_HISTORY_TREE_NODES, TABLE_MIGRATIONS, TABLE_VALUES,
+};
+use tables::{
+    akd_storable_for_ms_sql::{AkdStorableForMsSql, Statement},
     temp_table::TempTable,
+    values,
 };
 
 const DEFAULT_POOL_SIZE: u32 = 100;
@@ -284,7 +289,7 @@ impl Database for MsSql {
 
                 // Set values from temp table to main table
                 debug!("Merging temp table data into main table");
-                let sql = <DbRecord as MsSqlStorable>::set_batch_statement(&storage_type);
+                let sql = <DbRecord as AkdStorableForMsSql>::set_batch_statement(&storage_type);
                 trace!(sql, "Batch merge SQL");
                 conn.simple_query(&sql).await.map_err(|e| {
                     error!(error = %e, "Failed to execute batch set statement");

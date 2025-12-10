@@ -4,9 +4,12 @@ use akd::{
     AkdLabel, AkdValue,
 };
 use ms_database::Row;
-use tracing::{debug};
+use tracing::debug;
 
-use crate::{migrations::TABLE_VALUES, ms_sql_storable::QueryStatement, sql_params::SqlParams};
+use crate::ms_sql::{
+    migrations::TABLE_VALUES, sql_params::SqlParams,
+    tables::akd_storable_for_ms_sql::QueryStatement,
+};
 
 pub fn get_all(raw_label: &AkdLabel) -> QueryStatement<ValueState> {
     debug!("Building get_all query for label (label not logged for privacy)");
@@ -20,14 +23,18 @@ pub fn get_all(raw_label: &AkdLabel) -> QueryStatement<ValueState> {
         FROM {}
         WHERE raw_label = {}
         "#,
-        TABLE_VALUES, params
+        TABLE_VALUES,
+        params
             .key_for("raw_label")
             .expect("raw_label was added to the params list")
     );
     QueryStatement::new(sql, params, from_row)
 }
 
-pub fn get_by_flag(raw_label: &AkdLabel, flag: ValueStateRetrievalFlag) -> QueryStatement<ValueState> {
+pub fn get_by_flag(
+    raw_label: &AkdLabel,
+    flag: ValueStateRetrievalFlag,
+) -> QueryStatement<ValueState> {
     debug!(?flag, "Building get_by_flag query with flag");
     let mut params = SqlParams::new();
     params.add("raw_label", Box::new(raw_label.0.clone()));
@@ -101,15 +108,39 @@ pub fn get_versions_by_flag(
     let (filter, epoch_col) = match flag {
         ValueStateRetrievalFlag::SpecificVersion(version) => {
             params.add("version", Box::new(version as i64));
-            (format!("WHERE tmp.version = {}", params.key_for("version").expect("version was added to the params list")), "tmp.epoch")
+            (
+                format!(
+                    "WHERE tmp.version = {}",
+                    params
+                        .key_for("version")
+                        .expect("version was added to the params list")
+                ),
+                "tmp.epoch",
+            )
         }
         ValueStateRetrievalFlag::SpecificEpoch(epoch) => {
             params.add("epoch", Box::new(epoch as i64));
-            (format!("WHERE tmp.epoch = {}", params.key_for("epoch").expect("epoch was added to the params list")), "tmp.epoch")
+            (
+                format!(
+                    "WHERE tmp.epoch = {}",
+                    params
+                        .key_for("epoch")
+                        .expect("epoch was added to the params list")
+                ),
+                "tmp.epoch",
+            )
         }
         ValueStateRetrievalFlag::LeqEpoch(epoch) => {
             params.add("epoch", Box::new(epoch as i64));
-            (format!("WHERE tmp.epoch <= {}", params.key_for("epoch").expect("epoch was added to the params list")), "MAX(tmp.epoch)")
+            (
+                format!(
+                    "WHERE tmp.epoch <= {}",
+                    params
+                        .key_for("epoch")
+                        .expect("epoch was added to the params list")
+                ),
+                "MAX(tmp.epoch)",
+            )
         }
         ValueStateRetrievalFlag::MaxEpoch => ("".to_string(), "MAX(tmp.epoch)"),
         ValueStateRetrievalFlag::MinEpoch => ("".to_string(), "MIN(tmp.epoch)"),
@@ -127,8 +158,7 @@ pub fn get_versions_by_flag(
             GROUP BY tmp.raw_label
         ) epochs on epochs.raw_label = t.raw_label AND epochs.epoch = t.epoch
         "#,
-        epoch_col,
-        filter,
+        epoch_col, filter,
     );
 
     QueryStatement::new(sql, params, version_from_row)
