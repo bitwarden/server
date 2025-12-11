@@ -1,8 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using System.Diagnostics;
-using System.Text;
+﻿using System.Text;
 using Bit.Core;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
@@ -42,7 +38,7 @@ public class AccountsController : Controller
     private readonly IFeatureService _featureService;
     private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _registrationEmailVerificationTokenDataFactory;
 
-    private readonly byte[] _defaultKdfHmacKey = null;
+    private readonly byte[]? _defaultKdfHmacKey = null;
     private static readonly List<UserKdfInformation> _defaultKdfResults =
     [
         // The first result (index 0) should always return the "normal" default.
@@ -157,7 +153,7 @@ public class AccountsController : Controller
         }
 
         // Users will either have an emailed token or an email verification token - not both.
-        IdentityResult identityResult = null;
+        IdentityResult? identityResult = null;
 
         // PM-28143 - Just use the MasterPasswordAuthenticationData.MasterPasswordAuthenticationHash
         string masterPasswordHash = model.MasterPasswordAuthenticationData?.MasterPasswordAuthenticationHash
@@ -166,41 +162,64 @@ public class AccountsController : Controller
         switch (model.GetTokenType())
         {
             case RegisterFinishTokenType.EmailVerification:
+                if (string.IsNullOrEmpty(model.EmailVerificationToken))
+                    throw new BadRequestException("Email verification token absent when processing an email token.");
+
                 identityResult = await _registerUserCommand.RegisterUserViaEmailVerificationToken(
                     user,
                     masterPasswordHash,
                     model.EmailVerificationToken);
                 return ProcessRegistrationResult(identityResult, user);
+
             case RegisterFinishTokenType.OrganizationInvite:
+                if (string.IsNullOrEmpty(model.OrgInviteToken))
+                    throw new BadRequestException("Organization invite token absent when processing an email token.");
+
                 identityResult = await _registerUserCommand.RegisterUserViaOrganizationInviteToken(
                     user,
                     masterPasswordHash,
-                    model.OrgInviteToken, model.OrganizationUserId);
-
+                    model.OrgInviteToken,
+                    model.OrganizationUserId);
                 return ProcessRegistrationResult(identityResult, user);
+
             case RegisterFinishTokenType.OrgSponsoredFreeFamilyPlan:
+                if (string.IsNullOrEmpty(model.OrgSponsoredFreeFamilyPlanToken))
+                    throw new BadRequestException("Organization sponsored free family plan token absent when processing an email token.");
+
                 identityResult = await _registerUserCommand.RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(
                     user,
                     masterPasswordHash,
                     model.OrgSponsoredFreeFamilyPlanToken);
-
                 return ProcessRegistrationResult(identityResult, user);
+
             case RegisterFinishTokenType.EmergencyAccessInvite:
-                Debug.Assert(model.AcceptEmergencyAccessId.HasValue);
+                if (string.IsNullOrEmpty(model.AcceptEmergencyAccessInviteToken))
+                    throw new BadRequestException("Accept emergency access invite token absent when processing an email token.");
+
+                if (model.AcceptEmergencyAccessId == null || model.AcceptEmergencyAccessId == Guid.Empty)
+                    throw new BadRequestException("Accept emergency access id absent when processing an email token.");
+
                 identityResult = await _registerUserCommand.RegisterUserViaAcceptEmergencyAccessInviteToken(
                     user,
                     masterPasswordHash,
-                    model.AcceptEmergencyAccessInviteToken, model.AcceptEmergencyAccessId.Value);
-
+                    model.AcceptEmergencyAccessInviteToken,
+                    model.AcceptEmergencyAccessId.Value);
                 return ProcessRegistrationResult(identityResult, user);
+
             case RegisterFinishTokenType.ProviderInvite:
-                Debug.Assert(model.ProviderUserId.HasValue);
+                if (string.IsNullOrEmpty(model.ProviderInviteToken))
+                    throw new BadRequestException("Provider invite token absent when processing an email token.");
+
+                if (model.ProviderUserId == null || model.ProviderUserId == Guid.Empty)
+                    throw new BadRequestException("Provider user id absent when processing an email token.");
+
                 identityResult = await _registerUserCommand.RegisterUserViaProviderInviteToken(
                     user,
                     masterPasswordHash,
-                    model.ProviderInviteToken, model.ProviderUserId.Value);
-
+                    model.ProviderInviteToken,
+                    model.ProviderUserId.Value);
                 return ProcessRegistrationResult(identityResult, user);
+
             default:
                 throw new BadRequestException("Invalid registration finish request");
         }

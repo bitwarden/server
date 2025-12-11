@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Utilities;
@@ -107,14 +106,21 @@ public class RegisterFinishRequestModel : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
+        // PM-28143 - Remove line below
         var kdf = MasterPasswordUnlockData?.Kdf.KdfType
                   ?? Kdf
                   ?? throw new Exception($"{nameof(Kdf)} not found on RequestModel");
+
+        // PM-28143 - Remove line below
         var kdfIterations = MasterPasswordUnlockData?.Kdf.Iterations
                             ?? KdfIterations
                             ?? throw new Exception($"{nameof(KdfIterations)} not found on RequestModel");
+
+        // PM-28143 - Remove line below
         var kdfMemory = MasterPasswordUnlockData?.Kdf.Memory
                         ?? KdfMemory;
+
+        // PM-28143 - Remove line below
         var kdfParallelism = MasterPasswordUnlockData?.Kdf.Parallelism
                              ?? KdfParallelism;
 
