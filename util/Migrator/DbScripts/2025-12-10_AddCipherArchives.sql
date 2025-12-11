@@ -313,7 +313,7 @@ CREATE OR ALTER PROCEDURE [dbo].[CipherDetails_Create]
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
     @ArchivedDate DATETIME2(7) = NULL,
-    @Archives NVARCHAR(MAX)
+    @Archives NVARCHAR(MAX) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -428,7 +428,7 @@ CREATE OR ALTER PROCEDURE [dbo].[CipherDetails_Update]
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
     @ArchivedDate DATETIME2(7) = NULL,
-    @Archives NVARCHAR(MAX) -- not used
+    @Archives NVARCHAR(MAX) = NULL -- not used
 AS
 BEGIN
     SET NOCOUNT ON
