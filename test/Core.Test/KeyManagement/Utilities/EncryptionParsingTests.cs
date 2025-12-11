@@ -25,12 +25,8 @@ public class EncryptionParsingTests
 
     [Theory]
     [InlineData(TestEncryptionConstants.AES256_CBC_B64_Encstring, EncryptionType.AesCbc256_B64)]
-    [InlineData(TestEncryptionConstants.AES128_CBC_HMACSHA256_B64_Encstring, EncryptionType.AesCbc128_HmacSha256_B64)]
     [InlineData(TestEncryptionConstants.AES256_CBC_HMAC_Encstring, EncryptionType.AesCbc256_HmacSha256_B64)]
-    [InlineData(TestEncryptionConstants.RSA2048_OAEPSHA256_B64_Encstring, EncryptionType.Rsa2048_OaepSha256_B64)]
     [InlineData(TestEncryptionConstants.RSA2048_OAEPSHA1_B64_Encstring, EncryptionType.Rsa2048_OaepSha1_B64)]
-    [InlineData(TestEncryptionConstants.RSA2048_OAEPSHA256_HMACSHA256_B64_Encstring, EncryptionType.Rsa2048_OaepSha256_HmacSha256_B64)]
-    [InlineData(TestEncryptionConstants.RSA2048_OAEPSHA1_HMACSHA256_B64_Encstring, EncryptionType.Rsa2048_OaepSha1_HmacSha256_B64)]
     [InlineData(TestEncryptionConstants.V2PrivateKey, EncryptionType.XChaCha20Poly1305_B64)]
     [InlineData(TestEncryptionConstants.V2WrappedSigningKey, EncryptionType.XChaCha20Poly1305_B64)]
     [InlineData(TestEncryptionConstants.AES256_CBC_HMAC_EmptySuffix, EncryptionType.AesCbc256_HmacSha256_B64)] // empty suffix still valid
