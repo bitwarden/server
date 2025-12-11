@@ -181,6 +181,7 @@ CREATE PROCEDURE [dbo].[Cipher_Create]
     @DeletedDate DATETIME2(7),
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
+    @ArchivedDate DATETIME2(7) = NULL,  -- not used
     @Archives NVARCHAR(MAX)
 AS
 BEGIN
@@ -306,7 +307,6 @@ CREATE PROCEDURE [dbo].[Cipher_CreateWithCollections]
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
     @Archives NVARCHAR(MAX),
-    @ArchivedDate DATETIME2(7) = NULL,  -- not used
     @CollectionIds AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN

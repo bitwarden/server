@@ -124,7 +124,7 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
         return union;
     }
 
-    private static DateTime GetArchivedDate(Guid? userId, Cipher cipher)
+    private static DateTime? GetArchivedDate(Guid? userId, Cipher cipher)
     {
         try
         {
