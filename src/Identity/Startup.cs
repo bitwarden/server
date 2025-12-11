@@ -15,7 +15,6 @@ using Bit.SharedWeb.Utilities;
 using Duende.IdentityServer.Services;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Logging;
-using Microsoft.OpenApi.Models;
 
 namespace Bit.Identity;
 

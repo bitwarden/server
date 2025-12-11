@@ -1,7 +1,6 @@
 ﻿#nullable enable
 
 using System.Diagnostics;
-using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace Bit.SharedWeb.Swagger;

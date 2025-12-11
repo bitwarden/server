@@ -1,6 +1,5 @@
 ﻿using Bit.SharedWeb.Swagger;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace SharedWeb.Test;

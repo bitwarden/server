@@ -1,6 +1,5 @@
 ﻿using Bit.Core.Utilities;
 using Bit.SharedWeb.Swagger;
-using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 

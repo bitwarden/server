@@ -11,7 +11,6 @@ using Bit.SharedWeb.Health;
 using Bit.SharedWeb.Swagger;
 using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.OpenApi.Models;
 
 namespace Bit.Api.Utilities;
 

@@ -2,7 +2,6 @@
 
 using System.Text.Json;
 using Bit.Core.Utilities;
-using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace Bit.SharedWeb.Swagger;
