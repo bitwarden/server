@@ -57,14 +57,16 @@ public class AzureQueueHostedService : IHostedService, IDisposable
     private async Task ExecuteAsync(CancellationToken cancellationToken)
     {
         var storageConnectionString = _configuration["azureStorageConnectionString"];
-        if (string.IsNullOrWhiteSpace(storageConnectionString))
+        var queueName = _configuration["azureQueueServiceQueueName"];
+        if (string.IsNullOrWhiteSpace(storageConnectionString) ||
+            string.IsNullOrWhiteSpace(queueName))
         {
             return;
         }
 
         var repo = new Core.Repositories.TableStorage.EventRepository(storageConnectionString);
         _eventWriteService = new RepositoryEventWriteService(repo);
-        _queueClient = new QueueClient(storageConnectionString, "event");
+        _queueClient = new QueueClient(storageConnectionString, queueName);
 
         while (!cancellationToken.IsCancellationRequested)
         {
