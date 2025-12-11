@@ -212,6 +212,7 @@ public static class FeatureFlagKeys
     public const string NoLogoutOnKdfChange = "pm-23995-no-logout-on-kdf-change";
     public const string DisableType0Decryption = "pm-25174-disable-type-0-decryption";
     public const string ConsolidatedSessionTimeoutComponent = "pm-26056-consolidated-session-timeout-component";
+    public const string V2RegistrationTDEJIT = "pm-27279-v2-registration-tde-jit";
     public const string DataRecoveryTool = "pm-28813-data-recovery-tool";
 
     /* Mobile Team */
