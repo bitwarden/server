@@ -13,7 +13,7 @@
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
     @ArchivedDate DATETIME2(7) = NULL,  -- not used, remove once Cipher.ArchivedDate is removed
-    @Archives NVARCHAR(MAX)
+    @Archives NVARCHAR(MAX) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
