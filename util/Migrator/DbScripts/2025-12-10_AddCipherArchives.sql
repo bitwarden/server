@@ -85,7 +85,7 @@ BEGIN
         [Archives] = JSON_MODIFY(
             COALESCE([Archives], N'{}'),
             CONCAT('$."', CONVERT(NVARCHAR(36), @UserId), '"'),
-            CONVERT(NVARCHAR(30), @UtcNow, 127)
+            CONCAT('"', CONVERT(NVARCHAR(30), @UtcNow, 127), '"')
         ),
         [RevisionDate] = @UtcNow
     WHERE
