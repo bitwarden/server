@@ -181,7 +181,6 @@ CREATE PROCEDURE [dbo].[Cipher_Create]
     @DeletedDate DATETIME2(7),
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
-    @ArchivedDate DATETIME2(7) = NULL,
     @Archives NVARCHAR(MAX)
 AS
 BEGIN
@@ -201,7 +200,6 @@ BEGIN
         [DeletedDate],
         [Reprompt],
         [Key],
-        [ArchivedDate],
         [Archives]
     )
     VALUES
@@ -218,7 +216,6 @@ BEGIN
         @DeletedDate,
         @Reprompt,
         @Key,
-        @ArchivedDate,
         @Archives
     )
 
@@ -253,7 +250,6 @@ CREATE PROCEDURE [dbo].[Cipher_Update]
     @DeletedDate DATETIME2(7),
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
-    @ArchivedDate DATETIME2(7) = NULL,
     @Archives NVARCHAR(MAX)
 AS
 BEGIN
@@ -274,7 +270,6 @@ BEGIN
         [DeletedDate] = @DeletedDate,
         [Reprompt] = @Reprompt,
         [Key] = @Key,
-        [ArchivedDate] = @ArchivedDate,
         [Archives] = @Archives
     WHERE
         [Id] = @Id
@@ -310,7 +305,6 @@ CREATE PROCEDURE [dbo].[Cipher_CreateWithCollections]
     @DeletedDate DATETIME2(7),
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
-    @ArchivedDate DATETIME2(7) = NULL,
     @Archives NVARCHAR(MAX),
     @CollectionIds AS [dbo].[GuidIdArray] READONLY
 AS
@@ -318,7 +312,7 @@ BEGIN
     SET NOCOUNT ON
 
     EXEC [dbo].[Cipher_Create] @Id, @UserId, @OrganizationId, @Type, @Data, @Favorites, @Folders,
-        @Attachments, @CreationDate, @RevisionDate, @DeletedDate, @Reprompt, @Key, @ArchivedDate, @Archives
+        @Attachments, @CreationDate, @RevisionDate, @DeletedDate, @Reprompt, @Key, @Archives
 
     DECLARE @UpdateCollectionsSuccess INT
     EXEC @UpdateCollectionsSuccess = [dbo].[Cipher_UpdateCollections] @Id, @UserId, @OrganizationId, @CollectionIds
@@ -357,7 +351,6 @@ CREATE PROCEDURE [dbo].[CipherDetails_Create]
     @DeletedDate DATETIME2(7),
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
-    @ArchivedDate DATETIME2(7) = NULL,
     @Archives NVARCHAR(MAX)
 AS
 BEGIN
@@ -380,7 +373,6 @@ BEGIN
         [DeletedDate],
         [Reprompt],
         [Key],
-        [ArchivedDate],
         [Archives]
     )
     VALUES
@@ -397,8 +389,7 @@ BEGIN
         @DeletedDate,
         @Reprompt,
         @Key,
-        @ArchivedDate,
-        @Archives
+        CASE WHEN @ArchivedDate IS NOT NULL THEN CONCAT('{', @UserIdKey, ':', CONVERT(NVARCHAR(30), @ArchivedDate, 127), '}') ELSE NULL END,
     )
 
     IF @OrganizationId IS NOT NULL
@@ -439,7 +430,7 @@ CREATE PROCEDURE [dbo].[CipherDetails_CreateWithCollections]
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
     @ArchivedDate DATETIME2(7) = NULL,
-    @Archives NVARCHAR(MAX),
+    @Archives NVARCHAR(MAX), -- not used
     @CollectionIds AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN
@@ -486,8 +477,7 @@ CREATE PROCEDURE [dbo].[CipherDetails_Update]
     @DeletedDate DATETIME2(2),
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
-    @ArchivedDate DATETIME2(7) = NULL,
-    @Archives NVARCHAR(MAX)
+    @ArchivedDate DATETIME2(7) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -587,9 +577,7 @@ BEGIN
         [dbo].[Cipher]
     SET
         [DeletedDate] = @UtcNow,
-        [RevisionDate] = @UtcNow,
-        [ArchivedDate] = NULL,
-        [Archives] = NULL
+        [RevisionDate] = @UtcNow
     WHERE
         [Id] IN (SELECT [Id] FROM #Temp)
 
@@ -639,7 +627,6 @@ CREATE PROCEDURE [dbo].[Cipher_UpdateWithCollections]
     @DeletedDate DATETIME2(7),
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
-    @ArchivedDate DATETIME2(7) = NULL,
     @Archives NVARCHAR(MAX),
     @CollectionIds AS [dbo].[GuidIdArray] READONLY
 AS
@@ -666,7 +653,7 @@ BEGIN
         [Data] = @Data,
         [Attachments] = @Attachments,
         [RevisionDate] = @RevisionDate,
-        [DeletedDate] = @DeletedDate, [Key] = @Key, [ArchivedDate] = @ArchivedDate
+        [DeletedDate] = @DeletedDate, [Key] = @Key,
         -- No need to update CreationDate, Favorites, Folders, or Type since that data will not change
     WHERE
         [Id] = @Id
