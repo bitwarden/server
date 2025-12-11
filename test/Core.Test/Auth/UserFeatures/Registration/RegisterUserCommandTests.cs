@@ -1017,6 +1017,7 @@ public class RegisterUserCommandTests
     [Theory]
     [BitAutoData(PlanType.FamiliesAnnually)]
     [BitAutoData(PlanType.FamiliesAnnually2019)]
+    [BitAutoData(PlanType.FamiliesAnnually2025)]
     [BitAutoData(PlanType.Free)]
     public async Task SendWelcomeEmail_FamilyOrg_SendsFamilyWelcomeEmail(
         PlanType planType,

@@ -736,11 +736,8 @@ public abstract class BaseRequestValidator<T> where T : class
 
     private async Task SendFailedTwoFactorEmail(User user, TwoFactorProviderType failedAttemptType)
     {
-        if (_featureService.IsEnabled(FeatureFlagKeys.FailedTwoFactorEmail))
-        {
-            await _mailService.SendFailedTwoFactorAttemptEmailAsync(user.Email, failedAttemptType, DateTime.UtcNow,
-                CurrentContext.IpAddress);
-        }
+        await _mailService.SendFailedTwoFactorAttemptEmailAsync(user.Email, failedAttemptType, DateTime.UtcNow,
+            CurrentContext.IpAddress);
     }
 
     private async Task<MasterPasswordPolicyResponseModel> GetMasterPasswordPolicyAsync(User user)
