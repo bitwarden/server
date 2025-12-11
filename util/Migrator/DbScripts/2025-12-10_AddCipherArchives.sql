@@ -351,6 +351,7 @@ CREATE PROCEDURE [dbo].[CipherDetails_Create]
     @DeletedDate DATETIME2(7),
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
+    @ArchivedDate DATETIME2(7) = NULL,
     @Archives NVARCHAR(MAX)
 AS
 BEGIN
