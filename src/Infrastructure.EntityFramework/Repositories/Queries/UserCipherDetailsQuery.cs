@@ -137,12 +137,12 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
                 }
             }
 
-            return default;
+            return null;
         }
         catch
         {
             // Some Archives might be in an invalid format like: '{ "", "<ValidDateTime>" }'
-            return default;
+            return null;
         }
     }
 
