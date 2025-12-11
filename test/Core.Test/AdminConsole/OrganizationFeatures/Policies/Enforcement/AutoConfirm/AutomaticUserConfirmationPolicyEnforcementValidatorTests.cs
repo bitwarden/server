@@ -19,7 +19,7 @@ public class AutomaticUserConfirmationPolicyEnforcementValidatorTests
 {
     [Theory]
     [BitAutoData]
-    public async Task IsCompliantAsync_WithUserIsAMemberOfAProviderAndPolicyIsEnabled_ReturnsProviderUsersCannotJoinError(
+    public async Task IsCompliantAsync_WithPolicyEnabledAndUserIsProviderMember_ReturnsProviderUsersCannotJoinError(
         SutProvider<AutomaticUserConfirmationPolicyEnforcementValidator> sutProvider,
         OrganizationUser organizationUser,
         ProviderUser providerUser,
@@ -97,7 +97,7 @@ public class AutomaticUserConfirmationPolicyEnforcementValidatorTests
 
     [Theory]
     [BitAutoData]
-    public async Task IsCompliantAsync_UserIsAMemberOfAnotherOrgButNoPolicyDetailForAutoConfirm_ReturnsValid(
+    public async Task IsCompliantAsync_WithPolicyDisabledUserIsAMemberOfAnotherOrgReturnsValid(
         SutProvider<AutomaticUserConfirmationPolicyEnforcementValidator> sutProvider,
         OrganizationUser organizationUser,
         OrganizationUser otherOrgUser,
@@ -129,7 +129,46 @@ public class AutomaticUserConfirmationPolicyEnforcementValidatorTests
 
     [Theory]
     [BitAutoData]
-    public async Task IsCompliantAsync_ChecksConditionsInCorrectOrder_ReturnsFirstFailure(
+    public async Task IsCompliantAsync_WithPolicyEnabledUserIsAMemberOfAnotherOrg_ReturnsCannotBeMemberOfAnotherOrgError(
+        SutProvider<AutomaticUserConfirmationPolicyEnforcementValidator> sutProvider,
+        OrganizationUser organizationUser,
+        OrganizationUser otherOrgUser,
+        User user)
+    {
+        // Arrange
+        organizationUser.UserId = user.Id;
+        otherOrgUser.UserId = user.Id;
+
+        var request = new AutomaticUserConfirmationPolicyEnforcementRequest(
+            organizationUser.OrganizationId,
+            [organizationUser, otherOrgUser],
+            user);
+
+        var policyDetails = new PolicyDetails
+        {
+            OrganizationId = organizationUser.OrganizationId,
+            PolicyType = PolicyType.AutomaticUserConfirmation
+        };
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([policyDetails]));
+
+        sutProvider.GetDependency<IProviderUserRepository>()
+            .GetManyByUserAsync(user.Id)
+            .Returns([]);
+
+        // Act
+        var result = await sutProvider.Sut.IsCompliantAsync(request);
+
+        // Assert
+        Assert.True(result.IsError);
+        Assert.IsType<UserCannotBelongToAnotherOrganization>(result.AsError);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task IsCompliantAsync_WithPolicyEnabledAndChecksConditionsInCorrectOrder_ReturnsFirstFailure(
         SutProvider<AutomaticUserConfirmationPolicyEnforcementValidator> sutProvider,
         OrganizationUser organizationUser,
         OrganizationUser otherOrgUser,
@@ -204,7 +243,7 @@ public class AutomaticUserConfirmationPolicyEnforcementValidatorTests
 
     [Theory]
     [BitAutoData]
-    public async Task IsCompliantAsync_WithNoPolicyEnabledForCurrentAndOtherOrg_ReturnsValid(
+    public async Task IsCompliantAsync_WithPolicyDisabledForCurrentAndOtherOrg_ReturnsValid(
         SutProvider<AutomaticUserConfirmationPolicyEnforcementValidator> sutProvider,
         OrganizationUser organizationUser,
         OrganizationUser otherOrgUser,
@@ -235,7 +274,7 @@ public class AutomaticUserConfirmationPolicyEnforcementValidatorTests
 
     [Theory]
     [BitAutoData]
-    public async Task IsCompliantAsync_WithNoPolicyEnabledForCurrentAndOtherOrgAndIsProvider_ReturnsValid(
+    public async Task IsCompliantAsync_WithPolicyDisabledForCurrentAndOtherOrgAndIsProvider_ReturnsValid(
         SutProvider<AutomaticUserConfirmationPolicyEnforcementValidator> sutProvider,
         OrganizationUser organizationUser,
         OrganizationUser otherOrgUser,

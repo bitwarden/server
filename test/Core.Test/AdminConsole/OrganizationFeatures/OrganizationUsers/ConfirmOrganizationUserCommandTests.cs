@@ -591,12 +591,12 @@ public class ConfirmOrganizationUserCommandTests
             .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>())
             .Returns(Invalid(
                 new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser.Id, [orgUser, otherOrgUser], user),
-                new OrganizationEnforcesSingleOrgPolicy()));
+                new UserCannotBelongToAnotherOrganization()));
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id));
 
-        Assert.Equal(new OrganizationEnforcesSingleOrgPolicy().Message, exception.Message);
+        Assert.Equal(new UserCannotBelongToAnotherOrganization().Message, exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -746,13 +746,13 @@ public class ConfirmOrganizationUserCommandTests
             .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>())
             .Returns(Invalid(
                 new AutomaticUserConfirmationPolicyEnforcementRequest(org.Id, [orgUser, otherOrgUser], user),
-                new OrganizationEnforcesSingleOrgPolicy()));
+                new UserCannotBelongToAnotherOrganization()));
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id));
 
-        Assert.Equal(new OrganizationEnforcesSingleOrgPolicy().Message, exception.Message);
+        Assert.Equal(new UserCannotBelongToAnotherOrganization().Message, exception.Message);
         Assert.NotEqual("Cannot confirm this member to the organization until they leave or remove all other organizations.",
             exception.Message);
     }

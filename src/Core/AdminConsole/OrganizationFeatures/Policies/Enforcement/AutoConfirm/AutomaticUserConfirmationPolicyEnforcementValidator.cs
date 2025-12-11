@@ -33,14 +33,13 @@ public class AutomaticUserConfirmationPolicyEnforcementValidator(
                 return Invalid(request, new ProviderUsersCannotJoin());
             }
 
-            if (request.AllOrganizationUsers.Count == 1)
+            if (request.AllOrganizationUsers.Count > 1)
             {
-                return Valid(request);
+                return Invalid(request, new UserCannotBelongToAnotherOrganization());
             }
         }
 
-        if (automaticUserConfirmationPolicyRequirement
-            .IsEnabledForOrganizationsOtherThan(currentOrganizationUser.OrganizationId))
+        if (automaticUserConfirmationPolicyRequirement.IsEnabledForOrganizationsOtherThan(currentOrganizationUser.OrganizationId))
         {
             return Invalid(request, new OtherOrganizationDoesNotAllowOtherMembership());
         }

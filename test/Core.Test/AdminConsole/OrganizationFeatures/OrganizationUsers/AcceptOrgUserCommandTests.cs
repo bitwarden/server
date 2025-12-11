@@ -739,14 +739,14 @@ public class AcceptOrgUserCommandTests
             .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>())
             .Returns(Invalid(
                 new AutomaticUserConfirmationPolicyEnforcementRequest(org.Id, [orgUser, otherOrgUser], user),
-                new OrganizationEnforcesSingleOrgPolicy()));
+                new UserCannotBelongToAnotherOrganization()));
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService));
 
         // Should get auto-confirm error
-        Assert.Equal(new OrganizationEnforcesSingleOrgPolicy().Message, exception.Message);
+        Assert.Equal(new UserCannotBelongToAnotherOrganization().Message, exception.Message);
     }
 
     // Private helpers -------------------------------------------------------------------------------------------------
