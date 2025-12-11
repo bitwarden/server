@@ -403,13 +403,13 @@ public class GlobalSettings : IGlobalSettings
         public string ConnectionString
         {
             get => _connectionString;
-            set => _connectionString = value.Trim('"');
+            set => _connectionString = value?.Trim('"');
         }
 
         public string QueueName
         {
             get => _queueName;
-            set => _queueName = value.Trim('"');
+            set => _queueName = value?.Trim('"');
         }
     }
 
