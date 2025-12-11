@@ -163,7 +163,7 @@ public class AccountsController : Controller
         {
             case RegisterFinishTokenType.EmailVerification:
                 if (string.IsNullOrEmpty(model.EmailVerificationToken))
-                    throw new BadRequestException("Email verification token absent when processing an email token.");
+                    throw new BadRequestException("Email verification token absent when processing register/finish.");
 
                 identityResult = await _registerUserCommand.RegisterUserViaEmailVerificationToken(
                     user,
@@ -173,7 +173,7 @@ public class AccountsController : Controller
 
             case RegisterFinishTokenType.OrganizationInvite:
                 if (string.IsNullOrEmpty(model.OrgInviteToken))
-                    throw new BadRequestException("Organization invite token absent when processing an email token.");
+                    throw new BadRequestException("Organization invite token absent when processing register/finish.");
 
                 identityResult = await _registerUserCommand.RegisterUserViaOrganizationInviteToken(
                     user,
@@ -184,7 +184,7 @@ public class AccountsController : Controller
 
             case RegisterFinishTokenType.OrgSponsoredFreeFamilyPlan:
                 if (string.IsNullOrEmpty(model.OrgSponsoredFreeFamilyPlanToken))
-                    throw new BadRequestException("Organization sponsored free family plan token absent when processing an email token.");
+                    throw new BadRequestException("Organization sponsored free family plan token absent when processing register/finish.");
 
                 identityResult = await _registerUserCommand.RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(
                     user,
@@ -194,10 +194,10 @@ public class AccountsController : Controller
 
             case RegisterFinishTokenType.EmergencyAccessInvite:
                 if (string.IsNullOrEmpty(model.AcceptEmergencyAccessInviteToken))
-                    throw new BadRequestException("Accept emergency access invite token absent when processing an email token.");
+                    throw new BadRequestException("Accept emergency access invite token absent when processing register/finish.");
 
                 if (model.AcceptEmergencyAccessId == null || model.AcceptEmergencyAccessId == Guid.Empty)
-                    throw new BadRequestException("Accept emergency access id absent when processing an email token.");
+                    throw new BadRequestException("Accept emergency access id absent when processing register/finish.");
 
                 identityResult = await _registerUserCommand.RegisterUserViaAcceptEmergencyAccessInviteToken(
                     user,
@@ -208,10 +208,10 @@ public class AccountsController : Controller
 
             case RegisterFinishTokenType.ProviderInvite:
                 if (string.IsNullOrEmpty(model.ProviderInviteToken))
-                    throw new BadRequestException("Provider invite token absent when processing an email token.");
+                    throw new BadRequestException("Provider invite token absent when processing register/finish.");
 
                 if (model.ProviderUserId == null || model.ProviderUserId == Guid.Empty)
-                    throw new BadRequestException("Provider user id absent when processing an email token.");
+                    throw new BadRequestException("Provider user id absent when processing register/finish.");
 
                 identityResult = await _registerUserCommand.RegisterUserViaProviderInviteToken(
                     user,
