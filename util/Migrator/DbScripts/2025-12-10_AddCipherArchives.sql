@@ -13,7 +13,7 @@ GO
 
 -- Update CipherDetails function to use JSON column approac
 
-CREATE FUNCTION [dbo].[CipherDetails](@UserId UNIQUEIDENTIFIER OR ALTER)
+CREATE OR ALTER FUNCTION [dbo].[CipherDetails](@UserId UNIQUEIDENTIFIER)
 RETURNS TABLE
 AS RETURN
 SELECT
