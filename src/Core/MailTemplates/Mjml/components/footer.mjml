@@ -3,37 +3,37 @@
     <mj-social icon-size="24px" inner-padding="8px" padding="0">
       <mj-social-element
         href="https://x.com/bitwarden"
-        src="https://assets.bitwarden.com/email/v1/mail-x.png"
+        src="https://assets.bitwarden.com/email/v1/social-icons-x-twitter.png"
       ></mj-social-element>
 
       <mj-social-element
         href="https://www.reddit.com/r/Bitwarden/"
-        src="https://assets.bitwarden.com/email/v1/mail-reddit.png"
+        src="https://assets.bitwarden.com/email/v1/social-icons-reddit.png"
       ></mj-social-element>
 
       <mj-social-element
         href="https://community.bitwarden.com/"
-        src="https://assets.bitwarden.com/email/v1/mail-discourse.png"
+        src="https://assets.bitwarden.com/email/v1/social-icons-discourse.png"
       ></mj-social-element>
 
       <mj-social-element
         href="https://github.com/bitwarden"
-        src="https://assets.bitwarden.com/email/v1/mail-github.png"
+        src="https://assets.bitwarden.com/email/v1/social-icons-github.png"
       ></mj-social-element>
 
       <mj-social-element
         href="https://www.youtube.com/channel/UCId9a_jQqvJre0_dE2lE_Rw"
-        src="https://assets.bitwarden.com/email/v1/mail-youtube.png"
+        src="https://assets.bitwarden.com/email/v1/social-icons-youtube.png"
       ></mj-social-element>
 
       <mj-social-element
         href="https://www.linkedin.com/company/bitwarden1/"
-        src="https://assets.bitwarden.com/email/v1/mail-linkedin.png"
+        src="https://assets.bitwarden.com/email/v1/social-icons-linkedin.png"
       ></mj-social-element>
 
       <mj-social-element
         href="https://www.facebook.com/bitwarden/"
-        src="https://assets.bitwarden.com/email/v1/mail-facebook.png"
+        src="https://assets.bitwarden.com/email/v1/social-icons-facebook.png"
       ></mj-social-element>
     </mj-social>
 
