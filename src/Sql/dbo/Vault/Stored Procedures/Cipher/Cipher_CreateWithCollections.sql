@@ -13,6 +13,7 @@
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
     @Archives NVARCHAR(MAX),
+    @ArchivedDate DATETIME2(7) = NULL,  -- not used, remove once Cipher.ArchivedDate is removed
     @CollectionIds AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN
