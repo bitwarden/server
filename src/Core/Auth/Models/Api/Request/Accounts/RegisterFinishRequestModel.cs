@@ -65,6 +65,7 @@ public class RegisterFinishRequestModel : IValidatableObject
             MasterPasswordHint = MasterPasswordHint,
             Kdf = MasterPasswordUnlockData?.Kdf.KdfType ?? Kdf ?? throw new Exception("KdfType couldn't be found on either the MasterPasswordUnlockData or the Kdf property passed in."),
             KdfIterations = MasterPasswordUnlockData?.Kdf.Iterations ?? KdfIterations ?? throw new Exception("KdfIterations couldn't be found on either the MasterPasswordUnlockData or the KdfIterations property passed in."),
+            // KdfMemory and KdfParallelism are optional (only used for Argon2id)
             KdfMemory = MasterPasswordUnlockData?.Kdf.Memory ?? KdfMemory,
             KdfParallelism = MasterPasswordUnlockData?.Kdf.Parallelism ?? KdfParallelism,
             // PM-28827 To be added when MasterPasswordSalt is added to the user column
