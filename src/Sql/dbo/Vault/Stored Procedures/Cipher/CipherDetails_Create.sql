@@ -57,7 +57,7 @@ BEGIN
         @DeletedDate,
         @Reprompt,
         @Key,
-        CASE WHEN @ArchivedDate IS NOT NULL THEN CONCAT('{', @UserIdKey, ':', CONVERT(NVARCHAR(30), @ArchivedDate, 127), '}') ELSE NULL END
+        CASE WHEN @ArchivedDate IS NOT NULL THEN CONCAT('{', @UserIdKey, ':"', CONVERT(NVARCHAR(30), @ArchivedDate, 127), '"}') ELSE NULL END
     )
 
     IF @OrganizationId IS NOT NULL
