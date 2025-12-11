@@ -11,14 +11,9 @@ BEGIN
 END;
 GO
 
--- Update CipherDetails function to use JSON column approach
-IF OBJECT_ID('[dbo].[CipherDetails]') IS NOT NULL
-BEGIN
-    DROP FUNCTION [dbo].[CipherDetails];
-END
-GO
+-- Update CipherDetails function to use JSON column approac
 
-CREATE FUNCTION [dbo].[CipherDetails](@UserId UNIQUEIDENTIFIER)
+CREATE FUNCTION [dbo].[CipherDetails](@UserId UNIQUEIDENTIFIER OR ALTER)
 RETURNS TABLE
 AS RETURN
 SELECT
@@ -59,13 +54,7 @@ FROM
     [dbo].[Cipher] C;
 GO
 
-IF OBJECT_ID('[dbo].[Cipher_Archive]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[Cipher_Archive];
-END
-GO
-
-CREATE PROCEDURE [dbo].[Cipher_Archive]
+CREATE OR ALTER PROCEDURE [dbo].[Cipher_Archive]
     @Ids AS [dbo].[GuidIdArray] READONLY,
     @UserId AS UNIQUEIDENTIFIER
 AS
@@ -110,13 +99,7 @@ BEGIN
 END
 GO
 
-IF OBJECT_ID('[dbo].[Cipher_Unarchive]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[Cipher_Unarchive];
-END
-GO
-
-CREATE PROCEDURE [dbo].[Cipher_Unarchive]
+CREATE OR ALTER PROCEDURE [dbo].[Cipher_Unarchive]
     @Ids AS [dbo].[GuidIdArray] READONLY,
     @UserId AS UNIQUEIDENTIFIER
 AS
@@ -161,13 +144,7 @@ BEGIN
 END
 GO
 
-IF OBJECT_ID('[dbo].[Cipher_Create]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[Cipher_Create];
-END
-GO
-
-CREATE PROCEDURE [dbo].[Cipher_Create]
+CREATE OR ALTER PROCEDURE [dbo].[Cipher_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @UserId UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
@@ -182,7 +159,7 @@ CREATE PROCEDURE [dbo].[Cipher_Create]
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
     @ArchivedDate DATETIME2(7) = NULL,  -- not used, remove once Cipher.ArchivedDate is removed
-    @Archives NVARCHAR(MAX)
+    @Archives NVARCHAR(MAX) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -231,13 +208,7 @@ BEGIN
 END
 GO
 
-IF OBJECT_ID('[dbo].[Cipher_Update]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[Cipher_Update];
-END
-GO
-
-CREATE PROCEDURE [dbo].[Cipher_Update]
+CREATE OR ALTER PROCEDURE [dbo].[Cipher_Update]
     @Id UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
@@ -251,7 +222,7 @@ CREATE PROCEDURE [dbo].[Cipher_Update]
     @DeletedDate DATETIME2(7),
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
-    @Archives NVARCHAR(MAX)
+    @Archives NVARCHAR(MAX) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -286,13 +257,7 @@ BEGIN
 END
 GO
 
-IF OBJECT_ID('[dbo].[Cipher_CreateWithCollections]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[Cipher_CreateWithCollections];
-END
-GO
-
-CREATE PROCEDURE [dbo].[Cipher_CreateWithCollections]
+CREATE OR ALTER PROCEDURE [dbo].[Cipher_CreateWithCollections]
     @Id UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
@@ -327,13 +292,7 @@ BEGIN
 END
 GO
 
-IF OBJECT_ID('[dbo].[CipherDetails_Create]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[CipherDetails_Create];
-END
-GO
-
-CREATE PROCEDURE [dbo].[CipherDetails_Create]
+CREATE OR ALTER PROCEDURE [dbo].[CipherDetails_Create]
     @Id UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
@@ -406,13 +365,7 @@ BEGIN
 END
 GO
 
-IF OBJECT_ID('[dbo].[CipherDetails_CreateWithCollections]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[CipherDetails_CreateWithCollections];
-END
-GO
-
-CREATE PROCEDURE [dbo].[CipherDetails_CreateWithCollections]
+CREATE OR ALTER PROCEDURE [dbo].[CipherDetails_CreateWithCollections]
     @Id UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
@@ -454,13 +407,7 @@ BEGIN
 END
 GO
 
-IF OBJECT_ID('[dbo].[CipherDetails_Update]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[CipherDetails_Update];
-END
-GO
-
-CREATE PROCEDURE [dbo].[CipherDetails_Update]
+CREATE OR ALTER PROCEDURE [dbo].[CipherDetails_Update]
     @Id UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
@@ -480,7 +427,8 @@ CREATE PROCEDURE [dbo].[CipherDetails_Update]
     @DeletedDate DATETIME2(2),
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
-    @ArchivedDate DATETIME2(7) = NULL
+    @ArchivedDate DATETIME2(7) = NULL,
+    @Archives NVARCHAR(MAX) -- not used
 AS
 BEGIN
     SET NOCOUNT ON
@@ -542,13 +490,7 @@ BEGIN
 END
 GO
 
-IF OBJECT_ID('[dbo].[Cipher_SoftDelete]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[Cipher_SoftDelete];
-END
-GO
-
-CREATE PROCEDURE [dbo].[Cipher_SoftDelete]
+CREATE OR ALTER PROCEDURE [dbo].[Cipher_SoftDelete]
     @Ids AS [dbo].[GuidIdArray] READONLY,
     @UserId AS UNIQUEIDENTIFIER
 AS
@@ -610,13 +552,7 @@ BEGIN
 END
 GO
 
-IF OBJECT_ID('[dbo].[Cipher_UpdateWithCollections]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[Cipher_UpdateWithCollections];
-END
-GO
-
-CREATE PROCEDURE [dbo].[Cipher_UpdateWithCollections]
+CREATE OR ALTER PROCEDURE [dbo].[Cipher_UpdateWithCollections]
     @Id UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
