@@ -12,6 +12,7 @@
     @DeletedDate DATETIME2(7),
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
+    @ArchivedDate DATETIME2(7) = NULL,  -- not used
     @Archives NVARCHAR(MAX)
 AS
 BEGIN

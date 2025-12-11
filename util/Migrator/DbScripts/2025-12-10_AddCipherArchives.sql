@@ -306,6 +306,7 @@ CREATE PROCEDURE [dbo].[Cipher_CreateWithCollections]
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
     @Archives NVARCHAR(MAX),
+    @ArchivedDate DATETIME2(7) = NULL,  -- not used
     @CollectionIds AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN

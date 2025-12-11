@@ -25,6 +25,9 @@ public class Cipher : ITableObject<Guid>, ICloneable
     public DateTime? DeletedDate { get; set; }
     public Enums.CipherRepromptType? Reprompt { get; set; }
     public string Key { get; set; }
+    // Deprecated. Left for backwards compatibility with old archive handling.
+    // Remove after all clients migrate to the Archives JSON column.
+    public DateTime? ArchivedDate { get; set; }
     public string Archives { get; set; }
 
     public void SetNewId()
