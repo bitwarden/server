@@ -819,13 +819,11 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
                 {
                     // Remove this user's archive record
                     archives.Remove(userId);
-                    cipher.ArchivedDate = null;
                 }
                 else if (action == CipherStateAction.Archive)
                 {
                     // Set this user's archive date
                     archives[userId] = utcNow;
-                    cipher.ArchivedDate = utcNow;
                 }
 
                 // Persist the updated JSON or clear it if empty
