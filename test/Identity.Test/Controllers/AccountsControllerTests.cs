@@ -591,6 +591,8 @@ public class AccountsControllerTests : IDisposable
         await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostRegisterVerificationEmailClicked(requestModel));
     }
 
+    // PM-28143 - When removing the old properties, update this test to just test the new properties working
+    // as expected.
     [Theory, BitAutoData]
     public async Task PostRegisterFinish_EmailVerification_BothDataForms_ProduceEquivalentOutcomes(
         string email,
@@ -705,6 +707,8 @@ public class AccountsControllerTests : IDisposable
             emailVerificationToken);
     }
 
+    // PM-28143 - When removing the old properties, update this test to just test the new properties working
+    // as expected.
     [Theory, BitAutoData]
     public async Task PostRegisterFinish_OrgInvite_BothDataForms_ProduceEquivalentOutcomes(
         string email,
