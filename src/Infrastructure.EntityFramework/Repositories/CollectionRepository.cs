@@ -832,7 +832,6 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         try
         {
             // Check if this organization user already has a default collection
-            // SERIALIZABLE ensures this SELECT acquires range locks
             var existingDefaultCollection = await (
                 from c in dbContext.Collections
                 join cu in dbContext.CollectionUsers on c.Id equals cu.CollectionId

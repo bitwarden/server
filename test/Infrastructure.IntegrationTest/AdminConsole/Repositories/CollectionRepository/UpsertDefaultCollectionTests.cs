@@ -91,8 +91,8 @@ public class UpsertDefaultCollectionTests
         var orgUser = await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user);
         var defaultCollectionName = $"My Items - {organization.Id}";
 
-        // Act - Call method 5 times
-        var tasks = Enumerable.Range(1, 5).Select(i => collectionRepository.UpsertDefaultCollectionAsync(
+        // Act - Call method 20! times
+        var tasks = Enumerable.Range(1, 20).Select(i => collectionRepository.UpsertDefaultCollectionAsync(
             organization.Id,
             orgUser.Id,
             defaultCollectionName));
