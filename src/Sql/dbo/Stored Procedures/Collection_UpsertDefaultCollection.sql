@@ -13,8 +13,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- Use SERIALIZABLE isolation level to prevent race conditions during concurrent calls
-    SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+    -- explicit transaction but does not change the isolation level
     BEGIN TRANSACTION;
 
     BEGIN TRY
