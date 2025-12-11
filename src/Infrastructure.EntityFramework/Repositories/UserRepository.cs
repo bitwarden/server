@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
@@ -238,6 +239,80 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             await action();
         }
 
+        await transaction.CommitAsync();
+    }
+
+    public async Task SetV2AccountCryptographicStateAsync(
+        Guid userId,
+        UserAccountKeysData accountKeysData,
+        IEnumerable<UpdateUserData>? updateUserDataActions = null)
+    {
+        if (!accountKeysData.IsV2Encryption())
+        {
+            throw new ArgumentException("Provided account keys data is not valid V2 encryption data.", nameof(accountKeysData));
+        }
+
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
+        // Update user
+        var userEntity = await dbContext.Users.FindAsync(userId);
+        if (userEntity == null)
+        {
+            throw new ArgumentException("User not found", nameof(userId));
+        }
+
+        // Update public key encryption key pair
+        var timestamp = DateTime.UtcNow;
+
+        userEntity.RevisionDate = timestamp;
+        userEntity.AccountRevisionDate = timestamp;
+
+        // V1 + V2 user crypto changes
+        userEntity.PublicKey = accountKeysData.PublicKeyEncryptionKeyPairData.PublicKey;
+        userEntity.PrivateKey = accountKeysData.PublicKeyEncryptionKeyPairData.WrappedPrivateKey;
+
+        userEntity.SecurityState = accountKeysData.SecurityStateData!.SecurityState;
+        userEntity.SecurityVersion = accountKeysData.SecurityStateData.SecurityVersion;
+        userEntity.SignedPublicKey = accountKeysData.PublicKeyEncryptionKeyPairData.SignedPublicKey;
+
+        // Replace existing keypair if it exists
+        var existingKeyPair = await dbContext.UserSignatureKeyPairs
+            .FirstOrDefaultAsync(x => x.UserId == userId);
+        if (existingKeyPair != null)
+        {
+            existingKeyPair.SignatureAlgorithm = accountKeysData.SignatureKeyPairData!.SignatureAlgorithm;
+            existingKeyPair.SigningKey = accountKeysData.SignatureKeyPairData.WrappedSigningKey;
+            existingKeyPair.VerifyingKey = accountKeysData.SignatureKeyPairData.VerifyingKey;
+            existingKeyPair.RevisionDate = timestamp;
+        }
+        else
+        {
+            var newKeyPair = new UserSignatureKeyPair
+            {
+                UserId = userId,
+                SignatureAlgorithm = accountKeysData.SignatureKeyPairData!.SignatureAlgorithm,
+                SigningKey = accountKeysData.SignatureKeyPairData.WrappedSigningKey,
+                VerifyingKey = accountKeysData.SignatureKeyPairData.VerifyingKey,
+                CreationDate = timestamp,
+                RevisionDate = timestamp
+            };
+            newKeyPair.SetNewId();
+            await dbContext.UserSignatureKeyPairs.AddAsync(newKeyPair);
+        }
+
+        await dbContext.SaveChangesAsync();
+
+        // Update additional user data within the same transaction
+        if (updateUserDataActions != null)
+        {
+            foreach (var action in updateUserDataActions)
+            {
+                await action();
+            }
+        }
         await transaction.CommitAsync();
     }
 
