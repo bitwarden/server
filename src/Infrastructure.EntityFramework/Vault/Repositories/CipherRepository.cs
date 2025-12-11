@@ -704,6 +704,9 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
             trackedCipher.RevisionDate = cipher.RevisionDate;
             trackedCipher.DeletedDate = cipher.DeletedDate;
             trackedCipher.Key = cipher.Key;
+            trackedCipher.Folders = cipher.Folders;
+            trackedCipher.Favorites = cipher.Favorites;
+            trackedCipher.Reprompt = cipher.Reprompt;
 
             await transaction.CommitAsync();
 
