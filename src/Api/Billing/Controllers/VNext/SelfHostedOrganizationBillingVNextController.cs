@@ -14,7 +14,7 @@ namespace Bit.Api.Billing.Controllers.VNext;
 [Authorize("Application")]
 [Route("organizations/{organizationId:guid}/billing/vnext/self-host")]
 [SelfHosted(SelfHostedOnly = true)]
-public class SelfHostedBillingController(
+public class SelfHostedOrganizationBillingVNextController(
     IGetOrganizationMetadataQuery getOrganizationMetadataQuery) : BaseBillingController
 {
     [Authorize<MemberOrProviderRequirement>]
