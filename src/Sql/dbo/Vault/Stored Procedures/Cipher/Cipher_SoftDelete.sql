@@ -30,7 +30,7 @@ BEGIN
         [dbo].[Cipher]
     SET
         [DeletedDate] = @UtcNow,
-        [RevisionDate] = @UtcNow,
+        [RevisionDate] = @UtcNow
     WHERE
         [Id] IN (SELECT [Id] FROM #Temp)
 
