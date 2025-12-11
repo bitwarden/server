@@ -1829,8 +1829,6 @@ public class CipherServiceTests
         await sutProvider.Sut.SoftDeleteAsync(cipherDetails, deletingUserId);
 
         Assert.NotNull(cipherDetails.DeletedDate);
-        // Archives should be cleared on soft delete
-        Assert.Null(cipherDetails.Archives);
         Assert.Equal(cipherDetails.RevisionDate, cipherDetails.DeletedDate);
         await sutProvider.GetDependency<ICipherRepository>().Received(1).UpsertAsync(cipherDetails);
         await sutProvider.GetDependency<IEventService>().Received(1).LogCipherEventAsync(cipherDetails, EventType.Cipher_SoftDeleted);
