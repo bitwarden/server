@@ -9,8 +9,8 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.V
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities.Validation;
+using Bit.Core.Billing.Services;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.PasswordManager;
@@ -22,7 +22,7 @@ public class InviteUsersPasswordManagerValidator(
     IInviteUsersEnvironmentValidator inviteUsersEnvironmentValidator,
     IInviteUsersOrganizationValidator inviteUsersOrganizationValidator,
     IProviderRepository providerRepository,
-    IPaymentService paymentService,
+    IStripePaymentService paymentService,
     IOrganizationRepository organizationRepository
     ) : IInviteUsersPasswordManagerValidator
 {
