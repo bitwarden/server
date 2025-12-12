@@ -8,7 +8,7 @@ namespace Bit.Core.Test.KeyManagement.Models.Api.Request;
 
 public class SetKeyConnectorKeyRequestModelTests
 {
-    private const string _wrappedUserKey = "wrapped-user-key";
+    private const string _wrappedUserKey = "2.AOs41Hd8OQiCPXjyJKCiDA==|O6OHgt2U2hJGBSNGnimJmg==|iD33s8B69C8JhYYhSa4V1tArjvLr8eEaGqOV7BRo5Jk=";
     private const string _publicKey = "public-key";
     private const string _privateKey = "private-key";
     private const string _userKey = "user-key";
@@ -34,6 +34,30 @@ public class SetKeyConnectorKeyRequestModelTests
 
         // Assert
         Assert.Empty(results);
+    }
+
+    [Fact]
+    public void Validate_V2Registration_WrappedUserKeyNotEncryptedString_Invalid()
+    {
+        // Arrange
+        var model = new SetKeyConnectorKeyRequestModel
+        {
+            KeyConnectorKeyWrappedUserKey = "not-encrypted-string",
+            AccountKeys = new AccountKeysRequestModel
+            {
+                AccountPublicKey = _publicKey,
+                UserKeyEncryptedAccountPrivateKey = _privateKey
+            },
+            OrgIdentifier = _orgIdentifier
+        };
+
+        // Act
+        var results = Validate(model);
+
+        // Assert
+        Assert.Single(results);
+        Assert.Contains(results,
+            r => r.ErrorMessage == "KeyConnectorKeyWrappedUserKey is not a valid encrypted string.");
     }
 
     [Fact]
