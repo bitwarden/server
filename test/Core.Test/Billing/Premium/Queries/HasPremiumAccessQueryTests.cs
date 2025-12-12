@@ -80,7 +80,7 @@ public class HasPremiumAccessQueryTests
         // Arrange
         sutProvider.GetDependency<IUserRepository>()
             .GetPremiumAccessAsync(userId)
-            .Returns<UserPremiumAccess>(_ => throw new NotFoundException());
+            .Returns((UserPremiumAccess?)null);
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(
@@ -175,7 +175,7 @@ public class HasPremiumAccessQueryTests
         // Arrange
         sutProvider.GetDependency<IUserRepository>()
             .GetPremiumAccessAsync(userId)
-            .Returns<UserPremiumAccess>(_ => throw new NotFoundException());
+            .Returns((UserPremiumAccess?)null);
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(
