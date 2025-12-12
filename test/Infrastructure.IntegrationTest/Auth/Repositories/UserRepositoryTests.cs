@@ -260,6 +260,107 @@ public class UserRepositoryTests
         // Assert
         Assert.NotNull(result);
         Assert.False(result.OrganizationPremium);
+        Assert.False(result.HasPremiumAccess);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetPremiumAccessAsync_WithOrganizationUsersGetPremiumFalse_ReturnsNoOrganizationPremium(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "User",
+            Email = $"{Guid.NewGuid()}@example.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+            Premium = false
+        });
+
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        organization.UsersGetPremium = false;
+        await organizationRepository.ReplaceAsync(organization);
+        await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user);
+
+        // Act
+        var result = await userRepository.GetPremiumAccessAsync(user.Id);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.False(result.OrganizationPremium);
+        Assert.False(result.HasPremiumAccess);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetPremiumAccessAsync_WithMultipleOrganizations_OneProvidesPremium_ReturnsOrganizationPremium(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "User With Premium Org",
+            Email = $"{Guid.NewGuid()}@example.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+            Premium = false
+        });
+
+        var orgWithPremium = await organizationRepository.CreateTestOrganizationAsync();
+        await organizationUserRepository.CreateTestOrganizationUserAsync(orgWithPremium, user);
+
+        var orgNoPremium = await organizationRepository.CreateTestOrganizationAsync();
+        orgNoPremium.UsersGetPremium = false;
+        await organizationRepository.ReplaceAsync(orgNoPremium);
+        await organizationUserRepository.CreateTestOrganizationUserAsync(orgNoPremium, user);
+
+        // Act
+        var result = await userRepository.GetPremiumAccessAsync(user.Id);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.False(result.PersonalPremium);
+        Assert.True(result.OrganizationPremium);
+        Assert.True(result.HasPremiumAccess);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetPremiumAccessAsync_WithMultipleOrganizations_NoneProvidePremium_ReturnsNoOrganizationPremium(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "User With No Premium Orgs",
+            Email = $"{Guid.NewGuid()}@example.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+            Premium = false
+        });
+
+        var disabledOrg = await organizationRepository.CreateTestOrganizationAsync();
+        disabledOrg.Enabled = false;
+        await organizationRepository.ReplaceAsync(disabledOrg);
+        await organizationUserRepository.CreateTestOrganizationUserAsync(disabledOrg, user);
+
+        var orgNoPremium = await organizationRepository.CreateTestOrganizationAsync();
+        orgNoPremium.UsersGetPremium = false;
+        await organizationRepository.ReplaceAsync(orgNoPremium);
+        await organizationUserRepository.CreateTestOrganizationUserAsync(orgNoPremium, user);
+
+        // Act
+        var result = await userRepository.GetPremiumAccessAsync(user.Id);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.False(result.PersonalPremium);
+        Assert.False(result.OrganizationPremium);
+        Assert.False(result.HasPremiumAccess);
     }
 
     [Theory, DatabaseData]
@@ -283,7 +384,7 @@ public class UserRepositoryTests
         var personalPremiumUser = await userRepository.CreateAsync(new User
         {
             Name = "Personal Premium",
-            Email = $"personal+{Guid.NewGuid()}@example.com",
+            Email = $"{Guid.NewGuid()}@example.com",
             ApiKey = "TEST",
             SecurityStamp = "stamp",
             Premium = true
@@ -292,7 +393,7 @@ public class UserRepositoryTests
         var orgPremiumUser = await userRepository.CreateAsync(new User
         {
             Name = "Org Premium",
-            Email = $"org+{Guid.NewGuid()}@example.com",
+            Email = $"{Guid.NewGuid()}@example.com",
             ApiKey = "TEST",
             SecurityStamp = "stamp",
             Premium = false
@@ -301,7 +402,7 @@ public class UserRepositoryTests
         var bothPremiumUser = await userRepository.CreateAsync(new User
         {
             Name = "Both Premium",
-            Email = $"both+{Guid.NewGuid()}@example.com",
+            Email = $"{Guid.NewGuid()}@example.com",
             ApiKey = "TEST",
             SecurityStamp = "stamp",
             Premium = true
@@ -310,7 +411,7 @@ public class UserRepositoryTests
         var noPremiumUser = await userRepository.CreateAsync(new User
         {
             Name = "No Premium",
-            Email = $"none+{Guid.NewGuid()}@example.com",
+            Email = $"{Guid.NewGuid()}@example.com",
             ApiKey = "TEST",
             SecurityStamp = "stamp",
             Premium = false
@@ -319,10 +420,19 @@ public class UserRepositoryTests
         var multiOrgUser = await userRepository.CreateAsync(new User
         {
             Name = "Multi Org User",
-            Email = $"multi+{Guid.NewGuid()}@example.com",
+            Email = $"{Guid.NewGuid()}@example.com",
             ApiKey = "TEST",
             SecurityStamp = "stamp",
             Premium = false
+        });
+
+        var personalPremiumWithDisabledOrg = await userRepository.CreateAsync(new User
+        {
+            Name = "Personal Premium With Disabled Org",
+            Email = $"{Guid.NewGuid()}@example.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+            Premium = true
         });
 
         var organization = await organizationRepository.CreateTestOrganizationAsync();
@@ -335,19 +445,25 @@ public class UserRepositoryTests
         await organizationRepository.ReplaceAsync(orgWithoutPremium);
         await organizationUserRepository.CreateTestOrganizationUserAsync(orgWithoutPremium, multiOrgUser);
 
+        var disabledOrg = await organizationRepository.CreateTestOrganizationAsync();
+        disabledOrg.Enabled = false;
+        await organizationRepository.ReplaceAsync(disabledOrg);
+        await organizationUserRepository.CreateTestOrganizationUserAsync(disabledOrg, personalPremiumWithDisabledOrg);
+
         // Act
         var results = await userRepository.GetPremiumAccessByIdsAsync([
             personalPremiumUser.Id,
             orgPremiumUser.Id,
             bothPremiumUser.Id,
             noPremiumUser.Id,
-            multiOrgUser.Id
+            multiOrgUser.Id,
+            personalPremiumWithDisabledOrg.Id
         ]);
 
         var resultsList = results.ToList();
 
         // Assert
-        Assert.Equal(5, resultsList.Count);
+        Assert.Equal(6, resultsList.Count);
 
         var personalResult = resultsList.First(r => r.Id == personalPremiumUser.Id);
         Assert.True(personalResult.PersonalPremium);
@@ -366,7 +482,12 @@ public class UserRepositoryTests
         Assert.False(noneResult.OrganizationPremium);
 
         var multiResult = resultsList.First(r => r.Id == multiOrgUser.Id);
+        Assert.False(multiResult.PersonalPremium);
         Assert.True(multiResult.OrganizationPremium);
+
+        var personalWithDisabledOrgResult = resultsList.First(r => r.Id == personalPremiumWithDisabledOrg.Id);
+        Assert.True(personalWithDisabledOrgResult.PersonalPremium);
+        Assert.False(personalWithDisabledOrgResult.OrganizationPremium);
     }
 
     [Theory, DatabaseData]
