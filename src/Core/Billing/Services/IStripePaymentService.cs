@@ -4,8 +4,6 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.Billing.Models;
-using Bit.Core.Billing.Tax.Requests;
-using Bit.Core.Billing.Tax.Responses;
 using Bit.Core.Entities;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.StaticStore;
@@ -44,8 +42,6 @@ public interface IStripePaymentService
     Task<BillingInfo> GetBillingAsync(ISubscriber subscriber);
     Task<BillingHistoryInfo> GetBillingHistoryAsync(ISubscriber subscriber);
     Task<SubscriptionInfo> GetSubscriptionAsync(ISubscriber subscriber);
-    Task<TaxInfo> GetTaxInfoAsync(ISubscriber subscriber);
-    Task SaveTaxInfoAsync(ISubscriber subscriber, TaxInfo taxInfo);
     Task<string> AddSecretsManagerToSubscription(Organization org, Plan plan, int additionalSmSeats, int additionalServiceAccount);
     /// <summary>
     /// Secrets Manager Standalone is a discount in Stripe that is used to give an organization access to Secrets Manager.
@@ -68,7 +64,4 @@ public interface IStripePaymentService
     /// <param name="organization">Organization Representation used for Inviting Organization Users</param>
     /// <returns>If the organization has Secrets Manager and has the Standalone Stripe Discount</returns>
     Task<bool> HasSecretsManagerStandalone(InviteOrganization organization);
-    Task<PreviewInvoiceResponseModel> PreviewInvoiceAsync(PreviewIndividualInvoiceRequestBody parameters, string gatewayCustomerId, string gatewaySubscriptionId);
-    Task<PreviewInvoiceResponseModel> PreviewInvoiceAsync(PreviewOrganizationInvoiceRequestBody parameters, string gatewayCustomerId, string gatewaySubscriptionId);
-
 }

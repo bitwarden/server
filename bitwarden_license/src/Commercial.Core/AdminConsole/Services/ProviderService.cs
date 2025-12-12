@@ -36,8 +36,9 @@ public class ProviderService : IProviderService
 {
     private static readonly PlanType[] _resellerDisallowedOrganizationTypes = [
         PlanType.Free,
-        PlanType.FamiliesAnnually,
-        PlanType.FamiliesAnnually2019
+        PlanType.FamiliesAnnually2025,
+        PlanType.FamiliesAnnually2019,
+        PlanType.FamiliesAnnually
     ];
 
     private readonly IDataProtector _dataProtector;

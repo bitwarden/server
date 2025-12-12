@@ -3,12 +3,17 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 
+/// <summary>
+/// Represents all validations that need to be run to enable or disable the given policy.
+/// </summary>
+/// <remarks>
+/// This is used for the VNextSavePolicyCommand. This optional but should be implemented for all policies that have
+/// certain requirements for the given organization.
+/// </remarks>
 public interface IPolicyValidationEvent : IPolicyUpdateEvent
 {
     /// <summary>
-    /// Performs side effects after a policy is validated but before it is saved.
-    /// For example, this can be used to remove non-compliant users from the organization.
-    /// Implementation is optional; by default, it will not perform any side effects.
+    /// Performs any validations required to enable or disable the policy.
     /// </summary>
     /// <param name="policyRequest">The policy save request containing the policy update and metadata</param>
     /// <param name="currentPolicy">The current policy, if any</param>

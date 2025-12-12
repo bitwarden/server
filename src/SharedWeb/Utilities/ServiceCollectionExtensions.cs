@@ -13,6 +13,7 @@ using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.AdminConsole.Models.Teams;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.AdminConsole.Services.Implementations;
 using Bit.Core.AdminConsole.Services.NoopImplementations;
@@ -20,7 +21,6 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Auth.IdentityServer;
-using Bit.Core.Auth.LoginFeatures;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
@@ -38,7 +38,9 @@ using Bit.Core.KeyManagement;
 using Bit.Core.NotificationCenter;
 using Bit.Core.OrganizationFeatures;
 using Bit.Core.Platform;
-using Bit.Core.Platform.Mailer;
+using Bit.Core.Platform.Mail.Delivery;
+using Bit.Core.Platform.Mail.Enqueuing;
+using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Platform.Push;
 using Bit.Core.Platform.PushRegistration.Internal;
 using Bit.Core.Repositories;
@@ -47,6 +49,7 @@ using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.SecretsManager.Repositories.Noop;
 using Bit.Core.Services;
 using Bit.Core.Services.Implementations;
+using Bit.Core.Services.Mail;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Bit.Core.Tools.ImportFeatures;
@@ -81,7 +84,10 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.OpenApi.Models;
 using StackExchange.Redis;
+using Swashbuckle.AspNetCore.SwaggerGen;
+using ZiggyCreatures.Caching.Fusion;
 using NoopRepos = Bit.Core.Repositories.Noop;
 using Role = Bit.Core.Entities.Role;
 using TableStorageRepos = Bit.Core.Repositories.TableStorage;
@@ -133,7 +139,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAuthRequestService, AuthRequestService>();
         services.AddScoped<IDuoUniversalTokenService, DuoUniversalTokenService>();
         services.AddScoped<ISendAuthorizationService, SendAuthorizationService>();
-        services.AddLoginServices();
         services.AddScoped<IOrganizationDomainService, OrganizationDomainService>();
         services.AddVaultServices();
         services.AddReportingServices();
@@ -337,6 +342,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IProviderService, NoopProviderService>();
         services.AddScoped<IServiceAccountRepository, NoopServiceAccountRepository>();
         services.AddScoped<ISecretRepository, NoopSecretRepository>();
+        services.AddScoped<ISecretVersionRepository, NoopSecretVersionRepository>();
         services.AddScoped<IProjectRepository, NoopProjectRepository>();
     }
 
@@ -521,42 +527,33 @@ public static class ServiceCollectionExtensions
 
     public static IServiceCollection AddEventWriteServices(this IServiceCollection services, GlobalSettings globalSettings)
     {
-        if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Events.ConnectionString))
+        if (IsAzureServiceBusEnabled(globalSettings))
         {
-            services.TryAddKeyedSingleton<IEventWriteService, AzureQueueEventWriteService>("storage");
-
-            if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.ConnectionString) &&
-                CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.EventTopicName))
-            {
-                services.TryAddSingleton<IEventIntegrationPublisher, AzureServiceBusService>();
-                services.TryAddKeyedSingleton<IEventWriteService, EventIntegrationEventWriteService>("broadcast");
-            }
-            else
-            {
-                services.TryAddKeyedSingleton<IEventWriteService, NoopEventWriteService>("broadcast");
-            }
-        }
-        else if (globalSettings.SelfHosted)
-        {
-            services.TryAddKeyedSingleton<IEventWriteService, RepositoryEventWriteService>("storage");
-
-            if (IsRabbitMqEnabled(globalSettings))
-            {
-                services.TryAddSingleton<IEventIntegrationPublisher, RabbitMqService>();
-                services.TryAddKeyedSingleton<IEventWriteService, EventIntegrationEventWriteService>("broadcast");
-            }
-            else
-            {
-                services.TryAddKeyedSingleton<IEventWriteService, NoopEventWriteService>("broadcast");
-            }
-        }
-        else
-        {
-            services.TryAddKeyedSingleton<IEventWriteService, NoopEventWriteService>("storage");
-            services.TryAddKeyedSingleton<IEventWriteService, NoopEventWriteService>("broadcast");
+            services.TryAddSingleton<IEventIntegrationPublisher, AzureServiceBusService>();
+            services.TryAddSingleton<IEventWriteService, EventIntegrationEventWriteService>();
+            return services;
         }
 
-        services.TryAddScoped<IEventWriteService, EventRouteService>();
+        if (IsRabbitMqEnabled(globalSettings))
+        {
+            services.TryAddSingleton<IEventIntegrationPublisher, RabbitMqService>();
+            services.TryAddSingleton<IEventWriteService, EventIntegrationEventWriteService>();
+            return services;
+        }
+
+        if (CoreHelpers.SettingHasValue(globalSettings.Events.ConnectionString))
+        {
+            services.TryAddSingleton<IEventWriteService, AzureQueueEventWriteService>();
+            return services;
+        }
+
+        if (globalSettings.SelfHosted)
+        {
+            services.TryAddSingleton<IEventWriteService, RepositoryEventWriteService>();
+            return services;
+        }
+
+        services.TryAddSingleton<IEventWriteService, NoopEventWriteService>();
         return services;
     }
 
@@ -651,7 +648,7 @@ public static class ServiceCollectionExtensions
             ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
         };
 
-        if (!globalSettings.UnifiedDeployment)
+        if (!globalSettings.LiteDeployment)
         {
             // Trust the X-Forwarded-Host header of the nginx docker container
             try
@@ -894,11 +891,11 @@ public static class ServiceCollectionExtensions
                 integrationType: listenerConfiguration.IntegrationType,
                 eventIntegrationPublisher: provider.GetRequiredService<IEventIntegrationPublisher>(),
                 integrationFilterService: provider.GetRequiredService<IIntegrationFilterService>(),
-                configurationCache: provider.GetRequiredService<IIntegrationConfigurationDetailsCache>(),
-                userRepository: provider.GetRequiredService<IUserRepository>(),
+                cache: provider.GetRequiredKeyedService<IFusionCache>(EventIntegrationsCacheConstants.CacheName),
+                configurationRepository: provider.GetRequiredService<IOrganizationIntegrationConfigurationRepository>(),
+                groupRepository: provider.GetRequiredService<IGroupRepository>(),
                 organizationRepository: provider.GetRequiredService<IOrganizationRepository>(),
-                logger: provider.GetRequiredService<ILogger<EventIntegrationHandler<TConfig>>>()
-            )
+                organizationUserRepository: provider.GetRequiredService<IOrganizationUserRepository>(), logger: provider.GetRequiredService<ILogger<EventIntegrationHandler<TConfig>>>())
         );
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService,
             AzureServiceBusEventListenerService<TListenerConfig>>(provider =>
@@ -938,10 +935,8 @@ public static class ServiceCollectionExtensions
         GlobalSettings globalSettings)
     {
         // Add common services
-        services.TryAddSingleton<IntegrationConfigurationDetailsCacheService>();
-        services.TryAddSingleton<IIntegrationConfigurationDetailsCache>(provider =>
-            provider.GetRequiredService<IntegrationConfigurationDetailsCacheService>());
-        services.AddHostedService(provider => provider.GetRequiredService<IntegrationConfigurationDetailsCacheService>());
+        services.AddDistributedCache(globalSettings);
+        services.AddExtendedCache(EventIntegrationsCacheConstants.CacheName, globalSettings);
         services.TryAddSingleton<IIntegrationFilterService, IntegrationFilterService>();
         services.TryAddKeyedSingleton<IEventWriteService, RepositoryEventWriteService>("persistent");
 
@@ -1021,11 +1016,11 @@ public static class ServiceCollectionExtensions
                 integrationType: listenerConfiguration.IntegrationType,
                 eventIntegrationPublisher: provider.GetRequiredService<IEventIntegrationPublisher>(),
                 integrationFilterService: provider.GetRequiredService<IIntegrationFilterService>(),
-                configurationCache: provider.GetRequiredService<IIntegrationConfigurationDetailsCache>(),
-                userRepository: provider.GetRequiredService<IUserRepository>(),
+                cache: provider.GetRequiredKeyedService<IFusionCache>(EventIntegrationsCacheConstants.CacheName),
+                configurationRepository: provider.GetRequiredService<IOrganizationIntegrationConfigurationRepository>(),
+                groupRepository: provider.GetRequiredService<IGroupRepository>(),
                 organizationRepository: provider.GetRequiredService<IOrganizationRepository>(),
-                logger: provider.GetRequiredService<ILogger<EventIntegrationHandler<TConfig>>>()
-            )
+                organizationUserRepository: provider.GetRequiredService<IOrganizationUserRepository>(), logger: provider.GetRequiredService<ILogger<EventIntegrationHandler<TConfig>>>())
         );
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService,
             RabbitMqEventListenerService<TListenerConfig>>(provider =>
@@ -1064,5 +1059,62 @@ public static class ServiceCollectionExtensions
                CoreHelpers.SettingHasValue(settings.EventLogging.RabbitMq.Username) &&
                CoreHelpers.SettingHasValue(settings.EventLogging.RabbitMq.Password) &&
                CoreHelpers.SettingHasValue(settings.EventLogging.RabbitMq.EventExchangeName);
+    }
+
+    /// <summary>
+    /// Adds a server with its corresponding OAuth2 client credentials security definition and requirement.
+    /// </summary>
+    /// <param name="config">The SwaggerGen configuration</param>
+    /// <param name="serverId">Unique identifier for this server (e.g., "us-server", "eu-server")</param>
+    /// <param name="serverUrl">The API server URL</param>
+    /// <param name="identityTokenUrl">The identity server token URL</param>
+    /// <param name="serverDescription">Human-readable description for the server</param>
+    public static void AddSwaggerServerWithSecurity(
+        this SwaggerGenOptions config,
+        string serverId,
+        string serverUrl,
+        string identityTokenUrl,
+        string serverDescription)
+    {
+        // Add server
+        config.AddServer(new OpenApiServer
+        {
+            Url = serverUrl,
+            Description = serverDescription
+        });
+
+        // Add security definition
+        config.AddSecurityDefinition(serverId, new OpenApiSecurityScheme
+        {
+            Type = SecuritySchemeType.OAuth2,
+            Description = $"**Use this option if you've selected the {serverDescription}**",
+            Flows = new OpenApiOAuthFlows
+            {
+                ClientCredentials = new OpenApiOAuthFlow
+                {
+                    TokenUrl = new Uri(identityTokenUrl),
+                    Scopes = new Dictionary<string, string>
+                    {
+                        { ApiScopes.ApiOrganization, $"Organization APIs ({serverDescription})" },
+                    },
+                }
+            },
+        });
+
+        // Add security requirement
+        config.AddSecurityRequirement(new OpenApiSecurityRequirement
+        {
+            {
+                new OpenApiSecurityScheme
+                {
+                    Reference = new OpenApiReference
+                    {
+                        Type = ReferenceType.SecurityScheme,
+                        Id = serverId
+                    },
+                },
+                [ApiScopes.ApiOrganization]
+            }
+        });
     }
 }

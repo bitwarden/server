@@ -60,6 +60,7 @@ public enum EventType : int
     OrganizationUser_RejectedAuthRequest = 1514,
     OrganizationUser_Deleted = 1515, // Both user and organization user data were deleted
     OrganizationUser_Left = 1516,    // User voluntarily left the organization
+    OrganizationUser_AutomaticallyConfirmed = 1517,
 
     Organization_Updated = 1600,
     Organization_PurgedVault = 1601,
@@ -80,6 +81,8 @@ public enum EventType : int
     Organization_CollectionManagement_LimitItemDeletionDisabled = 1615,
     Organization_CollectionManagement_AllowAdminAccessToAllCollectionItemsEnabled = 1616,
     Organization_CollectionManagement_AllowAdminAccessToAllCollectionItemsDisabled = 1617,
+    Organization_ItemOrganization_Accepted = 1618,
+    Organization_ItemOrganization_Declined = 1619,
 
     Policy_Updated = 1700,
 

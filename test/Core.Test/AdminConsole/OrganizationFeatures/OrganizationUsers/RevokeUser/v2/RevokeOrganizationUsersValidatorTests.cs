@@ -1,0 +1,325 @@
+﻿using Bit.Core.AdminConsole.Models.Data;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v2;
+using Bit.Core.Entities;
+using Bit.Core.Enums;
+using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
+using Bit.Test.Common.AutoFixture;
+using Bit.Test.Common.AutoFixture.Attributes;
+using NSubstitute;
+using Xunit;
+
+namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v2;
+
+[SutProviderCustomize]
+public class RevokeOrganizationUsersValidatorTests
+{
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_WithValidUsers_ReturnsSuccess(
+        SutProvider<RevokeOrganizationUsersValidator> sutProvider,
+        Guid organizationId,
+        Guid actingUserId,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser1,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser2)
+    {
+        // Arrange
+        orgUser1.OrganizationId = orgUser2.OrganizationId = organizationId;
+        orgUser1.UserId = Guid.NewGuid();
+        orgUser2.UserId = Guid.NewGuid();
+
+        var actingUser = CreateActingUser(actingUserId, false, null);
+        var request = CreateValidationRequest(
+            organizationId,
+            [orgUser1, orgUser2],
+            actingUser);
+
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(true);
+
+        // Act
+        var results = (await sutProvider.Sut.ValidateAsync(request)).ToList();
+
+        // Assert
+        Assert.Equal(2, results.Count);
+        Assert.All(results, r => Assert.True(r.IsValid));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_WithRevokedUser_ReturnsErrorForThatUser(
+        SutProvider<RevokeOrganizationUsersValidator> sutProvider,
+        Guid organizationId,
+        Guid actingUserId,
+        [OrganizationUser(OrganizationUserStatusType.Revoked, OrganizationUserType.User)] OrganizationUser revokedUser)
+    {
+        // Arrange
+        revokedUser.OrganizationId = organizationId;
+        revokedUser.UserId = Guid.NewGuid();
+
+        var actingUser = CreateActingUser(actingUserId, false, null);
+        var request = CreateValidationRequest(
+            organizationId,
+            [revokedUser],
+            actingUser);
+
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(true);
+
+        // Act
+        var results = (await sutProvider.Sut.ValidateAsync(request)).ToList();
+
+        // Assert
+        Assert.Single(results);
+        Assert.True(results.First().IsError);
+        Assert.IsType<UserAlreadyRevoked>(results.First().AsError);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_WhenRevokingSelf_ReturnsErrorForThatUser(
+        SutProvider<RevokeOrganizationUsersValidator> sutProvider,
+        Guid organizationId,
+        Guid actingUserId,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
+    {
+        // Arrange
+        orgUser.OrganizationId = organizationId;
+        orgUser.UserId = actingUserId;
+
+        var actingUser = CreateActingUser(actingUserId, false, null);
+        var request = CreateValidationRequest(
+            organizationId,
+            [orgUser],
+            actingUser);
+
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(true);
+
+        // Act
+        var results = (await sutProvider.Sut.ValidateAsync(request)).ToList();
+
+        // Assert
+        Assert.Single(results);
+        Assert.True(results.First().IsError);
+        Assert.IsType<CannotRevokeYourself>(results.First().AsError);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_WhenNonOwnerRevokesOwner_ReturnsErrorForThatUser(
+        SutProvider<RevokeOrganizationUsersValidator> sutProvider,
+        Guid organizationId,
+        Guid actingUserId,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser ownerUser)
+    {
+        // Arrange
+        ownerUser.OrganizationId = organizationId;
+        ownerUser.UserId = Guid.NewGuid();
+
+        var actingUser = CreateActingUser(actingUserId, false, null);
+        var request = CreateValidationRequest(
+            organizationId,
+            [ownerUser],
+            actingUser);
+
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(true);
+
+        // Act
+        var results = (await sutProvider.Sut.ValidateAsync(request)).ToList();
+
+        // Assert
+        Assert.Single(results);
+        Assert.True(results.First().IsError);
+        Assert.IsType<OnlyOwnersCanRevokeOwners>(results.First().AsError);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_WhenOwnerRevokesOwner_ReturnsSuccess(
+        SutProvider<RevokeOrganizationUsersValidator> sutProvider,
+        Guid organizationId,
+        Guid actingUserId,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser ownerUser)
+    {
+        // Arrange
+        ownerUser.OrganizationId = organizationId;
+        ownerUser.UserId = Guid.NewGuid();
+
+        var actingUser = CreateActingUser(actingUserId, true, null);
+        var request = CreateValidationRequest(
+            organizationId,
+            [ownerUser],
+            actingUser);
+
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(true);
+
+        // Act
+        var results = (await sutProvider.Sut.ValidateAsync(request)).ToList();
+
+        // Assert
+        Assert.Single(results);
+        Assert.True(results.First().IsValid);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_WithMultipleUsers_SomeValid_ReturnsMixedResults(
+        SutProvider<RevokeOrganizationUsersValidator> sutProvider,
+        Guid organizationId,
+        Guid actingUserId,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser validUser,
+        [OrganizationUser(OrganizationUserStatusType.Revoked, OrganizationUserType.User)] OrganizationUser revokedUser)
+    {
+        // Arrange
+        validUser.OrganizationId = revokedUser.OrganizationId = organizationId;
+        validUser.UserId = Guid.NewGuid();
+        revokedUser.UserId = Guid.NewGuid();
+
+        var actingUser = CreateActingUser(actingUserId, false, null);
+        var request = CreateValidationRequest(
+            organizationId,
+            [validUser, revokedUser],
+            actingUser);
+
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(true);
+
+        // Act
+        var results = (await sutProvider.Sut.ValidateAsync(request)).ToList();
+
+        // Assert
+        Assert.Equal(2, results.Count);
+
+        var validResult = results.Single(r => r.Request.Id == validUser.Id);
+        var errorResult = results.Single(r => r.Request.Id == revokedUser.Id);
+
+        Assert.True(validResult.IsValid);
+        Assert.True(errorResult.IsError);
+        Assert.IsType<UserAlreadyRevoked>(errorResult.AsError);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_WithSystemUser_DoesNotRequireActingUserId(
+        SutProvider<RevokeOrganizationUsersValidator> sutProvider,
+        Guid organizationId,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
+    {
+        // Arrange
+        orgUser.OrganizationId = organizationId;
+        orgUser.UserId = Guid.NewGuid();
+
+        var actingUser = CreateActingUser(null, false, EventSystemUser.SCIM);
+        var request = CreateValidationRequest(
+            organizationId,
+            [orgUser],
+            actingUser);
+
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(true);
+
+        // Act
+        var results = (await sutProvider.Sut.ValidateAsync(request)).ToList();
+
+        // Assert
+        Assert.Single(results);
+        Assert.True(results.First().IsValid);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_WhenRevokingLastOwner_ReturnsErrorForThatUser(
+        SutProvider<RevokeOrganizationUsersValidator> sutProvider,
+        Guid organizationId,
+        Guid actingUserId,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser lastOwner)
+    {
+        // Arrange
+        lastOwner.OrganizationId = organizationId;
+        lastOwner.UserId = Guid.NewGuid();
+
+        var actingUser = CreateActingUser(actingUserId, true, null); // Is an owner
+        var request = CreateValidationRequest(
+            organizationId,
+            [lastOwner],
+            actingUser);
+
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(false);
+
+        // Act
+        var results = (await sutProvider.Sut.ValidateAsync(request)).ToList();
+
+        // Assert
+        Assert.Single(results);
+        Assert.True(results.First().IsError);
+        Assert.IsType<MustHaveConfirmedOwner>(results.First().AsError);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_WithMultipleValidationErrors_ReturnsAllErrors(
+        SutProvider<RevokeOrganizationUsersValidator> sutProvider,
+        Guid organizationId,
+        Guid actingUserId,
+        [OrganizationUser(OrganizationUserStatusType.Revoked, OrganizationUserType.User)] OrganizationUser revokedUser,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser ownerUser)
+    {
+        // Arrange
+        revokedUser.OrganizationId = ownerUser.OrganizationId = organizationId;
+        revokedUser.UserId = Guid.NewGuid();
+        ownerUser.UserId = Guid.NewGuid();
+
+        var actingUser = CreateActingUser(actingUserId, false, null); // Not an owner
+        var request = CreateValidationRequest(
+            organizationId,
+            [revokedUser, ownerUser],
+            actingUser);
+
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(true);
+
+        // Act
+        var results = (await sutProvider.Sut.ValidateAsync(request)).ToList();
+
+        // Assert
+        Assert.Equal(2, results.Count);
+        Assert.All(results, r => Assert.True(r.IsError));
+
+        Assert.Contains(results, r => r.AsError is UserAlreadyRevoked);
+        Assert.Contains(results, r => r.AsError is OnlyOwnersCanRevokeOwners);
+    }
+
+    private static IActingUser CreateActingUser(Guid? userId, bool isOwnerOrProvider, EventSystemUser? systemUserType) =>
+        (userId, systemUserType) switch
+        {
+            ({ } id, _) => new StandardUser(id, isOwnerOrProvider),
+            (null, { } type) => new SystemUser(type)
+        };
+
+
+    private static RevokeOrganizationUsersValidationRequest CreateValidationRequest(
+        Guid organizationId,
+        ICollection<OrganizationUser> organizationUsers,
+        IActingUser actingUser)
+    {
+        return new RevokeOrganizationUsersValidationRequest(
+            organizationId,
+            organizationUsers.Select(u => u.Id).ToList(),
+            actingUser,
+            organizationUsers
+        );
+    }
+}

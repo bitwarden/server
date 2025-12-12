@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models.Sales;
@@ -9,7 +10,7 @@ using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
-using Bit.Core.Utilities;
+using Bit.Core.Test.Billing.Mocks;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -30,38 +31,39 @@ public class OrganizationBillingServiceTests
         SutProvider<OrganizationBillingService> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(organization);
-        sutProvider.GetDependency<IPricingClient>().ListPlans().Returns(StaticStore.Plans.ToList());
+        sutProvider.GetDependency<IPricingClient>().ListPlans().Returns(MockPlans.Plans.ToList());
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType)
-            .Returns(StaticStore.GetPlan(organization.PlanType));
+            .Returns(MockPlans.Get(organization.PlanType));
 
         var subscriberService = sutProvider.GetDependency<ISubscriberService>();
         var organizationSeatCount = new OrganizationSeatCounts { Users = 1, Sponsored = 0 };
-        var customer = new Customer
-        {
-            Discount = new Discount
-            {
-                Coupon = new Coupon
-                {
-                    Id = StripeConstants.CouponIDs.SecretsManagerStandalone,
-                    AppliesTo = new CouponAppliesTo
-                    {
-                        Products = ["product_id"]
-                    }
-                }
-            }
-        };
+        var customer = new Customer();
 
         subscriberService
-            .GetCustomer(organization, Arg.Is<CustomerGetOptions>(options =>
-                options.Expand.Contains("discount.coupon.applies_to")))
+            .GetCustomer(organization)
             .Returns(customer);
 
-        subscriberService.GetSubscription(organization).Returns(new Subscription
-        {
-            Items = new StripeList<SubscriptionItem>
+        subscriberService.GetSubscription(organization, Arg.Is<SubscriptionGetOptions>(options =>
+            options.Expand.Contains("discounts.coupon.applies_to"))).Returns(new Subscription
             {
-                Data =
+                Discounts =
+            [
+                new Discount
+                {
+                    Coupon = new Coupon
+                    {
+                        Id = StripeConstants.CouponIDs.SecretsManagerStandalone,
+                        AppliesTo = new CouponAppliesTo
+                        {
+                            Products = ["product_id"]
+                        }
+                    }
+                }
+            ],
+                Items = new StripeList<SubscriptionItem>
+                {
+                    Data =
                 [
                     new SubscriptionItem
                     {
@@ -71,8 +73,8 @@ public class OrganizationBillingServiceTests
                         }
                     }
                 ]
-            }
-        });
+                }
+            });
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
@@ -95,10 +97,10 @@ public class OrganizationBillingServiceTests
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(organization);
 
-        sutProvider.GetDependency<IPricingClient>().ListPlans().Returns(StaticStore.Plans.ToList());
+        sutProvider.GetDependency<IPricingClient>().ListPlans().Returns(MockPlans.Plans.ToList());
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType)
-            .Returns(StaticStore.GetPlan(organization.PlanType));
+            .Returns(MockPlans.Get(organization.PlanType));
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
@@ -108,11 +110,12 @@ public class OrganizationBillingServiceTests
 
         // Set up subscriber service to return null for customer
         subscriberService
-            .GetCustomer(organization, Arg.Is<CustomerGetOptions>(options => options.Expand.FirstOrDefault() == "discount.coupon.applies_to"))
+            .GetCustomer(organization)
             .Returns((Customer)null);
 
         // Set up subscriber service to return null for subscription
-        subscriberService.GetSubscription(organization).Returns((Subscription)null);
+        subscriberService.GetSubscription(organization, Arg.Is<SubscriptionGetOptions>(options =>
+            options.Expand.Contains("discounts.coupon.applies_to"))).Returns((Subscription)null);
 
         var metadata = await sutProvider.Sut.GetMetadata(organizationId);
 
@@ -131,7 +134,7 @@ public class OrganizationBillingServiceTests
         SutProvider<OrganizationBillingService> sutProvider)
     {
         // Arrange
-        var plan = StaticStore.GetPlan(PlanType.TeamsAnnually);
+        var plan = MockPlans.Get(PlanType.TeamsAnnually);
         organization.PlanType = PlanType.TeamsAnnually;
         organization.GatewayCustomerId = "cus_test123";
         organization.GatewaySubscriptionId = null;
@@ -207,7 +210,7 @@ public class OrganizationBillingServiceTests
         SutProvider<OrganizationBillingService> sutProvider)
     {
         // Arrange
-        var plan = StaticStore.GetPlan(PlanType.TeamsAnnually);
+        var plan = MockPlans.Get(PlanType.TeamsAnnually);
         organization.PlanType = PlanType.TeamsAnnually;
         organization.GatewayCustomerId = "cus_test123";
         organization.GatewaySubscriptionId = null;
@@ -281,7 +284,7 @@ public class OrganizationBillingServiceTests
         SutProvider<OrganizationBillingService> sutProvider)
     {
         // Arrange
-        var plan = StaticStore.GetPlan(PlanType.TeamsAnnually);
+        var plan = MockPlans.Get(PlanType.TeamsAnnually);
         organization.PlanType = PlanType.TeamsAnnually;
         organization.GatewayCustomerId = "cus_test123";
         organization.GatewaySubscriptionId = null;
@@ -350,4 +353,97 @@ public class OrganizationBillingServiceTests
     }
 
     #endregion
+
+    [Theory, BitAutoData]
+    public async Task UpdateOrganizationNameAndEmail_UpdatesStripeCustomer(
+        Organization organization,
+        SutProvider<OrganizationBillingService> sutProvider)
+    {
+        organization.Name = "Short name";
+
+        CustomerUpdateOptions capturedOptions = null;
+        sutProvider.GetDependency<IStripeAdapter>()
+            .UpdateCustomerAsync(
+                Arg.Is<string>(id => id == organization.GatewayCustomerId),
+                Arg.Do<CustomerUpdateOptions>(options => capturedOptions = options))
+            .Returns(new Customer());
+
+        // Act
+        await sutProvider.Sut.UpdateOrganizationNameAndEmail(organization);
+
+        // Assert
+        await sutProvider.GetDependency<IStripeAdapter>()
+            .Received(1)
+            .UpdateCustomerAsync(
+                organization.GatewayCustomerId,
+                Arg.Any<CustomerUpdateOptions>());
+
+        Assert.NotNull(capturedOptions);
+        Assert.Equal(organization.BillingEmail, capturedOptions.Email);
+        Assert.Equal(organization.DisplayName(), capturedOptions.Description);
+        Assert.NotNull(capturedOptions.InvoiceSettings);
+        Assert.NotNull(capturedOptions.InvoiceSettings.CustomFields);
+        Assert.Single(capturedOptions.InvoiceSettings.CustomFields);
+
+        var customField = capturedOptions.InvoiceSettings.CustomFields.First();
+        Assert.Equal(organization.SubscriberType(), customField.Name);
+        Assert.Equal(organization.DisplayName(), customField.Value);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateOrganizationNameAndEmail_WhenNameIsLong_TruncatesTo30Characters(
+        Organization organization,
+        SutProvider<OrganizationBillingService> sutProvider)
+    {
+        // Arrange
+        organization.Name = "This is a very long organization name that exceeds thirty characters";
+
+        CustomerUpdateOptions capturedOptions = null;
+        sutProvider.GetDependency<IStripeAdapter>()
+            .UpdateCustomerAsync(
+                Arg.Is<string>(id => id == organization.GatewayCustomerId),
+                Arg.Do<CustomerUpdateOptions>(options => capturedOptions = options))
+            .Returns(new Customer());
+
+        // Act
+        await sutProvider.Sut.UpdateOrganizationNameAndEmail(organization);
+
+        // Assert
+        await sutProvider.GetDependency<IStripeAdapter>()
+            .Received(1)
+            .UpdateCustomerAsync(
+                organization.GatewayCustomerId,
+                Arg.Any<CustomerUpdateOptions>());
+
+        Assert.NotNull(capturedOptions);
+        Assert.NotNull(capturedOptions.InvoiceSettings);
+        Assert.NotNull(capturedOptions.InvoiceSettings.CustomFields);
+
+        var customField = capturedOptions.InvoiceSettings.CustomFields.First();
+        Assert.Equal(30, customField.Value.Length);
+
+        var expectedCustomFieldDisplayName = "This is a very long organizati";
+        Assert.Equal(expectedCustomFieldDisplayName, customField.Value);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateOrganizationNameAndEmail_WhenGatewayCustomerIdIsNull_ThrowsBillingException(
+        Organization organization,
+        SutProvider<OrganizationBillingService> sutProvider)
+    {
+        // Arrange
+        organization.GatewayCustomerId = null;
+        organization.Name = "Test Organization";
+        organization.BillingEmail = "billing@example.com";
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BillingException>(
+            () => sutProvider.Sut.UpdateOrganizationNameAndEmail(organization));
+
+        Assert.Contains("Cannot update an organization in Stripe without a GatewayCustomerId.", exception.Response);
+
+        await sutProvider.GetDependency<IStripeAdapter>()
+            .DidNotReceiveWithAnyArgs()
+            .UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>());
+    }
 }

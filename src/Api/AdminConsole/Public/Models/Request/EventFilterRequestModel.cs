@@ -24,6 +24,14 @@ public class EventFilterRequestModel
     /// </summary>
     public Guid? ItemId { get; set; }
     /// <summary>
+    /// The unique identifier of the related secret that the event describes.
+    /// </summary>
+    public Guid? SecretId { get; set; }
+    /// <summary>
+    /// The unique identifier of the related project that the event describes.
+    /// </summary>
+    public Guid? ProjectId { get; set; }
+    /// <summary>
     /// A cursor for use in pagination.
     /// </summary>
     public string ContinuationToken { get; set; }

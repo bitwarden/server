@@ -904,7 +904,6 @@ public class UserService : UserManager<User>, IUserService
         }
         else
         {
-            user.MaxStorageGb = (short)(1 + additionalStorageGb);
             user.LicenseKey = CoreHelpers.SecureRandomString(20);
         }
 
@@ -977,7 +976,8 @@ public class UserService : UserManager<User>, IUserService
 
         var premiumPlan = await _pricingClient.GetAvailablePremiumPlan();
 
-        var secret = await BillingHelpers.AdjustStorageAsync(_paymentService, user, storageAdjustmentGb, premiumPlan.Storage.StripePriceId);
+        var baseStorageGb = (short)premiumPlan.Storage.Provided;
+        var secret = await BillingHelpers.AdjustStorageAsync(_paymentService, user, storageAdjustmentGb, premiumPlan.Storage.StripePriceId, baseStorageGb);
         await SaveUserAsync(user);
         return secret;
     }
@@ -1104,7 +1104,7 @@ public class UserService : UserManager<User>, IUserService
         return success;
     }
 
-    public async Task<bool> CanAccessPremium(ITwoFactorProvidersUser user)
+    public async Task<bool> CanAccessPremium(User user)
     {
         var userId = user.GetUserId();
         if (!userId.HasValue)
@@ -1112,10 +1112,10 @@ public class UserService : UserManager<User>, IUserService
             return false;
         }
 
-        return user.GetPremium() || await this.HasPremiumFromOrganization(user);
+        return user.Premium || await HasPremiumFromOrganization(user);
     }
 
-    public async Task<bool> HasPremiumFromOrganization(ITwoFactorProvidersUser user)
+    public async Task<bool> HasPremiumFromOrganization(User user)
     {
         var userId = user.GetUserId();
         if (!userId.HasValue)
@@ -1138,6 +1138,7 @@ public class UserService : UserManager<User>, IUserService
             orgAbility.UsersGetPremium &&
             orgAbility.Enabled);
     }
+
     public async Task<string> GenerateSignInTokenAsync(User user, string purpose)
     {
         var token = await GenerateUserTokenAsync(user, Options.Tokens.PasswordResetTokenProvider,

@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
 
-    <Version>2025.10.1</Version>
+    <Version>2025.12.0</Version>
 
     <RootNamespace>Bit.$(MSBuildProjectName)</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -16,7 +16,7 @@
   
   <PropertyGroup>
     
-    <MicrosoftNetTestSdkVersion>17.8.0</MicrosoftNetTestSdkVersion>
+    <MicrosoftNetTestSdkVersion>18.0.1</MicrosoftNetTestSdkVersion>
     
     <XUnitVersion>2.6.6</XUnitVersion>
     

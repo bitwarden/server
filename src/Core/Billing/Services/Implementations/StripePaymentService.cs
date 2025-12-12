@@ -8,18 +8,13 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Organizations.Models;
-using Bit.Core.Billing.Premium.Commands;
 using Bit.Core.Billing.Pricing;
-using Bit.Core.Billing.Tax.Requests;
-using Bit.Core.Billing.Tax.Responses;
-using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.BitStripe;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 using Stripe;
@@ -37,8 +32,6 @@ public class StripePaymentService : IStripePaymentService
     private readonly Braintree.IBraintreeGateway _btGateway;
     private readonly IStripeAdapter _stripeAdapter;
     private readonly IGlobalSettings _globalSettings;
-    private readonly IFeatureService _featureService;
-    private readonly ITaxService _taxService;
     private readonly IPricingClient _pricingClient;
 
     public StripePaymentService(
@@ -47,8 +40,6 @@ public class StripePaymentService : IStripePaymentService
         IStripeAdapter stripeAdapter,
         Braintree.IBraintreeGateway braintreeGateway,
         IGlobalSettings globalSettings,
-        IFeatureService featureService,
-        ITaxService taxService,
         IPricingClient pricingClient)
     {
         _transactionRepository = transactionRepository;
@@ -56,8 +47,6 @@ public class StripePaymentService : IStripePaymentService
         _stripeAdapter = stripeAdapter;
         _btGateway = braintreeGateway;
         _globalSettings = globalSettings;
-        _featureService = featureService;
-        _taxService = taxService;
         _pricingClient = pricingClient;
     }
 
@@ -68,7 +57,7 @@ public class StripePaymentService : IStripePaymentService
     {
         var existingPlan = await _pricingClient.GetPlanOrThrow(org.PlanType);
         var sponsoredPlan = sponsorship?.PlanSponsorshipType != null
-            ? Core.Utilities.StaticStore.GetSponsoredPlan(sponsorship.PlanSponsorshipType.Value)
+            ? SponsoredPlans.Get(sponsorship.PlanSponsorshipType.Value)
             : null;
         var subscriptionUpdate =
             new SponsorOrganizationSubscriptionUpdate(existingPlan, sponsoredPlan, applySponsorship);
@@ -641,11 +630,23 @@ public class StripePaymentService : IStripePaymentService
         }
 
         var subscription = await _stripeAdapter.GetSubscriptionAsync(subscriber.GatewaySubscriptionId,
-            new SubscriptionGetOptions { Expand = ["customer", "discounts", "test_clock"] });
+            new SubscriptionGetOptions { Expand = ["customer.discount.coupon.applies_to", "discounts.coupon.applies_to", "test_clock"] });
+
+        if (subscription == null)
+        {
+            return subscriptionInfo;
+        }
 
         subscriptionInfo.Subscription = new SubscriptionInfo.BillingSubscription(subscription);
 
-        var discount = subscription.Customer.Discount ?? subscription.Discounts.FirstOrDefault();
+        // Discount selection priority:
+        // 1. Customer-level discount (applies to all subscriptions for the customer)
+        // 2. First subscription-level discount (if multiple exist, FirstOrDefault() selects the first one)
+        // Note: When multiple subscription-level discounts exist, only the first one is used.
+        // This matches Stripe's behavior where the first discount in the list is applied.
+        // Defensive null checks: Even though we expand "customer" and "discounts", external APIs
+        // may not always return the expected data structure, so we use null-safe operators.
+        var discount = subscription.Customer?.Discount ?? subscription.Discounts?.FirstOrDefault();
 
         if (discount != null)
         {
@@ -691,133 +692,6 @@ public class StripePaymentService : IStripePaymentService
         }
 
         return subscriptionInfo;
-    }
-
-    public async Task<TaxInfo> GetTaxInfoAsync(ISubscriber subscriber)
-    {
-        if (subscriber == null || string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
-        {
-            return null;
-        }
-
-        var customer = await _stripeAdapter.GetCustomerAsync(subscriber.GatewayCustomerId,
-            new CustomerGetOptions { Expand = ["tax_ids"] });
-
-        if (customer == null)
-        {
-            return null;
-        }
-
-        var address = customer.Address;
-        var taxId = customer.TaxIds?.FirstOrDefault();
-
-        // Line1 is required, so if missing we're using the subscriber name,
-        // see: https://stripe.com/docs/api/customers/create#create_customer-address-line1
-        if (address != null && string.IsNullOrWhiteSpace(address.Line1))
-        {
-            address.Line1 = null;
-        }
-
-        return new TaxInfo
-        {
-            TaxIdNumber = taxId?.Value,
-            TaxIdType = taxId?.Type,
-            BillingAddressLine1 = address?.Line1,
-            BillingAddressLine2 = address?.Line2,
-            BillingAddressCity = address?.City,
-            BillingAddressState = address?.State,
-            BillingAddressPostalCode = address?.PostalCode,
-            BillingAddressCountry = address?.Country,
-        };
-    }
-
-    public async Task SaveTaxInfoAsync(ISubscriber subscriber, TaxInfo taxInfo)
-    {
-        if (string.IsNullOrWhiteSpace(subscriber?.GatewayCustomerId) || subscriber.IsUser())
-        {
-            return;
-        }
-
-        var customer = await _stripeAdapter.UpdateCustomerAsync(subscriber.GatewayCustomerId,
-            new CustomerUpdateOptions
-            {
-                Address = new AddressOptions
-                {
-                    Line1 = taxInfo.BillingAddressLine1 ?? string.Empty,
-                    Line2 = taxInfo.BillingAddressLine2,
-                    City = taxInfo.BillingAddressCity,
-                    State = taxInfo.BillingAddressState,
-                    PostalCode = taxInfo.BillingAddressPostalCode,
-                    Country = taxInfo.BillingAddressCountry,
-                },
-                Expand = ["tax_ids"]
-            });
-
-        if (customer == null)
-        {
-            return;
-        }
-
-        var taxId = customer.TaxIds?.FirstOrDefault();
-
-        if (taxId != null)
-        {
-            await _stripeAdapter.DeleteTaxIdAsync(customer.Id, taxId.Id);
-        }
-
-        if (string.IsNullOrWhiteSpace(taxInfo.TaxIdNumber))
-        {
-            return;
-        }
-
-        var taxIdType = taxInfo.TaxIdType;
-
-        if (string.IsNullOrWhiteSpace(taxIdType))
-        {
-            taxIdType = _taxService.GetStripeTaxCode(taxInfo.BillingAddressCountry, taxInfo.TaxIdNumber);
-
-            if (taxIdType == null)
-            {
-                _logger.LogWarning("Could not infer tax ID type in country '{Country}' with tax ID '{TaxID}'.",
-                    taxInfo.BillingAddressCountry,
-                    taxInfo.TaxIdNumber);
-                throw new BadRequestException("billingTaxIdTypeInferenceError");
-            }
-        }
-
-        try
-        {
-            await _stripeAdapter.CreateTaxIdAsync(customer.Id,
-                new TaxIdCreateOptions { Type = taxInfo.TaxIdType, Value = taxInfo.TaxIdNumber });
-
-            if (taxInfo.TaxIdType == StripeConstants.TaxIdType.SpanishNIF)
-            {
-                await _stripeAdapter.CreateTaxIdAsync(customer.Id,
-                    new TaxIdCreateOptions
-                    {
-                        Type = StripeConstants.TaxIdType.EUVAT,
-                        Value = $"ES{taxInfo.TaxIdNumber}"
-                    });
-            }
-        }
-        catch (StripeException e)
-        {
-            switch (e.StripeError.Code)
-            {
-                case StripeConstants.ErrorCodes.TaxIdInvalid:
-                    _logger.LogWarning("Invalid tax ID '{TaxID}' for country '{Country}'.",
-                        taxInfo.TaxIdNumber,
-                        taxInfo.BillingAddressCountry);
-                    throw new BadRequestException("billingInvalidTaxIdError");
-                default:
-                    _logger.LogError(e,
-                        "Error creating tax ID '{TaxId}' in country '{Country}' for customer '{CustomerID}'.",
-                        taxInfo.TaxIdNumber,
-                        taxInfo.BillingAddressCountry,
-                        customer.Id);
-                    throw new BadRequestException("billingTaxIdCreationError");
-            }
-        }
     }
 
     public async Task<string> AddSecretsManagerToSubscription(
@@ -894,309 +768,6 @@ public class StripePaymentService : IStripePaymentService
                     return (firstOverdueInvoice?.DueDate?.AddDays(30), firstOverdueInvoice?.PeriodEnd);
                 }
             default: return (null, null);
-        }
-    }
-
-    [Obsolete($"Use {nameof(PreviewPremiumTaxCommand)} instead.")]
-    public async Task<PreviewInvoiceResponseModel> PreviewInvoiceAsync(
-        PreviewIndividualInvoiceRequestBody parameters,
-        string gatewayCustomerId,
-        string gatewaySubscriptionId)
-    {
-        var premiumPlan = await _pricingClient.GetAvailablePremiumPlan();
-
-        var options = new InvoiceCreatePreviewOptions
-        {
-            AutomaticTax = new InvoiceAutomaticTaxOptions { Enabled = true, },
-            Currency = "usd",
-            SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
-            {
-                Items =
-                [
-                    new InvoiceSubscriptionDetailsItemOptions
-                    {
-                        Quantity = 1,
-                        Plan = premiumPlan.Seat.StripePriceId
-                    },
-
-                    new InvoiceSubscriptionDetailsItemOptions
-                    {
-                        Quantity = parameters.PasswordManager.AdditionalStorage,
-                        Plan = premiumPlan.Storage.StripePriceId
-                    }
-                ]
-            },
-            CustomerDetails = new InvoiceCustomerDetailsOptions
-            {
-                Address = new AddressOptions
-                {
-                    PostalCode = parameters.TaxInformation.PostalCode,
-                    Country = parameters.TaxInformation.Country,
-                }
-            },
-        };
-
-        if (!string.IsNullOrEmpty(parameters.TaxInformation.TaxId))
-        {
-            var taxIdType = _taxService.GetStripeTaxCode(
-                options.CustomerDetails.Address.Country,
-                parameters.TaxInformation.TaxId);
-
-            if (taxIdType == null)
-            {
-                _logger.LogWarning("Invalid tax ID '{TaxID}' for country '{Country}'.",
-                    parameters.TaxInformation.TaxId,
-                    parameters.TaxInformation.Country);
-                throw new BadRequestException("billingPreviewInvalidTaxIdError");
-            }
-
-            options.CustomerDetails.TaxIds =
-            [
-                new InvoiceCustomerDetailsTaxIdOptions { Type = taxIdType, Value = parameters.TaxInformation.TaxId }
-            ];
-
-            if (taxIdType == StripeConstants.TaxIdType.SpanishNIF)
-            {
-                options.CustomerDetails.TaxIds.Add(new InvoiceCustomerDetailsTaxIdOptions
-                {
-                    Type = StripeConstants.TaxIdType.EUVAT,
-                    Value = $"ES{parameters.TaxInformation.TaxId}"
-                });
-            }
-        }
-
-        if (!string.IsNullOrWhiteSpace(gatewayCustomerId))
-        {
-            var gatewayCustomer = await _stripeAdapter.GetCustomerAsync(gatewayCustomerId);
-
-            if (gatewayCustomer.Discount != null)
-            {
-                options.Discounts = [new InvoiceDiscountOptions { Coupon = gatewayCustomer.Discount.Coupon.Id }];
-            }
-        }
-
-        if (!string.IsNullOrWhiteSpace(gatewaySubscriptionId))
-        {
-            var gatewaySubscription = await _stripeAdapter.GetSubscriptionAsync(gatewaySubscriptionId);
-
-            if (gatewaySubscription?.Discounts is { Count: > 0 })
-            {
-                options.Discounts = gatewaySubscription.Discounts.Select(x => new InvoiceDiscountOptions { Coupon = x.Coupon.Id }).ToList();
-            }
-        }
-
-        if (options.Discounts is { Count: > 0 })
-        {
-            options.Discounts = options.Discounts.DistinctBy(invoiceDiscountOptions => invoiceDiscountOptions.Coupon).ToList();
-        }
-
-        try
-        {
-            var invoice = await _stripeAdapter.CreateInvoicePreviewAsync(options);
-
-            var tax = invoice.TotalTaxes.Sum(invoiceTotalTax => invoiceTotalTax.Amount);
-
-            var effectiveTaxRate = invoice.TotalExcludingTax != null && invoice.TotalExcludingTax.Value != 0
-                ? tax.ToMajor() / invoice.TotalExcludingTax.Value.ToMajor()
-                : 0M;
-
-            var result = new PreviewInvoiceResponseModel(
-                effectiveTaxRate,
-                invoice.TotalExcludingTax.ToMajor() ?? 0,
-                tax.ToMajor(),
-                invoice.Total.ToMajor());
-            return result;
-        }
-        catch (StripeException e)
-        {
-            switch (e.StripeError.Code)
-            {
-                case StripeConstants.ErrorCodes.TaxIdInvalid:
-                    _logger.LogWarning("Invalid tax ID '{TaxID}' for country '{Country}'.",
-                        parameters.TaxInformation.TaxId,
-                        parameters.TaxInformation.Country);
-                    throw new BadRequestException("billingPreviewInvalidTaxIdError");
-                default:
-                    _logger.LogError(e,
-                        "Unexpected error previewing invoice with tax ID '{TaxId}' in country '{Country}'.",
-                        parameters.TaxInformation.TaxId,
-                        parameters.TaxInformation.Country);
-                    throw new BadRequestException("billingPreviewInvoiceError");
-            }
-        }
-    }
-
-    public async Task<PreviewInvoiceResponseModel> PreviewInvoiceAsync(
-        PreviewOrganizationInvoiceRequestBody parameters,
-        string gatewayCustomerId,
-        string gatewaySubscriptionId)
-    {
-        var plan = await _pricingClient.GetPlanOrThrow(parameters.PasswordManager.Plan);
-        var isSponsored = parameters.PasswordManager.SponsoredPlan.HasValue;
-
-        var options = new InvoiceCreatePreviewOptions
-        {
-            Currency = "usd",
-            SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
-            {
-                Items =
-                [
-                    new InvoiceSubscriptionDetailsItemOptions
-                    {
-                        Quantity = parameters.PasswordManager.AdditionalStorage,
-                        Plan = plan.PasswordManager.StripeStoragePlanId
-                    }
-                ]
-            },
-            CustomerDetails = new InvoiceCustomerDetailsOptions
-            {
-                Address = new AddressOptions
-                {
-                    PostalCode = parameters.TaxInformation.PostalCode,
-                    Country = parameters.TaxInformation.Country,
-                }
-            },
-        };
-
-        if (isSponsored)
-        {
-            var sponsoredPlan = Core.Utilities.StaticStore.GetSponsoredPlan(parameters.PasswordManager.SponsoredPlan.Value);
-            options.SubscriptionDetails.Items.Add(
-                new InvoiceSubscriptionDetailsItemOptions { Quantity = 1, Plan = sponsoredPlan.StripePlanId }
-            );
-        }
-        else
-        {
-            if (plan.PasswordManager.HasAdditionalSeatsOption)
-            {
-                options.SubscriptionDetails.Items.Add(
-                    new InvoiceSubscriptionDetailsItemOptions { Quantity = parameters.PasswordManager.Seats, Plan = plan.PasswordManager.StripeSeatPlanId }
-                );
-            }
-            else
-            {
-                options.SubscriptionDetails.Items.Add(
-                    new InvoiceSubscriptionDetailsItemOptions { Quantity = 1, Plan = plan.PasswordManager.StripePlanId }
-                );
-            }
-
-            if (plan.SupportsSecretsManager)
-            {
-                if (plan.SecretsManager.HasAdditionalSeatsOption)
-                {
-                    options.SubscriptionDetails.Items.Add(new InvoiceSubscriptionDetailsItemOptions
-                    {
-                        Quantity = parameters.SecretsManager?.Seats ?? 0,
-                        Plan = plan.SecretsManager.StripeSeatPlanId
-                    });
-                }
-
-                if (plan.SecretsManager.HasAdditionalServiceAccountOption)
-                {
-                    options.SubscriptionDetails.Items.Add(new InvoiceSubscriptionDetailsItemOptions
-                    {
-                        Quantity = parameters.SecretsManager?.AdditionalMachineAccounts ?? 0,
-                        Plan = plan.SecretsManager.StripeServiceAccountPlanId
-                    });
-                }
-            }
-        }
-
-        if (!string.IsNullOrWhiteSpace(parameters.TaxInformation.TaxId))
-        {
-            var taxIdType = _taxService.GetStripeTaxCode(
-                options.CustomerDetails.Address.Country,
-                parameters.TaxInformation.TaxId);
-
-            if (taxIdType == null)
-            {
-                _logger.LogWarning("Invalid tax ID '{TaxID}' for country '{Country}'.",
-                    parameters.TaxInformation.TaxId,
-                    parameters.TaxInformation.Country);
-                throw new BadRequestException("billingTaxIdTypeInferenceError");
-            }
-
-            options.CustomerDetails.TaxIds =
-            [
-                new InvoiceCustomerDetailsTaxIdOptions { Type = taxIdType, Value = parameters.TaxInformation.TaxId }
-            ];
-
-            if (taxIdType == StripeConstants.TaxIdType.SpanishNIF)
-            {
-                options.CustomerDetails.TaxIds.Add(new InvoiceCustomerDetailsTaxIdOptions
-                {
-                    Type = StripeConstants.TaxIdType.EUVAT,
-                    Value = $"ES{parameters.TaxInformation.TaxId}"
-                });
-            }
-        }
-
-        Customer gatewayCustomer = null;
-
-        if (!string.IsNullOrWhiteSpace(gatewayCustomerId))
-        {
-            gatewayCustomer = await _stripeAdapter.GetCustomerAsync(gatewayCustomerId);
-
-            if (gatewayCustomer.Discount != null)
-            {
-                options.Discounts =
-                [
-                    new InvoiceDiscountOptions { Coupon = gatewayCustomer.Discount.Coupon.Id }
-                ];
-            }
-        }
-
-        if (!string.IsNullOrWhiteSpace(gatewaySubscriptionId))
-        {
-            var gatewaySubscription = await _stripeAdapter.GetSubscriptionAsync(gatewaySubscriptionId);
-
-            if (gatewaySubscription?.Discounts != null)
-            {
-                options.Discounts = gatewaySubscription.Discounts
-                    .Select(discount => new InvoiceDiscountOptions { Coupon = discount.Coupon.Id }).ToList();
-            }
-        }
-
-        options.AutomaticTax = new InvoiceAutomaticTaxOptions { Enabled = true };
-        if (parameters.PasswordManager.Plan.IsBusinessProductTierType() &&
-            parameters.TaxInformation.Country != Core.Constants.CountryAbbreviations.UnitedStates)
-        {
-            options.CustomerDetails.TaxExempt = StripeConstants.TaxExempt.Reverse;
-        }
-
-        try
-        {
-            var invoice = await _stripeAdapter.CreateInvoicePreviewAsync(options);
-
-            var tax = invoice.TotalTaxes.Sum(invoiceTotalTax => invoiceTotalTax.Amount);
-
-            var effectiveTaxRate = invoice.TotalExcludingTax != null && invoice.TotalExcludingTax.Value != 0
-                ? tax.ToMajor() / invoice.TotalExcludingTax.Value.ToMajor()
-                : 0M;
-
-            var result = new PreviewInvoiceResponseModel(
-                effectiveTaxRate,
-                invoice.TotalExcludingTax.ToMajor() ?? 0,
-                tax.ToMajor(),
-                invoice.Total.ToMajor());
-            return result;
-        }
-        catch (StripeException e)
-        {
-            switch (e.StripeError.Code)
-            {
-                case StripeConstants.ErrorCodes.TaxIdInvalid:
-                    _logger.LogWarning("Invalid tax ID '{TaxID}' for country '{Country}'.",
-                        parameters.TaxInformation.TaxId,
-                        parameters.TaxInformation.Country);
-                    throw new BadRequestException("billingPreviewInvalidTaxIdError");
-                default:
-                    _logger.LogError(e,
-                        "Unexpected error previewing invoice with tax ID '{TaxId}' in country '{Country}'.",
-                        parameters.TaxInformation.TaxId,
-                        parameters.TaxInformation.Country);
-                    throw new BadRequestException("billingPreviewInvoiceError");
-            }
         }
     }
 
