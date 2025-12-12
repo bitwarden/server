@@ -53,6 +53,7 @@ public class CipherDetailsWithCollections : CipherDetails
         Key = cipher.Key;
         FolderId = cipher.FolderId;
         ArchivedDate = cipher.ArchivedDate;
+        FolderId = cipher.FolderId;
         Favorite = cipher.Favorite;
         Edit = cipher.Edit;
         ViewPassword = cipher.ViewPassword;
