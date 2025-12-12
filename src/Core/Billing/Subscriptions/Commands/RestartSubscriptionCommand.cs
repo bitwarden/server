@@ -113,7 +113,7 @@ public class RestartSubscriptionCommand(
 
         items.Add(new SubscriptionItemOptions
         {
-            Price = newPlan.PasswordManager.StripeSeatPlanId,
+            Price = newPlan.HasNonSeatBasedPasswordManagerPlan() ? newPlan.PasswordManager.StripePlanId : newPlan.PasswordManager.StripeSeatPlanId,
             Quantity = passwordManagerItem.Quantity
         });
 
@@ -131,8 +131,10 @@ public class RestartSubscriptionCommand(
         }
 
         // Secrets Manager
-        var secretsManagerItem =
-            canceledSubscription.Items.FirstOrDefault(item => item.Price.Id == oldPlan.SecretsManager.StripeSeatPlanId);
+        var secretsManagerItem = oldPlan.SecretsManager != null
+            ? canceledSubscription.Items.FirstOrDefault(item =>
+                item.Price.Id == oldPlan.SecretsManager.StripeSeatPlanId)
+            : null;
 
         if (secretsManagerItem != null)
         {
@@ -144,7 +146,10 @@ public class RestartSubscriptionCommand(
         }
 
         // Service Accounts
-        var serviceAccountsItem = canceledSubscription.Items.FirstOrDefault(item => item.Price.Id == oldPlan.SecretsManager.StripeServiceAccountPlanId);
+        var serviceAccountsItem = oldPlan.SecretsManager != null
+            ? canceledSubscription.Items.FirstOrDefault(item =>
+                item.Price.Id == oldPlan.SecretsManager.StripeServiceAccountPlanId)
+            : null;
 
         if (serviceAccountsItem != null)
         {
