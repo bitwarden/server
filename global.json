@@ -5,6 +5,7 @@
   },
   "msbuild-sdks": {
     "Microsoft.Build.Traversal": "4.1.0",
-    "Microsoft.Build.Sql": "1.0.0"
+    "Microsoft.Build.Sql": "1.0.0",
+    "Bitwarden.Server.Sdk": "1.2.0"
   }
 }

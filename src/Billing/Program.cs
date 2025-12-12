@@ -8,6 +8,7 @@ public class Program
     {
         Host
             .CreateDefaultBuilder(args)
+            .UseBitwardenSdk()
             .ConfigureWebHostDefaults(webBuilder =>
             {
                 webBuilder.UseStartup<Startup>();
