@@ -9,6 +9,8 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Services;
 using Bit.Identity;
+using Bit.Identity.IdentityServer;
+using Bit.Identity.IdentityServer.RequestValidators;
 using Bit.Test.Common.Helpers;
 using LinqToDB;
 using Microsoft.AspNetCore.Hosting;
@@ -23,6 +25,7 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
     public const string DefaultDeviceIdentifier = "92b9d953-b9b6-4eaf-9d3e-11d57144dfeb";
     public const string DefaultUserEmail = "DefaultEmail@bitwarden.com";
     public const string DefaultUserPasswordHash = "default_password_hash";
+    public bool UseMockClientVersionValidator { get; set; } = true;
 
     /// <summary>
     /// A dictionary to store registration tokens for email verification. We cannot substitute the IMailService more than once, so
@@ -45,6 +48,16 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
                     }
                 });
         });
+
+        if (UseMockClientVersionValidator)
+        {
+            // Bypass client version gating to isolate tests from client version behavior
+            SubstituteService<IClientVersionValidator>(svc =>
+            {
+                svc.ValidateAsync(Arg.Any<User>(), Arg.Any<CustomValidatorRequestContext>())
+                    .Returns(true);
+            });
+        }
 
         base.ConfigureWebHost(builder);
     }
@@ -75,8 +88,20 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
         var context = await ContextFromPasswordAsync(
             username, password, deviceIdentifier, clientId, deviceType, deviceName);
 
-        using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
-        var root = body.RootElement;
+        // Provide clearer diagnostics on failure
+        if (context.Response.StatusCode != StatusCodes.Status200OK)
+        {
+            var contentType = context.Response.ContentType ?? string.Empty;
+            if (context.Response.Body.CanSeek)
+            {
+                context.Response.Body.Position = 0;
+            }
+            string rawBody = await new StreamReader(context.Response.Body).ReadToEndAsync();
+            throw new Xunit.Sdk.XunitException($"Login failed: status={context.Response.StatusCode}, contentType='{contentType}', body='{rawBody}'");
+        }
+
+        using var jsonDoc = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        var root = jsonDoc.RootElement;
 
         return (root.GetProperty("access_token").GetString(), root.GetProperty("refresh_token").GetString());
     }
@@ -99,7 +124,13 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
             { "grant_type", "password" },
             { "username", username },
             { "password", password },
-        }));
+        }),
+        http =>
+        {
+            // Ensure JSON content negotiation for errors and set a sane client version
+            http.Request.Headers.Append("Accept", "application/json");
+            http.Request.Headers.Append("Bitwarden-Client-Version", "2025.11.0");
+        });
 
         return context;
     }
