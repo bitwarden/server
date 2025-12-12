@@ -166,36 +166,14 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
     public async Task CreateAsync(CipherDetails cipher, IEnumerable<Guid> collectionIds)
     {
         cipher.SetNewId();
-        // Omit ArchivedDate when creating via stored procedure
-        var parameters = new
-        {
-            cipher.Id,
-            cipher.UserId,
-            cipher.OrganizationId,
-            cipher.Type,
-            cipher.Data,
-            cipher.Favorites,
-            cipher.Folders,
-            cipher.Attachments,
-            cipher.CreationDate,
-            cipher.RevisionDate,
-            cipher.FolderId,
-            cipher.Favorite,
-            cipher.Edit,
-            cipher.ViewPassword,
-            cipher.Manage,
-            cipher.OrganizationUseTotp,
-            cipher.DeletedDate,
-            cipher.Reprompt,
-            cipher.Key,
-            cipher.ArchivedDate,
-            CollectionIds = collectionIds.ToGuidIdArrayTVP()
-        };
+        var objWithCollections = JsonSerializer.Deserialize<CipherDetailsWithCollections>(
+            JsonSerializer.Serialize(cipher));
+        objWithCollections.CollectionIds = collectionIds.ToGuidIdArrayTVP();
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
                 $"[{Schema}].[CipherDetails_CreateWithCollections]",
-                parameters,
+                objWithCollections,
                 commandType: CommandType.StoredProcedure);
         }
     }
