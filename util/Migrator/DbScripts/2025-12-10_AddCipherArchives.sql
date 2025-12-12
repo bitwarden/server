@@ -84,7 +84,7 @@ BEGIN
     SET
         [Archives] = JSON_MODIFY(
             COALESCE([Archives], N'{}'),
-            CONCAT('$."', CONVERT(NVARCHAR(36), @UserId), '"'),
+            CONCAT('$."', CAST(@UserId AS VARCHAR(50)), '"'),
             CONVERT(NVARCHAR(30), @UtcNow, 127)
         ),
         [RevisionDate] = @UtcNow
@@ -129,7 +129,7 @@ BEGIN
     SET
         [Archives] = JSON_MODIFY(
             COALESCE([Archives], N'{}'),
-            CONCAT('$."', CONVERT(NVARCHAR(36), @UserId), '"'),
+            CONCAT('$."', CAST(@UserId AS VARCHAR(50)), '"'),
             NULL
         ),
         [RevisionDate] = @UtcNow
