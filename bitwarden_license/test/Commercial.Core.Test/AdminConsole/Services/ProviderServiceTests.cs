@@ -12,6 +12,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Services;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -757,7 +758,7 @@ public class ProviderServiceTests
         await organizationRepository.Received(1)
             .ReplaceAsync(Arg.Is<Organization>(org => org.BillingEmail == provider.BillingEmail));
 
-        await sutProvider.GetDependency<IStripeAdapter>().Received(1).CustomerUpdateAsync(
+        await sutProvider.GetDependency<IStripeAdapter>().Received(1).UpdateCustomerAsync(
             organization.GatewayCustomerId,
             Arg.Is<CustomerUpdateOptions>(options => options.Email == provider.BillingEmail));
 
@@ -828,9 +829,9 @@ public class ProviderServiceTests
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         var subscriptionItem = GetSubscription(organization.GatewaySubscriptionId);
-        sutProvider.GetDependency<IStripeAdapter>().SubscriptionGetAsync(organization.GatewaySubscriptionId)
+        sutProvider.GetDependency<IStripeAdapter>().GetSubscriptionAsync(organization.GatewaySubscriptionId)
             .Returns(GetSubscription(organization.GatewaySubscriptionId));
-        await sutProvider.GetDependency<IStripeAdapter>().SubscriptionUpdateAsync(
+        await sutProvider.GetDependency<IStripeAdapter>().UpdateSubscriptionAsync(
             organization.GatewaySubscriptionId, SubscriptionUpdateRequest(expectedPlanId, subscriptionItem));
 
         await sutProvider.Sut.AddOrganization(provider.Id, organization.Id, key);
