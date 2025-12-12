@@ -468,7 +468,6 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             userEntity.Key = keyConnectorWrappedUserKey;
             // Key Connector does not use KDF, so we set some defaults
             userEntity.Kdf = KdfType.Argon2id;
-            userEntity.Kdf = KdfType.Argon2id;
             userEntity.KdfIterations = AuthConstants.ARGON2_ITERATIONS.Default;
             userEntity.KdfMemory = AuthConstants.ARGON2_MEMORY.Default;
             userEntity.KdfParallelism = AuthConstants.ARGON2_PARALLELISM.Default;

@@ -2,6 +2,7 @@
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Utilities;
 
 namespace Bit.Core.KeyManagement.Models.Api.Request;
 
@@ -22,6 +23,7 @@ public class SetKeyConnectorKeyRequestModel : IValidatableObject
     [Obsolete("Not used anymore")]
     public int? KdfParallelism { get; set; }
 
+    [EncryptedString]
     public string? KeyConnectorKeyWrappedUserKey { get; set; }
     public AccountKeysRequestModel? AccountKeys { get; set; }
 
