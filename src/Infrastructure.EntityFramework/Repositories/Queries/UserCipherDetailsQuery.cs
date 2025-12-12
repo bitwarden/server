@@ -95,7 +95,6 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
                          OrganizationUseTotp = false,
                          c.Reprompt,
                          c.Key,
-                         c.ArchivedDate,
                          c.Archives
                      };
 
