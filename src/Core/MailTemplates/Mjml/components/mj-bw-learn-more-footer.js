@@ -25,7 +25,7 @@ class MjBwLearnMoreFooter extends BodyComponent {
   render() {
     return this.renderMJML(
       `
-      <mj-section border-radius="0px 0px 4px 4px" background-color="#f6f6f6" padding="5px 10px 10px 10px">
+      <mj-section border-radius="0px 0px 4px 4px" background-color="#F3F6F9" padding="5px 10px 10px 10px">
         <mj-column width="70%">
           <mj-text line-height="24px">
             <p style="font-size: 18px; line-height: 28px; font-weight: bold;">
