@@ -270,6 +270,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Cipher_CreateWithCollections]
     @DeletedDate DATETIME2(7),
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
+    @Archives NVARCHAR(MAX) = NULL,
     @CollectionIds AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN
