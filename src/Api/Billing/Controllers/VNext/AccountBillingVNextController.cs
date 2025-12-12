@@ -1,7 +1,6 @@
 ﻿using Bit.Api.Billing.Attributes;
 using Bit.Api.Billing.Models.Requests.Payment;
 using Bit.Api.Billing.Models.Requests.Premium;
-using Bit.Core;
 using Bit.Core.Billing.Payment.Commands;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Premium.Commands;
@@ -66,7 +65,6 @@ public class AccountBillingVNextController(
     }
 
     [HttpPost("subscription")]
-    [RequireFeature(FeatureFlagKeys.PM24996ImplementUpgradeFromFreeDialog)]
     [InjectUser]
     public async Task<IResult> CreateSubscriptionAsync(
         [BindNever] User user,
