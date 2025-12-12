@@ -1,10 +1,13 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using System.Security.Claims;
 using System.Text.Json.Serialization;
 using Bit.Api.Models.Response;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Licenses;
+using Bit.Core.Billing.Licenses.Extensions;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Business;
@@ -72,6 +75,7 @@ public class OrganizationResponseModel : ResponseModel
         UseAdminSponsoredFamilies = organization.UseAdminSponsoredFamilies;
         UseAutomaticUserConfirmation = organization.UseAutomaticUserConfirmation;
         UseDisableSmAdsForUsers = organization.UseDisableSmAdsForUsers;
+        UsePhishingBlocker = organization.UsePhishingBlocker;
     }
 
     public Guid Id { get; set; }
@@ -122,6 +126,7 @@ public class OrganizationResponseModel : ResponseModel
     public bool UseAdminSponsoredFamilies { get; set; }
     public bool UseAutomaticUserConfirmation { get; set; }
     public bool UseDisableSmAdsForUsers { get; set; }
+    public bool UsePhishingBlocker { get; set; }
 }
 
 public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
@@ -174,6 +179,30 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
             ExpirationWithoutGracePeriod = license.ExpirationWithoutGracePeriod ?? (license.Trial
                 ? license.Expires
                 : license.Expires?.AddDays(-Constants.OrganizationSelfHostSubscriptionGracePeriodDays));
+        }
+    }
+
+    public OrganizationSubscriptionResponseModel(Organization organization, OrganizationLicense license, ClaimsPrincipal claimsPrincipal) :
+        this(organization, (Plan)null)
+    {
+        if (license != null)
+        {
+            // CRITICAL: When a license has a Token (JWT), ALWAYS use the expiration from the token claim
+            // The token's expiration is cryptographically secured and cannot be tampered with
+            // The file's Expires property can be manually edited and should NOT be trusted for display
+            if (claimsPrincipal != null)
+            {
+                Expiration = claimsPrincipal.GetValue<DateTime>(OrganizationLicenseConstants.Expires);
+                ExpirationWithoutGracePeriod = claimsPrincipal.GetValue<DateTime?>(OrganizationLicenseConstants.ExpirationWithoutGracePeriod);
+            }
+            else
+            {
+                // No token - use the license file expiration (for older licenses without tokens)
+                Expiration = license.Expires;
+                ExpirationWithoutGracePeriod = license.ExpirationWithoutGracePeriod ?? (license.Trial
+                    ? license.Expires
+                    : license.Expires?.AddDays(-Constants.OrganizationSelfHostSubscriptionGracePeriodDays));
+            }
         }
     }
 

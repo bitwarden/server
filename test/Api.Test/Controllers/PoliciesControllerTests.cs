@@ -3,7 +3,6 @@ using System.Text.Json;
 using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
@@ -291,7 +290,7 @@ public class PoliciesControllerTests
         string token,
         string email,
         Organization organization
-        )
+    )
     {
         // Arrange
         organization.UsePolicies = true;
@@ -302,14 +301,15 @@ public class PoliciesControllerTests
         var decryptedToken = Substitute.For<OrgUserInviteTokenable>();
         decryptedToken.Valid.Returns(false);
 
-        var orgUserInviteTokenDataFactory = sutProvider.GetDependency<IDataProtectorTokenFactory<OrgUserInviteTokenable>>();
+        var orgUserInviteTokenDataFactory =
+            sutProvider.GetDependency<IDataProtectorTokenFactory<OrgUserInviteTokenable>>();
 
         orgUserInviteTokenDataFactory.TryUnprotect(token, out Arg.Any<OrgUserInviteTokenable>())
             .Returns(x =>
-        {
-            x[1] = decryptedToken;
-            return true;
-        });
+            {
+                x[1] = decryptedToken;
+                return true;
+            });
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() =>
@@ -325,7 +325,7 @@ public class PoliciesControllerTests
         string token,
         string email,
         Organization organization
-        )
+    )
     {
         // Arrange
         organization.UsePolicies = true;
@@ -338,14 +338,15 @@ public class PoliciesControllerTests
         decryptedToken.OrgUserId = organizationUserId;
         decryptedToken.OrgUserEmail = email;
 
-        var orgUserInviteTokenDataFactory = sutProvider.GetDependency<IDataProtectorTokenFactory<OrgUserInviteTokenable>>();
+        var orgUserInviteTokenDataFactory =
+            sutProvider.GetDependency<IDataProtectorTokenFactory<OrgUserInviteTokenable>>();
 
         orgUserInviteTokenDataFactory.TryUnprotect(token, out Arg.Any<OrgUserInviteTokenable>())
             .Returns(x =>
-        {
-            x[1] = decryptedToken;
-            return true;
-        });
+            {
+                x[1] = decryptedToken;
+                return true;
+            });
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByIdAsync(organizationUserId)
@@ -366,7 +367,7 @@ public class PoliciesControllerTests
         string email,
         OrganizationUser orgUser,
         Organization organization
-        )
+    )
     {
         // Arrange
         organization.UsePolicies = true;
@@ -379,14 +380,15 @@ public class PoliciesControllerTests
         decryptedToken.OrgUserId = organizationUserId;
         decryptedToken.OrgUserEmail = email;
 
-        var orgUserInviteTokenDataFactory = sutProvider.GetDependency<IDataProtectorTokenFactory<OrgUserInviteTokenable>>();
+        var orgUserInviteTokenDataFactory =
+            sutProvider.GetDependency<IDataProtectorTokenFactory<OrgUserInviteTokenable>>();
 
         orgUserInviteTokenDataFactory.TryUnprotect(token, out Arg.Any<OrgUserInviteTokenable>())
             .Returns(x =>
-        {
-            x[1] = decryptedToken;
-            return true;
-        });
+            {
+                x[1] = decryptedToken;
+                return true;
+            });
 
         orgUser.OrganizationId = Guid.Empty;
 
@@ -409,7 +411,7 @@ public class PoliciesControllerTests
         string email,
         OrganizationUser orgUser,
         Organization organization
-        )
+    )
     {
         // Arrange
         organization.UsePolicies = true;
@@ -422,14 +424,15 @@ public class PoliciesControllerTests
         decryptedToken.OrgUserId = organizationUserId;
         decryptedToken.OrgUserEmail = email;
 
-        var orgUserInviteTokenDataFactory = sutProvider.GetDependency<IDataProtectorTokenFactory<OrgUserInviteTokenable>>();
+        var orgUserInviteTokenDataFactory =
+            sutProvider.GetDependency<IDataProtectorTokenFactory<OrgUserInviteTokenable>>();
 
         orgUserInviteTokenDataFactory.TryUnprotect(token, out Arg.Any<OrgUserInviteTokenable>())
             .Returns(x =>
-        {
-            x[1] = decryptedToken;
-            return true;
-        });
+            {
+                x[1] = decryptedToken;
+                return true;
+            });
 
         orgUser.OrganizationId = orgId;
         sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -463,7 +466,7 @@ public class PoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task PutVNext_WhenPolicyValidatorsRefactorEnabled_UsesVNextSavePolicyCommand(
+    public async Task PutVNext_UsesVNextSavePolicyCommand(
         SutProvider<PoliciesController> sutProvider, Guid orgId,
         SavePolicyRequest model, Policy policy, Guid userId)
     {
@@ -476,10 +479,6 @@ public class PoliciesControllerTests
 
         sutProvider.GetDependency<ICurrentContext>()
             .OrganizationOwner(orgId)
-            .Returns(true);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PolicyValidatorsRefactor)
             .Returns(true);
 
         sutProvider.GetDependency<IVNextSavePolicyCommand>()
@@ -487,68 +486,20 @@ public class PoliciesControllerTests
             .Returns(policy);
 
         // Act
-        var result = await sutProvider.Sut.PutVNext(orgId, model);
+        var result = await sutProvider.Sut.PutVNext(orgId, policy.Type, model);
 
         // Assert
         await sutProvider.GetDependency<IVNextSavePolicyCommand>()
             .Received(1)
-            .SaveAsync(Arg.Is<SavePolicyModel>(
-                m => m.PolicyUpdate.OrganizationId == orgId &&
-                     m.PolicyUpdate.Type == model.Policy.Type &&
-                     m.PolicyUpdate.Enabled == model.Policy.Enabled &&
-                     m.PerformedBy.UserId == userId &&
-                     m.PerformedBy.IsOrganizationOwnerOrProvider == true));
+            .SaveAsync(Arg.Is<SavePolicyModel>(m => m.PolicyUpdate.OrganizationId == orgId &&
+                                                    m.PolicyUpdate.Type == policy.Type &&
+                                                    m.PolicyUpdate.Enabled == model.Policy.Enabled &&
+                                                    m.PerformedBy.UserId == userId &&
+                                                    m.PerformedBy.IsOrganizationOwnerOrProvider == true));
 
         await sutProvider.GetDependency<ISavePolicyCommand>()
             .DidNotReceiveWithAnyArgs()
             .VNextSaveAsync(default);
-
-        Assert.NotNull(result);
-        Assert.Equal(policy.Id, result.Id);
-        Assert.Equal(policy.Type, result.Type);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task PutVNext_WhenPolicyValidatorsRefactorDisabled_UsesSavePolicyCommand(
-        SutProvider<PoliciesController> sutProvider, Guid orgId,
-        SavePolicyRequest model, Policy policy, Guid userId)
-    {
-        // Arrange
-        policy.Data = null;
-
-        sutProvider.GetDependency<ICurrentContext>()
-            .UserId
-            .Returns(userId);
-
-        sutProvider.GetDependency<ICurrentContext>()
-            .OrganizationOwner(orgId)
-            .Returns(true);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PolicyValidatorsRefactor)
-            .Returns(false);
-
-        sutProvider.GetDependency<ISavePolicyCommand>()
-            .VNextSaveAsync(Arg.Any<SavePolicyModel>())
-            .Returns(policy);
-
-        // Act
-        var result = await sutProvider.Sut.PutVNext(orgId, model);
-
-        // Assert
-        await sutProvider.GetDependency<ISavePolicyCommand>()
-            .Received(1)
-            .VNextSaveAsync(Arg.Is<SavePolicyModel>(
-                m => m.PolicyUpdate.OrganizationId == orgId &&
-                     m.PolicyUpdate.Type == model.Policy.Type &&
-                     m.PolicyUpdate.Enabled == model.Policy.Enabled &&
-                     m.PerformedBy.UserId == userId &&
-                     m.PerformedBy.IsOrganizationOwnerOrProvider == true));
-
-        await sutProvider.GetDependency<IVNextSavePolicyCommand>()
-            .DidNotReceiveWithAnyArgs()
-            .SaveAsync(default);
 
         Assert.NotNull(result);
         Assert.Equal(policy.Id, result.Id);

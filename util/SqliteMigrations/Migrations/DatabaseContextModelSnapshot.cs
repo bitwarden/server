@@ -105,9 +105,6 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("TEXT");
 
-                    b.Property<bool>("UseDisableSmAdsForUsers")
-                        .HasColumnType("INTEGER");
-
                     b.Property<bool>("Enabled")
                         .HasColumnType("INTEGER");
 
@@ -227,6 +224,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool>("UseDirectory")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("UseDisableSmAdsForUsers")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("UseEvents")
                         .HasColumnType("INTEGER");
 
@@ -240,6 +240,9 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("UsePasswordManager")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("UsePhishingBlocker")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("UsePolicies")

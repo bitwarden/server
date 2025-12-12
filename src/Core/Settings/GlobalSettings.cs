@@ -2,14 +2,12 @@
 #nullable disable
 
 using Bit.Core.Auth.Settings;
-using Bit.Core.Settings.LoggingSettings;
 
 namespace Bit.Core.Settings;
 
 public class GlobalSettings : IGlobalSettings
 {
     private string _mailTemplateDirectory;
-    private string _logDirectory;
     private string _licenseDirectory;
 
     public GlobalSettings()
@@ -21,18 +19,10 @@ public class GlobalSettings : IGlobalSettings
     }
 
     public bool SelfHosted { get; set; }
-    public bool UnifiedDeployment { get; set; }
+    public bool LiteDeployment { get; set; }
     public virtual string KnownProxies { get; set; }
     public virtual string SiteName { get; set; }
     public virtual string ProjectName { get; set; }
-    public virtual string LogDirectory
-    {
-        get => BuildDirectory(_logDirectory, "/logs");
-        set => _logDirectory = value;
-    }
-    public virtual bool LogDirectoryByProject { get; set; } = true;
-    public virtual long? LogRollBySizeLimit { get; set; }
-    public virtual bool EnableDevLogging { get; set; } = false;
     public virtual string LicenseDirectory
     {
         get => BuildDirectory(_licenseDirectory, "/core/licenses");
@@ -73,9 +63,6 @@ public class GlobalSettings : IGlobalSettings
     public virtual FileStorageSettings Send { get; set; }
     public virtual IdentityServerSettings IdentityServer { get; set; } = new IdentityServerSettings();
     public virtual DataProtectionSettings DataProtection { get; set; }
-    public virtual SentrySettings Sentry { get; set; } = new SentrySettings();
-    public virtual SyslogSettings Syslog { get; set; } = new SyslogSettings();
-    public virtual ILogLevelSettings MinLogLevel { get; set; } = new LogLevelSettings();
     public virtual NotificationHubPoolSettings NotificationHubPool { get; set; } = new();
     public virtual YubicoSettings Yubico { get; set; } = new YubicoSettings();
     public virtual DuoSettings Duo { get; set; } = new DuoSettings();
@@ -496,7 +483,7 @@ public class GlobalSettings : IGlobalSettings
         public string CertificatePassword { get; set; }
         public string RedisConnectionString { get; set; }
         public string CosmosConnectionString { get; set; }
-        public string LicenseKey { get; set; } = "eyJhbGciOiJQUzI1NiIsImtpZCI6IklkZW50aXR5U2VydmVyTGljZW5zZWtleS83Y2VhZGJiNzgxMzA0NjllODgwNjg5MTAyNTQxNGYxNiIsInR5cCI6ImxpY2Vuc2Urand0In0.eyJpc3MiOiJodHRwczovL2R1ZW5kZXNvZnR3YXJlLmNvbSIsImF1ZCI6IklkZW50aXR5U2VydmVyIiwiaWF0IjoxNzM0NTY2NDAwLCJleHAiOjE3NjQ5NzkyMDAsImNvbXBhbnlfbmFtZSI6IkJpdHdhcmRlbiBJbmMuIiwiY29udGFjdF9pbmZvIjoiY29udGFjdEBkdWVuZGVzb2Z0d2FyZS5jb20iLCJlZGl0aW9uIjoiU3RhcnRlciIsImlkIjoiNjg3OCIsImZlYXR1cmUiOlsiaXN2IiwidW5saW1pdGVkX2NsaWVudHMiXSwicHJvZHVjdCI6IkJpdHdhcmRlbiJ9.TYc88W_t2t0F2AJV3rdyKwGyQKrKFriSAzm1tWFNHNR9QizfC-8bliGdT4Wgeie-ynCXs9wWaF-sKC5emg--qS7oe2iIt67Qd88WS53AwgTvAddQRA4NhGB1R7VM8GAikLieSos-DzzwLYRgjZdmcsprItYGSJuY73r-7-F97ta915majBytVxGF966tT9zF1aYk0bA8FS6DcDYkr5f7Nsy8daS_uIUAgNa_agKXtmQPqKujqtUb6rgWEpSp4OcQcG-8Dpd5jHqoIjouGvY-5LTgk5WmLxi_m-1QISjxUJrUm-UGao3_VwV5KFGqYrz8csdTl-HS40ihWcsWnrV0ug";
+        public string LicenseKey { get; set; } = "eyJhbGciOiJQUzI1NiIsImtpZCI6IklkZW50aXR5U2VydmVyTGljZW5zZUtleS83Y2VhZGJiNzgxMzA0NjllODgwNjg5MTAyNTQxNGYxNiIsInR5cCI6ImxpY2Vuc2Urand0In0.eyJpc3MiOiJodHRwczovL2R1ZW5kZXNvZnR3YXJlLmNvbSIsImF1ZCI6IklkZW50aXR5U2VydmVyIiwiaWF0IjoxNzY1MDY1NjAwLCJleHAiOjE3OTY1MTUyMDAsImNvbXBhbnlfbmFtZSI6IkJpdHdhcmRlbiBJbmMuIiwiY29udGFjdF9pbmZvIjoiY29udGFjdEBkdWVuZGVzb2Z0d2FyZS5jb20iLCJlZGl0aW9uIjoiU3RhcnRlciIsImlkIjoiOTUxNSIsImZlYXR1cmUiOlsiaXN2IiwidW5saW1pdGVkX2NsaWVudHMiXSwiY2xpZW50X2xpbWl0IjowfQ.rWUsq-XBKNwPG7BRKG-vShXHuyHLHJCh0sEWdWT4Rkz4ArIPOAepEp9wNya-hxFKkBTFlPaQ5IKk4wDTvkQkuq1qaI_v6kSCdaP9fvXp0rmh4KcFEffVLB-wAOK2S2Cld5DzdyCoskUUfwNQP7xuLsz2Ydxe_whSRIdv8bsMbvTC3Kl8PYZPZ4MxqW8rSZ_mEuCpSe5-Q40sB7aiu_7YmWLJaKrfBTIqYH-XuzQj36Aemoei0efcntej-gvxovy-5SiSEsGuRZj41rjEZYOuj5KgHihJViO1VDHK6CNtlu2Ks8bkv6G2hO-TkF16Y28ywEG_beLEf_s5dzhbDBDbvA";
         /// <summary>
         /// Sliding lifetime of a refresh token in seconds.
         ///
@@ -548,57 +535,9 @@ public class GlobalSettings : IGlobalSettings
         }
     }
 
-    public class SentrySettings
-    {
-        public string Dsn { get; set; }
-    }
-
     public class NotificationsSettings : ConnectionStringSettings
     {
         public string RedisConnectionString { get; set; }
-    }
-
-    public class SyslogSettings
-    {
-        /// <summary>
-        /// The connection string used to connect to a remote syslog server over TCP or UDP, or to connect locally.
-        /// </summary>
-        /// <remarks>
-        /// <para>The connection string will be parsed using <see cref="System.Uri" /> to extract the protocol, host name and port number.
-        /// </para>
-        /// <para>
-        /// Supported protocols are:
-        /// <list type="bullet">
-        /// <item>UDP (use <code>udp://</code>)</item>
-        /// <item>TCP (use <code>tcp://</code>)</item>
-        /// <item>TLS over TCP (use <code>tls://</code>)</item>
-        /// </list>
-        /// </para>
-        /// </remarks>
-        /// <example>
-        /// A remote server (logging.dev.example.com) is listening on UDP (port 514):
-        /// <code>
-        /// udp://logging.dev.example.com:514</code>.
-        /// </example>
-        public string Destination { get; set; }
-        /// <summary>
-        /// The absolute path to a Certificate (DER or Base64 encoded with private key).
-        /// </summary>
-        /// <remarks>
-        /// The certificate path and <see cref="CertificatePassword"/> are passed into the <see cref="System.Security.Cryptography.X509Certificates.X509Certificate2.X509Certificate2(string, string)" />.
-        /// The file format of the certificate may be binary encoded (DER) or base64. If the private key is encrypted, provide the password in <see cref="CertificatePassword"/>,
-        /// </remarks>
-        public string CertificatePath { get; set; }
-        /// <summary>
-        /// The password for the encrypted private key in the certificate supplied in <see cref="CertificatePath" />.
-        /// </summary>
-        /// <value></value>
-        public string CertificatePassword { get; set; }
-        /// <summary>
-        /// The thumbprint of the certificate in the X.509 certificate store for personal certificates for the user account running Bitwarden.
-        /// </summary>
-        /// <value></value>
-        public string CertificateThumbprint { get; set; }
     }
 
     public class NotificationHubSettings
@@ -783,6 +722,30 @@ public class GlobalSettings : IGlobalSettings
     {
         public virtual IConnectionStringSettings Redis { get; set; } = new ConnectionStringSettings();
         public virtual IConnectionStringSettings Cosmos { get; set; } = new ConnectionStringSettings();
+        public ExtendedCacheSettings DefaultExtendedCache { get; set; } = new ExtendedCacheSettings();
+    }
+
+    /// <summary>
+    /// A collection of Settings for customizing the FusionCache used in extended caching. Defaults are
+    /// provided for every attribute so that only specific values need to be overridden if needed.
+    /// </summary>
+    public class ExtendedCacheSettings
+    {
+        public bool EnableDistributedCache { get; set; } = true;
+        public bool UseSharedDistributedCache { get; set; } = true;
+        public IConnectionStringSettings Redis { get; set; } = new ConnectionStringSettings();
+        public TimeSpan Duration { get; set; } = TimeSpan.FromMinutes(30);
+        public bool IsFailSafeEnabled { get; set; } = true;
+        public TimeSpan FailSafeMaxDuration { get; set; } = TimeSpan.FromHours(2);
+        public TimeSpan FailSafeThrottleDuration { get; set; } = TimeSpan.FromSeconds(30);
+        public float? EagerRefreshThreshold { get; set; } = 0.9f;
+        public TimeSpan FactorySoftTimeout { get; set; } = TimeSpan.FromMilliseconds(100);
+        public TimeSpan FactoryHardTimeout { get; set; } = TimeSpan.FromMilliseconds(1500);
+        public TimeSpan DistributedCacheSoftTimeout { get; set; } = TimeSpan.FromSeconds(1);
+        public TimeSpan DistributedCacheHardTimeout { get; set; } = TimeSpan.FromSeconds(2);
+        public bool AllowBackgroundDistributedCacheOperations { get; set; } = true;
+        public TimeSpan JitterMaxDuration { get; set; } = TimeSpan.FromSeconds(2);
+        public TimeSpan DistributedCacheCircuitBreakerDuration { get; set; } = TimeSpan.FromSeconds(30);
     }
 
     public class WebPushSettings : IWebPushSettings

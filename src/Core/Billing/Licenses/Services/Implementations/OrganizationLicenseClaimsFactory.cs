@@ -26,7 +26,7 @@ public class OrganizationLicenseClaimsFactory : ILicenseClaimsFactory<Organizati
             new(nameof(OrganizationLicenseConstants.LicenseType), LicenseType.Organization.ToString()),
             new(nameof(OrganizationLicenseConstants.Id), entity.Id.ToString()),
             new(nameof(OrganizationLicenseConstants.Enabled), entity.Enabled.ToString()),
-            new(nameof(OrganizationLicenseConstants.PlanType), entity.PlanType.ToString()),
+            new(nameof(OrganizationLicenseConstants.PlanType), ((int)entity.PlanType).ToString()),
             new(nameof(OrganizationLicenseConstants.UsePolicies), entity.UsePolicies.ToString()),
             new(nameof(OrganizationLicenseConstants.UseSso), entity.UseSso.ToString()),
             new(nameof(OrganizationLicenseConstants.UseKeyConnector), entity.UseKeyConnector.ToString()),
@@ -58,6 +58,7 @@ public class OrganizationLicenseClaimsFactory : ILicenseClaimsFactory<Organizati
             new(nameof(OrganizationLicenseConstants.UseOrganizationDomains), entity.UseOrganizationDomains.ToString()),
             new(nameof(OrganizationLicenseConstants.UseAutomaticUserConfirmation), entity.UseAutomaticUserConfirmation.ToString()),
             new(nameof(OrganizationLicenseConstants.UseDisableSmAdsForUsers), entity.UseDisableSmAdsForUsers.ToString()),
+            new(nameof(OrganizationLicenseConstants.UsePhishingBlocker), entity.UsePhishingBlocker.ToString()),
         };
 
         if (entity.Name is not null)

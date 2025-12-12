@@ -30,6 +30,7 @@ public class OrganizationAbility
         UseAdminSponsoredFamilies = organization.UseAdminSponsoredFamilies;
         UseAutomaticUserConfirmation = organization.UseAutomaticUserConfirmation;
         UseDisableSmAdsForUsers = organization.UseDisableSmAdsForUsers;
+        UsePhishingBlocker = organization.UsePhishingBlocker;
     }
 
     public Guid Id { get; set; }
@@ -53,4 +54,5 @@ public class OrganizationAbility
     public bool UseAdminSponsoredFamilies { get; set; }
     public bool UseAutomaticUserConfirmation { get; set; }
     public bool UseDisableSmAdsForUsers { get; set; }
+    public bool UsePhishingBlocker { get; set; }
 }

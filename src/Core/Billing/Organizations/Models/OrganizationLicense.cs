@@ -143,6 +143,7 @@ public class OrganizationLicense : ILicense
     public int? SmSeats { get; set; }
     public int? SmServiceAccounts { get; set; }
     public bool UseRiskInsights { get; set; }
+    public bool UsePhishingBlocker { get; set; }
 
     // Deprecated. Left for backwards compatibility with old license versions.
     public bool LimitCollectionCreationDeletion { get; set; } = true;
@@ -230,7 +231,8 @@ public class OrganizationLicense : ILicense
                     !p.Name.Equals(nameof(UseAdminSponsoredFamilies)) &&
                     !p.Name.Equals(nameof(UseOrganizationDomains)) &&
                     !p.Name.Equals(nameof(UseAutomaticUserConfirmation)) &&
-                    !p.Name.Equals(nameof(UseDisableSmAdsForUsers)))
+                    !p.Name.Equals(nameof(UseDisableSmAdsForUsers)) &&
+                    !p.Name.Equals(nameof(UsePhishingBlocker)))
                 .OrderBy(p => p.Name)
                 .Select(p => $"{p.Name}:{Core.Utilities.CoreHelpers.FormatLicenseSignatureValue(p.GetValue(this, null))}")
                 .Aggregate((c, n) => $"{c}|{n}");
@@ -401,7 +403,6 @@ public class OrganizationLicense : ILicense
         var installationId = claimsPrincipal.GetValue<Guid>(nameof(InstallationId));
         var licenseKey = claimsPrincipal.GetValue<string>(nameof(LicenseKey));
         var enabled = claimsPrincipal.GetValue<bool>(nameof(Enabled));
-        var planType = claimsPrincipal.GetValue<PlanType>(nameof(PlanType));
         var seats = claimsPrincipal.GetValue<int?>(nameof(Seats));
         var maxCollections = claimsPrincipal.GetValue<short?>(nameof(MaxCollections));
         var useGroups = claimsPrincipal.GetValue<bool>(nameof(UseGroups));
@@ -428,12 +429,18 @@ public class OrganizationLicense : ILicense
         var useAutomaticUserConfirmation = claimsPrincipal.GetValue<bool>(nameof(UseAutomaticUserConfirmation));
         var useDisableSmAdsForUsers = claimsPrincipal.GetValue<bool>(nameof(UseDisableSmAdsForUsers));
 
+        var claimedPlanType = claimsPrincipal.GetValue<PlanType>(nameof(PlanType));
+
+        var planTypesMatch = claimedPlanType == PlanType.FamiliesAnnually
+            ? organization.PlanType is PlanType.FamiliesAnnually or PlanType.FamiliesAnnually2025
+            : organization.PlanType == claimedPlanType;
+
         return issued <= DateTime.UtcNow &&
                expires >= DateTime.UtcNow &&
                installationId == globalSettings.Installation.Id &&
                licenseKey == organization.LicenseKey &&
                enabled == organization.Enabled &&
-               planType == organization.PlanType &&
+               planTypesMatch &&
                seats == organization.Seats &&
                maxCollections == organization.MaxCollections &&
                useGroups == organization.UseGroups &&

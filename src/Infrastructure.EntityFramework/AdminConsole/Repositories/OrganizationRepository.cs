@@ -114,7 +114,8 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 UseOrganizationDomains = e.UseOrganizationDomains,
                 UseAdminSponsoredFamilies = e.UseAdminSponsoredFamilies,
                 UseAutomaticUserConfirmation = e.UseAutomaticUserConfirmation,
-                UseDisableSmAdsForUsers = e.UseDisableSmAdsForUsers
+                UseDisableSmAdsForUsers = e.UseDisableSmAdsForUsers,
+                UsePhishingBlocker = e.UsePhishingBlocker
             }).ToListAsync();
         }
     }
@@ -130,6 +131,7 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             PlanType.Free,
             PlanType.Custom,
             PlanType.FamiliesAnnually2019,
+            PlanType.FamiliesAnnually2025,
             PlanType.FamiliesAnnually
         };
 

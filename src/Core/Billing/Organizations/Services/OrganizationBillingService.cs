@@ -79,10 +79,12 @@ public class OrganizationBillingService(
             };
         }
 
-        var customer = await subscriberService.GetCustomer(organization,
-            new CustomerGetOptions { Expand = ["discount.coupon.applies_to"] });
+        var customer = await subscriberService.GetCustomer(organization);
 
-        var subscription = await subscriberService.GetSubscription(organization);
+        var subscription = await subscriberService.GetSubscription(organization, new SubscriptionGetOptions
+        {
+            Expand = ["discounts.coupon.applies_to"]
+        });
 
         if (customer == null || subscription == null)
         {
@@ -172,6 +174,35 @@ public class OrganizationBillingService(
                 message: "An error occurred while updating the subscription plan",
                 innerException: stripeException);
         }
+    }
+
+    public async Task UpdateOrganizationNameAndEmail(Organization organization)
+    {
+        if (organization.GatewayCustomerId is null)
+        {
+            throw new BillingException("Cannot update an organization in Stripe without a GatewayCustomerId.");
+        }
+
+        var newDisplayName = organization.DisplayName();
+
+        await stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId,
+            new CustomerUpdateOptions
+            {
+                Email = organization.BillingEmail,
+                Description = newDisplayName,
+                InvoiceSettings = new CustomerInvoiceSettingsOptions
+                {
+                    // This overwrites the existing custom fields for this organization
+                    CustomFields = [
+                        new CustomerInvoiceSettingsCustomFieldOptions
+                        {
+                            Name = organization.SubscriberType(),
+                            Value = newDisplayName.Length <= 30
+                                ? newDisplayName
+                                : newDisplayName[..30]
+                        }]
+                },
+            });
     }
 
     #region Utilities
@@ -542,16 +573,17 @@ public class OrganizationBillingService(
             return false;
         }
 
-        var hasCoupon = customer.Discount?.Coupon?.Id == StripeConstants.CouponIDs.SecretsManagerStandalone;
+        var coupon = subscription.Discounts?.FirstOrDefault(discount =>
+            discount.Coupon?.Id == StripeConstants.CouponIDs.SecretsManagerStandalone)?.Coupon;
 
-        if (!hasCoupon)
+        if (coupon == null)
         {
             return false;
         }
 
         var subscriptionProductIds = subscription.Items.Data.Select(item => item.Plan.ProductId);
 
-        var couponAppliesTo = customer.Discount?.Coupon?.AppliesTo?.Products;
+        var couponAppliesTo = coupon.AppliesTo?.Products;
 
         return subscriptionProductIds.Intersect(couponAppliesTo ?? []).Any();
     }

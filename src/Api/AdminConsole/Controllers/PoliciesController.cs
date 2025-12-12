@@ -42,7 +42,6 @@ public class PoliciesController : Controller
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IPolicyRepository _policyRepository;
     private readonly IUserService _userService;
-    private readonly IFeatureService _featureService;
     private readonly ISavePolicyCommand _savePolicyCommand;
     private readonly IVNextSavePolicyCommand _vNextSavePolicyCommand;
 
@@ -55,7 +54,6 @@ public class PoliciesController : Controller
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
         IOrganizationHasVerifiedDomainsQuery organizationHasVerifiedDomainsQuery,
         IOrganizationRepository organizationRepository,
-        IFeatureService featureService,
         ISavePolicyCommand savePolicyCommand,
         IVNextSavePolicyCommand vNextSavePolicyCommand)
     {
@@ -69,7 +67,6 @@ public class PoliciesController : Controller
         _organizationRepository = organizationRepository;
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
         _organizationHasVerifiedDomainsQuery = organizationHasVerifiedDomainsQuery;
-        _featureService = featureService;
         _savePolicyCommand = savePolicyCommand;
         _vNextSavePolicyCommand = vNextSavePolicyCommand;
     }
@@ -209,29 +206,20 @@ public class PoliciesController : Controller
             throw new NotFoundException();
         }
 
-        if (type != model.Type)
-        {
-            throw new BadRequestException("Mismatched policy type");
-        }
-
-        var policyUpdate = await model.ToPolicyUpdateAsync(orgId, _currentContext);
+        var policyUpdate = await model.ToPolicyUpdateAsync(orgId, type, _currentContext);
         var policy = await _savePolicyCommand.SaveAsync(policyUpdate);
         return new PolicyResponseModel(policy);
     }
 
-
     [HttpPut("{type}/vnext")]
     [RequireFeatureAttribute(FeatureFlagKeys.CreateDefaultLocation)]
     [Authorize<ManagePoliciesRequirement>]
-    public async Task<PolicyResponseModel> PutVNext(Guid orgId, [FromBody] SavePolicyRequest model)
+    public async Task<PolicyResponseModel> PutVNext(Guid orgId, PolicyType type, [FromBody] SavePolicyRequest model)
     {
-        var savePolicyRequest = await model.ToSavePolicyModelAsync(orgId, _currentContext);
+        var savePolicyRequest = await model.ToSavePolicyModelAsync(orgId, type, _currentContext);
 
-        var policy = _featureService.IsEnabled(FeatureFlagKeys.PolicyValidatorsRefactor) ?
-            await _vNextSavePolicyCommand.SaveAsync(savePolicyRequest) :
-            await _savePolicyCommand.VNextSaveAsync(savePolicyRequest);
+        var policy = await _vNextSavePolicyCommand.SaveAsync(savePolicyRequest);
 
         return new PolicyResponseModel(policy);
     }
-
 }

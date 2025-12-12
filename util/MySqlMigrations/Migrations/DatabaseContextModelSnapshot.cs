@@ -110,9 +110,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<bool>("UseDisableSmAdsForUsers")
-                        .HasColumnType("tinyint(1)");
-
                     b.Property<bool>("Enabled")
                         .HasColumnType("tinyint(1)");
 
@@ -232,6 +229,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("UseDirectory")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<bool>("UseDisableSmAdsForUsers")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<bool>("UseEvents")
                         .HasColumnType("tinyint(1)");
 
@@ -245,6 +245,9 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("tinyint(1)");
 
                     b.Property<bool>("UsePasswordManager")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("UsePhishingBlocker")
                         .HasColumnType("tinyint(1)");
 
                     b.Property<bool>("UsePolicies")
