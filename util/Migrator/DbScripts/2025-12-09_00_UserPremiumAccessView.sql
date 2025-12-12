@@ -6,13 +6,17 @@ IF EXISTS (
     AND object_id = OBJECT_ID('[dbo].[Organization]')
 )
 BEGIN
-    DROP INDEX [IX_Organization_Enabled] ON [dbo].[Organization];
+    CREATE NONCLUSTERED INDEX [IX_Organization_Enabled]
+    ON [dbo].[Organization]([Id] ASC, [Enabled] ASC)
+    INCLUDE ([UseTotp], [UsersGetPremium])
+    WITH (DROP_EXISTING = ON);
 END
-GO
-
-CREATE NONCLUSTERED INDEX [IX_Organization_Enabled]
+ELSE
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_Organization_Enabled]
     ON [dbo].[Organization]([Id] ASC, [Enabled] ASC)
     INCLUDE ([UseTotp], [UsersGetPremium]);
+END
 GO
 
 CREATE OR ALTER VIEW [dbo].[UserPremiumAccessView]
