@@ -238,10 +238,13 @@ public class AccountsKeyManagementControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task PostSetKeyConnectorKeyAsync_UserNull_Throws(
+    public async Task PostSetKeyConnectorKeyAsync_V1_UserNull_Throws(
         SutProvider<AccountsKeyManagementController> sutProvider,
         SetKeyConnectorKeyRequestModel data)
     {
+        data.KeyConnectorKeyWrappedUserKey = null;
+        data.AccountKeys = null;
+
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsNull();
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sutProvider.Sut.PostSetKeyConnectorKeyAsync(data));
@@ -252,10 +255,13 @@ public class AccountsKeyManagementControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task PostSetKeyConnectorKeyAsync_SetKeyConnectorKeyFails_ThrowsBadRequestWithErrorResponse(
+    public async Task PostSetKeyConnectorKeyAsync_V1_SetKeyConnectorKeyFails_ThrowsBadRequestWithErrorResponse(
         SutProvider<AccountsKeyManagementController> sutProvider,
         SetKeyConnectorKeyRequestModel data, User expectedUser)
     {
+        data.KeyConnectorKeyWrappedUserKey = null;
+        data.AccountKeys = null;
+
         expectedUser.PublicKey = null;
         expectedUser.PrivateKey = null;
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
@@ -285,10 +291,13 @@ public class AccountsKeyManagementControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task PostSetKeyConnectorKeyAsync_SetKeyConnectorKeySucceeds_OkResponse(
+    public async Task PostSetKeyConnectorKeyAsync_V1_SetKeyConnectorKeySucceeds_OkResponse(
         SutProvider<AccountsKeyManagementController> sutProvider,
         SetKeyConnectorKeyRequestModel data, User expectedUser)
     {
+        data.KeyConnectorKeyWrappedUserKey = null;
+        data.AccountKeys = null;
+
         expectedUser.PublicKey = null;
         expectedUser.PrivateKey = null;
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
