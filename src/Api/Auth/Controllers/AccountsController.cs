@@ -18,6 +18,7 @@ using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Kdf;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Models.Api.Response;
 using Bit.Core.Repositories;
@@ -44,6 +45,7 @@ public class AccountsController : Controller
     private readonly IUserAccountKeysQuery _userAccountKeysQuery;
     private readonly ITwoFactorEmailService _twoFactorEmailService;
     private readonly IChangeKdfCommand _changeKdfCommand;
+    private readonly IUserRepository _userRepository;
 
     public AccountsController(
         IOrganizationService organizationService,
@@ -57,7 +59,8 @@ public class AccountsController : Controller
         IFeatureService featureService,
         IUserAccountKeysQuery userAccountKeysQuery,
         ITwoFactorEmailService twoFactorEmailService,
-        IChangeKdfCommand changeKdfCommand
+        IChangeKdfCommand changeKdfCommand,
+        IUserRepository userRepository
         )
     {
         _organizationService = organizationService;
@@ -72,6 +75,7 @@ public class AccountsController : Controller
         _userAccountKeysQuery = userAccountKeysQuery;
         _twoFactorEmailService = twoFactorEmailService;
         _changeKdfCommand = changeKdfCommand;
+        _userRepository = userRepository;
     }
 
 
@@ -440,8 +444,40 @@ public class AccountsController : Controller
             }
         }
 
-        await _userService.SaveUserAsync(model.ToUser(user));
-        return new KeysResponseModel(user);
+        if (model.AccountKeys != null)
+        {
+            var accountKeysData = model.AccountKeys.ToAccountKeysData();
+            if (accountKeysData.IsV2Encryption())
+            {
+                await _userRepository.SetV2AccountCryptographicStateAsync(user.Id, accountKeysData);
+                return new KeysResponseModel(accountKeysData, user.Key);
+            }
+            else
+            {
+                // Todo: Drop this after a transition period
+                await _userService.SaveUserAsync(model.ToUser(user));
+                return new KeysResponseModel(new UserAccountKeysData
+                {
+                    PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData(
+                        user.PrivateKey,
+                        user.PublicKey
+                    )
+                }, user.Key);
+            }
+        }
+        else
+        {
+            // Todo: Drop this after a transition period
+            await _userService.SaveUserAsync(model.ToUser(user));
+            return new KeysResponseModel(new UserAccountKeysData
+            {
+                PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData(
+                    user.PrivateKey,
+                    user.PublicKey
+                )
+            }, user.Key);
+        }
+
     }
 
     [HttpGet("keys")]
@@ -453,7 +489,8 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        return new KeysResponseModel(user);
+        var accountKeys = await _userAccountKeysQuery.Run(user);
+        return new KeysResponseModel(accountKeys, user.Key);
     }
 
     [HttpDelete]
