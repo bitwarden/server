@@ -12,15 +12,13 @@
     @DeletedDate DATETIME2(7),
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
-    @Archives NVARCHAR(MAX),
-    @ArchivedDate DATETIME2(7) = NULL,  -- not used, remove once Cipher.ArchivedDate is removed
     @CollectionIds AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN
     SET NOCOUNT ON
 
     EXEC [dbo].[Cipher_Create] @Id, @UserId, @OrganizationId, @Type, @Data, @Favorites, @Folders,
-        @Attachments, @CreationDate, @RevisionDate, @DeletedDate, @Reprompt, @Key, @Archives
+        @Attachments, @CreationDate, @RevisionDate, @DeletedDate, @Reprompt, @Key
 
     DECLARE @UpdateCollectionsSuccess INT
     EXEC @UpdateCollectionsSuccess = [dbo].[Cipher_UpdateCollections] @Id, @UserId, @OrganizationId, @CollectionIds

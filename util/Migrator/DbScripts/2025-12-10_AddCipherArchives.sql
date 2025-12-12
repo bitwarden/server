@@ -158,7 +158,6 @@ CREATE OR ALTER PROCEDURE [dbo].[Cipher_Create]
     @DeletedDate DATETIME2(7),
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
-    @ArchivedDate DATETIME2(7) = NULL,  -- not used, remove once Cipher.ArchivedDate is removed
     @Archives NVARCHAR(MAX) = NULL
 AS
 BEGIN
@@ -271,15 +270,13 @@ CREATE OR ALTER PROCEDURE [dbo].[Cipher_CreateWithCollections]
     @DeletedDate DATETIME2(7),
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
-    @Archives NVARCHAR(MAX),
-    @ArchivedDate DATETIME2(7) = NULL,  -- not used, remove once Cipher.ArchivedDate is removed
     @CollectionIds AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN
     SET NOCOUNT ON
 
     EXEC [dbo].[Cipher_Create] @Id, @UserId, @OrganizationId, @Type, @Data, @Favorites, @Folders,
-        @Attachments, @CreationDate, @RevisionDate, @DeletedDate, @Reprompt, @Key, @Archives
+        @Attachments, @CreationDate, @RevisionDate, @DeletedDate, @Reprompt, @Key
 
     DECLARE @UpdateCollectionsSuccess INT
     EXEC @UpdateCollectionsSuccess = [dbo].[Cipher_UpdateCollections] @Id, @UserId, @OrganizationId, @CollectionIds
@@ -312,8 +309,7 @@ CREATE OR ALTER PROCEDURE [dbo].[CipherDetails_Create]
     @DeletedDate DATETIME2(7),
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
-    @ArchivedDate DATETIME2(7) = NULL,
-    @Archives NVARCHAR(MAX) = NULL
+    @ArchivedDate DATETIME2(7) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -386,7 +382,6 @@ CREATE OR ALTER PROCEDURE [dbo].[CipherDetails_CreateWithCollections]
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
     @ArchivedDate DATETIME2(7) = NULL,
-    @Archives NVARCHAR(MAX), -- not used
     @CollectionIds AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN
@@ -394,7 +389,7 @@ BEGIN
 
     EXEC [dbo].[CipherDetails_Create] @Id, @UserId, @OrganizationId, @Type, @Data, @Favorites, @Folders,
         @Attachments, @CreationDate, @RevisionDate, @FolderId, @Favorite, @Edit, @ViewPassword, @Manage,
-        @OrganizationUseTotp, @DeletedDate, @Reprompt, @Key, @ArchivedDate, @Archives
+        @OrganizationUseTotp, @DeletedDate, @Reprompt, @Key, @ArchivedDate
 
     DECLARE @UpdateCollectionsSuccess INT
     EXEC @UpdateCollectionsSuccess = [dbo].[Cipher_UpdateCollections] @Id, @UserId, @OrganizationId, @CollectionIds
@@ -427,8 +422,7 @@ CREATE OR ALTER PROCEDURE [dbo].[CipherDetails_Update]
     @DeletedDate DATETIME2(2),
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
-    @ArchivedDate DATETIME2(7) = NULL,
-    @Archives NVARCHAR(MAX) = NULL -- not used
+    @ArchivedDate DATETIME2(7) = NULL
 AS
 BEGIN
     SET NOCOUNT ON

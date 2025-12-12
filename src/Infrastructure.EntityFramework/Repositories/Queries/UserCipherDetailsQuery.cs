@@ -71,7 +71,6 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
                         OrganizationUseTotp = o.UseTotp,
                         c.Reprompt,
                         c.Key,
-                        c.ArchivedDate,
                         c.Archives
                     };
 
