@@ -47,10 +47,10 @@ public class RestartSubscriptionCommand(
     private Task RestartSubscriptionAsync(
         ISubscriber subscriber,
         Subscription canceledSubscription) => subscriber switch
-    {
-        Organization organization => RestartOrganizationSubscriptionAsync(organization, canceledSubscription),
-        _ => throw new NotSupportedException("Only organization subscriptions can be restarted")
-    };
+        {
+            Organization organization => RestartOrganizationSubscriptionAsync(organization, canceledSubscription),
+            _ => throw new NotSupportedException("Only organization subscriptions can be restarted")
+        };
 
     private async Task RestartOrganizationSubscriptionAsync(
         Organization organization,
