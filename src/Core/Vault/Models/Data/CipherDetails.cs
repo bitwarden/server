@@ -51,6 +51,7 @@ public class CipherDetailsWithCollections : CipherDetails
         Reprompt = cipher.Reprompt;
         Key = cipher.Key;
         FolderId = cipher.FolderId;
+        ArchivedDate = cipher.ArchivedDate;
         Favorite = cipher.Favorite;
         Edit = cipher.Edit;
         ViewPassword = cipher.ViewPassword;
