@@ -376,8 +376,7 @@ BEGIN
         [UseAdminSponsoredFamilies] = @UseAdminSponsoredFamilies,
         [SyncSeats] = @SyncSeats,
         [UseAutomaticUserConfirmation] = @UseAutomaticUserConfirmation,
-        [UsePhishingBlocker] = @UsePhishingBlocker,
-        [MaxStorageGbIncreased] = @MaxStorageGb
+        [UsePhishingBlocker] = @UsePhishingBlocker
     WHERE
         [Id] = @Id;
 END
