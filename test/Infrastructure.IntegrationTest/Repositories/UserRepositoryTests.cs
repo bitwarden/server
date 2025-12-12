@@ -1,9 +1,11 @@
-﻿using Bit.Core.AdminConsole.Repositories;
+﻿using Bit.Core;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.IntegrationTest.AdminConsole;
+using Microsoft.Data.SqlClient;
 using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest.Repositories;
@@ -178,5 +180,55 @@ public class UserRepositoryTests
         Assert.NotNull(updatedCollection2);
         Assert.Equal(CollectionType.SharedCollection, updatedCollection2.Type);
         Assert.Equal(user2.Email, updatedCollection2.DefaultUserCollectionEmail);
+    }
+
+    [Theory, DatabaseData]
+    public async Task SetKeyConnectorUserKey_UpdatesUserKey(IUserRepository userRepository, Database database)
+    {
+        var user = await userRepository.CreateTestUserAsync();
+
+        const string keyConnectorWrappedKey = "key-connector-wrapped-user-key";
+
+        var setKeyConnectorUserKeyDelegate = userRepository.SetKeyConnectorUserKey(user.Id, keyConnectorWrappedKey);
+
+        await RunUpdateUserDataAsync(setKeyConnectorUserKeyDelegate, database);
+
+        var updatedUser = await userRepository.GetByIdAsync(user.Id);
+
+        Assert.NotNull(updatedUser);
+        Assert.Equal(keyConnectorWrappedKey, updatedUser.Key);
+        Assert.True(updatedUser.UsesKeyConnector);
+        Assert.Equal(KdfType.Argon2id, updatedUser.Kdf);
+        Assert.Equal(AuthConstants.ARGON2_ITERATIONS.Default, updatedUser.KdfIterations);
+        Assert.Equal(AuthConstants.ARGON2_MEMORY.Default, updatedUser.KdfMemory);
+        Assert.Equal(AuthConstants.ARGON2_PARALLELISM.Default, updatedUser.KdfParallelism);
+        Assert.Equal(DateTime.UtcNow, updatedUser.RevisionDate, TimeSpan.FromMinutes(1));
+        Assert.Equal(DateTime.UtcNow, updatedUser.AccountRevisionDate, TimeSpan.FromMinutes(1));
+    }
+
+    private static async Task RunUpdateUserDataAsync(UpdateUserData task, Database database)
+    {
+        if (database.Type == SupportedDatabaseProviders.SqlServer && !database.UseEf)
+        {
+            await using var connection = new SqlConnection(database.ConnectionString);
+            connection.Open();
+
+            await using var transaction = connection.BeginTransaction();
+            try
+            {
+                await task(connection, transaction);
+
+                transaction.Commit();
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
+        }
+        else
+        {
+            await task();
+        }
     }
 }
