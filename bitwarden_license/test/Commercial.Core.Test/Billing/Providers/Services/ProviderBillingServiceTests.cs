@@ -2151,4 +2151,151 @@ public class ProviderBillingServiceTests
     }
 
     #endregion
+
+    #region UpdateProviderNameAndEmail
+
+    [Theory, BitAutoData]
+    public async Task UpdateProviderNameAndEmail_NullGatewayCustomerId_LogsWarningAndReturns(
+        Provider provider,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        // Arrange
+        provider.GatewayCustomerId = null;
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+
+        // Act
+        await sutProvider.Sut.UpdateProviderNameAndEmail(provider);
+
+        // Assert
+        await stripeAdapter.DidNotReceive().CustomerUpdateAsync(
+            Arg.Any<string>(),
+            Arg.Any<CustomerUpdateOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateProviderNameAndEmail_EmptyGatewayCustomerId_LogsWarningAndReturns(
+        Provider provider,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        // Arrange
+        provider.GatewayCustomerId = "";
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+
+        // Act
+        await sutProvider.Sut.UpdateProviderNameAndEmail(provider);
+
+        // Assert
+        await stripeAdapter.DidNotReceive().CustomerUpdateAsync(
+            Arg.Any<string>(),
+            Arg.Any<CustomerUpdateOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateProviderNameAndEmail_NullProviderName_LogsWarningAndReturns(
+        Provider provider,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        // Arrange
+        provider.Name = null;
+        provider.GatewayCustomerId = "cus_test123";
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+
+        // Act
+        await sutProvider.Sut.UpdateProviderNameAndEmail(provider);
+
+        // Assert
+        await stripeAdapter.DidNotReceive().CustomerUpdateAsync(
+            Arg.Any<string>(),
+            Arg.Any<CustomerUpdateOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateProviderNameAndEmail_EmptyProviderName_LogsWarningAndReturns(
+        Provider provider,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        // Arrange
+        provider.Name = "";
+        provider.GatewayCustomerId = "cus_test123";
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+
+        // Act
+        await sutProvider.Sut.UpdateProviderNameAndEmail(provider);
+
+        // Assert
+        await stripeAdapter.DidNotReceive().CustomerUpdateAsync(
+            Arg.Any<string>(),
+            Arg.Any<CustomerUpdateOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateProviderNameAndEmail_ValidProvider_CallsStripeWithCorrectParameters(
+        Provider provider,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        // Arrange
+        provider.Name = "Test Provider";
+        provider.BillingEmail = "billing@test.com";
+        provider.GatewayCustomerId = "cus_test123";
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+
+        // Act
+        await sutProvider.Sut.UpdateProviderNameAndEmail(provider);
+
+        // Assert
+        await stripeAdapter.Received(1).CustomerUpdateAsync(
+            provider.GatewayCustomerId,
+            Arg.Is<CustomerUpdateOptions>(options =>
+                options.Email == provider.BillingEmail &&
+                options.Description == provider.Name &&
+                options.InvoiceSettings.CustomFields.Count == 1 &&
+                options.InvoiceSettings.CustomFields[0].Name == "Provider" &&
+                options.InvoiceSettings.CustomFields[0].Value == provider.Name));
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateProviderNameAndEmail_LongProviderName_UsesFullName(
+        Provider provider,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        // Arrange
+        var longName = new string('A', 50); // 50 characters
+        provider.Name = longName;
+        provider.BillingEmail = "billing@test.com";
+        provider.GatewayCustomerId = "cus_test123";
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+
+        // Act
+        await sutProvider.Sut.UpdateProviderNameAndEmail(provider);
+
+        // Assert
+        await stripeAdapter.Received(1).CustomerUpdateAsync(
+            provider.GatewayCustomerId,
+            Arg.Is<CustomerUpdateOptions>(options =>
+                options.InvoiceSettings.CustomFields[0].Value == longName));
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateProviderNameAndEmail_NullBillingEmail_UpdatesWithNull(
+        Provider provider,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        // Arrange
+        provider.Name = "Test Provider";
+        provider.BillingEmail = null;
+        provider.GatewayCustomerId = "cus_test123";
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+
+        // Act
+        await sutProvider.Sut.UpdateProviderNameAndEmail(provider);
+
+        // Assert
+        await stripeAdapter.Received(1).CustomerUpdateAsync(
+            provider.GatewayCustomerId,
+            Arg.Is<CustomerUpdateOptions>(options =>
+                options.Email == null &&
+                options.Description == provider.Name));
+    }
+
+    #endregion
 }
