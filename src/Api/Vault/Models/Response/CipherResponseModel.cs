@@ -110,7 +110,6 @@ public class CipherMiniResponseModel : ResponseModel
     public DateTime? DeletedDate { get; set; }
     public CipherRepromptType Reprompt { get; set; }
     public string Key { get; set; }
-    public DateTime? ArchivedDate { get; set; }
 }
 
 public class CipherResponseModel : CipherMiniResponseModel
@@ -135,6 +134,7 @@ public class CipherResponseModel : CipherMiniResponseModel
     public bool Favorite { get; set; }
     public bool Edit { get; set; }
     public bool ViewPassword { get; set; }
+    public DateTime? ArchivedDate { get; set; }
     public CipherPermissionsResponseModel Permissions { get; set; }
 }
 
