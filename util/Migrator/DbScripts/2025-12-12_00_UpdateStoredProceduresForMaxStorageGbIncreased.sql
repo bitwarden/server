@@ -62,7 +62,8 @@ CREATE OR ALTER PROCEDURE [dbo].[Organization_Create]
     @UseOrganizationDomains BIT = 0,
     @UseAdminSponsoredFamilies BIT = 0,
     @SyncSeats BIT = 0,
-    @UseAutomaticUserConfirmation BIT = 0
+    @UseAutomaticUserConfirmation BIT = 0,
+    @UsePhishingBlocker BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -130,6 +131,7 @@ BEGIN
         [UseAdminSponsoredFamilies],
         [SyncSeats],
         [UseAutomaticUserConfirmation],
+        [UsePhishingBlocker],
         [MaxStorageGbIncreased]
     )
     VALUES
@@ -195,6 +197,7 @@ BEGIN
             @UseAdminSponsoredFamilies,
             @SyncSeats,
             @UseAutomaticUserConfirmation,
+            @UsePhishingBlocker,
             @MaxStorageGb
         );
 END
@@ -261,7 +264,8 @@ CREATE OR ALTER PROCEDURE [dbo].[Organization_Update]
     @UseOrganizationDomains BIT = 0,
     @UseAdminSponsoredFamilies BIT = 0,
     @SyncSeats BIT = 0,
-    @UseAutomaticUserConfirmation BIT = 0
+    @UseAutomaticUserConfirmation BIT = 0,
+    @UsePhishingBlocker BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -329,6 +333,7 @@ BEGIN
         [UseAdminSponsoredFamilies] = @UseAdminSponsoredFamilies,
         [SyncSeats] = @SyncSeats,
         [UseAutomaticUserConfirmation] = @UseAutomaticUserConfirmation,
+        [UsePhishingBlocker] = @UsePhishingBlocker,
         [MaxStorageGbIncreased] = @MaxStorageGb
     WHERE
         [Id] = @Id;
