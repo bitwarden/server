@@ -91,7 +91,8 @@ public static class EventIntegrationsServiceCollectionExtensions
             return services;
         }
 
-        if (CoreHelpers.SettingHasValue(globalSettings.Events.ConnectionString))
+        if (CoreHelpers.SettingHasValue(globalSettings.Events.ConnectionString) &&
+            CoreHelpers.SettingHasValue(globalSettings.Events.QueueName))
         {
             services.TryAddSingleton<IEventWriteService, AzureQueueEventWriteService>();
             return services;
