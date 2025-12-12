@@ -31,7 +31,8 @@ public class Startup
         // Repositories
         services.AddDatabaseRepositories(globalSettings);
 
-        // Hosted Services
+        // Add event integration services
+        services.AddDistributedCache(globalSettings);
         services.AddAzureServiceBusListeners(globalSettings);
         services.AddHostedService<AzureQueueHostedService>();
     }

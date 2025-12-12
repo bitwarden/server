@@ -84,6 +84,8 @@ public class Startup
             services.AddHostedService<Core.HostedServices.ApplicationCacheHostedService>();
         }
 
+        // Add event integration services
+        services.AddDistributedCache(globalSettings);
         services.AddRabbitMqListeners(globalSettings);
     }
 
