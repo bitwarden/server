@@ -137,7 +137,8 @@ BEGIN
         [UseAdminSponsoredFamilies],
         [SyncSeats],
         [UseAutomaticUserConfirmation],
-        [UsePhishingBlocker]
+        [UsePhishingBlocker],
+        [MaxStorageGbIncreased]
         )
     VALUES
         (
@@ -202,7 +203,8 @@ BEGIN
             @UseAdminSponsoredFamilies,
             @SyncSeats,
             @UseAutomaticUserConfirmation,
-            @UsePhishingBlocker
+            @UsePhishingBlocker,
+            @MaxStorageGb
         );
 END
 GO
@@ -376,7 +378,8 @@ BEGIN
         [UseAdminSponsoredFamilies] = @UseAdminSponsoredFamilies,
         [SyncSeats] = @SyncSeats,
         [UseAutomaticUserConfirmation] = @UseAutomaticUserConfirmation,
-        [UsePhishingBlocker] = @UsePhishingBlocker
+        [UsePhishingBlocker] = @UsePhishingBlocker,
+        [MaxStorageGbIncreased] = @MaxStorageGb
     WHERE
         [Id] = @Id;
 END
