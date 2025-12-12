@@ -1,4 +1,4 @@
-﻿using Bit.Api.Models.Public.Request;
+﻿using Bit.Api.Dirt.Public.Models;
 using Bit.Api.Models.Public.Response;
 using Bit.Api.Utilities.DiagnosticTools;
 using Bit.Core;
@@ -155,7 +155,7 @@ public class EventDiagnosticLoggerTests
         var featureService = Substitute.For<IFeatureService>();
         featureService.IsEnabled(FeatureFlagKeys.EventDiagnosticLogging).Returns(true);
 
-        Bit.Api.Models.Response.EventResponseModel[] emptyEvents = [];
+        Api.Dirt.Models.Response.EventResponseModel[] emptyEvents = [];
 
         // Act
         logger.LogAggregateData(featureService, organizationId, emptyEvents, null, null, null);
@@ -188,7 +188,7 @@ public class EventDiagnosticLoggerTests
         var oldestEvent = Substitute.For<IEvent>();
         oldestEvent.Date.Returns(DateTime.UtcNow.AddDays(-2));
 
-        var events = new List<Bit.Api.Models.Response.EventResponseModel>
+        var events = new List<Api.Dirt.Models.Response.EventResponseModel>
         {
             new (newestEvent),
             new (middleEvent),

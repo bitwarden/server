@@ -2,7 +2,7 @@
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
 
-namespace Bit.Api.Models.Response;
+namespace Bit.Api.Dirt.Models.Response;
 
 public class EventResponseModel : ResponseModel
 {
