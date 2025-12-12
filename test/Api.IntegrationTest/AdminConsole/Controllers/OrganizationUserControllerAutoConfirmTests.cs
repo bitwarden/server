@@ -48,7 +48,7 @@ public class OrganizationUserControllerAutoConfirmTests : IClassFixture<ApiAppli
     [Fact]
     public async Task AutoConfirm_WhenUserCannotManageOtherUsers_ThenShouldReturnForbidden()
     {
-        var (organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseAnnually2023,
+        var (organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseAnnually,
             ownerEmail: _ownerEmail, passwordManagerSeats: 5, paymentMethod: PaymentMethodType.Card);
 
         organization.UseAutomaticUserConfirmation = true;
@@ -88,7 +88,7 @@ public class OrganizationUserControllerAutoConfirmTests : IClassFixture<ApiAppli
     [Fact]
     public async Task AutoConfirm_WhenOwnerConfirmsValidUser_ThenShouldReturnNoContent()
     {
-        var (organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseAnnually2023,
+        var (organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseAnnually,
             ownerEmail: _ownerEmail, passwordManagerSeats: 5, paymentMethod: PaymentMethodType.Card);
 
         organization.UseAutomaticUserConfirmation = true;
@@ -152,7 +152,7 @@ public class OrganizationUserControllerAutoConfirmTests : IClassFixture<ApiAppli
     [Fact]
     public async Task AutoConfirm_WhenUserIsConfirmedMultipleTimes_ThenShouldSuccessAndOnlyConfirmOneUser()
     {
-        var (organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseAnnually2023,
+        var (organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseAnnually,
             ownerEmail: _ownerEmail, passwordManagerSeats: 5, paymentMethod: PaymentMethodType.Card);
 
         organization.UseAutomaticUserConfirmation = true;

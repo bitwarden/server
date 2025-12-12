@@ -17,6 +17,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Testing;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
+using Neovolve.Logging.Xunit;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
@@ -24,7 +25,7 @@ using Transaction = Bit.Core.Entities.Transaction;
 
 namespace Bit.Billing.Test.Controllers;
 
-public class PayPalControllerTests
+public class PayPalControllerTests(ITestOutputHelper testOutputHelper)
 {
     private readonly ILogger<PayPalController> _logger;
     private readonly FakeLogCollector _fakeLogCollector;
@@ -126,8 +127,6 @@ public class PayPalControllerTests
             PayPal = { WebhookKey = _defaultWebhookKey }
         });
 
-        var organizationId = new Guid("ca8c6f2b-2d7b-4639-809f-b0e5013a304e");
-
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.UnsupportedTransactionType);
 
         var controller = ConfigureControllerContextWith(_defaultWebhookKey, ipnBody);
@@ -150,8 +149,6 @@ public class PayPalControllerTests
                 BusinessId = "INCORRECT"
             }
         });
-
-        var organizationId = new Guid("ca8c6f2b-2d7b-4639-809f-b0e5013a304e");
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.SuccessfulPayment);
 
@@ -176,8 +173,6 @@ public class PayPalControllerTests
             }
         });
 
-        var organizationId = new Guid("ca8c6f2b-2d7b-4639-809f-b0e5013a304e");
-
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.RefundMissingParentTransaction);
 
         var controller = ConfigureControllerContextWith(_defaultWebhookKey, ipnBody);
@@ -200,8 +195,6 @@ public class PayPalControllerTests
                 BusinessId = "NHDYKLQ3L4LWL"
             }
         });
-
-        var organizationId = new Guid("ca8c6f2b-2d7b-4639-809f-b0e5013a304e");
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.ECheckPayment);
 
@@ -226,8 +219,6 @@ public class PayPalControllerTests
             }
         });
 
-        var organizationId = new Guid("ca8c6f2b-2d7b-4639-809f-b0e5013a304e");
-
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.NonUSDPayment);
 
         var controller = ConfigureControllerContextWith(_defaultWebhookKey, ipnBody);
@@ -250,8 +241,6 @@ public class PayPalControllerTests
                 BusinessId = "NHDYKLQ3L4LWL"
             }
         });
-
-        var organizationId = new Guid("ca8c6f2b-2d7b-4639-809f-b0e5013a304e");
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.SuccessfulPayment);
 
@@ -279,8 +268,6 @@ public class PayPalControllerTests
                 BusinessId = "NHDYKLQ3L4LWL"
             }
         });
-
-        var organizationId = new Guid("ca8c6f2b-2d7b-4639-809f-b0e5013a304e");
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.SuccessfulPayment);
 
@@ -399,8 +386,6 @@ public class PayPalControllerTests
             }
         });
 
-        var organizationId = new Guid("ca8c6f2b-2d7b-4639-809f-b0e5013a304e");
-
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.SuccessfulRefund);
 
         _transactionRepository.GetByGatewayIdAsync(
@@ -431,8 +416,6 @@ public class PayPalControllerTests
                 BusinessId = "NHDYKLQ3L4LWL"
             }
         });
-
-        var organizationId = new Guid("ca8c6f2b-2d7b-4639-809f-b0e5013a304e");
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.SuccessfulRefund);
 

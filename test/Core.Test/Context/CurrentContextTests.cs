@@ -108,30 +108,6 @@ public class CurrentContextTests
     }
 
     [Theory, BitAutoData]
-    public async Task BuildAsync_HttpContext_SetsCloudflareFlags(
-        SutProvider<CurrentContext> sutProvider)
-    {
-        var httpContext = new DefaultHttpContext();
-        var globalSettings = new Core.Settings.GlobalSettings();
-        sutProvider.Sut.BotScore = null;
-        // Arrange
-        var botScore = 85;
-        httpContext.Request.Headers["X-Cf-Bot-Score"] = botScore.ToString();
-        httpContext.Request.Headers["X-Cf-Worked-Proxied"] = "1";
-        httpContext.Request.Headers["X-Cf-Is-Bot"] = "1";
-        httpContext.Request.Headers["X-Cf-Maybe-Bot"] = "1";
-
-        // Act
-        await sutProvider.Sut.BuildAsync(httpContext, globalSettings);
-
-        // Assert
-        Assert.True(sutProvider.Sut.CloudflareWorkerProxied);
-        Assert.True(sutProvider.Sut.IsBot);
-        Assert.True(sutProvider.Sut.MaybeBot);
-        Assert.Equal(botScore, sutProvider.Sut.BotScore);
-    }
-
-    [Theory, BitAutoData]
     public async Task BuildAsync_HttpContext_SetsClientVersion(
         SutProvider<CurrentContext> sutProvider)
     {

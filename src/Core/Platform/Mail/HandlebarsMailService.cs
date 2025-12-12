@@ -78,7 +78,7 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendRegistrationVerificationEmailAsync(string email, string token)
+    public async Task SendRegistrationVerificationEmailAsync(string email, string token, string? fromMarketing)
     {
         var message = CreateDefaultMessage("Verify Your Email", email);
         var model = new RegisterVerifyEmail
@@ -86,7 +86,8 @@ public class HandlebarsMailService : IMailService
             Token = WebUtility.UrlEncode(token),
             Email = WebUtility.UrlEncode(email),
             WebVaultUrl = _globalSettings.BaseServiceUri.Vault,
-            SiteName = _globalSettings.SiteName
+            SiteName = _globalSettings.SiteName,
+            FromMarketing = WebUtility.UrlEncode(fromMarketing),
         };
         await AddMessageContentAsync(message, "Auth.RegistrationVerifyEmail", model);
         message.MetaData.Add("SendGridBypassListManagement", true);

@@ -10,6 +10,7 @@ public static class SecretsManagerEfServiceCollectionExtensions
     {
         services.AddSingleton<IAccessPolicyRepository, AccessPolicyRepository>();
         services.AddSingleton<ISecretRepository, SecretRepository>();
+        services.AddSingleton<ISecretVersionRepository, SecretVersionRepository>();
         services.AddSingleton<IProjectRepository, ProjectRepository>();
         services.AddSingleton<IServiceAccountRepository, ServiceAccountRepository>();
     }

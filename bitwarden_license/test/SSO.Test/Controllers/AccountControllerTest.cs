@@ -3,6 +3,7 @@ using System.Security.Claims;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.Registration;
@@ -10,6 +11,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Tokens;
 using Bit.Sso.Controllers;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -1135,5 +1137,130 @@ public class AccountControllerTest
 
         Assert.NotNull(result.user);
         Assert.Equal(email, result.user.Email);
+    }
+
+    [Theory, BitAutoData]
+    public void ExternalChallenge_WithMatchingOrgId_Succeeds(
+        SutProvider<AccountController> sutProvider,
+        Organization organization)
+    {
+        // Arrange
+        var orgId = organization.Id;
+        var scheme = orgId.ToString();
+        var returnUrl = "~/vault";
+        var state = "test-state";
+        var userIdentifier = "user-123";
+        var ssoToken = "valid-sso-token";
+
+        // Mock the data protector to return a tokenable with matching org ID
+        var dataProtector = sutProvider.GetDependency<IDataProtectorTokenFactory<SsoTokenable>>();
+        var tokenable = new SsoTokenable(organization, 3600);
+        dataProtector.Unprotect(ssoToken).Returns(tokenable);
+
+        // Mock URL helper for IsLocalUrl check
+        var urlHelper = Substitute.For<IUrlHelper>();
+        urlHelper.IsLocalUrl(returnUrl).Returns(true);
+        sutProvider.Sut.Url = urlHelper;
+
+        // Mock interaction service for IsValidReturnUrl check
+        var interactionService = sutProvider.GetDependency<IIdentityServerInteractionService>();
+        interactionService.IsValidReturnUrl(returnUrl).Returns(true);
+
+        // Act
+        var result = sutProvider.Sut.ExternalChallenge(scheme, returnUrl, state, userIdentifier, ssoToken);
+
+        // Assert
+        var challengeResult = Assert.IsType<ChallengeResult>(result);
+        Assert.Contains(scheme, challengeResult.AuthenticationSchemes);
+        Assert.NotNull(challengeResult.Properties);
+        Assert.Equal(scheme, challengeResult.Properties.Items["scheme"]);
+        Assert.Equal(returnUrl, challengeResult.Properties.Items["return_url"]);
+        Assert.Equal(state, challengeResult.Properties.Items["state"]);
+        Assert.Equal(userIdentifier, challengeResult.Properties.Items["user_identifier"]);
+    }
+
+    [Theory, BitAutoData]
+    public void ExternalChallenge_WithMismatchedOrgId_ThrowsSsoOrganizationIdMismatch(
+        SutProvider<AccountController> sutProvider,
+        Organization organization)
+    {
+        // Arrange
+        var correctOrgId = organization.Id;
+        var wrongOrgId = Guid.NewGuid();
+        var scheme = wrongOrgId.ToString(); // Different from tokenable's org ID
+        var returnUrl = "~/vault";
+        var state = "test-state";
+        var userIdentifier = "user-123";
+        var ssoToken = "valid-sso-token";
+
+        // Mock the data protector to return a tokenable with different org ID
+        var dataProtector = sutProvider.GetDependency<IDataProtectorTokenFactory<SsoTokenable>>();
+        var tokenable = new SsoTokenable(organization, 3600); // Contains correctOrgId
+        dataProtector.Unprotect(ssoToken).Returns(tokenable);
+
+        // Mock i18n service to return the key
+        sutProvider.GetDependency<II18nService>()
+            .T(Arg.Any<string>())
+            .Returns(ci => (string)ci[0]!);
+
+        // Act & Assert
+        var ex = Assert.Throws<Exception>(() =>
+            sutProvider.Sut.ExternalChallenge(scheme, returnUrl, state, userIdentifier, ssoToken));
+        Assert.Equal("SsoOrganizationIdMismatch", ex.Message);
+    }
+
+    [Theory, BitAutoData]
+    public void ExternalChallenge_WithInvalidSchemeFormat_ThrowsSsoOrganizationIdMismatch(
+        SutProvider<AccountController> sutProvider,
+        Organization organization)
+    {
+        // Arrange
+        var scheme = "not-a-valid-guid";
+        var returnUrl = "~/vault";
+        var state = "test-state";
+        var userIdentifier = "user-123";
+        var ssoToken = "valid-sso-token";
+
+        // Mock the data protector to return a valid tokenable
+        var dataProtector = sutProvider.GetDependency<IDataProtectorTokenFactory<SsoTokenable>>();
+        var tokenable = new SsoTokenable(organization, 3600);
+        dataProtector.Unprotect(ssoToken).Returns(tokenable);
+
+        // Mock i18n service to return the key
+        sutProvider.GetDependency<II18nService>()
+            .T(Arg.Any<string>())
+            .Returns(ci => (string)ci[0]!);
+
+        // Act & Assert
+        var ex = Assert.Throws<Exception>(() =>
+            sutProvider.Sut.ExternalChallenge(scheme, returnUrl, state, userIdentifier, ssoToken));
+        Assert.Equal("SsoOrganizationIdMismatch", ex.Message);
+    }
+
+    [Theory, BitAutoData]
+    public void ExternalChallenge_WithInvalidSsoToken_ThrowsInvalidSsoToken(
+        SutProvider<AccountController> sutProvider)
+    {
+        // Arrange
+        var orgId = Guid.NewGuid();
+        var scheme = orgId.ToString();
+        var returnUrl = "~/vault";
+        var state = "test-state";
+        var userIdentifier = "user-123";
+        var ssoToken = "invalid-corrupted-token";
+
+        // Mock the data protector to throw when trying to unprotect
+        var dataProtector = sutProvider.GetDependency<IDataProtectorTokenFactory<SsoTokenable>>();
+        dataProtector.Unprotect(ssoToken).Returns(_ => throw new Exception("Token validation failed"));
+
+        // Mock i18n service to return the key
+        sutProvider.GetDependency<II18nService>()
+            .T(Arg.Any<string>())
+            .Returns(ci => (string)ci[0]!);
+
+        // Act & Assert
+        var ex = Assert.Throws<Exception>(() =>
+            sutProvider.Sut.ExternalChallenge(scheme, returnUrl, state, userIdentifier, ssoToken));
+        Assert.Equal("InvalidSsoToken", ex.Message);
     }
 }
