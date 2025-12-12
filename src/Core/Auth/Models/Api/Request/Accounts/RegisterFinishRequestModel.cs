@@ -1,6 +1,6 @@
-﻿#nullable enable
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.Auth.Models.Api.Request.Accounts;
@@ -21,19 +21,28 @@ public class RegisterFinishRequestModel : IValidatableObject
     public required string Email { get; set; }
     public string? EmailVerificationToken { get; set; }
 
+    public MasterPasswordAuthenticationData? MasterPasswordAuthenticationData { get; set; }
+    public MasterPasswordUnlockData? MasterPasswordUnlockData { get; set; }
+
+    // PM-28143 - Remove line below (made optional during migration to MasterPasswordUnlockData)
     [StringLength(1000)]
-    public required string MasterPasswordHash { get; set; }
+    public string? MasterPasswordHash { get; set; }
 
     [StringLength(50)]
     public string? MasterPasswordHint { get; set; }
 
-    public required string UserSymmetricKey { get; set; }
+    // PM-28143 - Remove line below (made optional during migration to MasterPasswordUnlockData)
+    public string? UserSymmetricKey { get; set; }
 
     public required KeysRequestModel UserAsymmetricKeys { get; set; }
 
-    public required KdfType Kdf { get; set; }
-    public required int KdfIterations { get; set; }
+    // PM-28143 - Remove line below (made optional during migration to MasterPasswordUnlockData)
+    public KdfType? Kdf { get; set; }
+    // PM-28143 - Remove line below (made optional during migration to MasterPasswordUnlockData)
+    public int? KdfIterations { get; set; }
+    // PM-28143 - Remove line below
     public int? KdfMemory { get; set; }
+    // PM-28143 - Remove line below
     public int? KdfParallelism { get; set; }
 
     public Guid? OrganizationUserId { get; set; }
@@ -54,11 +63,14 @@ public class RegisterFinishRequestModel : IValidatableObject
         {
             Email = Email,
             MasterPasswordHint = MasterPasswordHint,
-            Kdf = Kdf,
-            KdfIterations = KdfIterations,
-            KdfMemory = KdfMemory,
-            KdfParallelism = KdfParallelism,
-            Key = UserSymmetricKey,
+            Kdf = MasterPasswordUnlockData?.Kdf.KdfType ?? Kdf ?? throw new Exception("KdfType couldn't be found on either the MasterPasswordUnlockData or the Kdf property passed in."),
+            KdfIterations = MasterPasswordUnlockData?.Kdf.Iterations ?? KdfIterations ?? throw new Exception("KdfIterations couldn't be found on either the MasterPasswordUnlockData or the KdfIterations property passed in."),
+            // KdfMemory and KdfParallelism are optional (only used for Argon2id)
+            KdfMemory = MasterPasswordUnlockData?.Kdf.Memory ?? KdfMemory,
+            KdfParallelism = MasterPasswordUnlockData?.Kdf.Parallelism ?? KdfParallelism,
+            // PM-28827 To be added when MasterPasswordSalt is added to the user column
+            // MasterPasswordSalt = MasterPasswordUnlockData?.Salt ?? Email.ToLower().Trim(),
+            Key = MasterPasswordUnlockData?.MasterKeyWrappedUserKey ?? UserSymmetricKey,
         };
 
         UserAsymmetricKeys.ToUser(user);
@@ -95,6 +107,28 @@ public class RegisterFinishRequestModel : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        return KdfSettingsValidator.Validate(Kdf, KdfIterations, KdfMemory, KdfParallelism);
+        // PM-28143 - Remove line below
+        var kdf = MasterPasswordUnlockData?.Kdf.KdfType
+                  ?? Kdf
+                  ?? throw new Exception($"{nameof(Kdf)} not found on RequestModel");
+
+        // PM-28143 - Remove line below
+        var kdfIterations = MasterPasswordUnlockData?.Kdf.Iterations
+                            ?? KdfIterations
+                            ?? throw new Exception($"{nameof(KdfIterations)} not found on RequestModel");
+
+        // PM-28143 - Remove line below
+        var kdfMemory = MasterPasswordUnlockData?.Kdf.Memory
+                        ?? KdfMemory;
+
+        // PM-28143 - Remove line below
+        var kdfParallelism = MasterPasswordUnlockData?.Kdf.Parallelism
+                             ?? KdfParallelism;
+
+        // PM-28143 - Remove line below in favor of using the unlock data.
+        return KdfSettingsValidator.Validate(kdf, kdfIterations, kdfMemory, kdfParallelism);
+
+        // PM-28143 - Uncomment
+        // return KdfSettingsValidator.Validate(MasterPasswordUnlockData);
     }
 }
