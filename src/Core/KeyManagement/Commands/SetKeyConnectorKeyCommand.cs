@@ -34,7 +34,7 @@ public class SetKeyConnectorKeyCommand : ISetKeyConnectorKeyCommand
 
     public async Task SetKeyConnectorKeyForUserAsync(User user, SetKeyConnectorKeyRequestModel requestModel)
     {
-        // TODO remove validation with https://bitwarden.atlassian.net/browse/PM-27280
+        // TODO remove validation with https://bitwarden.atlassian.net/browse/PM-27328
         if (string.IsNullOrEmpty(requestModel.KeyConnectorKeyWrappedUserKey) || requestModel.AccountKeys == null)
         {
             throw new BadRequestException("KeyConnectorKeyWrappedUserKey and AccountKeys must be provided");
