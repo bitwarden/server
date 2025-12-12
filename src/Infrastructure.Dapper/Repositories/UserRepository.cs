@@ -2,6 +2,7 @@
 using System.Text.Json;
 using Bit.Core;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
@@ -379,6 +380,32 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
 
         UnprotectData(result);
         return result.SingleOrDefault();
+    }
+
+    public UpdateUserData SetKeyConnectorUserKey(Guid userId, string keyConnectorWrappedUserKey)
+    {
+        return async (connection, transaction) =>
+        {
+            var timestamp = DateTime.UtcNow;
+
+            await connection!.ExecuteAsync(
+                "[dbo].[User_UpdateKeyConnectorUserKey]",
+                new
+                {
+                    Id = userId,
+                    Key = keyConnectorWrappedUserKey,
+                    // Key Connector does not use KDF, so we set some defaults
+                    Kdf = KdfType.Argon2id,
+                    KdfIterations = AuthConstants.ARGON2_ITERATIONS.Default,
+                    KdfMemory = AuthConstants.ARGON2_MEMORY.Default,
+                    KdfParallelism = AuthConstants.ARGON2_PARALLELISM.Default,
+                    UsesKeyConnector = true,
+                    RevisionDate = timestamp,
+                    AccountRevisionDate = timestamp
+                },
+                transaction: transaction,
+                commandType: CommandType.StoredProcedure);
+        };
     }
 
     private async Task ProtectDataAndSaveAsync(User user, Func<Task> saveTask)

@@ -5,6 +5,7 @@ using Bit.Core.KeyManagement.Commands.Interfaces;
 using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 
 namespace Bit.Core.KeyManagement.Commands;
@@ -15,20 +16,20 @@ public class SetKeyConnectorKeyCommand : ISetKeyConnectorKeyCommand
     private readonly IEventService _eventService;
     private readonly IAcceptOrgUserCommand _acceptOrgUserCommand;
     private readonly IUserService _userService;
-    private readonly ISetAccountKeysForUserCommand _setAccountKeysForUserCommand;
+    private readonly IUserRepository _userRepository;
 
     public SetKeyConnectorKeyCommand(
         ICanUseKeyConnectorQuery canUseKeyConnectorQuery,
         IEventService eventService,
         IAcceptOrgUserCommand acceptOrgUserCommand,
         IUserService userService,
-        ISetAccountKeysForUserCommand setAccountKeysForUserCommand)
+        IUserRepository userRepository)
     {
         _canUseKeyConnectorQuery = canUseKeyConnectorQuery;
         _eventService = eventService;
         _acceptOrgUserCommand = acceptOrgUserCommand;
         _userService = userService;
-        _setAccountKeysForUserCommand = setAccountKeysForUserCommand;
+        _userRepository = userRepository;
     }
 
     public async Task SetKeyConnectorKeyForUserAsync(User user, SetKeyConnectorKeyRequestModel requestModel)
@@ -41,18 +42,11 @@ public class SetKeyConnectorKeyCommand : ISetKeyConnectorKeyCommand
 
         _canUseKeyConnectorQuery.VerifyCanUseKeyConnector(user);
 
-        // Key Connector does not use KDF, so we set some defaults
-        user.Kdf = KdfType.Argon2id;
-        user.KdfIterations = AuthConstants.ARGON2_ITERATIONS.Default;
-        user.KdfMemory = AuthConstants.ARGON2_MEMORY.Default;
-        user.KdfParallelism = AuthConstants.ARGON2_PARALLELISM.Default;
+        var setKeyConnectorUserKeyTask =
+            _userRepository.SetKeyConnectorUserKey(user.Id, requestModel.KeyConnectorKeyWrappedUserKey);
 
-        user.Key = requestModel.KeyConnectorKeyWrappedUserKey;
-
-        user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
-        user.UsesKeyConnector = true;
-
-        await _setAccountKeysForUserCommand.SetAccountKeysForUserAsync(user, requestModel.AccountKeys);
+        await _userRepository.SetV2AccountCryptographicStateAsync(user.Id, requestModel.AccountKeys.ToAccountKeysData(),
+            [setKeyConnectorUserKeyTask]);
 
         await _eventService.LogUserEventAsync(user.Id, EventType.User_MigratedKeyToKeyConnector);
 
