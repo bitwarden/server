@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Scim.Models;
 
 namespace Bit.Scim.Users.Interfaces;
 

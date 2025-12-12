@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Models.Data.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
@@ -461,13 +462,7 @@ public class OrganizationUserRepositoryTests
             KdfParallelism = 3
         });
 
-        var organization = await organizationRepository.CreateAsync(new Organization
-        {
-            Name = "Test Org",
-            BillingEmail = user1.Email, // TODO: EF does not enforce this being NOT NULL
-            Plan = "Test", // TODO: EF does not enforce this being NOT NULL
-            PrivateKey = "privatekey",
-        });
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
 
         var orgUser1 = await organizationUserRepository.CreateAsync(new OrganizationUser
         {
@@ -536,9 +531,72 @@ public class OrganizationUserRepositoryTests
         Assert.Equal(organization.SmServiceAccounts, result.SmServiceAccounts);
         Assert.Equal(organization.LimitCollectionCreation, result.LimitCollectionCreation);
         Assert.Equal(organization.LimitCollectionDeletion, result.LimitCollectionDeletion);
+        Assert.Equal(organization.LimitItemDeletion, result.LimitItemDeletion);
         Assert.Equal(organization.AllowAdminAccessToAllCollectionItems, result.AllowAdminAccessToAllCollectionItems);
         Assert.Equal(organization.UseRiskInsights, result.UseRiskInsights);
+        Assert.Equal(organization.UseOrganizationDomains, result.UseOrganizationDomains);
         Assert.Equal(organization.UseAdminSponsoredFamilies, result.UseAdminSponsoredFamilies);
+        Assert.Equal(organization.UseAutomaticUserConfirmation, result.UseAutomaticUserConfirmation);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetManyDetailsByUserAsync_ShouldPopulateSsoPropertiesCorrectly(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        ISsoConfigRepository ssoConfigRepository)
+    {
+        var user = await userRepository.CreateTestUserAsync();
+        var organizationWithSso = await organizationRepository.CreateTestOrganizationAsync();
+        var organizationWithoutSso = await organizationRepository.CreateTestOrganizationAsync();
+
+        var orgUserWithSso = await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organizationWithSso.Id,
+            UserId = user.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.Owner,
+            Email = user.Email
+        });
+
+        var orgUserWithoutSso = await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organizationWithoutSso.Id,
+            UserId = user.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.User,
+            Email = user.Email
+        });
+
+        // Create SSO configuration for first organization only
+        var serializedSsoConfigData = new SsoConfigurationData
+        {
+            MemberDecryptionType = MemberDecryptionType.KeyConnector,
+            KeyConnectorUrl = "https://keyconnector.example.com"
+        }.Serialize();
+
+        var ssoConfig = await ssoConfigRepository.CreateAsync(new SsoConfig
+        {
+            OrganizationId = organizationWithSso.Id,
+            Enabled = true,
+            Data = serializedSsoConfigData
+        });
+
+        var results = (await organizationUserRepository.GetManyDetailsByUserAsync(user.Id)).ToList();
+
+        Assert.Equal(2, results.Count);
+
+        var orgWithSsoDetails = results.Single(r => r.OrganizationId == organizationWithSso.Id);
+        var orgWithoutSsoDetails = results.Single(r => r.OrganizationId == organizationWithoutSso.Id);
+
+        // Organization with SSO should have SSO properties populated
+        Assert.True(orgWithSsoDetails.SsoEnabled);
+        Assert.NotNull(orgWithSsoDetails.SsoConfig);
+        Assert.Equal(serializedSsoConfigData, orgWithSsoDetails.SsoConfig);
+
+        // Organization without SSO should have null SSO properties
+        Assert.Null(orgWithoutSsoDetails.SsoEnabled);
+        Assert.Null(orgWithoutSsoDetails.SsoConfig);
     }
 
     [DatabaseTheory, DatabaseData]
@@ -615,7 +673,8 @@ public class OrganizationUserRepositoryTests
             LimitItemDeletion = false,
             AllowAdminAccessToAllCollectionItems = false,
             UseRiskInsights = false,
-            UseAdminSponsoredFamilies = false
+            UseAdminSponsoredFamilies = false,
+            UsePhishingBlocker = false,
         });
 
         var organizationDomain = new OrganizationDomain
@@ -1427,40 +1486,29 @@ public class OrganizationUserRepositoryTests
         var organization = await organizationRepository.CreateTestOrganizationAsync();
         var user = await userRepository.CreateTestUserAsync();
         var orgUser = await organizationUserRepository.CreateAcceptedTestOrganizationUserAsync(organization, user);
+        const string key = "test-key";
+        orgUser.Key = key;
+
+        var acceptedOrganizationUser = new AcceptedOrganizationUserToConfirm
+        {
+            OrganizationUserId = orgUser.Id,
+            UserId = user.Id,
+            Key = key
+        };
 
         // Act
-        var result = await organizationUserRepository.ConfirmOrganizationUserAsync(orgUser);
+        var result = await organizationUserRepository.ConfirmOrganizationUserAsync(acceptedOrganizationUser);
 
         // Assert
         Assert.True(result);
         var updatedUser = await organizationUserRepository.GetByIdAsync(orgUser.Id);
         Assert.NotNull(updatedUser);
         Assert.Equal(OrganizationUserStatusType.Confirmed, updatedUser.Status);
+        Assert.Equal(key, updatedUser.Key);
 
         // Annul
         await organizationRepository.DeleteAsync(organization);
         await userRepository.DeleteAsync(user);
-    }
-
-    [Theory, DatabaseData]
-    public async Task ConfirmOrganizationUserAsync_WhenUserIsInvited_ReturnsFalse(IOrganizationUserRepository organizationUserRepository,
-        IOrganizationRepository organizationRepository)
-    {
-        // Arrange
-        var organization = await organizationRepository.CreateTestOrganizationAsync();
-        var orgUser = await organizationUserRepository.CreateTestOrganizationUserInviteAsync(organization);
-
-        // Act
-        var result = await organizationUserRepository.ConfirmOrganizationUserAsync(orgUser);
-
-        // Assert
-        Assert.False(result);
-        var unchangedUser = await organizationUserRepository.GetByIdAsync(orgUser.Id);
-        Assert.NotNull(unchangedUser);
-        Assert.Equal(OrganizationUserStatusType.Invited, unchangedUser.Status);
-
-        // Annul
-        await organizationRepository.DeleteAsync(organization);
     }
 
     [Theory, DatabaseData]
@@ -1473,38 +1521,23 @@ public class OrganizationUserRepositoryTests
         var user = await userRepository.CreateTestUserAsync();
         var orgUser = await organizationUserRepository.CreateConfirmedTestOrganizationUserAsync(organization, user);
 
+        orgUser.Status = OrganizationUserStatusType.Accepted; // To simulate a second call to ConfirmOrganizationUserAsync
+
+        var acceptedOrganizationUser = new AcceptedOrganizationUserToConfirm
+        {
+            OrganizationUserId = orgUser.Id,
+            UserId = user.Id,
+            Key = "test-key"
+        };
+
         // Act
-        var result = await organizationUserRepository.ConfirmOrganizationUserAsync(orgUser);
+        var result = await organizationUserRepository.ConfirmOrganizationUserAsync(acceptedOrganizationUser);
 
         // Assert
         Assert.False(result);
         var unchangedUser = await organizationUserRepository.GetByIdAsync(orgUser.Id);
         Assert.NotNull(unchangedUser);
         Assert.Equal(OrganizationUserStatusType.Confirmed, unchangedUser.Status);
-
-        // Annul
-        await organizationRepository.DeleteAsync(organization);
-        await userRepository.DeleteAsync(user);
-    }
-
-    [Theory, DatabaseData]
-    public async Task ConfirmOrganizationUserAsync_WhenUserIsRevoked_ReturnsFalse(IOrganizationUserRepository organizationUserRepository,
-        IOrganizationRepository organizationRepository,
-        IUserRepository userRepository)
-    {
-        // Arrange
-        var organization = await organizationRepository.CreateTestOrganizationAsync();
-        var user = await userRepository.CreateTestUserAsync();
-        var orgUser = await organizationUserRepository.CreateRevokedTestOrganizationUserAsync(organization, user);
-
-        // Act
-        var result = await organizationUserRepository.ConfirmOrganizationUserAsync(orgUser);
-
-        // Assert
-        Assert.False(result);
-        var unchangedUser = await organizationUserRepository.GetByIdAsync(orgUser.Id);
-        Assert.NotNull(unchangedUser);
-        Assert.Equal(OrganizationUserStatusType.Revoked, unchangedUser.Status);
 
         // Annul
         await organizationRepository.DeleteAsync(organization);
@@ -1522,9 +1555,16 @@ public class OrganizationUserRepositoryTests
         var user = await userRepository.CreateTestUserAsync();
         var orgUser = await organizationUserRepository.CreateAcceptedTestOrganizationUserAsync(organization, user);
 
+        var acceptedOrganizationUser = new AcceptedOrganizationUserToConfirm
+        {
+            OrganizationUserId = orgUser.Id,
+            UserId = user.Id,
+            Key = "test-key"
+        };
+
         // Act - First call should confirm
-        var firstResult = await organizationUserRepository.ConfirmOrganizationUserAsync(orgUser);
-        var secondResult = await organizationUserRepository.ConfirmOrganizationUserAsync(orgUser);
+        var firstResult = await organizationUserRepository.ConfirmOrganizationUserAsync(acceptedOrganizationUser);
+        var secondResult = await organizationUserRepository.ConfirmOrganizationUserAsync(acceptedOrganizationUser);
 
         // Assert
         Assert.True(firstResult);
@@ -1543,14 +1583,11 @@ public class OrganizationUserRepositoryTests
         IOrganizationUserRepository organizationUserRepository)
     {
         // Arrange
-        var nonExistentUser = new OrganizationUser
+        var nonExistentUser = new AcceptedOrganizationUserToConfirm
         {
-            Id = Guid.NewGuid(),
-            OrganizationId = Guid.NewGuid(),
+            OrganizationUserId = Guid.NewGuid(),
             UserId = Guid.NewGuid(),
-            Email = "nonexistent@bitwarden.com",
-            Status = OrganizationUserStatusType.Accepted,
-            Type = OrganizationUserType.Owner
+            Key = "test-key"
         };
 
         // Act

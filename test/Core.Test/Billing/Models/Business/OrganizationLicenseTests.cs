@@ -213,7 +213,8 @@ If you believe you need to change the version for a valid reason, please discuss
             LimitCollectionDeletion = true,
             AllowAdminAccessToAllCollectionItems = true,
             UseOrganizationDomains = true,
-            UseAdminSponsoredFamilies = false
+            UseAdminSponsoredFamilies = false,
+            UsePhishingBlocker = false,
         };
     }
 
@@ -227,8 +228,16 @@ If you believe you need to change the version for a valid reason, please discuss
             Status = "active",
             TrialStart = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
             TrialEnd = new DateTime(2024, 2, 1, 0, 0, 0, DateTimeKind.Utc),
-            CurrentPeriodStart = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-            CurrentPeriodEnd = new DateTime(2024, 12, 31, 0, 0, 0, DateTimeKind.Utc)
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [
+                    new SubscriptionItem
+                    {
+                        CurrentPeriodStart = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                        CurrentPeriodEnd = new DateTime(2024, 12, 31, 0, 0, 0, DateTimeKind.Utc)
+                    }
+                ]
+            }
         };
 
         return new SubscriptionInfo

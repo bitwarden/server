@@ -13,7 +13,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
+using Bit.Core.Test.Billing.Mocks;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -156,16 +156,18 @@ public class RemoveOrganizationFromProviderCommandTests
             "b@example.com"
         ]);
 
-        sutProvider.GetDependency<IStripeAdapter>().SubscriptionGetAsync(organization.GatewaySubscriptionId)
-            .Returns(GetSubscription(organization.GatewaySubscriptionId));
+        sutProvider.GetDependency<IStripeAdapter>().SubscriptionGetAsync(organization.GatewaySubscriptionId, Arg.Is<SubscriptionGetOptions>(
+                options => options.Expand.Contains("customer")))
+            .Returns(GetSubscription(organization.GatewaySubscriptionId, organization.GatewayCustomerId));
 
         await sutProvider.Sut.RemoveOrganizationFromProvider(provider, providerOrganization, organization);
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
         await stripeAdapter.Received(1).CustomerUpdateAsync(organization.GatewayCustomerId,
-            Arg.Is<CustomerUpdateOptions>(options =>
-                options.Coupon == string.Empty && options.Email == "a@example.com"));
+            Arg.Is<CustomerUpdateOptions>(options => options.Email == "a@example.com"));
+
+        await stripeAdapter.Received(1).CustomerDeleteDiscountAsync(organization.GatewayCustomerId);
 
         await stripeAdapter.Received(1).SubscriptionUpdateAsync(organization.GatewaySubscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options =>
@@ -205,7 +207,7 @@ public class RemoveOrganizationFromProviderCommandTests
 
         organization.PlanType = PlanType.TeamsMonthly;
 
-        var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
+        var teamsMonthlyPlan = MockPlans.Get(PlanType.TeamsMonthly);
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(PlanType.TeamsMonthly).Returns(teamsMonthlyPlan);
 
@@ -294,7 +296,7 @@ public class RemoveOrganizationFromProviderCommandTests
 
         organization.PlanType = PlanType.TeamsMonthly;
 
-        var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
+        var teamsMonthlyPlan = MockPlans.Get(PlanType.TeamsMonthly);
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(PlanType.TeamsMonthly).Returns(teamsMonthlyPlan);
 
@@ -368,10 +370,21 @@ public class RemoveOrganizationFromProviderCommandTests
                 Arg.Is<IEnumerable<string>>(emails => emails.FirstOrDefault() == "a@example.com"));
     }
 
-    private static Subscription GetSubscription(string subscriptionId) =>
+    private static Subscription GetSubscription(string subscriptionId, string customerId) =>
         new()
         {
             Id = subscriptionId,
+            CustomerId = customerId,
+            Customer = new Customer
+            {
+                Discount = new Discount
+                {
+                    Coupon = new Coupon
+                    {
+                        Id = "coupon-id"
+                    }
+                }
+            },
             Status = StripeConstants.SubscriptionStatus.Active,
             Items = new StripeList<SubscriptionItem>
             {
@@ -403,7 +416,7 @@ public class RemoveOrganizationFromProviderCommandTests
         organization.PlanType = PlanType.TeamsMonthly;
         organization.Enabled = false; // Start with a disabled organization
 
-        var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
+        var teamsMonthlyPlan = MockPlans.Get(PlanType.TeamsMonthly);
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(PlanType.TeamsMonthly).Returns(teamsMonthlyPlan);
 

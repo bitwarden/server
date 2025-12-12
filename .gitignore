@@ -216,6 +216,8 @@ bitwarden_license/src/Sso/wwwroot/assets
 .mono
 src/Core/MailTemplates/Mjml/out
 src/Core/MailTemplates/Mjml/out-hbs
+NativeMethods.g.cs
+util/RustSdk/rust/target
 
 src/Admin/Admin.zip
 src/Api/Api.zip
@@ -232,4 +234,6 @@ bitwarden_license/src/Sso/Sso.zip
 /identity.json
 /api.json
 /api.public.json
+
+# Serena
 .serena/

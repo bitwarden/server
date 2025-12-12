@@ -3,12 +3,12 @@ using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Enums;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 using OneOf;
 using Stripe;
@@ -54,7 +54,7 @@ public class PreviewOrganizationTaxCommand(
             switch (purchase)
             {
                 case { PasswordManager.Sponsored: true }:
-                    var sponsoredPlan = StaticStore.GetSponsoredPlan(PlanSponsorshipType.FamiliesForEnterprise);
+                    var sponsoredPlan = SponsoredPlans.Get(PlanSponsorshipType.FamiliesForEnterprise);
                     items.Add(new InvoiceSubscriptionDetailsItemOptions
                     {
                         Price = sponsoredPlan.StripePlanId,
@@ -75,7 +75,13 @@ public class PreviewOrganizationTaxCommand(
                             Quantity = purchase.SecretsManager.Seats
                         }
                     ]);
-                    options.Coupon = CouponIDs.SecretsManagerStandalone;
+                    options.Discounts =
+                    [
+                        new InvoiceDiscountOptions
+                        {
+                            Coupon = CouponIDs.SecretsManagerStandalone
+                        }
+                    ];
                     break;
 
                 default:
@@ -180,7 +186,10 @@ public class PreviewOrganizationTaxCommand(
 
                 if (subscription.Customer.Discount != null)
                 {
-                    options.Coupon = subscription.Customer.Discount.Coupon.Id;
+                    options.Discounts =
+                    [
+                        new InvoiceDiscountOptions { Coupon = subscription.Customer.Discount.Coupon.Id }
+                    ];
                 }
 
                 var currentPlan = await pricingClient.GetPlanOrThrow(organization.PlanType);
@@ -277,7 +286,10 @@ public class PreviewOrganizationTaxCommand(
 
             if (subscription.Customer.Discount != null)
             {
-                options.Coupon = subscription.Customer.Discount.Coupon.Id;
+                options.Discounts =
+                [
+                    new InvoiceDiscountOptions { Coupon = subscription.Customer.Discount.Coupon.Id }
+                ];
             }
 
             var currentPlan = await pricingClient.GetPlanOrThrow(organization.PlanType);
@@ -329,7 +341,7 @@ public class PreviewOrganizationTaxCommand(
         });
 
     private static (decimal, decimal) GetAmounts(Invoice invoice) => (
-        Convert.ToDecimal(invoice.Tax) / 100,
+        Convert.ToDecimal(invoice.TotalTaxes.Sum(invoiceTotalTax => invoiceTotalTax.Amount)) / 100,
         Convert.ToDecimal(invoice.Total) / 100);
 
     private static InvoiceCreatePreviewOptions GetBaseOptions(
