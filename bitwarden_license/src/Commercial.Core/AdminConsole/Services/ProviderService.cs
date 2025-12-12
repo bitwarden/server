@@ -9,6 +9,9 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business.Provider;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Enums;
@@ -59,6 +62,7 @@ public class ProviderService : IProviderService
     private readonly IProviderBillingService _providerBillingService;
     private readonly IPricingClient _pricingClient;
     private readonly IProviderClientOrganizationSignUpCommand _providerClientOrganizationSignUpCommand;
+    private readonly IPolicyRequirementQuery _policyRequirementQuery;
 
     public ProviderService(IProviderRepository providerRepository, IProviderUserRepository providerUserRepository,
         IProviderOrganizationRepository providerOrganizationRepository, IUserRepository userRepository,
@@ -68,7 +72,8 @@ public class ProviderService : IProviderService
         ICurrentContext currentContext, IStripeAdapter stripeAdapter, IFeatureService featureService,
         IDataProtectorTokenFactory<ProviderDeleteTokenable> providerDeleteTokenDataFactory,
         IApplicationCacheService applicationCacheService, IProviderBillingService providerBillingService, IPricingClient pricingClient,
-        IProviderClientOrganizationSignUpCommand providerClientOrganizationSignUpCommand)
+        IProviderClientOrganizationSignUpCommand providerClientOrganizationSignUpCommand,
+        IPolicyRequirementQuery policyRequirementQuery)
     {
         _providerRepository = providerRepository;
         _providerUserRepository = providerUserRepository;
@@ -89,6 +94,7 @@ public class ProviderService : IProviderService
         _providerBillingService = providerBillingService;
         _pricingClient = pricingClient;
         _providerClientOrganizationSignUpCommand = providerClientOrganizationSignUpCommand;
+        _policyRequirementQuery = policyRequirementQuery;
     }
 
     public async Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key, TokenizedPaymentMethod paymentMethod, BillingAddress billingAddress)
@@ -114,6 +120,18 @@ public class ProviderService : IProviderService
         if (!(providerUser is { Type: ProviderUserType.ProviderAdmin }))
         {
             throw new BadRequestException("Invalid owner.");
+        }
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
+        {
+            var organizationAutoConfirmPolicyRequirement = await _policyRequirementQuery
+                .GetAsync<AutomaticUserConfirmationPolicyRequirement>(ownerUserId);
+
+            if (organizationAutoConfirmPolicyRequirement
+                .CannotCreateProvider())
+            {
+                throw new BadRequestException(new UserCannotJoinProvider().Message);
+            }
         }
 
         var customer = await _providerBillingService.SetupCustomer(provider, paymentMethod, billingAddress);
@@ -248,6 +266,18 @@ public class ProviderService : IProviderService
             throw new BadRequestException("User email does not match invite.");
         }
 
+        if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
+        {
+            var organizationAutoConfirmPolicyRequirement = await _policyRequirementQuery
+                .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id);
+
+            if (organizationAutoConfirmPolicyRequirement
+                .CannotJoinProvider())
+            {
+                throw new BadRequestException(new UserCannotJoinProvider().Message);
+            }
+        }
+
         providerUser.Status = ProviderUserStatusType.Accepted;
         providerUser.UserId = user.Id;
         providerUser.Email = null;
@@ -291,6 +321,19 @@ public class ProviderService : IProviderService
                 if (providerUser.Status != ProviderUserStatusType.Accepted || providerUser.ProviderId != providerId)
                 {
                     throw new BadRequestException("Invalid user.");
+                }
+
+                if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
+                {
+                    var organizationAutoConfirmPolicyRequirement = await _policyRequirementQuery
+                        .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id);
+
+                    if (organizationAutoConfirmPolicyRequirement
+                        .CannotJoinProvider())
+                    {
+                        result.Add(Tuple.Create(providerUser, new UserCannotJoinProvider().Message));
+                        continue;
+                    }
                 }
 
                 providerUser.Status = ProviderUserStatusType.Confirmed;
