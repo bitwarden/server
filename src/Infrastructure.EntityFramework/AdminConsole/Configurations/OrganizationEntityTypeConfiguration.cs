@@ -18,7 +18,7 @@ public class OrganizationEntityTypeConfiguration : IEntityTypeConfiguration<Orga
 
         NpgsqlIndexBuilderExtensions.IncludeProperties(
             builder.HasIndex(o => new { o.Id, o.Enabled }),
-            o => o.UseTotp);
+            o => new { o.UseTotp, o.UsersGetPremium });
 
         builder.ToTable(nameof(Organization));
     }

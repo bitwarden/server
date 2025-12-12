@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Bit.Core.Billing.Premium.Models;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
@@ -347,6 +348,36 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
     public async Task<UserWithCalculatedPremium?> GetCalculatedPremiumAsync(Guid id)
     {
         var result = await GetManyWithCalculatedPremiumAsync([id]);
+        return result.FirstOrDefault();
+    }
+
+    public async Task<IEnumerable<UserPremiumAccess>> GetPremiumAccessByIdsAsync(IEnumerable<Guid> ids)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+
+            var users = await dbContext.Users
+                .Where(x => ids.Contains(x.Id))
+                .Include(u => u.OrganizationUsers)
+                    .ThenInclude(ou => ou.Organization)
+                .ToListAsync();
+
+            return users.Select(user => new UserPremiumAccess
+            {
+                Id = user.Id,
+                PersonalPremium = user.Premium,
+                OrganizationPremium = user.OrganizationUsers
+                    .Any(ou => ou.Organization != null &&
+                               ou.Organization.Enabled == true &&
+                               ou.Organization.UsersGetPremium == true)
+            }).ToList();
+        }
+    }
+
+    public async Task<UserPremiumAccess?> GetPremiumAccessAsync(Guid userId)
+    {
+        var result = await GetPremiumAccessByIdsAsync([userId]);
         return result.FirstOrDefault();
     }
 
