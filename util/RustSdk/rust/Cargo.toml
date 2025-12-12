@@ -13,8 +13,8 @@ crate-type = ["cdylib"]
 
 [dependencies]
 base64 = "0.22.1"
-bitwarden-core = { git = "https://github.com/bitwarden/sdk-internal.git", rev = "7080159154a42b59028ccb9f5af62bf087e565f9" }
-bitwarden-crypto = { git = "https://github.com/bitwarden/sdk-internal.git", rev = "7080159154a42b59028ccb9f5af62bf087e565f9" }
+bitwarden-core = { git = "https://github.com/bitwarden/sdk-internal.git", rev = "bd636a4ff3e97f87431ef188f7a2685f89bcb274" }
+bitwarden-crypto = { git = "https://github.com/bitwarden/sdk-internal.git", rev = "bd636a4ff3e97f87431ef188f7a2685f89bcb274" }
 serde = "=1.0.219"
 serde_json = "=1.0.141"
 
