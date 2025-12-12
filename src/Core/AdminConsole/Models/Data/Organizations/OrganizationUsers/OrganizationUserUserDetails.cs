@@ -63,11 +63,6 @@ public class OrganizationUserUserDetails : IExternal, ITwoFactorProvidersUser, I
         return UserId;
     }
 
-    public bool GetPremium()
-    {
-        return Premium.GetValueOrDefault(false);
-    }
-
     public Permissions GetPermissions()
     {
         return string.IsNullOrWhiteSpace(Permissions) ? null
