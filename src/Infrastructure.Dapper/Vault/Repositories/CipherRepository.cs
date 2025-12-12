@@ -176,13 +176,19 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
             cipher.Data,
             cipher.Favorites,
             cipher.Folders,
-            cipher.FolderId,
             cipher.Attachments,
             cipher.CreationDate,
             cipher.RevisionDate,
+            cipher.FolderId,
+            cipher.Favorite,
+            cipher.Edit,
+            cipher.ViewPassword,
+            cipher.Manage,
+            cipher.OrganizationUseTotp,
             cipher.DeletedDate,
             cipher.Reprompt,
             cipher.Key,
+            cipher.ArchivedDate,
             CollectionIds = collectionIds.ToGuidIdArrayTVP()
         };
         using (var connection = new SqlConnection(ConnectionString))
