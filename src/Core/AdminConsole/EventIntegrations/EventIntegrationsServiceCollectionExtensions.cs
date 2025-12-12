@@ -1,5 +1,8 @@
-﻿using Bit.Core.AdminConsole.EventIntegrations.OrganizationIntegrations;
+﻿using Bit.Core.AdminConsole.EventIntegrations.OrganizationIntegrationConfigurations;
+using Bit.Core.AdminConsole.EventIntegrations.OrganizationIntegrationConfigurations.Interfaces;
+using Bit.Core.AdminConsole.EventIntegrations.OrganizationIntegrations;
 using Bit.Core.AdminConsole.EventIntegrations.OrganizationIntegrations.Interfaces;
+using Bit.Core.AdminConsole.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -20,8 +23,12 @@ public static class EventIntegrationsServiceCollectionExtensions
         // This is idempotent for the same named cache, so it's safe to call.
         services.AddExtendedCache(EventIntegrationsCacheConstants.CacheName, globalSettings);
 
+        // Add Validator
+        services.TryAddSingleton<IOrganizationIntegrationConfigurationValidator, OrganizationIntegrationConfigurationValidator>();
+
         // Add all commands/queries
         services.AddOrganizationIntegrationCommandsQueries();
+        services.AddOrganizationIntegrationConfigurationCommandsQueries();
 
         return services;
     }
@@ -32,6 +39,16 @@ public static class EventIntegrationsServiceCollectionExtensions
         services.TryAddScoped<IUpdateOrganizationIntegrationCommand, UpdateOrganizationIntegrationCommand>();
         services.TryAddScoped<IDeleteOrganizationIntegrationCommand, DeleteOrganizationIntegrationCommand>();
         services.TryAddScoped<IGetOrganizationIntegrationsQuery, GetOrganizationIntegrationsQuery>();
+
+        return services;
+    }
+
+    internal static IServiceCollection AddOrganizationIntegrationConfigurationCommandsQueries(this IServiceCollection services)
+    {
+        services.TryAddScoped<ICreateOrganizationIntegrationConfigurationCommand, CreateOrganizationIntegrationConfigurationCommand>();
+        services.TryAddScoped<IUpdateOrganizationIntegrationConfigurationCommand, UpdateOrganizationIntegrationConfigurationCommand>();
+        services.TryAddScoped<IDeleteOrganizationIntegrationConfigurationCommand, DeleteOrganizationIntegrationConfigurationCommand>();
+        services.TryAddScoped<IGetOrganizationIntegrationConfigurationsQuery, GetOrganizationIntegrationConfigurationsQuery>();
 
         return services;
     }

@@ -1,4 +1,6 @@
-﻿using Bit.Core.AdminConsole.EventIntegrations.OrganizationIntegrations.Interfaces;
+﻿using Bit.Core.AdminConsole.EventIntegrations.OrganizationIntegrationConfigurations.Interfaces;
+using Bit.Core.AdminConsole.EventIntegrations.OrganizationIntegrations.Interfaces;
+using Bit.Core.AdminConsole.Services;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -32,6 +34,7 @@ public class EventIntegrationServiceCollectionExtensionsTests
 
         // Mock required repository dependencies for commands
         _services.TryAddScoped(_ => Substitute.For<IOrganizationIntegrationRepository>());
+        _services.TryAddScoped(_ => Substitute.For<IOrganizationIntegrationConfigurationRepository>());
         _services.TryAddScoped(_ => Substitute.For<IOrganizationRepository>());
     }
 
@@ -45,6 +48,9 @@ public class EventIntegrationServiceCollectionExtensionsTests
         var cache = provider.GetRequiredKeyedService<IFusionCache>(EventIntegrationsCacheConstants.CacheName);
         Assert.NotNull(cache);
 
+        var validator = provider.GetRequiredService<IOrganizationIntegrationConfigurationValidator>();
+        Assert.NotNull(validator);
+
         using var scope = provider.CreateScope();
         var sp = scope.ServiceProvider;
 
@@ -52,6 +58,11 @@ public class EventIntegrationServiceCollectionExtensionsTests
         Assert.NotNull(sp.GetService<IUpdateOrganizationIntegrationCommand>());
         Assert.NotNull(sp.GetService<IDeleteOrganizationIntegrationCommand>());
         Assert.NotNull(sp.GetService<IGetOrganizationIntegrationsQuery>());
+
+        Assert.NotNull(sp.GetService<ICreateOrganizationIntegrationConfigurationCommand>());
+        Assert.NotNull(sp.GetService<IUpdateOrganizationIntegrationConfigurationCommand>());
+        Assert.NotNull(sp.GetService<IDeleteOrganizationIntegrationConfigurationCommand>());
+        Assert.NotNull(sp.GetService<IGetOrganizationIntegrationConfigurationsQuery>());
     }
 
     [Fact]
@@ -61,8 +72,11 @@ public class EventIntegrationServiceCollectionExtensionsTests
 
         var createIntegrationDescriptor = _services.First(s =>
             s.ServiceType == typeof(ICreateOrganizationIntegrationCommand));
+        var createConfigDescriptor = _services.First(s =>
+            s.ServiceType == typeof(ICreateOrganizationIntegrationConfigurationCommand));
 
         Assert.Equal(ServiceLifetime.Scoped, createIntegrationDescriptor.Lifetime);
+        Assert.Equal(ServiceLifetime.Scoped, createConfigDescriptor.Lifetime);
     }
 
     [Fact]
@@ -117,7 +131,7 @@ public class EventIntegrationServiceCollectionExtensionsTests
         _services.AddEventIntegrationsCommandsQueries(_globalSettings);
 
         var createConfigCmdDescriptors = _services.Where(s =>
-            s.ServiceType == typeof(ICreateOrganizationIntegrationCommand)).ToList();
+            s.ServiceType == typeof(ICreateOrganizationIntegrationConfigurationCommand)).ToList();
         Assert.Single(createConfigCmdDescriptors);
 
         var updateIntegrationCmdDescriptors = _services.Where(s =>
@@ -145,6 +159,29 @@ public class EventIntegrationServiceCollectionExtensionsTests
 
         var createCmdDescriptors = _services.Where(s =>
             s.ServiceType == typeof(ICreateOrganizationIntegrationCommand)).ToList();
+        Assert.Single(createCmdDescriptors);
+    }
+
+    [Fact]
+    public void AddOrganizationIntegrationConfigurationCommandsQueries_RegistersAllConfigurationServices()
+    {
+        _services.AddOrganizationIntegrationConfigurationCommandsQueries();
+
+        Assert.Contains(_services, s => s.ServiceType == typeof(ICreateOrganizationIntegrationConfigurationCommand));
+        Assert.Contains(_services, s => s.ServiceType == typeof(IUpdateOrganizationIntegrationConfigurationCommand));
+        Assert.Contains(_services, s => s.ServiceType == typeof(IDeleteOrganizationIntegrationConfigurationCommand));
+        Assert.Contains(_services, s => s.ServiceType == typeof(IGetOrganizationIntegrationConfigurationsQuery));
+    }
+
+    [Fact]
+    public void AddOrganizationIntegrationConfigurationCommandsQueries_MultipleCalls_IsIdempotent()
+    {
+        _services.AddOrganizationIntegrationConfigurationCommandsQueries();
+        _services.AddOrganizationIntegrationConfigurationCommandsQueries();
+        _services.AddOrganizationIntegrationConfigurationCommandsQueries();
+
+        var createCmdDescriptors = _services.Where(s =>
+            s.ServiceType == typeof(ICreateOrganizationIntegrationConfigurationCommand)).ToList();
         Assert.Single(createCmdDescriptors);
     }
 
