@@ -380,19 +380,16 @@ public class BaseRequestValidatorTests
         // 1 -> initial validation passes
         _sut.isValid = true;
 
-        // 2 -> enable the FailedTwoFactorEmail feature flag
-        _featureService.IsEnabled(FeatureFlagKeys.FailedTwoFactorEmail).Returns(true);
-
-        // 3 -> set up 2FA as required
+        // 2 -> set up 2FA as required
         _twoFactorAuthenticationValidator
             .RequiresTwoFactorAsync(Arg.Any<User>(), tokenRequest)
             .Returns(Task.FromResult(new Tuple<bool, Organization>(true, null)));
 
-        // 4 -> provide invalid 2FA token
+        // 3 -> provide invalid 2FA token
         tokenRequest.Raw["TwoFactorToken"] = "invalid_token";
         tokenRequest.Raw["TwoFactorProvider"] = TwoFactorProviderType.Email.ToString();
 
-        // 5 -> set up 2FA verification to fail
+        // 4 -> set up 2FA verification to fail
         _twoFactorAuthenticationValidator
             .VerifyTwoFactorAsync(user, null, TwoFactorProviderType.Email, "invalid_token")
             .Returns(Task.FromResult(false));
@@ -427,24 +424,21 @@ public class BaseRequestValidatorTests
         // 1 -> initial validation passes
         _sut.isValid = true;
 
-        // 2 -> enable the FailedTwoFactorEmail feature flag
-        _featureService.IsEnabled(FeatureFlagKeys.FailedTwoFactorEmail).Returns(true);
-
-        // 3 -> set up 2FA as required
+        // 2 -> set up 2FA as required
         _twoFactorAuthenticationValidator
             .RequiresTwoFactorAsync(Arg.Any<User>(), tokenRequest)
             .Returns(Task.FromResult(new Tuple<bool, Organization>(true, null)));
 
-        // 4 -> provide invalid remember token (remember token expired)
+        // 3 -> provide invalid remember token (remember token expired)
         tokenRequest.Raw["TwoFactorToken"] = "expired_remember_token";
         tokenRequest.Raw["TwoFactorProvider"] = "5"; // Remember provider
 
-        // 5 -> set up remember token verification to fail
+        // 4 -> set up remember token verification to fail
         _twoFactorAuthenticationValidator
             .VerifyTwoFactorAsync(user, null, TwoFactorProviderType.Remember, "expired_remember_token")
             .Returns(Task.FromResult(false));
 
-        // 6 -> set up dummy BuildTwoFactorResultAsync
+        // 5 -> set up dummy BuildTwoFactorResultAsync
         var twoFactorResultDict = new Dictionary<string, object>
         {
             { "TwoFactorProviders", new[] { "0", "1" } },
@@ -1126,9 +1120,6 @@ public class BaseRequestValidatorTests
         _twoFactorAuthenticationValidator
             .VerifyTwoFactorAsync(user, null, TwoFactorProviderType.RecoveryCode, "INVALID-recovery-code")
             .Returns(Task.FromResult(false));
-
-        // 6. Setup for failed 2FA email (if feature flag enabled)
-        _featureService.IsEnabled(FeatureFlagKeys.FailedTwoFactorEmail).Returns(true);
 
         // Act
         await _sut.ValidateAsync(context);

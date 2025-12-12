@@ -1,0 +1,55 @@
+<mjml>
+  <mj-head>
+    <mj-include path="../../../components/head.mjml" />
+  </mj-head>
+
+  <mj-body css-class="border-fix">
+    <!-- Blue Header Section -->
+    <mj-wrapper css-class="border-fix" padding="20px 20px 10px 20px">
+      <mj-bw-hero
+        img-src="https://assets.bitwarden.com/email/v1/spot-family-homes.png"
+        title="You can now share passwords with members of {{OrganizationName}}!"
+        button-text="Log in"
+        button-url="https://vault.bitwarden.com"
+      />
+    </mj-wrapper>
+
+    <!-- Main Content -->
+    <mj-wrapper padding="5px 20px 10px 20px">
+      <mj-section background-color="#fff" padding="15px 10px 10px 10px">
+        <mj-column>
+          <mj-text font-size="16px" line-height="24px" padding="10px 15px">
+            As a member of <b>{{OrganizationName}}</b>:
+          </mj-text>
+        </mj-column>
+      </mj-section>
+      <mj-bw-icon-row
+        icon-src="https://assets.bitwarden.com/email/v1/icon-item-type.png"
+        icon-alt="Collections Icon"
+        text="You can access passwords {{OrganizationName}} has shared with you."
+      />
+      <mj-bw-icon-row
+        icon-src="https://assets.bitwarden.com/email/v1/icon-account-switching-new.png"
+        icon-alt="Group Users Icon"
+        text="You can easily share passwords with friends, family, or coworkers."
+        foot-url-text="Share passwords in Bitwarden"
+        foot-url="https://bitwarden.com/help/share-to-a-collection/"
+      />
+      <mj-section background-color="#fff" padding="0 20px 20px 20px">
+      </mj-section>
+    </mj-wrapper>
+
+    <!-- Download Mobile Apps Section -->
+    <mj-wrapper padding="5px 20px 10px 20px">
+      <mj-include path="../components/mobile-app-download.mjml" />
+    </mj-wrapper>
+
+    <!-- Learn More Section -->
+    <mj-wrapper padding="5px 20px 10px 20px">
+      <mj-bw-learn-more-footer />
+    </mj-wrapper>
+
+    <!-- Footer -->
+    <mj-include path="../../../components/footer.mjml" />
+  </mj-body>
+</mjml>
