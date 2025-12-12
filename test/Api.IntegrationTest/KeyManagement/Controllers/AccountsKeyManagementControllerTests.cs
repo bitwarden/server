@@ -7,6 +7,7 @@ using Bit.Api.KeyManagement.Models.Responses;
 using Bit.Api.Tools.Models.Request;
 using Bit.Api.Vault.Models;
 using Bit.Api.Vault.Models.Request;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
@@ -19,9 +20,11 @@ using Bit.Core.KeyManagement.Enums;
 using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.KeyManagement.Repositories;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Vault.Enums;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Identity;
+using NSubstitute;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.KeyManagement.Controllers;
@@ -31,6 +34,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
     private static readonly string _mockEncryptedString =
         "2.AOs41Hd8OQiCPXjyJKCiDA==|O6OHgt2U2hJGBSNGnimJmg==|iD33s8B69C8JhYYhSa4V1tArjvLr8eEaGqOV7BRo5Jk=";
     private static readonly string _mockEncryptedType7String = "7.AOs41Hd8OQiCPXjyJKCiDA==";
+    private static readonly string _mockEncryptedType7WrappedSigningKey = "7.DRv74Kg1RSlFSam1MNFlGD==";
 
     private readonly HttpClient _client;
     private readonly IEmergencyAccessRepository _emergencyAccessRepository;
@@ -47,8 +51,11 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
     public AccountsKeyManagementControllerTests(ApiApplicationFactory factory)
     {
         _factory = factory;
-        _factory.UpdateConfiguration("globalSettings:launchDarkly:flagValues:pm-12241-private-key-regeneration",
-            "true");
+        _factory.SubstituteService<IFeatureService>(featureService =>
+        {
+            featureService.IsEnabled(FeatureFlagKeys.PrivateKeyRegeneration, Arg.Any<bool>())
+                .Returns(true);
+        });
         _client = factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
         _userRepository = _factory.GetService<IUserRepository>();
@@ -78,8 +85,11 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
     {
         // Localize factory to inject a false value for the feature flag.
         var localFactory = new ApiApplicationFactory();
-        localFactory.UpdateConfiguration("globalSettings:launchDarkly:flagValues:pm-12241-private-key-regeneration",
-            "false");
+        localFactory.SubstituteService<IFeatureService>(featureService =>
+        {
+            featureService.IsEnabled(FeatureFlagKeys.PrivateKeyRegeneration, Arg.Any<bool>())
+                .Returns(false);
+        });
         var localClient = localFactory.CreateClient();
         var localEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
         var localLoginHelper = new LoginHelper(localFactory, localClient);
@@ -285,21 +295,21 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
 
     [Theory]
     [BitAutoData]
-    public async Task PostSetKeyConnectorKeyAsync_Success(string organizationSsoIdentifier,
-        SetKeyConnectorKeyRequestModel request)
+    public async Task PostSetKeyConnectorKeyAsync_Success(string organizationSsoIdentifier)
     {
         var (ssoUserEmail, organization) = await SetupKeyConnectorTestAsync(OrganizationUserStatusType.Invited, organizationSsoIdentifier);
 
         var ssoUser = await _userRepository.GetByEmailAsync(ssoUserEmail);
         Assert.NotNull(ssoUser);
 
-        request.Keys = new KeysRequestModel
+        var request = new SetKeyConnectorKeyRequestModel
         {
-            PublicKey = ssoUser.PublicKey,
-            EncryptedPrivateKey = ssoUser.PrivateKey
+            Key = _mockEncryptedString,
+            Keys = new KeysRequestModel { PublicKey = ssoUser.PublicKey, EncryptedPrivateKey = ssoUser.PrivateKey },
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+            OrgIdentifier = organizationSsoIdentifier
         };
-        request.Key = _mockEncryptedString;
-        request.OrgIdentifier = organizationSsoIdentifier;
 
         var response = await _client.PostAsJsonAsync("/accounts/set-key-connector-key", request);
         response.EnsureSuccessStatusCode();
@@ -310,12 +320,95 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         Assert.True(user.UsesKeyConnector);
         Assert.Equal(DateTime.UtcNow, user.RevisionDate, TimeSpan.FromMinutes(1));
         Assert.Equal(DateTime.UtcNow, user.AccountRevisionDate, TimeSpan.FromMinutes(1));
+        var ssoOrganizationUser = await _organizationUserRepository.GetByOrganizationAsync(organization.Id, user.Id);
+        Assert.NotNull(ssoOrganizationUser);
+        Assert.Equal(OrganizationUserStatusType.Accepted, ssoOrganizationUser.Status);
+        Assert.Equal(user.Id, ssoOrganizationUser.UserId);
+        Assert.Null(ssoOrganizationUser.Email);
+    }
+
+    [Fact]
+    public async Task PostSetKeyConnectorKeyAsync_V2_NotLoggedIn_Unauthorized()
+    {
+        var request = new SetKeyConnectorKeyRequestModel
+        {
+            KeyConnectorKeyWrappedUserKey = _mockEncryptedString,
+            AccountKeys = new AccountKeysRequestModel
+            {
+                AccountPublicKey = "publicKey",
+                UserKeyEncryptedAccountPrivateKey = _mockEncryptedType7String
+            },
+            OrgIdentifier = "test-org"
+        };
+
+        var response = await _client.PostAsJsonAsync("/accounts/set-key-connector-key", request);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostSetKeyConnectorKeyAsync_V2_Success(string organizationSsoIdentifier)
+    {
+        var (ssoUserEmail, organization) = await SetupKeyConnectorTestAsync(OrganizationUserStatusType.Invited, organizationSsoIdentifier);
+
+        var request = new SetKeyConnectorKeyRequestModel
+        {
+            KeyConnectorKeyWrappedUserKey = _mockEncryptedString,
+            AccountKeys = new AccountKeysRequestModel
+            {
+                AccountPublicKey = "publicKey",
+                UserKeyEncryptedAccountPrivateKey = _mockEncryptedType7String,
+                PublicKeyEncryptionKeyPair = new PublicKeyEncryptionKeyPairRequestModel
+                {
+                    PublicKey = "publicKey",
+                    WrappedPrivateKey = _mockEncryptedType7String,
+                    SignedPublicKey = "signedPublicKey"
+                },
+                SignatureKeyPair = new SignatureKeyPairRequestModel
+                {
+                    SignatureAlgorithm = "ed25519",
+                    WrappedSigningKey = _mockEncryptedType7WrappedSigningKey,
+                    VerifyingKey = "verifyingKey"
+                },
+                SecurityState = new SecurityStateModel
+                {
+                    SecurityVersion = 2,
+                    SecurityState = "v2"
+                }
+            },
+            OrgIdentifier = organizationSsoIdentifier
+        };
+
+        var response = await _client.PostAsJsonAsync("/accounts/set-key-connector-key", request);
+        response.EnsureSuccessStatusCode();
+
+        var user = await _userRepository.GetByEmailAsync(ssoUserEmail);
+        Assert.NotNull(user);
+        Assert.Equal(request.KeyConnectorKeyWrappedUserKey, user.Key);
+        Assert.True(user.UsesKeyConnector);
+        Assert.Equal(KdfType.Argon2id, user.Kdf);
+        Assert.Equal(AuthConstants.ARGON2_ITERATIONS.Default, user.KdfIterations);
+        Assert.Equal(AuthConstants.ARGON2_MEMORY.Default, user.KdfMemory);
+        Assert.Equal(AuthConstants.ARGON2_PARALLELISM.Default, user.KdfParallelism);
+        Assert.Equal(request.AccountKeys.PublicKeyEncryptionKeyPair!.SignedPublicKey, user.SignedPublicKey);
+        Assert.Equal(request.AccountKeys.SecurityState!.SecurityState, user.SecurityState);
+        Assert.Equal(request.AccountKeys.SecurityState.SecurityVersion, user.SecurityVersion);
+        Assert.Equal(DateTime.UtcNow, user.RevisionDate, TimeSpan.FromMinutes(1));
+        Assert.Equal(DateTime.UtcNow, user.AccountRevisionDate, TimeSpan.FromMinutes(1));
+
         var ssoOrganizationUser =
             await _organizationUserRepository.GetByOrganizationAsync(organization.Id, user.Id);
         Assert.NotNull(ssoOrganizationUser);
         Assert.Equal(OrganizationUserStatusType.Accepted, ssoOrganizationUser.Status);
         Assert.Equal(user.Id, ssoOrganizationUser.UserId);
         Assert.Null(ssoOrganizationUser.Email);
+
+        var signatureKeyPair = await _userSignatureKeyPairRepository.GetByUserIdAsync(user.Id);
+        Assert.NotNull(signatureKeyPair);
+        Assert.Equal(SignatureAlgorithm.Ed25519, signatureKeyPair.SignatureAlgorithm);
+        Assert.Equal(_mockEncryptedType7WrappedSigningKey, signatureKeyPair.WrappedSigningKey);
+        Assert.Equal("verifyingKey", signatureKeyPair.VerifyingKey);
     }
 
     [Fact]

@@ -617,6 +617,7 @@ public class UserService : UserManager<User>, IUserService
         return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
     }
 
+    // TODO removed with https://bitwarden.atlassian.net/browse/PM-27328
     public async Task<IdentityResult> SetKeyConnectorKeyAsync(User user, string key, string orgIdentifier)
     {
         var identityResult = CheckCanUseKeyConnector(user);

@@ -55,6 +55,8 @@ public interface IUserRepository : IRepository<User, Guid>
         UserAccountKeysData accountKeysData,
         IEnumerable<UpdateUserData>? updateUserDataActions = null);
     Task DeleteManyAsync(IEnumerable<User> users);
+
+    UpdateUserData SetKeyConnectorUserKey(Guid userId, string keyConnectorWrappedUserKey);
 }
 
 public delegate Task UpdateUserData(Microsoft.Data.SqlClient.SqlConnection? connection = null,

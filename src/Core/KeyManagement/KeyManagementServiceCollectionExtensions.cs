@@ -21,11 +21,13 @@ public static class KeyManagementServiceCollectionExtensions
     {
         services.AddScoped<IRegenerateUserAsymmetricKeysCommand, RegenerateUserAsymmetricKeysCommand>();
         services.AddScoped<IChangeKdfCommand, ChangeKdfCommand>();
+        services.AddScoped<ISetKeyConnectorKeyCommand, SetKeyConnectorKeyCommand>();
     }
 
     private static void AddKeyManagementQueries(this IServiceCollection services)
     {
         services.AddScoped<IUserAccountKeysQuery, UserAccountKeysQuery>();
         services.AddScoped<IKeyConnectorConfirmationDetailsQuery, KeyConnectorConfirmationDetailsQuery>();
+        services.AddScoped<ICanUseKeyConnectorQuery, CanUseKeyConnectorQuery>();
     }
 }
