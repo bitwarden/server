@@ -2311,9 +2311,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
 
-                    b.Property<DateTime?>("ArchivedDate")
-                        .HasColumnType("datetime(6)");
-
                     b.Property<string>("Archives")
                         .HasColumnType("longtext");
 

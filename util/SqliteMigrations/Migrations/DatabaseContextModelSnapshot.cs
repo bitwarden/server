@@ -2300,9 +2300,6 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime?>("ArchivedDate")
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("Archives")
                         .HasColumnType("TEXT");
 

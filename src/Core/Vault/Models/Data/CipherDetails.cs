@@ -10,8 +10,7 @@ public class CipherDetails : CipherOrganizationDetails
     public bool ViewPassword { get; set; }
     public bool Manage { get; set; }
     // Per-user archived date from Archives JSON.
-    // This intentionally hides the legacy Cipher.ArchivedDate (DB column).
-    public new DateTime? ArchivedDate { get; set; }
+    public DateTime? ArchivedDate { get; set; }
     public CipherDetails() { }
 
     public CipherDetails(CipherOrganizationDetails cipher)
