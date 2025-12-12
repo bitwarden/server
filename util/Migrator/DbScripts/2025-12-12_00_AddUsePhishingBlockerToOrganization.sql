@@ -137,8 +137,7 @@ BEGIN
         [UseAdminSponsoredFamilies],
         [SyncSeats],
         [UseAutomaticUserConfirmation],
-        [UsePhishingBlocker],
-        [MaxStorageGbIncreased]
+        [UsePhishingBlocker]
         )
     VALUES
         (
@@ -203,8 +202,7 @@ BEGIN
             @UseAdminSponsoredFamilies,
             @SyncSeats,
             @UseAutomaticUserConfirmation,
-            @UsePhishingBlocker,
-            @MaxStorageGb
+            @UsePhishingBlocker
         );
 END
 GO
