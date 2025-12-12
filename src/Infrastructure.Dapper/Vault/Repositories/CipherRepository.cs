@@ -176,6 +176,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
             cipher.Data,
             cipher.Favorites,
             cipher.Folders,
+            cipher.FolderId,
             cipher.Attachments,
             cipher.CreationDate,
             cipher.RevisionDate,
