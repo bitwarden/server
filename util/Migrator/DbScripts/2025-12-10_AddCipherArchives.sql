@@ -460,7 +460,7 @@ BEGIN
             WHEN @ArchivedDate IS NOT NULL AND [Archives] IS NULL THEN
                 CONCAT('{', @UserIdKey, ':"', CONVERT(NVARCHAR(30), @ArchivedDate, 127), '"}')
             WHEN @ArchivedDate IS NOT NULL THEN
-                JSON_MODIFY([Archives], @UserIdPath, CONCAT('"', CONVERT(NVARCHAR(30), @ArchivedDate, 127), '"'))
+                JSON_MODIFY([Archives], @UserIdPath, CONVERT(NVARCHAR(30), @ArchivedDate, 127))
             ELSE
                 JSON_MODIFY([Archives], @UserIdPath, NULL)
             END,
