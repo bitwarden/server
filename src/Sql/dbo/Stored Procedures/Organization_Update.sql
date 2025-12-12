@@ -128,7 +128,7 @@ BEGIN
         [UseAdminSponsoredFamilies] = @UseAdminSponsoredFamilies,
         [SyncSeats] = @SyncSeats,
         [UseAutomaticUserConfirmation] = @UseAutomaticUserConfirmation,
-        [UsePhishingBlocker] = @UsePhishingBlocker
+        [UsePhishingBlocker] = @UsePhishingBlocker,
         [MaxStorageGbIncreased] = @MaxStorageGb
     WHERE
         [Id] = @Id;
