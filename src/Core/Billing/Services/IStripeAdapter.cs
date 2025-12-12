@@ -21,7 +21,7 @@ public interface IStripeAdapter
     Task<StripeList<Registration>> ListTaxRegistrationsAsync(RegistrationListOptions options = null);
     Task DeleteCustomerDiscountAsync(string customerId, CustomerDeleteDiscountOptions options = null);
     Task<Subscription> UpdateSubscriptionAsync(string id, SubscriptionUpdateOptions options = null);
-    Task<Subscription> CancelSubscriptionAsync(string Id, SubscriptionCancelOptions options = null);
+    Task<Subscription> CancelSubscriptionAsync(string id, SubscriptionCancelOptions options = null);
     Task<Invoice> GetInvoiceAsync(string id, InvoiceGetOptions options);
     Task<List<Invoice>> ListInvoicesAsync(StripeInvoiceListOptions options);
     Task<Invoice> CreateInvoicePreviewAsync(InvoiceCreatePreviewOptions options);

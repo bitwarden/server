@@ -163,23 +163,17 @@ public class StripeAdapter : IStripeAdapter
 
     public Task<TaxId> DeleteTaxIdAsync(string customerId, string taxIdId,
         TaxIdDeleteOptions options = null) =>
-        _taxIdService.DeleteAsync(customerId, taxIdId);
+        _taxIdService.DeleteAsync(customerId, taxIdId, options);
 
     /******************
      ** BANK ACCOUNT **
      ******************/
-    public Task<BankAccount> CreateBankAccountAsync(string customerId, BankAccountCreateOptions options = null) =>
-        _bankAccountService.CreateAsync(customerId, options);
-
     public Task<BankAccount> DeleteBankAccountAsync(string customerId, string bankAccount, BankAccountDeleteOptions options = null) =>
         _bankAccountService.DeleteAsync(customerId, bankAccount, options);
 
     /***********
      ** PRICE **
      ***********/
-    public Task<StripeList<Price>> ListPricesAsync(PriceListOptions options = null) =>
-        _priceService.ListAsync(options);
-
     public Task<Price> GetPriceAsync(string id, PriceGetOptions options = null) =>
         _priceService.GetAsync(id, options);
 
@@ -198,9 +192,6 @@ public class StripeAdapter : IStripeAdapter
     public Task<SetupIntent> GetSetupIntentAsync(string id, SetupIntentGetOptions options = null) =>
         _setupIntentService.GetAsync(id, options);
 
-    public Task VerifySetupIntentMicrodepositsAsync(string id, SetupIntentVerifyMicrodepositsOptions options) =>
-        _setupIntentService.VerifyMicrodepositsAsync(id, options);
-
     /*******************
      ** MISCELLANEOUS **
      *******************/
@@ -215,16 +206,4 @@ public class StripeAdapter : IStripeAdapter
 
     public Task<Card> DeleteCardAsync(string customerId, string cardId, CardDeleteOptions options = null) =>
         _cardService.DeleteAsync(customerId, cardId, options);
-
-    public async Task<List<TestClock>> ListTestClocksAsync()
-    {
-        var items = new List<TestClock>();
-        var options = new TestClockListOptions { Limit = 100 };
-        await foreach (var i in _testClockService.ListAutoPagingAsync(options))
-        {
-            items.Add(i);
-        }
-
-        return items;
-    }
 }
