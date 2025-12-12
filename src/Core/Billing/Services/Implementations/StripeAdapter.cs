@@ -52,7 +52,7 @@ public class StripeAdapter : IStripeAdapter
     public Task<Customer> CreateCustomerAsync(CustomerCreateOptions options) =>
         _customerService.CreateAsync(options);
 
-    public Task CustomerDeleteDiscountAsync(string customerId, CustomerDeleteDiscountOptions options = null) =>
+    public Task DeleteCustomerDiscountAsync(string customerId, CustomerDeleteDiscountOptions options = null) =>
         _customerService.DeleteDiscountAsync(customerId, options);
 
     public Task<Customer> GetCustomerAsync(string id, CustomerGetOptions options = null) =>

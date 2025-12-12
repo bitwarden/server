@@ -167,9 +167,9 @@ public class RemoveOrganizationFromProviderCommandTests
         await stripeAdapter.Received(1).UpdateCustomerAsync(organization.GatewayCustomerId,
             Arg.Is<CustomerUpdateOptions>(options => options.Email == "a@example.com"));
 
-        await stripeAdapter.Received(1).CustomerDeleteDiscountAsync(organization.GatewayCustomerId);
+        await stripeAdapter.Received(1).DeleteCustomerDiscountAsync(organization.GatewayCustomerId);
 
-        await stripeAdapter.Received(1).CustomerDeleteDiscountAsync(organization.GatewayCustomerId);
+        await stripeAdapter.Received(1).DeleteCustomerDiscountAsync(organization.GatewayCustomerId);
 
         await stripeAdapter.Received(1).UpdateSubscriptionAsync(organization.GatewaySubscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options =>

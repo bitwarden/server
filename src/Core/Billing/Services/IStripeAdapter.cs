@@ -4,7 +4,6 @@
 using Bit.Core.Models.BitStripe;
 using Stripe;
 using Stripe.Tax;
-using Stripe.TestHelpers;
 
 namespace Bit.Core.Billing.Services;
 
@@ -20,7 +19,7 @@ public interface IStripeAdapter
     Task<Subscription> CreateSubscriptionAsync(SubscriptionCreateOptions subscriptionCreateOptions);
     Task<Subscription> GetSubscriptionAsync(string id, SubscriptionGetOptions options = null);
     Task<StripeList<Registration>> ListTaxRegistrationsAsync(RegistrationListOptions options = null);
-    Task CustomerDeleteDiscountAsync(string customerId, CustomerDeleteDiscountOptions options = null);
+    Task DeleteCustomerDiscountAsync(string customerId, CustomerDeleteDiscountOptions options = null);
     Task<Subscription> UpdateSubscriptionAsync(string id, SubscriptionUpdateOptions options = null);
     Task<Subscription> CancelSubscriptionAsync(string Id, SubscriptionCancelOptions options = null);
     Task<Invoice> GetInvoiceAsync(string id, InvoiceGetOptions options);
@@ -42,14 +41,10 @@ public interface IStripeAdapter
     Task<StripeList<Charge>> ListChargesAsync(ChargeListOptions options);
     Task<Refund> CreateRefundAsync(RefundCreateOptions options);
     Task<Card> DeleteCardAsync(string customerId, string cardId, CardDeleteOptions options = null);
-    Task<BankAccount> CreateBankAccountAsync(string customerId, BankAccountCreateOptions options = null);
     Task<BankAccount> DeleteBankAccountAsync(string customerId, string bankAccount, BankAccountDeleteOptions options = null);
-    Task<StripeList<Price>> ListPricesAsync(PriceListOptions options = null);
     Task<SetupIntent> CreateSetupIntentAsync(SetupIntentCreateOptions options);
     Task<List<SetupIntent>> ListSetupIntentsAsync(SetupIntentListOptions options);
     Task CancelSetupIntentAsync(string id, SetupIntentCancelOptions options = null);
     Task<SetupIntent> GetSetupIntentAsync(string id, SetupIntentGetOptions options = null);
-    Task VerifySetupIntentMicrodepositsAsync(string id, SetupIntentVerifyMicrodepositsOptions options);
-    Task<List<TestClock>> ListTestClocksAsync();
     Task<Price> GetPriceAsync(string id, PriceGetOptions options = null);
 }
