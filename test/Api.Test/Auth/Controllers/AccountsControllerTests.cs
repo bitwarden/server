@@ -688,6 +688,59 @@ public class AccountsControllerTests : IDisposable
         await _sut.PostKdf(model);
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task PostKeys_NoUser_Errors(KeysRequestModel model)
+    {
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult<User>(null));
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _sut.PostKeys(model));
+    }
+
+    [Theory]
+    [BitAutoData("existing", "existing")]
+    [BitAutoData((string)null, "existing")]
+    [BitAutoData("", "existing")]
+    [BitAutoData(" ", "existing")]
+    [BitAutoData("existing", null)]
+    [BitAutoData("existing", "")]
+    [BitAutoData("existing", " ")]
+    public async Task PostKeys_UserAlreadyHasKeys_Errors(string? existingPrivateKey, string? existingPublicKey,
+        KeysRequestModel model)
+    {
+        var user = GenerateExampleUser();
+        user.PrivateKey = existingPrivateKey;
+        user.PublicKey = existingPublicKey;
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostKeys(model));
+
+        Assert.NotNull(exception.Message);
+        Assert.Contains("User has existing keypair", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData(" ")]
+    [BitAutoData("")]
+    [BitAutoData((string)null)]
+    public async Task PostKeys_Success(string? existingKeyValue, KeysRequestModel model)
+    {
+        var user = GenerateExampleUser();
+        user.Key = "existingUserKey";
+        user.PrivateKey = existingKeyValue;
+        user.PublicKey = existingKeyValue;
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+
+        var result = await _sut.PostKeys(model);
+
+        Assert.NotNull(result);
+        Assert.Equal(user.Key, result.Key);
+        Assert.Equal(model.EncryptedPrivateKey, result.PrivateKey);
+        Assert.Equal(model.PublicKey, result.PublicKey);
+        await _userService.Received(1).SaveUserAsync(Arg.Is<User>(x =>
+            x.PrivateKey == model.EncryptedPrivateKey && x.PublicKey == model.PublicKey));
+    }
+
     // Below are helper functions that currently belong to this
     // test class, but ultimately may need to be split out into
     // something greater in order to share common test steps with
