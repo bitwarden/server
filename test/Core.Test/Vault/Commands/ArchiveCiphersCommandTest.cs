@@ -20,7 +20,7 @@ public class ArchiveCiphersCommandTest
     [BitAutoData(false, false, 1, 0, 1)]
     [BitAutoData(false, true, 1, 0, 1)]
     [BitAutoData(true, true, 1, 0, 1)]
-    public async Task ArchiveAsync_Works(
+    public async Task ArchiveManyAsync_Works(
         bool isEditable, bool hasOrganizationId,
         int cipherRepoCalls, int resultCountFromQuery, int pushNotificationsCalls,
         SutProvider<ArchiveCiphersCommand> sutProvider, CipherDetails cipher, User user)
@@ -46,4 +46,36 @@ public class ArchiveCiphersCommandTest
         await sutProvider.GetDependency<IPushNotificationService>().Received(pushNotificationsCalls)
             .PushSyncCiphersAsync(user.Id);
     }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ArchiveManyAsync_SetsArchivedDateOnReturnedCiphers(
+        SutProvider<ArchiveCiphersCommand> sutProvider,
+        CipherDetails cipher,
+        User user)
+    {
+        // Arrange: make it archivable
+        cipher.Edit = true;
+        // Allow organization cipher to be archived in this test
+        cipher.OrganizationId = Guid.Parse("3f2504e0-4f89-11d3-9a0c-0305e82c3301");
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(user.Id)
+            .Returns(new List<CipherDetails> { cipher });
+
+        var repoRevisionDate = DateTime.UtcNow;
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .ArchiveAsync(Arg.Any<IEnumerable<Guid>>(), user.Id)
+            .Returns(repoRevisionDate);
+
+        // Act
+        var result = await sutProvider.Sut.ArchiveManyAsync(new[] { cipher.Id }, user.Id);
+
+        // Assert
+        var archivedCipher = Assert.Single(result);
+        Assert.Equal(repoRevisionDate, archivedCipher.RevisionDate);
+        Assert.Equal(repoRevisionDate, archivedCipher.ArchivedDate);
+    }
+
 }

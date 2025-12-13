@@ -80,6 +80,7 @@ public class CipherRequestModel
     {
         existingCipher.FolderId = string.IsNullOrWhiteSpace(FolderId) ? null : (Guid?)new Guid(FolderId);
         existingCipher.Favorite = Favorite;
+        existingCipher.ArchivedDate = ArchivedDate;
         ToCipher(existingCipher);
         return existingCipher;
     }
@@ -127,9 +128,9 @@ public class CipherRequestModel
         var userIdKey = userId.HasValue ? userId.ToString().ToUpperInvariant() : null;
         existingCipher.Reprompt = Reprompt;
         existingCipher.Key = Key;
-        existingCipher.ArchivedDate = ArchivedDate;
         existingCipher.Folders = UpdateUserSpecificJsonField(existingCipher.Folders, userIdKey, FolderId);
         existingCipher.Favorites = UpdateUserSpecificJsonField(existingCipher.Favorites, userIdKey, Favorite);
+        existingCipher.Archives = UpdateUserSpecificJsonField(existingCipher.Archives, userIdKey, ArchivedDate);
 
         var hasAttachments2 = (Attachments2?.Count ?? 0) > 0;
         var hasAttachments = (Attachments?.Count ?? 0) > 0;

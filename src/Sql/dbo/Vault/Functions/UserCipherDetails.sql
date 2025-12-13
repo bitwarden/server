@@ -19,9 +19,9 @@ SELECT
         ELSE 0
     END [Edit],
     CASE
-    	WHEN COALESCE(CU.[HidePasswords], CG.[HidePasswords], 0) = 0
-    	THEN 1
-    	ELSE 0
+        WHEN COALESCE(CU.[HidePasswords], CG.[HidePasswords], 0) = 0
+        THEN 1
+        ELSE 0
     END [ViewPassword],
     CASE
         WHEN COALESCE(CU.[Manage], CG.[Manage], 0) = 1
@@ -64,4 +64,4 @@ SELECT
 FROM
     [dbo].[CipherDetails](@UserId)
 WHERE
-    [UserId] = @UserId
+    [UserId] = @UserId;

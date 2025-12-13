@@ -37,7 +37,7 @@ public class ArchiveCiphersCommand : IArchiveCiphersCommand
         }
 
         var archivingCiphers = ciphers
-            .Where(c => cipherIdsSet.Contains(c.Id) && c is { Edit: true, OrganizationId: null, ArchivedDate: null })
+            .Where(c => cipherIdsSet.Contains(c.Id) && c is { Edit: true, ArchivedDate: null })
             .ToList();
 
         var revisionDate = await _cipherRepository.ArchiveAsync(archivingCiphers.Select(c => c.Id), archivingUserId);
