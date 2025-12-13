@@ -1215,12 +1215,12 @@ public class CipherServiceTests
     private static SaveDetailsAsyncDependencies GetSaveDetailsAsyncDependencies(
         SutProvider<CipherService> sutProvider,
         string newPassword,
-        bool viewPassword,
-        bool editPermission,
+        bool permission,
         string? key = null,
         string? totp = null,
         CipherLoginFido2CredentialData[]? passkeys = null,
-        CipherFieldData[]? fields = null
+        CipherFieldData[]? fields = null,
+        string? existingKey = "OriginalKey"
         )
     {
         var cipherDetails = new CipherDetails
@@ -1233,13 +1233,22 @@ public class CipherServiceTests
             Key = key,
         };
 
-        var newLoginData = new CipherLoginData { Username = "user", Password = newPassword, Totp = totp, Fido2Credentials = passkeys, Fields = fields };
+        var newLoginData = new CipherLoginData
+        {
+            Username = "user",
+            Password = newPassword,
+            Totp = totp,
+            Fido2Credentials = passkeys,
+            Fields = fields
+        };
+
         cipherDetails.Data = JsonSerializer.Serialize(newLoginData);
 
         var existingCipher = new Cipher
         {
             Id = cipherDetails.Id,
             Type = CipherType.Login,
+            Key = existingKey,
             Data = JsonSerializer.Serialize(
                 new CipherLoginData
                 {
@@ -1261,7 +1270,14 @@ public class CipherServiceTests
 
         var permissions = new Dictionary<Guid, OrganizationCipherPermission>
         {
-            { cipherDetails.Id, new OrganizationCipherPermission { ViewPassword = viewPassword, Edit = editPermission } }
+            {
+                cipherDetails.Id,
+                new OrganizationCipherPermission
+                {
+                    ViewPassword = permission,
+                    Edit = permission
+                }
+            }
         };
 
         sutProvider.GetDependency<IGetCipherPermissionsForUserQuery>()
@@ -1278,7 +1294,7 @@ public class CipherServiceTests
     [Theory, BitAutoData]
     public async Task SaveDetailsAsync_PasswordNotChangedWithoutViewPasswordPermission(string _, SutProvider<CipherService> sutProvider)
     {
-        var deps = GetSaveDetailsAsyncDependencies(sutProvider, "NewPassword", viewPassword: false, editPermission: true);
+        var deps = GetSaveDetailsAsyncDependencies(sutProvider, "NewPassword", permission: false);
 
         await deps.SutProvider.Sut.SaveDetailsAsync(
             deps.CipherDetails,
@@ -1294,7 +1310,7 @@ public class CipherServiceTests
     [Theory, BitAutoData]
     public async Task SaveDetailsAsync_PasswordNotChangedWithoutEditPermission(string _, SutProvider<CipherService> sutProvider)
     {
-        var deps = GetSaveDetailsAsyncDependencies(sutProvider, "NewPassword", viewPassword: true, editPermission: false);
+        var deps = GetSaveDetailsAsyncDependencies(sutProvider, "NewPassword", permission: false);
 
         await deps.SutProvider.Sut.SaveDetailsAsync(
             deps.CipherDetails,
@@ -1310,7 +1326,7 @@ public class CipherServiceTests
     [Theory, BitAutoData]
     public async Task SaveDetailsAsync_PasswordChangedWithPermission(string _, SutProvider<CipherService> sutProvider)
     {
-        var deps = GetSaveDetailsAsyncDependencies(sutProvider, "NewPassword", viewPassword: true, editPermission: true);
+        var deps = GetSaveDetailsAsyncDependencies(sutProvider, "NewPassword", permission: true);
 
         await deps.SutProvider.Sut.SaveDetailsAsync(
             deps.CipherDetails,
@@ -1326,7 +1342,11 @@ public class CipherServiceTests
     [Theory, BitAutoData]
     public async Task SaveDetailsAsync_CipherKeyChangedWithPermission(string _, SutProvider<CipherService> sutProvider)
     {
-        var deps = GetSaveDetailsAsyncDependencies(sutProvider, "NewPassword", viewPassword: true, editPermission: true, "NewKey");
+        var deps = GetSaveDetailsAsyncDependencies(
+            sutProvider,
+            newPassword: "NewPassword",
+            permission: true,
+            key: "NewKey");
 
         await deps.SutProvider.Sut.SaveDetailsAsync(
             deps.CipherDetails,
@@ -1336,27 +1356,40 @@ public class CipherServiceTests
             true);
 
         Assert.Equal("NewKey", deps.CipherDetails.Key);
+
+        await sutProvider.GetDependency<ICipherRepository>()
+            .Received()
+            .ReplaceAsync(Arg.Is<CipherDetails>(c => c.Id == deps.CipherDetails.Id && c.Key == "NewKey"));
     }
 
     [Theory, BitAutoData]
-    public async Task SaveDetailsAsync_CipherKeyChangedWithoutPermission(string _, SutProvider<CipherService> sutProvider)
+    public async Task SaveDetailsAsync_CipherKeyNotChangedWithoutPermission(string _, SutProvider<CipherService> sutProvider)
     {
-        var deps = GetSaveDetailsAsyncDependencies(sutProvider, "NewPassword", viewPassword: true, editPermission: false, "NewKey");
+        var deps = GetSaveDetailsAsyncDependencies(
+            sutProvider,
+            newPassword: "NewPassword",
+            permission: true,
+            key: "NewKey"
+        );
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => deps.SutProvider.Sut.SaveDetailsAsync(
+        await deps.SutProvider.Sut.SaveDetailsAsync(
             deps.CipherDetails,
             deps.CipherDetails.UserId.Value,
             deps.CipherDetails.RevisionDate,
             null,
-            true));
+            true);
 
-        Assert.Contains("do not have permission", exception.Message);
+        Assert.Equal("OriginalKey", deps.CipherDetails.Key);
+
+        await sutProvider.GetDependency<ICipherRepository>()
+            .Received()
+            .ReplaceAsync(Arg.Is<CipherDetails>(c => c.Id == deps.CipherDetails.Id && c.Key == "OriginalKey"));
     }
 
     [Theory, BitAutoData]
     public async Task SaveDetailsAsync_TotpChangedWithoutPermission(string _, SutProvider<CipherService> sutProvider)
     {
-        var deps = GetSaveDetailsAsyncDependencies(sutProvider, "NewPassword", viewPassword: true, editPermission: false, totp: "NewTotp");
+        var deps = GetSaveDetailsAsyncDependencies(sutProvider, "NewPassword", permission: false, totp: "NewTotp");
 
         await deps.SutProvider.Sut.SaveDetailsAsync(
             deps.CipherDetails,
@@ -1372,7 +1405,7 @@ public class CipherServiceTests
     [Theory, BitAutoData]
     public async Task SaveDetailsAsync_TotpChangedWithPermission(string _, SutProvider<CipherService> sutProvider)
     {
-        var deps = GetSaveDetailsAsyncDependencies(sutProvider, "NewPassword", viewPassword: true, editPermission: true, totp: "NewTotp");
+        var deps = GetSaveDetailsAsyncDependencies(sutProvider, "NewPassword", permission: true, totp: "NewTotp");
 
         await deps.SutProvider.Sut.SaveDetailsAsync(
             deps.CipherDetails,
@@ -1397,7 +1430,7 @@ public class CipherServiceTests
             }
         };
 
-        var deps = GetSaveDetailsAsyncDependencies(sutProvider, "NewPassword", viewPassword: true, editPermission: false, passkeys: passkeys);
+        var deps = GetSaveDetailsAsyncDependencies(sutProvider, "NewPassword", permission: false, passkeys: passkeys);
 
         await deps.SutProvider.Sut.SaveDetailsAsync(
             deps.CipherDetails,
@@ -1422,7 +1455,7 @@ public class CipherServiceTests
             }
         };
 
-        var deps = GetSaveDetailsAsyncDependencies(sutProvider, "NewPassword", viewPassword: true, editPermission: true, passkeys: passkeys);
+        var deps = GetSaveDetailsAsyncDependencies(sutProvider, "NewPassword", permission: true, passkeys: passkeys);
 
         await deps.SutProvider.Sut.SaveDetailsAsync(
             deps.CipherDetails,
@@ -1439,7 +1472,7 @@ public class CipherServiceTests
     [BitAutoData]
     public async Task SaveDetailsAsync_HiddenFieldsChangedWithoutPermission(string _, SutProvider<CipherService> sutProvider)
     {
-        var deps = GetSaveDetailsAsyncDependencies(sutProvider, "NewPassword", viewPassword: false, editPermission: false, fields:
+        var deps = GetSaveDetailsAsyncDependencies(sutProvider, "NewPassword", permission: false, fields:
         [
             new CipherFieldData
             {
@@ -1464,7 +1497,7 @@ public class CipherServiceTests
     [BitAutoData]
     public async Task SaveDetailsAsync_HiddenFieldsChangedWithPermission(string _, SutProvider<CipherService> sutProvider)
     {
-        var deps = GetSaveDetailsAsyncDependencies(sutProvider, "NewPassword", viewPassword: true, editPermission: true, fields:
+        var deps = GetSaveDetailsAsyncDependencies(sutProvider, "NewPassword", permission: true, fields:
         [
             new CipherFieldData
             {
