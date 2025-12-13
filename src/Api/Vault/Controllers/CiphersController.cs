@@ -923,7 +923,7 @@ public class CiphersController : Controller
         }
 
         return new CipherResponseModel(archivedCipherOrganizationDetails.First(),
-            await _userService.GetUserByIdAsync(userId),
+            await _userService.GetUserByPrincipalAsync(User),
             await _applicationCacheService.GetOrganizationAbilitiesAsync(),
             _globalSettings
         );
@@ -939,7 +939,7 @@ public class CiphersController : Controller
         }
 
         var userId = _userService.GetProperUserId(User).Value;
-        var user = await _userService.GetUserByIdAsync(userId);
+        var user = await _userService.GetUserByPrincipalAsync(User);
 
         var cipherIdsToArchive = new HashSet<Guid>(model.Ids);
 
@@ -1131,7 +1131,7 @@ public class CiphersController : Controller
         }
 
         return new CipherResponseModel(unarchivedCipherDetails.First(),
-            await _userService.GetUserByIdAsync(userId),
+            await _userService.GetUserByPrincipalAsync(User),
             await _applicationCacheService.GetOrganizationAbilitiesAsync(),
             _globalSettings
         );
@@ -1147,7 +1147,7 @@ public class CiphersController : Controller
         }
 
         var userId = _userService.GetProperUserId(User).Value;
-        var user = await _userService.GetUserByIdAsync(userId);
+        var user = await _userService.GetUserByPrincipalAsync(User);
         var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
 
         var cipherIdsToUnarchive = new HashSet<Guid>(model.Ids);

@@ -84,7 +84,7 @@ BEGIN
     SET
         [Archives] = JSON_MODIFY(
             COALESCE([Archives], N'{}'),
-            CONCAT('$."', CAST(@UserId AS VARCHAR(50)), '"'),
+            CONCAT('$."', @UserId, '"'),
             CONVERT(NVARCHAR(30), @UtcNow, 127)
         ),
         [RevisionDate] = @UtcNow
@@ -129,7 +129,7 @@ BEGIN
     SET
         [Archives] = JSON_MODIFY(
             COALESCE([Archives], N'{}'),
-            CONCAT('$."', CAST(@UserId AS VARCHAR(50)), '"'),
+            CONCAT('$."', @UserId, '"'),
             NULL
         ),
         [RevisionDate] = @UtcNow
@@ -277,7 +277,7 @@ BEGIN
     SET NOCOUNT ON
 
     EXEC [dbo].[Cipher_Create] @Id, @UserId, @OrganizationId, @Type, @Data, @Favorites, @Folders,
-        @Attachments, @CreationDate, @RevisionDate, @DeletedDate, @Reprompt, @Key
+        @Attachments, @CreationDate, @RevisionDate, @DeletedDate, @Reprompt, @Key, @Archives
 
     DECLARE @UpdateCollectionsSuccess INT
     EXEC @UpdateCollectionsSuccess = [dbo].[Cipher_UpdateCollections] @Id, @UserId, @OrganizationId, @CollectionIds
