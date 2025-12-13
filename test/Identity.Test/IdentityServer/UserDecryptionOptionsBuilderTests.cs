@@ -223,43 +223,6 @@ public class UserDecryptionOptionsBuilderTests
         Assert.False(result.TrustedDeviceOption?.HasLoginApprovingDevice);
     }
 
-    /// <summary>
-    /// This logic has been flagged as part of PM-23174.
-    /// When removing the server flag, please also remove this test, and remove the FeatureService
-    /// dependency from this suite and the following test.
-    /// </summary>
-    /// <param name="organizationUserType"></param>
-    /// <param name="ssoConfig"></param>
-    /// <param name="configurationData"></param>
-    /// <param name="organization"></param>
-    /// <param name="organizationUser"></param>
-    /// <param name="user"></param>
-    [Theory]
-    [BitAutoData(OrganizationUserType.Custom)]
-    public async Task Build_WhenManageResetPasswordPermissions_ShouldReturnHasManageResetPasswordPermissionTrue(
-        OrganizationUserType organizationUserType,
-        SsoConfig ssoConfig,
-        SsoConfigurationData configurationData,
-        CurrentContextOrganization organization,
-        [OrganizationUserWithDefaultPermissions] OrganizationUser organizationUser,
-        User user)
-    {
-        configurationData.MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption;
-        ssoConfig.Data = configurationData.Serialize();
-        ssoConfig.OrganizationId = organization.Id;
-        _currentContext.Organizations.Returns([organization]);
-        _currentContext.ManageResetPassword(organization.Id).Returns(true);
-        organizationUser.Type = organizationUserType;
-        organizationUser.OrganizationId = organization.Id;
-        organizationUser.UserId = user.Id;
-        organizationUser.SetPermissions(new Permissions() { ManageResetPassword = true });
-        _organizationUserRepository.GetByOrganizationAsync(ssoConfig.OrganizationId, user.Id).Returns(organizationUser);
-
-        var result = await _builder.ForUser(user).WithSso(ssoConfig).BuildAsync();
-
-        Assert.True(result.TrustedDeviceOption?.HasManageResetPasswordPermission);
-    }
-
     [Theory]
     [BitAutoData(OrganizationUserType.Custom)]
     public async Task Build_WhenManageResetPasswordPermissions_ShouldFetchUserFromRepositoryAndReturnHasManageResetPasswordPermissionTrue(

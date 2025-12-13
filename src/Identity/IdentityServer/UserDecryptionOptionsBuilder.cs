@@ -153,10 +153,10 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
             encryptedUserKey);
         return;
 
+        /// Determine if the user has manage reset password permission,  
+        /// as post-SSO logic requires it for forcing users with this permission to set a password.
         async Task<bool> EvaluateHasManageResetPasswordPermission()
         {
-            // PM-23174
-            // Determine if user has manage reset password permission as post sso logic requires it for forcing users with this permission to set a MP
             if (organizationUser == null)
             {
                 return false;
