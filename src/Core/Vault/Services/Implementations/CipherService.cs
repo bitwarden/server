@@ -718,6 +718,13 @@ public class CipherService : ICipherService
 
         cipherDetails.DeletedDate = cipherDetails.RevisionDate = DateTime.UtcNow;
 
+        if (cipherDetails.ArchivedDate.HasValue)
+        {
+            // If the cipher was archived, clear the archived date when soft deleting
+            // If a user were to restore an archived cipher, it should go back to the vault not the archive vault
+            cipherDetails.ArchivedDate = null;
+        }
+
         await _securityTaskRepository.MarkAsCompleteByCipherIds([cipherDetails.Id]);
         await _cipherRepository.UpsertAsync(cipherDetails);
         await _eventService.LogCipherEventAsync(cipherDetails, EventType.Cipher_SoftDeleted);
