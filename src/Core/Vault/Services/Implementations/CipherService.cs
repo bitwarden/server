@@ -718,13 +718,6 @@ public class CipherService : ICipherService
 
         cipherDetails.DeletedDate = cipherDetails.RevisionDate = DateTime.UtcNow;
 
-        if (cipherDetails.ArchivedDate.HasValue)
-        {
-            // If the cipher was archived, clear the archived date when soft deleting
-            // If a user were to restore an archived cipher, it should go back to the vault not the archive vault
-            cipherDetails.ArchivedDate = null;
-        }
-
         await _securityTaskRepository.MarkAsCompleteByCipherIds([cipherDetails.Id]);
         await _cipherRepository.UpsertAsync(cipherDetails);
         await _eventService.LogCipherEventAsync(cipherDetails, EventType.Cipher_SoftDeleted);
@@ -1029,11 +1022,8 @@ public class CipherService : ICipherService
             var existingCipherData = DeserializeCipherData(existingCipher);
             var newCipherData = DeserializeCipherData(cipher);
 
-            // "hidden password" users may not add cipher key encryption
-            if (existingCipher.Key == null && cipher.Key != null)
-            {
-                throw new BadRequestException("You do not have permission to add cipher key encryption.");
-            }
+            // For hidden-password users, never allow Key to change at all.
+            cipher.Key = existingCipher.Key; ;
             // Keep only non-hidden fileds from the new cipher
             var nonHiddenFields = newCipherData.Fields?.Where(f => f.Type != FieldType.Hidden) ?? [];
             // Get hidden fields from the existing cipher
