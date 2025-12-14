@@ -4,7 +4,7 @@ This feature supports the ability of Tools to require specific claims for access
 
 In order to access Send data a user must meet the requirements laid out in these request validators.
 
-> [!IMPORTANT] String Constants
+> [!IMPORTANT]
 > The string constants contained herein are used in conjunction with the Auth module in the SDK. Any change to these string values _must_ be intentional and _must_ have a corresponding change in the SDK.
 
 There is snapshot testing that will fail if the strings change to help detect unintended changes to the string constants.
