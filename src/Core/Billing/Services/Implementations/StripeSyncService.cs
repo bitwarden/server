@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Exceptions;
 
-namespace Bit.Core.Services;
+namespace Bit.Core.Billing.Services.Implementations;
 
 public class StripeSyncService : IStripeSyncService
 {
@@ -11,7 +11,7 @@ public class StripeSyncService : IStripeSyncService
         _stripeAdapter = stripeAdapter;
     }
 
-    public async Task UpdateCustomerEmailAddress(string gatewayCustomerId, string emailAddress)
+    public async Task UpdateCustomerEmailAddressAsync(string gatewayCustomerId, string emailAddress)
     {
         if (string.IsNullOrWhiteSpace(gatewayCustomerId))
         {
@@ -23,9 +23,9 @@ public class StripeSyncService : IStripeSyncService
             throw new InvalidEmailException();
         }
 
-        var customer = await _stripeAdapter.CustomerGetAsync(gatewayCustomerId);
+        var customer = await _stripeAdapter.GetCustomerAsync(gatewayCustomerId);
 
-        await _stripeAdapter.CustomerUpdateAsync(customer.Id,
+        await _stripeAdapter.UpdateCustomerAsync(customer.Id,
             new Stripe.CustomerUpdateOptions { Email = emailAddress });
     }
 }

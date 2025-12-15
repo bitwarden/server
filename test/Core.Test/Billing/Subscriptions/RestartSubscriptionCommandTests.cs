@@ -8,7 +8,6 @@ using Bit.Core.Billing.Subscriptions.Commands;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Test.Billing.Mocks;
 using NSubstitute;
 using Stripe;
@@ -254,13 +253,13 @@ public class RestartSubscriptionCommandTests
 
         _subscriberService.GetSubscription(organization).Returns(existingSubscription);
         _pricingClient.ListPlans().Returns([plan]);
-        _stripeAdapter.SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(newSubscription);
+        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(newSubscription);
 
         var result = await _command.Run(organization);
 
         Assert.True(result.IsT0);
 
-        await _stripeAdapter.Received(1).SubscriptionCreateAsync(Arg.Is<SubscriptionCreateOptions>(options =>
+        await _stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Is<SubscriptionCreateOptions>(options =>
             options.AutomaticTax.Enabled == true &&
             options.CollectionMethod == CollectionMethod.ChargeAutomatically &&
             options.Customer == "cus_123" &&
@@ -318,13 +317,13 @@ public class RestartSubscriptionCommandTests
 
         _subscriberService.GetSubscription(organization).Returns(existingSubscription);
         _pricingClient.ListPlans().Returns([plan]);
-        _stripeAdapter.SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(newSubscription);
+        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(newSubscription);
 
         var result = await _command.Run(organization);
 
         Assert.True(result.IsT0);
 
-        await _stripeAdapter.Received(1).SubscriptionCreateAsync(Arg.Is<SubscriptionCreateOptions>(options =>
+        await _stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Is<SubscriptionCreateOptions>(options =>
             options.Items.Count == 2 &&
             options.Items[0].Price == plan.PasswordManager.StripeSeatPlanId &&
             options.Items[0].Quantity == 5 &&
@@ -378,13 +377,13 @@ public class RestartSubscriptionCommandTests
 
         _subscriberService.GetSubscription(organization).Returns(existingSubscription);
         _pricingClient.ListPlans().Returns([plan]);
-        _stripeAdapter.SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(newSubscription);
+        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(newSubscription);
 
         var result = await _command.Run(organization);
 
         Assert.True(result.IsT0);
 
-        await _stripeAdapter.Received(1).SubscriptionCreateAsync(Arg.Is<SubscriptionCreateOptions>(options =>
+        await _stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Is<SubscriptionCreateOptions>(options =>
             options.Items.Count == 4 &&
             options.Items[0].Price == plan.PasswordManager.StripeSeatPlanId &&
             options.Items[0].Quantity == 15 &&
@@ -441,13 +440,13 @@ public class RestartSubscriptionCommandTests
 
         _subscriberService.GetSubscription(organization).Returns(existingSubscription);
         _pricingClient.ListPlans().Returns([oldPlan, newPlan]);
-        _stripeAdapter.SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(newSubscription);
+        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(newSubscription);
 
         var result = await _command.Run(organization);
 
         Assert.True(result.IsT0);
 
-        await _stripeAdapter.Received(1).SubscriptionCreateAsync(Arg.Is<SubscriptionCreateOptions>(options =>
+        await _stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Is<SubscriptionCreateOptions>(options =>
             options.Items.Count == 2 &&
             options.Items[0].Price == newPlan.PasswordManager.StripeSeatPlanId &&
             options.Items[0].Quantity == 20 &&
@@ -517,13 +516,13 @@ public class RestartSubscriptionCommandTests
 
         _subscriberService.GetSubscription(organization).Returns(existingSubscription);
         _pricingClient.ListPlans().Returns([plan]);
-        _stripeAdapter.SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(newSubscription);
+        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(newSubscription);
 
         var result = await _command.Run(organization);
 
         Assert.True(result.IsT0);
 
-        await _stripeAdapter.Received(1).SubscriptionCreateAsync(Arg.Is<SubscriptionCreateOptions>(options =>
+        await _stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Is<SubscriptionCreateOptions>(options =>
             options.Items.Count == 3 &&
             options.Items[0].Price == plan.PasswordManager.StripeSeatPlanId &&
             options.Items[0].Quantity == 12 &&
@@ -577,13 +576,13 @@ public class RestartSubscriptionCommandTests
 
         _subscriberService.GetSubscription(organization).Returns(existingSubscription);
         _pricingClient.ListPlans().Returns([plan]);
-        _stripeAdapter.SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(newSubscription);
+        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(newSubscription);
 
         var result = await _command.Run(organization);
 
         Assert.True(result.IsT0);
 
-        await _stripeAdapter.Received(1).SubscriptionCreateAsync(Arg.Is<SubscriptionCreateOptions>(options =>
+        await _stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Is<SubscriptionCreateOptions>(options =>
             options.Items.Count == 2 &&
             options.Items[0].Price == plan.PasswordManager.StripeSeatPlanId &&
             options.Items[0].Quantity == 8 &&
