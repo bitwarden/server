@@ -79,7 +79,7 @@ public class AccountsController(
     [HttpGet("subscription")]
     public async Task<SubscriptionResponseModel> GetSubscriptionAsync(
         [FromServices] GlobalSettings globalSettings,
-        [FromServices] IPaymentService paymentService)
+        [FromServices] IStripePaymentService paymentService)
     {
         var user = await userService.GetUserByPrincipalAsync(User);
         if (user == null)
