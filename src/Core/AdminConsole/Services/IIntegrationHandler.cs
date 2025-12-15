@@ -29,46 +29,65 @@ public abstract class IntegrationHandlerBase<T> : IIntegrationHandler<T>
         IntegrationMessage<T> message,
         TimeProvider timeProvider)
     {
-        var result = new IntegrationHandlerResult(success: response.IsSuccessStatusCode, message);
-
-        if (response.IsSuccessStatusCode) return result;
-
-        switch (response.StatusCode)
+        if (response.IsSuccessStatusCode)
         {
-            case HttpStatusCode.TooManyRequests:
-            case HttpStatusCode.RequestTimeout:
-            case HttpStatusCode.InternalServerError:
-            case HttpStatusCode.BadGateway:
-            case HttpStatusCode.ServiceUnavailable:
-            case HttpStatusCode.GatewayTimeout:
-                result.Retryable = true;
-                result.FailureReason = response.ReasonPhrase ?? $"Failure with status code: {(int)response.StatusCode}";
-
-                if (response.Headers.TryGetValues("Retry-After", out var values))
-                {
-                    var value = values.FirstOrDefault();
-                    if (int.TryParse(value, out var seconds))
-                    {
-                        // Retry-after was specified in seconds. Adjust DelayUntilDate by the requested number of seconds.
-                        result.DelayUntilDate = timeProvider.GetUtcNow().AddSeconds(seconds).UtcDateTime;
-                    }
-                    else if (DateTimeOffset.TryParseExact(value,
-                                 "r", // "r" is the round-trip format: RFC1123
-                                 CultureInfo.InvariantCulture,
-                                 DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
-                                 out var retryDate))
-                    {
-                        // Retry-after was specified as a date. Adjust DelayUntilDate to the specified date.
-                        result.DelayUntilDate = retryDate.UtcDateTime;
-                    }
-                }
-                break;
-            default:
-                result.Retryable = false;
-                result.FailureReason = response.ReasonPhrase ?? $"Failure with status code {(int)response.StatusCode}";
-                break;
+            return IntegrationHandlerResult.Succeed(message);
         }
 
-        return result;
+        var category = ClassifyHttpStatusCode(response.StatusCode);
+        var failureReason = response.ReasonPhrase ?? $"Failure with status code {(int)response.StatusCode}";
+        DateTime? delayUntil = null;
+
+        // Handle Retry-After header for rate-limited and retryable errors
+        if (category is IntegrationFailureCategory.RateLimited or IntegrationFailureCategory.TransientError)
+        {
+            if (response.Headers.TryGetValues("Retry-After", out var values))
+            {
+                var value = values.FirstOrDefault();
+                if (int.TryParse(value, out var seconds))
+                {
+                    // Retry-after was specified in seconds
+                    delayUntil = timeProvider.GetUtcNow().AddSeconds(seconds).UtcDateTime;
+                }
+                else if (DateTimeOffset.TryParseExact(value,
+                             "r", // "r" is the round-trip format: RFC1123
+                             CultureInfo.InvariantCulture,
+                             DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+                             out var retryDate))
+                {
+                    // Retry-after was specified as a date
+                    delayUntil = retryDate.UtcDateTime;
+                }
+            }
+        }
+
+        return IntegrationHandlerResult.Fail(
+            message,
+            category,
+            failureReason,
+            delayUntil
+        );
+    }
+
+    protected static IntegrationFailureCategory ClassifyHttpStatusCode(HttpStatusCode statusCode)
+    {
+        return statusCode switch
+        {
+            HttpStatusCode.Unauthorized => IntegrationFailureCategory.AuthenticationFailed,
+            HttpStatusCode.Forbidden => IntegrationFailureCategory.AuthenticationFailed,
+            HttpStatusCode.NotFound => IntegrationFailureCategory.ConfigurationError,
+            HttpStatusCode.TemporaryRedirect => IntegrationFailureCategory.ConfigurationError,
+            HttpStatusCode.PermanentRedirect => IntegrationFailureCategory.ConfigurationError,
+            HttpStatusCode.MovedPermanently => IntegrationFailureCategory.ConfigurationError,
+            HttpStatusCode.TooManyRequests => IntegrationFailureCategory.RateLimited,
+            HttpStatusCode.ServiceUnavailable => IntegrationFailureCategory.ServiceUnavailable,
+            HttpStatusCode.RequestTimeout => IntegrationFailureCategory.TransientError,
+            HttpStatusCode.InternalServerError => IntegrationFailureCategory.TransientError,
+            HttpStatusCode.BadGateway => IntegrationFailureCategory.TransientError,
+            HttpStatusCode.GatewayTimeout => IntegrationFailureCategory.TransientError,
+            _ => IntegrationFailureCategory.ServiceUnavailable
+        };
     }
 }
+
+

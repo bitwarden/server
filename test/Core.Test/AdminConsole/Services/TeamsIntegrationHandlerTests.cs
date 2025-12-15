@@ -103,7 +103,7 @@ public class TeamsIntegrationHandlerTests
     }
 
     [Theory, BitAutoData]
-    public async Task HandleAsync_UnknownException_ReturnsFalseAndNotRetryable(IntegrationMessage<TeamsIntegrationConfigurationDetails> message)
+    public async Task HandleAsync_UnknownException_ReturnsFalseButRetryable(IntegrationMessage<TeamsIntegrationConfigurationDetails> message)
     {
         var sutProvider = GetSutProvider();
         message.Configuration = new TeamsIntegrationConfigurationDetails(_channelId, _serviceUrl);
@@ -114,7 +114,7 @@ public class TeamsIntegrationHandlerTests
         var result = await sutProvider.Sut.HandleAsync(message);
 
         Assert.False(result.Success);
-        Assert.False(result.Retryable);
+        Assert.True(result.Retryable); // Unknown exceptions are classified as TransientError (retryable)
         Assert.Equal(result.Message, message);
 
         await sutProvider.GetDependency<ITeamsService>().Received(1).SendMessageToChannelAsync(

@@ -38,8 +38,7 @@ public class IntegrationHandlerTests
         public override Task<IntegrationHandlerResult> HandleAsync(
             IntegrationMessage<WebhookIntegrationConfigurationDetails> message)
         {
-            var result = new IntegrationHandlerResult(success: true, message: message);
-            return Task.FromResult(result);
+            return Task.FromResult(IntegrationHandlerResult.Succeed(message: message));
         }
     }
 }
