@@ -222,7 +222,7 @@ public abstract class BaseRequestValidator<T> where T : class
     /// <returns>true if the scheme successfully passed validation, otherwise false.</returns>
     private async Task<bool> ValidateClientVersionAsync(T context, CustomValidatorRequestContext validatorContext)
     {
-        var ok = _clientVersionValidator.ValidateAsync(validatorContext.User, validatorContext);
+        var ok = _clientVersionValidator.Validate(validatorContext.User, validatorContext);
         if (ok)
         {
             return true;

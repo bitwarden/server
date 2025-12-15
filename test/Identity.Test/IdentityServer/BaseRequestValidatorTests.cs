@@ -108,7 +108,7 @@ public class BaseRequestValidatorTests
 
         // Default client version validator behavior: allow to pass unless a test overrides.
         _clientVersionValidator
-            .ValidateAsync(Arg.Any<User>(), Arg.Any<CustomValidatorRequestContext>())
+            .Validate(Arg.Any<User>(), Arg.Any<CustomValidatorRequestContext>())
             .Returns(true);
     }
 
@@ -1187,7 +1187,7 @@ public class BaseRequestValidatorTests
 
         // Make client version validation succeed but ensure it's invoked
         _clientVersionValidator
-            .ValidateAsync(requestContext.User, requestContext)
+            .Validate(requestContext.User, requestContext)
             .Returns(true);
 
         // Ensure SSO requirement triggers an early stop after version validation to avoid success path setup
@@ -1200,7 +1200,7 @@ public class BaseRequestValidatorTests
 
         // Assert
         _clientVersionValidator.Received(1)
-            .ValidateAsync(requestContext.User, requestContext);
+            .Validate(requestContext.User, requestContext);
     }
 
     /// <summary>

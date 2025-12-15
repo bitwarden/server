@@ -34,7 +34,7 @@ public class ClientVersionValidatorTests
         var user = MakeValidV2User();
 
         // Act
-        var ok = sut.ValidateAsync(user, ctx);
+        var ok = sut.Validate(user, ctx);
 
         // Assert
         Assert.True(ok);
@@ -49,7 +49,7 @@ public class ClientVersionValidatorTests
         var user = MakeValidV2User();
 
         // Act
-        var ok = sut.ValidateAsync(user, ctx);
+        var ok = sut.Validate(user, ctx);
 
         // Assert
         Assert.False(ok);
@@ -67,7 +67,7 @@ public class ClientVersionValidatorTests
         User? user = null;
 
         // Act
-        var ok = sut.ValidateAsync(user, ctx);
+        var ok = sut.Validate(user, ctx);
 
         // Assert
         Assert.False(ok);
@@ -86,7 +86,7 @@ public class ClientVersionValidatorTests
         user.PrivateKey = null;
 
         // Act
-        var ok = sut.ValidateAsync(user, ctx);
+        var ok = sut.Validate(user, ctx);
 
         // Assert
         Assert.True(ok);
@@ -102,7 +102,7 @@ public class ClientVersionValidatorTests
         var user = MakeValidV2User();
         user.SecurityVersion = null;
         // Act
-        var ok = sut.ValidateAsync(user, ctx);
+        var ok = sut.Validate(user, ctx);
         // Assert
         Assert.True(ok);
     }
@@ -116,7 +116,7 @@ public class ClientVersionValidatorTests
         var user = MakeValidV2User();
 
         // Act
-        var ok = sut.ValidateAsync(user, ctx);
+        var ok = sut.Validate(user, ctx);
 
         // Assert
         Assert.False(ok);

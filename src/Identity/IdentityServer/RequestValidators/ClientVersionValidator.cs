@@ -8,7 +8,7 @@ namespace Bit.Identity.IdentityServer.RequestValidators;
 
 public interface IClientVersionValidator
 {
-    bool ValidateAsync(User user, CustomValidatorRequestContext requestContext);
+    bool Validate(User user, CustomValidatorRequestContext requestContext);
 }
 
 /// <summary>
@@ -28,7 +28,7 @@ public class ClientVersionValidator(
     private const string _noUserMessage = "No user found while trying to validate client version";
     private const string _versionHeaderMissing = "No client version header found, required to prevent encryption errors. Please confirm your client is supplying the header: \"Bitwarden-Client-Version\"";
 
-    public bool ValidateAsync(User? user, CustomValidatorRequestContext requestContext)
+    public bool Validate(User? user, CustomValidatorRequestContext requestContext)
     {
         // Do this nullish check because the base request validator currently is not
         // strict null checking. Once that gets fixed then we can see about making

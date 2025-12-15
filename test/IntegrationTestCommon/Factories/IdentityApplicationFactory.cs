@@ -54,7 +54,7 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
             // Bypass client version gating to isolate tests from client version behavior
             SubstituteService<IClientVersionValidator>(svc =>
             {
-                svc.ValidateAsync(Arg.Any<User>(), Arg.Any<CustomValidatorRequestContext>())
+                svc.Validate(Arg.Any<User>(), Arg.Any<CustomValidatorRequestContext>())
                     .Returns(true);
             });
         }

@@ -625,7 +625,7 @@ public class IdentityServerSsoTests
         // Bypass client version gating to isolate SSO test behavior
         factory.SubstituteService<IClientVersionValidator>(svc =>
         {
-            svc.ValidateAsync(Arg.Any<User>(), Arg.Any<CustomValidatorRequestContext>())
+            svc.Validate(Arg.Any<User>(), Arg.Any<CustomValidatorRequestContext>())
                 .Returns(true);
         });
 
