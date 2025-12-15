@@ -1368,7 +1368,7 @@ public class CipherServiceTests
         var deps = GetSaveDetailsAsyncDependencies(
             sutProvider,
             newPassword: "NewPassword",
-            permission: true,
+            permission: false,
             key: "NewKey"
         );
 
