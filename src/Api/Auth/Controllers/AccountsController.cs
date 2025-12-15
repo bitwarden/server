@@ -444,15 +444,20 @@ public class AccountsController : Controller
             }
         }
 
-        if (model.AccountKeys != null && model.AccountKeys.ToAccountKeysData().IsV2Encryption())
+        if (model.AccountKeys != null)
         {
             var accountKeysData = model.AccountKeys.ToAccountKeysData();
+            if (!accountKeysData.IsV2Encryption())
+            {
+                throw new BadRequestException("AccountKeys are only supported for V2 encryption.");
+            }
             await _userRepository.SetV2AccountCryptographicStateAsync(user.Id, accountKeysData);
             return new KeysResponseModel(accountKeysData, user.Key);
         }
         else
         {
-            // Todo: Drop this after a transition period. This will drop both no-account-keys requests, and V1 encryption account keys requests
+            // Todo: Drop this after a transition period. This will drop no-account-keys requests.
+            // The V1 check in the other branch should persist
             // https://bitwarden.atlassian.net/browse/PM-27329
             await _userService.SaveUserAsync(model.ToUser(user));
             return new KeysResponseModel(new UserAccountKeysData
