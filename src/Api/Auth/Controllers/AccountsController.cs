@@ -452,7 +452,8 @@ public class AccountsController : Controller
         }
         else
         {
-            // Todo: Drop this after a transition period
+            // Todo: Drop this after a transition period. This will drop both no-account-keys requests, and V1 encryption account keys requests
+            // https://bitwarden.atlassian.net/browse/PM-27329
             await _userService.SaveUserAsync(model.ToUser(user));
             return new KeysResponseModel(new UserAccountKeysData
             {
