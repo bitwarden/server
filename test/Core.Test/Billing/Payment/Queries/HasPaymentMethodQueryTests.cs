@@ -3,7 +3,6 @@ using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Services;
-using Bit.Core.Services;
 using Bit.Core.Test.Billing.Extensions;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
@@ -57,7 +56,7 @@ public class HasPaymentMethodQueryTests
         _setupIntentCache.GetSetupIntentIdForSubscriber(organization.Id).Returns("seti_123");
 
         _stripeAdapter
-            .SetupIntentGet("seti_123",
+            .GetSetupIntentAsync("seti_123",
                 Arg.Is<SetupIntentGetOptions>(options => options.HasExpansions("payment_method")))
             .Returns(new SetupIntent
             {
@@ -162,7 +161,7 @@ public class HasPaymentMethodQueryTests
         _setupIntentCache.GetSetupIntentIdForSubscriber(organization.Id).Returns("seti_123");
 
         _stripeAdapter
-            .SetupIntentGet("seti_123",
+            .GetSetupIntentAsync("seti_123",
                 Arg.Is<SetupIntentGetOptions>(options => options.HasExpansions("payment_method")))
             .Returns(new SetupIntent
             {
@@ -246,7 +245,7 @@ public class HasPaymentMethodQueryTests
         _setupIntentCache.GetSetupIntentIdForSubscriber(organization.Id).Returns("seti_123");
 
         _stripeAdapter
-            .SetupIntentGet("seti_123",
+            .GetSetupIntentAsync("seti_123",
                 Arg.Is<SetupIntentGetOptions>(options => options.HasExpansions("payment_method")))
             .Returns(new SetupIntent
             {

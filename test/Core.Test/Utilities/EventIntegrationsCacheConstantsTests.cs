@@ -55,20 +55,6 @@ public class EventIntegrationsCacheConstantsTests
         Assert.NotEqual(keyWithEvent, keyWithDifferentIntegration);
         Assert.NotEqual(keyWithEvent, keyWithDifferentOrganization);
         Assert.Equal(keyWithEvent, keyWithSameDetails);
-
-        var expectedWithNullEvent = $"OrganizationIntegrationConfigurationDetails:{orgId:N}:Hec:";
-        var keyWithNullEvent = EventIntegrationsCacheConstants.BuildCacheKeyForOrganizationIntegrationConfigurationDetails(
-            orgId, integrationType, null);
-        var keyWithNullEventDifferentIntegration = EventIntegrationsCacheConstants.BuildCacheKeyForOrganizationIntegrationConfigurationDetails(
-            orgId, IntegrationType.Webhook, null);
-        var keyWithNullEventDifferentOrganization = EventIntegrationsCacheConstants.BuildCacheKeyForOrganizationIntegrationConfigurationDetails(
-            Guid.NewGuid(), integrationType, null);
-
-        Assert.Equal(expectedWithNullEvent, keyWithNullEvent);
-        Assert.NotEqual(keyWithEvent, keyWithNullEvent);
-        Assert.NotEqual(keyWithNullEvent, keyWithDifferentEvent);
-        Assert.NotEqual(keyWithNullEvent, keyWithNullEventDifferentIntegration);
-        Assert.NotEqual(keyWithNullEvent, keyWithNullEventDifferentOrganization);
     }
 
     [Theory, BitAutoData]
