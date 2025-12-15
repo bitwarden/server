@@ -723,28 +723,6 @@ public class AccountsControllerTests : IDisposable
         Assert.Contains("User has existing keypair", exception.Message);
     }
 
-    [Theory]
-    [BitAutoData(" ")]
-    [BitAutoData("")]
-    [BitAutoData((string)null)]
-    public async Task PostKeys_Success(string? existingKeyValue, KeysRequestModel model)
-    {
-        var user = GenerateExampleUser();
-        user.Key = "existingUserKey";
-        user.PrivateKey = existingKeyValue;
-        user.PublicKey = existingKeyValue;
-        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
-
-        var result = await _sut.PostKeys(model);
-
-        Assert.NotNull(result);
-        Assert.Equal(user.Key, result.Key);
-        Assert.Equal(model.EncryptedPrivateKey, result.PrivateKey);
-        Assert.Equal(model.PublicKey, result.PublicKey);
-        await _userService.Received(1).SaveUserAsync(Arg.Is<User>(x =>
-            x.PrivateKey == model.EncryptedPrivateKey && x.PublicKey == model.PublicKey));
-    }
-
     // Below are helper functions that currently belong to this
     // test class, but ultimately may need to be split out into
     // something greater in order to share common test steps with
@@ -802,8 +780,8 @@ public class AccountsControllerTests : IDisposable
         KeysRequestModel model)
     {
         // Arrange
-        user.PublicKey = "public-key";
-        user.PrivateKey = "encrypted-private-key";
+        user.PublicKey = null;
+        user.PrivateKey = null;
         model.AccountKeys = new AccountKeysRequestModel
         {
             UserKeyEncryptedAccountPrivateKey = "wrapped-private-key",
@@ -828,7 +806,6 @@ public class AccountsControllerTests : IDisposable
         };
 
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
-        _featureService.IsEnabled(Bit.Core.FeatureFlagKeys.ReturnErrorOnExistingKeypair).Returns(false);
 
         // Act
         var result = await _sut.PostKeys(model);
@@ -855,7 +832,6 @@ public class AccountsControllerTests : IDisposable
         model.EncryptedPrivateKey = "encrypted-private-key";
 
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
-        _featureService.IsEnabled(Bit.Core.FeatureFlagKeys.ReturnErrorOnExistingKeypair).Returns(false);
 
         // Act
         var result = await _sut.PostKeys(model);
