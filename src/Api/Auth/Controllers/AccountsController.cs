@@ -444,7 +444,7 @@ public class AccountsController : Controller
             }
         }
 
-        if (model.AccountKeys != null || !model.AccountKeys.ToAccountKeysData().IsV2Encryption())
+        if (model.AccountKeys != null && model.AccountKeys.ToAccountKeysData().IsV2Encryption())
         {
             var accountKeysData = model.AccountKeys.ToAccountKeysData();
             await _userRepository.SetV2AccountCryptographicStateAsync(user.Id, accountKeysData);
