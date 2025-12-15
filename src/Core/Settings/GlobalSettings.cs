@@ -56,7 +56,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual EventLoggingSettings EventLogging { get; set; } = new EventLoggingSettings();
     public virtual MailSettings Mail { get; set; } = new MailSettings();
     public virtual IConnectionStringSettings Storage { get; set; } = new ConnectionStringSettings();
-    public virtual ConnectionStringSettings Events { get; set; } = new ConnectionStringSettings();
+    public virtual AzureQueueEventSettings Events { get; set; } = new AzureQueueEventSettings();
     public virtual DistributedCacheSettings DistributedCache { get; set; } = new DistributedCacheSettings();
     public virtual NotificationsSettings Notifications { get; set; } = new NotificationsSettings();
     public virtual IFileStorageSettings Attachment { get; set; }
@@ -392,6 +392,24 @@ public class GlobalSettings : IGlobalSettings
                 get => _integrationExchangeName;
                 set => _integrationExchangeName = value.Trim('"');
             }
+        }
+    }
+
+    public class AzureQueueEventSettings : IConnectionStringSettings
+    {
+        private string _connectionString;
+        private string _queueName;
+
+        public string ConnectionString
+        {
+            get => _connectionString;
+            set => _connectionString = value?.Trim('"');
+        }
+
+        public string QueueName
+        {
+            get => _queueName;
+            set => _queueName = value?.Trim('"');
         }
     }
 

@@ -727,7 +727,8 @@ public class EventIntegrationServiceCollectionExtensionsTests
         var services = new ServiceCollection();
         var globalSettings = CreateGlobalSettings(new Dictionary<string, string?>
         {
-            ["GlobalSettings:Events:ConnectionString"] = "DefaultEndpointsProtocol=https;AccountName=test;AccountKey=test;EndpointSuffix=core.windows.net"
+            ["GlobalSettings:Events:ConnectionString"] = "DefaultEndpointsProtocol=https;AccountName=test;AccountKey=test;EndpointSuffix=core.windows.net",
+            ["GlobalSettings:Events:QueueName"] = "event"
         });
 
         services.AddEventWriteServices(globalSettings);

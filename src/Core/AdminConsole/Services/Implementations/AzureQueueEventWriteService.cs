@@ -8,7 +8,7 @@ namespace Bit.Core.Services;
 public class AzureQueueEventWriteService : AzureQueueService<IEvent>, IEventWriteService
 {
     public AzureQueueEventWriteService(GlobalSettings globalSettings) : base(
-        new QueueClient(globalSettings.Events.ConnectionString, "event"),
+        new QueueClient(globalSettings.Events.ConnectionString, globalSettings.Events.QueueName),
         JsonHelpers.IgnoreWritingNull)
     { }
 
