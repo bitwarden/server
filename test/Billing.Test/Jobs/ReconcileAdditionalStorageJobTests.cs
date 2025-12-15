@@ -62,7 +62,7 @@ public class ReconcileAdditionalStorageJobTests
 
         // Assert
         _stripeFacade.Received(3).ListSubscriptionsAutoPagingAsync(
-            Arg.Is<SubscriptionListOptions>(o => o.Status == "active"));
+            Arg.Is<SubscriptionListOptions>(o => o.Limit == 100));
     }
 
     #endregion
@@ -553,6 +553,152 @@ public class ReconcileAdditionalStorageJobTests
 
     #endregion
 
+    #region Subscription Status Filtering Tests
+
+    [Fact]
+    public async Task Execute_ActiveStatusSubscription_ProcessesSubscription()
+    {
+        // Arrange
+        var context = CreateJobExecutionContext();
+        _featureService.IsEnabled(FeatureFlagKeys.PM28265_EnableReconcileAdditionalStorageJob).Returns(true);
+        _featureService.IsEnabled(FeatureFlagKeys.PM28265_ReconcileAdditionalStorageJobEnableLiveMode).Returns(true);
+
+        var subscription = CreateSubscription("sub_123", "storage-gb-monthly", quantity: 10, status: StripeConstants.SubscriptionStatus.Active);
+
+        _stripeFacade.ListSubscriptionsAutoPagingAsync(Arg.Any<SubscriptionListOptions>())
+            .Returns(AsyncEnumerable.Create(subscription));
+        _stripeFacade.UpdateSubscription(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
+            .Returns(subscription);
+
+        // Act
+        await _sut.Execute(context);
+
+        // Assert
+        await _stripeFacade.Received(1).UpdateSubscription("sub_123", Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Fact]
+    public async Task Execute_TrialingStatusSubscription_ProcessesSubscription()
+    {
+        // Arrange
+        var context = CreateJobExecutionContext();
+        _featureService.IsEnabled(FeatureFlagKeys.PM28265_EnableReconcileAdditionalStorageJob).Returns(true);
+        _featureService.IsEnabled(FeatureFlagKeys.PM28265_ReconcileAdditionalStorageJobEnableLiveMode).Returns(true);
+
+        var subscription = CreateSubscription("sub_123", "storage-gb-monthly", quantity: 10, status: StripeConstants.SubscriptionStatus.Trialing);
+
+        _stripeFacade.ListSubscriptionsAutoPagingAsync(Arg.Any<SubscriptionListOptions>())
+            .Returns(AsyncEnumerable.Create(subscription));
+        _stripeFacade.UpdateSubscription(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
+            .Returns(subscription);
+
+        // Act
+        await _sut.Execute(context);
+
+        // Assert
+        await _stripeFacade.Received(1).UpdateSubscription("sub_123", Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Fact]
+    public async Task Execute_PastDueStatusSubscription_ProcessesSubscription()
+    {
+        // Arrange
+        var context = CreateJobExecutionContext();
+        _featureService.IsEnabled(FeatureFlagKeys.PM28265_EnableReconcileAdditionalStorageJob).Returns(true);
+        _featureService.IsEnabled(FeatureFlagKeys.PM28265_ReconcileAdditionalStorageJobEnableLiveMode).Returns(true);
+
+        var subscription = CreateSubscription("sub_123", "storage-gb-monthly", quantity: 10, status: StripeConstants.SubscriptionStatus.PastDue);
+
+        _stripeFacade.ListSubscriptionsAutoPagingAsync(Arg.Any<SubscriptionListOptions>())
+            .Returns(AsyncEnumerable.Create(subscription));
+        _stripeFacade.UpdateSubscription(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
+            .Returns(subscription);
+
+        // Act
+        await _sut.Execute(context);
+
+        // Assert
+        await _stripeFacade.Received(1).UpdateSubscription("sub_123", Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Fact]
+    public async Task Execute_CanceledStatusSubscription_SkipsSubscription()
+    {
+        // Arrange
+        var context = CreateJobExecutionContext();
+        _featureService.IsEnabled(FeatureFlagKeys.PM28265_EnableReconcileAdditionalStorageJob).Returns(true);
+        _featureService.IsEnabled(FeatureFlagKeys.PM28265_ReconcileAdditionalStorageJobEnableLiveMode).Returns(true);
+
+        var subscription = CreateSubscription("sub_123", "storage-gb-monthly", quantity: 10, status: StripeConstants.SubscriptionStatus.Canceled);
+
+        _stripeFacade.ListSubscriptionsAutoPagingAsync(Arg.Any<SubscriptionListOptions>())
+            .Returns(AsyncEnumerable.Create(subscription));
+
+        // Act
+        await _sut.Execute(context);
+
+        // Assert
+        await _stripeFacade.DidNotReceiveWithAnyArgs().UpdateSubscription(null!);
+    }
+
+    [Fact]
+    public async Task Execute_IncompleteStatusSubscription_SkipsSubscription()
+    {
+        // Arrange
+        var context = CreateJobExecutionContext();
+        _featureService.IsEnabled(FeatureFlagKeys.PM28265_EnableReconcileAdditionalStorageJob).Returns(true);
+        _featureService.IsEnabled(FeatureFlagKeys.PM28265_ReconcileAdditionalStorageJobEnableLiveMode).Returns(true);
+
+        var subscription = CreateSubscription("sub_123", "storage-gb-monthly", quantity: 10, status: StripeConstants.SubscriptionStatus.Incomplete);
+
+        _stripeFacade.ListSubscriptionsAutoPagingAsync(Arg.Any<SubscriptionListOptions>())
+            .Returns(AsyncEnumerable.Create(subscription));
+
+        // Act
+        await _sut.Execute(context);
+
+        // Assert
+        await _stripeFacade.DidNotReceiveWithAnyArgs().UpdateSubscription(null!);
+    }
+
+    [Fact]
+    public async Task Execute_MixedSubscriptionStatuses_OnlyProcessesValidStatuses()
+    {
+        // Arrange
+        var context = CreateJobExecutionContext();
+        _featureService.IsEnabled(FeatureFlagKeys.PM28265_EnableReconcileAdditionalStorageJob).Returns(true);
+        _featureService.IsEnabled(FeatureFlagKeys.PM28265_ReconcileAdditionalStorageJobEnableLiveMode).Returns(true);
+
+        var activeSubscription = CreateSubscription("sub_active", "storage-gb-monthly", quantity: 10, status: StripeConstants.SubscriptionStatus.Active);
+        var trialingSubscription = CreateSubscription("sub_trialing", "storage-gb-monthly", quantity: 8, status: StripeConstants.SubscriptionStatus.Trialing);
+        var pastDueSubscription = CreateSubscription("sub_pastdue", "storage-gb-monthly", quantity: 6, status: StripeConstants.SubscriptionStatus.PastDue);
+        var canceledSubscription = CreateSubscription("sub_canceled", "storage-gb-monthly", quantity: 5, status: StripeConstants.SubscriptionStatus.Canceled);
+        var incompleteSubscription = CreateSubscription("sub_incomplete", "storage-gb-monthly", quantity: 4, status: StripeConstants.SubscriptionStatus.Incomplete);
+
+        _stripeFacade.ListSubscriptionsAutoPagingAsync(Arg.Any<SubscriptionListOptions>())
+            .Returns(AsyncEnumerable.Create(activeSubscription, trialingSubscription, pastDueSubscription, canceledSubscription, incompleteSubscription));
+        _stripeFacade.UpdateSubscription(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
+            .Returns(callInfo => callInfo.Arg<string>() switch
+            {
+                "sub_active" => activeSubscription,
+                "sub_trialing" => trialingSubscription,
+                "sub_pastdue" => pastDueSubscription,
+                _ => null
+            });
+
+        // Act
+        await _sut.Execute(context);
+
+        // Assert
+        await _stripeFacade.Received(1).UpdateSubscription("sub_active", Arg.Any<SubscriptionUpdateOptions>());
+        await _stripeFacade.Received(1).UpdateSubscription("sub_trialing", Arg.Any<SubscriptionUpdateOptions>());
+        await _stripeFacade.Received(1).UpdateSubscription("sub_pastdue", Arg.Any<SubscriptionUpdateOptions>());
+        await _stripeFacade.DidNotReceive().UpdateSubscription("sub_canceled", Arg.Any<SubscriptionUpdateOptions>());
+        await _stripeFacade.DidNotReceive().UpdateSubscription("sub_incomplete", Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    #endregion
+
     #region Cancellation Tests
 
     [Fact]
@@ -598,7 +744,8 @@ public class ReconcileAdditionalStorageJobTests
         string id,
         string priceId,
         long? quantity = null,
-        Dictionary<string, string>? metadata = null)
+        Dictionary<string, string>? metadata = null,
+        string status = StripeConstants.SubscriptionStatus.Active)
     {
         var price = new Price { Id = priceId };
         var item = new SubscriptionItem
@@ -611,6 +758,7 @@ public class ReconcileAdditionalStorageJobTests
         return new Subscription
         {
             Id = id,
+            Status = status,
             Metadata = metadata,
             Items = new StripeList<SubscriptionItem>
             {
