@@ -1,7 +1,8 @@
 ﻿using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Services.Implementations;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -49,7 +50,7 @@ public class StripePaymentServiceTests
         };
 
         sutProvider.GetDependency<IStripeAdapter>()
-            .SubscriptionGetAsync(
+            .GetSubscriptionAsync(
                 subscriber.GatewaySubscriptionId,
                 Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
@@ -100,7 +101,7 @@ public class StripePaymentServiceTests
         };
 
         sutProvider.GetDependency<IStripeAdapter>()
-            .SubscriptionGetAsync(
+            .GetSubscriptionAsync(
                 subscriber.GatewaySubscriptionId,
                 Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
@@ -159,7 +160,7 @@ public class StripePaymentServiceTests
         };
 
         sutProvider.GetDependency<IStripeAdapter>()
-            .SubscriptionGetAsync(
+            .GetSubscriptionAsync(
                 subscriber.GatewaySubscriptionId,
                 Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
@@ -198,7 +199,7 @@ public class StripePaymentServiceTests
         };
 
         sutProvider.GetDependency<IStripeAdapter>()
-            .SubscriptionGetAsync(
+            .GetSubscriptionAsync(
                 subscriber.GatewaySubscriptionId,
                 Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
@@ -256,7 +257,7 @@ public class StripePaymentServiceTests
         };
 
         sutProvider.GetDependency<IStripeAdapter>()
-            .SubscriptionGetAsync(
+            .GetSubscriptionAsync(
                 subscriber.GatewaySubscriptionId,
                 Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
@@ -295,7 +296,7 @@ public class StripePaymentServiceTests
         };
 
         sutProvider.GetDependency<IStripeAdapter>()
-            .SubscriptionGetAsync(
+            .GetSubscriptionAsync(
                 subscriber.GatewaySubscriptionId,
                 Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
@@ -332,7 +333,7 @@ public class StripePaymentServiceTests
         };
 
         sutProvider.GetDependency<IStripeAdapter>()
-            .SubscriptionGetAsync(
+            .GetSubscriptionAsync(
                 subscriber.GatewaySubscriptionId,
                 Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
@@ -367,7 +368,7 @@ public class StripePaymentServiceTests
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         stripeAdapter
-            .SubscriptionGetAsync(
+            .GetSubscriptionAsync(
                 Arg.Any<string>(),
                 Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
@@ -376,7 +377,7 @@ public class StripePaymentServiceTests
         await sutProvider.Sut.GetSubscriptionAsync(subscriber);
 
         // Assert - Verify expand options are correct
-        await stripeAdapter.Received(1).SubscriptionGetAsync(
+        await stripeAdapter.Received(1).GetSubscriptionAsync(
             subscriber.GatewaySubscriptionId,
             Arg.Is<SubscriptionGetOptions>(o =>
                 o.Expand.Contains("customer.discount.coupon.applies_to") &&
@@ -405,6 +406,6 @@ public class StripePaymentServiceTests
         // Verify no Stripe API calls were made
         await sutProvider.GetDependency<IStripeAdapter>()
             .DidNotReceive()
-            .SubscriptionGetAsync(Arg.Any<string>(), Arg.Any<SubscriptionGetOptions>());
+            .GetSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionGetOptions>());
     }
 }

@@ -9,7 +9,6 @@ using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
-using Bit.Core.Services;
 using Stripe;
 using Stripe.Tax;
 
@@ -201,7 +200,7 @@ public class GetOrganizationWarningsQuery(
         // ReSharper disable once InvertIf
         if (subscription.Status == SubscriptionStatus.PastDue)
         {
-            var openInvoices = await stripeAdapter.InvoiceSearchAsync(new InvoiceSearchOptions
+            var openInvoices = await stripeAdapter.SearchInvoiceAsync(new InvoiceSearchOptions
             {
                 Query = $"subscription:'{subscription.Id}' status:'open'"
             });
@@ -257,8 +256,8 @@ public class GetOrganizationWarningsQuery(
 
         // Get active and scheduled registrations
         var registrations = (await Task.WhenAll(
-                stripeAdapter.TaxRegistrationsListAsync(new RegistrationListOptions { Status = TaxRegistrationStatus.Active }),
-                stripeAdapter.TaxRegistrationsListAsync(new RegistrationListOptions { Status = TaxRegistrationStatus.Scheduled })))
+                stripeAdapter.ListTaxRegistrationsAsync(new RegistrationListOptions { Status = TaxRegistrationStatus.Active }),
+                stripeAdapter.ListTaxRegistrationsAsync(new RegistrationListOptions { Status = TaxRegistrationStatus.Scheduled })))
             .SelectMany(registrations => registrations.Data);
 
         // Find the matching registration for the customer
