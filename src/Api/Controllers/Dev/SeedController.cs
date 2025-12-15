@@ -48,7 +48,7 @@ public class SeedController : ControllerBase
         var labeledName = request.Name;
         var adminEmail = $"seed-{request.Label}-admin@{request.Domain}";
         var recipe = new OrganizationWithUsersRecipe(_db);
-        var orgId = recipe.Seed(labeledName, request.UserCount, request.Domain, request.Label);
+        var orgId = recipe.Seed(labeledName, request.Domain, request.UserCount, label: request.Label);
         // Seeders create fixed password hash; return the known plaintext for automation
         var adminPassword = "P@ssword123!";
         _logger.LogInformation("Seeded org {OrgId} with label {Label} from {Ip}", orgId, request.Label, HttpContext.Connection.RemoteIpAddress?.ToString());
