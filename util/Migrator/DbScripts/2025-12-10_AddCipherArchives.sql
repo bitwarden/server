@@ -612,3 +612,15 @@ BEGIN
     SELECT 0 -- 0 = Success
 END
 GO
+
+-- Drop deprecated ArchivedDate column (EF already removed this for other providers)
+IF EXISTS (
+    SELECT 1
+    FROM sys.columns
+    WHERE object_id = OBJECT_ID(N'[dbo].[Cipher]')
+      AND name = 'ArchivedDate'
+)
+BEGIN
+    ALTER TABLE [dbo].[Cipher] DROP COLUMN [ArchivedDate];
+END;
+GO
