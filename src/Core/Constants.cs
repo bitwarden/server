@@ -142,6 +142,7 @@ public static class FeatureFlagKeys
     public const string PM23845_VNextApplicationCache = "pm-24957-refactor-memory-application-cache";
     public const string BlockClaimedDomainAccountCreation = "pm-28297-block-uninvited-claimed-domain-registration";
     public const string IncreaseBulkReinviteLimitForCloud = "pm-28251-increase-bulk-reinvite-limit-for-cloud";
+    public const string BulkRevokeUsersV2 = "pm-28456-bulk-revoke-users-v2";
 
     /* Architecture */
     public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";
@@ -155,12 +156,10 @@ public static class FeatureFlagKeys
     public const string SetInitialPasswordRefactor = "pm-16117-set-initial-password-refactor";
     public const string ChangeExistingPasswordRefactor = "pm-16117-change-existing-password-refactor";
     public const string Otp6Digits = "pm-18612-otp-6-digits";
-    public const string FailedTwoFactorEmail = "pm-24425-send-2fa-failed-email";
     public const string PM24579_PreventSsoOnExistingNonCompliantUsers = "pm-24579-prevent-sso-on-existing-non-compliant-users";
     public const string DisableAlternateLoginMethods = "pm-22110-disable-alternate-login-methods";
     public const string PM23174ManageAccountRecoveryPermissionDrivesTheNeedToSetMasterPassword =
         "pm-23174-manage-account-recovery-permission-drives-the-need-to-set-master-password";
-    public const string RecoveryCodeSupportForSsoRequiredUsers = "pm-21153-recovery-code-support-for-sso-required";
     public const string MJMLBasedEmailTemplates = "mjml-based-email-templates";
     public const string MjmlWelcomeEmailTemplates = "pm-21741-mjml-welcome-email";
     public const string MarketingInitiatedPremiumFlow = "pm-26140-marketing-initiated-premium-flow";
@@ -212,6 +211,7 @@ public static class FeatureFlagKeys
     public const string NoLogoutOnKdfChange = "pm-23995-no-logout-on-kdf-change";
     public const string DisableType0Decryption = "pm-25174-disable-type-0-decryption";
     public const string ConsolidatedSessionTimeoutComponent = "pm-26056-consolidated-session-timeout-component";
+    public const string V2RegistrationTDEJIT = "pm-27279-v2-registration-tde-jit";
     public const string DataRecoveryTool = "pm-28813-data-recovery-tool";
 
     /* Mobile Team */
@@ -238,19 +238,20 @@ public static class FeatureFlagKeys
     public const string UseSdkPasswordGenerators = "pm-19976-use-sdk-password-generators";
     public const string UseChromiumImporter = "pm-23982-chromium-importer";
     public const string ChromiumImporterWithABE = "pm-25855-chromium-importer-abe";
+    public const string SendUIRefresh = "pm-28175-send-ui-refresh";
 
     /* Vault Team */
     public const string CipherKeyEncryption = "cipher-key-encryption";
     public const string PM19941MigrateCipherDomainToSdk = "pm-19941-migrate-cipher-domain-to-sdk";
-    public const string EndUserNotifications = "pm-10609-end-user-notifications";
     public const string PhishingDetection = "phishing-detection";
     public const string RemoveCardItemTypePolicy = "pm-16442-remove-card-item-type-policy";
     public const string PM22134SdkCipherListView = "pm-22134-sdk-cipher-list-view";
-    public const string PM19315EndUserActivationMvp = "pm-19315-end-user-activation-mvp";
     public const string PM22136_SdkCipherEncryption = "pm-22136-sdk-cipher-encryption";
     public const string PM23904_RiskInsightsForPremium = "pm-23904-risk-insights-for-premium";
     public const string PM25083_AutofillConfirmFromSearch = "pm-25083-autofill-confirm-from-search";
     public const string VaultLoadingSkeletons = "pm-25081-vault-skeleton-loaders";
+    public const string BrowserPremiumSpotlight = "pm-23384-browser-premium-spotlight";
+    public const string MigrateMyVaultToMyItems = "pm-20558-migrate-myvault-to-myitems";
 
     /* Innovation Team */
     public const string ArchiveVaultItems = "pm-19148-innovation-archive";

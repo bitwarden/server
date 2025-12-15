@@ -361,11 +361,11 @@ public class ProvidersController : Controller
                     ]);
                 await _providerBillingService.UpdateSeatMinimums(updateMspSeatMinimumsCommand);
 
-                var customer = await _stripeAdapter.CustomerGetAsync(provider.GatewayCustomerId);
+                var customer = await _stripeAdapter.GetCustomerAsync(provider.GatewayCustomerId);
                 if (model.PayByInvoice != customer.ApprovedToPayByInvoice())
                 {
                     var approvedToPayByInvoice = model.PayByInvoice ? "1" : "0";
-                    await _stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
+                    await _stripeAdapter.UpdateCustomerAsync(customer.Id, new CustomerUpdateOptions
                     {
                         Metadata = new Dictionary<string, string>
                         {

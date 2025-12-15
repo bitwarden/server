@@ -17,6 +17,7 @@ using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Services;
+using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -42,7 +43,7 @@ public class OrganizationsController : Controller
     private readonly ICollectionRepository _collectionRepository;
     private readonly IGroupRepository _groupRepository;
     private readonly IPolicyRepository _policyRepository;
-    private readonly IPaymentService _paymentService;
+    private readonly IStripePaymentService _paymentService;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly GlobalSettings _globalSettings;
     private readonly IProviderRepository _providerRepository;
@@ -68,7 +69,7 @@ public class OrganizationsController : Controller
         ICollectionRepository collectionRepository,
         IGroupRepository groupRepository,
         IPolicyRepository policyRepository,
-        IPaymentService paymentService,
+        IStripePaymentService paymentService,
         IApplicationCacheService applicationCacheService,
         GlobalSettings globalSettings,
         IProviderRepository providerRepository,
