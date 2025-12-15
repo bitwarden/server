@@ -6,14 +6,10 @@ using System.Reflection;
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using AspNetCoreRateLimit;
-using Azure.Messaging.ServiceBus;
 using Bit.Core;
 using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
-using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
-using Bit.Core.AdminConsole.Models.Teams;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.AdminConsole.Services.Implementations;
 using Bit.Core.AdminConsole.Services.NoopImplementations;
@@ -21,7 +17,6 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Auth.IdentityServer;
-using Bit.Core.Auth.LoginFeatures;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
@@ -75,8 +70,6 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Azure.Cosmos.Fluent;
-using Microsoft.Bot.Builder;
-using Microsoft.Bot.Builder.Integration.AspNet.Core;
 using Microsoft.Extensions.Caching.Cosmos;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
@@ -85,8 +78,9 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.OpenApi.Models;
 using StackExchange.Redis;
-using ZiggyCreatures.Caching.Fusion;
+using Swashbuckle.AspNetCore.SwaggerGen;
 using NoopRepos = Bit.Core.Repositories.Noop;
 using Role = Bit.Core.Entities.Role;
 using TableStorageRepos = Bit.Core.Repositories.TableStorage;
@@ -138,7 +132,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAuthRequestService, AuthRequestService>();
         services.AddScoped<IDuoUniversalTokenService, DuoUniversalTokenService>();
         services.AddScoped<ISendAuthorizationService, SendAuthorizationService>();
-        services.AddLoginServices();
         services.AddScoped<IOrganizationDomainService, OrganizationDomainService>();
         services.AddVaultServices();
         services.AddReportingServices();
@@ -245,7 +238,7 @@ public static class ServiceCollectionExtensions
                 PrivateKey = globalSettings.Braintree.PrivateKey
             };
         });
-        services.AddScoped<IPaymentService, StripePaymentService>();
+        services.AddScoped<IStripePaymentService, StripePaymentService>();
         services.AddScoped<IPaymentHistoryService, PaymentHistoryService>();
         services.AddScoped<ITwoFactorEmailService, TwoFactorEmailService>();
         // Legacy mailer service
@@ -342,6 +335,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IProviderService, NoopProviderService>();
         services.AddScoped<IServiceAccountRepository, NoopServiceAccountRepository>();
         services.AddScoped<ISecretRepository, NoopSecretRepository>();
+        services.AddScoped<ISecretVersionRepository, NoopSecretVersionRepository>();
         services.AddScoped<IProjectRepository, NoopProjectRepository>();
     }
 
@@ -522,116 +516,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(s => globalSettings);
         services.AddSingleton<IGlobalSettings, GlobalSettings>(s => globalSettings);
         return globalSettings;
-    }
-
-    public static IServiceCollection AddEventWriteServices(this IServiceCollection services, GlobalSettings globalSettings)
-    {
-        if (IsAzureServiceBusEnabled(globalSettings))
-        {
-            services.TryAddSingleton<IEventIntegrationPublisher, AzureServiceBusService>();
-            services.TryAddSingleton<IEventWriteService, EventIntegrationEventWriteService>();
-            return services;
-        }
-
-        if (IsRabbitMqEnabled(globalSettings))
-        {
-            services.TryAddSingleton<IEventIntegrationPublisher, RabbitMqService>();
-            services.TryAddSingleton<IEventWriteService, EventIntegrationEventWriteService>();
-            return services;
-        }
-
-        if (CoreHelpers.SettingHasValue(globalSettings.Events.ConnectionString))
-        {
-            services.TryAddSingleton<IEventWriteService, AzureQueueEventWriteService>();
-            return services;
-        }
-
-        if (globalSettings.SelfHosted)
-        {
-            services.TryAddSingleton<IEventWriteService, RepositoryEventWriteService>();
-            return services;
-        }
-
-        services.TryAddSingleton<IEventWriteService, NoopEventWriteService>();
-        return services;
-    }
-
-    public static IServiceCollection AddAzureServiceBusListeners(this IServiceCollection services, GlobalSettings globalSettings)
-    {
-        if (!IsAzureServiceBusEnabled(globalSettings))
-        {
-            return services;
-        }
-
-        services.TryAddSingleton<IAzureServiceBusService, AzureServiceBusService>();
-        services.TryAddSingleton<IEventIntegrationPublisher, AzureServiceBusService>();
-        services.TryAddSingleton<IEventRepository, TableStorageRepos.EventRepository>();
-        services.TryAddKeyedSingleton<IEventWriteService, RepositoryEventWriteService>("persistent");
-        services.TryAddSingleton<AzureTableStorageEventHandler>();
-
-        services.AddEventIntegrationServices(globalSettings);
-
-        return services;
-    }
-
-    public static IServiceCollection AddRabbitMqListeners(this IServiceCollection services, GlobalSettings globalSettings)
-    {
-        if (!IsRabbitMqEnabled(globalSettings))
-        {
-            return services;
-        }
-
-        services.TryAddSingleton<IRabbitMqService, RabbitMqService>();
-        services.TryAddSingleton<IEventIntegrationPublisher, RabbitMqService>();
-        services.TryAddSingleton<EventRepositoryHandler>();
-
-        services.AddEventIntegrationServices(globalSettings);
-
-        return services;
-    }
-
-    public static IServiceCollection AddSlackService(this IServiceCollection services, GlobalSettings globalSettings)
-    {
-        if (CoreHelpers.SettingHasValue(globalSettings.Slack.ClientId) &&
-            CoreHelpers.SettingHasValue(globalSettings.Slack.ClientSecret) &&
-            CoreHelpers.SettingHasValue(globalSettings.Slack.Scopes))
-        {
-            services.AddHttpClient(SlackService.HttpClientName);
-            services.TryAddSingleton<ISlackService, SlackService>();
-        }
-        else
-        {
-            services.TryAddSingleton<ISlackService, NoopSlackService>();
-        }
-
-        return services;
-    }
-
-    public static IServiceCollection AddTeamsService(this IServiceCollection services, GlobalSettings globalSettings)
-    {
-        if (CoreHelpers.SettingHasValue(globalSettings.Teams.ClientId) &&
-            CoreHelpers.SettingHasValue(globalSettings.Teams.ClientSecret) &&
-            CoreHelpers.SettingHasValue(globalSettings.Teams.Scopes))
-        {
-            services.AddHttpClient(TeamsService.HttpClientName);
-            services.TryAddSingleton<TeamsService>();
-            services.TryAddSingleton<IBot>(sp => sp.GetRequiredService<TeamsService>());
-            services.TryAddSingleton<ITeamsService>(sp => sp.GetRequiredService<TeamsService>());
-            services.TryAddSingleton<IBotFrameworkHttpAdapter>(sp =>
-                new BotFrameworkHttpAdapter(
-                    new TeamsBotCredentialProvider(
-                        clientId: globalSettings.Teams.ClientId,
-                        clientSecret: globalSettings.Teams.ClientSecret
-                    )
-                )
-            );
-        }
-        else
-        {
-            services.TryAddSingleton<ITeamsService, NoopTeamsService>();
-        }
-
-        return services;
     }
 
     public static void UseDefaultMiddleware(this IApplicationBuilder app,
@@ -880,191 +764,60 @@ public static class ServiceCollectionExtensions
         return (provider, connectionString);
     }
 
-    private static IServiceCollection AddAzureServiceBusIntegration<TConfig, TListenerConfig>(this IServiceCollection services,
-        TListenerConfig listenerConfiguration)
-        where TConfig : class
-        where TListenerConfig : IIntegrationListenerConfiguration
+    /// <summary>
+    /// Adds a server with its corresponding OAuth2 client credentials security definition and requirement.
+    /// </summary>
+    /// <param name="config">The SwaggerGen configuration</param>
+    /// <param name="serverId">Unique identifier for this server (e.g., "us-server", "eu-server")</param>
+    /// <param name="serverUrl">The API server URL</param>
+    /// <param name="identityTokenUrl">The identity server token URL</param>
+    /// <param name="serverDescription">Human-readable description for the server</param>
+    public static void AddSwaggerServerWithSecurity(
+        this SwaggerGenOptions config,
+        string serverId,
+        string serverUrl,
+        string identityTokenUrl,
+        string serverDescription)
     {
-        services.TryAddKeyedSingleton<IEventMessageHandler>(serviceKey: listenerConfiguration.RoutingKey, implementationFactory: (provider, _) =>
-            new EventIntegrationHandler<TConfig>(
-                integrationType: listenerConfiguration.IntegrationType,
-                eventIntegrationPublisher: provider.GetRequiredService<IEventIntegrationPublisher>(),
-                integrationFilterService: provider.GetRequiredService<IIntegrationFilterService>(),
-                configurationCache: provider.GetRequiredService<IIntegrationConfigurationDetailsCache>(),
-                cache: provider.GetRequiredKeyedService<IFusionCache>(EventIntegrationsCacheConstants.CacheName),
-                groupRepository: provider.GetRequiredService<IGroupRepository>(),
-                organizationRepository: provider.GetRequiredService<IOrganizationRepository>(),
-                organizationUserRepository: provider.GetRequiredService<IOrganizationUserRepository>(),
-                logger: provider.GetRequiredService<ILogger<EventIntegrationHandler<TConfig>>>()
-            )
-        );
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService,
-            AzureServiceBusEventListenerService<TListenerConfig>>(provider =>
-                new AzureServiceBusEventListenerService<TListenerConfig>(
-                    configuration: listenerConfiguration,
-                    handler: provider.GetRequiredKeyedService<IEventMessageHandler>(serviceKey: listenerConfiguration.RoutingKey),
-                    serviceBusService: provider.GetRequiredService<IAzureServiceBusService>(),
-                    serviceBusOptions: new ServiceBusProcessorOptions()
-                    {
-                        PrefetchCount = listenerConfiguration.EventPrefetchCount,
-                        MaxConcurrentCalls = listenerConfiguration.EventMaxConcurrentCalls
-                    },
-                    loggerFactory: provider.GetRequiredService<ILoggerFactory>()
-                )
-            )
-        );
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService,
-            AzureServiceBusIntegrationListenerService<TListenerConfig>>(provider =>
-                new AzureServiceBusIntegrationListenerService<TListenerConfig>(
-                    configuration: listenerConfiguration,
-                    handler: provider.GetRequiredService<IIntegrationHandler<TConfig>>(),
-                    serviceBusService: provider.GetRequiredService<IAzureServiceBusService>(),
-                    serviceBusOptions: new ServiceBusProcessorOptions()
-                    {
-                        PrefetchCount = listenerConfiguration.IntegrationPrefetchCount,
-                        MaxConcurrentCalls = listenerConfiguration.IntegrationMaxConcurrentCalls
-                    },
-                    loggerFactory: provider.GetRequiredService<ILoggerFactory>()
-                )
-            )
-        );
-
-        return services;
-    }
-
-    private static IServiceCollection AddEventIntegrationServices(this IServiceCollection services,
-        GlobalSettings globalSettings)
-    {
-        // Add common services
-        services.AddDistributedCache(globalSettings);
-        services.AddExtendedCache(EventIntegrationsCacheConstants.CacheName, globalSettings);
-        services.TryAddSingleton<IntegrationConfigurationDetailsCacheService>();
-        services.TryAddSingleton<IIntegrationConfigurationDetailsCache>(provider =>
-            provider.GetRequiredService<IntegrationConfigurationDetailsCacheService>());
-        services.AddHostedService(provider => provider.GetRequiredService<IntegrationConfigurationDetailsCacheService>());
-        services.TryAddSingleton<IIntegrationFilterService, IntegrationFilterService>();
-        services.TryAddKeyedSingleton<IEventWriteService, RepositoryEventWriteService>("persistent");
-
-        // Add services in support of handlers
-        services.AddSlackService(globalSettings);
-        services.AddTeamsService(globalSettings);
-        services.TryAddSingleton(TimeProvider.System);
-        services.AddHttpClient(WebhookIntegrationHandler.HttpClientName);
-        services.AddHttpClient(DatadogIntegrationHandler.HttpClientName);
-
-        // Add integration handlers
-        services.TryAddSingleton<IIntegrationHandler<SlackIntegrationConfigurationDetails>, SlackIntegrationHandler>();
-        services.TryAddSingleton<IIntegrationHandler<WebhookIntegrationConfigurationDetails>, WebhookIntegrationHandler>();
-        services.TryAddSingleton<IIntegrationHandler<DatadogIntegrationConfigurationDetails>, DatadogIntegrationHandler>();
-        services.TryAddSingleton<IIntegrationHandler<TeamsIntegrationConfigurationDetails>, TeamsIntegrationHandler>();
-
-        var repositoryConfiguration = new RepositoryListenerConfiguration(globalSettings);
-        var slackConfiguration = new SlackListenerConfiguration(globalSettings);
-        var webhookConfiguration = new WebhookListenerConfiguration(globalSettings);
-        var hecConfiguration = new HecListenerConfiguration(globalSettings);
-        var datadogConfiguration = new DatadogListenerConfiguration(globalSettings);
-        var teamsConfiguration = new TeamsListenerConfiguration(globalSettings);
-
-        if (IsRabbitMqEnabled(globalSettings))
+        // Add server
+        config.AddServer(new OpenApiServer
         {
-            services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService,
-                    RabbitMqEventListenerService<RepositoryListenerConfiguration>>(provider =>
-                    new RabbitMqEventListenerService<RepositoryListenerConfiguration>(
-                        handler: provider.GetRequiredService<EventRepositoryHandler>(),
-                        configuration: repositoryConfiguration,
-                        rabbitMqService: provider.GetRequiredService<IRabbitMqService>(),
-                        loggerFactory: provider.GetRequiredService<ILoggerFactory>()
-                    )
-                )
-            );
-            services.AddRabbitMqIntegration<SlackIntegrationConfigurationDetails, SlackListenerConfiguration>(slackConfiguration);
-            services.AddRabbitMqIntegration<WebhookIntegrationConfigurationDetails, WebhookListenerConfiguration>(webhookConfiguration);
-            services.AddRabbitMqIntegration<WebhookIntegrationConfigurationDetails, HecListenerConfiguration>(hecConfiguration);
-            services.AddRabbitMqIntegration<DatadogIntegrationConfigurationDetails, DatadogListenerConfiguration>(datadogConfiguration);
-            services.AddRabbitMqIntegration<TeamsIntegrationConfigurationDetails, TeamsListenerConfiguration>(teamsConfiguration);
-        }
+            Url = serverUrl,
+            Description = serverDescription
+        });
 
-        if (IsAzureServiceBusEnabled(globalSettings))
+        // Add security definition
+        config.AddSecurityDefinition(serverId, new OpenApiSecurityScheme
         {
-            services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService,
-                AzureServiceBusEventListenerService<RepositoryListenerConfiguration>>(provider =>
-                    new AzureServiceBusEventListenerService<RepositoryListenerConfiguration>(
-                        configuration: repositoryConfiguration,
-                        handler: provider.GetRequiredService<AzureTableStorageEventHandler>(),
-                        serviceBusService: provider.GetRequiredService<IAzureServiceBusService>(),
-                        serviceBusOptions: new ServiceBusProcessorOptions()
-                        {
-                            PrefetchCount = repositoryConfiguration.EventPrefetchCount,
-                            MaxConcurrentCalls = repositoryConfiguration.EventMaxConcurrentCalls
-                        },
-                        loggerFactory: provider.GetRequiredService<ILoggerFactory>()
-                    )
-                )
-            );
-            services.AddAzureServiceBusIntegration<SlackIntegrationConfigurationDetails, SlackListenerConfiguration>(slackConfiguration);
-            services.AddAzureServiceBusIntegration<WebhookIntegrationConfigurationDetails, WebhookListenerConfiguration>(webhookConfiguration);
-            services.AddAzureServiceBusIntegration<WebhookIntegrationConfigurationDetails, HecListenerConfiguration>(hecConfiguration);
-            services.AddAzureServiceBusIntegration<DatadogIntegrationConfigurationDetails, DatadogListenerConfiguration>(datadogConfiguration);
-            services.AddAzureServiceBusIntegration<TeamsIntegrationConfigurationDetails, TeamsListenerConfiguration>(teamsConfiguration);
-        }
+            Type = SecuritySchemeType.OAuth2,
+            Description = $"**Use this option if you've selected the {serverDescription}**",
+            Flows = new OpenApiOAuthFlows
+            {
+                ClientCredentials = new OpenApiOAuthFlow
+                {
+                    TokenUrl = new Uri(identityTokenUrl),
+                    Scopes = new Dictionary<string, string>
+                    {
+                        { ApiScopes.ApiOrganization, $"Organization APIs ({serverDescription})" },
+                    },
+                }
+            },
+        });
 
-        return services;
-    }
-
-    private static IServiceCollection AddRabbitMqIntegration<TConfig, TListenerConfig>(this IServiceCollection services,
-        TListenerConfig listenerConfiguration)
-        where TConfig : class
-        where TListenerConfig : IIntegrationListenerConfiguration
-    {
-        services.TryAddKeyedSingleton<IEventMessageHandler>(serviceKey: listenerConfiguration.RoutingKey, implementationFactory: (provider, _) =>
-            new EventIntegrationHandler<TConfig>(
-                integrationType: listenerConfiguration.IntegrationType,
-                eventIntegrationPublisher: provider.GetRequiredService<IEventIntegrationPublisher>(),
-                integrationFilterService: provider.GetRequiredService<IIntegrationFilterService>(),
-                configurationCache: provider.GetRequiredService<IIntegrationConfigurationDetailsCache>(),
-                cache: provider.GetRequiredKeyedService<IFusionCache>(EventIntegrationsCacheConstants.CacheName),
-                groupRepository: provider.GetRequiredService<IGroupRepository>(),
-                organizationRepository: provider.GetRequiredService<IOrganizationRepository>(),
-                organizationUserRepository: provider.GetRequiredService<IOrganizationUserRepository>(),
-                logger: provider.GetRequiredService<ILogger<EventIntegrationHandler<TConfig>>>()
-            )
-        );
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService,
-            RabbitMqEventListenerService<TListenerConfig>>(provider =>
-                new RabbitMqEventListenerService<TListenerConfig>(
-                    handler: provider.GetRequiredKeyedService<IEventMessageHandler>(serviceKey: listenerConfiguration.RoutingKey),
-                    configuration: listenerConfiguration,
-                    rabbitMqService: provider.GetRequiredService<IRabbitMqService>(),
-                    loggerFactory: provider.GetRequiredService<ILoggerFactory>()
-                )
-            )
-        );
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService,
-            RabbitMqIntegrationListenerService<TListenerConfig>>(provider =>
-                new RabbitMqIntegrationListenerService<TListenerConfig>(
-                    handler: provider.GetRequiredService<IIntegrationHandler<TConfig>>(),
-                    configuration: listenerConfiguration,
-                    rabbitMqService: provider.GetRequiredService<IRabbitMqService>(),
-                    loggerFactory: provider.GetRequiredService<ILoggerFactory>(),
-                    timeProvider: provider.GetRequiredService<TimeProvider>()
-                )
-            )
-        );
-
-        return services;
-    }
-
-    private static bool IsAzureServiceBusEnabled(GlobalSettings settings)
-    {
-        return CoreHelpers.SettingHasValue(settings.EventLogging.AzureServiceBus.ConnectionString) &&
-               CoreHelpers.SettingHasValue(settings.EventLogging.AzureServiceBus.EventTopicName);
-    }
-
-    private static bool IsRabbitMqEnabled(GlobalSettings settings)
-    {
-        return CoreHelpers.SettingHasValue(settings.EventLogging.RabbitMq.HostName) &&
-               CoreHelpers.SettingHasValue(settings.EventLogging.RabbitMq.Username) &&
-               CoreHelpers.SettingHasValue(settings.EventLogging.RabbitMq.Password) &&
-               CoreHelpers.SettingHasValue(settings.EventLogging.RabbitMq.EventExchangeName);
+        // Add security requirement
+        config.AddSecurityRequirement(new OpenApiSecurityRequirement
+        {
+            {
+                new OpenApiSecurityScheme
+                {
+                    Reference = new OpenApiReference
+                    {
+                        Type = ReferenceType.SecurityScheme,
+                        Id = serverId
+                    },
+                },
+                [ApiScopes.ApiOrganization]
+            }
+        });
     }
 }

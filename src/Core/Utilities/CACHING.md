@@ -140,7 +140,7 @@ services.AddExtendedCache("MyFeatureCache", globalSettings, new GlobalSettings.E
 // Option 4: Isolated Redis for specialized features
 services.AddExtendedCache("SpecializedCache", globalSettings, new GlobalSettings.ExtendedCacheSettings
 {
-    UseSharedRedisCache = false,
+    UseSharedDistributedCache = false,
     Redis = new GlobalSettings.ConnectionStringSettings
     {
         ConnectionString = "localhost:6379,ssl=false"
@@ -381,7 +381,7 @@ public class OrganizationAbilityService
 
 ### Example Usage: Default (Ephemeral Data)
 
-#### 1. Registration (already done in Api, Admin, Billing, Identity, and Notifications Startup.cs files, plus Events and EventsProcessor service collection extensions):
+#### 1. Registration (already done in Api, Admin, Billing, Events, EventsProcessor, Identity, and Notifications Startup.cs files):
 
 ```csharp
 services.AddDistributedCache(globalSettings);
