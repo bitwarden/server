@@ -14,7 +14,6 @@ using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Braintree;
 using Microsoft.Extensions.Logging;
@@ -161,7 +160,7 @@ public class OrganizationBillingService(
         try
         {
             // Update the subscription in Stripe
-            await stripeAdapter.SubscriptionUpdateAsync(subscription.Id, updateOptions);
+            await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, updateOptions);
             organization.PlanType = newPlan.Type;
             await organizationRepository.ReplaceAsync(organization);
         }
@@ -185,7 +184,7 @@ public class OrganizationBillingService(
 
         var newDisplayName = organization.DisplayName();
 
-        await stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId,
+        await stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId,
             new CustomerUpdateOptions
             {
                 Email = organization.BillingEmail,
@@ -324,7 +323,7 @@ public class OrganizationBillingService(
                 case PaymentMethodType.BankAccount:
                     {
                         var setupIntent =
-                            (await stripeAdapter.SetupIntentList(new SetupIntentListOptions { PaymentMethod = paymentMethodToken }))
+                            (await stripeAdapter.ListSetupIntentsAsync(new SetupIntentListOptions { PaymentMethod = paymentMethodToken }))
                             .FirstOrDefault();
 
                         if (setupIntent == null)
@@ -358,7 +357,7 @@ public class OrganizationBillingService(
 
         try
         {
-            var customer = await stripeAdapter.CustomerCreateAsync(customerCreateOptions);
+            var customer = await stripeAdapter.CreateCustomerAsync(customerCreateOptions);
 
             organization.Gateway = GatewayType.Stripe;
             organization.GatewayCustomerId = customer.Id;
@@ -509,7 +508,7 @@ public class OrganizationBillingService(
             subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
         }
 
-        var subscription = await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
+        var subscription = await stripeAdapter.CreateSubscriptionAsync(subscriptionCreateOptions);
 
         organization.GatewaySubscriptionId = subscription.Id;
         await organizationRepository.ReplaceAsync(organization);
@@ -537,14 +536,14 @@ public class OrganizationBillingService(
         customer = customer switch
         {
             { Address.Country: not Core.Constants.CountryAbbreviations.UnitedStates, TaxExempt: not StripeConstants.TaxExempt.Reverse } => await
-                stripeAdapter.CustomerUpdateAsync(customer.Id,
+                stripeAdapter.UpdateCustomerAsync(customer.Id,
                     new CustomerUpdateOptions
                     {
                         Expand = expansions,
                         TaxExempt = StripeConstants.TaxExempt.Reverse
                     }),
             { Address.Country: Core.Constants.CountryAbbreviations.UnitedStates, TaxExempt: StripeConstants.TaxExempt.Reverse } => await
-                stripeAdapter.CustomerUpdateAsync(customer.Id,
+                stripeAdapter.UpdateCustomerAsync(customer.Id,
                     new CustomerUpdateOptions
                     {
                         Expand = expansions,
@@ -603,7 +602,7 @@ public class OrganizationBillingService(
                     }
                 }
             };
-            await stripeAdapter.SubscriptionUpdateAsync(organization.GatewaySubscriptionId, options);
+            await stripeAdapter.UpdateSubscriptionAsync(organization.GatewaySubscriptionId, options);
         }
     }
 

@@ -6,6 +6,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -24,7 +25,7 @@ public class MembersController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly IUpdateOrganizationUserCommand _updateOrganizationUserCommand;
     private readonly IUpdateOrganizationUserGroupsCommand _updateOrganizationUserGroupsCommand;
-    private readonly IPaymentService _paymentService;
+    private readonly IStripePaymentService _paymentService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
@@ -37,7 +38,7 @@ public class MembersController : Controller
         ICurrentContext currentContext,
         IUpdateOrganizationUserCommand updateOrganizationUserCommand,
         IUpdateOrganizationUserGroupsCommand updateOrganizationUserGroupsCommand,
-        IPaymentService paymentService,
+        IStripePaymentService paymentService,
         IOrganizationRepository organizationRepository,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IRemoveOrganizationUserCommand removeOrganizationUserCommand,

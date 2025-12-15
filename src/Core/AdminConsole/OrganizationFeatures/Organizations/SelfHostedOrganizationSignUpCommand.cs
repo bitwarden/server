@@ -32,7 +32,7 @@ public class SelfHostedOrganizationSignUpCommand : ISelfHostedOrganizationSignUp
     private readonly ILicensingService _licensingService;
     private readonly IPolicyService _policyService;
     private readonly IGlobalSettings _globalSettings;
-    private readonly IPaymentService _paymentService;
+    private readonly IStripePaymentService _paymentService;
     private readonly IFeatureService _featureService;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
 
@@ -48,7 +48,7 @@ public class SelfHostedOrganizationSignUpCommand : ISelfHostedOrganizationSignUp
         ILicensingService licensingService,
         IPolicyService policyService,
         IGlobalSettings globalSettings,
-        IPaymentService paymentService,
+        IStripePaymentService paymentService,
         IFeatureService featureService,
         IPolicyRequirementQuery policyRequirementQuery)
     {
