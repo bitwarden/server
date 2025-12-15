@@ -8,9 +8,9 @@ using Bit.Core.Entities;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.StaticStore;
 
-namespace Bit.Core.Services;
+namespace Bit.Core.Billing.Services;
 
-public interface IPaymentService
+public interface IStripePaymentService
 {
     Task CancelAndRecoverChargesAsync(ISubscriber subscriber);
     Task SponsorOrganizationAsync(Organization org, OrganizationSponsorship sponsorship);
