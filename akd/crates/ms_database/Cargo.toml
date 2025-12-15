@@ -10,7 +10,7 @@ keywords.workspace = true
 async-trait = { workspace = true }
 bb8 = "0.9.0"
 macros = { path = "../macros" }
-thiserror = "2.0.17"
+thiserror.workspace = true
 tokio = { workspace = true }
 tokio-util = { version = "0.7.16", features = ["compat"] }
 tracing = { workspace = true }

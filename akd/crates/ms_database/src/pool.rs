@@ -5,7 +5,7 @@ use tokio_util::compat::TokioAsyncWriteCompatExt;
 
 use bb8::ManageConnection;
 use tiberius::{Client, Config};
-use tracing::{debug, instrument, info};
+use tracing::{debug, info, instrument};
 
 #[derive(thiserror::Error, Debug)]
 pub enum OnConnectError {
@@ -66,7 +66,7 @@ impl ManagedConnection {
     pub async fn execute(
         &mut self,
         sql: &str,
-        params: &[&(dyn tiberius::ToSql)],
+        params: &[&dyn tiberius::ToSql],
     ) -> Result<tiberius::ExecuteResult, tiberius::error::Error> {
         debug!("Executing command");
         self.0.execute(sql, params).await
@@ -76,7 +76,7 @@ impl ManagedConnection {
     pub async fn query<'a>(
         &'a mut self,
         sql: &str,
-        params: &[&(dyn tiberius::ToSql)],
+        params: &[&dyn tiberius::ToSql],
     ) -> Result<tiberius::QueryStream<'a>, tiberius::error::Error> {
         debug!("Executing query");
         self.0.query(sql, params).await
@@ -141,8 +141,6 @@ impl ManageConnection for ConnectionManager {
     }
 
     fn has_broken(&self, _conn: &mut Self::Connection) -> bool {
-        *self.is_healthy
-            .read()
-            .expect("poisoned is_healthy lock")
+        *self.is_healthy.read().expect("poisoned is_healthy lock")
     }
 }

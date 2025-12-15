@@ -1,8 +1,8 @@
 use akd::ecvrf::HardCodedAkdVRF;
 use akd::storage::StorageManager;
 use akd::Directory;
-use akd_storage::DatabaseType;
 use akd_storage::db_config::DbConfig;
+use akd_storage::DatabaseType;
 use anyhow::{Context, Result};
 use clap::{Parser, ValueEnum};
 use commands::Command;
@@ -65,7 +65,10 @@ enum Mode {
 }
 
 #[derive(Parser, Debug, Clone)]
-#[clap(name = "akd-test-utility", about = "AKD MS SQL test utility and benchmark tool")]
+#[clap(
+    name = "akd-test-utility",
+    about = "AKD MS SQL test utility and benchmark tool"
+)]
 struct CliArgs {
     /// Database connection string (also reads from AKD_MSSQL_CONNECTION_STRING env var)
     #[clap(long = "connection-string", short = 'c')]
@@ -82,7 +85,11 @@ struct CliArgs {
     log_level: LogLevel,
 
     /// Optional log file path (suppresses console logging when specified)
-    #[clap(long = "log-file", short = 'f', help = "Write logs to file (suppresses console output)")]
+    #[clap(
+        long = "log-file",
+        short = 'f',
+        help = "Write logs to file (suppresses console output)"
+    )]
     log_file: Option<String>,
 
     /// Connection pool size
@@ -140,10 +147,11 @@ async fn main() -> Result<()> {
     use tracing_subscriber::util::SubscriberInitExt;
 
     tracing_subscriber::registry()
-        .with(tracing_subscriber::EnvFilter::try_from_default_env()
-            .unwrap_or_else(|_| {
+        .with(
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
                 tracing_subscriber::EnvFilter::new(args.log_level.to_tracing_level().as_str())
-            }))
+            }),
+        )
         .with(layers)
         .init();
 
@@ -151,9 +159,15 @@ async fn main() -> Result<()> {
 
     // Create database connection
     info!("Connecting to MS SQL database");
-    let config = DbConfig::MsSql { connection_string, pool_size: args.pool_size };
-    let db = config.connect().await.context("Failed to connect to database")?;
-    
+    let config = DbConfig::MsSql {
+        connection_string,
+        pool_size: args.pool_size,
+    };
+    let db = config
+        .connect()
+        .await
+        .context("Failed to connect to database")?;
+
     // Handle pre-processing modes
     if let Some(()) = pre_process_mode(&args, &db).await? {
         return Ok(());
@@ -177,10 +191,7 @@ async fn main() -> Result<()> {
 }
 
 // Process modes that run before creating the directory
-async fn pre_process_mode(
-    args: &CliArgs,
-    db: &DatabaseType,
-) -> Result<Option<()>> {
+async fn pre_process_mode(args: &CliArgs, db: &DatabaseType) -> Result<Option<()>> {
     match (db, &args.mode) {
         (DatabaseType::MsSql(db), Some(Mode::Drop)) => {
             info!("Dropping database tables");
@@ -475,7 +486,7 @@ async fn bench_lookup(
 }
 
 async fn repl_loop(
-    args: &CliArgs,
+    _args: &CliArgs,
     tx: &Sender<directory_host::Rpc>,
     db: &DatabaseType,
 ) -> Result<()> {
@@ -491,7 +502,7 @@ async fn repl_loop(
             (_, Command::Unknown(other)) => {
                 println!("Input '{other}' is not supported, enter 'help' for the help menu")
             }
-            (_,Command::InvalidArgs(message)) => println!("Invalid arguments: {message}"),
+            (_, Command::InvalidArgs(message)) => println!("Invalid arguments: {message}"),
             (_, Command::Exit) => {
                 info!("Exiting...");
                 break;
@@ -518,6 +529,7 @@ async fn repl_loop(
                     }
                 }
             }
+            #[allow(unreachable_patterns)]
             (_, Command::Clean) => {
                 println!("Clean command is only supported for MS SQL databases");
             }

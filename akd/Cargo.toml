@@ -18,9 +18,11 @@ akd = "0.11.0"
 async-trait = "0.1.89"
 akd_storage = { path = "crates/akd_storage" }
 bitwarden-akd-configuration = { path = "crates/bitwarden-akd-configuration" }
+blake3 = "1.8.2"
 common = { path = "crates/common" }
 config = "0.15.18"
 serde = { version = "1.0.228", features = ["derive"] }
 tokio = { version = "1.47.1", features = ["full"] }
 tracing = { version = "0.1.41" }
-tracing-subscriber = {version = "0.3.19" }
+tracing-subscriber = { version = "0.3.19" }
+thiserror = "2.0.17"

@@ -1,7 +1,6 @@
 //! The Reader crate is responsible for handling read requests to the AKD. It requires only read permissions to the
 //! underlying data stores, and can be horizontally scaled as needed.
 
-use akd::ecvrf::VRFKeyStorage;
 use akd_storage::db_config::DbConfig;
 use common::VrfStorageType;
 use reader::start;

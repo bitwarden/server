@@ -1,6 +1,6 @@
 [toolchain]
-channel = "1.88.0"
-components = [ "rustfmt", "clippy" ]
+channel = "1.90.0"
+components = ["rustfmt", "clippy"]
 profile = "minimal"
 
 # The following is not part of the rust-toolchain.toml format,

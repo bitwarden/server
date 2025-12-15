@@ -110,8 +110,8 @@ pub(crate) trait AkdStorableForMsSql {
     fn get_statement<St: Storable>(key: &St::StorageKey) -> Result<Statement, StorageError>;
 
     fn get_batch_temp_table_rows<St: Storable>(
-        key: &[St::StorageKey],
-    ) -> Result<Vec<TokenRow>, StorageError>;
+        key: &'_ [St::StorageKey],
+    ) -> Result<Vec<TokenRow<'_>>, StorageError>;
 
     fn get_batch_statement<St: Storable>() -> String;
 
@@ -119,7 +119,7 @@ pub(crate) trait AkdStorableForMsSql {
     where
         Self: Sized;
 
-    fn into_row(&self) -> Result<TokenRow, StorageError>;
+    fn into_row(&'_ self) -> Result<TokenRow<'_>, StorageError>;
 }
 
 impl AkdStorableForMsSql for DbRecord {
@@ -479,8 +479,8 @@ impl AkdStorableForMsSql for DbRecord {
     }
 
     fn get_batch_temp_table_rows<St: Storable>(
-        key: &[St::StorageKey],
-    ) -> Result<Vec<TokenRow>, StorageError> {
+        key: &'_ [St::StorageKey],
+    ) -> Result<Vec<TokenRow<'_>>, StorageError> {
         match St::data_type() {
             StorageType::Azks => Err(StorageError::Other(
                 "Batch temp table rows not supported for Azks".to_string(),
@@ -681,7 +681,7 @@ impl AkdStorableForMsSql for DbRecord {
         }
     }
 
-    fn into_row(&self) -> Result<TokenRow, StorageError> {
+    fn into_row(&'_ self) -> Result<TokenRow<'_>, StorageError> {
         match &self {
             DbRecord::Azks(azks) => {
                 let row = (

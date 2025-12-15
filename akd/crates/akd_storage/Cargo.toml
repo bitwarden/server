@@ -8,11 +8,21 @@ keywords.workspace = true
 
 [dependencies]
 akd = "0.11.0"
-async-trait = { workspace = true}
+async-trait.workspace = true
+base64 = "0.22.1"
+bitwarden-encoding = { path = "../bitwarden-encoding" }
+blake3.workspace = true
+chacha20poly1305 = { version = "0.10.1" }
+ed25519-dalek = { version = ">=2.1.1, <=2.2.0", features = ["rand_core"] }
 ms_database = { path = "../ms_database" }
+rand = ">=0.8.5, <0.9"
+rsa = { version = ">=0.9.2, <0.10" }
 serde = { workspace = true }
-thiserror = "2.0.17"
+thiserror.workspace = true
 tracing.workspace = true
+
+[dev-dependencies]
+tokio.workspace = true
 
 [lints]
 workspace = true

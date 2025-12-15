@@ -5,14 +5,14 @@ use common::VrfStorageType;
 use tracing::instrument;
 
 struct AppState {
-    directory: Directory<BitwardenV1Configuration, DatabaseType, VrfStorageType>,
+    _directory: Directory<BitwardenV1Configuration, DatabaseType, VrfStorageType>,
 }
 
 #[instrument(skip_all, name = "publisher_start")]
 pub async fn start_write_job(_db: DatabaseType, vrf: VrfStorageType) {
     let storage_manager = StorageManager::new_no_cache(_db);
     let _app_state = AppState {
-        directory: Directory::new(storage_manager, vrf).await.unwrap(),
+        _directory: Directory::new(storage_manager, vrf).await.unwrap(),
     };
     println!("Publisher started");
 }

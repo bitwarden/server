@@ -1,20 +1,26 @@
 [package]
-name = "common"
+name = "bitwarden-encoding"
+description = """
+Internal crate for the bitwarden crate. Do not use.
+"""
+
 edition.workspace = true
 version.workspace = true
 authors.workspace = true
 license-file.workspace = true
 keywords.workspace = true
 
+[features]
+default = []
+
 [dependencies]
-akd = "0.11.0"
-async-trait = { workspace = true }
-akd_storage = { workspace = true }
-config = { workspace = true }
+data-encoding = ">=2.0, <3"
+data-encoding-macro = "0.1.18"
 serde = { workspace = true }
 thiserror.workspace = true
-tracing.workspace = true
-hex = "0.4.3"
+
+[dev-dependencies]
+serde_json = ">=1.0.96, <2.0"
 
 [lints]
 workspace = true

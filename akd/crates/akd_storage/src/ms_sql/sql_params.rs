@@ -98,10 +98,10 @@ impl SqlParams {
             .collect()
     }
 
-    pub fn values(&self) -> Vec<&(dyn ToSql)> {
+    pub fn values(&self) -> Vec<&dyn ToSql> {
         self.params
             .iter()
-            .map(|b| b.data.as_ref() as &(dyn ToSql))
+            .map(|b| b.data.as_ref() as &dyn ToSql)
             .collect()
     }
 }
