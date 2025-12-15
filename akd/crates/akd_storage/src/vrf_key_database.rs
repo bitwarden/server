@@ -199,6 +199,9 @@ mod tests {
 
     #[tokio::test]
     pub async fn test_generation_from_symmetric_key() {
+        // This is a sample key for testing purposes only.
+        // Please do not flag this as key leakage or use this key in
+        // any production system.
         let symmetric_key_b64 = "4AD95tg8tfveioyS/E2jAQw06FDTUCu+VSEZxa41wuM=";
         let config = super::VrfKeyConfig::B64EncodedSymmetricKey {
             key: symmetric_key_b64.to_string(),
@@ -220,6 +223,9 @@ mod tests {
 
     #[tokio::test]
     pub async fn test_generation_from_rsa_key() {
+        // This is a sample RSA private key for testing purposes only.
+        // Please do not flag this as key leakage or use this key in
+        // any production system.
         let rsa_private_key_pem = r"-----BEGIN RSA PRIVATE KEY-----
 MIICXAIBAAKBgQCaPQBvavQC8o/A0map70QTqGz6ETMURzHaWIEjlS89ytjj+8Zs
 K9L1HCy9SOShFcSYrGb47CdMhMKHa/1YRUVA653uO4rqlO+wPhOZEzljvp9zXvDz
