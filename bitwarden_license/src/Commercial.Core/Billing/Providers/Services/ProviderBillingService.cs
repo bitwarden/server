@@ -817,7 +817,7 @@ public class ProviderBillingService(
             return;
         }
 
-        await stripeAdapter.CustomerUpdateAsync(provider.GatewayCustomerId,
+        await stripeAdapter.UpdateCustomerAsync(provider.GatewayCustomerId,
             new CustomerUpdateOptions
             {
                 Email = provider.BillingEmail,

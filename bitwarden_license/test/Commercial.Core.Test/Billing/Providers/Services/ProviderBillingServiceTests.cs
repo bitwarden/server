@@ -2166,7 +2166,7 @@ public class ProviderBillingServiceTests
         await sutProvider.Sut.UpdateProviderNameAndEmail(provider);
 
         // Assert
-        await stripeAdapter.DidNotReceive().CustomerUpdateAsync(
+        await stripeAdapter.DidNotReceive().UpdateCustomerAsync(
             Arg.Any<string>(),
             Arg.Any<CustomerUpdateOptions>());
     }
@@ -2184,7 +2184,7 @@ public class ProviderBillingServiceTests
         await sutProvider.Sut.UpdateProviderNameAndEmail(provider);
 
         // Assert
-        await stripeAdapter.DidNotReceive().CustomerUpdateAsync(
+        await stripeAdapter.DidNotReceive().UpdateCustomerAsync(
             Arg.Any<string>(),
             Arg.Any<CustomerUpdateOptions>());
     }
@@ -2203,7 +2203,7 @@ public class ProviderBillingServiceTests
         await sutProvider.Sut.UpdateProviderNameAndEmail(provider);
 
         // Assert
-        await stripeAdapter.DidNotReceive().CustomerUpdateAsync(
+        await stripeAdapter.DidNotReceive().UpdateCustomerAsync(
             Arg.Any<string>(),
             Arg.Any<CustomerUpdateOptions>());
     }
@@ -2222,7 +2222,7 @@ public class ProviderBillingServiceTests
         await sutProvider.Sut.UpdateProviderNameAndEmail(provider);
 
         // Assert
-        await stripeAdapter.DidNotReceive().CustomerUpdateAsync(
+        await stripeAdapter.DidNotReceive().UpdateCustomerAsync(
             Arg.Any<string>(),
             Arg.Any<CustomerUpdateOptions>());
     }
@@ -2242,7 +2242,7 @@ public class ProviderBillingServiceTests
         await sutProvider.Sut.UpdateProviderNameAndEmail(provider);
 
         // Assert
-        await stripeAdapter.Received(1).CustomerUpdateAsync(
+        await stripeAdapter.Received(1).UpdateCustomerAsync(
             provider.GatewayCustomerId,
             Arg.Is<CustomerUpdateOptions>(options =>
                 options.Email == provider.BillingEmail &&
@@ -2268,7 +2268,7 @@ public class ProviderBillingServiceTests
         await sutProvider.Sut.UpdateProviderNameAndEmail(provider);
 
         // Assert
-        await stripeAdapter.Received(1).CustomerUpdateAsync(
+        await stripeAdapter.Received(1).UpdateCustomerAsync(
             provider.GatewayCustomerId,
             Arg.Is<CustomerUpdateOptions>(options =>
                 options.InvoiceSettings.CustomFields[0].Value == longName));
@@ -2289,7 +2289,7 @@ public class ProviderBillingServiceTests
         await sutProvider.Sut.UpdateProviderNameAndEmail(provider);
 
         // Assert
-        await stripeAdapter.Received(1).CustomerUpdateAsync(
+        await stripeAdapter.Received(1).UpdateCustomerAsync(
             provider.GatewayCustomerId,
             Arg.Is<CustomerUpdateOptions>(options =>
                 options.Email == null &&
