@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -39,7 +40,7 @@ public class ResellerClientOrganizationSignUpCommand : IResellerClientOrganizati
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IEventService _eventService;
     private readonly ISendOrganizationInvitesCommand _sendOrganizationInvitesCommand;
-    private readonly IPaymentService _paymentService;
+    private readonly IStripePaymentService _paymentService;
 
     public ResellerClientOrganizationSignUpCommand(
         IOrganizationRepository organizationRepository,
@@ -48,7 +49,7 @@ public class ResellerClientOrganizationSignUpCommand : IResellerClientOrganizati
         IOrganizationUserRepository organizationUserRepository,
         IEventService eventService,
         ISendOrganizationInvitesCommand sendOrganizationInvitesCommand,
-        IPaymentService paymentService)
+        IStripePaymentService paymentService)
     {
         _organizationRepository = organizationRepository;
         _organizationApiKeyRepository = organizationApiKeyRepository;
