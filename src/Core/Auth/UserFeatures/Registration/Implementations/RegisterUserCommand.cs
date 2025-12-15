@@ -99,6 +99,9 @@ public class RegisterUserCommand : IRegisterUserCommand
 
     public async Task<IdentityResult> RegisterSSOAutoProvisionedUserAsync(User user, Organization organization)
     {
+        // Validate that the email domain is not blocked by another organization's policy
+        await ValidateEmailDomainNotBlockedAsync(user.Email, organization.Id);
+
         var result = await _userService.CreateUserAsync(user);
         if (result == IdentityResult.Success)
         {
