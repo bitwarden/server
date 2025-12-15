@@ -28,7 +28,7 @@ public class PayPalControllerTests(ITestOutputHelper testOutputHelper)
     private readonly IOptions<BillingSettings> _billingSettings = Substitute.For<IOptions<BillingSettings>>();
     private readonly IMailService _mailService = Substitute.For<IMailService>();
     private readonly IOrganizationRepository _organizationRepository = Substitute.For<IOrganizationRepository>();
-    private readonly IPaymentService _paymentService = Substitute.For<IPaymentService>();
+    private readonly IStripePaymentService _paymentService = Substitute.For<IStripePaymentService>();
     private readonly ITransactionRepository _transactionRepository = Substitute.For<ITransactionRepository>();
     private readonly IUserRepository _userRepository = Substitute.For<IUserRepository>();
     private readonly IProviderRepository _providerRepository = Substitute.For<IProviderRepository>();

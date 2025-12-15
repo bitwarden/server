@@ -9,6 +9,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -1142,7 +1143,7 @@ public class OrganizationServiceTests
             .GetByIdentifierAsync(Arg.Is<string>(id => id == organization.Identifier));
         await stripeAdapter
             .Received(1)
-            .CustomerUpdateAsync(
+            .UpdateCustomerAsync(
                 Arg.Is<string>(id => id == organization.GatewayCustomerId),
                 Arg.Is<CustomerUpdateOptions>(options => options.Email == requestOptionsReturned.Email
                                                          && options.Description == requestOptionsReturned.Description
@@ -1182,7 +1183,7 @@ public class OrganizationServiceTests
             .GetByIdentifierAsync(Arg.Is<string>(id => id == organization.Identifier));
         await stripeAdapter
             .DidNotReceiveWithAnyArgs()
-            .CustomerUpdateAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>());
+            .UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>());
         await organizationRepository
             .Received(1)
             .ReplaceAsync(Arg.Is<Organization>(org => org == organization));
