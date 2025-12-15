@@ -1382,4 +1382,90 @@ public class RegisterUserCommandTests
             .Received(1)
             .SendOrganizationUserWelcomeEmailAsync(user, organization.DisplayName());
     }
+
+    [Theory, BitAutoData]
+    public async Task RegisterSSOAutoProvisionedUserAsync_WithBlockedDomain_ThrowsException(
+        User user,
+        Organization organization,
+        SutProvider<RegisterUserCommand> sutProvider)
+    {
+        // Arrange
+        user.Email = "user@blocked-domain.com";
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
+            .Returns(true);
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("blocked-domain.com", organization.Id)
+            .Returns(true);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.RegisterSSOAutoProvisionedUserAsync(user, organization));
+        Assert.Equal("This email address is claimed by an organization using Bitwarden.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RegisterSSOAutoProvisionedUserAsync_WithOwnClaimedDomain_Succeeds(
+        User user,
+        Organization organization,
+        SutProvider<RegisterUserCommand> sutProvider)
+    {
+        // Arrange
+        user.Email = "user@company-domain.com";
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
+            .Returns(true);
+
+        // Domain is claimed by THIS organization, so it should be allowed
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("company-domain.com", organization.Id)
+            .Returns(false); // Not blocked because organization.Id is excluded
+
+        sutProvider.GetDependency<IUserService>()
+            .CreateUserAsync(user)
+            .Returns(IdentityResult.Success);
+
+        // Act
+        var result = await sutProvider.Sut.RegisterSSOAutoProvisionedUserAsync(user, organization);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        await sutProvider.GetDependency<IUserService>()
+            .Received(1)
+            .CreateUserAsync(user);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RegisterSSOAutoProvisionedUserAsync_WithNonClaimedDomain_Succeeds(
+        User user,
+        Organization organization,
+        SutProvider<RegisterUserCommand> sutProvider)
+    {
+        // Arrange
+        user.Email = "user@unclaimed-domain.com";
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
+            .Returns(true);
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("unclaimed-domain.com", organization.Id)
+            .Returns(false); // Domain is not claimed by any org
+
+        sutProvider.GetDependency<IUserService>()
+            .CreateUserAsync(user)
+            .Returns(IdentityResult.Success);
+
+        // Act
+        var result = await sutProvider.Sut.RegisterSSOAutoProvisionedUserAsync(user, organization);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        await sutProvider.GetDependency<IUserService>()
+            .Received(1)
+            .CreateUserAsync(user);
+    }
 }
