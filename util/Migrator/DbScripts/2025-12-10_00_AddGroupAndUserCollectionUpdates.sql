@@ -20,11 +20,11 @@ BEGIN
         cu
     FROM
         [dbo].[CollectionUser] cu
-            LEFT JOIN
+    LEFT JOIN
         @Users u ON cu.OrganizationUserId = u.Id
     WHERE
         cu.CollectionId = @Id
-      AND u.Id IS NULL;
+            AND u.Id IS NULL;
 
     -- Update existing users
     UPDATE
@@ -35,15 +35,15 @@ BEGIN
         cu.Manage = u.Manage
     FROM
         [dbo].[CollectionUser] cu
-            INNER JOIN
+    INNER JOIN
         @Users u ON cu.OrganizationUserId = u.Id
     WHERE
         cu.CollectionId = @Id
-      AND (
-        cu.ReadOnly != u.ReadOnly
-            OR cu.HidePasswords != u.HidePasswords
-            OR cu.Manage != u.Manage
-        );
+            AND (
+                cu.ReadOnly != u.ReadOnly
+                    OR cu.HidePasswords != u.HidePasswords
+                    OR cu.Manage != u.Manage
+            );
 
     -- Insert new users
     INSERT INTO [dbo].[CollectionUser]
@@ -62,13 +62,13 @@ BEGIN
         u.Manage
     FROM
         @Users u
-            INNER JOIN
+    INNER JOIN
         [dbo].[OrganizationUser] ou ON ou.Id = u.Id
-            LEFT JOIN
+    LEFT JOIN
         [dbo].[CollectionUser] cu ON cu.CollectionId = @Id AND cu.OrganizationUserId = u.Id
     WHERE
         ou.OrganizationId = @OrganizationId
-      AND cu.CollectionId IS NULL;
+            AND cu.CollectionId IS NULL;
 
     EXEC [dbo].[User_BumpAccountRevisionDateByCollectionId] @Id, @OrganizationId
 END
@@ -96,11 +96,11 @@ BEGIN
         cg
     FROM
         [dbo].[CollectionGroup] cg
-            LEFT JOIN
+    LEFT JOIN
         @Groups g ON cg.GroupId = g.Id
     WHERE
         cg.CollectionId = @Id
-      AND g.Id IS NULL;
+            AND g.Id IS NULL;
 
     -- Update existing groups
     UPDATE
@@ -111,15 +111,15 @@ BEGIN
         cg.Manage = g.Manage
     FROM
         [dbo].[CollectionGroup] cg
-            INNER JOIN
+    INNER JOIN
         @Groups g ON cg.GroupId = g.Id
     WHERE
         cg.CollectionId = @Id
-      AND (
-        cg.ReadOnly != g.ReadOnly
-            OR cg.HidePasswords != g.HidePasswords
-            OR cg.Manage != g.Manage
-        );
+            AND (
+                cg.ReadOnly != g.ReadOnly
+                    OR cg.HidePasswords != g.HidePasswords
+                    OR cg.Manage != g.Manage
+            );
 
     -- Insert new groups
     INSERT INTO [dbo].[CollectionGroup]
@@ -138,13 +138,13 @@ BEGIN
         g.Manage
     FROM
         @Groups g
-            INNER JOIN
+    INNER JOIN
         [dbo].[Group] grp ON grp.Id = g.Id
-            LEFT JOIN
+    LEFT JOIN
         [dbo].[CollectionGroup] cg ON cg.CollectionId = @Id AND cg.GroupId = g.Id
     WHERE
         grp.OrganizationId = @OrganizationId
-      AND cg.CollectionId IS NULL;
+            AND cg.CollectionId IS NULL;
 
     EXEC [dbo].[User_BumpAccountRevisionDateByCollectionId] @Id, @OrganizationId
 END

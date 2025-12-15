@@ -20,11 +20,11 @@ BEGIN
         cu
     FROM
         [dbo].[CollectionUser] cu
-            LEFT JOIN
+    LEFT JOIN
         @Users u ON cu.OrganizationUserId = u.Id
     WHERE
         cu.CollectionId = @Id
-      AND u.Id IS NULL;
+            AND u.Id IS NULL;
 
     -- Update existing users
     UPDATE
@@ -35,15 +35,15 @@ BEGIN
         cu.Manage = u.Manage
     FROM
         [dbo].[CollectionUser] cu
-            INNER JOIN
+    INNER JOIN
         @Users u ON cu.OrganizationUserId = u.Id
     WHERE
         cu.CollectionId = @Id
-      AND (
-        cu.ReadOnly != u.ReadOnly
-            OR cu.HidePasswords != u.HidePasswords
-            OR cu.Manage != u.Manage
-        );
+            AND (
+                cu.ReadOnly != u.ReadOnly
+                    OR cu.HidePasswords != u.HidePasswords
+                    OR cu.Manage != u.Manage
+            );
 
     -- Insert new users
     INSERT INTO [dbo].[CollectionUser]
@@ -62,13 +62,13 @@ BEGIN
         u.Manage
     FROM
         @Users u
-            INNER JOIN
+    INNER JOIN
         [dbo].[OrganizationUser] ou ON ou.Id = u.Id
-            LEFT JOIN
+    LEFT JOIN
         [dbo].[CollectionUser] cu ON cu.CollectionId = @Id AND cu.OrganizationUserId = u.Id
     WHERE
         ou.OrganizationId = @OrganizationId
-      AND cu.CollectionId IS NULL;
+            AND cu.CollectionId IS NULL;
 
     EXEC [dbo].[User_BumpAccountRevisionDateByCollectionId] @Id, @OrganizationId
 END
