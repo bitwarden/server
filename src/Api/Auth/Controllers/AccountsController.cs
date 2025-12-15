@@ -444,26 +444,11 @@ public class AccountsController : Controller
             }
         }
 
-        if (model.AccountKeys != null)
+        if (model.AccountKeys != null || !model.AccountKeys.ToAccountKeysData().IsV2Encryption())
         {
             var accountKeysData = model.AccountKeys.ToAccountKeysData();
-            if (accountKeysData.IsV2Encryption())
-            {
-                await _userRepository.SetV2AccountCryptographicStateAsync(user.Id, accountKeysData);
-                return new KeysResponseModel(accountKeysData, user.Key);
-            }
-            else
-            {
-                // Todo: Drop this after a transition period
-                await _userService.SaveUserAsync(model.ToUser(user));
-                return new KeysResponseModel(new UserAccountKeysData
-                {
-                    PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData(
-                        user.PrivateKey,
-                        user.PublicKey
-                    )
-                }, user.Key);
-            }
+            await _userRepository.SetV2AccountCryptographicStateAsync(user.Id, accountKeysData);
+            return new KeysResponseModel(accountKeysData, user.Key);
         }
         else
         {
