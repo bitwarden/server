@@ -269,8 +269,13 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
     private async Task ValidateAutomaticUserConfirmationPolicyAsync(OrganizationUser orgUser,
         ICollection<OrganizationUser> allOrgUsers, User user)
     {
+        // Org user is technically not assigned to a user at this point. Assigning user id for compliance checks.
+        orgUser.UserId = user.Id;
+
         var error = (await _automaticUserConfirmationPolicyEnforcementValidator.IsCompliantAsync(
-                new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser.OrganizationId, allOrgUsers, user)))
+                new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser.OrganizationId,
+                    allOrgUsers.Append(orgUser),
+                    user)))
             .Match(
                 error => error.Message,
                 _ => string.Empty
