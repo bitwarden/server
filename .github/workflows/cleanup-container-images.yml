@@ -1,0 +1,78 @@
+name: Cleanup Container Images
+
+on:
+  delete:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.ref }}
+  cancel-in-progress: false
+
+jobs:
+  cleanup-images:
+    name: Delete branch container images
+    if: |
+      github.event.ref != 'rc' &&
+      github.event.ref != 'hotfix-rc'
+    runs-on: ubuntu-24.04
+    permissions:
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image_name: Admin
+          - image_name: Api
+          - image_name: Attachments
+          - image_name: Events
+          - image_name: EventsProcessor
+          - image_name: Icons
+          - image_name: Identity
+          - image_name: MsSql
+          - image_name: MsSqlMigratorUtility
+          - image_name: Nginx
+          - image_name: Notifications
+          - image_name: Scim
+          - image_name: Server
+          - image_name: Setup
+          - image_name: Sso
+    steps:
+      - name: Generate image tag to delete
+        id: tag
+        env:
+          EVENT_REF: ${{ github.event.ref }}
+        run: |
+          # Sanitize deleted branch name to match build workflow tag generation
+          BRANCH_NAME="${EVENT_REF}"
+          IMAGE_TAG=$(echo "$BRANCH_NAME" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9._-]+/-/g; s/-+/-/g; s/^-+|-+$//g' | cut -c1-128 | sed -E 's/[.-]$//')
+
+          if [[ -z "$IMAGE_TAG" ]]; then
+            echo "ERROR: Failed to generate valid IMAGE_TAG from EVENT_REF: $EVENT_REF"
+            exit 1
+          fi
+
+          echo "tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Delete container image version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IMAGE_TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          # Get the version ID for this specific tag
+          VERSION_ID=$(gh api \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "/orgs/bitwarden/packages/container/lite/versions" \
+            --jq ".[] | select(.metadata.container.tags[] == \"$IMAGE_TAG\") | .id" \
+            | head -1)
+
+          if [[ -n "$VERSION_ID" ]]; then
+            echo "Deleting image with tag: $IMAGE_TAG (version ID: $VERSION_ID)"
+            gh api \
+              --method DELETE \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "/orgs/bitwarden/packages/container/lite/versions/$VERSION_ID"
+            echo "Successfully deleted image"
+          else
+            echo "No image found with tag: $IMAGE_TAG"
+          fi
