@@ -143,6 +143,7 @@ public static class FeatureFlagKeys
     public const string BlockClaimedDomainAccountCreation = "pm-28297-block-uninvited-claimed-domain-registration";
     public const string IncreaseBulkReinviteLimitForCloud = "pm-28251-increase-bulk-reinvite-limit-for-cloud";
     public const string BulkRevokeUsersV2 = "pm-28456-bulk-revoke-users-v2";
+    public const string PremiumAccessQuery = "pm-21411-premium-access-query";
 
     /* Architecture */
     public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";
@@ -198,7 +199,6 @@ public static class FeatureFlagKeys
     public const string PM28265_ReconcileAdditionalStorageJobEnableLiveMode = "pm-28265-reconcile-additional-storage-job-enable-live-mode";
 
     /* Key Management Team */
-    public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
     public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
     public const string Argon2Default = "argon2-default";
     public const string SSHKeyItemVaultItem = "ssh-key-vault-item";

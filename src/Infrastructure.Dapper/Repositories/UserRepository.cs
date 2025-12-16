@@ -1,6 +1,7 @@
 ﻿using System.Data;
 using System.Text.Json;
 using Bit.Core;
+using Bit.Core.Billing.Premium.Models;
 using Bit.Core.Entities;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.UserKey;
@@ -378,6 +379,25 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         var result = await GetManyWithCalculatedPremiumAsync([userId]);
 
         UnprotectData(result);
+        return result.SingleOrDefault();
+    }
+
+    public async Task<IEnumerable<UserPremiumAccess>> GetPremiumAccessByIdsAsync(IEnumerable<Guid> ids)
+    {
+        using (var connection = new SqlConnection(ReadOnlyConnectionString))
+        {
+            var results = await connection.QueryAsync<UserPremiumAccess>(
+                $"[{Schema}].[{Table}_ReadPremiumAccessByIds]",
+                new { Ids = ids.ToGuidIdArrayTVP() },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
+
+    public async Task<UserPremiumAccess?> GetPremiumAccessAsync(Guid userId)
+    {
+        var result = await GetPremiumAccessByIdsAsync([userId]);
         return result.SingleOrDefault();
     }
 

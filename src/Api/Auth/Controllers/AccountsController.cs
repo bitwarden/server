@@ -436,12 +436,9 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.ReturnErrorOnExistingKeypair))
+        if (!string.IsNullOrWhiteSpace(user.PrivateKey) || !string.IsNullOrWhiteSpace(user.PublicKey))
         {
-            if (!string.IsNullOrWhiteSpace(user.PrivateKey) || !string.IsNullOrWhiteSpace(user.PublicKey))
-            {
-                throw new BadRequestException("User has existing keypair");
-            }
+            throw new BadRequestException("User has existing keypair");
         }
 
         if (model.AccountKeys != null)
