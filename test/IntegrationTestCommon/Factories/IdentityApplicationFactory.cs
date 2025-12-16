@@ -4,9 +4,11 @@
 using System.Collections.Concurrent;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Bit.Core;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Services;
 using Bit.Identity;
 using Bit.Test.Common.Helpers;
@@ -195,6 +197,71 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
         RegisterFinishRequestModel requestModel,
         bool marketingEmails = true)
     {
+        // Ensure required fields for registration finish are present.
+        // Prefer legacy-path defaults (root fields) to minimize changes to tests.
+        // PM-28143 - When MasterPasswordAuthenticationData is required, delete all handling of MasterPasswordHash.
+        requestModel.MasterPasswordHash ??= DefaultUserPasswordHash;
+        // PM-28143 - When KDF is sourced exclusively from MasterPasswordUnlockData, delete the root Kdf defaults below.
+        requestModel.Kdf ??= KdfType.PBKDF2_SHA256;
+        requestModel.KdfIterations ??= AuthConstants.PBKDF2_ITERATIONS.Default;
+        // Ensure a symmetric key is provided when no unlock data is present
+        // PM-28143 - When MasterPasswordUnlockData is required, delete the UserSymmetricKey fallback block below.
+        if (requestModel.MasterPasswordUnlockData == null && string.IsNullOrWhiteSpace(requestModel.UserSymmetricKey))
+        {
+            requestModel.UserSymmetricKey = "user_symmetric_key";
+        }
+
+        // Align unlock/auth data KDF with root KDF so login uses the provided master password hash.
+        // PM-28143 - After removing root Kdf fields, build KDF exclusively from MasterPasswordUnlockData.Kdf and delete this alignment section.
+        var effectiveKdfType = requestModel.Kdf ?? KdfType.PBKDF2_SHA256;
+        var effectiveIterations = requestModel.KdfIterations ?? AuthConstants.PBKDF2_ITERATIONS.Default;
+        int? effectiveMemory = null;
+        int? effectiveParallelism = null;
+        if (effectiveKdfType == KdfType.Argon2id)
+        {
+            effectiveIterations = AuthConstants.ARGON2_ITERATIONS.InsideRange(effectiveIterations)
+                ? effectiveIterations
+                : AuthConstants.ARGON2_ITERATIONS.Default;
+            effectiveMemory = AuthConstants.ARGON2_MEMORY.Default;
+            effectiveParallelism = AuthConstants.ARGON2_PARALLELISM.Default;
+        }
+
+        var alignedKdf = new KdfSettings
+        {
+            KdfType = effectiveKdfType,
+            Iterations = effectiveIterations,
+            Memory = effectiveMemory,
+            Parallelism = effectiveParallelism
+        };
+
+        if (requestModel.MasterPasswordUnlockData != null)
+        {
+            var unlock = requestModel.MasterPasswordUnlockData;
+            // PM-28143 - Once UserSymmetricKey is removed and UnlockData is required, delete the fallback to UserSymmetricKey below.
+            var masterKeyWrappedUserKey = !string.IsNullOrWhiteSpace(unlock.MasterKeyWrappedUserKey)
+                ? unlock.MasterKeyWrappedUserKey
+                : (string.IsNullOrWhiteSpace(requestModel.UserSymmetricKey) ? "user_symmetric_key" : requestModel.UserSymmetricKey);
+            requestModel.MasterPasswordUnlockData = new MasterPasswordUnlockData
+            {
+                Kdf = alignedKdf,
+                MasterKeyWrappedUserKey = masterKeyWrappedUserKey,
+                Salt = unlock.Salt
+            };
+        }
+
+        if (requestModel.MasterPasswordAuthenticationData != null)
+        {
+            // Ensure registration uses the same hash the tests will provide at login.
+            // PM-28143 - When MasterPasswordAuthenticationData is the only source of the auth hash,
+            // stop overriding it from MasterPasswordHash and delete this whole reassignment block.
+            requestModel.MasterPasswordAuthenticationData = new MasterPasswordAuthenticationData
+            {
+                Kdf = alignedKdf,
+                MasterPasswordAuthenticationHash = requestModel.MasterPasswordHash,
+                Salt = requestModel.Email
+            };
+        }
+
         var sendVerificationEmailReqModel = new RegisterSendVerificationEmailRequestModel
         {
             Email = requestModel.Email,
