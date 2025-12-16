@@ -17,4 +17,5 @@ public class TestListenerConfiguration : IIntegrationListenerConfiguration
     public int EventPrefetchCount => 0;
     public int IntegrationMaxConcurrentCalls => 1;
     public int IntegrationPrefetchCount => 0;
+    public string RoutingKey => IntegrationType.ToRoutingKey();
 }

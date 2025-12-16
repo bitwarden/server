@@ -289,20 +289,13 @@ public class StripeEventUtilityService : IStripeEventUtilityService
         }
         var btInvoiceAmount = Math.Round(invoice.AmountDue / 100M, 2);
 
-        var existingTransactions = organizationId.HasValue
-            ? await _transactionRepository.GetManyByOrganizationIdAsync(organizationId.Value)
-            : userId.HasValue
-                ? await _transactionRepository.GetManyByUserIdAsync(userId.Value)
-                : await _transactionRepository.GetManyByProviderIdAsync(providerId.Value);
-
-        var duplicateTimeSpan = TimeSpan.FromHours(24);
-        var now = DateTime.UtcNow;
-        var duplicateTransaction = existingTransactions?
-            .FirstOrDefault(t => (now - t.CreationDate) < duplicateTimeSpan);
-        if (duplicateTransaction != null)
+        // Check if this invoice already has a Braintree transaction ID to prevent duplicate charges
+        if (invoice.Metadata?.ContainsKey("btTransactionId") ?? false)
         {
-            _logger.LogWarning("There is already a recent PayPal transaction ({0}). " +
-                "Do not charge again to prevent possible duplicate.", duplicateTransaction.GatewayId);
+            _logger.LogWarning("Invoice {InvoiceId} already has a Braintree transaction ({TransactionId}). " +
+                "Do not charge again to prevent duplicate.",
+                invoice.Id,
+                invoice.Metadata["btTransactionId"]);
             return false;
         }
 
