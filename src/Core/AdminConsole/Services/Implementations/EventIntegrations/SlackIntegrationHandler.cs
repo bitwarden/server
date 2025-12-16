@@ -36,11 +36,26 @@ public class SlackIntegrationHandler(
         );
     }
 
+    /// <summary>
+    /// Classifies a Slack API error code string as an <see cref="IntegrationFailureCategory"/> to drive
+    /// retry behavior and operator-facing failure reporting.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Slack responses commonly return an <c>error</c> string when <c>ok</c> is false. This method maps
+    /// known Slack error codes to failure categories.
+    /// </para>
+    /// <para>
+    /// Any unrecognized error codes default to <see cref="IntegrationFailureCategory.TransientError"/> to avoid
+    /// incorrectly marking new/unknown Slack failures as non-retryable.
+    /// </para>
+    /// </remarks>
+    /// <param name="error">The Slack error code string (e.g. <c>invalid_auth</c>, <c>rate_limited</c>).</param>
+    /// <returns>The corresponding <see cref="IntegrationFailureCategory"/>.</returns>
     private static IntegrationFailureCategory ClassifySlackError(string error)
     {
         return error switch
         {
-
             "invalid_auth" => IntegrationFailureCategory.AuthenticationFailed,
             "access_denied" => IntegrationFailureCategory.AuthenticationFailed,
             "token_expired" => IntegrationFailureCategory.AuthenticationFailed,
@@ -53,7 +68,7 @@ public class SlackIntegrationHandler(
             "ratelimited" => IntegrationFailureCategory.RateLimited,
             "message_limit_exceeded" => IntegrationFailureCategory.RateLimited,
             "internal_error" => IntegrationFailureCategory.TransientError,
-            "service_unavailable" => IntegrationFailureCategory.TransientError, // Temporary Slack service issue, retryable
+            "service_unavailable" => IntegrationFailureCategory.ServiceUnavailable,
             "fatal_error" => IntegrationFailureCategory.ServiceUnavailable,
             _ => IntegrationFailureCategory.TransientError
         };

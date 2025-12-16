@@ -43,9 +43,10 @@ public class IntegrationHandlerResult
     {
         IntegrationFailureCategory.RateLimited => true,
         IntegrationFailureCategory.TransientError => true,
-        IntegrationFailureCategory.ServiceUnavailable => false,
+        IntegrationFailureCategory.ServiceUnavailable => true,
         IntegrationFailureCategory.AuthenticationFailed => false,
         IntegrationFailureCategory.ConfigurationError => false,
+        IntegrationFailureCategory.PermanentFailure => false,
         null => false,
         _ => false
     };

@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
+﻿using System.Text.Json;
+using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Microsoft.Rest;
 
 namespace Bit.Core.Services;
@@ -26,6 +27,30 @@ public class TeamsIntegrationHandler(
             return IntegrationHandlerResult.Fail(
                 message,
                 category,
+                ex.Message
+            );
+        }
+        catch (ArgumentException ex)
+        {
+            return IntegrationHandlerResult.Fail(
+                message,
+                IntegrationFailureCategory.ConfigurationError,
+                ex.Message
+            );
+        }
+        catch (UriFormatException ex)
+        {
+            return IntegrationHandlerResult.Fail(
+                message,
+                IntegrationFailureCategory.ConfigurationError,
+                ex.Message
+            );
+        }
+        catch (JsonException ex)
+        {
+            return IntegrationHandlerResult.Fail(
+                message,
+                IntegrationFailureCategory.PermanentFailure,
                 ex.Message
             );
         }

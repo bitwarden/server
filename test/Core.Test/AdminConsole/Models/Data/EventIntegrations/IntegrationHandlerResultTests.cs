@@ -95,12 +95,24 @@ public class IntegrationHandlerResultTests
     }
 
     [Theory, BitAutoData]
-    public void Retryable_ServiceUnavailable_ReturnsFalse(IntegrationMessage message)
+    public void Retryable_ServiceUnavailable_ReturnsTrue(IntegrationMessage message)
     {
         var result = IntegrationHandlerResult.Fail(
             message,
             IntegrationFailureCategory.ServiceUnavailable,
             "Service is down"
+        );
+
+        Assert.True(result.Retryable);
+    }
+
+    [Theory, BitAutoData]
+    public void Retryable_PermanentFailure_ReturnsFalse(IntegrationMessage message)
+    {
+        var result = IntegrationHandlerResult.Fail(
+            message,
+            IntegrationFailureCategory.PermanentFailure,
+            "Permanent failure"
         );
 
         Assert.False(result.Retryable);
