@@ -254,6 +254,10 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
     }
 }
 
+/// <summary>
+/// Decorator around the <see cref="OrganizationRepository"/> that tracks
+/// created Organizations for seeding.
+/// </summary>
 public class TestOrganizationTrackingOrganizationRepository : OrganizationRepository
 {
     private readonly IPlayDataService _playDataService;

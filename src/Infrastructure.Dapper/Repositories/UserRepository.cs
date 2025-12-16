@@ -474,6 +474,10 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
     }
 }
 
+/// <summary>
+/// Decorator around the <see cref="UserRepository"/> that tracks
+/// created Users for seeding.
+/// </summary>
 public class TestUserTrackingUserRepository : UserRepository
 {
     private readonly IPlayDataService _playDataService;

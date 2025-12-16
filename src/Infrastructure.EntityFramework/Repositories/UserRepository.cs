@@ -8,7 +8,6 @@ using Bit.Core.Services;
 using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 #nullable enable
 
@@ -18,7 +17,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 {
     public UserRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
         : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Users)
-    {}
+    { }
 
     public async Task<Core.Entities.User?> GetByEmailAsync(string email)
     {
@@ -501,6 +500,10 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
     }
 }
 
+/// <summary>
+/// Decorator around the <see cref="UserRepository"/> that tracks
+/// created Users for seeding.
+/// </summary>
 public class TestUserTrackingUserRepository : UserRepository
 {
     private readonly IPlayDataService _playDataService;
