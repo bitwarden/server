@@ -16,16 +16,9 @@ namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserRepository
 {
-    protected readonly ILogger<UserRepository> _logger;
-
-    public UserRepository(
-        IServiceScopeFactory serviceScopeFactory,
-        IMapper mapper,
-        ILogger<UserRepository> logger)
+    public UserRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
         : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Users)
-    {
-        _logger = logger;
-    }
+    {}
 
     public async Task<Core.Entities.User?> GetByEmailAsync(string email)
     {
@@ -515,9 +508,8 @@ public class TestUserTrackingUserRepository : UserRepository
     public TestUserTrackingUserRepository(
         IPlayDataService playDataService,
         IServiceScopeFactory serviceScopeFactory,
-        IMapper mapper,
-        ILogger<UserRepository> logger)
-        : base(serviceScopeFactory, mapper, logger)
+        IMapper mapper)
+        : base(serviceScopeFactory, mapper)
     {
         _playDataService = playDataService;
     }

@@ -32,8 +32,6 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
         _logger = logger;
     }
 
-
-
     public async Task<Core.AdminConsole.Entities.Organization> GetByIdentifierAsync(string identifier)
     {
         using (var scope = ServiceScopeFactory.CreateScope())

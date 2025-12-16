@@ -13,11 +13,10 @@ public class PlayData : ITableObject<Guid>
 {
     public Guid Id { get; set; }
     [MaxLength(256)]
-    public string PlayId { get; init; } = null!;
+    public required string PlayId { get; init; }
     public Guid? UserId { get; init; }
     public Guid? OrganizationId { get; init; }
     public DateTime CreationDate { get; init; }
-    protected PlayData() { }
 
     /// <summary>
     /// Generates and sets a new COMB GUID for the Id property.

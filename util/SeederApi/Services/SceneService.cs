@@ -23,9 +23,10 @@ public class SceneService(
 
     public List<string> GetAllPlayIds()
     {
-        return [.. databaseContext.PlayData
+        return databaseContext.PlayData
             .Select(pd => pd.PlayId)
-            .Distinct()];
+            .Distinct()
+            .ToList();
     }
 
     public async Task<SceneResponseModel> ExecuteScene(string templateName, JsonElement? arguments)

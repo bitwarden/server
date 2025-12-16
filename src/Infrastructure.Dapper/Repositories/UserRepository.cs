@@ -13,23 +13,19 @@ using Bit.Core.Utilities;
 using Dapper;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.Logging;
 
 namespace Bit.Infrastructure.Dapper.Repositories;
 
 public class UserRepository : Repository<User, Guid>, IUserRepository
 {
     private readonly IDataProtector _dataProtector;
-    protected readonly ILogger<UserRepository> _logger;
 
     public UserRepository(
         IDataProtectionProvider dataProtectionProvider,
-        GlobalSettings globalSettings,
-        ILogger<UserRepository> logger)
+        GlobalSettings globalSettings)
         : base(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
     {
         _dataProtector = dataProtectionProvider.CreateProtector(Constants.DatabaseFieldProtectorPurpose);
-        _logger = logger;
     }
 
     public override async Task<User?> GetByIdAsync(Guid id)
@@ -159,7 +155,6 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
     public override async Task<User> CreateAsync(User user)
     {
         await ProtectDataAndSaveAsync(user, async () => await base.CreateAsync(user));
-
         return user;
     }
 
@@ -486,9 +481,8 @@ public class TestUserTrackingUserRepository : UserRepository
     public TestUserTrackingUserRepository(
         IPlayDataService playDataService,
         GlobalSettings globalSettings,
-        IDataProtectionProvider dataProtectionProvider,
-        ILogger<UserRepository> logger)
-        : base(dataProtectionProvider, globalSettings, logger)
+        IDataProtectionProvider dataProtectionProvider)
+        : base(dataProtectionProvider, globalSettings)
     {
         _playDataService = playDataService;
     }
