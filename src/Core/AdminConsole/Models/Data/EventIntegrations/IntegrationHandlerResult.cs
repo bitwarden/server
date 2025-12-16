@@ -33,7 +33,7 @@ public class IntegrationHandlerResult
     /// <summary>
     /// Detailed failure reason or error message. Empty for successful results.
     /// </summary>
-    public string FailureReason { get; private init; } = string.Empty;
+    public string? FailureReason { get; private init; }
 
     /// <summary>
     /// Indicates whether the operation is retryable.

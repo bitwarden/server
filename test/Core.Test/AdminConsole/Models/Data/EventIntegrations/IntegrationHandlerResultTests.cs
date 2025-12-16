@@ -14,7 +14,7 @@ public class IntegrationHandlerResultTests
         Assert.True(result.Success);
         Assert.Null(result.Category);
         Assert.Equal(message, result.Message);
-        Assert.Empty(result.FailureReason);
+        Assert.Null(result.FailureReason);
     }
 
     [Theory, BitAutoData]
