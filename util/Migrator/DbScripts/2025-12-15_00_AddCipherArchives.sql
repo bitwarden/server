@@ -612,3 +612,6 @@ BEGIN
     SELECT 0 -- 0 = Success
 END
 GO
+
+EXECUTE sp_refreshview N'[dbo].[CipherView]'
+GO
