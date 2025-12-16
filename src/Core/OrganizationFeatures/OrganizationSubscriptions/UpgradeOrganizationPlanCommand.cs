@@ -4,6 +4,7 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.OrganizationConnectionConfigs;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Update;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
@@ -266,9 +267,10 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         organization.UseCustomPermissions = newPlan.HasCustomPermissions;
         organization.Plan = newPlan.Name;
         organization.Enabled = success;
-        organization.BackfillPublicPrivateKeys(upgrade.Keys);
         organization.UsePasswordManager = true;
         organization.UseSecretsManager = upgrade.UseSecretsManager;
+
+        organization.BackfillPublicPrivateKeys(upgrade.Keys);
 
         if (upgrade.UseSecretsManager)
         {

@@ -6,6 +6,6 @@
 /// </summary>
 public record OrganizationKeyPair
 {
-    public string? PublicKey { get; init; }
-    public string? PrivateKey { get; init; }
+    public required string PublicKey { get; init; }
+    public required string PrivateKey { get; init; }
 }
