@@ -150,7 +150,7 @@ public class SendsControllerTests : IDisposable
         };
         _sendOwnerQuery.GetOwned(Arg.Any<ClaimsPrincipal>()).Returns(sends);
 
-        var result = await _sut.Get();
+        var result = await _sut.GetAll();
 
         Assert.NotNull(result);
         Assert.IsType<ListResponseModel<SendResponseModel>>(result);
@@ -166,7 +166,7 @@ public class SendsControllerTests : IDisposable
     {
         _sendOwnerQuery.GetOwned(Arg.Any<ClaimsPrincipal>()).Returns(new List<Send>());
 
-        var result = await _sut.Get();
+        var result = await _sut.GetAll();
 
         Assert.NotNull(result);
         Assert.IsType<ListResponseModel<SendResponseModel>>(result);
