@@ -616,8 +616,8 @@ public class GlobalSettings : IGlobalSettings
 
     public class WebAuthNSettings
     {
-        public int PremiumMaximumAllowedCredentials { get; set; }
-        public int NonPremiumMaximumAllowedCredentials { get; set; }
+        public int PremiumMaximumAllowedCredentials { get; set; } = 10;
+        public int NonPremiumMaximumAllowedCredentials { get; set; } = 5;
     }
 
     public class BraintreeSettings
