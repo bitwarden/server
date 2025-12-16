@@ -159,6 +159,9 @@ impl VrfKeyTableData {
             ));
         }
 
+        if self.sym_enc_vrf_key_nonce.len() != 24 {
+            return Err(VrfKeyStorageError::SymmetricEncryptionError);
+        }
         let nonce = GenericArray::from_slice(self.sym_enc_vrf_key_nonce.as_ref());
         let vrf_key = match config {
             #[cfg(test)]
@@ -195,17 +198,66 @@ impl VrfKeyTableData {
 #[cfg(test)]
 mod tests {
 
-    use rsa::{pkcs1::DecodeRsaPrivateKey, Pkcs1v15Encrypt};
+    use std::str::FromStr;
+
+    use chacha20poly1305::{KeyInit, XChaCha20Poly1305};
+    use rsa::{
+        pkcs1::{DecodeRsaPrivateKey, EncodeRsaPrivateKey},
+        Pkcs1v15Encrypt,
+    };
+
+    // This is a sample RSA private key for testing purposes only.
+    // Please do not flag this as key leakage or use this key in
+    // any production system.
+    const TEST_RSA_PRIVATE_KEY: &str = r"-----BEGIN RSA PRIVATE KEY-----
+MIICXAIBAAKBgQCaPQBvavQC8o/A0map70QTqGz6ETMURzHaWIEjlS89ytjj+8Zs
+K9L1HCy9SOShFcSYrGb47CdMhMKHa/1YRUVA653uO4rqlO+wPhOZEzljvp9zXvDz
+ybLjF2aGZg61w1rC25l36M0NUx8HN+Ws+14mcVzllUiXbk9PMXhWFKoj2wIDAQAB
+AoGAU61Sph/NQCgea0r6nakMMuoGLWjVYGP7nOy1KvvNxGVfY9h9XsQr0AS4FP0N
+5IKtxPKLbvKXo4DHFLc2nAQAvI8kUPZM40jyVk2yUr2k48PMkssdQKXJ/qRi6PeI
+LLLSh7IHDYWdVL7pHA1a7ghH+DIATkA83/++QON1btyKSNECQQDMkKZhqjP2OAbW
+5xYrmJp3Q2TlXRjwuOdZLD8uXHl15vAxGokkawxkVlW5vI99tdnqS6Kp5U0THP6H
+jc+Hii85AkEAwQTxM1Nr3McluiS5kXs8FjdlgUJ+zRAZWOHQqEazQXDlXFVODHFO
++Rh2sX9eqFUc07sJyjV1xLoN5Fe8DjUXswJABy91iKyv0pA5PUc0sidUFahaXOwe
+OiZkie9R8NDyuz93ZGIoOw0/jC60KCgFakb+9ondltYlFOzJy/0hMwOZkQJAc+rB
+5+8LcfVvZNC1WPdHaJgwL2Z9vC0U69oBc22yLXTdaYwZaUOLB/F3JrW1ZSZoP4eu
+I2/joBeUTDOcTnP4HQJBAICmnHCopJ1sSfQG3fMDobOStJBvxQwLkGeRGzI2XsMw
+k7UXX8Wh7AgrK4A/MuZXJL30Cd/dgtlHzJWtlQevTII=
+-----END RSA PRIVATE KEY-----";
+
+    // This is a sample key for testing purposes only.
+    // Please do not flag this as key leakage or use this key in
+    // any production system.
+    const TEST_SYMMETRIC_KEY_B64: &str = "4AD95tg8tfveioyS/E2jAQw06FDTUCu+VSEZxa41wuM=";
+
+    fn create_test_symmetric_config() -> super::VrfKeyConfig {
+        super::VrfKeyConfig::B64EncodedSymmetricKey {
+            key: TEST_SYMMETRIC_KEY_B64.to_string(),
+        }
+    }
+
+    fn create_test_rsa_config() -> super::VrfKeyConfig {
+        super::VrfKeyConfig::PEMEncodedRSAKey {
+            private_key: TEST_RSA_PRIVATE_KEY.to_string(),
+        }
+    }
+
+    fn generate_random_symmetric_key_b64() -> String {
+        let key = XChaCha20Poly1305::generate_key(rand::thread_rng());
+        bitwarden_encoding::B64::from(key.to_vec()).to_string()
+    }
+
+    fn generate_random_rsa_key_pem() -> String {
+        let rsa_private_key = rsa::RsaPrivateKey::new(&mut rand::thread_rng(), 1024).unwrap();
+        rsa_private_key
+            .to_pkcs1_pem(Default::default())
+            .unwrap()
+            .to_string()
+    }
 
     #[tokio::test]
     pub async fn test_generation_from_symmetric_key() {
-        // This is a sample key for testing purposes only.
-        // Please do not flag this as key leakage or use this key in
-        // any production system.
-        let symmetric_key_b64 = "4AD95tg8tfveioyS/E2jAQw06FDTUCu+VSEZxa41wuM=";
-        let config = super::VrfKeyConfig::B64EncodedSymmetricKey {
-            key: symmetric_key_b64.to_string(),
-        };
+        let config = create_test_symmetric_config();
         let (table_data, vrf_key) = super::VrfKeyTableData::new(config.clone()).await.unwrap();
         let retrieved_vrf_key = table_data.to_vrf_key(config).await.unwrap();
 
@@ -223,28 +275,8 @@ mod tests {
 
     #[tokio::test]
     pub async fn test_generation_from_rsa_key() {
-        // This is a sample RSA private key for testing purposes only.
-        // Please do not flag this as key leakage or use this key in
-        // any production system.
-        let rsa_private_key_pem = r"-----BEGIN RSA PRIVATE KEY-----
-MIICXAIBAAKBgQCaPQBvavQC8o/A0map70QTqGz6ETMURzHaWIEjlS89ytjj+8Zs
-K9L1HCy9SOShFcSYrGb47CdMhMKHa/1YRUVA653uO4rqlO+wPhOZEzljvp9zXvDz
-ybLjF2aGZg61w1rC25l36M0NUx8HN+Ws+14mcVzllUiXbk9PMXhWFKoj2wIDAQAB
-AoGAU61Sph/NQCgea0r6nakMMuoGLWjVYGP7nOy1KvvNxGVfY9h9XsQr0AS4FP0N
-5IKtxPKLbvKXo4DHFLc2nAQAvI8kUPZM40jyVk2yUr2k48PMkssdQKXJ/qRi6PeI
-LLLSh7IHDYWdVL7pHA1a7ghH+DIATkA83/++QON1btyKSNECQQDMkKZhqjP2OAbW
-5xYrmJp3Q2TlXRjwuOdZLD8uXHl15vAxGokkawxkVlW5vI99tdnqS6Kp5U0THP6H
-jc+Hii85AkEAwQTxM1Nr3McluiS5kXs8FjdlgUJ+zRAZWOHQqEazQXDlXFVODHFO
-+Rh2sX9eqFUc07sJyjV1xLoN5Fe8DjUXswJABy91iKyv0pA5PUc0sidUFahaXOwe
-OiZkie9R8NDyuz93ZGIoOw0/jC60KCgFakb+9ondltYlFOzJy/0hMwOZkQJAc+rB
-5+8LcfVvZNC1WPdHaJgwL2Z9vC0U69oBc22yLXTdaYwZaUOLB/F3JrW1ZSZoP4eu
-I2/joBeUTDOcTnP4HQJBAICmnHCopJ1sSfQG3fMDobOStJBvxQwLkGeRGzI2XsMw
-k7UXX8Wh7AgrK4A/MuZXJL30Cd/dgtlHzJWtlQevTII=
------END RSA PRIVATE KEY-----";
-        let rsa_private_key = rsa::RsaPrivateKey::from_pkcs1_pem(rsa_private_key_pem).unwrap();
-        let config = super::VrfKeyConfig::PEMEncodedRSAKey {
-            private_key: rsa_private_key_pem.to_string(),
-        };
+        let rsa_private_key = rsa::RsaPrivateKey::from_pkcs1_pem(TEST_RSA_PRIVATE_KEY).unwrap();
+        let config = create_test_rsa_config();
         let (table_data, vrf_key) = super::VrfKeyTableData::new(config.clone()).await.unwrap();
         let retrieved_vrf_key = table_data.to_vrf_key(config).await.unwrap();
         assert_eq!(
@@ -261,5 +293,264 @@ k7UXX8Wh7AgrK4A/MuZXJL30Cd/dgtlHzJWtlQevTII=
             .unwrap();
 
         assert_eq!(vrf_key.0, retrieved_vrf_key.0);
+    }
+
+    #[tokio::test]
+    pub async fn test_generation_from_constant_key() {
+        let config = super::VrfKeyConfig::ConstantVrfKey;
+        let (table_data, vrf_key) = super::VrfKeyTableData::new(config.clone()).await.unwrap();
+        let retrieved_vrf_key = table_data.to_vrf_key(config).await.unwrap();
+
+        assert_eq!(table_data.root_key_hash, vec![]);
+        assert_eq!(table_data.enc_sym_key, None);
+        assert_eq!(table_data.sym_enc_vrf_key, vec![]);
+        assert_eq!(table_data.sym_enc_vrf_key_nonce, vec![]);
+        assert_eq!(vrf_key.0, retrieved_vrf_key.0);
+        assert!(!vrf_key.0.is_empty());
+    }
+
+    #[tokio::test]
+    pub async fn test_invalid_base64_symmetric_key() {
+        let config = super::VrfKeyConfig::B64EncodedSymmetricKey {
+            key: "not!valid@base64#".to_string(),
+        };
+
+        let result = super::VrfKeyTableData::new(config.clone()).await;
+        assert!(matches!(
+            result,
+            Err(super::VrfKeyStorageError::B64DecodingError(_))
+        ));
+    }
+
+    #[tokio::test]
+    pub async fn test_invalid_base64_during_retrieval() {
+        let config_valid = create_test_symmetric_config();
+        let (table_data, _) = super::VrfKeyTableData::new(config_valid).await.unwrap();
+
+        let config_invalid = super::VrfKeyConfig::B64EncodedSymmetricKey {
+            key: "not!valid@base64#".to_string(),
+        };
+        let result = table_data.to_vrf_key(config_invalid).await;
+        assert!(matches!(
+            result,
+            Err(super::VrfKeyStorageError::B64DecodingError(_))
+        ));
+    }
+
+    #[tokio::test]
+    pub async fn test_invalid_symmetric_key_length() {
+        let short_key = bitwarden_encoding::B64::from(vec![0u8; 16]).to_string();
+        let config = super::VrfKeyConfig::B64EncodedSymmetricKey { key: short_key };
+
+        let result = super::VrfKeyTableData::new(config).await;
+        assert!(matches!(
+            result,
+            Err(super::VrfKeyStorageError::KeyLengthError(_))
+        ));
+    }
+
+    #[tokio::test]
+    pub async fn test_invalid_rsa_pem_format_malformed() {
+        let malformed_pem =
+            "-----BEGIN RSA PRIVATE KEY-----\nINVALID\n-----END RSA PRIVATE KEY-----";
+        let config = super::VrfKeyConfig::PEMEncodedRSAKey {
+            private_key: malformed_pem.to_string(),
+        };
+
+        let result = super::VrfKeyTableData::new(config).await;
+        assert!(matches!(
+            result,
+            Err(super::VrfKeyStorageError::RsaKeyEncodingError(_))
+        ));
+    }
+
+    #[tokio::test]
+    pub async fn test_invalid_rsa_pem_format_missing_headers() {
+        let missing_headers = TEST_RSA_PRIVATE_KEY
+            .replace("-----BEGIN RSA PRIVATE KEY-----\n", "")
+            .replace("-----END RSA PRIVATE KEY-----", "");
+        let config = super::VrfKeyConfig::PEMEncodedRSAKey {
+            private_key: missing_headers.to_string(),
+        };
+
+        let result = super::VrfKeyTableData::new(config).await;
+        assert!(matches!(
+            result,
+            Err(super::VrfKeyStorageError::RsaKeyEncodingError(_))
+        ));
+    }
+
+    #[tokio::test]
+    pub async fn test_wrong_symmetric_key_decryption() {
+        let config1 = create_test_symmetric_config();
+        let (table_data, _) = super::VrfKeyTableData::new(config1).await.unwrap();
+
+        let config2 = super::VrfKeyConfig::B64EncodedSymmetricKey {
+            key: generate_random_symmetric_key_b64(),
+        };
+
+        let result = table_data.to_vrf_key(config2).await;
+        assert!(matches!(
+            result,
+            Err(super::VrfKeyStorageError::SymmetricEncryptionError)
+        ));
+    }
+
+    #[tokio::test]
+    pub async fn test_wrong_rsa_key_decryption() {
+        let config1 = create_test_rsa_config();
+        let (table_data, _) = super::VrfKeyTableData::new(config1).await.unwrap();
+
+        let config2 = super::VrfKeyConfig::PEMEncodedRSAKey {
+            private_key: generate_random_rsa_key_pem(),
+        };
+
+        let result = table_data.to_vrf_key(config2).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    pub async fn test_rsa_missing_enc_sym_key() {
+        let config = create_test_rsa_config();
+        let (mut table_data, _) = super::VrfKeyTableData::new(config.clone()).await.unwrap();
+
+        table_data.enc_sym_key = None;
+
+        let result = table_data.to_vrf_key(config).await;
+        assert!(matches!(result, Err(super::VrfKeyStorageError::Other(_))));
+    }
+
+    #[tokio::test]
+    pub async fn test_wrong_nonce() {
+        let config = create_test_symmetric_config();
+        let (mut table_data, _) = super::VrfKeyTableData::new(config.clone()).await.unwrap();
+
+        table_data.sym_enc_vrf_key_nonce.truncate(10);
+
+        let result = table_data.to_vrf_key(config).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    pub async fn test_nonce_size_validation() {
+        let config = create_test_symmetric_config();
+        let (table_data, _) = super::VrfKeyTableData::new(config).await.unwrap();
+
+        assert_eq!(table_data.sym_enc_vrf_key_nonce.len(), 24);
+    }
+
+    #[tokio::test]
+    pub async fn test_empty_symmetric_key() {
+        let config = super::VrfKeyConfig::B64EncodedSymmetricKey { key: String::new() };
+
+        let result = super::VrfKeyTableData::new(config).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    pub async fn test_empty_rsa_key() {
+        let config = super::VrfKeyConfig::PEMEncodedRSAKey {
+            private_key: String::new(),
+        };
+
+        let result = super::VrfKeyTableData::new(config).await;
+        assert!(matches!(
+            result,
+            Err(super::VrfKeyStorageError::RsaKeyEncodingError(_))
+        ));
+    }
+
+    #[tokio::test]
+    pub async fn test_vrf_key_randomness() {
+        let config1 = create_test_symmetric_config();
+        let config2 = create_test_symmetric_config();
+
+        let (table_data1, vrf_key1) = super::VrfKeyTableData::new(config1).await.unwrap();
+        let (table_data2, vrf_key2) = super::VrfKeyTableData::new(config2).await.unwrap();
+
+        assert_ne!(vrf_key1.0, vrf_key2.0);
+        assert_ne!(
+            table_data1.sym_enc_vrf_key_nonce,
+            table_data2.sym_enc_vrf_key_nonce
+        );
+    }
+
+    #[tokio::test]
+    pub async fn test_symmetric_key_not_persisted() {
+        let config = create_test_symmetric_config();
+        let (table_data, _) = super::VrfKeyTableData::new(config).await.unwrap();
+
+        let symmetric_key_bytes =
+            bitwarden_encoding::B64::from_str(TEST_SYMMETRIC_KEY_B64).unwrap();
+
+        assert!(!table_data
+            .sym_enc_vrf_key
+            .contains(&symmetric_key_bytes.as_bytes()[0]));
+        assert_eq!(table_data.enc_sym_key, None);
+    }
+
+    #[tokio::test]
+    pub async fn test_rsa_private_key_not_persisted() {
+        let config = create_test_rsa_config();
+        let (table_data, _) = super::VrfKeyTableData::new(config).await.unwrap();
+
+        let rsa_key = rsa::RsaPrivateKey::from_pkcs1_pem(TEST_RSA_PRIVATE_KEY).unwrap();
+        let rsa_der = rsa_key.to_pkcs1_der().unwrap();
+
+        assert!(!table_data
+            .sym_enc_vrf_key
+            .windows(4)
+            .any(|w| rsa_der.as_bytes().windows(4).any(|rw| w == rw)));
+
+        assert!(table_data.enc_sym_key.is_some());
+    }
+
+    #[tokio::test]
+    pub async fn test_vrf_key_is_encrypted_at_rest() {
+        let config = create_test_symmetric_config();
+        let (table_data, vrf_key) = super::VrfKeyTableData::new(config).await.unwrap();
+
+        assert!(!table_data
+            .sym_enc_vrf_key
+            .windows(8)
+            .any(|w| vrf_key.0.windows(8).any(|vw| w == vw)));
+    }
+
+    #[tokio::test]
+    pub async fn test_symmetric_key_encryption_in_rsa_mode() {
+        let config = create_test_rsa_config();
+        let (table_data, _) = super::VrfKeyTableData::new(config).await.unwrap();
+
+        let enc_sym_key = table_data.enc_sym_key.as_ref().unwrap();
+        let rsa_key = rsa::RsaPrivateKey::from_pkcs1_pem(TEST_RSA_PRIVATE_KEY).unwrap();
+        let decrypted_sym_key = rsa_key.decrypt(Pkcs1v15Encrypt, enc_sym_key).unwrap();
+
+        assert_ne!(enc_sym_key, &decrypted_sym_key);
+        assert_eq!(decrypted_sym_key.len(), 32);
+    }
+
+    #[tokio::test]
+    pub async fn test_cannot_decrypt_symmetric_with_rsa_config() {
+        let sym_config = create_test_symmetric_config();
+        let (table_data, _) = super::VrfKeyTableData::new(sym_config).await.unwrap();
+
+        let rsa_config = create_test_rsa_config();
+
+        let result = table_data.to_vrf_key(rsa_config).await;
+        assert!(matches!(result, Err(super::VrfKeyStorageError::Other(_))));
+    }
+
+    #[tokio::test]
+    pub async fn test_cannot_decrypt_rsa_with_symmetric_config() {
+        let rsa_config = create_test_rsa_config();
+        let (table_data, _) = super::VrfKeyTableData::new(rsa_config).await.unwrap();
+
+        let sym_config = create_test_symmetric_config();
+
+        let result = table_data.to_vrf_key(sym_config).await;
+        assert!(matches!(
+            result,
+            Err(super::VrfKeyStorageError::SymmetricEncryptionError)
+        ));
     }
 }
