@@ -161,7 +161,6 @@ public static class FeatureFlagKeys
     public const string DisableAlternateLoginMethods = "pm-22110-disable-alternate-login-methods";
     public const string PM23174ManageAccountRecoveryPermissionDrivesTheNeedToSetMasterPassword =
         "pm-23174-manage-account-recovery-permission-drives-the-need-to-set-master-password";
-    public const string RecoveryCodeSupportForSsoRequiredUsers = "pm-21153-recovery-code-support-for-sso-required";
     public const string MJMLBasedEmailTemplates = "mjml-based-email-templates";
     public const string MjmlWelcomeEmailTemplates = "pm-21741-mjml-welcome-email";
     public const string MarketingInitiatedPremiumFlow = "pm-26140-marketing-initiated-premium-flow";
@@ -200,10 +199,8 @@ public static class FeatureFlagKeys
     public const string PM28265_ReconcileAdditionalStorageJobEnableLiveMode = "pm-28265-reconcile-additional-storage-job-enable-live-mode";
 
     /* Key Management Team */
-    public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
     public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
     public const string Argon2Default = "argon2-default";
-    public const string UserkeyRotationV2 = "userkey-rotation-v2";
     public const string SSHKeyItemVaultItem = "ssh-key-vault-item";
     public const string EnrollAeadOnKeyRotation = "enroll-aead-on-key-rotation";
     public const string ForceUpdateKDFSettings = "pm-18021-force-update-kdf-settings";
@@ -213,6 +210,7 @@ public static class FeatureFlagKeys
     public const string NoLogoutOnKdfChange = "pm-23995-no-logout-on-kdf-change";
     public const string DisableType0Decryption = "pm-25174-disable-type-0-decryption";
     public const string ConsolidatedSessionTimeoutComponent = "pm-26056-consolidated-session-timeout-component";
+    public const string V2RegistrationTDEJIT = "pm-27279-v2-registration-tde-jit";
     public const string DataRecoveryTool = "pm-28813-data-recovery-tool";
 
     /* Mobile Team */

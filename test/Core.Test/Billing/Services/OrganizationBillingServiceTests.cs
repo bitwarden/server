@@ -10,7 +10,6 @@ using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Test.Billing.Mocks;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -179,7 +178,7 @@ public class OrganizationBillingServiceTests
 
         SubscriptionCreateOptions capturedOptions = null;
         sutProvider.GetDependency<IStripeAdapter>()
-            .SubscriptionCreateAsync(Arg.Do<SubscriptionCreateOptions>(options => capturedOptions = options))
+            .CreateSubscriptionAsync(Arg.Do<SubscriptionCreateOptions>(options => capturedOptions = options))
             .Returns(new Subscription
             {
                 Id = "sub_test123",
@@ -196,7 +195,7 @@ public class OrganizationBillingServiceTests
         // Assert
         await sutProvider.GetDependency<IStripeAdapter>()
             .Received(1)
-            .SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>());
+            .CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>());
 
         Assert.NotNull(capturedOptions);
         Assert.Equal(7, capturedOptions.TrialPeriodDays);
@@ -255,7 +254,7 @@ public class OrganizationBillingServiceTests
 
         SubscriptionCreateOptions capturedOptions = null;
         sutProvider.GetDependency<IStripeAdapter>()
-            .SubscriptionCreateAsync(Arg.Do<SubscriptionCreateOptions>(options => capturedOptions = options))
+            .CreateSubscriptionAsync(Arg.Do<SubscriptionCreateOptions>(options => capturedOptions = options))
             .Returns(new Subscription
             {
                 Id = "sub_test123",
@@ -272,7 +271,7 @@ public class OrganizationBillingServiceTests
         // Assert
         await sutProvider.GetDependency<IStripeAdapter>()
             .Received(1)
-            .SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>());
+            .CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>());
 
         Assert.NotNull(capturedOptions);
         Assert.Equal(0, capturedOptions.TrialPeriodDays);
@@ -329,7 +328,7 @@ public class OrganizationBillingServiceTests
 
         SubscriptionCreateOptions capturedOptions = null;
         sutProvider.GetDependency<IStripeAdapter>()
-            .SubscriptionCreateAsync(Arg.Do<SubscriptionCreateOptions>(options => capturedOptions = options))
+            .CreateSubscriptionAsync(Arg.Do<SubscriptionCreateOptions>(options => capturedOptions = options))
             .Returns(new Subscription
             {
                 Id = "sub_test123",
@@ -346,7 +345,7 @@ public class OrganizationBillingServiceTests
         // Assert
         await sutProvider.GetDependency<IStripeAdapter>()
             .Received(1)
-            .SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>());
+            .CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>());
 
         Assert.NotNull(capturedOptions);
         Assert.Equal(7, capturedOptions.TrialPeriodDays);
@@ -364,7 +363,7 @@ public class OrganizationBillingServiceTests
 
         CustomerUpdateOptions capturedOptions = null;
         sutProvider.GetDependency<IStripeAdapter>()
-            .CustomerUpdateAsync(
+            .UpdateCustomerAsync(
                 Arg.Is<string>(id => id == organization.GatewayCustomerId),
                 Arg.Do<CustomerUpdateOptions>(options => capturedOptions = options))
             .Returns(new Customer());
@@ -375,7 +374,7 @@ public class OrganizationBillingServiceTests
         // Assert
         await sutProvider.GetDependency<IStripeAdapter>()
             .Received(1)
-            .CustomerUpdateAsync(
+            .UpdateCustomerAsync(
                 organization.GatewayCustomerId,
                 Arg.Any<CustomerUpdateOptions>());
 
@@ -401,7 +400,7 @@ public class OrganizationBillingServiceTests
 
         CustomerUpdateOptions capturedOptions = null;
         sutProvider.GetDependency<IStripeAdapter>()
-            .CustomerUpdateAsync(
+            .UpdateCustomerAsync(
                 Arg.Is<string>(id => id == organization.GatewayCustomerId),
                 Arg.Do<CustomerUpdateOptions>(options => capturedOptions = options))
             .Returns(new Customer());
@@ -412,7 +411,7 @@ public class OrganizationBillingServiceTests
         // Assert
         await sutProvider.GetDependency<IStripeAdapter>()
             .Received(1)
-            .CustomerUpdateAsync(
+            .UpdateCustomerAsync(
                 organization.GatewayCustomerId,
                 Arg.Any<CustomerUpdateOptions>());
 
@@ -445,6 +444,6 @@ public class OrganizationBillingServiceTests
 
         await sutProvider.GetDependency<IStripeAdapter>()
             .DidNotReceiveWithAnyArgs()
-            .CustomerUpdateAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>());
+            .UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>());
     }
 }

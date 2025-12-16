@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -172,7 +173,7 @@ public class ResellerClientOrganizationSignUpCommandTests
 
     private static async Task AssertCleanupIsPerformed(SutProvider<ResellerClientOrganizationSignUpCommand> sutProvider)
     {
-        await sutProvider.GetDependency<IPaymentService>()
+        await sutProvider.GetDependency<IStripePaymentService>()
             .Received(1)
             .CancelAndRecoverChargesAsync(Arg.Any<Organization>());
         await sutProvider.GetDependency<IOrganizationRepository>()

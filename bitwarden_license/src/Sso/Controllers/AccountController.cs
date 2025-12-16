@@ -201,12 +201,15 @@ public class AccountController : Controller
             returnUrl,
             state = context.Parameters["state"],
             userIdentifier = context.Parameters["session_state"],
+            ssoToken
         });
     }
 
     [HttpGet]
-    public IActionResult ExternalChallenge(string scheme, string returnUrl, string state, string userIdentifier)
+    public IActionResult ExternalChallenge(string scheme, string returnUrl, string state, string userIdentifier, string ssoToken)
     {
+        ValidateSchemeAgainstSsoToken(scheme, ssoToken);
+
         if (string.IsNullOrEmpty(returnUrl))
         {
             returnUrl = "~/";
@@ -233,6 +236,31 @@ public class AccountController : Controller
         };
 
         return Challenge(props, scheme);
+    }
+
+    /// <summary>
+    /// Validates the scheme (organization ID) against the organization ID found in the ssoToken.
+    /// </summary>
+    /// <param name="scheme">The authentication scheme (organization ID) to validate.</param>
+    /// <param name="ssoToken">The SSO token to validate against.</param>
+    /// <exception cref="Exception">Thrown if the scheme (organization ID) does not match the organization ID found in the ssoToken.</exception>
+    private void ValidateSchemeAgainstSsoToken(string scheme, string ssoToken)
+    {
+        SsoTokenable tokenable;
+
+        try
+        {
+            tokenable = _dataProtector.Unprotect(ssoToken);
+        }
+        catch
+        {
+            throw new Exception(_i18nService.T("InvalidSsoToken"));
+        }
+
+        if (!Guid.TryParse(scheme, out var schemeOrgId) || tokenable.OrganizationId != schemeOrgId)
+        {
+            throw new Exception(_i18nService.T("SsoOrganizationIdMismatch"));
+        }
     }
 
     [HttpGet]
