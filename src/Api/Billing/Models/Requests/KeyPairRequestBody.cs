@@ -2,6 +2,7 @@
 #nullable disable
 
 using System.ComponentModel.DataAnnotations;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 
 namespace Bit.Api.Billing.Models.Requests;
 
@@ -12,4 +13,13 @@ public class KeyPairRequestBody
     public string PublicKey { get; set; }
     [Required(ErrorMessage = "'encryptedPrivateKey' must be provided")]
     public string EncryptedPrivateKey { get; set; }
+
+    public OrganizationKeyPair ToOrganizationKeyPair()
+    {
+        return new OrganizationKeyPair
+        {
+            PublicKey = PublicKey,
+            PrivateKey = EncryptedPrivateKey
+        };
+    }
 }

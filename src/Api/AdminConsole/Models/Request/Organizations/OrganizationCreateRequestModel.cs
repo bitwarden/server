@@ -113,10 +113,9 @@ public class OrganizationCreateRequestModel : IValidatableObject
                 BillingAddressCountry = BillingAddressCountry,
             },
             InitiationPath = InitiationPath,
-            SkipTrial = SkipTrial
+            SkipTrial = SkipTrial,
+            Keys = Keys?.ToOrganizationKeyPair()
         };
-
-        Keys?.ToOrganizationSignup(orgSignup);
 
         return orgSignup;
     }

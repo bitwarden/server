@@ -3,7 +3,6 @@
 
 using Bit.Api.Billing.Controllers;
 using Bit.Api.Billing.Models.Requests;
-using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Providers.Services;
@@ -58,11 +57,7 @@ public class ProviderClientsController(
             Owner = user,
             BillingEmail = provider.BillingEmail,
             OwnerKey = requestBody.Key,
-            Keys = new OrganizationKeyPair
-            {
-                PublicKey = requestBody.KeyPair.PublicKey,
-                PrivateKey = requestBody.KeyPair.EncryptedPrivateKey
-            },
+            Keys = requestBody.KeyPair.ToOrganizationKeyPair(),
             CollectionName = requestBody.CollectionName,
             IsFromProvider = true
         };

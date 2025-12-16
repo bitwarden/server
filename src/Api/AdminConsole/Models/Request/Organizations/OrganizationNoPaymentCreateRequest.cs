@@ -110,9 +110,8 @@ public class OrganizationNoPaymentCreateRequest
                 BillingAddressCountry = BillingAddressCountry,
             },
             InitiationPath = InitiationPath,
+            Keys = Keys?.ToOrganizationKeyPair()
         };
-
-        Keys?.ToOrganizationSignup(orgSignup);
 
         return orgSignup;
     }

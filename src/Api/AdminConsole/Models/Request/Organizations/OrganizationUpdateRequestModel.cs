@@ -1,6 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
-using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Update;
 using Bit.Core.Utilities;
 
@@ -23,10 +22,6 @@ public class OrganizationUpdateRequestModel
         OrganizationId = organizationId,
         Name = Name,
         BillingEmail = BillingEmail,
-        Keys = Keys != null ? new OrganizationKeyPair
-        {
-            PublicKey = Keys.PublicKey,
-            PrivateKey = Keys.EncryptedPrivateKey
-        } : null
+        Keys = Keys?.ToOrganizationKeyPair()
     };
 }
