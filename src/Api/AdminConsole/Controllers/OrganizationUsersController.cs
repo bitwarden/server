@@ -19,6 +19,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimed
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.SelfRevokeUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
@@ -81,6 +82,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly IInitPendingOrganizationCommand _initPendingOrganizationCommand;
     private readonly V1_RevokeOrganizationUserCommand _revokeOrganizationUserCommand;
     private readonly IAdminRecoverAccountCommand _adminRecoverAccountCommand;
+    private readonly ISelfRevokeOrganizationUserCommand _selfRevokeOrganizationUserCommand;
 
     public OrganizationUsersController(IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -112,7 +114,8 @@ public class OrganizationUsersController : BaseAdminConsoleController
         IBulkResendOrganizationInvitesCommand bulkResendOrganizationInvitesCommand,
         IAdminRecoverAccountCommand adminRecoverAccountCommand,
         IAutomaticallyConfirmOrganizationUserCommand automaticallyConfirmOrganizationUserCommand,
-        V2_RevokeOrganizationUserCommand.IRevokeOrganizationUserCommand revokeOrganizationUserCommandVNext)
+        V2_RevokeOrganizationUserCommand.IRevokeOrganizationUserCommand revokeOrganizationUserCommandVNext,
+        ISelfRevokeOrganizationUserCommand selfRevokeOrganizationUserCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -145,6 +148,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _initPendingOrganizationCommand = initPendingOrganizationCommand;
         _revokeOrganizationUserCommand = revokeOrganizationUserCommand;
         _adminRecoverAccountCommand = adminRecoverAccountCommand;
+        _selfRevokeOrganizationUserCommand = selfRevokeOrganizationUserCommand;
     }
 
     [HttpGet("{id}")]
@@ -633,6 +637,19 @@ public class OrganizationUsersController : BaseAdminConsoleController
     public async Task RevokeAsync(Guid orgId, Guid id)
     {
         await RestoreOrRevokeUserAsync(orgId, id, _revokeOrganizationUserCommand.RevokeUserAsync);
+    }
+
+    [HttpPut("revoke-self")]
+    [Authorize<MemberOrProviderRequirement>]
+    public async Task RevokeSelfAsync(Guid orgId)
+    {
+        var userId = _userService.GetProperUserId(User);
+        if (!userId.HasValue)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        await _selfRevokeOrganizationUserCommand.SelfRevokeUserAsync(orgId, userId.Value);
     }
 
     [HttpPatch("{id}/revoke")]
