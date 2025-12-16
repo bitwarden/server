@@ -1,5 +1,8 @@
 ﻿namespace Bit.Seeder;
 
+/// <summary>
+/// Helper for mangling IDs
+/// </summary>
 public class MangleId
 {
     public readonly string Value;
