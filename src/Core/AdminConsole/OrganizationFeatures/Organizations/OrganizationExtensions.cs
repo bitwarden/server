@@ -11,19 +11,16 @@ public static class OrganizationExtensions
     /// </summary>
     public static void BackfillPublicPrivateKeys(this Organization organization, OrganizationKeyPair? keyPair)
     {
-        if (keyPair == null)
+        // Only backfill if both new keys are provided and both old keys are missing.
+        if (string.IsNullOrWhiteSpace(keyPair?.PublicKey) ||
+            string.IsNullOrWhiteSpace(keyPair.PrivateKey) ||
+            !string.IsNullOrWhiteSpace(organization.PublicKey) ||
+            !string.IsNullOrWhiteSpace(organization.PrivateKey))
         {
             return;
         }
 
-        if (!string.IsNullOrWhiteSpace(keyPair.PublicKey) && string.IsNullOrWhiteSpace(organization.PublicKey))
-        {
-            organization.PublicKey = keyPair.PublicKey;
-        }
-
-        if (!string.IsNullOrWhiteSpace(keyPair.PrivateKey) && string.IsNullOrWhiteSpace(organization.PrivateKey))
-        {
-            organization.PrivateKey = keyPair.PrivateKey;
-        }
+        organization.PublicKey = keyPair.PublicKey;
+        organization.PrivateKey = keyPair.PrivateKey;
     }
 }
