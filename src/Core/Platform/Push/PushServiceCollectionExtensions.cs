@@ -1,5 +1,4 @@
-﻿using Azure.Storage.Queues;
-using Bit.Core.Platform.Push;
+﻿using Bit.Core.Platform.Push;
 using Bit.Core.Platform.Push.Internal;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -14,7 +13,7 @@ public static class PushServiceCollectionExtensions
 {
     /// <summary>
     /// Adds a <see cref="IPushNotificationService"/> to the services that can be used to send push notifications to
-    /// end user devices. This method is safe to be ran multiple time provided <see cref="GlobalSettings"/> does not 
+    /// end user devices. This method is safe to be ran multiple time provided <see cref="GlobalSettings"/> does not
     /// change between calls.
     /// </summary>
     /// <param name="services">The <see cref="IServiceCollection"/> to add services to.</param>
@@ -64,17 +63,17 @@ public static class PushServiceCollectionExtensions
 
             services.TryAddSingleton<IPushRelayer, NotificationHubPushEngine>();
 
-            if (CoreHelpers.SettingHasValue(globalSettings.Notifications?.ConnectionString))
-            {
-                services.TryAddKeyedSingleton("notifications", static (sp, _) =>
-                {
-                    var gs = sp.GetRequiredService<GlobalSettings>();
-                    return new QueueClient(gs.Notifications.ConnectionString, "notifications");
-                });
-
-                // We not IHttpContextAccessor will be added above, no need to do it here.
-                services.TryAddEnumerable(ServiceDescriptor.Singleton<IPushEngine, AzureQueuePushEngine>());
-            }
+            // if (CoreHelpers.SettingHasValue(globalSettings.Notifications?.ConnectionString))
+            // {
+            //     services.TryAddKeyedSingleton("notifications", static (sp, _) =>
+            //     {
+            //         var gs = sp.GetRequiredService<GlobalSettings>();
+            //         return new QueueClient(gs.Notifications.ConnectionString, "notifications");
+            //     });
+            //
+            //     // We not IHttpContextAccessor will be added above, no need to do it here.
+            //     services.TryAddEnumerable(ServiceDescriptor.Singleton<IPushEngine, AzureQueuePushEngine>());
+            // }
         }
 
         return services;

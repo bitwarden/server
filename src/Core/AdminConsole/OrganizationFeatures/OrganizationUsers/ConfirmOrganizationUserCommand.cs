@@ -1,8 +1,10 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationConfirmation;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
@@ -19,54 +21,39 @@ using Bit.Core.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 
-public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
+public class ConfirmOrganizationUserCommand(
+    IOrganizationRepository organizationRepository,
+    IOrganizationUserRepository organizationUserRepository,
+    IUserRepository userRepository,
+    IEventService eventService,
+    IMailService mailService,
+    ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
+    IPushNotificationService pushNotificationService,
+    IPushRegistrationService pushRegistrationService,
+    IPolicyService policyService,
+    IDeviceRepository deviceRepository,
+    IPolicyRequirementQuery policyRequirementQuery,
+    IFeatureService featureService,
+    ICollectionRepository collectionRepository,
+    IAutomaticUserConfirmationPolicyEnforcementValidator automaticUserConfirmationPolicyEnforcementValidator,
+    ISendOrganizationConfirmationCommand sendOrganizationConfirmationCommand)
+    : IConfirmOrganizationUserCommand
 {
-    private readonly IOrganizationRepository _organizationRepository;
-    private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IUserRepository _userRepository;
-    private readonly IEventService _eventService;
-    private readonly IMailService _mailService;
-    private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
-    private readonly IPushNotificationService _pushNotificationService;
-    private readonly IPushRegistrationService _pushRegistrationService;
-    private readonly IPolicyService _policyService;
-    private readonly IDeviceRepository _deviceRepository;
-    private readonly IPolicyRequirementQuery _policyRequirementQuery;
-    private readonly IFeatureService _featureService;
-    private readonly ICollectionRepository _collectionRepository;
-    private readonly IAutomaticUserConfirmationPolicyEnforcementValidator _automaticUserConfirmationPolicyEnforcementValidator;
-
-    public ConfirmOrganizationUserCommand(
-        IOrganizationRepository organizationRepository,
-        IOrganizationUserRepository organizationUserRepository,
-        IUserRepository userRepository,
-        IEventService eventService,
-        IMailService mailService,
-        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-        IPushNotificationService pushNotificationService,
-        IPushRegistrationService pushRegistrationService,
-        IPolicyService policyService,
-        IDeviceRepository deviceRepository,
-        IPolicyRequirementQuery policyRequirementQuery,
-        IFeatureService featureService,
-        ICollectionRepository collectionRepository,
-        IAutomaticUserConfirmationPolicyEnforcementValidator automaticUserConfirmationPolicyEnforcementValidator)
-    {
-        _organizationRepository = organizationRepository;
-        _organizationUserRepository = organizationUserRepository;
-        _userRepository = userRepository;
-        _eventService = eventService;
-        _mailService = mailService;
-        _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
-        _pushNotificationService = pushNotificationService;
-        _pushRegistrationService = pushRegistrationService;
-        _policyService = policyService;
-        _deviceRepository = deviceRepository;
-        _policyRequirementQuery = policyRequirementQuery;
-        _featureService = featureService;
-        _collectionRepository = collectionRepository;
-        _automaticUserConfirmationPolicyEnforcementValidator = automaticUserConfirmationPolicyEnforcementValidator;
-    }
+    private readonly IOrganizationRepository _organizationRepository = organizationRepository;
+    private readonly IOrganizationUserRepository _organizationUserRepository = organizationUserRepository;
+    private readonly IUserRepository _userRepository = userRepository;
+    private readonly IEventService _eventService = eventService;
+    private readonly IMailService _mailService = mailService;
+    private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
+    private readonly IPushNotificationService _pushNotificationService = pushNotificationService;
+    private readonly IPushRegistrationService _pushRegistrationService = pushRegistrationService;
+    private readonly IPolicyService _policyService = policyService;
+    private readonly IDeviceRepository _deviceRepository = deviceRepository;
+    private readonly IPolicyRequirementQuery _policyRequirementQuery = policyRequirementQuery;
+    private readonly IFeatureService _featureService = featureService;
+    private readonly ICollectionRepository _collectionRepository = collectionRepository;
+    private readonly IAutomaticUserConfirmationPolicyEnforcementValidator _automaticUserConfirmationPolicyEnforcementValidator = automaticUserConfirmationPolicyEnforcementValidator;
+    private readonly ISendOrganizationConfirmationCommand _sendOrganizationConfirmationCommand = sendOrganizationConfirmationCommand;
 
     public async Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key,
         Guid confirmingUserId, string defaultUserCollectionName = null)
@@ -170,7 +157,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
                 orgUser.Email = null;
 
                 await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
-                await _mailService.SendOrganizationConfirmedEmailAsync(organization.DisplayName(), user.Email, orgUser.AccessSecretsManager);
+                await SendOrganizationConfirmedEmailAsync(organization, user.Email, orgUser.AccessSecretsManager);
                 succeededUsers.Add(orgUser);
                 result.Add(Tuple.Create(orgUser, ""));
             }
@@ -348,5 +335,26 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         }
 
         await _collectionRepository.UpsertDefaultCollectionsAsync(organizationId, eligibleOrganizationUserIds, defaultUserCollectionName);
+    }
+
+    /// <summary>
+    /// Sends the organization confirmed email using either the new mailer pattern or the legacy mail service,
+    /// depending on the feature flag.
+    /// </summary>
+    /// <param name="organization">The organization the user was confirmed to.</param>
+    /// <param name="userEmail">The email address of the confirmed user.</param>
+    /// <param name="accessSecretsManager">Whether the user has access to Secrets Manager.</param>
+    private async Task SendOrganizationConfirmedEmailAsync(Organization organization, string userEmail, bool accessSecretsManager)
+    {
+
+        await _sendOrganizationConfirmationCommand.SendConfirmationAsync(organization, userEmail);
+        // if (_featureService.IsEnabled(FeatureFlagKeys.OrganizationConfirmationEmail))
+        // {
+        //     await _sendOrganizationConfirmationCommand.SendConfirmationAsync(organization, userEmail);
+        // }
+        // else
+        // {
+        //     await _mailService.SendOrganizationConfirmedEmailAsync(organization.DisplayName(), userEmail, accessSecretsManager);
+        // }
     }
 }

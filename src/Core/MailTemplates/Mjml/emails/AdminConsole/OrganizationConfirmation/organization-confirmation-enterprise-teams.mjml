@@ -24,6 +24,8 @@
         </mj-column>
       </mj-section>
       <mj-bw-icon-row
+
+
         icon-src="https://assets.bitwarden.com/email/v1/icon-enterprise.png"
         icon-alt="Organization Icon"
         text="Your account is owned by {{OrganizationName}} and is subject to their security and management policies."
