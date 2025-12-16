@@ -16,8 +16,8 @@ permissions:
   contents: read
 
 env:
-  _AZ_REGISTRY: "bitwardenprod.azurecr.io"
   _GITHUB_PR_REPO_NAME: ${{ github.event.pull_request.head.repo.full_name }}
+  _REGISTRY: "ghcr.io/bitwarden"
 
 jobs:
   lint:
@@ -39,8 +39,7 @@ jobs:
   build-artifacts:
     name: Build Docker images
     runs-on: ubuntu-22.04
-    needs:
-      - lint
+    needs: lint
     outputs:
       has_secrets: ${{ steps.check-secrets.outputs.has_secrets }}
     permissions:
@@ -129,15 +128,6 @@ jobs:
           cache-dependency-path: "**/package-lock.json"
           node-version: "16"
 
-      - name: Print environment
-        run: |
-          whoami
-          dotnet --info
-          node --version
-          npm --version
-          echo "GitHub ref: $GITHUB_REF"
-          echo "GitHub event: $GITHUB_EVENT"
-
       - name: Build node
         if: ${{ matrix.node }}
         working-directory: ${{ matrix.base_path }}/${{ matrix.project_name }}
@@ -174,25 +164,12 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
 
-      ########## ACRs ##########
-      - name: Log in to Azure
-        uses: bitwarden/gh-actions/azure-login@main
-        with:
-          subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          tenant_id: ${{ secrets.AZURE_TENANT_ID }}
-          client_id: ${{ secrets.AZURE_CLIENT_ID }}
-
-      - name: Log in to ACR - production subscription
-        run: az acr login -n bitwardenprod
-
       ########## Generate image tag and build Docker image ##########
       - name: Generate Docker image tag
         id: tag
         run: |
           if [[ "${GITHUB_EVENT_NAME}" == "pull_request" || "${GITHUB_EVENT_NAME}" == "pull_request_target" ]]; then
-            IMAGE_TAG=$(echo "${GITHUB_HEAD_REF}" | sed "s/[^a-zA-Z0-9]/-/g") # Sanitize branch name to alphanumeric only
-          else
-            IMAGE_TAG=$(echo "${GITHUB_REF:11}" | sed "s#/#-#g")
+            IMAGE_TAG=$(echo "${GITHUB_HEAD_REF}" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9._-]+/-/g; s/-+/-/g; s/^-+|-+$//g' | cut -c1-128 | sed -E 's/[.-]$//')
           fi
 
           if [[ "${{ github.event.pull_request.head.repo.fork }}" == "true" ]]; then
@@ -223,13 +200,20 @@ jobs:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
           SHA: ${{ github.sha }}
         run: |
-          TAGS="${_AZ_REGISTRY}/${PROJECT_NAME}:${IMAGE_TAG}"
+          TAGS="${_REGISTRY}/${PROJECT_NAME}:${IMAGE_TAG}"
           echo "primary_tag=$TAGS" >> "$GITHUB_OUTPUT"
           if [[ "${IMAGE_TAG}" == "dev" ]]; then
             SHORT_SHA=$(git rev-parse --short "${SHA}")
-            TAGS=$TAGS",${_AZ_REGISTRY}/${PROJECT_NAME}:dev-${SHORT_SHA}"
+            TAGS=$TAGS",${_REGISTRY}/${PROJECT_NAME}:dev-${SHORT_SHA}"
           fi
           echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build Docker image
         id: build-artifacts
@@ -297,16 +281,6 @@ jobs:
       - name: Set up .NET
         uses: actions/setup-dotnet@d4c94342e560b34958eacfc5d055d21461ed1c5d # v5.0.0
 
-      - name: Log in to Azure
-        uses: bitwarden/gh-actions/azure-login@main
-        with:
-          subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          tenant_id: ${{ secrets.AZURE_TENANT_ID }}
-          client_id: ${{ secrets.AZURE_CLIENT_ID }}
-
-      - name: Log in to ACR - production subscription
-        run: az acr login -n "$_AZ_REGISTRY" --only-show-errors
-
       - name: Make Docker stubs
         if: |
           github.event_name != 'pull_request'
@@ -315,13 +289,13 @@ jobs:
           # Set proper setup image based on branch
           case "$GITHUB_REF" in
             "refs/heads/main")
-                SETUP_IMAGE="$_AZ_REGISTRY/setup:dev"
+                SETUP_IMAGE="${_REGISTRY}/setup:dev"
                 ;;
             "refs/heads/rc")
-                SETUP_IMAGE="$_AZ_REGISTRY/setup:rc"
+                SETUP_IMAGE="${_REGISTRY}/setup:rc"
                 ;;
             "refs/heads/hotfix-rc")
-                SETUP_IMAGE="$_AZ_REGISTRY/setup:hotfix-rc"
+                SETUP_IMAGE="${_REGISTRY}/setup:hotfix-rc"
                 ;;
           esac
 
@@ -348,9 +322,6 @@ jobs:
           # Zip up the Docker stub files
           cd docker-stub/US; zip -r ../../docker-stub-US.zip ./*; cd ../..
           cd docker-stub/EU; zip -r ../../docker-stub-EU.zip ./*; cd ../..
-
-      - name: Log out from Azure
-        uses: bitwarden/gh-actions/azure-logout@main
 
       - name: Upload Docker stub US artifact
         if: |
@@ -401,8 +372,7 @@ jobs:
   build-mssqlmigratorutility:
     name: Build MSSQL migrator utility
     runs-on: ubuntu-22.04
-    needs:
-      - lint
+    needs: lint
     defaults:
       run:
         shell: bash
@@ -423,13 +393,6 @@ jobs:
 
       - name: Set up .NET
         uses: actions/setup-dotnet@d4c94342e560b34958eacfc5d055d21461ed1c5d # v5.0.0
-
-      - name: Print environment
-        run: |
-          whoami
-          dotnet --info
-          echo "GitHub ref: $GITHUB_REF"
-          echo "GitHub event: $GITHUB_EVENT"
 
       - name: Publish project
         run: |
@@ -458,8 +421,7 @@ jobs:
       github.event_name != 'pull_request'
       && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc')
     runs-on: ubuntu-22.04
-    needs:
-      - build-artifacts
+    needs: build-artifacts
     permissions:
       id-token: write
     steps:
@@ -508,8 +470,7 @@ jobs:
     name: Trigger k8s deploy
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-22.04
-    needs:
-      - build-artifacts
+    needs: build-artifacts
     permissions:
       id-token: write
     steps:
@@ -557,8 +518,7 @@ jobs:
 
   setup-ephemeral-environment:
     name: Setup Ephemeral Environment
-    needs:
-      - build-artifacts
+    needs: build-artifacts
     if: |
       needs.build-artifacts.outputs.has_secrets == 'true'
       && github.event_name == 'pull_request'

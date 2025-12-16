@@ -1,18 +1,9 @@
 name: Publish
-run-name: Publish ${{ inputs.publish_type }}
+run-name: Publish - ${{ inputs.version }}
 
 on:
   workflow_dispatch:
     inputs:
-      publish_type:
-        description: "Publish Options"
-        required: true
-        default: "Initial Publish"
-        type: choice
-        options:
-          - Initial Publish
-          - Redeploy
-          - Dry Run
       version:
         description: 'Version to publish (default: latest release)'
         required: true
@@ -20,7 +11,7 @@ on:
         default: latest
 
 env:
-  _AZ_REGISTRY: "bitwardenprod.azurecr.io"
+  _REGISTRY: "ghcr.io/bitwarden"
 
 jobs:
   setup:
@@ -95,16 +86,6 @@ jobs:
           - project_name: Setup
           - project_name: Sso
     steps:
-      - name: Print environment
-        env:
-          RELEASE_OPTION: ${{ inputs.publish_type }}
-        run: |
-          whoami
-          docker --version
-          echo "GitHub ref: $GITHUB_REF"
-          echo "GitHub event: $GITHUB_EVENT"
-          echo "Github Release Option: $RELEASE_OPTION"
-
       - name: Check out repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -119,54 +100,34 @@ jobs:
           echo "PROJECT_NAME: $PROJECT_NAME"
           echo "project_name=$PROJECT_NAME" >> "$GITHUB_OUTPUT"
 
-      ########## ACR PROD ##########
-      - name: Log in to Azure
-        uses: bitwarden/gh-actions/azure-login@main
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
         with:
-          subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          tenant_id: ${{ secrets.AZURE_TENANT_ID }}
-          client_id: ${{ secrets.AZURE_CLIENT_ID }}
-
-      - name: Log in to Azure ACR
-        run: az acr login -n "$_AZ_REGISTRY" --only-show-errors
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Pull latest project image
         env:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
-        run: |
-          if [[ "${{ inputs.publish_type }}" == "Dry Run" ]]; then
-            docker pull "$_AZ_REGISTRY/$PROJECT_NAME:latest"
-          else
-            docker pull "$_AZ_REGISTRY/$PROJECT_NAME:$_BRANCH_NAME"
-          fi
+        run: docker pull "${_REGISTRY}/${PROJECT_NAME}:${_BRANCH_NAME}"
 
       - name: Tag version and latest
         env:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
         run: |
-          if [[ "${{ inputs.publish_type }}" == "Dry Run" ]]; then
-            docker tag "$_AZ_REGISTRY/$PROJECT_NAME:latest" "$_AZ_REGISTRY/$PROJECT_NAME:dryrun"
-          else
-            docker tag "$_AZ_REGISTRY/$PROJECT_NAME:$_BRANCH_NAME" "$_AZ_REGISTRY/$PROJECT_NAME:$_RELEASE_VERSION"
-            docker tag "$_AZ_REGISTRY/$PROJECT_NAME:$_BRANCH_NAME" "$_AZ_REGISTRY/$PROJECT_NAME:latest"
-          fi
+          docker tag "${_REGISTRY}/${PROJECT_NAME}:${_BRANCH_NAME}" "${_REGISTRY}/${PROJECT_NAME}:${_RELEASE_VERSION}"
+          docker tag "${_REGISTRY}/${PROJECT_NAME}:${_BRANCH_NAME}" "${_REGISTRY}/${PROJECT_NAME}:latest"
 
       - name: Push version and latest image
         env:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
         run: |
-          if [[ "${{ inputs.publish_type }}" == "Dry Run" ]]; then
-            docker push "$_AZ_REGISTRY/$PROJECT_NAME:dryrun"
-          else
-            docker push "$_AZ_REGISTRY/$PROJECT_NAME:$_RELEASE_VERSION"
-            docker push "$_AZ_REGISTRY/$PROJECT_NAME:latest"
-          fi
+          docker push "${_REGISTRY}/${PROJECT_NAME}:${_RELEASE_VERSION}"
+          docker push "${_REGISTRY}/${PROJECT_NAME}:latest"
 
-      - name: Log out of Docker
-        run: docker logout
-
-      - name: Log out from Azure
-        uses: bitwarden/gh-actions/azure-logout@main
+      - name: Log out of GHCR
+        run: docker logout ghcr.io
 
   update-deployment:
     name: Update Deployment Status
@@ -176,14 +137,14 @@ jobs:
       - publish-docker
     permissions:
       deployments: write
-    if: ${{ always() && inputs.publish_type != 'Dry Run' }}
+    if: ${{ always() }}
     steps:
       - name: Check if any job failed
         if: contains(needs.*.result, 'failure')
         run: exit 1
 
       - name: Update deployment status to Success
-        if: ${{ inputs.publish_type != 'Dry Run' && success() }}
+        if: ${{ success() }}
         uses: chrnorm/deployment-status@9a72af4586197112e0491ea843682b5dc280d806 # v2.0.3
         with:
           token: '${{ secrets.GITHUB_TOKEN }}'
@@ -191,7 +152,7 @@ jobs:
           deployment-id: ${{ needs.setup.outputs.deployment-id }}
 
       - name: Update deployment status to Failure
-        if: ${{ inputs.publish_type != 'Dry Run' && failure() }}
+        if: ${{ failure() }}
         uses: chrnorm/deployment-status@9a72af4586197112e0491ea843682b5dc280d806 # v2.0.3
         with:
           token: '${{ secrets.GITHUB_TOKEN }}'
