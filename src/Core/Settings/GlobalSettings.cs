@@ -66,6 +66,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual NotificationHubPoolSettings NotificationHubPool { get; set; } = new();
     public virtual YubicoSettings Yubico { get; set; } = new YubicoSettings();
     public virtual DuoSettings Duo { get; set; } = new DuoSettings();
+    public virtual WebAuthNSettings WebAuthN { get; set; } = new WebAuthNSettings();
     public virtual BraintreeSettings Braintree { get; set; } = new BraintreeSettings();
     public virtual ImportCiphersLimitationSettings ImportCiphersLimitation { get; set; } = new ImportCiphersLimitationSettings();
     public virtual BitPaySettings BitPay { get; set; } = new BitPaySettings();
@@ -611,6 +612,12 @@ public class GlobalSettings : IGlobalSettings
     public class DuoSettings
     {
         public string AKey { get; set; }
+    }
+
+    public class WebAuthNSettings
+    {
+        public int PremiumMaximumAllowedCredentials { get; set; }
+        public int NonPremiumMaximumAllowedCredentials { get; set; }
     }
 
     public class BraintreeSettings
