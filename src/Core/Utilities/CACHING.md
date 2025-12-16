@@ -381,7 +381,7 @@ public class OrganizationAbilityService
 
 ### Example Usage: Default (Ephemeral Data)
 
-#### 1. Registration (already done in Api, Admin, Billing, Identity, and Notifications Startup.cs files, plus Events and EventsProcessor service collection extensions):
+#### 1. Registration (already done in Api, Admin, Billing, Events, EventsProcessor, Identity, and Notifications Startup.cs files):
 
 ```csharp
 services.AddDistributedCache(globalSettings);
