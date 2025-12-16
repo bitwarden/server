@@ -243,35 +243,47 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
     public async Task ReplaceAsync(Collection obj, IEnumerable<CollectionAccessSelection>? groups, IEnumerable<CollectionAccessSelection>? users)
     {
         await using var connection = new SqlConnection(ConnectionString);
+        await connection.OpenAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+        try
+        {
+            if (groups == null && users == null)
+            {
+                await connection.ExecuteAsync(
+                    $"[{Schema}].[Collection_Update]",
+                    obj,
+                    commandType: CommandType.StoredProcedure);
+            }
+            else if (groups != null && users == null)
+            {
+                await connection.ExecuteAsync(
+                    $"[{Schema}].[Collection_UpdateWithGroups]",
+                    new CollectionWithGroups(obj, groups),
+                    commandType: CommandType.StoredProcedure);
+            }
+            else if (groups == null && users != null)
+            {
+                await connection.ExecuteAsync(
+                    $"[{Schema}].[Collection_UpdateWithUsers]",
+                    new CollectionWithUsers(obj, users),
+                    commandType: CommandType.StoredProcedure);
+            }
+            else if (groups != null && users != null)
+            {
+                await connection.ExecuteAsync(
+                    $"[{Schema}].[Collection_UpdateWithGroupsAndUsers]",
+                    new CollectionWithGroupsAndUsers(obj, groups, users),
+                    commandType: CommandType.StoredProcedure);
+            }
 
-        if (groups == null && users == null)
-        {
-            await connection.ExecuteAsync(
-                $"[{Schema}].[Collection_Update]",
-                obj,
-                commandType: CommandType.StoredProcedure);
+            await transaction.CommitAsync();
         }
-        else if (groups != null && users == null)
+        catch
         {
-            await connection.ExecuteAsync(
-                $"[{Schema}].[Collection_UpdateWithGroups]",
-                new CollectionWithGroups(obj, groups),
-                commandType: CommandType.StoredProcedure);
+            await transaction.RollbackAsync();
+            throw;
         }
-        else if (groups == null && users != null)
-        {
-            await connection.ExecuteAsync(
-                $"[{Schema}].[Collection_UpdateWithUsers]",
-                new CollectionWithUsers(obj, users),
-                commandType: CommandType.StoredProcedure);
-        }
-        else if (groups != null && users != null)
-        {
-            await connection.ExecuteAsync(
-                $"[{Schema}].[Collection_UpdateWithGroupsAndUsers]",
-                new CollectionWithGroupsAndUsers(obj, groups, users),
-                commandType: CommandType.StoredProcedure);
-        }
+
     }
 
     public async Task DeleteManyAsync(IEnumerable<Guid> collectionIds)
