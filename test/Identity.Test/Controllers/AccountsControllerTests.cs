@@ -821,6 +821,225 @@ public class AccountsControllerTests : IDisposable
             organizationUserId);
     }
 
+    [Theory, BitAutoData]
+    public async Task PostRegisterFinish_NewForm_UsesUnlockDataForKdfAndKey_WhenRootFieldsNull(
+        string email,
+        string emailVerificationToken,
+        string masterPasswordHash,
+        string masterKeyWrappedUserKey,
+        int iterations,
+        string publicKey,
+        string encryptedPrivateKey)
+    {
+        // Arrange: Provide only unlock-data KDF + key; leave root KDF fields null
+        var unlockKdf = new KdfSettings
+        {
+            KdfType = KdfType.PBKDF2_SHA256,
+            Iterations = iterations
+        };
+
+        var model = new RegisterFinishRequestModel
+        {
+            Email = email,
+            EmailVerificationToken = emailVerificationToken,
+            MasterPasswordAuthenticationData = new MasterPasswordAuthenticationData
+            {
+                // present but not used by ToUser for KDF/Key
+                Kdf = new KdfSettings { KdfType = KdfType.Argon2id, Iterations = iterations },
+                MasterPasswordAuthenticationHash = masterPasswordHash,
+                Salt = email
+            },
+            MasterPasswordUnlockData = new MasterPasswordUnlockData
+            {
+                Kdf = unlockKdf,
+                MasterKeyWrappedUserKey = masterKeyWrappedUserKey,
+                Salt = email
+            },
+            // root KDF fields intentionally null
+            Kdf = null,
+            KdfIterations = null,
+            UserAsymmetricKeys = new KeysRequestModel
+            {
+                PublicKey = publicKey,
+                EncryptedPrivateKey = encryptedPrivateKey
+            }
+        };
+
+        _registerUserCommand
+            .RegisterUserViaEmailVerificationToken(Arg.Any<User>(), masterPasswordHash, emailVerificationToken)
+            .Returns(Task.FromResult(IdentityResult.Success));
+
+        // Act
+        var _ = await _sut.PostRegisterFinish(model);
+
+        // Assert: The user passed to command uses unlock-data values
+        await _registerUserCommand.Received(1).RegisterUserViaEmailVerificationToken(
+            Arg.Is<User>(u =>
+                u.Email == email &&
+                u.Kdf == unlockKdf.KdfType &&
+                u.KdfIterations == unlockKdf.Iterations &&
+                u.Key == masterKeyWrappedUserKey),
+            masterPasswordHash,
+            emailVerificationToken);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostRegisterFinish_LegacyForm_UsesRootFields_WhenUnlockDataNull(
+        string email,
+        string emailVerificationToken,
+        string masterPasswordHash,
+        string legacyKey,
+        string publicKey,
+        string encryptedPrivateKey)
+    {
+        // Arrange: Provide only legacy root KDF + key; no unlock-data provided
+        var model = new RegisterFinishRequestModel
+        {
+            Email = email,
+            EmailVerificationToken = emailVerificationToken,
+            MasterPasswordHash = masterPasswordHash,
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+            UserSymmetricKey = legacyKey,
+            MasterPasswordUnlockData = null,
+            UserAsymmetricKeys = new KeysRequestModel
+            {
+                PublicKey = publicKey,
+                EncryptedPrivateKey = encryptedPrivateKey
+            }
+        };
+
+        _registerUserCommand
+            .RegisterUserViaEmailVerificationToken(Arg.Any<User>(), masterPasswordHash, emailVerificationToken)
+            .Returns(Task.FromResult(IdentityResult.Success));
+
+        // Act
+        var _ = await _sut.PostRegisterFinish(model);
+
+        // Assert: The user passed to command uses root values
+        await _registerUserCommand.Received(1).RegisterUserViaEmailVerificationToken(
+            Arg.Is<User>(u =>
+                u.Email == email &&
+                u.Kdf == KdfType.PBKDF2_SHA256 &&
+                u.KdfIterations == AuthConstants.PBKDF2_ITERATIONS.Default &&
+                u.Key == legacyKey),
+            masterPasswordHash,
+            emailVerificationToken);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostRegisterFinish_WhenKdfMissingInAllSources_ShouldReturnBadRequest(
+        string email,
+        string emailVerificationToken,
+        string masterPasswordHash,
+        string masterKeyWrappedUserKey,
+        int iterations,
+        string publicKey,
+        string encryptedPrivateKey)
+    {
+        // Arrange: No KDF at root, and no unlock-data present
+        var model = new RegisterFinishRequestModel
+        {
+            Email = email,
+            EmailVerificationToken = emailVerificationToken,
+            MasterPasswordAuthenticationData = new MasterPasswordAuthenticationData
+            {
+                // present but ToUser does not source KDF from here
+                Kdf = new KdfSettings { KdfType = KdfType.Argon2id, Iterations = iterations },
+                MasterPasswordAuthenticationHash = masterPasswordHash,
+                Salt = email
+            },
+            MasterPasswordUnlockData = null,
+            Kdf = null,
+            KdfIterations = iterations,
+            UserSymmetricKey = masterKeyWrappedUserKey,
+            UserAsymmetricKeys = new KeysRequestModel
+            {
+                PublicKey = publicKey,
+                EncryptedPrivateKey = encryptedPrivateKey
+            }
+        };
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostRegisterFinish(model));
+        Assert.Equal("KdfType couldn't be found on either the MasterPasswordUnlockData or the Kdf property passed in.", ex.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostRegisterFinish_WhenKdfIterationsMissingInAllSources_ShouldReturnBadRequest(
+        string email,
+        string emailVerificationToken,
+        string masterPasswordHash,
+        string masterKeyWrappedUserKey,
+        KdfType kdfType,
+        string publicKey,
+        string encryptedPrivateKey)
+    {
+        // Arrange: No KdfIterations at root, and no unlock-data present
+        var model = new RegisterFinishRequestModel
+        {
+            Email = email,
+            EmailVerificationToken = emailVerificationToken,
+            MasterPasswordAuthenticationData = new MasterPasswordAuthenticationData
+            {
+                // present but ToUser does not source iterations from here
+                Kdf = new KdfSettings { KdfType = kdfType, Iterations = AuthConstants.PBKDF2_ITERATIONS.Default },
+                MasterPasswordAuthenticationHash = masterPasswordHash,
+                Salt = email
+            },
+            MasterPasswordUnlockData = null,
+            Kdf = kdfType,
+            KdfIterations = null,
+            UserSymmetricKey = masterKeyWrappedUserKey,
+            UserAsymmetricKeys = new KeysRequestModel
+            {
+                PublicKey = publicKey,
+                EncryptedPrivateKey = encryptedPrivateKey
+            }
+        };
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostRegisterFinish(model));
+        Assert.Equal("KdfIterations couldn't be found on either the MasterPasswordUnlockData or the KdfIterations property passed in.", ex.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostRegisterFinish_WhenKeyMissingInAllSources_ShouldReturnBadRequest(
+        string email,
+        string emailVerificationToken,
+        string masterPasswordHash,
+        int iterations,
+        KdfType kdfType,
+        string publicKey,
+        string encryptedPrivateKey)
+    {
+        // Arrange: No key at root, and no unlock-data present
+        var model = new RegisterFinishRequestModel
+        {
+            Email = email,
+            EmailVerificationToken = emailVerificationToken,
+            MasterPasswordAuthenticationData = new MasterPasswordAuthenticationData
+            {
+                Kdf = new KdfSettings { KdfType = kdfType, Iterations = iterations },
+                MasterPasswordAuthenticationHash = masterPasswordHash,
+                Salt = email
+            },
+            MasterPasswordUnlockData = null,
+            Kdf = kdfType,
+            KdfIterations = iterations,
+            UserSymmetricKey = null,
+            UserAsymmetricKeys = new KeysRequestModel
+            {
+                PublicKey = publicKey,
+                EncryptedPrivateKey = encryptedPrivateKey
+            }
+        };
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostRegisterFinish(model));
+        Assert.Equal("MasterKeyWrappedUserKey couldn't be found on either the MasterPasswordUnlockData or the UserSymmetricKey property passed in.", ex.Message);
+    }
+
     private void SetDefaultKdfHmacKey(byte[]? newKey)
     {
         var fieldInfo = typeof(AccountsController).GetField("_defaultKdfHmacKey", BindingFlags.NonPublic | BindingFlags.Instance);

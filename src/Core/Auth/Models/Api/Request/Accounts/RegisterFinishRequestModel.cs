@@ -24,14 +24,18 @@ public class RegisterFinishRequestModel : IValidatableObject
     public MasterPasswordAuthenticationData? MasterPasswordAuthenticationData { get; set; }
     public MasterPasswordUnlockData? MasterPasswordUnlockData { get; set; }
 
-    // PM-28143 - Remove line below (made optional during migration to MasterPasswordUnlockData)
+    // PM-28143 - Remove property below (made optional during migration to MasterPasswordUnlockData)
     [StringLength(1000)]
+    // Made optional but there will still be a thrown error if it does not exist either here or
+    // in the MasterPasswordAuthenticationData.
     public string? MasterPasswordHash { get; set; }
 
     [StringLength(50)]
     public string? MasterPasswordHint { get; set; }
 
-    // PM-28143 - Remove line below (made optional during migration to MasterPasswordUnlockData)
+    // PM-28143 - Remove property below (made optional during migration to MasterPasswordUnlockData)
+    // Made optional but there will still be a thrown error if it does not exist either here or
+    // in the MasterPasswordAuthenticationData.
     public string? UserSymmetricKey { get; set; }
 
     public required KeysRequestModel UserAsymmetricKeys { get; set; }
@@ -70,7 +74,7 @@ public class RegisterFinishRequestModel : IValidatableObject
             KdfParallelism = MasterPasswordUnlockData?.Kdf.Parallelism ?? KdfParallelism,
             // PM-28827 To be added when MasterPasswordSalt is added to the user column
             // MasterPasswordSalt = MasterPasswordUnlockData?.Salt ?? Email.ToLower().Trim(),
-            Key = MasterPasswordUnlockData?.MasterKeyWrappedUserKey ?? UserSymmetricKey,
+            Key = MasterPasswordUnlockData?.MasterKeyWrappedUserKey ?? UserSymmetricKey ?? throw new Exception("MasterKeyWrappedUserKey couldn't be found on either the MasterPasswordUnlockData or the UserSymmetricKey property passed in."),
         };
 
         UserAsymmetricKeys.ToUser(user);
