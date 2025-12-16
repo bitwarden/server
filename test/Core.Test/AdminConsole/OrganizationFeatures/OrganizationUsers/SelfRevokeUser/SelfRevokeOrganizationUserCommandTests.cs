@@ -138,6 +138,41 @@ public class SelfRevokeOrganizationUserCommandTests
         Assert.Contains("exempt from the organization data ownership policy", exception.Message);
     }
 
+    [Theory]
+    [BitAutoData(OrganizationUserStatusType.Invited)]
+    [BitAutoData(OrganizationUserStatusType.Accepted)]
+    public async Task SelfRevokeUser_WhenUserNotConfirmed_ThrowsBadRequest(
+        OrganizationUserStatusType status,
+        Guid organizationId,
+        Guid userId,
+        OrganizationUser organizationUser,
+        Policy policy,
+        SutProvider<SelfRevokeOrganizationUserCommand> sutProvider)
+    {
+        // Arrange
+        organizationUser.Status = status;
+        organizationUser.Type = OrganizationUserType.User;
+        organizationUser.OrganizationId = organizationId;
+        organizationUser.UserId = userId;
+        policy.Type = PolicyType.OrganizationDataOwnership;
+        policy.Enabled = true;
+        policy.OrganizationId = organizationId;
+
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(organizationId, PolicyType.OrganizationDataOwnership)
+            .Returns(policy);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(organizationId, userId)
+            .Returns(organizationUser);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SelfRevokeUserAsync(organizationId, userId));
+
+        Assert.Contains("User must be confirmed to self-revoke", exception.Message);
+    }
+
     [Theory, BitAutoData]
     public async Task SelfRevokeUser_WhenUserNotFound_ThrowsNotFoundException(
         Guid organizationId,
