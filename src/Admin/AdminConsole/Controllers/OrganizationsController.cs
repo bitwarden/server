@@ -14,8 +14,10 @@ using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Services;
+using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -41,7 +43,7 @@ public class OrganizationsController : Controller
     private readonly ICollectionRepository _collectionRepository;
     private readonly IGroupRepository _groupRepository;
     private readonly IPolicyRepository _policyRepository;
-    private readonly IPaymentService _paymentService;
+    private readonly IStripePaymentService _paymentService;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly GlobalSettings _globalSettings;
     private readonly IProviderRepository _providerRepository;
@@ -56,6 +58,7 @@ public class OrganizationsController : Controller
     private readonly IOrganizationInitiateDeleteCommand _organizationInitiateDeleteCommand;
     private readonly IPricingClient _pricingClient;
     private readonly IResendOrganizationInviteCommand _resendOrganizationInviteCommand;
+    private readonly IOrganizationBillingService _organizationBillingService;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -66,7 +69,7 @@ public class OrganizationsController : Controller
         ICollectionRepository collectionRepository,
         IGroupRepository groupRepository,
         IPolicyRepository policyRepository,
-        IPaymentService paymentService,
+        IStripePaymentService paymentService,
         IApplicationCacheService applicationCacheService,
         GlobalSettings globalSettings,
         IProviderRepository providerRepository,
@@ -80,7 +83,8 @@ public class OrganizationsController : Controller
         IProviderBillingService providerBillingService,
         IOrganizationInitiateDeleteCommand organizationInitiateDeleteCommand,
         IPricingClient pricingClient,
-        IResendOrganizationInviteCommand resendOrganizationInviteCommand)
+        IResendOrganizationInviteCommand resendOrganizationInviteCommand,
+        IOrganizationBillingService organizationBillingService)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -105,6 +109,7 @@ public class OrganizationsController : Controller
         _organizationInitiateDeleteCommand = organizationInitiateDeleteCommand;
         _pricingClient = pricingClient;
         _resendOrganizationInviteCommand = resendOrganizationInviteCommand;
+        _organizationBillingService = organizationBillingService;
     }
 
     [RequirePermission(Permission.Org_List_View)]
@@ -241,6 +246,8 @@ public class OrganizationsController : Controller
         var existingOrganizationData = new Organization
         {
             Id = organization.Id,
+            Name = organization.Name,
+            BillingEmail = organization.BillingEmail,
             Status = organization.Status,
             PlanType = organization.PlanType,
             Seats = organization.Seats
@@ -285,6 +292,22 @@ public class OrganizationsController : Controller
         await _organizationRepository.ReplaceAsync(organization);
 
         await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
+
+        // Sync name/email changes to Stripe
+        if (existingOrganizationData.Name != organization.Name || existingOrganizationData.BillingEmail != organization.BillingEmail)
+        {
+            try
+            {
+                await _organizationBillingService.UpdateOrganizationNameAndEmail(organization);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to update Stripe customer for organization {OrganizationId}. Database was updated successfully.",
+                    organization.Id);
+                TempData["Warning"] = "Organization updated successfully, but Stripe customer name/email synchronization failed.";
+            }
+        }
 
         return RedirectToAction("Edit", new { id });
     }
@@ -473,6 +496,7 @@ public class OrganizationsController : Controller
             organization.UseOrganizationDomains = model.UseOrganizationDomains;
             organization.UseAdminSponsoredFamilies = model.UseAdminSponsoredFamilies;
             organization.UseAutomaticUserConfirmation = model.UseAutomaticUserConfirmation;
+            organization.UsePhishingBlocker = model.UsePhishingBlocker;
 
             //secrets
             organization.SmSeats = model.SmSeats;

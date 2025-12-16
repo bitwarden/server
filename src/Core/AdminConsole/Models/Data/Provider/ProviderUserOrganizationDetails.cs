@@ -56,4 +56,5 @@ public class ProviderUserOrganizationDetails : IProfileOrganizationDetails
     public string? SsoExternalId { get; set; }
     public string? Permissions { get; set; }
     public string? ResetPasswordKey { get; set; }
+    public bool UsePhishingBlocker { get; set; }
 }

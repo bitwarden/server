@@ -45,6 +45,9 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
+using V1_RevokeUsersCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v1;
+using V2_RevokeUsersCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v2;
+
 namespace Bit.Core.OrganizationFeatures;
 
 public static class OrganizationServiceCollectionExtensions
@@ -133,7 +136,6 @@ public static class OrganizationServiceCollectionExtensions
     {
         services.AddScoped<IRemoveOrganizationUserCommand, RemoveOrganizationUserCommand>();
         services.AddScoped<IRevokeNonCompliantOrganizationUserCommand, RevokeNonCompliantOrganizationUserCommand>();
-        services.AddScoped<IRevokeOrganizationUserCommand, RevokeOrganizationUserCommand>();
         services.AddScoped<IUpdateOrganizationUserCommand, UpdateOrganizationUserCommand>();
         services.AddScoped<IUpdateOrganizationUserGroupsCommand, UpdateOrganizationUserGroupsCommand>();
         services.AddScoped<IConfirmOrganizationUserCommand, ConfirmOrganizationUserCommand>();
@@ -143,6 +145,11 @@ public static class OrganizationServiceCollectionExtensions
 
         services.AddScoped<IDeleteClaimedOrganizationUserAccountCommand, DeleteClaimedOrganizationUserAccountCommand>();
         services.AddScoped<IDeleteClaimedOrganizationUserAccountValidator, DeleteClaimedOrganizationUserAccountValidator>();
+
+        services.AddScoped<V1_RevokeUsersCommand.IRevokeOrganizationUserCommand, V1_RevokeUsersCommand.RevokeOrganizationUserCommand>();
+
+        services.AddScoped<V2_RevokeUsersCommand.IRevokeOrganizationUserCommand, V2_RevokeUsersCommand.RevokeOrganizationUserCommand>();
+        services.AddScoped<V2_RevokeUsersCommand.IRevokeOrganizationUserValidator, V2_RevokeUsersCommand.RevokeOrganizationUsersValidator>();
     }
 
     private static void AddOrganizationApiKeyCommandsQueries(this IServiceCollection services)
@@ -197,6 +204,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IInviteOrganizationUsersCommand, InviteOrganizationUsersCommand>();
         services.AddScoped<ISendOrganizationInvitesCommand, SendOrganizationInvitesCommand>();
         services.AddScoped<IResendOrganizationInviteCommand, ResendOrganizationInviteCommand>();
+        services.AddScoped<IBulkResendOrganizationInvitesCommand, BulkResendOrganizationInvitesCommand>();
 
         services.AddScoped<IInviteUsersValidator, InviteOrganizationUsersValidator>();
         services.AddScoped<IInviteUsersOrganizationValidator, InviteUsersOrganizationValidator>();

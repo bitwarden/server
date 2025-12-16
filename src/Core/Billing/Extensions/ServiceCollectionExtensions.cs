@@ -6,6 +6,7 @@ using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Payment;
 using Bit.Core.Billing.Premium.Commands;
+using Bit.Core.Billing.Premium.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Implementations;
@@ -31,6 +32,7 @@ public static class ServiceCollectionExtensions
         services.AddPaymentOperations();
         services.AddOrganizationLicenseCommandsQueries();
         services.AddPremiumCommands();
+        services.AddPremiumQueries();
         services.AddTransient<IGetOrganizationMetadataQuery, GetOrganizationMetadataQuery>();
         services.AddTransient<IGetOrganizationWarningsQuery, GetOrganizationWarningsQuery>();
         services.AddTransient<IRestartSubscriptionCommand, RestartSubscriptionCommand>();
@@ -49,5 +51,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICreatePremiumCloudHostedSubscriptionCommand, CreatePremiumCloudHostedSubscriptionCommand>();
         services.AddScoped<ICreatePremiumSelfHostedSubscriptionCommand, CreatePremiumSelfHostedSubscriptionCommand>();
         services.AddTransient<IPreviewPremiumTaxCommand, PreviewPremiumTaxCommand>();
+    }
+
+    private static void AddPremiumQueries(this IServiceCollection services)
+    {
+        services.AddScoped<IHasPremiumAccessQuery, HasPremiumAccessQuery>();
     }
 }

@@ -244,6 +244,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("UsePasswordManager")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<bool>("UsePhishingBlocker")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<bool>("UsePolicies")
                         .HasColumnType("tinyint(1)");
 
@@ -271,7 +274,7 @@ namespace Bit.MySqlMigrations.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("Id", "Enabled")
-                        .HasAnnotation("Npgsql:IndexInclude", new[] { "UseTotp" });
+                        .HasAnnotation("Npgsql:IndexInclude", new[] { "UseTotp", "UsersGetPremium" });
 
                     b.ToTable("Organization", (string)null);
                 });

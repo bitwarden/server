@@ -57,7 +57,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual EventLoggingSettings EventLogging { get; set; } = new EventLoggingSettings();
     public virtual MailSettings Mail { get; set; } = new MailSettings();
     public virtual IConnectionStringSettings Storage { get; set; } = new ConnectionStringSettings();
-    public virtual ConnectionStringSettings Events { get; set; } = new ConnectionStringSettings();
+    public virtual AzureQueueEventSettings Events { get; set; } = new AzureQueueEventSettings();
     public virtual DistributedCacheSettings DistributedCache { get; set; } = new DistributedCacheSettings();
     public virtual NotificationsSettings Notifications { get; set; } = new NotificationsSettings();
     public virtual IFileStorageSettings Attachment { get; set; }
@@ -82,7 +82,6 @@ public class GlobalSettings : IGlobalSettings
     public virtual ILaunchDarklySettings LaunchDarkly { get; set; } = new LaunchDarklySettings();
     public virtual string DevelopmentDirectory { get; set; }
     public virtual IWebPushSettings WebPush { get; set; } = new WebPushSettings();
-    public virtual IPhishingDomainSettings PhishingDomain { get; set; } = new PhishingDomainSettings();
 
     public virtual int SendAccessTokenLifetimeInMinutes { get; set; } = 5;
     public virtual bool EnableEmailVerification { get; set; }
@@ -396,6 +395,24 @@ public class GlobalSettings : IGlobalSettings
         }
     }
 
+    public class AzureQueueEventSettings : IConnectionStringSettings
+    {
+        private string _connectionString;
+        private string _queueName;
+
+        public string ConnectionString
+        {
+            get => _connectionString;
+            set => _connectionString = value?.Trim('"');
+        }
+
+        public string QueueName
+        {
+            get => _queueName;
+            set => _queueName = value?.Trim('"');
+        }
+    }
+
     public class ConnectionStringSettings : IConnectionStringSettings
     {
         private string _connectionString;
@@ -484,7 +501,7 @@ public class GlobalSettings : IGlobalSettings
         public string CertificatePassword { get; set; }
         public string RedisConnectionString { get; set; }
         public string CosmosConnectionString { get; set; }
-        public string LicenseKey { get; set; } = "eyJhbGciOiJQUzI1NiIsImtpZCI6IklkZW50aXR5U2VydmVyTGljZW5zZWtleS83Y2VhZGJiNzgxMzA0NjllODgwNjg5MTAyNTQxNGYxNiIsInR5cCI6ImxpY2Vuc2Urand0In0.eyJpc3MiOiJodHRwczovL2R1ZW5kZXNvZnR3YXJlLmNvbSIsImF1ZCI6IklkZW50aXR5U2VydmVyIiwiaWF0IjoxNzM0NTY2NDAwLCJleHAiOjE3NjQ5NzkyMDAsImNvbXBhbnlfbmFtZSI6IkJpdHdhcmRlbiBJbmMuIiwiY29udGFjdF9pbmZvIjoiY29udGFjdEBkdWVuZGVzb2Z0d2FyZS5jb20iLCJlZGl0aW9uIjoiU3RhcnRlciIsImlkIjoiNjg3OCIsImZlYXR1cmUiOlsiaXN2IiwidW5saW1pdGVkX2NsaWVudHMiXSwicHJvZHVjdCI6IkJpdHdhcmRlbiJ9.TYc88W_t2t0F2AJV3rdyKwGyQKrKFriSAzm1tWFNHNR9QizfC-8bliGdT4Wgeie-ynCXs9wWaF-sKC5emg--qS7oe2iIt67Qd88WS53AwgTvAddQRA4NhGB1R7VM8GAikLieSos-DzzwLYRgjZdmcsprItYGSJuY73r-7-F97ta915majBytVxGF966tT9zF1aYk0bA8FS6DcDYkr5f7Nsy8daS_uIUAgNa_agKXtmQPqKujqtUb6rgWEpSp4OcQcG-8Dpd5jHqoIjouGvY-5LTgk5WmLxi_m-1QISjxUJrUm-UGao3_VwV5KFGqYrz8csdTl-HS40ihWcsWnrV0ug";
+        public string LicenseKey { get; set; } = "eyJhbGciOiJQUzI1NiIsImtpZCI6IklkZW50aXR5U2VydmVyTGljZW5zZUtleS83Y2VhZGJiNzgxMzA0NjllODgwNjg5MTAyNTQxNGYxNiIsInR5cCI6ImxpY2Vuc2Urand0In0.eyJpc3MiOiJodHRwczovL2R1ZW5kZXNvZnR3YXJlLmNvbSIsImF1ZCI6IklkZW50aXR5U2VydmVyIiwiaWF0IjoxNzY1MDY1NjAwLCJleHAiOjE3OTY1MTUyMDAsImNvbXBhbnlfbmFtZSI6IkJpdHdhcmRlbiBJbmMuIiwiY29udGFjdF9pbmZvIjoiY29udGFjdEBkdWVuZGVzb2Z0d2FyZS5jb20iLCJlZGl0aW9uIjoiU3RhcnRlciIsImlkIjoiOTUxNSIsImZlYXR1cmUiOlsiaXN2IiwidW5saW1pdGVkX2NsaWVudHMiXSwiY2xpZW50X2xpbWl0IjowfQ.rWUsq-XBKNwPG7BRKG-vShXHuyHLHJCh0sEWdWT4Rkz4ArIPOAepEp9wNya-hxFKkBTFlPaQ5IKk4wDTvkQkuq1qaI_v6kSCdaP9fvXp0rmh4KcFEffVLB-wAOK2S2Cld5DzdyCoskUUfwNQP7xuLsz2Ydxe_whSRIdv8bsMbvTC3Kl8PYZPZ4MxqW8rSZ_mEuCpSe5-Q40sB7aiu_7YmWLJaKrfBTIqYH-XuzQj36Aemoei0efcntej-gvxovy-5SiSEsGuRZj41rjEZYOuj5KgHihJViO1VDHK6CNtlu2Ks8bkv6G2hO-TkF16Y28ywEG_beLEf_s5dzhbDBDbvA";
         /// <summary>
         /// Sliding lifetime of a refresh token in seconds.
         ///
@@ -673,12 +690,6 @@ public class GlobalSettings : IGlobalSettings
         public int MaxNetworkRetries { get; set; } = 2;
     }
 
-    public class PhishingDomainSettings : IPhishingDomainSettings
-    {
-        public string UpdateUrl { get; set; }
-        public string ChecksumUrl { get; set; }
-    }
-
     public class DistributedIpRateLimitingSettings
     {
         public string RedisConnectionString { get; set; }
@@ -733,7 +744,7 @@ public class GlobalSettings : IGlobalSettings
     public class ExtendedCacheSettings
     {
         public bool EnableDistributedCache { get; set; } = true;
-        public bool UseSharedRedisCache { get; set; } = true;
+        public bool UseSharedDistributedCache { get; set; } = true;
         public IConnectionStringSettings Redis { get; set; } = new ConnectionStringSettings();
         public TimeSpan Duration { get; set; } = TimeSpan.FromMinutes(30);
         public bool IsFailSafeEnabled { get; set; } = true;
