@@ -129,34 +129,36 @@ public class RestartSubscriptionCommand(
             });
         }
 
-        // Secrets Manager
+        // Secrets Manager & Service Accounts
         var secretsManagerItem = oldPlan.SecretsManager != null
             ? canceledSubscription.Items.FirstOrDefault(item =>
                 item.Price.Id == oldPlan.SecretsManager.StripeSeatPlanId)
             : null;
 
-        if (secretsManagerItem != null)
-        {
-            items.Add(new SubscriptionItemOptions
-            {
-                Price = newPlan.SecretsManager.StripeSeatPlanId,
-                Quantity = secretsManagerItem.Quantity
-            });
-        }
-
-        // Service Accounts
         var serviceAccountsItem = oldPlan.SecretsManager != null
             ? canceledSubscription.Items.FirstOrDefault(item =>
                 item.Price.Id == oldPlan.SecretsManager.StripeServiceAccountPlanId)
             : null;
 
-        if (serviceAccountsItem != null)
+        if (newPlan.SecretsManager != null)
         {
-            items.Add(new SubscriptionItemOptions
+            if (secretsManagerItem != null)
             {
-                Price = newPlan.SecretsManager.StripeServiceAccountPlanId,
-                Quantity = serviceAccountsItem.Quantity
-            });
+                items.Add(new SubscriptionItemOptions
+                {
+                    Price = newPlan.SecretsManager.StripeSeatPlanId,
+                    Quantity = secretsManagerItem.Quantity
+                });
+            }
+
+            if (serviceAccountsItem != null)
+            {
+                items.Add(new SubscriptionItemOptions
+                {
+                    Price = newPlan.SecretsManager.StripeServiceAccountPlanId,
+                    Quantity = serviceAccountsItem.Quantity
+                });
+            }
         }
 
         var options = new SubscriptionCreateOptions
