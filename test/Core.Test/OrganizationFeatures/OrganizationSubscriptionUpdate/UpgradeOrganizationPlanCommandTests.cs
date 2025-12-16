@@ -1,4 +1,5 @@
-﻿using Bit.Core.Billing.Enums;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Exceptions;
@@ -241,5 +242,188 @@ public class UpgradeOrganizationPlanCommandTests
         Assert.Contains($"Your organization currently has {currentServiceAccounts} machine accounts. Your new plan only allows", exception.Message);
 
         await sutProvider.GetDependency<IOrganizationService>().DidNotReceiveWithAnyArgs().ReplaceAndUpdateCacheAsync(default);
+    }
+
+    [Theory]
+    [FreeOrganizationUpgradeCustomize, BitAutoData]
+    public async Task UpgradePlan_OrgHasNoKeysAndUpgradeHasKeys_SetsKeys(
+        Organization organization,
+        OrganizationUpgrade upgrade,
+        SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
+    {
+        // Arrange
+        const string newPublicKey = "new-public-key";
+        const string newPrivateKey = "new-private-key";
+
+        organization.GatewayCustomerId = "customer-id";
+        organization.GatewaySubscriptionId = "subscription-id";
+        organization.PublicKey = null;
+        organization.PrivateKey = null;
+
+        upgrade.Plan = PlanType.TeamsAnnually;
+        upgrade.Keys = new OrganizationKeyPair
+        {
+            PublicKey = newPublicKey,
+            PrivateKey = newPrivateKey
+        };
+        upgrade.AdditionalSeats = 10;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(organization.PlanType)
+            .Returns(MockPlans.Get(organization.PlanType));
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(upgrade.Plan)
+            .Returns(MockPlans.Get(upgrade.Plan));
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Sponsored = 0, Users = 1 });
+
+        // Act
+        await sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade);
+
+        // Assert
+        Assert.Equal(newPublicKey, organization.PublicKey);
+        Assert.Equal(newPrivateKey, organization.PrivateKey);
+        await sutProvider.GetDependency<IOrganizationService>()
+            .Received(1)
+            .ReplaceAndUpdateCacheAsync(organization);
+    }
+
+    [Theory]
+    [FreeOrganizationUpgradeCustomize, BitAutoData]
+    public async Task UpgradePlan_OrgHasKeysAndUpgradeHasNullKeys_PreservesExistingKeys(
+        Organization organization,
+        OrganizationUpgrade upgrade,
+        SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
+    {
+        // Arrange
+        const string existingPublicKey = "existing-public-key";
+        const string existingPrivateKey = "existing-private-key";
+
+        organization.GatewayCustomerId = "customer-id";
+        organization.GatewaySubscriptionId = "subscription-id";
+        organization.PublicKey = existingPublicKey;
+        organization.PrivateKey = existingPrivateKey;
+
+        upgrade.Plan = PlanType.TeamsAnnually;
+        upgrade.Keys = null;
+        upgrade.AdditionalSeats = 10;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(organization.PlanType)
+            .Returns(MockPlans.Get(organization.PlanType));
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(upgrade.Plan)
+            .Returns(MockPlans.Get(upgrade.Plan));
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Sponsored = 0, Users = 1 });
+
+        // Act
+        await sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade);
+
+        // Assert
+        Assert.Equal(existingPublicKey, organization.PublicKey);
+        Assert.Equal(existingPrivateKey, organization.PrivateKey);
+        await sutProvider.GetDependency<IOrganizationService>()
+            .Received(1)
+            .ReplaceAndUpdateCacheAsync(organization);
+    }
+
+    [Theory]
+    [FreeOrganizationUpgradeCustomize, BitAutoData]
+    public async Task UpgradePlan_OrgHasKeysAndUpgradeHasKeys_PreservesExistingKeys(
+        Organization organization,
+        OrganizationUpgrade upgrade,
+        SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
+    {
+        // Arrange
+        const string existingPublicKey = "existing-public-key";
+        const string existingPrivateKey = "existing-private-key";
+        const string newPublicKey = "new-public-key";
+        const string newPrivateKey = "new-private-key";
+
+        organization.GatewayCustomerId = "customer-id";
+        organization.GatewaySubscriptionId = "subscription-id";
+        organization.PublicKey = existingPublicKey;
+        organization.PrivateKey = existingPrivateKey;
+
+        upgrade.Plan = PlanType.TeamsAnnually;
+        upgrade.Keys = new OrganizationKeyPair
+        {
+            PublicKey = newPublicKey,
+            PrivateKey = newPrivateKey
+        };
+        upgrade.AdditionalSeats = 10;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(organization.PlanType)
+            .Returns(MockPlans.Get(organization.PlanType));
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(upgrade.Plan)
+            .Returns(MockPlans.Get(upgrade.Plan));
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Sponsored = 0, Users = 1 });
+
+        // Act
+        await sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade);
+
+        // Assert
+        Assert.Equal(existingPublicKey, organization.PublicKey);
+        Assert.Equal(existingPrivateKey, organization.PrivateKey);
+        await sutProvider.GetDependency<IOrganizationService>()
+            .Received(1)
+            .ReplaceAndUpdateCacheAsync(organization);
+    }
+
+    [Theory]
+    [FreeOrganizationUpgradeCustomize, BitAutoData]
+    public async Task UpgradePlan_OrgHasNoKeysAndUpgradeHasNoKeys_LeavesKeysNull(
+        Organization organization,
+        OrganizationUpgrade upgrade,
+        SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
+    {
+        // Arrange
+        organization.GatewayCustomerId = "customer-id";
+        organization.GatewaySubscriptionId = "subscription-id";
+        organization.PublicKey = null;
+        organization.PrivateKey = null;
+
+        upgrade.Plan = PlanType.TeamsAnnually;
+        upgrade.Keys = null;
+        upgrade.AdditionalSeats = 10;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(organization.PlanType)
+            .Returns(MockPlans.Get(organization.PlanType));
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(upgrade.Plan)
+            .Returns(MockPlans.Get(upgrade.Plan));
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Sponsored = 0, Users = 1 });
+
+        // Act
+        await sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade);
+
+        // Assert
+        Assert.Null(organization.PublicKey);
+        Assert.Null(organization.PrivateKey);
+        await sutProvider.GetDependency<IOrganizationService>()
+            .Received(1)
+            .ReplaceAndUpdateCacheAsync(organization);
     }
 }

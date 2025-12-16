@@ -2,6 +2,7 @@
 #nullable disable
 
 using System.ComponentModel.DataAnnotations;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Models.Business;
 
@@ -43,10 +44,13 @@ public class OrganizationUpgradeRequestModel
             {
                 BillingAddressCountry = BillingAddressCountry,
                 BillingAddressPostalCode = BillingAddressPostalCode
-            }
+            },
+            Keys = Keys != null ? new OrganizationKeyPair
+            {
+                PublicKey = Keys.PublicKey,
+                PrivateKey = Keys.EncryptedPrivateKey
+            } : null
         };
-
-        Keys?.ToOrganizationUpgrade(orgUpgrade);
 
         return orgUpgrade;
     }

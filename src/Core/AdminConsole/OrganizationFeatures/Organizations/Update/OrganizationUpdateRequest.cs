@@ -22,12 +22,7 @@ public record OrganizationUpdateRequest
     public string? BillingEmail { get; init; }
 
     /// <summary>
-    /// The organization's public key to set (optional, only set if not already present on the organization).
+    /// The organization's public/private key pair to set (optional, only set if not already present on the organization).
     /// </summary>
-    public string? PublicKey { get; init; }
-
-    /// <summary>
-    /// The organization's encrypted private key to set (optional, only set if not already present on the organization).
-    /// </summary>
-    public string? EncryptedPrivateKey { get; init; }
+    public OrganizationKeyPair? Keys { get; init; }
 }

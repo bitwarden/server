@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Update;
 using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Enums;
@@ -162,8 +163,11 @@ public class OrganizationUpdateCommandTests
             OrganizationId = organizationId,
             Name = organization.Name,
             BillingEmail = organization.BillingEmail,
-            PublicKey = publicKey,
-            EncryptedPrivateKey = encryptedPrivateKey
+            Keys = new OrganizationKeyPair
+            {
+                PublicKey = publicKey,
+                PrivateKey = encryptedPrivateKey
+            }
         };
 
         // Act
@@ -207,8 +211,11 @@ public class OrganizationUpdateCommandTests
             OrganizationId = organizationId,
             Name = organization.Name,
             BillingEmail = organization.BillingEmail,
-            PublicKey = newPublicKey,
-            EncryptedPrivateKey = newEncryptedPrivateKey
+            Keys = new OrganizationKeyPair
+            {
+                PublicKey = newPublicKey,
+                PrivateKey = newEncryptedPrivateKey
+            }
         };
 
         // Act
@@ -394,8 +401,11 @@ public class OrganizationUpdateCommandTests
             OrganizationId = organizationId,
             Name = newName, // Should be ignored
             BillingEmail = newBillingEmail, // Should be ignored
-            PublicKey = publicKey,
-            EncryptedPrivateKey = encryptedPrivateKey
+            Keys = new OrganizationKeyPair
+            {
+                PublicKey = publicKey,
+                PrivateKey = encryptedPrivateKey
+            }
         };
 
         // Act
