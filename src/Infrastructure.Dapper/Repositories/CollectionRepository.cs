@@ -252,28 +252,32 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
                 await connection.ExecuteAsync(
                     $"[{Schema}].[Collection_Update]",
                     obj,
-                    commandType: CommandType.StoredProcedure);
+                    commandType: CommandType.StoredProcedure,
+                    transaction: transaction);
             }
             else if (groups != null && users == null)
             {
                 await connection.ExecuteAsync(
                     $"[{Schema}].[Collection_UpdateWithGroups]",
                     new CollectionWithGroups(obj, groups),
-                    commandType: CommandType.StoredProcedure);
+                    commandType: CommandType.StoredProcedure,
+                    transaction: transaction);
             }
             else if (groups == null && users != null)
             {
                 await connection.ExecuteAsync(
                     $"[{Schema}].[Collection_UpdateWithUsers]",
                     new CollectionWithUsers(obj, users),
-                    commandType: CommandType.StoredProcedure);
+                    commandType: CommandType.StoredProcedure,
+                    transaction: transaction);
             }
             else if (groups != null && users != null)
             {
                 await connection.ExecuteAsync(
                     $"[{Schema}].[Collection_UpdateWithGroupsAndUsers]",
                     new CollectionWithGroupsAndUsers(obj, groups, users),
-                    commandType: CommandType.StoredProcedure);
+                    commandType: CommandType.StoredProcedure,
+                    transaction: transaction);
             }
 
             await transaction.CommitAsync();
