@@ -239,6 +239,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool>("UsePasswordManager")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("UsePhishingBlocker")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("UsePolicies")
                         .HasColumnType("INTEGER");
 
@@ -266,7 +269,7 @@ namespace Bit.SqliteMigrations.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("Id", "Enabled")
-                        .HasAnnotation("Npgsql:IndexInclude", new[] { "UseTotp" });
+                        .HasAnnotation("Npgsql:IndexInclude", new[] { "UseTotp", "UsersGetPremium" });
 
                     b.ToTable("Organization", (string)null);
                 });

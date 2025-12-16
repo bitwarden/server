@@ -41,8 +41,10 @@ if (!fs.existsSync(config.outputDir)) {
   }
 }
 
-// Find all MJML files with absolute path
-const mjmlFiles = glob.sync(`${config.inputDir}/**/*.mjml`);
+// Find all MJML files with absolute paths, excluding components directories
+const mjmlFiles = glob.sync(`${config.inputDir}/**/*.mjml`, {
+  ignore: ['**/components/**']
+});
 
 console.log(`\n[INFO] Found ${mjmlFiles.length} MJML file(s) to compile...`);
 

@@ -1,16 +1,17 @@
 ﻿using System.Data;
 using System.Text.Json;
 using Bit.Core;
+using Bit.Core.Billing.Premium.Models;
 using Bit.Core.Entities;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Dapper;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Data.SqlClient;
-
-#nullable enable
 
 namespace Bit.Infrastructure.Dapper.Repositories;
 
@@ -288,6 +289,63 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         UnprotectData(user);
     }
 
+    public async Task SetV2AccountCryptographicStateAsync(
+        Guid userId,
+        UserAccountKeysData accountKeysData,
+        IEnumerable<UpdateUserData>? updateUserDataActions = null)
+    {
+        if (!accountKeysData.IsV2Encryption())
+        {
+            throw new ArgumentException("Provided account keys data is not valid V2 encryption data.", nameof(accountKeysData));
+        }
+
+        var timestamp = DateTime.UtcNow;
+        var signatureKeyPairId = CoreHelpers.GenerateComb();
+
+        await using var connection = new SqlConnection(ConnectionString);
+        await connection.OpenAsync();
+
+        await using var transaction = connection.BeginTransaction();
+        try
+        {
+            await connection.ExecuteAsync(
+                "[dbo].[User_UpdateAccountCryptographicState]",
+                new
+                {
+                    Id = userId,
+                    PublicKey = accountKeysData.PublicKeyEncryptionKeyPairData.PublicKey,
+                    PrivateKey = accountKeysData.PublicKeyEncryptionKeyPairData.WrappedPrivateKey,
+                    SignedPublicKey = accountKeysData.PublicKeyEncryptionKeyPairData.SignedPublicKey,
+                    SecurityState = accountKeysData.SecurityStateData!.SecurityState,
+                    SecurityVersion = accountKeysData.SecurityStateData!.SecurityVersion,
+                    SignatureKeyPairId = signatureKeyPairId,
+                    SignatureAlgorithm = accountKeysData.SignatureKeyPairData!.SignatureAlgorithm,
+                    SigningKey = accountKeysData.SignatureKeyPairData!.WrappedSigningKey,
+                    VerifyingKey = accountKeysData.SignatureKeyPairData!.VerifyingKey,
+                    RevisionDate = timestamp,
+                    AccountRevisionDate = timestamp
+                },
+                transaction: transaction,
+                commandType: CommandType.StoredProcedure);
+
+            //  Update user data that depends on cryptographic state
+            if (updateUserDataActions != null)
+            {
+                foreach (var action in updateUserDataActions)
+                {
+                    await action(connection, transaction);
+                }
+            }
+
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
     public async Task<IEnumerable<User>> GetManyAsync(IEnumerable<Guid> ids)
     {
         using (var connection = new SqlConnection(ReadOnlyConnectionString))
@@ -321,6 +379,25 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         var result = await GetManyWithCalculatedPremiumAsync([userId]);
 
         UnprotectData(result);
+        return result.SingleOrDefault();
+    }
+
+    public async Task<IEnumerable<UserPremiumAccess>> GetPremiumAccessByIdsAsync(IEnumerable<Guid> ids)
+    {
+        using (var connection = new SqlConnection(ReadOnlyConnectionString))
+        {
+            var results = await connection.QueryAsync<UserPremiumAccess>(
+                $"[{Schema}].[{Table}_ReadPremiumAccessByIds]",
+                new { Ids = ids.ToGuidIdArrayTVP() },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
+
+    public async Task<UserPremiumAccess?> GetPremiumAccessAsync(Guid userId)
+    {
+        var result = await GetPremiumAccessByIdsAsync([userId]);
         return result.SingleOrDefault();
     }
 

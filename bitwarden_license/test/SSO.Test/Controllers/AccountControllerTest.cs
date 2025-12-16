@@ -3,12 +3,15 @@ using System.Security.Claims;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.UserFeatures.Registration;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Tokens;
 using Bit.Sso.Controllers;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -18,6 +21,7 @@ using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
@@ -1007,5 +1011,257 @@ public class AccountControllerTest
             _output.WriteLine($"Scenario={scenario} | ON: SSO={onCounts.UserGetBySso}, Email={onCounts.UserGetByEmail}, Org={onCounts.OrgGetById}, OrgUserByOrg={onCounts.OrgUserGetByOrg}, OrgUserByEmail={onCounts.OrgUserGetByEmail}");
             _output.WriteLine($"Scenario={scenario} | OFF: SSO={offCounts.UserGetBySso}, Email={offCounts.UserGetByEmail}, Org={offCounts.OrgGetById}, OrgUserByOrg={offCounts.OrgUserGetByOrg}, OrgUserByEmail={offCounts.OrgUserGetByEmail}");
         }
+    }
+
+    [Theory, BitAutoData]
+    public async Task AutoProvisionUserAsync_WithFeatureFlagEnabled_CallsRegisterSSOAutoProvisionedUser(
+        SutProvider<AccountController> sutProvider)
+    {
+        // Arrange
+        var orgId = Guid.NewGuid();
+        var providerUserId = "ext-new-user";
+        var email = "newuser@example.com";
+        var organization = new Organization { Id = orgId, Name = "Test Org", Seats = null };
+
+        // No existing user (JIT provisioning scenario)
+        sutProvider.GetDependency<IUserRepository>().GetByEmailAsync(email).Returns((User?)null);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(organization);
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetByOrganizationEmailAsync(orgId, email)
+            .Returns((OrganizationUser?)null);
+
+        // Feature flag enabled
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates)
+            .Returns(true);
+
+        // Mock the RegisterSSOAutoProvisionedUserAsync to return success
+        sutProvider.GetDependency<IRegisterUserCommand>()
+            .RegisterSSOAutoProvisionedUserAsync(Arg.Any<User>(), Arg.Any<Organization>())
+            .Returns(IdentityResult.Success);
+
+        var claims = new[]
+        {
+            new Claim(JwtClaimTypes.Email, email),
+            new Claim(JwtClaimTypes.Name, "New User")
+        } as IEnumerable<Claim>;
+        var config = new SsoConfigurationData();
+
+        var method = typeof(AccountController).GetMethod(
+            "CreateUserAndOrgUserConditionallyAsync",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(method);
+
+        // Act
+        var task = (Task<(User user, Organization organization, OrganizationUser orgUser)>)method!.Invoke(
+            sutProvider.Sut,
+            new object[]
+            {
+                orgId.ToString(),
+                providerUserId,
+                claims,
+                null!,
+                config
+            })!;
+
+        var result = await task;
+
+        // Assert
+        await sutProvider.GetDependency<IRegisterUserCommand>().Received(1)
+            .RegisterSSOAutoProvisionedUserAsync(
+                Arg.Is<User>(u => u.Email == email && u.Name == "New User"),
+                Arg.Is<Organization>(o => o.Id == orgId && o.Name == "Test Org"));
+
+        Assert.NotNull(result.user);
+        Assert.Equal(email, result.user.Email);
+        Assert.Equal(organization.Id, result.organization.Id);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AutoProvisionUserAsync_WithFeatureFlagDisabled_CallsRegisterUserInstead(
+        SutProvider<AccountController> sutProvider)
+    {
+        // Arrange
+        var orgId = Guid.NewGuid();
+        var providerUserId = "ext-legacy-user";
+        var email = "legacyuser@example.com";
+        var organization = new Organization { Id = orgId, Name = "Test Org", Seats = null };
+
+        // No existing user (JIT provisioning scenario)
+        sutProvider.GetDependency<IUserRepository>().GetByEmailAsync(email).Returns((User?)null);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(organization);
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetByOrganizationEmailAsync(orgId, email)
+            .Returns((OrganizationUser?)null);
+
+        // Feature flag disabled
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates)
+            .Returns(false);
+
+        // Mock the RegisterUser to return success
+        sutProvider.GetDependency<IRegisterUserCommand>()
+            .RegisterUser(Arg.Any<User>())
+            .Returns(IdentityResult.Success);
+
+        var claims = new[]
+        {
+            new Claim(JwtClaimTypes.Email, email),
+            new Claim(JwtClaimTypes.Name, "Legacy User")
+        } as IEnumerable<Claim>;
+        var config = new SsoConfigurationData();
+
+        var method = typeof(AccountController).GetMethod(
+            "CreateUserAndOrgUserConditionallyAsync",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(method);
+
+        // Act
+        var task = (Task<(User user, Organization organization, OrganizationUser orgUser)>)method!.Invoke(
+            sutProvider.Sut,
+            new object[]
+            {
+                orgId.ToString(),
+                providerUserId,
+                claims,
+                null!,
+                config
+            })!;
+
+        var result = await task;
+
+        // Assert
+        await sutProvider.GetDependency<IRegisterUserCommand>().Received(1)
+            .RegisterUser(Arg.Is<User>(u => u.Email == email && u.Name == "Legacy User"));
+
+        // Verify the new method was NOT called
+        await sutProvider.GetDependency<IRegisterUserCommand>().DidNotReceive()
+            .RegisterSSOAutoProvisionedUserAsync(Arg.Any<User>(), Arg.Any<Organization>());
+
+        Assert.NotNull(result.user);
+        Assert.Equal(email, result.user.Email);
+    }
+
+    [Theory, BitAutoData]
+    public void ExternalChallenge_WithMatchingOrgId_Succeeds(
+        SutProvider<AccountController> sutProvider,
+        Organization organization)
+    {
+        // Arrange
+        var orgId = organization.Id;
+        var scheme = orgId.ToString();
+        var returnUrl = "~/vault";
+        var state = "test-state";
+        var userIdentifier = "user-123";
+        var ssoToken = "valid-sso-token";
+
+        // Mock the data protector to return a tokenable with matching org ID
+        var dataProtector = sutProvider.GetDependency<IDataProtectorTokenFactory<SsoTokenable>>();
+        var tokenable = new SsoTokenable(organization, 3600);
+        dataProtector.Unprotect(ssoToken).Returns(tokenable);
+
+        // Mock URL helper for IsLocalUrl check
+        var urlHelper = Substitute.For<IUrlHelper>();
+        urlHelper.IsLocalUrl(returnUrl).Returns(true);
+        sutProvider.Sut.Url = urlHelper;
+
+        // Mock interaction service for IsValidReturnUrl check
+        var interactionService = sutProvider.GetDependency<IIdentityServerInteractionService>();
+        interactionService.IsValidReturnUrl(returnUrl).Returns(true);
+
+        // Act
+        var result = sutProvider.Sut.ExternalChallenge(scheme, returnUrl, state, userIdentifier, ssoToken);
+
+        // Assert
+        var challengeResult = Assert.IsType<ChallengeResult>(result);
+        Assert.Contains(scheme, challengeResult.AuthenticationSchemes);
+        Assert.NotNull(challengeResult.Properties);
+        Assert.Equal(scheme, challengeResult.Properties.Items["scheme"]);
+        Assert.Equal(returnUrl, challengeResult.Properties.Items["return_url"]);
+        Assert.Equal(state, challengeResult.Properties.Items["state"]);
+        Assert.Equal(userIdentifier, challengeResult.Properties.Items["user_identifier"]);
+    }
+
+    [Theory, BitAutoData]
+    public void ExternalChallenge_WithMismatchedOrgId_ThrowsSsoOrganizationIdMismatch(
+        SutProvider<AccountController> sutProvider,
+        Organization organization)
+    {
+        // Arrange
+        var correctOrgId = organization.Id;
+        var wrongOrgId = Guid.NewGuid();
+        var scheme = wrongOrgId.ToString(); // Different from tokenable's org ID
+        var returnUrl = "~/vault";
+        var state = "test-state";
+        var userIdentifier = "user-123";
+        var ssoToken = "valid-sso-token";
+
+        // Mock the data protector to return a tokenable with different org ID
+        var dataProtector = sutProvider.GetDependency<IDataProtectorTokenFactory<SsoTokenable>>();
+        var tokenable = new SsoTokenable(organization, 3600); // Contains correctOrgId
+        dataProtector.Unprotect(ssoToken).Returns(tokenable);
+
+        // Mock i18n service to return the key
+        sutProvider.GetDependency<II18nService>()
+            .T(Arg.Any<string>())
+            .Returns(ci => (string)ci[0]!);
+
+        // Act & Assert
+        var ex = Assert.Throws<Exception>(() =>
+            sutProvider.Sut.ExternalChallenge(scheme, returnUrl, state, userIdentifier, ssoToken));
+        Assert.Equal("SsoOrganizationIdMismatch", ex.Message);
+    }
+
+    [Theory, BitAutoData]
+    public void ExternalChallenge_WithInvalidSchemeFormat_ThrowsSsoOrganizationIdMismatch(
+        SutProvider<AccountController> sutProvider,
+        Organization organization)
+    {
+        // Arrange
+        var scheme = "not-a-valid-guid";
+        var returnUrl = "~/vault";
+        var state = "test-state";
+        var userIdentifier = "user-123";
+        var ssoToken = "valid-sso-token";
+
+        // Mock the data protector to return a valid tokenable
+        var dataProtector = sutProvider.GetDependency<IDataProtectorTokenFactory<SsoTokenable>>();
+        var tokenable = new SsoTokenable(organization, 3600);
+        dataProtector.Unprotect(ssoToken).Returns(tokenable);
+
+        // Mock i18n service to return the key
+        sutProvider.GetDependency<II18nService>()
+            .T(Arg.Any<string>())
+            .Returns(ci => (string)ci[0]!);
+
+        // Act & Assert
+        var ex = Assert.Throws<Exception>(() =>
+            sutProvider.Sut.ExternalChallenge(scheme, returnUrl, state, userIdentifier, ssoToken));
+        Assert.Equal("SsoOrganizationIdMismatch", ex.Message);
+    }
+
+    [Theory, BitAutoData]
+    public void ExternalChallenge_WithInvalidSsoToken_ThrowsInvalidSsoToken(
+        SutProvider<AccountController> sutProvider)
+    {
+        // Arrange
+        var orgId = Guid.NewGuid();
+        var scheme = orgId.ToString();
+        var returnUrl = "~/vault";
+        var state = "test-state";
+        var userIdentifier = "user-123";
+        var ssoToken = "invalid-corrupted-token";
+
+        // Mock the data protector to throw when trying to unprotect
+        var dataProtector = sutProvider.GetDependency<IDataProtectorTokenFactory<SsoTokenable>>();
+        dataProtector.Unprotect(ssoToken).Returns(_ => throw new Exception("Token validation failed"));
+
+        // Mock i18n service to return the key
+        sutProvider.GetDependency<II18nService>()
+            .T(Arg.Any<string>())
+            .Returns(ci => (string)ci[0]!);
+
+        // Act & Assert
+        var ex = Assert.Throws<Exception>(() =>
+            sutProvider.Sut.ExternalChallenge(scheme, returnUrl, state, userIdentifier, ssoToken));
+        Assert.Equal("InvalidSsoToken", ex.Message);
     }
 }

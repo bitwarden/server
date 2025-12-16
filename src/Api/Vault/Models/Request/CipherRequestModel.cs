@@ -84,7 +84,7 @@ public class CipherRequestModel
         return existingCipher;
     }
 
-    public Cipher ToCipher(Cipher existingCipher)
+    public Cipher ToCipher(Cipher existingCipher, Guid? userId = null)
     {
         // If Data field is provided, use it directly
         if (!string.IsNullOrWhiteSpace(Data))
@@ -124,9 +124,12 @@ public class CipherRequestModel
             }
         }
 
+        var userIdKey = userId.HasValue ? userId.ToString().ToUpperInvariant() : null;
         existingCipher.Reprompt = Reprompt;
         existingCipher.Key = Key;
         existingCipher.ArchivedDate = ArchivedDate;
+        existingCipher.Folders = UpdateUserSpecificJsonField(existingCipher.Folders, userIdKey, FolderId);
+        existingCipher.Favorites = UpdateUserSpecificJsonField(existingCipher.Favorites, userIdKey, Favorite);
 
         var hasAttachments2 = (Attachments2?.Count ?? 0) > 0;
         var hasAttachments = (Attachments?.Count ?? 0) > 0;
@@ -290,6 +293,37 @@ public class CipherRequestModel
             PublicKey = SSHKey.PublicKey,
             KeyFingerprint = SSHKey.KeyFingerprint,
         };
+    }
+
+    /// <summary>
+    /// Updates a JSON string representing a dictionary by adding, updating, or removing a key-value pair
+    /// based on the provided userIdKey and newValue.
+    /// </summary>
+    private static string UpdateUserSpecificJsonField(string existingJson, string userIdKey, object newValue)
+    {
+        if (userIdKey == null)
+        {
+            return existingJson;
+        }
+
+        var jsonDict = string.IsNullOrWhiteSpace(existingJson)
+            ? new Dictionary<string, object>()
+            : JsonSerializer.Deserialize<Dictionary<string, object>>(existingJson) ?? new Dictionary<string, object>();
+
+        var shouldRemove = newValue == null ||
+                          (newValue is string strValue && string.IsNullOrWhiteSpace(strValue)) ||
+                          (newValue is bool boolValue && !boolValue);
+
+        if (shouldRemove)
+        {
+            jsonDict.Remove(userIdKey);
+        }
+        else
+        {
+            jsonDict[userIdKey] = newValue is string str ? str.ToUpperInvariant() : newValue;
+        }
+
+        return jsonDict.Count == 0 ? null : JsonSerializer.Serialize(jsonDict);
     }
 }
 

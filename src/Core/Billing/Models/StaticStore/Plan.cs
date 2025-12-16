@@ -97,7 +97,7 @@ public abstract record Plan
         public decimal PremiumAccessOptionPrice { get; init; }
         public short? MaxSeats { get; init; }
         // Storage
-        public short? BaseStorageGb { get; init; }
+        public short BaseStorageGb { get; init; }
         public bool HasAdditionalStorageOption { get; init; }
         public decimal AdditionalStoragePricePerGb { get; init; }
         public string StripeStoragePlanId { get; init; }

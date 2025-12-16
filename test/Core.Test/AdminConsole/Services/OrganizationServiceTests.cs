@@ -9,6 +9,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -21,8 +22,8 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
+using Bit.Core.Test.Billing.Mocks;
 using Bit.Core.Tokens;
-using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Fakes;
@@ -618,7 +619,7 @@ public class OrganizationServiceTests
         SetupOrgUserRepositoryCreateManyAsyncMock(organizationUserRepository);
         SetupOrgUserRepositoryCreateAsyncMock(organizationUserRepository);
 
-        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType).Returns(StaticStore.GetPlan(organization.PlanType));
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType).Returns(MockPlans.Get(organization.PlanType));
 
         await sutProvider.Sut.InviteUsersAsync(organization.Id, savingUser.Id, systemUser: null, invites);
 
@@ -666,7 +667,7 @@ public class OrganizationServiceTests
             .SendInvitesAsync(Arg.Any<SendInvitesRequest>()).ThrowsAsync<Exception>();
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType)
-            .Returns(StaticStore.GetPlan(organization.PlanType));
+            .Returns(MockPlans.Get(organization.PlanType));
 
         await Assert.ThrowsAsync<AggregateException>(async () =>
             await sutProvider.Sut.InviteUsersAsync(organization.Id, savingUser.Id, systemUser: null, invites));
@@ -732,7 +733,7 @@ public class OrganizationServiceTests
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType)
-            .Returns(StaticStore.GetPlan(organization.PlanType));
+            .Returns(MockPlans.Get(organization.PlanType));
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscription(organization.Id,
             seatAdjustment, maxAutoscaleSeats));
@@ -757,7 +758,7 @@ public class OrganizationServiceTests
         organization.SmSeats = 100;
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType)
-            .Returns(StaticStore.GetPlan(organization.PlanType));
+            .Returns(MockPlans.Get(organization.PlanType));
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
             {
@@ -837,7 +838,7 @@ public class OrganizationServiceTests
     [BitAutoData(PlanType.EnterpriseMonthly)]
     public void ValidateSecretsManagerPlan_ThrowsException_WhenNoSecretsManagerSeats(PlanType planType, SutProvider<OrganizationService> sutProvider)
     {
-        var plan = StaticStore.GetPlan(planType);
+        var plan = MockPlans.Get(planType);
         var signup = new OrganizationUpgrade
         {
             UseSecretsManager = true,
@@ -854,7 +855,7 @@ public class OrganizationServiceTests
     [BitAutoData(PlanType.Free)]
     public void ValidateSecretsManagerPlan_ThrowsException_WhenSubtractingSeats(PlanType planType, SutProvider<OrganizationService> sutProvider)
     {
-        var plan = StaticStore.GetPlan(planType);
+        var plan = MockPlans.Get(planType);
         var signup = new OrganizationUpgrade
         {
             UseSecretsManager = true,
@@ -871,7 +872,7 @@ public class OrganizationServiceTests
         PlanType planType,
         SutProvider<OrganizationService> sutProvider)
     {
-        var plan = StaticStore.GetPlan(planType);
+        var plan = MockPlans.Get(planType);
         var signup = new OrganizationUpgrade
         {
             UseSecretsManager = true,
@@ -890,7 +891,7 @@ public class OrganizationServiceTests
     [BitAutoData(PlanType.EnterpriseMonthly)]
     public void ValidateSecretsManagerPlan_ThrowsException_WhenMoreSeatsThanPasswordManagerSeats(PlanType planType, SutProvider<OrganizationService> sutProvider)
     {
-        var plan = StaticStore.GetPlan(planType);
+        var plan = MockPlans.Get(planType);
         var signup = new OrganizationUpgrade
         {
             UseSecretsManager = true,
@@ -912,7 +913,7 @@ public class OrganizationServiceTests
         PlanType planType,
         SutProvider<OrganizationService> sutProvider)
     {
-        var plan = StaticStore.GetPlan(planType);
+        var plan = MockPlans.Get(planType);
         var signup = new OrganizationUpgrade
         {
             UseSecretsManager = true,
@@ -930,7 +931,7 @@ public class OrganizationServiceTests
         PlanType planType,
         SutProvider<OrganizationService> sutProvider)
     {
-        var plan = StaticStore.GetPlan(planType);
+        var plan = MockPlans.Get(planType);
         var signup = new OrganizationUpgrade
         {
             UseSecretsManager = true,
@@ -952,7 +953,7 @@ public class OrganizationServiceTests
         PlanType planType,
         SutProvider<OrganizationService> sutProvider)
     {
-        var plan = StaticStore.GetPlan(planType);
+        var plan = MockPlans.Get(planType);
         var signup = new OrganizationUpgrade
         {
             UseSecretsManager = true,
@@ -1142,7 +1143,7 @@ public class OrganizationServiceTests
             .GetByIdentifierAsync(Arg.Is<string>(id => id == organization.Identifier));
         await stripeAdapter
             .Received(1)
-            .CustomerUpdateAsync(
+            .UpdateCustomerAsync(
                 Arg.Is<string>(id => id == organization.GatewayCustomerId),
                 Arg.Is<CustomerUpdateOptions>(options => options.Email == requestOptionsReturned.Email
                                                          && options.Description == requestOptionsReturned.Description
@@ -1182,7 +1183,7 @@ public class OrganizationServiceTests
             .GetByIdentifierAsync(Arg.Is<string>(id => id == organization.Identifier));
         await stripeAdapter
             .DidNotReceiveWithAnyArgs()
-            .CustomerUpdateAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>());
+            .UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>());
         await organizationRepository
             .Received(1)
             .ReplaceAsync(Arg.Is<Organization>(org => org == organization));

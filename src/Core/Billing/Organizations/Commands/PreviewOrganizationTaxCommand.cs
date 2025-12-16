@@ -3,12 +3,12 @@ using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
-using Bit.Core.Services;
-using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 using OneOf;
 using Stripe;
@@ -54,7 +54,7 @@ public class PreviewOrganizationTaxCommand(
             switch (purchase)
             {
                 case { PasswordManager.Sponsored: true }:
-                    var sponsoredPlan = StaticStore.GetSponsoredPlan(PlanSponsorshipType.FamiliesForEnterprise);
+                    var sponsoredPlan = SponsoredPlans.Get(PlanSponsorshipType.FamiliesForEnterprise);
                     items.Add(new InvoiceSubscriptionDetailsItemOptions
                     {
                         Price = sponsoredPlan.StripePlanId,
@@ -125,7 +125,7 @@ public class PreviewOrganizationTaxCommand(
 
             options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions { Items = items };
 
-            var invoice = await stripeAdapter.InvoiceCreatePreviewAsync(options);
+            var invoice = await stripeAdapter.CreateInvoicePreviewAsync(options);
             return GetAmounts(invoice);
         });
 
@@ -165,7 +165,7 @@ public class PreviewOrganizationTaxCommand(
 
                 options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions { Items = items };
 
-                var invoice = await stripeAdapter.InvoiceCreatePreviewAsync(options);
+                var invoice = await stripeAdapter.CreateInvoicePreviewAsync(options);
                 return GetAmounts(invoice);
             }
             else
@@ -181,7 +181,7 @@ public class PreviewOrganizationTaxCommand(
 
                 var options = GetBaseOptions(billingAddress, planChange.Tier != ProductTierType.Families);
 
-                var subscription = await stripeAdapter.SubscriptionGetAsync(organization.GatewaySubscriptionId,
+                var subscription = await stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId,
                     new SubscriptionGetOptions { Expand = ["customer"] });
 
                 if (subscription.Customer.Discount != null)
@@ -259,7 +259,7 @@ public class PreviewOrganizationTaxCommand(
 
                 options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions { Items = items };
 
-                var invoice = await stripeAdapter.InvoiceCreatePreviewAsync(options);
+                var invoice = await stripeAdapter.CreateInvoicePreviewAsync(options);
                 return GetAmounts(invoice);
             }
         });
@@ -278,7 +278,7 @@ public class PreviewOrganizationTaxCommand(
                 return new BadRequest("Organization does not have a subscription.");
             }
 
-            var subscription = await stripeAdapter.SubscriptionGetAsync(organization.GatewaySubscriptionId,
+            var subscription = await stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId,
                 new SubscriptionGetOptions { Expand = ["customer.tax_ids"] });
 
             var options = GetBaseOptions(subscription.Customer,
@@ -336,7 +336,7 @@ public class PreviewOrganizationTaxCommand(
 
             options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions { Items = items };
 
-            var invoice = await stripeAdapter.InvoiceCreatePreviewAsync(options);
+            var invoice = await stripeAdapter.CreateInvoicePreviewAsync(options);
             return GetAmounts(invoice);
         });
 

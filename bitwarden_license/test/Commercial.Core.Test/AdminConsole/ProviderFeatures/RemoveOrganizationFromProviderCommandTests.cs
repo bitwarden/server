@@ -13,7 +13,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
+using Bit.Core.Test.Billing.Mocks;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -131,7 +131,7 @@ public class RemoveOrganizationFromProviderCommandTests
                 Arg.Is<IEnumerable<string>>(emails => emails.FirstOrDefault() == "a@example.com"));
 
         await sutProvider.GetDependency<IStripeAdapter>().DidNotReceiveWithAnyArgs()
-            .CustomerUpdateAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>());
+            .UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>());
     }
 
     [Theory, BitAutoData]
@@ -156,7 +156,7 @@ public class RemoveOrganizationFromProviderCommandTests
             "b@example.com"
         ]);
 
-        sutProvider.GetDependency<IStripeAdapter>().SubscriptionGetAsync(organization.GatewaySubscriptionId, Arg.Is<SubscriptionGetOptions>(
+        sutProvider.GetDependency<IStripeAdapter>().GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Is<SubscriptionGetOptions>(
                 options => options.Expand.Contains("customer")))
             .Returns(GetSubscription(organization.GatewaySubscriptionId, organization.GatewayCustomerId));
 
@@ -164,12 +164,14 @@ public class RemoveOrganizationFromProviderCommandTests
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
-        await stripeAdapter.Received(1).CustomerUpdateAsync(organization.GatewayCustomerId,
+        await stripeAdapter.Received(1).UpdateCustomerAsync(organization.GatewayCustomerId,
             Arg.Is<CustomerUpdateOptions>(options => options.Email == "a@example.com"));
 
-        await stripeAdapter.Received(1).CustomerDeleteDiscountAsync(organization.GatewayCustomerId);
+        await stripeAdapter.Received(1).DeleteCustomerDiscountAsync(organization.GatewayCustomerId);
 
-        await stripeAdapter.Received(1).SubscriptionUpdateAsync(organization.GatewaySubscriptionId,
+        await stripeAdapter.Received(1).DeleteCustomerDiscountAsync(organization.GatewayCustomerId);
+
+        await stripeAdapter.Received(1).UpdateSubscriptionAsync(organization.GatewaySubscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options =>
                 options.CollectionMethod == StripeConstants.CollectionMethod.SendInvoice &&
                 options.DaysUntilDue == 30));
@@ -207,7 +209,7 @@ public class RemoveOrganizationFromProviderCommandTests
 
         organization.PlanType = PlanType.TeamsMonthly;
 
-        var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
+        var teamsMonthlyPlan = MockPlans.Get(PlanType.TeamsMonthly);
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(PlanType.TeamsMonthly).Returns(teamsMonthlyPlan);
 
@@ -226,7 +228,7 @@ public class RemoveOrganizationFromProviderCommandTests
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
-        stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
+        stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
             options.Description == string.Empty &&
             options.Email == organization.BillingEmail &&
             options.Expand[0] == "tax" &&
@@ -239,14 +241,14 @@ public class RemoveOrganizationFromProviderCommandTests
                 }
             });
 
-        stripeAdapter.SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(new Subscription
+        stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(new Subscription
         {
             Id = "subscription_id"
         });
 
         await sutProvider.Sut.RemoveOrganizationFromProvider(provider, providerOrganization, organization);
 
-        await stripeAdapter.Received(1).SubscriptionCreateAsync(Arg.Is<SubscriptionCreateOptions>(options =>
+        await stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Is<SubscriptionCreateOptions>(options =>
             options.Customer == organization.GatewayCustomerId &&
             options.CollectionMethod == StripeConstants.CollectionMethod.SendInvoice &&
             options.DaysUntilDue == 30 &&
@@ -296,7 +298,7 @@ public class RemoveOrganizationFromProviderCommandTests
 
         organization.PlanType = PlanType.TeamsMonthly;
 
-        var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
+        var teamsMonthlyPlan = MockPlans.Get(PlanType.TeamsMonthly);
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(PlanType.TeamsMonthly).Returns(teamsMonthlyPlan);
 
@@ -315,7 +317,7 @@ public class RemoveOrganizationFromProviderCommandTests
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
-        stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
+        stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
             options.Description == string.Empty &&
             options.Email == organization.BillingEmail &&
             options.Expand[0] == "tax" &&
@@ -328,14 +330,14 @@ public class RemoveOrganizationFromProviderCommandTests
                 }
             });
 
-        stripeAdapter.SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(new Subscription
+        stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(new Subscription
         {
             Id = "subscription_id"
         });
 
         await sutProvider.Sut.RemoveOrganizationFromProvider(provider, providerOrganization, organization);
 
-        await stripeAdapter.Received(1).SubscriptionCreateAsync(Arg.Is<SubscriptionCreateOptions>(options =>
+        await stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Is<SubscriptionCreateOptions>(options =>
             options.Customer == organization.GatewayCustomerId &&
             options.CollectionMethod == StripeConstants.CollectionMethod.SendInvoice &&
             options.DaysUntilDue == 30 &&
@@ -416,7 +418,7 @@ public class RemoveOrganizationFromProviderCommandTests
         organization.PlanType = PlanType.TeamsMonthly;
         organization.Enabled = false; // Start with a disabled organization
 
-        var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
+        var teamsMonthlyPlan = MockPlans.Get(PlanType.TeamsMonthly);
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(PlanType.TeamsMonthly).Returns(teamsMonthlyPlan);
 
@@ -434,7 +436,7 @@ public class RemoveOrganizationFromProviderCommandTests
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
-        stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, Arg.Any<CustomerUpdateOptions>())
+        stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Any<CustomerUpdateOptions>())
             .Returns(new Customer
             {
                 Id = "customer_id",
@@ -444,7 +446,7 @@ public class RemoveOrganizationFromProviderCommandTests
                 }
             });
 
-        stripeAdapter.SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(new Subscription
+        stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(new Subscription
         {
             Id = "new_subscription_id"
         });

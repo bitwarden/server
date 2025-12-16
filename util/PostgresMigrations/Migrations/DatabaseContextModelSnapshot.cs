@@ -246,6 +246,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("UsePasswordManager")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("UsePhishingBlocker")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("UsePolicies")
                         .HasColumnType("boolean");
 
@@ -274,7 +277,7 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasIndex("Id", "Enabled");
 
-                    NpgsqlIndexBuilderExtensions.IncludeProperties(b.HasIndex("Id", "Enabled"), new[] { "UseTotp" });
+                    NpgsqlIndexBuilderExtensions.IncludeProperties(b.HasIndex("Id", "Enabled"), new[] { "UseTotp", "UsersGetPremium" });
 
                     b.ToTable("Organization", (string)null);
                 });
