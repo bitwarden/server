@@ -79,7 +79,7 @@ public class OrganizationUpdateCommand(
         var shouldUpdateBilling = originalName != organization.Name ||
                                   originalBillingEmail != organization.BillingEmail;
 
-        if (!shouldUpdateBilling || string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
+        if (!shouldUpdateBilling)
         {
             return;
         }

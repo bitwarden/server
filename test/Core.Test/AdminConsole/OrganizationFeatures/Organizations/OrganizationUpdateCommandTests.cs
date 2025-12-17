@@ -32,7 +32,7 @@ public class OrganizationUpdateCommandTests
         var organizationBillingService = sutProvider.GetDependency<IOrganizationBillingService>();
 
         organization.Id = organizationId;
-        organization.GatewayCustomerId = null; // No Stripe customer, so no billing update
+        organization.GatewayCustomerId = null; // No Stripe customer, but billing update is still called
 
         organizationRepository
             .GetByIdAsync(organizationId)
@@ -63,8 +63,8 @@ public class OrganizationUpdateCommandTests
                 result,
                 EventType.Organization_Updated);
         await organizationBillingService
-            .DidNotReceiveWithAnyArgs()
-            .UpdateOrganizationNameAndEmail(Arg.Any<Organization>());
+            .Received(1)
+            .UpdateOrganizationNameAndEmail(result);
     }
 
     [Theory, BitAutoData]
@@ -95,7 +95,7 @@ public class OrganizationUpdateCommandTests
     [Theory]
     [BitAutoData("")]
     [BitAutoData((string)null)]
-    public async Task UpdateAsync_WhenGatewayCustomerIdIsNullOrEmpty_SkipsBillingUpdate(
+    public async Task UpdateAsync_WhenGatewayCustomerIdIsNullOrEmpty_CallsBillingUpdateButHandledGracefully(
         string gatewayCustomerId,
         Guid organizationId,
         Organization organization,
@@ -135,8 +135,8 @@ public class OrganizationUpdateCommandTests
                 result,
                 EventType.Organization_Updated);
         await organizationBillingService
-            .DidNotReceiveWithAnyArgs()
-            .UpdateOrganizationNameAndEmail(Arg.Any<Organization>());
+            .Received(1)
+            .UpdateOrganizationNameAndEmail(result);
     }
 
     [Theory, BitAutoData]
