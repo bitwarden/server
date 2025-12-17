@@ -25,11 +25,15 @@ using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
+using Fido2NetLib;
+using Fido2NetLib.Objects;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Options;
 using NSubstitute;
 using Xunit;
+using static Fido2NetLib.Fido2;
+using GlobalSettings = Bit.Core.Settings.GlobalSettings;
 
 namespace Bit.Core.Test.Services;
 
@@ -593,6 +597,255 @@ public class UserServiceTests
         {
             user.MasterPassword = null;
         }
+    }
+
+    [Theory, BitAutoData]
+    public async Task StartWebAuthnRegistrationAsync_PremiumUser_ExceedsLimit_ThrowsBadRequestException(
+        SutProvider<UserService> sutProvider, User user)
+    {
+        // Arrange - Premium user with 10 credentials (at limit)
+        var credentialCount = 10;
+        SetupWebAuthnProvider(user, credentialCount);
+
+        sutProvider.GetDependency<IGlobalSettings>().WebAuthN = new GlobalSettings.WebAuthNSettings
+        {
+            PremiumMaximumAllowedCredentials = 10,
+            NonPremiumMaximumAllowedCredentials = 5
+        };
+
+        user.Premium = true;
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByUserAsync(user.Id)
+            .Returns(new List<OrganizationUser>());
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.StartWebAuthnRegistrationAsync(user));
+
+        Assert.Equal("Maximum allowed WebAuthN credential count exceeded.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task StartWebAuthnRegistrationAsync_NonPremiumUser_ExceedsLimit_ThrowsBadRequestException(
+        SutProvider<UserService> sutProvider, User user)
+    {
+        // Arrange - Non-premium user with 5 credentials (at limit)
+        var credentialCount = 5;
+        SetupWebAuthnProvider(user, credentialCount);
+
+        sutProvider.GetDependency<IGlobalSettings>().WebAuthN = new GlobalSettings.WebAuthNSettings
+        {
+            PremiumMaximumAllowedCredentials = 10,
+            NonPremiumMaximumAllowedCredentials = 5
+        };
+
+        user.Premium = false;
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByUserAsync(user.Id)
+            .Returns(new List<OrganizationUser>());
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.StartWebAuthnRegistrationAsync(user));
+
+        Assert.Equal("Maximum allowed WebAuthN credential count exceeded.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task StartWebAuthnRegistrationAsync_BelowLimit_Succeeds(
+        SutProvider<UserService> sutProvider, User user)
+    {
+        // Arrange - Non-premium user with 4 credentials (below limit of 5)
+        SetupWebAuthnProvider(user, credentialCount: 4);
+
+        sutProvider.GetDependency<IGlobalSettings>().WebAuthN = new GlobalSettings.WebAuthNSettings
+        {
+            PremiumMaximumAllowedCredentials = 10,
+            NonPremiumMaximumAllowedCredentials = 5
+        };
+
+        user.Premium = false;
+        user.Id = Guid.NewGuid();
+        user.Email = "test@example.com";
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByUserAsync(user.Id)
+            .Returns(new List<OrganizationUser>());
+
+        var mockFido2 = sutProvider.GetDependency<IFido2>();
+        mockFido2.RequestNewCredential(
+            Arg.Any<Fido2User>(),
+            Arg.Any<List<PublicKeyCredentialDescriptor>>(),
+            Arg.Any<AuthenticatorSelection>(),
+            Arg.Any<AttestationConveyancePreference>())
+            .Returns(new CredentialCreateOptions
+            {
+                Challenge = new byte[] { 1, 2, 3 },
+                Rp = new PublicKeyCredentialRpEntity("example.com", "example.com", ""),
+                User = new Fido2User
+                {
+                    Id = user.Id.ToByteArray(),
+                    Name = user.Email,
+                    DisplayName = user.Name
+                },
+                PubKeyCredParams = new List<PubKeyCredParam>()
+            });
+
+        // Act
+        var result = await sutProvider.Sut.StartWebAuthnRegistrationAsync(user);
+
+        // Assert
+        Assert.NotNull(result);
+        await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(user);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CompleteWebAuthRegistrationAsync_ExceedsLimit_ThrowsBadRequestException(
+        SutProvider<UserService> sutProvider, User user, AuthenticatorAttestationRawResponse deviceResponse)
+    {
+        // Arrange - time-of-check/time-of-use scenario: user now has 10 credentials (at limit)
+        SetupWebAuthnProviderWithPending(user, credentialCount: 10);
+
+        sutProvider.GetDependency<IGlobalSettings>().WebAuthN = new GlobalSettings.WebAuthNSettings
+        {
+            PremiumMaximumAllowedCredentials = 10,
+            NonPremiumMaximumAllowedCredentials = 5
+        };
+
+        user.Premium = true;
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByUserAsync(user.Id)
+            .Returns(new List<OrganizationUser>());
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.CompleteWebAuthRegistrationAsync(user, 11, "NewKey", deviceResponse));
+
+        Assert.Equal("Maximum allowed WebAuthN credential count exceeded.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CompleteWebAuthRegistrationAsync_BelowLimit_Succeeds(
+        SutProvider<UserService> sutProvider, User user, AuthenticatorAttestationRawResponse deviceResponse)
+    {
+        // Arrange - User has 4 credentials (below limit of 5)
+        SetupWebAuthnProviderWithPending(user, credentialCount: 4);
+
+        sutProvider.GetDependency<IGlobalSettings>().WebAuthN = new GlobalSettings.WebAuthNSettings
+        {
+            PremiumMaximumAllowedCredentials = 10,
+            NonPremiumMaximumAllowedCredentials = 5
+        };
+
+        user.Premium = false;
+        user.Id = Guid.NewGuid();
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByUserAsync(user.Id)
+            .Returns(new List<OrganizationUser>());
+
+        var mockFido2 = sutProvider.GetDependency<IFido2>();
+        mockFido2.MakeNewCredentialAsync(
+            Arg.Any<AuthenticatorAttestationRawResponse>(),
+            Arg.Any<CredentialCreateOptions>(),
+            Arg.Any<IsCredentialIdUniqueToUserAsyncDelegate>())
+            .Returns(new CredentialMakeResult("ok", "", new AttestationVerificationSuccess
+            {
+                Aaguid = Guid.NewGuid(),
+                Counter = 0,
+                CredentialId = new byte[] { 1, 2, 3 },
+                CredType = "public-key",
+                PublicKey = new byte[] { 4, 5, 6 },
+                Status = "ok",
+                User = new Fido2User
+                {
+                    Id = user.Id.ToByteArray(),
+                    Name = user.Email ?? "test@example.com",
+                    DisplayName = user.Name ?? "Test User"
+                }
+            }));
+
+        // Act
+        var result = await sutProvider.Sut.CompleteWebAuthRegistrationAsync(user, 5, "NewKey", deviceResponse);
+
+        // Assert
+        Assert.True(result);
+        await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(user);
+    }
+
+    private static void SetupWebAuthnProvider(User user, int credentialCount)
+    {
+        var providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
+        var metadata = new Dictionary<string, object>();
+
+        // Add credentials as Key1, Key2, Key3, etc.
+        for (int i = 1; i <= credentialCount; i++)
+        {
+            metadata[$"Key{i}"] = new TwoFactorProvider.WebAuthnData
+            {
+                Name = $"Key {i}",
+                Descriptor = new PublicKeyCredentialDescriptor(new byte[] { (byte)i }),
+                PublicKey = new byte[] { (byte)i },
+                UserHandle = new byte[] { (byte)i },
+                SignatureCounter = 0,
+                CredType = "public-key",
+                RegDate = DateTime.UtcNow,
+                AaGuid = Guid.NewGuid()
+            };
+        }
+
+        providers[TwoFactorProviderType.WebAuthn] = new TwoFactorProvider
+        {
+            Enabled = true,
+            MetaData = metadata
+        };
+
+        user.SetTwoFactorProviders(providers);
+    }
+
+    private static void SetupWebAuthnProviderWithPending(User user, int credentialCount)
+    {
+        var providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
+        var metadata = new Dictionary<string, object>();
+
+        // Add existing credentials
+        for (int i = 1; i <= credentialCount; i++)
+        {
+            metadata[$"Key{i}"] = new TwoFactorProvider.WebAuthnData
+            {
+                Name = $"Key {i}",
+                Descriptor = new PublicKeyCredentialDescriptor(new byte[] { (byte)i }),
+                PublicKey = new byte[] { (byte)i },
+                UserHandle = new byte[] { (byte)i },
+                SignatureCounter = 0,
+                CredType = "public-key",
+                RegDate = DateTime.UtcNow,
+                AaGuid = Guid.NewGuid()
+            };
+        }
+
+        // Add pending registration
+        var pendingOptions = new CredentialCreateOptions
+        {
+            Challenge = new byte[] { 1, 2, 3 },
+            Rp = new PublicKeyCredentialRpEntity("example.com", "example.com", ""),
+            User = new Fido2User
+            {
+                Id = user.Id.ToByteArray(),
+                Name = user.Email ?? "test@example.com",
+                DisplayName = user.Name ?? "Test User"
+            },
+            PubKeyCredParams = new List<PubKeyCredParam>()
+        };
+        metadata["pending"] = pendingOptions.ToJson();
+
+        providers[TwoFactorProviderType.WebAuthn] = new TwoFactorProvider
+        {
+            Enabled = true,
+            MetaData = metadata
+        };
+
+        user.SetTwoFactorProviders(providers);
     }
 }
 
