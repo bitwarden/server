@@ -19,7 +19,8 @@ public class AutomaticUserConfirmationPolicyEnforcementValidator(
 
         var currentOrganizationUser = request.AllOrganizationUsers
             .FirstOrDefault(x => x.OrganizationId == request.OrganizationId
-                                 && x.UserId == request.User.Id);
+                                 // invited users do not have a userId but will have email
+                                 && (x.UserId == request.User.Id || x.Email == request.User.Email));
 
         if (currentOrganizationUser is null)
         {
