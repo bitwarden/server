@@ -1,6 +1,7 @@
 ﻿using AutoFixture.Xunit2;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -9,6 +10,7 @@ using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
 using Bit.Events.Controllers;
 using Bit.Events.Models;
+using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Mvc;
 using NSubstitute;
 
@@ -21,6 +23,7 @@ public class CollectControllerTests
     private readonly IEventService _eventService;
     private readonly ICipherRepository _cipherRepository;
     private readonly IOrganizationRepository _organizationRepository;
+    private readonly IOrganizationUserRepository _organizationUserRepository;
 
     public CollectControllerTests()
     {
@@ -28,12 +31,14 @@ public class CollectControllerTests
         _eventService = Substitute.For<IEventService>();
         _cipherRepository = Substitute.For<ICipherRepository>();
         _organizationRepository = Substitute.For<IOrganizationRepository>();
+        _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
 
         _sut = new CollectController(
             _currentContext,
             _eventService,
             _cipherRepository,
-            _organizationRepository
+            _organizationRepository,
+            _organizationUserRepository
         );
     }
 
@@ -72,6 +77,32 @@ public class CollectControllerTests
 
         Assert.IsType<OkResult>(result);
         await _eventService.Received(1).LogUserEventAsync(userId, EventType.User_ClientExportedVault, eventDate);
+    }
+
+    [Theory]
+    [BitAutoData(EventType.Organization_ItemOrganization_Accepted)]
+    [BitAutoData(EventType.Organization_ItemOrganization_Declined)]
+    public async Task Post_Organization_ItemOrganization_LogsOrganizationUserEvent(
+        EventType type, Guid userId, Guid orgId, OrganizationUser orgUser)
+    {
+        _currentContext.UserId.Returns(userId);
+        orgUser.OrganizationId = orgId;
+        _organizationUserRepository.GetByOrganizationAsync(orgId, userId).Returns(orgUser);
+        var eventDate = DateTime.UtcNow;
+        var events = new List<EventModel>
+        {
+            new EventModel
+            {
+                Type = type,
+                OrganizationId = orgId,
+                Date = eventDate
+            }
+        };
+
+        var result = await _sut.Post(events);
+
+        Assert.IsType<OkResult>(result);
+        await _eventService.Received(1).LogOrganizationUserEventAsync(orgUser, type, eventDate);
     }
 
     [Theory]
