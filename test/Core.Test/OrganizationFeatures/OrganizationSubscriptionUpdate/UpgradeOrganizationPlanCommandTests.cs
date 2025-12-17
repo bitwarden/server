@@ -1,5 +1,4 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
-using Bit.Core.Billing.Enums;
+﻿using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Exceptions;
