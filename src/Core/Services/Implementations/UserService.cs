@@ -34,6 +34,7 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Fido2NetLib;
 using Fido2NetLib.Objects;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
@@ -344,6 +345,12 @@ public class UserService : UserManager<User>, IUserService
         await _mailService.SendMasterPasswordHintEmailAsync(email, user.MasterPasswordHint);
     }
 
+    /// <summary>
+    /// Initiates WebAuthn 2FA credential registration and generates a challenge for adding a new security key.
+    /// </summary>
+    /// <param name="user">The current user.</param>
+    /// <returns></returns>
+    /// <exception cref="BadHttpRequestException">Maximum allowed number of credentials already registered.</exception>
     public async Task<CredentialCreateOptions> StartWebAuthnRegistrationAsync(User user)
     {
         var providers = user.GetTwoFactorProviders();
@@ -362,6 +369,15 @@ public class UserService : UserManager<User>, IUserService
         if (provider.MetaData == null)
         {
             provider.MetaData = new Dictionary<string, object>();
+        }
+
+        // Boundary validation to provide a better UX. There is also second-level enforcement at persistence time.
+        var maximumAllowedCredentialCount = (await CanAccessPremium(user))
+            ? _globalSettings.WebAuthN.PremiumMaximumAllowedCredentials
+            : _globalSettings.WebAuthN.NonPremiumMaximumAllowedCredentials;
+        if (provider.MetaData.Count >= maximumAllowedCredentialCount)
+        {
+            throw new BadRequestException("Maximum allowed WebAuthN credential count exceeded.");
         }
 
         var fidoUser = new Fido2User
@@ -400,6 +416,16 @@ public class UserService : UserManager<User>, IUserService
         if (provider?.MetaData is null || !provider.MetaData.TryGetValue("pending", out var pendingValue))
         {
             return false;
+        }
+
+        // Persistence-time validation for comprehensive enforcement. There is also boundary validation for best-possible UX.
+        var registeredCredentialCount = provider.MetaData.Count(metadata => metadata.Key.StartsWith("Key"));
+        var maxiumumAllowedCredentialCount = (await CanAccessPremium(user))
+            ? _globalSettings.WebAuthN.PremiumMaximumAllowedCredentials
+            : _globalSettings.WebAuthN.NonPremiumMaximumAllowedCredentials;
+        if (registeredCredentialCount >= maxiumumAllowedCredentialCount)
+        {
+            throw new BadRequestException("Maximum allowed WebAuthN credential count exceeded.");
         }
 
         var options = CredentialCreateOptions.FromJson((string)pendingValue);
