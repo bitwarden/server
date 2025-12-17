@@ -4,6 +4,7 @@
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
@@ -32,6 +33,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IFeatureService _featureService;
     private readonly ICollectionRepository _collectionRepository;
+    private readonly IAutomaticUserConfirmationPolicyEnforcementValidator _automaticUserConfirmationPolicyEnforcementValidator;
 
     public ConfirmOrganizationUserCommand(
         IOrganizationRepository organizationRepository,
@@ -46,7 +48,8 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         IDeviceRepository deviceRepository,
         IPolicyRequirementQuery policyRequirementQuery,
         IFeatureService featureService,
-        ICollectionRepository collectionRepository)
+        ICollectionRepository collectionRepository,
+        IAutomaticUserConfirmationPolicyEnforcementValidator automaticUserConfirmationPolicyEnforcementValidator)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -61,6 +64,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         _policyRequirementQuery = policyRequirementQuery;
         _featureService = featureService;
         _collectionRepository = collectionRepository;
+        _automaticUserConfirmationPolicyEnforcementValidator = automaticUserConfirmationPolicyEnforcementValidator;
     }
 
     public async Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key,
@@ -126,6 +130,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
 
         var organization = await _organizationRepository.GetByIdAsync(organizationId);
         var allUsersOrgs = await _organizationUserRepository.GetManyByManyUsersAsync(validSelectedUserIds);
+
         var users = await _userRepository.GetManyAsync(validSelectedUserIds);
         var usersTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(validSelectedUserIds);
 
@@ -187,6 +192,25 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         await ValidateTwoFactorAuthenticationPolicyAsync(user, organizationId, userTwoFactorEnabled);
 
         var hasOtherOrgs = userOrgs.Any(ou => ou.OrganizationId != organizationId);
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
+        {
+            var error = (await _automaticUserConfirmationPolicyEnforcementValidator.IsCompliantAsync(
+                    new AutomaticUserConfirmationPolicyEnforcementRequest(
+                        organizationId,
+                        userOrgs,
+                        user)))
+                .Match(
+                    error => new BadRequestException(error.Message),
+                    _ => null
+                );
+
+            if (error is not null)
+            {
+                throw error;
+            }
+        }
+
         var singleOrgPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg);
         var otherSingleOrgPolicies =
             singleOrgPolicies.Where(p => p.OrganizationId != organizationId);
@@ -266,8 +290,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
             return;
         }
 
-        var organizationDataOwnershipPolicy =
-            await _policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(organizationUser.UserId!.Value);
+        var organizationDataOwnershipPolicy = await _policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(organizationUser.UserId!.Value);
         if (!organizationDataOwnershipPolicy.RequiresDefaultCollectionOnConfirm(organizationUser.OrganizationId))
         {
             return;
@@ -299,8 +322,8 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
             return;
         }
 
-        var policyEligibleOrganizationUserIds =
-            await _policyRequirementQuery.GetManyByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(organizationId);
+        var policyEligibleOrganizationUserIds = await _policyRequirementQuery
+            .GetManyByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(organizationId);
 
         var eligibleOrganizationUserIds = confirmedOrganizationUsers
             .Where(ou => policyEligibleOrganizationUserIds.Contains(ou.Id))

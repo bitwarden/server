@@ -37,7 +37,7 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationService _organizationService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IPaymentService _paymentService;
+    private readonly IStripePaymentService _paymentService;
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly IUserService _userService;
     private readonly IGetCloudOrganizationLicenseQuery _getCloudOrganizationLicenseQuery;
@@ -59,7 +59,7 @@ public class OrganizationsControllerTests : IDisposable
         _organizationRepository = Substitute.For<IOrganizationRepository>();
         _organizationService = Substitute.For<IOrganizationService>();
         _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
-        _paymentService = Substitute.For<IPaymentService>();
+        _paymentService = Substitute.For<IStripePaymentService>();
         Substitute.For<IPolicyRepository>();
         _ssoConfigRepository = Substitute.For<ISsoConfigRepository>();
         Substitute.For<ISsoConfigService>();

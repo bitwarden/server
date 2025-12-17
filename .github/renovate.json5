@@ -44,6 +44,7 @@
     {
       matchPackageNames: ["https://github.com/bitwarden/sdk-internal.git"],
       groupName: "sdk-internal",
+      dependencyDashboardApproval: true
     },
     {
       matchManagers: ["dockerfile", "docker-compose"],

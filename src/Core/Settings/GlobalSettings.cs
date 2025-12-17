@@ -56,7 +56,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual EventLoggingSettings EventLogging { get; set; } = new EventLoggingSettings();
     public virtual MailSettings Mail { get; set; } = new MailSettings();
     public virtual IConnectionStringSettings Storage { get; set; } = new ConnectionStringSettings();
-    public virtual ConnectionStringSettings Events { get; set; } = new ConnectionStringSettings();
+    public virtual AzureQueueEventSettings Events { get; set; } = new AzureQueueEventSettings();
     public virtual DistributedCacheSettings DistributedCache { get; set; } = new DistributedCacheSettings();
     public virtual NotificationsSettings Notifications { get; set; } = new NotificationsSettings();
     public virtual IFileStorageSettings Attachment { get; set; }
@@ -81,7 +81,6 @@ public class GlobalSettings : IGlobalSettings
     public virtual ILaunchDarklySettings LaunchDarkly { get; set; } = new LaunchDarklySettings();
     public virtual string DevelopmentDirectory { get; set; }
     public virtual IWebPushSettings WebPush { get; set; } = new WebPushSettings();
-    public virtual IPhishingDomainSettings PhishingDomain { get; set; } = new PhishingDomainSettings();
 
     public virtual int SendAccessTokenLifetimeInMinutes { get; set; } = 5;
     public virtual bool EnableEmailVerification { get; set; }
@@ -395,6 +394,24 @@ public class GlobalSettings : IGlobalSettings
         }
     }
 
+    public class AzureQueueEventSettings : IConnectionStringSettings
+    {
+        private string _connectionString;
+        private string _queueName;
+
+        public string ConnectionString
+        {
+            get => _connectionString;
+            set => _connectionString = value?.Trim('"');
+        }
+
+        public string QueueName
+        {
+            get => _queueName;
+            set => _queueName = value?.Trim('"');
+        }
+    }
+
     public class ConnectionStringSettings : IConnectionStringSettings
     {
         private string _connectionString;
@@ -672,12 +689,6 @@ public class GlobalSettings : IGlobalSettings
         public int MaxNetworkRetries { get; set; } = 2;
     }
 
-    public class PhishingDomainSettings : IPhishingDomainSettings
-    {
-        public string UpdateUrl { get; set; }
-        public string ChecksumUrl { get; set; }
-    }
-
     public class DistributedIpRateLimitingSettings
     {
         public string RedisConnectionString { get; set; }
@@ -732,7 +743,7 @@ public class GlobalSettings : IGlobalSettings
     public class ExtendedCacheSettings
     {
         public bool EnableDistributedCache { get; set; } = true;
-        public bool UseSharedRedisCache { get; set; } = true;
+        public bool UseSharedDistributedCache { get; set; } = true;
         public IConnectionStringSettings Redis { get; set; } = new ConnectionStringSettings();
         public TimeSpan Duration { get; set; } = TimeSpan.FromMinutes(30);
         public bool IsFailSafeEnabled { get; set; } = true;

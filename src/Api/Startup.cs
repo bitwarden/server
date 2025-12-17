@@ -187,7 +187,6 @@ public class Startup
         services.AddBillingOperations();
         services.AddReportingServices();
         services.AddImportServices();
-        services.AddPhishingDomainServices(globalSettings);
 
         services.AddSendServices();
 
@@ -226,7 +225,8 @@ public class Startup
             services.AddHostedService<Core.HostedServices.ApplicationCacheHostedService>();
         }
 
-        // Add Slack / Teams Services for OAuth API requests - if configured
+        // Add Event Integrations services
+        services.AddEventIntegrationsCommandsQueries(globalSettings);
         services.AddSlackService(globalSettings);
         services.AddTeamsService(globalSettings);
     }
