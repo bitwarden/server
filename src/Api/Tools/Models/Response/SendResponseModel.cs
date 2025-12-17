@@ -39,7 +39,7 @@ public class SendResponseModel : ResponseModel
         Type = send.Type;
         AuthType = send.AuthType ?? (!string.IsNullOrWhiteSpace(send.Password)
             ? AuthType = Core.Tools.Enums.AuthType.Password
-            : (!string.IsNullOrWhiteSpace(send.Emails)? Core.Tools.Enums.AuthType.Email : Core.Tools.Enums.AuthType.None));
+            : (!string.IsNullOrWhiteSpace(send.Emails) ? Core.Tools.Enums.AuthType.Email : Core.Tools.Enums.AuthType.None));
         Key = send.Key;
         MaxAccessCount = send.MaxAccessCount;
         AccessCount = send.AccessCount;
