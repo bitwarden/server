@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.KeyManagement.Models.Data;
+namespace Bit.Core.KeyManagement.Models.Data;
 
 /// <summary>
 /// Represents an expanded account cryptographic state for a user. Expanded here means
@@ -30,5 +30,23 @@ public class UserAccountKeysData
         {
             throw new InvalidOperationException("Invalid account cryptographic state: V2 encryption fields must be either all present or all absent.");
         }
+    }
+
+    public override bool Equals(object? obj)
+    {
+        if (obj is not UserAccountKeysData other)
+        {
+            return false;
+        }
+
+        return PublicKeyEncryptionKeyPairData.Equals(other.PublicKeyEncryptionKeyPairData) &&
+               Equals(SignatureKeyPairData, other.SignatureKeyPairData) &&
+               Equals(SecurityStateData, other.SecurityStateData) &&
+               IsV2Encryption() == other.IsV2Encryption();
+    }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(PublicKeyEncryptionKeyPairData, SignatureKeyPairData, SecurityStateData);
     }
 }

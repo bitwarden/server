@@ -477,6 +477,32 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         }
     }
 
+    public UpdateUserData SetRegisterFinishUserData(Guid userId, RegisterFinishData registerFinishData)
+    {
+        return async (connection, transaction) =>
+        {
+            var timestamp = DateTime.UtcNow;
+
+            await connection!.ExecuteAsync(
+                "[dbo].[User_SetRegisterFinishUserData]",
+                new
+                {
+                    Id = userId,
+                    Kdf = registerFinishData.MasterPasswordUnlockData.Kdf.KdfType,
+                    KdfIterations = registerFinishData.MasterPasswordUnlockData.Kdf.Iterations,
+                    KdfMemory = registerFinishData.MasterPasswordUnlockData.Kdf.Memory,
+                    KdfParallelism = registerFinishData.MasterPasswordUnlockData.Kdf.Parallelism,
+                    Key = registerFinishData.MasterPasswordUnlockData.MasterKeyWrappedUserKey,
+                    PublicKey = registerFinishData.UserAccountKeysData.PublicKeyEncryptionKeyPairData.PublicKey,
+                    PrivateKey = registerFinishData.UserAccountKeysData.PublicKeyEncryptionKeyPairData.WrappedPrivateKey,
+                    RevisionDate = timestamp,
+                    AccountRevisionDate = timestamp,
+                },
+                transaction: transaction,
+                commandType: CommandType.StoredProcedure);
+        };
+    }
+
     private async Task ProtectDataAndSaveAsync(User user, Func<Task> saveTask)
     {
         if (user == null)

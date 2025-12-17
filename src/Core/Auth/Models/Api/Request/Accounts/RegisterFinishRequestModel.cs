@@ -1,6 +1,8 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Models.Api.Request;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.Auth.Models.Api.Request.Accounts;
@@ -38,7 +40,12 @@ public class RegisterFinishRequestModel : IValidatableObject
     // in the MasterPasswordAuthenticationData.
     public string? UserSymmetricKey { get; set; }
 
-    public required KeysRequestModel UserAsymmetricKeys { get; set; }
+    // TODO Remove property below, deprecated due to new AccountKeys property
+    // https://bitwarden.atlassian.net/browse/PM-27326
+    // Will throw error if both UserAsymmetricKeys and AccountKeys do not exist.
+    public KeysRequestModel? UserAsymmetricKeys { get; set; }
+
+    public AccountKeysRequestModel? AccountKeys { get; set; }
 
     // PM-28143 - Remove line below (made optional during migration to MasterPasswordUnlockData)
     public KdfType? Kdf { get; set; }
@@ -61,25 +68,84 @@ public class RegisterFinishRequestModel : IValidatableObject
 
     public Guid? ProviderUserId { get; set; }
 
-    public User ToUser()
+    public User ToUser(bool IsV2Encryption)
     {
-        var user = new User
+        // TODO remove IsV2Encryption bool and simplify logic below after a compatibility period - once V2 accounts are supported
+        // https://bitwarden.atlassian.net/browse/PM-27326
+        if (!IsV2Encryption)
+        {
+            var user = new User
+            {
+                Email = Email,
+                MasterPasswordHint = MasterPasswordHint,
+                Kdf = (KdfType)(MasterPasswordUnlock?.Kdf.KdfType ?? Kdf)!,
+                KdfIterations = (int)(MasterPasswordUnlock?.Kdf.Iterations ?? KdfIterations)!,
+                // KdfMemory and KdfParallelism are optional (only used for Argon2id)
+                KdfMemory = MasterPasswordUnlock?.Kdf.Memory ?? KdfMemory,
+                KdfParallelism = MasterPasswordUnlock?.Kdf.Parallelism ?? KdfParallelism,
+                // PM-28827 To be added when MasterPasswordSalt is added to the user column
+                // MasterPasswordSalt = MasterPasswordUnlock?.Salt ?? Email.ToLower().Trim(),
+                Key = MasterPasswordUnlock?.MasterKeyWrappedUserKey ?? UserSymmetricKey
+            };
+
+            user = UserAsymmetricKeys?.ToUser(user) ?? throw new Exception("User's public and private account keys couldn't be found in either AccountKeys or UserAsymmetricKeys");
+
+            return user;
+        }
+        return new User
         {
             Email = Email,
             MasterPasswordHint = MasterPasswordHint,
-            Kdf = (KdfType)(MasterPasswordUnlock?.Kdf.KdfType ?? Kdf)!,
-            KdfIterations = (int)(MasterPasswordUnlock?.Kdf.Iterations ?? KdfIterations)!,
-            // KdfMemory and KdfParallelism are optional (only used for Argon2id)
-            KdfMemory = MasterPasswordUnlock?.Kdf.Memory ?? KdfMemory,
-            KdfParallelism = MasterPasswordUnlock?.Kdf.Parallelism ?? KdfParallelism,
-            // PM-28827 To be added when MasterPasswordSalt is added to the user column
-            // MasterPasswordSalt = MasterPasswordUnlock?.Salt ?? Email.ToLower().Trim(),
-            Key = MasterPasswordUnlock?.MasterKeyWrappedUserKey ?? UserSymmetricKey
         };
+    }
 
-        UserAsymmetricKeys.ToUser(user);
-
-        return user;
+    public RegisterFinishData ToData()
+    {
+        // TODO clean up flow once old fields are deprecated
+        // https://bitwarden.atlassian.net/browse/PM-27326
+        return new RegisterFinishData
+        {
+            MasterPasswordUnlockData = MasterPasswordUnlock?.ToData() ?? 
+                new MasterPasswordUnlockData
+                {
+                    Kdf = new KdfSettings
+                    {
+                        KdfType = Kdf ?? throw new Exception("KdfType couldn't be found on either the MasterPasswordUnlockData or the Kdf property passed in."),
+                        Iterations = KdfIterations  ?? throw new Exception("KdfIterations couldn't be found on either the MasterPasswordUnlockData or the KdfIterations property passed in."),
+                        // KdfMemory and KdfParallelism are optional (only used for Argon2id)
+                        Memory = KdfMemory,
+                        Parallelism = KdfParallelism,
+                    },
+                    MasterKeyWrappedUserKey = UserSymmetricKey ?? throw new Exception("MasterKeyWrappedUserKey couldn't be found on either the MasterPasswordUnlockData or the UserSymmetricKey property passed in."),
+                    // PM-28827 To be added when MasterPasswordSalt is added to the user column
+                    Salt = Email.ToLowerInvariant().Trim(),
+                },
+            UserAccountKeysData = AccountKeys?.ToAccountKeysData() ?? 
+                new UserAccountKeysData
+                {
+                    PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData
+                    (
+                        UserAsymmetricKeys?.EncryptedPrivateKey ?? 
+                            throw new Exception("WrappedPrivateKey couldn't be found in either AccountKeys or UserAsymmetricKeys."), 
+                        UserAsymmetricKeys?.PublicKey ?? 
+                            throw new Exception("PublicKey couldn't be found in either AccountKeys or UserAsymmetricKeys")
+                    ),
+                },
+            MasterPasswordAuthenticationData = MasterPasswordAuthentication?.ToData() ??
+                new MasterPasswordAuthenticationData
+                {
+                    Kdf = new KdfSettings
+                    {
+                        KdfType = Kdf ?? throw new Exception("KdfType couldn't be found on either the MasterPasswordUnlockData or the Kdf property passed in."),
+                        Iterations = KdfIterations  ?? throw new Exception("KdfIterations couldn't be found on either the MasterPasswordUnlockData or the KdfIterations property passed in."),
+                        // KdfMemory and KdfParallelism are optional (only used for Argon2id)
+                        Memory = KdfMemory,
+                        Parallelism = KdfParallelism,
+                    },
+                    MasterPasswordAuthenticationHash = MasterPasswordHash ?? throw new BadRequestException("MasterPasswordHash couldn't be found on either the MasterPasswordAuthenticationData or the MasterPasswordHash property passed in."),
+                    Salt = Email.ToLowerInvariant().Trim(),
+                }
+        };
     }
 
     public RegisterFinishTokenType GetTokenType()
@@ -186,6 +252,13 @@ public class RegisterFinishRequestModel : IValidatableObject
         {
             // Unlock provided but Authentication missing
             yield return new ValidationResult($"{nameof(MasterPasswordAuthentication)} not found on RequestModel", [nameof(MasterPasswordAuthentication)]);
+        }
+
+        if (AccountKeys == null && UserAsymmetricKeys == null)
+        {
+            yield return new ValidationResult(
+                $"{nameof(AccountKeys.PublicKeyEncryptionKeyPair.PublicKey)} and {nameof(AccountKeys.PublicKeyEncryptionKeyPair.WrappedPrivateKey)} not found in RequestModel", 
+                [nameof(AccountKeys.PublicKeyEncryptionKeyPair.PublicKey), nameof(AccountKeys.PublicKeyEncryptionKeyPair.WrappedPrivateKey)]);
         }
 
         // 3. Lastly, validate access token type and presence. Must be done last because of yield break.
