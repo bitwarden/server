@@ -171,7 +171,7 @@ jobs:
           echo "PROJECT_NAME: $PROJECT_NAME"
           echo "project_name=$PROJECT_NAME" >> "$GITHUB_OUTPUT"
 
-      - name: Generate image tags(s)
+      - name: Generate image tag(s)
         id: image-tags
         env:
           IMAGE_TAG: ${{ steps.tag.outputs.tag }}
@@ -185,7 +185,7 @@ jobs:
             TAGS=$TAGS",${_REGISTRY}/${PROJECT_NAME}:dev-${SHORT_SHA}"
           fi
           echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
-          echo "### :mega: Docker Image Tags: $TAGS" >> "$GITHUB_STEP_SUMMARY"
+          echo "### :mega: Docker Image Tag(s): $TAGS" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
