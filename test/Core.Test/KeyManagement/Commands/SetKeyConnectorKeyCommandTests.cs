@@ -1,14 +1,17 @@
-﻿using Bit.Core.Entities;
+﻿using System.Security.Claims;
+using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Commands;
 using Bit.Core.KeyManagement.Models.Data;
-using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using NSubstitute;
 using Xunit;
 
@@ -33,6 +36,16 @@ public class SetKeyConnectorKeyCommandTests
         var expectedAccountKeysData = data.AccountKeys.ToAccountKeysData();
 
         // Arrange
+        user.UsesKeyConnector = false;
+        var currentContext = sutProvider.GetDependency<ICurrentContext>();
+        var httpContext = Substitute.For<HttpContext>();
+        httpContext.User.Returns(new ClaimsPrincipal());
+        currentContext.HttpContext.Returns(httpContext);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), user, Arg.Any<IEnumerable<IAuthorizationRequirement>>())
+            .Returns(AuthorizationResult.Success());
+
         var userRepository = sutProvider.GetDependency<IUserRepository>();
         var mockUpdateUserData = Substitute.For<UpdateUserData>();
         userRepository.SetKeyConnectorUserKey(user.Id, data.KeyConnectorKeyWrappedUserKey!)
@@ -42,9 +55,6 @@ public class SetKeyConnectorKeyCommandTests
         await sutProvider.Sut.SetKeyConnectorKeyForUserAsync(user, data);
 
         // Assert
-        sutProvider.GetDependency<ICanUseKeyConnectorQuery>()
-            .Received(1)
-            .VerifyCanUseKeyConnector(user);
 
         userRepository
             .Received(1)
@@ -76,22 +86,25 @@ public class SetKeyConnectorKeyCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task SetKeyConnectorKeyForUserAsync_UserCannotUseKeyConnector_ThrowsException(
+    public async Task SetKeyConnectorKeyForUserAsync_UserCantUseKeyConnector_ThrowsException(
         User user,
         KeyConnectorKeysData data,
         SutProvider<SetKeyConnectorKeyCommand> sutProvider)
     {
         // Arrange
-        var expectedException = new BadRequestException("User cannot use Key Connector");
-        sutProvider.GetDependency<ICanUseKeyConnectorQuery>()
-            .When(x => x.VerifyCanUseKeyConnector(user))
-            .Throw(expectedException);
+        user.UsesKeyConnector = true;
+        var currentContext = sutProvider.GetDependency<ICurrentContext>();
+        var httpContext = Substitute.For<HttpContext>();
+        httpContext.User.Returns(new ClaimsPrincipal());
+        currentContext.HttpContext.Returns(httpContext);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), user, Arg.Any<IEnumerable<IAuthorizationRequirement>>())
+            .Returns(AuthorizationResult.Failed());
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
+        await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SetKeyConnectorKeyForUserAsync(user, data));
-
-        Assert.Equal(expectedException.Message, exception.Message);
 
         sutProvider.GetDependency<IUserRepository>()
             .DidNotReceiveWithAnyArgs()
