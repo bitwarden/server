@@ -86,8 +86,10 @@ public class RabbitMqIntegrationListenerServiceTests
             new BasicProperties(),
             body: Encoding.UTF8.GetBytes(message.ToJson())
         );
-        var result = new IntegrationHandlerResult(false, message);
-        result.Retryable = false;
+        var result = IntegrationHandlerResult.Fail(
+            message: message,
+            category: IntegrationFailureCategory.AuthenticationFailed, // NOT retryable
+            failureReason: "403");
         _handler.HandleAsync(Arg.Any<string>()).Returns(result);
 
         var expected = IntegrationMessage<WebhookIntegrationConfiguration>.FromJson(message.ToJson());
@@ -105,7 +107,7 @@ public class RabbitMqIntegrationListenerServiceTests
         _logger.Received().Log(
             LogLevel.Warning,
             Arg.Any<EventId>(),
-            Arg.Is<object>(o => (o.ToString() ?? "").Contains("Non-retryable failure")),
+            Arg.Is<object>(o => (o.ToString() ?? "").Contains("Integration failure - non-retryable.")),
             Arg.Any<Exception?>(),
             Arg.Any<Func<object, Exception?, string>>());
 
@@ -133,8 +135,10 @@ public class RabbitMqIntegrationListenerServiceTests
             new BasicProperties(),
             body: Encoding.UTF8.GetBytes(message.ToJson())
         );
-        var result = new IntegrationHandlerResult(false, message);
-        result.Retryable = true;
+        var result = IntegrationHandlerResult.Fail(
+            message: message,
+            category: IntegrationFailureCategory.TransientError, // Retryable
+            failureReason: "403");
         _handler.HandleAsync(Arg.Any<string>()).Returns(result);
 
         var expected = IntegrationMessage<WebhookIntegrationConfiguration>.FromJson(message.ToJson());
@@ -151,7 +155,7 @@ public class RabbitMqIntegrationListenerServiceTests
         _logger.Received().Log(
             LogLevel.Warning,
             Arg.Any<EventId>(),
-            Arg.Is<object>(o => (o.ToString() ?? "").Contains("Max retry attempts reached")),
+            Arg.Is<object>(o => (o.ToString() ?? "").Contains("Integration failure - max retries exceeded.")),
             Arg.Any<Exception?>(),
             Arg.Any<Func<object, Exception?, string>>());
 
@@ -179,9 +183,10 @@ public class RabbitMqIntegrationListenerServiceTests
             new BasicProperties(),
             body: Encoding.UTF8.GetBytes(message.ToJson())
         );
-        var result = new IntegrationHandlerResult(false, message);
-        result.Retryable = true;
-        result.DelayUntilDate = _now.AddMinutes(1);
+        var result = IntegrationHandlerResult.Fail(
+            message: message,
+            category: IntegrationFailureCategory.TransientError, // Retryable
+            failureReason: "403");
         _handler.HandleAsync(Arg.Any<string>()).Returns(result);
 
         var expected = IntegrationMessage<WebhookIntegrationConfiguration>.FromJson(message.ToJson());
@@ -220,7 +225,7 @@ public class RabbitMqIntegrationListenerServiceTests
             new BasicProperties(),
             body: Encoding.UTF8.GetBytes(message.ToJson())
         );
-        var result = new IntegrationHandlerResult(true, message);
+        var result = IntegrationHandlerResult.Succeed(message);
         _handler.HandleAsync(Arg.Any<string>()).Returns(result);
 
         await sutProvider.Sut.ProcessReceivedMessageAsync(eventArgs, cancellationToken);

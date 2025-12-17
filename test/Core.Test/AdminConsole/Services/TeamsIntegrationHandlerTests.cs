@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
+﻿using System.Text.Json;
+using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -42,9 +43,77 @@ public class TeamsIntegrationHandlerTests
         );
     }
 
+    [Theory, BitAutoData]
+    public async Task HandleAsync_ArgumentException_ReturnsConfigurationError(IntegrationMessage<TeamsIntegrationConfigurationDetails> message)
+    {
+        var sutProvider = GetSutProvider();
+        message.Configuration = new TeamsIntegrationConfigurationDetails(_channelId, _serviceUrl);
+
+        sutProvider.GetDependency<ITeamsService>()
+            .SendMessageToChannelAsync(Arg.Any<Uri>(), Arg.Any<string>(), Arg.Any<string>())
+            .ThrowsAsync(new ArgumentException("argument error"));
+        var result = await sutProvider.Sut.HandleAsync(message);
+
+        Assert.False(result.Success);
+        Assert.Equal(IntegrationFailureCategory.ConfigurationError, result.Category);
+        Assert.False(result.Retryable);
+        Assert.Equal(result.Message, message);
+
+        await sutProvider.GetDependency<ITeamsService>().Received(1).SendMessageToChannelAsync(
+            Arg.Is(AssertHelper.AssertPropertyEqual(_serviceUrl)),
+            Arg.Is(AssertHelper.AssertPropertyEqual(_channelId)),
+            Arg.Is(AssertHelper.AssertPropertyEqual(message.RenderedTemplate))
+        );
+    }
 
     [Theory, BitAutoData]
-    public async Task HandleAsync_HttpExceptionNonRetryable_ReturnsFalseAndNotRetryable(IntegrationMessage<TeamsIntegrationConfigurationDetails> message)
+    public async Task HandleAsync_JsonException_ReturnsPermanentFailure(IntegrationMessage<TeamsIntegrationConfigurationDetails> message)
+    {
+        var sutProvider = GetSutProvider();
+        message.Configuration = new TeamsIntegrationConfigurationDetails(_channelId, _serviceUrl);
+
+        sutProvider.GetDependency<ITeamsService>()
+            .SendMessageToChannelAsync(Arg.Any<Uri>(), Arg.Any<string>(), Arg.Any<string>())
+            .ThrowsAsync(new JsonException("JSON error"));
+        var result = await sutProvider.Sut.HandleAsync(message);
+
+        Assert.False(result.Success);
+        Assert.Equal(IntegrationFailureCategory.PermanentFailure, result.Category);
+        Assert.False(result.Retryable);
+        Assert.Equal(result.Message, message);
+
+        await sutProvider.GetDependency<ITeamsService>().Received(1).SendMessageToChannelAsync(
+            Arg.Is(AssertHelper.AssertPropertyEqual(_serviceUrl)),
+            Arg.Is(AssertHelper.AssertPropertyEqual(_channelId)),
+            Arg.Is(AssertHelper.AssertPropertyEqual(message.RenderedTemplate))
+        );
+    }
+
+    [Theory, BitAutoData]
+    public async Task HandleAsync_UriFormatException_ReturnsConfigurationError(IntegrationMessage<TeamsIntegrationConfigurationDetails> message)
+    {
+        var sutProvider = GetSutProvider();
+        message.Configuration = new TeamsIntegrationConfigurationDetails(_channelId, _serviceUrl);
+
+        sutProvider.GetDependency<ITeamsService>()
+            .SendMessageToChannelAsync(Arg.Any<Uri>(), Arg.Any<string>(), Arg.Any<string>())
+            .ThrowsAsync(new UriFormatException("Bad URI"));
+        var result = await sutProvider.Sut.HandleAsync(message);
+
+        Assert.False(result.Success);
+        Assert.Equal(IntegrationFailureCategory.ConfigurationError, result.Category);
+        Assert.False(result.Retryable);
+        Assert.Equal(result.Message, message);
+
+        await sutProvider.GetDependency<ITeamsService>().Received(1).SendMessageToChannelAsync(
+            Arg.Is(AssertHelper.AssertPropertyEqual(_serviceUrl)),
+            Arg.Is(AssertHelper.AssertPropertyEqual(_channelId)),
+            Arg.Is(AssertHelper.AssertPropertyEqual(message.RenderedTemplate))
+        );
+    }
+
+    [Theory, BitAutoData]
+    public async Task HandleAsync_HttpExceptionForbidden_ReturnsAuthenticationFailed(IntegrationMessage<TeamsIntegrationConfigurationDetails> message)
     {
         var sutProvider = GetSutProvider();
         message.Configuration = new TeamsIntegrationConfigurationDetails(_channelId, _serviceUrl);
@@ -62,6 +131,7 @@ public class TeamsIntegrationHandlerTests
         var result = await sutProvider.Sut.HandleAsync(message);
 
         Assert.False(result.Success);
+        Assert.Equal(IntegrationFailureCategory.AuthenticationFailed, result.Category);
         Assert.False(result.Retryable);
         Assert.Equal(result.Message, message);
 
@@ -73,7 +143,7 @@ public class TeamsIntegrationHandlerTests
     }
 
     [Theory, BitAutoData]
-    public async Task HandleAsync_HttpExceptionRetryable_ReturnsFalseAndRetryable(IntegrationMessage<TeamsIntegrationConfigurationDetails> message)
+    public async Task HandleAsync_HttpExceptionTooManyRequests_ReturnsRateLimited(IntegrationMessage<TeamsIntegrationConfigurationDetails> message)
     {
         var sutProvider = GetSutProvider();
         message.Configuration = new TeamsIntegrationConfigurationDetails(_channelId, _serviceUrl);
@@ -92,6 +162,7 @@ public class TeamsIntegrationHandlerTests
         var result = await sutProvider.Sut.HandleAsync(message);
 
         Assert.False(result.Success);
+        Assert.Equal(IntegrationFailureCategory.RateLimited, result.Category);
         Assert.True(result.Retryable);
         Assert.Equal(result.Message, message);
 
@@ -103,7 +174,7 @@ public class TeamsIntegrationHandlerTests
     }
 
     [Theory, BitAutoData]
-    public async Task HandleAsync_UnknownException_ReturnsFalseAndNotRetryable(IntegrationMessage<TeamsIntegrationConfigurationDetails> message)
+    public async Task HandleAsync_UnknownException_ReturnsTransientError(IntegrationMessage<TeamsIntegrationConfigurationDetails> message)
     {
         var sutProvider = GetSutProvider();
         message.Configuration = new TeamsIntegrationConfigurationDetails(_channelId, _serviceUrl);
@@ -114,7 +185,8 @@ public class TeamsIntegrationHandlerTests
         var result = await sutProvider.Sut.HandleAsync(message);
 
         Assert.False(result.Success);
-        Assert.False(result.Retryable);
+        Assert.Equal(IntegrationFailureCategory.TransientError, result.Category);
+        Assert.True(result.Retryable);
         Assert.Equal(result.Message, message);
 
         await sutProvider.GetDependency<ITeamsService>().Received(1).SendMessageToChannelAsync(
