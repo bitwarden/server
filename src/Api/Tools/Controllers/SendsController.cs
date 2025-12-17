@@ -1,7 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using System.Text.Json;
+﻿using System.Text.Json;
 using Azure.Messaging.EventGrid;
 using Bit.Api.Models.Response;
 using Bit.Api.Tools.Models.Request;
@@ -76,7 +73,11 @@ public class SendsController : Controller
 
         var guid = new Guid(CoreHelpers.Base64UrlDecode(id));
         var send = await _sendRepository.GetByIdAsync(guid);
-        SendAccessResult sendAuthResult =
+        if (send == null)
+        {
+            throw new BadRequestException("Could not locate send");
+        }
+        var sendAuthResult =
             await _sendAuthorizationService.AccessAsync(send, model.Password);
         if (sendAuthResult.Equals(SendAccessResult.PasswordRequired))
         {
@@ -206,7 +207,7 @@ public class SendsController : Controller
     public async Task<SendResponseModel> Post([FromBody] SendRequestModel model)
     {
         model.ValidateCreation();
-        var userId = _userService.GetProperUserId(User).Value;
+        var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
         var send = model.ToSend(userId, _sendAuthorizationService);
         await _nonAnonymousSendCommand.SaveSendAsync(send);
         return new SendResponseModel(send);
@@ -231,7 +232,7 @@ public class SendsController : Controller
         }
 
         model.ValidateCreation();
-        var userId = _userService.GetProperUserId(User).Value;
+        var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
         var (send, data) = model.ToSend(userId, model.File.FileName, _sendAuthorizationService);
         var uploadUrl = await _nonAnonymousSendCommand.SaveFileSendAsync(send, data, model.FileLength.Value);
         return new SendFileUploadDataResponseModel
@@ -245,13 +246,13 @@ public class SendsController : Controller
     [HttpGet("{id}/file/{fileId}")]
     public async Task<SendFileUploadDataResponseModel> RenewFileUpload(string id, string fileId)
     {
-        var userId = _userService.GetProperUserId(User).Value;
+        var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
         var sendId = new Guid(id);
         var send = await _sendRepository.GetByIdAsync(sendId);
-        var fileData = JsonSerializer.Deserialize<SendFileData>(send?.Data);
+        var fileData = JsonSerializer.Deserialize<SendFileData>(send?.Data ?? string.Empty);
 
         if (send == null || send.Type != SendType.File || (send.UserId.HasValue && send.UserId.Value != userId) ||
-            !send.UserId.HasValue || fileData.Id != fileId || fileData.Validated)
+            !send.UserId.HasValue || fileData?.Id != fileId || fileData.Validated)
         {
             // Not found if Send isn't found, user doesn't have access, request is faulty,
             // or we've already validated the file. This last is to emulate create-only blob permissions for Azure
@@ -272,12 +273,16 @@ public class SendsController : Controller
     [DisableFormValueModelBinding]
     public async Task PostFileForExistingSend(string id, string fileId)
     {
-        if (!Request?.ContentType.Contains("multipart/") ?? true)
+        if (!Request?.ContentType?.Contains("multipart/") ?? true)
         {
             throw new BadRequestException("Invalid content.");
         }
 
         var send = await _sendRepository.GetByIdAsync(new Guid(id));
+        if (send == null)
+        {
+            throw new BadRequestException("Could not locate send");
+        }
         await Request.GetFileAsync(async (stream) =>
         {
             await _nonAnonymousSendCommand.UploadFileToExistingSendAsync(stream, send);
@@ -288,7 +293,7 @@ public class SendsController : Controller
     public async Task<SendResponseModel> Put(string id, [FromBody] SendRequestModel model)
     {
         model.ValidateEdit();
-        var userId = _userService.GetProperUserId(User).Value;
+        var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
         var send = await _sendRepository.GetByIdAsync(new Guid(id));
         if (send == null || send.UserId != userId)
         {
@@ -302,7 +307,7 @@ public class SendsController : Controller
     [HttpPut("{id}/remove-password")]
     public async Task<SendResponseModel> PutRemovePassword(string id)
     {
-        var userId = _userService.GetProperUserId(User).Value;
+        var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
         var send = await _sendRepository.GetByIdAsync(new Guid(id));
         if (send == null || send.UserId != userId)
         {
@@ -320,7 +325,7 @@ public class SendsController : Controller
     [HttpDelete("{id}")]
     public async Task Delete(string id)
     {
-        var userId = _userService.GetProperUserId(User).Value;
+        var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
         var send = await _sendRepository.GetByIdAsync(new Guid(id));
         if (send == null || send.UserId != userId)
         {
