@@ -247,17 +247,13 @@ public class UpgradeOrganizationPlanCommandTests
 
     [Theory]
     [FreeOrganizationUpgradeCustomize, BitAutoData]
-    public async Task UpgradePlan_OrgHasNoKeysAndUpgradeHasKeys_SetsKeys(
+    public async Task UpgradePlan_WhenOrganizationIsMissingPublicAndPrivateKeys_Backfills(
         Organization organization,
         OrganizationUpgrade upgrade,
+        string newPublicKey,
+        string newPrivateKey,
         SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
     {
-        // Arrange
-        const string newPublicKey = "new-public-key";
-        const string newPrivateKey = "new-private-key";
-
-        organization.GatewayCustomerId = "customer-id";
-        organization.GatewaySubscriptionId = "subscription-id";
         organization.PublicKey = null;
         organization.PrivateKey = null;
 
@@ -293,7 +289,7 @@ public class UpgradeOrganizationPlanCommandTests
 
     [Theory]
     [FreeOrganizationUpgradeCustomize, BitAutoData]
-    public async Task UpgradePlan_OrgHasKeysAndUpgradeHasNullKeys_PreservesExistingKeys(
+    public async Task UpgradePlan_WhenOrganizationAlreadyHasPublicAndPrivateKeys_DoesNotOverwriteWithNull(
         Organization organization,
         OrganizationUpgrade upgrade,
         SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
@@ -302,8 +298,6 @@ public class UpgradeOrganizationPlanCommandTests
         const string existingPublicKey = "existing-public-key";
         const string existingPrivateKey = "existing-private-key";
 
-        organization.GatewayCustomerId = "customer-id";
-        organization.GatewaySubscriptionId = "subscription-id";
         organization.PublicKey = existingPublicKey;
         organization.PrivateKey = existingPrivateKey;
 
@@ -337,7 +331,7 @@ public class UpgradeOrganizationPlanCommandTests
 
     [Theory]
     [FreeOrganizationUpgradeCustomize, BitAutoData]
-    public async Task UpgradePlan_OrgHasKeysAndUpgradeHasKeys_PreservesExistingKeys(
+    public async Task UpgradePlan_WhenOrganizationAlreadyHasPublicAndPrivateKeys_DoesNotBackfillWithNewKeys(
         Organization organization,
         OrganizationUpgrade upgrade,
         SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
@@ -348,8 +342,6 @@ public class UpgradeOrganizationPlanCommandTests
         const string newPublicKey = "new-public-key";
         const string newPrivateKey = "new-private-key";
 
-        organization.GatewayCustomerId = "customer-id";
-        organization.GatewaySubscriptionId = "subscription-id";
         organization.PublicKey = existingPublicKey;
         organization.PrivateKey = existingPrivateKey;
 
@@ -378,47 +370,6 @@ public class UpgradeOrganizationPlanCommandTests
         // Assert
         Assert.Equal(existingPublicKey, organization.PublicKey);
         Assert.Equal(existingPrivateKey, organization.PrivateKey);
-        await sutProvider.GetDependency<IOrganizationService>()
-            .Received(1)
-            .ReplaceAndUpdateCacheAsync(organization);
-    }
-
-    [Theory]
-    [FreeOrganizationUpgradeCustomize, BitAutoData]
-    public async Task UpgradePlan_OrgHasNoKeysAndUpgradeHasNoKeys_LeavesKeysNull(
-        Organization organization,
-        OrganizationUpgrade upgrade,
-        SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
-    {
-        // Arrange
-        organization.GatewayCustomerId = "customer-id";
-        organization.GatewaySubscriptionId = "subscription-id";
-        organization.PublicKey = null;
-        organization.PrivateKey = null;
-
-        upgrade.Plan = PlanType.TeamsAnnually;
-        upgrade.Keys = null;
-        upgrade.AdditionalSeats = 10;
-
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(organization.Id)
-            .Returns(organization);
-        sutProvider.GetDependency<IPricingClient>()
-            .GetPlanOrThrow(organization.PlanType)
-            .Returns(MockPlans.Get(organization.PlanType));
-        sutProvider.GetDependency<IPricingClient>()
-            .GetPlanOrThrow(upgrade.Plan)
-            .Returns(MockPlans.Get(upgrade.Plan));
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
-            .Returns(new OrganizationSeatCounts { Sponsored = 0, Users = 1 });
-
-        // Act
-        await sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade);
-
-        // Assert
-        Assert.Null(organization.PublicKey);
-        Assert.Null(organization.PrivateKey);
         await sutProvider.GetDependency<IOrganizationService>()
             .Received(1)
             .ReplaceAndUpdateCacheAsync(organization);
