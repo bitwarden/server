@@ -1632,6 +1632,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<int>("AccessCount")
                         .HasColumnType("int");
 
+                    b.Property<byte?>("AuthType")
+                        .HasColumnType("tinyint unsigned");
+
                     b.Property<Guid?>("CipherId")
                         .HasColumnType("char(36)");
 

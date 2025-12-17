@@ -1637,6 +1637,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<int>("AccessCount")
                         .HasColumnType("integer");
 
+                    b.Property<byte?>("AuthType")
+                        .HasColumnType("smallint");
+
                     b.Property<Guid?>("CipherId")
                         .HasColumnType("uuid");
 
