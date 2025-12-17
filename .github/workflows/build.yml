@@ -40,6 +40,7 @@ jobs:
     runs-on: ubuntu-22.04
     needs: lint
     permissions:
+      packages: write
       security-events: write
       id-token: write
     timeout-minutes: 45
@@ -207,11 +208,19 @@ jobs:
           tags: ${{ steps.image-tags.outputs.tags }}
 
       - name: Install Cosign
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        if: |
+          github.event_name != 'pull_request' && 
+          (github.ref == 'refs/heads/main' ||
+           github.ref == 'refs/heads/rc' ||
+           github.ref == 'refs/head/hotfix-rc')
         uses: sigstore/cosign-installer@3454372f43399081ed03b604cb2d021dabca52bb # v3.8.2
 
       - name: Sign image with Cosign
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        if: |
+          github.event_name != 'pull_request' && 
+          (github.ref == 'refs/heads/main' ||
+           github.ref == 'refs/heads/rc' ||
+           github.ref == 'refs/head/hotfix-rc')
         env:
           DIGEST: ${{ steps.build-artifacts.outputs.digest }}
           TAGS: ${{ steps.image-tags.outputs.tags }}
