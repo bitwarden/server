@@ -420,10 +420,10 @@ public class UserService : UserManager<User>, IUserService
 
         // Persistence-time validation for comprehensive enforcement. There is also boundary validation for best-possible UX.
         var registeredCredentialCount = provider.MetaData.Count(metadata => metadata.Key.StartsWith("Key"));
-        var maxiumumAllowedCredentialCount = (await CanAccessPremium(user))
+        var maximumAllowedCredentialCount = (await CanAccessPremium(user))
             ? _globalSettings.WebAuthN.PremiumMaximumAllowedCredentials
             : _globalSettings.WebAuthN.NonPremiumMaximumAllowedCredentials;
-        if (registeredCredentialCount >= maxiumumAllowedCredentialCount)
+        if (registeredCredentialCount >= maximumAllowedCredentialCount)
         {
             throw new BadRequestException("Maximum allowed WebAuthN credential count exceeded.");
         }
