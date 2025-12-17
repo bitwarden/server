@@ -39,8 +39,6 @@ jobs:
     name: Build Docker images
     runs-on: ubuntu-22.04
     needs: lint
-    outputs:
-      has_secrets: ${{ steps.check-secrets.outputs.has_secrets }}
     permissions:
       security-events: write
       id-token: write
@@ -93,12 +91,6 @@ jobs:
             base_path: ./bitwarden_license/src
             dotnet: true
     steps:
-      - name: Check secrets
-        id: check-secrets
-        run: |
-          has_secrets=${{ secrets.AZURE_CLIENT_ID != '' }}
-          echo "has_secrets=$has_secrets" >> "$GITHUB_OUTPUT"
-
       - name: Check out repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -514,8 +506,8 @@ jobs:
     name: Setup Ephemeral Environment
     needs: build-artifacts
     if: |
-      needs.build-artifacts.outputs.has_secrets == 'true'
-      && github.event_name == 'pull_request'
+      github.event_name == 'pull_request'
+      && github.event.pull_request.head.repo.fork != true
       && contains(github.event.pull_request.labels.*.name, 'ephemeral-environment')
     uses: bitwarden/gh-actions/.github/workflows/_ephemeral_environment_manager.yml@main
     with:
