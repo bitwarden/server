@@ -1,6 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using System.Globalization;
 using System.Text.Json;
 using Azure.Messaging.EventGrid;
 using Bit.Api.Auth.Models.Request.Accounts;
@@ -336,13 +337,15 @@ public class CiphersController : Controller
     }
 
     [HttpGet("organization-details")]
-    public async Task<ListResponseModel<CipherMiniDetailsResponseModel>> GetOrganizationCiphers(Guid organizationId)
+    public async Task<ListResponseModel<CipherMiniDetailsResponseModel>> GetOrganizationCiphers(Guid organizationId, bool includeMemberItems = false)
     {
         if (!await CanAccessAllCiphersAsync(organizationId))
         {
             throw new NotFoundException();
         }
-        var allOrganizationCiphers = _featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation)
+
+        bool excludeDefaultUserCollections = _featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation) && !includeMemberItems;
+        var allOrganizationCiphers = excludeDefaultUserCollections
         ?
             await _organizationCiphersQuery.GetAllOrganizationCiphersExcludingDefaultUserCollections(organizationId)
         :
@@ -399,8 +402,9 @@ public class CiphersController : Controller
     {
         var org = _currentContext.GetOrganization(organizationId);
 
-        // If we're not an "admin" or if we're not a provider user we don't need to check the ciphers
-        if (org is not ({ Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or { Permissions.EditAnyCollection: true }) || await _currentContext.ProviderUserForOrgAsync(organizationId))
+        // If we're not an "admin" we don't need to check the ciphers
+        if (org is not ({ Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
+            { Permissions.EditAnyCollection: true }))
         {
             return false;
         }
@@ -413,8 +417,9 @@ public class CiphersController : Controller
     {
         var org = _currentContext.GetOrganization(organizationId);
 
-        // If we're not an "admin" or if we're a provider user we don't need to check the ciphers
-        if (org is not ({ Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or { Permissions.EditAnyCollection: true }) || await _currentContext.ProviderUserForOrgAsync(organizationId))
+        // If we're not an "admin" we don't need to check the ciphers
+        if (org is not ({ Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
+            { Permissions.EditAnyCollection: true }))
         {
             return false;
         }
@@ -755,7 +760,7 @@ public class CiphersController : Controller
         ValidateClientVersionForFido2CredentialSupport(cipher);
 
         var original = cipher.Clone();
-        await _cipherService.ShareAsync(original, model.Cipher.ToCipher(cipher), new Guid(model.Cipher.OrganizationId),
+        await _cipherService.ShareAsync(original, model.Cipher.ToCipher(cipher, user.Id), new Guid(model.Cipher.OrganizationId),
             model.CollectionIds.Select(c => new Guid(c)), user.Id, model.Cipher.LastKnownRevisionDate);
 
         var sharedCipher = await GetByIdAsync(id, user.Id);
@@ -885,6 +890,9 @@ public class CiphersController : Controller
     [HttpPost("bulk-collections")]
     public async Task PostBulkCollections([FromBody] CipherBulkUpdateCollectionsRequestModel model)
     {
+        var userId = _userService.GetProperUserId(User).Value;
+        await _cipherService.ValidateBulkCollectionAssignmentAsync(model.CollectionIds, model.CipherIds, userId);
+
         if (!await CanModifyCipherCollectionsAsync(model.OrganizationId, model.CipherIds) ||
             !await CanEditItemsInCollections(model.OrganizationId, model.CollectionIds))
         {
@@ -1346,7 +1354,7 @@ public class CiphersController : Controller
         }
 
         var (attachmentId, uploadUrl) = await _cipherService.CreateAttachmentForDelayedUploadAsync(cipher,
-            request.Key, request.FileName, request.FileSize, request.AdminRequest, user.Id);
+            request.Key, request.FileName, request.FileSize, request.AdminRequest, user.Id, request.LastKnownRevisionDate);
         return new AttachmentUploadDataResponseModel
         {
             AttachmentId = attachmentId,
@@ -1420,10 +1428,12 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
+        // Extract lastKnownRevisionDate from form data if present
+        DateTime? lastKnownRevisionDate = GetLastKnownRevisionDateFromForm();
         await Request.GetFileAsync(async (stream, fileName, key) =>
         {
             await _cipherService.CreateAttachmentAsync(cipher, stream, fileName, key,
-                    Request.ContentLength.GetValueOrDefault(0), user.Id);
+                    Request.ContentLength.GetValueOrDefault(0), user.Id, false, lastKnownRevisionDate);
         });
 
         return new CipherResponseModel(
@@ -1449,10 +1459,13 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
+        // Extract lastKnownRevisionDate from form data if present
+        DateTime? lastKnownRevisionDate = GetLastKnownRevisionDateFromForm();
+
         await Request.GetFileAsync(async (stream, fileName, key) =>
         {
             await _cipherService.CreateAttachmentAsync(cipher, stream, fileName, key,
-                    Request.ContentLength.GetValueOrDefault(0), userId, true);
+                    Request.ContentLength.GetValueOrDefault(0), userId, true, lastKnownRevisionDate);
         });
 
         return new CipherMiniResponseModel(cipher, _globalSettings, cipher.OrganizationUseTotp);
@@ -1573,7 +1586,7 @@ public class CiphersController : Controller
                     }
                     catch (Exception e)
                     {
-                        _logger.LogError(e, $"Uncaught exception occurred while handling event grid event: {JsonSerializer.Serialize(eventGridEvent)}");
+                        _logger.LogError(e, "Uncaught exception occurred while handling event grid event: {Event}", JsonSerializer.Serialize(eventGridEvent));
                         return;
                     }
                 }
@@ -1609,5 +1622,20 @@ public class CiphersController : Controller
     private async Task<CipherDetails> GetByIdAsync(Guid cipherId, Guid userId)
     {
         return await _cipherRepository.GetByIdAsync(cipherId, userId);
+    }
+
+    private DateTime? GetLastKnownRevisionDateFromForm()
+    {
+        DateTime? lastKnownRevisionDate = null;
+        if (Request.Form.TryGetValue("lastKnownRevisionDate", out var dateValue))
+        {
+            if (!DateTime.TryParse(dateValue, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsedDate))
+            {
+                throw new BadRequestException("Invalid lastKnownRevisionDate format.");
+            }
+            lastKnownRevisionDate = parsedDate;
+        }
+
+        return lastKnownRevisionDate;
     }
 }

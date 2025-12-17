@@ -4,7 +4,6 @@
 using System.Security.Claims;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Enums;
-using Bit.Core.Auth.Models;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -38,8 +37,6 @@ public interface IUserService
     Task<IdentityResult> ConvertToKeyConnectorAsync(User user);
     Task<IdentityResult> AdminResetPasswordAsync(OrganizationUserType type, Guid orgId, Guid id, string newMasterPassword, string key);
     Task<IdentityResult> UpdateTempPasswordAsync(User user, string newMasterPassword, string key, string hint);
-    Task<IdentityResult> ChangeKdfAsync(User user, string masterPassword, string newMasterPassword, string key,
-        KdfType kdf, int kdfIterations, int? kdfMemory, int? kdfParallelism);
     Task<IdentityResult> RefreshSecurityStampAsync(User user, string masterPasswordHash);
     Task UpdateTwoFactorProviderAsync(User user, TwoFactorProviderType type, bool setEnabled = true, bool logEvent = true);
     Task DisableTwoFactorProviderAsync(User user, TwoFactorProviderType type);
@@ -62,11 +59,23 @@ public interface IUserService
     Task<bool> CheckPasswordAsync(User user, string password);
     /// <summary>
     /// Checks if the user has access to premium features, either through a personal subscription or through an organization.
+    ///
+    /// This is the preferred way to definitively know if a user has access to premium features when you already have the User object.
     /// </summary>
     /// <param name="user">user being acted on</param>
     /// <returns>true if they can access premium; false otherwise.</returns>
-    Task<bool> CanAccessPremium(ITwoFactorProvidersUser user);
-    Task<bool> HasPremiumFromOrganization(ITwoFactorProvidersUser user);
+    Task<bool> CanAccessPremium(User user);
+
+    /// <summary>
+    /// Checks if the user has inherited access to premium features through an organization.
+    ///
+    /// This primarily serves as a means to communicate to the client when a user has inherited their premium status
+    /// through an organization. Feature gating logic probably should not be behind this check.
+    /// </summary>
+    /// <param name="user">user being acted on</param>
+    /// <returns>true if they can access premium because of organization membership; false otherwise.</returns>
+    [Obsolete("Use IHasPremiumAccessQuery.HasPremiumFromOrganizationAsync instead. This method will be removed in a future version.")]
+    Task<bool> HasPremiumFromOrganization(User user);
     Task<string> GenerateSignInTokenAsync(User user, string purpose);
 
     Task<IdentityResult> UpdatePasswordHash(User user, string newPassword,

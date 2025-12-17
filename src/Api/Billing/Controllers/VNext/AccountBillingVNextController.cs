@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Bit.Api.Billing.Attributes;
+﻿using Bit.Api.Billing.Attributes;
 using Bit.Api.Billing.Models.Requests.Payment;
 using Bit.Api.Billing.Models.Requests.Premium;
 using Bit.Core;
@@ -67,7 +66,7 @@ public class AccountBillingVNextController(
     }
 
     [HttpPost("subscription")]
-    [RequireFeature(FeatureFlagKeys.PM23385_UseNewPremiumFlow)]
+    [RequireFeature(FeatureFlagKeys.PM24996ImplementUpgradeFromFreeDialog)]
     [InjectUser]
     public async Task<IResult> CreateSubscriptionAsync(
         [BindNever] User user,

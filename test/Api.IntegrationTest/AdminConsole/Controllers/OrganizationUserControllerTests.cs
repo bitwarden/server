@@ -7,7 +7,7 @@ using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccountvNext;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
@@ -32,10 +32,6 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
         {
             featureService
                 .IsEnabled(FeatureFlagKeys.CreateDefaultLocation)
-                .Returns(true);
-
-            featureService
-                .IsEnabled(FeatureFlagKeys.DeleteClaimedUserAccountRefactor)
                 .Returns(true);
         });
         _client = _factory.CreateClient();
@@ -222,7 +218,7 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
         _ownerEmail = $"org-user-integration-test-{Guid.NewGuid()}@bitwarden.com";
         await _factory.LoginWithNewAccount(_ownerEmail);
 
-        (_organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseAnnually2023,
+        (_organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseAnnually,
             ownerEmail: _ownerEmail, passwordManagerSeats: 5, paymentMethod: PaymentMethodType.Card);
     }
 

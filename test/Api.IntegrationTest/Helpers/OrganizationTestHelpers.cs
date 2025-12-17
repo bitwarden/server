@@ -152,6 +152,30 @@ public static class OrganizationTestHelpers
     }
 
     /// <summary>
+    /// Creates a collection with optional user and group associations.
+    /// </summary>
+    public static async Task<Collection> CreateCollectionAsync(
+        ApiApplicationFactory factory,
+        Guid organizationId,
+        string name,
+        IEnumerable<CollectionAccessSelection>? users = null,
+        IEnumerable<CollectionAccessSelection>? groups = null,
+        string? externalId = null)
+    {
+        var collectionRepository = factory.GetService<ICollectionRepository>();
+        var collection = new Collection
+        {
+            OrganizationId = organizationId,
+            Name = name,
+            Type = CollectionType.SharedCollection,
+            ExternalId = externalId
+        };
+
+        await collectionRepository.CreateAsync(collection, groups, users);
+        return collection;
+    }
+
+    /// <summary>
     /// Enables the Organization Data Ownership policy for the specified organization.
     /// </summary>
     public static async Task EnableOrganizationDataOwnershipPolicyAsync<T>(
@@ -168,6 +192,15 @@ public static class OrganizationTestHelpers
         };
 
         await policyRepository.CreateAsync(policy);
+    }
+
+    /// <summary>
+    /// Generates a unique random domain name for testing purposes.
+    /// </summary>
+    /// <returns>A domain string like "a1b2c3d4.com"</returns>
+    public static string GenerateRandomDomain()
+    {
+        return $"{Guid.NewGuid().ToString("N").Substring(0, 8)}.com";
     }
 
     /// <summary>

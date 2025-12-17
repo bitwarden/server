@@ -6,7 +6,10 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Business;
 using Bit.Core.Entities;
 using Bit.Core.Models.Mail;
+using Bit.Core.Platform.Mail.Delivery;
+using Bit.Core.Platform.Mail.Enqueuing;
 using Bit.Core.Services;
+using Bit.Core.Services.Mail;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
@@ -23,6 +26,7 @@ public class HandlebarsMailServiceTests
     private readonly IMailDeliveryService _mailDeliveryService;
     private readonly IMailEnqueuingService _mailEnqueuingService;
     private readonly IDistributedCache _distributedCache;
+    private readonly ILogger<HandlebarsMailService> _logger;
 
     public HandlebarsMailServiceTests()
     {
@@ -30,12 +34,14 @@ public class HandlebarsMailServiceTests
         _mailDeliveryService = Substitute.For<IMailDeliveryService>();
         _mailEnqueuingService = Substitute.For<IMailEnqueuingService>();
         _distributedCache = Substitute.For<IDistributedCache>();
+        _logger = Substitute.For<ILogger<HandlebarsMailService>>();
 
         _sut = new HandlebarsMailService(
             _globalSettings,
             _mailDeliveryService,
             _mailEnqueuingService,
-            _distributedCache
+            _distributedCache,
+            _logger
         );
     }
 
@@ -217,8 +223,9 @@ public class HandlebarsMailServiceTests
 
         var mailDeliveryService = new MailKitSmtpMailDeliveryService(globalSettings, Substitute.For<ILogger<MailKitSmtpMailDeliveryService>>());
         var distributedCache = Substitute.For<IDistributedCache>();
+        var logger = Substitute.For<ILogger<HandlebarsMailService>>();
 
-        var handlebarsService = new HandlebarsMailService(globalSettings, mailDeliveryService, new BlockingMailEnqueuingService(), distributedCache);
+        var handlebarsService = new HandlebarsMailService(globalSettings, mailDeliveryService, new BlockingMailEnqueuingService(), distributedCache, logger);
 
         var sendMethods = typeof(IMailService).GetMethods(BindingFlags.Public | BindingFlags.Instance)
             .Where(m => m.Name.StartsWith("Send") && m.Name != "SendEnqueuedMailMessageAsync");
@@ -260,5 +267,116 @@ public class HandlebarsMailServiceTests
 
         // Assert
         await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Any<MailMessage>());
+    }
+
+    [Fact]
+    public async Task SendIndividualUserWelcomeEmailAsync_SendsCorrectEmail()
+    {
+        // Arrange
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "test@example.com"
+        };
+
+        // Act
+        await _sut.SendIndividualUserWelcomeEmailAsync(user);
+
+        // Assert
+        await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m =>
+            m.MetaData != null &&
+            m.ToEmails.Contains("test@example.com") &&
+            m.Subject == "Welcome to Bitwarden!" &&
+            m.Category == "Welcome"));
+    }
+
+    [Fact]
+    public async Task SendOrganizationUserWelcomeEmailAsync_SendsCorrectEmailWithOrganizationName()
+    {
+        // Arrange
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "user@company.com"
+        };
+        var organizationName = "Bitwarden Corp";
+
+        // Act
+        await _sut.SendOrganizationUserWelcomeEmailAsync(user, organizationName);
+
+        // Assert
+        await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m =>
+            m.MetaData != null &&
+            m.ToEmails.Contains("user@company.com") &&
+            m.Subject == "Welcome to Bitwarden!" &&
+            m.HtmlContent.Contains("Bitwarden Corp") &&
+            m.Category == "Welcome"));
+    }
+
+    [Fact]
+    public async Task SendFreeOrgOrFamilyOrgUserWelcomeEmailAsync_SendsCorrectEmailWithFamilyTemplate()
+    {
+        // Arrange
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "family@example.com"
+        };
+        var familyOrganizationName = "Smith Family";
+
+        // Act
+        await _sut.SendFreeOrgOrFamilyOrgUserWelcomeEmailAsync(user, familyOrganizationName);
+
+        // Assert
+        await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m =>
+            m.MetaData != null &&
+            m.ToEmails.Contains("family@example.com") &&
+            m.Subject == "Welcome to Bitwarden!" &&
+            m.HtmlContent.Contains("Smith Family") &&
+            m.Category == "Welcome"));
+    }
+
+    [Theory]
+    [InlineData("Acme Corp", "Acme Corp")]
+    [InlineData("Company & Associates", "Company &amp; Associates")]
+    [InlineData("Test \"Quoted\" Org", "Test &quot;Quoted&quot; Org")]
+    public async Task SendOrganizationUserWelcomeEmailAsync_SanitizesOrganizationNameForEmail(string inputOrgName, string expectedSanitized)
+    {
+        // Arrange
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "test@example.com"
+        };
+
+        // Act
+        await _sut.SendOrganizationUserWelcomeEmailAsync(user, inputOrgName);
+
+        // Assert
+        await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m =>
+            m.HtmlContent.Contains(expectedSanitized) &&
+            !m.HtmlContent.Contains("<script>") && // Ensure script tags are removed
+            m.Category == "Welcome"));
+    }
+
+    [Theory]
+    [InlineData("test@example.com")]
+    [InlineData("user+tag@domain.co.uk")]
+    [InlineData("admin@organization.org")]
+    public async Task SendIndividualUserWelcomeEmailAsync_HandlesVariousEmailFormats(string email)
+    {
+        // Arrange
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = email
+        };
+
+        // Act
+        await _sut.SendIndividualUserWelcomeEmailAsync(user);
+
+        // Assert
+        await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Is<MailMessage>(m =>
+            m.ToEmails.Contains(email)));
     }
 }

@@ -14,10 +14,11 @@ using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
-using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Models.Sales;
+using Bit.Core.Billing.Premium.Queries;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Context;
@@ -57,7 +58,7 @@ public class UserService : UserManager<User>, IUserService
     private readonly ILicensingService _licenseService;
     private readonly IEventService _eventService;
     private readonly IApplicationCacheService _applicationCacheService;
-    private readonly IPaymentService _paymentService;
+    private readonly IStripePaymentService _paymentService;
     private readonly IPolicyRepository _policyRepository;
     private readonly IPolicyService _policyService;
     private readonly IFido2 _fido2;
@@ -72,6 +73,8 @@ public class UserService : UserManager<User>, IUserService
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IDistributedCache _distributedCache;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
+    private readonly IPricingClient _pricingClient;
+    private readonly IHasPremiumAccessQuery _hasPremiumAccessQuery;
 
     public UserService(
         IUserRepository userRepository,
@@ -92,7 +95,7 @@ public class UserService : UserManager<User>, IUserService
         ILicensingService licenseService,
         IEventService eventService,
         IApplicationCacheService applicationCacheService,
-        IPaymentService paymentService,
+        IStripePaymentService paymentService,
         IPolicyRepository policyRepository,
         IPolicyService policyService,
         IFido2 fido2,
@@ -106,7 +109,9 @@ public class UserService : UserManager<User>, IUserService
         IRevokeNonCompliantOrganizationUserCommand revokeNonCompliantOrganizationUserCommand,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IDistributedCache distributedCache,
-        IPolicyRequirementQuery policyRequirementQuery)
+        IPolicyRequirementQuery policyRequirementQuery,
+        IPricingClient pricingClient,
+        IHasPremiumAccessQuery hasPremiumAccessQuery)
         : base(
               store,
               optionsAccessor,
@@ -146,6 +151,8 @@ public class UserService : UserManager<User>, IUserService
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _distributedCache = distributedCache;
         _policyRequirementQuery = policyRequirementQuery;
+        _pricingClient = pricingClient;
+        _hasPremiumAccessQuery = hasPremiumAccessQuery;
     }
 
     public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -531,7 +538,7 @@ public class UserService : UserManager<User>, IUserService
 
             try
             {
-                await _stripeSyncService.UpdateCustomerEmailAddress(user.GatewayCustomerId,
+                await _stripeSyncService.UpdateCustomerEmailAddressAsync(user.GatewayCustomerId,
                     user.BillingEmailAddress());
             }
             catch (Exception ex)
@@ -777,39 +784,6 @@ public class UserService : UserManager<User>, IUserService
         return IdentityResult.Success;
     }
 
-    public async Task<IdentityResult> ChangeKdfAsync(User user, string masterPassword, string newMasterPassword,
-        string key, KdfType kdf, int kdfIterations, int? kdfMemory, int? kdfParallelism)
-    {
-        if (user == null)
-        {
-            throw new ArgumentNullException(nameof(user));
-        }
-
-        if (await CheckPasswordAsync(user, masterPassword))
-        {
-            var result = await UpdatePasswordHash(user, newMasterPassword);
-            if (!result.Succeeded)
-            {
-                return result;
-            }
-
-            var now = DateTime.UtcNow;
-            user.RevisionDate = user.AccountRevisionDate = now;
-            user.LastKdfChangeDate = now;
-            user.Key = key;
-            user.Kdf = kdf;
-            user.KdfIterations = kdfIterations;
-            user.KdfMemory = kdfMemory;
-            user.KdfParallelism = kdfParallelism;
-            await _userRepository.ReplaceAsync(user);
-            await _pushService.PushLogOutAsync(user.Id);
-            return IdentityResult.Success;
-        }
-
-        Logger.LogWarning("Change KDF failed for user {userId}.", user.Id);
-        return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
-    }
-
     public async Task<IdentityResult> RefreshSecurityStampAsync(User user, string secret)
     {
         if (user == null)
@@ -897,7 +871,7 @@ public class UserService : UserManager<User>, IUserService
         }
 
         string paymentIntentClientSecret = null;
-        IPaymentService paymentService = null;
+        IStripePaymentService paymentService = null;
         if (_globalSettings.SelfHosted)
         {
             if (license == null || !_licenseService.VerifyLicense(license))
@@ -934,7 +908,6 @@ public class UserService : UserManager<User>, IUserService
         }
         else
         {
-            user.MaxStorageGb = (short)(1 + additionalStorageGb);
             user.LicenseKey = CoreHelpers.SecureRandomString(20);
         }
 
@@ -1005,8 +978,10 @@ public class UserService : UserManager<User>, IUserService
             throw new BadRequestException("Not a premium user.");
         }
 
-        var secret = await BillingHelpers.AdjustStorageAsync(_paymentService, user, storageAdjustmentGb,
-            StripeConstants.Prices.StoragePlanPersonal);
+        var premiumPlan = await _pricingClient.GetAvailablePremiumPlan();
+
+        var baseStorageGb = (short)premiumPlan.Storage.Provided;
+        var secret = await BillingHelpers.AdjustStorageAsync(_paymentService, user, storageAdjustmentGb, premiumPlan.Storage.StripePriceId, baseStorageGb);
         await SaveUserAsync(user);
         return secret;
     }
@@ -1133,7 +1108,7 @@ public class UserService : UserManager<User>, IUserService
         return success;
     }
 
-    public async Task<bool> CanAccessPremium(ITwoFactorProvidersUser user)
+    public async Task<bool> CanAccessPremium(User user)
     {
         var userId = user.GetUserId();
         if (!userId.HasValue)
@@ -1141,15 +1116,25 @@ public class UserService : UserManager<User>, IUserService
             return false;
         }
 
-        return user.GetPremium() || await this.HasPremiumFromOrganization(user);
+        if (_featureService.IsEnabled(FeatureFlagKeys.PremiumAccessQuery))
+        {
+            return user.Premium || await _hasPremiumAccessQuery.HasPremiumFromOrganizationAsync(userId.Value);
+        }
+
+        return user.Premium || await HasPremiumFromOrganization(user);
     }
 
-    public async Task<bool> HasPremiumFromOrganization(ITwoFactorProvidersUser user)
+    public async Task<bool> HasPremiumFromOrganization(User user)
     {
         var userId = user.GetUserId();
         if (!userId.HasValue)
         {
             return false;
+        }
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.PremiumAccessQuery))
+        {
+            return await _hasPremiumAccessQuery.HasPremiumFromOrganizationAsync(userId.Value);
         }
 
         // orgUsers in the Invited status are not associated with a userId yet, so this will get
@@ -1167,6 +1152,7 @@ public class UserService : UserManager<User>, IUserService
             orgAbility.UsersGetPremium &&
             orgAbility.Enabled);
     }
+
     public async Task<string> GenerateSignInTokenAsync(User user, string purpose)
     {
         var token = await GenerateUserTokenAsync(user, Options.Tokens.PasswordResetTokenProvider,

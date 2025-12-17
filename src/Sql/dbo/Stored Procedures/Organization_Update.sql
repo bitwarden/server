@@ -58,7 +58,9 @@ CREATE PROCEDURE [dbo].[Organization_Update]
     @LimitItemDeletion BIT = 0,
     @UseOrganizationDomains BIT = 0,
     @UseAdminSponsoredFamilies BIT = 0,
-    @SyncSeats BIT = 0
+    @SyncSeats BIT = 0,
+    @UseAutomaticUserConfirmation BIT = 0,
+    @UsePhishingBlocker BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -124,7 +126,9 @@ BEGIN
         [LimitItemDeletion] = @LimitItemDeletion,
         [UseOrganizationDomains] = @UseOrganizationDomains,
         [UseAdminSponsoredFamilies] = @UseAdminSponsoredFamilies,
-        [SyncSeats] = @SyncSeats
+        [SyncSeats] = @SyncSeats,
+        [UseAutomaticUserConfirmation] = @UseAutomaticUserConfirmation,
+        [UsePhishingBlocker] = @UsePhishingBlocker
     WHERE
-        [Id] = @Id
+        [Id] = @Id;
 END

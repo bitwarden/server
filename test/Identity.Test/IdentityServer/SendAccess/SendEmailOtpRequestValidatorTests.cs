@@ -1,12 +1,7 @@
-﻿using System.Collections.Specialized;
-using Bit.Core.Auth.Identity;
+﻿using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Identity.TokenProviders;
-using Bit.Core.Auth.IdentityServer;
-using Bit.Core.Enums;
 using Bit.Core.Services;
 using Bit.Core.Tools.Models.Data;
-using Bit.Core.Utilities;
-using Bit.Identity.IdentityServer.Enums;
 using Bit.Identity.IdentityServer.RequestValidators.SendAccess;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -28,7 +23,7 @@ public class SendEmailOtpRequestValidatorTests
         Guid sendId)
     {
         // Arrange
-        tokenRequest.Raw = CreateValidatedTokenRequest(sendId);
+        tokenRequest.Raw = SendAccessTestUtilities.CreateValidatedTokenRequest(sendId);
         var context = new ExtensionGrantValidationContext
         {
             Request = tokenRequest
@@ -61,8 +56,7 @@ public class SendEmailOtpRequestValidatorTests
         Guid sendId)
     {
         // Arrange
-        tokenRequest.Raw = CreateValidatedTokenRequest(sendId, email);
-        var emailOTP = new EmailOtp(["user@test.dev"]);
+        tokenRequest.Raw = SendAccessTestUtilities.CreateValidatedTokenRequest(sendId, email);
         var context = new ExtensionGrantValidationContext
         {
             Request = tokenRequest
@@ -96,7 +90,7 @@ public class SendEmailOtpRequestValidatorTests
         string generatedToken)
     {
         // Arrange
-        tokenRequest.Raw = CreateValidatedTokenRequest(sendId, email);
+        tokenRequest.Raw = SendAccessTestUtilities.CreateValidatedTokenRequest(sendId, email);
         var context = new ExtensionGrantValidationContext
         {
             Request = tokenRequest
@@ -144,7 +138,7 @@ public class SendEmailOtpRequestValidatorTests
         string email)
     {
         // Arrange
-        tokenRequest.Raw = CreateValidatedTokenRequest(sendId, email);
+        tokenRequest.Raw = SendAccessTestUtilities.CreateValidatedTokenRequest(sendId, email);
         var context = new ExtensionGrantValidationContext
         {
             Request = tokenRequest
@@ -179,7 +173,7 @@ public class SendEmailOtpRequestValidatorTests
         string otp)
     {
         // Arrange
-        tokenRequest.Raw = CreateValidatedTokenRequest(sendId, email, otp);
+        tokenRequest.Raw = SendAccessTestUtilities.CreateValidatedTokenRequest(sendId, email, otp);
         var context = new ExtensionGrantValidationContext
         {
             Request = tokenRequest
@@ -231,7 +225,7 @@ public class SendEmailOtpRequestValidatorTests
         string invalidOtp)
     {
         // Arrange
-        tokenRequest.Raw = CreateValidatedTokenRequest(sendId, email, invalidOtp);
+        tokenRequest.Raw = SendAccessTestUtilities.CreateValidatedTokenRequest(sendId, email, invalidOtp);
         var context = new ExtensionGrantValidationContext
         {
             Request = tokenRequest
@@ -271,40 +265,12 @@ public class SendEmailOtpRequestValidatorTests
         // Arrange
         var otpTokenProvider = Substitute.For<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>();
         var mailService = Substitute.For<IMailService>();
+        var featureService = Substitute.For<IFeatureService>();
 
         // Act
-        var validator = new SendEmailOtpRequestValidator(otpTokenProvider, mailService);
+        var validator = new SendEmailOtpRequestValidator(featureService, otpTokenProvider, mailService);
 
         // Assert
         Assert.NotNull(validator);
-    }
-
-    private static NameValueCollection CreateValidatedTokenRequest(
-        Guid sendId,
-        string sendEmail = null,
-        string otpCode = null)
-    {
-        var sendIdBase64 = CoreHelpers.Base64UrlEncode(sendId.ToByteArray());
-
-        var rawRequestParameters = new NameValueCollection
-        {
-            { OidcConstants.TokenRequest.GrantType, CustomGrantTypes.SendAccess },
-            { OidcConstants.TokenRequest.ClientId, BitwardenClient.Send },
-            { OidcConstants.TokenRequest.Scope, ApiScopes.ApiSendAccess },
-            { "device_type", ((int)DeviceType.FirefoxBrowser).ToString() },
-            { SendAccessConstants.TokenRequest.SendId, sendIdBase64 }
-        };
-
-        if (sendEmail != null)
-        {
-            rawRequestParameters.Add(SendAccessConstants.TokenRequest.Email, sendEmail);
-        }
-
-        if (otpCode != null && sendEmail != null)
-        {
-            rawRequestParameters.Add(SendAccessConstants.TokenRequest.Otp, otpCode);
-        }
-
-        return rawRequestParameters;
     }
 }

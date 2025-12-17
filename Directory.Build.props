@@ -3,12 +3,10 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
 
-    <Version>2025.9.2</Version>
+    <Version>2025.12.2</Version>
 
     <RootNamespace>Bit.$(MSBuildProjectName)</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
-    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
-    
     <IsTestProject Condition="'$(IsTestProject)' == '' and ($(MSBuildProjectName.EndsWith('.Test')) or $(MSBuildProjectName.EndsWith('.IntegrationTest')))">true</IsTestProject>
     <Nullable Condition="'$(Nullable)' == '' and '$(IsTestProject)' == 'true'">annotations</Nullable>
     <Nullable Condition="'$(Nullable)' == '' and '$(IsTestProject)' != 'true'">enable</Nullable>
@@ -18,7 +16,7 @@
   
   <PropertyGroup>
     
-    <MicrosoftNetTestSdkVersion>17.8.0</MicrosoftNetTestSdkVersion>
+    <MicrosoftNetTestSdkVersion>18.0.1</MicrosoftNetTestSdkVersion>
     
     <XUnitVersion>2.6.6</XUnitVersion>
     
@@ -32,19 +30,4 @@
     
     <AutoFixtureAutoNSubstituteVersion>4.18.1</AutoFixtureAutoNSubstituteVersion>
   </PropertyGroup>
-
-  
-  <Target Name="SetSourceRevisionId" BeforeTargets="CoreGenerateAssemblyInfo">
-    <Exec Command="git describe --long --always --dirty --exclude=* --abbrev=8" ConsoleToMSBuild="True" IgnoreExitCode="False">
-      <Output PropertyName="SourceRevisionId" TaskParameter="ConsoleOutput" />
-    </Exec>
-  </Target>
-  <Target Name="WriteRevision" AfterTargets="SetSourceRevisionId">
-    <ItemGroup>
-      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-        <_Parameter1>GitHash</_Parameter1>
-        <_Parameter2>$(SourceRevisionId)</_Parameter2>
-      </AssemblyAttribute>
-    </ItemGroup>
-  </Target>
 </Project>

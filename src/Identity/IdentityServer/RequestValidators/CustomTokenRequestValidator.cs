@@ -4,10 +4,10 @@ using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.IdentityServer;
-using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Platform.Installations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -35,6 +35,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         IEventService eventService,
         IDeviceValidator deviceValidator,
         ITwoFactorAuthenticationValidator twoFactorAuthenticationValidator,
+        ISsoRequestValidator ssoRequestValidator,
         IOrganizationUserRepository organizationUserRepository,
         ILogger<CustomTokenRequestValidator> logger,
         ICurrentContext currentContext,
@@ -47,13 +48,15 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         IUpdateInstallationCommand updateInstallationCommand,
         IPolicyRequirementQuery policyRequirementQuery,
         IAuthRequestRepository authRequestRepository,
-        IMailService mailService)
+        IMailService mailService,
+        IUserAccountKeysQuery userAccountKeysQuery)
         : base(
             userManager,
             userService,
             eventService,
             deviceValidator,
             twoFactorAuthenticationValidator,
+            ssoRequestValidator,
             organizationUserRepository,
             logger,
             currentContext,
@@ -65,7 +68,8 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             userDecryptionOptionsBuilder,
             policyRequirementQuery,
             authRequestRepository,
-            mailService)
+            mailService,
+            userAccountKeysQuery)
     {
         _userManager = userManager;
         _updateInstallationCommand = updateInstallationCommand;
@@ -150,23 +154,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             {
                 // KeyConnectorUrl is configured in the CLI client, we just need to tell the client to use it
                 context.Result.CustomResponse["ApiUseKeyConnector"] = true;
-                context.Result.CustomResponse["ResetMasterPassword"] = false;
             }
-            return Task.CompletedTask;
-        }
-
-        // Key connector data should have already been set in the decryption options
-        // for backwards compatibility we set them this way too. We can eventually get rid of this
-        // when all clients don't read them from the existing locations.
-        if (!context.Result.CustomResponse.TryGetValue("UserDecryptionOptions", out var userDecryptionOptionsObj) ||
-            userDecryptionOptionsObj is not UserDecryptionOptions userDecryptionOptions)
-        {
-            return Task.CompletedTask;
-        }
-        if (userDecryptionOptions is { KeyConnectorOption: { } })
-        {
-            context.Result.CustomResponse["KeyConnectorUrl"] = userDecryptionOptions.KeyConnectorOption.KeyConnectorUrl;
-            context.Result.CustomResponse["ResetMasterPassword"] = false;
         }
 
         return Task.CompletedTask;

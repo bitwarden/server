@@ -17,6 +17,6 @@ public class LoggingExceptionHandlerFilterAttribute : ExceptionFilterAttribute
 
         var logger = context.HttpContext.RequestServices
             .GetRequiredService<ILogger<LoggingExceptionHandlerFilterAttribute>>();
-        logger.LogError(0, exception, exception.Message);
+        logger.LogError(0, exception, "Unhandled exception");
     }
 }

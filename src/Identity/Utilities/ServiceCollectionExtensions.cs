@@ -26,9 +26,11 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IUserDecryptionOptionsBuilder, UserDecryptionOptionsBuilder>();
         services.AddTransient<IDeviceValidator, DeviceValidator>();
         services.AddTransient<ITwoFactorAuthenticationValidator, TwoFactorAuthenticationValidator>();
+        services.AddTransient<ISsoRequestValidator, SsoRequestValidator>();
         services.AddTransient<ILoginApprovingClientTypes, LoginApprovingClientTypes>();
         services.AddTransient<ISendAuthenticationMethodValidator<ResourcePassword>, SendPasswordRequestValidator>();
         services.AddTransient<ISendAuthenticationMethodValidator<EmailOtp>, SendEmailOtpRequestValidator>();
+        services.AddTransient<ISendAuthenticationMethodValidator<NeverAuthenticate>, SendNeverAuthenticateRequestValidator>();
 
         var issuerUri = new Uri(globalSettings.BaseServiceUri.InternalIdentity);
         var identityServerBuilder = services

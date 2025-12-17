@@ -2,13 +2,12 @@
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Queries;
+using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
-using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -75,7 +74,7 @@ public class GetOrganizationWarningsQueryTests
             });
 
         sutProvider.GetDependency<ICurrentContext>().EditSubscription(organization.Id).Returns(true);
-        sutProvider.GetDependency<ISetupIntentCache>().GetSetupIntentIdForSubscriber(organization.Id).Returns((string?)null);
+        sutProvider.GetDependency<IHasPaymentMethodQuery>().Run(organization).Returns(false);
 
         var response = await sutProvider.Sut.Run(organization);
 
@@ -86,12 +85,11 @@ public class GetOrganizationWarningsQueryTests
     }
 
     [Theory, BitAutoData]
-    public async Task Run_Has_FreeTrialWarning_WithUnverifiedBankAccount_NoWarning(
+    public async Task Run_Has_FreeTrialWarning_WithPaymentMethod_NoWarning(
         Organization organization,
         SutProvider<GetOrganizationWarningsQuery> sutProvider)
     {
         var now = DateTime.UtcNow;
-        const string setupIntentId = "setup_intent_id";
 
         sutProvider.GetDependency<ISubscriberService>()
             .GetSubscription(organization, Arg.Is<SubscriptionGetOptions>(options =>
@@ -113,20 +111,7 @@ public class GetOrganizationWarningsQueryTests
             });
 
         sutProvider.GetDependency<ICurrentContext>().EditSubscription(organization.Id).Returns(true);
-        sutProvider.GetDependency<ISetupIntentCache>().GetSetupIntentIdForSubscriber(organization.Id).Returns(setupIntentId);
-        sutProvider.GetDependency<IStripeAdapter>().SetupIntentGet(setupIntentId, Arg.Is<SetupIntentGetOptions>(
-            options => options.Expand.Contains("payment_method"))).Returns(new SetupIntent
-            {
-                Status = "requires_action",
-                NextAction = new SetupIntentNextAction
-                {
-                    VerifyWithMicrodeposits = new SetupIntentNextActionVerifyWithMicrodeposits()
-                },
-                PaymentMethod = new PaymentMethod
-                {
-                    UsBankAccount = new PaymentMethodUsBankAccount()
-                }
-            });
+        sutProvider.GetDependency<IHasPaymentMethodQuery>().Run(organization).Returns(true);
 
         var response = await sutProvider.Sut.Run(organization);
 
@@ -286,7 +271,16 @@ public class GetOrganizationWarningsQueryTests
                 CollectionMethod = CollectionMethod.SendInvoice,
                 Customer = new Customer(),
                 Status = SubscriptionStatus.Active,
-                CurrentPeriodEnd = now.AddDays(10),
+                Items = new StripeList<SubscriptionItem>
+                {
+                    Data =
+                    [
+                        new SubscriptionItem
+                        {
+                            CurrentPeriodEnd = now.AddDays(10)
+                        }
+                    ]
+                },
                 TestClock = new TestClock
                 {
                     FrozenTime = now
@@ -387,7 +381,7 @@ public class GetOrganizationWarningsQueryTests
 
         var dueDate = now.AddDays(-10);
 
-        sutProvider.GetDependency<IStripeAdapter>().InvoiceSearchAsync(Arg.Is<InvoiceSearchOptions>(options =>
+        sutProvider.GetDependency<IStripeAdapter>().SearchInvoiceAsync(Arg.Is<InvoiceSearchOptions>(options =>
             options.Query == $"subscription:'{subscriptionId}' status:'open'")).Returns([
             new Invoice { DueDate = dueDate, Created = dueDate.AddDays(-30) }
         ]);
@@ -547,7 +541,7 @@ public class GetOrganizationWarningsQueryTests
             .Returns(true);
 
         sutProvider.GetDependency<IStripeAdapter>()
-            .TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
+            .ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
             .Returns(new StripeList<Registration>
             {
                 Data = new List<Registration>
@@ -588,7 +582,7 @@ public class GetOrganizationWarningsQueryTests
             .Returns(true);
 
         sutProvider.GetDependency<IStripeAdapter>()
-            .TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
+            .ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
             .Returns(new StripeList<Registration>
             {
                 Data = new List<Registration>
@@ -640,7 +634,7 @@ public class GetOrganizationWarningsQueryTests
             .Returns(true);
 
         sutProvider.GetDependency<IStripeAdapter>()
-            .TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
+            .ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
             .Returns(new StripeList<Registration>
             {
                 Data = new List<Registration>
@@ -692,7 +686,7 @@ public class GetOrganizationWarningsQueryTests
             .Returns(true);
 
         sutProvider.GetDependency<IStripeAdapter>()
-            .TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
+            .ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
             .Returns(new StripeList<Registration>
             {
                 Data = new List<Registration>
@@ -744,7 +738,7 @@ public class GetOrganizationWarningsQueryTests
             .Returns(true);
 
         sutProvider.GetDependency<IStripeAdapter>()
-            .TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
+            .ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
             .Returns(new StripeList<Registration>
             {
                 Data = new List<Registration>
@@ -790,7 +784,7 @@ public class GetOrganizationWarningsQueryTests
             .Returns(true);
 
         sutProvider.GetDependency<IStripeAdapter>()
-            .TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
+            .ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
             .Returns(new StripeList<Registration>
             {
                 Data = new List<Registration>

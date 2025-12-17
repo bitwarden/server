@@ -43,6 +43,8 @@ public abstract record Plan
     public SecretsManagerPlanFeatures SecretsManager { get; protected init; }
     public bool SupportsSecretsManager => SecretsManager != null;
 
+    public bool AutomaticUserConfirmation { get; init; }
+
     public bool HasNonSeatBasedPasswordManagerPlan() =>
         PasswordManager is { StripePlanId: not null and not "", StripeSeatPlanId: null or "" };
 
@@ -95,7 +97,7 @@ public abstract record Plan
         public decimal PremiumAccessOptionPrice { get; init; }
         public short? MaxSeats { get; init; }
         // Storage
-        public short? BaseStorageGb { get; init; }
+        public short BaseStorageGb { get; init; }
         public bool HasAdditionalStorageOption { get; init; }
         public decimal AdditionalStoragePricePerGb { get; init; }
         public string StripeStoragePlanId { get; init; }

@@ -6,10 +6,11 @@ using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Payment;
 using Bit.Core.Billing.Premium.Commands;
+using Bit.Core.Billing.Premium.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Implementations;
-using Bit.Core.Billing.Tax.Commands;
+using Bit.Core.Billing.Subscriptions.Commands;
 using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Billing.Tax.Services.Implementations;
 
@@ -28,11 +29,14 @@ public static class ServiceCollectionExtensions
         services.AddTransient<ISubscriberService, SubscriberService>();
         services.AddLicenseServices();
         services.AddPricingClient();
-        services.AddTransient<IPreviewTaxAmountCommand, PreviewTaxAmountCommand>();
         services.AddPaymentOperations();
         services.AddOrganizationLicenseCommandsQueries();
         services.AddPremiumCommands();
+        services.AddPremiumQueries();
+        services.AddTransient<IGetOrganizationMetadataQuery, GetOrganizationMetadataQuery>();
         services.AddTransient<IGetOrganizationWarningsQuery, GetOrganizationWarningsQuery>();
+        services.AddTransient<IRestartSubscriptionCommand, RestartSubscriptionCommand>();
+        services.AddTransient<IPreviewOrganizationTaxCommand, PreviewOrganizationTaxCommand>();
     }
 
     private static void AddOrganizationLicenseCommandsQueries(this IServiceCollection services)
@@ -46,5 +50,11 @@ public static class ServiceCollectionExtensions
     {
         services.AddScoped<ICreatePremiumCloudHostedSubscriptionCommand, CreatePremiumCloudHostedSubscriptionCommand>();
         services.AddScoped<ICreatePremiumSelfHostedSubscriptionCommand, CreatePremiumSelfHostedSubscriptionCommand>();
+        services.AddTransient<IPreviewPremiumTaxCommand, PreviewPremiumTaxCommand>();
+    }
+
+    private static void AddPremiumQueries(this IServiceCollection services)
+    {
+        services.AddScoped<IHasPremiumAccessQuery, HasPremiumAccessQuery>();
     }
 }

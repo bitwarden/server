@@ -1,4 +1,5 @@
-﻿using Bit.Core.Services;
+﻿using Bit.Core.Models.Slack;
+using Bit.Core.Services;
 
 namespace Bit.Core.AdminConsole.Services.NoopImplementations;
 
@@ -19,14 +20,15 @@ public class NoopSlackService : ISlackService
         return Task.FromResult(string.Empty);
     }
 
-    public string GetRedirectUrl(string redirectUrl)
+    public string GetRedirectUrl(string callbackUrl, string state)
     {
         return string.Empty;
     }
 
-    public Task SendSlackMessageByChannelIdAsync(string token, string message, string channelId)
+    public Task<SlackSendMessageResponse?> SendSlackMessageByChannelIdAsync(string token, string message,
+        string channelId)
     {
-        return Task.FromResult(0);
+        return Task.FromResult<SlackSendMessageResponse?>(null);
     }
 
     public Task<string> ObtainTokenViaOAuth(string code, string redirectUrl)

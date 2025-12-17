@@ -60,6 +60,7 @@ public enum EventType : int
     OrganizationUser_RejectedAuthRequest = 1514,
     OrganizationUser_Deleted = 1515, // Both user and organization user data were deleted
     OrganizationUser_Left = 1516,    // User voluntarily left the organization
+    OrganizationUser_AutomaticallyConfirmed = 1517,
 
     Organization_Updated = 1600,
     Organization_PurgedVault = 1601,
@@ -70,8 +71,8 @@ public enum EventType : int
     Organization_EnabledKeyConnector = 1606,
     Organization_DisabledKeyConnector = 1607,
     Organization_SponsorshipsSynced = 1608,
-    [Obsolete("Use other specific Organization_CollectionManagement events instead")]
-    Organization_CollectionManagement_Updated = 1609, // TODO: Will be removed in PM-25315
+    [Obsolete("Kept for historical data. Use specific Organization_CollectionManagement events instead.")]
+    Organization_CollectionManagement_Updated = 1609,
     Organization_CollectionManagement_LimitCollectionCreationEnabled = 1610,
     Organization_CollectionManagement_LimitCollectionCreationDisabled = 1611,
     Organization_CollectionManagement_LimitCollectionDeletionEnabled = 1612,
@@ -80,6 +81,8 @@ public enum EventType : int
     Organization_CollectionManagement_LimitItemDeletionDisabled = 1615,
     Organization_CollectionManagement_AllowAdminAccessToAllCollectionItemsEnabled = 1616,
     Organization_CollectionManagement_AllowAdminAccessToAllCollectionItemsDisabled = 1617,
+    Organization_ItemOrganization_Accepted = 1618,
+    Organization_ItemOrganization_Declined = 1619,
 
     Policy_Updated = 1700,
 
@@ -109,4 +112,11 @@ public enum EventType : int
     Project_Created = 2201,
     Project_Edited = 2202,
     Project_Deleted = 2203,
+
+    ServiceAccount_UserAdded = 2300,
+    ServiceAccount_UserRemoved = 2301,
+    ServiceAccount_GroupAdded = 2302,
+    ServiceAccount_GroupRemoved = 2303,
+    ServiceAccount_Created = 2304,
+    ServiceAccount_Deleted = 2305,
 }

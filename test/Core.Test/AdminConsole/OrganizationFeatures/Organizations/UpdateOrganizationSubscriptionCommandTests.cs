@@ -2,10 +2,10 @@
 using Bit.Core.AdminConsole.Models.Data.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Models.StaticStore.Plans;
+using Bit.Core.Billing.Services;
 using Bit.Core.Models.StaticStore;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
+using Bit.Core.Test.Billing.Mocks.Plans;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -28,7 +28,7 @@ public class UpdateOrganizationSubscriptionCommandTests
         // Act
         await sutProvider.Sut.UpdateOrganizationSubscriptionAsync(subscriptionsToUpdate);
 
-        await sutProvider.GetDependency<IPaymentService>()
+        await sutProvider.GetDependency<IStripePaymentService>()
             .DidNotReceive()
             .AdjustSeatsAsync(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>());
 
@@ -53,7 +53,7 @@ public class UpdateOrganizationSubscriptionCommandTests
         // Act
         await sutProvider.Sut.UpdateOrganizationSubscriptionAsync(subscriptionsToUpdate);
 
-        await sutProvider.GetDependency<IPaymentService>()
+        await sutProvider.GetDependency<IStripePaymentService>()
             .Received(1)
             .AdjustSeatsAsync(
                 Arg.Is<Organization>(x => x.Id == organization.Id),
@@ -81,7 +81,7 @@ public class UpdateOrganizationSubscriptionCommandTests
         OrganizationSubscriptionUpdate[] subscriptionsToUpdate =
             [new() { Organization = organization, Plan = new Enterprise2023Plan(true) }];
 
-        sutProvider.GetDependency<IPaymentService>()
+        sutProvider.GetDependency<IStripePaymentService>()
             .AdjustSeatsAsync(
                 Arg.Is<Organization>(x => x.Id == organization.Id),
                 Arg.Is<Plan>(x => x.Type == organization.PlanType),
@@ -115,7 +115,7 @@ public class UpdateOrganizationSubscriptionCommandTests
             new() { Organization = failedOrganization, Plan = new Enterprise2023Plan(true) }
         ];
 
-        sutProvider.GetDependency<IPaymentService>()
+        sutProvider.GetDependency<IStripePaymentService>()
             .AdjustSeatsAsync(
                 Arg.Is<Organization>(x => x.Id == failedOrganization.Id),
                 Arg.Is<Plan>(x => x.Type == failedOrganization.PlanType),
@@ -124,7 +124,7 @@ public class UpdateOrganizationSubscriptionCommandTests
         // Act
         await sutProvider.Sut.UpdateOrganizationSubscriptionAsync(subscriptionsToUpdate);
 
-        await sutProvider.GetDependency<IPaymentService>()
+        await sutProvider.GetDependency<IStripePaymentService>()
             .Received(1)
             .AdjustSeatsAsync(
                 Arg.Is<Organization>(x => x.Id == successfulOrganization.Id),

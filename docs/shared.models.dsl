@@ -10,7 +10,6 @@ bw_controlled = group "Bitwarden Controlled" {
   customer_success = person "Customer Success" "A customer success engineer. Inspects bitwarden state through the admin portal and internal tools" {
     tags "Bitwarden Employee"
   }
-
   # Root systems
   server = softwareSystem "Bitwarden Server" {
     api = container "API" {
@@ -74,7 +73,7 @@ bw_controlled = group "Bitwarden Controlled" {
     tags "LDAP"
     tags "Self-Hosted"
   }
-  key_connector = softwareSystem "Key Connector"
+  key_connector = softwareSystem "Key Connector" 
 }
 
 self_hosted_instances = softwareSystem "Self-Hosted Instances" {

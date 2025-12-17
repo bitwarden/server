@@ -2,6 +2,7 @@
 using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.Utilities.DebuggingInstruments;
 using Bit.Core.Entities;
@@ -14,8 +15,6 @@ using Bit.Core.Settings;
 using Dapper;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
-
-#nullable enable
 
 namespace Bit.Infrastructure.Dapper.Repositories;
 
@@ -626,7 +625,11 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
 
         await connection.ExecuteAsync(
             "[dbo].[OrganizationUser_SetStatusForUsersByGuidIdArray]",
-            new { OrganizationUserIds = organizationUserIds.ToGuidIdArrayTVP(), Status = OrganizationUserStatusType.Revoked },
+            new
+            {
+                OrganizationUserIds = organizationUserIds.ToGuidIdArrayTVP(),
+                Status = OrganizationUserStatusType.Revoked
+            },
             commandType: CommandType.StoredProcedure);
     }
 
@@ -671,5 +674,39 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
                     }))
             },
             commandType: CommandType.StoredProcedure);
+    }
+
+    public async Task<bool> ConfirmOrganizationUserAsync(AcceptedOrganizationUserToConfirm organizationUserToConfirm)
+    {
+        await using var connection = new SqlConnection(_marsConnectionString);
+
+        var rowCount = await connection.ExecuteScalarAsync<int>(
+            $"[{Schema}].[OrganizationUser_ConfirmById]",
+            new
+            {
+                Id = organizationUserToConfirm.OrganizationUserId,
+                UserId = organizationUserToConfirm.UserId,
+                RevisionDate = DateTime.UtcNow.Date,
+                Key = organizationUserToConfirm.Key
+            });
+
+        return rowCount > 0;
+    }
+
+    public async Task<OrganizationUserUserDetails?> GetDetailsByOrganizationIdUserIdAsync(Guid organizationId, Guid userId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var result = await connection.QuerySingleOrDefaultAsync<OrganizationUserUserDetails>(
+                "[dbo].[OrganizationUserUserDetails_ReadByOrganizationIdUserId]",
+                new
+                {
+                    OrganizationId = organizationId,
+                    UserId = userId
+                },
+                commandType: CommandType.StoredProcedure);
+
+            return result;
+        }
     }
 }

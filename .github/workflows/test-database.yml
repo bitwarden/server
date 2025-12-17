@@ -45,9 +45,11 @@ jobs:
     steps:
       - name: Check out repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
+        uses: actions/setup-dotnet@d4c94342e560b34958eacfc5d055d21461ed1c5d # v5.0.0
 
       - name: Restore tools
         run: dotnet tool restore
@@ -60,7 +62,7 @@ jobs:
           docker compose --profile mssql --profile postgres --profile mysql up -d
         shell: pwsh
 
-      - name: Add MariaDB for unified
+      - name: Add MariaDB for Bitwarden lite
         # Use a different port than MySQL
         run: |
           docker run --detach --name mariadb --env MARIADB_ROOT_PASSWORD=mariadb-password -p 4306:3306 mariadb:10
@@ -131,7 +133,7 @@ jobs:
           # Default Sqlite
           BW_TEST_DATABASES__3__TYPE: "Sqlite"
           BW_TEST_DATABASES__3__CONNECTIONSTRING: "Data Source=${{ runner.temp }}/test.db"
-          # Unified MariaDB
+          # Bitwarden lite MariaDB
           BW_TEST_DATABASES__4__TYPE: "MySql"
           BW_TEST_DATABASES__4__CONNECTIONSTRING: "server=localhost;port=4306;uid=root;pwd=mariadb-password;database=vault_dev;Allow User Variables=true"
         run: dotnet test --logger "trx;LogFileName=infrastructure-test-results.trx" /p:CoverletOutputFormatter="cobertura" --collect:"XPlat Code Coverage"
@@ -139,26 +141,26 @@ jobs:
 
       - name: Print MySQL Logs
         if: failure()
-        run: 'docker logs $(docker ps --quiet --filter "name=mysql")'
+        run: 'docker logs "$(docker ps --quiet --filter "name=mysql")"'
 
       - name: Print MariaDB Logs
         if: failure()
-        run: 'docker logs $(docker ps --quiet --filter "name=mariadb")'
+        run: 'docker logs "$(docker ps --quiet --filter "name=mariadb")"'
 
       - name: Print Postgres Logs
         if: failure()
-        run: 'docker logs $(docker ps --quiet --filter "name=postgres")'
+        run: 'docker logs "$(docker ps --quiet --filter "name=postgres")"'
 
       - name: Print MSSQL Logs
         if: failure()
-        run: 'docker logs $(docker ps --quiet --filter "name=mssql")'
+        run: 'docker logs "$(docker ps --quiet --filter "name=mssql")"'
 
       - name: Report test results
         uses: dorny/test-reporter@890a17cecf52a379fc869ab770a71657660be727 # v2.1.0
         if: ${{ github.event.pull_request.head.repo.full_name == github.repository && !cancelled() }}
         with:
           name: Test Results
-          path: "**/*-test-results.trx"
+          path: "./**/*-test-results.trx"
           reporter: dotnet-trx
           fail-on-error: true
 
@@ -177,9 +179,11 @@ jobs:
     steps:
       - name: Check out repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
+        uses: actions/setup-dotnet@d4c94342e560b34958eacfc5d055d21461ed1c5d # v5.0.0
 
       - name: Print environment
         run: |
@@ -193,7 +197,7 @@ jobs:
         shell: pwsh
 
       - name: Upload DACPAC
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: sql.dacpac
           path: Sql.dacpac
@@ -219,7 +223,7 @@ jobs:
         shell: pwsh
 
       - name: Report validation results
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: report.xml
           path: |
@@ -257,4 +261,27 @@ jobs:
         if: ${{ always() }}
         working-directory: "dev"
         run: docker compose down
+        shell: pwsh
+
+  validate-migration-naming:
+    name: Validate new migration naming and order
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate new migrations for pull request
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch origin main:main
+          pwsh dev/verify_migrations.ps1 -BaseRef main
+        shell: pwsh
+
+      - name: Validate new migrations for push
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        run: pwsh dev/verify_migrations.ps1 -BaseRef HEAD~1
         shell: pwsh

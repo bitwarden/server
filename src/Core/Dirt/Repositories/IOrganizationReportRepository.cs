@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Models.Data;
+using Bit.Core.Dirt.Reports.Models.Data;
 using Bit.Core.Repositories;
 
 namespace Bit.Core.Dirt.Repositories;
@@ -21,5 +22,8 @@ public interface IOrganizationReportRepository : IRepository<OrganizationReport,
     // ApplicationData methods
     Task<OrganizationReportApplicationDataResponse> GetApplicationDataAsync(Guid reportId);
     Task<OrganizationReport> UpdateApplicationDataAsync(Guid orgId, Guid reportId, string applicationData);
+
+    // Metrics methods
+    Task UpdateMetricsAsync(Guid reportId, OrganizationReportMetricsData metrics);
 }
 

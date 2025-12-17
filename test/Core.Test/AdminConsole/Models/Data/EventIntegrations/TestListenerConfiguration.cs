@@ -13,4 +13,9 @@ public class TestListenerConfiguration : IIntegrationListenerConfiguration
     public string IntegrationSubscriptionName => "integration_subscription";
     public string IntegrationTopicName => "integration_topic";
     public int MaxRetries => 3;
+    public int EventMaxConcurrentCalls => 1;
+    public int EventPrefetchCount => 0;
+    public int IntegrationMaxConcurrentCalls => 1;
+    public int IntegrationPrefetchCount => 0;
+    public string RoutingKey => IntegrationType.ToRoutingKey();
 }

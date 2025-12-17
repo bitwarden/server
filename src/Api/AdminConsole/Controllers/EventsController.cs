@@ -3,6 +3,7 @@
 
 using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
+using Bit.Api.Utilities.DiagnosticTools;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -30,16 +31,22 @@ public class EventsController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly ISecretRepository _secretRepository;
     private readonly IProjectRepository _projectRepository;
+    private readonly IServiceAccountRepository _serviceAccountRepository;
+    private readonly ILogger<EventsController> _logger;
+    private readonly IFeatureService _featureService;
 
-    public EventsController(
-        IUserService userService,
+
+    public EventsController(IUserService userService,
         ICipherRepository cipherRepository,
         IOrganizationUserRepository organizationUserRepository,
         IProviderUserRepository providerUserRepository,
         IEventRepository eventRepository,
         ICurrentContext currentContext,
         ISecretRepository secretRepository,
-        IProjectRepository projectRepository)
+        IProjectRepository projectRepository,
+        IServiceAccountRepository serviceAccountRepository,
+        ILogger<EventsController> logger,
+        IFeatureService featureService)
     {
         _userService = userService;
         _cipherRepository = cipherRepository;
@@ -49,6 +56,9 @@ public class EventsController : Controller
         _currentContext = currentContext;
         _secretRepository = secretRepository;
         _projectRepository = projectRepository;
+        _serviceAccountRepository = serviceAccountRepository;
+        _logger = logger;
+        _featureService = featureService;
     }
 
     [HttpGet("")]
@@ -110,6 +120,9 @@ public class EventsController : Controller
         var result = await _eventRepository.GetManyByOrganizationAsync(orgId, dateRange.Item1, dateRange.Item2,
             new PageOptions { ContinuationToken = continuationToken });
         var responses = result.Data.Select(e => new EventResponseModel(e));
+
+        _logger.LogAggregateData(_featureService, orgId, responses, continuationToken, start, end);
+
         return new ListResponseModel<EventResponseModel>(responses, result.ContinuationToken);
     }
 
@@ -182,6 +195,57 @@ public class EventsController : Controller
 
         var responses = result.Data.Select(e => new EventResponseModel(e));
         return new ListResponseModel<EventResponseModel>(responses, result.ContinuationToken);
+    }
+
+    [HttpGet("~/organization/{orgId}/service-account/{id}/events")]
+    public async Task<ListResponseModel<EventResponseModel>> GetServiceAccounts(
+       Guid orgId,
+       Guid id,
+       [FromQuery] DateTime? start = null,
+       [FromQuery] DateTime? end = null,
+       [FromQuery] string continuationToken = null)
+    {
+        if (id == Guid.Empty || orgId == Guid.Empty)
+        {
+            throw new NotFoundException();
+        }
+
+        var serviceAccount = await GetServiceAccount(id, orgId);
+        var org = _currentContext.GetOrganization(orgId);
+
+        if (org == null || !await _currentContext.AccessEventLogs(org.Id))
+        {
+            throw new NotFoundException();
+        }
+
+        var (fromDate, toDate) = ApiHelpers.GetDateRange(start, end);
+        var result = await _eventRepository.GetManyByOrganizationServiceAccountAsync(
+            serviceAccount.OrganizationId,
+            serviceAccount.Id,
+            fromDate,
+            toDate,
+            new PageOptions { ContinuationToken = continuationToken });
+
+        var responses = result.Data.Select(e => new EventResponseModel(e));
+        return new ListResponseModel<EventResponseModel>(responses, result.ContinuationToken);
+    }
+
+    [ApiExplorerSettings(IgnoreApi = true)]
+    private async Task<ServiceAccount> GetServiceAccount(Guid serviceAccountId, Guid orgId)
+    {
+        var serviceAccount = await _serviceAccountRepository.GetByIdAsync(serviceAccountId);
+        if (serviceAccount != null)
+        {
+            return serviceAccount;
+        }
+
+        var fallbackServiceAccount = new ServiceAccount
+        {
+            Id = serviceAccountId,
+            OrganizationId = orgId
+        };
+
+        return fallbackServiceAccount;
     }
 
     [HttpGet("~/organizations/{orgId}/users/{id}/events")]
