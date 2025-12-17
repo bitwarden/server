@@ -24,7 +24,7 @@ BEGIN
         @Users u ON cu.OrganizationUserId = u.Id
     WHERE
         cu.CollectionId = @Id
-            AND u.Id IS NULL;
+        AND u.Id IS NULL;
 
     -- Update existing users
     UPDATE
@@ -39,11 +39,11 @@ BEGIN
         @Users u ON cu.OrganizationUserId = u.Id
     WHERE
         cu.CollectionId = @Id
-            AND (
-                cu.ReadOnly != u.ReadOnly
-                    OR cu.HidePasswords != u.HidePasswords
-                    OR cu.Manage != u.Manage
-            );
+        AND (
+            cu.ReadOnly != u.ReadOnly
+            OR cu.HidePasswords != u.HidePasswords
+            OR cu.Manage != u.Manage
+        );
 
     -- Insert new users
     INSERT INTO [dbo].[CollectionUser]
@@ -68,7 +68,7 @@ BEGIN
         [dbo].[CollectionUser] cu ON cu.CollectionId = @Id AND cu.OrganizationUserId = u.Id
     WHERE
         ou.OrganizationId = @OrganizationId
-            AND cu.CollectionId IS NULL;
+        AND cu.CollectionId IS NULL;
 
     EXEC [dbo].[User_BumpAccountRevisionDateByCollectionId] @Id, @OrganizationId
 END

@@ -24,7 +24,7 @@ BEGIN
         @Groups g ON cg.GroupId = g.Id
     WHERE
         cg.CollectionId = @Id
-            AND g.Id IS NULL;
+        AND g.Id IS NULL;
 
     -- Update existing groups
     UPDATE
@@ -39,11 +39,11 @@ BEGIN
         @Groups g ON cg.GroupId = g.Id
     WHERE
         cg.CollectionId = @Id
-            AND (
-                cg.ReadOnly != g.ReadOnly
-                    OR cg.HidePasswords != g.HidePasswords
-                    OR cg.Manage != g.Manage
-            );
+        AND (
+            cg.ReadOnly != g.ReadOnly
+            OR cg.HidePasswords != g.HidePasswords
+            OR cg.Manage != g.Manage
+        );
 
     -- Insert new groups
     INSERT INTO [dbo].[CollectionGroup]
@@ -68,7 +68,7 @@ BEGIN
         [dbo].[CollectionGroup] cg ON cg.CollectionId = @Id AND cg.GroupId = g.Id
     WHERE
         grp.OrganizationId = @OrganizationId
-            AND cg.CollectionId IS NULL;
+        AND cg.CollectionId IS NULL;
 
     EXEC [dbo].[User_BumpAccountRevisionDateByCollectionId] @Id, @OrganizationId
 END

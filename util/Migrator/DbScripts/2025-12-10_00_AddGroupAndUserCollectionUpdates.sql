@@ -24,7 +24,7 @@ BEGIN
         @Users u ON cu.OrganizationUserId = u.Id
     WHERE
         cu.CollectionId = @Id
-            AND u.Id IS NULL;
+        AND u.Id IS NULL;
 
     -- Update existing users
     UPDATE
@@ -39,11 +39,11 @@ BEGIN
         @Users u ON cu.OrganizationUserId = u.Id
     WHERE
         cu.CollectionId = @Id
-            AND (
-                cu.ReadOnly != u.ReadOnly
-                    OR cu.HidePasswords != u.HidePasswords
-                    OR cu.Manage != u.Manage
-            );
+        AND (
+            cu.ReadOnly != u.ReadOnly
+            OR cu.HidePasswords != u.HidePasswords
+            OR cu.Manage != u.Manage
+        );
 
     -- Insert new users
     INSERT INTO [dbo].[CollectionUser]
@@ -68,7 +68,7 @@ BEGIN
         [dbo].[CollectionUser] cu ON cu.CollectionId = @Id AND cu.OrganizationUserId = u.Id
     WHERE
         ou.OrganizationId = @OrganizationId
-            AND cu.CollectionId IS NULL;
+        AND cu.CollectionId IS NULL;
 
     EXEC [dbo].[User_BumpAccountRevisionDateByCollectionId] @Id, @OrganizationId
 END
@@ -100,7 +100,7 @@ BEGIN
         @Groups g ON cg.GroupId = g.Id
     WHERE
         cg.CollectionId = @Id
-            AND g.Id IS NULL;
+        AND g.Id IS NULL;
 
     -- Update existing groups
     UPDATE
@@ -115,11 +115,11 @@ BEGIN
         @Groups g ON cg.GroupId = g.Id
     WHERE
         cg.CollectionId = @Id
-            AND (
-                cg.ReadOnly != g.ReadOnly
-                    OR cg.HidePasswords != g.HidePasswords
-                    OR cg.Manage != g.Manage
-            );
+        AND (
+            cg.ReadOnly != g.ReadOnly
+            OR cg.HidePasswords != g.HidePasswords
+            OR cg.Manage != g.Manage
+        );
 
     -- Insert new groups
     INSERT INTO [dbo].[CollectionGroup]
@@ -144,7 +144,7 @@ BEGIN
         [dbo].[CollectionGroup] cg ON cg.CollectionId = @Id AND cg.GroupId = g.Id
     WHERE
         grp.OrganizationId = @OrganizationId
-            AND cg.CollectionId IS NULL;
+        AND cg.CollectionId IS NULL;
 
     EXEC [dbo].[User_BumpAccountRevisionDateByCollectionId] @Id, @OrganizationId
 END
