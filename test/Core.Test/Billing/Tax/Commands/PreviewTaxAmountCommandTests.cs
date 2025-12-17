@@ -1,6 +1,5 @@
 ﻿using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Tax.Commands;
 using Bit.Core.Billing.Tax.Services;
@@ -8,7 +7,6 @@ using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
-using NSubstitute.ExceptionExtensions;
 using Stripe;
 using Xunit;
 using static Bit.Core.Billing.Tax.Commands.OrganizationTrialParameters;
@@ -183,7 +181,7 @@ public class PreviewTaxAmountCommandTests
                 options.SubscriptionDetails.Items.Count == 1 &&
                 options.SubscriptionDetails.Items[0].Price == plan.PasswordManager.StripeSeatPlanId &&
                 options.SubscriptionDetails.Items[0].Quantity == 1 &&
-                options.AutomaticTax.Enabled == false
+                options.AutomaticTax.Enabled == true
             ))
             .Returns(expectedInvoice);
 
@@ -273,11 +271,44 @@ public class PreviewTaxAmountCommandTests
         // Assert
         Assert.True(result.IsT1);
         var badRequest = result.AsT1;
-        Assert.Equal(BillingErrorTranslationKeys.UnknownTaxIdType, badRequest.TranslationKey);
+        Assert.Equal("We couldn't find a corresponding tax ID type for the tax ID you provided. Please try again or contact support for assistance.", badRequest.Response);
     }
 
     [Fact]
-    public async Task Run_CustomerTaxLocationInvalid_BadRequest()
+    public async Task Run_USBased_PersonalUse_SetsAutomaticTaxEnabled()
+    {
+        // Arrange
+        var parameters = new OrganizationTrialParameters
+        {
+            PlanType = PlanType.FamiliesAnnually,
+            ProductType = ProductType.PasswordManager,
+            TaxInformation = new TaxInformationDTO
+            {
+                Country = "US",
+                PostalCode = "12345"
+            }
+        };
+
+        var plan = StaticStore.GetPlan(parameters.PlanType);
+
+        _pricingClient.GetPlanOrThrow(parameters.PlanType).Returns(plan);
+
+        var expectedInvoice = new Invoice { Tax = 1000 }; // $10.00 in cents
+        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(expectedInvoice);
+
+        // Act
+        var result = await _command.Run(parameters);
+
+        // Assert
+        await _stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.AutomaticTax.Enabled == true
+        ));
+        Assert.True(result.IsT0);
+    }
+
+    [Fact]
+    public async Task Run_USBased_BusinessUse_SetsAutomaticTaxEnabled()
     {
         // Arrange
         var parameters = new OrganizationTrialParameters
@@ -295,23 +326,121 @@ public class PreviewTaxAmountCommandTests
 
         _pricingClient.GetPlanOrThrow(parameters.PlanType).Returns(plan);
 
+        var expectedInvoice = new Invoice { Tax = 1000 }; // $10.00 in cents
         _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
-            .Throws(new StripeException
-            {
-                StripeError = new StripeError { Code = StripeConstants.ErrorCodes.CustomerTaxLocationInvalid }
-            });
+            .Returns(expectedInvoice);
 
         // Act
         var result = await _command.Run(parameters);
 
         // Assert
-        Assert.True(result.IsT1);
-        var badRequest = result.AsT1;
-        Assert.Equal(BillingErrorTranslationKeys.CustomerTaxLocationInvalid, badRequest.TranslationKey);
+        await _stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.AutomaticTax.Enabled == true
+        ));
+        Assert.True(result.IsT0);
     }
 
     [Fact]
-    public async Task Run_TaxIdInvalid_BadRequest()
+    public async Task Run_NonUSBased_PersonalUse_SetsAutomaticTaxEnabled()
+    {
+        // Arrange
+        var parameters = new OrganizationTrialParameters
+        {
+            PlanType = PlanType.FamiliesAnnually,
+            ProductType = ProductType.PasswordManager,
+            TaxInformation = new TaxInformationDTO
+            {
+                Country = "CA",
+                PostalCode = "12345"
+            }
+        };
+
+        var plan = StaticStore.GetPlan(parameters.PlanType);
+
+        _pricingClient.GetPlanOrThrow(parameters.PlanType).Returns(plan);
+
+        var expectedInvoice = new Invoice { Tax = 1000 }; // $10.00 in cents
+        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(expectedInvoice);
+
+        // Act
+        var result = await _command.Run(parameters);
+
+        // Assert
+        await _stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.AutomaticTax.Enabled == true
+        ));
+        Assert.True(result.IsT0);
+    }
+
+    [Fact]
+    public async Task Run_NonUSBased_BusinessUse_SetsAutomaticTaxEnabled()
+    {
+        // Arrange
+        var parameters = new OrganizationTrialParameters
+        {
+            PlanType = PlanType.EnterpriseAnnually,
+            ProductType = ProductType.PasswordManager,
+            TaxInformation = new TaxInformationDTO
+            {
+                Country = "CA",
+                PostalCode = "12345"
+            }
+        };
+
+        var plan = StaticStore.GetPlan(parameters.PlanType);
+
+        _pricingClient.GetPlanOrThrow(parameters.PlanType).Returns(plan);
+
+        var expectedInvoice = new Invoice { Tax = 1000 }; // $10.00 in cents
+        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(expectedInvoice);
+
+        // Act
+        var result = await _command.Run(parameters);
+
+        // Assert
+        await _stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.AutomaticTax.Enabled == true
+        ));
+        Assert.True(result.IsT0);
+    }
+
+    [Fact]
+    public async Task Run_USBased_PersonalUse_DoesNotSetTaxExempt()
+    {
+        // Arrange
+        var parameters = new OrganizationTrialParameters
+        {
+            PlanType = PlanType.FamiliesAnnually,
+            ProductType = ProductType.PasswordManager,
+            TaxInformation = new TaxInformationDTO
+            {
+                Country = "US",
+                PostalCode = "12345"
+            }
+        };
+
+        var plan = StaticStore.GetPlan(parameters.PlanType);
+
+        _pricingClient.GetPlanOrThrow(parameters.PlanType).Returns(plan);
+
+        var expectedInvoice = new Invoice { Tax = 1000 }; // $10.00 in cents
+        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(expectedInvoice);
+
+        // Act
+        var result = await _command.Run(parameters);
+
+        // Assert
+        await _stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.CustomerDetails.TaxExempt == null
+        ));
+        Assert.True(result.IsT0);
+    }
+
+    [Fact]
+    public async Task Run_USBased_BusinessUse_DoesNotSetTaxExempt()
     {
         // Arrange
         var parameters = new OrganizationTrialParameters
@@ -329,18 +458,84 @@ public class PreviewTaxAmountCommandTests
 
         _pricingClient.GetPlanOrThrow(parameters.PlanType).Returns(plan);
 
+        var expectedInvoice = new Invoice { Tax = 1000 }; // $10.00 in cents
         _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
-            .Throws(new StripeException
-            {
-                StripeError = new StripeError { Code = StripeConstants.ErrorCodes.TaxIdInvalid }
-            });
+            .Returns(expectedInvoice);
 
         // Act
         var result = await _command.Run(parameters);
 
         // Assert
-        Assert.True(result.IsT1);
-        var badRequest = result.AsT1;
-        Assert.Equal(BillingErrorTranslationKeys.TaxIdInvalid, badRequest.TranslationKey);
+        await _stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.CustomerDetails.TaxExempt == null
+        ));
+        Assert.True(result.IsT0);
+    }
+
+    [Fact]
+    public async Task Run_NonUSBased_PersonalUse_DoesNotSetTaxExempt()
+    {
+        // Arrange
+        var parameters = new OrganizationTrialParameters
+        {
+            PlanType = PlanType.FamiliesAnnually,
+            ProductType = ProductType.PasswordManager,
+            TaxInformation = new TaxInformationDTO
+            {
+                Country = "CA",
+                PostalCode = "12345"
+            }
+        };
+
+        var plan = StaticStore.GetPlan(parameters.PlanType);
+
+        _pricingClient.GetPlanOrThrow(parameters.PlanType).Returns(plan);
+
+        var expectedInvoice = new Invoice { Tax = 1000 }; // $10.00 in cents
+        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(expectedInvoice);
+
+        // Act
+        var result = await _command.Run(parameters);
+
+        // Assert
+        await _stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.CustomerDetails.TaxExempt == null
+        ));
+        Assert.True(result.IsT0);
+
+    }
+
+    [Fact]
+    public async Task Run_NonUSBased_BusinessUse_SetsTaxExemptReverse()
+    {
+        // Arrange
+        var parameters = new OrganizationTrialParameters
+        {
+            PlanType = PlanType.EnterpriseAnnually,
+            ProductType = ProductType.PasswordManager,
+            TaxInformation = new TaxInformationDTO
+            {
+                Country = "CA",
+                PostalCode = "12345"
+            }
+        };
+
+        var plan = StaticStore.GetPlan(parameters.PlanType);
+
+        _pricingClient.GetPlanOrThrow(parameters.PlanType).Returns(plan);
+
+        var expectedInvoice = new Invoice { Tax = 1000 }; // $10.00 in cents
+        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(expectedInvoice);
+
+        // Act
+        var result = await _command.Run(parameters);
+
+        // Assert
+        await _stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.CustomerDetails.TaxExempt == StripeConstants.TaxExempt.Reverse
+        ));
+        Assert.True(result.IsT0);
     }
 }

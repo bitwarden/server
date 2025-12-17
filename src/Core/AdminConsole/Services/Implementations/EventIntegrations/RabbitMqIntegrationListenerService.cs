@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Microsoft.Extensions.Hosting;
@@ -10,7 +8,8 @@ using RabbitMQ.Client.Events;
 
 namespace Bit.Core.Services;
 
-public class RabbitMqIntegrationListenerService : BackgroundService
+public class RabbitMqIntegrationListenerService<TConfiguration> : BackgroundService
+    where TConfiguration : IIntegrationListenerConfiguration
 {
     private readonly int _maxRetries;
     private readonly string _queueName;
@@ -19,27 +18,26 @@ public class RabbitMqIntegrationListenerService : BackgroundService
     private readonly IIntegrationHandler _handler;
     private readonly Lazy<Task<IChannel>> _lazyChannel;
     private readonly IRabbitMqService _rabbitMqService;
-    private readonly ILogger<RabbitMqIntegrationListenerService> _logger;
+    private readonly ILogger _logger;
     private readonly TimeProvider _timeProvider;
 
-    public RabbitMqIntegrationListenerService(IIntegrationHandler handler,
-        string routingKey,
-        string queueName,
-        string retryQueueName,
-        int maxRetries,
+    public RabbitMqIntegrationListenerService(
+        IIntegrationHandler handler,
+        TConfiguration configuration,
         IRabbitMqService rabbitMqService,
-        ILogger<RabbitMqIntegrationListenerService> logger,
+        ILoggerFactory loggerFactory,
         TimeProvider timeProvider)
     {
         _handler = handler;
-        _routingKey = routingKey;
-        _retryQueueName = retryQueueName;
-        _queueName = queueName;
+        _maxRetries = configuration.MaxRetries;
+        _routingKey = configuration.RoutingKey;
+        _retryQueueName = configuration.IntegrationRetryQueueName;
+        _queueName = configuration.IntegrationQueueName;
         _rabbitMqService = rabbitMqService;
-        _logger = logger;
         _timeProvider = timeProvider;
-        _maxRetries = maxRetries;
         _lazyChannel = new Lazy<Task<IChannel>>(() => _rabbitMqService.CreateChannelAsync());
+        _logger = loggerFactory.CreateLogger(
+            categoryName: $"Bit.Core.Services.RabbitMqIntegrationListenerService.{configuration.IntegrationQueueName}"); ;
     }
 
     public override async Task StartAsync(CancellationToken cancellationToken)

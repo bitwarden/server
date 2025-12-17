@@ -1,4 +1,7 @@
-﻿using Bit.Core.Billing.Caches;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
@@ -280,7 +283,7 @@ public class PremiumUserBillingService(
             {
                 case PaymentMethodType.BankAccount:
                     {
-                        await setupIntentCache.Remove(user.Id);
+                        await setupIntentCache.RemoveSetupIntentForSubscriber(user.Id);
                         break;
                     }
                 case PaymentMethodType.PayPal when !string.IsNullOrEmpty(braintreeCustomerId):
@@ -301,7 +304,7 @@ public class PremiumUserBillingService(
         {
             new ()
             {
-                Price = "premium-annually",
+                Price = StripeConstants.Prices.PremiumAnnually,
                 Quantity = 1
             }
         };

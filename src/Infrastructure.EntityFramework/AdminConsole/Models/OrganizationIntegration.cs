@@ -4,7 +4,7 @@ namespace Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 
 public class OrganizationIntegration : Core.AdminConsole.Entities.OrganizationIntegration
 {
-    public virtual Organization Organization { get; set; }
+    public virtual required Organization Organization { get; set; }
 }
 
 public class OrganizationIntegrationMapperProfile : Profile

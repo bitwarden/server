@@ -1,4 +1,7 @@
-﻿using System.Text.Json;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text.Json;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
@@ -478,7 +481,7 @@ public class CipherService : ICipherService
             throw new NotFoundException();
         }
         await _cipherRepository.DeleteByOrganizationIdAsync(organizationId);
-        await _eventService.LogOrganizationEventAsync(org, Bit.Core.Enums.EventType.Organization_PurgedVault);
+        await _eventService.LogOrganizationEventAsync(org, EventType.Organization_PurgedVault);
     }
 
     public async Task MoveManyAsync(IEnumerable<Guid> cipherIds, Guid? destinationFolderId, Guid movingUserId)
@@ -639,7 +642,15 @@ public class CipherService : ICipherService
             cipherIds.Add(cipher.Id);
         }
 
-        await _cipherRepository.UpdateCiphersAsync(sharingUserId, cipherInfos.Select(c => c.cipher));
+        var useBulkResourceCreationService = _featureService.IsEnabled(FeatureFlagKeys.CipherRepositoryBulkResourceCreation);
+        if (useBulkResourceCreationService)
+        {
+            await _cipherRepository.UpdateCiphersAsync_vNext(sharingUserId, cipherInfos.Select(c => c.cipher));
+        }
+        else
+        {
+            await _cipherRepository.UpdateCiphersAsync(sharingUserId, cipherInfos.Select(c => c.cipher));
+        }
         await _collectionCipherRepository.UpdateCollectionsForCiphersAsync(cipherIds, sharingUserId,
             organizationId, collectionIds);
 
@@ -686,7 +697,7 @@ public class CipherService : ICipherService
             await _collectionCipherRepository.UpdateCollectionsAsync(cipher.Id, savingUserId, collectionIds);
         }
 
-        await _eventService.LogCipherEventAsync(cipher, Bit.Core.Enums.EventType.Cipher_UpdatedCollections);
+        await _eventService.LogCipherEventAsync(cipher, EventType.Cipher_UpdatedCollections);
 
         // push
         await _pushService.PushSyncCipherUpdateAsync(cipher, collectionIds);
@@ -775,8 +786,8 @@ public class CipherService : ICipherService
         }
 
         var cipherIdsSet = new HashSet<Guid>(cipherIds);
-        var restoringCiphers = new List<CipherOrganizationDetails>();
-        DateTime? revisionDate;
+        List<CipherOrganizationDetails> restoringCiphers;
+        DateTime? revisionDate; // TODO: Make this not nullable
 
         if (orgAdmin && organizationId.HasValue)
         {
@@ -922,7 +933,7 @@ public class CipherService : ICipherService
                 // Users that get access to file storage/premium from their organization get the default
                 // 1 GB max storage.
                 storageBytesRemaining = user.StorageBytesRemaining(
-                    _globalSettings.SelfHosted ? (short)10240 : (short)1);
+                    _globalSettings.SelfHosted ? Constants.SelfHostedMaxStorageGb : (short)1);
             }
         }
         else if (cipher.OrganizationId.HasValue)
@@ -958,6 +969,11 @@ public class CipherService : ICipherService
         if (!cipher.UserId.HasValue || cipher.UserId.Value != sharingUserId)
         {
             throw new BadRequestException("One or more ciphers do not belong to you.");
+        }
+
+        if (cipher.ArchivedDate.HasValue)
+        {
+            throw new BadRequestException("Cipher cannot be shared with organization because it is archived.");
         }
 
         var attachments = cipher.GetAttachments();

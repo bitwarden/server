@@ -1,4 +1,7 @@
-﻿using System.Security.Claims;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Security.Claims;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data;
@@ -13,6 +16,7 @@ using Bit.Core.Auth.Models;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Models;
@@ -40,8 +44,6 @@ namespace Bit.Core.Services;
 
 public class UserService : UserManager<User>, IUserService
 {
-    private const string PremiumPlanId = "premium-annually";
-
     private readonly IUserRepository _userRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationRepository _organizationRepository;
@@ -861,39 +863,6 @@ public class UserService : UserManager<User>, IUserService
         }
     }
 
-    /// <summary>
-    /// To be removed when the feature flag pm-17128-recovery-code-login is removed PM-18175.
-    /// </summary>
-    [Obsolete("Two Factor recovery is handled in the TwoFactorAuthenticationValidator.")]
-    public async Task<bool> RecoverTwoFactorAsync(string email, string secret, string recoveryCode)
-    {
-        var user = await _userRepository.GetByEmailAsync(email);
-        if (user == null)
-        {
-            // No user exists. Do we want to send an email telling them this in the future?
-            return false;
-        }
-
-        if (!await VerifySecretAsync(user, secret))
-        {
-            return false;
-        }
-
-        if (!CoreHelpers.FixedTimeEquals(user.TwoFactorRecoveryCode, recoveryCode))
-        {
-            return false;
-        }
-
-        user.TwoFactorProviders = null;
-        user.TwoFactorRecoveryCode = CoreHelpers.SecureRandomString(32, upper: false, special: false);
-        await SaveUserAsync(user);
-        await _mailService.SendRecoverTwoFactorEmail(user.Email, DateTime.UtcNow, _currentContext.IpAddress);
-        await _eventService.LogUserEventAsync(user.Id, EventType.User_Recovered2fa);
-        await CheckPoliciesOnTwoFactorRemovalAsync(user);
-
-        return true;
-    }
-
     public async Task<bool> RecoverTwoFactorAsync(User user, string recoveryCode)
     {
         if (!CoreHelpers.FixedTimeEquals(
@@ -959,7 +928,7 @@ public class UserService : UserManager<User>, IUserService
 
         if (_globalSettings.SelfHosted)
         {
-            user.MaxStorageGb = 10240; // 10 TB
+            user.MaxStorageGb = Constants.SelfHostedMaxStorageGb;
             user.LicenseKey = license.LicenseKey;
             user.PremiumExpirationDate = license.Expires;
         }
@@ -1018,7 +987,7 @@ public class UserService : UserManager<User>, IUserService
 
         user.Premium = license.Premium;
         user.RevisionDate = DateTime.UtcNow;
-        user.MaxStorageGb = _globalSettings.SelfHosted ? 10240 : license.MaxStorageGb; // 10 TB
+        user.MaxStorageGb = _globalSettings.SelfHosted ? Constants.SelfHostedMaxStorageGb : license.MaxStorageGb;
         user.LicenseKey = license.LicenseKey;
         user.PremiumExpirationDate = license.Expires;
         await SaveUserAsync(user);

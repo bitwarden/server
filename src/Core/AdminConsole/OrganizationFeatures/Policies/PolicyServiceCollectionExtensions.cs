@@ -17,6 +17,7 @@ public static class PolicyServiceCollectionExtensions
 
         services.AddPolicyValidators();
         services.AddPolicyRequirements();
+        services.AddPolicySideEffects();
     }
 
     private static void AddPolicyValidators(this IServiceCollection services)
@@ -29,6 +30,11 @@ public static class PolicyServiceCollectionExtensions
         services.AddScoped<IPolicyValidator, FreeFamiliesForEnterprisePolicyValidator>();
     }
 
+    private static void AddPolicySideEffects(this IServiceCollection services)
+    {
+        services.AddScoped<IPostSavePolicySideEffect, OrganizationDataOwnershipPolicyValidator>();
+    }
+
     private static void AddPolicyRequirements(this IServiceCollection services)
     {
         services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, DisableSendPolicyRequirementFactory>();
@@ -37,5 +43,6 @@ public static class PolicyServiceCollectionExtensions
         services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, OrganizationDataOwnershipPolicyRequirementFactory>();
         services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, RequireSsoPolicyRequirementFactory>();
         services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, RequireTwoFactorPolicyRequirementFactory>();
+        services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, MasterPasswordPolicyRequirementFactory>();
     }
 }

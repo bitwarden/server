@@ -1,4 +1,7 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
@@ -85,7 +88,7 @@ public interface IProviderBillingService
     Task<Customer> SetupCustomer(
         Provider provider,
         TaxInfo taxInfo,
-        TokenizedPaymentSource tokenizedPaymentSource = null);
+        TokenizedPaymentSource tokenizedPaymentSource);
 
     /// <summary>
     /// For use during the provider setup process, this method starts a Stripe <see cref="Stripe.Subscription"/> for the given <paramref name="provider"/>.

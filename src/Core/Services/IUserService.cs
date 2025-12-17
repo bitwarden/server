@@ -1,7 +1,11 @@
-﻿using System.Security.Claims;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Security.Claims;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
+using Bit.Core.Billing.Models.Business;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
@@ -85,9 +89,6 @@ public interface IUserService
     Task ToggleNewDeviceVerificationException(Guid userId);
 
     void SetTwoFactorProvider(User user, TwoFactorProviderType type, bool setEnabled = true);
-
-    [Obsolete("To be removed when the feature flag pm-17128-recovery-code-login is removed PM-18175.")]
-    Task<bool> RecoverTwoFactorAsync(string email, string masterPassword, string recoveryCode);
 
     /// <summary>
     /// This method is used by the TwoFactorAuthenticationValidator to recover two

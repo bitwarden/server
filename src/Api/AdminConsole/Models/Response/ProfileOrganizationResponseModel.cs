@@ -1,4 +1,7 @@
-﻿using System.Text.Json.Serialization;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text.Json.Serialization;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
@@ -75,12 +78,14 @@ public class ProfileOrganizationResponseModel : ResponseModel
         UseRiskInsights = organization.UseRiskInsights;
         UseOrganizationDomains = organization.UseOrganizationDomains;
         UseAdminSponsoredFamilies = organization.UseAdminSponsoredFamilies;
+        SsoEnabled = organization.SsoEnabled ?? false;
 
         if (organization.SsoConfig != null)
         {
             var ssoConfigData = SsoConfigurationData.Deserialize(organization.SsoConfig);
             KeyConnectorEnabled = ssoConfigData.MemberDecryptionType == MemberDecryptionType.KeyConnector && !string.IsNullOrEmpty(ssoConfigData.KeyConnectorUrl);
             KeyConnectorUrl = ssoConfigData.KeyConnectorUrl;
+            SsoMemberDecryptionType = ssoConfigData.MemberDecryptionType;
         }
     }
 
@@ -157,4 +162,6 @@ public class ProfileOrganizationResponseModel : ResponseModel
     public bool UseOrganizationDomains { get; set; }
     public bool UseAdminSponsoredFamilies { get; set; }
     public bool IsAdminInitiated { get; set; }
+    public bool SsoEnabled { get; set; }
+    public MemberDecryptionType? SsoMemberDecryptionType { get; set; }
 }
