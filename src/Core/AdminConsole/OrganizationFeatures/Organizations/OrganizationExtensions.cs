@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.KeyManagement.Models.Data;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 
@@ -10,11 +11,11 @@ public static class OrganizationExtensions
     /// It is a soft migration that will silently migrate organizations when they perform certain actions,
     /// e.g. change their details or upgrade their plan.
     /// </summary>
-    public static void BackfillPublicPrivateKeys(this Organization organization, OrganizationKeyPair? keyPair)
+    public static void BackfillPublicPrivateKeys(this Organization organization, PublicKeyEncryptionKeyPairData? keyPair)
     {
         // Only backfill if both new keys are provided and both old keys are missing.
         if (string.IsNullOrWhiteSpace(keyPair?.PublicKey) ||
-            string.IsNullOrWhiteSpace(keyPair.PrivateKey) ||
+            string.IsNullOrWhiteSpace(keyPair.WrappedPrivateKey) ||
             !string.IsNullOrWhiteSpace(organization.PublicKey) ||
             !string.IsNullOrWhiteSpace(organization.PrivateKey))
         {
@@ -22,6 +23,6 @@ public static class OrganizationExtensions
         }
 
         organization.PublicKey = keyPair.PublicKey;
-        organization.PrivateKey = keyPair.PrivateKey;
+        organization.PrivateKey = keyPair.WrappedPrivateKey;
     }
 }

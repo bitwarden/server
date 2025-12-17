@@ -100,7 +100,7 @@ public class CloudOrganizationSignUpCommand(
             Enabled = true,
             LicenseKey = CoreHelpers.SecureRandomString(20),
             PublicKey = signup.Keys?.PublicKey,
-            PrivateKey = signup.Keys?.PrivateKey,
+            PrivateKey = signup.Keys?.WrappedPrivateKey,
             CreationDate = DateTime.UtcNow,
             RevisionDate = DateTime.UtcNow,
             Status = OrganizationStatusType.Created,

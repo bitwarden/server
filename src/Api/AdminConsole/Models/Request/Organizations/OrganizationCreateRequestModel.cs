@@ -114,7 +114,7 @@ public class OrganizationCreateRequestModel : IValidatableObject
             },
             InitiationPath = InitiationPath,
             SkipTrial = SkipTrial,
-            Keys = Keys?.ToOrganizationKeyPair()
+            Keys = Keys?.ToPublicKeyEncryptionKeyPairData()
         };
 
         return orgSignup;

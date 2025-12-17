@@ -1,4 +1,6 @@
-﻿namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Update;
+﻿using Bit.Core.KeyManagement.Models.Data;
+
+namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Update;
 
 /// <summary>
 /// Request model for updating the name, billing email, and/or public-private keys for an organization (legacy migration code).
@@ -24,5 +26,5 @@ public record OrganizationUpdateRequest
     /// <summary>
     /// The organization's public/private key pair to set (optional, only set if not already present on the organization).
     /// </summary>
-    public OrganizationKeyPair? Keys { get; init; }
+    public PublicKeyEncryptionKeyPairData? Keys { get; init; }
 }

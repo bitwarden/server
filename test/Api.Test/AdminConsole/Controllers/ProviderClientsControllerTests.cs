@@ -67,7 +67,7 @@ public class ProviderClientsControllerTests
                     signup.AdditionalSeats == requestBody.Seats &&
                     signup.OwnerKey == requestBody.Key &&
                     signup.Keys.PublicKey == requestBody.KeyPair.PublicKey &&
-                    signup.Keys.PrivateKey == requestBody.KeyPair.EncryptedPrivateKey &&
+                    signup.Keys.WrappedPrivateKey == requestBody.KeyPair.EncryptedPrivateKey &&
                     signup.CollectionName == requestBody.CollectionName),
                 requestBody.OwnerEmail,
                 user)

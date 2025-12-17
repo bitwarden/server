@@ -44,7 +44,7 @@ public class OrganizationUpgradeRequestModel
                 BillingAddressCountry = BillingAddressCountry,
                 BillingAddressPostalCode = BillingAddressPostalCode
             },
-            Keys = Keys?.ToOrganizationKeyPair()
+            Keys = Keys?.ToPublicKeyEncryptionKeyPairData()
         };
 
         return orgUpgrade;

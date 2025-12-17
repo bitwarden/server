@@ -3,6 +3,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
@@ -261,11 +262,9 @@ public class UpgradeOrganizationPlanCommandTests
         organization.PrivateKey = null;
 
         upgrade.Plan = PlanType.TeamsAnnually;
-        upgrade.Keys = new OrganizationKeyPair
-        {
-            PublicKey = newPublicKey,
-            PrivateKey = newPrivateKey
-        };
+        upgrade.Keys = new PublicKeyEncryptionKeyPairData(
+            wrappedPrivateKey: newPrivateKey,
+            publicKey: newPublicKey);
         upgrade.AdditionalSeats = 10;
 
         sutProvider.GetDependency<IOrganizationRepository>()
@@ -355,11 +354,9 @@ public class UpgradeOrganizationPlanCommandTests
         organization.PrivateKey = existingPrivateKey;
 
         upgrade.Plan = PlanType.TeamsAnnually;
-        upgrade.Keys = new OrganizationKeyPair
-        {
-            PublicKey = newPublicKey,
-            PrivateKey = newPrivateKey
-        };
+        upgrade.Keys = new PublicKeyEncryptionKeyPairData(
+            wrappedPrivateKey: newPrivateKey,
+            publicKey: newPublicKey);
         upgrade.AdditionalSeats = 10;
 
         sutProvider.GetDependency<IOrganizationRepository>()
