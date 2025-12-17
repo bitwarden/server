@@ -20,19 +20,14 @@ pub unsafe extern "C" fn generate_user_keys(
     let email = CStr::from_ptr(email).to_str().unwrap();
     let password = CStr::from_ptr(password).to_str().unwrap();
 
-    println!("Generating keys for {email}");
-    println!("Password: {password}");
-
     let kdf = Kdf::PBKDF2 {
-        iterations: NonZeroU32::new(5_000).unwrap(),
+        iterations: NonZeroU32::new(600_000).unwrap(),
     };
 
     let master_key = MasterKey::derive(password, email, &kdf).unwrap();
 
     let master_password_hash =
         master_key.derive_master_key_hash(password.as_bytes(), HashPurpose::ServerAuthorization);
-
-    println!("Master password hash: {}", master_password_hash);
 
     let (user_key, encrypted_user_key) = master_key.make_user_key().unwrap();
 
@@ -136,6 +131,25 @@ pub unsafe extern "C" fn generate_user_organization_key(
     .unwrap();
 
     let result = CString::new(encrypted_key.to_string()).unwrap();
+
+    result.into_raw()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn encrypt_string(
+    plaintext: *const c_char,
+    key: *const c_char,
+) -> *const c_char {
+    let plaintext = CStr::from_ptr(plaintext).to_str().unwrap().to_owned();
+    let key = CStr::from_ptr(key).to_str().unwrap().to_owned();
+
+    let key_bytes = STANDARD.decode(key).unwrap();
+    let symmetric_key =
+        SymmetricCryptoKey::try_from(&BitwardenLegacyKeyBytes::from(key_bytes)).unwrap();
+
+    let encrypted = plaintext.encrypt_with_key(&symmetric_key).unwrap();
+
+    let result = CString::new(encrypted.to_string()).unwrap();
 
     result.into_raw()
 }
