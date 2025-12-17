@@ -1,6 +1,6 @@
 CREATE PROCEDURE [dbo].[User_UpdateKeyConnectorUserKey]
     @Id UNIQUEIDENTIFIER,
-    @Key NVARCHAR(MAX),
+    @Key VARCHAR(MAX),
     @Kdf TINYINT,
     @KdfIterations INT,
     @KdfMemory INT,

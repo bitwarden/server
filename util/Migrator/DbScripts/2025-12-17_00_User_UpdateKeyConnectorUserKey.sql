@@ -1,12 +1,6 @@
-IF OBJECT_ID('[dbo].[User_UpdateKeyConnectorUserKey]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[User_UpdateKeyConnectorUserKey]
-END
-GO
-
-CREATE PROCEDURE [dbo].[User_UpdateKeyConnectorUserKey]
+CREATE OR ALTER PROCEDURE [dbo].[User_UpdateKeyConnectorUserKey]
     @Id UNIQUEIDENTIFIER,
-    @Key NVARCHAR(MAX),
+    @Key VARCHAR(MAX),
     @Kdf TINYINT,
     @KdfIterations INT,
     @KdfMemory INT,
