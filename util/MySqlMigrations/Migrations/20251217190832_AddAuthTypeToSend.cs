@@ -2,27 +2,26 @@
 
 #nullable disable
 
-namespace Bit.MySqlMigrations.Migrations
+namespace Bit.MySqlMigrations.Migrations;
+
+/// <inheritdoc />
+public partial class AddAuthTypeToSend : Migration
 {
     /// <inheritdoc />
-    public partial class AddAuthTypeToSend : Migration
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.AddColumn<byte>(
-                name: "AuthType",
-                table: "Send",
-                type: "tinyint unsigned",
-                nullable: true);
-        }
+        migrationBuilder.AddColumn<byte>(
+            name: "AuthType",
+            table: "Send",
+            type: "tinyint unsigned",
+            nullable: true);
+    }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropColumn(
-                name: "AuthType",
-                table: "Send");
-        }
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.DropColumn(
+            name: "AuthType",
+            table: "Send");
     }
 }
