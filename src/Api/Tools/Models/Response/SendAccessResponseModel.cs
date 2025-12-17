@@ -3,7 +3,6 @@
 
 using System.Text.Json;
 using Bit.Core.Models.Api;
-using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Data;
@@ -20,17 +19,13 @@ public class SendAccessResponseModel : ResponseModel
     /// Instantiates a send access response model
     /// </summary>
     /// <param name="send">Content to transmit to the client.</param>
-    /// <param name="globalSettings">
-    /// Settings that control response generation.
-    /// </param>
     /// <exception cref="ArgumentNullException">
     /// Thrown when <paramref name="send"/> is <see langword="null" />
     /// </exception>
     /// <exception cref="ArgumentException">
     /// Thrown when <paramref name="send" /> has an invalid <see cref="Send.Type"/>.
     /// </exception>
-    // FIXME: remove `globalSettings` variable
-    public SendAccessResponseModel(Send send, GlobalSettings globalSettings)
+    public SendAccessResponseModel(Send send)
         : base("send-access")
     {
         if (send == null)
@@ -40,6 +35,7 @@ public class SendAccessResponseModel : ResponseModel
 
         Id = CoreHelpers.Base64UrlEncode(send.Id.ToByteArray());
         Type = send.Type;
+        AuthType = send.AuthType;
 
         SendData sendData;
         switch (send.Type)
@@ -71,6 +67,11 @@ public class SendAccessResponseModel : ResponseModel
     /// Indicates whether the send contains text or file data.
     /// </summary>
     public SendType Type { get; set; }
+
+    /// <summary>
+    /// Specifies the authentication method required to access this Send.
+    /// </summary>
+    public AuthType? AuthType { get; set; }
 
     /// <summary>
     /// Label for the send. This is only visible to the owner of the send.

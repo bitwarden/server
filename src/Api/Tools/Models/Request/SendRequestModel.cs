@@ -25,6 +25,11 @@ public class SendRequestModel
     public SendType Type { get; set; }
 
     /// <summary>
+    /// Specifies the authentication method required to access this Send.
+    /// </summary>
+    public AuthType? AuthType { get; set; }
+
+    /// <summary>
     /// Estimated length of the file accompanying the send. <see langword="null"/> when
     /// <see cref="Type"/> is <see cref="SendType.Text"/>.
     /// </summary>
@@ -125,7 +130,7 @@ public class SendRequestModel
             Type = Type,
             UserId = (Guid?)userId
         };
-        ToSend(send, sendAuthorizationService);
+        send = UpdateSend(send, sendAuthorizationService);
         return send;
     }
 
@@ -155,8 +160,7 @@ public class SendRequestModel
     /// <param name="existingSend">The send to update</param>
     /// <param name="sendAuthorizationService">Hashes the send password.</param>
     /// <returns>The send object</returns>
-    // FIXME: rename to `UpdateSend`
-    public Send ToSend(Send existingSend, ISendAuthorizationService sendAuthorizationService)
+    public Send UpdateSend(Send existingSend, ISendAuthorizationService sendAuthorizationService)
     {
         existingSend = ToSendBase(existingSend, sendAuthorizationService);
         switch (existingSend.Type)
@@ -249,11 +253,29 @@ public class SendRequestModel
             var emails = Emails.Split(',', RemoveEmptyEntries | TrimEntries);
             existingSend.Emails = string.Join(", ", emails);
             existingSend.Password = null;
+            existingSend.AuthType = Core.Tools.Enums.AuthType.Email;
         }
         else if (!string.IsNullOrWhiteSpace(Password))
         {
             existingSend.Password = authorizationService.HashPassword(Password);
             existingSend.Emails = null;
+            existingSend.AuthType = Core.Tools.Enums.AuthType.Password;
+        }
+        else
+        {
+            // Neither Password nor Emails provided - preserve existing values and infer AuthType
+            if (!string.IsNullOrWhiteSpace(existingSend.Password))
+            {
+                existingSend.AuthType = Core.Tools.Enums.AuthType.Password;
+            }
+            else if (!string.IsNullOrWhiteSpace(existingSend.Emails))
+            {
+                existingSend.AuthType = Core.Tools.Enums.AuthType.Email;
+            }
+            else
+            {
+                existingSend.AuthType = Core.Tools.Enums.AuthType.None;
+            }
         }
 
         existingSend.Disabled = Disabled.GetValueOrDefault();

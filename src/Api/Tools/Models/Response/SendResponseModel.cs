@@ -37,6 +37,9 @@ public class SendResponseModel : ResponseModel
         Id = send.Id;
         AccessId = CoreHelpers.Base64UrlEncode(send.Id.ToByteArray());
         Type = send.Type;
+        AuthType = send.AuthType ?? (!string.IsNullOrWhiteSpace(send.Password)
+            ? AuthType = Core.Tools.Enums.AuthType.Password
+            : (!string.IsNullOrWhiteSpace(send.Emails)? Core.Tools.Enums.AuthType.Email : Core.Tools.Enums.AuthType.None));
         Key = send.Key;
         MaxAccessCount = send.MaxAccessCount;
         AccessCount = send.AccessCount;
@@ -83,6 +86,11 @@ public class SendResponseModel : ResponseModel
     /// Indicates whether the send contains text or file data.
     /// </summary>
     public SendType Type { get; set; }
+
+    /// <summary>
+    /// Specifies the authentication method required to access this Send.
+    /// </summary>
+    public AuthType? AuthType { get; set; }
 
     /// <summary>
     /// Label for the send.

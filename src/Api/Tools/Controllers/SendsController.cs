@@ -92,7 +92,7 @@ public class SendsController : Controller
             throw new NotFoundException();
         }
 
-        var sendResponse = new SendAccessResponseModel(send, _globalSettings);
+        var sendResponse = new SendAccessResponseModel(send);
         if (send.UserId.HasValue && !send.HideEmail.GetValueOrDefault())
         {
             var creator = await _userService.GetUserByIdAsync(send.UserId.Value);
@@ -295,7 +295,7 @@ public class SendsController : Controller
             throw new NotFoundException();
         }
 
-        await _nonAnonymousSendCommand.SaveSendAsync(model.ToSend(send, _sendAuthorizationService));
+        await _nonAnonymousSendCommand.SaveSendAsync(model.UpdateSend(send, _sendAuthorizationService));
         return new SendResponseModel(send);
     }
 
@@ -309,7 +309,10 @@ public class SendsController : Controller
             throw new NotFoundException();
         }
 
+        // This endpoint exists because PUT preserves existing Password/Emails when not provided.
+        // This allows clients to update other fields without re-submitting sensitive auth data.
         send.Password = null;
+        send.AuthType = AuthType.None;
         await _nonAnonymousSendCommand.SaveSendAsync(send);
         return new SendResponseModel(send);
     }
