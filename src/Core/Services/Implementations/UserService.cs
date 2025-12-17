@@ -25,6 +25,7 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
@@ -324,6 +325,24 @@ public class UserService : UserManager<User>, IUserService
     public async Task<IdentityResult> CreateUserAsync(User user, string masterPasswordHash)
     {
         return await CreateAsync(user, masterPasswordHash);
+    }
+
+    public async Task<IdentityResult> CreateV2UserAsync(User user, RegisterFinishData registerFinishData)
+    {
+        // TODO remove logic below after a compatibility period - once V2 accounts are fully supported
+        // https://bitwarden.atlassian.net/browse/PM-TBD
+        if (!registerFinishData.IsV2Encryption())
+        {
+            return await CreateUserAsync(user, registerFinishData.MasterPasswordAuthenticationData.MasterPasswordAuthenticationHash);
+        }
+
+        var result = await CreateAsync(user, registerFinishData.MasterPasswordAuthenticationData.MasterPasswordAuthenticationHash);
+        if (result.Succeeded)
+        {
+            var setRegisterFinishUserDataTask = _userRepository.SetRegisterFinishUserData(user.Id, registerFinishData);
+            await _userRepository.SetV2AccountCryptographicStateAsync(user.Id, registerFinishData.UserAccountKeysData, [setRegisterFinishUserDataTask]);
+        }
+        return result;
     }
 
     public async Task SendMasterPasswordHintAsync(string email)

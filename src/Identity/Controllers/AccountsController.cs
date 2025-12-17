@@ -141,28 +141,37 @@ public class AccountsController : Controller
     [HttpPost("register/finish")]
     public async Task<RegisterFinishResponseModel> PostRegisterFinish([FromBody] RegisterFinishRequestModel model)
     {
-        User user = model.ToUser();
+        User user;
+        
+        var registerFinishData = model.ToData();
+
+        // TODO simplify logic below after a compatibility period - once V2 accounts are supported
+        // https://bitwarden.atlassian.net/browse/PM-TBD
+        if (registerFinishData.IsV2Encryption())
+        {
+            user = model.ToV2User();
+        }
+        else
+        {
+            user = model.ToUser();
+        }
 
         // Users will either have an emailed token or an email verification token - not both.
         IdentityResult? identityResult = null;
-
-        // PM-28143 - Just use the MasterPasswordAuthenticationData.MasterPasswordAuthenticationHash
-        string masterPasswordHash = model.MasterPasswordAuthentication?.MasterPasswordAuthenticationHash
-                                 ?? model.MasterPasswordHash ?? throw new BadRequestException("MasterPasswordHash couldn't be found on either the MasterPasswordAuthenticationData or the MasterPasswordHash property passed in.");
 
         switch (model.GetTokenType())
         {
             case RegisterFinishTokenType.EmailVerification:
                 identityResult = await _registerUserCommand.RegisterUserViaEmailVerificationToken(
                     user,
-                    masterPasswordHash,
+                    registerFinishData,
                     model.EmailVerificationToken!);
                 return ProcessRegistrationResult(identityResult, user);
 
             case RegisterFinishTokenType.OrganizationInvite:
                 identityResult = await _registerUserCommand.RegisterUserViaOrganizationInviteToken(
                     user,
-                    masterPasswordHash,
+                    registerFinishData,
                     model.OrgInviteToken!,
                     model.OrganizationUserId);
                 return ProcessRegistrationResult(identityResult, user);
@@ -170,14 +179,14 @@ public class AccountsController : Controller
             case RegisterFinishTokenType.OrgSponsoredFreeFamilyPlan:
                 identityResult = await _registerUserCommand.RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(
                     user,
-                    masterPasswordHash,
+                    registerFinishData,
                     model.OrgSponsoredFreeFamilyPlanToken!);
                 return ProcessRegistrationResult(identityResult, user);
 
             case RegisterFinishTokenType.EmergencyAccessInvite:
                 identityResult = await _registerUserCommand.RegisterUserViaAcceptEmergencyAccessInviteToken(
                     user,
-                    masterPasswordHash,
+                    registerFinishData,
                     model.AcceptEmergencyAccessInviteToken!,
                     (Guid)model.AcceptEmergencyAccessId!);
                 return ProcessRegistrationResult(identityResult, user);
@@ -185,7 +194,7 @@ public class AccountsController : Controller
             case RegisterFinishTokenType.ProviderInvite:
                 identityResult = await _registerUserCommand.RegisterUserViaProviderInviteToken(
                     user,
-                    masterPasswordHash,
+                    registerFinishData,
                     model.ProviderInviteToken!,
                     (Guid)model.ProviderUserId!);
                 return ProcessRegistrationResult(identityResult, user);
