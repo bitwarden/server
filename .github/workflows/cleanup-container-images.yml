@@ -38,19 +38,9 @@ jobs:
     steps:
       - name: Generate image tag to delete
         id: tag
-        env:
-          EVENT_REF: ${{ github.event.ref }}
-        run: |
-          # Sanitize deleted branch name to match build workflow tag generation
-          BRANCH_NAME="${EVENT_REF}"
-          IMAGE_TAG=$(echo "$BRANCH_NAME" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9._-]+/-/g; s/-+/-/g; s/^-+|-+$//g' | cut -c1-128 | sed -E 's/[.-]$//')
-
-          if [[ -z "$IMAGE_TAG" ]]; then
-            echo "ERROR: Failed to generate valid IMAGE_TAG from EVENT_REF: $EVENT_REF"
-            exit 1
-          fi
-
-          echo "tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+        uses: bitwarden/gh-actions/container-tag@main
+        with:
+          ref: refs/heads/${{ github.event.ref }}
 
       - name: Delete container image version
         env:

@@ -158,21 +158,9 @@ jobs:
       ########## Generate image tag and build Docker image ##########
       - name: Generate Docker image tag
         id: tag
-        run: |
-          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" || "${GITHUB_EVENT_NAME}" == "pull_request_target" ]]; then
-            IMAGE_TAG=$(echo "${GITHUB_HEAD_REF}" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9._-]+/-/g; s/-+/-/g; s/^-+|-+$//g' | cut -c1-128 | sed -E 's/[.-]$//')
-          else
-            # Extract branch/tag name from ref and sanitize it
-            BRANCH_NAME=$(echo "${GITHUB_REF}" | sed 's|^refs/heads/||; s|^refs/tags/||')
-            IMAGE_TAG=$(echo "${BRANCH_NAME}" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9._-]+/-/g; s/-+/-/g; s/^-+|-+$//g' | cut -c1-128 | sed -E 's/[.-]$//')
-          fi
-
-          if [[ "$IMAGE_TAG" == "main" ]]; then
-            IMAGE_TAG=dev
-          fi
-
-          echo "image_tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
-          echo "### :mega: Docker Image Tag: $IMAGE_TAG" >> "$GITHUB_STEP_SUMMARY"
+        uses: bitwarden/gh-actions/container-tag@main
+        with:
+          ref: ${{ github.head_ref || github.ref }}
 
       - name: Set up project name
         id: setup
@@ -185,7 +173,7 @@ jobs:
       - name: Generate image tags(s)
         id: image-tags
         env:
-          IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
+          IMAGE_TAG: ${{ steps.tag.outputs.tag }}
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
           SHA: ${{ github.sha }}
         run: |
@@ -196,6 +184,7 @@ jobs:
             TAGS=$TAGS",${_REGISTRY}/${PROJECT_NAME}:dev-${SHORT_SHA}"
           fi
           echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
+          echo "### :mega: Docker Image Tags: $TAGS" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
