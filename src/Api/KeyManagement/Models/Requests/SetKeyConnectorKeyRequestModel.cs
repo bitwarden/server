@@ -2,9 +2,12 @@
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Models.Api.Request;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Utilities;
 
-namespace Bit.Core.KeyManagement.Models.Api.Request;
+namespace Bit.Api.KeyManagement.Models.Requests;
 
 public class SetKeyConnectorKeyRequestModel : IValidatableObject
 {
@@ -89,5 +92,21 @@ public class SetKeyConnectorKeyRequestModel : IValidatableObject
         existingUser.Key = Key;
         Keys!.ToUser(existingUser);
         return existingUser;
+    }
+
+    public KeyConnectorKeysData ToKeyConnectorKeysData()
+    {
+        // TODO remove validation with https://bitwarden.atlassian.net/browse/PM-27328
+        if (string.IsNullOrEmpty(KeyConnectorKeyWrappedUserKey) || AccountKeys == null)
+        {
+            throw new BadRequestException("KeyConnectorKeyWrappedUserKey and AccountKeys must be supplied.");
+        }
+
+        return new KeyConnectorKeysData
+        {
+            KeyConnectorKeyWrappedUserKey = KeyConnectorKeyWrappedUserKey,
+            AccountKeys = AccountKeys,
+            OrgIdentifier = OrgIdentifier
+        };
     }
 }

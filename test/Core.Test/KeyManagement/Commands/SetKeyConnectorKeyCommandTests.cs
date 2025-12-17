@@ -2,7 +2,6 @@
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Commands;
-using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
@@ -22,25 +21,25 @@ public class SetKeyConnectorKeyCommandTests
     [Theory, BitAutoData]
     public async Task SetKeyConnectorKeyForUserAsync_Success_SetsAccountKeys(
         User user,
-        SetKeyConnectorKeyRequestModel requestModel,
+        KeyConnectorKeysData data,
         SutProvider<SetKeyConnectorKeyCommand> sutProvider)
     {
         // Set up valid V2 encryption data
-        if (requestModel.AccountKeys!.SignatureKeyPair != null)
+        if (data.AccountKeys!.SignatureKeyPair != null)
         {
-            requestModel.AccountKeys.SignatureKeyPair.SignatureAlgorithm = "ed25519";
+            data.AccountKeys.SignatureKeyPair.SignatureAlgorithm = "ed25519";
         }
 
-        var expectedAccountKeysData = requestModel.AccountKeys.ToAccountKeysData();
+        var expectedAccountKeysData = data.AccountKeys.ToAccountKeysData();
 
         // Arrange
         var userRepository = sutProvider.GetDependency<IUserRepository>();
         var mockUpdateUserData = Substitute.For<UpdateUserData>();
-        userRepository.SetKeyConnectorUserKey(user.Id, requestModel.KeyConnectorKeyWrappedUserKey!)
+        userRepository.SetKeyConnectorUserKey(user.Id, data.KeyConnectorKeyWrappedUserKey!)
             .Returns(mockUpdateUserData);
 
         // Act
-        await sutProvider.Sut.SetKeyConnectorKeyForUserAsync(user, requestModel);
+        await sutProvider.Sut.SetKeyConnectorKeyForUserAsync(user, data);
 
         // Assert
         sutProvider.GetDependency<ICanUseKeyConnectorQuery>()
@@ -49,7 +48,7 @@ public class SetKeyConnectorKeyCommandTests
 
         userRepository
             .Received(1)
-            .SetKeyConnectorUserKey(user.Id, requestModel.KeyConnectorKeyWrappedUserKey);
+            .SetKeyConnectorUserKey(user.Id, data.KeyConnectorKeyWrappedUserKey);
 
         await userRepository
             .Received(1)
@@ -73,109 +72,13 @@ public class SetKeyConnectorKeyCommandTests
 
         await sutProvider.GetDependency<IAcceptOrgUserCommand>()
             .Received(1)
-            .AcceptOrgUserByOrgSsoIdAsync(requestModel.OrgIdentifier, user, sutProvider.GetDependency<IUserService>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task SetKeyConnectorKeyForUserAsync_NullKeyConnectorKeyWrappedUserKey_ThrowsBadRequestException(
-        User user,
-        SetKeyConnectorKeyRequestModel requestModel,
-        SutProvider<SetKeyConnectorKeyCommand> sutProvider)
-    {
-        // Arrange
-        requestModel.KeyConnectorKeyWrappedUserKey = null;
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SetKeyConnectorKeyForUserAsync(user, requestModel));
-
-        Assert.Equal("KeyConnectorKeyWrappedUserKey and AccountKeys must be provided", exception.Message);
-
-        sutProvider.GetDependency<IUserRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .SetKeyConnectorUserKey(Arg.Any<Guid>(), Arg.Any<string>());
-
-        await sutProvider.GetDependency<IUserRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .SetV2AccountCryptographicStateAsync(Arg.Any<Guid>(), Arg.Any<UserAccountKeysData>(), Arg.Any<IEnumerable<UpdateUserData>>());
-
-        await sutProvider.GetDependency<IEventService>()
-            .DidNotReceiveWithAnyArgs()
-            .LogUserEventAsync(Arg.Any<Guid>(), Arg.Any<EventType>());
-
-        await sutProvider.GetDependency<IAcceptOrgUserCommand>()
-            .DidNotReceiveWithAnyArgs()
-            .AcceptOrgUserByOrgSsoIdAsync(Arg.Any<string>(), Arg.Any<User>(), Arg.Any<IUserService>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task SetKeyConnectorKeyForUserAsync_EmptyKeyConnectorKeyWrappedUserKey_ThrowsBadRequestException(
-        User user,
-        SetKeyConnectorKeyRequestModel requestModel,
-        SutProvider<SetKeyConnectorKeyCommand> sutProvider)
-    {
-        // Arrange
-        requestModel.KeyConnectorKeyWrappedUserKey = string.Empty;
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SetKeyConnectorKeyForUserAsync(user, requestModel));
-
-        Assert.Equal("KeyConnectorKeyWrappedUserKey and AccountKeys must be provided", exception.Message);
-
-        sutProvider.GetDependency<IUserRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .SetKeyConnectorUserKey(Arg.Any<Guid>(), Arg.Any<string>());
-
-        await sutProvider.GetDependency<IUserRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .SetV2AccountCryptographicStateAsync(Arg.Any<Guid>(), Arg.Any<UserAccountKeysData>(), Arg.Any<IEnumerable<UpdateUserData>>());
-
-        await sutProvider.GetDependency<IEventService>()
-            .DidNotReceiveWithAnyArgs()
-            .LogUserEventAsync(Arg.Any<Guid>(), Arg.Any<EventType>());
-
-        await sutProvider.GetDependency<IAcceptOrgUserCommand>()
-            .DidNotReceiveWithAnyArgs()
-            .AcceptOrgUserByOrgSsoIdAsync(Arg.Any<string>(), Arg.Any<User>(), Arg.Any<IUserService>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task SetKeyConnectorKeyForUserAsync_NullAccountKeys_ThrowsBadRequestException(
-        User user,
-        SetKeyConnectorKeyRequestModel requestModel,
-        SutProvider<SetKeyConnectorKeyCommand> sutProvider)
-    {
-        // Arrange
-        requestModel.AccountKeys = null;
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SetKeyConnectorKeyForUserAsync(user, requestModel));
-
-        Assert.Equal("KeyConnectorKeyWrappedUserKey and AccountKeys must be provided", exception.Message);
-
-        sutProvider.GetDependency<IUserRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .SetKeyConnectorUserKey(Arg.Any<Guid>(), Arg.Any<string>());
-
-        await sutProvider.GetDependency<IUserRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .SetV2AccountCryptographicStateAsync(Arg.Any<Guid>(), Arg.Any<UserAccountKeysData>(), Arg.Any<IEnumerable<UpdateUserData>>());
-
-        await sutProvider.GetDependency<IEventService>()
-            .DidNotReceiveWithAnyArgs()
-            .LogUserEventAsync(Arg.Any<Guid>(), Arg.Any<EventType>());
-
-        await sutProvider.GetDependency<IAcceptOrgUserCommand>()
-            .DidNotReceiveWithAnyArgs()
-            .AcceptOrgUserByOrgSsoIdAsync(Arg.Any<string>(), Arg.Any<User>(), Arg.Any<IUserService>());
+            .AcceptOrgUserByOrgSsoIdAsync(data.OrgIdentifier, user, sutProvider.GetDependency<IUserService>());
     }
 
     [Theory, BitAutoData]
     public async Task SetKeyConnectorKeyForUserAsync_UserCannotUseKeyConnector_ThrowsException(
         User user,
-        SetKeyConnectorKeyRequestModel requestModel,
+        KeyConnectorKeysData data,
         SutProvider<SetKeyConnectorKeyCommand> sutProvider)
     {
         // Arrange
@@ -186,7 +89,7 @@ public class SetKeyConnectorKeyCommandTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SetKeyConnectorKeyForUserAsync(user, requestModel));
+            () => sutProvider.Sut.SetKeyConnectorKeyForUserAsync(user, data));
 
         Assert.Equal(expectedException.Message, exception.Message);
 

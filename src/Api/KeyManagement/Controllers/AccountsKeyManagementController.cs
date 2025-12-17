@@ -13,7 +13,6 @@ using Bit.Core.Auth.Models.Data;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Commands.Interfaces;
-using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.KeyManagement.UserKey;
@@ -154,7 +153,7 @@ public class AccountsKeyManagementController : Controller
         if (model.IsV2Request())
         {
             // V2 account registration
-            await _setKeyConnectorKeyCommand.SetKeyConnectorKeyForUserAsync(user, model);
+            await _setKeyConnectorKeyCommand.SetKeyConnectorKeyForUserAsync(user, model.ToKeyConnectorKeysData());
         }
         else
         {

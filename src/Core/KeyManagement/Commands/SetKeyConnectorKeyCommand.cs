@@ -1,8 +1,7 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Commands.Interfaces;
-using Bit.Core.KeyManagement.Models.Api.Request;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
@@ -32,24 +31,19 @@ public class SetKeyConnectorKeyCommand : ISetKeyConnectorKeyCommand
         _userRepository = userRepository;
     }
 
-    public async Task SetKeyConnectorKeyForUserAsync(User user, SetKeyConnectorKeyRequestModel requestModel)
+    public async Task SetKeyConnectorKeyForUserAsync(User user, KeyConnectorKeysData keyConnectorKeysData)
     {
-        // TODO remove validation with https://bitwarden.atlassian.net/browse/PM-27328
-        if (string.IsNullOrEmpty(requestModel.KeyConnectorKeyWrappedUserKey) || requestModel.AccountKeys == null)
-        {
-            throw new BadRequestException("KeyConnectorKeyWrappedUserKey and AccountKeys must be provided");
-        }
-
         _canUseKeyConnectorQuery.VerifyCanUseKeyConnector(user);
 
         var setKeyConnectorUserKeyTask =
-            _userRepository.SetKeyConnectorUserKey(user.Id, requestModel.KeyConnectorKeyWrappedUserKey);
+            _userRepository.SetKeyConnectorUserKey(user.Id, keyConnectorKeysData.KeyConnectorKeyWrappedUserKey);
 
-        await _userRepository.SetV2AccountCryptographicStateAsync(user.Id, requestModel.AccountKeys.ToAccountKeysData(),
-            [setKeyConnectorUserKeyTask]);
+        await _userRepository.SetV2AccountCryptographicStateAsync(user.Id,
+            keyConnectorKeysData.AccountKeys.ToAccountKeysData(), [setKeyConnectorUserKeyTask]);
 
         await _eventService.LogUserEventAsync(user.Id, EventType.User_MigratedKeyToKeyConnector);
 
-        await _acceptOrgUserCommand.AcceptOrgUserByOrgSsoIdAsync(requestModel.OrgIdentifier, user, _userService);
+        await _acceptOrgUserCommand.AcceptOrgUserByOrgSsoIdAsync(keyConnectorKeysData.OrgIdentifier, user,
+            _userService);
     }
 }

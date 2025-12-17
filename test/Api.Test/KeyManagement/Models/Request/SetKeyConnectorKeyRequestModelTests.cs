@@ -1,10 +1,13 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Api.KeyManagement.Models.Requests;
+using Bit.Core;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Models.Api.Request;
 using Xunit;
 
-namespace Bit.Core.Test.KeyManagement.Models.Api.Request;
+namespace Bit.Api.Test.KeyManagement.Models.Request;
 
 public class SetKeyConnectorKeyRequestModelTests
 {
@@ -232,6 +235,93 @@ public class SetKeyConnectorKeyRequestModelTests
         // Assert
         Assert.Single(results);
         Assert.Contains(results, r => r.ErrorMessage == "KdfParallelism must be supplied when Kdf is Argon2id.");
+    }
+
+    [Fact]
+    public void ToKeyConnectorKeysData_EmptyKeyConnectorKeyWrappedUserKey_ThrowsException()
+    {
+        // Arrange
+        var model = new SetKeyConnectorKeyRequestModel
+        {
+            KeyConnectorKeyWrappedUserKey = "",
+            AccountKeys = new AccountKeysRequestModel
+            {
+                AccountPublicKey = _publicKey,
+                UserKeyEncryptedAccountPrivateKey = _privateKey
+            },
+            OrgIdentifier = _orgIdentifier
+        };
+
+        // Act
+        var exception = Assert.Throws<BadRequestException>(() => model.ToKeyConnectorKeysData());
+
+        // Assert
+        Assert.Equal("KeyConnectorKeyWrappedUserKey and AccountKeys must be supplied.", exception.Message);
+    }
+
+    [Fact]
+    public void ToKeyConnectorKeysData_NullKeyConnectorKeyWrappedUserKey_ThrowsException()
+    {
+        // Arrange
+        var model = new SetKeyConnectorKeyRequestModel
+        {
+            KeyConnectorKeyWrappedUserKey = null,
+            AccountKeys = new AccountKeysRequestModel
+            {
+                AccountPublicKey = _publicKey,
+                UserKeyEncryptedAccountPrivateKey = _privateKey
+            },
+            OrgIdentifier = _orgIdentifier
+        };
+
+        // Act
+        var exception = Assert.Throws<BadRequestException>(() => model.ToKeyConnectorKeysData());
+
+        // Assert
+        Assert.Equal("KeyConnectorKeyWrappedUserKey and AccountKeys must be supplied.", exception.Message);
+    }
+
+    [Fact]
+    public void ToKeyConnectorKeysData_NullAccountKeys_ThrowsException()
+    {
+        // Arrange
+        var model = new SetKeyConnectorKeyRequestModel
+        {
+            KeyConnectorKeyWrappedUserKey = _wrappedUserKey,
+            AccountKeys = null,
+            OrgIdentifier = _orgIdentifier
+        };
+
+        // Act
+        var exception = Assert.Throws<BadRequestException>(() => model.ToKeyConnectorKeysData());
+
+        // Assert
+        Assert.Equal("KeyConnectorKeyWrappedUserKey and AccountKeys must be supplied.", exception.Message);
+    }
+
+    [Fact]
+    public void ToKeyConnectorKeysData_Valid_Success()
+    {
+        // Arrange
+        var model = new SetKeyConnectorKeyRequestModel
+        {
+            KeyConnectorKeyWrappedUserKey = _wrappedUserKey,
+            AccountKeys = new AccountKeysRequestModel
+            {
+                AccountPublicKey = _publicKey,
+                UserKeyEncryptedAccountPrivateKey = _privateKey
+            },
+            OrgIdentifier = _orgIdentifier
+        };
+
+        // Act
+        var data = model.ToKeyConnectorKeysData();
+
+        // Assert
+        Assert.Equal(_wrappedUserKey, data.KeyConnectorKeyWrappedUserKey);
+        Assert.Equal(_publicKey, data.AccountKeys.AccountPublicKey);
+        Assert.Equal(_privateKey, data.AccountKeys.UserKeyEncryptedAccountPrivateKey);
+        Assert.Equal(_orgIdentifier, data.OrgIdentifier);
     }
 
     private static List<ValidationResult> Validate(SetKeyConnectorKeyRequestModel model)

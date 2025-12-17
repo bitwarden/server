@@ -1,5 +1,5 @@
 ﻿using Bit.Core.Entities;
-using Bit.Core.KeyManagement.Models.Api.Request;
+using Bit.Core.KeyManagement.Models.Data;
 
 namespace Bit.Core.KeyManagement.Commands.Interfaces;
 
@@ -9,5 +9,5 @@ namespace Bit.Core.KeyManagement.Commands.Interfaces;
 /// </summary>
 public interface ISetKeyConnectorKeyCommand
 {
-    Task SetKeyConnectorKeyForUserAsync(User user, SetKeyConnectorKeyRequestModel requestModel);
+    Task SetKeyConnectorKeyForUserAsync(User user, KeyConnectorKeysData keyConnectorKeysData);
 }
