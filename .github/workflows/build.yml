@@ -16,7 +16,6 @@ permissions:
   contents: read
 
 env:
-  _GITHUB_PR_REPO_NAME: ${{ github.event.pull_request.head.repo.full_name }}
   _REGISTRY: "ghcr.io/bitwarden"
 
 jobs:
@@ -174,12 +173,6 @@ jobs:
             # Extract branch/tag name from ref and sanitize it
             BRANCH_NAME=$(echo "${GITHUB_REF}" | sed 's|^refs/heads/||; s|^refs/tags/||')
             IMAGE_TAG=$(echo "${BRANCH_NAME}" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9._-]+/-/g; s/-+/-/g; s/^-+|-+$//g' | cut -c1-128 | sed -E 's/[.-]$//')
-          fi
-
-          if [[ "${{ github.event.pull_request.head.repo.fork }}" == "true" ]]; then
-            SANITIZED_REPO_NAME=$(echo "$_GITHUB_PR_REPO_NAME" | sed "s/[^a-zA-Z0-9]/-/g") # Sanitize repo name to alphanumeric only
-            IMAGE_TAG=$SANITIZED_REPO_NAME-$IMAGE_TAG # Add repo name to the tag
-            IMAGE_TAG=${IMAGE_TAG:0:128}  # Limit to 128 characters, as that's the max length for Docker image tags
           fi
 
           if [[ "$IMAGE_TAG" == "main" ]]; then
