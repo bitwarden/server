@@ -8,7 +8,6 @@ using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
-using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -382,7 +381,7 @@ public class GetOrganizationWarningsQueryTests
 
         var dueDate = now.AddDays(-10);
 
-        sutProvider.GetDependency<IStripeAdapter>().InvoiceSearchAsync(Arg.Is<InvoiceSearchOptions>(options =>
+        sutProvider.GetDependency<IStripeAdapter>().SearchInvoiceAsync(Arg.Is<InvoiceSearchOptions>(options =>
             options.Query == $"subscription:'{subscriptionId}' status:'open'")).Returns([
             new Invoice { DueDate = dueDate, Created = dueDate.AddDays(-30) }
         ]);
@@ -542,7 +541,7 @@ public class GetOrganizationWarningsQueryTests
             .Returns(true);
 
         sutProvider.GetDependency<IStripeAdapter>()
-            .TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
+            .ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
             .Returns(new StripeList<Registration>
             {
                 Data = new List<Registration>
@@ -583,7 +582,7 @@ public class GetOrganizationWarningsQueryTests
             .Returns(true);
 
         sutProvider.GetDependency<IStripeAdapter>()
-            .TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
+            .ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
             .Returns(new StripeList<Registration>
             {
                 Data = new List<Registration>
@@ -635,7 +634,7 @@ public class GetOrganizationWarningsQueryTests
             .Returns(true);
 
         sutProvider.GetDependency<IStripeAdapter>()
-            .TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
+            .ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
             .Returns(new StripeList<Registration>
             {
                 Data = new List<Registration>
@@ -687,7 +686,7 @@ public class GetOrganizationWarningsQueryTests
             .Returns(true);
 
         sutProvider.GetDependency<IStripeAdapter>()
-            .TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
+            .ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
             .Returns(new StripeList<Registration>
             {
                 Data = new List<Registration>
@@ -739,7 +738,7 @@ public class GetOrganizationWarningsQueryTests
             .Returns(true);
 
         sutProvider.GetDependency<IStripeAdapter>()
-            .TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
+            .ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
             .Returns(new StripeList<Registration>
             {
                 Data = new List<Registration>
@@ -785,7 +784,7 @@ public class GetOrganizationWarningsQueryTests
             .Returns(true);
 
         sutProvider.GetDependency<IStripeAdapter>()
-            .TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
+            .ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
             .Returns(new StripeList<Registration>
             {
                 Data = new List<Registration>

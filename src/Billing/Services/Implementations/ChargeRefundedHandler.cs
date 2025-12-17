@@ -38,7 +38,7 @@ public class ChargeRefundedHandler : IChargeRefundedHandler
         {
             // Attempt to create a transaction for the charge if it doesn't exist
             var (organizationId, userId, providerId) = await _stripeEventUtilityService.GetEntityIdsFromChargeAsync(charge);
-            var tx = _stripeEventUtilityService.FromChargeToTransaction(charge, organizationId, userId, providerId);
+            var tx = await _stripeEventUtilityService.FromChargeToTransactionAsync(charge, organizationId, userId, providerId);
             try
             {
                 parentTransaction = await _transactionRepository.CreateAsync(tx);

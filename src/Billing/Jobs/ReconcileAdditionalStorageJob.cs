@@ -39,15 +39,11 @@ public class ReconcileAdditionalStorageJob(
         logger.LogInformation("Starting ReconcileAdditionalStorageJob (live mode: {LiveMode})", liveMode);
 
         var priceIds = new[] { _storageGbMonthlyPriceId, _storageGbAnnuallyPriceId, _personalStorageGbAnnuallyPriceId };
+        var stripeStatusesToProcess = new[] { StripeConstants.SubscriptionStatus.Active, StripeConstants.SubscriptionStatus.Trialing, StripeConstants.SubscriptionStatus.PastDue };
 
         foreach (var priceId in priceIds)
         {
-            var options = new SubscriptionListOptions
-            {
-                Limit = 100,
-                Status = StripeConstants.SubscriptionStatus.Active,
-                Price = priceId
-            };
+            var options = new SubscriptionListOptions { Limit = 100, Price = priceId };
 
             await foreach (var subscription in stripeFacade.ListSubscriptionsAutoPagingAsync(options))
             {
@@ -64,12 +60,18 @@ public class ReconcileAdditionalStorageJob(
                         failures.Count > 0
                             ? $", Failures: {Environment.NewLine}{string.Join(Environment.NewLine, failures)}"
                             : string.Empty
-                        );
+                    );
                     return;
                 }
 
                 if (subscription == null)
                 {
+                    continue;
+                }
+
+                if (!stripeStatusesToProcess.Contains(subscription.Status))
+                {
+                    logger.LogInformation("Skipping subscription with unsupported status: {SubscriptionId} - {Status}", subscription.Id, subscription.Status);
                     continue;
                 }
 
@@ -133,7 +135,7 @@ public class ReconcileAdditionalStorageJob(
             failures.Count > 0
                 ? $", Failures: {Environment.NewLine}{string.Join(Environment.NewLine, failures)}"
                 : string.Empty
-            );
+        );
     }
 
     private SubscriptionUpdateOptions? BuildSubscriptionUpdateOptions(
@@ -145,15 +147,7 @@ public class ReconcileAdditionalStorageJob(
             return null;
         }
 
-        var updateOptions = new SubscriptionUpdateOptions
-        {
-            ProrationBehavior = StripeConstants.ProrationBehavior.CreateProrations,
-            Metadata = new Dictionary<string, string>
-            {
-                [StripeConstants.MetadataKeys.StorageReconciled2025] = DateTime.UtcNow.ToString("o")
-            },
-            Items = []
-        };
+        var updateOptions = new SubscriptionUpdateOptions { ProrationBehavior = StripeConstants.ProrationBehavior.CreateProrations, Metadata = new Dictionary<string, string> { [StripeConstants.MetadataKeys.StorageReconciled2025] = DateTime.UtcNow.ToString("o") }, Items = [] };
 
         var hasUpdates = false;
 
@@ -172,11 +166,7 @@ public class ReconcileAdditionalStorageJob(
                     newQuantity,
                     item.Price.Id);
 
-                updateOptions.Items.Add(new SubscriptionItemOptions
-                {
-                    Id = item.Id,
-                    Quantity = newQuantity
-                });
+                updateOptions.Items.Add(new SubscriptionItemOptions { Id = item.Id, Quantity = newQuantity });
             }
             else
             {
@@ -185,11 +175,7 @@ public class ReconcileAdditionalStorageJob(
                     currentQuantity,
                     item.Price.Id);
 
-                updateOptions.Items.Add(new SubscriptionItemOptions
-                {
-                    Id = item.Id,
-                    Deleted = true
-                });
+                updateOptions.Items.Add(new SubscriptionItemOptions { Id = item.Id, Deleted = true });
             }
         }
 

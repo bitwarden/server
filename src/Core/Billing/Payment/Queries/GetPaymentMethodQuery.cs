@@ -4,7 +4,6 @@ using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
-using Bit.Core.Services;
 using Braintree;
 using Microsoft.Extensions.Logging;
 using Stripe;
@@ -53,7 +52,7 @@ public class GetPaymentMethodQuery(
 
         if (!string.IsNullOrEmpty(setupIntentId))
         {
-            var setupIntent = await stripeAdapter.SetupIntentGet(setupIntentId, new SetupIntentGetOptions
+            var setupIntent = await stripeAdapter.GetSetupIntentAsync(setupIntentId, new SetupIntentGetOptions
             {
                 Expand = ["payment_method"]
             });
