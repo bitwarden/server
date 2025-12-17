@@ -170,6 +170,10 @@ jobs:
         run: |
           if [[ "${GITHUB_EVENT_NAME}" == "pull_request" || "${GITHUB_EVENT_NAME}" == "pull_request_target" ]]; then
             IMAGE_TAG=$(echo "${GITHUB_HEAD_REF}" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9._-]+/-/g; s/-+/-/g; s/^-+|-+$//g' | cut -c1-128 | sed -E 's/[.-]$//')
+          else
+            # Extract branch/tag name from ref and sanitize it
+            BRANCH_NAME=$(echo "${GITHUB_REF}" | sed 's|^refs/heads/||; s|^refs/tags/||')
+            IMAGE_TAG=$(echo "${BRANCH_NAME}" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9._-]+/-/g; s/-+/-/g; s/^-+|-+$//g' | cut -c1-128 | sed -E 's/[.-]$//')
           fi
 
           if [[ "${{ github.event.pull_request.head.repo.fork }}" == "true" ]]; then
@@ -260,9 +264,6 @@ jobs:
           sarif_file: ${{ steps.container-scan.outputs.sarif }}
           sha: ${{ contains(github.event_name, 'pull_request') && github.event.pull_request.head.sha || github.sha }}
           ref: ${{ contains(github.event_name, 'pull_request') && format('refs/pull/{0}/head', github.event.pull_request.number) || github.ref }}
-
-      - name: Log out from Azure
-        uses: bitwarden/gh-actions/azure-logout@main
 
   upload:
     name: Upload
