@@ -60,7 +60,7 @@ public class EventsController : Controller
     {
         if (!_currentContext.OrganizationId.HasValue)
         {
-            return new JsonResult(new PagedListResponseModel<EventResponseModel>([], ""));
+            return new JsonResult(new PagedListResponseModel<EventResponseModel>([], null));
         }
 
         var organizationId = _currentContext.OrganizationId.Value;
@@ -99,7 +99,7 @@ public class EventsController : Controller
             }
             else
             {
-                return new JsonResult(new PagedListResponseModel<EventResponseModel>([], ""));
+                return new JsonResult(new PagedListResponseModel<EventResponseModel>([], null));
             }
         }
         else if (request.ProjectId.HasValue)
@@ -113,7 +113,7 @@ public class EventsController : Controller
             }
             else
             {
-                return new JsonResult(new PagedListResponseModel<EventResponseModel>([], ""));
+                return new JsonResult(new PagedListResponseModel<EventResponseModel>([], null));
             }
         }
         else
@@ -124,7 +124,7 @@ public class EventsController : Controller
         }
 
         var eventResponses = result.Data.Select(e => new EventResponseModel(e));
-        var response = new PagedListResponseModel<EventResponseModel>(eventResponses, result.ContinuationToken ?? "");
+        var response = new PagedListResponseModel<EventResponseModel>(eventResponses, result.ContinuationToken ?? null);
 
         _logger.LogAggregateData(_featureService, organizationId, response, request);
 
