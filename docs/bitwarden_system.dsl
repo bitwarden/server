@@ -15,6 +15,7 @@ workspace "Bitwarden Server System" {
     !include "admin_console/models.dsl"
     !include "auth/models.dsl"
     !include "billing/models.dsl"
+    !include "dirt/models.dsl"
     !include "key_management/models.dsl"
     !include "platform/models.dsl"
     !include "tools/models.dsl"
@@ -23,10 +24,10 @@ workspace "Bitwarden Server System" {
     # Include shared level relationships
     !include "shared.relationships.dsl"
 
-
     !include "admin_console/relationships.dsl"
     !include "auth/relationships.dsl"
     !include "billing/relationships.dsl"
+    !include "dirt/relationships.dsl"
     !include "key_management/relationships.dsl"
     !include "platform/relationships.dsl"
     !include "tools/relationships.dsl"
@@ -37,6 +38,7 @@ workspace "Bitwarden Server System" {
     !include "admin_console/views.dsl"
     !include "auth/views.dsl"
     !include "billing/views.dsl"
+    !include "dirt/views.dsl"
     !include "key_management/views.dsl"
     !include "platform/views.dsl"
     !include "tools/views.dsl"
@@ -49,6 +51,9 @@ workspace "Bitwarden Server System" {
     container server "Bitwarden_Server" {
       include *
     }
+
+    filtered Bitwarden_Server exclude "Self-Hosted-Only" "Cloud"
+    filtered Bitwarden_Server exclude "Cloud-Only" "Self-Hosted"
 
     // This is last to override team styles with common styles
     !include "shared.views.dsl"
