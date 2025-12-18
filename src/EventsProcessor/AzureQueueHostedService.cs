@@ -6,6 +6,7 @@ using Azure.Storage.Queues;
 using Bit.Core;
 using Bit.Core.Models.Data;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Core.Utilities;
 
 namespace Bit.EventsProcessor;
@@ -13,7 +14,7 @@ namespace Bit.EventsProcessor;
 public class AzureQueueHostedService : IHostedService, IDisposable
 {
     private readonly ILogger<AzureQueueHostedService> _logger;
-    private readonly IConfiguration _configuration;
+    private readonly GlobalSettings _globalSettings;
 
     private Task _executingTask;
     private CancellationTokenSource _cts;
@@ -22,10 +23,10 @@ public class AzureQueueHostedService : IHostedService, IDisposable
 
     public AzureQueueHostedService(
         ILogger<AzureQueueHostedService> logger,
-        IConfiguration configuration)
+        GlobalSettings globalSettings)
     {
         _logger = logger;
-        _configuration = configuration;
+        _globalSettings = globalSettings;
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
@@ -56,15 +57,18 @@ public class AzureQueueHostedService : IHostedService, IDisposable
 
     private async Task ExecuteAsync(CancellationToken cancellationToken)
     {
-        var storageConnectionString = _configuration["azureStorageConnectionString"];
-        if (string.IsNullOrWhiteSpace(storageConnectionString))
+        var storageConnectionString = _globalSettings.Events.ConnectionString;
+        var queueName = _globalSettings.Events.QueueName;
+        if (string.IsNullOrWhiteSpace(storageConnectionString) ||
+            string.IsNullOrWhiteSpace(queueName))
         {
+            _logger.LogInformation("Azure Queue Hosted Service is disabled. Missing connection string or queue name.");
             return;
         }
 
         var repo = new Core.Repositories.TableStorage.EventRepository(storageConnectionString);
         _eventWriteService = new RepositoryEventWriteService(repo);
-        _queueClient = new QueueClient(storageConnectionString, "event");
+        _queueClient = new QueueClient(storageConnectionString, queueName);
 
         while (!cancellationToken.IsCancellationRequested)
         {
