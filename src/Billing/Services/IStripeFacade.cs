@@ -20,6 +20,12 @@ public interface IStripeFacade
         RequestOptions requestOptions = null,
         CancellationToken cancellationToken = default);
 
+    IAsyncEnumerable<CustomerCashBalanceTransaction> GetCustomerCashBalanceTransactions(
+        string customerId,
+        CustomerCashBalanceTransactionListOptions customerCashBalanceTransactionListOptions = null,
+        RequestOptions requestOptions = null,
+        CancellationToken cancellationToken = default);
+
     Task<Customer> UpdateCustomer(
         string customerId,
         CustomerUpdateOptions customerUpdateOptions = null,

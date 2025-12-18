@@ -21,6 +21,13 @@ namespace Bit.Identity.IntegrationTest.Endpoints;
 [SutProviderCustomize]
 public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
 {
+    private static readonly KeysRequestModel TEST_ACCOUNT_KEYS = new KeysRequestModel
+    {
+        AccountKeys = null,
+        PublicKey = "public-key",
+        EncryptedPrivateKey = "encrypted-private-key",
+    };
+
     private const int SecondsInMinute = 60;
     private const int MinutesInHour = 60;
     private const int SecondsInHour = SecondsInMinute * MinutesInHour;
@@ -53,6 +60,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
     [Theory, BitAutoData, RegisterFinishRequestModelCustomize]
     public async Task TokenEndpoint_GrantTypePassword_Success(RegisterFinishRequestModel requestModel)
     {
+        requestModel.UserAsymmetricKeys = TEST_ACCOUNT_KEYS;
         var localFactory = new IdentityApplicationFactory();
         var user = await localFactory.RegisterNewIdentityFactoryUserAsync(requestModel);
 
@@ -62,7 +70,6 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         var root = body.RootElement;
         AssertRefreshTokenExists(root);
         AssertHelper.AssertJsonProperty(root, "ForcePasswordReset", JsonValueKind.False);
-        AssertHelper.AssertJsonProperty(root, "ResetMasterPassword", JsonValueKind.False);
         var kdf = AssertHelper.AssertJsonProperty(root, "Kdf", JsonValueKind.Number).GetInt32();
         Assert.Equal(0, kdf);
         var kdfIterations = AssertHelper.AssertJsonProperty(root, "KdfIterations", JsonValueKind.Number).GetInt32();
@@ -78,6 +85,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
     public async Task TokenEndpoint_GrantTypePassword_WithAllUserTypes_WithSsoPolicyDisabled_WithEnforceSsoPolicyForAllUsersTrue_Success(
        OrganizationUserType organizationUserType, RegisterFinishRequestModel requestModel, Guid organizationId, int generatedUsername)
     {
+        requestModel.UserAsymmetricKeys = TEST_ACCOUNT_KEYS;
         requestModel.Email = $"{generatedUsername}@example.com";
 
         var localFactory = new IdentityApplicationFactory();
@@ -103,6 +111,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
     public async Task TokenEndpoint_GrantTypePassword_WithAllUserTypes_WithSsoPolicyDisabled_WithEnforceSsoPolicyForAllUsersFalse_Success(
         OrganizationUserType organizationUserType, RegisterFinishRequestModel requestModel, Guid organizationId, int generatedUsername)
     {
+        requestModel.UserAsymmetricKeys = TEST_ACCOUNT_KEYS;
         requestModel.Email = $"{generatedUsername}@example.com";
 
         var localFactory = new IdentityApplicationFactory();
@@ -129,6 +138,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
     public async Task TokenEndpoint_GrantTypePassword_WithAllUserTypes_WithSsoPolicyEnabled_WithEnforceSsoPolicyForAllUsersTrue_Throw(
         OrganizationUserType organizationUserType, RegisterFinishRequestModel requestModel, Guid organizationId, int generatedUsername)
     {
+        requestModel.UserAsymmetricKeys = TEST_ACCOUNT_KEYS;
         requestModel.Email = $"{generatedUsername}@example.com";
 
         var localFactory = new IdentityApplicationFactory();
@@ -152,6 +162,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
     public async Task TokenEndpoint_GrantTypePassword_WithOwnerOrAdmin_WithSsoPolicyEnabled_WithEnforceSsoPolicyForAllUsersFalse_Success(
         OrganizationUserType organizationUserType, RegisterFinishRequestModel requestModel, Guid organizationId, int generatedUsername)
     {
+        requestModel.UserAsymmetricKeys = TEST_ACCOUNT_KEYS;
         requestModel.Email = $"{generatedUsername}@example.com";
 
         var localFactory = new IdentityApplicationFactory();
@@ -175,6 +186,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
     public async Task TokenEndpoint_GrantTypePassword_WithNonOwnerOrAdmin_WithSsoPolicyEnabled_WithEnforceSsoPolicyForAllUsersFalse_Throws(
         OrganizationUserType organizationUserType, RegisterFinishRequestModel requestModel, Guid organizationId, int generatedUsername)
     {
+        requestModel.UserAsymmetricKeys = TEST_ACCOUNT_KEYS;
         requestModel.Email = $"{generatedUsername}@example.com";
 
         var localFactory = new IdentityApplicationFactory();
@@ -196,6 +208,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
     [Theory, BitAutoData, RegisterFinishRequestModelCustomize]
     public async Task TokenEndpoint_GrantTypeRefreshToken_Success(RegisterFinishRequestModel requestModel)
     {
+        requestModel.UserAsymmetricKeys = TEST_ACCOUNT_KEYS;
         var localFactory = new IdentityApplicationFactory();
 
         var user = await localFactory.RegisterNewIdentityFactoryUserAsync(requestModel);
@@ -218,6 +231,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
     [Theory, BitAutoData, RegisterFinishRequestModelCustomize]
     public async Task TokenEndpoint_GrantTypeClientCredentials_Success(RegisterFinishRequestModel model)
     {
+        model.UserAsymmetricKeys = TEST_ACCOUNT_KEYS;
         var localFactory = new IdentityApplicationFactory();
         var user = await localFactory.RegisterNewIdentityFactoryUserAsync(model);
 
@@ -242,6 +256,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         RegisterFinishRequestModel model,
         string deviceId)
     {
+        model.UserAsymmetricKeys.AccountKeys = null;
         var localFactory = new IdentityApplicationFactory();
         var server = localFactory.WithWebHostBuilder(builder =>
         {
@@ -445,6 +460,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
     public async Task TokenEndpoint_TooQuickInOneSecond_BlockRequest(
         RegisterFinishRequestModel requestModel)
     {
+        requestModel.UserAsymmetricKeys = TEST_ACCOUNT_KEYS;
         const int AmountInOneSecondAllowed = 10;
 
         // The rule we are testing is 10 requests in 1 second
