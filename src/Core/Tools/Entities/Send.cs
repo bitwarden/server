@@ -78,7 +78,7 @@ public class Send : ITableObject<Guid>
     /// <remarks>
     /// This field is mutually exclusive with <see cref="Password" />
     /// </remarks>
-    [MaxLength(1024)]
+    [MaxLength(4000)]
     public string? Emails { get; set; }
 
     /// <summary>

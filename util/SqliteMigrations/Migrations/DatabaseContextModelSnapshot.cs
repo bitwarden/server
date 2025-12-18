@@ -1640,7 +1640,7 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Emails")
-                        .HasMaxLength(1024)
+                        .HasMaxLength(4000)
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("ExpirationDate")
