@@ -15,7 +15,7 @@ use crate::ms_sql::MsSql;
 pub mod akd_storage_config;
 pub mod db_config;
 pub mod ms_sql;
-mod vrf_key_config;
+pub mod vrf_key_config;
 pub mod vrf_key_database;
 
 /// Enum to represent different database types supported by the storage layer.

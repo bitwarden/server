@@ -1,10 +1,9 @@
 use thiserror::Error;
 
 mod storage_manager_config;
-mod vrf_config;
 
+pub use akd_storage::vrf_key_config::VrfKeyConfig;
 pub use storage_manager_config::*;
-pub use vrf_config::*;
 
 #[derive(Error, Debug)]
 pub enum ConfigError {
