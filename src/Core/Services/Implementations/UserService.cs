@@ -34,7 +34,6 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Fido2NetLib;
 using Fido2NetLib.Objects;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
@@ -350,7 +349,7 @@ public class UserService : UserManager<User>, IUserService
     /// </summary>
     /// <param name="user">The current user.</param>
     /// <returns></returns>
-    /// <exception cref="BadHttpRequestException">Maximum allowed number of credentials already registered.</exception>
+    /// <exception cref="BadRequestException">Maximum allowed number of credentials already registered.</exception>
     public async Task<CredentialCreateOptions> StartWebAuthnRegistrationAsync(User user)
     {
         var providers = user.GetTwoFactorProviders();
