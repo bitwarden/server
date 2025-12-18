@@ -9,9 +9,6 @@ on:
       - "hotfix-rc"
   pull_request:
 
-env:
-  _AZ_REGISTRY: "bitwardenprod.azurecr.io"
-
 jobs:
   testing:
     name: Run tests
