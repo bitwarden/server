@@ -192,7 +192,6 @@ public static class FeatureFlagKeys
     public const string PM24996ImplementUpgradeFromFreeDialog = "pm-24996-implement-upgrade-from-free-dialog";
     public const string PM24032_NewNavigationPremiumUpgradeButton = "pm-24032-new-navigation-premium-upgrade-button";
     public const string PM23713_PremiumBadgeOpensNewPremiumUpgradeDialog = "pm-23713-premium-badge-opens-new-premium-upgrade-dialog";
-    public const string PremiumUpgradeNewDesign = "pm-24033-updat-premium-subscription-page";
     public const string PM26793_FetchPremiumPriceFromPricingService = "pm-26793-fetch-premium-price-from-pricing-service";
     public const string PM23341_Milestone_2 = "pm-23341-milestone-2";
     public const string PM26462_Milestone_3 = "pm-26462-milestone-3";
@@ -213,6 +212,7 @@ public static class FeatureFlagKeys
     public const string ConsolidatedSessionTimeoutComponent = "pm-26056-consolidated-session-timeout-component";
     public const string V2RegistrationTDEJIT = "pm-27279-v2-registration-tde-jit";
     public const string DataRecoveryTool = "pm-28813-data-recovery-tool";
+    public const string EnableAccountEncryptionV2KeyConnectorRegistration = "enable-account-encryption-v2-key-connector-registration";
 
     /* Mobile Team */
     public const string AndroidImportLoginsFlow = "import-logins-flow";
@@ -243,6 +243,7 @@ public static class FeatureFlagKeys
     public const string UseChromiumImporter = "pm-23982-chromium-importer";
     public const string ChromiumImporterWithABE = "pm-25855-chromium-importer-abe";
     public const string SendUIRefresh = "pm-28175-send-ui-refresh";
+    public const string SendEmailOTP = "pm-19051-send-email-verification";
 
     /// <summary>
     /// Enable this flag to output email/OTP authenticated sends from the `GET sends` endpoint. When
