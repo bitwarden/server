@@ -16,6 +16,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Commands.Interfaces;
 using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.KeyManagement.Models.Data;
+using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -237,10 +238,13 @@ public class AccountsKeyManagementControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task PostSetKeyConnectorKeyAsync_UserNull_Throws(
+    public async Task PostSetKeyConnectorKeyAsync_V1_UserNull_Throws(
         SutProvider<AccountsKeyManagementController> sutProvider,
         SetKeyConnectorKeyRequestModel data)
     {
+        data.KeyConnectorKeyWrappedUserKey = null;
+        data.AccountKeys = null;
+
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsNull();
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sutProvider.Sut.PostSetKeyConnectorKeyAsync(data));
@@ -251,10 +255,13 @@ public class AccountsKeyManagementControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task PostSetKeyConnectorKeyAsync_SetKeyConnectorKeyFails_ThrowsBadRequestWithErrorResponse(
+    public async Task PostSetKeyConnectorKeyAsync_V1_SetKeyConnectorKeyFails_ThrowsBadRequestWithErrorResponse(
         SutProvider<AccountsKeyManagementController> sutProvider,
         SetKeyConnectorKeyRequestModel data, User expectedUser)
     {
+        data.KeyConnectorKeyWrappedUserKey = null;
+        data.AccountKeys = null;
+
         expectedUser.PublicKey = null;
         expectedUser.PrivateKey = null;
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
@@ -277,17 +284,20 @@ public class AccountsKeyManagementControllerTests
                 Assert.Equal(data.KdfIterations, user.KdfIterations);
                 Assert.Equal(data.KdfMemory, user.KdfMemory);
                 Assert.Equal(data.KdfParallelism, user.KdfParallelism);
-                Assert.Equal(data.Keys.PublicKey, user.PublicKey);
-                Assert.Equal(data.Keys.EncryptedPrivateKey, user.PrivateKey);
+                Assert.Equal(data.Keys!.PublicKey, user.PublicKey);
+                Assert.Equal(data.Keys!.EncryptedPrivateKey, user.PrivateKey);
             }), Arg.Is(data.Key), Arg.Is(data.OrgIdentifier));
     }
 
     [Theory]
     [BitAutoData]
-    public async Task PostSetKeyConnectorKeyAsync_SetKeyConnectorKeySucceeds_OkResponse(
+    public async Task PostSetKeyConnectorKeyAsync_V1_SetKeyConnectorKeySucceeds_OkResponse(
         SutProvider<AccountsKeyManagementController> sutProvider,
         SetKeyConnectorKeyRequestModel data, User expectedUser)
     {
+        data.KeyConnectorKeyWrappedUserKey = null;
+        data.AccountKeys = null;
+
         expectedUser.PublicKey = null;
         expectedUser.PrivateKey = null;
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
@@ -307,9 +317,106 @@ public class AccountsKeyManagementControllerTests
                 Assert.Equal(data.KdfIterations, user.KdfIterations);
                 Assert.Equal(data.KdfMemory, user.KdfMemory);
                 Assert.Equal(data.KdfParallelism, user.KdfParallelism);
-                Assert.Equal(data.Keys.PublicKey, user.PublicKey);
-                Assert.Equal(data.Keys.EncryptedPrivateKey, user.PrivateKey);
+                Assert.Equal(data.Keys!.PublicKey, user.PublicKey);
+                Assert.Equal(data.Keys!.EncryptedPrivateKey, user.PrivateKey);
             }), Arg.Is(data.Key), Arg.Is(data.OrgIdentifier));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostSetKeyConnectorKeyAsync_V2_UserNull_Throws(
+        SutProvider<AccountsKeyManagementController> sutProvider)
+    {
+        var request = new SetKeyConnectorKeyRequestModel
+        {
+            KeyConnectorKeyWrappedUserKey = "wrapped-user-key",
+            AccountKeys = new AccountKeysRequestModel
+            {
+                AccountPublicKey = "public-key",
+                UserKeyEncryptedAccountPrivateKey = "encrypted-private-key"
+            },
+            OrgIdentifier = "test-org"
+        };
+
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsNull();
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sutProvider.Sut.PostSetKeyConnectorKeyAsync(request));
+
+        await sutProvider.GetDependency<ISetKeyConnectorKeyCommand>().DidNotReceive()
+            .SetKeyConnectorKeyForUserAsync(Arg.Any<User>(), Arg.Any<KeyConnectorKeysData>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostSetKeyConnectorKeyAsync_V2_Success(
+        SutProvider<AccountsKeyManagementController> sutProvider,
+        User expectedUser)
+    {
+        var request = new SetKeyConnectorKeyRequestModel
+        {
+            KeyConnectorKeyWrappedUserKey = "wrapped-user-key",
+            AccountKeys = new AccountKeysRequestModel
+            {
+                AccountPublicKey = "public-key",
+                UserKeyEncryptedAccountPrivateKey = "encrypted-private-key"
+            },
+            OrgIdentifier = "test-org"
+        };
+
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(expectedUser);
+
+        await sutProvider.Sut.PostSetKeyConnectorKeyAsync(request);
+
+        await sutProvider.GetDependency<ISetKeyConnectorKeyCommand>().Received(1)
+            .SetKeyConnectorKeyForUserAsync(Arg.Is(expectedUser),
+                Arg.Do<KeyConnectorKeysData>(data =>
+                {
+                    Assert.Equal(request.KeyConnectorKeyWrappedUserKey, data.KeyConnectorKeyWrappedUserKey);
+                    Assert.Equal(request.AccountKeys.AccountPublicKey, data.AccountKeys.AccountPublicKey);
+                    Assert.Equal(request.AccountKeys.UserKeyEncryptedAccountPrivateKey,
+                        data.AccountKeys.UserKeyEncryptedAccountPrivateKey);
+                    Assert.Equal(request.OrgIdentifier, data.OrgIdentifier);
+                }));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostSetKeyConnectorKeyAsync_V2_CommandThrows_PropagatesException(
+        SutProvider<AccountsKeyManagementController> sutProvider,
+        User expectedUser)
+    {
+        var request = new SetKeyConnectorKeyRequestModel
+        {
+            KeyConnectorKeyWrappedUserKey = "wrapped-user-key",
+            AccountKeys = new AccountKeysRequestModel
+            {
+                AccountPublicKey = "public-key",
+                UserKeyEncryptedAccountPrivateKey = "encrypted-private-key"
+            },
+            OrgIdentifier = "test-org"
+        };
+
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(expectedUser);
+        sutProvider.GetDependency<ISetKeyConnectorKeyCommand>()
+            .When(x => x.SetKeyConnectorKeyForUserAsync(Arg.Any<User>(), Arg.Any<KeyConnectorKeysData>()))
+            .Do(_ => throw new BadRequestException("Command failed"));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.PostSetKeyConnectorKeyAsync(request));
+
+        Assert.Equal("Command failed", exception.Message);
+        await sutProvider.GetDependency<ISetKeyConnectorKeyCommand>().Received(1)
+            .SetKeyConnectorKeyForUserAsync(Arg.Is(expectedUser),
+                Arg.Do<KeyConnectorKeysData>(data =>
+                {
+                    Assert.Equal(request.KeyConnectorKeyWrappedUserKey, data.KeyConnectorKeyWrappedUserKey);
+                    Assert.Equal(request.AccountKeys.AccountPublicKey, data.AccountKeys.AccountPublicKey);
+                    Assert.Equal(request.AccountKeys.UserKeyEncryptedAccountPrivateKey,
+                        data.AccountKeys.UserKeyEncryptedAccountPrivateKey);
+                    Assert.Equal(request.OrgIdentifier, data.OrgIdentifier);
+                }));
     }
 
     [Theory]
@@ -362,5 +469,40 @@ public class AccountsKeyManagementControllerTests
 
         await sutProvider.GetDependency<IUserService>().Received(1)
             .ConvertToKeyConnectorAsync(Arg.Is(expectedUser));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetKeyConnectorConfirmationDetailsAsync_NoUser_Throws(
+        SutProvider<AccountsKeyManagementController> sutProvider, string orgSsoIdentifier)
+    {
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .ReturnsNull();
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            sutProvider.Sut.GetKeyConnectorConfirmationDetailsAsync(orgSsoIdentifier));
+
+        await sutProvider.GetDependency<IKeyConnectorConfirmationDetailsQuery>().ReceivedWithAnyArgs(0)
+            .Run(Arg.Any<string>(), Arg.Any<Guid>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetKeyConnectorConfirmationDetailsAsync_Success(
+        SutProvider<AccountsKeyManagementController> sutProvider, User expectedUser, string orgSsoIdentifier)
+    {
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(expectedUser);
+        sutProvider.GetDependency<IKeyConnectorConfirmationDetailsQuery>().Run(orgSsoIdentifier, expectedUser.Id)
+            .Returns(
+                new KeyConnectorConfirmationDetails { OrganizationName = "test" }
+            );
+
+        var result = await sutProvider.Sut.GetKeyConnectorConfirmationDetailsAsync(orgSsoIdentifier);
+
+        Assert.NotNull(result);
+        Assert.Equal("test", result.OrganizationName);
+        await sutProvider.GetDependency<IKeyConnectorConfirmationDetailsQuery>().Received(1)
+            .Run(orgSsoIdentifier, expectedUser.Id);
     }
 }

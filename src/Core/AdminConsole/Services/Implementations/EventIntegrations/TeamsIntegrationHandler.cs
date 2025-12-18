@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
+﻿using System.Text.Json;
+using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Microsoft.Rest;
 
 namespace Bit.Core.Services;
@@ -18,24 +19,48 @@ public class TeamsIntegrationHandler(
                 channelId: message.Configuration.ChannelId
             );
 
-            return new IntegrationHandlerResult(success: true, message: message);
+            return IntegrationHandlerResult.Succeed(message);
         }
         catch (HttpOperationException ex)
         {
-            var result = new IntegrationHandlerResult(success: false, message: message);
-            var statusCode = (int)ex.Response.StatusCode;
-            result.Retryable = statusCode is 429 or >= 500 and < 600;
-            result.FailureReason = ex.Message;
-
-            return result;
+            var category = ClassifyHttpStatusCode(ex.Response.StatusCode);
+            return IntegrationHandlerResult.Fail(
+                message,
+                category,
+                ex.Message
+            );
+        }
+        catch (ArgumentException ex)
+        {
+            return IntegrationHandlerResult.Fail(
+                message,
+                IntegrationFailureCategory.ConfigurationError,
+                ex.Message
+            );
+        }
+        catch (UriFormatException ex)
+        {
+            return IntegrationHandlerResult.Fail(
+                message,
+                IntegrationFailureCategory.ConfigurationError,
+                ex.Message
+            );
+        }
+        catch (JsonException ex)
+        {
+            return IntegrationHandlerResult.Fail(
+                message,
+                IntegrationFailureCategory.PermanentFailure,
+                ex.Message
+            );
         }
         catch (Exception ex)
         {
-            var result = new IntegrationHandlerResult(success: false, message: message);
-            result.Retryable = false;
-            result.FailureReason = ex.Message;
-
-            return result;
+            return IntegrationHandlerResult.Fail(
+                message,
+                IntegrationFailureCategory.TransientError,
+                ex.Message
+            );
         }
     }
 }

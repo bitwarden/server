@@ -130,6 +130,7 @@ BEGIN
         [SyncSeats] = @SyncSeats,
         [UseAutomaticUserConfirmation] = @UseAutomaticUserConfirmation,
         [UsePhishingBlocker] = @UsePhishingBlocker,
+        [MaxStorageGbIncreased] = @MaxStorageGb,
         [UseDisableSmAdsForUsers] = @UseDisableSmAdsForUsers
     WHERE
         [Id] = @Id;

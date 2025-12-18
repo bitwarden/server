@@ -130,6 +130,7 @@ BEGIN
         [SyncSeats],
         [UseAutomaticUserConfirmation],
         [UsePhishingBlocker],
+        [MaxStorageGbIncreased],
         [UseDisableSmAdsForUsers]
     )
     VALUES
@@ -196,6 +197,7 @@ BEGIN
             @SyncSeats,
             @UseAutomaticUserConfirmation,
             @UsePhishingBlocker,
+            @MaxStorageGb,
             @UseDisableSmAdsForUsers
         );
 END
