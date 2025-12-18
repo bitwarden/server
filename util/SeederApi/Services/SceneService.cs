@@ -31,7 +31,7 @@ public class SceneService(
 
     public async Task<SceneResponseModel> ExecuteScene(string templateName, JsonElement? arguments)
     {
-        var result = await ExecuteSceneMethod(templateName, arguments, "Seed");
+        var result = await ExecuteSceneMethodAsync(templateName, arguments, "Seed");
 
         return SceneResponseModel.FromSceneResult(result);
     }
@@ -108,7 +108,7 @@ public class SceneService(
         }
     }
 
-    private async Task<SceneResult<object?>> ExecuteSceneMethod(string templateName, JsonElement? arguments, string methodName)
+    private async Task<SceneResult<object?>> ExecuteSceneMethodAsync(string templateName, JsonElement? arguments, string methodName)
     {
         try
         {

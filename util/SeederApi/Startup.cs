@@ -24,26 +24,19 @@ public class Startup
 
     public void ConfigureServices(IServiceCollection services)
     {
-        // Options
         services.AddOptions();
 
-        // Settings
         var globalSettings = services.AddGlobalSettingsServices(Configuration, Environment);
 
-        // Data Protection
         services.AddCustomDataProtectionServices(Environment, globalSettings);
 
-        // Repositories
         services.AddTokenizers();
         services.AddDatabaseRepositories(globalSettings);
 
-        // Context
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
-        // Identity
         services.AddScoped<IPasswordHasher<Core.Entities.User>, PasswordHasher<Core.Entities.User>>();
 
-        // Seeder services
         services.AddSingleton<RustSDK.RustSdkService>();
         services.AddScoped<UserSeeder>();
         services.AddScoped<ISceneService, SceneService>();
@@ -52,7 +45,6 @@ public class Startup
         services.AddScenes();
         services.AddQueries();
 
-        // MVC
         services.AddControllers();
     }
 
@@ -62,13 +54,11 @@ public class Startup
         IHostApplicationLifetime appLifetime,
         GlobalSettings globalSettings)
     {
-        // Add PlayIdMiddleware services
         if (globalSettings.TestPlayIdTrackingEnabled)
         {
             app.UseMiddleware<PlayIdMiddleware>();
         }
 
-        // Configure the HTTP request pipeline
         if (!env.IsDevelopment())
         {
             app.UseExceptionHandler("/Home/Error");
