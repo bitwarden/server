@@ -55,16 +55,16 @@ public static class EventIntegrationsCacheConstants
     /// Builds a deterministic cache key for an organization's integration configuration details
     /// <see cref="OrganizationIntegrationConfigurationDetails"/>.
     /// </summary>
-    /// <param name="organizationId">The unique identifier of the organization to which the user belongs.</param>
+    /// <param name="organizationId">The unique identifier of the organization.</param>
     /// <param name="integrationType">The <see cref="IntegrationType"/> of the integration.</param>
-    /// <param name="eventType">The <see cref="EventType"/> of the event configured. Can be null to apply to all events.</param>
+    /// <param name="eventType">The specific <see cref="EventType"/> of the event configured.</param>
     /// <returns>
     /// A cache key for the configuration details.
     /// </returns>
     public static string BuildCacheKeyForOrganizationIntegrationConfigurationDetails(
         Guid organizationId,
         IntegrationType integrationType,
-        EventType? eventType
+        EventType eventType
     ) => $"OrganizationIntegrationConfigurationDetails:{organizationId:N}:{integrationType}:{eventType}";
 
     /// <summary>

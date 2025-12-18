@@ -269,7 +269,7 @@ namespace Bit.SqliteMigrations.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("Id", "Enabled")
-                        .HasAnnotation("Npgsql:IndexInclude", new[] { "UseTotp" });
+                        .HasAnnotation("Npgsql:IndexInclude", new[] { "UseTotp", "UsersGetPremium" });
 
                     b.ToTable("Organization", (string)null);
                 });
