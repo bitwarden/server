@@ -270,7 +270,9 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         ICollection<OrganizationUser> allOrgUsers, User user)
     {
         var error = (await _automaticUserConfirmationPolicyEnforcementValidator.IsCompliantAsync(
-                new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser.OrganizationId, allOrgUsers, user)))
+                new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser.OrganizationId,
+                    allOrgUsers.Append(orgUser),
+                    user)))
             .Match(
                 error => error.Message,
                 _ => string.Empty

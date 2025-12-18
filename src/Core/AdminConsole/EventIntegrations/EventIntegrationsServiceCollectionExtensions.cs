@@ -528,17 +528,21 @@ public static class EventIntegrationsServiceCollectionExtensions
     /// <returns>True if all required RabbitMQ settings are present; otherwise, false.</returns>
     /// <remarks>
     /// Requires all the following settings to be configured:
-    /// - EventLogging.RabbitMq.HostName
-    /// - EventLogging.RabbitMq.Username
-    /// - EventLogging.RabbitMq.Password
-    /// - EventLogging.RabbitMq.EventExchangeName
+    /// <list type="bullet">
+    ///   <item><description>EventLogging.RabbitMq.HostName</description></item>
+    ///   <item><description>EventLogging.RabbitMq.Username</description></item>
+    ///   <item><description>EventLogging.RabbitMq.Password</description></item>
+    ///   <item><description>EventLogging.RabbitMq.EventExchangeName</description></item>
+    ///   <item><description>EventLogging.RabbitMq.IntegrationExchangeName</description></item>
+    /// </list>
     /// </remarks>
     internal static bool IsRabbitMqEnabled(GlobalSettings settings)
     {
         return CoreHelpers.SettingHasValue(settings.EventLogging.RabbitMq.HostName) &&
                CoreHelpers.SettingHasValue(settings.EventLogging.RabbitMq.Username) &&
                CoreHelpers.SettingHasValue(settings.EventLogging.RabbitMq.Password) &&
-               CoreHelpers.SettingHasValue(settings.EventLogging.RabbitMq.EventExchangeName);
+               CoreHelpers.SettingHasValue(settings.EventLogging.RabbitMq.EventExchangeName) &&
+               CoreHelpers.SettingHasValue(settings.EventLogging.RabbitMq.IntegrationExchangeName);
     }
 
     /// <summary>
@@ -547,13 +551,17 @@ public static class EventIntegrationsServiceCollectionExtensions
     /// <param name="settings">The global settings containing Azure Service Bus configuration.</param>
     /// <returns>True if all required Azure Service Bus settings are present; otherwise, false.</returns>
     /// <remarks>
-    /// Requires both of the following settings to be configured:
-    /// - EventLogging.AzureServiceBus.ConnectionString
-    /// - EventLogging.AzureServiceBus.EventTopicName
+    /// Requires all of the following settings to be configured:
+    /// <list type="bullet">
+    ///   <item><description>EventLogging.AzureServiceBus.ConnectionString</description></item>
+    ///   <item><description>EventLogging.AzureServiceBus.EventTopicName</description></item>
+    ///   <item><description>EventLogging.AzureServiceBus.IntegrationTopicName</description></item>
+    /// </list>
     /// </remarks>
     internal static bool IsAzureServiceBusEnabled(GlobalSettings settings)
     {
         return CoreHelpers.SettingHasValue(settings.EventLogging.AzureServiceBus.ConnectionString) &&
-               CoreHelpers.SettingHasValue(settings.EventLogging.AzureServiceBus.EventTopicName);
+               CoreHelpers.SettingHasValue(settings.EventLogging.AzureServiceBus.EventTopicName) &&
+               CoreHelpers.SettingHasValue(settings.EventLogging.AzureServiceBus.IntegrationTopicName);
     }
 }
