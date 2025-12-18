@@ -193,7 +193,7 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
     /// <param name="organization">The organization the user was confirmed to.</param>
     /// <param name="userEmail">The email address of the confirmed user.</param>
     /// <param name="accessSecretsManager">Whether the user has access to Secrets Manager.</param>
-    private async Task SendOrganizationConfirmedEmailAsync(Organization organization, string userEmail, bool accessSecretsManager)
+    internal async Task SendOrganizationConfirmedEmailAsync(Organization organization, string userEmail, bool accessSecretsManager)
     {
         if (featureService.IsEnabled(FeatureFlagKeys.OrganizationConfirmationEmail))
         {
