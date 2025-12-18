@@ -16,7 +16,7 @@
     @Disabled BIT,
     @HideEmail BIT,
     @CipherId UNIQUEIDENTIFIER = NULL,
-    @Emails NVARCHAR(1024) = NULL
+    @Emails NVARCHAR(4000) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
