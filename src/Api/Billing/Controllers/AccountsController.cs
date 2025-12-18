@@ -1,4 +1,4 @@
-﻿using Bit.Api.Models.Request;
+using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
@@ -112,21 +112,6 @@ public class AccountsController(
         {
             return new SubscriptionResponseModel(user);
         }
-    }
-
-    // TODO: Migrate to Command / AccountBillingVNextController as PUT /account/billing/vnext/subscription
-    [HttpPost("storage")]
-    [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task<PaymentResponseModel> PostStorageAsync([FromBody] StorageRequestModel model)
-    {
-        var user = await userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        var result = await userService.AdjustStorageAsync(user, model.StorageGbAdjustment!.Value);
-        return new PaymentResponseModel { Success = true, PaymentIntentClientSecret = result };
     }
 
     /*
