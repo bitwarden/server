@@ -98,18 +98,6 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
 
-      - name: Check branch to publish
-        env:
-          PUBLISH_BRANCHES: "main,rc,hotfix-rc"
-        id: publish-branch-check
-        run: |
-          IFS="," read -a publish_branches <<< "$PUBLISH_BRANCHES"
-          if [[ " ${publish_branches[*]} " =~ " ${GITHUB_REF:11} " ]]; then
-            echo "is_publish_branch=true" >> "$GITHUB_ENV"
-          else
-            echo "is_publish_branch=false" >> "$GITHUB_ENV"
-          fi
-
       - name: Set up .NET
         uses: actions/setup-dotnet@d4c94342e560b34958eacfc5d055d21461ed1c5d # v5.0.0
 
