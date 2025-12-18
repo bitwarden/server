@@ -599,61 +599,11 @@ public class UserServiceTests
         }
     }
 
-    [Theory, BitAutoData]
-    public async Task StartWebAuthnRegistrationAsync_PremiumUser_ExceedsLimit_ThrowsBadRequestException(
-        SutProvider<UserService> sutProvider, User user)
-    {
-        // Arrange - Premium user with 10 credentials (at limit)
-        var credentialCount = 10;
-        SetupWebAuthnProvider(user, credentialCount);
-
-        sutProvider.GetDependency<IGlobalSettings>().WebAuthn = new GlobalSettings.WebAuthnSettings
-        {
-            PremiumMaximumAllowedCredentials = 10,
-            NonPremiumMaximumAllowedCredentials = 5
-        };
-
-        user.Premium = true;
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByUserAsync(user.Id)
-            .Returns(new List<OrganizationUser>());
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.StartWebAuthnRegistrationAsync(user));
-
-        Assert.Equal("Maximum allowed WebAuthn credential count exceeded.", exception.Message);
-    }
-
-    [Theory, BitAutoData]
-    public async Task StartWebAuthnRegistrationAsync_NonPremiumUser_ExceedsLimit_ThrowsBadRequestException(
-        SutProvider<UserService> sutProvider, User user)
-    {
-        // Arrange - Non-premium user with 5 credentials (at limit)
-        var credentialCount = 5;
-        SetupWebAuthnProvider(user, credentialCount);
-
-        sutProvider.GetDependency<IGlobalSettings>().WebAuthn = new GlobalSettings.WebAuthnSettings
-        {
-            PremiumMaximumAllowedCredentials = 10,
-            NonPremiumMaximumAllowedCredentials = 5
-        };
-
-        user.Premium = false;
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByUserAsync(user.Id)
-            .Returns(new List<OrganizationUser>());
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.StartWebAuthnRegistrationAsync(user));
-
-        Assert.Equal("Maximum allowed WebAuthn credential count exceeded.", exception.Message);
-    }
-
-    [Theory, BitAutoData]
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
     public async Task StartWebAuthnRegistrationAsync_BelowLimit_Succeeds(
-        SutProvider<UserService> sutProvider, User user)
+        bool hasPremium, SutProvider<UserService> sutProvider, User user)
     {
         // Arrange - Non-premium user with 4 credentials (below limit of 5)
         SetupWebAuthnProvider(user, credentialCount: 4);
@@ -664,7 +614,7 @@ public class UserServiceTests
             NonPremiumMaximumAllowedCredentials = 5
         };
 
-        user.Premium = false;
+        user.Premium = hasPremium;
         user.Id = Guid.NewGuid();
         user.Email = "test@example.com";
 
@@ -699,8 +649,10 @@ public class UserServiceTests
         await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(user);
     }
 
-    [Theory, BitAutoData]
-    public async Task CompleteWebAuthRegistrationAsync_ExceedsLimit_ThrowsBadRequestException(
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
+    public async Task CompleteWebAuthRegistrationAsync_ExceedsLimit_ThrowsBadRequestException(bool hasPremium,
         SutProvider<UserService> sutProvider, User user, AuthenticatorAttestationRawResponse deviceResponse)
     {
         // Arrange - time-of-check/time-of-use scenario: user now has 10 credentials (at limit)
@@ -712,7 +664,7 @@ public class UserServiceTests
             NonPremiumMaximumAllowedCredentials = 5
         };
 
-        user.Premium = true;
+        user.Premium = hasPremium;
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetManyByUserAsync(user.Id)
             .Returns(new List<OrganizationUser>());
@@ -724,8 +676,10 @@ public class UserServiceTests
         Assert.Equal("Maximum allowed WebAuthn credential count exceeded.", exception.Message);
     }
 
-    [Theory, BitAutoData]
-    public async Task CompleteWebAuthRegistrationAsync_BelowLimit_Succeeds(
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
+    public async Task CompleteWebAuthRegistrationAsync_BelowLimit_Succeeds(bool hasPremium,
         SutProvider<UserService> sutProvider, User user, AuthenticatorAttestationRawResponse deviceResponse)
     {
         // Arrange - User has 4 credentials (below limit of 5)
@@ -737,7 +691,7 @@ public class UserServiceTests
             NonPremiumMaximumAllowedCredentials = 5
         };
 
-        user.Premium = false;
+        user.Premium = hasPremium;
         user.Id = Guid.NewGuid();
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
