@@ -2,6 +2,7 @@
 #nullable disable
 
 using System.Text.Json;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
@@ -999,18 +1000,51 @@ public class CipherService : ICipherService
             throw new BadRequestException("Could not find organization.");
         }
 
-        if (hasAttachments && !org.MaxStorageGb.HasValue)
-        {
-            throw new BadRequestException("This organization cannot use attachments.");
-        }
+        // Ignore storage limits if the organization has data ownership policy enabled.
+        // Allows users to seamlessly migrate their data into the organization without being blocked by storage limits.
+        // Organization admins will need to manage storage after migration should overages occur.
+        var ignoreStorageLimits = await OrganizationDataOwnershipPolicyEnabledAsync(sharingUserId, org);
 
-        var storageAdjustment = attachments?.Sum(a => a.Value.Size) ?? 0;
-        if (org.StorageBytesRemaining() < storageAdjustment)
+        if (!ignoreStorageLimits)
         {
-            throw new BadRequestException("Not enough storage available for this organization.");
+            if (hasAttachments && !org.MaxStorageGb.HasValue)
+            {
+                throw new BadRequestException("This organization cannot use attachments.");
+            }
+
+            var storageAdjustment = attachments?.Sum(a => a.Value.Size) ?? 0;
+            if (org.StorageBytesRemaining() < storageAdjustment)
+            {
+                throw new BadRequestException("Not enough storage available for this organization.");
+            }
         }
 
         ValidateCipherLastKnownRevisionDate(cipher, lastKnownRevisionDate);
+    }
+
+    /// <summary>
+    /// Checks if the Organization Data Ownership Policy is enabled for the given user and organization.
+    /// </summary>
+    private async Task<bool> OrganizationDataOwnershipPolicyEnabledAsync(Guid userId, Organization organization)
+    {
+        if (!organization.UsePolicies)
+        {
+            return false;
+        }
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
+        {
+            var requirement = await _policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(userId);
+
+            return requirement.State == OrganizationDataOwnershipState.Enabled &&
+                   requirement.EnforcedByOrg(organization.Id);
+        }
+
+        var policies =
+            await _policyService.GetPoliciesApplicableToUserAsync(userId,
+                PolicyType.OrganizationDataOwnership);
+
+        return policies.Any(p => p.OrganizationId == organization.Id);
     }
 
     private async Task ValidateViewPasswordUserAsync(Cipher cipher)

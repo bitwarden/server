@@ -72,6 +72,14 @@ public class OrganizationDataOwnershipPolicyRequirement : IPolicyRequirement
     {
         return _policyDetails.Any(p => p.OrganizationId == organizationId);
     }
+
+    /// <summary>
+    /// Determines if the policy is enforced by the specified organization.
+    /// </summary>
+    public bool EnforcedByOrg(Guid organizationId)
+    {
+        return _policyDetails.Any(p => p.OrganizationId == organizationId);
+    }
 }
 
 public record DefaultCollectionRequest(Guid OrganizationUserId, bool ShouldCreateDefaultCollection)
