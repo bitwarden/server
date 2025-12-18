@@ -10,7 +10,6 @@ using Bit.Api.Utilities;
 using Bit.Api.Vault.Models.Request;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -43,7 +42,6 @@ public class CiphersController : Controller
     private readonly ICipherService _cipherService;
     private readonly IUserService _userService;
     private readonly IAttachmentStorageService _attachmentStorageService;
-    private readonly IProviderService _providerService;
     private readonly ICurrentContext _currentContext;
     private readonly ILogger<CiphersController> _logger;
     private readonly GlobalSettings _globalSettings;
@@ -52,7 +50,6 @@ public class CiphersController : Controller
     private readonly ICollectionRepository _collectionRepository;
     private readonly IArchiveCiphersCommand _archiveCiphersCommand;
     private readonly IUnarchiveCiphersCommand _unarchiveCiphersCommand;
-    private readonly IFeatureService _featureService;
 
     public CiphersController(
         ICipherRepository cipherRepository,
@@ -60,7 +57,6 @@ public class CiphersController : Controller
         ICipherService cipherService,
         IUserService userService,
         IAttachmentStorageService attachmentStorageService,
-        IProviderService providerService,
         ICurrentContext currentContext,
         ILogger<CiphersController> logger,
         GlobalSettings globalSettings,
@@ -68,15 +64,13 @@ public class CiphersController : Controller
         IApplicationCacheService applicationCacheService,
         ICollectionRepository collectionRepository,
         IArchiveCiphersCommand archiveCiphersCommand,
-        IUnarchiveCiphersCommand unarchiveCiphersCommand,
-        IFeatureService featureService)
+        IUnarchiveCiphersCommand unarchiveCiphersCommand)
     {
         _cipherRepository = cipherRepository;
         _collectionCipherRepository = collectionCipherRepository;
         _cipherService = cipherService;
         _userService = userService;
         _attachmentStorageService = attachmentStorageService;
-        _providerService = providerService;
         _currentContext = currentContext;
         _logger = logger;
         _globalSettings = globalSettings;
@@ -85,7 +79,6 @@ public class CiphersController : Controller
         _collectionRepository = collectionRepository;
         _archiveCiphersCommand = archiveCiphersCommand;
         _unarchiveCiphersCommand = unarchiveCiphersCommand;
-        _featureService = featureService;
     }
 
     [HttpGet("{id}")]
@@ -344,8 +337,7 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        bool excludeDefaultUserCollections = _featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation) && !includeMemberItems;
-        var allOrganizationCiphers = excludeDefaultUserCollections
+        var allOrganizationCiphers = !includeMemberItems
         ?
             await _organizationCiphersQuery.GetAllOrganizationCiphersExcludingDefaultUserCollections(organizationId)
         :
