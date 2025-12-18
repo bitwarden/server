@@ -1,7 +1,7 @@
 ﻿namespace Bit.Api.Tools.Utilities;
 
-using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Entities;
+using Bit.Core.Tools.Enums;
 
 public class SendUtilities
 {
