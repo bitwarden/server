@@ -607,7 +607,7 @@ public class UserServiceTests
         var credentialCount = 10;
         SetupWebAuthnProvider(user, credentialCount);
 
-        sutProvider.GetDependency<IGlobalSettings>().WebAuthN = new GlobalSettings.WebAuthNSettings
+        sutProvider.GetDependency<IGlobalSettings>().WebAuthn = new GlobalSettings.WebAuthnSettings
         {
             PremiumMaximumAllowedCredentials = 10,
             NonPremiumMaximumAllowedCredentials = 5
@@ -622,7 +622,7 @@ public class UserServiceTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.StartWebAuthnRegistrationAsync(user));
 
-        Assert.Equal("Maximum allowed WebAuthN credential count exceeded.", exception.Message);
+        Assert.Equal("Maximum allowed WebAuthn credential count exceeded.", exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -633,7 +633,7 @@ public class UserServiceTests
         var credentialCount = 5;
         SetupWebAuthnProvider(user, credentialCount);
 
-        sutProvider.GetDependency<IGlobalSettings>().WebAuthN = new GlobalSettings.WebAuthNSettings
+        sutProvider.GetDependency<IGlobalSettings>().WebAuthn = new GlobalSettings.WebAuthnSettings
         {
             PremiumMaximumAllowedCredentials = 10,
             NonPremiumMaximumAllowedCredentials = 5
@@ -648,7 +648,7 @@ public class UserServiceTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.StartWebAuthnRegistrationAsync(user));
 
-        Assert.Equal("Maximum allowed WebAuthN credential count exceeded.", exception.Message);
+        Assert.Equal("Maximum allowed WebAuthn credential count exceeded.", exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -658,7 +658,7 @@ public class UserServiceTests
         // Arrange - Non-premium user with 4 credentials (below limit of 5)
         SetupWebAuthnProvider(user, credentialCount: 4);
 
-        sutProvider.GetDependency<IGlobalSettings>().WebAuthN = new GlobalSettings.WebAuthNSettings
+        sutProvider.GetDependency<IGlobalSettings>().WebAuthn = new GlobalSettings.WebAuthnSettings
         {
             PremiumMaximumAllowedCredentials = 10,
             NonPremiumMaximumAllowedCredentials = 5
@@ -706,7 +706,7 @@ public class UserServiceTests
         // Arrange - time-of-check/time-of-use scenario: user now has 10 credentials (at limit)
         SetupWebAuthnProviderWithPending(user, credentialCount: 10);
 
-        sutProvider.GetDependency<IGlobalSettings>().WebAuthN = new GlobalSettings.WebAuthNSettings
+        sutProvider.GetDependency<IGlobalSettings>().WebAuthn = new GlobalSettings.WebAuthnSettings
         {
             PremiumMaximumAllowedCredentials = 10,
             NonPremiumMaximumAllowedCredentials = 5
@@ -721,7 +721,7 @@ public class UserServiceTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.CompleteWebAuthRegistrationAsync(user, 11, "NewKey", deviceResponse));
 
-        Assert.Equal("Maximum allowed WebAuthN credential count exceeded.", exception.Message);
+        Assert.Equal("Maximum allowed WebAuthn credential count exceeded.", exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -731,7 +731,7 @@ public class UserServiceTests
         // Arrange - User has 4 credentials (below limit of 5)
         SetupWebAuthnProviderWithPending(user, credentialCount: 4);
 
-        sutProvider.GetDependency<IGlobalSettings>().WebAuthN = new GlobalSettings.WebAuthNSettings
+        sutProvider.GetDependency<IGlobalSettings>().WebAuthn = new GlobalSettings.WebAuthnSettings
         {
             PremiumMaximumAllowedCredentials = 10,
             NonPremiumMaximumAllowedCredentials = 5

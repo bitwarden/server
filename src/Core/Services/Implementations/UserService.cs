@@ -373,12 +373,12 @@ public class UserService : UserManager<User>, IUserService
 
         // Boundary validation to provide a better UX. There is also second-level enforcement at persistence time.
         var maximumAllowedCredentialCount = (await CanAccessPremium(user))
-            ? _globalSettings.WebAuthN.PremiumMaximumAllowedCredentials
-            : _globalSettings.WebAuthN.NonPremiumMaximumAllowedCredentials;
+            ? _globalSettings.WebAuthn.PremiumMaximumAllowedCredentials
+            : _globalSettings.WebAuthn.NonPremiumMaximumAllowedCredentials;
         // Allow 'pending' requests -- including the incoming.
         if (provider.MetaData.Count(metadata => !metadata.Key.Equals("pending")) >= maximumAllowedCredentialCount)
         {
-            throw new BadRequestException("Maximum allowed WebAuthN credential count exceeded.");
+            throw new BadRequestException("Maximum allowed WebAuthn credential count exceeded.");
         }
 
         var fidoUser = new Fido2User
@@ -422,11 +422,11 @@ public class UserService : UserManager<User>, IUserService
         // Persistence-time validation for comprehensive enforcement. There is also boundary validation for best-possible UX.
         var registeredCredentialCount = provider.MetaData.Count(metadata => !metadata.Key.Equals("pending"));
         var maximumAllowedCredentialCount = (await CanAccessPremium(user))
-            ? _globalSettings.WebAuthN.PremiumMaximumAllowedCredentials
-            : _globalSettings.WebAuthN.NonPremiumMaximumAllowedCredentials;
+            ? _globalSettings.WebAuthn.PremiumMaximumAllowedCredentials
+            : _globalSettings.WebAuthn.NonPremiumMaximumAllowedCredentials;
         if (registeredCredentialCount >= maximumAllowedCredentialCount)
         {
-            throw new BadRequestException("Maximum allowed WebAuthN credential count exceeded.");
+            throw new BadRequestException("Maximum allowed WebAuthn credential count exceeded.");
         }
 
         var options = CredentialCreateOptions.FromJson((string)pendingValue);
