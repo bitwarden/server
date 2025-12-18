@@ -1,6 +1,5 @@
 ﻿using Bit.Core.Dirt.Enums;
 using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.Dirt.Entities;

@@ -1,14 +1,11 @@
 ﻿#nullable enable
 
 using System.Text.Json;
-using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Dirt.Models.Response;
-using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Enums;
 using Bit.Core.Dirt.Models.Data.EventIntegrations;
 using Bit.Core.Dirt.Models.Data.Teams;
-using Bit.Core.Enums;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
 

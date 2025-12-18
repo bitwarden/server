@@ -1,7 +1,6 @@
 ﻿using System.Text.Json;
 using Bit.Core.Dirt.Enums;
 using Bit.Core.Dirt.Models.Data.EventIntegrations;
-using Bit.Core.Enums;
 using Xunit;
 
 namespace Bit.Core.Test.Dirt.Models.Data.EventIntegrations;

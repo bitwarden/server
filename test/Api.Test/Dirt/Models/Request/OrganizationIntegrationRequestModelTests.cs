@@ -1,11 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using Bit.Api.Dirt.Models.Request;
-using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Enums;
 using Bit.Core.Dirt.Models.Data.EventIntegrations;
-using Bit.Core.Enums;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
 

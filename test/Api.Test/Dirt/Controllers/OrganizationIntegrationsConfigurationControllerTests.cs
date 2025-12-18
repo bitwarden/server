@@ -1,8 +1,6 @@
-﻿using Bit.Api.AdminConsole.Controllers;
-using Bit.Api.Dirt.Controllers;
+﻿using Bit.Api.Dirt.Controllers;
 using Bit.Api.Dirt.Models.Request;
 using Bit.Api.Dirt.Models.Response;
-using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Context;
 using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.EventIntegrations.OrganizationIntegrationConfigurations.Interfaces;

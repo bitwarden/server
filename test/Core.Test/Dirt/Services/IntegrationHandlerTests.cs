@@ -2,7 +2,6 @@
 using Bit.Core.Dirt.Enums;
 using Bit.Core.Dirt.Models.Data.EventIntegrations;
 using Bit.Core.Dirt.Services;
-using Bit.Core.Enums;
 using Xunit;
 
 namespace Bit.Core.Test.Dirt.Services;

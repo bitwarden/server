@@ -1,16 +1,12 @@
 ﻿using System.Text.Json;
 using Bit.Api.Dirt.Models.Response;
-using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Context;
 using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Enums;
 using Bit.Core.Dirt.Models.Data.EventIntegrations;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Dirt.Services;
-using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

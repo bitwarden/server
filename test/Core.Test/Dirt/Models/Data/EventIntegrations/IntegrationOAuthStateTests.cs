@@ -1,6 +1,5 @@
 ﻿#nullable enable
 
-using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Models.Data.EventIntegrations;
 using Bit.Test.Common.AutoFixture.Attributes;

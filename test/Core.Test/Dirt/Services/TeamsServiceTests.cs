@@ -3,7 +3,6 @@
 using System.Net;
 using System.Text.Json;
 using System.Web;
-using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Models.Data.EventIntegrations;
 using Bit.Core.Dirt.Models.Data.Teams;
