@@ -2,7 +2,7 @@
 
 namespace Bit.Core.AdminConsole.Models.Mail.Mailer.OrganizationConfirmation;
 
-public class OrganizationConfirmationEnterpriseTeamsView : OrganizationConfirmationBase
+public class OrganizationConfirmationEnterpriseTeamsView : OrganizationConfirmationBaseView
 {
 }
 

@@ -4,7 +4,7 @@ namespace Bit.Core.AdminConsole.Models.Mail.Mailer.OrganizationConfirmation;
 
 #nullable enable
 
-public class OrganizationConfirmationFamilyFreeView : OrganizationConfirmationBase
+public class OrganizationConfirmationFamilyFreeView : OrganizationConfirmationBaseView
 {
 }
 

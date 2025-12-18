@@ -10,7 +10,7 @@
         img-src="https://assets.bitwarden.com/email/v1/spot-enterprise.png"
         title="You can now share passwords with members of {{OrganizationName}}!"
         button-text="Log in"
-        button-url="https://vault.bitwarden.com"
+        button-url="{{WebVaultUrl}}"
       />
     </mj-wrapper>
 
@@ -24,8 +24,6 @@
         </mj-column>
       </mj-section>
       <mj-bw-icon-row
-
-
         icon-src="https://assets.bitwarden.com/email/v1/icon-enterprise.png"
         icon-alt="Organization Icon"
         text="Your account is owned by {{OrganizationName}} and is subject to their security and management policies."

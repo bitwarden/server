@@ -3,17 +3,19 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Mail.Mailer.OrganizationConfirmation;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Platform.Mail.Mailer;
+using Bit.Core.Settings;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationConfirmation;
 
-public class SendOrganizationConfirmationCommand(IMailer mailer) : ISendOrganizationConfirmationCommand
+public class SendOrganizationConfirmationCommand(IMailer mailer, GlobalSettings globalSettings) : ISendOrganizationConfirmationCommand
 {
-    public async Task SendConfirmationAsync(Organization organization, string userEmail)
+
+    public async Task SendConfirmationAsync(Organization organization, string userEmail, bool accessSecretsManager = false)
     {
-        await SendConfirmationsAsync(organization, [userEmail]);
+        await SendConfirmationsAsync(organization, [userEmail], accessSecretsManager);
     }
 
-    public async Task SendConfirmationsAsync(Organization organization, IEnumerable<string> userEmails)
+    public async Task SendConfirmationsAsync(Organization organization, IEnumerable<string> userEmails, bool accessSecretsManager = false)
     {
         var userEmailsList = userEmails.ToList();
         if (userEmailsList.Count == 0)
@@ -25,14 +27,14 @@ public class SendOrganizationConfirmationCommand(IMailer mailer) : ISendOrganiza
 
         if (IsEnterpriseOrTeamsPlan(organization.PlanType))
         {
-            await SendEnterpriseTeamsEmailsAsync(userEmailsList, organizationName);
+            await SendEnterpriseTeamsEmailsAsync(userEmailsList, organizationName, accessSecretsManager);
             return;
         }
 
-        await SendFamilyFreeConfirmEmailsAsync(userEmailsList, organizationName);
+        await SendFamilyFreeConfirmEmailsAsync(userEmailsList, organizationName, accessSecretsManager);
     }
 
-    private async Task SendEnterpriseTeamsEmailsAsync(List<string> userEmailsList, string organizationName)
+    private async Task SendEnterpriseTeamsEmailsAsync(List<string> userEmailsList, string organizationName, bool accessSecretsManager)
     {
         var mail = new OrganizationConfirmationEnterpriseTeams
         {
@@ -43,14 +45,17 @@ public class SendOrganizationConfirmationCommand(IMailer mailer) : ISendOrganiza
                 OrganizationName = organizationName,
                 TitleFirst = "You're confirmed as a member of ",
                 TitleSecondBold = organizationName,
-                TitleThird = "!"
+                TitleThird = "!",
+                WebVaultUrl = accessSecretsManager
+                    ? globalSettings.BaseServiceUri.VaultWithHashAndSecretManagerProduct
+                    : globalSettings.BaseServiceUri.VaultWithHash
             }
         };
 
         await mailer.SendEmail(mail);
     }
 
-    private async Task SendFamilyFreeConfirmEmailsAsync(List<string> userEmailsList, string organizationName)
+    private async Task SendFamilyFreeConfirmEmailsAsync(List<string> userEmailsList, string organizationName, bool accessSecretsManager)
     {
         var mail = new OrganizationConfirmationFamilyFree
         {
@@ -61,7 +66,10 @@ public class SendOrganizationConfirmationCommand(IMailer mailer) : ISendOrganiza
                 OrganizationName = organizationName,
                 TitleFirst = "You're confirmed as a member of ",
                 TitleSecondBold = organizationName,
-                TitleThird = "!"
+                TitleThird = "!",
+                WebVaultUrl = accessSecretsManager
+                    ? globalSettings.BaseServiceUri.VaultWithHashAndSecretManagerProduct
+                    : globalSettings.BaseServiceUri.VaultWithHash
             }
         };
 
