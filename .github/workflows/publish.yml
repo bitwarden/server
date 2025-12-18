@@ -106,17 +106,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Push version and latest image
+      - name: Push release version image
         env:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
         run: |
           skopeo copy --all \
             "docker://${_REGISTRY}/${PROJECT_NAME}:${_BRANCH_NAME}" \
             "docker://${_REGISTRY}/${PROJECT_NAME}:${_RELEASE_VERSION}"
-
-          skopeo copy --all \
-            "docker://${_REGISTRY}/${PROJECT_NAME}:${_BRANCH_NAME}" \
-            "docker://${_REGISTRY}/${PROJECT_NAME}:latest"
 
       - name: Log out of GHCR
         run:  docker logout ghcr.io
