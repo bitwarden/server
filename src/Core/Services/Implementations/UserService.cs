@@ -376,7 +376,8 @@ public class UserService : UserManager<User>, IUserService
             ? _globalSettings.WebAuthn.PremiumMaximumAllowedCredentials
             : _globalSettings.WebAuthn.NonPremiumMaximumAllowedCredentials;
         // Allow 'pending' requests -- including the incoming.
-        if (provider.MetaData.Count(metadata => !metadata.Key.Equals("pending")) >= maximumAllowedCredentialCount)
+        if (provider.MetaData.Count(metadata => !metadata.Key.Equals("pending", StringComparison.OrdinalIgnoreCase)) >=
+            maximumAllowedCredentialCount)
         {
             throw new BadRequestException("Maximum allowed WebAuthn credential count exceeded.");
         }
@@ -420,11 +421,12 @@ public class UserService : UserManager<User>, IUserService
         }
 
         // Persistence-time validation for comprehensive enforcement. There is also boundary validation for best-possible UX.
-        var registeredCredentialCount = provider.MetaData.Count(metadata => !metadata.Key.Equals("pending"));
         var maximumAllowedCredentialCount = (await CanAccessPremium(user))
             ? _globalSettings.WebAuthn.PremiumMaximumAllowedCredentials
             : _globalSettings.WebAuthn.NonPremiumMaximumAllowedCredentials;
-        if (registeredCredentialCount >= maximumAllowedCredentialCount)
+        // Allow 'pending' requests -- including the incoming.
+        if (provider.MetaData.Count(metadata => !metadata.Key.Equals("pending", StringComparison.OrdinalIgnoreCase)) >=
+            maximumAllowedCredentialCount)
         {
             throw new BadRequestException("Maximum allowed WebAuthn credential count exceeded.");
         }
