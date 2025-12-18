@@ -1,0 +1,42 @@
+CREATE OR REPLACE FUNCTION updatePermissionsJson(permissions jsonb) returns jsonb LANGUAGE plpgsql AS $$
+	DECLARE manageAllCollections jsonb := COALESCE(jsonb_extract_path(permissions, 'manageAllCollections'), 'false');
+	DECLARE manageAssignedCollections jsonb := COALESCE(jsonb_extract_path(permissions, 'manageAssignedCollections'), 'false');
+
+	DECLARE createNewCollections jsonb := COALESCE(jsonb_extract_path(permissions, 'createNewCollections'), manageAllCollections);
+	DECLARE editAnyCollection jsonb := COALESCE(jsonb_extract_path(permissions, 'editAnyCollection'), manageAllCollections);
+	DECLARE deleteAnyCollection jsonb := COALESCE(jsonb_extract_path(permissions, 'deleteAnyCollection'), manageAllCollections);
+
+	DECLARE editAssignedCollections jsonb := COALESCE(jsonb_extract_path(permissions, 'editAssignedCollections'), manageAssignedCollections);
+	DECLARE deleteAssignedCollections jsonb := COALESCE(jsonb_extract_path(permissions, 'deleteAssignedCollections'), manageAssignedCollections);
+
+	BEGIN
+		RETURN
+			jsonb_set(
+				jsonb_set(
+					jsonb_set(
+						jsonb_set(
+							jsonb_set(
+								permissions,
+								'{createNewCollections}',
+								createNewCollections
+							),
+							'{editAnyCollection}',
+							editAnyCollection
+						),
+						'{deleteAnyCollection}',
+						deleteAnyCollection
+					),
+					'{editAssignedCollections}',
+					editAssignedCollections
+				),
+				'{deleteAssignedCollections}',
+				deleteAssignedCollections
+			);
+	END
+$$;
+
+UPDATE "OrganizationUser"
+SET "Permissions" = updatePermissionsJson("Permissions"::jsonb)::text
+WHERE "Permissions" IS NOT NULL;
+	
+DROP FUNCTION updatePermissionsJson(jsonb);

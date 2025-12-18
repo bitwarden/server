@@ -1,0 +1,12 @@
+INSERT INTO "OrganizationApiKey"(
+    "Id",
+    "OrganizationId",
+    "ApiKey",
+    "Type",
+    "RevisionDate") 
+SELECT uuid_in(overlay(overlay(md5(random()::text || ':' || random()::text) placing '4' from 13) placing to_hex(floor(random()*(11-8+1) + 8)::int)::text from 17)::cstring),
+    "Id" AS "OrganizationId",
+    "ApiKey",
+    0 AS "Type",
+    "RevisionDate" 
+FROM "Organization";
