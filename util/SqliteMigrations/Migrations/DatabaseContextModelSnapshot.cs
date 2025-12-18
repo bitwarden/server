@@ -224,6 +224,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool>("UseDirectory")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("UseDisableSmAdsForUsers")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("UseEvents")
                         .HasColumnType("INTEGER");
 
