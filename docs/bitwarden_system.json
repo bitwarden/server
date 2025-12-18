@@ -23,11 +23,12 @@
     } ]
   },
   "id" : 1,
-  "lastModifiedDate" : "2025-12-17T19:46:00Z",
+  "lastModifiedDate" : "2025-12-18T23:06:18Z",
   "model" : {
     "people" : [ {
       "description" : "An end user of the Bitwarden System",
       "id" : "1",
+      "location" : "Unspecified",
       "name" : "Bitwarden User",
       "properties" : {
         "structurizr.dsl.identifier" : "user"
@@ -79,6 +80,7 @@
     }, {
       "description" : "Either a Bitwarden site-reliability engineer or administrator of a self-hosted instance",
       "id" : "2",
+      "location" : "Unspecified",
       "name" : "System Admin",
       "properties" : {
         "structurizr.dsl.identifier" : "system_admin"
@@ -101,6 +103,7 @@
       "description" : "A customer success engineer. Inspects bitwarden state through the admin portal and internal tools",
       "group" : "Bitwarden Controlled",
       "id" : "3",
+      "location" : "Unspecified",
       "name" : "Customer Success",
       "properties" : {
         "structurizr.dsl.identifier" : "customer_success"
@@ -122,6 +125,7 @@
     }, {
       "description" : "An administrator of an organization",
       "id" : "25",
+      "location" : "Unspecified",
       "name" : "Organization Admin",
       "properties" : {
         "structurizr.dsl.identifier" : "admin"
@@ -143,6 +147,7 @@
     }, {
       "description" : "And employee of a managed service provider",
       "id" : "26",
+      "location" : "Unspecified",
       "name" : "MSP",
       "properties" : {
         "structurizr.dsl.identifier" : "provider"
@@ -188,14 +193,14 @@
           },
           "relationships" : [ {
             "description" : "Requests payments for customers",
-            "destinationId" : "80",
-            "id" : "266",
+            "destinationId" : "32",
+            "id" : "153",
             "sourceId" : "6",
             "tags" : "Relationship"
           }, {
             "description" : "Requests payments for customers",
-            "destinationId" : "81",
-            "id" : "269",
+            "destinationId" : "33",
+            "id" : "156",
             "sourceId" : "6",
             "tags" : "Relationship"
           } ],
@@ -209,7 +214,7 @@
         },
         "relationships" : [ {
           "description" : "Validates JWTs with",
-          "destinationId" : "78",
+          "destinationId" : "30",
           "id" : "137",
           "sourceId" : "5",
           "tags" : "Relationship",
@@ -239,40 +244,40 @@
           "sourceId" : "5",
           "tags" : "Relationship"
         }, {
+          "description" : "Requests payments for customers",
+          "destinationId" : "32",
+          "id" : "154",
+          "linkedRelationshipId" : "153",
+          "sourceId" : "5"
+        }, {
+          "description" : "Requests payments for customers",
+          "destinationId" : "33",
+          "id" : "157",
+          "linkedRelationshipId" : "156",
+          "sourceId" : "5"
+        }, {
           "description" : "Sends events to",
-          "destinationId" : "31",
-          "id" : "151",
+          "destinationId" : "35",
+          "id" : "162",
           "sourceId" : "5",
           "tags" : "Relationship"
         }, {
           "description" : "Sends events to",
-          "destinationId" : "30",
-          "id" : "152",
-          "linkedRelationshipId" : "151",
+          "destinationId" : "34",
+          "id" : "163",
+          "linkedRelationshipId" : "162",
           "sourceId" : "5"
         }, {
           "description" : "Sends events to",
-          "destinationId" : "41",
-          "id" : "155",
+          "destinationId" : "45",
+          "id" : "166",
           "sourceId" : "5",
           "tags" : "Relationship"
         }, {
           "description" : "Sends events to",
-          "destinationId" : "40",
-          "id" : "156",
-          "linkedRelationshipId" : "155",
-          "sourceId" : "5"
-        }, {
-          "description" : "Requests payments for customers",
-          "destinationId" : "80",
-          "id" : "267",
-          "linkedRelationshipId" : "266",
-          "sourceId" : "5"
-        }, {
-          "description" : "Requests payments for customers",
-          "destinationId" : "81",
-          "id" : "270",
-          "linkedRelationshipId" : "269",
+          "destinationId" : "44",
+          "id" : "167",
+          "linkedRelationshipId" : "166",
           "sourceId" : "5"
         } ],
         "tags" : "Element,Container,API"
@@ -280,138 +285,138 @@
         "components" : [ {
           "description" : "Listens to a specific queue and passes off to a handler to handle events",
           "documentation" : { },
-          "id" : "63",
+          "id" : "67",
           "name" : "RabbitMqEventListenerService",
           "properties" : {
             "structurizr.dsl.identifier" : "server.events.event_listener"
           },
           "relationships" : [ {
             "description" : "Listens to",
-            "destinationId" : "43",
-            "id" : "205",
+            "destinationId" : "47",
+            "id" : "216",
             "properties" : {
-              "structurizr.dsl.identifier" : "eventsWriteListener_events"
+              "structurizr.dsl.identifier" : "eventswritelistener_events"
             },
-            "sourceId" : "63",
-            "tags" : "Relationship"
-          }, {
-            "description" : "Listens to",
-            "destinationId" : "40",
-            "id" : "206",
-            "linkedRelationshipId" : "205",
-            "sourceId" : "63"
-          }, {
-            "description" : "Listens to",
-            "destinationId" : "46",
-            "id" : "208",
-            "properties" : {
-              "structurizr.dsl.identifier" : "eventsHecListener_events"
-            },
-            "sourceId" : "63",
-            "tags" : "Relationship"
-          }, {
-            "description" : "Listens to",
-            "destinationId" : "45",
-            "id" : "210",
-            "properties" : {
-              "structurizr.dsl.identifier" : "eventsWebhookListener_events"
-            },
-            "sourceId" : "63",
+            "sourceId" : "67",
             "tags" : "Relationship"
           }, {
             "description" : "Listens to",
             "destinationId" : "44",
-            "id" : "212",
-            "properties" : {
-              "structurizr.dsl.identifier" : "eventsSlackListener_events"
-            },
-            "sourceId" : "63",
-            "tags" : "Relationship"
-          }, {
-            "description" : "Delegates to",
-            "destinationId" : "65",
-            "id" : "214",
-            "properties" : {
-              "structurizr.dsl.identifier" : "eventsWriteDelegate_events"
-            },
-            "sourceId" : "63",
-            "tags" : "Relationship"
-          }, {
-            "description" : "Delegates to",
-            "destinationId" : "66",
             "id" : "217",
+            "linkedRelationshipId" : "216",
+            "sourceId" : "67"
+          }, {
+            "description" : "Listens to",
+            "destinationId" : "50",
+            "id" : "219",
             "properties" : {
-              "structurizr.dsl.identifier" : "eventsIntegrationHandlerDelegate_events"
+              "structurizr.dsl.identifier" : "eventsheclistener_events"
             },
-            "sourceId" : "63",
+            "sourceId" : "67",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Listens to",
+            "destinationId" : "49",
+            "id" : "221",
+            "properties" : {
+              "structurizr.dsl.identifier" : "eventswebhooklistener_events"
+            },
+            "sourceId" : "67",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Listens to",
+            "destinationId" : "48",
+            "id" : "223",
+            "properties" : {
+              "structurizr.dsl.identifier" : "eventsslacklistener_events"
+            },
+            "sourceId" : "67",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Delegates to",
+            "destinationId" : "69",
+            "id" : "225",
+            "properties" : {
+              "structurizr.dsl.identifier" : "eventswritedelegate_events"
+            },
+            "sourceId" : "67",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Delegates to",
+            "destinationId" : "70",
+            "id" : "228",
+            "properties" : {
+              "structurizr.dsl.identifier" : "eventsintegrationhandlerdelegate_events"
+            },
+            "sourceId" : "67",
             "tags" : "Relationship"
           } ],
           "tags" : "Element,Component"
         }, {
           "description" : "Listens to a specific queue and passes off to a handler to handle IntegrationMessages",
           "documentation" : { },
-          "id" : "64",
+          "id" : "68",
           "name" : "RabbitMqIntegrationListenerService",
           "properties" : {
             "structurizr.dsl.identifier" : "server.events.integration_listener"
           },
           "relationships" : [ {
             "description" : "Listens to",
-            "destinationId" : "47",
-            "id" : "224",
+            "destinationId" : "51",
+            "id" : "235",
             "properties" : {
-              "structurizr.dsl.identifier" : "integrationSlackListener_events"
+              "structurizr.dsl.identifier" : "integrationslacklistener_events"
             },
-            "sourceId" : "64",
+            "sourceId" : "68",
             "tags" : "Relationship"
           }, {
             "description" : "Listens to",
-            "destinationId" : "40",
-            "id" : "225",
-            "linkedRelationshipId" : "224",
-            "sourceId" : "64"
+            "destinationId" : "44",
+            "id" : "236",
+            "linkedRelationshipId" : "235",
+            "sourceId" : "68"
           }, {
             "description" : "Listens to",
-            "destinationId" : "48",
-            "id" : "227",
+            "destinationId" : "52",
+            "id" : "238",
             "properties" : {
-              "structurizr.dsl.identifier" : "integrationWebhookListener_events"
+              "structurizr.dsl.identifier" : "integrationwebhooklistener_events"
             },
-            "sourceId" : "64",
+            "sourceId" : "68",
             "tags" : "Relationship"
           }, {
             "description" : "Listens to",
-            "destinationId" : "49",
-            "id" : "229",
+            "destinationId" : "53",
+            "id" : "240",
             "properties" : {
-              "structurizr.dsl.identifier" : "integrationHecListener_events"
+              "structurizr.dsl.identifier" : "integrationheclistener_events"
             },
-            "sourceId" : "64",
+            "sourceId" : "68",
             "tags" : "Relationship"
           }, {
             "description" : "Delegates to",
-            "destinationId" : "67",
-            "id" : "231",
+            "destinationId" : "71",
+            "id" : "242",
             "properties" : {
-              "structurizr.dsl.identifier" : "integrationSlackDelegate_events"
+              "structurizr.dsl.identifier" : "integrationslackdelegate_events"
             },
-            "sourceId" : "64",
+            "sourceId" : "68",
             "tags" : "Relationship"
           }, {
             "description" : "Delegates to",
-            "destinationId" : "68",
-            "id" : "232",
+            "destinationId" : "72",
+            "id" : "243",
             "properties" : {
-              "structurizr.dsl.identifier" : "integrationWebhookDelegate_events"
+              "structurizr.dsl.identifier" : "integrationwebhookdelegate_events"
             },
-            "sourceId" : "64",
+            "sourceId" : "68",
             "tags" : "Relationship"
           } ],
           "tags" : "Element,Component"
         }, {
           "description" : "Handles all events, passing them off to the IEventWriteService with the `persistent` key for long term storage.",
           "documentation" : { },
-          "id" : "65",
+          "id" : "69",
           "name" : "EventRepositoryHandler",
           "properties" : {
             "structurizr.dsl.identifier" : "server.events.event_repository_handler"
@@ -419,112 +424,9 @@
           "relationships" : [ {
             "description" : "Writes events to",
             "destinationId" : "11",
-            "id" : "215",
+            "id" : "226",
             "properties" : {
-              "structurizr.dsl.identifier" : "eventRepositoryDatabase_events"
-            },
-            "sourceId" : "65",
-            "tags" : "Relationship,Self-Hosted-Only",
-            "technology" : "tags"
-          } ],
-          "tags" : "Element,Component,Self-Hosted-Only"
-        }, {
-          "description" : "Fetches the relevent configurations when an event comes in and hands the event to its paired integration handler for processing.",
-          "documentation" : { },
-          "id" : "66",
-          "name" : "EventIntegrationHandler",
-          "properties" : {
-            "structurizr.dsl.identifier" : "server.events.event_integration_handler"
-          },
-          "relationships" : [ {
-            "description" : "Fetches configurations from",
-            "destinationId" : "69",
-            "id" : "219",
-            "properties" : {
-              "structurizr.dsl.identifier" : "eventIntegrationHandlerCache_events"
-            },
-            "sourceId" : "66",
-            "tags" : "Relationship"
-          }, {
-            "description" : "Runs filters",
-            "destinationId" : "72",
-            "id" : "220",
-            "properties" : {
-              "structurizr.dsl.identifier" : "eventIntegrationHandlerFilter_events"
-            },
-            "sourceId" : "66",
-            "tags" : "Relationship"
-          }, {
-            "description" : "Publishes To",
-            "destinationId" : "42",
-            "id" : "221",
-            "properties" : {
-              "structurizr.dsl.identifier" : "eventIntegrationHandlerPublish_events"
-            },
-            "sourceId" : "66",
-            "tags" : "Relationship"
-          }, {
-            "description" : "Publishes To",
-            "destinationId" : "40",
-            "id" : "222",
-            "linkedRelationshipId" : "221",
-            "sourceId" : "66"
-          } ],
-          "tags" : "Element,Component,Self-Hosted-Only"
-        }, {
-          "description" : "Processes Slack IntegrationMessages, posting them to the configured channels.",
-          "documentation" : { },
-          "id" : "67",
-          "name" : "SlackIntegrationHandler",
-          "properties" : {
-            "structurizr.dsl.identifier" : "server.events.slack_integration_handler"
-          },
-          "relationships" : [ {
-            "description" : "Uses",
-            "destinationId" : "70",
-            "id" : "251",
-            "properties" : {
-              "structurizr.dsl.identifier" : "slackToSlackService_events"
-            },
-            "sourceId" : "67",
-            "tags" : "Relationship,Self-Hosted-Only",
-            "technology" : "tags"
-          } ],
-          "tags" : "Element,Component,Self-Hosted-Only"
-        }, {
-          "description" : "Processes Webhook and HEC IntegrationMessages, posting them to the configured URI.",
-          "documentation" : { },
-          "id" : "68",
-          "name" : "WebhookIntegrationHandler",
-          "properties" : {
-            "structurizr.dsl.identifier" : "server.events.webhook_integration_handler"
-          },
-          "relationships" : [ {
-            "description" : "Uses",
-            "destinationId" : "71",
-            "id" : "256",
-            "properties" : {
-              "structurizr.dsl.identifier" : "handlerHttpClient_events"
-            },
-            "sourceId" : "68",
-            "tags" : "Relationship,Self-Hosted-Only",
-            "technology" : "tags"
-          } ],
-          "tags" : "Element,Component,Self-Hosted-Only"
-        }, {
-          "description" : "Caches all configurations for integrations in memory so that events can be handled without adding database load.",
-          "documentation" : { },
-          "id" : "69",
-          "name" : "IntegrationConfigurationDetailsCacheService",
-          "properties" : {
-            "structurizr.dsl.identifier" : "server.events.integration_configuration_details_cache_service"
-          },
-          "relationships" : [ {
-            "description" : "Fetches configurations from",
-            "destinationId" : "11",
-            "id" : "218",
-            "properties" : {
-              "structurizr.dsl.identifier" : "cacheDatabaseFetch_events"
+              "structurizr.dsl.identifier" : "eventrepositorydatabase_events"
             },
             "sourceId" : "69",
             "tags" : "Relationship,Self-Hosted-Only",
@@ -532,75 +434,178 @@
           } ],
           "tags" : "Element,Component,Self-Hosted-Only"
         }, {
-          "description" : "Handles all API interaction with Slack.",
+          "description" : "Fetches the relevant configurations when an event comes in and hands the event to its paired integration handler for processing.",
           "documentation" : { },
           "id" : "70",
+          "name" : "EventIntegrationHandler",
+          "properties" : {
+            "structurizr.dsl.identifier" : "server.events.event_integration_handler"
+          },
+          "relationships" : [ {
+            "description" : "Fetches configurations from",
+            "destinationId" : "73",
+            "id" : "230",
+            "properties" : {
+              "structurizr.dsl.identifier" : "eventintegrationhandlercache_events"
+            },
+            "sourceId" : "70",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Runs filters",
+            "destinationId" : "76",
+            "id" : "231",
+            "properties" : {
+              "structurizr.dsl.identifier" : "eventintegrationhandlerfilter_events"
+            },
+            "sourceId" : "70",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Publishes To",
+            "destinationId" : "46",
+            "id" : "232",
+            "properties" : {
+              "structurizr.dsl.identifier" : "eventintegrationhandlerpublish_events"
+            },
+            "sourceId" : "70",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Publishes To",
+            "destinationId" : "44",
+            "id" : "233",
+            "linkedRelationshipId" : "232",
+            "sourceId" : "70"
+          } ],
+          "tags" : "Element,Component,Self-Hosted-Only"
+        }, {
+          "description" : "Processes Slack IntegrationMessages, posting them to the configured channels.",
+          "documentation" : { },
+          "id" : "71",
+          "name" : "SlackIntegrationHandler",
+          "properties" : {
+            "structurizr.dsl.identifier" : "server.events.slack_integration_handler"
+          },
+          "relationships" : [ {
+            "description" : "Uses",
+            "destinationId" : "74",
+            "id" : "262",
+            "properties" : {
+              "structurizr.dsl.identifier" : "slacktoslackservice_events"
+            },
+            "sourceId" : "71",
+            "tags" : "Relationship,Self-Hosted-Only",
+            "technology" : "tags"
+          } ],
+          "tags" : "Element,Component,Self-Hosted-Only"
+        }, {
+          "description" : "Processes Webhook and HEC IntegrationMessages, posting them to the configured URI.",
+          "documentation" : { },
+          "id" : "72",
+          "name" : "WebhookIntegrationHandler",
+          "properties" : {
+            "structurizr.dsl.identifier" : "server.events.webhook_integration_handler"
+          },
+          "relationships" : [ {
+            "description" : "Uses",
+            "destinationId" : "75",
+            "id" : "267",
+            "properties" : {
+              "structurizr.dsl.identifier" : "handlerhttpclient_events"
+            },
+            "sourceId" : "72",
+            "tags" : "Relationship,Self-Hosted-Only",
+            "technology" : "tags"
+          } ],
+          "tags" : "Element,Component,Self-Hosted-Only"
+        }, {
+          "description" : "Caches all configurations for integrations in memory so that events can be handled without adding database load.",
+          "documentation" : { },
+          "id" : "73",
+          "name" : "IntegrationConfigurationDetailsCacheService",
+          "properties" : {
+            "structurizr.dsl.identifier" : "server.events.integration_configuration_details_cache_service"
+          },
+          "relationships" : [ {
+            "description" : "Fetches configurations from",
+            "destinationId" : "11",
+            "id" : "229",
+            "properties" : {
+              "structurizr.dsl.identifier" : "cachedatabasefetch_events"
+            },
+            "sourceId" : "73",
+            "tags" : "Relationship,Self-Hosted-Only",
+            "technology" : "tags"
+          } ],
+          "tags" : "Element,Component,Self-Hosted-Only"
+        }, {
+          "description" : "Handles all API interaction with Slack.",
+          "documentation" : { },
+          "id" : "74",
           "name" : "SlackService",
           "properties" : {
             "structurizr.dsl.identifier" : "server.events.slack_service"
           },
           "relationships" : [ {
             "description" : "Publishes configured events to",
-            "destinationId" : "74",
-            "id" : "252",
+            "destinationId" : "78",
+            "id" : "263",
             "properties" : {
-              "structurizr.dsl.identifier" : "slackServiceToSlack_events"
+              "structurizr.dsl.identifier" : "slackservicetoslack_events"
             },
-            "sourceId" : "70",
+            "sourceId" : "74",
             "tags" : "Relationship,Self-Hosted-Only",
             "technology" : "tags"
           }, {
             "description" : "Publishes configured events to",
-            "destinationId" : "73",
-            "id" : "253",
-            "linkedRelationshipId" : "252",
-            "sourceId" : "70",
+            "destinationId" : "77",
+            "id" : "264",
+            "linkedRelationshipId" : "263",
+            "sourceId" : "74",
             "technology" : "tags"
           } ],
           "tags" : "Element,Component,Self-Hosted-Only"
         }, {
           "description" : "Performs any Http functions for Webhooks / HEC.",
           "documentation" : { },
-          "id" : "71",
+          "id" : "75",
           "name" : "HttpClient",
           "properties" : {
             "structurizr.dsl.identifier" : "server.events.http_client"
           },
           "relationships" : [ {
             "description" : "Publishes configured events to",
+            "destinationId" : "81",
+            "id" : "268",
+            "properties" : {
+              "structurizr.dsl.identifier" : "httptocrowdstrike_events"
+            },
+            "sourceId" : "75",
+            "tags" : "Relationship,Self-Hosted-Only",
+            "technology" : "tags"
+          }, {
+            "description" : "Publishes configured events to",
             "destinationId" : "77",
-            "id" : "257",
+            "id" : "269",
+            "linkedRelationshipId" : "268",
+            "sourceId" : "75",
+            "technology" : "tags"
+          }, {
+            "description" : "Publishes configured events to",
+            "destinationId" : "80",
+            "id" : "271",
             "properties" : {
-              "structurizr.dsl.identifier" : "httpToCrowdstrike_events"
+              "structurizr.dsl.identifier" : "httptodatadog_events"
             },
-            "sourceId" : "71",
+            "sourceId" : "75",
             "tags" : "Relationship,Self-Hosted-Only",
             "technology" : "tags"
           }, {
             "description" : "Publishes configured events to",
-            "destinationId" : "73",
-            "id" : "258",
-            "linkedRelationshipId" : "257",
-            "sourceId" : "71",
-            "technology" : "tags"
-          }, {
-            "description" : "Publishes configured events to",
-            "destinationId" : "76",
-            "id" : "260",
+            "destinationId" : "79",
+            "id" : "273",
             "properties" : {
-              "structurizr.dsl.identifier" : "httpToDatadog_events"
+              "structurizr.dsl.identifier" : "httptosplunk_events"
             },
-            "sourceId" : "71",
-            "tags" : "Relationship,Self-Hosted-Only",
-            "technology" : "tags"
-          }, {
-            "description" : "Publishes configured events to",
-            "destinationId" : "75",
-            "id" : "262",
-            "properties" : {
-              "structurizr.dsl.identifier" : "httpToSplunk_events"
-            },
-            "sourceId" : "71",
+            "sourceId" : "75",
             "tags" : "Relationship,Self-Hosted-Only",
             "technology" : "tags"
           } ],
@@ -608,7 +613,7 @@
         }, {
           "description" : "Processes filters from configurations to determine if an event should be processed out to the integration.",
           "documentation" : { },
-          "id" : "72",
+          "id" : "76",
           "name" : "IntegrationFilterService",
           "properties" : {
             "structurizr.dsl.identifier" : "server.events.integration_filter_service"
@@ -629,116 +634,116 @@
           "tags" : "Relationship"
         }, {
           "description" : "Sends events to",
-          "destinationId" : "31",
-          "id" : "153",
+          "destinationId" : "35",
+          "id" : "164",
           "sourceId" : "7",
           "tags" : "Relationship"
         }, {
           "description" : "Sends events to",
-          "destinationId" : "30",
-          "id" : "154",
-          "linkedRelationshipId" : "153",
+          "destinationId" : "34",
+          "id" : "165",
+          "linkedRelationshipId" : "164",
           "sourceId" : "7"
         }, {
           "description" : "Sends events to",
-          "destinationId" : "41",
-          "id" : "157",
-          "sourceId" : "7",
-          "tags" : "Relationship"
-        }, {
-          "description" : "Sends events to",
-          "destinationId" : "40",
-          "id" : "158",
-          "linkedRelationshipId" : "157",
-          "sourceId" : "7"
-        }, {
-          "description" : "Listens to",
-          "destinationId" : "43",
-          "id" : "207",
-          "linkedRelationshipId" : "205",
-          "sourceId" : "7"
-        }, {
-          "description" : "Listens to",
-          "destinationId" : "46",
-          "id" : "209",
-          "linkedRelationshipId" : "208",
-          "sourceId" : "7"
-        }, {
-          "description" : "Listens to",
           "destinationId" : "45",
-          "id" : "211",
-          "linkedRelationshipId" : "210",
-          "sourceId" : "7"
-        }, {
-          "description" : "Listens to",
-          "destinationId" : "44",
-          "id" : "213",
-          "linkedRelationshipId" : "212",
-          "sourceId" : "7"
-        }, {
-          "description" : "Writes events to",
-          "destinationId" : "11",
-          "id" : "216",
-          "linkedRelationshipId" : "215",
+          "id" : "168",
           "sourceId" : "7",
-          "technology" : "tags"
+          "tags" : "Relationship"
         }, {
-          "description" : "Publishes To",
-          "destinationId" : "42",
-          "id" : "223",
-          "linkedRelationshipId" : "221",
+          "description" : "Sends events to",
+          "destinationId" : "44",
+          "id" : "169",
+          "linkedRelationshipId" : "168",
           "sourceId" : "7"
         }, {
           "description" : "Listens to",
           "destinationId" : "47",
-          "id" : "226",
-          "linkedRelationshipId" : "224",
+          "id" : "218",
+          "linkedRelationshipId" : "216",
           "sourceId" : "7"
         }, {
           "description" : "Listens to",
-          "destinationId" : "48",
-          "id" : "228",
-          "linkedRelationshipId" : "227",
+          "destinationId" : "50",
+          "id" : "220",
+          "linkedRelationshipId" : "219",
           "sourceId" : "7"
         }, {
           "description" : "Listens to",
           "destinationId" : "49",
-          "id" : "230",
-          "linkedRelationshipId" : "229",
+          "id" : "222",
+          "linkedRelationshipId" : "221",
           "sourceId" : "7"
         }, {
-          "description" : "Publishes configured events to",
-          "destinationId" : "74",
-          "id" : "254",
-          "linkedRelationshipId" : "252",
+          "description" : "Listens to",
+          "destinationId" : "48",
+          "id" : "224",
+          "linkedRelationshipId" : "223",
+          "sourceId" : "7"
+        }, {
+          "description" : "Writes events to",
+          "destinationId" : "11",
+          "id" : "227",
+          "linkedRelationshipId" : "226",
           "sourceId" : "7",
           "technology" : "tags"
         }, {
+          "description" : "Publishes To",
+          "destinationId" : "46",
+          "id" : "234",
+          "linkedRelationshipId" : "232",
+          "sourceId" : "7"
+        }, {
+          "description" : "Listens to",
+          "destinationId" : "51",
+          "id" : "237",
+          "linkedRelationshipId" : "235",
+          "sourceId" : "7"
+        }, {
+          "description" : "Listens to",
+          "destinationId" : "52",
+          "id" : "239",
+          "linkedRelationshipId" : "238",
+          "sourceId" : "7"
+        }, {
+          "description" : "Listens to",
+          "destinationId" : "53",
+          "id" : "241",
+          "linkedRelationshipId" : "240",
+          "sourceId" : "7"
+        }, {
           "description" : "Publishes configured events to",
-          "destinationId" : "73",
-          "id" : "255",
-          "linkedRelationshipId" : "252",
+          "destinationId" : "78",
+          "id" : "265",
+          "linkedRelationshipId" : "263",
           "sourceId" : "7",
           "technology" : "tags"
         }, {
           "description" : "Publishes configured events to",
           "destinationId" : "77",
-          "id" : "259",
-          "linkedRelationshipId" : "257",
+          "id" : "266",
+          "linkedRelationshipId" : "263",
           "sourceId" : "7",
           "technology" : "tags"
         }, {
           "description" : "Publishes configured events to",
-          "destinationId" : "76",
-          "id" : "261",
-          "linkedRelationshipId" : "260",
+          "destinationId" : "81",
+          "id" : "270",
+          "linkedRelationshipId" : "268",
           "sourceId" : "7",
           "technology" : "tags"
         }, {
           "description" : "Publishes configured events to",
-          "destinationId" : "75",
-          "id" : "263",
-          "linkedRelationshipId" : "262",
+          "destinationId" : "80",
+          "id" : "272",
+          "linkedRelationshipId" : "271",
+          "sourceId" : "7",
+          "technology" : "tags"
+        }, {
+          "description" : "Publishes configured events to",
+          "destinationId" : "79",
+          "id" : "274",
+          "linkedRelationshipId" : "273",
           "sourceId" : "7",
           "technology" : "tags"
         } ],
@@ -777,7 +782,7 @@
         "components" : [ {
           "description" : "Handles all events, passing them off to the IEventWriteService with the `persistent` key for long term storage.",
           "documentation" : { },
-          "id" : "53",
+          "id" : "57",
           "name" : "EventRepositoryHandler",
           "properties" : {
             "structurizr.dsl.identifier" : "server.events_processor.event_repository_handler"
@@ -785,230 +790,230 @@
           "relationships" : [ {
             "description" : "Writes events to",
             "destinationId" : "11",
-            "id" : "185",
+            "id" : "196",
             "properties" : {
-              "structurizr.dsl.identifier" : "eventRepositoryDatabase"
-            },
-            "sourceId" : "53",
-            "tags" : "Relationship"
-          } ],
-          "tags" : "Element,Component"
-        }, {
-          "description" : "Listens to a specific subscription and passes off to a handler to handle events",
-          "documentation" : { },
-          "id" : "54",
-          "name" : "AzureServiceBusEventListenerService",
-          "properties" : {
-            "structurizr.dsl.identifier" : "server.events_processor.event_listener"
-          },
-          "relationships" : [ {
-            "description" : "Listens to",
-            "destinationId" : "33",
-            "id" : "166",
-            "properties" : {
-              "structurizr.dsl.identifier" : "eventsWriteListener"
-            },
-            "sourceId" : "54",
-            "tags" : "Relationship"
-          }, {
-            "description" : "Listens to",
-            "destinationId" : "30",
-            "id" : "167",
-            "linkedRelationshipId" : "166",
-            "sourceId" : "54"
-          }, {
-            "description" : "Delegates to",
-            "destinationId" : "53",
-            "id" : "170",
-            "properties" : {
-              "structurizr.dsl.identifier" : "eventsWriteDelegate"
-            },
-            "sourceId" : "54",
-            "tags" : "Relationship"
-          }, {
-            "description" : "Listens to",
-            "destinationId" : "36",
-            "id" : "171",
-            "properties" : {
-              "structurizr.dsl.identifier" : "eventsHecListener"
-            },
-            "sourceId" : "54",
-            "tags" : "Relationship"
-          }, {
-            "description" : "Listens to",
-            "destinationId" : "35",
-            "id" : "173",
-            "properties" : {
-              "structurizr.dsl.identifier" : "eventsWebhookListener"
-            },
-            "sourceId" : "54",
-            "tags" : "Relationship"
-          }, {
-            "description" : "Listens to",
-            "destinationId" : "34",
-            "id" : "175",
-            "properties" : {
-              "structurizr.dsl.identifier" : "eventsSlackListener"
-            },
-            "sourceId" : "54",
-            "tags" : "Relationship"
-          }, {
-            "description" : "Delegates to",
-            "destinationId" : "56",
-            "id" : "177",
-            "properties" : {
-              "structurizr.dsl.identifier" : "eventsIntegrationHandlerDelegate"
-            },
-            "sourceId" : "54",
-            "tags" : "Relationship"
-          } ],
-          "tags" : "Element,Component"
-        }, {
-          "description" : "Listens to a specific subscription and passes off to a handler to handle IntegrationMessages",
-          "documentation" : { },
-          "id" : "55",
-          "name" : "AzureServiceBusIntegrationListenerService",
-          "properties" : {
-            "structurizr.dsl.identifier" : "server.events_processor.integration_listener"
-          },
-          "relationships" : [ {
-            "description" : "Listens to",
-            "destinationId" : "37",
-            "id" : "186",
-            "properties" : {
-              "structurizr.dsl.identifier" : "integrationSlackListener"
-            },
-            "sourceId" : "55",
-            "tags" : "Relationship"
-          }, {
-            "description" : "Listens to",
-            "destinationId" : "30",
-            "id" : "187",
-            "linkedRelationshipId" : "186",
-            "sourceId" : "55"
-          }, {
-            "description" : "Delegates to",
-            "destinationId" : "57",
-            "id" : "189",
-            "properties" : {
-              "structurizr.dsl.identifier" : "integrationSlackDelegate"
-            },
-            "sourceId" : "55",
-            "tags" : "Relationship"
-          }, {
-            "description" : "Listens to",
-            "destinationId" : "38",
-            "id" : "190",
-            "properties" : {
-              "structurizr.dsl.identifier" : "integrationWebhookListener"
-            },
-            "sourceId" : "55",
-            "tags" : "Relationship"
-          }, {
-            "description" : "Listens to",
-            "destinationId" : "39",
-            "id" : "192",
-            "properties" : {
-              "structurizr.dsl.identifier" : "integrationHecListener"
-            },
-            "sourceId" : "55",
-            "tags" : "Relationship"
-          }, {
-            "description" : "Delegates to",
-            "destinationId" : "58",
-            "id" : "194",
-            "properties" : {
-              "structurizr.dsl.identifier" : "integrationWebhookDelegate"
-            },
-            "sourceId" : "55",
-            "tags" : "Relationship"
-          } ],
-          "tags" : "Element,Component"
-        }, {
-          "description" : "Fetches the relevent configurations when an event comes in and hands the event to its paired integration handler for processing.",
-          "documentation" : { },
-          "id" : "56",
-          "name" : "EventIntegrationHandler",
-          "properties" : {
-            "structurizr.dsl.identifier" : "server.events_processor.event_integration_handler"
-          },
-          "relationships" : [ {
-            "description" : "Publishes To",
-            "destinationId" : "32",
-            "id" : "178",
-            "properties" : {
-              "structurizr.dsl.identifier" : "eventIntegrationHandlerPublish"
-            },
-            "sourceId" : "56",
-            "tags" : "Relationship"
-          }, {
-            "description" : "Publishes To",
-            "destinationId" : "30",
-            "id" : "179",
-            "linkedRelationshipId" : "178",
-            "sourceId" : "56"
-          }, {
-            "description" : "Fetches configurations from",
-            "destinationId" : "59",
-            "id" : "181",
-            "properties" : {
-              "structurizr.dsl.identifier" : "eventIntegrationHandlerCache"
-            },
-            "sourceId" : "56",
-            "tags" : "Relationship"
-          }, {
-            "description" : "Runs filters",
-            "destinationId" : "62",
-            "id" : "184",
-            "properties" : {
-              "structurizr.dsl.identifier" : "eventIntegrationHandlerFilter"
-            },
-            "sourceId" : "56",
-            "tags" : "Relationship"
-          } ],
-          "tags" : "Element,Component"
-        }, {
-          "description" : "Processes Slack IntegrationMessages, posting them to the configured channels.",
-          "documentation" : { },
-          "id" : "57",
-          "name" : "SlackIntegrationHandler",
-          "properties" : {
-            "structurizr.dsl.identifier" : "server.events_processor.slack_integration_handler"
-          },
-          "relationships" : [ {
-            "description" : "Uses",
-            "destinationId" : "60",
-            "id" : "233",
-            "properties" : {
-              "structurizr.dsl.identifier" : "slackToSlackService"
+              "structurizr.dsl.identifier" : "eventrepositorydatabase"
             },
             "sourceId" : "57",
             "tags" : "Relationship"
           } ],
           "tags" : "Element,Component"
         }, {
-          "description" : "Processes Webhook and HEC IntegrationMessages, posting them to the configured URI.",
+          "description" : "Listens to a specific subscription and passes off to a handler to handle events",
           "documentation" : { },
           "id" : "58",
-          "name" : "WebhookIntegrationHandler",
+          "name" : "AzureServiceBusEventListenerService",
           "properties" : {
-            "structurizr.dsl.identifier" : "server.events_processor.webhook_integration_handler"
+            "structurizr.dsl.identifier" : "server.events_processor.event_listener"
           },
           "relationships" : [ {
-            "description" : "Uses",
-            "destinationId" : "61",
-            "id" : "240",
+            "description" : "Listens to",
+            "destinationId" : "37",
+            "id" : "177",
             "properties" : {
-              "structurizr.dsl.identifier" : "handlerHttpClient"
+              "structurizr.dsl.identifier" : "eventswritelistener"
+            },
+            "sourceId" : "58",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Listens to",
+            "destinationId" : "34",
+            "id" : "178",
+            "linkedRelationshipId" : "177",
+            "sourceId" : "58"
+          }, {
+            "description" : "Delegates to",
+            "destinationId" : "57",
+            "id" : "181",
+            "properties" : {
+              "structurizr.dsl.identifier" : "eventswritedelegate"
+            },
+            "sourceId" : "58",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Listens to",
+            "destinationId" : "40",
+            "id" : "182",
+            "properties" : {
+              "structurizr.dsl.identifier" : "eventsheclistener"
+            },
+            "sourceId" : "58",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Listens to",
+            "destinationId" : "39",
+            "id" : "184",
+            "properties" : {
+              "structurizr.dsl.identifier" : "eventswebhooklistener"
+            },
+            "sourceId" : "58",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Listens to",
+            "destinationId" : "38",
+            "id" : "186",
+            "properties" : {
+              "structurizr.dsl.identifier" : "eventsslacklistener"
+            },
+            "sourceId" : "58",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Delegates to",
+            "destinationId" : "60",
+            "id" : "188",
+            "properties" : {
+              "structurizr.dsl.identifier" : "eventsintegrationhandlerdelegate"
             },
             "sourceId" : "58",
             "tags" : "Relationship"
           } ],
           "tags" : "Element,Component"
         }, {
-          "description" : "Caches all configurations for integrations in memory so that events can be handled without adding database load.",
+          "description" : "Listens to a specific subscription and passes off to a handler to handle IntegrationMessages",
           "documentation" : { },
           "id" : "59",
+          "name" : "AzureServiceBusIntegrationListenerService",
+          "properties" : {
+            "structurizr.dsl.identifier" : "server.events_processor.integration_listener"
+          },
+          "relationships" : [ {
+            "description" : "Listens to",
+            "destinationId" : "41",
+            "id" : "197",
+            "properties" : {
+              "structurizr.dsl.identifier" : "integrationslacklistener"
+            },
+            "sourceId" : "59",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Listens to",
+            "destinationId" : "34",
+            "id" : "198",
+            "linkedRelationshipId" : "197",
+            "sourceId" : "59"
+          }, {
+            "description" : "Delegates to",
+            "destinationId" : "61",
+            "id" : "200",
+            "properties" : {
+              "structurizr.dsl.identifier" : "integrationslackdelegate"
+            },
+            "sourceId" : "59",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Listens to",
+            "destinationId" : "42",
+            "id" : "201",
+            "properties" : {
+              "structurizr.dsl.identifier" : "integrationwebhooklistener"
+            },
+            "sourceId" : "59",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Listens to",
+            "destinationId" : "43",
+            "id" : "203",
+            "properties" : {
+              "structurizr.dsl.identifier" : "integrationheclistener"
+            },
+            "sourceId" : "59",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Delegates to",
+            "destinationId" : "62",
+            "id" : "205",
+            "properties" : {
+              "structurizr.dsl.identifier" : "integrationwebhookdelegate"
+            },
+            "sourceId" : "59",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component"
+        }, {
+          "description" : "Fetches the relevant configurations when an event comes in and hands the event to its paired integration handler for processing.",
+          "documentation" : { },
+          "id" : "60",
+          "name" : "EventIntegrationHandler",
+          "properties" : {
+            "structurizr.dsl.identifier" : "server.events_processor.event_integration_handler"
+          },
+          "relationships" : [ {
+            "description" : "Publishes To",
+            "destinationId" : "36",
+            "id" : "189",
+            "properties" : {
+              "structurizr.dsl.identifier" : "eventintegrationhandlerpublish"
+            },
+            "sourceId" : "60",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Publishes To",
+            "destinationId" : "34",
+            "id" : "190",
+            "linkedRelationshipId" : "189",
+            "sourceId" : "60"
+          }, {
+            "description" : "Fetches configurations from",
+            "destinationId" : "63",
+            "id" : "192",
+            "properties" : {
+              "structurizr.dsl.identifier" : "eventintegrationhandlercache"
+            },
+            "sourceId" : "60",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Runs filters",
+            "destinationId" : "66",
+            "id" : "195",
+            "properties" : {
+              "structurizr.dsl.identifier" : "eventintegrationhandlerfilter"
+            },
+            "sourceId" : "60",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component"
+        }, {
+          "description" : "Processes Slack IntegrationMessages, posting them to the configured channels.",
+          "documentation" : { },
+          "id" : "61",
+          "name" : "SlackIntegrationHandler",
+          "properties" : {
+            "structurizr.dsl.identifier" : "server.events_processor.slack_integration_handler"
+          },
+          "relationships" : [ {
+            "description" : "Uses",
+            "destinationId" : "64",
+            "id" : "244",
+            "properties" : {
+              "structurizr.dsl.identifier" : "slacktoslackservice"
+            },
+            "sourceId" : "61",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component"
+        }, {
+          "description" : "Processes Webhook and HEC IntegrationMessages, posting them to the configured URI.",
+          "documentation" : { },
+          "id" : "62",
+          "name" : "WebhookIntegrationHandler",
+          "properties" : {
+            "structurizr.dsl.identifier" : "server.events_processor.webhook_integration_handler"
+          },
+          "relationships" : [ {
+            "description" : "Uses",
+            "destinationId" : "65",
+            "id" : "251",
+            "properties" : {
+              "structurizr.dsl.identifier" : "handlerhttpclient"
+            },
+            "sourceId" : "62",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component"
+        }, {
+          "description" : "Caches all configurations for integrations in memory so that events can be handled without adding database load.",
+          "documentation" : { },
+          "id" : "63",
           "name" : "IntegrationConfigurationDetailsCacheService",
           "properties" : {
             "structurizr.dsl.identifier" : "server.events_processor.integration_configuration_details_cache_service"
@@ -1016,86 +1021,86 @@
           "relationships" : [ {
             "description" : "Fetches configurations from",
             "destinationId" : "11",
-            "id" : "182",
+            "id" : "193",
             "properties" : {
-              "structurizr.dsl.identifier" : "cacheDatabaseFetch"
+              "structurizr.dsl.identifier" : "cachedatabasefetch"
             },
-            "sourceId" : "59",
+            "sourceId" : "63",
             "tags" : "Relationship"
           } ],
           "tags" : "Element,Component"
         }, {
           "description" : "Handles all API interaction with Slack.",
           "documentation" : { },
-          "id" : "60",
+          "id" : "64",
           "name" : "SlackService",
           "properties" : {
             "structurizr.dsl.identifier" : "server.events_processor.slack_service"
           },
           "relationships" : [ {
             "description" : "Publishes configured events to",
-            "destinationId" : "74",
-            "id" : "234",
+            "destinationId" : "78",
+            "id" : "245",
             "properties" : {
-              "structurizr.dsl.identifier" : "slackServiceToSlack"
+              "structurizr.dsl.identifier" : "slackservicetoslack"
             },
-            "sourceId" : "60",
+            "sourceId" : "64",
             "tags" : "Relationship"
           }, {
             "description" : "Publishes configured events to",
-            "destinationId" : "73",
-            "id" : "235",
-            "linkedRelationshipId" : "234",
-            "sourceId" : "60"
+            "destinationId" : "77",
+            "id" : "246",
+            "linkedRelationshipId" : "245",
+            "sourceId" : "64"
           } ],
           "tags" : "Element,Component"
         }, {
           "description" : "Performs any Http functions for Webhooks / HEC.",
           "documentation" : { },
-          "id" : "61",
+          "id" : "65",
           "name" : "HttpClient",
           "properties" : {
             "structurizr.dsl.identifier" : "server.events_processor.http_client"
           },
           "relationships" : [ {
             "description" : "Publishes configured events to",
+            "destinationId" : "81",
+            "id" : "252",
+            "properties" : {
+              "structurizr.dsl.identifier" : "httptocrowdstrike"
+            },
+            "sourceId" : "65",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Publishes configured events to",
             "destinationId" : "77",
-            "id" : "241",
+            "id" : "253",
+            "linkedRelationshipId" : "252",
+            "sourceId" : "65"
+          }, {
+            "description" : "Publishes configured events to",
+            "destinationId" : "80",
+            "id" : "256",
             "properties" : {
-              "structurizr.dsl.identifier" : "httpToCrowdstrike"
+              "structurizr.dsl.identifier" : "httptodatadog"
             },
-            "sourceId" : "61",
+            "sourceId" : "65",
             "tags" : "Relationship"
           }, {
             "description" : "Publishes configured events to",
-            "destinationId" : "73",
-            "id" : "242",
-            "linkedRelationshipId" : "241",
-            "sourceId" : "61"
-          }, {
-            "description" : "Publishes configured events to",
-            "destinationId" : "76",
-            "id" : "245",
+            "destinationId" : "79",
+            "id" : "259",
             "properties" : {
-              "structurizr.dsl.identifier" : "httpToDatadog"
+              "structurizr.dsl.identifier" : "httptosplunk"
             },
-            "sourceId" : "61",
-            "tags" : "Relationship"
-          }, {
-            "description" : "Publishes configured events to",
-            "destinationId" : "75",
-            "id" : "248",
-            "properties" : {
-              "structurizr.dsl.identifier" : "httpToSplunk"
-            },
-            "sourceId" : "61",
+            "sourceId" : "65",
             "tags" : "Relationship"
           } ],
           "tags" : "Element,Component"
         }, {
           "description" : "Processes filters from configurations to determine if an event should be processed out to the integration.",
           "documentation" : { },
-          "id" : "62",
+          "id" : "66",
           "name" : "IntegrationFilterService",
           "properties" : {
             "structurizr.dsl.identifier" : "server.events_processor.integration_filter_service"
@@ -1110,93 +1115,93 @@
         },
         "relationships" : [ {
           "description" : "Listens to",
-          "destinationId" : "33",
-          "id" : "168",
-          "linkedRelationshipId" : "166",
-          "sourceId" : "10"
-        }, {
-          "description" : "Listens to",
-          "destinationId" : "30",
-          "id" : "169",
-          "linkedRelationshipId" : "166",
-          "sourceId" : "10"
-        }, {
-          "description" : "Listens to",
-          "destinationId" : "36",
-          "id" : "172",
-          "linkedRelationshipId" : "171",
-          "sourceId" : "10"
-        }, {
-          "description" : "Listens to",
-          "destinationId" : "35",
-          "id" : "174",
-          "linkedRelationshipId" : "173",
+          "destinationId" : "37",
+          "id" : "179",
+          "linkedRelationshipId" : "177",
           "sourceId" : "10"
         }, {
           "description" : "Listens to",
           "destinationId" : "34",
-          "id" : "176",
-          "linkedRelationshipId" : "175",
-          "sourceId" : "10"
-        }, {
-          "description" : "Publishes To",
-          "destinationId" : "32",
           "id" : "180",
-          "linkedRelationshipId" : "178",
+          "linkedRelationshipId" : "177",
           "sourceId" : "10"
         }, {
-          "description" : "Fetches configurations from",
-          "destinationId" : "11",
+          "description" : "Listens to",
+          "destinationId" : "40",
           "id" : "183",
           "linkedRelationshipId" : "182",
           "sourceId" : "10"
         }, {
           "description" : "Listens to",
-          "destinationId" : "37",
-          "id" : "188",
-          "linkedRelationshipId" : "186",
+          "destinationId" : "39",
+          "id" : "185",
+          "linkedRelationshipId" : "184",
           "sourceId" : "10"
         }, {
           "description" : "Listens to",
           "destinationId" : "38",
+          "id" : "187",
+          "linkedRelationshipId" : "186",
+          "sourceId" : "10"
+        }, {
+          "description" : "Publishes To",
+          "destinationId" : "36",
           "id" : "191",
-          "linkedRelationshipId" : "190",
+          "linkedRelationshipId" : "189",
+          "sourceId" : "10"
+        }, {
+          "description" : "Fetches configurations from",
+          "destinationId" : "11",
+          "id" : "194",
+          "linkedRelationshipId" : "193",
           "sourceId" : "10"
         }, {
           "description" : "Listens to",
-          "destinationId" : "39",
-          "id" : "193",
-          "linkedRelationshipId" : "192",
+          "destinationId" : "41",
+          "id" : "199",
+          "linkedRelationshipId" : "197",
+          "sourceId" : "10"
+        }, {
+          "description" : "Listens to",
+          "destinationId" : "42",
+          "id" : "202",
+          "linkedRelationshipId" : "201",
+          "sourceId" : "10"
+        }, {
+          "description" : "Listens to",
+          "destinationId" : "43",
+          "id" : "204",
+          "linkedRelationshipId" : "203",
           "sourceId" : "10"
         }, {
           "description" : "Publishes configured events to",
-          "destinationId" : "74",
-          "id" : "236",
-          "linkedRelationshipId" : "234",
-          "sourceId" : "10"
-        }, {
-          "description" : "Publishes configured events to",
-          "destinationId" : "73",
-          "id" : "237",
-          "linkedRelationshipId" : "234",
-          "sourceId" : "10"
-        }, {
-          "description" : "Publishes configured events to",
-          "destinationId" : "77",
-          "id" : "243",
-          "linkedRelationshipId" : "241",
-          "sourceId" : "10"
-        }, {
-          "description" : "Publishes configured events to",
-          "destinationId" : "76",
-          "id" : "246",
+          "destinationId" : "78",
+          "id" : "247",
           "linkedRelationshipId" : "245",
           "sourceId" : "10"
         }, {
           "description" : "Publishes configured events to",
-          "destinationId" : "75",
-          "id" : "249",
-          "linkedRelationshipId" : "248",
+          "destinationId" : "77",
+          "id" : "248",
+          "linkedRelationshipId" : "245",
+          "sourceId" : "10"
+        }, {
+          "description" : "Publishes configured events to",
+          "destinationId" : "81",
+          "id" : "254",
+          "linkedRelationshipId" : "252",
+          "sourceId" : "10"
+        }, {
+          "description" : "Publishes configured events to",
+          "destinationId" : "80",
+          "id" : "257",
+          "linkedRelationshipId" : "256",
+          "sourceId" : "10"
+        }, {
+          "description" : "Publishes configured events to",
+          "destinationId" : "79",
+          "id" : "260",
+          "linkedRelationshipId" : "259",
           "sourceId" : "10"
         } ],
         "tags" : "Element,Container,Events,Cloud-Only"
@@ -1262,156 +1267,186 @@
         } ],
         "tags" : "Element,Container,SCIM"
       }, {
+        "documentation" : { },
+        "id" : "30",
+        "name" : "Identity",
+        "properties" : {
+          "structurizr.dsl.identifier" : "server.identity"
+        },
+        "relationships" : [ {
+          "description" : "Queries",
+          "destinationId" : "11",
+          "id" : "151",
+          "sourceId" : "30",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Auth"
+      }, {
+        "documentation" : { },
+        "id" : "31",
+        "name" : "SSO",
+        "properties" : {
+          "structurizr.dsl.identifier" : "server.sso"
+        },
+        "relationships" : [ {
+          "description" : "Queries",
+          "destinationId" : "11",
+          "id" : "152",
+          "sourceId" : "31",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Auth"
+      }, {
         "components" : [ {
           "description" : "The main entry point for all events in the system. When an event occurs, it is published to this topic.",
           "documentation" : { },
-          "id" : "31",
+          "id" : "35",
           "name" : "Event Topic",
           "properties" : {
             "structurizr.dsl.identifier" : "server.azure_service_bus.event_topic"
           },
           "relationships" : [ {
             "description" : "Subscribes via fan-out",
-            "destinationId" : "33",
-            "id" : "159",
+            "destinationId" : "37",
+            "id" : "170",
             "properties" : {
-              "structurizr.dsl.identifier" : "eventsWriteSub"
+              "structurizr.dsl.identifier" : "eventswritesub"
             },
-            "sourceId" : "31",
+            "sourceId" : "35",
             "tags" : "Relationship"
           }, {
             "description" : "Subscribes via fan-out",
-            "destinationId" : "36",
-            "id" : "160",
+            "destinationId" : "40",
+            "id" : "171",
             "properties" : {
-              "structurizr.dsl.identifier" : "eventsHecSub"
+              "structurizr.dsl.identifier" : "eventshecsub"
             },
-            "sourceId" : "31",
+            "sourceId" : "35",
             "tags" : "Relationship"
           }, {
             "description" : "Subscribes via fan-out",
-            "destinationId" : "35",
-            "id" : "161",
+            "destinationId" : "39",
+            "id" : "172",
             "properties" : {
-              "structurizr.dsl.identifier" : "eventsWebhookSub"
+              "structurizr.dsl.identifier" : "eventswebhooksub"
             },
-            "sourceId" : "31",
+            "sourceId" : "35",
             "tags" : "Relationship"
           }, {
             "description" : "Subscribes via fan-out",
-            "destinationId" : "34",
-            "id" : "162",
+            "destinationId" : "38",
+            "id" : "173",
             "properties" : {
-              "structurizr.dsl.identifier" : "eventsSlackSub"
+              "structurizr.dsl.identifier" : "eventsslacksub"
             },
-            "sourceId" : "31",
+            "sourceId" : "35",
             "tags" : "Relationship"
           } ],
           "tags" : "Element,Component,Events,ASB,Event Tier"
         }, {
           "description" : "Events that have integrations configured are processed and put on the integration topic with a routing key for their specific integration handler to process.",
           "documentation" : { },
-          "id" : "32",
+          "id" : "36",
           "name" : "Integration Topic",
           "properties" : {
             "structurizr.dsl.identifier" : "server.azure_service_bus.integration_topic"
           },
           "relationships" : [ {
             "description" : "Subscribes via filter on Slack key",
-            "destinationId" : "37",
-            "id" : "163",
+            "destinationId" : "41",
+            "id" : "174",
             "properties" : {
-              "structurizr.dsl.identifier" : "integrationSlackSub"
+              "structurizr.dsl.identifier" : "integrationslacksub"
             },
-            "sourceId" : "32",
+            "sourceId" : "36",
             "tags" : "Relationship"
           }, {
             "description" : "Subscribes via filter on Webhook key",
-            "destinationId" : "38",
-            "id" : "164",
+            "destinationId" : "42",
+            "id" : "175",
             "properties" : {
-              "structurizr.dsl.identifier" : "integrationWebhookSub"
+              "structurizr.dsl.identifier" : "integrationwebhooksub"
             },
-            "sourceId" : "32",
+            "sourceId" : "36",
             "tags" : "Relationship"
           }, {
             "description" : "Subscribes via filter on HEC key",
-            "destinationId" : "39",
-            "id" : "165",
+            "destinationId" : "43",
+            "id" : "176",
             "properties" : {
-              "structurizr.dsl.identifier" : "integrationHecSub"
+              "structurizr.dsl.identifier" : "integrationhecsub"
             },
-            "sourceId" : "32",
+            "sourceId" : "36",
             "tags" : "Relationship"
           } ],
           "tags" : "Element,Component,Events,ASB,Integrations,Integration Tier"
         }, {
           "description" : "Subscription for EventRepositoryHandler to write all events into azure table storage.",
           "documentation" : { },
-          "id" : "33",
+          "id" : "37",
           "name" : "events-write-subscription",
           "properties" : {
-            "structurizr.dsl.identifier" : "server.azure_service_bus.eventsWriteSub"
+            "structurizr.dsl.identifier" : "server.azure_service_bus.eventswritesub"
           },
           "tags" : "Element,Component,ASB,Subscription,Event Tier"
         }, {
           "description" : "Subscription for slack-specific EventIntegrationHandler which publishes processed events to the integration tier if there is a Slack integration configured.",
           "documentation" : { },
-          "id" : "34",
+          "id" : "38",
           "name" : "events-slack-subscription",
           "properties" : {
-            "structurizr.dsl.identifier" : "server.azure_service_bus.eventsSlackSub"
+            "structurizr.dsl.identifier" : "server.azure_service_bus.eventsslacksub"
           },
           "tags" : "Element,Component,ASB,Subscription,Event Tier,Slack"
         }, {
           "description" : "Subscription for webhook-specific EventIntegrationHandler which publishes processed events to the integration tier if there is a webhook integration configured.",
           "documentation" : { },
-          "id" : "35",
+          "id" : "39",
           "name" : "events-webhook-subscription",
           "properties" : {
-            "structurizr.dsl.identifier" : "server.azure_service_bus.eventsWebhookSub"
+            "structurizr.dsl.identifier" : "server.azure_service_bus.eventswebhooksub"
           },
           "tags" : "Element,Component,ASB,Subscription,Event Tier,Webhook"
         }, {
           "description" : "Subscription for HEC-specific EventIntegrationHandler which publishes processed events to the integration tier if there is a HEC integration configured.",
           "documentation" : { },
-          "id" : "36",
+          "id" : "40",
           "name" : "events-hec-subscription",
           "properties" : {
-            "structurizr.dsl.identifier" : "server.azure_service_bus.eventsHecSub"
+            "structurizr.dsl.identifier" : "server.azure_service_bus.eventshecsub"
           },
           "tags" : "Element,Component,ASB,Subscription,Event Tier,HEC"
         }, {
           "description" : "Integration-level subscription for Slack IntegrationMessages. Correlation filter: Label = 'slack'.",
           "documentation" : { },
-          "id" : "37",
+          "id" : "41",
           "name" : "integration-slack-subscription",
           "properties" : {
-            "structurizr.dsl.identifier" : "server.azure_service_bus.integrationSlackSub"
+            "structurizr.dsl.identifier" : "server.azure_service_bus.integrationslacksub"
           },
           "tags" : "Element,Component,ASB,Subscription,Integration Tier,Slack"
         }, {
           "description" : "Integration-level subscription for Webhook IntegrationMessages. Correlation filter: Label = 'webhook'.",
           "documentation" : { },
-          "id" : "38",
+          "id" : "42",
           "name" : "integration-webhook-subscription",
           "properties" : {
-            "structurizr.dsl.identifier" : "server.azure_service_bus.integrationWebhookSub"
+            "structurizr.dsl.identifier" : "server.azure_service_bus.integrationwebhooksub"
           },
           "tags" : "Element,Component,ASB,Subscription,Integration Tier,Webhook"
         }, {
           "description" : "Integration-level subscription for HEC IntegrationMessages. Correlation filter: Label = 'hec'.",
           "documentation" : { },
-          "id" : "39",
+          "id" : "43",
           "name" : "integration-hec-subscription",
           "properties" : {
-            "structurizr.dsl.identifier" : "server.azure_service_bus.integrationHecSub"
+            "structurizr.dsl.identifier" : "server.azure_service_bus.integrationhecsub"
           },
           "tags" : "Element,Component,ASB,Subscription,Integration Tier,HEC"
         } ],
         "description" : "AMQP service used for pub/sub architecture for Events and Integrations",
         "documentation" : { },
-        "id" : "30",
+        "id" : "34",
         "name" : "Azure Service Bus",
         "properties" : {
           "structurizr.dsl.identifier" : "server.azure_service_bus"
@@ -1420,243 +1455,213 @@
       }, {
         "components" : [ {
           "documentation" : { },
-          "id" : "41",
+          "id" : "45",
           "name" : "Event Exchange",
           "properties" : {
             "structurizr.dsl.identifier" : "server.rabbit_mq.event_exchange"
           },
           "relationships" : [ {
             "description" : "Subscribes via fan-out",
-            "destinationId" : "43",
-            "id" : "195",
+            "destinationId" : "47",
+            "id" : "206",
             "properties" : {
-              "structurizr.dsl.identifier" : "eventsWriteQueue"
+              "structurizr.dsl.identifier" : "eventswritequeue"
             },
-            "sourceId" : "41",
+            "sourceId" : "45",
             "tags" : "Relationship"
           }, {
             "description" : "Subscribes via fan-out",
-            "destinationId" : "46",
-            "id" : "196",
+            "destinationId" : "50",
+            "id" : "207",
             "properties" : {
-              "structurizr.dsl.identifier" : "eventsHecQueue"
+              "structurizr.dsl.identifier" : "eventshecqueue"
             },
-            "sourceId" : "41",
+            "sourceId" : "45",
             "tags" : "Relationship"
           }, {
             "description" : "Subscribes via fan-out",
-            "destinationId" : "45",
-            "id" : "197",
+            "destinationId" : "49",
+            "id" : "208",
             "properties" : {
-              "structurizr.dsl.identifier" : "eventsWebhookQueue"
+              "structurizr.dsl.identifier" : "eventswebhookqueue"
             },
-            "sourceId" : "41",
+            "sourceId" : "45",
             "tags" : "Relationship"
           }, {
             "description" : "Subscribes via fan-out",
-            "destinationId" : "44",
-            "id" : "198",
+            "destinationId" : "48",
+            "id" : "209",
             "properties" : {
-              "structurizr.dsl.identifier" : "eventsSlackQueue"
+              "structurizr.dsl.identifier" : "eventsslackqueue"
             },
-            "sourceId" : "41",
+            "sourceId" : "45",
             "tags" : "Relationship"
           } ],
           "tags" : "Element,Component,Events,Event Tier"
         }, {
           "documentation" : { },
-          "id" : "42",
+          "id" : "46",
           "name" : "Integration Exchange",
           "properties" : {
             "structurizr.dsl.identifier" : "server.rabbit_mq.integration_exchange"
           },
           "relationships" : [ {
             "description" : "Subscribes via filter on Slack key",
-            "destinationId" : "47",
-            "id" : "199",
+            "destinationId" : "51",
+            "id" : "210",
             "properties" : {
-              "structurizr.dsl.identifier" : "integrationSlackQueue"
+              "structurizr.dsl.identifier" : "integrationslackqueue"
             },
-            "sourceId" : "42",
+            "sourceId" : "46",
             "tags" : "Relationship"
           }, {
             "description" : "Subscribes via filter on Webhook key",
-            "destinationId" : "48",
-            "id" : "200",
+            "destinationId" : "52",
+            "id" : "211",
             "properties" : {
-              "structurizr.dsl.identifier" : "integrationWebhookQueue"
+              "structurizr.dsl.identifier" : "integrationwebhookqueue"
             },
-            "sourceId" : "42",
+            "sourceId" : "46",
             "tags" : "Relationship"
           }, {
             "description" : "Subscribes via filter on HEC key",
-            "destinationId" : "49",
-            "id" : "201",
+            "destinationId" : "53",
+            "id" : "212",
             "properties" : {
-              "structurizr.dsl.identifier" : "integrationHecQueue"
+              "structurizr.dsl.identifier" : "integrationhecqueue"
             },
-            "sourceId" : "42",
+            "sourceId" : "46",
             "tags" : "Relationship"
           } ],
           "tags" : "Element,Component,Events,Integrations,Integration Tier"
         }, {
           "description" : "Queue for EventRepositoryHandler to write all events into the database.",
           "documentation" : { },
-          "id" : "43",
+          "id" : "47",
           "name" : "events-write-queue",
           "properties" : {
-            "structurizr.dsl.identifier" : "server.rabbit_mq.eventsWriteQueue"
+            "structurizr.dsl.identifier" : "server.rabbit_mq.eventswritequeue"
           },
           "tags" : "Element,Component,RabbitMQ,Queue,Event Tier"
         }, {
           "description" : "Queue for slack-specific EventIntegrationHandler which publishes processed events to the integration tier if there is a Slack integration configured.",
           "documentation" : { },
-          "id" : "44",
+          "id" : "48",
           "name" : "events-slack-queue",
           "properties" : {
-            "structurizr.dsl.identifier" : "server.rabbit_mq.eventsSlackQueue"
+            "structurizr.dsl.identifier" : "server.rabbit_mq.eventsslackqueue"
           },
           "tags" : "Element,Component,RabbitMQ,Queue,Event Tier,Slack"
         }, {
           "description" : "Queue for webhook-specific EventIntegrationHandler which publishes processed events to the integration tier if there is a webhook integration configured.",
           "documentation" : { },
-          "id" : "45",
+          "id" : "49",
           "name" : "events-webhook-queue",
           "properties" : {
-            "structurizr.dsl.identifier" : "server.rabbit_mq.eventsWebhookQueue"
+            "structurizr.dsl.identifier" : "server.rabbit_mq.eventswebhookqueue"
           },
           "tags" : "Element,Component,RabbitMQ,Queue,Event Tier,Webhook"
         }, {
           "description" : "Queue for HEC-specific EventIntegrationHandler which publishes processed events to the integration tier if there is a HEC integration configured.",
           "documentation" : { },
-          "id" : "46",
+          "id" : "50",
           "name" : "events-hec-queue",
           "properties" : {
-            "structurizr.dsl.identifier" : "server.rabbit_mq.eventsHecQueue"
+            "structurizr.dsl.identifier" : "server.rabbit_mq.eventshecqueue"
           },
           "tags" : "Element,Component,RabbitMQ,Queue,Event Tier,HEC"
         }, {
           "description" : "Integration-level queue for Slack IntegrationMessages. Routing key = 'slack'.",
           "documentation" : { },
-          "id" : "47",
+          "id" : "51",
           "name" : "integration-slack-queue",
           "properties" : {
-            "structurizr.dsl.identifier" : "server.rabbit_mq.integrationSlackQueue"
+            "structurizr.dsl.identifier" : "server.rabbit_mq.integrationslackqueue"
           },
           "tags" : "Element,Component,RabbitMQ,Queue,Integration Tier,Slack"
         }, {
           "description" : "Integration-level queue for Webhook IntegrationMessages. Routing key = 'webhook'.",
           "documentation" : { },
-          "id" : "48",
+          "id" : "52",
           "name" : "integration-webhook-queue",
           "properties" : {
-            "structurizr.dsl.identifier" : "server.rabbit_mq.integrationWebhookQueue"
+            "structurizr.dsl.identifier" : "server.rabbit_mq.integrationwebhookqueue"
           },
           "tags" : "Element,Component,RabbitMQ,Queue,Integration Tier,Webhook"
         }, {
           "description" : "Integration-level queue for HEC IntegrationMessages. Routing key = 'hec'.",
           "documentation" : { },
-          "id" : "49",
+          "id" : "53",
           "name" : "integration-hec-queue",
           "properties" : {
-            "structurizr.dsl.identifier" : "server.rabbit_mq.integrationHecQueue"
+            "structurizr.dsl.identifier" : "server.rabbit_mq.integrationhecqueue"
           },
           "tags" : "Element,Component,RabbitMQ,Queue,Integration Tier,HEC"
         }, {
           "description" : "Integration-level retry queue for Slack IntegrationMessages. Routing key Label = 'slack-retry'.",
           "documentation" : { },
-          "id" : "50",
+          "id" : "54",
           "name" : "integration-slack-retry-queue",
           "properties" : {
-            "structurizr.dsl.identifier" : "server.rabbit_mq.integrationSlackRetryQueue"
+            "structurizr.dsl.identifier" : "server.rabbit_mq.integrationslackretryqueue"
           },
           "relationships" : [ {
             "description" : "DLQ after configured retry timing",
-            "destinationId" : "47",
-            "id" : "202",
+            "destinationId" : "51",
+            "id" : "213",
             "properties" : {
-              "structurizr.dsl.identifier" : "integrationSlackRetryQueue"
+              "structurizr.dsl.identifier" : "integrationslackretryqueue"
             },
-            "sourceId" : "50",
+            "sourceId" : "54",
             "tags" : "Relationship"
           } ],
           "tags" : "Element,Component,RabbitMQ,Queue,Integration Tier,Slack"
         }, {
           "description" : "Integration-level retry queue for Webhook IntegrationMessages. Routing key = 'webhook-retry'.",
           "documentation" : { },
-          "id" : "51",
+          "id" : "55",
           "name" : "integration-webhook-retry-queue",
           "properties" : {
-            "structurizr.dsl.identifier" : "server.rabbit_mq.integrationWebhookRetryQueue"
+            "structurizr.dsl.identifier" : "server.rabbit_mq.integrationwebhookretryqueue"
           },
           "relationships" : [ {
             "description" : "DLQ after configured retry timing",
-            "destinationId" : "48",
-            "id" : "203",
+            "destinationId" : "52",
+            "id" : "214",
             "properties" : {
-              "structurizr.dsl.identifier" : "integrationWebhookRetryQueue"
+              "structurizr.dsl.identifier" : "integrationwebhookretryqueue"
             },
-            "sourceId" : "51",
+            "sourceId" : "55",
             "tags" : "Relationship"
           } ],
           "tags" : "Element,Component,RabbitMQ,Queue,Integration Tier,Webhook"
         }, {
           "description" : "Integration-level retry queue for HEC IntegrationMessages. Routing key = 'hec-retry'.",
           "documentation" : { },
-          "id" : "52",
+          "id" : "56",
           "name" : "integration-hec-retry-queue",
           "properties" : {
-            "structurizr.dsl.identifier" : "server.rabbit_mq.integrationHecRetryQueue"
+            "structurizr.dsl.identifier" : "server.rabbit_mq.integrationhecretryqueue"
           },
           "relationships" : [ {
             "description" : "DLQ after configured retry timing",
-            "destinationId" : "49",
-            "id" : "204",
+            "destinationId" : "53",
+            "id" : "215",
             "properties" : {
-              "structurizr.dsl.identifier" : "integrationHecRetryQueue"
+              "structurizr.dsl.identifier" : "integrationhecretryqueue"
             },
-            "sourceId" : "52",
+            "sourceId" : "56",
             "tags" : "Relationship"
           } ],
           "tags" : "Element,Component,RabbitMQ,Queue,Integration Tier,HEC"
         } ],
         "documentation" : { },
-        "id" : "40",
+        "id" : "44",
         "name" : "RabbitMQ",
         "properties" : {
           "structurizr.dsl.identifier" : "server.rabbit_mq"
         },
         "tags" : "Element,Container,Events,RabbitMQ,Self-Hosted-Only"
-      }, {
-        "documentation" : { },
-        "id" : "78",
-        "name" : "Identity",
-        "properties" : {
-          "structurizr.dsl.identifier" : "server.identity"
-        },
-        "relationships" : [ {
-          "description" : "Queries",
-          "destinationId" : "11",
-          "id" : "264",
-          "sourceId" : "78",
-          "tags" : "Relationship"
-        } ],
-        "tags" : "Element,Container,Auth"
-      }, {
-        "documentation" : { },
-        "id" : "79",
-        "name" : "SSO",
-        "properties" : {
-          "structurizr.dsl.identifier" : "server.sso"
-        },
-        "relationships" : [ {
-          "description" : "Queries",
-          "destinationId" : "11",
-          "id" : "265",
-          "sourceId" : "79",
-          "tags" : "Relationship"
-        } ],
-        "tags" : "Element,Container,Auth"
       }, {
         "components" : [ {
           "description" : "IconsController",
@@ -1677,7 +1682,7 @@
             "destinationId" : "86",
             "id" : "91",
             "perspectives" : [ {
-              "description" : "            Icons 1.3.1 Aggregate vault content leak through timing attack on cache \n\n            Icons 1.3.2 Possible injection attack through cache key \n\n            Icons 1.3.3 & Icons 1.3.4 Cache bloat leading to DoS \n\n            Icons 1.3.5 Cache poisoning leading to incorrect icon storage ",
+              "description" : "Icons 1.3.1 Aggregate vault content leak through timing attack on cache \n\n            Icons 1.3.2 Possible injection attack through cache key \n\n            Icons 1.3.3 & Icons 1.3.4 Cache bloat leading to DoS \n\n            Icons 1.3.5 Cache poisoning leading to incorrect icon storage",
               "name" : "Security"
             } ],
             "sourceId" : "83",
@@ -1759,6 +1764,7 @@
       "documentation" : { },
       "group" : "Bitwarden Controlled",
       "id" : "4",
+      "location" : "Unspecified",
       "name" : "Bitwarden Server",
       "properties" : {
         "structurizr.dsl.identifier" : "server"
@@ -1776,46 +1782,46 @@
         "linkedRelationshipId" : "97",
         "sourceId" : "4"
       }, {
-        "description" : "Publishes configured events to",
-        "destinationId" : "74",
-        "id" : "238",
-        "linkedRelationshipId" : "234",
+        "description" : "Requests payments for customers",
+        "destinationId" : "32",
+        "id" : "155",
+        "linkedRelationshipId" : "153",
+        "sourceId" : "4"
+      }, {
+        "description" : "Requests payments for customers",
+        "destinationId" : "33",
+        "id" : "158",
+        "linkedRelationshipId" : "156",
         "sourceId" : "4"
       }, {
         "description" : "Publishes configured events to",
-        "destinationId" : "73",
-        "id" : "239",
-        "linkedRelationshipId" : "234",
-        "sourceId" : "4"
-      }, {
-        "description" : "Publishes configured events to",
-        "destinationId" : "77",
-        "id" : "244",
-        "linkedRelationshipId" : "241",
-        "sourceId" : "4"
-      }, {
-        "description" : "Publishes configured events to",
-        "destinationId" : "76",
-        "id" : "247",
+        "destinationId" : "78",
+        "id" : "249",
         "linkedRelationshipId" : "245",
         "sourceId" : "4"
       }, {
         "description" : "Publishes configured events to",
-        "destinationId" : "75",
+        "destinationId" : "77",
         "id" : "250",
-        "linkedRelationshipId" : "248",
+        "linkedRelationshipId" : "245",
         "sourceId" : "4"
       }, {
-        "description" : "Requests payments for customers",
-        "destinationId" : "80",
-        "id" : "268",
-        "linkedRelationshipId" : "266",
-        "sourceId" : "4"
-      }, {
-        "description" : "Requests payments for customers",
+        "description" : "Publishes configured events to",
         "destinationId" : "81",
-        "id" : "271",
-        "linkedRelationshipId" : "269",
+        "id" : "255",
+        "linkedRelationshipId" : "252",
+        "sourceId" : "4"
+      }, {
+        "description" : "Publishes configured events to",
+        "destinationId" : "80",
+        "id" : "258",
+        "linkedRelationshipId" : "256",
+        "sourceId" : "4"
+      }, {
+        "description" : "Publishes configured events to",
+        "destinationId" : "79",
+        "id" : "261",
+        "linkedRelationshipId" : "259",
         "sourceId" : "4"
       } ],
       "tags" : "Element,Software System"
@@ -1841,7 +1847,7 @@
           "sourceId" : "16"
         }, {
           "description" : "Authenticates with",
-          "destinationId" : "78",
+          "destinationId" : "30",
           "id" : "130",
           "sourceId" : "16",
           "tags" : "Relationship"
@@ -1868,7 +1874,7 @@
           "sourceId" : "17"
         }, {
           "description" : "Authenticates With",
-          "destinationId" : "78",
+          "destinationId" : "30",
           "id" : "132",
           "sourceId" : "17",
           "tags" : "Relationship"
@@ -1895,7 +1901,7 @@
           "sourceId" : "18"
         }, {
           "description" : "Authenticates With",
-          "destinationId" : "78",
+          "destinationId" : "30",
           "id" : "133",
           "sourceId" : "18",
           "tags" : "Relationship"
@@ -1922,7 +1928,7 @@
           "sourceId" : "19"
         }, {
           "description" : "Authenticates With",
-          "destinationId" : "78",
+          "destinationId" : "30",
           "id" : "134",
           "sourceId" : "19",
           "tags" : "Relationship"
@@ -1949,7 +1955,7 @@
           "sourceId" : "20"
         }, {
           "description" : "Authenticates With",
-          "destinationId" : "78",
+          "destinationId" : "30",
           "id" : "135",
           "sourceId" : "20",
           "tags" : "Relationship"
@@ -1976,7 +1982,7 @@
           "sourceId" : "21"
         }, {
           "description" : "Authenticates With",
-          "destinationId" : "78",
+          "destinationId" : "30",
           "id" : "136",
           "sourceId" : "21",
           "tags" : "Relationship"
@@ -1986,6 +1992,7 @@
       "documentation" : { },
       "group" : "Bitwarden Controlled",
       "id" : "15",
+      "location" : "Unspecified",
       "name" : "Clients",
       "properties" : {
         "structurizr.dsl.identifier" : "clients"
@@ -1995,7 +2002,7 @@
         "destinationId" : "83",
         "id" : "87",
         "perspectives" : [ {
-          "description" : "            Icons 1.2.1 Broken SSL communication exposes vault contents to network administrators \n\n            Icons 1.2.2 Tracking of user vault contents by ip correlation between identity and icons services \n\n            Icons 1.2.3 No SLA offered on Icons service, graceful degradation of features needed if it goes down \n\n            Icons 1.2.4 SSRF through crafted input resolving to a location the server has elevated privileges in",
+          "description" : "Icons 1.2.1 Broken SSL communication exposes vault contents to network administrators \n\n            Icons 1.2.2 Tracking of user vault contents by ip correlation between identity and icons services \n\n            Icons 1.2.3 No SLA offered on Icons service, graceful degradation of features needed if it goes down \n\n            Icons 1.2.4 SSRF through crafted input resolving to a location the server has elevated privileges in",
           "name" : "Security"
         } ],
         "sourceId" : "15",
@@ -2020,7 +2027,7 @@
         "sourceId" : "15"
       }, {
         "description" : "Authenticates with",
-        "destinationId" : "78",
+        "destinationId" : "30",
         "id" : "131",
         "linkedRelationshipId" : "130",
         "sourceId" : "15"
@@ -2036,6 +2043,7 @@
       "documentation" : { },
       "group" : "Bitwarden Controlled",
       "id" : "22",
+      "location" : "Unspecified",
       "name" : "Directory Connector",
       "properties" : {
         "structurizr.dsl.identifier" : "directory_connector"
@@ -2058,13 +2066,14 @@
       "documentation" : { },
       "group" : "Bitwarden Controlled",
       "id" : "23",
+      "location" : "Unspecified",
       "name" : "Key Connector",
       "properties" : {
         "structurizr.dsl.identifier" : "key_connector"
       },
       "relationships" : [ {
         "description" : "Validates JWTs with",
-        "destinationId" : "78",
+        "destinationId" : "30",
         "id" : "275",
         "sourceId" : "23",
         "tags" : "Relationship"
@@ -2080,6 +2089,7 @@
       "description" : "Self-hosted instances of Bitwarden servers",
       "documentation" : { },
       "id" : "24",
+      "location" : "Unspecified",
       "name" : "Self-Hosted Instances",
       "properties" : {
         "structurizr.dsl.identifier" : "self_hosted_instances"
@@ -2099,10 +2109,51 @@
       } ],
       "tags" : "Element,Software System,Self-Hosted,External"
     }, {
+      "description" : "Handles credit cards and subscriptions.",
+      "documentation" : { },
+      "group" : "Payment Systems",
+      "id" : "32",
+      "location" : "Unspecified",
+      "name" : "Stripe",
+      "properties" : {
+        "structurizr.dsl.identifier" : "stripe"
+      },
+      "relationships" : [ {
+        "description" : "Sends subscription events to",
+        "destinationId" : "6",
+        "id" : "159",
+        "sourceId" : "32",
+        "tags" : "Relationship"
+      }, {
+        "description" : "Sends subscription events to",
+        "destinationId" : "5",
+        "id" : "160",
+        "linkedRelationshipId" : "159",
+        "sourceId" : "32"
+      }, {
+        "description" : "Sends subscription events to",
+        "destinationId" : "4",
+        "id" : "161",
+        "linkedRelationshipId" : "159",
+        "sourceId" : "32"
+      } ],
+      "tags" : "Element,Software System,External,Billing"
+    }, {
+      "description" : "Handles PayPal and cryptocurrency.",
+      "documentation" : { },
+      "group" : "Payment Systems",
+      "id" : "33",
+      "location" : "Unspecified",
+      "name" : "Braintree",
+      "properties" : {
+        "structurizr.dsl.identifier" : "braintree"
+      },
+      "tags" : "Element,Software System,External,Billing"
+    }, {
       "containers" : [ {
         "description" : "Slack messaging service. Receives messages via configured event integrations.",
         "documentation" : { },
-        "id" : "74",
+        "id" : "78",
         "name" : "Slack",
         "properties" : {
           "structurizr.dsl.identifier" : "external_services.slack"
@@ -2111,7 +2162,7 @@
       }, {
         "description" : "Splunk SIEM service. Receives events via configured event integrations.",
         "documentation" : { },
-        "id" : "75",
+        "id" : "79",
         "name" : "Splunk",
         "properties" : {
           "structurizr.dsl.identifier" : "external_services.splunk"
@@ -2120,7 +2171,7 @@
       }, {
         "description" : "Datadog SIEM service. Receives events via configured event integrations.",
         "documentation" : { },
-        "id" : "76",
+        "id" : "80",
         "name" : "Datadog",
         "properties" : {
           "structurizr.dsl.identifier" : "external_services.datadog"
@@ -2129,7 +2180,7 @@
       }, {
         "description" : "Crowdstrike Falcon SIEM service. Receives events via configured event integrations.",
         "documentation" : { },
-        "id" : "77",
+        "id" : "81",
         "name" : "Crowdstrike Falcon",
         "properties" : {
           "structurizr.dsl.identifier" : "external_services.crowdstrike"
@@ -2138,54 +2189,17 @@
       } ],
       "description" : "External services (e.g. SIEM, Slack, et al) that consume events via integrations",
       "documentation" : { },
-      "id" : "73",
+      "id" : "77",
+      "location" : "Unspecified",
       "name" : "External Services",
       "properties" : {
         "structurizr.dsl.identifier" : "external_services"
       },
       "tags" : "Element,Software System,External,Events,Integrations"
     }, {
-      "description" : "Handles credit cards and subscriptions.",
-      "documentation" : { },
-      "group" : "Payment Systems",
-      "id" : "80",
-      "name" : "Stripe",
-      "properties" : {
-        "structurizr.dsl.identifier" : "stripe"
-      },
-      "relationships" : [ {
-        "description" : "Sends subscription events to",
-        "destinationId" : "6",
-        "id" : "272",
-        "sourceId" : "80",
-        "tags" : "Relationship"
-      }, {
-        "description" : "Sends subscription events to",
-        "destinationId" : "5",
-        "id" : "273",
-        "linkedRelationshipId" : "272",
-        "sourceId" : "80"
-      }, {
-        "description" : "Sends subscription events to",
-        "destinationId" : "4",
-        "id" : "274",
-        "linkedRelationshipId" : "272",
-        "sourceId" : "80"
-      } ],
-      "tags" : "Element,Software System,External,Billing"
-    }, {
-      "description" : "Handles PayPal and cryptocurrency.",
-      "documentation" : { },
-      "group" : "Payment Systems",
-      "id" : "81",
-      "name" : "Braintree",
-      "properties" : {
-        "structurizr.dsl.identifier" : "braintree"
-      },
-      "tags" : "Element,Software System,External,Billing"
-    }, {
       "documentation" : { },
       "id" : "92",
+      "location" : "Unspecified",
       "name" : "DNS",
       "properties" : {
         "structurizr.dsl.identifier" : "dns"
@@ -2194,6 +2208,7 @@
     }, {
       "documentation" : { },
       "id" : "96",
+      "location" : "Unspecified",
       "name" : "External Websites",
       "properties" : {
         "structurizr.dsl.identifier" : "external_websites"
@@ -2203,14 +2218,11 @@
   },
   "name" : "Bitwarden Server System",
   "properties" : {
-    "structurizr.inspection.error" : "247",
-    "structurizr.inspection.info" : "0",
-    "structurizr.inspection.ignore" : "0",
-    "structurizr.inspection.warning" : "0"
+    "structurizr.dsl" : "d29ya3NwYWNlICJCaXR3YXJkZW4gU2VydmVyIFN5c3RlbSIgewoKICAhaWRlbnRpZmllcnMgaGllcmFyY2hpY2FsCgogICFkb2NzICJ1c2FnZV9kb2NzIgogIG1vZGVsIHsKICAgIHByb3BlcnRpZXMgewogICAgICAic3RydWN0dXJpenIuZ3JvdXBTZXBhcmF0b3IiICIvIgogICAgfQoKICAgICMgSW5jbHVkZSBzaGFyZWQgbGV2ZWwgbW9kZWxzCiAgICAjIFBlcnNvbiB0eXBlcwogICAgdXNlciA9IHBlcnNvbiAiQml0d2FyZGVuIFVzZXIiICJBbiBlbmQgdXNlciBvZiB0aGUgQml0d2FyZGVuIFN5c3RlbSIKICAgIHN5c3RlbV9hZG1pbiA9IHBlcnNvbiAiU3lzdGVtIEFkbWluIiAiRWl0aGVyIGEgQml0d2FyZGVuIHNpdGUtcmVsaWFiaWxpdHkgZW5naW5lZXIgb3IgYWRtaW5pc3RyYXRvciBvZiBhIHNlbGYtaG9zdGVkIGluc3RhbmNlIiB7CiAgICAgIHRhZ3MgIkJpdHdhcmRlbiBFbXBsb3llZSIgIlNlbGYtSG9zdCBBZG1pbiIKICAgIH0KICAgIAogICAgCiAgICBid19jb250cm9sbGVkID0gZ3JvdXAgIkJpdHdhcmRlbiBDb250cm9sbGVkIiB7CiAgICAgICMgQml0d2FyZGVuIHN0YWZmCiAgICAgIGN1c3RvbWVyX3N1Y2Nlc3MgPSBwZXJzb24gIkN1c3RvbWVyIFN1Y2Nlc3MiICJBIGN1c3RvbWVyIHN1Y2Nlc3MgZW5naW5lZXIuIEluc3BlY3RzIGJpdHdhcmRlbiBzdGF0ZSB0aHJvdWdoIHRoZSBhZG1pbiBwb3J0YWwgYW5kIGludGVybmFsIHRvb2xzIiB7CiAgICAgICAgdGFncyAiQml0d2FyZGVuIEVtcGxveWVlIgogICAgICB9CiAgICAgICMgUm9vdCBzeXN0ZW1zCiAgICAgIHNlcnZlciA9IHNvZnR3YXJlU3lzdGVtICJCaXR3YXJkZW4gU2VydmVyIiB7CiAgICAgICAgYXBpID0gY29udGFpbmVyICJBUEkiIHsKICAgICAgICAgIGJpbGxpbmcgPSBjb21wb25lbnQgIkJpbGxpbmciIHsKICAgICAgICAgICAgdGFncyAiQmlsbGluZyIKICAgICAgICAgIH0KICAgICAgICAgIHRhZ3MgIkFQSSIKICAgICAgICB9CiAgICAgICAgZXZlbnRzID0gY29udGFpbmVyICJFdmVudHMiIHsKICAgICAgICAgIHRhZ3MgIkV2ZW50cyIKICAgICAgICB9CiAgICAgICAgbm90aWZpY2F0aW9ucyA9IGNvbnRhaW5lciAiTm90aWZpY2F0aW9ucyIKICAgICAgICBwb3J0YWwgPSBjb250YWluZXIgIkJpdHdhcmRlbiBQb3J0YWwiIHsKICAgICAgICAgIHRhZ3MgIldlYiIKICAgICAgICB9CiAgICAgICAgZXZlbnRzX3Byb2Nlc3NvciA9IGNvbnRhaW5lciAiRXZlbnRzIFByb2Nlc3NvciIgewogICAgICAgICAgdGFncyAiRXZlbnRzIgogICAgICAgICAgdGFncyAiQ2xvdWQtT25seSIKICAgICAgICB9CiAgICAKICAgICAgICAjIERhdGEgc3RvcmVzCiAgICAgICAgZGF0YWJhc2UgPSBjb250YWluZXIgIkRhdGFiYXNlIiB7CiAgICAgICAgICB0YWdzICJEYXRhYmFzZSIKICAgICAgICB9CiAgICAgICAgZXZlbnRzX3F1ZXVlID0gY29udGFpbmVyICJFdmVudHMgUXVldWUiIHsKICAgICAgICAgIHRhZ3MgIlF1ZXVlIgogICAgICAgICAgdGFncyAiQXp1cmUiCiAgICAgICAgICB0YWdzICJDbG91ZC1Pbmx5IgogICAgICAgIH0KICAgICAgICBtYWlsX3F1ZXVlID0gY29udGFpbmVyICJNYWlsIFF1ZXVlIiB7CiAgICAgICAgICB0YWdzICJRdWV1ZSIKICAgICAgICAgIHRhZ3MgIkF6dXJlIgogICAgICAgIH0KICAgICAgICBub3RpZmljYXRpb25zX3F1ZXVlID0gY29udGFpbmVyICJOb3RpZmljYXRpb25zIFF1ZXVlIiB7CiAgICAgICAgICB0YWdzICJRdWV1ZSIKICAgICAgICAgIHRhZ3MgIkF6dXJlIgogICAgICAgIH0KICAgICAgfQogICAgICBjbGllbnRzID0gc29mdHdhcmVTeXN0ZW0gIkNsaWVudHMiIHsKICAgICAgICB3ZWIgPSBjb250YWluZXIgIldlYiBBcHBsaWNhdGlvbiIgewogICAgICAgICAgdGFncyAiV2ViIgogICAgICAgIH0KICAgICAgICBpb3MgPSBjb250YWluZXIgImlPUyBBcHBsaWNhdGlvbiIgewogICAgICAgICAgdGFncyAiTW9iaWxlIgogICAgICAgIH0KICAgICAgICBhbmRyb2lkID0gY29udGFpbmVyICJBbmRyb2lkIEFwcGxpY2F0aW9uIiB7CiAgICAgICAgICB0YWdzICJNb2JpbGUiCiAgICAgICAgfQogICAgICAgIGJyb3dzZXJfZXh0ZW5zaW9uID0gY29udGFpbmVyICJCcm93c2VyIEV4dGVuc2lvbiIgewogICAgICAgICAgdGFncyAiQnJvd3NlciIKICAgICAgICB9CiAgICAgICAgY2xpID0gY29udGFpbmVyICJDTEkiIHsKICAgICAgICAgIHRhZ3MgIkNMSSIKICAgICAgICB9CiAgICAgICAgZGVza3RvcCA9IGNvbnRhaW5lciAiRGVza3RvcCBBcHBsaWNhdGlvbiIgewogICAgICAgICAgdGFncyAiRGVza3RvcCIKICAgICAgICB9CiAgICAgIH0KICAgICAgZGlyZWN0b3J5X2Nvbm5lY3RvciA9IHNvZnR3YXJlU3lzdGVtICJEaXJlY3RvcnkgQ29ubmVjdG9yIiB7CiAgICAgICAgdGFncyAiRGlyZWN0b3J5IgogICAgICAgIHRhZ3MgIkxEQVAiCiAgICAgICAgdGFncyAiU2VsZi1Ib3N0ZWQiCiAgICAgIH0KICAgICAga2V5X2Nvbm5lY3RvciA9IHNvZnR3YXJlU3lzdGVtICJLZXkgQ29ubmVjdG9yIiAKICAgIH0KICAgIAogICAgc2VsZl9ob3N0ZWRfaW5zdGFuY2VzID0gc29mdHdhcmVTeXN0ZW0gIlNlbGYtSG9zdGVkIEluc3RhbmNlcyIgewogICAgICB0YWdzICJTZWxmLUhvc3RlZCIKICAgICAgdGFncyAiRXh0ZXJuYWwiCiAgICAgIGRlc2NyaXB0aW9uICJTZWxmLWhvc3RlZCBpbnN0YW5jZXMgb2YgQml0d2FyZGVuIHNlcnZlcnMiCiAgICB9CgogICAgIyBJbmNsdWRlIHRlYW0gbGV2ZWwgbW9kZWxzCiAgICBhZG1pbiA9IHBlcnNvbiAiT3JnYW5pemF0aW9uIEFkbWluIiAiQW4gYWRtaW5pc3RyYXRvciBvZiBhbiBvcmdhbml6YXRpb24iIHsKICAgICAgdGFncyAiQWRtaW4iCiAgICB9CiAgICBwcm92aWRlciA9IHBlcnNvbiAiTVNQIiAiQW5kIGVtcGxveWVlIG9mIGEgbWFuYWdlZCBzZXJ2aWNlIHByb3ZpZGVyIiB7CiAgICAgIHRhZ3MgIk1TUCIKICAgIH0KICAgIAogICAgIWVsZW1lbnQgc2VydmVyIHsKICAgICAgc2NpbSA9IGNvbnRhaW5lciAiU0NJTSIgewogICAgICAgIHRhZ3MgIlNDSU0iCiAgICAgIH0KICAgIH0KICAgIAogICAgZGlyZWN0b3J5X2Nvbm5lY3RvciAtPiBzZXJ2ZXIuYXBpICJTeW5jcyB1c2VycyBhbmQgZ3JvdXBzIHRvIEJpdHdhcmRlbiIKICAgICFlbGVtZW50IHNlcnZlciB7CiAgICAgIGlkZW50aXR5ID0gY29udGFpbmVyICJJZGVudGl0eSIgewogICAgICAgIHRhZ3MgIkF1dGgiCiAgICAgIH0KICAgICAgc3NvID0gY29udGFpbmVyICJTU08iIHsKICAgICAgICB0YWdzICJBdXRoIgogICAgICB9CiAgICB9CiAgICAjIEV4dGVybmFsIHZlbmRvcnMKICAgIGdyb3VwICJQYXltZW50IFN5c3RlbXMiIHsKICAgICAgc3RyaXBlID0gc29mdHdhcmVTeXN0ZW0gIlN0cmlwZSIgewogICAgICAgIHRhZ3MgIkV4dGVybmFsIgogICAgICAgIHRhZ3MgIkJpbGxpbmciCiAgICAgICAgZGVzY3JpcHRpb24gIkhhbmRsZXMgY3JlZGl0IGNhcmRzIGFuZCBzdWJzY3JpcHRpb25zLiIKICAgICAgfQogICAgICBicmFpbnRyZWUgPSBzb2Z0d2FyZVN5c3RlbSAiQnJhaW50cmVlIiB7CiAgICAgICAgdGFncyAiRXh0ZXJuYWwiCiAgICAgICAgdGFncyAiQmlsbGluZyIKICAgICAgICBkZXNjcmlwdGlvbiAiSGFuZGxlcyBQYXlQYWwgYW5kIGNyeXB0b2N1cnJlbmN5LiIKICAgICAgfQogICAgfQogICAgCiAgICAhZWxlbWVudCBzZXJ2ZXIgewogICAgICAgIGF6dXJlX3NlcnZpY2VfYnVzID0gY29udGFpbmVyICJBenVyZSBTZXJ2aWNlIEJ1cyIgewogICAgICAgICAgICBkZXNjcmlwdGlvbiAiQU1RUCBzZXJ2aWNlIHVzZWQgZm9yIHB1Yi9zdWIgYXJjaGl0ZWN0dXJlIGZvciBFdmVudHMgYW5kIEludGVncmF0aW9ucyIKICAgICAgICAgICAgdGFncyAiRXZlbnRzIiwgIkF6dXJlIiwgIkFTQiIsICJDbG91ZC1Pbmx5IgogICAgCiAgICAgICAgICAgIGV2ZW50X3RvcGljID0gY29tcG9uZW50ICJFdmVudCBUb3BpYyIgewogICAgICAgICAgICAgICAgZGVzY3JpcHRpb24gIlRoZSBtYWluIGVudHJ5IHBvaW50IGZvciBhbGwgZXZlbnRzIGluIHRoZSBzeXN0ZW0uIFdoZW4gYW4gZXZlbnQgb2NjdXJzLCBpdCBpcyBwdWJsaXNoZWQgdG8gdGhpcyB0b3BpYy4iCiAgICAgICAgICAgICAgICB0YWdzICJFdmVudHMiLCAiQVNCIiwgIkV2ZW50IFRpZXIiCiAgICAgICAgICAgIH0KICAgIAogICAgICAgICAgICBpbnRlZ3JhdGlvbl90b3BpYyA9IGNvbXBvbmVudCAiSW50ZWdyYXRpb24gVG9waWMiIHsKICAgICAgICAgICAgICAgIGRlc2NyaXB0aW9uICJFdmVudHMgdGhhdCBoYXZlIGludGVncmF0aW9ucyBjb25maWd1cmVkIGFyZSBwcm9jZXNzZWQgYW5kIHB1dCBvbiB0aGUgaW50ZWdyYXRpb24gdG9waWMgd2l0aCBhIHJvdXRpbmcga2V5IGZvciB0aGVpciBzcGVjaWZpYyBpbnRlZ3JhdGlvbiBoYW5kbGVyIHRvIHByb2Nlc3MuIgogICAgICAgICAgICAgICAgdGFncyAiRXZlbnRzIiwgIkFTQiIsICJJbnRlZ3JhdGlvbnMiLCAiSW50ZWdyYXRpb24gVGllciIKICAgICAgICAgICAgfQogICAgCiAgICAgICAgICAgIGV2ZW50c1dyaXRlU3ViID0gY29tcG9uZW50ICJldmVudHMtd3JpdGUtc3Vic2NyaXB0aW9uIiB7CiAgICAgICAgICAgICAgICBkZXNjcmlwdGlvbiAiU3Vic2NyaXB0aW9uIGZvciBFdmVudFJlcG9zaXRvcnlIYW5kbGVyIHRvIHdyaXRlIGFsbCBldmVudHMgaW50byBhenVyZSB0YWJsZSBzdG9yYWdlLiIKICAgICAgICAgICAgICAgIHRhZ3MgIkFTQiIsICJTdWJzY3JpcHRpb24iLCAiRXZlbnQgVGllciIKICAgICAgICAgICAgfQogICAgCiAgICAgICAgICAgIGV2ZW50c1NsYWNrU3ViID0gY29tcG9uZW50ICJldmVudHMtc2xhY2stc3Vic2NyaXB0aW9uIiB7CiAgICAgICAgICAgICAgICBkZXNjcmlwdGlvbiAiU3Vic2NyaXB0aW9uIGZvciBzbGFjay1zcGVjaWZpYyBFdmVudEludGVncmF0aW9uSGFuZGxlciB3aGljaCBwdWJsaXNoZXMgcHJvY2Vzc2VkIGV2ZW50cyB0byB0aGUgaW50ZWdyYXRpb24gdGllciBpZiB0aGVyZSBpcyBhIFNsYWNrIGludGVncmF0aW9uIGNvbmZpZ3VyZWQuIgogICAgICAgICAgICAgICAgdGFncyAiQVNCIiwgIlN1YnNjcmlwdGlvbiIsICJFdmVudCBUaWVyIiwgIlNsYWNrIgogICAgICAgICAgICB9CiAgICAKICAgICAgICAgICAgZXZlbnRzV2ViaG9va1N1YiA9IGNvbXBvbmVudCAiZXZlbnRzLXdlYmhvb2stc3Vic2NyaXB0aW9uIiB7CiAgICAgICAgICAgICAgICBkZXNjcmlwdGlvbiAiU3Vic2NyaXB0aW9uIGZvciB3ZWJob29rLXNwZWNpZmljIEV2ZW50SW50ZWdyYXRpb25IYW5kbGVyIHdoaWNoIHB1Ymxpc2hlcyBwcm9jZXNzZWQgZXZlbnRzIHRvIHRoZSBpbnRlZ3JhdGlvbiB0aWVyIGlmIHRoZXJlIGlzIGEgd2ViaG9vayBpbnRlZ3JhdGlvbiBjb25maWd1cmVkLiIKICAgICAgICAgICAgICAgIHRhZ3MgIkFTQiIsICJTdWJzY3JpcHRpb24iLCAiRXZlbnQgVGllciIsICJXZWJob29rIgogICAgICAgICAgICB9CiAgICAKICAgICAgICAgICAgZXZlbnRzSGVjU3ViID0gY29tcG9uZW50ICJldmVudHMtaGVjLXN1YnNjcmlwdGlvbiIgewogICAgICAgICAgICAgICAgZGVzY3JpcHRpb24gIlN1YnNjcmlwdGlvbiBmb3IgSEVDLXNwZWNpZmljIEV2ZW50SW50ZWdyYXRpb25IYW5kbGVyIHdoaWNoIHB1Ymxpc2hlcyBwcm9jZXNzZWQgZXZlbnRzIHRvIHRoZSBpbnRlZ3JhdGlvbiB0aWVyIGlmIHRoZXJlIGlzIGEgSEVDIGludGVncmF0aW9uIGNvbmZpZ3VyZWQuIgogICAgICAgICAgICAgICAgdGFncyAiQVNCIiwgIlN1YnNjcmlwdGlvbiIsICJFdmVudCBUaWVyIiwgIkhFQyIKICAgICAgICAgICAgfQogICAgCiAgICAgICAgICAgIGludGVncmF0aW9uU2xhY2tTdWIgPSBjb21wb25lbnQgImludGVncmF0aW9uLXNsYWNrLXN1YnNjcmlwdGlvbiIgewogICAgICAgICAgICAgICAgZGVzY3JpcHRpb24gIkludGVncmF0aW9uLWxldmVsIHN1YnNjcmlwdGlvbiBmb3IgU2xhY2sgSW50ZWdyYXRpb25NZXNzYWdlcy4gQ29ycmVsYXRpb24gZmlsdGVyOiBMYWJlbCA9ICdzbGFjaycuIgogICAgICAgICAgICAgICAgdGFncyAiQVNCIiwgIlN1YnNjcmlwdGlvbiIsICJJbnRlZ3JhdGlvbiBUaWVyIiwgIlNsYWNrIgogICAgICAgICAgICB9CiAgICAKICAgICAgICAgICAgaW50ZWdyYXRpb25XZWJob29rU3ViID0gY29tcG9uZW50ICJpbnRlZ3JhdGlvbi13ZWJob29rLXN1YnNjcmlwdGlvbiIgewogICAgICAgICAgICAgICAgZGVzY3JpcHRpb24gIkludGVncmF0aW9uLWxldmVsIHN1YnNjcmlwdGlvbiBmb3IgV2ViaG9vayBJbnRlZ3JhdGlvbk1lc3NhZ2VzLiBDb3JyZWxhdGlvbiBmaWx0ZXI6IExhYmVsID0gJ3dlYmhvb2snLiIKICAgICAgICAgICAgICAgIHRhZ3MgIkFTQiIsICJTdWJzY3JpcHRpb24iLCAiSW50ZWdyYXRpb24gVGllciIsICJXZWJob29rIgogICAgICAgICAgICB9CiAgICAKICAgICAgICAgICAgaW50ZWdyYXRpb25IZWNTdWIgPSBjb21wb25lbnQgImludGVncmF0aW9uLWhlYy1zdWJzY3JpcHRpb24iIHsKICAgICAgICAgICAgICAgIGRlc2NyaXB0aW9uICJJbnRlZ3JhdGlvbi1sZXZlbCBzdWJzY3JpcHRpb24gZm9yIEhFQyBJbnRlZ3JhdGlvbk1lc3NhZ2VzLiBDb3JyZWxhdGlvbiBmaWx0ZXI6IExhYmVsID0gJ2hlYycuIgogICAgICAgICAgICAgICAgdGFncyAiQVNCIiwgIlN1YnNjcmlwdGlvbiIsICJJbnRlZ3JhdGlvbiBUaWVyIiwgIkhFQyIKICAgICAgICAgICAgfQogICAgICAgIH0KICAgIAogICAgICAgIHJhYmJpdF9tcSA9IGNvbnRhaW5lciAiUmFiYml0TVEiIHsKICAgICAgICAgICAgdGFncyAiRXZlbnRzIgogICAgICAgICAgICB0YWdzICJSYWJiaXRNUSIKICAgICAgICAgICAgdGFncyAiU2VsZi1Ib3N0ZWQtT25seSIKICAgIAogICAgICAgICAgICBldmVudF9leGNoYW5nZSA9IGNvbXBvbmVudCAiRXZlbnQgRXhjaGFuZ2UiIHsKICAgICAgICAgICAgICAgIHRhZ3MgIkV2ZW50cyIsICJFdmVudCBUaWVyIgogICAgICAgICAgICB9CiAgICAKICAgICAgICAgICAgaW50ZWdyYXRpb25fZXhjaGFuZ2UgPSBjb21wb25lbnQgIkludGVncmF0aW9uIEV4Y2hhbmdlIiB7CiAgICAgICAgICAgICAgICB0YWdzICJFdmVudHMiLCAiSW50ZWdyYXRpb25zIiwgIkludGVncmF0aW9uIFRpZXIiCiAgICAgICAgICAgIH0KICAgIAogICAgICAgICAgICBldmVudHNXcml0ZVF1ZXVlID0gY29tcG9uZW50ICJldmVudHMtd3JpdGUtcXVldWUiIHsKICAgICAgICAgICAgICAgIGRlc2NyaXB0aW9uICJRdWV1ZSBmb3IgRXZlbnRSZXBvc2l0b3J5SGFuZGxlciB0byB3cml0ZSBhbGwgZXZlbnRzIGludG8gdGhlIGRhdGFiYXNlLiIKICAgICAgICAgICAgICAgIHRhZ3MgIlJhYmJpdE1RIiwgIlF1ZXVlIiwgIkV2ZW50IFRpZXIiCiAgICAgICAgICAgIH0KICAgIAogICAgICAgICAgICBldmVudHNTbGFja1F1ZXVlID0gY29tcG9uZW50ICJldmVudHMtc2xhY2stcXVldWUiIHsKICAgICAgICAgICAgICAgIGRlc2NyaXB0aW9uICJRdWV1ZSBmb3Igc2xhY2stc3BlY2lmaWMgRXZlbnRJbnRlZ3JhdGlvbkhhbmRsZXIgd2hpY2ggcHVibGlzaGVzIHByb2Nlc3NlZCBldmVudHMgdG8gdGhlIGludGVncmF0aW9uIHRpZXIgaWYgdGhlcmUgaXMgYSBTbGFjayBpbnRlZ3JhdGlvbiBjb25maWd1cmVkLiIKICAgICAgICAgICAgICAgIHRhZ3MgIlJhYmJpdE1RIiwgIlF1ZXVlIiwgIkV2ZW50IFRpZXIiLCAiU2xhY2siCiAgICAgICAgICAgIH0KICAgIAogICAgICAgICAgICBldmVudHNXZWJob29rUXVldWUgPSBjb21wb25lbnQgImV2ZW50cy13ZWJob29rLXF1ZXVlIiB7CiAgICAgICAgICAgICAgICBkZXNjcmlwdGlvbiAiUXVldWUgZm9yIHdlYmhvb2stc3BlY2lmaWMgRXZlbnRJbnRlZ3JhdGlvbkhhbmRsZXIgd2hpY2ggcHVibGlzaGVzIHByb2Nlc3NlZCBldmVudHMgdG8gdGhlIGludGVncmF0aW9uIHRpZXIgaWYgdGhlcmUgaXMgYSB3ZWJob29rIGludGVncmF0aW9uIGNvbmZpZ3VyZWQuIgogICAgICAgICAgICAgICAgdGFncyAiUmFiYml0TVEiLCAiUXVldWUiLCAiRXZlbnQgVGllciIsICJXZWJob29rIgogICAgICAgICAgICB9CiAgICAKICAgICAgICAgICAgZXZlbnRzSGVjUXVldWUgPSBjb21wb25lbnQgImV2ZW50cy1oZWMtcXVldWUiIHsKICAgICAgICAgICAgICAgIGRlc2NyaXB0aW9uICJRdWV1ZSBmb3IgSEVDLXNwZWNpZmljIEV2ZW50SW50ZWdyYXRpb25IYW5kbGVyIHdoaWNoIHB1Ymxpc2hlcyBwcm9jZXNzZWQgZXZlbnRzIHRvIHRoZSBpbnRlZ3JhdGlvbiB0aWVyIGlmIHRoZXJlIGlzIGEgSEVDIGludGVncmF0aW9uIGNvbmZpZ3VyZWQuIgogICAgICAgICAgICAgICAgdGFncyAiUmFiYml0TVEiLCAiUXVldWUiLCAiRXZlbnQgVGllciIsICJIRUMiCiAgICAgICAgICAgIH0KICAgIAogICAgICAgICAgICBpbnRlZ3JhdGlvblNsYWNrUXVldWUgPSBjb21wb25lbnQgImludGVncmF0aW9uLXNsYWNrLXF1ZXVlIiB7CiAgICAgICAgICAgICAgICBkZXNjcmlwdGlvbiAiSW50ZWdyYXRpb24tbGV2ZWwgcXVldWUgZm9yIFNsYWNrIEludGVncmF0aW9uTWVzc2FnZXMuIFJvdXRpbmcga2V5ID0gJ3NsYWNrJy4iCiAgICAgICAgICAgICAgICB0YWdzICJSYWJiaXRNUSIsICJRdWV1ZSIsICJJbnRlZ3JhdGlvbiBUaWVyIiwgIlNsYWNrIgogICAgICAgICAgICB9CiAgICAKICAgICAgICAgICAgaW50ZWdyYXRpb25XZWJob29rUXVldWUgPSBjb21wb25lbnQgImludGVncmF0aW9uLXdlYmhvb2stcXVldWUiIHsKICAgICAgICAgICAgICAgIGRlc2NyaXB0aW9uICJJbnRlZ3JhdGlvbi1sZXZlbCBxdWV1ZSBmb3IgV2ViaG9vayBJbnRlZ3JhdGlvbk1lc3NhZ2VzLiBSb3V0aW5nIGtleSA9ICd3ZWJob29rJy4iCiAgICAgICAgICAgICAgICB0YWdzICJSYWJiaXRNUSIsICJRdWV1ZSIsICJJbnRlZ3JhdGlvbiBUaWVyIiwgIldlYmhvb2siCiAgICAgICAgICAgIH0KICAgIAogICAgICAgICAgICBpbnRlZ3JhdGlvbkhlY1F1ZXVlID0gY29tcG9uZW50ICJpbnRlZ3JhdGlvbi1oZWMtcXVldWUiIHsKICAgICAgICAgICAgICAgIGRlc2NyaXB0aW9uICJJbnRlZ3JhdGlvbi1sZXZlbCBxdWV1ZSBmb3IgSEVDIEludGVncmF0aW9uTWVzc2FnZXMuIFJvdXRpbmcga2V5ID0gJ2hlYycuIgogICAgICAgICAgICAgICAgdGFncyAiUmFiYml0TVEiLCAiUXVldWUiLCAiSW50ZWdyYXRpb24gVGllciIsICJIRUMiCiAgICAgICAgICAgIH0KICAgIAogICAgICAgICAgICBpbnRlZ3JhdGlvblNsYWNrUmV0cnlRdWV1ZSA9IGNvbXBvbmVudCAiaW50ZWdyYXRpb24tc2xhY2stcmV0cnktcXVldWUiIHsKICAgICAgICAgICAgICAgIGRlc2NyaXB0aW9uICJJbnRlZ3JhdGlvbi1sZXZlbCByZXRyeSBxdWV1ZSBmb3IgU2xhY2sgSW50ZWdyYXRpb25NZXNzYWdlcy4gUm91dGluZyBrZXkgTGFiZWwgPSAnc2xhY2stcmV0cnknLiIKICAgICAgICAgICAgICAgIHRhZ3MgIlJhYmJpdE1RIiwgIlF1ZXVlIiwgIkludGVncmF0aW9uIFRpZXIiLCAiU2xhY2siCiAgICAgICAgICAgIH0KICAgIAogICAgICAgICAgICBpbnRlZ3JhdGlvbldlYmhvb2tSZXRyeVF1ZXVlID0gY29tcG9uZW50ICJpbnRlZ3JhdGlvbi13ZWJob29rLXJldHJ5LXF1ZXVlIiB7CiAgICAgICAgICAgICAgICBkZXNjcmlwdGlvbiAiSW50ZWdyYXRpb24tbGV2ZWwgcmV0cnkgcXVldWUgZm9yIFdlYmhvb2sgSW50ZWdyYXRpb25NZXNzYWdlcy4gUm91dGluZyBrZXkgPSAnd2ViaG9vay1yZXRyeScuIgogICAgICAgICAgICAgICAgdGFncyAiUmFiYml0TVEiLCAiUXVldWUiLCAiSW50ZWdyYXRpb24gVGllciIsICJXZWJob29rIgogICAgICAgICAgICB9CiAgICAKICAgICAgICAgICAgaW50ZWdyYXRpb25IZWNSZXRyeVF1ZXVlID0gY29tcG9uZW50ICJpbnRlZ3JhdGlvbi1oZWMtcmV0cnktcXVldWUiIHsKICAgICAgICAgICAgICAgIGRlc2NyaXB0aW9uICJJbnRlZ3JhdGlvbi1sZXZlbCByZXRyeSBxdWV1ZSBmb3IgSEVDIEludGVncmF0aW9uTWVzc2FnZXMuIFJvdXRpbmcga2V5ID0gJ2hlYy1yZXRyeScuIgogICAgICAgICAgICAgICAgdGFncyAiUmFiYml0TVEiLCAiUXVldWUiLCAiSW50ZWdyYXRpb24gVGllciIsICJIRUMiCiAgICAgICAgICAgIH0KICAgICAgICB9CiAgICB9CiAgICAKICAgICFlbGVtZW50IHNlcnZlci5ldmVudHNfcHJvY2Vzc29yIHsKICAgICAgICB0YWdzICJDbG91ZC1Pbmx5IgogICAgCiAgICAgICAgZXZlbnRfcmVwb3NpdG9yeV9oYW5kbGVyID0gY29tcG9uZW50ICJFdmVudFJlcG9zaXRvcnlIYW5kbGVyIiB7CiAgICAgICAgICAgIGRlc2NyaXB0aW9uICJIYW5kbGVzIGFsbCBldmVudHMsIHBhc3NpbmcgdGhlbSBvZmYgdG8gdGhlIElFdmVudFdyaXRlU2VydmljZSB3aXRoIHRoZSBgcGVyc2lzdGVudGAga2V5IGZvciBsb25nIHRlcm0gc3RvcmFnZS4iCiAgICAgICAgfQogICAgICAgIGV2ZW50X2xpc3RlbmVyID0gY29tcG9uZW50ICJBenVyZVNlcnZpY2VCdXNFdmVudExpc3RlbmVyU2VydmljZSIgewogICAgICAgICAgICBkZXNjcmlwdGlvbiAiTGlzdGVucyB0byBhIHNwZWNpZmljIHN1YnNjcmlwdGlvbiBhbmQgcGFzc2VzIG9mZiB0byBhIGhhbmRsZXIgdG8gaGFuZGxlIGV2ZW50cyIKICAgICAgICB9CiAgICAgICAgaW50ZWdyYXRpb25fbGlzdGVuZXIgPSBjb21wb25lbnQgIkF6dXJlU2VydmljZUJ1c0ludGVncmF0aW9uTGlzdGVuZXJTZXJ2aWNlIiB7CiAgICAgICAgICAgIGRlc2NyaXB0aW9uICJMaXN0ZW5zIHRvIGEgc3BlY2lmaWMgc3Vic2NyaXB0aW9uIGFuZCBwYXNzZXMgb2ZmIHRvIGEgaGFuZGxlciB0byBoYW5kbGUgSW50ZWdyYXRpb25NZXNzYWdlcyIKICAgICAgICB9CiAgICAgICAgZXZlbnRfaW50ZWdyYXRpb25faGFuZGxlciA9IGNvbXBvbmVudCAiRXZlbnRJbnRlZ3JhdGlvbkhhbmRsZXIiIHsKICAgICAgICAgICAgZGVzY3JpcHRpb24gIkZldGNoZXMgdGhlIHJlbGV2YW50IGNvbmZpZ3VyYXRpb25zIHdoZW4gYW4gZXZlbnQgY29tZXMgaW4gYW5kIGhhbmRzIHRoZSBldmVudCB0byBpdHMgcGFpcmVkIGludGVncmF0aW9uIGhhbmRsZXIgZm9yIHByb2Nlc3NpbmcuIgogICAgICAgIH0KICAgICAgICBzbGFja19pbnRlZ3JhdGlvbl9oYW5kbGVyID0gY29tcG9uZW50ICJTbGFja0ludGVncmF0aW9uSGFuZGxlciIgewogICAgICAgICAgICBkZXNjcmlwdGlvbiAiUHJvY2Vzc2VzIFNsYWNrIEludGVncmF0aW9uTWVzc2FnZXMsIHBvc3RpbmcgdGhlbSB0byB0aGUgY29uZmlndXJlZCBjaGFubmVscy4iCiAgICAgICAgfQogICAgICAgIHdlYmhvb2tfaW50ZWdyYXRpb25faGFuZGxlciA9IGNvbXBvbmVudCAiV2ViaG9va0ludGVncmF0aW9uSGFuZGxlciIgewogICAgICAgICAgICBkZXNjcmlwdGlvbiAiUHJvY2Vzc2VzIFdlYmhvb2sgYW5kIEhFQyBJbnRlZ3JhdGlvbk1lc3NhZ2VzLCBwb3N0aW5nIHRoZW0gdG8gdGhlIGNvbmZpZ3VyZWQgVVJJLiIKICAgICAgICB9CiAgICAgICAgaW50ZWdyYXRpb25fY29uZmlndXJhdGlvbl9kZXRhaWxzX2NhY2hlX3NlcnZpY2UgPSBjb21wb25lbnQgIkludGVncmF0aW9uQ29uZmlndXJhdGlvbkRldGFpbHNDYWNoZVNlcnZpY2UiIHsKICAgICAgICAgICAgZGVzY3JpcHRpb24gIkNhY2hlcyBhbGwgY29uZmlndXJhdGlvbnMgZm9yIGludGVncmF0aW9ucyBpbiBtZW1vcnkgc28gdGhhdCBldmVudHMgY2FuIGJlIGhhbmRsZWQgd2l0aG91dCBhZGRpbmcgZGF0YWJhc2UgbG9hZC4iCiAgICAgICAgfQogICAgICAgIHNsYWNrX3NlcnZpY2UgPSBjb21wb25lbnQgIlNsYWNrU2VydmljZSIgewogICAgICAgICAgICBkZXNjcmlwdGlvbiAiSGFuZGxlcyBhbGwgQVBJIGludGVyYWN0aW9uIHdpdGggU2xhY2suIgogICAgICAgIH0KICAgICAgICBodHRwX2NsaWVudCA9IGNvbXBvbmVudCAiSHR0cENsaWVudCIgewogICAgICAgICAgICBkZXNjcmlwdGlvbiAiUGVyZm9ybXMgYW55IEh0dHAgZnVuY3Rpb25zIGZvciBXZWJob29rcyAvIEhFQy4iCiAgICAgICAgfQogICAgICAgIGludGVncmF0aW9uX2ZpbHRlcl9zZXJ2aWNlID0gY29tcG9uZW50ICJJbnRlZ3JhdGlvbkZpbHRlclNlcnZpY2UiIHsKICAgICAgICAgICAgZGVzY3JpcHRpb24gIlByb2Nlc3NlcyBmaWx0ZXJzIGZyb20gY29uZmlndXJhdGlvbnMgdG8gZGV0ZXJtaW5lIGlmIGFuIGV2ZW50IHNob3VsZCBiZSBwcm9jZXNzZWQgb3V0IHRvIHRoZSBpbnRlZ3JhdGlvbi4iCiAgICAgICAgfQogICAgfQogICAgCiAgICAhZWxlbWVudCBzZXJ2ZXIuZXZlbnRzIHsKICAgICAgICBldmVudF9saXN0ZW5lciA9IGNvbXBvbmVudCAiUmFiYml0TXFFdmVudExpc3RlbmVyU2VydmljZSIgewogICAgICAgICAgICBkZXNjcmlwdGlvbiAiTGlzdGVucyB0byBhIHNwZWNpZmljIHF1ZXVlIGFuZCBwYXNzZXMgb2ZmIHRvIGEgaGFuZGxlciB0byBoYW5kbGUgZXZlbnRzIgogICAgICAgIH0KICAgICAgICBpbnRlZ3JhdGlvbl9saXN0ZW5lciA9IGNvbXBvbmVudCAiUmFiYml0TXFJbnRlZ3JhdGlvbkxpc3RlbmVyU2VydmljZSIgewogICAgICAgICAgICBkZXNjcmlwdGlvbiAiTGlzdGVucyB0byBhIHNwZWNpZmljIHF1ZXVlIGFuZCBwYXNzZXMgb2ZmIHRvIGEgaGFuZGxlciB0byBoYW5kbGUgSW50ZWdyYXRpb25NZXNzYWdlcyIKICAgICAgICB9CiAgICAgICAgZXZlbnRfcmVwb3NpdG9yeV9oYW5kbGVyID0gY29tcG9uZW50ICJFdmVudFJlcG9zaXRvcnlIYW5kbGVyIiB7CiAgICAgICAgICAgIHRhZ3MgIlNlbGYtSG9zdGVkLU9ubHkiCiAgICAgICAgICAgIGRlc2NyaXB0aW9uICJIYW5kbGVzIGFsbCBldmVudHMsIHBhc3NpbmcgdGhlbSBvZmYgdG8gdGhlIElFdmVudFdyaXRlU2VydmljZSB3aXRoIHRoZSBgcGVyc2lzdGVudGAga2V5IGZvciBsb25nIHRlcm0gc3RvcmFnZS4iCiAgICAgICAgfQogICAgICAgIGV2ZW50X2ludGVncmF0aW9uX2hhbmRsZXIgPSBjb21wb25lbnQgIkV2ZW50SW50ZWdyYXRpb25IYW5kbGVyIiB7CiAgICAgICAgICAgIHRhZ3MgIlNlbGYtSG9zdGVkLU9ubHkiCiAgICAgICAgICAgIGRlc2NyaXB0aW9uICJGZXRjaGVzIHRoZSByZWxldmFudCBjb25maWd1cmF0aW9ucyB3aGVuIGFuIGV2ZW50IGNvbWVzIGluIGFuZCBoYW5kcyB0aGUgZXZlbnQgdG8gaXRzIHBhaXJlZCBpbnRlZ3JhdGlvbiBoYW5kbGVyIGZvciBwcm9jZXNzaW5nLiIKICAgICAgICB9CiAgICAgICAgc2xhY2tfaW50ZWdyYXRpb25faGFuZGxlciA9IGNvbXBvbmVudCAiU2xhY2tJbnRlZ3JhdGlvbkhhbmRsZXIiIHsKICAgICAgICAgICAgdGFncyAiU2VsZi1Ib3N0ZWQtT25seSIKICAgICAgICAgICAgZGVzY3JpcHRpb24gIlByb2Nlc3NlcyBTbGFjayBJbnRlZ3JhdGlvbk1lc3NhZ2VzLCBwb3N0aW5nIHRoZW0gdG8gdGhlIGNvbmZpZ3VyZWQgY2hhbm5lbHMuIgogICAgICAgIH0KICAgICAgICB3ZWJob29rX2ludGVncmF0aW9uX2hhbmRsZXIgPSBjb21wb25lbnQgIldlYmhvb2tJbnRlZ3JhdGlvbkhhbmRsZXIiIHsKICAgICAgICAgICAgdGFncyAiU2VsZi1Ib3N0ZWQtT25seSIKICAgICAgICAgICAgZGVzY3JpcHRpb24gIlByb2Nlc3NlcyBXZWJob29rIGFuZCBIRUMgSW50ZWdyYXRpb25NZXNzYWdlcywgcG9zdGluZyB0aGVtIHRvIHRoZSBjb25maWd1cmVkIFVSSS4iCiAgICAgICAgfQogICAgICAgIGludGVncmF0aW9uX2NvbmZpZ3VyYXRpb25fZGV0YWlsc19jYWNoZV9zZXJ2aWNlID0gY29tcG9uZW50ICJJbnRlZ3JhdGlvbkNvbmZpZ3VyYXRpb25EZXRhaWxzQ2FjaGVTZXJ2aWNlIiB7CiAgICAgICAgICAgIHRhZ3MgIlNlbGYtSG9zdGVkLU9ubHkiCiAgICAgICAgICAgIGRlc2NyaXB0aW9uICJDYWNoZXMgYWxsIGNvbmZpZ3VyYXRpb25zIGZvciBpbnRlZ3JhdGlvbnMgaW4gbWVtb3J5IHNvIHRoYXQgZXZlbnRzIGNhbiBiZSBoYW5kbGVkIHdpdGhvdXQgYWRkaW5nIGRhdGFiYXNlIGxvYWQuIgogICAgICAgIH0KICAgICAgICBzbGFja19zZXJ2aWNlID0gY29tcG9uZW50ICJTbGFja1NlcnZpY2UiIHsKICAgICAgICAgICAgdGFncyAiU2VsZi1Ib3N0ZWQtT25seSIKICAgICAgICAgICAgZGVzY3JpcHRpb24gIkhhbmRsZXMgYWxsIEFQSSBpbnRlcmFjdGlvbiB3aXRoIFNsYWNrLiIKICAgICAgICB9CiAgICAgICAgaHR0cF9jbGllbnQgPSBjb21wb25lbnQgIkh0dHBDbGllbnQiIHsKICAgICAgICAgICAgdGFncyAiU2VsZi1Ib3N0ZWQtT25seSIKICAgICAgICAgICAgZGVzY3JpcHRpb24gIlBlcmZvcm1zIGFueSBIdHRwIGZ1bmN0aW9ucyBmb3IgV2ViaG9va3MgLyBIRUMuIgogICAgICAgIH0KICAgICAgICBpbnRlZ3JhdGlvbl9maWx0ZXJfc2VydmljZSA9IGNvbXBvbmVudCAiSW50ZWdyYXRpb25GaWx0ZXJTZXJ2aWNlIiB7CiAgICAgICAgICAgIHRhZ3MgIlNlbGYtSG9zdGVkLU9ubHkiCiAgICAgICAgICAgIGRlc2NyaXB0aW9uICJQcm9jZXNzZXMgZmlsdGVycyBmcm9tIGNvbmZpZ3VyYXRpb25zIHRvIGRldGVybWluZSBpZiBhbiBldmVudCBzaG91bGQgYmUgcHJvY2Vzc2VkIG91dCB0byB0aGUgaW50ZWdyYXRpb24uIgogICAgICAgIH0KICAgIH0KICAgIAogICAgZXh0ZXJuYWxfc2VydmljZXMgPSBzb2Z0d2FyZVN5c3RlbSAiRXh0ZXJuYWwgU2VydmljZXMiIHsKICAgICAgICB0YWdzICJFeHRlcm5hbCIsICJFdmVudHMiLCAiSW50ZWdyYXRpb25zIgogICAgICAgIGRlc2NyaXB0aW9uICJFeHRlcm5hbCBzZXJ2aWNlcyAoZS5nLiBTSUVNLCBTbGFjaywgZXQgYWwpIHRoYXQgY29uc3VtZSBldmVudHMgdmlhIGludGVncmF0aW9ucyIKICAgIAogICAgICAgIHNsYWNrID0gY29udGFpbmVyICJTbGFjayIgewogICAgICAgICAgICB0YWdzICJFeHRlcm5hbCIsICJFdmVudHMiLCAiSW50ZWdyYXRpb25zIiwgIlNsYWNrIgogICAgICAgICAgICBkZXNjcmlwdGlvbiAiU2xhY2sgbWVzc2FnaW5nIHNlcnZpY2UuIFJlY2VpdmVzIG1lc3NhZ2VzIHZpYSBjb25maWd1cmVkIGV2ZW50IGludGVncmF0aW9ucy4iCiAgICAgICAgfQogICAgCiAgICAgICAgc3BsdW5rID0gY29udGFpbmVyICJTcGx1bmsiIHsKICAgICAgICAgICAgdGFncyAiRXh0ZXJuYWwiLCAiRXZlbnRzIiwgIkludGVncmF0aW9ucyIsICJTcGx1bmsiCiAgICAgICAgICAgIGRlc2NyaXB0aW9uICJTcGx1bmsgU0lFTSBzZXJ2aWNlLiBSZWNlaXZlcyBldmVudHMgdmlhIGNvbmZpZ3VyZWQgZXZlbnQgaW50ZWdyYXRpb25zLiIKICAgICAgICB9CiAgICAKICAgICAgICBkYXRhZG9nID0gY29udGFpbmVyICJEYXRhZG9nIiB7CiAgICAgICAgICAgIHRhZ3MgIkV4dGVybmFsIiwgIkV2ZW50cyIsICJJbnRlZ3JhdGlvbnMiLCAiRGF0YWRvZyIKICAgICAgICAgICAgZGVzY3JpcHRpb24gIkRhdGFkb2cgU0lFTSBzZXJ2aWNlLiBSZWNlaXZlcyBldmVudHMgdmlhIGNvbmZpZ3VyZWQgZXZlbnQgaW50ZWdyYXRpb25zLiIKICAgICAgICB9CiAgICAKICAgICAgICBjcm93ZHN0cmlrZSA9IGNvbnRhaW5lciAiQ3Jvd2RzdHJpa2UgRmFsY29uIiB7CiAgICAgICAgICAgIHRhZ3MgIkV4dGVybmFsIiwgIkV2ZW50cyIsICJJbnRlZ3JhdGlvbnMiLCAiQ3Jvd2RzdHJpa2UgRmFsY29uIiwgIkNyb3dkc3RyaWtlIgogICAgICAgICAgICBkZXNjcmlwdGlvbiAiQ3Jvd2RzdHJpa2UgRmFsY29uIFNJRU0gc2VydmljZS4gUmVjZWl2ZXMgZXZlbnRzIHZpYSBjb25maWd1cmVkIGV2ZW50IGludGVncmF0aW9ucy4iCiAgICAgICAgfQogICAgfQogICAgIWVsZW1lbnQgc2VydmVyIHsKICAgICAgaWNvbnMgPSBjb250YWluZXIgIkljb25zIiB7CiAgICAgICAgIWRvY3MgInRocmVhdF9tb2RlbC5tZCIKICAgICAgICBpY29uc19jb250cm9sbGVyID0gY29tcG9uZW50ICJJY29uc0NvbnRyb2xsZXIiIHsKICAgICAgICAgIGRlc2NyaXB0aW9uICJJY29uc0NvbnRyb2xsZXIiCiAgICAgICAgICB0ZWNobm9sb2d5ICJDIyBBU1AuTkVUIENvcmUiCiAgICAgICAgICAKICAgICAgICB9CiAgICAgICAgaW5mb19jb250cm9sbGVyID0gY29tcG9uZW50ICJJbmZvQ29udHJvbGxlciIgewogICAgICAgICAgZGVzY3JpcHRpb24gIlByb3ZpZGVzIGluZm9ybWF0aW9uIGFib3V0IHRoZSBkZXBsb3llZCBpY29uIHNlcnZpY2UuIEFsbG93IGZvciBoZWFsdGggY2hlY2tzLiIKICAgICAgICAgIHRlY2hub2xvZ3kgIkMjIEFTUC5ORVQgQ29yZSIKICAgICAgICAgIHRhZ3MgIkluZm8iICJIZWFsdGhDaGVjayIKICAgICAgICB9CiAgICAgICAgaWNvbl9kZXRlcm1pbmF0aW9uID0gY29tcG9uZW50ICJJY29uRGV0ZXJtaW5hdGlvbiIgewogICAgICAgICAgZGVzY3JpcHRpb24gIlJlc29sdmVzIGEgc2luZ2xlIHNvdXJjZSBmb3IgYSB3ZWJzaXRlIGljb24gYW5kIGRvd25sb2FkcyBpdC4iCiAgICAgICAgfQogICAgICAgIGljb25fY2FjaGUgPSBjb21wb25lbnQgIkljb25DYWNoZSIgewogICAgICAgICAgZGVzY3JpcHRpb24gIkNhY2hlcyBpY29ucyBmb3IgYSBnaXZlbiBkb21haW4iCiAgICAgICAgICB0YWdzICJDYWNoZSIKICAgICAgICAgIHRlY2hub2xvZ3kgIkMjIE1lbW9yeUNhY2hlIgogICAgICAgIH0KICAgIAogICAgICAgIGNsaWVudHMgLT4gaWNvbnNfY29udHJvbGxlciAiUmVxdWVzdHMgaWNvbnMgZm9yIGNsZWFydGV4dCB1cmxzIGZyb20iIHsKICAgICAgICAgIHBlcnNwZWN0aXZlcyB7CiAgICAgICAgICAgICJTZWN1cml0eSIgIiAgICAgICAgICAgIEljb25zIDEuMi4xIEJyb2tlbiBTU0wgY29tbXVuaWNhdGlvbiBleHBvc2VzIHZhdWx0IGNvbnRlbnRzIHRvIG5ldHdvcmsgYWRtaW5pc3RyYXRvcnMgXG5cbiAgICAgICAgICAgIEljb25zIDEuMi4yIFRyYWNraW5nIG9mIHVzZXIgdmF1bHQgY29udGVudHMgYnkgaXAgY29ycmVsYXRpb24gYmV0d2VlbiBpZGVudGl0eSBhbmQgaWNvbnMgc2VydmljZXMgXG5cbiAgICAgICAgICAgIEljb25zIDEuMi4zIE5vIFNMQSBvZmZlcmVkIG9uIEljb25zIHNlcnZpY2UsIGdyYWNlZnVsIGRlZ3JhZGF0aW9uIG9mIGZlYXR1cmVzIG5lZWRlZCBpZiBpdCBnb2VzIGRvd24gXG5cbiAgICAgICAgICAgIEljb25zIDEuMi40IFNTUkYgdGhyb3VnaCBjcmFmdGVkIGlucHV0IHJlc29sdmluZyB0byBhIGxvY2F0aW9uIHRoZSBzZXJ2ZXIgaGFzIGVsZXZhdGVkIHByaXZpbGVnZXMgaW4iCiAgICAgICAgICB9CiAgICAgICAgfQogICAgICAgIGljb25zX2NvbnRyb2xsZXIgLT4gaWNvbl9kZXRlcm1pbmF0aW9uICJSZXF1ZXN0cyBpY29ucyBmcm9tIgogICAgICAgIGljb25zX2NvbnRyb2xsZXIgLT4gaWNvbl9jYWNoZSAiQ2FjaGVzIGljb25zIGluIiB7CiAgICAgICAgICBwZXJzcGVjdGl2ZXMgewogICAgICAgICAgICAiU2VjdXJpdHkiICIgICAgICAgICAgICBJY29ucyAxLjMuMSBBZ2dyZWdhdGUgdmF1bHQgY29udGVudCBsZWFrIHRocm91Z2ggdGltaW5nIGF0dGFjayBvbiBjYWNoZSBcblxuICAgICAgICAgICAgSWNvbnMgMS4zLjIgUG9zc2libGUgaW5qZWN0aW9uIGF0dGFjayB0aHJvdWdoIGNhY2hlIGtleSBcblxuICAgICAgICAgICAgSWNvbnMgMS4zLjMgJiBJY29ucyAxLjMuNCBDYWNoZSBibG9hdCBsZWFkaW5nIHRvIERvUyBcblxuICAgICAgICAgICAgSWNvbnMgMS4zLjUgQ2FjaGUgcG9pc29uaW5nIGxlYWRpbmcgdG8gaW5jb3JyZWN0IGljb24gc3RvcmFnZSAiCiAgICAgICAgICB9CiAgICAgICAgfQogICAgICB9CiAgICB9CiAgICAKICAgIGRucyA9IHNvZnR3YXJlU3lzdGVtICJETlMiIHsKICAgICAgdGFncyAiRXh0ZXJuYWwiCiAgICAgIHRhZ3MgIkljb25zIgogICAgfQogICAgCiAgICBzZXJ2ZXIuaWNvbnMuaWNvbl9kZXRlcm1pbmF0aW9uIC0+IGRucyAiUmVzb2x2ZXMgSVAgYWRkcmVzc2VzIGZvciBkb21haW4gbmFtZXMgZnJvbSIKICAgIAogICAgZXh0ZXJuYWxfd2Vic2l0ZXMgPSBzb2Z0d2FyZVN5c3RlbSAiRXh0ZXJuYWwgV2Vic2l0ZXMiIHsKICAgICAgdGFncyAiRXh0ZXJuYWwiCiAgICAgIHRhZ3MgIkljb25zIgogICAgfQogICAgCiAgICBzZXJ2ZXIuaWNvbnMuaWNvbl9kZXRlcm1pbmF0aW9uIC0+IGV4dGVybmFsX3dlYnNpdGVzICJSZXRyaWV2ZXMgaWNvbnMgZnJvbSIKCiAgICAjIEluY2x1ZGUgc2hhcmVkIGxldmVsIHJlbGF0aW9uc2hpcHMKICAgICMgVXNlciBSZWxhdGlvbnNoaXBzCiAgICB1c2VyIC0+IGNsaWVudHMud2ViICJVc2VzIgogICAgdXNlciAtPiBjbGllbnRzLmlvcyAiVXNlcyIKICAgIHVzZXIgLT4gY2xpZW50cy5hbmRyb2lkICJVc2VzIgogICAgdXNlciAtPiBjbGllbnRzLmJyb3dzZXJfZXh0ZW5zaW9uICJVc2VzIgogICAgdXNlciAtPiBjbGllbnRzLmNsaSAiVXNlcyIKICAgIHVzZXIgLT4gY2xpZW50cy5kZXNrdG9wICJVc2VzIgogICAgYWRtaW4gLT4gY2xpZW50cy53ZWIgIkFkbWluaXN0ZXJzIE9yZ2FuaXphdGlvbnMiCiAgICBwcm92aWRlciAtPiBzZXJ2ZXIucG9ydGFsICJDb21wbGV0ZXMgUHJvdmlkZXIgcmVnaXN0cmF0aW9uIHdpdGgiCiAgICBwcm92aWRlciAtPiBjbGllbnRzLndlYiAiQWRtaW5pc3RlcnMgUHJvdmlkZXJzIGFuZCBPcmdhbml6YXRpb25zIgogICAgY3VzdG9tZXJfc3VjY2VzcyAtPiBzZXJ2ZXIucG9ydGFsICJJbnNwZWN0cyBhbmQgc3VwcG9ydHMiCiAgICBzeXN0ZW1fYWRtaW4gLT4gc2VydmVyLnBvcnRhbCAiQWRtaW5pc3RlcnMgU3lzdGVtIgogICAgCiAgICAjIEhpZ2gtbGV2ZWwgQ2xpZW50IFJlbGF0aW9uc2hpcHMKICAgIGNsaWVudHMud2ViIC0+IHNlcnZlci5hcGkgIk1ha2VzIHJlcXVlc3RzIHRvIgogICAgY2xpZW50cy5pb3MgLT4gc2VydmVyLmFwaSAiTWFrZXMgcmVxdWVzdHMgdG8iCiAgICBjbGllbnRzLmFuZHJvaWQgLT4gc2VydmVyLmFwaSAiTWFrZXMgcmVxdWVzdHMgdG8iCiAgICBjbGllbnRzLmJyb3dzZXJfZXh0ZW5zaW9uIC0+IHNlcnZlci5hcGkgIk1ha2VzIHJlcXVlc3RzIHRvIgogICAgY2xpZW50cy5jbGkgLT4gc2VydmVyLmFwaSAiTWFrZXMgcmVxdWVzdHMgdG8iCiAgICBjbGllbnRzLmRlc2t0b3AgLT4gc2VydmVyLmFwaSAiTWFrZXMgcmVxdWVzdHMgdG8iCiAgICBjbGllbnRzLndlYiAtPiBzZXJ2ZXIuaWRlbnRpdHkgIkF1dGhlbnRpY2F0ZXMgd2l0aCIKICAgIGNsaWVudHMuaW9zIC0+IHNlcnZlci5pZGVudGl0eSAiQXV0aGVudGljYXRlcyBXaXRoIgogICAgY2xpZW50cy5hbmRyb2lkIC0+IHNlcnZlci5pZGVudGl0eSAiQXV0aGVudGljYXRlcyBXaXRoIgogICAgY2xpZW50cy5icm93c2VyX2V4dGVuc2lvbiAtPiBzZXJ2ZXIuaWRlbnRpdHkgIkF1dGhlbnRpY2F0ZXMgV2l0aCIKICAgIGNsaWVudHMuY2xpIC0+IHNlcnZlci5pZGVudGl0eSAiQXV0aGVudGljYXRlcyBXaXRoIgogICAgY2xpZW50cy5kZXNrdG9wIC0+IHNlcnZlci5pZGVudGl0eSAiQXV0aGVudGljYXRlcyBXaXRoIgogICAgc2VydmVyLmFwaSAtPiBzZXJ2ZXIuaWRlbnRpdHkgIlZhbGlkYXRlcyBKV1RzIHdpdGgiIHsKICAgICAgdXJsICJodHRwczovL2JpdHdhcmRlbi5jb20iCiAgICB9CiAgICBjbGllbnRzIC0+IHNlcnZlci5ldmVudHMgIlBvc3RzIGxvY2FsIHVzYWdlIGV2ZW50cyB0byIKICAgIAogICAgIyBEYXRhYmFzZSBSZWxhdGlvbnNoaXBzCiAgICAKICAgIHNlcnZlci5hcGkgLT4gc2VydmVyLmRhdGFiYXNlICJRdWVyaWVzIgogICAgc2VydmVyLnBvcnRhbCAtPiBzZXJ2ZXIuZGF0YWJhc2UgIlF1ZXJpZXMiCiAgICAKICAgICMgcXVldWUgUmVsYXRpb25zaGlwcwogICAgc2VydmVyLmFwaSAtPiBzZXJ2ZXIuZXZlbnRzX3F1ZXVlICJTZW5kcyBldmVudHMgdG8iCiAgICBzZXJ2ZXIuZXZlbnRzIC0+IHNlcnZlci5ldmVudHNfcXVldWUgIlNlbmRzIGV2ZW50cyB0byIKICAgIHNlcnZlci5hcGkgLT4gc2VydmVyLm1haWxfcXVldWUgIlNlbmRzIGVtYWlscyB0byIKICAgIHNlcnZlci5hcGkgLT4gc2VydmVyLm5vdGlmaWNhdGlvbnNfcXVldWUgIlNlbmRzIG5vdGlmaWNhdGlvbnMgdG8iCiAgICBzZXJ2ZXIubm90aWZpY2F0aW9ucyAtPiBzZXJ2ZXIubm90aWZpY2F0aW9uc19xdWV1ZSAiU2VuZHMgbm90aWZpY2F0aW9ucyB0byIKICAgIHNlcnZlci5ldmVudHNfcXVldWUgLT4gc2VydmVyLmV2ZW50c19wcm9jZXNzb3IgIlByb2Nlc3NlcyBldmVudHMgZnJvbSIKICAgIHNlcnZlci5tYWlsX3F1ZXVlIC0+IHNlcnZlci5wb3J0YWwgIlByb2Nlc3NlcyBlbWFpbHMgZnJvbSIKICAgIAogICAgIyBzZWxmIGhvc3QgcGhvbmUgaG9tZQogICAgc2VsZl9ob3N0ZWRfaW5zdGFuY2VzIC0+IHNlcnZlci5ub3RpZmljYXRpb25zICJTZW5kcyBwdXNoIG5vdGlmaWNhdGlvbiBwcm94eSByZXF1ZXN0cyB0byIKCiAgICBzZXJ2ZXIuc2NpbSAtPiBzZXJ2ZXIuZGF0YWJhc2UgIlF1ZXJpZXMiCiAgICBzZXJ2ZXIuaWRlbnRpdHkgLT4gc2VydmVyLmRhdGFiYXNlICJRdWVyaWVzIgogICAgc2VydmVyLnNzbyAtPiBzZXJ2ZXIuZGF0YWJhc2UgIlF1ZXJpZXMiCiAgICAjIEhpZ2gtbGV2ZWwgcHJvdmlkZXIgcmVsYXRpb25zaGlwcwogICAgc2VydmVyLmFwaS5iaWxsaW5nIC0+IHN0cmlwZSAiUmVxdWVzdHMgcGF5bWVudHMgZm9yIGN1c3RvbWVycyIKICAgIHNlcnZlci5hcGkuYmlsbGluZyAtPiBicmFpbnRyZWUgIlJlcXVlc3RzIHBheW1lbnRzIGZvciBjdXN0b21lcnMiCiAgICBzdHJpcGUgLT4gc2VydmVyLmFwaS5iaWxsaW5nICJTZW5kcyBzdWJzY3JpcHRpb24gZXZlbnRzIHRvIgogICAgIyBUb3AgTGV2ZWwgZXZlbnQgcHVibGlzaGluZwogICAgc2VydmVyLmFwaSAtPiBzZXJ2ZXIuYXp1cmVfc2VydmljZV9idXMuZXZlbnRfdG9waWMgIlNlbmRzIGV2ZW50cyB0byIKICAgIHNlcnZlci5ldmVudHMgLT4gc2VydmVyLmF6dXJlX3NlcnZpY2VfYnVzLmV2ZW50X3RvcGljICJTZW5kcyBldmVudHMgdG8iCiAgICBzZXJ2ZXIuYXBpIC0+IHNlcnZlci5yYWJiaXRfbXEuZXZlbnRfZXhjaGFuZ2UgIlNlbmRzIGV2ZW50cyB0byIKICAgIHNlcnZlci5ldmVudHMgLT4gc2VydmVyLnJhYmJpdF9tcS5ldmVudF9leGNoYW5nZSAiU2VuZHMgZXZlbnRzIHRvIgogICAgCiAgICAjIEF6dXJlIFNlcnZpY2UgQnVzIHRvcGljcywgc3Vic2NyaXB0aW9ucywgYW5kIHJvdXRpbmcKICAgIGV2ZW50c1dyaXRlU3ViID0gc2VydmVyLmF6dXJlX3NlcnZpY2VfYnVzLmV2ZW50X3RvcGljIC0+IHNlcnZlci5henVyZV9zZXJ2aWNlX2J1cy5ldmVudHNXcml0ZVN1YiAgIlN1YnNjcmliZXMgdmlhIGZhbi1vdXQiCiAgICBldmVudHNIZWNTdWIgPSBzZXJ2ZXIuYXp1cmVfc2VydmljZV9idXMuZXZlbnRfdG9waWMgLT4gc2VydmVyLmF6dXJlX3NlcnZpY2VfYnVzLmV2ZW50c0hlY1N1YiAiU3Vic2NyaWJlcyB2aWEgZmFuLW91dCIKICAgIGV2ZW50c1dlYmhvb2tTdWIgPSBzZXJ2ZXIuYXp1cmVfc2VydmljZV9idXMuZXZlbnRfdG9waWMgLT4gc2VydmVyLmF6dXJlX3NlcnZpY2VfYnVzLmV2ZW50c1dlYmhvb2tTdWIgICJTdWJzY3JpYmVzIHZpYSBmYW4tb3V0IgogICAgZXZlbnRzU2xhY2tTdWIgPSBzZXJ2ZXIuYXp1cmVfc2VydmljZV9idXMuZXZlbnRfdG9waWMgLT4gc2VydmVyLmF6dXJlX3NlcnZpY2VfYnVzLmV2ZW50c1NsYWNrU3ViICJTdWJzY3JpYmVzIHZpYSBmYW4tb3V0IgogICAgaW50ZWdyYXRpb25TbGFja1N1YiA9IHNlcnZlci5henVyZV9zZXJ2aWNlX2J1cy5pbnRlZ3JhdGlvbl90b3BpYyAtPiBzZXJ2ZXIuYXp1cmVfc2VydmljZV9idXMuaW50ZWdyYXRpb25TbGFja1N1YiAiU3Vic2NyaWJlcyB2aWEgZmlsdGVyIG9uIFNsYWNrIGtleSIKICAgIGludGVncmF0aW9uV2ViaG9va1N1YiA9IHNlcnZlci5henVyZV9zZXJ2aWNlX2J1cy5pbnRlZ3JhdGlvbl90b3BpYyAtPiBzZXJ2ZXIuYXp1cmVfc2VydmljZV9idXMuaW50ZWdyYXRpb25XZWJob29rU3ViICJTdWJzY3JpYmVzIHZpYSBmaWx0ZXIgb24gV2ViaG9vayBrZXkiCiAgICBpbnRlZ3JhdGlvbkhlY1N1YiA9IHNlcnZlci5henVyZV9zZXJ2aWNlX2J1cy5pbnRlZ3JhdGlvbl90b3BpYyAtPiBzZXJ2ZXIuYXp1cmVfc2VydmljZV9idXMuaW50ZWdyYXRpb25IZWNTdWIgIlN1YnNjcmliZXMgdmlhIGZpbHRlciBvbiBIRUMga2V5IgogICAgCiAgICBldmVudHNXcml0ZUxpc3RlbmVyID0gc2VydmVyLmV2ZW50c19wcm9jZXNzb3IuZXZlbnRfbGlzdGVuZXIgLT4gc2VydmVyLmF6dXJlX3NlcnZpY2VfYnVzLmV2ZW50c1dyaXRlU3ViICJMaXN0ZW5zIHRvIgogICAgZXZlbnRzV3JpdGVEZWxlZ2F0ZSA9IHNlcnZlci5ldmVudHNfcHJvY2Vzc29yLmV2ZW50X2xpc3RlbmVyIC0+IHNlcnZlci5ldmVudHNfcHJvY2Vzc29yLmV2ZW50X3JlcG9zaXRvcnlfaGFuZGxlciAiRGVsZWdhdGVzIHRvIgogICAgZXZlbnRzSGVjTGlzdGVuZXIgPSBzZXJ2ZXIuZXZlbnRzX3Byb2Nlc3Nvci5ldmVudF9saXN0ZW5lciAtPiBzZXJ2ZXIuYXp1cmVfc2VydmljZV9idXMuZXZlbnRzSGVjU3ViICJMaXN0ZW5zIHRvIgogICAgZXZlbnRzV2ViaG9va0xpc3RlbmVyID0gc2VydmVyLmV2ZW50c19wcm9jZXNzb3IuZXZlbnRfbGlzdGVuZXIgLT4gc2VydmVyLmF6dXJlX3NlcnZpY2VfYnVzLmV2ZW50c1dlYmhvb2tTdWIgIkxpc3RlbnMgdG8iCiAgICBldmVudHNTbGFja0xpc3RlbmVyID0gc2VydmVyLmV2ZW50c19wcm9jZXNzb3IuZXZlbnRfbGlzdGVuZXIgLT4gc2VydmVyLmF6dXJlX3NlcnZpY2VfYnVzLmV2ZW50c1NsYWNrU3ViICJMaXN0ZW5zIHRvIgogICAgZXZlbnRzSW50ZWdyYXRpb25IYW5kbGVyRGVsZWdhdGUgPSBzZXJ2ZXIuZXZlbnRzX3Byb2Nlc3Nvci5ldmVudF9saXN0ZW5lciAtPiBzZXJ2ZXIuZXZlbnRzX3Byb2Nlc3Nvci5ldmVudF9pbnRlZ3JhdGlvbl9oYW5kbGVyICJEZWxlZ2F0ZXMgdG8iCiAgICAKICAgIGV2ZW50SW50ZWdyYXRpb25IYW5kbGVyUHVibGlzaCA9IHNlcnZlci5ldmVudHNfcHJvY2Vzc29yLmV2ZW50X2ludGVncmF0aW9uX2hhbmRsZXIgLT4gc2VydmVyLmF6dXJlX3NlcnZpY2VfYnVzLmludGVncmF0aW9uX3RvcGljICJQdWJsaXNoZXMgVG8iCiAgICBldmVudEludGVncmF0aW9uSGFuZGxlckNhY2hlID0gc2VydmVyLmV2ZW50c19wcm9jZXNzb3IuZXZlbnRfaW50ZWdyYXRpb25faGFuZGxlciAtPiBzZXJ2ZXIuZXZlbnRzX3Byb2Nlc3Nvci5pbnRlZ3JhdGlvbl9jb25maWd1cmF0aW9uX2RldGFpbHNfY2FjaGVfc2VydmljZSAiRmV0Y2hlcyBjb25maWd1cmF0aW9ucyBmcm9tIgogICAgY2FjaGVEYXRhYmFzZUZldGNoID0gc2VydmVyLmV2ZW50c19wcm9jZXNzb3IuaW50ZWdyYXRpb25fY29uZmlndXJhdGlvbl9kZXRhaWxzX2NhY2hlX3NlcnZpY2UgLT4gc2VydmVyLmRhdGFiYXNlICJGZXRjaGVzIGNvbmZpZ3VyYXRpb25zIGZyb20iCiAgICBldmVudEludGVncmF0aW9uSGFuZGxlckZpbHRlciA9IHNlcnZlci5ldmVudHNfcHJvY2Vzc29yLmV2ZW50X2ludGVncmF0aW9uX2hhbmRsZXIgLT4gc2VydmVyLmV2ZW50c19wcm9jZXNzb3IuaW50ZWdyYXRpb25fZmlsdGVyX3NlcnZpY2UgIlJ1bnMgZmlsdGVycyIKICAgIGV2ZW50UmVwb3NpdG9yeURhdGFiYXNlID0gc2VydmVyLmV2ZW50c19wcm9jZXNzb3IuZXZlbnRfcmVwb3NpdG9yeV9oYW5kbGVyIC0+IHNlcnZlci5kYXRhYmFzZSAgIldyaXRlcyBldmVudHMgdG8iCiAgICAKICAgIGludGVncmF0aW9uU2xhY2tMaXN0ZW5lciA9IHNlcnZlci5ldmVudHNfcHJvY2Vzc29yLmludGVncmF0aW9uX2xpc3RlbmVyIC0+IHNlcnZlci5henVyZV9zZXJ2aWNlX2J1cy5pbnRlZ3JhdGlvblNsYWNrU3ViICJMaXN0ZW5zIHRvIgogICAgaW50ZWdyYXRpb25TbGFja0RlbGVnYXRlID0gc2VydmVyLmV2ZW50c19wcm9jZXNzb3IuaW50ZWdyYXRpb25fbGlzdGVuZXIgLT4gc2VydmVyLmV2ZW50c19wcm9jZXNzb3Iuc2xhY2tfaW50ZWdyYXRpb25faGFuZGxlciAiRGVsZWdhdGVzIHRvIgogICAgaW50ZWdyYXRpb25XZWJob29rTGlzdGVuZXIgPSBzZXJ2ZXIuZXZlbnRzX3Byb2Nlc3Nvci5pbnRlZ3JhdGlvbl9saXN0ZW5lciAtPiBzZXJ2ZXIuYXp1cmVfc2VydmljZV9idXMuaW50ZWdyYXRpb25XZWJob29rU3ViICJMaXN0ZW5zIHRvIgogICAgaW50ZWdyYXRpb25IZWNMaXN0ZW5lciA9IHNlcnZlci5ldmVudHNfcHJvY2Vzc29yLmludGVncmF0aW9uX2xpc3RlbmVyIC0+IHNlcnZlci5henVyZV9zZXJ2aWNlX2J1cy5pbnRlZ3JhdGlvbkhlY1N1YiAiTGlzdGVucyB0byIKICAgIGludGVncmF0aW9uV2ViaG9va0RlbGVnYXRlID0gc2VydmVyLmV2ZW50c19wcm9jZXNzb3IuaW50ZWdyYXRpb25fbGlzdGVuZXIgLT4gc2VydmVyLmV2ZW50c19wcm9jZXNzb3Iud2ViaG9va19pbnRlZ3JhdGlvbl9oYW5kbGVyICJEZWxlZ2F0ZXMgdG8iCiAgICAKICAgICMgUmFiYml0TVEgZXhjaGFuZ2VzLCBxdWV1ZXMsIGFuZCByb3V0aW5nCiAgICBldmVudHNXcml0ZVF1ZXVlID0gc2VydmVyLnJhYmJpdF9tcS5ldmVudF9leGNoYW5nZSAtPiBzZXJ2ZXIucmFiYml0X21xLmV2ZW50c1dyaXRlUXVldWUgICJTdWJzY3JpYmVzIHZpYSBmYW4tb3V0IgogICAgZXZlbnRzSGVjUXVldWUgPSBzZXJ2ZXIucmFiYml0X21xLmV2ZW50X2V4Y2hhbmdlIC0+IHNlcnZlci5yYWJiaXRfbXEuZXZlbnRzSGVjUXVldWUgIlN1YnNjcmliZXMgdmlhIGZhbi1vdXQiCiAgICBldmVudHNXZWJob29rUXVldWUgPSBzZXJ2ZXIucmFiYml0X21xLmV2ZW50X2V4Y2hhbmdlIC0+IHNlcnZlci5yYWJiaXRfbXEuZXZlbnRzV2ViaG9va1F1ZXVlICJTdWJzY3JpYmVzIHZpYSBmYW4tb3V0IgogICAgZXZlbnRzU2xhY2tRdWV1ZSA9IHNlcnZlci5yYWJiaXRfbXEuZXZlbnRfZXhjaGFuZ2UgLT4gc2VydmVyLnJhYmJpdF9tcS5ldmVudHNTbGFja1F1ZXVlICJTdWJzY3JpYmVzIHZpYSBmYW4tb3V0IgogICAgaW50ZWdyYXRpb25TbGFja1F1ZXVlID0gc2VydmVyLnJhYmJpdF9tcS5pbnRlZ3JhdGlvbl9leGNoYW5nZSAtPiBzZXJ2ZXIucmFiYml0X21xLmludGVncmF0aW9uU2xhY2tRdWV1ZSAiU3Vic2NyaWJlcyB2aWEgZmlsdGVyIG9uIFNsYWNrIGtleSIKICAgIGludGVncmF0aW9uV2ViaG9va1F1ZXVlID0gc2VydmVyLnJhYmJpdF9tcS5pbnRlZ3JhdGlvbl9leGNoYW5nZSAtPiBzZXJ2ZXIucmFiYml0X21xLmludGVncmF0aW9uV2ViaG9va1F1ZXVlICJTdWJzY3JpYmVzIHZpYSBmaWx0ZXIgb24gV2ViaG9vayBrZXkiCiAgICBpbnRlZ3JhdGlvbkhlY1F1ZXVlID0gc2VydmVyLnJhYmJpdF9tcS5pbnRlZ3JhdGlvbl9leGNoYW5nZSAtPiBzZXJ2ZXIucmFiYml0X21xLmludGVncmF0aW9uSGVjUXVldWUgIlN1YnNjcmliZXMgdmlhIGZpbHRlciBvbiBIRUMga2V5IgogICAgaW50ZWdyYXRpb25TbGFja1JldHJ5UXVldWUgPSBzZXJ2ZXIucmFiYml0X21xLmludGVncmF0aW9uU2xhY2tSZXRyeVF1ZXVlIC0+IHNlcnZlci5yYWJiaXRfbXEuaW50ZWdyYXRpb25TbGFja1F1ZXVlICJETFEgYWZ0ZXIgY29uZmlndXJlZCByZXRyeSB0aW1pbmciCiAgICBpbnRlZ3JhdGlvbldlYmhvb2tSZXRyeVF1ZXVlID0gc2VydmVyLnJhYmJpdF9tcS5pbnRlZ3JhdGlvbldlYmhvb2tSZXRyeVF1ZXVlIC0+IHNlcnZlci5yYWJiaXRfbXEuaW50ZWdyYXRpb25XZWJob29rUXVldWUgIkRMUSBhZnRlciBjb25maWd1cmVkIHJldHJ5IHRpbWluZyIKICAgIGludGVncmF0aW9uSGVjUmV0cnlRdWV1ZSA9IHNlcnZlci5yYWJiaXRfbXEuaW50ZWdyYXRpb25IZWNSZXRyeVF1ZXVlIC0+IHNlcnZlci5yYWJiaXRfbXEuaW50ZWdyYXRpb25IZWNRdWV1ZSAiRExRIGFmdGVyIGNvbmZpZ3VyZWQgcmV0cnkgdGltaW5nIgogICAgCiAgICBldmVudHNXcml0ZUxpc3RlbmVyX2V2ZW50cyA9IHNlcnZlci5ldmVudHMuZXZlbnRfbGlzdGVuZXIgLT4gc2VydmVyLnJhYmJpdF9tcS5ldmVudHNXcml0ZVF1ZXVlICJMaXN0ZW5zIHRvIgogICAgZXZlbnRzSGVjTGlzdGVuZXJfZXZlbnRzID0gc2VydmVyLmV2ZW50cy5ldmVudF9saXN0ZW5lciAtPiBzZXJ2ZXIucmFiYml0X21xLmV2ZW50c0hlY1F1ZXVlICJMaXN0ZW5zIHRvIgogICAgZXZlbnRzV2ViaG9va0xpc3RlbmVyX2V2ZW50cyA9IHNlcnZlci5ldmVudHMuZXZlbnRfbGlzdGVuZXIgLT4gc2VydmVyLnJhYmJpdF9tcS5ldmVudHNXZWJob29rUXVldWUgIkxpc3RlbnMgdG8iCiAgICBldmVudHNTbGFja0xpc3RlbmVyX2V2ZW50cyA9IHNlcnZlci5ldmVudHMuZXZlbnRfbGlzdGVuZXIgLT4gc2VydmVyLnJhYmJpdF9tcS5ldmVudHNTbGFja1F1ZXVlICJMaXN0ZW5zIHRvIgogICAgZXZlbnRzV3JpdGVEZWxlZ2F0ZV9ldmVudHMgPSBzZXJ2ZXIuZXZlbnRzLmV2ZW50X2xpc3RlbmVyIC0+IHNlcnZlci5ldmVudHMuZXZlbnRfcmVwb3NpdG9yeV9oYW5kbGVyICJEZWxlZ2F0ZXMgdG8iCiAgICAKICAgIGV2ZW50UmVwb3NpdG9yeURhdGFiYXNlX2V2ZW50cyA9IHNlcnZlci5ldmVudHMuZXZlbnRfcmVwb3NpdG9yeV9oYW5kbGVyIC0+IHNlcnZlci5kYXRhYmFzZSAiV3JpdGVzIGV2ZW50cyB0byIgdGFncyAiU2VsZi1Ib3N0ZWQtT25seSIKICAgIGV2ZW50c0ludGVncmF0aW9uSGFuZGxlckRlbGVnYXRlX2V2ZW50cyA9IHNlcnZlci5ldmVudHMuZXZlbnRfbGlzdGVuZXIgLT4gc2VydmVyLmV2ZW50cy5ldmVudF9pbnRlZ3JhdGlvbl9oYW5kbGVyICJEZWxlZ2F0ZXMgdG8iCiAgICBjYWNoZURhdGFiYXNlRmV0Y2hfZXZlbnRzID0gc2VydmVyLmV2ZW50cy5pbnRlZ3JhdGlvbl9jb25maWd1cmF0aW9uX2RldGFpbHNfY2FjaGVfc2VydmljZSAtPiBzZXJ2ZXIuZGF0YWJhc2UgIkZldGNoZXMgY29uZmlndXJhdGlvbnMgZnJvbSIgdGFncyAiU2VsZi1Ib3N0ZWQtT25seSIKICAgIGV2ZW50SW50ZWdyYXRpb25IYW5kbGVyQ2FjaGVfZXZlbnRzID0gc2VydmVyLmV2ZW50cy5ldmVudF9pbnRlZ3JhdGlvbl9oYW5kbGVyIC0+IHNlcnZlci5ldmVudHMuaW50ZWdyYXRpb25fY29uZmlndXJhdGlvbl9kZXRhaWxzX2NhY2hlX3NlcnZpY2UgIkZldGNoZXMgY29uZmlndXJhdGlvbnMgZnJvbSIKICAgIGV2ZW50SW50ZWdyYXRpb25IYW5kbGVyRmlsdGVyX2V2ZW50cyA9IHNlcnZlci5ldmVudHMuZXZlbnRfaW50ZWdyYXRpb25faGFuZGxlciAtPiBzZXJ2ZXIuZXZlbnRzLmludGVncmF0aW9uX2ZpbHRlcl9zZXJ2aWNlICJSdW5zIGZpbHRlcnMiCiAgICBldmVudEludGVncmF0aW9uSGFuZGxlclB1Ymxpc2hfZXZlbnRzID0gc2VydmVyLmV2ZW50cy5ldmVudF9pbnRlZ3JhdGlvbl9oYW5kbGVyIC0+IHNlcnZlci5yYWJiaXRfbXEuaW50ZWdyYXRpb25fZXhjaGFuZ2UgIlB1Ymxpc2hlcyBUbyIKICAgIAogICAgaW50ZWdyYXRpb25TbGFja0xpc3RlbmVyX2V2ZW50cyA9IHNlcnZlci5ldmVudHMuaW50ZWdyYXRpb25fbGlzdGVuZXIgLT4gc2VydmVyLnJhYmJpdF9tcS5pbnRlZ3JhdGlvblNsYWNrUXVldWUgIkxpc3RlbnMgdG8iCiAgICBpbnRlZ3JhdGlvbldlYmhvb2tMaXN0ZW5lcl9ldmVudHMgPSBzZXJ2ZXIuZXZlbnRzLmludGVncmF0aW9uX2xpc3RlbmVyIC0+IHNlcnZlci5yYWJiaXRfbXEuaW50ZWdyYXRpb25XZWJob29rUXVldWUgIkxpc3RlbnMgdG8iCiAgICBpbnRlZ3JhdGlvbkhlY0xpc3RlbmVyX2V2ZW50cyA9IHNlcnZlci5ldmVudHMuaW50ZWdyYXRpb25fbGlzdGVuZXIgLT4gc2VydmVyLnJhYmJpdF9tcS5pbnRlZ3JhdGlvbkhlY1F1ZXVlICJMaXN0ZW5zIHRvIgogICAgaW50ZWdyYXRpb25TbGFja0RlbGVnYXRlX2V2ZW50cyA9IHNlcnZlci5ldmVudHMuaW50ZWdyYXRpb25fbGlzdGVuZXIgLT4gc2VydmVyLmV2ZW50cy5zbGFja19pbnRlZ3JhdGlvbl9oYW5kbGVyICJEZWxlZ2F0ZXMgdG8iCiAgICBpbnRlZ3JhdGlvbldlYmhvb2tEZWxlZ2F0ZV9ldmVudHMgPSBzZXJ2ZXIuZXZlbnRzLmludGVncmF0aW9uX2xpc3RlbmVyIC0+IHNlcnZlci5ldmVudHMud2ViaG9va19pbnRlZ3JhdGlvbl9oYW5kbGVyICJEZWxlZ2F0ZXMgdG8iCiAgICAKICAgICMgRXh0ZXJuYWwgU2VydmljZXMKICAgIHNsYWNrVG9TbGFja1NlcnZpY2UgPSBzZXJ2ZXIuZXZlbnRzX3Byb2Nlc3Nvci5zbGFja19pbnRlZ3JhdGlvbl9oYW5kbGVyIC0+IHNlcnZlci5ldmVudHNfcHJvY2Vzc29yLnNsYWNrX3NlcnZpY2UgIlVzZXMiCiAgICBzbGFja1NlcnZpY2VUb1NsYWNrID0gc2VydmVyLmV2ZW50c19wcm9jZXNzb3Iuc2xhY2tfc2VydmljZSAgLT4gZXh0ZXJuYWxfc2VydmljZXMuc2xhY2sgIlB1Ymxpc2hlcyBjb25maWd1cmVkIGV2ZW50cyB0byIKICAgIGhhbmRsZXJIdHRwQ2xpZW50ID0gc2VydmVyLmV2ZW50c19wcm9jZXNzb3Iud2ViaG9va19pbnRlZ3JhdGlvbl9oYW5kbGVyIC0+IHNlcnZlci5ldmVudHNfcHJvY2Vzc29yLmh0dHBfY2xpZW50ICJVc2VzIgogICAgaHR0cFRvQ3Jvd2RzdHJpa2UgPSBzZXJ2ZXIuZXZlbnRzX3Byb2Nlc3Nvci5odHRwX2NsaWVudCAtPiBleHRlcm5hbF9zZXJ2aWNlcy5jcm93ZHN0cmlrZSAiUHVibGlzaGVzIGNvbmZpZ3VyZWQgZXZlbnRzIHRvIgogICAgaHR0cFRvRGF0YWRvZyA9IHNlcnZlci5ldmVudHNfcHJvY2Vzc29yLmh0dHBfY2xpZW50IC0+IGV4dGVybmFsX3NlcnZpY2VzLmRhdGFkb2cgIlB1Ymxpc2hlcyBjb25maWd1cmVkIGV2ZW50cyB0byIKICAgIGh0dHBUb1NwbHVuayA9IHNlcnZlci5ldmVudHNfcHJvY2Vzc29yLmh0dHBfY2xpZW50IC0+IGV4dGVybmFsX3NlcnZpY2VzLnNwbHVuayAiUHVibGlzaGVzIGNvbmZpZ3VyZWQgZXZlbnRzIHRvIgogICAgCiAgICBzbGFja1RvU2xhY2tTZXJ2aWNlX2V2ZW50cyA9IHNlcnZlci5ldmVudHMuc2xhY2tfaW50ZWdyYXRpb25faGFuZGxlciAtPiBzZXJ2ZXIuZXZlbnRzLnNsYWNrX3NlcnZpY2UgIlVzZXMiIHRhZ3MgIlNlbGYtSG9zdGVkLU9ubHkiCiAgICBzbGFja1NlcnZpY2VUb1NsYWNrX2V2ZW50cyA9IHNlcnZlci5ldmVudHMuc2xhY2tfc2VydmljZSAgLT4gZXh0ZXJuYWxfc2VydmljZXMuc2xhY2sgIlB1Ymxpc2hlcyBjb25maWd1cmVkIGV2ZW50cyB0byIgdGFncyAiU2VsZi1Ib3N0ZWQtT25seSIKICAgIGhhbmRsZXJIdHRwQ2xpZW50X2V2ZW50cyA9IHNlcnZlci5ldmVudHMud2ViaG9va19pbnRlZ3JhdGlvbl9oYW5kbGVyIC0+IHNlcnZlci5ldmVudHMuaHR0cF9jbGllbnQgIlVzZXMiIHRhZ3MgIlNlbGYtSG9zdGVkLU9ubHkiCiAgICBodHRwVG9Dcm93ZHN0cmlrZV9ldmVudHMgPSBzZXJ2ZXIuZXZlbnRzLmh0dHBfY2xpZW50IC0+IGV4dGVybmFsX3NlcnZpY2VzLmNyb3dkc3RyaWtlICJQdWJsaXNoZXMgY29uZmlndXJlZCBldmVudHMgdG8iIHRhZ3MgIlNlbGYtSG9zdGVkLU9ubHkiCiAgICBodHRwVG9EYXRhZG9nX2V2ZW50cyA9IHNlcnZlci5ldmVudHMuaHR0cF9jbGllbnQgLT4gZXh0ZXJuYWxfc2VydmljZXMuZGF0YWRvZyAiUHVibGlzaGVzIGNvbmZpZ3VyZWQgZXZlbnRzIHRvIiB0YWdzICJTZWxmLUhvc3RlZC1Pbmx5IgogICAgaHR0cFRvU3BsdW5rX2V2ZW50cyA9IHNlcnZlci5ldmVudHMuaHR0cF9jbGllbnQgLT4gZXh0ZXJuYWxfc2VydmljZXMuc3BsdW5rICJQdWJsaXNoZXMgY29uZmlndXJlZCBldmVudHMgdG8iIHRhZ3MgIlNlbGYtSG9zdGVkLU9ubHkiCiAgICBrZXlfY29ubmVjdG9yIC0+IHNlcnZlci5pZGVudGl0eSAiVmFsaWRhdGVzIEpXVHMgd2l0aCIKICB9CgogIHZpZXdzIHsKICAgIHN0eWxlcyB7CiAgICAgIGVsZW1lbnQgIlBlcnNvbiIgewogICAgICAgIGJhY2tncm91bmQgIzMxMDdkMwogICAgICAgIHNoYXBlIHBlcnNvbgogICAgICB9CiAgICAgIGVsZW1lbnQgIk1TUCIgewogICAgICAgIGJhY2tncm91bmQgIzMxMDdkMwogICAgICAgIHNoYXBlIHBlcnNvbgogICAgICB9CiAgICB9CiAgICBjb21wb25lbnQgc2VydmVyLmF6dXJlX3NlcnZpY2VfYnVzICJBenVyZV9TZXJ2aWNlX0J1cyIgewogICAgICAgIGluY2x1ZGUgKgogICAgfQogICAgCiAgICBjb21wb25lbnQgc2VydmVyLnJhYmJpdF9tcSAiUmFiYml0TVEiIHsKICAgICAgICBpbmNsdWRlICoKICAgIH0KICAgIAogICAgY29tcG9uZW50IHNlcnZlci5ldmVudHNfcHJvY2Vzc29yICJFdmVudHNfUHJvY2Vzc29yIiB7CiAgICAgICAgaW5jbHVkZSAqCiAgICB9CiAgICAKICAgIGNvbXBvbmVudCBzZXJ2ZXIuZXZlbnRzICJFdmVudHMiIHsKICAgICAgICBpbmNsdWRlICoKICAgIH0KICAgIAogICAgZHluYW1pYyBzZXJ2ZXIuZXZlbnRzX3Byb2Nlc3NvciAiRXZlbnRzX1Byb2Nlc3Nvcl9BenVyZV9TZXJ2aWNlX0J1cyIgIkV2ZW50IEludGVncmF0aW9ucyAvIEFTQiBEZXRhaWwiIHsKICAgICAgICBldmVudHNXcml0ZVN1YgogICAgICAgIGV2ZW50c0hlY1N1YgogICAgICAgIGV2ZW50c1NsYWNrU3ViCiAgICAgICAgZXZlbnRzV2ViaG9va1N1YgogICAgICAgIGV2ZW50c1dyaXRlTGlzdGVuZXIKICAgICAgICBldmVudHNIZWNMaXN0ZW5lcgogICAgICAgIGV2ZW50c1NsYWNrTGlzdGVuZXIKICAgICAgICBldmVudHNXZWJob29rTGlzdGVuZXIKICAgICAgICBldmVudHNXcml0ZURlbGVnYXRlCiAgICAgICAgZXZlbnRSZXBvc2l0b3J5RGF0YWJhc2UKICAgICAgICBldmVudHNJbnRlZ3JhdGlvbkhhbmRsZXJEZWxlZ2F0ZQogICAgICAgIGV2ZW50SW50ZWdyYXRpb25IYW5kbGVyQ2FjaGUKICAgICAgICBjYWNoZURhdGFiYXNlRmV0Y2gKICAgICAgICBldmVudEludGVncmF0aW9uSGFuZGxlckZpbHRlcgogICAgICAgIGV2ZW50SW50ZWdyYXRpb25IYW5kbGVyUHVibGlzaAogICAgICAgIGludGVncmF0aW9uU2xhY2tTdWIKICAgICAgICBpbnRlZ3JhdGlvbldlYmhvb2tTdWIKICAgICAgICBpbnRlZ3JhdGlvbkhlY1N1YgogICAgICAgIGludGVncmF0aW9uU2xhY2tMaXN0ZW5lcgogICAgICAgIGludGVncmF0aW9uV2ViaG9va0xpc3RlbmVyCiAgICAgICAgaW50ZWdyYXRpb25IZWNMaXN0ZW5lcgogICAgICAgIGludGVncmF0aW9uU2xhY2tEZWxlZ2F0ZQogICAgICAgIGludGVncmF0aW9uV2ViaG9va0RlbGVnYXRlCiAgICAgICAgc2xhY2tUb1NsYWNrU2VydmljZQogICAgICAgIHNsYWNrU2VydmljZVRvU2xhY2sKICAgICAgICBoYW5kbGVySHR0cENsaWVudAogICAgICAgIGh0dHBUb0Nyb3dkc3RyaWtlCiAgICAgICAgaHR0cFRvRGF0YWRvZwogICAgICAgIGh0dHBUb1NwbHVuawogICAgfQogICAgCiAgICBkeW5hbWljIHNlcnZlci5ldmVudHMgIkV2ZW50c19SYWJiaXRNUSIgIkV2ZW50IEludGVncmF0aW9ucyAvIFJhYmJpdE1RIERldGFpbCIgewogICAgICAgIGV2ZW50c1dyaXRlUXVldWUKICAgICAgICBldmVudHNIZWNRdWV1ZQogICAgICAgIGV2ZW50c1NsYWNrUXVldWUKICAgICAgICBldmVudHNXZWJob29rUXVldWUKICAgICAgICBldmVudHNXcml0ZUxpc3RlbmVyX2V2ZW50cwogICAgICAgIGV2ZW50c0hlY0xpc3RlbmVyX2V2ZW50cwogICAgICAgIGV2ZW50c1NsYWNrTGlzdGVuZXJfZXZlbnRzCiAgICAgICAgZXZlbnRzV2ViaG9va0xpc3RlbmVyX2V2ZW50cwogICAgICAgIGV2ZW50c1dyaXRlRGVsZWdhdGVfZXZlbnRzCiAgICAgICAgZXZlbnRSZXBvc2l0b3J5RGF0YWJhc2VfZXZlbnRzCiAgICAgICAgZXZlbnRzSW50ZWdyYXRpb25IYW5kbGVyRGVsZWdhdGVfZXZlbnRzCiAgICAgICAgZXZlbnRJbnRlZ3JhdGlvbkhhbmRsZXJDYWNoZV9ldmVudHMKICAgICAgICBjYWNoZURhdGFiYXNlRmV0Y2hfZXZlbnRzCiAgICAgICAgZXZlbnRJbnRlZ3JhdGlvbkhhbmRsZXJGaWx0ZXJfZXZlbnRzCiAgICAgICAgZXZlbnRJbnRlZ3JhdGlvbkhhbmRsZXJQdWJsaXNoX2V2ZW50cwogICAgICAgIGludGVncmF0aW9uU2xhY2tRdWV1ZQogICAgICAgIGludGVncmF0aW9uV2ViaG9va1F1ZXVlCiAgICAgICAgaW50ZWdyYXRpb25IZWNRdWV1ZQogICAgICAgIGludGVncmF0aW9uU2xhY2tMaXN0ZW5lcl9ldmVudHMKICAgICAgICBpbnRlZ3JhdGlvbldlYmhvb2tMaXN0ZW5lcl9ldmVudHMKICAgICAgICBpbnRlZ3JhdGlvbkhlY0xpc3RlbmVyX2V2ZW50cwogICAgICAgIGludGVncmF0aW9uU2xhY2tEZWxlZ2F0ZV9ldmVudHMKICAgICAgICBpbnRlZ3JhdGlvbldlYmhvb2tEZWxlZ2F0ZV9ldmVudHMKICAgICAgICBzbGFja1RvU2xhY2tTZXJ2aWNlX2V2ZW50cwogICAgICAgIHNsYWNrU2VydmljZVRvU2xhY2tfZXZlbnRzCiAgICAgICAgaGFuZGxlckh0dHBDbGllbnRfZXZlbnRzCiAgICAgICAgaHR0cFRvQ3Jvd2RzdHJpa2VfZXZlbnRzCiAgICAgICAgaHR0cFRvRGF0YWRvZ19ldmVudHMKICAgICAgICBodHRwVG9TcGx1bmtfZXZlbnRzCiAgICB9CiAgICBjb21wb25lbnQgc2VydmVyLmljb25zICJpY29uc19zZXJ2aWNlIiB7CiAgICAgIGluY2x1ZGUgKgogICAgfQoKICAgIHN5c3RlbUxhbmRzY2FwZSAiQml0d2FyZGVuIiB7CiAgICAgIGluY2x1ZGUgKgogICAgfQoKICAgIGNvbnRhaW5lciBzZXJ2ZXIgIkJpdHdhcmRlbl9TZXJ2ZXIiIHsKICAgICAgaW5jbHVkZSAqCiAgICB9CgogICAgZmlsdGVyZWQgQml0d2FyZGVuX1NlcnZlciBleGNsdWRlICJTZWxmLUhvc3RlZC1Pbmx5IiAiQ2xvdWQiCiAgICBmaWx0ZXJlZCBCaXR3YXJkZW5fU2VydmVyIGV4Y2x1ZGUgIkNsb3VkLU9ubHkiICJTZWxmLUhvc3RlZCIKCiAgICAvLyBUaGlzIGlzIGxhc3QgdG8gb3ZlcnJpZGUgdGVhbSBzdHlsZXMgd2l0aCBjb21tb24gc3R5bGVzCiAgICBzdHlsZXMgewogICAgICB0aGVtZSBkZWZhdWx0CiAgICAgIGVsZW1lbnQgIkVsZW1lbnQiIHsKICAgICAgICBjb2xvciAjM2MzYjNiCiAgICAgIH0KICAgICAgZWxlbWVudCAiUGVyc29uIiB7CiAgICAgICAgYmFja2dyb3VuZCAjZDM0NDA3CiAgICAgICAgc2hhcGUgcGVyc29uCiAgICAgIH0KICAgICAgZWxlbWVudCAiQ29udGFpbmVyIiB7CiAgICAgICAgYmFja2dyb3VuZCAjZjg4NzI4CiAgICAgIH0KICAgICAgZWxlbWVudCAiTVNQIiB7CiAgICAgICAgYmFja2dyb3VuZCAjMzEwN2QzCiAgICAgIH0KICAgICAgZWxlbWVudCAiUXVldWUiIHsKICAgICAgICBzaGFwZSBwaXBlCiAgICAgIH0KICAgICAgZWxlbWVudCAiTW9iaWxlIiB7CiAgICAgICAgc2hhcGUgbW9iaWxlRGV2aWNlUG9ydHJhaXQKICAgICAgfQogICAgICBlbGVtZW50ICJXZWIiIHsKICAgICAgICBzaGFwZSB3ZWJCcm93c2VyCiAgICAgIH0KICAgICAgZWxlbWVudCAiRGF0YWJhc2UiIHsKICAgICAgICBzaGFwZSBjeWxpbmRlcgogICAgICB9CiAgICAgIGVsZW1lbnQgIkV4dGVybmFsIiB7CiAgICAgICAgY29sb3IgIzAwMDAwMAogICAgICAgIGJhY2tncm91bmQgI2I1YjViNQogICAgICB9CiAgICB9CiAgfQp9"
   },
   "views" : {
     "componentViews" : [ {
-      "containerId" : "30",
+      "containerId" : "34",
       "dimensions" : {
         "height" : 2446,
         "width" : 2980
@@ -2228,83 +2240,82 @@
         "x" : 50,
         "y" : 1255
       }, {
-        "id" : "31",
+        "id" : "35",
         "x" : 1575,
         "y" : 430
       }, {
-        "id" : "32",
+        "id" : "36",
         "x" : 1900,
         "y" : 1255
       }, {
-        "id" : "33",
+        "id" : "37",
         "x" : 760,
         "y" : 860
       }, {
-        "id" : "34",
+        "id" : "38",
         "x" : 1331,
         "y" : 860
       }, {
-        "id" : "35",
+        "id" : "39",
         "x" : 1902,
         "y" : 860
       }, {
-        "id" : "36",
+        "id" : "40",
         "x" : 2475,
         "y" : 860
       }, {
-        "id" : "37",
+        "id" : "41",
         "x" : 1331,
         "y" : 1710
       }, {
-        "id" : "38",
+        "id" : "42",
         "x" : 1902,
         "y" : 1710
       }, {
-        "id" : "39",
+        "id" : "43",
         "x" : 2475,
         "y" : 1710
       } ],
       "externalContainerBoundariesVisible" : false,
       "key" : "Azure_Service_Bus",
-      "name" : "Component View: Bitwarden Server - Azure Service Bus",
       "order" : 1,
       "relationships" : [ {
-        "id" : "151"
-      }, {
-        "id" : "153"
-      }, {
-        "id" : "159"
-      }, {
-        "id" : "160"
-      }, {
-        "id" : "161"
-      }, {
         "id" : "162"
-      }, {
-        "id" : "163"
       }, {
         "id" : "164"
       }, {
-        "id" : "165"
+        "id" : "170"
       }, {
-        "id" : "168"
+        "id" : "171"
       }, {
         "id" : "172"
       }, {
+        "id" : "173"
+      }, {
         "id" : "174"
+      }, {
+        "id" : "175"
       }, {
         "id" : "176"
       }, {
-        "id" : "180"
+        "id" : "179"
       }, {
-        "id" : "188"
+        "id" : "183"
+      }, {
+        "id" : "185"
+      }, {
+        "id" : "187"
       }, {
         "id" : "191"
       }, {
-        "id" : "193"
+        "id" : "199"
+      }, {
+        "id" : "202"
+      }, {
+        "id" : "204"
       } ]
     }, {
-      "containerId" : "40",
+      "containerId" : "44",
       "dimensions" : {
         "height" : 3111,
         "width" : 3705
@@ -2318,102 +2329,101 @@
         "x" : 199,
         "y" : 1440
       }, {
-        "id" : "41",
+        "id" : "45",
         "x" : 1969,
         "y" : 630
       }, {
-        "id" : "42",
+        "id" : "46",
         "x" : 2264,
         "y" : 1530
       }, {
-        "id" : "43",
+        "id" : "47",
         "x" : 3034,
         "y" : 1020
       }, {
-        "id" : "44",
+        "id" : "48",
         "x" : 1214,
         "y" : 1020
       }, {
-        "id" : "45",
+        "id" : "49",
         "x" : 1884,
         "y" : 1015
       }, {
-        "id" : "46",
+        "id" : "50",
         "x" : 2464,
         "y" : 1015
       }, {
-        "id" : "47",
+        "id" : "51",
         "x" : 1644,
         "y" : 1985
       }, {
-        "id" : "48",
+        "id" : "52",
         "x" : 2284,
         "y" : 1985
       }, {
-        "id" : "49",
+        "id" : "53",
         "x" : 2889,
         "y" : 1990
       }, {
-        "id" : "50",
+        "id" : "54",
         "x" : 1649,
         "y" : 2480
       }, {
-        "id" : "51",
+        "id" : "55",
         "x" : 2289,
         "y" : 2480
       }, {
-        "id" : "52",
+        "id" : "56",
         "x" : 2894,
         "y" : 2485
       } ],
       "externalContainerBoundariesVisible" : false,
       "key" : "RabbitMQ",
-      "name" : "Component View: Bitwarden Server - RabbitMQ",
       "order" : 2,
       "relationships" : [ {
-        "id" : "155"
+        "id" : "166"
       }, {
-        "id" : "157",
+        "id" : "168",
         "vertices" : [ {
           "x" : 409,
           "y" : 775
         } ]
       }, {
-        "id" : "195"
-      }, {
-        "id" : "196"
-      }, {
-        "id" : "197"
-      }, {
-        "id" : "198"
-      }, {
-        "id" : "199"
-      }, {
-        "id" : "200"
-      }, {
-        "id" : "201"
-      }, {
-        "id" : "202"
-      }, {
-        "id" : "203"
-      }, {
-        "id" : "204"
+        "id" : "206"
       }, {
         "id" : "207"
       }, {
+        "id" : "208"
+      }, {
         "id" : "209"
+      }, {
+        "id" : "210"
       }, {
         "id" : "211"
       }, {
+        "id" : "212"
+      }, {
         "id" : "213"
       }, {
-        "id" : "223"
+        "id" : "214"
       }, {
-        "id" : "226"
+        "id" : "215"
       }, {
-        "id" : "228"
+        "id" : "218"
       }, {
-        "id" : "230"
+        "id" : "220"
+      }, {
+        "id" : "222"
+      }, {
+        "id" : "224"
+      }, {
+        "id" : "234"
+      }, {
+        "id" : "237"
+      }, {
+        "id" : "239"
+      }, {
+        "id" : "241"
       } ]
     }, {
       "containerId" : "10",
@@ -2426,88 +2436,87 @@
         "x" : 470,
         "y" : 1775
       }, {
-        "id" : "30",
+        "id" : "34",
         "x" : 1514,
         "y" : 165
       }, {
-        "id" : "53",
+        "id" : "57",
         "x" : 165,
         "y" : 705
       }, {
-        "id" : "54",
+        "id" : "58",
         "x" : 805,
         "y" : 515
       }, {
-        "id" : "55",
+        "id" : "59",
         "x" : 2450,
         "y" : 545
       }, {
-        "id" : "56",
+        "id" : "60",
         "x" : 1495,
         "y" : 710
       }, {
-        "id" : "57",
+        "id" : "61",
         "x" : 2185,
         "y" : 955
       }, {
-        "id" : "58",
+        "id" : "62",
         "x" : 2770,
         "y" : 955
       }, {
-        "id" : "59",
+        "id" : "63",
         "x" : 905,
         "y" : 1135
       }, {
-        "id" : "60",
+        "id" : "64",
         "x" : 2185,
         "y" : 1320
       }, {
-        "id" : "61",
+        "id" : "65",
         "x" : 2765,
         "y" : 1320
       }, {
-        "id" : "62",
+        "id" : "66",
         "x" : 1510,
         "y" : 1140
       }, {
-        "id" : "73",
+        "id" : "77",
         "x" : 2445,
         "y" : 1775
       } ],
       "externalContainerBoundariesVisible" : false,
       "key" : "Events_Processor",
-      "name" : "Component View: Bitwarden Server - Events Processor",
       "order" : 3,
       "relationships" : [ {
-        "id" : "167"
-      }, {
-        "id" : "170"
-      }, {
-        "id" : "177"
-      }, {
-        "id" : "179"
+        "id" : "178"
       }, {
         "id" : "181"
       }, {
-        "id" : "182"
+        "id" : "188"
       }, {
-        "id" : "184"
+        "id" : "190"
       }, {
-        "id" : "185"
+        "id" : "192"
       }, {
-        "id" : "187"
+        "id" : "193"
       }, {
-        "id" : "189"
+        "id" : "195"
       }, {
-        "id" : "194"
+        "id" : "196"
       }, {
-        "id" : "233"
+        "id" : "198"
       }, {
-        "id" : "235"
+        "id" : "200"
       }, {
-        "id" : "240"
+        "id" : "205"
       }, {
-        "id" : "242"
+        "id" : "244"
+      }, {
+        "id" : "246"
+      }, {
+        "id" : "251"
+      }, {
+        "id" : "253"
       } ]
     }, {
       "containerId" : "7",
@@ -2520,88 +2529,87 @@
         "x" : 240,
         "y" : 2160
       }, {
-        "id" : "40",
+        "id" : "44",
         "x" : 1331,
         "y" : 165
       }, {
-        "id" : "63",
+        "id" : "67",
         "x" : 601,
         "y" : 590
       }, {
-        "id" : "64",
+        "id" : "68",
         "x" : 2075,
         "y" : 605
       }, {
-        "id" : "65",
+        "id" : "69",
         "x" : 220,
         "y" : 1125
       }, {
-        "id" : "66",
+        "id" : "70",
         "x" : 970,
         "y" : 1125
       }, {
-        "id" : "67",
+        "id" : "71",
         "x" : 1720,
         "y" : 1125
       }, {
-        "id" : "68",
+        "id" : "72",
         "x" : 2315,
         "y" : 1130
       }, {
-        "id" : "69",
+        "id" : "73",
         "x" : 585,
         "y" : 1605
       }, {
-        "id" : "70",
+        "id" : "74",
         "x" : 1725,
         "y" : 1670
       }, {
-        "id" : "71",
+        "id" : "75",
         "x" : 2320,
         "y" : 1675
       }, {
-        "id" : "72",
+        "id" : "76",
         "x" : 1150,
         "y" : 1605
       }, {
-        "id" : "73",
+        "id" : "77",
         "x" : 1960,
         "y" : 2175
       } ],
       "externalContainerBoundariesVisible" : false,
       "key" : "Events",
-      "name" : "Component View: Bitwarden Server - Events",
       "order" : 4,
       "relationships" : [ {
-        "id" : "206"
-      }, {
-        "id" : "214"
-      }, {
-        "id" : "215"
-      }, {
         "id" : "217"
-      }, {
-        "id" : "218"
-      }, {
-        "id" : "219"
-      }, {
-        "id" : "220"
-      }, {
-        "id" : "222"
       }, {
         "id" : "225"
       }, {
+        "id" : "226"
+      }, {
+        "id" : "228"
+      }, {
+        "id" : "229"
+      }, {
+        "id" : "230"
+      }, {
         "id" : "231"
       }, {
-        "id" : "232"
+        "id" : "233"
       }, {
-        "id" : "251"
+        "id" : "236"
       }, {
-        "id" : "253"
+        "id" : "242"
       }, {
-        "id" : "256"
+        "id" : "243"
       }, {
-        "id" : "258"
+        "id" : "262"
+      }, {
+        "id" : "264"
+      }, {
+        "id" : "267"
+      }, {
+        "id" : "269"
       } ]
     }, {
       "containerId" : "82",
@@ -2640,7 +2648,6 @@
       } ],
       "externalContainerBoundariesVisible" : false,
       "key" : "icons_service",
-      "name" : "Component View: Bitwarden Server - Icons",
       "order" : 7,
       "relationships" : [ {
         "id" : "87"
@@ -2659,35 +2666,35 @@
       "lastSavedView" : "Self-Hosted",
       "styles" : {
         "elements" : [ {
-          "background" : "#f88728",
-          "tag" : "Container"
-        }, {
-          "shape" : "Cylinder",
-          "tag" : "Database"
-        }, {
-          "color" : "#3c3b3b",
-          "tag" : "Element"
-        }, {
-          "background" : "#b5b5b5",
-          "color" : "#000000",
-          "tag" : "External"
+          "background" : "#d34407",
+          "shape" : "Person",
+          "tag" : "Person"
         }, {
           "background" : "#3107d3",
           "shape" : "Person",
           "tag" : "MSP"
         }, {
-          "shape" : "MobileDevicePortrait",
-          "tag" : "Mobile"
+          "color" : "#3c3b3b",
+          "tag" : "Element"
         }, {
-          "background" : "#d34407",
-          "shape" : "Person",
-          "tag" : "Person"
+          "background" : "#f88728",
+          "tag" : "Container"
         }, {
           "shape" : "Pipe",
           "tag" : "Queue"
         }, {
+          "shape" : "MobileDevicePortrait",
+          "tag" : "Mobile"
+        }, {
           "shape" : "WebBrowser",
           "tag" : "Web"
+        }, {
+          "shape" : "Cylinder",
+          "tag" : "Database"
+        }, {
+          "background" : "#b5b5b5",
+          "color" : "#000000",
+          "tag" : "External"
         } ]
       },
       "terminology" : { },
@@ -2768,32 +2775,32 @@
         "y" : 2771
       }, {
         "id" : "30",
-        "x" : 1490,
-        "y" : 2235
-      }, {
-        "id" : "40",
-        "x" : 2015,
-        "y" : 2105
-      }, {
-        "id" : "73",
-        "x" : 201,
-        "y" : 2775
-      }, {
-        "id" : "78",
         "x" : 810,
         "y" : 1471
       }, {
-        "id" : "79",
+        "id" : "31",
         "x" : 2405,
         "y" : 2771
       }, {
-        "id" : "80",
+        "id" : "32",
         "x" : 2860,
         "y" : 865
       }, {
-        "id" : "81",
+        "id" : "33",
         "x" : 4269,
         "y" : 2115
+      }, {
+        "id" : "34",
+        "x" : 1490,
+        "y" : 2235
+      }, {
+        "id" : "44",
+        "x" : 2015,
+        "y" : 2105
+      }, {
+        "id" : "77",
+        "x" : 201,
+        "y" : 2775
       }, {
         "id" : "82",
         "x" : 3005,
@@ -2809,7 +2816,6 @@
       } ],
       "externalSoftwareSystemBoundariesVisible" : false,
       "key" : "Bitwarden_Server",
-      "name" : "Container View: Bitwarden Server",
       "order" : 9,
       "relationships" : [ {
         "id" : "109",
@@ -2882,48 +2888,23 @@
       }, {
         "id" : "150"
       }, {
-        "id" : "152",
-        "position" : 30
-      }, {
-        "id" : "154",
-        "position" : 70
-      }, {
-        "id" : "156"
-      }, {
-        "id" : "158",
-        "position" : 40
-      }, {
-        "id" : "169"
-      }, {
-        "id" : "183"
-      }, {
-        "id" : "216",
-        "vertices" : [ {
-          "x" : 1750,
-          "y" : 2905
-        } ]
-      }, {
-        "id" : "237"
-      }, {
-        "id" : "255"
-      }, {
-        "id" : "264",
+        "id" : "151",
         "position" : 10,
         "vertices" : [ {
           "x" : 1375,
           "y" : 3205
         } ]
       }, {
-        "id" : "265"
+        "id" : "152"
       }, {
-        "id" : "267",
+        "id" : "154",
         "position" : 65,
         "vertices" : [ {
           "x" : 3020,
           "y" : 1240
         } ]
       }, {
-        "id" : "270",
+        "id" : "157",
         "vertices" : [ {
           "x" : 2710,
           "y" : 1765
@@ -2932,11 +2913,36 @@
           "y" : 2065
         } ]
       }, {
-        "id" : "273",
+        "id" : "160",
         "vertices" : [ {
           "x" : 2616,
           "y" : 1197
         } ]
+      }, {
+        "id" : "163",
+        "position" : 30
+      }, {
+        "id" : "165",
+        "position" : 70
+      }, {
+        "id" : "167"
+      }, {
+        "id" : "169",
+        "position" : 40
+      }, {
+        "id" : "180"
+      }, {
+        "id" : "194"
+      }, {
+        "id" : "227",
+        "vertices" : [ {
+          "x" : 1750,
+          "y" : 2905
+        } ]
+      }, {
+        "id" : "248"
+      }, {
+        "id" : "266"
       }, {
         "id" : "275"
       }, {
@@ -2984,160 +2990,159 @@
         "x" : 4100,
         "y" : 680
       }, {
-        "id" : "31",
+        "id" : "35",
         "x" : 220,
         "y" : 680
       }, {
-        "id" : "32",
+        "id" : "36",
         "x" : 225,
         "y" : 2070
       }, {
-        "id" : "33",
+        "id" : "37",
         "x" : 1004,
         "y" : 171
       }, {
-        "id" : "34",
+        "id" : "38",
         "x" : 1004,
         "y" : 883
       }, {
-        "id" : "35",
+        "id" : "39",
         "x" : 1004,
         "y" : 1241
       }, {
-        "id" : "36",
+        "id" : "40",
         "x" : 1004,
         "y" : 527
       }, {
-        "id" : "37",
+        "id" : "41",
         "x" : 1004,
         "y" : 1705
       }, {
-        "id" : "38",
+        "id" : "42",
         "x" : 1004,
         "y" : 2070
       }, {
-        "id" : "39",
+        "id" : "43",
         "x" : 1004,
         "y" : 2435
       }, {
-        "id" : "53",
+        "id" : "57",
         "x" : 3290,
         "y" : 190
       }, {
-        "id" : "54",
+        "id" : "58",
         "x" : 1973,
         "y" : 190
       }, {
-        "id" : "55",
+        "id" : "59",
         "x" : 2010,
         "y" : 2070
       }, {
-        "id" : "56",
+        "id" : "60",
         "x" : 2416,
         "y" : 839
       }, {
-        "id" : "57",
+        "id" : "61",
         "x" : 2681,
         "y" : 1864
       }, {
-        "id" : "58",
+        "id" : "62",
         "x" : 2681,
         "y" : 2319
       }, {
-        "id" : "59",
+        "id" : "63",
         "x" : 3121,
         "y" : 680
       }, {
-        "id" : "60",
+        "id" : "64",
         "x" : 3330,
         "y" : 1680
       }, {
-        "id" : "61",
+        "id" : "65",
         "x" : 3330,
         "y" : 2325
       }, {
-        "id" : "62",
+        "id" : "66",
         "x" : 3111,
         "y" : 1094
       }, {
-        "id" : "74",
+        "id" : "78",
         "x" : 4111,
         "y" : 1409
       }, {
-        "id" : "75",
+        "id" : "79",
         "x" : 4111,
         "y" : 2562
       }, {
-        "id" : "76",
+        "id" : "80",
         "x" : 4111,
         "y" : 2227
       }, {
-        "id" : "77",
+        "id" : "81",
         "x" : 4111,
         "y" : 1887
       } ],
       "externalBoundariesVisible" : false,
       "key" : "Events_Processor_Azure_Service_Bus",
-      "name" : "Dynamic View: Bitwarden Server - Events Processor",
       "order" : 5,
       "relationships" : [ {
-        "id" : "159",
+        "id" : "170",
         "order" : "1",
         "response" : false
       }, {
-        "id" : "160",
+        "id" : "171",
         "order" : "2",
         "response" : false
       }, {
-        "id" : "162",
+        "id" : "173",
         "order" : "3",
         "response" : false
       }, {
-        "id" : "161",
+        "id" : "172",
         "order" : "4",
         "response" : false
       }, {
-        "id" : "166",
+        "id" : "177",
         "order" : "5",
         "response" : false
       }, {
-        "id" : "171",
+        "id" : "182",
         "order" : "6",
         "response" : false
       }, {
-        "id" : "175",
+        "id" : "186",
         "order" : "7",
         "response" : false
       }, {
-        "id" : "173",
+        "id" : "184",
         "order" : "8",
         "response" : false
       }, {
-        "id" : "170",
+        "id" : "181",
         "order" : "9",
         "response" : false
       }, {
-        "id" : "185",
+        "id" : "196",
         "order" : "10",
         "response" : false
       }, {
-        "id" : "177",
+        "id" : "188",
         "order" : "11",
         "response" : false
       }, {
-        "id" : "181",
+        "id" : "192",
         "order" : "12",
         "response" : false
       }, {
-        "id" : "182",
+        "id" : "193",
         "order" : "13",
         "response" : false
       }, {
-        "id" : "184",
+        "id" : "195",
         "order" : "14",
         "response" : false
       }, {
-        "id" : "178",
+        "id" : "189",
         "order" : "15",
         "position" : 10,
         "response" : false,
@@ -3149,59 +3154,59 @@
           "y" : 1639
         } ]
       }, {
-        "id" : "163",
+        "id" : "174",
         "order" : "16",
         "response" : false
       }, {
-        "id" : "164",
+        "id" : "175",
         "order" : "17",
         "response" : false
       }, {
-        "id" : "165",
+        "id" : "176",
         "order" : "18",
         "response" : false
       }, {
-        "id" : "186",
+        "id" : "197",
         "order" : "19",
         "response" : false
       }, {
-        "id" : "190",
+        "id" : "201",
         "order" : "20",
         "response" : false
       }, {
-        "id" : "192",
+        "id" : "203",
         "order" : "21",
         "response" : false
       }, {
-        "id" : "189",
+        "id" : "200",
         "order" : "22",
         "response" : false
       }, {
-        "id" : "194",
+        "id" : "205",
         "order" : "23",
         "response" : false
       }, {
-        "id" : "233",
+        "id" : "244",
         "order" : "24",
         "response" : false
       }, {
-        "id" : "234",
+        "id" : "245",
         "order" : "25",
         "response" : false
       }, {
-        "id" : "240",
+        "id" : "251",
         "order" : "26",
         "response" : false
       }, {
-        "id" : "241",
+        "id" : "252",
         "order" : "27",
         "response" : false
       }, {
-        "id" : "245",
+        "id" : "256",
         "order" : "28",
         "response" : false
       }, {
-        "id" : "248",
+        "id" : "259",
         "order" : "29",
         "response" : false
       } ]
@@ -3217,160 +3222,159 @@
         "x" : 3664,
         "y" : 560
       }, {
-        "id" : "41",
+        "id" : "45",
         "x" : 219,
         "y" : 706
       }, {
-        "id" : "42",
+        "id" : "46",
         "x" : 229,
         "y" : 2066
       }, {
-        "id" : "43",
+        "id" : "47",
         "x" : 969,
         "y" : 266
       }, {
-        "id" : "44",
+        "id" : "48",
         "x" : 969,
         "y" : 952
       }, {
-        "id" : "45",
+        "id" : "49",
         "x" : 969,
         "y" : 1296
       }, {
-        "id" : "46",
+        "id" : "50",
         "x" : 969,
         "y" : 609
       }, {
-        "id" : "47",
+        "id" : "51",
         "x" : 969,
         "y" : 1736
       }, {
-        "id" : "48",
+        "id" : "52",
         "x" : 969,
         "y" : 2071
       }, {
-        "id" : "49",
+        "id" : "53",
         "x" : 969,
         "y" : 2416
       }, {
-        "id" : "63",
+        "id" : "67",
         "x" : 1852,
         "y" : 292
       }, {
-        "id" : "64",
+        "id" : "68",
         "x" : 1645,
         "y" : 1996
       }, {
-        "id" : "65",
+        "id" : "69",
         "x" : 2722,
         "y" : 172
       }, {
-        "id" : "66",
+        "id" : "70",
         "x" : 1945,
         "y" : 890
       }, {
-        "id" : "67",
+        "id" : "71",
         "x" : 2290,
         "y" : 1605
       }, {
-        "id" : "68",
+        "id" : "72",
         "x" : 2315,
         "y" : 2305
       }, {
-        "id" : "69",
+        "id" : "73",
         "x" : 2712,
         "y" : 667
       }, {
-        "id" : "70",
+        "id" : "74",
         "x" : 2940,
         "y" : 1460
       }, {
-        "id" : "71",
+        "id" : "75",
         "x" : 2920,
         "y" : 2305
       }, {
-        "id" : "72",
+        "id" : "76",
         "x" : 2712,
         "y" : 1022
       }, {
-        "id" : "74",
+        "id" : "78",
         "x" : 3664,
         "y" : 1070
       }, {
-        "id" : "75",
+        "id" : "79",
         "x" : 3685,
         "y" : 2527
       }, {
-        "id" : "76",
+        "id" : "80",
         "x" : 3686,
         "y" : 2183
       }, {
-        "id" : "77",
+        "id" : "81",
         "x" : 3685,
         "y" : 1840
       } ],
       "externalBoundariesVisible" : false,
       "key" : "Events_RabbitMQ",
-      "name" : "Dynamic View: Bitwarden Server - Events",
       "order" : 6,
       "relationships" : [ {
-        "id" : "195",
+        "id" : "206",
         "order" : "1",
         "response" : false
       }, {
-        "id" : "196",
+        "id" : "207",
         "order" : "2",
         "response" : false
       }, {
-        "id" : "198",
+        "id" : "209",
         "order" : "3",
         "response" : false
       }, {
-        "id" : "197",
+        "id" : "208",
         "order" : "4",
         "response" : false
       }, {
-        "id" : "205",
+        "id" : "216",
         "order" : "5",
         "response" : false
       }, {
-        "id" : "208",
+        "id" : "219",
         "order" : "6",
         "response" : false
       }, {
-        "id" : "212",
+        "id" : "223",
         "order" : "7",
         "response" : false
       }, {
-        "id" : "210",
+        "id" : "221",
         "order" : "8",
         "response" : false
       }, {
-        "id" : "214",
+        "id" : "225",
         "order" : "9",
         "response" : false
       }, {
-        "id" : "215",
+        "id" : "226",
         "order" : "10",
         "response" : false
       }, {
-        "id" : "217",
+        "id" : "228",
         "order" : "11",
         "response" : false
       }, {
-        "id" : "219",
+        "id" : "230",
         "order" : "12",
         "response" : false
       }, {
-        "id" : "218",
+        "id" : "229",
         "order" : "13",
         "response" : false
       }, {
-        "id" : "220",
+        "id" : "231",
         "order" : "14",
         "response" : false
       }, {
-        "id" : "221",
+        "id" : "232",
         "order" : "15",
         "position" : 15,
         "response" : false,
@@ -3382,59 +3386,59 @@
           "y" : 1681
         } ]
       }, {
-        "id" : "199",
+        "id" : "210",
         "order" : "16",
         "response" : false
       }, {
-        "id" : "200",
+        "id" : "211",
         "order" : "17",
         "response" : false
       }, {
-        "id" : "201",
+        "id" : "212",
         "order" : "18",
         "response" : false
       }, {
-        "id" : "224",
+        "id" : "235",
         "order" : "19",
         "response" : false
       }, {
-        "id" : "227",
+        "id" : "238",
         "order" : "20",
         "response" : false
       }, {
-        "id" : "229",
+        "id" : "240",
         "order" : "21",
         "response" : false
       }, {
-        "id" : "231",
+        "id" : "242",
         "order" : "22",
         "response" : false
       }, {
-        "id" : "232",
+        "id" : "243",
         "order" : "23",
         "response" : false
       }, {
-        "id" : "251",
+        "id" : "262",
         "order" : "24",
         "response" : false
       }, {
-        "id" : "252",
+        "id" : "263",
         "order" : "25",
         "response" : false
       }, {
-        "id" : "256",
+        "id" : "267",
         "order" : "26",
         "response" : false
       }, {
-        "id" : "257",
+        "id" : "268",
         "order" : "27",
         "response" : false
       }, {
-        "id" : "260",
+        "id" : "271",
         "order" : "28",
         "response" : false
       }, {
-        "id" : "262",
+        "id" : "273",
         "order" : "29",
         "response" : false
       } ]
@@ -3443,14 +3447,12 @@
       "baseViewKey" : "Bitwarden_Server",
       "key" : "Cloud",
       "mode" : "Exclude",
-      "name" : "Filtered: Container View: Bitwarden Server",
       "order" : 10,
       "tags" : [ "Self-Hosted-Only" ]
     }, {
       "baseViewKey" : "Bitwarden_Server",
       "key" : "Self-Hosted",
       "mode" : "Exclude",
-      "name" : "Filtered: Container View: Bitwarden Server",
       "order" : 11,
       "tags" : [ "Cloud-Only" ]
     } ],
@@ -3500,17 +3502,17 @@
         "x" : 3825,
         "y" : 208
       }, {
-        "id" : "73",
-        "x" : 265,
-        "y" : 2215
-      }, {
-        "id" : "80",
+        "id" : "32",
         "x" : 1633,
         "y" : 2210
       }, {
-        "id" : "81",
+        "id" : "33",
         "x" : 883,
         "y" : 2210
+      }, {
+        "id" : "77",
+        "x" : 265,
+        "y" : 2215
       }, {
         "id" : "92",
         "x" : 2383,
@@ -3522,7 +3524,6 @@
       } ],
       "enterpriseBoundaryVisible" : true,
       "key" : "Bitwarden",
-      "name" : "System Landscape View",
       "order" : 8,
       "paperSize" : "A3_Landscape",
       "relationships" : [ {
@@ -3548,21 +3549,21 @@
       }, {
         "id" : "149"
       }, {
-        "id" : "239"
-      }, {
-        "id" : "268",
+        "id" : "155",
         "vertices" : [ {
           "x" : 1708,
           "y" : 2058
         } ]
       }, {
-        "id" : "271"
+        "id" : "158"
       }, {
-        "id" : "274",
+        "id" : "161",
         "vertices" : [ {
           "x" : 2008,
           "y" : 2058
         } ]
+      }, {
+        "id" : "250"
       }, {
         "id" : "276"
       }, {

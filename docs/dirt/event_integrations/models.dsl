@@ -127,7 +127,7 @@
         description "Listens to a specific subscription and passes off to a handler to handle IntegrationMessages"
     }
     event_integration_handler = component "EventIntegrationHandler" {
-        description "Fetches the relevent configurations when an event comes in and hands the event to its paired integration handler for processing."
+        description "Fetches the relevant configurations when an event comes in and hands the event to its paired integration handler for processing."
     }
     slack_integration_handler = component "SlackIntegrationHandler" {
         description "Processes Slack IntegrationMessages, posting them to the configured channels."
@@ -162,7 +162,7 @@
     }
     event_integration_handler = component "EventIntegrationHandler" {
         tags "Self-Hosted-Only"
-        description "Fetches the relevent configurations when an event comes in and hands the event to its paired integration handler for processing."
+        description "Fetches the relevant configurations when an event comes in and hands the event to its paired integration handler for processing."
     }
     slack_integration_handler = component "SlackIntegrationHandler" {
         tags "Self-Hosted-Only"
