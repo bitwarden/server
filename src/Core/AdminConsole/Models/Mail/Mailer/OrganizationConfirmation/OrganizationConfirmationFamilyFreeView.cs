@@ -10,6 +10,5 @@ public class OrganizationConfirmationFamilyFreeView : OrganizationConfirmationBa
 
 public class OrganizationConfirmationFamilyFree : BaseMail<OrganizationConfirmationFamilyFreeView>
 {
-    // Jimmy TODO: confirm subject content
-    public override string Subject => "Welcome to Bitwarden!";
+    public override string Subject { get; set; } = "";
 }

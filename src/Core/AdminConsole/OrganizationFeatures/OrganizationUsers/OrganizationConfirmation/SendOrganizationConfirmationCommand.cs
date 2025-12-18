@@ -37,9 +37,13 @@ public class SendOrganizationConfirmationCommand(IMailer mailer) : ISendOrganiza
         var mail = new OrganizationConfirmationEnterpriseTeams
         {
             ToEmails = userEmailsList,
+            Subject = $"You Have Been Confirmed To {organizationName}",
             View = new OrganizationConfirmationEnterpriseTeamsView
             {
-                OrganizationName = organizationName
+                OrganizationName = organizationName,
+                TitleFirst = "You're confirmed as a member of ",
+                TitleSecondBold = organizationName,
+                TitleThird = "!"
             }
         };
 
@@ -51,9 +55,13 @@ public class SendOrganizationConfirmationCommand(IMailer mailer) : ISendOrganiza
         var mail = new OrganizationConfirmationFamilyFree
         {
             ToEmails = userEmailsList,
+            Subject = $"You Have Been Confirmed To {organizationName}",
             View = new OrganizationConfirmationFamilyFreeView
             {
-                OrganizationName = organizationName
+                OrganizationName = organizationName,
+                TitleFirst = "You're confirmed as a member of ",
+                TitleSecondBold = organizationName,
+                TitleThird = "!"
             }
         };
 

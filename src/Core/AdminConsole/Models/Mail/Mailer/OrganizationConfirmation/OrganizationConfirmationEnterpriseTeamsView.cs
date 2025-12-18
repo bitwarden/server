@@ -8,5 +8,5 @@ public class OrganizationConfirmationEnterpriseTeamsView : OrganizationConfirmat
 
 public class OrganizationConfirmationEnterpriseTeams : BaseMail<OrganizationConfirmationEnterpriseTeamsView>
 {
-    public override string Subject => "Welcome to Bitwarden!";
+    public override string Subject { get; set; } = "";
 }
