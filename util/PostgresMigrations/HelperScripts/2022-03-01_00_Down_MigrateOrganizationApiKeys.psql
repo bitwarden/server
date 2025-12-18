@@ -1,4 +1,0 @@
-UPDATE "Organization" AS o 
-SET "ApiKey" = oa."ApiKey"
-FROM "OrganizationApiKey" AS oa 
-WHERE oa."OrganizationId" = o."Id" AND oa."Type" = 0;
