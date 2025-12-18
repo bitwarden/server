@@ -368,6 +368,7 @@ public class HandlebarsMailService : IMailService
             TitleSecondBold = CoreHelpers.SanitizeForEmail(organizationName, false),
             TitleThird = "!",
             OrganizationName = CoreHelpers.SanitizeForEmail(organizationName, false),
+            // Jimmy TODO: look into this
             WebVaultUrl = hasAccessSecretsManager
                 ? _globalSettings.BaseServiceUri.VaultWithHashAndSecretManagerProduct
                 : _globalSettings.BaseServiceUri.VaultWithHash,
