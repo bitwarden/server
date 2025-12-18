@@ -2,6 +2,7 @@
 #nullable disable
 
 using System.Text.Json;
+using Bit.Api.Tools.Utilities;
 using Bit.Core.Models.Api;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
@@ -37,9 +38,7 @@ public class SendResponseModel : ResponseModel
         Id = send.Id;
         AccessId = CoreHelpers.Base64UrlEncode(send.Id.ToByteArray());
         Type = send.Type;
-        AuthType = send.AuthType ?? (!string.IsNullOrWhiteSpace(send.Password)
-            ? AuthType = Core.Tools.Enums.AuthType.Password
-            : (!string.IsNullOrWhiteSpace(send.Emails) ? Core.Tools.Enums.AuthType.Email : Core.Tools.Enums.AuthType.None));
+        AuthType = send.AuthType ?? SendUtilities.InferAuthType(send);
         Key = send.Key;
         MaxAccessCount = send.MaxAccessCount;
         AccessCount = send.AccessCount;
