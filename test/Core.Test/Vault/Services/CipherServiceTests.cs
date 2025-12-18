@@ -1232,6 +1232,8 @@ public class CipherServiceTests
             (DateTime?)c.RevisionDate));
         var sharingUserId = ciphers.First().UserId.Value;
 
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.MigrateMyVaultToMyItems).Returns(true);
+
         sutProvider.GetDependency<IPolicyService>()
             .GetPoliciesApplicableToUserAsync(sharingUserId, PolicyType.OrganizationDataOwnership)
             .Returns(new List<OrganizationUserPolicyDetails>()
@@ -1273,6 +1275,8 @@ public class CipherServiceTests
             (DateTime?)c.RevisionDate));
         var sharingUserId = ciphers.First().UserId.Value;
 
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.MigrateMyVaultToMyItems).Returns(true);
+
         sutProvider.GetDependency<IPolicyService>()
             .GetPoliciesApplicableToUserAsync(sharingUserId, PolicyType.OrganizationDataOwnership)
             .Returns([]);
@@ -1305,6 +1309,8 @@ public class CipherServiceTests
         var cipherInfos = ciphers.Select(c => (c,
             (DateTime?)c.RevisionDate));
         var sharingUserId = ciphers.First().UserId.Value;
+
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.MigrateMyVaultToMyItems).Returns(true);
 
         // Remove after FeatureFlagKeys.PolicyRequirements is removed.
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);

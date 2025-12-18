@@ -1000,10 +1000,12 @@ public class CipherService : ICipherService
             throw new BadRequestException("Could not find organization.");
         }
 
+        var migrateFeatureEnabled = _featureService.IsEnabled(FeatureFlagKeys.MigrateMyVaultToMyItems);
+
         // Ignore storage limits if the organization has data ownership policy enabled.
         // Allows users to seamlessly migrate their data into the organization without being blocked by storage limits.
         // Organization admins will need to manage storage after migration should overages occur.
-        var ignoreStorageLimits = await OrganizationDataOwnershipPolicyEnabledAsync(sharingUserId, org);
+        var ignoreStorageLimits = migrateFeatureEnabled && await OrganizationDataOwnershipPolicyEnabledAsync(sharingUserId, org);
 
         if (!ignoreStorageLimits)
         {
