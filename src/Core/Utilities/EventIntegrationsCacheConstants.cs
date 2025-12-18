@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Dirt.Enums;
+using Bit.Core.Dirt.Models.Data.EventIntegrations;
 using Bit.Core.Enums;
-using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
 namespace Bit.Core.Utilities;
