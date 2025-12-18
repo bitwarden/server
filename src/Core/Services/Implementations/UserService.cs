@@ -371,7 +371,7 @@ public class UserService : UserManager<User>, IUserService
         }
 
         // Boundary validation to provide a better UX. There is also second-level enforcement at persistence time.
-        var maximumAllowedCredentialCount = (await CanAccessPremium(user))
+        var maximumAllowedCredentialCount = await _hasPremiumAccessQuery.HasPremiumAccessAsync(user.Id)
             ? _globalSettings.WebAuthn.PremiumMaximumAllowedCredentials
             : _globalSettings.WebAuthn.NonPremiumMaximumAllowedCredentials;
         // Allow 'pending' requests -- including the incoming.
@@ -420,7 +420,7 @@ public class UserService : UserManager<User>, IUserService
         }
 
         // Persistence-time validation for comprehensive enforcement. There is also boundary validation for best-possible UX.
-        var maximumAllowedCredentialCount = (await CanAccessPremium(user))
+        var maximumAllowedCredentialCount = await _hasPremiumAccessQuery.HasPremiumAccessAsync(user.Id)
             ? _globalSettings.WebAuthn.PremiumMaximumAllowedCredentials
             : _globalSettings.WebAuthn.NonPremiumMaximumAllowedCredentials;
         // Allow 'pending' requests -- including the incoming.
