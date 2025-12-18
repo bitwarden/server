@@ -1,4 +1,5 @@
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Storage.Commands;
 using Bit.Core.Entities;
 using Bit.Core.Services;
@@ -13,7 +14,7 @@ namespace Bit.Core.Test.Billing.Storage.Commands;
 
 public class UpdateStorageCommandTests
 {
-    private readonly IPaymentService _paymentService = Substitute.For<IPaymentService>();
+    private readonly IStripePaymentService _paymentService = Substitute.For<IStripePaymentService>();
     private readonly IUserService _userService = Substitute.For<IUserService>();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly UpdateStorageCommand _command;

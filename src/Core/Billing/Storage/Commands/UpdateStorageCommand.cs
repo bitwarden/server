@@ -1,5 +1,6 @@
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -23,7 +24,7 @@ public interface IUpdateStorageCommand
 }
 
 public class UpdateStorageCommand(
-    IPaymentService paymentService,
+    IStripePaymentService paymentService,
     IUserService userService,
     IPricingClient pricingClient,
     ILogger<UpdateStorageCommand> logger)

@@ -460,14 +460,14 @@ public class UpdateBillingAddressCommandTests
             }
         };
 
-        _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
+        _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
             options.Address.Matches(input) &&
             options.HasExpansions("subscriptions", "tax_ids") &&
             options.TaxExempt == TaxExempt.None
         )).Returns(customer);
 
         var newTaxId = new TaxId { Id = "tax_id_456", Type = "us_ein", Value = "987654321" };
-        _stripeAdapter.TaxIdCreateAsync(customer.Id, Arg.Is<TaxIdCreateOptions>(
+        _stripeAdapter.CreateTaxIdAsync(customer.Id, Arg.Is<TaxIdCreateOptions>(
             options => options.Type == "us_ein" && options.Value == "987654321"
         )).Returns(newTaxId);
 
@@ -480,12 +480,12 @@ public class UpdateBillingAddressCommandTests
         // Verify that deletion happens before creation
         Received.InOrder(() =>
         {
-            _stripeAdapter.TaxIdDeleteAsync(customer.Id, existingTaxId.Id);
-            _stripeAdapter.TaxIdCreateAsync(customer.Id, Arg.Any<TaxIdCreateOptions>());
+            _stripeAdapter.DeleteTaxIdAsync(customer.Id, existingTaxId.Id);
+            _stripeAdapter.CreateTaxIdAsync(customer.Id, Arg.Any<TaxIdCreateOptions>());
         });
 
-        await _stripeAdapter.Received(1).TaxIdDeleteAsync(customer.Id, existingTaxId.Id);
-        await _stripeAdapter.Received(1).TaxIdCreateAsync(customer.Id, Arg.Is<TaxIdCreateOptions>(
+        await _stripeAdapter.Received(1).DeleteTaxIdAsync(customer.Id, existingTaxId.Id);
+        await _stripeAdapter.Received(1).CreateTaxIdAsync(customer.Id, Arg.Is<TaxIdCreateOptions>(
             options => options.Type == "us_ein" && options.Value == "987654321"));
     }
 }
