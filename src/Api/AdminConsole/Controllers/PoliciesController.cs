@@ -212,7 +212,6 @@ public class PoliciesController : Controller
     }
 
     [HttpPut("{type}/vnext")]
-    [RequireFeatureAttribute(FeatureFlagKeys.CreateDefaultLocation)]
     [Authorize<ManagePoliciesRequirement>]
     public async Task<PolicyResponseModel> PutVNext(Guid orgId, PolicyType type, [FromBody] SavePolicyRequest model)
     {
