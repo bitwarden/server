@@ -15,6 +15,26 @@
     <Compile Remove="NativeMethods.g.cs" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Include="NativeMethods.g.cs" />
+
+    <Content Include="rust/target/release/libsdk*.dylib">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <PackageCopyToOutput>true</PackageCopyToOutput>
+      <Link>runtimes/osx-arm64/native/libsdk.dylib</Link>
+    </Content>
+    <Content Include="./rust/target/release/libsdk*.so">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <PackageCopyToOutput>true</PackageCopyToOutput>
+      <Link>runtimes/linux-x64/native/libsdk.so</Link>
+    </Content>
+    <Content Include="./rust/target/release/libsdk*.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <PackageCopyToOutput>true</PackageCopyToOutput>
+      <Link>runtimes/windows-x64/native/libsdk.dll</Link>
+    </Content>
+  </ItemGroup>
+
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
     <Exec Command="cargo build --release" WorkingDirectory="$(ProjectDir)/rust" />
     <ItemGroup>
