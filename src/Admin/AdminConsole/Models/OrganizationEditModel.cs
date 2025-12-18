@@ -198,7 +198,7 @@ public class OrganizationEditModel : OrganizationViewModel
     [Display(Name = "Use Organization Domains")]
     public bool UseOrganizationDomains { get; set; }
     [Display(Name = "Disable SM Ads For Users")]
-    public bool UseDisableSmAdsForUsers { get; set; }
+    public new bool UseDisableSmAdsForUsers { get; set; }
 
     [Display(Name = "Automatic User Confirmation")]
     public bool UseAutomaticUserConfirmation { get; set; }

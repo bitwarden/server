@@ -675,6 +675,7 @@ public class OrganizationUserRepositoryTests
             UseRiskInsights = false,
             UseAdminSponsoredFamilies = false,
             UsePhishingBlocker = false,
+            UseDisableSmAdsForUsers = false,
         });
 
         var organizationDomain = new OrganizationDomain

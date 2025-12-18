@@ -65,5 +65,6 @@ public class OrganizationUserOrganizationDetails : IProfileOrganizationDetails
     public bool UseAdminSponsoredFamilies { get; set; }
     public bool? IsAdminInitiated { get; set; }
     public bool UseAutomaticUserConfirmation { get; set; }
+    public bool UseDisableSMAdsForUsers { get; set; }
     public bool UsePhishingBlocker { get; set; }
 }

@@ -115,6 +115,7 @@ public static class OrganizationFactory
             UseOrganizationDomains = license.UseOrganizationDomains,
             UseAdminSponsoredFamilies = license.UseAdminSponsoredFamilies,
             UseAutomaticUserConfirmation = license.UseAutomaticUserConfirmation,
+            UseDisableSmAdsForUsers = license.UseDisableSmAdsForUsers,
             UsePhishingBlocker = license.UsePhishingBlocker,
         };
 }
