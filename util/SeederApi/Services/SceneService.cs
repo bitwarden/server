@@ -29,14 +29,14 @@ public class SceneService(
             .ToList();
     }
 
-    public async Task<SceneResponseModel> ExecuteScene(string templateName, JsonElement? arguments)
+    public async Task<SceneResponseModel> ExecuteSceneAsync(string templateName, JsonElement? arguments)
     {
         var result = await ExecuteSceneMethodAsync(templateName, arguments, "Seed");
 
         return SceneResponseModel.FromSceneResult(result);
     }
 
-    public async Task<object?> DestroyScene(string playId)
+    public async Task<object?> DestroySceneAsync(string playId)
     {
         // Note, delete cascade will remove PlayData entries
 
@@ -80,7 +80,7 @@ public class SceneService(
         return new { PlayId = playId };
     }
 
-    public async Task DestroyScenes(IEnumerable<string> playIds)
+    public async Task DestroyScenesAsync(IEnumerable<string> playIds)
     {
         var exceptions = new List<Exception>();
 
@@ -88,7 +88,7 @@ public class SceneService(
         {
             try
             {
-                await DestroyScene(playId);
+                await DestroySceneAsync(playId);
             }
             catch (Exception ex)
             {

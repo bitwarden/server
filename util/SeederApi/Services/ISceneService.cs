@@ -21,7 +21,7 @@ public interface ISceneService
     /// <returns>A tuple containing the result and optional seed ID for tracked entities</returns>
     /// <exception cref="SceneNotFoundException">Thrown when the scene template is not found</exception>
     /// <exception cref="SceneExecutionException">Thrown when there's an error executing the scene</exception>
-    Task<SceneResponseModel> ExecuteScene(string templateName, JsonElement? arguments);
+    Task<SceneResponseModel> ExecuteSceneAsync(string templateName, JsonElement? arguments);
 
     /// <summary>
     /// Destroys data created by a scene using the seeded data ID.
@@ -29,7 +29,7 @@ public interface ISceneService
     /// <param name="playId">The ID of the seeded data to destroy</param>
     /// <returns>The result of the destroy operation</returns>
     /// <exception cref="SceneExecutionException">Thrown when there's an error destroying the seeded data</exception>
-    Task<object?> DestroyScene(string playId);
+    Task<object?> DestroySceneAsync(string playId);
 
     /// <summary>
     /// Retrieves all play IDs for currently tracked seeded data.
@@ -42,5 +42,5 @@ public interface ISceneService
     /// </summary>
     /// <param name="playIds">The list of play IDs to destroy</param>
     /// <exception cref="AggregateException">Thrown when one or more scenes fail to destroy</exception>
-    Task DestroyScenes(IEnumerable<string> playIds);
+    Task DestroyScenesAsync(IEnumerable<string> playIds);
 }

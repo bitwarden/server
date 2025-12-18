@@ -14,7 +14,7 @@ public class SeedController(ILogger<SeedController> logger, ISceneService sceneS
 
         try
         {
-            var response = await sceneService.ExecuteScene(request.Template, request.Arguments);
+            var response = await sceneService.ExecuteSceneAsync(request.Template, request.Arguments);
 
             return Json(response);
         }
@@ -36,7 +36,7 @@ public class SeedController(ILogger<SeedController> logger, ISceneService sceneS
 
         try
         {
-            await sceneService.DestroyScenes(playIds);
+            await sceneService.DestroyScenesAsync(playIds);
             return Ok(new { Message = "Batch delete completed successfully" });
         }
         catch (AggregateException ex)
@@ -56,7 +56,7 @@ public class SeedController(ILogger<SeedController> logger, ISceneService sceneS
 
         try
         {
-            var result = await sceneService.DestroyScene(playId);
+            var result = await sceneService.DestroySceneAsync(playId);
 
             return Json(result);
         }
@@ -77,7 +77,7 @@ public class SeedController(ILogger<SeedController> logger, ISceneService sceneS
 
         try
         {
-            await sceneService.DestroyScenes(playIds);
+            await sceneService.DestroyScenesAsync(playIds);
             return NoContent();
         }
         catch (AggregateException ex)
