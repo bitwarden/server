@@ -34,7 +34,7 @@ public class SendOrganizationConfirmationCommandTests
                 mail.ToEmails.Contains(userEmail) &&
                 mail.ToEmails.Count() == 1 &&
                 mail.View.OrganizationName == organization.Name &&
-                mail.Subject == "Welcome to Bitwarden!"));
+                mail.Subject == GetSubject(organization.Name)));
     }
 
     [Theory]
@@ -57,7 +57,7 @@ public class SendOrganizationConfirmationCommandTests
                 mail.ToEmails.Contains(userEmail) &&
                 mail.ToEmails.Count() == 1 &&
                 mail.View.OrganizationName == organization.Name &&
-                mail.Subject == "Welcome to Bitwarden!"));
+                mail.Subject == GetSubject(organization.Name)));
     }
 
     [Theory]
@@ -80,7 +80,7 @@ public class SendOrganizationConfirmationCommandTests
                 mail.ToEmails.Contains(userEmail) &&
                 mail.ToEmails.Count() == 1 &&
                 mail.View.OrganizationName == organization.Name &&
-                mail.Subject == "Welcome to Bitwarden!"));
+                mail.Subject == GetSubject(organization.Name)));
     }
 
     [Theory]
@@ -103,7 +103,7 @@ public class SendOrganizationConfirmationCommandTests
                 mail.ToEmails.Contains(userEmail) &&
                 mail.ToEmails.Count() == 1 &&
                 mail.View.OrganizationName == organization.Name &&
-                mail.Subject == "Welcome to Bitwarden!"));
+                mail.Subject == GetSubject(organization.Name)));
     }
 
     [Theory]
@@ -239,4 +239,7 @@ public class SendOrganizationConfirmationCommandTests
                 .SendEmail(Arg.Any<OrganizationConfirmationEnterpriseTeams>());
         }
     }
+
+    private static string GetSubject(string organizationName) => $"You Have Been Confirmed To {organizationName}";
+
 }
