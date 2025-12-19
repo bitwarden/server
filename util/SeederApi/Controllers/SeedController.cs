@@ -1,11 +1,19 @@
-﻿using Bit.SeederApi.Models.Request;
+﻿using Bit.SeederApi.Commands.Interfaces;
+using Bit.SeederApi.Execution;
+using Bit.SeederApi.Models.Request;
+using Bit.SeederApi.Queries.Interfaces;
 using Bit.SeederApi.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.SeederApi.Controllers;
 
 [Route("seed")]
-public class SeedController(ILogger<SeedController> logger, ISceneService sceneService) : Controller
+public class SeedController(
+    ILogger<SeedController> logger,
+    ISceneExecutor sceneExecutor,
+    IDestroySceneCommand destroySceneCommand,
+    IDestroyBatchScenesCommand destroyBatchScenesCommand,
+    IGetAllPlayIdsQuery getAllPlayIdsQuery) : Controller
 {
     [HttpPost]
     public async Task<IActionResult> SeedAsync([FromBody] SeedRequestModel request)
@@ -14,7 +22,7 @@ public class SeedController(ILogger<SeedController> logger, ISceneService sceneS
 
         try
         {
-            var response = await sceneService.ExecuteSceneAsync(request.Template, request.Arguments);
+            var response = await sceneExecutor.ExecuteAsync(request.Template, request.Arguments);
 
             return Json(response);
         }
@@ -36,7 +44,7 @@ public class SeedController(ILogger<SeedController> logger, ISceneService sceneS
 
         try
         {
-            await sceneService.DestroyScenesAsync(playIds);
+            await destroyBatchScenesCommand.DestroyAsync(playIds);
             return Ok(new { Message = "Batch delete completed successfully" });
         }
         catch (AggregateException ex)
@@ -56,7 +64,7 @@ public class SeedController(ILogger<SeedController> logger, ISceneService sceneS
 
         try
         {
-            var result = await sceneService.DestroySceneAsync(playId);
+            var result = await destroySceneCommand.DestroyAsync(playId);
 
             return Json(result);
         }
@@ -73,11 +81,11 @@ public class SeedController(ILogger<SeedController> logger, ISceneService sceneS
     {
         logger.LogInformation("Deleting all seeded data");
 
-        var playIds = sceneService.GetAllPlayIds();
+        var playIds = getAllPlayIdsQuery.GetAllPlayIds();
 
         try
         {
-            await sceneService.DestroyScenesAsync(playIds);
+            await destroyBatchScenesCommand.DestroyAsync(playIds);
             return NoContent();
         }
         catch (AggregateException ex)

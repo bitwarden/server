@@ -1,11 +1,32 @@
 ﻿using System.Reflection;
 using Bit.Seeder;
+using Bit.SeederApi.Commands;
+using Bit.SeederApi.Commands.Interfaces;
+using Bit.SeederApi.Execution;
+using Bit.SeederApi.Queries;
+using Bit.SeederApi.Queries.Interfaces;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Bit.SeederApi.Extensions;
 
 public static class ServiceCollectionExtensions
 {
+    /// <summary>
+    /// Registers SeederApi executors, commands, and queries.
+    /// </summary>
+    public static IServiceCollection AddSeederApiServices(this IServiceCollection services)
+    {
+        services.AddScoped<ISceneExecutor, SceneExecutor>();
+        services.AddScoped<IQueryExecutor, QueryExecutor>();
+
+        services.AddScoped<IDestroySceneCommand, DestroySceneCommand>();
+        services.AddScoped<IDestroyBatchScenesCommand, DestroyBatchScenesCommand>();
+
+        services.AddScoped<IGetAllPlayIdsQuery, GetAllPlayIdsQuery>();
+
+        return services;
+    }
+
     /// <summary>
     /// Dynamically registers all scene types that implement IScene&lt;TRequest&gt; from the Seeder assembly.
     /// Scenes are registered as keyed scoped services using their class name as the key.

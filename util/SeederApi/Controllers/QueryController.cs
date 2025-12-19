@@ -1,11 +1,12 @@
-﻿using Bit.SeederApi.Models.Request;
+﻿using Bit.SeederApi.Execution;
+using Bit.SeederApi.Models.Request;
 using Bit.SeederApi.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.SeederApi.Controllers;
 
 [Route("query")]
-public class QueryController(ILogger<QueryController> logger, IQueryService queryService) : Controller
+public class QueryController(ILogger<QueryController> logger, IQueryExecutor queryExecutor) : Controller
 {
     [HttpPost]
     public IActionResult Query([FromBody] QueryRequestModel request)
@@ -14,7 +15,7 @@ public class QueryController(ILogger<QueryController> logger, IQueryService quer
 
         try
         {
-            var result = queryService.ExecuteQuery(request.Template, request.Arguments);
+            var result = queryExecutor.Execute(request.Template, request.Arguments);
 
             return Json(result);
         }

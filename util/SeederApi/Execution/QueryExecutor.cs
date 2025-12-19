@@ -1,20 +1,15 @@
 ﻿using System.Text.Json;
 using Bit.Seeder;
+using Bit.SeederApi.Services;
 
-namespace Bit.SeederApi.Services;
+namespace Bit.SeederApi.Execution;
 
-public class QueryService(
-    ILogger<QueryService> logger,
-    IServiceProvider serviceProvider)
-    : IQueryService
+public class QueryExecutor(
+    ILogger<QueryExecutor> logger,
+    IServiceProvider serviceProvider) : IQueryExecutor
 {
-    private static readonly JsonSerializerOptions _jsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
 
-    public object ExecuteQuery(string queryName, JsonElement? arguments)
+    public object Execute(string queryName, JsonElement? arguments)
     {
         try
         {
@@ -22,7 +17,6 @@ public class QueryService(
                 ?? throw new QueryNotFoundException(queryName);
 
             var requestType = query.GetRequestType();
-
             var requestModel = DeserializeRequestModel(queryName, requestType, arguments);
             var result = query.Execute(requestModel);
 
@@ -47,7 +41,7 @@ public class QueryService(
 
         try
         {
-            var requestModel = JsonSerializer.Deserialize(arguments.Value.GetRawText(), requestType, _jsonOptions);
+            var requestModel = JsonSerializer.Deserialize(arguments.Value.GetRawText(), requestType, JsonConfiguration.Options);
             if (requestModel == null)
             {
                 throw new QueryExecutionException(

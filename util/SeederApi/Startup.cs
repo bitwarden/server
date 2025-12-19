@@ -3,7 +3,6 @@ using Bit.Core.Settings;
 using Bit.Seeder;
 using Bit.Seeder.Factories;
 using Bit.SeederApi.Extensions;
-using Bit.SeederApi.Services;
 using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -39,8 +38,9 @@ public class Startup
 
         services.AddSingleton<RustSDK.RustSdkService>();
         services.AddScoped<UserSeeder>();
-        services.AddScoped<ISceneService, SceneService>();
-        services.AddScoped<IQueryService, QueryService>();
+
+        services.AddSeederApiServices();
+
         services.AddScoped<MangleId>(_ => new MangleId());
         services.AddScenes();
         services.AddQueries();
