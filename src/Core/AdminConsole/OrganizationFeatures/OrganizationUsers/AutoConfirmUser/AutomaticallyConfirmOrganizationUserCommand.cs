@@ -197,7 +197,7 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
     {
         if (featureService.IsEnabled(FeatureFlagKeys.OrganizationConfirmationEmail))
         {
-            await sendOrganizationConfirmationCommand.SendConfirmationAsync(organization, userEmail);
+            await sendOrganizationConfirmationCommand.SendConfirmationAsync(organization, userEmail, accessSecretsManager);
         }
         else
         {

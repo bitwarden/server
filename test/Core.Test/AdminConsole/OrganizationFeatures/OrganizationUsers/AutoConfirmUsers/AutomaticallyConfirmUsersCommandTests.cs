@@ -748,7 +748,7 @@ public class AutomaticallyConfirmUsersCommandTests
         // Assert
         await sutProvider.GetDependency<ISendOrganizationConfirmationCommand>()
             .Received(1)
-            .SendConfirmationAsync(organization, userEmail);
+            .SendConfirmationAsync(organization, userEmail, accessSecretsManager);
         await sutProvider.GetDependency<IMailService>()
             .DidNotReceive()
             .SendOrganizationConfirmedEmailAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
@@ -776,6 +776,6 @@ public class AutomaticallyConfirmUsersCommandTests
             .SendOrganizationConfirmedEmailAsync(organization.Name, userEmail, accessSecretsManager);
         await sutProvider.GetDependency<ISendOrganizationConfirmationCommand>()
             .DidNotReceive()
-            .SendConfirmationAsync(Arg.Any<Organization>(), Arg.Any<string>());
+            .SendConfirmationAsync(Arg.Any<Organization>(), Arg.Any<string>(), Arg.Any<bool>());
     }
 }

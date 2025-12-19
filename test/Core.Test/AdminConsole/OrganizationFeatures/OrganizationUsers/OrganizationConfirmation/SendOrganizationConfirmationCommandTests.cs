@@ -26,7 +26,7 @@ public class SendOrganizationConfirmationCommandTests
         organization.Name = "Test Enterprise Org";
 
         // Act
-        await sutProvider.Sut.SendConfirmationAsync(organization, userEmail);
+        await sutProvider.Sut.SendConfirmationAsync(organization, userEmail, false);
 
         // Assert
         await sutProvider.GetDependency<IMailer>().Received(1)
@@ -49,7 +49,7 @@ public class SendOrganizationConfirmationCommandTests
         organization.Name = "Test Teams Org";
 
         // Act
-        await sutProvider.Sut.SendConfirmationAsync(organization, userEmail);
+        await sutProvider.Sut.SendConfirmationAsync(organization, userEmail, false);
 
         // Assert
         await sutProvider.GetDependency<IMailer>().Received(1)
@@ -72,7 +72,7 @@ public class SendOrganizationConfirmationCommandTests
         organization.Name = "Test Family Org";
 
         // Act
-        await sutProvider.Sut.SendConfirmationAsync(organization, userEmail);
+        await sutProvider.Sut.SendConfirmationAsync(organization, userEmail, false);
 
         // Assert
         await sutProvider.GetDependency<IMailer>().Received(1)
@@ -95,7 +95,7 @@ public class SendOrganizationConfirmationCommandTests
         organization.Name = "Test Free Org";
 
         // Act
-        await sutProvider.Sut.SendConfirmationAsync(organization, userEmail);
+        await sutProvider.Sut.SendConfirmationAsync(organization, userEmail, false);
 
         // Assert
         await sutProvider.GetDependency<IMailer>().Received(1)
@@ -118,7 +118,7 @@ public class SendOrganizationConfirmationCommandTests
         organization.Name = "Test Enterprise Org";
 
         // Act
-        await sutProvider.Sut.SendConfirmationsAsync(organization, userEmails);
+        await sutProvider.Sut.SendConfirmationsAsync(organization, userEmails, false);
 
         // Assert
         await sutProvider.GetDependency<IMailer>().Received(1)
@@ -138,7 +138,7 @@ public class SendOrganizationConfirmationCommandTests
         organization.Name = "Test Enterprise Org";
 
         // Act
-        await sutProvider.Sut.SendConfirmationsAsync(organization, []);
+        await sutProvider.Sut.SendConfirmationsAsync(organization, [], false);
 
         // Assert
         await sutProvider.GetDependency<IMailer>().DidNotReceive()
@@ -160,7 +160,7 @@ public class SendOrganizationConfirmationCommandTests
         var expectedDecodedName = "Test & Company";
 
         // Act
-        await sutProvider.Sut.SendConfirmationAsync(organization, userEmail);
+        await sutProvider.Sut.SendConfirmationAsync(organization, userEmail, false);
 
         // Assert
         await sutProvider.GetDependency<IMailer>().Received(1)
@@ -197,7 +197,7 @@ public class SendOrganizationConfirmationCommandTests
             sutProvider.GetDependency<IMailer>().ClearReceivedCalls();
 
             // Act
-            await sutProvider.Sut.SendConfirmationAsync(organization, userEmail);
+            await sutProvider.Sut.SendConfirmationAsync(organization, userEmail, false);
 
             // Assert
             await sutProvider.GetDependency<IMailer>().Received(1)
@@ -230,7 +230,7 @@ public class SendOrganizationConfirmationCommandTests
             sutProvider.GetDependency<IMailer>().ClearReceivedCalls();
 
             // Act
-            await sutProvider.Sut.SendConfirmationAsync(organization, userEmail);
+            await sutProvider.Sut.SendConfirmationAsync(organization, userEmail, false);
 
             // Assert
             await sutProvider.GetDependency<IMailer>().Received(1)
