@@ -374,8 +374,8 @@ public class UserService : UserManager<User>, IUserService
         var maximumAllowedCredentialCount = await _hasPremiumAccessQuery.HasPremiumAccessAsync(user.Id)
             ? _globalSettings.WebAuthn.PremiumMaximumAllowedCredentials
             : _globalSettings.WebAuthn.NonPremiumMaximumAllowedCredentials;
-        // Allow 'pending' requests -- including the incoming.
-        if (provider.MetaData.Count(metadata => !metadata.Key.Equals("pending", StringComparison.OrdinalIgnoreCase)) >=
+        // Count only saved credentials ("Key{id}") toward the limit.
+        if (provider.MetaData.Count(k => k.Key.StartsWith("Key")) >=
             maximumAllowedCredentialCount)
         {
             throw new BadRequestException("Maximum allowed WebAuthn credential count exceeded.");
@@ -423,8 +423,8 @@ public class UserService : UserManager<User>, IUserService
         var maximumAllowedCredentialCount = await _hasPremiumAccessQuery.HasPremiumAccessAsync(user.Id)
             ? _globalSettings.WebAuthn.PremiumMaximumAllowedCredentials
             : _globalSettings.WebAuthn.NonPremiumMaximumAllowedCredentials;
-        // Allow 'pending' requests -- including the incoming.
-        if (provider.MetaData.Count(metadata => !metadata.Key.Equals("pending", StringComparison.OrdinalIgnoreCase)) >=
+        // Count only saved credentials ("Key{id}") toward the limit.
+        if (provider.MetaData.Count(k => k.Key.StartsWith("Key")) >=
             maximumAllowedCredentialCount)
         {
             throw new BadRequestException("Maximum allowed WebAuthn credential count exceeded.");
