@@ -3,16 +3,11 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Mail.Mailer.OrganizationConfirmation;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Platform.Mail.Mailer;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationConfirmation;
 
-public class SendOrganizationConfirmationCommand(
-    IMailer mailer,
-    GlobalSettings globalSettings,
-    IMailService mailService,
-    IFeatureService featureService) : ISendOrganizationConfirmationCommand
+public class SendOrganizationConfirmationCommand(IMailer mailer, GlobalSettings globalSettings) : ISendOrganizationConfirmationCommand
 {
     public async Task SendConfirmationAsync(Organization organization, string userEmail, bool accessSecretsManager = false)
     {
@@ -22,23 +17,12 @@ public class SendOrganizationConfirmationCommand(
     public async Task SendConfirmationsAsync(Organization organization, IEnumerable<string> userEmails, bool accessSecretsManager = false)
     {
         var userEmailsList = userEmails.ToList();
+
         if (userEmailsList.Count == 0)
         {
             return;
         }
 
-        // Check feature flag to determine which email service to use
-        if (!featureService.IsEnabled(FeatureFlagKeys.OrganizationConfirmationEmail))
-        {
-            // Use legacy mail service
-            foreach (var email in userEmailsList)
-            {
-                await mailService.SendOrganizationConfirmedEmailAsync(organization.DisplayName(), email, accessSecretsManager);
-            }
-            return;
-        }
-
-        // Use new mailer pattern
         var organizationName = WebUtility.HtmlDecode(organization.Name);
 
         if (IsEnterpriseOrTeamsPlan(organization.PlanType))
