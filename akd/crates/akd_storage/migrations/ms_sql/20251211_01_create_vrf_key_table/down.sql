@@ -1,1 +1,1 @@
-DROP TABLE IF EXISTS dbo.vrf_key;
+DROP TABLE IF EXISTS dbo.akd_vrf_keys;

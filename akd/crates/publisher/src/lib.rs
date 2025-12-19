@@ -1,7 +1,6 @@
 use akd::{directory::Directory, storage::StorageManager};
 use akd_storage::DatabaseType;
 use bitwarden_akd_configuration::BitwardenV1Configuration;
-use common::VrfStorageType;
 use tracing::instrument;
 
 struct AppState {

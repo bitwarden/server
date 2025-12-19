@@ -1,4 +1,11 @@
+use std::str::FromStr;
+
+use rsa::pkcs1::{DecodeRsaPrivateKey, EncodeRsaPrivateKey};
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
+use tracing::error;
+
+use crate::vrf_key_database::VrfRootKeyType;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
@@ -35,4 +42,61 @@ pub enum VrfKeyConfig {
     ///
     /// Losing this key is equivalent to losing your directory's VRF key.
     PEMEncodedRSAKey { private_key: String },
+}
+
+#[derive(Debug, Error)]
+#[error("Error reading root key from configuration")]
+pub struct VrfRootKeyError;
+
+impl VrfKeyConfig {
+    pub fn root_key_bytes(&self) -> Result<Vec<u8>, VrfRootKeyError> {
+        match self {
+            #[cfg(test)]
+            VrfKeyConfig::ConstantVrfKey => {
+                // This is the hard coded vrf key
+                Ok(
+                    hex::decode("c9afa9d845ba75166b5c215767b1d6934e50c3db36e89b127b8a622b120f6721")
+                        .map_err(|err| {
+                            error!("Failed to decode hardcoded vrf key: {}", err);
+                            VrfRootKeyError
+                        })?,
+                )
+            }
+            VrfKeyConfig::B64EncodedSymmetricKey { key } => bitwarden_encoding::B64::from_str(&key)
+                .map_err(|err| {
+                    error!(%err, "Failed to decode symmetric key from base64 format");
+                    VrfRootKeyError
+                })
+                .map(|b64| Vec::<u8>::from(b64)),
+            VrfKeyConfig::PEMEncodedRSAKey { private_key } => {
+                let rsa_private_key =
+                    rsa::RsaPrivateKey::from_pkcs1_pem(&private_key).map_err(|err| {
+                        error!(%err, "Failed to decode RSA private key from PEM format");
+                        VrfRootKeyError
+                    })?;
+                Ok(rsa_private_key
+                    .to_pkcs1_der()
+                    .map_err(|err| {
+                        error!(%err, "Failed to encode RSA private key to DER format");
+                        VrfRootKeyError
+                    })?
+                    .as_bytes()
+                    .to_vec())
+            }
+        }
+    }
+
+    pub fn root_key_hash(&self) -> Result<Vec<u8>, VrfRootKeyError> {
+        let root_key_bytes = self.root_key_bytes()?;
+        Ok(blake3::hash(&root_key_bytes).as_bytes().to_vec())
+    }
+
+    pub fn root_key_type(&self) -> VrfRootKeyType {
+        match self {
+            #[cfg(test)]
+            VrfKeyConfig::ConstantVrfKey => VrfRootKeyType::None,
+            VrfKeyConfig::B64EncodedSymmetricKey { .. } => VrfRootKeyType::SymmetricKey,
+            VrfKeyConfig::PEMEncodedRSAKey { .. } => VrfRootKeyType::RsaKey,
+        }
+    }
 }

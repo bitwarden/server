@@ -18,11 +18,18 @@ use tracing::{debug, error, info, instrument, trace, warn};
 
 use migrations::{
     MIGRATIONS, TABLE_AZKS, TABLE_HISTORY_TREE_NODES, TABLE_MIGRATIONS, TABLE_VALUES,
+    TABLE_VRF_KEYS,
 };
 use tables::{
     akd_storable_for_ms_sql::{AkdStorableForMsSql, Statement},
     temp_table::TempTable,
     values,
+};
+
+use crate::{
+    ms_sql::tables::vrf_key,
+    vrf_key_config::VrfKeyConfig,
+    vrf_key_database::{VrfKeyRetrievalError, VrfKeyStorageError, VrfKeyTableData},
 };
 
 const DEFAULT_POOL_SIZE: u32 = 100;
@@ -116,6 +123,7 @@ impl MsSql {
             DROP TABLE IF EXISTS {TABLE_AZKS};
             DROP TABLE IF EXISTS {TABLE_HISTORY_TREE_NODES};
             DROP TABLE IF EXISTS {TABLE_VALUES};
+            DROP TABLE IF EXISTS {TABLE_VRF_KEYS};
             DROP TABLE IF EXISTS {TABLE_MIGRATIONS};"#
         );
 
@@ -161,6 +169,66 @@ impl MsSql {
             })?;
         debug!("Statement executed successfully");
         Ok(())
+    }
+}
+
+impl MsSql {
+    #[instrument(skip(self, config), level = "debug")]
+    pub async fn get_vrf_key(
+        &self,
+        config: &VrfKeyConfig,
+    ) -> Result<VrfKeyTableData, VrfKeyRetrievalError> {
+        debug!("Retrieving VRF key from database");
+
+        let mut conn = self.get_connection().await.map_err(|err| {
+            error!(%err, "Failed to get DB connection for VRF key retrieval");
+            VrfKeyRetrievalError::DatabaseError
+        })?;
+
+        let statement = vrf_key::get_statement(&config).map_err(|err| {
+            error!(%err, "Failed to build VRF key retrieval statement");
+            VrfKeyRetrievalError::CorruptedData
+        })?;
+        let query_stream = conn
+            .query(statement.sql(), &statement.params())
+            .await
+            .map_err(|err| {
+                error!(%err, "Failed to execute VRF key retrieval query");
+                VrfKeyRetrievalError::DatabaseError
+            })?;
+
+        let row = query_stream.into_row().await.map_err(|err| {
+            error!(%err, "Failed to fetch VRF key row");
+            VrfKeyRetrievalError::DatabaseError
+        })?;
+
+        match row {
+            None => {
+                debug!("VRF key not found");
+                return Err(VrfKeyRetrievalError::KeyNotFound);
+            }
+            Some(row) => {
+                debug!("VRF key found");
+                vrf_key::from_row(&row).map_err(|err| {
+                    error!(%err, "Failed to parse VRF key from database row");
+                    VrfKeyRetrievalError::CorruptedData
+                })
+            }
+        }
+    }
+
+    #[instrument(skip(self, table_data), level = "debug")]
+    pub async fn store_vrf_key(
+        &self,
+        table_data: &VrfKeyTableData,
+    ) -> Result<(), VrfKeyStorageError> {
+        debug!("Storing VRF key in database");
+
+        let statement = vrf_key::store_statement(table_data);
+        self.execute_statement(&statement).await.map_err(|err| {
+            error!(%err, "Failed to store VRF key in database");
+            VrfKeyStorageError
+        })
     }
 }
 
@@ -552,7 +620,9 @@ impl Database for MsSql {
             statement.parse(&row)
         } else {
             debug!("Raw label not found");
-            Err(StorageError::NotFound("ValueState for label not found".to_string()))
+            Err(StorageError::NotFound(
+                "ValueState for label not found".to_string(),
+            ))
         }
     }
 

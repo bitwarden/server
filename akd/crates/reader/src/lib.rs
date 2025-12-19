@@ -1,7 +1,6 @@
 use akd::{directory::ReadOnlyDirectory, storage::StorageManager};
 use akd_storage::DatabaseType;
 use bitwarden_akd_configuration::BitwardenV1Configuration;
-use common::VrfStorageType;
 use tracing::instrument;
 
 struct AppState {
@@ -10,7 +9,7 @@ struct AppState {
 }
 
 #[instrument(skip_all, name = "reader_start")]
-pub async fn start(db: DatabaseType, vrf: VrfStorageType) {
+pub async fn start(db: DatabaseType) {
     let storage_manager = StorageManager::new_no_cache(db);
     let _app = AppState {
         _directory: ReadOnlyDirectory::new(storage_manager, vrf)

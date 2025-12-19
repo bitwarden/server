@@ -1,17 +1,14 @@
-use std::str::FromStr;
-
+use akd::ecvrf::{VRFKeyStorage, VrfError};
+use async_trait::async_trait;
 use chacha20poly1305::{
     aead::{generic_array::GenericArray, Aead},
     AeadCore, KeyInit, XChaCha20Poly1305,
 };
-use rsa::{
-    pkcs1::{DecodeRsaPrivateKey, EncodeRsaPrivateKey},
-    Pkcs1v15Encrypt,
-};
+use rsa::{pkcs1::DecodeRsaPrivateKey, Pkcs1v15Encrypt};
 use thiserror::Error;
 use tracing::{error, info};
 
-use crate::vrf_key_config::VrfKeyConfig;
+use crate::{db_config::DatabaseType, vrf_key_config::VrfKeyConfig};
 
 /// Represents a storage-layer error
 #[derive(Debug, Error)]
@@ -35,31 +32,116 @@ pub struct VrfKeyCreationError;
 #[error("Internal VRF key storage error")]
 pub struct VrfKeyStorageError;
 
-#[allow(unused)]
-trait VrfKeyTable {
-    async fn get_vrf_key(config: VrfKeyConfig) -> Result<VrfKeyTableData, VrfKeyRetrievalError>;
-    async fn store_vrf_key(table_data: VrfKeyTableData) -> Result<(), VrfKeyStorageError>;
+#[derive(Debug, Clone)]
+pub struct VrfKeyDatabase {
+    db: DatabaseType,
+    vrf_key_config: VrfKeyConfig,
+    cached_vrf_key: Option<Vec<u8>>,
+}
+
+impl VrfKeyDatabase {
+    pub fn new(db: DatabaseType, config: VrfKeyConfig) -> VrfKeyDatabase {
+        VrfKeyDatabase {
+            db,
+            vrf_key_config: config,
+            cached_vrf_key: None,
+        }
+    }
+    async fn get_vrf_key(&self) -> Result<VrfKeyTableData, VrfKeyRetrievalError> {
+        match &self.db {
+            DatabaseType::MsSql(db) => db.get_vrf_key(&self.vrf_key_config).await,
+        }
+    }
+    async fn store_vrf_key(&self, table_data: &VrfKeyTableData) -> Result<(), VrfKeyStorageError> {
+        match &self.db {
+            DatabaseType::MsSql(db) => db.store_vrf_key(table_data).await,
+        }
+    }
+}
+
+#[async_trait]
+impl VRFKeyStorage for VrfKeyDatabase {
+    async fn retrieve(&self) -> Result<Vec<u8>, VrfError> {
+        if let Some(cached_key) = &self.cached_vrf_key {
+            return Ok(cached_key.clone());
+        }
+
+        match &self.get_vrf_key().await {
+            Ok(table_data) => table_data
+                .to_vrf_key(&self.vrf_key_config)
+                .await
+                .map(|k| k.0)
+                .map_err(|err| {
+                    VrfError::SigningKey(format!("Error decrypting signing key: {err}"))
+                }),
+            Err(VrfKeyRetrievalError::KeyNotFound) => {
+                // Make a new key
+                let (table_data, key) =
+                    VrfKeyTableData::new(&self.vrf_key_config)
+                        .await
+                        .map_err(|err| {
+                            VrfError::SigningKey(format!("Failed to create a new VRF key: {err}"))
+                        })?;
+                // store store
+                self.store_vrf_key(&table_data).await.map_err(|err| {
+                    VrfError::SigningKey(format!("Failed to store a new VRF key: {err}"))
+                })?;
+
+                // and return
+                Ok(key.0)
+            }
+            Err(err) => {
+                error!(%err, "Key retrieval error");
+                Err(VrfError::SigningKey("Key retrieval error".to_string()))
+            }
+        }
+    }
 }
 
 pub struct VrfKeyTableData {
     pub root_key_hash: Vec<u8>,
-    pub root_key_type: RootKeyType,
+    pub root_key_type: VrfRootKeyType,
     pub enc_sym_key: Option<Vec<u8>>,
     pub sym_enc_vrf_key: Vec<u8>,
     pub sym_enc_vrf_key_nonce: Vec<u8>,
 }
 
-pub enum RootKeyType {
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub enum VrfRootKeyType {
     #[cfg(test)]
     None = 0,
     SymmetricKey = 1,
     RsaKey = 2,
 }
 
+impl From<i16> for VrfRootKeyType {
+    fn from(value: i16) -> Self {
+        match value {
+            1 => VrfRootKeyType::SymmetricKey,
+            2 => VrfRootKeyType::RsaKey,
+            #[cfg(test)]
+            0 => VrfRootKeyType::None,
+            _ => panic!("Invalid VrfRootKeyType value: {}", value),
+        }
+    }
+}
+
+impl From<VrfRootKeyType> for i16 {
+    fn from(value: VrfRootKeyType) -> Self {
+        match value {
+            VrfRootKeyType::SymmetricKey => 1,
+            VrfRootKeyType::RsaKey => 2,
+            #[cfg(test)]
+            VrfRootKeyType::None => 0,
+        }
+    }
+}
+
+#[derive(Clone)]
 pub struct VrfKey(pub Vec<u8>);
 
 impl VrfKeyTableData {
-    pub async fn new(config: VrfKeyConfig) -> Result<(Self, VrfKey), VrfKeyCreationError> {
+    pub async fn new(config: &VrfKeyConfig) -> Result<(Self, VrfKey), VrfKeyCreationError> {
         info!("Generating new VRF key and table data");
         // handle constant key case separately to avoid unnecessary key generation / parsing
         #[cfg(test)]
@@ -68,8 +150,8 @@ impl VrfKeyTableData {
 
             return Ok((
                 VrfKeyTableData {
-                    root_key_hash: vec![],
-                    root_key_type: RootKeyType::None,
+                    root_key_hash: config.root_key_hash().expect("hard coded vrf key"),
+                    root_key_type: VrfRootKeyType::None,
                     enc_sym_key: None,
                     sym_enc_vrf_key: vec![],
                     sym_enc_vrf_key_nonce: vec![],
@@ -78,17 +160,14 @@ impl VrfKeyTableData {
             ));
         }
 
-        let (sym, sym_key) = if let VrfKeyConfig::B64EncodedSymmetricKey { key } = &config {
-            let raw_key = bitwarden_encoding::B64::from_str(key).map_err(|err| {
-                error!(%err, "Invalid b64 encoding of symmetric key");
-                VrfKeyCreationError
-            })?;
+        let (sym, sym_key) = if let VrfKeyConfig::B64EncodedSymmetricKey { key: _ } = &config {
+            let raw_key = config.root_key_bytes().map_err(|_| VrfKeyCreationError)?;
             (
-                XChaCha20Poly1305::new_from_slice(raw_key.as_bytes()).map_err(|err| {
+                XChaCha20Poly1305::new_from_slice(&raw_key).map_err(|err| {
                     error!(%err, "Invalid symmetric key length");
                     VrfKeyCreationError
                 })?,
-                raw_key.as_bytes().to_vec(),
+                raw_key,
             )
         } else {
             let key = XChaCha20Poly1305::generate_key(rand::thread_rng());
@@ -103,16 +182,22 @@ impl VrfKeyTableData {
             VrfKeyCreationError
         })?;
 
-        match config {
+        match &config {
             #[cfg(test)]
             VrfKeyConfig::ConstantVrfKey => unreachable!(), // handled above
             VrfKeyConfig::B64EncodedSymmetricKey { key: _ } => {
-                let root_key_hash = blake3::hash(&sym_key).as_bytes().to_vec();
+                let root_key_hash = config.root_key_hash().map_err(|_| VrfKeyCreationError)?;
 
+                error!(
+                    rkh = root_key_hash.len(),
+                    sevk = sym_enc_vrf_key.len(),
+                    sevkn = nonce.len(),
+                    "lengths of stuff!!!!!\n\n\n\n"
+                );
                 Ok((
                     VrfKeyTableData {
                         root_key_hash,
-                        root_key_type: RootKeyType::SymmetricKey,
+                        root_key_type: VrfRootKeyType::SymmetricKey,
                         enc_sym_key: None,
                         sym_enc_vrf_key,
                         sym_enc_vrf_key_nonce: nonce.to_vec(),
@@ -122,21 +207,11 @@ impl VrfKeyTableData {
             }
             VrfKeyConfig::PEMEncodedRSAKey { private_key } => {
                 let rsa_private_key =
-                    rsa::RsaPrivateKey::from_pkcs1_pem(&private_key).map_err(|err| {
+                    rsa::RsaPrivateKey::from_pkcs1_pem(private_key).map_err(|err| {
                         error!(%err, "Failed to decode RSA private key from PEM format");
                         VrfKeyCreationError
                     })?;
-                let root_key_hash = blake3::hash(
-                    rsa_private_key
-                        .to_pkcs1_der()
-                        .map_err(|err| {
-                            error!(%err, "Failed to encode RSA private key to DER format");
-                            VrfKeyCreationError
-                        })?
-                        .as_bytes(),
-                )
-                .as_bytes()
-                .to_vec();
+                let root_key_hash = config.root_key_hash().map_err(|_| VrfKeyCreationError)?;
                 let rsa_public_key = rsa_private_key.to_public_key();
                 let enc_sym_key = rsa_public_key
                     .encrypt(&mut rand::thread_rng(), Pkcs1v15Encrypt, &sym_key)
@@ -148,7 +223,7 @@ impl VrfKeyTableData {
                 Ok((
                     VrfKeyTableData {
                         root_key_hash,
-                        root_key_type: RootKeyType::RsaKey,
+                        root_key_type: VrfRootKeyType::RsaKey,
                         enc_sym_key: Some(enc_sym_key),
                         sym_enc_vrf_key,
                         sym_enc_vrf_key_nonce: nonce.to_vec(),
@@ -159,7 +234,7 @@ impl VrfKeyTableData {
         }
     }
 
-    pub async fn to_vrf_key(&self, config: VrfKeyConfig) -> Result<VrfKey, VrfKeyCreationError> {
+    pub async fn to_vrf_key(&self, config: &VrfKeyConfig) -> Result<VrfKey, VrfKeyCreationError> {
         info!("Decrypting VrfKeyTableData to obtain VRF key");
         // handle constant key case separately to avoid unnecessary key generation / parsing
         #[cfg(test)]
@@ -179,15 +254,12 @@ impl VrfKeyTableData {
             return Err(VrfKeyCreationError);
         }
         let nonce = GenericArray::from_slice(self.sym_enc_vrf_key_nonce.as_ref());
-        let vrf_key = match config {
+        let vrf_key = match &config {
             #[cfg(test)]
             VrfKeyConfig::ConstantVrfKey => unreachable!(), // handled above
-            VrfKeyConfig::B64EncodedSymmetricKey { key } => {
-                let raw_key = bitwarden_encoding::B64::from_str(&key).map_err(|err| {
-                    error!(%err, "Invalid b64 encoding of symmetric key");
-                    VrfKeyCreationError
-                })?;
-                let sym = XChaCha20Poly1305::new_from_slice(raw_key.as_bytes()).map_err(|err| {
+            VrfKeyConfig::B64EncodedSymmetricKey { key: _ } => {
+                let raw_key = config.root_key_bytes().map_err(|_| VrfKeyCreationError)?;
+                let sym = XChaCha20Poly1305::new_from_slice(&raw_key).map_err(|err| {
                     error!(%err, "Invalid symmetric key length");
                     VrfKeyCreationError
                 })?;
@@ -202,7 +274,7 @@ impl VrfKeyTableData {
             }
             VrfKeyConfig::PEMEncodedRSAKey { private_key } => {
                 let rsa_private_key =
-                    rsa::RsaPrivateKey::from_pkcs1_pem(&private_key).map_err(|err| {
+                    rsa::RsaPrivateKey::from_pkcs1_pem(private_key).map_err(|err| {
                         error!(%err, "Failed to decode RSA private key from PEM format");
                         VrfKeyCreationError
                     })?;
@@ -303,8 +375,8 @@ k7UXX8Wh7AgrK4A/MuZXJL30Cd/dgtlHzJWtlQevTII=
     #[tokio::test]
     pub async fn test_generation_from_symmetric_key() {
         let config = create_test_symmetric_config();
-        let (table_data, vrf_key) = super::VrfKeyTableData::new(config.clone()).await.unwrap();
-        let retrieved_vrf_key = table_data.to_vrf_key(config).await.unwrap();
+        let (table_data, vrf_key) = super::VrfKeyTableData::new(&config).await.unwrap();
+        let retrieved_vrf_key = table_data.to_vrf_key(&config).await.unwrap();
 
         assert_eq!(table_data.enc_sym_key, None);
         assert_eq!(
@@ -322,8 +394,8 @@ k7UXX8Wh7AgrK4A/MuZXJL30Cd/dgtlHzJWtlQevTII=
     pub async fn test_generation_from_rsa_key() {
         let rsa_private_key = rsa::RsaPrivateKey::from_pkcs1_pem(TEST_RSA_PRIVATE_KEY).unwrap();
         let config = create_test_rsa_config();
-        let (table_data, vrf_key) = super::VrfKeyTableData::new(config.clone()).await.unwrap();
-        let retrieved_vrf_key = table_data.to_vrf_key(config).await.unwrap();
+        let (table_data, vrf_key) = super::VrfKeyTableData::new(&config.clone()).await.unwrap();
+        let retrieved_vrf_key = table_data.to_vrf_key(&config).await.unwrap();
         assert_eq!(
             table_data.root_key_hash,
             [
@@ -343,8 +415,8 @@ k7UXX8Wh7AgrK4A/MuZXJL30Cd/dgtlHzJWtlQevTII=
     #[tokio::test]
     pub async fn test_generation_from_constant_key() {
         let config = super::VrfKeyConfig::ConstantVrfKey;
-        let (table_data, vrf_key) = super::VrfKeyTableData::new(config.clone()).await.unwrap();
-        let retrieved_vrf_key = table_data.to_vrf_key(config).await.unwrap();
+        let (table_data, vrf_key) = super::VrfKeyTableData::new(&config.clone()).await.unwrap();
+        let retrieved_vrf_key = table_data.to_vrf_key(&config).await.unwrap();
 
         assert_eq!(table_data.root_key_hash, vec![]);
         assert_eq!(table_data.enc_sym_key, None);
@@ -360,19 +432,19 @@ k7UXX8Wh7AgrK4A/MuZXJL30Cd/dgtlHzJWtlQevTII=
             key: "not!valid@base64#".to_string(),
         };
 
-        let result = super::VrfKeyTableData::new(config.clone()).await;
+        let result = super::VrfKeyTableData::new(&config.clone()).await;
         assert!(matches!(result, Err(super::VrfKeyCreationError)));
     }
 
     #[tokio::test]
     pub async fn test_invalid_base64_during_retrieval() {
         let config_valid = create_test_symmetric_config();
-        let (table_data, _) = super::VrfKeyTableData::new(config_valid).await.unwrap();
+        let (table_data, _) = super::VrfKeyTableData::new(&config_valid).await.unwrap();
 
         let config_invalid = super::VrfKeyConfig::B64EncodedSymmetricKey {
             key: "not!valid@base64#".to_string(),
         };
-        let result = table_data.to_vrf_key(config_invalid).await;
+        let result = table_data.to_vrf_key(&config_invalid).await;
         assert!(matches!(result, Err(super::VrfKeyCreationError)));
     }
 
@@ -381,7 +453,7 @@ k7UXX8Wh7AgrK4A/MuZXJL30Cd/dgtlHzJWtlQevTII=
         let short_key = bitwarden_encoding::B64::from(vec![0u8; 16]).to_string();
         let config = super::VrfKeyConfig::B64EncodedSymmetricKey { key: short_key };
 
-        let result = super::VrfKeyTableData::new(config).await;
+        let result = super::VrfKeyTableData::new(&config).await;
         assert!(matches!(result, Err(super::VrfKeyCreationError)));
     }
 
@@ -393,7 +465,7 @@ k7UXX8Wh7AgrK4A/MuZXJL30Cd/dgtlHzJWtlQevTII=
             private_key: malformed_pem.to_string(),
         };
 
-        let result = super::VrfKeyTableData::new(config).await;
+        let result = super::VrfKeyTableData::new(&config).await;
         assert!(matches!(result, Err(super::VrfKeyCreationError)));
     }
 
@@ -406,62 +478,62 @@ k7UXX8Wh7AgrK4A/MuZXJL30Cd/dgtlHzJWtlQevTII=
             private_key: missing_headers.to_string(),
         };
 
-        let result = super::VrfKeyTableData::new(config).await;
+        let result = super::VrfKeyTableData::new(&config).await;
         assert!(matches!(result, Err(super::VrfKeyCreationError)));
     }
 
     #[tokio::test]
     pub async fn test_wrong_symmetric_key_decryption() {
         let config1 = create_test_symmetric_config();
-        let (table_data, _) = super::VrfKeyTableData::new(config1).await.unwrap();
+        let (table_data, _) = super::VrfKeyTableData::new(&config1).await.unwrap();
 
         let config2 = super::VrfKeyConfig::B64EncodedSymmetricKey {
             key: generate_random_symmetric_key_b64(),
         };
 
-        let result = table_data.to_vrf_key(config2).await;
+        let result = table_data.to_vrf_key(&config2).await;
         assert!(matches!(result, Err(super::VrfKeyCreationError)));
     }
 
     #[tokio::test]
     pub async fn test_wrong_rsa_key_decryption() {
         let config1 = create_test_rsa_config();
-        let (table_data, _) = super::VrfKeyTableData::new(config1).await.unwrap();
+        let (table_data, _) = super::VrfKeyTableData::new(&config1).await.unwrap();
 
         let config2 = super::VrfKeyConfig::PEMEncodedRSAKey {
             private_key: generate_random_rsa_key_pem(),
         };
 
-        let result = table_data.to_vrf_key(config2).await;
+        let result = table_data.to_vrf_key(&config2).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     pub async fn test_rsa_missing_enc_sym_key() {
         let config = create_test_rsa_config();
-        let (mut table_data, _) = super::VrfKeyTableData::new(config.clone()).await.unwrap();
+        let (mut table_data, _) = super::VrfKeyTableData::new(&config).await.unwrap();
 
         table_data.enc_sym_key = None;
 
-        let result = table_data.to_vrf_key(config).await;
+        let result = table_data.to_vrf_key(&config).await;
         assert!(matches!(result, Err(super::VrfKeyCreationError)));
     }
 
     #[tokio::test]
     pub async fn test_wrong_nonce() {
         let config = create_test_symmetric_config();
-        let (mut table_data, _) = super::VrfKeyTableData::new(config.clone()).await.unwrap();
+        let (mut table_data, _) = super::VrfKeyTableData::new(&config).await.unwrap();
 
         table_data.sym_enc_vrf_key_nonce.truncate(10);
 
-        let result = table_data.to_vrf_key(config).await;
+        let result = table_data.to_vrf_key(&config).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     pub async fn test_nonce_size_validation() {
         let config = create_test_symmetric_config();
-        let (table_data, _) = super::VrfKeyTableData::new(config).await.unwrap();
+        let (table_data, _) = super::VrfKeyTableData::new(&config).await.unwrap();
 
         assert_eq!(table_data.sym_enc_vrf_key_nonce.len(), 24);
     }
@@ -470,7 +542,7 @@ k7UXX8Wh7AgrK4A/MuZXJL30Cd/dgtlHzJWtlQevTII=
     pub async fn test_empty_symmetric_key() {
         let config = super::VrfKeyConfig::B64EncodedSymmetricKey { key: String::new() };
 
-        let result = super::VrfKeyTableData::new(config).await;
+        let result = super::VrfKeyTableData::new(&config).await;
         assert!(result.is_err());
     }
 
@@ -480,7 +552,7 @@ k7UXX8Wh7AgrK4A/MuZXJL30Cd/dgtlHzJWtlQevTII=
             private_key: String::new(),
         };
 
-        let result = super::VrfKeyTableData::new(config).await;
+        let result = super::VrfKeyTableData::new(&config).await;
         assert!(matches!(result, Err(super::VrfKeyCreationError)));
     }
 
@@ -489,8 +561,8 @@ k7UXX8Wh7AgrK4A/MuZXJL30Cd/dgtlHzJWtlQevTII=
         let config1 = create_test_symmetric_config();
         let config2 = create_test_symmetric_config();
 
-        let (table_data1, vrf_key1) = super::VrfKeyTableData::new(config1).await.unwrap();
-        let (table_data2, vrf_key2) = super::VrfKeyTableData::new(config2).await.unwrap();
+        let (table_data1, vrf_key1) = super::VrfKeyTableData::new(&config1).await.unwrap();
+        let (table_data2, vrf_key2) = super::VrfKeyTableData::new(&config2).await.unwrap();
 
         assert_ne!(vrf_key1.0, vrf_key2.0);
         assert_ne!(
@@ -502,7 +574,7 @@ k7UXX8Wh7AgrK4A/MuZXJL30Cd/dgtlHzJWtlQevTII=
     #[tokio::test]
     pub async fn test_symmetric_key_not_persisted() {
         let config = create_test_symmetric_config();
-        let (table_data, _) = super::VrfKeyTableData::new(config).await.unwrap();
+        let (table_data, _) = super::VrfKeyTableData::new(&config).await.unwrap();
 
         let symmetric_key_bytes =
             bitwarden_encoding::B64::from_str(TEST_SYMMETRIC_KEY_B64).unwrap();
@@ -516,7 +588,7 @@ k7UXX8Wh7AgrK4A/MuZXJL30Cd/dgtlHzJWtlQevTII=
     #[tokio::test]
     pub async fn test_rsa_private_key_not_persisted() {
         let config = create_test_rsa_config();
-        let (table_data, _) = super::VrfKeyTableData::new(config).await.unwrap();
+        let (table_data, _) = super::VrfKeyTableData::new(&config).await.unwrap();
 
         let rsa_key = rsa::RsaPrivateKey::from_pkcs1_pem(TEST_RSA_PRIVATE_KEY).unwrap();
         let rsa_der = rsa_key.to_pkcs1_der().unwrap();
@@ -532,7 +604,7 @@ k7UXX8Wh7AgrK4A/MuZXJL30Cd/dgtlHzJWtlQevTII=
     #[tokio::test]
     pub async fn test_vrf_key_is_encrypted_at_rest() {
         let config = create_test_symmetric_config();
-        let (table_data, vrf_key) = super::VrfKeyTableData::new(config).await.unwrap();
+        let (table_data, vrf_key) = super::VrfKeyTableData::new(&config).await.unwrap();
 
         assert!(!table_data
             .sym_enc_vrf_key
@@ -543,7 +615,7 @@ k7UXX8Wh7AgrK4A/MuZXJL30Cd/dgtlHzJWtlQevTII=
     #[tokio::test]
     pub async fn test_symmetric_key_encryption_in_rsa_mode() {
         let config = create_test_rsa_config();
-        let (table_data, _) = super::VrfKeyTableData::new(config).await.unwrap();
+        let (table_data, _) = super::VrfKeyTableData::new(&config).await.unwrap();
 
         let enc_sym_key = table_data.enc_sym_key.as_ref().unwrap();
         let rsa_key = rsa::RsaPrivateKey::from_pkcs1_pem(TEST_RSA_PRIVATE_KEY).unwrap();
@@ -556,22 +628,22 @@ k7UXX8Wh7AgrK4A/MuZXJL30Cd/dgtlHzJWtlQevTII=
     #[tokio::test]
     pub async fn test_cannot_decrypt_symmetric_with_rsa_config() {
         let sym_config = create_test_symmetric_config();
-        let (table_data, _) = super::VrfKeyTableData::new(sym_config).await.unwrap();
+        let (table_data, _) = super::VrfKeyTableData::new(&sym_config).await.unwrap();
 
         let rsa_config = create_test_rsa_config();
 
-        let result = table_data.to_vrf_key(rsa_config).await;
+        let result = table_data.to_vrf_key(&rsa_config).await;
         assert!(matches!(result, Err(super::VrfKeyCreationError)));
     }
 
     #[tokio::test]
     pub async fn test_cannot_decrypt_rsa_with_symmetric_config() {
         let rsa_config = create_test_rsa_config();
-        let (table_data, _) = super::VrfKeyTableData::new(rsa_config).await.unwrap();
+        let (table_data, _) = super::VrfKeyTableData::new(&rsa_config).await.unwrap();
 
         let sym_config = create_test_symmetric_config();
 
-        let result = table_data.to_vrf_key(sym_config).await;
+        let result = table_data.to_vrf_key(&sym_config).await;
         assert!(matches!(result, Err(super::VrfKeyCreationError)));
     }
 }

@@ -21,6 +21,7 @@ bitwarden-akd-configuration = { path = "crates/bitwarden-akd-configuration" }
 blake3 = "1.8.2"
 common = { path = "crates/common" }
 config = "0.15.18"
+hex = "0.4.3"
 serde = { version = "1.0.228", features = ["derive"] }
 tokio = { version = "1.47.1", features = ["full"] }
 tracing = { version = "0.1.41" }

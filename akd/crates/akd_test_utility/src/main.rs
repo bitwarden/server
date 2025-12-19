@@ -1,8 +1,7 @@
-use akd::ecvrf::HardCodedAkdVRF;
-use akd::storage::StorageManager;
 use akd::Directory;
-use akd_storage::db_config::DbConfig;
-use akd_storage::DatabaseType;
+use akd_storage::akd_storage_config::AkdStorageConfig;
+use akd_storage::db_config::{DatabaseType, DbConfig};
+use akd_storage::AkdDatabase;
 use anyhow::{Context, Result};
 use clap::{Parser, ValueEnum};
 use commands::Command;
@@ -159,33 +158,37 @@ async fn main() -> Result<()> {
 
     // Create database connection
     info!("Connecting to MS SQL database");
-    let config = DbConfig::MsSql {
-        connection_string,
-        pool_size: args.pool_size,
+    let config = AkdStorageConfig {
+        db_config: DbConfig::MsSql {
+            connection_string: connection_string.clone(),
+            pool_size: args.pool_size,
+        },
+        cache_item_lifetime_ms: 30000,
+        cache_limit_bytes: None,
+        cache_clean_ms: 15000,
+        vrf_key_config: akd_storage::vrf_key_config::VrfKeyConfig::B64EncodedSymmetricKey {
+            key: "4AD95tg8tfveioyS/E2jAQw06FDTUCu+VSEZxa41wuM=".to_string(),
+        },
     };
-    let db = config
-        .connect()
+    let (storage_manager, state) = config
+        .initialize_storage()
         .await
-        .context("Failed to connect to database")?;
+        .context("Failed to initialize storage")?;
 
     // Handle pre-processing modes
-    if let Some(()) = pre_process_mode(&args, &db).await? {
+    if let Some(()) = pre_process_mode(&args, &state.db()).await? {
         return Ok(());
     }
 
-    let storage_manager = StorageManager::new(db.clone(), None, None, None);
-    let vrf = HardCodedAkdVRF {};
-    let mut directory = Directory::<TC, _, _>::new(storage_manager.clone(), vrf)
+    let mut directory = Directory::<TC, _, _>::new(storage_manager, state.vrf_key_database())
         .await
         .context("Failed to create AKD directory")?;
 
     let (tx, mut rx) = channel(2);
 
-    tokio::spawn(async move {
-        directory_host::init_host::<TC, _, HardCodedAkdVRF>(&mut rx, &mut directory).await
-    });
+    tokio::spawn(async move { directory_host::init_host(&mut rx, &mut directory).await });
 
-    process_mode(&args, &tx, &db).await?;
+    process_mode(&args, &tx, &state).await?;
 
     Ok(())
 }
@@ -221,7 +224,7 @@ async fn pre_process_mode(args: &CliArgs, db: &DatabaseType) -> Result<Option<()
 async fn process_mode(
     args: &CliArgs,
     tx: &Sender<directory_host::Rpc>,
-    db: &DatabaseType,
+    db: &AkdDatabase,
 ) -> Result<()> {
     if let Some(mode) = &args.mode {
         match mode {
@@ -260,7 +263,7 @@ async fn process_mode(
     Ok(())
 }
 
-async fn bench_db_insert(num_users: u64, db: &DatabaseType) -> Result<()> {
+async fn bench_db_insert(num_users: u64, db: &AkdDatabase) -> Result<()> {
     use owo_colors::OwoColorize;
 
     println!("{}", "======= Benchmark operation requested =======".cyan());
@@ -488,7 +491,7 @@ async fn bench_lookup(
 async fn repl_loop(
     _args: &CliArgs,
     tx: &Sender<directory_host::Rpc>,
-    db: &DatabaseType,
+    db: &AkdDatabase,
 ) -> Result<()> {
     loop {
         println!("Please enter a command");
@@ -498,7 +501,7 @@ async fn repl_loop(
         let mut line = String::new();
         stdin().read_line(&mut line)?;
 
-        match (db, Command::parse(&mut line)) {
+        match (db.db(), Command::parse(&mut line)) {
             (_, Command::Unknown(other)) => {
                 println!("Input '{other}' is not supported, enter 'help' for the help menu")
             }

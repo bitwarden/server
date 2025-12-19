@@ -94,6 +94,7 @@ dependencies = [
  "blake3",
  "chacha20poly1305",
  "ed25519-dalek",
+ "hex",
  "ms_database",
  "rand 0.8.5",
  "rsa",
