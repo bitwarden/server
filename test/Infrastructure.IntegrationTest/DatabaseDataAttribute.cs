@@ -140,7 +140,7 @@ public class DatabaseDataAttribute : DataAttribute
                 UserRequestExpiration = TimeSpan.FromMinutes(15),
             }
         };
-        services.AddDapperRepositories(SelfHosted, globalSettings);
+        services.AddDapperRepositories(SelfHosted);
         services.AddSingleton(globalSettings);
         services.AddSingleton<IGlobalSettings>(globalSettings);
         services.AddSingleton(database);
@@ -168,7 +168,7 @@ public class DatabaseDataAttribute : DataAttribute
                 UserRequestExpiration = TimeSpan.FromMinutes(15),
             },
         };
-        services.AddPasswordManagerEFRepositories(SelfHosted, globalSettings);
+        services.AddPasswordManagerEFRepositories(SelfHosted);
         services.AddSingleton(globalSettings);
         services.AddSingleton<IGlobalSettings>(globalSettings);
 

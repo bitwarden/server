@@ -1,4 +1,4 @@
-using Bit.Core.Services;
+﻿using Bit.Core.Services;
 using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Hosting;

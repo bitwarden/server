@@ -10,7 +10,6 @@ using Bit.Core.NotificationCenter.Repositories;
 using Bit.Core.Platform.Installations;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
-using Bit.Core.Settings;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Vault.Repositories;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
