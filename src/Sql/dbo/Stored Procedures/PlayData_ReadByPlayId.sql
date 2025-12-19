@@ -5,7 +5,11 @@ BEGIN
     SET NOCOUNT ON
 
     SELECT
-        *
+        [Id],
+        [PlayId],
+        [UserId],
+        [OrganizationId],
+        [CreationDate]
     FROM
         [dbo].[PlayData]
     WHERE

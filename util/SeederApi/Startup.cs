@@ -54,6 +54,12 @@ public class Startup
         IHostApplicationLifetime appLifetime,
         GlobalSettings globalSettings)
     {
+        if (env.IsProduction())
+        {
+            throw new InvalidOperationException(
+                "SeederApi cannot be run in production environments. This service is intended for test data generation only.");
+        }
+
         if (globalSettings.TestPlayIdTrackingEnabled)
         {
             app.UseMiddleware<PlayIdMiddleware>();

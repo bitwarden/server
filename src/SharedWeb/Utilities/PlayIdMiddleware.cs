@@ -11,13 +11,31 @@ namespace Bit.SharedWeb.Utilities;
 /// <param name="next"></param>
 public sealed class PlayIdMiddleware(RequestDelegate next)
 {
-    public Task Invoke(HttpContext context, PlayIdService playIdService)
+    private const int MaxPlayIdLength = 256;
+
+    public async Task Invoke(HttpContext context, PlayIdService playIdService)
     {
         if (context.Request.Headers.TryGetValue("x-play-id", out var playId))
         {
-            playIdService.PlayId = playId;
+            var playIdValue = playId.ToString();
+
+            if (string.IsNullOrWhiteSpace(playIdValue))
+            {
+                context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                await context.Response.WriteAsJsonAsync(new { Error = "x-play-id header cannot be empty or whitespace" });
+                return;
+            }
+
+            if (playIdValue.Length > MaxPlayIdLength)
+            {
+                context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                await context.Response.WriteAsJsonAsync(new { Error = $"x-play-id header cannot exceed {MaxPlayIdLength} characters" });
+                return;
+            }
+
+            playIdService.PlayId = playIdValue;
         }
 
-        return next(context);
+        await next(context);
     }
 }

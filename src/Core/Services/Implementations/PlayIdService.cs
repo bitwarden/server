@@ -29,6 +29,14 @@ public class NeverPlayIdServices : IPlayIdService
     }
 }
 
+/// <summary>
+/// Singleton wrapper service that bridges singleton-scoped service boundaries for PlayId tracking.
+/// This allows singleton services to access the scoped PlayIdService via HttpContext.RequestServices.
+///
+/// Uses IHttpContextAccessor to retrieve the current request's scoped PlayIdService instance, enabling
+/// singleton services to participate in Play session tracking without violating DI lifetime rules.
+/// Falls back to NeverPlayIdServices when no HttpContext is available (e.g., background jobs).
+/// </summary>
 public class PlayIdSingletonService(IHttpContextAccessor httpContextAccessor, IHostEnvironment hostEnvironment) : IPlayIdService
 {
     private IPlayIdService Current

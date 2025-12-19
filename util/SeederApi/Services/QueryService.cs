@@ -23,44 +23,7 @@ public class QueryService(
 
             var requestType = query.GetRequestType();
 
-            // Deserialize the arguments into the request model
-            object? requestModel;
-            if (arguments == null)
-            {
-                // Try to create an instance with default values
-                try
-                {
-                    requestModel = Activator.CreateInstance(requestType);
-                    if (requestModel == null)
-                    {
-                        throw new QueryExecutionException(
-                            $"Arguments are required for query '{queryName}'");
-                    }
-                }
-                catch
-                {
-                    throw new QueryExecutionException(
-                        $"Arguments are required for query '{queryName}'");
-                }
-            }
-            else
-            {
-                try
-                {
-                    requestModel = JsonSerializer.Deserialize(arguments.Value.GetRawText(), requestType, _jsonOptions);
-                    if (requestModel == null)
-                    {
-                        throw new QueryExecutionException(
-                            $"Failed to deserialize request model for query '{queryName}'");
-                    }
-                }
-                catch (JsonException ex)
-                {
-                    throw new QueryExecutionException(
-                        $"Failed to deserialize request model for query '{queryName}': {ex.Message}", ex);
-                }
-            }
-
+            var requestModel = DeserializeRequestModel(queryName, requestType, arguments);
             var result = query.Execute(requestModel);
 
             logger.LogInformation("Successfully executed query: {QueryName}", queryName);
@@ -72,6 +35,49 @@ public class QueryService(
             throw new QueryExecutionException(
                 $"An unexpected error occurred while executing query '{queryName}'",
                 ex.InnerException ?? ex);
+        }
+    }
+
+    private object DeserializeRequestModel(string queryName, Type requestType, JsonElement? arguments)
+    {
+        if (arguments == null)
+        {
+            return CreateDefaultRequestModel(queryName, requestType);
+        }
+
+        try
+        {
+            var requestModel = JsonSerializer.Deserialize(arguments.Value.GetRawText(), requestType, _jsonOptions);
+            if (requestModel == null)
+            {
+                throw new QueryExecutionException(
+                    $"Failed to deserialize request model for query '{queryName}'");
+            }
+            return requestModel;
+        }
+        catch (JsonException ex)
+        {
+            throw new QueryExecutionException(
+                $"Failed to deserialize request model for query '{queryName}': {ex.Message}", ex);
+        }
+    }
+
+    private object CreateDefaultRequestModel(string queryName, Type requestType)
+    {
+        try
+        {
+            var requestModel = Activator.CreateInstance(requestType);
+            if (requestModel == null)
+            {
+                throw new QueryExecutionException(
+                    $"Arguments are required for query '{queryName}'");
+            }
+            return requestModel;
+        }
+        catch
+        {
+            throw new QueryExecutionException(
+                $"Arguments are required for query '{queryName}'");
         }
     }
 }

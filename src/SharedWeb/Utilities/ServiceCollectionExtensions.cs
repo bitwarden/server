@@ -96,11 +96,11 @@ public static class ServiceCollectionExtensions
 
         if (provider != SupportedDatabaseProviders.SqlServer)
         {
-            services.AddPasswordManagerEFRepositories(globalSettings.SelfHosted, globalSettings);
+            services.AddPasswordManagerEFRepositories(globalSettings.SelfHosted);
         }
         else
         {
-            services.AddDapperRepositories(globalSettings.SelfHosted, globalSettings);
+            services.AddDapperRepositories(globalSettings.SelfHosted);
         }
 
         if (globalSettings.SelfHosted)
@@ -123,6 +123,16 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<IPlayDataService, PlayDataService>();
             services.AddSingleton<IPlayIdService, PlayIdSingletonService>();
             services.AddScoped<PlayIdService>();
+
+            // Replace standard repositories with PlayId tracking decorators
+            if (provider == SupportedDatabaseProviders.SqlServer)
+            {
+                services.AddPlayIdTrackingRepositories();
+            }
+            else
+            {
+                services.AddPlayIdTrackingEFRepositories();
+            }
         }
         else
         {
