@@ -285,7 +285,6 @@ CREATE OR ALTER PROCEDURE [dbo].[Organization_Update]
     @SyncSeats BIT = 0,
     @UseAutomaticUserConfirmation BIT = 0,
     @UsePhishingBlocker BIT = 0,
-    @MaxStorageGbIncreased BIT = 0,
     @UseDisableSmAdsForUsers BIT = 0
 AS
 BEGIN
@@ -394,7 +393,6 @@ BEGIN
         [UseAdminSponsoredFamilies],
         [UseAutomaticUserConfirmation],
         [UsePhishingBlocker],
-        [MaxStorageGbIncreased],
         [UseDisableSmAdsForUsers]
     FROM
         [dbo].[Organization]
