@@ -58,7 +58,6 @@ SELECT
     OS.[IsAdminInitiated],
     O.[UseAutomaticUserConfirmation],
     O.[UsePhishingBlocker],
-    O.[MaxStorageGbIncreased],
     O.[UseDisableSmAdsForUsers]
 FROM
     [dbo].[OrganizationUser] OU
@@ -125,7 +124,6 @@ SELECT
     SS.[Enabled] SsoEnabled,
     SS.[Data] SsoConfig,
     O.[UsePhishingBlocker],
-    O.[MaxStorageGbIncreased],
     O.[UseDisableSmAdsForUsers]
 FROM
     [dbo].[ProviderUser] PU
@@ -205,7 +203,6 @@ SELECT
     [SyncSeats],
     [UseAutomaticUserConfirmation],
     [UsePhishingBlocker],
-    [MaxStorageGbIncreased],
     [UseDisableSmAdsForUsers]
 FROM
     [dbo].[Organization]
