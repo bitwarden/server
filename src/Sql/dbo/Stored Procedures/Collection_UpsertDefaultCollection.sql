@@ -13,10 +13,10 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    BEGIN TRANSACTION;
+    BEGIN TRANSACTION
 
     BEGIN TRY
-        SET @WasCreated = 1;
+        SET @WasCreated = 1
 
         -- Insert Collection with DefaultCollectionOwner populated for constraint enforcement
         INSERT INTO [dbo].[Collection]
@@ -42,7 +42,7 @@ BEGIN
             NULL, -- DefaultUserCollectionEmail
             1, -- CollectionType.DefaultUserCollection
             @OrganizationUserId
-        );
+        )
 
         -- Insert CollectionUser
         INSERT INTO [dbo].[CollectionUser]
@@ -60,29 +60,28 @@ BEGIN
             0, -- ReadOnly = false
             0, -- HidePasswords = false
             1  -- Manage = true
-        );
+        )
 
         -- Bump user account revision dates
-        EXEC [dbo].[User_BumpAccountRevisionDateByCollectionId] @CollectionId, @OrganizationId;
+        EXEC [dbo].[User_BumpAccountRevisionDateByCollectionId] @CollectionId, @OrganizationId
 
-        COMMIT TRANSACTION;
+        COMMIT TRANSACTION
     END TRY
     BEGIN CATCH
         -- Check if error is unique constraint violation (error 2601 or 2627)
         IF ERROR_NUMBER() IN (2601, 2627)
         BEGIN
             -- Collection already exists, return gracefully
-            SET @WasCreated = 0;
+            SET @WasCreated = 0
             IF @@TRANCOUNT > 0
-                ROLLBACK TRANSACTION;
+                ROLLBACK TRANSACTION
         END
         ELSE
         BEGIN
             -- Unexpected error, rollback and re-throw
             IF @@TRANCOUNT > 0
-                ROLLBACK TRANSACTION;
-            THROW;
+                ROLLBACK TRANSACTION
+            THROW
         END
     END CATCH
 END
-GO
