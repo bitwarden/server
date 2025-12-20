@@ -1,7 +1,7 @@
 -- This procedure prevents duplicate "My Items" collections for users using
 -- a filtered unique constraint on (DefaultCollectionOwner, OrganizationId, Type) WHERE Type = 1.
 
-CREATE OR ALTER PROCEDURE [dbo].[Collection_UpsertDefaultCollection]
+CREATE PROCEDURE [dbo].[Collection_UpsertDefaultCollection]
     @CollectionId UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
     @OrganizationUserId UNIQUEIDENTIFIER,
