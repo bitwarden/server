@@ -1029,11 +1029,8 @@ public class CipherService : ICipherService
             var existingCipherData = DeserializeCipherData(existingCipher);
             var newCipherData = DeserializeCipherData(cipher);
 
-            // "hidden password" users may not add cipher key encryption
-            if (existingCipher.Key == null && cipher.Key != null)
-            {
-                throw new BadRequestException("You do not have permission to add cipher key encryption.");
-            }
+            // For hidden-password users, never allow Key to change at all.
+            cipher.Key = existingCipher.Key;
             // Keep only non-hidden fileds from the new cipher
             var nonHiddenFields = newCipherData.Fields?.Where(f => f.Type != FieldType.Hidden) ?? [];
             // Get hidden fields from the existing cipher
