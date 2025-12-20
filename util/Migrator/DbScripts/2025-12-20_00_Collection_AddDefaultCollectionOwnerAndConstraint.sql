@@ -1,3 +1,4 @@
+-- TODO! Handle existing data in MSSQL (and EF if releasing before this). This assumes the column is populated, if it isn't then it'll create at least 1 duplicate.
 -- Add DefaultCollectionOwner column to Collection table for Type=1 collections
 -- This enables a filtered unique constraint to prevent duplicate default collections
 
