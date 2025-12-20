@@ -10,7 +10,7 @@
     [DefaultCollectionOwner]        UNIQUEIDENTIFIER    NULL,
     CONSTRAINT [PK_Collection] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_Collection_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]) ON DELETE CASCADE,
-    CONSTRAINT [FK_Collection_OrganizationUser] FOREIGN KEY ([DefaultCollectionOwner]) REFERENCES [dbo].[OrganizationUser] ([Id]) ON DELETE SET NULL
+    CONSTRAINT [FK_Collection_OrganizationUser] FOREIGN KEY ([DefaultCollectionOwner]) REFERENCES [dbo].[OrganizationUser] ([Id]) ON DELETE NO ACTION
 );
 GO
 

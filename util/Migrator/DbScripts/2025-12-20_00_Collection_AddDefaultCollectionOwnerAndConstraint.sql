@@ -26,7 +26,7 @@ BEGIN
         ADD CONSTRAINT [FK_Collection_OrganizationUser]
         FOREIGN KEY ([DefaultCollectionOwner])
         REFERENCES [dbo].[OrganizationUser] ([Id])
-        ON DELETE SET NULL
+        ON DELETE NO ACTION
 END
 GO
 

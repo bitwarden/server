@@ -18,6 +18,14 @@ public class CollectionEntityTypeConfiguration : IEntityTypeConfiguration<Collec
             .HasFilter("[Type] = 1")
             .HasDatabaseName("IX_Collection_DefaultCollectionOwner_OrganizationId_Type");
 
+        // Configure FK with NO ACTION delete behavior to prevent cascade conflicts
+        // Cleanup is handled explicitly in OrganizationUserRepository.DeleteAsync
+        builder
+            .HasOne<OrganizationUser>()
+            .WithMany()
+            .HasForeignKey(c => c.DefaultCollectionOwner)
+            .OnDelete(DeleteBehavior.NoAction);
+
         builder.ToTable(nameof(Collection));
     }
 }

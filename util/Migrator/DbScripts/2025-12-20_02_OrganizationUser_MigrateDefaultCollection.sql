@@ -1,4 +1,7 @@
-CREATE PROCEDURE [dbo].[OrganizationUser_MigrateDefaultCollection]
+-- Update OrganizationUser_MigrateDefaultCollection to set DefaultCollectionOwner = NULL
+-- when migrating default collections to shared collections during OrganizationUser deletion
+
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_MigrateDefaultCollection]
     @Ids [dbo].[GuidIdArray] READONLY
 AS
 BEGIN

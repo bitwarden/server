@@ -114,7 +114,8 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                         .SetProperty(c => c.Type, CollectionType.SharedCollection)
                         .SetProperty(c => c.RevisionDate, utcNow)
                         .SetProperty(c => c.DefaultUserCollectionEmail,
-                            c => c.DefaultUserCollectionEmail == null ? email : c.DefaultUserCollectionEmail));
+                            c => c.DefaultUserCollectionEmail == null ? email : c.DefaultUserCollectionEmail)
+                        .SetProperty(c => c.DefaultCollectionOwner, (Guid?)null));
 
                 await dbContext.CollectionUsers
                     .Where(cu => cu.OrganizationUserId == organizationUser.Id)
