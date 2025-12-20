@@ -1,6 +1,6 @@
 -- Create the idempotent stored procedure for creating default collections
--- This procedure prevents duplicate "My Items" collections for users by checking
--- if a default collection already exists before attempting to create one.
+-- This procedure prevents duplicate "My Items" collections for users using
+-- a filtered unique constraint on (DefaultCollectionOwner, OrganizationId, Type) WHERE Type = 1.
 
 CREATE OR ALTER PROCEDURE [dbo].[Collection_UpsertDefaultCollection]
     @CollectionId UNIQUEIDENTIFIER,
@@ -14,34 +14,12 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- Use SERIALIZABLE isolation level to prevent race conditions during concurrent calls
-    SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
     BEGIN TRANSACTION;
 
     BEGIN TRY
-        DECLARE @ExistingCollectionId UNIQUEIDENTIFIER;
-
-        -- Check if this organization user already has a default collection
-        -- SERIALIZABLE ensures range locks prevent concurrent insertions
-        SELECT @ExistingCollectionId = c.Id
-        FROM [dbo].[Collection] c
-        INNER JOIN [dbo].[CollectionUser] cu ON cu.CollectionId = c.Id
-        WHERE cu.OrganizationUserId = @OrganizationUserId
-            AND c.OrganizationId = @OrganizationId
-            AND c.Type = 1; -- CollectionType.DefaultUserCollection
-
-        -- If collection already exists, return early
-        IF @ExistingCollectionId IS NOT NULL
-        BEGIN
-            SET @WasCreated = 0;
-            COMMIT TRANSACTION;
-            RETURN;
-        END
-
-        -- Create new default collection
         SET @WasCreated = 1;
 
-        -- Insert Collection
+        -- Insert Collection with DefaultCollectionOwner populated for constraint enforcement
         INSERT INTO [dbo].[Collection]
         (
             [Id],
@@ -51,7 +29,8 @@ BEGIN
             [CreationDate],
             [RevisionDate],
             [DefaultUserCollectionEmail],
-            [Type]
+            [Type],
+            [DefaultCollectionOwner]
         )
         VALUES
         (
@@ -62,7 +41,8 @@ BEGIN
             @CreationDate,
             @RevisionDate,
             NULL, -- DefaultUserCollectionEmail
-            1 -- CollectionType.DefaultUserCollection
+            1, -- CollectionType.DefaultUserCollection
+            @OrganizationUserId
         );
 
         -- Insert CollectionUser
@@ -89,9 +69,21 @@ BEGIN
         COMMIT TRANSACTION;
     END TRY
     BEGIN CATCH
-        IF @@TRANCOUNT > 0
-            ROLLBACK TRANSACTION;
-        THROW;
+        -- Check if error is unique constraint violation (error 2601 or 2627)
+        IF ERROR_NUMBER() IN (2601, 2627)
+        BEGIN
+            -- Collection already exists, return gracefully
+            SET @WasCreated = 0;
+            IF @@TRANCOUNT > 0
+                ROLLBACK TRANSACTION;
+        END
+        ELSE
+        BEGIN
+            -- Unexpected error, rollback and re-throw
+            IF @@TRANCOUNT > 0
+                ROLLBACK TRANSACTION;
+            THROW;
+        END
     END CATCH
 END
 GO

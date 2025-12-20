@@ -826,76 +826,56 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        // Use EF's execution strategy to handle transient failures (including deadlocks)
-        var strategy = dbContext.Database.CreateExecutionStrategy();
-
-        return await strategy.ExecuteAsync(async () =>
+        try
         {
-            // Use SERIALIZABLE isolation level to prevent race conditions during concurrent calls
-            using var transaction = await dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+            // Create new default collection
+            var collectionId = CoreHelpers.GenerateComb();
+            var now = DateTime.UtcNow;
 
-            try
+            var collection = new Collection
             {
-                // Check if this organization user already has a default collection
-                // SERIALIZABLE ensures this SELECT acquires range locks
-                var existingDefaultCollection = await (
-                    from c in dbContext.Collections
-                    join cu in dbContext.CollectionUsers on c.Id equals cu.CollectionId
-                    where cu.OrganizationUserId == organizationUserId
-                        && c.OrganizationId == organizationId
-                        && c.Type == CollectionType.DefaultUserCollection
-                    select c
-                ).FirstOrDefaultAsync();
+                Id = collectionId,
+                OrganizationId = organizationId,
+                Name = defaultCollectionName,
+                ExternalId = null,
+                CreationDate = now,
+                RevisionDate = now,
+                Type = CollectionType.DefaultUserCollection,
+                DefaultUserCollectionEmail = null,
+                DefaultCollectionOwner = organizationUserId
+            };
 
-                // If collection already exists, return false (not created)
-                if (existingDefaultCollection != null)
-                {
-                    await transaction.CommitAsync();
-                    return false;
-                }
-
-                // Create new default collection
-                var collectionId = CoreHelpers.GenerateComb();
-                var now = DateTime.UtcNow;
-
-                var collection = new Collection
-                {
-                    Id = collectionId,
-                    OrganizationId = organizationId,
-                    Name = defaultCollectionName,
-                    ExternalId = null,
-                    CreationDate = now,
-                    RevisionDate = now,
-                    Type = CollectionType.DefaultUserCollection,
-                    DefaultUserCollectionEmail = null
-                };
-
-                var collectionUser = new CollectionUser
-                {
-                    CollectionId = collectionId,
-                    OrganizationUserId = organizationUserId,
-                    ReadOnly = false,
-                    HidePasswords = false,
-                    Manage = true
-                };
-
-                await dbContext.Collections.AddAsync(collection);
-                await dbContext.CollectionUsers.AddAsync(collectionUser);
-                await dbContext.SaveChangesAsync();
-
-                // Bump user account revision dates
-                await dbContext.UserBumpAccountRevisionDateByCollectionIdAsync(collectionId, organizationId);
-                await dbContext.SaveChangesAsync();
-
-                await transaction.CommitAsync();
-                return true;
-            }
-            catch
+            var collectionUser = new CollectionUser
             {
-                await transaction.RollbackAsync();
-                throw;
-            }
-        });
+                CollectionId = collectionId,
+                OrganizationUserId = organizationUserId,
+                ReadOnly = false,
+                HidePasswords = false,
+                Manage = true
+            };
+
+            await dbContext.Collections.AddAsync(collection);
+            await dbContext.CollectionUsers.AddAsync(collectionUser);
+            await dbContext.SaveChangesAsync();
+
+            // Bump user account revision dates
+            await dbContext.UserBumpAccountRevisionDateByCollectionIdAsync(collectionId, organizationId);
+            await dbContext.SaveChangesAsync();
+
+            return true;
+        }
+        catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
+        {
+            // Collection already exists, return false
+            return false;
+        }
+    }
+
+    private static bool IsUniqueConstraintViolation(DbUpdateException ex)
+    {
+        // Check if the inner exception is a SqlException with error 2601 or 2627
+        return ex.InnerException is Microsoft.Data.SqlClient.SqlException sqlEx
+            && (sqlEx.Number == 2601 || sqlEx.Number == 2627);
     }
 
     private async Task<HashSet<Guid>> GetOrgUserIdsWithDefaultCollectionAsync(DatabaseContext dbContext, Guid organizationId)
@@ -938,8 +918,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                 CreationDate = DateTime.UtcNow,
                 RevisionDate = DateTime.UtcNow,
                 Type = CollectionType.DefaultUserCollection,
-                DefaultUserCollectionEmail = null
-
+                DefaultUserCollectionEmail = null,
+                DefaultCollectionOwner = orgUserId
             });
 
             collectionUsers.Add(new CollectionUser
