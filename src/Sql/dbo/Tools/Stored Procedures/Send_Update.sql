@@ -2,7 +2,6 @@
     @Id UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
-    @Type TINYINT,
     @AuthType TINYINT,
     @Data VARCHAR(MAX),
     @Key VARCHAR(MAX),
@@ -16,7 +15,8 @@
     @Disabled BIT,
     @HideEmail BIT,
     @CipherId UNIQUEIDENTIFIER = NULL,
-    @Emails NVARCHAR(4000) = NULL
+    @Emails NVARCHAR(4000) = NULL,
+    @Type TINYINT = 2
 AS
 BEGIN
     SET NOCOUNT ON

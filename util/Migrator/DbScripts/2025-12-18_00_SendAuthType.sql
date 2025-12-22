@@ -138,3 +138,5 @@ BEGIN
     -- TODO: OrganizationId bump?
 END
 GO
+EXECUTE sp_refreshview N'[dbo].[SendView]'
+GO

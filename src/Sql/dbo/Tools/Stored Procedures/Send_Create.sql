@@ -3,7 +3,6 @@
     @UserId UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
     @Type TINYINT,
-    @AuthType TINYINT,
     @Data VARCHAR(MAX),
     @Key VARCHAR(MAX),
     @Password NVARCHAR(300),
@@ -18,7 +17,8 @@
     @CipherId UNIQUEIDENTIFIER = NULL,
 --  FIXME: remove null default value once this argument has been
 --         in 2 server releases
-    @Emails NVARCHAR(4000) = NULL
+    @Emails NVARCHAR(4000) = NULL,
+    @AuthType TINYINT = 2
 AS
 BEGIN
     SET NOCOUNT ON
@@ -50,7 +50,7 @@ BEGIN
         @UserId,
         @OrganizationId,
         @Type,
-     @AuthType,
+        @AuthType,
         @Data,
         @Key,
         @Password,

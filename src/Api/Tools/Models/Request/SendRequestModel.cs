@@ -3,6 +3,7 @@
 
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
+using Bit.Api.Tools.Utilities;
 using Bit.Core.Exceptions;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
@@ -101,7 +102,7 @@ public class SendRequestModel
     /// Comma-separated list of emails that may access the send using OTP
     /// authentication. Mutually exclusive with <see cref="Password"/>.
     /// </summary>
-    [StringLength(1024)]
+    [StringLength(4000)]
     public string Emails { get; set; }
 
     /// <summary>
@@ -264,18 +265,7 @@ public class SendRequestModel
         else
         {
             // Neither Password nor Emails provided - preserve existing values and infer AuthType
-            if (!string.IsNullOrWhiteSpace(existingSend.Password))
-            {
-                existingSend.AuthType = Core.Tools.Enums.AuthType.Password;
-            }
-            else if (!string.IsNullOrWhiteSpace(existingSend.Emails))
-            {
-                existingSend.AuthType = Core.Tools.Enums.AuthType.Email;
-            }
-            else
-            {
-                existingSend.AuthType = Core.Tools.Enums.AuthType.None;
-            }
+            existingSend.AuthType = SendUtilities.InferAuthType(existingSend);
         }
 
         existingSend.Disabled = Disabled.GetValueOrDefault();
