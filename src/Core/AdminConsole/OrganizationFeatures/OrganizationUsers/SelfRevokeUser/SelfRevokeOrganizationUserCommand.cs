@@ -1,5 +1,6 @@
-﻿using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.Repositories;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
@@ -10,33 +11,39 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.SelfRevok
 
 public class SelfRevokeOrganizationUserCommand(
     IOrganizationUserRepository organizationUserRepository,
-    IPolicyRepository policyRepository,
+    IPolicyRequirementQuery policyRequirementQuery,
+    IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
     IEventService eventService,
     IPushNotificationService pushNotificationService)
     : ISelfRevokeOrganizationUserCommand
 {
     public async Task SelfRevokeUserAsync(Guid organizationId, Guid userId)
     {
-        var policy = await policyRepository.GetByOrganizationIdTypeAsync(organizationId, PolicyType.OrganizationDataOwnership);
-        if (policy is not { Enabled: true })
-        {
-            throw new BadRequestException("Organization data ownership policy is not enabled.");
-        }
-
         var organizationUser = await organizationUserRepository.GetByOrganizationAsync(organizationId, userId);
         if (organizationUser == null)
         {
             throw new NotFoundException();
         }
 
-        if (organizationUser.Type is OrganizationUserType.Owner or OrganizationUserType.Admin)
+        var policyRequirement = await policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(userId);
+
+        if (!policyRequirement.EligibleForSelfRevoke(organizationId))
         {
-            throw new BadRequestException("Owners and Admins are exempt from the organization data ownership policy.");
+            throw new BadRequestException("User is not eligible for self-revocation. The organization data ownership policy must be enabled and the user must be a confirmed member.");
         }
 
-        if (organizationUser.Status is not OrganizationUserStatusType.Confirmed)
+        // Prevent the last owner from revoking themselves, which would brick the organization
+        if (organizationUser.Type == OrganizationUserType.Owner)
         {
-            throw new BadRequestException("User must be confirmed to self-revoke.");
+            var hasOtherOwner = await hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(
+                organizationId,
+                [organizationUser.Id],
+                includeProvider: true);
+
+            if (!hasOtherOwner)
+            {
+                throw new BadRequestException("The last owner cannot revoke themselves.");
+            }
         }
 
         await organizationUserRepository.RevokeAsync(organizationUser.Id);

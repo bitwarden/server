@@ -1,7 +1,9 @@
-﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Enums;
+﻿using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.SelfRevokeUser;
-using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -22,29 +24,42 @@ public class SelfRevokeOrganizationUserCommandTests
     [Theory]
     [BitAutoData(OrganizationUserType.User)]
     [BitAutoData(OrganizationUserType.Custom)]
+    [BitAutoData(OrganizationUserType.Admin)]
     public async Task SelfRevokeUser_Success(
         OrganizationUserType userType,
         Guid organizationId,
         Guid userId,
         [OrganizationUser(OrganizationUserStatusType.Confirmed)] OrganizationUser organizationUser,
-        Policy policy,
         SutProvider<SelfRevokeOrganizationUserCommand> sutProvider)
     {
         // Arrange
         organizationUser.Type = userType;
         organizationUser.OrganizationId = organizationId;
         organizationUser.UserId = userId;
-        policy.Type = PolicyType.OrganizationDataOwnership;
-        policy.Enabled = true;
-        policy.OrganizationId = organizationId;
-
-        sutProvider.GetDependency<IPolicyRepository>()
-            .GetByOrganizationIdTypeAsync(organizationId, PolicyType.OrganizationDataOwnership)
-            .Returns(policy);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByOrganizationAsync(organizationId, userId)
             .Returns(organizationUser);
+
+        // Create policy requirement with confirmed user
+        var policyDetails = new List<PolicyDetails>
+        {
+            new()
+            {
+                OrganizationId = organizationId,
+                OrganizationUserId = organizationUser.Id,
+                OrganizationUserStatus = OrganizationUserStatusType.Confirmed,
+                OrganizationUserType = userType,
+                PolicyType = PolicyType.OrganizationDataOwnership
+            }
+        };
+        var policyRequirement = new OrganizationDataOwnershipPolicyRequirement(
+            OrganizationDataOwnershipState.Enabled,
+            policyDetails);
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(userId)
+            .Returns(policyRequirement);
 
         // Act
         await sutProvider.Sut.SelfRevokeUserAsync(organizationId, userId);
@@ -64,131 +79,12 @@ public class SelfRevokeOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task SelfRevokeUser_WhenPolicyDisabled_ThrowsBadRequest(
-        Guid organizationId,
-        Guid userId,
-        Policy policy,
-        SutProvider<SelfRevokeOrganizationUserCommand> sutProvider)
-    {
-        // Arrange
-        policy.Type = PolicyType.OrganizationDataOwnership;
-        policy.Enabled = false;
-        policy.OrganizationId = organizationId;
-
-        sutProvider.GetDependency<IPolicyRepository>()
-            .GetByOrganizationIdTypeAsync(organizationId, PolicyType.OrganizationDataOwnership)
-            .Returns(policy);
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SelfRevokeUserAsync(organizationId, userId));
-
-        Assert.Contains("policy is not enabled", exception.Message);
-    }
-
-    [Theory, BitAutoData]
-    public async Task SelfRevokeUser_WhenPolicyNotFound_ThrowsBadRequest(
-        Guid organizationId,
-        Guid userId,
-        SutProvider<SelfRevokeOrganizationUserCommand> sutProvider)
-    {
-        // Arrange
-        sutProvider.GetDependency<IPolicyRepository>()
-            .GetByOrganizationIdTypeAsync(organizationId, PolicyType.OrganizationDataOwnership)
-            .Returns((Policy)null);
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SelfRevokeUserAsync(organizationId, userId));
-
-        Assert.Contains("policy is not enabled", exception.Message);
-    }
-
-    [Theory]
-    [BitAutoData(OrganizationUserType.Owner)]
-    [BitAutoData(OrganizationUserType.Admin)]
-    public async Task SelfRevokeUser_WhenUserIsOwnerOrAdmin_ThrowsBadRequest(
-        OrganizationUserType userType,
-        Guid organizationId,
-        Guid userId,
-        [OrganizationUser(OrganizationUserStatusType.Confirmed)] OrganizationUser organizationUser,
-        Policy policy,
-        SutProvider<SelfRevokeOrganizationUserCommand> sutProvider)
-    {
-        // Arrange
-        organizationUser.Type = userType;
-        organizationUser.OrganizationId = organizationId;
-        organizationUser.UserId = userId;
-        policy.Type = PolicyType.OrganizationDataOwnership;
-        policy.Enabled = true;
-        policy.OrganizationId = organizationId;
-
-        sutProvider.GetDependency<IPolicyRepository>()
-            .GetByOrganizationIdTypeAsync(organizationId, PolicyType.OrganizationDataOwnership)
-            .Returns(policy);
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByOrganizationAsync(organizationId, userId)
-            .Returns(organizationUser);
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SelfRevokeUserAsync(organizationId, userId));
-
-        Assert.Contains("exempt from the organization data ownership policy", exception.Message);
-    }
-
-    [Theory]
-    [BitAutoData(OrganizationUserStatusType.Invited)]
-    [BitAutoData(OrganizationUserStatusType.Accepted)]
-    public async Task SelfRevokeUser_WhenUserNotConfirmed_ThrowsBadRequest(
-        OrganizationUserStatusType status,
-        Guid organizationId,
-        Guid userId,
-        OrganizationUser organizationUser,
-        Policy policy,
-        SutProvider<SelfRevokeOrganizationUserCommand> sutProvider)
-    {
-        // Arrange
-        organizationUser.Status = status;
-        organizationUser.Type = OrganizationUserType.User;
-        organizationUser.OrganizationId = organizationId;
-        organizationUser.UserId = userId;
-        policy.Type = PolicyType.OrganizationDataOwnership;
-        policy.Enabled = true;
-        policy.OrganizationId = organizationId;
-
-        sutProvider.GetDependency<IPolicyRepository>()
-            .GetByOrganizationIdTypeAsync(organizationId, PolicyType.OrganizationDataOwnership)
-            .Returns(policy);
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByOrganizationAsync(organizationId, userId)
-            .Returns(organizationUser);
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SelfRevokeUserAsync(organizationId, userId));
-
-        Assert.Contains("User must be confirmed to self-revoke", exception.Message);
-    }
-
-    [Theory, BitAutoData]
     public async Task SelfRevokeUser_WhenUserNotFound_ThrowsNotFoundException(
         Guid organizationId,
         Guid userId,
-        Policy policy,
         SutProvider<SelfRevokeOrganizationUserCommand> sutProvider)
     {
         // Arrange
-        policy.Type = PolicyType.OrganizationDataOwnership;
-        policy.Enabled = true;
-        policy.OrganizationId = organizationId;
-
-        sutProvider.GetDependency<IPolicyRepository>()
-            .GetByOrganizationIdTypeAsync(organizationId, PolicyType.OrganizationDataOwnership)
-            .Returns(policy);
-
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByOrganizationAsync(organizationId, userId)
             .Returns((OrganizationUser)null);
@@ -196,5 +92,134 @@ public class SelfRevokeOrganizationUserCommandTests
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.SelfRevokeUserAsync(organizationId, userId));
+    }
+
+    [Theory, BitAutoData]
+    public async Task SelfRevokeUser_WhenNotEligible_ThrowsBadRequest(
+        Guid organizationId,
+        Guid userId,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser organizationUser,
+        SutProvider<SelfRevokeOrganizationUserCommand> sutProvider)
+    {
+        // Arrange
+        organizationUser.OrganizationId = organizationId;
+        organizationUser.UserId = userId;
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(organizationId, userId)
+            .Returns(organizationUser);
+
+        // Policy requirement with no policies (disabled)
+        var policyRequirement = new OrganizationDataOwnershipPolicyRequirement(
+            OrganizationDataOwnershipState.Disabled,
+            Enumerable.Empty<PolicyDetails>());
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(userId)
+            .Returns(policyRequirement);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SelfRevokeUserAsync(organizationId, userId));
+
+        Assert.Contains("not eligible for self-revocation", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SelfRevokeUser_WhenLastOwner_ThrowsBadRequest(
+        Guid organizationId,
+        Guid userId,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser organizationUser,
+        SutProvider<SelfRevokeOrganizationUserCommand> sutProvider)
+    {
+        // Arrange
+        organizationUser.OrganizationId = organizationId;
+        organizationUser.UserId = userId;
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(organizationId, userId)
+            .Returns(organizationUser);
+
+        // Create policy requirement with confirmed owner
+        var policyDetails = new List<PolicyDetails>
+        {
+            new()
+            {
+                OrganizationId = organizationId,
+                OrganizationUserId = organizationUser.Id,
+                OrganizationUserStatus = OrganizationUserStatusType.Confirmed,
+                OrganizationUserType = OrganizationUserType.Owner,
+                PolicyType = PolicyType.OrganizationDataOwnership
+            }
+        };
+        var policyRequirement = new OrganizationDataOwnershipPolicyRequirement(
+            OrganizationDataOwnershipState.Enabled,
+            policyDetails);
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(userId)
+            .Returns(policyRequirement);
+
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>(), true)
+            .Returns(false);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SelfRevokeUserAsync(organizationId, userId));
+
+        Assert.Contains("last owner cannot revoke themselves", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SelfRevokeUser_WhenOwnerButNotLastOwner_Success(
+        Guid organizationId,
+        Guid userId,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser organizationUser,
+        SutProvider<SelfRevokeOrganizationUserCommand> sutProvider)
+    {
+        // Arrange
+        organizationUser.OrganizationId = organizationId;
+        organizationUser.UserId = userId;
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(organizationId, userId)
+            .Returns(organizationUser);
+
+        // Create policy requirement with confirmed owner
+        var policyDetails = new List<PolicyDetails>
+        {
+            new()
+            {
+                OrganizationId = organizationId,
+                OrganizationUserId = organizationUser.Id,
+                OrganizationUserStatus = OrganizationUserStatusType.Confirmed,
+                OrganizationUserType = OrganizationUserType.Owner,
+                PolicyType = PolicyType.OrganizationDataOwnership
+            }
+        };
+        var policyRequirement = new OrganizationDataOwnershipPolicyRequirement(
+            OrganizationDataOwnershipState.Enabled,
+            policyDetails);
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(userId)
+            .Returns(policyRequirement);
+
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>(), true)
+            .Returns(true);
+
+        // Act
+        await sutProvider.Sut.SelfRevokeUserAsync(organizationId, userId);
+
+        // Assert
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .RevokeAsync(organizationUser.Id);
+
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_SelfRevoked);
     }
 }
