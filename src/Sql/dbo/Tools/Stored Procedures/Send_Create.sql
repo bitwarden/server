@@ -29,7 +29,6 @@ BEGIN
         [UserId],
         [OrganizationId],
         [Type],
-        [AuthType],
         [Data],
         [Key],
         [Password],
@@ -42,7 +41,8 @@ BEGIN
         [Disabled],
         [HideEmail],
         [CipherId],
-        [Emails]
+        [Emails],
+        [AuthType]
     )
     VALUES
     (
@@ -50,7 +50,6 @@ BEGIN
         @UserId,
         @OrganizationId,
         @Type,
-        @AuthType,
         @Data,
         @Key,
         @Password,
@@ -63,7 +62,8 @@ BEGIN
         @Disabled,
         @HideEmail,
         @CipherId,
-        @Emails
+        @Emails,
+        @AuthType
     )
 
     IF @UserId IS NOT NULL

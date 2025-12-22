@@ -17,7 +17,6 @@ CREATE OR ALTER PROCEDURE [dbo].[Send_Create]
     @UserId UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
     @Type TINYINT,
-    @AuthType TINYINT,
     @Data VARCHAR(MAX),
     @Key VARCHAR(MAX),
     @Password NVARCHAR(300),
@@ -30,7 +29,8 @@ CREATE OR ALTER PROCEDURE [dbo].[Send_Create]
     @Disabled BIT,
     @HideEmail BIT,
     @CipherId UNIQUEIDENTIFIER = NULL,
-    @Emails NVARCHAR(4000) = NULL
+    @Emails NVARCHAR(4000) = NULL,
+    @AuthType TINYINT = 2
 AS
 BEGIN
     SET NOCOUNT ON
@@ -41,7 +41,6 @@ BEGIN
         [UserId],
         [OrganizationId],
         [Type],
-        [AuthType],
         [Data],
         [Key],
         [Password],
@@ -54,7 +53,8 @@ BEGIN
         [Disabled],
         [HideEmail],
         [CipherId],
-        [Emails]
+        [Emails],
+        [AuthType]
     )
     VALUES
     (
@@ -62,7 +62,6 @@ BEGIN
         @UserId,
         @OrganizationId,
         @Type,
-        @AuthType,
         @Data,
         @Key,
         @Password,
@@ -75,7 +74,8 @@ BEGIN
         @Disabled,
         @HideEmail,
         @CipherId,
-        @Emails
+        @Emails,
+        @AuthType
     )
 
     IF @UserId IS NOT NULL
@@ -96,7 +96,6 @@ CREATE OR ALTER PROCEDURE [dbo].[Send_Update]
     @UserId UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
     @Type TINYINT,
-    @AuthType TINYINT,
     @Data VARCHAR(MAX),
     @Key VARCHAR(MAX),
     @Password NVARCHAR(300),
@@ -109,7 +108,8 @@ CREATE OR ALTER PROCEDURE [dbo].[Send_Update]
     @Disabled BIT,
     @HideEmail BIT,
     @CipherId UNIQUEIDENTIFIER = NULL,
-    @Emails NVARCHAR(4000) = NULL
+    @Emails NVARCHAR(4000) = NULL,
+    @AuthType TINYINT = 2
 AS
 BEGIN
     SET NOCOUNT ON
@@ -120,7 +120,6 @@ BEGIN
         [UserId] = @UserId,
         [OrganizationId] = @OrganizationId,
         [Type] = @Type,
-        [AuthType] = @AuthType,
         [Data] = @Data,
         [Key] = @Key,
         [Password] = @Password,
@@ -133,7 +132,8 @@ BEGIN
         [Disabled] = @Disabled,
         [HideEmail] = @HideEmail,
         [CipherId] = @CipherId,
-        [Emails] = @Emails
+        [Emails] = @Emails,
+        [AuthType] = @AuthType
     WHERE
         [Id] = @Id
 
