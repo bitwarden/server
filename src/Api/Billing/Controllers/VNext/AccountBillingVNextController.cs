@@ -1,11 +1,15 @@
 ﻿using Bit.Api.Billing.Attributes;
 using Bit.Api.Billing.Models.Requests.Payment;
 using Bit.Api.Billing.Models.Requests.Premium;
+using Bit.Api.Models.Response;
 using Bit.Core;
 using Bit.Core.Billing.Payment.Commands;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Premium.Commands;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
+using Bit.Core.Exceptions;
+using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -21,7 +25,9 @@ public class AccountBillingVNextController(
     ICreatePremiumCloudHostedSubscriptionCommand createPremiumCloudHostedSubscriptionCommand,
     IGetCreditQuery getCreditQuery,
     IGetPaymentMethodQuery getPaymentMethodQuery,
-    IUpdatePaymentMethodCommand updatePaymentMethodCommand) : BaseBillingController
+    IUpdatePaymentMethodCommand updatePaymentMethodCommand,
+    IUserService userService,
+    ILicensingService licensingService) : BaseBillingController
 {
     [HttpGet("credit")]
     [InjectUser]
@@ -76,5 +82,22 @@ public class AccountBillingVNextController(
         var result = await createPremiumCloudHostedSubscriptionCommand.Run(
             user, paymentMethod, billingAddress, additionalStorageGb);
         return Handle(result);
+    }
+
+    [HttpGet("license")]
+    [InjectUser]
+    public async Task<IResult> GetLicenseAsync(
+        [BindNever] User user)
+    {
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        var license = await userService.GenerateLicenseAsync(user);
+        var claimsPrincipal = licensingService.GetClaimsPrincipalFromLicense(license);
+        var response = new LicenseResponseModel(license, claimsPrincipal);
+
+        return TypedResults.Ok(response);
     }
 }

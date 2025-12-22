@@ -1,7 +1,4 @@
-﻿using System.Security.Claims;
-using Bit.Core.Billing.Constants;
-using Bit.Core.Billing.Licenses;
-using Bit.Core.Billing.Licenses.Extensions;
+﻿using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Entities;
 using Bit.Core.Models.Api;
@@ -15,42 +12,13 @@ public class SubscriptionResponseModel : ResponseModel
 
     /// <param name="user">The user entity containing storage and premium subscription information</param>
     /// <param name="subscription">Subscription information retrieved from the payment provider (Stripe/Braintree)</param>
-    /// <param name="license">The user's license containing expiration and feature entitlements</param>
     /// <param name="includeMilestone2Discount">
     /// Whether to include discount information in the response.
     /// Set to true when the PM23341_Milestone_2 feature flag is enabled AND
     /// you want to expose Milestone 2 discount information to the client.
     /// The discount will only be included if it matches the specific Milestone 2 coupon ID.
     /// </param>
-    public SubscriptionResponseModel(User user, SubscriptionInfo subscription, UserLicense license, bool includeMilestone2Discount = false)
-        : base("subscription")
-    {
-        Subscription = subscription.Subscription != null ? new BillingSubscription(subscription.Subscription) : null;
-        UpcomingInvoice = subscription.UpcomingInvoice != null ?
-            new BillingSubscriptionUpcomingInvoice(subscription.UpcomingInvoice) : null;
-        StorageName = user.Storage.HasValue ? CoreHelpers.ReadableBytesSize(user.Storage.Value) : null;
-        StorageGb = user.Storage.HasValue ? Math.Round(user.Storage.Value / 1073741824D, 2) : 0; // 1 GB
-        MaxStorageGb = user.MaxStorageGb;
-        License = license;
-        Expiration = License.Expires;
-
-        // Only display the Milestone 2 subscription discount on the subscription page.
-        CustomerDiscount = ShouldIncludeMilestone2Discount(includeMilestone2Discount, subscription.CustomerDiscount)
-            ? new BillingCustomerDiscount(subscription.CustomerDiscount!)
-            : null;
-    }
-
-    /// <param name="user">The user entity containing storage and premium subscription information</param>
-    /// <param name="subscription">Subscription information retrieved from the payment provider (Stripe/Braintree)</param>
-    /// <param name="license">The user's license containing expiration and feature entitlements</param>
-    /// <param name="claimsPrincipal">The claims principal containing cryptographically secure token claims</param>
-    /// <param name="includeMilestone2Discount">
-    /// Whether to include discount information in the response.
-    /// Set to true when the PM23341_Milestone_2 feature flag is enabled AND
-    /// you want to expose Milestone 2 discount information to the client.
-    /// The discount will only be included if it matches the specific Milestone 2 coupon ID.
-    /// </param>
-    public SubscriptionResponseModel(User user, SubscriptionInfo? subscription, UserLicense license, ClaimsPrincipal? claimsPrincipal, bool includeMilestone2Discount = false)
+    public SubscriptionResponseModel(User user, SubscriptionInfo? subscription, bool includeMilestone2Discount = false)
         : base("subscription")
     {
         Subscription = subscription?.Subscription != null ? new BillingSubscription(subscription.Subscription) : null;
@@ -59,20 +27,6 @@ public class SubscriptionResponseModel : ResponseModel
         StorageName = user.Storage.HasValue ? CoreHelpers.ReadableBytesSize(user.Storage.Value) : null;
         StorageGb = user.Storage.HasValue ? Math.Round(user.Storage.Value / 1073741824D, 2) : 0; // 1 GB
         MaxStorageGb = user.MaxStorageGb;
-        License = license;
-
-        // CRITICAL: When a license has a Token (JWT), ALWAYS use the expiration from the token claim
-        // The token's expiration is cryptographically secured and cannot be tampered with
-        // The file's Expires property can be manually edited and should NOT be trusted for display
-        if (claimsPrincipal != null)
-        {
-            Expiration = claimsPrincipal.GetValue<DateTime?>(UserLicenseConstants.Expires);
-        }
-        else
-        {
-            // No token - use the license file expiration (for older licenses without tokens)
-            Expiration = License.Expires;
-        }
 
         // Only display the Milestone 2 subscription discount on the subscription page.
         CustomerDiscount = ShouldIncludeMilestone2Discount(includeMilestone2Discount, subscription?.CustomerDiscount)
@@ -80,18 +34,12 @@ public class SubscriptionResponseModel : ResponseModel
             : null;
     }
 
-    public SubscriptionResponseModel(User user, UserLicense? license = null)
+    public SubscriptionResponseModel(User user)
         : base("subscription")
     {
         StorageName = user.Storage.HasValue ? CoreHelpers.ReadableBytesSize(user.Storage.Value) : null;
         StorageGb = user.Storage.HasValue ? Math.Round(user.Storage.Value / 1073741824D, 2) : 0; // 1 GB
         MaxStorageGb = user.MaxStorageGb;
-        Expiration = user.PremiumExpirationDate;
-
-        if (license != null)
-        {
-            License = license;
-        }
     }
 
     public string? StorageName { get; set; }
@@ -113,8 +61,6 @@ public class SubscriptionResponseModel : ResponseModel
     /// </para>
     /// </summary>
     public BillingCustomerDiscount? CustomerDiscount { get; set; }
-    public UserLicense? License { get; set; }
-    public DateTime? Expiration { get; set; }
 
     /// <summary>
     /// Determines whether the Milestone 2 discount should be included in the response.
