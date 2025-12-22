@@ -1,4 +1,7 @@
 ﻿using AutoMapper;
+using Bit.Core;
+using Bit.Core.Billing.Premium.Models;
+using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
@@ -350,6 +353,36 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         return result.FirstOrDefault();
     }
 
+    public async Task<IEnumerable<UserPremiumAccess>> GetPremiumAccessByIdsAsync(IEnumerable<Guid> ids)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+
+            var users = await dbContext.Users
+                .Where(x => ids.Contains(x.Id))
+                .Include(u => u.OrganizationUsers)
+                    .ThenInclude(ou => ou.Organization)
+                .ToListAsync();
+
+            return users.Select(user => new UserPremiumAccess
+            {
+                Id = user.Id,
+                PersonalPremium = user.Premium,
+                OrganizationPremium = user.OrganizationUsers
+                    .Any(ou => ou.Organization != null &&
+                               ou.Organization.Enabled == true &&
+                               ou.Organization.UsersGetPremium == true)
+            }).ToList();
+        }
+    }
+
+    public async Task<UserPremiumAccess?> GetPremiumAccessAsync(Guid userId)
+    {
+        var result = await GetPremiumAccessByIdsAsync([userId]);
+        return result.FirstOrDefault();
+    }
+
     public override async Task DeleteAsync(Core.Entities.User user)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -446,6 +479,35 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             await dbContext.SaveChangesAsync();
             await transaction.CommitAsync();
         }
+    }
+
+    public UpdateUserData SetKeyConnectorUserKey(Guid userId, string keyConnectorWrappedUserKey)
+    {
+        return async (_, _) =>
+        {
+            using var scope = ServiceScopeFactory.CreateScope();
+            var dbContext = GetDatabaseContext(scope);
+
+            var userEntity = await dbContext.Users.FindAsync(userId);
+            if (userEntity == null)
+            {
+                throw new ArgumentException("User not found", nameof(userId));
+            }
+
+            var timestamp = DateTime.UtcNow;
+
+            userEntity.Key = keyConnectorWrappedUserKey;
+            // Key Connector does not use KDF, so we set some defaults
+            userEntity.Kdf = KdfType.Argon2id;
+            userEntity.KdfIterations = AuthConstants.ARGON2_ITERATIONS.Default;
+            userEntity.KdfMemory = AuthConstants.ARGON2_MEMORY.Default;
+            userEntity.KdfParallelism = AuthConstants.ARGON2_PARALLELISM.Default;
+            userEntity.UsesKeyConnector = true;
+            userEntity.RevisionDate = timestamp;
+            userEntity.AccountRevisionDate = timestamp;
+
+            await dbContext.SaveChangesAsync();
+        };
     }
 
     private static void MigrateDefaultUserCollectionsToShared(DatabaseContext dbContext, IEnumerable<Guid> userIds)

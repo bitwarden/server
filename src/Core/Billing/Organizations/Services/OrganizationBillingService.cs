@@ -177,12 +177,24 @@ public class OrganizationBillingService(
 
     public async Task UpdateOrganizationNameAndEmail(Organization organization)
     {
-        if (organization.GatewayCustomerId is null)
+        if (string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
         {
-            throw new BillingException("Cannot update an organization in Stripe without a GatewayCustomerId.");
+            logger.LogWarning(
+                "Organization ({OrganizationId}) has no Stripe customer to update",
+                organization.Id);
+            return;
         }
 
         var newDisplayName = organization.DisplayName();
+
+        // Organization.DisplayName() can return null - handle gracefully
+        if (string.IsNullOrWhiteSpace(newDisplayName))
+        {
+            logger.LogWarning(
+                "Organization ({OrganizationId}) has no name to update in Stripe",
+                organization.Id);
+            return;
+        }
 
         await stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId,
             new CustomerUpdateOptions
@@ -196,9 +208,7 @@ public class OrganizationBillingService(
                         new CustomerInvoiceSettingsCustomFieldOptions
                         {
                             Name = organization.SubscriberType(),
-                            Value = newDisplayName.Length <= 30
-                                ? newDisplayName
-                                : newDisplayName[..30]
+                            Value = newDisplayName
                         }]
                 },
             });

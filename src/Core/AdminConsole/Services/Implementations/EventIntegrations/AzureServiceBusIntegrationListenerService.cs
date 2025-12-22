@@ -85,6 +85,17 @@ public class AzureServiceBusIntegrationListenerService<TConfiguration> : Backgro
             {
                 // Non-recoverable failure or exceeded the max number of retries
                 // Return false to indicate this message should be dead-lettered
+                _logger.LogWarning(
+                    "Integration failure - non-recoverable error or max retries exceeded. " +
+                    "MessageId: {MessageId}, IntegrationType: {IntegrationType}, OrganizationId: {OrgId}, " +
+                    "FailureCategory: {Category}, Reason: {Reason}, RetryCount: {RetryCount}, MaxRetries: {MaxRetries}",
+                    message.MessageId,
+                    message.IntegrationType,
+                    message.OrganizationId,
+                    result.Category,
+                    result.FailureReason,
+                    message.RetryCount,
+                    _maxRetries);
                 return false;
             }
         }
