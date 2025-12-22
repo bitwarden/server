@@ -3,6 +3,7 @@ using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
@@ -130,5 +131,41 @@ public class OrganizationUsersControllerSelfRevokeTests : IClassFixture<ApiAppli
         var result = await _client.PutAsync($"organizations/{organization.Id}/users/revoke-self", null);
 
         Assert.Equal(HttpStatusCode.BadRequest, result.StatusCode);
+    }
+
+    [Fact]
+    public async Task SelfRevoke_WhenUserIsProviderButNotMember_ReturnsForbidden()
+    {
+        var (organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseAnnually,
+            ownerEmail: _ownerEmail, passwordManagerSeats: 5, paymentMethod: PaymentMethodType.Card);
+
+        var policy = new Policy
+        {
+            OrganizationId = organization.Id,
+            Type = PolicyType.OrganizationDataOwnership,
+            Enabled = true,
+            Data = null
+        };
+        await _factory.GetService<IPolicyRepository>().CreateAsync(policy);
+
+        var provider = await ProviderTestHelpers.CreateProviderAndLinkToOrganizationAsync(
+            _factory,
+            organization.Id,
+            ProviderType.Msp,
+            ProviderStatusType.Billable);
+
+        var providerUserEmail = $"{Guid.NewGuid()}@example.com";
+        await _factory.LoginWithNewAccount(providerUserEmail);
+        await ProviderTestHelpers.CreateProviderUserAsync(
+            _factory,
+            provider.Id,
+            providerUserEmail,
+            ProviderUserType.ProviderAdmin);
+
+        await _loginHelper.LoginAsync(providerUserEmail);
+
+        var result = await _client.PutAsync($"organizations/{organization.Id}/users/revoke-self", null);
+
+        Assert.Equal(HttpStatusCode.Forbidden, result.StatusCode);
     }
 }

@@ -640,7 +640,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     }
 
     [HttpPut("revoke-self")]
-    [Authorize<MemberOrProviderRequirement>]
+    [Authorize<MemberRequirement>]
     public async Task RevokeSelfAsync(Guid orgId)
     {
         var userId = _userService.GetProperUserId(User);
