@@ -200,7 +200,8 @@ public class EventIntegrationServiceCollectionExtensionsTests
             ["GlobalSettings:EventLogging:RabbitMq:HostName"] = "localhost",
             ["GlobalSettings:EventLogging:RabbitMq:Username"] = "user",
             ["GlobalSettings:EventLogging:RabbitMq:Password"] = "pass",
-            ["GlobalSettings:EventLogging:RabbitMq:EventExchangeName"] = "exchange"
+            ["GlobalSettings:EventLogging:RabbitMq:EventExchangeName"] = "exchange",
+            ["GlobalSettings:EventLogging:RabbitMq:IntegrationExchangeName"] = "integration"
         });
 
         Assert.True(EventIntegrationsServiceCollectionExtensions.IsRabbitMqEnabled(globalSettings));
@@ -214,7 +215,8 @@ public class EventIntegrationServiceCollectionExtensionsTests
             ["GlobalSettings:EventLogging:RabbitMq:HostName"] = null,
             ["GlobalSettings:EventLogging:RabbitMq:Username"] = "user",
             ["GlobalSettings:EventLogging:RabbitMq:Password"] = "pass",
-            ["GlobalSettings:EventLogging:RabbitMq:EventExchangeName"] = "exchange"
+            ["GlobalSettings:EventLogging:RabbitMq:EventExchangeName"] = "exchange",
+            ["GlobalSettings:EventLogging:RabbitMq:IntegrationExchangeName"] = "integration"
         });
 
         Assert.False(EventIntegrationsServiceCollectionExtensions.IsRabbitMqEnabled(globalSettings));
@@ -228,7 +230,8 @@ public class EventIntegrationServiceCollectionExtensionsTests
             ["GlobalSettings:EventLogging:RabbitMq:HostName"] = "localhost",
             ["GlobalSettings:EventLogging:RabbitMq:Username"] = null,
             ["GlobalSettings:EventLogging:RabbitMq:Password"] = "pass",
-            ["GlobalSettings:EventLogging:RabbitMq:EventExchangeName"] = "exchange"
+            ["GlobalSettings:EventLogging:RabbitMq:EventExchangeName"] = "exchange",
+            ["GlobalSettings:EventLogging:RabbitMq:IntegrationExchangeName"] = "integration"
         });
 
         Assert.False(EventIntegrationsServiceCollectionExtensions.IsRabbitMqEnabled(globalSettings));
@@ -242,21 +245,38 @@ public class EventIntegrationServiceCollectionExtensionsTests
             ["GlobalSettings:EventLogging:RabbitMq:HostName"] = "localhost",
             ["GlobalSettings:EventLogging:RabbitMq:Username"] = "user",
             ["GlobalSettings:EventLogging:RabbitMq:Password"] = null,
-            ["GlobalSettings:EventLogging:RabbitMq:EventExchangeName"] = "exchange"
+            ["GlobalSettings:EventLogging:RabbitMq:EventExchangeName"] = "exchange",
+            ["GlobalSettings:EventLogging:RabbitMq:IntegrationExchangeName"] = "integration"
         });
 
         Assert.False(EventIntegrationsServiceCollectionExtensions.IsRabbitMqEnabled(globalSettings));
     }
 
     [Fact]
-    public void IsRabbitMqEnabled_MissingExchangeName_ReturnsFalse()
+    public void IsRabbitMqEnabled_MissingEventExchangeName_ReturnsFalse()
     {
         var globalSettings = CreateGlobalSettings(new Dictionary<string, string?>
         {
             ["GlobalSettings:EventLogging:RabbitMq:HostName"] = "localhost",
             ["GlobalSettings:EventLogging:RabbitMq:Username"] = "user",
             ["GlobalSettings:EventLogging:RabbitMq:Password"] = "pass",
-            ["GlobalSettings:EventLogging:RabbitMq:EventExchangeName"] = null
+            ["GlobalSettings:EventLogging:RabbitMq:EventExchangeName"] = null,
+            ["GlobalSettings:EventLogging:RabbitMq:IntegrationExchangeName"] = "integration"
+        });
+
+        Assert.False(EventIntegrationsServiceCollectionExtensions.IsRabbitMqEnabled(globalSettings));
+    }
+
+    [Fact]
+    public void IsRabbitMqEnabled_MissingIntegrationExchangeName_ReturnsFalse()
+    {
+        var globalSettings = CreateGlobalSettings(new Dictionary<string, string?>
+        {
+            ["GlobalSettings:EventLogging:RabbitMq:HostName"] = "localhost",
+            ["GlobalSettings:EventLogging:RabbitMq:Username"] = "user",
+            ["GlobalSettings:EventLogging:RabbitMq:Password"] = "pass",
+            ["GlobalSettings:EventLogging:RabbitMq:EventExchangeName"] = "exchange",
+            ["GlobalSettings:EventLogging:RabbitMq:IntegrationExchangeName"] = null
         });
 
         Assert.False(EventIntegrationsServiceCollectionExtensions.IsRabbitMqEnabled(globalSettings));
@@ -268,7 +288,8 @@ public class EventIntegrationServiceCollectionExtensionsTests
         var globalSettings = CreateGlobalSettings(new Dictionary<string, string?>
         {
             ["GlobalSettings:EventLogging:AzureServiceBus:ConnectionString"] = "Endpoint=sb://test.servicebus.windows.net/;SharedAccessKeyName=test;SharedAccessKey=test",
-            ["GlobalSettings:EventLogging:AzureServiceBus:EventTopicName"] = "events"
+            ["GlobalSettings:EventLogging:AzureServiceBus:EventTopicName"] = "events",
+            ["GlobalSettings:EventLogging:AzureServiceBus:IntegrationTopicName"] = "integration"
         });
 
         Assert.True(EventIntegrationsServiceCollectionExtensions.IsAzureServiceBusEnabled(globalSettings));
@@ -280,19 +301,34 @@ public class EventIntegrationServiceCollectionExtensionsTests
         var globalSettings = CreateGlobalSettings(new Dictionary<string, string?>
         {
             ["GlobalSettings:EventLogging:AzureServiceBus:ConnectionString"] = null,
-            ["GlobalSettings:EventLogging:AzureServiceBus:EventTopicName"] = "events"
+            ["GlobalSettings:EventLogging:AzureServiceBus:EventTopicName"] = "events",
+            ["GlobalSettings:EventLogging:AzureServiceBus:IntegrationTopicName"] = "integration"
         });
 
         Assert.False(EventIntegrationsServiceCollectionExtensions.IsAzureServiceBusEnabled(globalSettings));
     }
 
     [Fact]
-    public void IsAzureServiceBusEnabled_MissingTopicName_ReturnsFalse()
+    public void IsAzureServiceBusEnabled_MissingEventTopicName_ReturnsFalse()
     {
         var globalSettings = CreateGlobalSettings(new Dictionary<string, string?>
         {
             ["GlobalSettings:EventLogging:AzureServiceBus:ConnectionString"] = "Endpoint=sb://test.servicebus.windows.net/;SharedAccessKeyName=test;SharedAccessKey=test",
-            ["GlobalSettings:EventLogging:AzureServiceBus:EventTopicName"] = null
+            ["GlobalSettings:EventLogging:AzureServiceBus:EventTopicName"] = null,
+            ["GlobalSettings:EventLogging:AzureServiceBus:IntegrationTopicName"] = "integration"
+        });
+
+        Assert.False(EventIntegrationsServiceCollectionExtensions.IsAzureServiceBusEnabled(globalSettings));
+    }
+
+    [Fact]
+    public void IsAzureServiceBusEnabled_MissingIntegrationTopicName_ReturnsFalse()
+    {
+        var globalSettings = CreateGlobalSettings(new Dictionary<string, string?>
+        {
+            ["GlobalSettings:EventLogging:AzureServiceBus:ConnectionString"] = "Endpoint=sb://test.servicebus.windows.net/;SharedAccessKeyName=test;SharedAccessKey=test",
+            ["GlobalSettings:EventLogging:AzureServiceBus:EventTopicName"] = "events",
+            ["GlobalSettings:EventLogging:AzureServiceBus:IntegrationTopicName"] = null
         });
 
         Assert.False(EventIntegrationsServiceCollectionExtensions.IsAzureServiceBusEnabled(globalSettings));
@@ -601,7 +637,8 @@ public class EventIntegrationServiceCollectionExtensionsTests
             ["GlobalSettings:EventLogging:RabbitMq:HostName"] = "localhost",
             ["GlobalSettings:EventLogging:RabbitMq:Username"] = "user",
             ["GlobalSettings:EventLogging:RabbitMq:Password"] = "pass",
-            ["GlobalSettings:EventLogging:RabbitMq:EventExchangeName"] = "exchange"
+            ["GlobalSettings:EventLogging:RabbitMq:EventExchangeName"] = "exchange",
+            ["GlobalSettings:EventLogging:RabbitMq:IntegrationExchangeName"] = "integration"
         });
 
         // Add prerequisites
@@ -624,7 +661,8 @@ public class EventIntegrationServiceCollectionExtensionsTests
         var globalSettings = CreateGlobalSettings(new Dictionary<string, string?>
         {
             ["GlobalSettings:EventLogging:AzureServiceBus:ConnectionString"] = "Endpoint=sb://test.servicebus.windows.net/;SharedAccessKeyName=test;SharedAccessKey=test",
-            ["GlobalSettings:EventLogging:AzureServiceBus:EventTopicName"] = "events"
+            ["GlobalSettings:EventLogging:AzureServiceBus:EventTopicName"] = "events",
+            ["GlobalSettings:EventLogging:AzureServiceBus:IntegrationTopicName"] = "integration"
         });
 
         // Add prerequisites
@@ -650,8 +688,10 @@ public class EventIntegrationServiceCollectionExtensionsTests
             ["GlobalSettings:EventLogging:RabbitMq:Username"] = "user",
             ["GlobalSettings:EventLogging:RabbitMq:Password"] = "pass",
             ["GlobalSettings:EventLogging:RabbitMq:EventExchangeName"] = "exchange",
+            ["GlobalSettings:EventLogging:RabbitMq:IntegrationExchangeName"] = "integration",
             ["GlobalSettings:EventLogging:AzureServiceBus:ConnectionString"] = "Endpoint=sb://test.servicebus.windows.net/;SharedAccessKeyName=test;SharedAccessKey=test",
-            ["GlobalSettings:EventLogging:AzureServiceBus:EventTopicName"] = "events"
+            ["GlobalSettings:EventLogging:AzureServiceBus:EventTopicName"] = "events",
+            ["GlobalSettings:EventLogging:AzureServiceBus:IntegrationTopicName"] = "integration"
         });
 
         // Add prerequisites
@@ -694,7 +734,8 @@ public class EventIntegrationServiceCollectionExtensionsTests
         var globalSettings = CreateGlobalSettings(new Dictionary<string, string?>
         {
             ["GlobalSettings:EventLogging:AzureServiceBus:ConnectionString"] = "Endpoint=sb://test.servicebus.windows.net/;SharedAccessKeyName=test;SharedAccessKey=test",
-            ["GlobalSettings:EventLogging:AzureServiceBus:EventTopicName"] = "events"
+            ["GlobalSettings:EventLogging:AzureServiceBus:EventTopicName"] = "events",
+            ["GlobalSettings:EventLogging:AzureServiceBus:IntegrationTopicName"] = "integration"
         });
 
         services.AddEventWriteServices(globalSettings);
@@ -712,7 +753,8 @@ public class EventIntegrationServiceCollectionExtensionsTests
             ["GlobalSettings:EventLogging:RabbitMq:HostName"] = "localhost",
             ["GlobalSettings:EventLogging:RabbitMq:Username"] = "user",
             ["GlobalSettings:EventLogging:RabbitMq:Password"] = "pass",
-            ["GlobalSettings:EventLogging:RabbitMq:EventExchangeName"] = "exchange"
+            ["GlobalSettings:EventLogging:RabbitMq:EventExchangeName"] = "exchange",
+            ["GlobalSettings:EventLogging:RabbitMq:IntegrationExchangeName"] = "integration"
         });
 
         services.AddEventWriteServices(globalSettings);
@@ -727,7 +769,8 @@ public class EventIntegrationServiceCollectionExtensionsTests
         var services = new ServiceCollection();
         var globalSettings = CreateGlobalSettings(new Dictionary<string, string?>
         {
-            ["GlobalSettings:Events:ConnectionString"] = "DefaultEndpointsProtocol=https;AccountName=test;AccountKey=test;EndpointSuffix=core.windows.net"
+            ["GlobalSettings:Events:ConnectionString"] = "DefaultEndpointsProtocol=https;AccountName=test;AccountKey=test;EndpointSuffix=core.windows.net",
+            ["GlobalSettings:Events:QueueName"] = "event"
         });
 
         services.AddEventWriteServices(globalSettings);
@@ -768,10 +811,12 @@ public class EventIntegrationServiceCollectionExtensionsTests
         {
             ["GlobalSettings:EventLogging:AzureServiceBus:ConnectionString"] = "Endpoint=sb://test.servicebus.windows.net/;SharedAccessKeyName=test;SharedAccessKey=test",
             ["GlobalSettings:EventLogging:AzureServiceBus:EventTopicName"] = "events",
+            ["GlobalSettings:EventLogging:AzureServiceBus:IntegrationTopicName"] = "integration",
             ["GlobalSettings:EventLogging:RabbitMq:HostName"] = "localhost",
             ["GlobalSettings:EventLogging:RabbitMq:Username"] = "user",
             ["GlobalSettings:EventLogging:RabbitMq:Password"] = "pass",
-            ["GlobalSettings:EventLogging:RabbitMq:EventExchangeName"] = "exchange"
+            ["GlobalSettings:EventLogging:RabbitMq:EventExchangeName"] = "exchange",
+            ["GlobalSettings:EventLogging:RabbitMq:IntegrationExchangeName"] = "integration"
         });
 
         services.AddEventWriteServices(globalSettings);
@@ -788,7 +833,8 @@ public class EventIntegrationServiceCollectionExtensionsTests
         var globalSettings = CreateGlobalSettings(new Dictionary<string, string?>
         {
             ["GlobalSettings:EventLogging:AzureServiceBus:ConnectionString"] = "Endpoint=sb://test.servicebus.windows.net/;SharedAccessKeyName=test;SharedAccessKey=test",
-            ["GlobalSettings:EventLogging:AzureServiceBus:EventTopicName"] = "events"
+            ["GlobalSettings:EventLogging:AzureServiceBus:EventTopicName"] = "events",
+            ["GlobalSettings:EventLogging:AzureServiceBus:IntegrationTopicName"] = "integration"
         });
 
         // Add prerequisites
@@ -825,7 +871,8 @@ public class EventIntegrationServiceCollectionExtensionsTests
             ["GlobalSettings:EventLogging:RabbitMq:HostName"] = "localhost",
             ["GlobalSettings:EventLogging:RabbitMq:Username"] = "user",
             ["GlobalSettings:EventLogging:RabbitMq:Password"] = "pass",
-            ["GlobalSettings:EventLogging:RabbitMq:EventExchangeName"] = "exchange"
+            ["GlobalSettings:EventLogging:RabbitMq:EventExchangeName"] = "exchange",
+            ["GlobalSettings:EventLogging:RabbitMq:IntegrationExchangeName"] = "integration"
         });
 
         // Add prerequisites

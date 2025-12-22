@@ -110,7 +110,7 @@ public class SlackIntegrationHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_NullResponse_ReturnsNonRetryableFailure()
+    public async Task HandleAsync_NullResponse_ReturnsRetryableFailure()
     {
         var sutProvider = GetSutProvider();
         var message = new IntegrationMessage<SlackIntegrationConfigurationDetails>()
@@ -126,7 +126,7 @@ public class SlackIntegrationHandlerTests
         var result = await sutProvider.Sut.HandleAsync(message);
 
         Assert.False(result.Success);
-        Assert.False(result.Retryable);
+        Assert.True(result.Retryable); // Null response is classified as TransientError (retryable)
         Assert.Equal("Slack response was null", result.FailureReason);
         Assert.Equal(result.Message, message);
 
