@@ -43,7 +43,7 @@ public static class UserServiceCollectionExtensions
 
     private static void AddUserPasswordCommands(this IServiceCollection services)
     {
-        services.AddScoped<ISetInitialMasterPasswordCommand, SetInitialMasterPasswordCommand>();
+        services.AddScoped<ISetInitialMasterPasswordCommandV1, SetInitialMasterPasswordCommandV1>();
     }
 
     private static void AddTdeOffboardingPasswordCommands(this IServiceCollection services)

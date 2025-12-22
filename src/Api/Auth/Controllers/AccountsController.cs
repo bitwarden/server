@@ -38,7 +38,7 @@ public class AccountsController : Controller
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IUserService _userService;
     private readonly IPolicyService _policyService;
-    private readonly ISetInitialMasterPasswordCommand _setInitialMasterPasswordCommand;
+    private readonly ISetInitialMasterPasswordCommandV1 _setInitialMasterPasswordCommandV1;
     private readonly ITdeOffboardingPasswordCommand _tdeOffboardingPasswordCommand;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IFeatureService _featureService;
@@ -53,7 +53,7 @@ public class AccountsController : Controller
         IProviderUserRepository providerUserRepository,
         IUserService userService,
         IPolicyService policyService,
-        ISetInitialMasterPasswordCommand setInitialMasterPasswordCommand,
+        ISetInitialMasterPasswordCommandV1 setInitialMasterPasswordCommandV1,
         ITdeOffboardingPasswordCommand tdeOffboardingPasswordCommand,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IFeatureService featureService,
@@ -68,7 +68,7 @@ public class AccountsController : Controller
         _providerUserRepository = providerUserRepository;
         _userService = userService;
         _policyService = policyService;
-        _setInitialMasterPasswordCommand = setInitialMasterPasswordCommand;
+        _setInitialMasterPasswordCommandV1 = setInitialMasterPasswordCommandV1;
         _tdeOffboardingPasswordCommand = tdeOffboardingPasswordCommand;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _featureService = featureService;
@@ -226,7 +226,7 @@ public class AccountsController : Controller
             throw new BadRequestException(ModelState);
         }
 
-        var result = await _setInitialMasterPasswordCommand.SetInitialMasterPasswordAsync(
+        var result = await _setInitialMasterPasswordCommandV1.SetInitialMasterPasswordAsync(
             user,
             model.MasterPasswordHash,
             model.Key,

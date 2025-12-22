@@ -32,7 +32,7 @@ public class AccountsControllerTests : IDisposable
     private readonly IUserService _userService;
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IPolicyService _policyService;
-    private readonly ISetInitialMasterPasswordCommand _setInitialMasterPasswordCommand;
+    private readonly ISetInitialMasterPasswordCommandV1 _setInitialMasterPasswordCommandV1;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly ITdeOffboardingPasswordCommand _tdeOffboardingPasswordCommand;
     private readonly IFeatureService _featureService;
@@ -48,7 +48,7 @@ public class AccountsControllerTests : IDisposable
         _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
         _providerUserRepository = Substitute.For<IProviderUserRepository>();
         _policyService = Substitute.For<IPolicyService>();
-        _setInitialMasterPasswordCommand = Substitute.For<ISetInitialMasterPasswordCommand>();
+        _setInitialMasterPasswordCommandV1 = Substitute.For<ISetInitialMasterPasswordCommandV1>();
         _twoFactorIsEnabledQuery = Substitute.For<ITwoFactorIsEnabledQuery>();
         _tdeOffboardingPasswordCommand = Substitute.For<ITdeOffboardingPasswordCommand>();
         _featureService = Substitute.For<IFeatureService>();
@@ -63,7 +63,7 @@ public class AccountsControllerTests : IDisposable
             _providerUserRepository,
             _userService,
             _policyService,
-            _setInitialMasterPasswordCommand,
+            _setInitialMasterPasswordCommandV1,
             _tdeOffboardingPasswordCommand,
             _twoFactorIsEnabledQuery,
             _featureService,
@@ -416,7 +416,7 @@ public class AccountsControllerTests : IDisposable
         }
 
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
-        _setInitialMasterPasswordCommand.SetInitialMasterPasswordAsync(
+        _setInitialMasterPasswordCommandV1.SetInitialMasterPasswordAsync(
                 user,
                 setPasswordRequestModel.MasterPasswordHash,
                 setPasswordRequestModel.Key,
@@ -428,7 +428,7 @@ public class AccountsControllerTests : IDisposable
         {
             await _sut.PostSetPasswordAsync(setPasswordRequestModel);
             // Assert
-            await _setInitialMasterPasswordCommand.Received(1)
+            await _setInitialMasterPasswordCommandV1.Received(1)
                 .SetInitialMasterPasswordAsync(
                     Arg.Is<User>(u => u == user),
                     Arg.Is<string>(s => s == setPasswordRequestModel.MasterPasswordHash),
@@ -472,7 +472,7 @@ public class AccountsControllerTests : IDisposable
         };
 
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
-        _setInitialMasterPasswordCommand.SetInitialMasterPasswordAsync(
+        _setInitialMasterPasswordCommandV1.SetInitialMasterPasswordAsync(
                 user,
                 setPasswordRequestModel.MasterPasswordHash,
                 setPasswordRequestModel.Key,
@@ -505,7 +505,7 @@ public class AccountsControllerTests : IDisposable
         model.Keys = null;
         // Arrange
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
-        _setInitialMasterPasswordCommand.SetInitialMasterPasswordAsync(Arg.Any<User>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
+        _setInitialMasterPasswordCommandV1.SetInitialMasterPasswordAsync(Arg.Any<User>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
             .Returns(Task.FromResult(IdentityResult.Failed(new IdentityError { Description = "Some Error" })));
 
         // Act & Assert

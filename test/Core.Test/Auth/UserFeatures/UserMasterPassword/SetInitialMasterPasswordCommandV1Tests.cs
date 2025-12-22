@@ -16,11 +16,11 @@ using Xunit;
 namespace Bit.Core.Test.Auth.UserFeatures.UserMasterPassword;
 
 [SutProviderCustomize]
-public class SetInitialMasterPasswordCommandTests
+public class SetInitialMasterPasswordCommandV1Tests
 {
     [Theory]
     [BitAutoData]
-    public async Task SetInitialMasterPassword_Success(SutProvider<SetInitialMasterPasswordCommand> sutProvider,
+    public async Task SetInitialMasterPassword_Success(SutProvider<SetInitialMasterPasswordCommandV1> sutProvider,
         User user, string masterPassword, string key, string orgIdentifier,
         Organization org, OrganizationUser orgUser)
     {
@@ -48,7 +48,7 @@ public class SetInitialMasterPasswordCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task SetInitialMasterPassword_UserIsNull_ThrowsArgumentNullException(SutProvider<SetInitialMasterPasswordCommand> sutProvider, string masterPassword, string key, string orgIdentifier)
+    public async Task SetInitialMasterPassword_UserIsNull_ThrowsArgumentNullException(SutProvider<SetInitialMasterPasswordCommandV1> sutProvider, string masterPassword, string key, string orgIdentifier)
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(async () => await sutProvider.Sut.SetInitialMasterPasswordAsync(null, masterPassword, key, orgIdentifier));
@@ -56,7 +56,7 @@ public class SetInitialMasterPasswordCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task SetInitialMasterPassword_AlreadyHasPassword_ReturnsFalse(SutProvider<SetInitialMasterPasswordCommand> sutProvider, User user, string masterPassword, string key, string orgIdentifier)
+    public async Task SetInitialMasterPassword_AlreadyHasPassword_ReturnsFalse(SutProvider<SetInitialMasterPasswordCommandV1> sutProvider, User user, string masterPassword, string key, string orgIdentifier)
     {
         // Arrange
         user.MasterPassword = "ExistingPassword";
@@ -71,7 +71,7 @@ public class SetInitialMasterPasswordCommandTests
     [Theory]
     [BitAutoData]
     public async Task SetInitialMasterPassword_NullOrgSsoIdentifier_ThrowsBadRequestException(
-        SutProvider<SetInitialMasterPasswordCommand> sutProvider, User user, string masterPassword, string key)
+        SutProvider<SetInitialMasterPasswordCommandV1> sutProvider, User user, string masterPassword, string key)
     {
         // Arrange
         user.MasterPassword = null;
@@ -90,7 +90,7 @@ public class SetInitialMasterPasswordCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task SetInitialMasterPassword_InvalidOrganization_Throws(SutProvider<SetInitialMasterPasswordCommand> sutProvider, User user, string masterPassword, string key, string orgIdentifier)
+    public async Task SetInitialMasterPassword_InvalidOrganization_Throws(SutProvider<SetInitialMasterPasswordCommandV1> sutProvider, User user, string masterPassword, string key, string orgIdentifier)
     {
         // Arrange
         user.MasterPassword = null;
@@ -110,7 +110,7 @@ public class SetInitialMasterPasswordCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task SetInitialMasterPassword_UserNotFoundInOrganization_Throws(SutProvider<SetInitialMasterPasswordCommand> sutProvider, User user, string masterPassword, string key, Organization org)
+    public async Task SetInitialMasterPassword_UserNotFoundInOrganization_Throws(SutProvider<SetInitialMasterPasswordCommandV1> sutProvider, User user, string masterPassword, string key, Organization org)
     {
         // Arrange
         user.MasterPassword = null;
@@ -134,7 +134,7 @@ public class SetInitialMasterPasswordCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task SetInitialMasterPassword_ConfirmedOrgUser_DoesNotCallAcceptOrgUser(SutProvider<SetInitialMasterPasswordCommand> sutProvider,
+    public async Task SetInitialMasterPassword_ConfirmedOrgUser_DoesNotCallAcceptOrgUser(SutProvider<SetInitialMasterPasswordCommandV1> sutProvider,
         User user, string masterPassword, string key, string orgIdentifier, Organization org, OrganizationUser orgUser)
     {
         // Arrange
@@ -164,7 +164,7 @@ public class SetInitialMasterPasswordCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task SetInitialMasterPassword_InvitedOrgUser_CallsAcceptOrgUser(SutProvider<SetInitialMasterPasswordCommand> sutProvider,
+    public async Task SetInitialMasterPassword_InvitedOrgUser_CallsAcceptOrgUser(SutProvider<SetInitialMasterPasswordCommandV1> sutProvider,
         User user, string masterPassword, string key, string orgIdentifier, Organization org, OrganizationUser orgUser)
     {
         // Arrange

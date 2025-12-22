@@ -10,9 +10,9 @@ using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Auth.UserFeatures.UserMasterPassword;
 
-public class SetInitialMasterPasswordCommand : ISetInitialMasterPasswordCommand
+public class SetInitialMasterPasswordCommandV1 : ISetInitialMasterPasswordCommandV1
 {
-    private readonly ILogger<SetInitialMasterPasswordCommand> _logger;
+    private readonly ILogger<SetInitialMasterPasswordCommandV1> _logger;
     private readonly IdentityErrorDescriber _identityErrorDescriber;
     private readonly IUserService _userService;
     private readonly IUserRepository _userRepository;
@@ -22,8 +22,8 @@ public class SetInitialMasterPasswordCommand : ISetInitialMasterPasswordCommand
     private readonly IOrganizationRepository _organizationRepository;
 
 
-    public SetInitialMasterPasswordCommand(
-        ILogger<SetInitialMasterPasswordCommand> logger,
+    public SetInitialMasterPasswordCommandV1(
+        ILogger<SetInitialMasterPasswordCommandV1> logger,
         IdentityErrorDescriber identityErrorDescriber,
         IUserService userService,
         IUserRepository userRepository,
