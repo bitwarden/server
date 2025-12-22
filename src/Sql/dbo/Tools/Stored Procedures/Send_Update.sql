@@ -27,7 +27,6 @@ BEGIN
         [UserId] = @UserId,
         [OrganizationId] = @OrganizationId,
         [Type] = @Type,
-        [AuthType] = @AuthType,
         [Data] = @Data,
         [Key] = @Key,
         [Password] = @Password,
@@ -40,7 +39,8 @@ BEGIN
         [Disabled] = @Disabled,
         [HideEmail] = @HideEmail,
         [CipherId] = @CipherId,
-        [Emails] = @Emails
+        [Emails] = @Emails,
+        [AuthType] = @AuthType
     WHERE
         [Id] = @Id
 
