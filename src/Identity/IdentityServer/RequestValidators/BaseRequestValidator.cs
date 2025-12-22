@@ -792,6 +792,7 @@ public abstract class BaseRequestValidator<T> where T : class
         var customResponse = new Dictionary<string, object>();
         if (!string.IsNullOrWhiteSpace(user.PrivateKey))
         {
+            // PrivateKey usage is now deprecated in favor of AccountKeys
             customResponse.Add("PrivateKey", user.PrivateKey);
             var accountKeys = await _accountKeysQuery.Run(user);
             customResponse.Add("AccountKeys", new PrivateKeysResponseModel(accountKeys));
@@ -799,6 +800,7 @@ public abstract class BaseRequestValidator<T> where T : class
 
         if (!string.IsNullOrWhiteSpace(user.Key))
         {
+            // Key is deprecated in favor of UserDecryptionOptions.MasterPasswordUnlock.MasterKeyEncryptedUserKey
             customResponse.Add("Key", user.Key);
         }
 
