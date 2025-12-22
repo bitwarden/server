@@ -1000,14 +1000,7 @@ public class CipherService : ICipherService
             throw new BadRequestException("Could not find organization.");
         }
 
-        var migrateFeatureEnabled = _featureService.IsEnabled(FeatureFlagKeys.MigrateMyVaultToMyItems);
-
-        // Ignore storage limits if the organization has data ownership policy enabled.
-        // Allows users to seamlessly migrate their data into the organization without being blocked by storage limits.
-        // Organization admins will need to manage storage after migration should overages occur.
-        var ignoreStorageLimits = migrateFeatureEnabled && await OrganizationDataOwnershipPolicyEnabledAsync(sharingUserId, org);
-
-        if (!ignoreStorageLimits)
+        if (!await IgnoreStorageLimitsOnMigrationAsync(sharingUserId, org))
         {
             if (hasAttachments && !org.MaxStorageGb.HasValue)
             {
@@ -1025,28 +1018,23 @@ public class CipherService : ICipherService
     }
 
     /// <summary>
-    /// Checks if the Organization Data Ownership Policy is enabled for the given user and organization.
+    /// Checks if the storage limit for the org should be ignored due to the Organization Data Ownership Policy
     /// </summary>
-    private async Task<bool> OrganizationDataOwnershipPolicyEnabledAsync(Guid userId, Organization organization)
+    private async Task<bool> IgnoreStorageLimitsOnMigrationAsync(Guid userId, Organization organization)
     {
+        if (!_featureService.IsEnabled(FeatureFlagKeys.MigrateMyVaultToMyItems))
+        {
+            return false;
+        }
+
         if (!organization.UsePolicies)
         {
             return false;
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
-        {
-            var requirement = await _policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(userId);
+        var requirement = await _policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(userId);
 
-            return requirement.State == OrganizationDataOwnershipState.Enabled &&
-                   requirement.EnforcedByOrg(organization.Id);
-        }
-
-        var policies =
-            await _policyService.GetPoliciesApplicableToUserAsync(userId,
-                PolicyType.OrganizationDataOwnership);
-
-        return policies.Any(p => p.OrganizationId == organization.Id);
+        return requirement.IgnoreStorageLimitsOnMigration(organization.Id);
     }
 
     private async Task ValidateViewPasswordUserAsync(Cipher cipher)

@@ -74,11 +74,14 @@ public class OrganizationDataOwnershipPolicyRequirement : IPolicyRequirement
     }
 
     /// <summary>
-    /// Determines if the policy is enforced by the specified organization.
+    /// Ignore storage limits if the organization has data ownership policy enabled.
+    /// Allows users to seamlessly migrate their data into the organization without being blocked by storage limits.
+    /// Organization admins will need to manage storage after migration should overages occur.
     /// </summary>
-    public bool EnforcedByOrg(Guid organizationId)
+    public bool IgnoreStorageLimitsOnMigration(Guid organizationId)
     {
-        return _policyDetails.Any(p => p.OrganizationId == organizationId);
+        return _policyDetails.Any(p => p.OrganizationId == organizationId &&
+                                       p.OrganizationUserStatus == OrganizationUserStatusType.Confirmed);
     }
 }
 
