@@ -641,7 +641,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
     [HttpPut("revoke-self")]
     [Authorize<MemberRequirement>]
-    public async Task RevokeSelfAsync(Guid orgId)
+    public async Task<IResult> RevokeSelfAsync(Guid orgId)
     {
         var userId = _userService.GetProperUserId(User);
         if (!userId.HasValue)
@@ -649,7 +649,8 @@ public class OrganizationUsersController : BaseAdminConsoleController
             throw new UnauthorizedAccessException();
         }
 
-        await _selfRevokeOrganizationUserCommand.SelfRevokeUserAsync(orgId, userId.Value);
+        var result = await _selfRevokeOrganizationUserCommand.SelfRevokeUserAsync(orgId, userId.Value);
+        return Handle(result);
     }
 
     [HttpPatch("{id}/revoke")]

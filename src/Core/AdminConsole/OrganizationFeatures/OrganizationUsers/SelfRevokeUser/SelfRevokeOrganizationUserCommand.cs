@@ -1,11 +1,12 @@
 ﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Enums;
-using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using OneOf.Types;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.SelfRevokeUser;
 
@@ -17,19 +18,19 @@ public class SelfRevokeOrganizationUserCommand(
     IPushNotificationService pushNotificationService)
     : ISelfRevokeOrganizationUserCommand
 {
-    public async Task SelfRevokeUserAsync(Guid organizationId, Guid userId)
+    public async Task<CommandResult> SelfRevokeUserAsync(Guid organizationId, Guid userId)
     {
         var organizationUser = await organizationUserRepository.GetByOrganizationAsync(organizationId, userId);
         if (organizationUser == null)
         {
-            throw new NotFoundException();
+            return new OrganizationUserNotFound();
         }
 
         var policyRequirement = await policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(userId);
 
         if (!policyRequirement.EligibleForSelfRevoke(organizationId))
         {
-            throw new BadRequestException("User is not eligible for self-revocation. The organization data ownership policy must be enabled and the user must be a confirmed member.");
+            return new NotEligibleForSelfRevoke();
         }
 
         // Prevent the last owner from revoking themselves, which would brick the organization
@@ -42,12 +43,14 @@ public class SelfRevokeOrganizationUserCommand(
 
             if (!hasOtherOwner)
             {
-                throw new BadRequestException("The last owner cannot revoke themselves.");
+                return new LastOwnerCannotSelfRevoke();
             }
         }
 
         await organizationUserRepository.RevokeAsync(organizationUser.Id);
         await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_SelfRevoked);
         await pushNotificationService.PushSyncOrgKeysAsync(organizationUser.UserId!.Value);
+
+        return new None();
     }
 }

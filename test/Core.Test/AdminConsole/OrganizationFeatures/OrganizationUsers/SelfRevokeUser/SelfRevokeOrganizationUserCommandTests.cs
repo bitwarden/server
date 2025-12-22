@@ -6,7 +6,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -62,9 +61,11 @@ public class SelfRevokeOrganizationUserCommandTests
             .Returns(policyRequirement);
 
         // Act
-        await sutProvider.Sut.SelfRevokeUserAsync(organizationId, userId);
+        var result = await sutProvider.Sut.SelfRevokeUserAsync(organizationId, userId);
 
         // Assert
+        Assert.True(result.IsSuccess);
+
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
             .RevokeAsync(organizationUser.Id);
@@ -79,7 +80,7 @@ public class SelfRevokeOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task SelfRevokeUser_WhenUserNotFound_ThrowsNotFoundException(
+    public async Task SelfRevokeUser_WhenUserNotFound_ReturnsNotFoundError(
         Guid organizationId,
         Guid userId,
         SutProvider<SelfRevokeOrganizationUserCommand> sutProvider)
@@ -89,13 +90,16 @@ public class SelfRevokeOrganizationUserCommandTests
             .GetByOrganizationAsync(organizationId, userId)
             .Returns((OrganizationUser)null);
 
-        // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.SelfRevokeUserAsync(organizationId, userId));
+        // Act
+        var result = await sutProvider.Sut.SelfRevokeUserAsync(organizationId, userId);
+
+        // Assert
+        Assert.True(result.IsError);
+        Assert.IsType<OrganizationUserNotFound>(result.AsError);
     }
 
     [Theory, BitAutoData]
-    public async Task SelfRevokeUser_WhenNotEligible_ThrowsBadRequest(
+    public async Task SelfRevokeUser_WhenNotEligible_ReturnsBadRequestError(
         Guid organizationId,
         Guid userId,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser organizationUser,
@@ -118,15 +122,16 @@ public class SelfRevokeOrganizationUserCommandTests
             .GetAsync<OrganizationDataOwnershipPolicyRequirement>(userId)
             .Returns(policyRequirement);
 
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SelfRevokeUserAsync(organizationId, userId));
+        // Act
+        var result = await sutProvider.Sut.SelfRevokeUserAsync(organizationId, userId);
 
-        Assert.Contains("not eligible for self-revocation", exception.Message);
+        // Assert
+        Assert.True(result.IsError);
+        Assert.IsType<NotEligibleForSelfRevoke>(result.AsError);
     }
 
     [Theory, BitAutoData]
-    public async Task SelfRevokeUser_WhenLastOwner_ThrowsBadRequest(
+    public async Task SelfRevokeUser_WhenLastOwner_ReturnsBadRequestError(
         Guid organizationId,
         Guid userId,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser organizationUser,
@@ -164,11 +169,12 @@ public class SelfRevokeOrganizationUserCommandTests
             .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>(), true)
             .Returns(false);
 
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SelfRevokeUserAsync(organizationId, userId));
+        // Act
+        var result = await sutProvider.Sut.SelfRevokeUserAsync(organizationId, userId);
 
-        Assert.Contains("last owner cannot revoke themselves", exception.Message);
+        // Assert
+        Assert.True(result.IsError);
+        Assert.IsType<LastOwnerCannotSelfRevoke>(result.AsError);
     }
 
     [Theory, BitAutoData]
@@ -211,9 +217,11 @@ public class SelfRevokeOrganizationUserCommandTests
             .Returns(true);
 
         // Act
-        await sutProvider.Sut.SelfRevokeUserAsync(organizationId, userId);
+        var result = await sutProvider.Sut.SelfRevokeUserAsync(organizationId, userId);
 
         // Assert
+        Assert.True(result.IsSuccess);
+
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
             .RevokeAsync(organizationUser.Id);

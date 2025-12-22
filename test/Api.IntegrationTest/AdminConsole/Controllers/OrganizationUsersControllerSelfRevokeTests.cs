@@ -62,7 +62,7 @@ public class OrganizationUsersControllerSelfRevokeTests : IClassFixture<ApiAppli
 
         var result = await _client.PutAsync($"organizations/{organization.Id}/users/revoke-self", null);
 
-        Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, result.StatusCode);
 
         var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
         var organizationUsers = await organizationUserRepository.GetManyDetailsByOrganizationAsync(organization.Id);
