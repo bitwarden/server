@@ -12,6 +12,8 @@ namespace Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 /// Users who are upgraded to have admin account recovery permissions must set a master password
 /// to ensure their ability to reset other users' accounts.</para>
 /// </summary>
+// TODO removed with https://bitwarden.atlassian.net/browse/PM-27327
+[Obsolete("Use ISetInitialMasterPasswordCommand instead")]
 public interface ISetInitialMasterPasswordCommandV1
 {
     public Task<IdentityResult> SetInitialMasterPasswordAsync(User user, string masterPassword, string key,
