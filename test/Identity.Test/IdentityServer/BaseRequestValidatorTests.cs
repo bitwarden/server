@@ -1178,7 +1178,7 @@ public class BaseRequestValidatorTests
         GrantValidationResult grantResult)
     {
         // Arrange
-        SetupRecoveryCodeSupportForSsoRequiredUsersFeatureFlag(featureFlagValue);
+        _featureService.IsEnabled(FeatureFlagKeys.RedirectOnSsoRequired).Returns(featureFlagValue);
         var context = CreateContext(tokenRequest, requestContext, grantResult);
         _sut.isValid = true; // ensure initial context validation passes
 
