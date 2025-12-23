@@ -26,10 +26,8 @@ public interface IUpdatePremiumStorageCommand
 
 public class UpdatePremiumStorageCommand(
     IStripeAdapter stripeAdapter,
-    IStripePaymentService paymentService,
     IUserService userService,
     IPricingClient pricingClient,
-    IFeatureService featureService,
     ILogger<UpdatePremiumStorageCommand> logger)
     : BaseBillingCommand<UpdatePremiumStorageCommand>(logger), IUpdatePremiumStorageCommand
 {
@@ -40,14 +38,25 @@ public class UpdatePremiumStorageCommand(
             return new BadRequest("User does not have a premium subscription.");
         }
 
-        // Fetch all premium plans and find the one the user is on
-        var premiumPlans = await pricingClient.ListPremiumPlans();
-        var premiumPlan = premiumPlans.FirstOrDefault(p => p.Available);
-
-        if (premiumPlan == null)
+        if (!user.MaxStorageGb.HasValue)
         {
-            return new BadRequest("No available premium plan found.");
+            return new BadRequest("No access to storage.");
         }
+
+        // Fetch all premium plans and the user's subscription to find which plan they're on
+        var premiumPlans = await pricingClient.ListPremiumPlans();
+        var subscription = await stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId);
+
+        // Find the password manager subscription item (seat, not storage) and match it to a plan
+        var passwordManagerItem = subscription.Items.Data.FirstOrDefault(i =>
+            premiumPlans.Any(p => p.Seat.StripePriceId == i.Price.Id));
+
+        if (passwordManagerItem == null)
+        {
+            return new BadRequest("Premium subscription item not found.");
+        }
+
+        var premiumPlan = premiumPlans.First(p => p.Seat.StripePriceId == passwordManagerItem.Price.Id);
 
         var baseStorageGb = (short)premiumPlan.Storage.Provided;
 
@@ -61,12 +70,6 @@ public class UpdatePremiumStorageCommand(
         if (newTotalStorageGb > 100)
         {
             return new BadRequest("Maximum storage is 100 GB.");
-        }
-
-        // Check if the requested storage would fit the user's current usage
-        if (!user.MaxStorageGb.HasValue)
-        {
-            return new BadRequest("No access to storage.");
         }
 
         // Idempotency check: if user already has the requested storage, return success
@@ -83,84 +86,58 @@ public class UpdatePremiumStorageCommand(
                 "Delete some stored data first.");
         }
 
-        // Check feature flag to determine which code path to use
-        if (featureService.IsEnabled(FeatureFlagKeys.PM29594_UpdateIndividualSubscriptionPage))
+        // Find the storage line item in the subscription
+        var storageItem = subscription.Items.Data.FirstOrDefault(i => i.Price.Id == premiumPlan.Storage.StripePriceId);
+
+        var subscriptionItemOptions = new List<SubscriptionItemOptions>();
+
+        if (additionalStorageGb > 0)
         {
-            // NEW PATH: Directly update the premium subscription with prorations
-            // This is simpler than using FinalizeSubscriptionChangeAsync since storage is always billed annually
-            var subscription = await stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId);
-            if (subscription == null)
+            if (storageItem != null)
             {
-                return new BadRequest("Subscription not found.");
-            }
-
-            // Find the storage line item in the subscription
-            var storageItem = subscription.Items.Data.FirstOrDefault(i => i.Price.Id == premiumPlan.Storage.StripePriceId);
-
-            var subscriptionItemOptions = new List<SubscriptionItemOptions>();
-
-            if (additionalStorageGb > 0)
-            {
-                if (storageItem != null)
-                {
-                    // Update existing storage item
-                    subscriptionItemOptions.Add(new SubscriptionItemOptions
-                    {
-                        Id = storageItem.Id,
-                        Price = premiumPlan.Storage.StripePriceId,
-                        Quantity = additionalStorageGb
-                    });
-                }
-                else
-                {
-                    // Add new storage item
-                    subscriptionItemOptions.Add(new SubscriptionItemOptions
-                    {
-                        Price = premiumPlan.Storage.StripePriceId,
-                        Quantity = additionalStorageGb
-                    });
-                }
-            }
-            else if (storageItem != null)
-            {
-                // Remove storage item if setting to 0
+                // Update existing storage item
                 subscriptionItemOptions.Add(new SubscriptionItemOptions
                 {
                     Id = storageItem.Id,
-                    Deleted = true
+                    Price = premiumPlan.Storage.StripePriceId,
+                    Quantity = additionalStorageGb
                 });
             }
-
-            // Update subscription with prorations
-            // Storage is billed annually, so we create prorations and invoice immediately
-            var subscriptionUpdateOptions = new SubscriptionUpdateOptions
+            else
             {
-                Items = subscriptionItemOptions,
-                ProrationBehavior = Core.Constants.CreateProrations
-            };
-
-            await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, subscriptionUpdateOptions);
-
-            // Update the user's max storage
-            user.MaxStorageGb = newTotalStorageGb;
-            await userService.SaveUserAsync(user);
-
-            // No payment intent needed - the subscription update will automatically create and finalize the invoice
-            return (string?)null;
+                // Add new storage item
+                subscriptionItemOptions.Add(new SubscriptionItemOptions
+                {
+                    Price = premiumPlan.Storage.StripePriceId,
+                    Quantity = additionalStorageGb
+                });
+            }
         }
-        else
+        else if (storageItem != null)
         {
-            // OLD PATH: Use BillingHelpers.AdjustStorageAsync
-            // Convert from additionalStorageGb (final additional beyond base) to storageAdjustmentGb (delta from current)
-            var currentTotal = user.MaxStorageGb.Value;
-            var desiredTotal = newTotalStorageGb;
-            var adjustment = (short)(desiredTotal - currentTotal);
-
-            var paymentIntentSecret = await BillingHelpers.AdjustStorageAsync(
-                paymentService, user, adjustment, premiumPlan.Storage.StripePriceId, baseStorageGb);
-
-            await userService.SaveUserAsync(user);
-            return paymentIntentSecret;
+            // Remove storage item if setting to 0
+            subscriptionItemOptions.Add(new SubscriptionItemOptions
+            {
+                Id = storageItem.Id,
+                Deleted = true
+            });
         }
+
+        // Update subscription with prorations
+        // Storage is billed annually, so we create prorations and invoice immediately
+        var subscriptionUpdateOptions = new SubscriptionUpdateOptions
+        {
+            Items = subscriptionItemOptions,
+            ProrationBehavior = Core.Constants.CreateProrations
+        };
+
+        await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, subscriptionUpdateOptions);
+
+        // Update the user's max storage
+        user.MaxStorageGb = newTotalStorageGb;
+        await userService.SaveUserAsync(user);
+
+        // No payment intent needed - the subscription update will automatically create and finalize the invoice
+        return (string?)null;
     });
 }
