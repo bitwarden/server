@@ -252,7 +252,7 @@ public class SendRequestModel
         {
             // normalize encoding
             var emails = Emails.Split(',', RemoveEmptyEntries | TrimEntries);
-            existingSend.Emails = string.Join(", ", emails);
+            existingSend.Emails = string.Join(",", emails);
             existingSend.Password = null;
             existingSend.AuthType = Core.Tools.Enums.AuthType.Email;
         }
