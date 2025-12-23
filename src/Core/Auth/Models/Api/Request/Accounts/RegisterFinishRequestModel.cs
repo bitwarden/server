@@ -21,7 +21,7 @@ public class RegisterFinishRequestModel : IValidatableObject
     public required string Email { get; set; }
     public string? EmailVerificationToken { get; set; }
 
-    public MasterPasswordAuthenticationData? MasterPasswordAuthenticationData { get; set; }
+    public MasterPasswordAuthenticationData? MasterPasswordAuthentication { get; set; }
     public MasterPasswordUnlockData? MasterPasswordUnlockData { get; set; }
 
     // PM-28143 - Remove property below (made optional during migration to MasterPasswordUnlockData)
