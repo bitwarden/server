@@ -63,12 +63,22 @@ public class RegisterFinishRequestModel : IValidatableObject
 
     public User ToUser()
     {
+        // PM-28143 - Remove line below
+        // When we process this request to a user object, check if the unlock and authentication
+        // data has been passed through, and if so they should have matching values.
+        MasterPasswordUnlockData.ThrowIfExistsAndNotMatchingAuthenticationData(MasterPasswordAuthenticationData, MasterPasswordUnlockData);
+
+        // PM-28143 - Remove line below
+        MasterPasswordAuthenticationData.ThrowIfExistsAndHashIsNotEqual(MasterPasswordAuthenticationData, MasterPasswordHash);
+
         var user = new User
         {
             Email = Email,
             MasterPasswordHint = MasterPasswordHint,
-            Kdf = MasterPasswordUnlockData?.Kdf.KdfType ?? Kdf ?? throw new Exception("KdfType couldn't be found on either the MasterPasswordUnlockData or the Kdf property passed in."),
-            KdfIterations = MasterPasswordUnlockData?.Kdf.Iterations ?? KdfIterations ?? throw new Exception("KdfIterations couldn't be found on either the MasterPasswordUnlockData or the KdfIterations property passed in."),
+            Kdf = MasterPasswordUnlockData?.Kdf.KdfType ?? Kdf
+                ?? throw new Exception("KdfType couldn't be found on either the MasterPasswordUnlockData or the Kdf property passed in."),
+            KdfIterations = MasterPasswordUnlockData?.Kdf.Iterations ?? KdfIterations
+                ?? throw new Exception("KdfIterations couldn't be found on either the MasterPasswordUnlockData or the KdfIterations property passed in."),
             // KdfMemory and KdfParallelism are optional (only used for Argon2id)
             KdfMemory = MasterPasswordUnlockData?.Kdf.Memory ?? KdfMemory,
             KdfParallelism = MasterPasswordUnlockData?.Kdf.Parallelism ?? KdfParallelism,
@@ -111,6 +121,8 @@ public class RegisterFinishRequestModel : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
+        MasterPasswordUnlockData.ThrowIfExistsAndNotMatchingAuthenticationData(MasterPasswordAuthenticationData, MasterPasswordUnlockData);
+
         // PM-28143 - Remove line below
         var kdf = MasterPasswordUnlockData?.Kdf.KdfType
                   ?? Kdf
