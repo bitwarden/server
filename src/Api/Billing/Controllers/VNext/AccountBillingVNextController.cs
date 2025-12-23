@@ -6,7 +6,6 @@ using Bit.Core;
 using Bit.Core.Billing.Payment.Commands;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Premium.Commands;
-using Bit.Core.Billing.Storage.Commands;
 using Bit.Core.Entities;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
@@ -24,7 +23,7 @@ public class AccountBillingVNextController(
     IGetCreditQuery getCreditQuery,
     IGetPaymentMethodQuery getPaymentMethodQuery,
     IUpdatePaymentMethodCommand updatePaymentMethodCommand,
-    IUpdateStorageCommand updateStorageCommand) : BaseBillingController
+    IUpdatePremiumStorageCommand updatePremiumStorageCommand) : BaseBillingController
 {
     [HttpGet("credit")]
     [InjectUser]
@@ -82,12 +81,13 @@ public class AccountBillingVNextController(
     }
 
     [HttpPut("storage")]
+    [RequireFeature(FeatureFlagKeys.PM29594_UpdateIndividualSubscriptionPage)]
     [InjectUser]
     public async Task<IResult> UpdateStorageAsync(
         [BindNever] User user,
         [FromBody] StorageUpdateRequest request)
     {
-        var result = await updateStorageCommand.Run(user, request.StorageGb);
+        var result = await updatePremiumStorageCommand.Run(user, request.AdditionalStorageGb);
         return Handle(result);
     }
 }

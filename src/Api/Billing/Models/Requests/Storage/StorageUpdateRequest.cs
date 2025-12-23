@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace Bit.Api.Billing.Models.Requests.Storage;
 
@@ -9,27 +9,27 @@ namespace Bit.Api.Billing.Models.Requests.Storage;
 public class StorageUpdateRequest : IValidatableObject
 {
     /// <summary>
-    /// The desired total storage in GB (including base storage).
-    /// Must be between the base storage amount and the maximum allowed (100 GB).
+    /// The additional storage in GB beyond the base storage.
+    /// Must be between 0 and the maximum allowed (minus base storage).
     /// </summary>
     [Required]
-    [Range(1, 100)]
-    public short StorageGb { get; set; }
+    [Range(0, 99)]
+    public short AdditionalStorageGb { get; set; }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if (StorageGb <= 0)
+        if (AdditionalStorageGb < 0)
         {
             yield return new ValidationResult(
-                "Storage must be greater than 0 GB.",
-                new[] { nameof(StorageGb) });
+                "Additional storage cannot be negative.",
+                new[] { nameof(AdditionalStorageGb) });
         }
 
-        if (StorageGb > 100)
+        if (AdditionalStorageGb > 99)
         {
             yield return new ValidationResult(
-                "Maximum storage is 100 GB.",
-                new[] { nameof(StorageGb) });
+                "Maximum additional storage is 99 GB.",
+                new[] { nameof(AdditionalStorageGb) });
         }
     }
 }
