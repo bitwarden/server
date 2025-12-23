@@ -16,10 +16,8 @@ namespace Bit.Core.Test.Billing.Premium.Commands;
 public class UpdatePremiumStorageCommandTests
 {
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
-    private readonly IStripePaymentService _stripePaymentService = Substitute.For<IStripePaymentService>();
     private readonly IUserService _userService = Substitute.For<IUserService>();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
-    private readonly IFeatureService _featureService = Substitute.For<IFeatureService>();
     private readonly PremiumPlan _premiumPlan;
     private readonly UpdatePremiumStorageCommand _command;
 
@@ -36,15 +34,10 @@ public class UpdatePremiumStorageCommandTests
         };
         _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { _premiumPlan });
 
-        // Enable new feature flag by default for tests
-        _featureService.IsEnabled(FeatureFlagKeys.PM29594_UpdateIndividualSubscriptionPage).Returns(true);
-
         _command = new UpdatePremiumStorageCommand(
             _stripeAdapter,
-            _stripePaymentService,
             _userService,
             _pricingClient,
-            _featureService,
             Substitute.For<ILogger<UpdatePremiumStorageCommand>>());
     }
 
@@ -350,100 +343,4 @@ public class UpdatePremiumStorageCommandTests
 
         await _userService.Received(1).SaveUserAsync(Arg.Is<User>(u => u.MaxStorageGb == 100));
     }
-
-    #region Old Code Path Tests (Feature Flag Disabled)
-
-    [Theory, BitAutoData]
-    public async Task Run_FeatureFlagDisabled_UsesOldPath_IncreaseStorage(User user)
-    {
-        // Arrange
-        _featureService.IsEnabled(FeatureFlagKeys.PM29594_UpdateIndividualSubscriptionPage).Returns(false);
-
-        user.Premium = true;
-        user.MaxStorageGb = 5;
-        user.Storage = 2L * 1024 * 1024 * 1024;
-        user.GatewaySubscriptionId = "sub_123";
-        user.GatewayCustomerId = "cus_123";
-
-        // BillingHelpers will call paymentService.AdjustStorageAsync with additionalStorage = newTotal - base = 10 - 1 = 9
-        _stripePaymentService.AdjustStorageAsync(Arg.Any<IStorableSubscriber>(), 9, "price_storage").Returns("pi_secret_123");
-
-        // Act
-        var result = await _command.Run(user, 9);
-
-        // Assert
-        Assert.True(result.IsT0);
-        var paymentSecret = result.AsT0;
-        Assert.Equal("pi_secret_123", paymentSecret);
-
-        // Verify old path was called (BillingHelpers calls with final additional storage = 9)
-        await _stripePaymentService.Received(1).AdjustStorageAsync(Arg.Any<IStorableSubscriber>(), 9, "price_storage");
-
-        // Verify Stripe adapter was NOT called
-        await _stripeAdapter.DidNotReceive().GetSubscriptionAsync(Arg.Any<string>());
-        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
-
-        // Verify user was saved
-        await _userService.Received(1).SaveUserAsync(user);
-    }
-
-    [Theory, BitAutoData]
-    public async Task Run_FeatureFlagDisabled_UsesOldPath_DecreaseStorage(User user)
-    {
-        // Arrange
-        _featureService.IsEnabled(FeatureFlagKeys.PM29594_UpdateIndividualSubscriptionPage).Returns(false);
-
-        user.Premium = true;
-        user.MaxStorageGb = 10;
-        user.Storage = 2L * 1024 * 1024 * 1024;
-        user.GatewaySubscriptionId = "sub_123";
-        user.GatewayCustomerId = "cus_123";
-
-        // BillingHelpers will call paymentService.AdjustStorageAsync with additionalStorage = newTotal - base = 3 - 1 = 2
-        _stripePaymentService.AdjustStorageAsync(Arg.Any<IStorableSubscriber>(), 2, "price_storage").Returns("pi_secret_decrease");
-
-        // Act
-        var result = await _command.Run(user, 2);
-
-        // Assert
-        Assert.True(result.IsT0);
-        var paymentSecret = result.AsT0;
-        Assert.Equal("pi_secret_decrease", paymentSecret);
-
-        // Verify old path was called (BillingHelpers calls with final additional storage = 2)
-        await _stripePaymentService.Received(1).AdjustStorageAsync(Arg.Any<IStorableSubscriber>(), 2, "price_storage");
-
-        await _userService.Received(1).SaveUserAsync(user);
-    }
-
-    [Theory, BitAutoData]
-    public async Task Run_FeatureFlagDisabled_UsesOldPath_RemoveAllAdditionalStorage(User user)
-    {
-        // Arrange
-        _featureService.IsEnabled(FeatureFlagKeys.PM29594_UpdateIndividualSubscriptionPage).Returns(false);
-
-        user.Premium = true;
-        user.MaxStorageGb = 10;
-        user.Storage = 500L * 1024 * 1024;
-        user.GatewaySubscriptionId = "sub_123";
-        user.GatewayCustomerId = "cus_123";
-
-        // BillingHelpers will call paymentService.AdjustStorageAsync with additionalStorage = newTotal - base = 1 - 1 = 0
-        _stripePaymentService.AdjustStorageAsync(Arg.Any<IStorableSubscriber>(), 0, "price_storage").Returns((string)null);
-
-        // Act
-        var result = await _command.Run(user, 0);
-
-        // Assert
-        Assert.True(result.IsT0);
-        var paymentSecret = result.AsT0;
-        Assert.Null(paymentSecret);
-
-        // Verify old path was called (BillingHelpers calls with final additional storage = 0)
-        await _stripePaymentService.Received(1).AdjustStorageAsync(Arg.Any<IStorableSubscriber>(), 0, "price_storage");
-
-        await _userService.Received(1).SaveUserAsync(user);
-    }
-
-    #endregion
 }
