@@ -95,6 +95,10 @@ public class UpdatePremiumStorageCommandTests
         // Arrange
         user.Premium = true;
         user.MaxStorageGb = 5;
+        user.GatewaySubscriptionId = "sub_123";
+
+        var subscription = CreateMockSubscription("sub_123", 4);
+        _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(subscription);
 
         // Act
         var result = await _command.Run(user, -5);
@@ -111,6 +115,10 @@ public class UpdatePremiumStorageCommandTests
         // Arrange
         user.Premium = true;
         user.MaxStorageGb = 5;
+        user.GatewaySubscriptionId = "sub_123";
+
+        var subscription = CreateMockSubscription("sub_123", 4);
+        _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(subscription);
 
         // Act
         var result = await _command.Run(user, 100);
@@ -144,6 +152,10 @@ public class UpdatePremiumStorageCommandTests
         user.Premium = true;
         user.MaxStorageGb = 10;
         user.Storage = 5L * 1024 * 1024 * 1024; // 5 GB currently used
+        user.GatewaySubscriptionId = "sub_123";
+
+        var subscription = CreateMockSubscription("sub_123", 9);
+        _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(subscription);
 
         // Act
         var result = await _command.Run(user, 0);
@@ -162,6 +174,10 @@ public class UpdatePremiumStorageCommandTests
         user.Premium = true;
         user.MaxStorageGb = 5;
         user.Storage = 2L * 1024 * 1024 * 1024;
+        user.GatewaySubscriptionId = "sub_123";
+
+        var subscription = CreateMockSubscription("sub_123", 4);
+        _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(subscription);
 
         // Act
         var result = await _command.Run(user, 4);
@@ -171,29 +187,10 @@ public class UpdatePremiumStorageCommandTests
         var paymentSecret = result.AsT0;
         Assert.Null(paymentSecret);
 
-        // Verify Stripe was NOT called
-        await _stripeAdapter.DidNotReceive().GetSubscriptionAsync(Arg.Any<string>());
+        // Verify subscription was fetched but NOT updated
+        await _stripeAdapter.Received(1).GetSubscriptionAsync("sub_123");
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
         await _userService.DidNotReceive().SaveUserAsync(Arg.Any<User>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task Run_NoSubscriptionId_ReturnsBadRequest(User user)
-    {
-        // Arrange
-        user.Premium = true;
-        user.MaxStorageGb = 5;
-        user.Storage = 2L * 1024 * 1024 * 1024;
-        user.GatewaySubscriptionId = null;
-
-        _stripeAdapter.GetSubscriptionAsync(null).Returns((Subscription)null);
-
-        // Act
-        var result = await _command.Run(user, 9);
-
-        // Assert
-        Assert.True(result.IsT1);
-        var badRequest = result.AsT1;
-        Assert.Equal("Subscription not found.", badRequest.Response);
     }
 
     [Theory, BitAutoData]
