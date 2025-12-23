@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Billing.Constants;
-using Bit.Core.Billing.Models.Business;
 using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Business;
