@@ -96,7 +96,8 @@ BEGIN
         [VerifyDevices],
         [SecurityState],
         [SecurityVersion],
-        [SignedPublicKey]
+        [SignedPublicKey],
+        [MaxStorageGbIncreased]
     )
     VALUES
     (
@@ -145,6 +146,7 @@ BEGIN
         @VerifyDevices,
         @SecurityState,
         @SecurityVersion,
-        @SignedPublicKey
+        @SignedPublicKey,
+        @MaxStorageGb
     )
 END
