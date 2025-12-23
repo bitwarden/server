@@ -18,7 +18,7 @@
 --  FIXME: remove null default value once this argument has been
 --         in 2 server releases
     @Emails NVARCHAR(4000) = NULL,
-    @AuthType TINYINT = 2
+    @AuthType TINYINT = NULL
 AS
 BEGIN
     SET NOCOUNT ON

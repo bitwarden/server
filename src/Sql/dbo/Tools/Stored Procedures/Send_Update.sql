@@ -16,7 +16,7 @@
     @HideEmail BIT,
     @CipherId UNIQUEIDENTIFIER = NULL,
     @Emails NVARCHAR(4000) = NULL,
-    @AuthType TINYINT = 2
+    @AuthType TINYINT = NULL
 AS
 BEGIN
     SET NOCOUNT ON
