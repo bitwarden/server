@@ -51,7 +51,7 @@ public class DatadogIntegrationHandlerTests
 
         Assert.True(result.Success);
         Assert.Equal(result.Message, message);
-        Assert.Empty(result.FailureReason);
+        Assert.Null(result.FailureReason);
 
         sutProvider.GetDependency<IHttpClientFactory>().Received(1).CreateClient(
             Arg.Is(AssertHelper.AssertPropertyEqual(DatadogIntegrationHandler.HttpClientName))

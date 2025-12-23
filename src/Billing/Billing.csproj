@@ -1,7 +1,15 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+  <Sdk Name="Bitwarden.Server.Sdk" />
 
   <PropertyGroup>
     <UserSecretsId>bitwarden-Billing</UserSecretsId>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Server SDK settings">
+    <!-- These features will be gradually turned on -->
+    <BitIncludeFeatures>false</BitIncludeFeatures>
+    <BitIncludeTelemetry>false</BitIncludeTelemetry>
+    <BitIncludeAuthentication>false</BitIncludeAuthentication>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Billing' " />

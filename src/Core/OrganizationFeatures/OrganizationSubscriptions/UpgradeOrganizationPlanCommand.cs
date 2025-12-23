@@ -11,6 +11,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -26,7 +27,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly ICollectionRepository _collectionRepository;
     private readonly IGroupRepository _groupRepository;
-    private readonly IPaymentService _paymentService;
+    private readonly IStripePaymentService _paymentService;
     private readonly IPolicyRepository _policyRepository;
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly IOrganizationConnectionRepository _organizationConnectionRepository;
@@ -41,7 +42,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         IOrganizationUserRepository organizationUserRepository,
         ICollectionRepository collectionRepository,
         IGroupRepository groupRepository,
-        IPaymentService paymentService,
+        IStripePaymentService paymentService,
         IPolicyRepository policyRepository,
         ISsoConfigRepository ssoConfigRepository,
         IOrganizationConnectionRepository organizationConnectionRepository,

@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -18,7 +19,7 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
 {
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IPaymentService _paymentService;
+    private readonly IStripePaymentService _paymentService;
     private readonly IGroupRepository _groupRepository;
     private readonly IEventService _eventService;
     private readonly IOrganizationService _organizationService;
@@ -27,7 +28,7 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
 
     public ImportOrganizationUsersAndGroupsCommand(IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
-            IPaymentService paymentService,
+            IStripePaymentService paymentService,
             IGroupRepository groupRepository,
             IEventService eventService,
             IOrganizationService organizationService)

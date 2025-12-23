@@ -69,7 +69,7 @@ CREATE TABLE [dbo].[Organization] (
 GO
 CREATE NONCLUSTERED INDEX [IX_Organization_Enabled]
     ON [dbo].[Organization]([Id] ASC, [Enabled] ASC)
-    INCLUDE ([UseTotp]);
+    INCLUDE ([UseTotp], [UsersGetPremium]);
 
 GO
 CREATE UNIQUE NONCLUSTERED INDEX [IX_Organization_Identifier]

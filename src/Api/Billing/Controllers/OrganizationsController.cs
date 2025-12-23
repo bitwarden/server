@@ -36,7 +36,7 @@ public class OrganizationsController(
     IOrganizationUserRepository organizationUserRepository,
     IOrganizationService organizationService,
     IUserService userService,
-    IPaymentService paymentService,
+    IStripePaymentService paymentService,
     ICurrentContext currentContext,
     IGetCloudOrganizationLicenseQuery getCloudOrganizationLicenseQuery,
     GlobalSettings globalSettings,

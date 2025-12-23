@@ -1,10 +1,10 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.OrganizationSponsorshipFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -82,7 +82,7 @@ public class SetUpSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
 
     private static async Task AssertDidNotSetUpAsync(SutProvider<SetUpSponsorshipCommand> sutProvider)
     {
-        await sutProvider.GetDependency<IPaymentService>()
+        await sutProvider.GetDependency<IStripePaymentService>()
             .DidNotReceiveWithAnyArgs()
             .SponsorOrganizationAsync(default, default);
         await sutProvider.GetDependency<IOrganizationRepository>()

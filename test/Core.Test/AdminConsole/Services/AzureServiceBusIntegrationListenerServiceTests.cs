@@ -78,8 +78,10 @@ public class AzureServiceBusIntegrationListenerServiceTests
         var sutProvider = GetSutProvider();
         message.RetryCount = 0;
 
-        var result = new IntegrationHandlerResult(false, message);
-        result.Retryable = false;
+        var result = IntegrationHandlerResult.Fail(
+            message: message,
+            category: IntegrationFailureCategory.AuthenticationFailed, // NOT retryable
+            failureReason: "403");
         _handler.HandleAsync(Arg.Any<string>()).Returns(result);
 
         var expected = IntegrationMessage<WebhookIntegrationConfiguration>.FromJson(message.ToJson());
@@ -89,6 +91,12 @@ public class AzureServiceBusIntegrationListenerServiceTests
 
         await _handler.Received(1).HandleAsync(Arg.Is(expected.ToJson()));
         await _serviceBusService.DidNotReceiveWithAnyArgs().PublishToRetryAsync(Arg.Any<IIntegrationMessage>());
+        _logger.Received().Log(
+            LogLevel.Warning,
+            Arg.Any<EventId>(),
+            Arg.Is<object>(o => (o.ToString() ?? "").Contains("Integration failure - non-recoverable error or max retries exceeded.")),
+            Arg.Any<Exception?>(),
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     [Theory, BitAutoData]
@@ -96,9 +104,10 @@ public class AzureServiceBusIntegrationListenerServiceTests
     {
         var sutProvider = GetSutProvider();
         message.RetryCount = _config.MaxRetries;
-        var result = new IntegrationHandlerResult(false, message);
-        result.Retryable = true;
-
+        var result = IntegrationHandlerResult.Fail(
+            message: message,
+            category: IntegrationFailureCategory.TransientError, // Retryable
+            failureReason: "403");
         _handler.HandleAsync(Arg.Any<string>()).Returns(result);
 
         var expected = IntegrationMessage<WebhookIntegrationConfiguration>.FromJson(message.ToJson());
@@ -108,6 +117,12 @@ public class AzureServiceBusIntegrationListenerServiceTests
 
         await _handler.Received(1).HandleAsync(Arg.Is(expected.ToJson()));
         await _serviceBusService.DidNotReceiveWithAnyArgs().PublishToRetryAsync(Arg.Any<IIntegrationMessage>());
+        _logger.Received().Log(
+            LogLevel.Warning,
+            Arg.Any<EventId>(),
+            Arg.Is<object>(o => (o.ToString() ?? "").Contains("Integration failure - non-recoverable error or max retries exceeded.")),
+            Arg.Any<Exception?>(),
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     [Theory, BitAutoData]
@@ -116,8 +131,10 @@ public class AzureServiceBusIntegrationListenerServiceTests
         var sutProvider = GetSutProvider();
         message.RetryCount = 0;
 
-        var result = new IntegrationHandlerResult(false, message);
-        result.Retryable = true;
+        var result = IntegrationHandlerResult.Fail(
+            message: message,
+            category: IntegrationFailureCategory.TransientError, // Retryable
+            failureReason: "403");
         _handler.HandleAsync(Arg.Any<string>()).Returns(result);
 
         var expected = IntegrationMessage<WebhookIntegrationConfiguration>.FromJson(message.ToJson());
@@ -133,7 +150,7 @@ public class AzureServiceBusIntegrationListenerServiceTests
     public async Task HandleMessageAsync_SuccessfulResult_Succeeds(IntegrationMessage<WebhookIntegrationConfiguration> message)
     {
         var sutProvider = GetSutProvider();
-        var result = new IntegrationHandlerResult(true, message);
+        var result = IntegrationHandlerResult.Succeed(message);
         _handler.HandleAsync(Arg.Any<string>()).Returns(result);
 
         var expected = IntegrationMessage<WebhookIntegrationConfiguration>.FromJson(message.ToJson());
@@ -156,7 +173,7 @@ public class AzureServiceBusIntegrationListenerServiceTests
         _logger.Received(1).Log(
             LogLevel.Error,
             Arg.Any<EventId>(),
-            Arg.Any<object>(),
+            Arg.Is<object>(o => (o.ToString() ?? "").Contains("Unhandled error processing ASB message")),
             Arg.Any<Exception>(),
             Arg.Any<Func<object, Exception?, string>>());
 

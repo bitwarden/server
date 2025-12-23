@@ -227,7 +227,7 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
             services.AddSingleton<ILoggerFactory, NullLoggerFactory>();
 
             // Noop StripePaymentService - this could be changed to integrate with our Stripe test account
-            Replace(services, Substitute.For<IPaymentService>());
+            Replace(services, Substitute.For<IStripePaymentService>());
 
             Replace(services, Substitute.For<IOrganizationBillingService>());
         });

@@ -3,11 +3,14 @@
 
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -33,7 +36,7 @@ public interface ICloudOrganizationSignUpCommand
 public class CloudOrganizationSignUpCommand(
     IOrganizationUserRepository organizationUserRepository,
     IOrganizationBillingService organizationBillingService,
-    IPaymentService paymentService,
+    IStripePaymentService paymentService,
     IPolicyService policyService,
     IOrganizationRepository organizationRepository,
     IOrganizationApiKeyRepository organizationApiKeyRepository,
@@ -42,7 +45,9 @@ public class CloudOrganizationSignUpCommand(
     IPushNotificationService pushNotificationService,
     ICollectionRepository collectionRepository,
     IDeviceRepository deviceRepository,
-    IPricingClient pricingClient) : ICloudOrganizationSignUpCommand
+    IPricingClient pricingClient,
+    IPolicyRequirementQuery policyRequirementQuery,
+    IFeatureService featureService) : ICloudOrganizationSignUpCommand
 {
     public async Task<SignUpOrganizationResponse> SignUpOrganizationAsync(OrganizationSignup signup)
     {
@@ -236,6 +241,17 @@ public class CloudOrganizationSignUpCommand(
 
     private async Task ValidateSignUpPoliciesAsync(Guid ownerId)
     {
+        if (featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
+        {
+            var requirement = await policyRequirementQuery.GetAsync<AutomaticUserConfirmationPolicyRequirement>(ownerId);
+
+            if (requirement.CannotCreateNewOrganization())
+            {
+                throw new BadRequestException("You may not create an organization. You belong to an organization " +
+                                              "which has a policy that prohibits you from being a member of any other organization.");
+            }
+        }
+
         var anySingleOrgPolicies = await policyService.AnyPoliciesApplicableToUserAsync(ownerId, PolicyType.SingleOrg);
         if (anySingleOrgPolicies)
         {
