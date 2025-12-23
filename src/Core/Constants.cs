@@ -265,6 +265,9 @@ public static class FeatureFlagKeys
     /* UIF Team */
     public const string RouterFocusManagement = "router-focus-management";
 
+    /* Secrets Manager Team */
+    public const string SM1719_RemoveSecretsManagerAds = "sm-1719-remove-secrets-manager-ads";
+
     public static List<string> GetAllKeys()
     {
         return typeof(FeatureFlagKeys).GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
