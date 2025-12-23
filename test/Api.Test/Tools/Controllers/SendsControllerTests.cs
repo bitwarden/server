@@ -1,5 +1,5 @@
 ﻿using System.Text.Json;
-using AutoFixture.Xunit2;
+using AutoFixture.Xunit3;
 using Bit.Api.Tools.Controllers;
 using Bit.Api.Tools.Models.Request;
 using Bit.Api.Tools.Models.Response;

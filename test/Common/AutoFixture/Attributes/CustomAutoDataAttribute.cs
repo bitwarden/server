@@ -1,15 +1,11 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using AutoFixture;
-using AutoFixture.Xunit2;
+﻿using AutoFixture;
+using AutoFixture.Xunit3;
 
 namespace Bit.Test.Common.AutoFixture.Attributes;
 
 public class CustomAutoDataAttribute : AutoDataAttribute
 {
-    public CustomAutoDataAttribute(params Type[] iCustomizationTypes) : this(iCustomizationTypes
-        .Select(t => (ICustomization)Activator.CreateInstance(t)).ToArray())
+    public CustomAutoDataAttribute(params Type[] iCustomizationTypes) : this(CreateCustomizations(iCustomizationTypes))
     { }
 
     public CustomAutoDataAttribute(params ICustomization[] customizations) : base(() =>
@@ -22,4 +18,22 @@ public class CustomAutoDataAttribute : AutoDataAttribute
         return fixture;
     })
     { }
+
+    private static ICustomization[] CreateCustomizations(Type[] customizationTypes)
+    {
+        var customizations = new ICustomization[customizationTypes.Length];
+        for (var i = 0; i < customizationTypes.Length; i++)
+        {
+            var customizationType = customizationTypes[i];
+            var customizationObj = Activator.CreateInstance(customizationTypes[i]);
+            if (customizationObj is not ICustomization customization)
+            {
+                throw new InvalidOperationException($"{customizationType.FullName} should implement ICustomization");
+            }
+
+            customizations[i] = customization;
+        }
+
+        return customizations;
+    }
 }

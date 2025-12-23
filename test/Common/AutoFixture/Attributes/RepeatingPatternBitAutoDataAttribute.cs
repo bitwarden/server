@@ -1,5 +1,7 @@
 ﻿#nullable enable
 using System.Reflection;
+using Xunit;
+using Xunit.Sdk;
 
 namespace Bit.Test.Common.AutoFixture.Attributes;
 
@@ -66,23 +68,27 @@ public class RepeatingPatternBitAutoDataAttribute : BitAutoDataAttribute
         _repeatingDataList = AllValues([first, second, third]);
     }
 
-    public override IEnumerable<object?[]> GetData(MethodInfo testMethod)
+    public override ValueTask<IReadOnlyCollection<ITheoryDataRow>> GetData(MethodInfo testMethod, DisposalTracker disposalTracker)
     {
+        var dataRows = new List<ITheoryDataRow>();
         if (_repeatingDataList.Count == 0)
         {
-            yield return base.GetData(testMethod).First();
+            dataRows.Add(new TheoryDataRow(base.GetDataCore(testMethod)));
+            return new(dataRows);
         }
 
         foreach (var repeatingData in _repeatingDataList)
         {
-            var bitData = base.GetData(testMethod).First();
+            var bitData = base.GetDataCore(testMethod).First();
             for (var i = 0; i < repeatingData.Length; i++)
             {
                 bitData[i] = repeatingData[i];
             }
 
-            yield return bitData;
+            dataRows.Add(new TheoryDataRow(bitData));
         }
+
+        return new(dataRows);
     }
 
     private static List<object?[]> AllValues(object?[][] parameterToPatternValues)

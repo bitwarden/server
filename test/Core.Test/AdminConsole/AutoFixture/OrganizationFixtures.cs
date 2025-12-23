@@ -2,7 +2,7 @@
 using System.Text.Json;
 using AutoFixture;
 using AutoFixture.Kernel;
-using AutoFixture.Xunit2;
+using AutoFixture.Xunit3;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;

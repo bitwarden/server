@@ -1,6 +1,6 @@
 ﻿using System.Reflection;
 using AutoFixture;
-using AutoFixture.Xunit2;
+using AutoFixture.Xunit3;
 using Bit.Core.Tools.Entities;
 using Bit.Test.Common.AutoFixture.Attributes;
 
@@ -37,4 +37,3 @@ internal class NewUserSendCustomizeAttribute : CustomizeAttribute
     public override ICustomization GetCustomization(ParameterInfo parameterInfo)
         => new NewUserSend();
 }
-

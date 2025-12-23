@@ -213,7 +213,7 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
         Assert.Equal(HttpStatusCode.Forbidden, httpResponse.StatusCode);
     }
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         _ownerEmail = $"org-user-integration-test-{Guid.NewGuid()}@bitwarden.com";
         await _factory.LoginWithNewAccount(_ownerEmail);
@@ -325,10 +325,10 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
         await VerifyCollectionAccessWasUpdatedCorrectlyAsync(organizationUser, sharedCollection.Id, defaultCollection.Id);
     }
 
-    public Task DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         _client.Dispose();
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
     private async Task<(Group group, Collection sharedCollection, Collection defaultCollection)> CreateTestDataAsync()

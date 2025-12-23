@@ -22,14 +22,14 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
         _factory = factory;
     }
 
-    public Task InitializeAsync()
+    public ValueTask InitializeAsync()
     {
         var databaseContext = _factory.GetDatabaseContext();
         _factory.ReinitializeDbForTests(databaseContext);
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
-    Task IAsyncLifetime.DisposeAsync() => Task.CompletedTask;
+    ValueTask IAsyncDisposable.DisposeAsync() => ValueTask.CompletedTask;
 
     [Fact]
     public async Task Get_Success()

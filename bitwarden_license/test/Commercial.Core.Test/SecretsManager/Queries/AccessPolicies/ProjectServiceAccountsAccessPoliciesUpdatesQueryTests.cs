@@ -75,11 +75,11 @@ public class ProjectServiceAccountsAccessPoliciesUpdatesQueryTests
 
         Assert.Equal(data.ProjectId, result.ProjectId);
         Assert.Equal(data.OrganizationId, result.OrganizationId);
-        Assert.Single(result.ServiceAccountAccessPolicyUpdates.Where(x =>
-            x.Operation == AccessPolicyOperation.Delete && x.AccessPolicy == currentPolicyToDelete));
-        Assert.Single(result.ServiceAccountAccessPolicyUpdates.Where(x =>
+        Assert.Single(result.ServiceAccountAccessPolicyUpdates, x =>
+            x.Operation == AccessPolicyOperation.Delete && x.AccessPolicy == currentPolicyToDelete);
+        Assert.Single(result.ServiceAccountAccessPolicyUpdates, x =>
             x.Operation == AccessPolicyOperation.Update &&
-            x.AccessPolicy.GrantedProjectId == updatePolicy.GrantedProjectId));
+            x.AccessPolicy.GrantedProjectId == updatePolicy.GrantedProjectId);
         Assert.Equal(result.ServiceAccountAccessPolicyUpdates.Count() - 2,
             result.ServiceAccountAccessPolicyUpdates.Count(x => x.Operation == AccessPolicyOperation.Create));
     }

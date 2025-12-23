@@ -13,7 +13,7 @@ public class DuoUniversalTokenServiceTests
     [BitAutoData("", "ClientId", "ClientSecret")]
     [BitAutoData("api-valid.duosecurity.com", "", "ClientSecret")]
     [BitAutoData("api-valid.duosecurity.com", "ClientId", "")]
-    public async void ValidateDuoConfiguration_InvalidConfig_ReturnsFalse(
+    public async Task ValidateDuoConfiguration_InvalidConfig_ReturnsFalse(
         string host, string clientId, string clientSecret, SutProvider<DuoUniversalTokenService> sutProvider)
     {
         // Arrange

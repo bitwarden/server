@@ -2,7 +2,7 @@
 using System.Text;
 using AutoFixture;
 using AutoFixture.Kernel;
-using AutoFixture.Xunit2;
+using AutoFixture.Xunit3;
 using Bit.Core;
 using Bit.Core.Test.Helpers.Factories;
 using Microsoft.AspNetCore.DataProtection;

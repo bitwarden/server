@@ -1,10 +1,10 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
+﻿using System.Diagnostics;
 using System.Reflection;
 using AutoFixture;
 using Bit.Test.Common.Helpers;
 using Xunit;
+using Xunit.Sdk;
+using Xunit.v3;
 
 namespace Bit.Test.Common.AutoFixture.Attributes;
 
@@ -22,6 +22,27 @@ public class BitMemberAutoDataAttribute : MemberDataAttributeBase
         _createFixture = createFixture;
     }
 
-    protected override object[] ConvertDataItem(MethodInfo testMethod, object item) =>
-        BitAutoDataAttributeHelpers.GetData(testMethod, _createFixture(), item as object[]).First();
+    private MethodInfo? _testMethod;
+
+    public override ValueTask<IReadOnlyCollection<ITheoryDataRow>> GetData(MethodInfo testMethod, DisposalTracker disposalTracker)
+    {
+        _testMethod = testMethod;
+        return base.GetData(testMethod, disposalTracker);
+    }
+
+    protected override ITheoryDataRow ConvertDataRow(object dataRow)
+    {
+        // Unwrap a possible ITheoryDataRow
+        object?[] fixedItems;
+        if (dataRow is ITheoryDataRow theoryDataRow)
+        {
+            fixedItems = theoryDataRow.GetData();
+        }
+        else
+        {
+            fixedItems = (dataRow as object?[])!;
+        }
+        Debug.Assert(_testMethod is not null, "GetData expected to be called first.");
+        return new TheoryDataRow(BitAutoDataAttributeHelpers.GetData(_testMethod, _createFixture(), fixedItems).First());
+    }
 }
