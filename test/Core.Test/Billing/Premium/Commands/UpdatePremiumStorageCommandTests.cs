@@ -1,6 +1,6 @@
+﻿using Bit.Core.Billing.Premium.Commands;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
-using Bit.Core.Billing.Premium.Commands;
 using Bit.Core.Entities;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -192,13 +192,15 @@ public class UpdatePremiumStorageCommandTests
         user.Storage = 2L * 1024 * 1024 * 1024;
         user.GatewaySubscriptionId = null;
 
+        _stripeAdapter.GetSubscriptionAsync(null).Returns((Subscription)null);
+
         // Act
         var result = await _command.Run(user, 9);
 
         // Assert
         Assert.True(result.IsT1);
         var badRequest = result.AsT1;
-        Assert.Equal("No subscription found.", badRequest.Response);
+        Assert.Equal("Subscription not found.", badRequest.Response);
     }
 
     [Theory, BitAutoData]
