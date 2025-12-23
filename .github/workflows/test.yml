@@ -40,7 +40,7 @@ jobs:
           toolchain: stable
 
       - name: Cache cargo registry
-        uses: Swatinem/rust-cache@f0deed1e0edfc6a9be95417288c0e1099b1eeec3 # v2.7.7
+        uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
 
       - name: Print environment
         run: |
@@ -59,7 +59,7 @@ jobs:
         run: dotnet test ./bitwarden_license/test --configuration Debug --logger "trx;LogFileName=bw-test-results.trx" /p:CoverletOutputFormatter="cobertura" --collect:"XPlat Code Coverage"
 
       - name: Report test results
-        uses: dorny/test-reporter@890a17cecf52a379fc869ab770a71657660be727 # v2.1.0
+        uses: dorny/test-reporter@fe45e9537387dac839af0d33ba56eed8e24189e8 # v2.3.0
         if: ${{ github.event.pull_request.head.repo.full_name == github.repository && !cancelled() }}
         with:
           name: Test Results
@@ -68,4 +68,4 @@ jobs:
           fail-on-error: true
 
       - name: Upload to codecov.io
-        uses: codecov/codecov-action@18283e04ce6e62d37312384ff67231eb8fd56d24 # v5.4.3
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2

@@ -59,7 +59,7 @@ jobs:
 
       - name: Collect
         id: collect
-        uses: launchdarkly/find-code-references@e3e9da201b87ada54eb4c550c14fb783385c5c8a # v2.13.0
+        uses: launchdarkly/find-code-references@89a7d362d1d4b3725fe0fe0ccd0dc69e3bdcba58 # v2.14.0
         with:
           accessToken: ${{ steps.get-kv-secrets.outputs.LD-ACCESS-TOKEN }}
           projKey: default
