@@ -39,6 +39,7 @@ public class AccountsController : Controller
     private readonly IUserService _userService;
     private readonly IPolicyService _policyService;
     private readonly ISetInitialMasterPasswordCommandV1 _setInitialMasterPasswordCommandV1;
+    private readonly ISetInitialMasterPasswordCommand _setInitialMasterPasswordCommand;
     private readonly ITdeOffboardingPasswordCommand _tdeOffboardingPasswordCommand;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IFeatureService _featureService;
@@ -53,6 +54,7 @@ public class AccountsController : Controller
         IProviderUserRepository providerUserRepository,
         IUserService userService,
         IPolicyService policyService,
+        ISetInitialMasterPasswordCommand setInitialMasterPasswordCommand,
         ISetInitialMasterPasswordCommandV1 setInitialMasterPasswordCommandV1,
         ITdeOffboardingPasswordCommand tdeOffboardingPasswordCommand,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
@@ -68,6 +70,7 @@ public class AccountsController : Controller
         _providerUserRepository = providerUserRepository;
         _userService = userService;
         _policyService = policyService;
+        _setInitialMasterPasswordCommand = setInitialMasterPasswordCommand;
         _setInitialMasterPasswordCommandV1 = setInitialMasterPasswordCommandV1;
         _tdeOffboardingPasswordCommand = tdeOffboardingPasswordCommand;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
@@ -216,33 +219,41 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        try
+        if (model.IsV2Request())
         {
-            user = model.ToUser(user);
+            await _setInitialMasterPasswordCommand.SetInitialMasterPasswordAsync(user, model.ToData());
         }
-        catch (Exception e)
+        else
         {
-            ModelState.AddModelError(string.Empty, e.Message);
+            // TODO removed with https://bitwarden.atlassian.net/browse/PM-27327
+            try
+            {
+                user = model.ToUser(user);
+            }
+            catch (Exception e)
+            {
+                ModelState.AddModelError(string.Empty, e.Message);
+                throw new BadRequestException(ModelState);
+            }
+
+            var result = await _setInitialMasterPasswordCommandV1.SetInitialMasterPasswordAsync(
+                user,
+                model.MasterPasswordHash,
+                model.Key,
+                model.OrgIdentifier);
+
+            if (result.Succeeded)
+            {
+                return;
+            }
+
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
+
             throw new BadRequestException(ModelState);
         }
-
-        var result = await _setInitialMasterPasswordCommandV1.SetInitialMasterPasswordAsync(
-            user,
-            model.MasterPasswordHash,
-            model.Key,
-            model.OrgIdentifier);
-
-        if (result.Succeeded)
-        {
-            return;
-        }
-
-        foreach (var error in result.Errors)
-        {
-            ModelState.AddModelError(string.Empty, error.Description);
-        }
-
-        throw new BadRequestException(ModelState);
     }
 
     [HttpPost("verify-password")]

@@ -1,40 +1,158 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
+using Bit.Api.KeyManagement.Models.Requests;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
+using Bit.Core.Auth.Models.Data;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Models.Api.Request;
+using Bit.Core.Utilities;
 
 namespace Bit.Api.Auth.Models.Request.Accounts;
 
-public class SetPasswordRequestModel
+public class SetPasswordRequestModel : IValidatableObject
 {
-    [Required]
+    // TODO will be removed with https://bitwarden.atlassian.net/browse/PM-27327
+    [Obsolete("Use MasterPasswordAuthentication instead")]
     [StringLength(300)]
-    public string MasterPasswordHash { get; set; }
-    [Required]
-    public string Key { get; set; }
-    [StringLength(50)]
-    public string MasterPasswordHint { get; set; }
-    public KeysRequestModel Keys { get; set; }
-    [Required]
-    public KdfType Kdf { get; set; }
-    [Required]
-    public int KdfIterations { get; set; }
-    public int? KdfMemory { get; set; }
-    public int? KdfParallelism { get; set; }
-    public string OrgIdentifier { get; set; }
+    public string? MasterPasswordHash { get; set; }
 
+    [Obsolete("Use MasterPasswordUnlock instead")]
+    public string? Key { get; set; }
+
+    [Obsolete("Use AccountKeys instead")]
+    public KeysRequestModel? Keys { get; set; }
+
+    [Obsolete("Use MasterPasswordAuthentication instead")]
+    public KdfType? Kdf { get; set; }
+
+    [Obsolete("Use MasterPasswordAuthentication instead")]
+    public int? KdfIterations { get; set; }
+
+    [Obsolete("Use MasterPasswordAuthentication instead")]
+    public int? KdfMemory { get; set; }
+
+    [Obsolete("Use MasterPasswordAuthentication instead")]
+    public int? KdfParallelism { get; set; }
+
+    public MasterPasswordAuthenticationDataRequestModel? MasterPasswordAuthentication { get; set; }
+    public MasterPasswordUnlockDataRequestModel? MasterPasswordUnlock { get; set; }
+    public AccountKeysRequestModel? AccountKeys { get; set; }
+
+    [StringLength(50)]
+    public string? MasterPasswordHint { get; set; }
+
+    [Required]
+    public required string OrgIdentifier { get; set; }
+
+    // TODO removed with https://bitwarden.atlassian.net/browse/PM-27327
     public User ToUser(User existingUser)
     {
         existingUser.MasterPasswordHint = MasterPasswordHint;
-        existingUser.Kdf = Kdf;
-        existingUser.KdfIterations = KdfIterations;
+        existingUser.Kdf = Kdf!.Value;
+        existingUser.KdfIterations = KdfIterations!.Value;
         existingUser.KdfMemory = KdfMemory;
         existingUser.KdfParallelism = KdfParallelism;
         existingUser.Key = Key;
         Keys?.ToUser(existingUser);
         return existingUser;
+    }
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (IsV2Request())
+        {
+            // V2 registration
+
+            // Validate Kdf
+            var authenticationKdf = MasterPasswordAuthentication!.Kdf.ToData();
+            var unlockKdf = MasterPasswordUnlock!.Kdf.ToData();
+
+            // Currently, KDF settings are not saved separately for authentication and unlock and must therefore be equal
+            if (!authenticationKdf.Equals(unlockKdf))
+            {
+                throw new BadRequestException("KDF settings must be equal for authentication and unlock.");
+            }
+
+            var authenticationValidationErrors = KdfSettingsValidator.Validate(authenticationKdf).ToList();
+            if (authenticationValidationErrors.Count != 0)
+            {
+                yield return authenticationValidationErrors.First();
+            }
+
+            var unlockValidationErrors = KdfSettingsValidator.Validate(unlockKdf).ToList();
+            if (unlockValidationErrors.Count != 0)
+            {
+                yield return unlockValidationErrors.First();
+            }
+
+            yield break;
+        }
+
+        // V1 registration
+        // TODO removed with https://bitwarden.atlassian.net/browse/PM-27327
+        if (string.IsNullOrEmpty(MasterPasswordHash))
+        {
+            yield return new ValidationResult("MasterPasswordHash must be supplied.");
+        }
+
+        if (string.IsNullOrEmpty(Key))
+        {
+            yield return new ValidationResult("Key must be supplied.");
+        }
+
+        // TODO Keys can be null for TDE user, but must not null for regular master password JIT user
+        // if (Keys == null)
+        // {
+        //     yield return new ValidationResult("Keys must be supplied.");
+        // }
+
+        if (Kdf == null)
+        {
+            yield return new ValidationResult("Kdf must be supplied.");
+        }
+
+        if (KdfIterations == null)
+        {
+            yield return new ValidationResult("KdfIterations must be supplied.");
+        }
+
+        if (Kdf == KdfType.Argon2id)
+        {
+            if (KdfMemory == null)
+            {
+                yield return new ValidationResult("KdfMemory must be supplied when Kdf is Argon2id.");
+            }
+
+            if (KdfParallelism == null)
+            {
+                yield return new ValidationResult("KdfParallelism must be supplied when Kdf is Argon2id.");
+            }
+        }
+
+        var validationErrors = KdfSettingsValidator
+            .Validate(Kdf!.Value, KdfIterations!.Value, KdfMemory, KdfParallelism).ToList();
+        if (validationErrors.Count != 0)
+        {
+            yield return validationErrors.First();
+        }
+    }
+
+    public bool IsV2Request()
+    {
+        // AccountKeys can be null for TDE users, so we don't check that here
+        return MasterPasswordAuthentication != null && MasterPasswordUnlock != null;
+    }
+
+    public SetMasterPasswordDataModel ToData()
+    {
+        return new SetMasterPasswordDataModel
+        {
+            MasterPasswordAuthentication = MasterPasswordAuthentication!.ToData(),
+            MasterPasswordUnlock = MasterPasswordUnlock!.ToData(),
+            OrgSsoIdentifier = OrgIdentifier,
+            AccountKeys = AccountKeys?.ToAccountKeysData(),
+            MasterPasswordHint = MasterPasswordHint
+        };
     }
 }

@@ -74,6 +74,11 @@ public interface IUserRepository : IRepository<User, Guid>
     Task DeleteManyAsync(IEnumerable<User> users);
 
     UpdateUserData SetKeyConnectorUserKey(Guid userId, string keyConnectorWrappedUserKey);
+
+    UpdateUserData SetInitialMasterPassword(Guid userId, MasterPasswordUnlockData masterPasswordUnlockData,
+        string masterPasswordHash, string? masterPasswordHint);
+
+    Task UpdateUserDataAsync(IEnumerable<UpdateUserData> updateUserDataActions);
 }
 
 public delegate Task UpdateUserData(Microsoft.Data.SqlClient.SqlConnection? connection = null,

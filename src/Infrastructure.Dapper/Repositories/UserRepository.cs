@@ -428,6 +428,55 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         };
     }
 
+    public UpdateUserData SetInitialMasterPassword(Guid userId, MasterPasswordUnlockData masterPasswordUnlockData,
+        string masterPasswordHash, string? masterPasswordHint)
+    {
+        return async (connection, transaction) =>
+        {
+            var timestamp = DateTime.UtcNow;
+
+            await connection!.ExecuteAsync(
+                "[dbo].[User_UpdateInitialMasterPassword]",
+                new
+                {
+                    Id = userId,
+                    MasterPassword = masterPasswordHash,
+                    MasterPasswordHint = masterPasswordHint,
+                    Key = masterPasswordUnlockData.MasterKeyWrappedUserKey,
+                    Kdf = masterPasswordUnlockData.Kdf.KdfType,
+                    KdfIterations = masterPasswordUnlockData.Kdf.Iterations,
+                    KdfMemory = masterPasswordUnlockData.Kdf.Memory,
+                    KdfParallelism = masterPasswordUnlockData.Kdf.Parallelism,
+                    RevisionDate = timestamp,
+                    AccountRevisionDate = timestamp
+                },
+                transaction: transaction,
+                commandType: CommandType.StoredProcedure);
+        };
+    }
+
+    public async Task UpdateUserDataAsync(IEnumerable<UpdateUserData> updateUserDataActions)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        await connection.OpenAsync();
+
+        await using var transaction = connection.BeginTransaction();
+        try
+        {
+            foreach (var action in updateUserDataActions)
+            {
+                await action(connection, transaction);
+            }
+
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
     private async Task ProtectDataAndSaveAsync(User user, Func<Task> saveTask)
     {
         if (user == null)

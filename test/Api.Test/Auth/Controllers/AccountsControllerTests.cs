@@ -32,6 +32,7 @@ public class AccountsControllerTests : IDisposable
     private readonly IUserService _userService;
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IPolicyService _policyService;
+    private readonly ISetInitialMasterPasswordCommand _setInitialMasterPasswordCommand;
     private readonly ISetInitialMasterPasswordCommandV1 _setInitialMasterPasswordCommandV1;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly ITdeOffboardingPasswordCommand _tdeOffboardingPasswordCommand;
@@ -48,6 +49,7 @@ public class AccountsControllerTests : IDisposable
         _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
         _providerUserRepository = Substitute.For<IProviderUserRepository>();
         _policyService = Substitute.For<IPolicyService>();
+        _setInitialMasterPasswordCommand = Substitute.For<ISetInitialMasterPasswordCommand>();
         _setInitialMasterPasswordCommandV1 = Substitute.For<ISetInitialMasterPasswordCommandV1>();
         _twoFactorIsEnabledQuery = Substitute.For<ITwoFactorIsEnabledQuery>();
         _tdeOffboardingPasswordCommand = Substitute.For<ITdeOffboardingPasswordCommand>();
@@ -63,6 +65,7 @@ public class AccountsControllerTests : IDisposable
             _providerUserRepository,
             _userService,
             _policyService,
+            _setInitialMasterPasswordCommand,
             _setInitialMasterPasswordCommandV1,
             _tdeOffboardingPasswordCommand,
             _twoFactorIsEnabledQuery,

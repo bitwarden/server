@@ -510,6 +510,51 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         };
     }
 
+    public UpdateUserData SetInitialMasterPassword(Guid userId, MasterPasswordUnlockData masterPasswordUnlockData,
+        string masterPasswordHash, string? masterPasswordHint)
+    {
+        return async (_, _) =>
+        {
+            using var scope = ServiceScopeFactory.CreateScope();
+            var dbContext = GetDatabaseContext(scope);
+
+            var userEntity = await dbContext.Users.FindAsync(userId);
+            if (userEntity == null)
+            {
+                throw new ArgumentException("User not found", nameof(userId));
+            }
+
+            var timestamp = DateTime.UtcNow;
+
+            userEntity.MasterPassword = masterPasswordHash;
+            userEntity.MasterPasswordHint = masterPasswordHint;
+            userEntity.Key = masterPasswordUnlockData.MasterKeyWrappedUserKey;
+            userEntity.Kdf = masterPasswordUnlockData.Kdf.KdfType;
+            userEntity.KdfIterations = masterPasswordUnlockData.Kdf.Iterations;
+            userEntity.KdfMemory = masterPasswordUnlockData.Kdf.Memory;
+            userEntity.KdfParallelism = masterPasswordUnlockData.Kdf.Parallelism;
+            userEntity.RevisionDate = timestamp;
+            userEntity.AccountRevisionDate = timestamp;
+
+            await dbContext.SaveChangesAsync();
+        };
+    }
+
+    public async Task UpdateUserDataAsync(IEnumerable<UpdateUserData> updateUserDataActions)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
+        foreach (var action in updateUserDataActions)
+        {
+            await action();
+        }
+
+        await transaction.CommitAsync();
+    }
+
     private static void MigrateDefaultUserCollectionsToShared(DatabaseContext dbContext, IEnumerable<Guid> userIds)
     {
         var defaultCollections = (from c in dbContext.Collections
