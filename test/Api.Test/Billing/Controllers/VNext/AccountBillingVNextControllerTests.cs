@@ -1,4 +1,4 @@
-using Bit.Api.Billing.Controllers.VNext;
+﻿using Bit.Api.Billing.Controllers.VNext;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Payment.Commands;
 using Bit.Core.Billing.Payment.Queries;
