@@ -6,12 +6,8 @@ namespace Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 
 /// <summary>
 /// <para>Manages the setting of the initial master password for a <see cref="User"/> in an organization.</para>
-/// <para>This command is primarily invoked in two scenarios:</para>
-/// <para>1) In organizations configured with Single Sign-On (SSO) and master password decryption:
+/// <para>In organizations configured with Single Sign-On (SSO) and master password decryption:
 /// just in time (JIT) provisioned users logging in via SSO are required to set a master password.</para>
-/// <para>2) In organizations configured with SSO and trusted devices decryption:
-/// Users who are upgraded to have admin account recovery permissions must set a master password
-/// to ensure their ability to reset other users' accounts.</para>
 /// </summary>
 public interface ISetInitialMasterPasswordCommand
 {
@@ -19,12 +15,11 @@ public interface ISetInitialMasterPasswordCommand
     /// Sets the initial master password and account keys for the specified user.
     /// </summary>
     /// <param name="user">User to set the master password for</param>
-    /// <param name="setMasterPassword">Initial master password setup data</param>
+    /// <param name="masterPasswordDataModel">Initial master password setup data</param>
     /// <returns>A task that completes when the operation succeeds</returns>
     /// <exception cref="BadRequestException">
     /// Thrown if the user's master password is already set, the organization is not found,
-    /// the user is not a member of the organization, the master password does not meet requirements,
-    /// or the user is a TDE user without account keys set.
+    /// the user is not a member of the organization, the master password does not meet requirements.
     /// </exception>
-    public Task SetInitialMasterPasswordAsync(User user, SetMasterPasswordDataModel setMasterPassword);
+    public Task SetInitialMasterPasswordAsync(User user, SetInitialMasterPasswordDataModel masterPasswordDataModel);
 }

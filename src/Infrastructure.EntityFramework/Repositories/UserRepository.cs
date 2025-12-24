@@ -510,7 +510,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         };
     }
 
-    public UpdateUserData SetInitialMasterPassword(Guid userId, MasterPasswordUnlockData masterPasswordUnlockData,
+    public UpdateUserData SetMasterPassword(Guid userId, MasterPasswordUnlockData masterPasswordUnlockData,
         string masterPasswordHash, string? masterPasswordHint)
     {
         return async (_, _) =>

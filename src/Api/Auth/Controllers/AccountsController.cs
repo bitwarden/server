@@ -13,6 +13,7 @@ using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
+using Bit.Core.Auth.UserFeatures.TdeOnboardingPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Enums;
@@ -40,6 +41,7 @@ public class AccountsController : Controller
     private readonly IPolicyService _policyService;
     private readonly ISetInitialMasterPasswordCommandV1 _setInitialMasterPasswordCommandV1;
     private readonly ISetInitialMasterPasswordCommand _setInitialMasterPasswordCommand;
+    private readonly ITdeOnboardingPasswordCommand _tdeOnboardingPasswordCommand;
     private readonly ITdeOffboardingPasswordCommand _tdeOffboardingPasswordCommand;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IFeatureService _featureService;
@@ -56,6 +58,7 @@ public class AccountsController : Controller
         IPolicyService policyService,
         ISetInitialMasterPasswordCommand setInitialMasterPasswordCommand,
         ISetInitialMasterPasswordCommandV1 setInitialMasterPasswordCommandV1,
+        ITdeOnboardingPasswordCommand tdeOnboardingPasswordCommand,
         ITdeOffboardingPasswordCommand tdeOffboardingPasswordCommand,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IFeatureService featureService,
@@ -72,6 +75,7 @@ public class AccountsController : Controller
         _policyService = policyService;
         _setInitialMasterPasswordCommand = setInitialMasterPasswordCommand;
         _setInitialMasterPasswordCommandV1 = setInitialMasterPasswordCommandV1;
+        _tdeOnboardingPasswordCommand = tdeOnboardingPasswordCommand;
         _tdeOffboardingPasswordCommand = tdeOffboardingPasswordCommand;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _featureService = featureService;
@@ -211,7 +215,7 @@ public class AccountsController : Controller
     }
 
     [HttpPost("set-password")]
-    public async Task PostSetPasswordAsync([FromBody] SetPasswordRequestModel model)
+    public async Task PostSetPasswordAsync([FromBody] SetInitialPasswordRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -254,6 +258,18 @@ public class AccountsController : Controller
 
             throw new BadRequestException(ModelState);
         }
+    }
+
+    [HttpPost("tde-onboard-password")]
+    public async Task PostTdeOnboardPasswordAsync([FromBody] TdeOnboardPasswordRequestModel model)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        await _tdeOnboardingPasswordCommand.OnboardMasterPasswordAsync(user, model.ToData());
     }
 
     [HttpPost("verify-password")]

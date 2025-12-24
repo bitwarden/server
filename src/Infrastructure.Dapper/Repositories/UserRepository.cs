@@ -428,7 +428,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         };
     }
 
-    public UpdateUserData SetInitialMasterPassword(Guid userId, MasterPasswordUnlockData masterPasswordUnlockData,
+    public UpdateUserData SetMasterPassword(Guid userId, MasterPasswordUnlockData masterPasswordUnlockData,
         string masterPasswordHash, string? masterPasswordHint)
     {
         return async (connection, transaction) =>
@@ -436,7 +436,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
             var timestamp = DateTime.UtcNow;
 
             await connection!.ExecuteAsync(
-                "[dbo].[User_UpdateInitialMasterPassword]",
+                "[dbo].[User_UpdateMasterPassword]",
                 new
                 {
                     Id = userId,

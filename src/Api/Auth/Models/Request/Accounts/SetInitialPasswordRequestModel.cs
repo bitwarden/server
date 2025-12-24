@@ -10,7 +10,7 @@ using Bit.Core.Utilities;
 
 namespace Bit.Api.Auth.Models.Request.Accounts;
 
-public class SetPasswordRequestModel : IValidatableObject
+public class SetInitialPasswordRequestModel : IValidatableObject
 {
     // TODO will be removed with https://bitwarden.atlassian.net/browse/PM-27327
     [Obsolete("Use MasterPasswordAuthentication instead")]
@@ -101,12 +101,6 @@ public class SetPasswordRequestModel : IValidatableObject
             yield return new ValidationResult("Key must be supplied.");
         }
 
-        // TODO Keys can be null for TDE user, but must not null for regular master password JIT user
-        // if (Keys == null)
-        // {
-        //     yield return new ValidationResult("Keys must be supplied.");
-        // }
-
         if (Kdf == null)
         {
             yield return new ValidationResult("Kdf must be supplied.");
@@ -140,18 +134,17 @@ public class SetPasswordRequestModel : IValidatableObject
 
     public bool IsV2Request()
     {
-        // AccountKeys can be null for TDE users, so we don't check that here
-        return MasterPasswordAuthentication != null && MasterPasswordUnlock != null;
+        return MasterPasswordAuthentication != null && MasterPasswordUnlock != null && AccountKeys != null;
     }
 
-    public SetMasterPasswordDataModel ToData()
+    public SetInitialMasterPasswordDataModel ToData()
     {
-        return new SetMasterPasswordDataModel
+        return new SetInitialMasterPasswordDataModel
         {
             MasterPasswordAuthentication = MasterPasswordAuthentication!.ToData(),
             MasterPasswordUnlock = MasterPasswordUnlock!.ToData(),
             OrgSsoIdentifier = OrgIdentifier,
-            AccountKeys = AccountKeys?.ToAccountKeysData(),
+            AccountKeys = AccountKeys!.ToAccountKeysData(),
             MasterPasswordHint = MasterPasswordHint
         };
     }

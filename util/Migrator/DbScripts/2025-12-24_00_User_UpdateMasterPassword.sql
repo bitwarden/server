@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[User_UpdateInitialMasterPassword]
+CREATE PROCEDURE [dbo].[User_UpdateMasterPassword]
     @Id UNIQUEIDENTIFIER,
     @MasterPassword NVARCHAR(300),
     @MasterPasswordHint NVARCHAR(50) = NULL,
