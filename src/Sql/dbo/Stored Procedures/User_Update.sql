@@ -96,7 +96,8 @@ BEGIN
         [VerifyDevices] = @VerifyDevices,
         [SecurityState] = @SecurityState,
         [SecurityVersion] = @SecurityVersion,
-        [SignedPublicKey] = @SignedPublicKey
+        [SignedPublicKey] = @SignedPublicKey,
+        [MaxStorageGbIncreased] = @MaxStorageGb
     WHERE
         [Id] = @Id
 END

@@ -1,6 +1,5 @@
-﻿
-using System.Net;
-using Bit.Api.Models.Public.Request;
+﻿using System.Net;
+using Bit.Api.Dirt.Public.Models;
 using Bit.Api.Models.Public.Response;
 using Bit.Api.Utilities.DiagnosticTools;
 using Bit.Core.Context;
@@ -12,7 +11,7 @@ using Bit.Core.Vault.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Bit.Api.Public.Controllers;
+namespace Bit.Api.Dirt.Public.Controllers;
 
 [Route("public/events")]
 [Authorize("Organization")]

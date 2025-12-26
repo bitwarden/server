@@ -1,8 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Api.Models.Public.Response;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 
-namespace Bit.Api.Models.Public.Response;
+namespace Bit.Api.Dirt.Public.Models;
 
 /// <summary>
 /// An event log.

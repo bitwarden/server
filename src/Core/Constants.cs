@@ -187,7 +187,6 @@ public static class FeatureFlagKeys
 
     /* Billing Team */
     public const string TrialPayment = "PM-8163-trial-payment";
-    public const string PM22415_TaxIDWarnings = "pm-22415-tax-id-warnings";
     public const string PM25379_UseNewOrganizationMetadataStructure = "pm-25379-use-new-organization-metadata-structure";
     public const string PM24996ImplementUpgradeFromFreeDialog = "pm-24996-implement-upgrade-from-free-dialog";
     public const string PM24032_NewNavigationPremiumUpgradeButton = "pm-24032-new-navigation-premium-upgrade-button";
@@ -212,6 +211,7 @@ public static class FeatureFlagKeys
     public const string ConsolidatedSessionTimeoutComponent = "pm-26056-consolidated-session-timeout-component";
     public const string V2RegistrationTDEJIT = "pm-27279-v2-registration-tde-jit";
     public const string DataRecoveryTool = "pm-28813-data-recovery-tool";
+    public const string EnableAccountEncryptionV2KeyConnectorRegistration = "enable-account-encryption-v2-key-connector-registration";
 
     /* Mobile Team */
     public const string AndroidImportLoginsFlow = "import-logins-flow";
@@ -238,12 +238,12 @@ public static class FeatureFlagKeys
     public const string UseChromiumImporter = "pm-23982-chromium-importer";
     public const string ChromiumImporterWithABE = "pm-25855-chromium-importer-abe";
     public const string SendUIRefresh = "pm-28175-send-ui-refresh";
+    public const string SendEmailOTP = "pm-19051-send-email-verification";
 
     /* Vault Team */
     public const string CipherKeyEncryption = "cipher-key-encryption";
     public const string PM19941MigrateCipherDomainToSdk = "pm-19941-migrate-cipher-domain-to-sdk";
     public const string PhishingDetection = "phishing-detection";
-    public const string RemoveCardItemTypePolicy = "pm-16442-remove-card-item-type-policy";
     public const string PM22134SdkCipherListView = "pm-22134-sdk-cipher-list-view";
     public const string PM22136_SdkCipherEncryption = "pm-22136-sdk-cipher-encryption";
     public const string PM23904_RiskInsightsForPremium = "pm-23904-risk-insights-for-premium";
