@@ -16,4 +16,17 @@ public class MasterPasswordAuthenticationData
             throw new BadRequestException("Invalid master password salt.");
         }
     }
+
+    public static void ThrowIfExistsAndHashIsNotEqual(
+        MasterPasswordAuthenticationData? authenticationData,
+        string? hash)
+    {
+        if (authenticationData != null && hash != null)
+        {
+            if (authenticationData.MasterPasswordAuthenticationHash != hash)
+            {
+                throw new Exception("Master password hash and hash are not equal.");
+            }
+        }
+    }
 }
