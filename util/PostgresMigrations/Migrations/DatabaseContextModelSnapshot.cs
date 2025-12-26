@@ -1637,6 +1637,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<int>("AccessCount")
                         .HasColumnType("integer");
 
+                    b.Property<byte?>("AuthType")
+                        .HasColumnType("smallint");
+
                     b.Property<Guid?>("CipherId")
                         .HasColumnType("uuid");
 
@@ -1653,8 +1656,8 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<string>("Emails")
-                        .HasMaxLength(1024)
-                        .HasColumnType("character varying(1024)");
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
 
                     b.Property<DateTime?>("ExpirationDate")
                         .HasColumnType("timestamp with time zone");
