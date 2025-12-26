@@ -136,6 +136,43 @@ public class ImportCiphersAsyncCommandTests
     }
 
     [Theory, BitAutoData]
+    public async Task ImportIntoIndividualVaultAsync_FavoriteCiphers_PersistsFavoriteInfo(
+        Guid importingUserId,
+        List<CipherDetails> ciphers,
+        SutProvider<ImportCiphersCommand> sutProvider
+    )
+    {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PolicyRequirements)
+            .Returns(true);
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(importingUserId)
+            .Returns(new OrganizationDataOwnershipPolicyRequirement(
+                OrganizationDataOwnershipState.Disabled,
+                []));
+
+        sutProvider.GetDependency<IFolderRepository>()
+            .GetManyByUserIdAsync(importingUserId)
+            .Returns(new List<Folder>());
+
+        var folders = new List<Folder>();
+        var folderRelationships = new List<KeyValuePair<int, int>>();
+
+        ciphers.ForEach(c =>
+        {
+            c.UserId = importingUserId;
+            c.Favorite = true;
+        });
+
+        await sutProvider.Sut.ImportIntoIndividualVaultAsync(folders, ciphers, folderRelationships, importingUserId);
+
+        await sutProvider.GetDependency<ICipherRepository>()
+            .Received(1)
+            .CreateAsync(importingUserId, Arg.Is<IEnumerable<Cipher>>(ciphers => ciphers.All(c => c.Favorites == $"{{\"{importingUserId.ToString().ToUpperInvariant()}\":true}}")), Arg.Any<List<Folder>>());
+    }
+
+    [Theory, BitAutoData]
     public async Task ImportIntoOrganizationalVaultAsync_Success(
         Organization organization,
         Guid importingUserId,
