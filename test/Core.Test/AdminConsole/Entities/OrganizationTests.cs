@@ -96,4 +96,23 @@ public class OrganizationTests
         var host = Assert.Contains("Host", (IDictionary<string, object>)duo.MetaData);
         Assert.Equal("Host_value", host);
     }
+
+    [Fact]
+    public void UseDisableSmAdsForUsers_DefaultValue_IsFalse()
+    {
+        var organization = new Organization();
+
+        Assert.False(organization.UseDisableSmAdsForUsers);
+    }
+
+    [Fact]
+    public void UseDisableSmAdsForUsers_CanBeSetToTrue()
+    {
+        var organization = new Organization
+        {
+            UseDisableSmAdsForUsers = true
+        };
+
+        Assert.True(organization.UseDisableSmAdsForUsers);
+    }
 }

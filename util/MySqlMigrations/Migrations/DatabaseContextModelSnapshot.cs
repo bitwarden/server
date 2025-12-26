@@ -229,6 +229,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("UseDirectory")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<bool>("UseDisableSmAdsForUsers")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<bool>("UseEvents")
                         .HasColumnType("tinyint(1)");
 
