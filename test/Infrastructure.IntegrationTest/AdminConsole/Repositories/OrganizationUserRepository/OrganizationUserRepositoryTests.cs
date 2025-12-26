@@ -147,13 +147,13 @@ public class OrganizationUserRepositoryTests
         Assert.NotNull(updatedCollection1);
         Assert.Equal(CollectionType.SharedCollection, updatedCollection1.Type);
         Assert.Equal(user1.Email, updatedCollection1.DefaultUserCollectionEmail);
-        Assert.Null(updatedCollection1.DefaultCollectionOwner);
+        Assert.Null(updatedCollection1.DefaultCollectionOwnerId);
 
         var updatedCollection2 = await collectionRepository.GetByIdAsync(defaultUserCollection2.Id);
         Assert.NotNull(updatedCollection2);
         Assert.Equal(CollectionType.SharedCollection, updatedCollection2.Type);
         Assert.Equal(user2.Email, updatedCollection2.DefaultUserCollectionEmail);
-        Assert.Null(updatedCollection2.DefaultCollectionOwner);
+        Assert.Null(updatedCollection2.DefaultCollectionOwnerId);
     }
 
     [DatabaseTheory, DatabaseData]
@@ -216,7 +216,7 @@ public class OrganizationUserRepositoryTests
         Assert.NotNull(updatedCollection);
         Assert.Equal(CollectionType.SharedCollection, updatedCollection.Type);
         Assert.Equal(user.Email, updatedCollection.DefaultUserCollectionEmail);
-        Assert.Null(updatedCollection.DefaultCollectionOwner);
+        Assert.Null(updatedCollection.DefaultCollectionOwnerId);
     }
 
 
@@ -1358,7 +1358,7 @@ public class OrganizationUserRepositoryTests
         Assert.NotNull(updatedCollection);
         Assert.Equal(CollectionType.SharedCollection, updatedCollection.Type);
         Assert.Equal(user.Email, updatedCollection.DefaultUserCollectionEmail);
-        Assert.Null(updatedCollection.DefaultCollectionOwner);
+        Assert.Null(updatedCollection.DefaultCollectionOwnerId);
     }
 
     [DatabaseTheory, DatabaseData]
@@ -1416,7 +1416,7 @@ public class OrganizationUserRepositoryTests
         Assert.NotNull(updatedCollection);
         Assert.Equal(CollectionType.SharedCollection, updatedCollection.Type);
         Assert.Equal(user.Email, updatedCollection.DefaultUserCollectionEmail);
-        Assert.Null(updatedCollection.DefaultCollectionOwner);
+        Assert.Null(updatedCollection.DefaultCollectionOwnerId);
     }
 
     [DatabaseTheory, DatabaseData]

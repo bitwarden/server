@@ -842,7 +842,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                 RevisionDate = now,
                 Type = CollectionType.DefaultUserCollection,
                 DefaultUserCollectionEmail = null,
-                DefaultCollectionOwner = organizationUserId
+                DefaultCollectionOwnerId = organizationUserId
             };
 
             var collectionUser = new CollectionUser
@@ -919,7 +919,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                 RevisionDate = DateTime.UtcNow,
                 Type = CollectionType.DefaultUserCollection,
                 DefaultUserCollectionEmail = null,
-                DefaultCollectionOwner = orgUserId
+                DefaultCollectionOwnerId = orgUserId
             });
 
             collectionUsers.Add(new CollectionUser

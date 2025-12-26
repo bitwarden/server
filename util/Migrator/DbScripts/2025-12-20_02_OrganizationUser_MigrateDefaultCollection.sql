@@ -1,4 +1,4 @@
--- Update OrganizationUser_MigrateDefaultCollection to set DefaultCollectionOwner = NULL
+-- Update OrganizationUser_MigrateDefaultCollection to set DefaultCollectionOwnerId = NULL
 -- when migrating default collections to shared collections during OrganizationUser deletion
 
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_MigrateDefaultCollection]
@@ -13,7 +13,7 @@ BEGIN
         [DefaultUserCollectionEmail] = CASE WHEN c.[DefaultUserCollectionEmail] IS NULL THEN u.[Email] ELSE c.[DefaultUserCollectionEmail] END,
         [RevisionDate] = @UtcNow,
         [Type] = 0,
-        [DefaultCollectionOwner] = NULL
+        [DefaultCollectionOwnerId] = NULL
     FROM
         [dbo].[Collection] c
         INNER JOIN [dbo].[CollectionUser] cu ON c.[Id] = cu.[CollectionId]

@@ -66,7 +66,7 @@ public class Collection : ITableObject<Guid>
     /// Only populated for collections of type DefaultUserCollection.
     /// Set to null when the OrganizationUser entry is deleted.
     /// </remarks>
-    public Guid? DefaultCollectionOwner { get; set; }
+    public Guid? DefaultCollectionOwnerId { get; set; }
 
     public void SetNewId()
     {

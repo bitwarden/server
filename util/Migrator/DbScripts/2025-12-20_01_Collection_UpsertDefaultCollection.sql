@@ -1,6 +1,6 @@
 -- Create the idempotent stored procedure for creating default collections
 -- This procedure prevents duplicate "My Items" collections for users using
--- a filtered unique constraint on (DefaultCollectionOwner, OrganizationId, Type) WHERE Type = 1.
+-- a filtered unique constraint on (DefaultCollectionOwnerId, OrganizationId, Type) WHERE Type = 1.
 
 CREATE OR ALTER PROCEDURE [dbo].[Collection_UpsertDefaultCollection]
     @CollectionId UNIQUEIDENTIFIER,
@@ -19,7 +19,7 @@ BEGIN
     BEGIN TRY
         SET @WasCreated = 1
 
-        -- Insert Collection with DefaultCollectionOwner populated for constraint enforcement
+        -- Insert Collection with DefaultCollectionOwnerId populated for constraint enforcement
         INSERT INTO [dbo].[Collection]
         (
             [Id],
@@ -30,7 +30,7 @@ BEGIN
             [RevisionDate],
             [DefaultUserCollectionEmail],
             [Type],
-            [DefaultCollectionOwner]
+            [DefaultCollectionOwnerId]
         )
         VALUES
         (

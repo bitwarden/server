@@ -463,7 +463,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
                 RevisionDate = DateTime.UtcNow,
                 Type = CollectionType.DefaultUserCollection,
                 DefaultUserCollectionEmail = null,
-                DefaultCollectionOwner = orgUserId
+                DefaultCollectionOwnerId = orgUserId
             });
 
             collectionUsers.Add(new CollectionUser

@@ -13,17 +13,17 @@ public class CollectionEntityTypeConfiguration : IEntityTypeConfiguration<Collec
             .ValueGeneratedNever();
 
         builder
-            .HasIndex(c => new { c.DefaultCollectionOwner, c.OrganizationId, c.Type })
+            .HasIndex(c => new { c.DefaultCollectionOwnerId, c.OrganizationId, c.Type })
             .IsUnique()
             .HasFilter("[Type] = 1")
-            .HasDatabaseName("IX_Collection_DefaultCollectionOwner_OrganizationId_Type");
+            .HasDatabaseName("IX_Collection_DefaultCollectionOwnerId_OrganizationId_Type");
 
         // Configure FK with NO ACTION delete behavior to prevent cascade conflicts
         // Cleanup is handled explicitly in OrganizationUserRepository.DeleteAsync
         builder
             .HasOne<OrganizationUser>()
             .WithMany()
-            .HasForeignKey(c => c.DefaultCollectionOwner)
+            .HasForeignKey(c => c.DefaultCollectionOwnerId)
             .OnDelete(DeleteBehavior.NoAction);
 
         builder.ToTable(nameof(Collection));

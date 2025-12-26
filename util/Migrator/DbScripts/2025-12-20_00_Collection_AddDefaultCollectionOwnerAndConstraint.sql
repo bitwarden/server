@@ -1,5 +1,5 @@
 -- TODO! Handle existing data in MSSQL (and EF if releasing before this). This assumes the column is populated, if it isn't then it'll create at least 1 duplicate.
--- Add DefaultCollectionOwner column to Collection table for Type=1 collections
+-- Add DefaultCollectionOwnerId column to Collection table for Type=1 collections
 -- This enables a filtered unique constraint to prevent duplicate default collections
 
 IF NOT EXISTS (
@@ -7,11 +7,11 @@ IF NOT EXISTS (
     FROM INFORMATION_SCHEMA.COLUMNS
     WHERE TABLE_SCHEMA = 'dbo'
       AND TABLE_NAME = 'Collection'
-      AND COLUMN_NAME = 'DefaultCollectionOwner'
+      AND COLUMN_NAME = 'DefaultCollectionOwnerId'
 )
 BEGIN
     ALTER TABLE [dbo].[Collection]
-        ADD [DefaultCollectionOwner] UNIQUEIDENTIFIER NULL
+        ADD [DefaultCollectionOwnerId] UNIQUEIDENTIFIER NULL
 END
 GO
 
@@ -25,7 +25,7 @@ IF NOT EXISTS (
 BEGIN
     ALTER TABLE [dbo].[Collection]
         ADD CONSTRAINT [FK_Collection_OrganizationUser]
-        FOREIGN KEY ([DefaultCollectionOwner])
+        FOREIGN KEY ([DefaultCollectionOwnerId])
         REFERENCES [dbo].[OrganizationUser] ([Id])
         ON DELETE NO ACTION
 END
@@ -35,12 +35,12 @@ GO
 IF NOT EXISTS (
     SELECT *
     FROM sys.indexes
-    WHERE name = 'IX_Collection_DefaultCollectionOwner_OrganizationId_Type'
+    WHERE name = 'IX_Collection_DefaultCollectionOwnerId_OrganizationId_Type'
       AND object_id = OBJECT_ID('[dbo].[Collection]')
 )
 BEGIN
-    CREATE UNIQUE NONCLUSTERED INDEX [IX_Collection_DefaultCollectionOwner_OrganizationId_Type]
-        ON [dbo].[Collection]([DefaultCollectionOwner], [OrganizationId], [Type])
+    CREATE UNIQUE NONCLUSTERED INDEX [IX_Collection_DefaultCollectionOwnerId_OrganizationId_Type]
+        ON [dbo].[Collection]([DefaultCollectionOwnerId], [OrganizationId], [Type])
         WHERE [Type] = 1;
 END
 GO
