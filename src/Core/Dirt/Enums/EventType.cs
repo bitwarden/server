@@ -61,6 +61,7 @@ public enum EventType : int
     OrganizationUser_Deleted = 1515, // Both user and organization user data were deleted
     OrganizationUser_Left = 1516,    // User voluntarily left the organization
     OrganizationUser_AutomaticallyConfirmed = 1517,
+    OrganizationUser_SelfRevoked = 1518, // User self-revoked due to declining organization data ownership policy
 
     Organization_Updated = 1600,
     Organization_PurgedVault = 1601,
