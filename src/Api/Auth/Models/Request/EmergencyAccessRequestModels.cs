@@ -36,7 +36,7 @@ public class EmergencyAccessUpdateRequestModel
             existingEmergencyAccess.KeyEncrypted = KeyEncrypted;
         }
         existingEmergencyAccess.Type = Type;
-        existingEmergencyAccess.WaitTimeDays = WaitTimeDays;
+        existingEmergencyAccess.WaitTimeDays = (short)WaitTimeDays;
         return existingEmergencyAccess;
     }
 }

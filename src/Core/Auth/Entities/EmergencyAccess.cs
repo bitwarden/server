@@ -18,7 +18,7 @@ public class EmergencyAccess : ITableObject<Guid>
     public string KeyEncrypted { get; set; }
     public EmergencyAccessType Type { get; set; }
     public EmergencyAccessStatusType Status { get; set; }
-    public int WaitTimeDays { get; set; }
+    public short WaitTimeDays { get; set; }
     public DateTime? RecoveryInitiatedDate { get; set; }
     public DateTime? LastNotificationDate { get; set; }
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;

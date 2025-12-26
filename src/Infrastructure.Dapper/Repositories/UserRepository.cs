@@ -8,6 +8,7 @@ using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Dapper;
@@ -21,8 +22,8 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
     private readonly IDataProtector _dataProtector;
 
     public UserRepository(
-        GlobalSettings globalSettings,
-        IDataProtectionProvider dataProtectionProvider)
+        IDataProtectionProvider dataProtectionProvider,
+        GlobalSettings globalSettings)
         : base(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
     {
         _dataProtector = dataProtectionProvider.CreateProtector(Constants.DatabaseFieldProtectorPurpose);
@@ -497,5 +498,31 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         {
             UnprotectData(user);
         }
+    }
+}
+
+/// <summary>
+/// Decorator around the <see cref="UserRepository"/> that tracks
+/// created Users for seeding.
+/// </summary>
+public class TestUserTrackingUserRepository : UserRepository
+{
+    private readonly IPlayDataService _playDataService;
+
+    public TestUserTrackingUserRepository(
+        IPlayDataService playDataService,
+        GlobalSettings globalSettings,
+        IDataProtectionProvider dataProtectionProvider)
+        : base(dataProtectionProvider, globalSettings)
+    {
+        _playDataService = playDataService;
+    }
+
+    public override async Task<User> CreateAsync(User user)
+    {
+        var createdUser = await base.CreateAsync(user);
+
+        await _playDataService.Record(createdUser);
+        return createdUser;
     }
 }
