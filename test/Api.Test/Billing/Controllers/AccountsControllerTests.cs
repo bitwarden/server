@@ -31,7 +31,6 @@ public class AccountsControllerTests : IDisposable
     private readonly IStripePaymentService _paymentService;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IUserAccountKeysQuery _userAccountKeysQuery;
-    private readonly ILicensingService _licensingService;
     private readonly GlobalSettings _globalSettings;
     private readonly AccountsController _sut;
 
@@ -42,15 +41,13 @@ public class AccountsControllerTests : IDisposable
         _paymentService = Substitute.For<IStripePaymentService>();
         _twoFactorIsEnabledQuery = Substitute.For<ITwoFactorIsEnabledQuery>();
         _userAccountKeysQuery = Substitute.For<IUserAccountKeysQuery>();
-        _licensingService = Substitute.For<ILicensingService>();
         _globalSettings = new GlobalSettings { SelfHosted = false };
 
         _sut = new AccountsController(
             _userService,
             _twoFactorIsEnabledQuery,
             _userAccountKeysQuery,
-            _featureService,
-            _licensingService
+            _featureService
         );
     }
 

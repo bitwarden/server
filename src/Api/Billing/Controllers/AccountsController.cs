@@ -24,8 +24,7 @@ public class AccountsController(
     IUserService userService,
     ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
     IUserAccountKeysQuery userAccountKeysQuery,
-    IFeatureService featureService,
-    ILicensingService licensingService) : Controller
+    IFeatureService featureService) : Controller
 {
     // TODO: Remove when pm-24996-implement-upgrade-from-free-dialog is removed
     [HttpPost("premium")]
@@ -97,15 +96,11 @@ public class AccountsController(
                 // The feature flag controls the broader Milestone 2 feature set, not just this specific task.
                 var includeMilestone2Discount = featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2);
                 var subscriptionInfo = await paymentService.GetSubscriptionAsync(user);
-                var license = await userService.GenerateLicenseAsync(user, subscriptionInfo);
-                var claimsPrincipal = licensingService.GetClaimsPrincipalFromLicense(license);
-                return new SubscriptionResponseModel(user, subscriptionInfo, license, claimsPrincipal, includeMilestone2Discount);
+                return new SubscriptionResponseModel(user, subscriptionInfo, includeMilestone2Discount);
             }
             else
             {
-                var license = await userService.GenerateLicenseAsync(user);
-                var claimsPrincipal = licensingService.GetClaimsPrincipalFromLicense(license);
-                return new SubscriptionResponseModel(user, null, license, claimsPrincipal);
+                return new SubscriptionResponseModel(user, null);
             }
         }
         else
