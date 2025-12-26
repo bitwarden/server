@@ -1,6 +1,7 @@
 ﻿using Bit.Api.Billing.Attributes;
 using Bit.Api.Billing.Models.Requests.Payment;
 using Bit.Api.Billing.Models.Requests.Premium;
+using Bit.Api.Billing.Models.Requests.Storage;
 using Bit.Core;
 using Bit.Core.Billing.Payment.Commands;
 using Bit.Core.Billing.Payment.Queries;
@@ -21,7 +22,8 @@ public class AccountBillingVNextController(
     ICreatePremiumCloudHostedSubscriptionCommand createPremiumCloudHostedSubscriptionCommand,
     IGetCreditQuery getCreditQuery,
     IGetPaymentMethodQuery getPaymentMethodQuery,
-    IUpdatePaymentMethodCommand updatePaymentMethodCommand) : BaseBillingController
+    IUpdatePaymentMethodCommand updatePaymentMethodCommand,
+    IUpdatePremiumStorageCommand updatePremiumStorageCommand) : BaseBillingController
 {
     [HttpGet("credit")]
     [InjectUser]
@@ -75,6 +77,17 @@ public class AccountBillingVNextController(
         var (paymentMethod, billingAddress, additionalStorageGb) = request.ToDomain();
         var result = await createPremiumCloudHostedSubscriptionCommand.Run(
             user, paymentMethod, billingAddress, additionalStorageGb);
+        return Handle(result);
+    }
+
+    [HttpPut("storage")]
+    [RequireFeature(FeatureFlagKeys.PM29594_UpdateIndividualSubscriptionPage)]
+    [InjectUser]
+    public async Task<IResult> UpdateStorageAsync(
+        [BindNever] User user,
+        [FromBody] StorageUpdateRequest request)
+    {
+        var result = await updatePremiumStorageCommand.Run(user, request.AdditionalStorageGb);
         return Handle(result);
     }
 }

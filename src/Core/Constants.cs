@@ -196,6 +196,7 @@ public static class FeatureFlagKeys
     public const string PM26462_Milestone_3 = "pm-26462-milestone-3";
     public const string PM28265_EnableReconcileAdditionalStorageJob = "pm-28265-enable-reconcile-additional-storage-job";
     public const string PM28265_ReconcileAdditionalStorageJobEnableLiveMode = "pm-28265-reconcile-additional-storage-job-enable-live-mode";
+    public const string PM29594_UpdateIndividualSubscriptionPage = "pm-29594-update-individual-subscription-page";
 
     /* Key Management Team */
     public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
