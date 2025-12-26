@@ -1,6 +1,7 @@
 ﻿using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Seeder.Recipes;
 using CommandDotNet;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.DbSeederUtility;
@@ -15,12 +16,16 @@ public class Program
 
     [Command("organization", Description = "Seed an organization and organization users")]
     public void Organization(
-        [Option('n', "Name", Description = "Name of organization")]
+        [Option('N', "Name", Description = "Name of organization")]
         string name,
-        [Option('u', "users", Description = "Number of users to generate")]
+        [Option('U', "users", Description = "Number of users to generate")]
         int users,
-        [Option('d', "domain", Description = "Email domain for users")]
-        string domain
+        [Option('D', "domain", Description = "Email domain for users")]
+        string domain,
+        [Option('C', "collections", Description = "Number of collections to generate")]
+        int collections = 0,
+        [Option('I', "ciphers-per-collection", Description = "Number of ciphers per collection")]
+        int ciphersPerCollection = 0
     )
     {
         // Create service provider with necessary services
@@ -32,8 +37,9 @@ public class Program
         using var scope = serviceProvider.CreateScope();
         var scopedServices = scope.ServiceProvider;
         var db = scopedServices.GetRequiredService<DatabaseContext>();
+        var passwordHasher = scopedServices.GetRequiredService<IPasswordHasher<Bit.Core.Entities.User>>();
 
-        var recipe = new OrganizationWithUsersRecipe(db);
-        recipe.Seed(name: name, domain: domain, users: users);
+        var recipe = new OrganizationWithUsersRecipe(db, passwordHasher);
+        recipe.Seed(name: name, domain: domain, users: users, collections: collections, ciphersPerCollection: ciphersPerCollection);
     }
 }
