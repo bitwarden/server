@@ -15,6 +15,7 @@ using Bit.Infrastructure.Dapper.AdminConsole.Repositories;
 using Bit.Infrastructure.Dapper.Auth.Repositories;
 using Bit.Infrastructure.Dapper.Billing.Repositories;
 using Bit.Infrastructure.Dapper.Dirt;
+using Bit.Infrastructure.Dapper.Dirt.Repositories;
 using Bit.Infrastructure.Dapper.KeyManagement.Repositories;
 using Bit.Infrastructure.Dapper.NotificationCenter.Repositories;
 using Bit.Infrastructure.Dapper.Platform;
