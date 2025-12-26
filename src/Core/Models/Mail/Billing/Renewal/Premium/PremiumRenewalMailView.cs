@@ -11,5 +11,5 @@ public class PremiumRenewalMailView : BaseMailView
 
 public class PremiumRenewalMail : BaseMail<PremiumRenewalMailView>
 {
-    public override string Subject { get => "Your Bitwarden Premium renewal is updating"; }
+    public override string Subject { get; set; } = "Your Bitwarden Premium renewal is updating";
 }
