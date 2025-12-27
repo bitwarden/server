@@ -873,9 +873,20 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
 
     private static bool IsUniqueConstraintViolation(DbUpdateException ex)
     {
-        // Check if the inner exception is a SqlException with error 2601 or 2627
-        return ex.InnerException is Microsoft.Data.SqlClient.SqlException sqlEx
-            && (sqlEx.Number == 2601 || sqlEx.Number == 2627);
+        switch (ex.InnerException)
+        {
+            // Check if the inner exception is a SQL Server unique constraint violation (error 2601 or 2627)
+            case Microsoft.Data.SqlClient.SqlException { Number: 2601 or 2627 }:
+            // Check if the inner exception is a PostgreSQL unique constraint violation (SQLSTATE 23505)
+            case Npgsql.PostgresException { SqlState: "23505" }:
+            // Check if the inner exception is a SQLite unique constraint violation (SQLITE_CONSTRAINT = 19)
+            case Microsoft.Data.Sqlite.SqliteException { SqliteErrorCode: 19 }:
+            // Check if the inner exception is a MySQL unique constraint violation (ER_DUP_ENTRY = 1062)
+            case MySqlConnector.MySqlException { ErrorCode: MySqlConnector.MySqlErrorCode.DuplicateKeyEntry }:
+                return true;
+            default:
+                return false;
+        }
     }
 
     private async Task<HashSet<Guid>> GetOrgUserIdsWithDefaultCollectionAsync(DatabaseContext dbContext, Guid organizationId)
