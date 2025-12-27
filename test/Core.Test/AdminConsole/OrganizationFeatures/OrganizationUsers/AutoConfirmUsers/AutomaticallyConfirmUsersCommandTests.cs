@@ -9,6 +9,7 @@ using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -202,10 +203,15 @@ public class AutomaticallyConfirmUsersCommandTests
 
         await sutProvider.GetDependency<ICollectionRepository>()
             .Received(1)
-            .UpsertDefaultCollectionAsync(
-                organization.Id,
-                organizationUser.Id,
-                defaultCollectionName);
+            .CreateAsync(
+                Arg.Is<Collection>(c =>
+                    c.OrganizationId == organization.Id &&
+                    c.Name == defaultCollectionName &&
+                    c.Type == CollectionType.DefaultUserCollection &&
+                    c.DefaultCollectionOwnerId == request.OrganizationUserId),
+                Arg.Is<IEnumerable<CollectionAccessSelection>>(groups => groups == null),
+                Arg.Is<IEnumerable<CollectionAccessSelection>>(access =>
+                    access.FirstOrDefault(x => x.Id == organizationUser.Id && x.Manage) != null));
     }
 
     [Theory]
@@ -247,10 +253,9 @@ public class AutomaticallyConfirmUsersCommandTests
 
         await sutProvider.GetDependency<ICollectionRepository>()
             .DidNotReceive()
-            .UpsertDefaultCollectionAsync(
-                Arg.Any<Guid>(),
-                Arg.Any<Guid>(),
-                Arg.Any<string>());
+            .CreateAsync(Arg.Any<Collection>(),
+                Arg.Any<IEnumerable<CollectionAccessSelection>>(),
+                Arg.Any<IEnumerable<CollectionAccessSelection>>());
     }
 
     [Theory]
@@ -286,10 +291,9 @@ public class AutomaticallyConfirmUsersCommandTests
 
         var collectionException = new Exception("Collection creation failed");
         sutProvider.GetDependency<ICollectionRepository>()
-            .UpsertDefaultCollectionAsync(
-                Arg.Any<Guid>(),
-                Arg.Any<Guid>(),
-                Arg.Any<string>())
+            .CreateAsync(Arg.Any<Collection>(),
+                Arg.Any<IEnumerable<CollectionAccessSelection>>(),
+                Arg.Any<IEnumerable<CollectionAccessSelection>>())
             .ThrowsAsync(collectionException);
 
         // Act

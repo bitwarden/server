@@ -2,7 +2,9 @@
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -77,10 +79,20 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
                 return;
             }
 
-            await collectionRepository.UpsertDefaultCollectionAsync(
-                request.Organization!.Id,
-                request.OrganizationUser!.Id,
-                request.DefaultUserCollectionName);
+            await collectionRepository.CreateAsync(
+                new Collection
+                {
+                    OrganizationId = request.Organization!.Id,
+                    Name = request.DefaultUserCollectionName,
+                    Type = CollectionType.DefaultUserCollection,
+                    DefaultCollectionOwnerId = request.OrganizationUserId
+                },
+                groups: null,
+                [new CollectionAccessSelection
+                {
+                    Id = request.OrganizationUser!.Id,
+                    Manage = true
+                }]);
         }
         catch (Exception ex)
         {

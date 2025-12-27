@@ -12,6 +12,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
@@ -493,10 +494,16 @@ public class ConfirmOrganizationUserCommandTests
 
         await sutProvider.GetDependency<ICollectionRepository>()
             .Received(1)
-            .UpsertDefaultCollectionAsync(
-                organization.Id,
-                orgUser.Id,
-                collectionName);
+            .CreateAsync(
+                Arg.Is<Collection>(c =>
+                    c.Name == collectionName &&
+                    c.OrganizationId == organization.Id &&
+                    c.Type == CollectionType.DefaultUserCollection &&
+                    c.DefaultCollectionOwnerId == orgUser.Id),
+                Arg.Any<IEnumerable<CollectionAccessSelection>>(),
+                Arg.Is<IEnumerable<CollectionAccessSelection>>(cu =>
+                    cu.Single().Id == orgUser.Id &&
+                    cu.Single().Manage));
     }
 
     [Theory, BitAutoData]
