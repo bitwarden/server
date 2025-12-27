@@ -438,8 +438,8 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
                 CreationDate = DateTime.UtcNow,
                 RevisionDate = DateTime.UtcNow,
                 Type = CollectionType.DefaultUserCollection,
-                DefaultUserCollectionEmail = null
-
+                DefaultUserCollectionEmail = null,
+                DefaultCollectionOwnerId = orgUserId
             });
 
             collectionUsers.Add(new CollectionUser

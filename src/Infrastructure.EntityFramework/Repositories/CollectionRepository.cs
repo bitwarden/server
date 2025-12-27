@@ -861,8 +861,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                 CreationDate = DateTime.UtcNow,
                 RevisionDate = DateTime.UtcNow,
                 Type = CollectionType.DefaultUserCollection,
-                DefaultUserCollectionEmail = null
-
+                DefaultUserCollectionEmail = null,
+                DefaultCollectionOwnerId = orgUserId
             });
 
             collectionUsers.Add(new CollectionUser

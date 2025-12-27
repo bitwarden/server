@@ -1156,6 +1156,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("DefaultCollectionOwnerId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("DefaultUserCollectionEmail")
                         .HasColumnType("text");
 
@@ -1179,6 +1182,11 @@ namespace Bit.PostgresMigrations.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("OrganizationId");
+
+                    b.HasIndex("DefaultCollectionOwnerId", "OrganizationId", "Type")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Collection_DefaultCollectionOwnerId_OrganizationId_Type")
+                        .HasFilter("\"Type\" = 1");
 
                     b.ToTable("Collection", (string)null);
                 });
@@ -2831,6 +2839,11 @@ namespace Bit.PostgresMigrations.Migrations
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Collection", b =>
                 {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.OrganizationUser", null)
+                        .WithMany()
+                        .HasForeignKey("DefaultCollectionOwnerId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
                         .WithMany("Collections")
                         .HasForeignKey("OrganizationId")

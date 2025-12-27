@@ -84,7 +84,8 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
                 {
                     OrganizationId = request.Organization!.Id,
                     Name = request.DefaultUserCollectionName,
-                    Type = CollectionType.DefaultUserCollection
+                    Type = CollectionType.DefaultUserCollection,
+                    DefaultCollectionOwnerId = request.OrganizationUserId
                 },
                 groups: null,
                 [new CollectionAccessSelection

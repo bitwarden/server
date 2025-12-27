@@ -498,7 +498,8 @@ public class ConfirmOrganizationUserCommandTests
                 Arg.Is<Collection>(c =>
                     c.Name == collectionName &&
                     c.OrganizationId == organization.Id &&
-                    c.Type == CollectionType.DefaultUserCollection),
+                    c.Type == CollectionType.DefaultUserCollection &&
+                    c.DefaultCollectionOwnerId == orgUser.Id),
                 Arg.Any<IEnumerable<CollectionAccessSelection>>(),
                 Arg.Is<IEnumerable<CollectionAccessSelection>>(cu =>
                     cu.Single().Id == orgUser.Id &&

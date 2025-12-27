@@ -301,7 +301,8 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         {
             OrganizationId = organizationUser.OrganizationId,
             Name = defaultUserCollectionName,
-            Type = CollectionType.DefaultUserCollection
+            Type = CollectionType.DefaultUserCollection,
+            DefaultCollectionOwnerId = organizationUser.Id
         };
         var collectionUser = new CollectionAccessSelection
         {

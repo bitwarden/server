@@ -207,7 +207,8 @@ public class AutomaticallyConfirmUsersCommandTests
                 Arg.Is<Collection>(c =>
                     c.OrganizationId == organization.Id &&
                     c.Name == defaultCollectionName &&
-                    c.Type == CollectionType.DefaultUserCollection),
+                    c.Type == CollectionType.DefaultUserCollection &&
+                    c.DefaultCollectionOwnerId == request.OrganizationUserId),
                 Arg.Is<IEnumerable<CollectionAccessSelection>>(groups => groups == null),
                 Arg.Is<IEnumerable<CollectionAccessSelection>>(access =>
                     access.FirstOrDefault(x => x.Id == organizationUser.Id && x.Manage) != null));
