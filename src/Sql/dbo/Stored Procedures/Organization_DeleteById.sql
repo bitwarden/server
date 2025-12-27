@@ -44,6 +44,12 @@ BEGIN
     WHERE
         [OrganizationId] = @Id
 
+    DELETE C
+    FROM
+        [dbo].[Collection] C
+    WHERE
+        [OrganizationId] = @Id
+
     DELETE CU
     FROM
         [dbo].[CollectionUser] CU

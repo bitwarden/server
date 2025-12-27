@@ -10,6 +10,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
+using Bit.Infrastructure.EntityFramework.Models;
 using LinqToDB.Tools;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -190,6 +191,8 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             await deleteCiphersTransaction.CommitAsync();
 
             var organizationDeleteTransaction = await dbContext.Database.BeginTransactionAsync();
+            await dbContext.Collections.Where(c => c.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
             await dbContext.AuthRequests.Where(ar => ar.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
             await dbContext.SsoUsers.Where(su => su.OrganizationId == organization.Id)

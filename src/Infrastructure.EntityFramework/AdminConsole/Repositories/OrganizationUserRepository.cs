@@ -218,6 +218,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                             }
                         }
                         collection.Type = CollectionType.SharedCollection;
+                        collection.DefaultCollectionOwnerId = null;
                     }
                 }
             }

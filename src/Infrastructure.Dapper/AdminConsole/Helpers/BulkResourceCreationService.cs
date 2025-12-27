@@ -156,6 +156,8 @@ public static class BulkResourceCreationService
         collectionsTable.Columns.Add(typeColumn);
         var defaultUserCollectionEmailColumn = new DataColumn(nameof(collection.DefaultUserCollectionEmail), typeof(string));
         collectionsTable.Columns.Add(defaultUserCollectionEmailColumn);
+        var defaultCollectionOwnerIdColumn = new DataColumn(nameof(collection.DefaultCollectionOwnerId), typeof(Guid));
+        collectionsTable.Columns.Add(defaultCollectionOwnerIdColumn);
 
         foreach (DataColumn col in collectionsTable.Columns)
         {
@@ -178,6 +180,7 @@ public static class BulkResourceCreationService
             row[externalIdColumn] = collectionRecord.ExternalId;
             row[typeColumn] = collectionRecord.Type;
             row[defaultUserCollectionEmailColumn] = collectionRecord.DefaultUserCollectionEmail;
+            row[defaultCollectionOwnerIdColumn] = collectionRecord.DefaultCollectionOwnerId;
 
             collectionsTable.Rows.Add(row);
         }
