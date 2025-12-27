@@ -1173,7 +1173,7 @@ namespace Bit.SqliteMigrations.Migrations
                     b.HasIndex("DefaultCollectionOwnerId", "OrganizationId", "Type")
                         .IsUnique()
                         .HasDatabaseName("IX_Collection_DefaultCollectionOwnerId_OrganizationId_Type")
-                        .HasFilter("[Type] = 1");
+                        .HasFilter("\"Type\" = 1");
 
                     b.ToTable("Collection", (string)null);
                 });

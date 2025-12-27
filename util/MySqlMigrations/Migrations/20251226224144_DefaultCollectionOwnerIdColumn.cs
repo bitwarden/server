@@ -23,7 +23,7 @@ namespace Bit.MySqlMigrations.Migrations
                 table: "Collection",
                 columns: new[] { "DefaultCollectionOwnerId", "OrganizationId", "Type" },
                 unique: true,
-                filter: "[Type] = 1");
+                filter: "\"Type\" = 1");
 
             migrationBuilder.AddForeignKey(
                 name: "FK_Collection_OrganizationUser_DefaultCollectionOwnerId",

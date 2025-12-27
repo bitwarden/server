@@ -15,7 +15,7 @@ public class CollectionEntityTypeConfiguration : IEntityTypeConfiguration<Collec
         builder
             .HasIndex(c => new { c.DefaultCollectionOwnerId, c.OrganizationId, c.Type })
             .IsUnique()
-            .HasFilter("[Type] = 1")
+            .HasFilter("\"Type\" = 1")
             .HasDatabaseName("IX_Collection_DefaultCollectionOwnerId_OrganizationId_Type");
 
         // Configure FK with NO ACTION delete behavior to prevent cascade conflicts
