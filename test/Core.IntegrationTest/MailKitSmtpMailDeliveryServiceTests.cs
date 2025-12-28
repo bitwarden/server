@@ -8,7 +8,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Rnwood.SmtpServer;
 using Rnwood.SmtpServer.Extensions.Auth;
-using Xunit.Abstractions;
 
 namespace Bit.Core.IntegrationTest;
 

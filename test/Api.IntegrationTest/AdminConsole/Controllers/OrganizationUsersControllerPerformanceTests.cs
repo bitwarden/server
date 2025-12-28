@@ -9,7 +9,6 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Seeder.Recipes;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
 

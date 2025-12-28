@@ -63,7 +63,7 @@ public class TwoFactorAuthenticationValidatorTests
     [Theory]
     [BitAutoData("password")]
     [BitAutoData("authorization_code")]
-    public async void RequiresTwoFactorAsync_IndividualOnly_Required_ReturnTrue(
+    public async Task RequiresTwoFactorAsync_IndividualOnly_Required_ReturnTrue(
         string grantType,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request,
         User user)
@@ -87,7 +87,7 @@ public class TwoFactorAuthenticationValidatorTests
     [Theory]
     [BitAutoData("client_credentials")]
     [BitAutoData("webauthn")]
-    public async void RequiresTwoFactorAsync_NotRequired_ReturnFalse(
+    public async Task RequiresTwoFactorAsync_NotRequired_ReturnFalse(
         string grantType,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request,
         User user)
@@ -106,7 +106,7 @@ public class TwoFactorAuthenticationValidatorTests
     [Theory]
     [BitAutoData("password")]
     [BitAutoData("authorization_code")]
-    public async void RequiresTwoFactorAsync_IndividualFalse_OrganizationRequired_ReturnTrue(
+    public async Task RequiresTwoFactorAsync_IndividualFalse_OrganizationRequired_ReturnTrue(
         string grantType,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request,
         User user,
@@ -154,7 +154,7 @@ public class TwoFactorAuthenticationValidatorTests
 
     [Theory]
     [BitAutoData]
-    public async void BuildTwoFactorResultAsync_NoProviders_ReturnsNull(
+    public async Task BuildTwoFactorResultAsync_NoProviders_ReturnsNull(
         User user,
         Organization organization)
     {
@@ -174,7 +174,7 @@ public class TwoFactorAuthenticationValidatorTests
 
     [Theory]
     [BitAutoData]
-    public async void BuildTwoFactorResultAsync_OrganizationProviders_NotEnabled_ReturnsNull(
+    public async Task BuildTwoFactorResultAsync_OrganizationProviders_NotEnabled_ReturnsNull(
         User user,
         Organization organization)
     {
@@ -194,7 +194,7 @@ public class TwoFactorAuthenticationValidatorTests
 
     [Theory]
     [BitAutoData]
-    public async void BuildTwoFactorResultAsync_OrganizationProviders_ReturnsNotNull(
+    public async Task BuildTwoFactorResultAsync_OrganizationProviders_ReturnsNotNull(
         User user,
         Organization organization)
     {
@@ -217,7 +217,7 @@ public class TwoFactorAuthenticationValidatorTests
 
     [Theory]
     [BitAutoData]
-    public async void BuildTwoFactorResultAsync_IndividualProviders_NotEnabled_ReturnsNull(
+    public async Task BuildTwoFactorResultAsync_IndividualProviders_NotEnabled_ReturnsNull(
         User user)
     {
         // Arrange
@@ -232,7 +232,7 @@ public class TwoFactorAuthenticationValidatorTests
 
     [Theory]
     [BitAutoData]
-    public async void BuildTwoFactorResultAsync_IndividualProviders_ReturnsNotNull(
+    public async Task BuildTwoFactorResultAsync_IndividualProviders_ReturnsNotNull(
         User user)
     {
         // Arrange
@@ -252,7 +252,7 @@ public class TwoFactorAuthenticationValidatorTests
 
     [Theory]
     [BitAutoData(TwoFactorProviderType.Email)]
-    public async void BuildTwoFactorResultAsync_SetsSsoToken_ReturnsNotNull(
+    public async Task BuildTwoFactorResultAsync_SetsSsoToken_ReturnsNotNull(
     TwoFactorProviderType providerType,
     User user)
     {
@@ -284,7 +284,7 @@ public class TwoFactorAuthenticationValidatorTests
     [BitAutoData(TwoFactorProviderType.Email)]
     [BitAutoData(TwoFactorProviderType.YubiKey)]
     [BitAutoData(TwoFactorProviderType.OrganizationDuo)]
-    public async void BuildTwoFactorResultAsync_IndividualProvider_ReturnMatchesType(
+    public async Task BuildTwoFactorResultAsync_IndividualProvider_ReturnMatchesType(
         TwoFactorProviderType providerType,
         User user)
     {
@@ -313,7 +313,7 @@ public class TwoFactorAuthenticationValidatorTests
 
     [Theory]
     [BitAutoData]
-    public async void VerifyTwoFactorAsync_Individual_TypeNull_ReturnsFalse(
+    public async Task VerifyTwoFactorAsync_Individual_TypeNull_ReturnsFalse(
         User user,
         string token)
     {
@@ -330,7 +330,7 @@ public class TwoFactorAuthenticationValidatorTests
 
     [Theory]
     [BitAutoData]
-    public async void VerifyTwoFactorAsync_Individual_NotEnabled_ReturnsFalse(
+    public async Task VerifyTwoFactorAsync_Individual_NotEnabled_ReturnsFalse(
         User user,
         string token)
     {
@@ -348,7 +348,7 @@ public class TwoFactorAuthenticationValidatorTests
 
     [Theory]
     [BitAutoData]
-    public async void VerifyTwoFactorAsync_Organization_NotEnabled_ReturnsFalse(
+    public async Task VerifyTwoFactorAsync_Organization_NotEnabled_ReturnsFalse(
         User user,
         string token)
     {
@@ -369,7 +369,7 @@ public class TwoFactorAuthenticationValidatorTests
     [BitAutoData(TwoFactorProviderType.Email)]
     [BitAutoData(TwoFactorProviderType.YubiKey)]
     [BitAutoData(TwoFactorProviderType.Remember)]
-    public async void VerifyTwoFactorAsync_Individual_ValidToken_ReturnsTrue(
+    public async Task VerifyTwoFactorAsync_Individual_ValidToken_ReturnsTrue(
         TwoFactorProviderType providerType,
         User user,
         string token)
@@ -392,7 +392,7 @@ public class TwoFactorAuthenticationValidatorTests
     [BitAutoData(TwoFactorProviderType.Email)]
     [BitAutoData(TwoFactorProviderType.YubiKey)]
     [BitAutoData(TwoFactorProviderType.Remember)]
-    public async void VerifyTwoFactorAsync_Individual_InvalidToken_ReturnsFalse(
+    public async Task VerifyTwoFactorAsync_Individual_InvalidToken_ReturnsFalse(
         TwoFactorProviderType providerType,
         User user,
         string token)
@@ -411,7 +411,7 @@ public class TwoFactorAuthenticationValidatorTests
 
     [Theory]
     [BitAutoData(TwoFactorProviderType.OrganizationDuo)]
-    public async void VerifyTwoFactorAsync_Organization_ValidToken_ReturnsTrue(
+    public async Task VerifyTwoFactorAsync_Organization_ValidToken_ReturnsTrue(
         TwoFactorProviderType providerType,
         User user,
         Organization organization,
@@ -438,7 +438,7 @@ public class TwoFactorAuthenticationValidatorTests
 
     [Theory]
     [BitAutoData(TwoFactorProviderType.RecoveryCode)]
-    public async void VerifyTwoFactorAsync_RecoveryCode_ValidToken_ReturnsTrue(
+    public async Task VerifyTwoFactorAsync_RecoveryCode_ValidToken_ReturnsTrue(
         TwoFactorProviderType providerType,
         User user,
         Organization organization)
@@ -458,7 +458,7 @@ public class TwoFactorAuthenticationValidatorTests
 
     [Theory]
     [BitAutoData(TwoFactorProviderType.RecoveryCode)]
-    public async void VerifyTwoFactorAsync_RecoveryCode_InvalidToken_ReturnsFalse(
+    public async Task VerifyTwoFactorAsync_RecoveryCode_InvalidToken_ReturnsFalse(
         TwoFactorProviderType providerType,
         User user,
         Organization organization)

@@ -5,6 +5,7 @@ using Bit.Infrastructure.Dapper;
 using Bit.Infrastructure.EntityFramework;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.IntegrationTest.Services;
+using Bit.Test.Common;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -67,7 +68,9 @@ public class DatabaseDataAttribute : DataAttribute
 
             if (!database.Enabled)
             {
-                var theory = new TheoryDataRow()
+                // Use the database type as an argument since it is used to build a unique ID and if we have multiple with no
+                // data then the tests overwrite each other
+                var theory = new TheoryDataRow(database.Type, database.ConnectionString)
                     .WithSkip("Not-Enabled")
                     .WithTrait("Database", database.Type.ToString());
                 theory.Label = database.Type.ToString();
@@ -102,7 +105,9 @@ public class DatabaseDataAttribute : DataAttribute
 
         foreach (var unconfiguredDatabase in unconfiguredDatabases)
         {
-            var theory = new TheoryDataRow()
+            // Use the database type as an argument since it is used to build a unique ID and if we have multiple with no
+            // data then the tests overwrite each other
+            var theory = new TheoryDataRow(unconfiguredDatabase)
                 .WithSkip("Unconfigured")
                 .WithTrait("Database", unconfiguredDatabase.ToString());
             theory.Label = unconfiguredDatabase.ToString();

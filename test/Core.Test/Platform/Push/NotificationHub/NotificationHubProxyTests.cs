@@ -25,7 +25,7 @@ public class NotificationHubProxyTests
 
     [Theory]
     [MemberData(nameof(ClientMethods))]
-    public async void CallsAllClients(Func<NotificationHubClientProxy, Task> proxyMethod, Func<INotificationHubClient, Task> clientMethod)
+    public async Task CallsAllClients(Func<NotificationHubClientProxy, Task> proxyMethod, Func<INotificationHubClient, Task> clientMethod)
     {
         var clients = _clients.ToArray();
         var proxy = new NotificationHubClientProxy(clients);

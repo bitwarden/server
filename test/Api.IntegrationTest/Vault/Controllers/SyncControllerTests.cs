@@ -26,16 +26,16 @@ public class SyncControllerTests : IClassFixture<ApiApplicationFactory>, IAsyncL
         _userRepository = _factory.GetService<IUserRepository>();
     }
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         _ownerEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
         await _factory.LoginWithNewAccount(_ownerEmail);
     }
 
-    public Task DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         _client.Dispose();
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
     [Fact]

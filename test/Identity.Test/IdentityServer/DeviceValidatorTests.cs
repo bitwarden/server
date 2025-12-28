@@ -57,7 +57,7 @@ public class DeviceValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async void GetKnownDeviceAsync_UserNull_ReturnsFalse(
+    public async Task GetKnownDeviceAsync_UserNull_ReturnsFalse(
         Device device)
     {
         // Arrange
@@ -71,7 +71,7 @@ public class DeviceValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async void GetKnownDeviceAsync_DeviceNull_ReturnsFalse(
+    public async Task GetKnownDeviceAsync_DeviceNull_ReturnsFalse(
         User user)
     {
         // Arrange
@@ -85,7 +85,7 @@ public class DeviceValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async void GetKnownDeviceAsync_DeviceNotInDatabase_ReturnsFalse(
+    public async Task GetKnownDeviceAsync_DeviceNotInDatabase_ReturnsFalse(
         User user,
         Device device)
     {
@@ -100,7 +100,7 @@ public class DeviceValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async void GetKnownDeviceAsync_UserAndDeviceValid_ReturnsTrue(
+    public async Task GetKnownDeviceAsync_UserAndDeviceValid_ReturnsTrue(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request,
         User user,
         Device device)
@@ -157,7 +157,7 @@ public class DeviceValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async void ValidateRequestDeviceAsync_DeviceNull_ContextModified_ReturnsFalse(
+    public async Task ValidateRequestDeviceAsync_DeviceNull_ContextModified_ReturnsFalse(
         CustomValidatorRequestContext context,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
     {
@@ -180,7 +180,7 @@ public class DeviceValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async void ValidateRequestDeviceAsync_RequestDeviceKnown_ContextDeviceModified_ReturnsTrue(
+    public async Task ValidateRequestDeviceAsync_RequestDeviceKnown_ContextDeviceModified_ReturnsTrue(
         Device device,
         CustomValidatorRequestContext context,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
@@ -205,7 +205,7 @@ public class DeviceValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async void ValidateRequestDeviceAsync_ContextDeviceKnown_ContextDeviceModified_ReturnsTrue(
+    public async Task ValidateRequestDeviceAsync_ContextDeviceKnown_ContextDeviceModified_ReturnsTrue(
     Device databaseDevice,
     CustomValidatorRequestContext context,
     [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
@@ -229,7 +229,7 @@ public class DeviceValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async void ValidateRequestDeviceAsync_ExistingUserNewDeviceLogin_SendNewDeviceLoginEmail_ReturnsTrue(
+    public async Task ValidateRequestDeviceAsync_ExistingUserNewDeviceLogin_SendNewDeviceLoginEmail_ReturnsTrue(
         CustomValidatorRequestContext context,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
     {
@@ -253,7 +253,7 @@ public class DeviceValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async void ValidateRequestDeviceAsync_NewUserNewDeviceLogin_DoesNotSendNewDeviceLoginEmail_ReturnsTrue(
+    public async Task ValidateRequestDeviceAsync_NewUserNewDeviceLogin_DoesNotSendNewDeviceLoginEmail_ReturnsTrue(
     CustomValidatorRequestContext context,
     [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
     {
@@ -277,7 +277,7 @@ public class DeviceValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async void ValidateRequestDeviceAsynce_DisableNewDeviceLoginEmailTrue_DoesNotSendNewDeviceEmail_ReturnsTrue(
+    public async Task ValidateRequestDeviceAsynce_DisableNewDeviceLoginEmailTrue_DoesNotSendNewDeviceEmail_ReturnsTrue(
         CustomValidatorRequestContext context,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
     {
@@ -303,7 +303,7 @@ public class DeviceValidatorTests
     [BitAutoData("refresh_token")]
     [BitAutoData("authorization_code")]
     [BitAutoData("client_credentials")]
-    public async void ValidateRequestDeviceAsync_GrantTypeNotPassword_SavesDevice_ReturnsTrue(
+    public async Task ValidateRequestDeviceAsync_GrantTypeNotPassword_SavesDevice_ReturnsTrue(
         string grantType,
         CustomValidatorRequestContext context,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
@@ -331,7 +331,7 @@ public class DeviceValidatorTests
     [BitAutoData(true, true)]
     [BitAutoData(true, false)]
 
-    public async void ValidateRequestDeviceAsync_IsAuthRequest_UnknownDevice_Errors(
+    public async Task ValidateRequestDeviceAsync_IsAuthRequest_UnknownDevice_Errors(
         bool twoFactoRequired, bool ssoRequired,
         CustomValidatorRequestContext context,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
@@ -368,7 +368,7 @@ public class DeviceValidatorTests
     [BitAutoData(true, false)]
     [BitAutoData(true, true)]
     [BitAutoData(true, false)]
-    public async void ValidateRequestDeviceAsync_IsAuthRequest_NewDeviceOtp_Errors(
+    public async Task ValidateRequestDeviceAsync_IsAuthRequest_NewDeviceOtp_Errors(
         bool twoFactoRequired, bool ssoRequired,
         CustomValidatorRequestContext context,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
@@ -405,7 +405,7 @@ public class DeviceValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async void ValidateRequestDeviceAsync_TwoFactorRequired_SavesDevice_ReturnsTrue(
+    public async Task ValidateRequestDeviceAsync_TwoFactorRequired_SavesDevice_ReturnsTrue(
         CustomValidatorRequestContext context,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
     {
@@ -427,7 +427,7 @@ public class DeviceValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async void ValidateRequestDeviceAsync_SsoRequired_SavesDevice_ReturnsTrue(
+    public async Task ValidateRequestDeviceAsync_SsoRequired_SavesDevice_ReturnsTrue(
         CustomValidatorRequestContext context,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
     {
@@ -449,7 +449,7 @@ public class DeviceValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async void HandleNewDeviceVerificationAsync_UserNull_ContextModified_ReturnsInvalidUser(
+    public async Task HandleNewDeviceVerificationAsync_UserNull_ContextModified_ReturnsInvalidUser(
         CustomValidatorRequestContext context,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
     {
@@ -474,7 +474,7 @@ public class DeviceValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async void HandleNewDeviceVerificationAsync_VerifyDevicesFalse_ReturnsSuccess(
+    public async Task HandleNewDeviceVerificationAsync_VerifyDevicesFalse_ReturnsSuccess(
         CustomValidatorRequestContext context,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
     {
@@ -497,7 +497,7 @@ public class DeviceValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async void HandleNewDeviceVerificationAsync_NewlyCreated_ReturnsSuccess(
+    public async Task HandleNewDeviceVerificationAsync_NewlyCreated_ReturnsSuccess(
         CustomValidatorRequestContext context,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
     {
@@ -521,7 +521,7 @@ public class DeviceValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async void HandleNewDeviceVerificationAsync_UserHasCacheValue_ReturnsSuccess(
+    public async Task HandleNewDeviceVerificationAsync_UserHasCacheValue_ReturnsSuccess(
         CustomValidatorRequestContext context,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
     {
@@ -544,7 +544,7 @@ public class DeviceValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async void HandleNewDeviceVerificationAsync_NewDeviceOtpValid_ReturnsSuccess(
+    public async Task HandleNewDeviceVerificationAsync_NewDeviceOtpValid_ReturnsSuccess(
         CustomValidatorRequestContext context,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
     {
@@ -574,7 +574,7 @@ public class DeviceValidatorTests
     [Theory]
     [BitAutoData("")]
     [BitAutoData("123456")]
-    public async void HandleNewDeviceVerificationAsync_NewDeviceOtpInvalid_ReturnsInvalidNewDeviceOtp(
+    public async Task HandleNewDeviceVerificationAsync_NewDeviceOtpInvalid_ReturnsInvalidNewDeviceOtp(
         string newDeviceOtp,
         CustomValidatorRequestContext context,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
@@ -603,7 +603,7 @@ public class DeviceValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async void HandleNewDeviceVerificationAsync_UserHasNoDevices_ReturnsSuccess(
+    public async Task HandleNewDeviceVerificationAsync_UserHasNoDevices_ReturnsSuccess(
         CustomValidatorRequestContext context,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
     {
@@ -628,7 +628,7 @@ public class DeviceValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async void HandleNewDeviceVerificationAsync_NewDeviceOtpEmpty_UserHasDevices_ReturnsNewDeviceVerificationRequired(
+    public async Task HandleNewDeviceVerificationAsync_NewDeviceOtpEmpty_UserHasDevices_ReturnsNewDeviceVerificationRequired(
         CustomValidatorRequestContext context,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
     {

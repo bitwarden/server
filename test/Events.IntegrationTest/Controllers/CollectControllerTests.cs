@@ -18,7 +18,7 @@ public class CollectControllerTests : IAsyncLifetime
     private string _ownerEmail = null!;
     private Guid _ownerId;
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         _factory = new EventsApplicationFactory();
         _ownerEmail = $"integration-test+{Guid.NewGuid()}@bitwarden.com";
@@ -31,11 +31,11 @@ public class CollectControllerTests : IAsyncLifetime
         _ownerId = user!.Id;
     }
 
-    public Task DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         _client?.Dispose();
         _factory?.Dispose();
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
     [Fact]
