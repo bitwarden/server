@@ -19,7 +19,8 @@ public interface ISetInitialMasterPasswordCommand
     /// <returns>A task that completes when the operation succeeds</returns>
     /// <exception cref="BadRequestException">
     /// Thrown if the user's master password is already set, the organization is not found,
-    /// the user is not a member of the organization, the master password does not meet requirements.
+    /// the user is not a member of the organization, the master password does not meet requirements,
+    /// or the account keys are missing.
     /// </exception>
     public Task SetInitialMasterPasswordAsync(User user, SetInitialMasterPasswordDataModel masterPasswordDataModel);
 }

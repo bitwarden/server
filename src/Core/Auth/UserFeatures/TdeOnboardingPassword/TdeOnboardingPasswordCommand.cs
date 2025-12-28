@@ -30,7 +30,7 @@ public class TdeOnboardingPasswordCommand : ITdeOnboardingPasswordCommand
         _eventService = eventService;
     }
 
-    public async Task OnboardMasterPasswordAsync(User user, TdeOnboardMasterPasswordDataModel masterPasswordDataModel)
+    public async Task OnboardMasterPasswordAsync(User user, SetInitialMasterPasswordDataModel masterPasswordDataModel)
     {
         if (user.Key != null)
         {

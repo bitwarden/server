@@ -1,11 +1,9 @@
-﻿using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
-using Bit.Core.KeyManagement.Models.Data;
+﻿using Bit.Core.KeyManagement.Models.Data;
 
 namespace Bit.Core.Auth.Models.Data;
 
 /// <summary>
 /// Data model for setting an initial master password for a user.
-/// See <see cref="ISetInitialMasterPasswordCommand"/> for more details.
 /// </summary>
 public class SetInitialMasterPasswordDataModel
 {
@@ -17,6 +15,9 @@ public class SetInitialMasterPasswordDataModel
     /// </summary>
     public required string OrgSsoIdentifier { get; set; }
 
-    public required UserAccountKeysData AccountKeys { get; set; }
+    /// <summary>
+    /// User account keys. Required for Master Password decryption user.
+    /// </summary>
+    public required UserAccountKeysData? AccountKeys { get; set; }
     public string? MasterPasswordHint { get; set; }
 }

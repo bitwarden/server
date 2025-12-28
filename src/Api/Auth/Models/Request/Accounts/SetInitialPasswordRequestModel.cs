@@ -134,7 +134,13 @@ public class SetInitialPasswordRequestModel : IValidatableObject
 
     public bool IsV2Request()
     {
-        return MasterPasswordAuthentication != null && MasterPasswordUnlock != null && AccountKeys != null;
+        // AccountKeys can be null for TDE users, so we don't check that here
+        return MasterPasswordAuthentication != null && MasterPasswordUnlock != null;
+    }
+
+    public bool IsTdeOnboardingPassword()
+    {
+        return AccountKeys == null;
     }
 
     public SetInitialMasterPasswordDataModel ToData()
@@ -144,7 +150,7 @@ public class SetInitialPasswordRequestModel : IValidatableObject
             MasterPasswordAuthentication = MasterPasswordAuthentication!.ToData(),
             MasterPasswordUnlock = MasterPasswordUnlock!.ToData(),
             OrgSsoIdentifier = OrgIdentifier,
-            AccountKeys = AccountKeys!.ToAccountKeysData(),
+            AccountKeys = AccountKeys?.ToAccountKeysData(),
             MasterPasswordHint = MasterPasswordHint
         };
     }

@@ -23,5 +23,5 @@ public interface ITdeOnboardingPasswordCommand
     /// the user is not a member of the organization, the master password does not meet requirements,
     /// or the user is a TDE user without account keys set.
     /// </exception>
-    Task OnboardMasterPasswordAsync(User user, TdeOnboardMasterPasswordDataModel masterPasswordDataModel);
+    Task OnboardMasterPasswordAsync(User user, SetInitialMasterPasswordDataModel masterPasswordDataModel);
 }

@@ -42,6 +42,11 @@ public class SetInitialMasterPasswordCommand : ISetInitialMasterPasswordCommand
             throw new BadRequestException("User already has a master password set.");
         }
 
+        if (masterPasswordDataModel.AccountKeys == null)
+        {
+            throw new BadRequestException("Account keys are required.");
+        }
+
         // Prevent a de-synced salt value from creating an un-decryptable unlock method
         masterPasswordDataModel.MasterPasswordAuthentication.ValidateSaltUnchangedForUser(user);
         masterPasswordDataModel.MasterPasswordUnlock.ValidateSaltUnchangedForUser(user);

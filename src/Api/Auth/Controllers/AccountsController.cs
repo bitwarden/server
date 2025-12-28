@@ -225,7 +225,14 @@ public class AccountsController : Controller
 
         if (model.IsV2Request())
         {
-            await _setInitialMasterPasswordCommand.SetInitialMasterPasswordAsync(user, model.ToData());
+            if (model.IsTdeOnboardingPassword())
+            {
+                await _tdeOnboardingPasswordCommand.OnboardMasterPasswordAsync(user, model.ToData());
+            }
+            else
+            {
+                await _setInitialMasterPasswordCommand.SetInitialMasterPasswordAsync(user, model.ToData());
+            }
         }
         else
         {
@@ -258,18 +265,6 @@ public class AccountsController : Controller
 
             throw new BadRequestException(ModelState);
         }
-    }
-
-    [HttpPost("tde-onboard-password")]
-    public async Task PostTdeOnboardPasswordAsync([FromBody] TdeOnboardPasswordRequestModel model)
-    {
-        var user = await _userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        await _tdeOnboardingPasswordCommand.OnboardMasterPasswordAsync(user, model.ToData());
     }
 
     [HttpPost("verify-password")]
