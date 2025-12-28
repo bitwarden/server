@@ -429,7 +429,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
     }
 
     public UpdateUserData SetMasterPassword(Guid userId, MasterPasswordUnlockData masterPasswordUnlockData,
-        string masterPasswordHash, string? masterPasswordHint)
+        string serverSideMasterPasswordHash, string? masterPasswordHint)
     {
         return async (connection, transaction) =>
         {
@@ -440,7 +440,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                 new
                 {
                     Id = userId,
-                    MasterPassword = masterPasswordHash,
+                    MasterPassword = serverSideMasterPasswordHash,
                     MasterPasswordHint = masterPasswordHint,
                     Key = masterPasswordUnlockData.MasterKeyWrappedUserKey,
                     Kdf = masterPasswordUnlockData.Kdf.KdfType,

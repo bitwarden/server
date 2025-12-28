@@ -79,12 +79,12 @@ public interface IUserRepository : IRepository<User, Guid>
     /// Sets the master password and KDF for a user.
     /// </summary>
     /// <param name="userId">The user identifier.</param>
-    /// <param name="masterPasswordUnlockData">Data for unlocking with master password.</param>
-    /// <param name="masterPasswordHash">Hash of the master password.</param>
+    /// <param name="masterPasswordUnlockData">Data for unlocking with the master password.</param>
+    /// <param name="serverSideMasterPasswordHash">Server side hash of the user master password hash</param>
     /// <param name="masterPasswordHint">Optional hint for the master password.</param>
     /// <returns>A task to complete the operation.</returns>
     UpdateUserData SetMasterPassword(Guid userId, MasterPasswordUnlockData masterPasswordUnlockData,
-        string masterPasswordHash, string? masterPasswordHint);
+        string serverSideMasterPasswordHash, string? masterPasswordHint);
 
     /// <summary>
     /// Updates multiple user data properties in a single transaction.

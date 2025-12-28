@@ -65,11 +65,12 @@ public class TdeOnboardingPasswordCommand : ITdeOnboardingPasswordCommand
             throw new BadRequestException(result.Errors);
         }
 
-        var masterPasswordHash = _passwordHasher.HashPassword(user,
+        // Hash the provided user master password hash on the server side
+        var serverSideMasterPasswordHash = _passwordHasher.HashPassword(user,
             masterPasswordDataModel.MasterPasswordAuthentication.MasterPasswordAuthenticationHash);
 
         var setMasterPasswordTask = _userRepository.SetMasterPassword(user.Id,
-            masterPasswordDataModel.MasterPasswordUnlock, masterPasswordHash,
+            masterPasswordDataModel.MasterPasswordUnlock, serverSideMasterPasswordHash,
             masterPasswordDataModel.MasterPasswordHint);
         await _userRepository.UpdateUserDataAsync([setMasterPasswordTask]);
 
