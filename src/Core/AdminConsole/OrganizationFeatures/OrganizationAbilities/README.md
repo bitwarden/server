@@ -90,7 +90,7 @@ Then update the plan-to-ability assignment code so new organizations get the cor
 
 When developing a new plan-gated feature:
 
-1. **Add the ability to the Organization entity** — Create a `Use[FeatureName]` boolean property.
+1. **Add the ability to the Organization and OrganizationAbility entities** — Create a `Use[FeatureName]` boolean property.
 
 2. **Add a database migration** — Add the new column to the Organization table.
 
@@ -98,9 +98,11 @@ When developing a new plan-gated feature:
 
 4. **Update organization creation/upgrade logic** — Ensure the ability is set based on the plan.
 
-5. **Update the license model** (if applicable) — For self-hosted licensing validation.
+5. **Update the organization license claims** (if applicable) - To make the feature available on self-hosted instances.
 
 6. **Implement checks throughout client and server** — Use the ability consistently everywhere the feature is accessed.
+   - clients: get the organization object from `OrganizationService`.
+   - server: use the organization object if it's already in scope, or check the OrganizationAbility via IApplicationCacheService for a high speed cache.
 
 ## Existing Abilities
 
