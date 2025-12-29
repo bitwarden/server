@@ -10,7 +10,6 @@ bw_controlled = group "Bitwarden Controlled" {
   customer_success = person "Customer Success" "A customer success engineer. Inspects bitwarden state through the admin portal and internal tools" {
     tags "Bitwarden Employee"
   }
-  
   # Root systems
   server = softwareSystem "Bitwarden Server" {
     api = container "API" {
@@ -28,15 +27,12 @@ bw_controlled = group "Bitwarden Controlled" {
     }
     events_processor = container "Events Processor" {
       tags "Events"
+      tags "Cloud-Only"
     }
 
     # Data stores
     database = container "Database" {
       tags "Database"
-    }
-    events_queue = container "Events Queue" {
-      tags "Queue"
-      tags "Azure"
     }
     mail_queue = container "Mail Queue" {
       tags "Queue"
@@ -72,7 +68,7 @@ bw_controlled = group "Bitwarden Controlled" {
     tags "LDAP"
     tags "Self-Hosted"
   }
-  key_connector = softwareSystem "Key Connector" 
+  key_connector = softwareSystem "Key Connector"
 }
 
 self_hosted_instances = softwareSystem "Self-Hosted Instances" {

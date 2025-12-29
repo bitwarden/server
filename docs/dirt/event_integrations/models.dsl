@@ -1,0 +1,294 @@
+!element server {
+    azure_service_bus = container "Azure Service Bus" {
+        description "AMQP service used for pub/sub architecture for Events and Integrations"
+        tags "Events", "Azure", "ASB", "Cloud-Only"
+
+        event_topic = component "Event Topic" {
+            description "The main entry point for all events in the system. When an event occurs, it is published to this topic."
+            tags "Events", "ASB", "Event Tier"
+        }
+
+        integration_topic = component "Integration Topic" {
+            description "Events that have integrations configured are processed and put on the integration topic with a routing key for their specific integration handler to process."
+            tags "Events", "ASB", "Integrations", "Integration Tier"
+        }
+
+        eventsWriteSub = component "events-write-subscription" {
+            description "Subscription for EventRepositoryHandler to write all events into azure table storage."
+            tags "ASB", "Subscription", "Event Tier"
+        }
+
+        eventsSlackSub = component "events-slack-subscription" {
+            description "Subscription for slack-specific EventIntegrationHandler which publishes processed events to the integration tier if there is a Slack integration configured."
+            tags "ASB", "Subscription", "Event Tier", "Slack"
+        }
+
+        eventsWebhookSub = component "events-webhook-subscription" {
+            description "Subscription for webhook-specific EventIntegrationHandler which publishes processed events to the integration tier if there is a webhook integration configured."
+            tags "ASB", "Subscription", "Event Tier", "Webhook"
+        }
+
+        eventsHecSub = component "events-hec-subscription" {
+            description "Subscription for HEC-specific EventIntegrationHandler which publishes processed events to the integration tier if there is a HEC integration configured."
+            tags "ASB", "Subscription", "Event Tier", "HEC"
+        }
+
+        eventsDatadogSub = component "events-datadog-subscription" {
+            description "Subscription for Datadog-specific EventIntegrationHandler which publishes processed events to the integration tier if there is a Datadog integration configured."
+            tags "ASB", "Subscription", "Event Tier", "Datadog"
+        }
+
+        eventsTeamsSub = component "events-teams-subscription" {
+            description "Subscription for Microsoft Teams-specific EventIntegrationHandler which publishes processed events to the integration tier if there is a Teams integration configured."
+            tags "ASB", "Subscription", "Event Tier", "Teams"
+        }
+
+        integrationSlackSub = component "integration-slack-subscription" {
+            description "Integration-level subscription for Slack IntegrationMessages. Correlation filter: Label = 'slack'."
+            tags "ASB", "Subscription", "Integration Tier", "Slack"
+        }
+
+        integrationWebhookSub = component "integration-webhook-subscription" {
+            description "Integration-level subscription for Webhook IntegrationMessages. Correlation filter: Label = 'webhook'."
+            tags "ASB", "Subscription", "Integration Tier", "Webhook"
+        }
+
+        integrationHecSub = component "integration-hec-subscription" {
+            description "Integration-level subscription for HEC IntegrationMessages. Correlation filter: Label = 'hec'."
+            tags "ASB", "Subscription", "Integration Tier", "HEC"
+        }
+
+        integrationDatadogSub = component "integration-datadog-subscription" {
+            description "Integration-level subscription for Datadog IntegrationMessages. Correlation filter: Label = 'datadog'."
+            tags "ASB", "Subscription", "Integration Tier", "Datadog"
+        }
+
+        integrationTeamsSub = component "integration-teams-subscription" {
+            description "Integration-level subscription for Microsoft Teams IntegrationMessages. Correlation filter: Label = 'teams'."
+            tags "ASB", "Subscription", "Integration Tier", "Teams"
+        }
+    }
+
+    rabbit_mq = container "RabbitMQ" {
+        tags "Events"
+        tags "RabbitMQ"
+        tags "Self-Hosted-Only"
+
+        event_exchange = component "Event Exchange" {
+            tags "Events", "Event Tier"
+        }
+
+        integration_exchange = component "Integration Exchange" {
+            tags "Events", "Integrations", "Integration Tier"
+        }
+
+        eventsWriteQueue = component "events-write-queue" {
+            description "Queue for EventRepositoryHandler to write all events into the database."
+            tags "RabbitMQ", "Queue", "Event Tier"
+        }
+
+        eventsSlackQueue = component "events-slack-queue" {
+            description "Queue for slack-specific EventIntegrationHandler which publishes processed events to the integration tier if there is a Slack integration configured."
+            tags "RabbitMQ", "Queue", "Event Tier", "Slack"
+        }
+
+        eventsWebhookQueue = component "events-webhook-queue" {
+            description "Queue for webhook-specific EventIntegrationHandler which publishes processed events to the integration tier if there is a webhook integration configured."
+            tags "RabbitMQ", "Queue", "Event Tier", "Webhook"
+        }
+
+        eventsHecQueue = component "events-hec-queue" {
+            description "Queue for HEC-specific EventIntegrationHandler which publishes processed events to the integration tier if there is a HEC integration configured."
+            tags "RabbitMQ", "Queue", "Event Tier", "HEC"
+        }
+
+        eventsDatadogQueue = component "events-datadog-queue" {
+            description "Queue for Datadog-specific EventIntegrationHandler which publishes processed events to the integration tier if there is a Datadog integration configured."
+            tags "RabbitMQ", "Queue", "Event Tier", "Datadog"
+        }
+
+        eventsTeamsQueue = component "events-teams-queue" {
+            description "Queue for Microsoft Teams-specific EventIntegrationHandler which publishes processed events to the integration tier if there is a Teams integration configured."
+            tags "RabbitMQ", "Queue", "Event Tier", "Teams"
+        }
+
+        integrationSlackQueue = component "integration-slack-queue" {
+            description "Integration-level queue for Slack IntegrationMessages. Routing key = 'slack'."
+            tags "RabbitMQ", "Queue", "Integration Tier", "Slack"
+        }
+
+        integrationWebhookQueue = component "integration-webhook-queue" {
+            description "Integration-level queue for Webhook IntegrationMessages. Routing key = 'webhook'."
+            tags "RabbitMQ", "Queue", "Integration Tier", "Webhook"
+        }
+
+        integrationHecQueue = component "integration-hec-queue" {
+            description "Integration-level queue for HEC IntegrationMessages. Routing key = 'hec'."
+            tags "RabbitMQ", "Queue", "Integration Tier", "HEC"
+        }
+
+        integrationDatadogQueue = component "integration-datadog-queue" {
+            description "Integration-level queue for Datadog IntegrationMessages. Routing key = 'datadog'."
+            tags "RabbitMQ", "Queue", "Integration Tier", "Datadog"
+        }
+
+        integrationTeamsQueue = component "integration-teams-queue" {
+            description "Integration-level queue for Teams IntegrationMessages. Routing key = 'teams'."
+            tags "RabbitMQ", "Queue", "Integration Tier", "Teams"
+        }
+
+        integrationSlackRetryQueue = component "integration-slack-retry-queue" {
+            description "Integration-level retry queue for Slack IntegrationMessages. Routing key = 'slack-retry'."
+            tags "RabbitMQ", "Queue", "Integration Tier", "Slack"
+        }
+
+        integrationWebhookRetryQueue = component "integration-webhook-retry-queue" {
+            description "Integration-level retry queue for Webhook IntegrationMessages. Routing key = 'webhook-retry'."
+            tags "RabbitMQ", "Queue", "Integration Tier", "Webhook"
+        }
+
+        integrationHecRetryQueue = component "integration-hec-retry-queue" {
+            description "Integration-level retry queue for HEC IntegrationMessages. Routing key = 'hec-retry'."
+            tags "RabbitMQ", "Queue", "Integration Tier", "HEC"
+        }
+
+        integrationDatadogRetryQueue = component "integration-datadog-retry-queue" {
+            description "Integration-level retry queue for Datadog IntegrationMessages. Routing key = 'datadog-retry'."
+            tags "RabbitMQ", "Queue", "Integration Tier", "Datadog"
+        }
+
+        integrationTeamsRetryQueue = component "integration-teams-retry-queue" {
+            description "Integration-level retry queue for Teams IntegrationMessages. Routing key = 'teams-retry'."
+            tags "RabbitMQ", "Queue", "Integration Tier", "Teams"
+        }
+    }
+}
+
+!element server.events_processor {
+    tags "Cloud-Only"
+
+    event_repository_handler = component "EventRepositoryHandler" {
+        description "Handles all events, passing them off to the IEventWriteService with the `persistent` key for long term storage."
+    }
+    event_listener = component "AzureServiceBusEventListenerService" {
+        description "Listens to a specific subscription and passes off to a handler to handle events"
+    }
+    integration_listener = component "AzureServiceBusIntegrationListenerService" {
+        description "Listens to a specific subscription and passes off to a handler to handle IntegrationMessages"
+    }
+    event_integration_handler = component "EventIntegrationHandler" {
+        description "Fetches the relevant configurations when an event comes in and hands the event to its paired integration handler for processing."
+    }
+    slack_integration_handler = component "SlackIntegrationHandler" {
+        description "Processes Slack IntegrationMessages, posting them to the configured channels."
+    }
+    teams_integration_handler = component "TeamsIntegrationHandler" {
+        description "Processes Teams IntegrationMessages, posting them to the configured channels."
+    }
+    datadog_integration_handler = component "DatadogIntegrationHandler" {
+        description "Processes Datadog IntegrationMessages, posting them to the configured URI."
+    }
+    webhook_integration_handler = component "WebhookIntegrationHandler" {
+        description "Processes Webhook and HEC IntegrationMessages, posting them to the configured URI."
+    }
+    event_integrations_extended_cache = component "EventIntegrationsExtendedCache" {
+        description "Caches all configurations for integrations so that events can be handled without adding database load."
+    }
+    slack_service = component "SlackService" {
+        description "Handles all API interaction with Slack."
+    }
+    teams_service = component "TeamsService" {
+        description "Handles all API interaction with Teams."
+    }
+    http_client = component "HttpClient" {
+        description "Performs any HTTP functions for Datadog / Webhooks / HEC."
+    }
+    integration_filter_service = component "IntegrationFilterService" {
+        description "Processes filters from configurations to determine if an event should be processed out to the integration."
+    }
+}
+
+!element server.events {
+    event_listener = component "RabbitMqEventListenerService" {
+        tags "Self-Hosted-Only"
+        description "Listens to a specific queue and passes off to a handler to handle events"
+    }
+    integration_listener = component "RabbitMqIntegrationListenerService" {
+        tags "Self-Hosted-Only"
+        description "Listens to a specific queue and passes off to a handler to handle IntegrationMessages"
+    }
+    event_repository_handler = component "EventRepositoryHandler" {
+        tags "Self-Hosted-Only"
+        description "Handles all events, passing them off to the IEventWriteService with the `persistent` key for long term storage."
+    }
+    event_integration_handler = component "EventIntegrationHandler" {
+        tags "Self-Hosted-Only"
+        description "Fetches the relevant configurations when an event comes in and hands the event to its paired integration handler for processing."
+    }
+    slack_integration_handler = component "SlackIntegrationHandler" {
+        tags "Self-Hosted-Only"
+        description "Processes Slack IntegrationMessages, posting them to the configured channels."
+    }
+    teams_integration_handler = component "TeamsIntegrationHandler" {
+        tags "Self-Hosted-Only"
+        description "Processes Teams IntegrationMessages, posting them to the configured channels."
+    }
+    datadog_integration_handler = component "DatadogIntegrationHandler" {
+        tags "Self-Hosted-Only"
+        description "Processes Datadog IntegrationMessages, posting them to the configured URI."
+    }
+    webhook_integration_handler = component "WebhookIntegrationHandler" {
+        tags "Self-Hosted-Only"
+        description "Processes Webhook and HEC IntegrationMessages, posting them to the configured URI."
+    }
+    event_integrations_extended_cache = component "EventIntegrationsExtendedCache" {
+        tags "Self-Hosted-Only"
+        description "Caches all configurations for integrations so that events can be handled without adding database load."
+    }
+    slack_service = component "SlackService" {
+        tags "Self-Hosted-Only"
+        description "Handles all API interaction with Slack."
+    }
+    teams_service = component "TeamsService" {
+        tags "Self-Hosted-Only"
+        description "Handles all API interaction with Teams."
+    }
+    http_client = component "HttpClient" {
+        tags "Self-Hosted-Only"
+        description "Performs any HTTP functions for Datadog / Webhooks / HEC."
+    }
+    integration_filter_service = component "IntegrationFilterService" {
+        tags "Self-Hosted-Only"
+        description "Processes filters from configurations to determine if an event should be processed out to the integration."
+    }
+}
+
+external_services = softwareSystem "External Services" {
+    tags "External", "Events", "Integrations"
+    description "External services (e.g. SIEM, Slack, et al) that consume events via integrations"
+
+    slack = container "Slack" {
+        tags "External", "Events", "Integrations", "Slack"
+        description "Slack messaging service. Receives messages via configured event integrations."
+    }
+
+    teams = container "Teams" {
+        tags "External", "Events", "Integrations", "Teams"
+        description "Microsoft Teams messaging service. Receives messages via configured event integrations."
+    }
+
+    splunk = container "Splunk" {
+        tags "External", "Events", "Integrations", "Splunk"
+        description "Splunk SIEM service. Receives events via configured event integrations."
+    }
+
+    datadog = container "Datadog" {
+        tags "External", "Events", "Integrations", "Datadog"
+        description "Datadog SIEM service. Receives events via configured event integrations."
+    }
+
+    crowdstrike = container "Crowdstrike Falcon" {
+        tags "External", "Events", "Integrations", "CrowdStrike Falcon", "CrowdStrike"
+        description "CrowdStrike Falcon SIEM service. Receives events via configured event integrations."
+    }
+}

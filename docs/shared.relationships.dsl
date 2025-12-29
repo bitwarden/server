@@ -35,12 +35,9 @@ server.api -> server.database "Queries"
 server.portal -> server.database "Queries"
 
 # queue Relationships
-server.api -> server.events_queue "Sends events to"
-server.events -> server.events_queue "Sends events to"
 server.api -> server.mail_queue "Sends emails to"
 server.api -> server.notifications_queue "Sends notifications to"
 server.notifications -> server.notifications_queue "Sends notifications to"
-server.events_queue -> server.events_processor "Processes events from"
 server.mail_queue -> server.portal "Processes emails from"
 
 # self host phone home
