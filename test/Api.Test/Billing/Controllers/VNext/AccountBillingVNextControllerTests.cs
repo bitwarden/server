@@ -1,10 +1,12 @@
 ﻿using Bit.Api.Billing.Controllers.VNext;
 using Bit.Api.Billing.Models.Requests.Storage;
+using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Premium.Commands;
 using Bit.Core.Entities;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Http;
 using NSubstitute;
+using OneOf.Types;
 using Xunit;
 using BadRequest = Bit.Core.Billing.Commands.BadRequest;
 
@@ -37,7 +39,7 @@ public class AccountBillingVNextControllerTests
         _updatePremiumStorageCommand.Run(
             Arg.Is<User>(u => u.Id == user.Id),
             Arg.Is<short>(s => s == 10))
-            .Returns((string?)null);
+            .Returns(new BillingCommandResult<None>(new None()));
 
         // Act
         var result = await _sut.UpdateStorageAsync(user, request);
@@ -156,7 +158,7 @@ public class AccountBillingVNextControllerTests
         _updatePremiumStorageCommand.Run(
             Arg.Is<User>(u => u.Id == user.Id),
             Arg.Is<short>(s => s == 15))
-            .Returns((string?)null);
+            .Returns(new BillingCommandResult<None>(new None()));
 
         // Act
         var result = await _sut.UpdateStorageAsync(user, request);
@@ -175,7 +177,7 @@ public class AccountBillingVNextControllerTests
         _updatePremiumStorageCommand.Run(
             Arg.Is<User>(u => u.Id == user.Id),
             Arg.Is<short>(s => s == 3))
-            .Returns((string?)null);
+            .Returns(new BillingCommandResult<None>(new None()));
 
         // Act
         var result = await _sut.UpdateStorageAsync(user, request);
@@ -194,7 +196,7 @@ public class AccountBillingVNextControllerTests
         _updatePremiumStorageCommand.Run(
             Arg.Is<User>(u => u.Id == user.Id),
             Arg.Is<short>(s => s == 100))
-            .Returns((string?)null);
+            .Returns(new BillingCommandResult<None>(new None()));
 
         // Act
         var result = await _sut.UpdateStorageAsync(user, request);
@@ -213,7 +215,7 @@ public class AccountBillingVNextControllerTests
         _updatePremiumStorageCommand.Run(
             Arg.Is<User>(u => u.Id == user.Id),
             Arg.Is<short>(s => s == 5))
-            .Returns((string?)null);
+            .Returns(new BillingCommandResult<None>(new None()));
 
         // Act
         var result = await _sut.UpdateStorageAsync(user, request);

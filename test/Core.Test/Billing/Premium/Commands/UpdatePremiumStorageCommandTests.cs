@@ -6,6 +6,7 @@ using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using OneOf.Types;
 using Stripe;
 using Xunit;
 using PremiumPlan = Bit.Core.Billing.Pricing.Premium.Plan;
@@ -184,8 +185,6 @@ public class UpdatePremiumStorageCommandTests
 
         // Assert
         Assert.True(result.IsT0);
-        var paymentSecret = result.AsT0;
-        Assert.Null(paymentSecret);
 
         // Verify subscription was fetched but NOT updated
         await _stripeAdapter.Received(1).GetSubscriptionAsync("sub_123");
@@ -210,8 +209,6 @@ public class UpdatePremiumStorageCommandTests
 
         // Assert
         Assert.True(result.IsT0);
-        var paymentSecret = result.AsT0;
-        Assert.Null(paymentSecret);
 
         // Verify subscription was updated
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(

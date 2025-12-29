@@ -5,6 +5,7 @@ using Bit.Core.Entities;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
+using OneOf.Types;
 using Stripe;
 
 namespace Bit.Core.Billing.Premium.Commands;
@@ -20,8 +21,8 @@ public interface IUpdatePremiumStorageCommand
     /// </summary>
     /// <param name="user">The premium user whose storage should be updated.</param>
     /// <param name="additionalStorageGb">The additional storage amount in GB beyond base storage.</param>
-    /// <returns>A billing command result with payment intent client secret if payment is required.</returns>
-    Task<BillingCommandResult<string?>> Run(User user, short additionalStorageGb);
+    /// <returns>A billing command result indicating success or failure.</returns>
+    Task<BillingCommandResult<None>> Run(User user, short additionalStorageGb);
 }
 
 public class UpdatePremiumStorageCommand(
@@ -31,7 +32,7 @@ public class UpdatePremiumStorageCommand(
     ILogger<UpdatePremiumStorageCommand> logger)
     : BaseBillingCommand<UpdatePremiumStorageCommand>(logger), IUpdatePremiumStorageCommand
 {
-    public Task<BillingCommandResult<string?>> Run(User user, short additionalStorageGb) => HandleAsync<string?>(async () =>
+    public Task<BillingCommandResult<None>> Run(User user, short additionalStorageGb) => HandleAsync<None>(async () =>
     {
         if (!user.Premium)
         {
@@ -75,7 +76,7 @@ public class UpdatePremiumStorageCommand(
         // Idempotency check: if user already has the requested storage, return success
         if (user.MaxStorageGb == newTotalStorageGb)
         {
-            return (string?)null; // No payment intent needed for no-op
+            return new None();
         }
 
         var remainingStorage = user.StorageBytesRemaining(newTotalStorageGb);
@@ -138,6 +139,6 @@ public class UpdatePremiumStorageCommand(
         await userService.SaveUserAsync(user);
 
         // No payment intent needed - the subscription update will automatically create and finalize the invoice
-        return (string?)null;
+        return new None();
     });
 }
