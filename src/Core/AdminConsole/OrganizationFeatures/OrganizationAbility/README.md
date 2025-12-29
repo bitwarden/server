@@ -83,7 +83,7 @@ To change abilities for existing organizations (e.g., rolling out a feature to a
 -- Example: Enable UseEvents for all Teams organizations
 UPDATE [dbo].[Organization]
 SET UseEvents = 1
-WHERE PlanType IN ('TeamsAnnually', 'TeamsMonthly')
+WHERE PlanType IN (17, 18) -- TeamsMonthly = 17, TeamsAnnually = 18
 ```
 
 Then update the plan-to-ability assignment code so new organizations get the correct value.
