@@ -34,11 +34,6 @@ bw_controlled = group "Bitwarden Controlled" {
     database = container "Database" {
       tags "Database"
     }
-    events_queue = container "Events Queue" {
-      tags "Queue"
-      tags "Azure"
-      tags "Cloud-Only"
-    }
     mail_queue = container "Mail Queue" {
       tags "Queue"
       tags "Azure"
@@ -73,7 +68,7 @@ bw_controlled = group "Bitwarden Controlled" {
     tags "LDAP"
     tags "Self-Hosted"
   }
-  key_connector = softwareSystem "Key Connector" 
+  key_connector = softwareSystem "Key Connector"
 }
 
 self_hosted_instances = softwareSystem "Self-Hosted Instances" {

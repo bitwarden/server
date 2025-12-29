@@ -33,6 +33,16 @@
             tags "ASB", "Subscription", "Event Tier", "HEC"
         }
 
+        eventsDatadogSub = component "events-datadog-subscription" {
+            description "Subscription for Datadog-specific EventIntegrationHandler which publishes processed events to the integration tier if there is a Datadog integration configured."
+            tags "ASB", "Subscription", "Event Tier", "Datadog"
+        }
+
+        eventsTeamsSub = component "events-teams-subscription" {
+            description "Subscription for Microsoft Teams-specific EventIntegrationHandler which publishes processed events to the integration tier if there is a Teams integration configured."
+            tags "ASB", "Subscription", "Event Tier", "Teams"
+        }
+
         integrationSlackSub = component "integration-slack-subscription" {
             description "Integration-level subscription for Slack IntegrationMessages. Correlation filter: Label = 'slack'."
             tags "ASB", "Subscription", "Integration Tier", "Slack"
@@ -46,6 +56,16 @@
         integrationHecSub = component "integration-hec-subscription" {
             description "Integration-level subscription for HEC IntegrationMessages. Correlation filter: Label = 'hec'."
             tags "ASB", "Subscription", "Integration Tier", "HEC"
+        }
+
+        integrationDatadogSub = component "integration-datadog-subscription" {
+            description "Integration-level subscription for Datadog IntegrationMessages. Correlation filter: Label = 'datadog'."
+            tags "ASB", "Subscription", "Integration Tier", "Datadog"
+        }
+
+        integrationTeamsSub = component "integration-teams-subscription" {
+            description "Integration-level subscription for Miocrosoft Teams IntegrationMessages. Correlation filter: Label = 'teams'."
+            tags "ASB", "Subscription", "Integration Tier", "Teams"
         }
     }
 
@@ -82,6 +102,16 @@
             tags "RabbitMQ", "Queue", "Event Tier", "HEC"
         }
 
+        eventsDatadogQueue = component "events-datadog-queue" {
+            description "Queue for Datadog-specific EventIntegrationHandler which publishes processed events to the integration tier if there is a Datadog integration configured."
+            tags "RabbitMQ", "Queue", "Event Tier", "Datadog"
+        }
+
+        eventsTeamsQueue = component "events-teams-queue" {
+            description "Queue for Microsoft Teams-specific EventIntegrationHandler which publishes processed events to the integration tier if there is a Teams integration configured."
+            tags "RabbitMQ", "Queue", "Event Tier", "Teams"
+        }
+
         integrationSlackQueue = component "integration-slack-queue" {
             description "Integration-level queue for Slack IntegrationMessages. Routing key = 'slack'."
             tags "RabbitMQ", "Queue", "Integration Tier", "Slack"
@@ -97,6 +127,16 @@
             tags "RabbitMQ", "Queue", "Integration Tier", "HEC"
         }
 
+        integrationDatadogQueue = component "integration-datadog-queue" {
+            description "Integration-level queue for Datadog IntegrationMessages. Routing key = 'datadog'."
+            tags "RabbitMQ", "Queue", "Integration Tier", "Datadog"
+        }
+
+        integrationTeamsQueue = component "integration-teams-queue" {
+            description "Integration-level queue for Teams IntegrationMessages. Routing key = 'teams'."
+            tags "RabbitMQ", "Queue", "Integration Tier", "Teams"
+        }
+
         integrationSlackRetryQueue = component "integration-slack-retry-queue" {
             description "Integration-level retry queue for Slack IntegrationMessages. Routing key Label = 'slack-retry'."
             tags "RabbitMQ", "Queue", "Integration Tier", "Slack"
@@ -110,6 +150,16 @@
         integrationHecRetryQueue = component "integration-hec-retry-queue" {
             description "Integration-level retry queue for HEC IntegrationMessages. Routing key = 'hec-retry'."
             tags "RabbitMQ", "Queue", "Integration Tier", "HEC"
+        }
+
+        integrationDatadogRetryQueue = component "integration-datadog-retry-queue" {
+            description "Integration-level retry queue for Datadog IntegrationMessages. Routing key = 'datadog-retry'."
+            tags "RabbitMQ", "Queue", "Integration Tier", "Datadog"
+        }
+
+        integrationTeamsRetryQueue = component "integration-teams-retry-queue" {
+            description "Integration-level retry queue for Teams IntegrationMessages. Routing key = 'teams-retry'."
+            tags "RabbitMQ", "Queue", "Integration Tier", "Teams"
         }
     }
 }
@@ -132,17 +182,26 @@
     slack_integration_handler = component "SlackIntegrationHandler" {
         description "Processes Slack IntegrationMessages, posting them to the configured channels."
     }
+    teams_integration_handler = component "TeamsIntegrationHandler" {
+        description "Processes Teams IntegrationMessages, posting them to the configured channels."
+    }
+    datadog_integration_handler = component "DatadogIntegrationHandler" {
+        description "Processes Datadog IntegrationMessages, posting them to the configured URI."
+    }
     webhook_integration_handler = component "WebhookIntegrationHandler" {
         description "Processes Webhook and HEC IntegrationMessages, posting them to the configured URI."
     }
-    integration_configuration_details_cache_service = component "IntegrationConfigurationDetailsCacheService" {
-        description "Caches all configurations for integrations in memory so that events can be handled without adding database load."
+    event_integrations_extended_cache = component "EventIntegrationsExtendedCache" {
+        description "Caches all configurations for integrations so that events can be handled without adding database load."
     }
     slack_service = component "SlackService" {
         description "Handles all API interaction with Slack."
     }
+    teams_service = component "TeamsService" {
+        description "Handles all API interaction with Teams."
+    }
     http_client = component "HttpClient" {
-        description "Performs any Http functions for Webhooks / HEC."
+        description "Performs any HTTP functions for Datadog / Webhooks / HEC."
     }
     integration_filter_service = component "IntegrationFilterService" {
         description "Processes filters from configurations to determine if an event should be processed out to the integration."
@@ -151,9 +210,11 @@
 
 !element server.events {
     event_listener = component "RabbitMqEventListenerService" {
+        tags "Self-Hosted-Only"
         description "Listens to a specific queue and passes off to a handler to handle events"
     }
     integration_listener = component "RabbitMqIntegrationListenerService" {
+        tags "Self-Hosted-Only"
         description "Listens to a specific queue and passes off to a handler to handle IntegrationMessages"
     }
     event_repository_handler = component "EventRepositoryHandler" {
@@ -168,11 +229,19 @@
         tags "Self-Hosted-Only"
         description "Processes Slack IntegrationMessages, posting them to the configured channels."
     }
+    teams_integration_handler = component "TeamsIntegrationHandler" {
+        tags "Self-Hosted-Only"
+        description "Processes Teams IntegrationMessages, posting them to the configured channels."
+    }
+    datadog_integration_handler = component "DatadogIntegrationHandler" {
+        tags "Self-Hosted-Only"
+        description "Processes Datadog IntegrationMessages, posting them to the configured URI."
+    }
     webhook_integration_handler = component "WebhookIntegrationHandler" {
         tags "Self-Hosted-Only"
         description "Processes Webhook and HEC IntegrationMessages, posting them to the configured URI."
     }
-    integration_configuration_details_cache_service = component "IntegrationConfigurationDetailsCacheService" {
+    event_integrations_extended_cache = component "EventIntegrationsExtendedCache" {
         tags "Self-Hosted-Only"
         description "Caches all configurations for integrations in memory so that events can be handled without adding database load."
     }
@@ -180,9 +249,13 @@
         tags "Self-Hosted-Only"
         description "Handles all API interaction with Slack."
     }
+    teams_service = component "TeamsService" {
+        tags "Self-Hosted-Only"
+        description "Handles all API interaction with Teams."
+    }
     http_client = component "HttpClient" {
         tags "Self-Hosted-Only"
-        description "Performs any Http functions for Webhooks / HEC."
+        description "Performs any Http functions for Datadog / Webhooks / HEC."
     }
     integration_filter_service = component "IntegrationFilterService" {
         tags "Self-Hosted-Only"
@@ -197,6 +270,11 @@ external_services = softwareSystem "External Services" {
     slack = container "Slack" {
         tags "External", "Events", "Integrations", "Slack"
         description "Slack messaging service. Receives messages via configured event integrations."
+    }
+
+    teams = container "Teams" {
+        tags "External", "Events", "Integrations", "Teams"
+        description "Microsoft Teams messaging service. Receives messages via configured event integrations."
     }
 
     splunk = container "Splunk" {

@@ -26,23 +26,33 @@ dynamic server.events_processor "Events_Processor_Azure_Service_Bus" "Event Inte
     eventsWriteDelegate
     eventRepositoryDatabase
     eventsIntegrationHandlerDelegate
+    eventIntegrationHandlerDatabase
     eventIntegrationHandlerCache
     cacheDatabaseFetch
     eventIntegrationHandlerFilter
     eventIntegrationHandlerPublish
     integrationSlackSub
+    integrationTeamsSub
+    integrationDatadogSub
     integrationWebhookSub
     integrationHecSub
     integrationSlackListener
+    integrationTeamsListener
+    integrationDatadogListener
     integrationWebhookListener
     integrationHecListener
     integrationSlackDelegate
+    integrationTeamsDelegate
+    integrationDatadogDelegate
     integrationWebhookDelegate
     slackToSlackService
     slackServiceToSlack
-    handlerHttpClient
-    httpToCrowdstrike
+    teamsToTeamsService
+    teamsServiceToTeams
+    datadogHandlerHttpClient
+    webhookHandlerHttpClient
     httpToDatadog
+    httpToCrowdstrike
     httpToSplunk
 }
 
@@ -58,6 +68,7 @@ dynamic server.events "Events_RabbitMQ" "Event Integrations / RabbitMQ Detail" {
     eventsWriteDelegate_events
     eventRepositoryDatabase_events
     eventsIntegrationHandlerDelegate_events
+    eventIntegrationHandlerDatabase_events
     eventIntegrationHandlerCache_events
     cacheDatabaseFetch_events
     eventIntegrationHandlerFilter_events
@@ -65,15 +76,24 @@ dynamic server.events "Events_RabbitMQ" "Event Integrations / RabbitMQ Detail" {
     integrationSlackQueue
     integrationWebhookQueue
     integrationHecQueue
+    integrationTeamsQueue
+    integrationDatadogQueue
     integrationSlackListener_events
+    integrationTeamsListener_events
+    integrationDatadogListener_events
     integrationWebhookListener_events
     integrationHecListener_events
     integrationSlackDelegate_events
+    integrationTeamsDelegate_events
+    integrationDatadogDelegate_events
     integrationWebhookDelegate_events
     slackToSlackService_events
     slackServiceToSlack_events
-    handlerHttpClient_events
-    httpToCrowdstrike_events
+    teamsToTeamsService_events
+    teamsServiceToTeams_events
+    webhookHandlerHttpClient_events
+    datadogHandlerHttpClient_events
     httpToDatadog_events
+    httpToCrowdstrike_events
     httpToSplunk_events
 }
