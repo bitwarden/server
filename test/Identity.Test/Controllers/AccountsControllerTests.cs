@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Reflection;
 using System.Text;
 using Bit.Core;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
@@ -1038,6 +1039,150 @@ public class AccountsControllerTests : IDisposable
         // Act & Assert
         var ex = await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostRegisterFinish(model));
         Assert.Equal("MasterKeyWrappedUserKey couldn't be found on either the MasterPasswordUnlockData or the UserSymmetricKey property passed in.", ex.Message);
+    }
+
+    [Theory, BitAutoData]
+    public void RegisterFinishRequestModel_Validate_Throws_WhenUnlockAndAuthDataMismatch(
+        string email,
+        string authHash,
+        string masterKeyWrappedUserKey,
+        string publicKey,
+        string encryptedPrivateKey)
+    {
+        // Arrange: authentication and unlock have different KDF and/or salt
+        var authKdf = new KdfRequestModel
+        {
+            KdfType = KdfType.PBKDF2_SHA256,
+            Iterations = AuthConstants.PBKDF2_ITERATIONS.Default
+        };
+        var unlockKdf = new KdfRequestModel
+        {
+            KdfType = KdfType.Argon2id,
+            Iterations = AuthConstants.ARGON2_ITERATIONS.Default,
+            Memory = AuthConstants.ARGON2_MEMORY.Default,
+            Parallelism = AuthConstants.ARGON2_PARALLELISM.Default
+        };
+
+        var model = new RegisterFinishRequestModel
+        {
+            Email = email,
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
+            {
+                Kdf = authKdf,
+                MasterPasswordAuthenticationHash = authHash,
+                Salt = email
+            },
+            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
+            {
+                Kdf = unlockKdf,
+                MasterKeyWrappedUserKey = masterKeyWrappedUserKey,
+                Salt = email
+            },
+            UserAsymmetricKeys = new KeysRequestModel
+            {
+                PublicKey = publicKey,
+                EncryptedPrivateKey = encryptedPrivateKey
+            }
+        };
+
+        var ctx = new ValidationContext(model);
+
+        // Act & Assert
+        var ex = Assert.Throws<Exception>(() => model.Validate(ctx).ToList());
+        Assert.Equal("KDF settings and salt must match between authentication and unlock data.", ex.Message);
+    }
+
+    [Theory, BitAutoData]
+    public void RegisterFinishRequestModel_Validate_Throws_WhenSaltMismatch(
+        string email,
+        string authHash,
+        string masterKeyWrappedUserKey,
+        string publicKey,
+        string encryptedPrivateKey)
+    {
+        var unlockKdf = new KdfRequestModel
+        {
+            KdfType = KdfType.Argon2id,
+            Iterations = AuthConstants.ARGON2_ITERATIONS.Default,
+            Memory = AuthConstants.ARGON2_MEMORY.Default,
+            Parallelism = AuthConstants.ARGON2_PARALLELISM.Default
+        };
+
+        var model = new RegisterFinishRequestModel
+        {
+            Email = email,
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
+            {
+                Kdf = unlockKdf,
+                MasterPasswordAuthenticationHash = authHash,
+                Salt = email
+            },
+            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
+            {
+                Kdf = unlockKdf,
+                MasterKeyWrappedUserKey = masterKeyWrappedUserKey,
+                // Intentionally different salt to force mismatch
+                Salt = email + ".mismatch"
+            },
+            UserAsymmetricKeys = new KeysRequestModel
+            {
+                PublicKey = publicKey,
+                EncryptedPrivateKey = encryptedPrivateKey
+            }
+        };
+
+        var ctx = new ValidationContext(model);
+
+        // Act & Assert
+        var ex = Assert.Throws<Exception>(() => model.Validate(ctx).ToList());
+        Assert.Equal("KDF settings and salt must match between authentication and unlock data.", ex.Message);
+    }
+
+    [Theory, BitAutoData]
+    public void RegisterFinishRequestModel_Validate_Throws_WhenAuthHashAndRootHashMismatch(
+        string email,
+        string authHash,
+        string differentRootHash,
+        string masterKeyWrappedUserKey,
+        string publicKey,
+        string encryptedPrivateKey)
+    {
+        // Arrange: same KDF/salt, but authentication hash differs from legacy root hash
+        var kdf = new KdfRequestModel
+        {
+            KdfType = KdfType.PBKDF2_SHA256,
+            Iterations = AuthConstants.PBKDF2_ITERATIONS.Default
+        };
+
+        var model = new RegisterFinishRequestModel
+        {
+            Email = email,
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
+            {
+                Kdf = kdf,
+                MasterPasswordAuthenticationHash = authHash,
+                Salt = email
+            },
+            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
+            {
+                Kdf = kdf,
+                MasterKeyWrappedUserKey = masterKeyWrappedUserKey,
+                Salt = email
+            },
+            // Intentionally set the legacy field to a different value to trigger the throw
+            MasterPasswordHash = differentRootHash,
+            UserAsymmetricKeys = new KeysRequestModel
+            {
+                PublicKey = publicKey,
+                EncryptedPrivateKey = encryptedPrivateKey
+            }
+        };
+
+        var ctx = new ValidationContext(model);
+
+        // Act & Assert
+        var ex = Assert.Throws<Exception>(() => model.Validate(ctx).ToList());
+        Assert.Equal("Master password hash and hash are not equal.", ex.Message);
     }
 
     private void SetDefaultKdfHmacKey(byte[]? newKey)

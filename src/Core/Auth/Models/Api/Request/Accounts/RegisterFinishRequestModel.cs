@@ -63,14 +63,6 @@ public class RegisterFinishRequestModel : IValidatableObject
 
     public User ToUser()
     {
-        // PM-28143 - Remove line below
-        // When we process this request to a user object, check if the unlock and authentication
-        // data has been passed through, and if so they should have matching values.
-        MasterPasswordUnlockDataRequestModel.ThrowIfExistsAndNotMatchingAuthenticationData(MasterPasswordAuthentication, MasterPasswordUnlock);
-
-        // PM-28143 - Remove line below
-        MasterPasswordAuthenticationDataRequestModel.ThrowIfExistsAndHashIsNotEqual(MasterPasswordAuthentication, MasterPasswordHash);
-
         var user = new User
         {
             Email = Email,
