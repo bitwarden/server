@@ -64,7 +64,7 @@
         }
 
         integrationTeamsSub = component "integration-teams-subscription" {
-            description "Integration-level subscription for Miocrosoft Teams IntegrationMessages. Correlation filter: Label = 'teams'."
+            description "Integration-level subscription for Microsoft Teams IntegrationMessages. Correlation filter: Label = 'teams'."
             tags "ASB", "Subscription", "Integration Tier", "Teams"
         }
     }
@@ -138,7 +138,7 @@
         }
 
         integrationSlackRetryQueue = component "integration-slack-retry-queue" {
-            description "Integration-level retry queue for Slack IntegrationMessages. Routing key Label = 'slack-retry'."
+            description "Integration-level retry queue for Slack IntegrationMessages. Routing key = 'slack-retry'."
             tags "RabbitMQ", "Queue", "Integration Tier", "Slack"
         }
 
