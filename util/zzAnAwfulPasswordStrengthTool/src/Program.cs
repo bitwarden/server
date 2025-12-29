@@ -12,7 +12,6 @@ app.MapPost("/analyze", (PasswordRequest request, HttpContext ctx) =>
     if (ctx.Request.Headers["X-API-Key"] != apiKey)
         return Results.Unauthorized();
 
-    Console.WriteLine($"Analyzing password: {request.Password}");
 
     var score = 0;
     var feedback = new List<string>();
