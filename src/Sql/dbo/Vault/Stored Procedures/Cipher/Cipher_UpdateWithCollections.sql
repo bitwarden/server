@@ -38,8 +38,13 @@ BEGIN
         [Data] = @Data,
         [Attachments] = @Attachments,
         [RevisionDate] = @RevisionDate,
-        [DeletedDate] = @DeletedDate, [Key] = @Key, [ArchivedDate] = @ArchivedDate
-        -- No need to update CreationDate, Favorites, Folders, or Type since that data will not change
+        [DeletedDate] = @DeletedDate,
+        [Key] = @Key,
+        [ArchivedDate] = @ArchivedDate,
+        [Folders] = @Folders,
+        [Favorites] = @Favorites,
+        [Reprompt] = @Reprompt
+        -- No need to update CreationDate or Type since that data will not change
     WHERE
         [Id] = @Id
 

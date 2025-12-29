@@ -106,14 +106,32 @@ public class RabbitMqIntegrationListenerService<TConfiguration> : BackgroundServ
                 {
                     // Exceeded the max number of retries; fail and send to dead letter queue
                     await _rabbitMqService.PublishToDeadLetterAsync(channel, message, cancellationToken);
-                    _logger.LogWarning("Max retry attempts reached. Sent to DLQ.");
+                    _logger.LogWarning(
+                        "Integration failure - max retries exceeded. " +
+                        "MessageId: {MessageId}, IntegrationType: {IntegrationType}, OrganizationId: {OrgId}, " +
+                        "FailureCategory: {Category}, Reason: {Reason}, RetryCount: {RetryCount}, MaxRetries: {MaxRetries}",
+                        message.MessageId,
+                        message.IntegrationType,
+                        message.OrganizationId,
+                        result.Category,
+                        result.FailureReason,
+                        message.RetryCount,
+                        _maxRetries);
                 }
             }
             else
             {
                 // Fatal error (i.e. not retryable) occurred. Send message to dead letter queue without any retries
                 await _rabbitMqService.PublishToDeadLetterAsync(channel, message, cancellationToken);
-                _logger.LogWarning("Non-retryable failure. Sent to DLQ.");
+                _logger.LogWarning(
+                    "Integration failure - non-retryable. " +
+                    "MessageId: {MessageId}, IntegrationType: {IntegrationType}, OrganizationId: {OrgId}, " +
+                    "FailureCategory: {Category}, Reason: {Reason}",
+                    message.MessageId,
+                    message.IntegrationType,
+                    message.OrganizationId,
+                    result.Category,
+                    result.FailureReason);
             }
 
             // Message has been sent to retry or dead letter queues.

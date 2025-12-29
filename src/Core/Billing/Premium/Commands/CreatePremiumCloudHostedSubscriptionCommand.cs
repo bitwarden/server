@@ -210,7 +210,7 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
             case TokenizablePaymentMethodType.BankAccount:
                 {
                     var setupIntent =
-                        (await stripeAdapter.SetupIntentList(new SetupIntentListOptions { PaymentMethod = tokenizedPaymentMethod.Token }))
+                        (await stripeAdapter.ListSetupIntentsAsync(new SetupIntentListOptions { PaymentMethod = tokenizedPaymentMethod.Token }))
                         .FirstOrDefault();
 
                     if (setupIntent == null)
@@ -243,7 +243,7 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
 
         try
         {
-            return await stripeAdapter.CustomerCreateAsync(customerCreateOptions);
+            return await stripeAdapter.CreateCustomerAsync(customerCreateOptions);
         }
         catch
         {
@@ -300,7 +300,7 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
                 ValidateLocation = ValidateTaxLocationTiming.Immediately
             }
         };
-        return await stripeAdapter.CustomerUpdateAsync(customer.Id, options);
+        return await stripeAdapter.UpdateCustomerAsync(customer.Id, options);
     }
 
     private async Task<Subscription> CreateSubscriptionAsync(
@@ -349,11 +349,11 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
             OffSession = true
         };
 
-        var subscription = await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
+        var subscription = await stripeAdapter.CreateSubscriptionAsync(subscriptionCreateOptions);
 
         if (usingPayPal)
         {
-            await stripeAdapter.InvoiceUpdateAsync(subscription.LatestInvoiceId, new InvoiceUpdateOptions
+            await stripeAdapter.UpdateInvoiceAsync(subscription.LatestInvoiceId, new InvoiceUpdateOptions
             {
                 AutoAdvance = false
             });

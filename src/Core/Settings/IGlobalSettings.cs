@@ -28,5 +28,5 @@ public interface IGlobalSettings
     string DevelopmentDirectory { get; set; }
     IWebPushSettings WebPush { get; set; }
     GlobalSettings.EventLoggingSettings EventLogging { get; set; }
-    IPhishingDomainSettings PhishingDomain { get; set; }
+    GlobalSettings.WebAuthnSettings WebAuthn { get; set; }
 }

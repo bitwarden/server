@@ -1,4 +1,12 @@
 const { BodyComponent } = require("mjml-core");
+
+const BODY_TEXT_STYLES = `
+  font-family="Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif"
+  font-size="16px"
+  font-weight="400"
+  line-height="24px"
+`;
+
 class MjBwIconRow extends BodyComponent {
   static dependencies = {
     "mj-column": ["mj-bw-icon-row"],
@@ -18,7 +26,7 @@ class MjBwIconRow extends BodyComponent {
 
   static defaultAttributes = {};
 
-  headStyle = (breakpoint) => {
+   headStyle = (breakpoint) => {
     return `
       @media only screen and (max-width:${breakpoint}) {
         .mj-bw-icon-row-text {
@@ -36,30 +44,35 @@ class MjBwIconRow extends BodyComponent {
   render() {
     const headAnchorElement =
       this.getAttribute("head-url-text") && this.getAttribute("head-url")
-        ? `<a href="${this.getAttribute("head-url")}" class="link">
-                ${this.getAttribute("head-url-text")}
-                <span style="text-decoration: none">
-                  <img src="https://assets.bitwarden.com/email/v1/bwi-external-link-16px.png"
-                    alt="External Link Icon"
-                    width="16px"
-                    style="vertical-align: middle;"
-                  />
-                </span>
-              </a>`
+        ? `
+            <mj-text css-class="mj-bw-icon-row-text" padding="5px 10px 0px 10px" ${BODY_TEXT_STYLES}>
+                <a href="${this.getAttribute("head-url")}" class="link">
+                    ${this.getAttribute("head-url-text")}
+                    <span style="text-decoration: none">
+                      <img src="https://assets.bitwarden.com/email/v1/bwi-external-link-16px.png"
+                        alt="External Link Icon"
+                        width="16px"
+                        style="vertical-align: middle;"
+                      />
+                    </span>
+                  </a>
+            </mj-text>`
         : "";
 
     const footAnchorElement =
       this.getAttribute("foot-url-text") && this.getAttribute("foot-url")
-        ? `<a href="${this.getAttribute("foot-url")}" class="link">
-                ${this.getAttribute("foot-url-text")}
-                <span style="text-decoration: none">
-                  <img src="https://assets.bitwarden.com/email/v1/bwi-external-link-16px.png"
-                    alt="External Link Icon"
-                    width="16px"
-                    style="vertical-align: middle;"
-                  />
-                </span>
-          </a>`
+        ? `<mj-text css-class="mj-bw-icon-row-text" padding="5px 10px 0px 10px" ${BODY_TEXT_STYLES}>
+                <a href="${this.getAttribute("foot-url")}" class="link">
+                    ${this.getAttribute("foot-url-text")}
+                    <span style="text-decoration: none">
+                      <img src="https://assets.bitwarden.com/email/v1/bwi-external-link-16px.png"
+                        alt="External Link Icon"
+                        width="16px"
+                        style="vertical-align: middle;"
+                      />
+                    </span>
+              </a>
+          </mj-text>`
         : "";
 
     return this.renderMJML(
@@ -76,19 +89,11 @@ class MjBwIconRow extends BodyComponent {
             />
           </mj-column>
           <mj-column width="85%" vertical-align="top">
-            <mj-text css-class="mj-bw-icon-row-text" padding="5px 10px 0px 10px">
-              ` +
-        headAnchorElement +
-        `
-              </mj-text>
-              <mj-text css-class="mj-bw-icon-row-text" padding="5px 10px 0px 10px">
+              ${headAnchorElement}
+              <mj-text css-class="mj-bw-icon-row-text" padding="5px 10px 0px 10px" ${BODY_TEXT_STYLES}>
                 ${this.getAttribute("text")}
               </mj-text>
-              <mj-text css-class="mj-bw-icon-row-text" padding="5px 10px 0px 10px">
-              ` +
-        footAnchorElement +
-        `
-              </mj-text>
+              ${footAnchorElement}
           </mj-column>
         </mj-group>
       </mj-section>

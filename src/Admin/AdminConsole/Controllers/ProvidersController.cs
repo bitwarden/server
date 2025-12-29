@@ -56,6 +56,7 @@ public class ProvidersController : Controller
     private readonly IStripeAdapter _stripeAdapter;
     private readonly IAccessControlService _accessControlService;
     private readonly ISubscriberService _subscriberService;
+    private readonly ILogger<ProvidersController> _logger;
 
     public ProvidersController(IOrganizationRepository organizationRepository,
         IResellerClientOrganizationSignUpCommand resellerClientOrganizationSignUpCommand,
@@ -72,7 +73,8 @@ public class ProvidersController : Controller
         IPricingClient pricingClient,
         IStripeAdapter stripeAdapter,
         IAccessControlService accessControlService,
-        ISubscriberService subscriberService)
+        ISubscriberService subscriberService,
+        ILogger<ProvidersController> logger)
     {
         _organizationRepository = organizationRepository;
         _resellerClientOrganizationSignUpCommand = resellerClientOrganizationSignUpCommand;
@@ -92,6 +94,7 @@ public class ProvidersController : Controller
         _braintreeMerchantUrl = webHostEnvironment.GetBraintreeMerchantUrl();
         _braintreeMerchantId = globalSettings.Braintree.MerchantId;
         _subscriberService = subscriberService;
+        _logger = logger;
     }
 
     [RequirePermission(Permission.Provider_List_View)]
@@ -296,6 +299,9 @@ public class ProvidersController : Controller
 
         var originalProviderStatus = provider.Enabled;
 
+        // Capture original billing email before modifications for Stripe sync
+        var originalBillingEmail = provider.BillingEmail;
+
         model.ToProvider(provider);
 
         // validate the stripe ids to prevent saving a bad one
@@ -321,6 +327,22 @@ public class ProvidersController : Controller
         await _providerService.UpdateAsync(provider);
         await _applicationCacheService.UpsertProviderAbilityAsync(provider);
 
+        // Sync billing email changes to Stripe
+        if (!string.IsNullOrEmpty(provider.GatewayCustomerId) && originalBillingEmail != provider.BillingEmail)
+        {
+            try
+            {
+                await _providerBillingService.UpdateProviderNameAndEmail(provider);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to update Stripe customer for provider {ProviderId}. Database was updated successfully.",
+                    provider.Id);
+                TempData["Warning"] = "Provider updated successfully, but Stripe customer email synchronization failed.";
+            }
+        }
+
         if (!provider.IsBillable())
         {
             return RedirectToAction("Edit", new { id });
@@ -339,11 +361,11 @@ public class ProvidersController : Controller
                     ]);
                 await _providerBillingService.UpdateSeatMinimums(updateMspSeatMinimumsCommand);
 
-                var customer = await _stripeAdapter.CustomerGetAsync(provider.GatewayCustomerId);
+                var customer = await _stripeAdapter.GetCustomerAsync(provider.GatewayCustomerId);
                 if (model.PayByInvoice != customer.ApprovedToPayByInvoice())
                 {
                     var approvedToPayByInvoice = model.PayByInvoice ? "1" : "0";
-                    await _stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
+                    await _stripeAdapter.UpdateCustomerAsync(customer.Id, new CustomerUpdateOptions
                     {
                         Metadata = new Dictionary<string, string>
                         {
