@@ -1,8 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Enums;
-using Bit.Core.KeyManagement.Models.Data;
 
-namespace Bit.Api.KeyManagement.Models.Requests;
+namespace Bit.Core.KeyManagement.Models.Data;
 
 public class KdfRequestModel
 {

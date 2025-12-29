@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.KeyManagement.Models.Data;
+using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.Auth.Models.Api.Request.Accounts;
@@ -21,8 +21,8 @@ public class RegisterFinishRequestModel : IValidatableObject
     public required string Email { get; set; }
     public string? EmailVerificationToken { get; set; }
 
-    public MasterPasswordAuthenticationData? MasterPasswordAuthentication { get; set; }
-    public MasterPasswordUnlockData? MasterPasswordUnlock { get; set; }
+    public MasterPasswordAuthenticationDataRequestModel? MasterPasswordAuthentication { get; set; }
+    public MasterPasswordUnlockDataRequestModel? MasterPasswordUnlock { get; set; }
 
     // PM-28143 - Remove property below (made optional during migration to MasterPasswordUnlockData)
     [StringLength(1000)]
@@ -66,10 +66,10 @@ public class RegisterFinishRequestModel : IValidatableObject
         // PM-28143 - Remove line below
         // When we process this request to a user object, check if the unlock and authentication
         // data has been passed through, and if so they should have matching values.
-        MasterPasswordUnlockData.ThrowIfExistsAndNotMatchingAuthenticationData(MasterPasswordAuthentication, MasterPasswordUnlock);
+        MasterPasswordUnlockDataRequestModel.ThrowIfExistsAndNotMatchingAuthenticationData(MasterPasswordAuthentication, MasterPasswordUnlock);
 
         // PM-28143 - Remove line below
-        MasterPasswordAuthenticationData.ThrowIfExistsAndHashIsNotEqual(MasterPasswordAuthentication, MasterPasswordHash);
+        MasterPasswordAuthenticationDataRequestModel.ThrowIfExistsAndHashIsNotEqual(MasterPasswordAuthentication, MasterPasswordHash);
 
         var user = new User
         {
@@ -122,10 +122,10 @@ public class RegisterFinishRequestModel : IValidatableObject
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         // PM-28143 - Remove line below
-        MasterPasswordUnlockData.ThrowIfExistsAndNotMatchingAuthenticationData(MasterPasswordAuthentication, MasterPasswordUnlock);
+        MasterPasswordUnlockDataRequestModel.ThrowIfExistsAndNotMatchingAuthenticationData(MasterPasswordAuthentication, MasterPasswordUnlock);
 
         // PM-28143 - Remove line below
-        MasterPasswordAuthenticationData.ThrowIfExistsAndHashIsNotEqual(MasterPasswordAuthentication, MasterPasswordHash);
+        MasterPasswordAuthenticationDataRequestModel.ThrowIfExistsAndHashIsNotEqual(MasterPasswordAuthentication, MasterPasswordHash);
 
         // PM-28143 - Remove line below
         var kdf = MasterPasswordUnlock?.Kdf.KdfType

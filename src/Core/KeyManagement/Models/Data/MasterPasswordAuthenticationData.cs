@@ -3,6 +3,12 @@ using Bit.Core.Exceptions;
 
 namespace Bit.Core.KeyManagement.Models.Data;
 
+/// <summary>
+/// The data used for authentication of a master password.
+///
+/// This data model does not have any validation, consider using MasterPasswordAuthenticationDataRequestModel
+/// if validation is required.
+/// </summary>
 public class MasterPasswordAuthenticationData
 {
     public required KdfSettings Kdf { get; init; }
@@ -14,19 +20,6 @@ public class MasterPasswordAuthenticationData
         if (user.GetMasterPasswordSalt() != Salt)
         {
             throw new BadRequestException("Invalid master password salt.");
-        }
-    }
-
-    public static void ThrowIfExistsAndHashIsNotEqual(
-        MasterPasswordAuthenticationData? authenticationData,
-        string? hash)
-    {
-        if (authenticationData != null && hash != null)
-        {
-            if (authenticationData.MasterPasswordAuthenticationHash != hash)
-            {
-                throw new Exception("Master password hash and hash are not equal.");
-            }
         }
     }
 }

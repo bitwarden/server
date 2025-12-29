@@ -8,6 +8,7 @@ using Bit.Core;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Services;
 using Bit.Identity;
@@ -226,7 +227,7 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
             effectiveParallelism = AuthConstants.ARGON2_PARALLELISM.Default;
         }
 
-        var alignedKdf = new KdfSettings
+        var alignedKdf = new KdfRequestModel
         {
             KdfType = effectiveKdfType,
             Iterations = effectiveIterations,
@@ -241,7 +242,7 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
             var masterKeyWrappedUserKey = !string.IsNullOrWhiteSpace(unlock.MasterKeyWrappedUserKey)
                 ? unlock.MasterKeyWrappedUserKey
                 : (string.IsNullOrWhiteSpace(requestModel.UserSymmetricKey) ? "user_symmetric_key" : requestModel.UserSymmetricKey);
-            requestModel.MasterPasswordUnlock = new MasterPasswordUnlockData
+            requestModel.MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
             {
                 Kdf = alignedKdf,
                 MasterKeyWrappedUserKey = masterKeyWrappedUserKey,
@@ -254,7 +255,7 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
             // Ensure registration uses the same hash the tests will provide at login.
             // PM-28143 - When MasterPasswordAuthenticationData is the only source of the auth hash,
             // stop overriding it from MasterPasswordHash and delete this whole reassignment block.
-            requestModel.MasterPasswordAuthentication = new MasterPasswordAuthenticationData
+            requestModel.MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
             {
                 Kdf = alignedKdf,
                 MasterPasswordAuthenticationHash = requestModel.MasterPasswordHash,

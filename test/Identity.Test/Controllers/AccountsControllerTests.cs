@@ -9,6 +9,7 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
@@ -603,31 +604,28 @@ public class AccountsControllerTests : IDisposable
         string encryptedPrivateKey)
     {
         // Arrange: new-form model (MasterPasswordAuthenticationData + MasterPasswordUnlockData)
+
+        var kdfData = new KdfRequestModel
+        {
+            KdfType = KdfType.Argon2id,
+            Iterations = AuthConstants.ARGON2_ITERATIONS.Default,
+            Memory = AuthConstants.ARGON2_MEMORY.Default,
+            Parallelism = AuthConstants.ARGON2_PARALLELISM.Default
+        };
+
         var newModel = new RegisterFinishRequestModel
         {
             Email = email,
             EmailVerificationToken = emailVerificationToken,
-            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
             {
-                Kdf = new KdfSettings
-                {
-                    KdfType = KdfType.Argon2id,
-                    Iterations = AuthConstants.ARGON2_ITERATIONS.Default,
-                    Memory = AuthConstants.ARGON2_MEMORY.Default,
-                    Parallelism = AuthConstants.ARGON2_PARALLELISM.Default
-                },
+                Kdf = kdfData,
                 MasterPasswordAuthenticationHash = masterPasswordHash,
                 Salt = email // salt choice is not validated here during registration
             },
-            MasterPasswordUnlock = new MasterPasswordUnlockData
+            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
             {
-                Kdf = new KdfSettings
-                {
-                    KdfType = KdfType.Argon2id,
-                    Iterations = AuthConstants.ARGON2_ITERATIONS.Default,
-                    Memory = AuthConstants.ARGON2_MEMORY.Default,
-                    Parallelism = AuthConstants.ARGON2_PARALLELISM.Default
-                },
+                Kdf = kdfData,
                 MasterKeyWrappedUserKey = masterKeyWrappedUserKey,
                 Salt = email
             },
@@ -719,29 +717,29 @@ public class AccountsControllerTests : IDisposable
         string publicKey,
         string encryptedPrivateKey)
     {
+        var kdfData = new KdfRequestModel
+        {
+            KdfType = KdfType.Argon2id,
+            Iterations = AuthConstants.ARGON2_ITERATIONS.Default,
+            Memory = AuthConstants.ARGON2_MEMORY.Default,
+            Parallelism = AuthConstants.ARGON2_PARALLELISM.Default
+        };
+
         // Arrange: new-form model (MasterPasswordAuthenticationData + MasterPasswordUnlockData)
         var newModel = new RegisterFinishRequestModel
         {
             Email = email,
             OrgInviteToken = orgInviteToken,
             OrganizationUserId = organizationUserId,
-            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
             {
-                Kdf = new KdfSettings
-                {
-                    KdfType = KdfType.PBKDF2_SHA256,
-                    Iterations = AuthConstants.PBKDF2_ITERATIONS.Default
-                },
+                Kdf = kdfData,
                 MasterPasswordAuthenticationHash = masterPasswordHash,
                 Salt = email
             },
-            MasterPasswordUnlock = new MasterPasswordUnlockData
+            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
             {
-                Kdf = new KdfSettings
-                {
-                    KdfType = KdfType.PBKDF2_SHA256,
-                    Iterations = AuthConstants.PBKDF2_ITERATIONS.Default
-                },
+                Kdf = kdfData,
                 MasterKeyWrappedUserKey = masterKeyWrappedUserKey,
                 Salt = email
             },
@@ -759,8 +757,10 @@ public class AccountsControllerTests : IDisposable
             OrgInviteToken = orgInviteToken,
             OrganizationUserId = organizationUserId,
             MasterPasswordHash = masterPasswordHash,
-            Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+            Kdf = kdfData.KdfType,
+            KdfIterations = kdfData.Iterations,
+            KdfMemory = kdfData.Memory,
+            KdfParallelism = kdfData.Parallelism,
             UserSymmetricKey = masterKeyWrappedUserKey,
             UserAsymmetricKeys = new KeysRequestModel
             {
@@ -832,7 +832,7 @@ public class AccountsControllerTests : IDisposable
         string encryptedPrivateKey)
     {
         // Arrange: Provide only unlock-data KDF + key; leave root KDF fields null
-        var unlockKdf = new KdfSettings
+        var unlockKdf = new KdfRequestModel
         {
             KdfType = KdfType.PBKDF2_SHA256,
             Iterations = iterations
@@ -842,14 +842,14 @@ public class AccountsControllerTests : IDisposable
         {
             Email = email,
             EmailVerificationToken = emailVerificationToken,
-            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
             {
                 // present but not used by ToUser for KDF/Key
-                Kdf = new KdfSettings { KdfType = KdfType.Argon2id, Iterations = iterations },
+                Kdf = unlockKdf,
                 MasterPasswordAuthenticationHash = masterPasswordHash,
                 Salt = email
             },
-            MasterPasswordUnlock = new MasterPasswordUnlockData
+            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
             {
                 Kdf = unlockKdf,
                 MasterKeyWrappedUserKey = masterKeyWrappedUserKey,
@@ -942,10 +942,10 @@ public class AccountsControllerTests : IDisposable
         {
             Email = email,
             EmailVerificationToken = emailVerificationToken,
-            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
             {
                 // present but ToUser does not source KDF from here
-                Kdf = new KdfSettings { KdfType = KdfType.Argon2id, Iterations = iterations },
+                Kdf = new KdfRequestModel { KdfType = KdfType.Argon2id, Iterations = iterations },
                 MasterPasswordAuthenticationHash = masterPasswordHash,
                 Salt = email
             },
@@ -980,10 +980,10 @@ public class AccountsControllerTests : IDisposable
         {
             Email = email,
             EmailVerificationToken = emailVerificationToken,
-            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
             {
                 // present but ToUser does not source iterations from here
-                Kdf = new KdfSettings { KdfType = kdfType, Iterations = AuthConstants.PBKDF2_ITERATIONS.Default },
+                Kdf = new KdfRequestModel { KdfType = kdfType, Iterations = AuthConstants.PBKDF2_ITERATIONS.Default },
                 MasterPasswordAuthenticationHash = masterPasswordHash,
                 Salt = email
             },
@@ -1018,9 +1018,9 @@ public class AccountsControllerTests : IDisposable
         {
             Email = email,
             EmailVerificationToken = emailVerificationToken,
-            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
             {
-                Kdf = new KdfSettings { KdfType = kdfType, Iterations = iterations },
+                Kdf = new KdfRequestModel { KdfType = kdfType, Iterations = iterations },
                 MasterPasswordAuthenticationHash = masterPasswordHash,
                 Salt = email
             },

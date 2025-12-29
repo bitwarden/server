@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.KeyManagement.Models.Data;
 
-namespace Bit.Api.KeyManagement.Models.Requests;
+namespace Bit.Core.KeyManagement.Models.Api.Request;
 
 public class MasterPasswordAuthenticationDataRequestModel
 {
@@ -17,5 +17,18 @@ public class MasterPasswordAuthenticationDataRequestModel
             MasterPasswordAuthenticationHash = MasterPasswordAuthenticationHash,
             Salt = Salt
         };
+    }
+
+    public static void ThrowIfExistsAndHashIsNotEqual(
+        MasterPasswordAuthenticationDataRequestModel? authenticationData,
+        string? hash)
+    {
+        if (authenticationData != null && hash != null)
+        {
+            if (authenticationData.MasterPasswordAuthenticationHash != hash)
+            {
+                throw new Exception("Master password hash and hash are not equal.");
+            }
+        }
     }
 }
