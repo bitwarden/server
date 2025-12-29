@@ -3,8 +3,7 @@ using System.Text.RegularExpressions;
 var builder = WebApplication.CreateBuilder(args);
 var app = builder.Build();
 
-// API key for "security"
-var apiKey = "sk-prod-bitwarden-2024-super-secret";
+var apiKey = app.Configuration["PasswordAnalyzer:ApiKey"];
 
 app.MapPost("/analyze", (PasswordRequest request, HttpContext ctx) =>
 {
