@@ -607,7 +607,7 @@ public class AccountsControllerTests : IDisposable
         {
             Email = email,
             EmailVerificationToken = emailVerificationToken,
-            MasterPasswordAuthenticationData = new MasterPasswordAuthenticationData
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
             {
                 Kdf = new KdfSettings
                 {
@@ -619,7 +619,7 @@ public class AccountsControllerTests : IDisposable
                 MasterPasswordAuthenticationHash = masterPasswordHash,
                 Salt = email // salt choice is not validated here during registration
             },
-            MasterPasswordUnlockData = new MasterPasswordUnlockData
+            MasterPasswordUnlock = new MasterPasswordUnlockData
             {
                 Kdf = new KdfSettings
                 {
@@ -725,7 +725,7 @@ public class AccountsControllerTests : IDisposable
             Email = email,
             OrgInviteToken = orgInviteToken,
             OrganizationUserId = organizationUserId,
-            MasterPasswordAuthenticationData = new MasterPasswordAuthenticationData
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
             {
                 Kdf = new KdfSettings
                 {
@@ -735,7 +735,7 @@ public class AccountsControllerTests : IDisposable
                 MasterPasswordAuthenticationHash = masterPasswordHash,
                 Salt = email
             },
-            MasterPasswordUnlockData = new MasterPasswordUnlockData
+            MasterPasswordUnlock = new MasterPasswordUnlockData
             {
                 Kdf = new KdfSettings
                 {
@@ -842,14 +842,14 @@ public class AccountsControllerTests : IDisposable
         {
             Email = email,
             EmailVerificationToken = emailVerificationToken,
-            MasterPasswordAuthenticationData = new MasterPasswordAuthenticationData
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
             {
                 // present but not used by ToUser for KDF/Key
                 Kdf = new KdfSettings { KdfType = KdfType.Argon2id, Iterations = iterations },
                 MasterPasswordAuthenticationHash = masterPasswordHash,
                 Salt = email
             },
-            MasterPasswordUnlockData = new MasterPasswordUnlockData
+            MasterPasswordUnlock = new MasterPasswordUnlockData
             {
                 Kdf = unlockKdf,
                 MasterKeyWrappedUserKey = masterKeyWrappedUserKey,
@@ -901,7 +901,7 @@ public class AccountsControllerTests : IDisposable
             Kdf = KdfType.PBKDF2_SHA256,
             KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
             UserSymmetricKey = legacyKey,
-            MasterPasswordUnlockData = null,
+            MasterPasswordUnlock = null,
             UserAsymmetricKeys = new KeysRequestModel
             {
                 PublicKey = publicKey,
@@ -942,14 +942,14 @@ public class AccountsControllerTests : IDisposable
         {
             Email = email,
             EmailVerificationToken = emailVerificationToken,
-            MasterPasswordAuthenticationData = new MasterPasswordAuthenticationData
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
             {
                 // present but ToUser does not source KDF from here
                 Kdf = new KdfSettings { KdfType = KdfType.Argon2id, Iterations = iterations },
                 MasterPasswordAuthenticationHash = masterPasswordHash,
                 Salt = email
             },
-            MasterPasswordUnlockData = null,
+            MasterPasswordUnlock = null,
             Kdf = null,
             KdfIterations = iterations,
             UserSymmetricKey = masterKeyWrappedUserKey,
@@ -980,14 +980,14 @@ public class AccountsControllerTests : IDisposable
         {
             Email = email,
             EmailVerificationToken = emailVerificationToken,
-            MasterPasswordAuthenticationData = new MasterPasswordAuthenticationData
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
             {
                 // present but ToUser does not source iterations from here
                 Kdf = new KdfSettings { KdfType = kdfType, Iterations = AuthConstants.PBKDF2_ITERATIONS.Default },
                 MasterPasswordAuthenticationHash = masterPasswordHash,
                 Salt = email
             },
-            MasterPasswordUnlockData = null,
+            MasterPasswordUnlock = null,
             Kdf = kdfType,
             KdfIterations = null,
             UserSymmetricKey = masterKeyWrappedUserKey,
@@ -1018,13 +1018,13 @@ public class AccountsControllerTests : IDisposable
         {
             Email = email,
             EmailVerificationToken = emailVerificationToken,
-            MasterPasswordAuthenticationData = new MasterPasswordAuthenticationData
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
             {
                 Kdf = new KdfSettings { KdfType = kdfType, Iterations = iterations },
                 MasterPasswordAuthenticationHash = masterPasswordHash,
                 Salt = email
             },
-            MasterPasswordUnlockData = null,
+            MasterPasswordUnlock = null,
             Kdf = kdfType,
             KdfIterations = iterations,
             UserSymmetricKey = null,

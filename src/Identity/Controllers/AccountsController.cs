@@ -156,7 +156,7 @@ public class AccountsController : Controller
         IdentityResult? identityResult = null;
 
         // PM-28143 - Just use the MasterPasswordAuthenticationData.MasterPasswordAuthenticationHash
-        string masterPasswordHash = model.MasterPasswordAuthenticationData?.MasterPasswordAuthenticationHash
+        string masterPasswordHash = model.MasterPasswordAuthentication?.MasterPasswordAuthenticationHash
                                  ?? model.MasterPasswordHash ?? throw new BadRequestException("MasterPasswordHash couldn't be found on either the MasterPasswordAuthenticationData or the MasterPasswordHash property passed in.");
 
         switch (model.GetTokenType())

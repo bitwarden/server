@@ -206,7 +206,7 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
         requestModel.KdfIterations ??= AuthConstants.PBKDF2_ITERATIONS.Default;
         // Ensure a symmetric key is provided when no unlock data is present
         // PM-28143 - When MasterPasswordUnlockData is required, delete the UserSymmetricKey fallback block below.
-        if (requestModel.MasterPasswordUnlockData == null && string.IsNullOrWhiteSpace(requestModel.UserSymmetricKey))
+        if (requestModel.MasterPasswordUnlock == null && string.IsNullOrWhiteSpace(requestModel.UserSymmetricKey))
         {
             requestModel.UserSymmetricKey = "user_symmetric_key";
         }
@@ -234,14 +234,14 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
             Parallelism = effectiveParallelism
         };
 
-        if (requestModel.MasterPasswordUnlockData != null)
+        if (requestModel.MasterPasswordUnlock != null)
         {
-            var unlock = requestModel.MasterPasswordUnlockData;
+            var unlock = requestModel.MasterPasswordUnlock;
             // PM-28143 - Once UserSymmetricKey is removed and UnlockData is required, delete the fallback to UserSymmetricKey below.
             var masterKeyWrappedUserKey = !string.IsNullOrWhiteSpace(unlock.MasterKeyWrappedUserKey)
                 ? unlock.MasterKeyWrappedUserKey
                 : (string.IsNullOrWhiteSpace(requestModel.UserSymmetricKey) ? "user_symmetric_key" : requestModel.UserSymmetricKey);
-            requestModel.MasterPasswordUnlockData = new MasterPasswordUnlockData
+            requestModel.MasterPasswordUnlock = new MasterPasswordUnlockData
             {
                 Kdf = alignedKdf,
                 MasterKeyWrappedUserKey = masterKeyWrappedUserKey,
@@ -249,12 +249,12 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
             };
         }
 
-        if (requestModel.MasterPasswordAuthenticationData != null)
+        if (requestModel.MasterPasswordAuthentication != null)
         {
             // Ensure registration uses the same hash the tests will provide at login.
             // PM-28143 - When MasterPasswordAuthenticationData is the only source of the auth hash,
             // stop overriding it from MasterPasswordHash and delete this whole reassignment block.
-            requestModel.MasterPasswordAuthenticationData = new MasterPasswordAuthenticationData
+            requestModel.MasterPasswordAuthentication = new MasterPasswordAuthenticationData
             {
                 Kdf = alignedKdf,
                 MasterPasswordAuthenticationHash = requestModel.MasterPasswordHash,

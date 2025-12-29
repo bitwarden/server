@@ -22,7 +22,7 @@ public class RegisterFinishRequestModel : IValidatableObject
     public string? EmailVerificationToken { get; set; }
 
     public MasterPasswordAuthenticationData? MasterPasswordAuthentication { get; set; }
-    public MasterPasswordUnlockData? MasterPasswordUnlockData { get; set; }
+    public MasterPasswordUnlockData? MasterPasswordUnlock { get; set; }
 
     // PM-28143 - Remove property below (made optional during migration to MasterPasswordUnlockData)
     [StringLength(1000)]
@@ -66,25 +66,25 @@ public class RegisterFinishRequestModel : IValidatableObject
         // PM-28143 - Remove line below
         // When we process this request to a user object, check if the unlock and authentication
         // data has been passed through, and if so they should have matching values.
-        MasterPasswordUnlockData.ThrowIfExistsAndNotMatchingAuthenticationData(MasterPasswordAuthenticationData, MasterPasswordUnlockData);
+        MasterPasswordUnlockData.ThrowIfExistsAndNotMatchingAuthenticationData(MasterPasswordAuthentication, MasterPasswordUnlock);
 
         // PM-28143 - Remove line below
-        MasterPasswordAuthenticationData.ThrowIfExistsAndHashIsNotEqual(MasterPasswordAuthenticationData, MasterPasswordHash);
+        MasterPasswordAuthenticationData.ThrowIfExistsAndHashIsNotEqual(MasterPasswordAuthentication, MasterPasswordHash);
 
         var user = new User
         {
             Email = Email,
             MasterPasswordHint = MasterPasswordHint,
-            Kdf = MasterPasswordUnlockData?.Kdf.KdfType ?? Kdf
+            Kdf = MasterPasswordUnlock?.Kdf.KdfType ?? Kdf
                 ?? throw new Exception("KdfType couldn't be found on either the MasterPasswordUnlockData or the Kdf property passed in."),
-            KdfIterations = MasterPasswordUnlockData?.Kdf.Iterations ?? KdfIterations
+            KdfIterations = MasterPasswordUnlock?.Kdf.Iterations ?? KdfIterations
                 ?? throw new Exception("KdfIterations couldn't be found on either the MasterPasswordUnlockData or the KdfIterations property passed in."),
             // KdfMemory and KdfParallelism are optional (only used for Argon2id)
-            KdfMemory = MasterPasswordUnlockData?.Kdf.Memory ?? KdfMemory,
-            KdfParallelism = MasterPasswordUnlockData?.Kdf.Parallelism ?? KdfParallelism,
+            KdfMemory = MasterPasswordUnlock?.Kdf.Memory ?? KdfMemory,
+            KdfParallelism = MasterPasswordUnlock?.Kdf.Parallelism ?? KdfParallelism,
             // PM-28827 To be added when MasterPasswordSalt is added to the user column
             // MasterPasswordSalt = MasterPasswordUnlockData?.Salt ?? Email.ToLower().Trim(),
-            Key = MasterPasswordUnlockData?.MasterKeyWrappedUserKey ?? UserSymmetricKey ?? throw new Exception("MasterKeyWrappedUserKey couldn't be found on either the MasterPasswordUnlockData or the UserSymmetricKey property passed in."),
+            Key = MasterPasswordUnlock?.MasterKeyWrappedUserKey ?? UserSymmetricKey ?? throw new Exception("MasterKeyWrappedUserKey couldn't be found on either the MasterPasswordUnlockData or the UserSymmetricKey property passed in."),
         };
 
         UserAsymmetricKeys.ToUser(user);
@@ -121,24 +121,28 @@ public class RegisterFinishRequestModel : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        MasterPasswordUnlockData.ThrowIfExistsAndNotMatchingAuthenticationData(MasterPasswordAuthenticationData, MasterPasswordUnlockData);
+        // PM-28143 - Remove line below
+        MasterPasswordUnlockData.ThrowIfExistsAndNotMatchingAuthenticationData(MasterPasswordAuthentication, MasterPasswordUnlock);
 
         // PM-28143 - Remove line below
-        var kdf = MasterPasswordUnlockData?.Kdf.KdfType
+        MasterPasswordAuthenticationData.ThrowIfExistsAndHashIsNotEqual(MasterPasswordAuthentication, MasterPasswordHash);
+
+        // PM-28143 - Remove line below
+        var kdf = MasterPasswordUnlock?.Kdf.KdfType
                   ?? Kdf
                   ?? throw new Exception($"{nameof(Kdf)} not found on RequestModel");
 
         // PM-28143 - Remove line below
-        var kdfIterations = MasterPasswordUnlockData?.Kdf.Iterations
+        var kdfIterations = MasterPasswordUnlock?.Kdf.Iterations
                             ?? KdfIterations
                             ?? throw new Exception($"{nameof(KdfIterations)} not found on RequestModel");
 
         // PM-28143 - Remove line below
-        var kdfMemory = MasterPasswordUnlockData?.Kdf.Memory
+        var kdfMemory = MasterPasswordUnlock?.Kdf.Memory
                         ?? KdfMemory;
 
         // PM-28143 - Remove line below
-        var kdfParallelism = MasterPasswordUnlockData?.Kdf.Parallelism
+        var kdfParallelism = MasterPasswordUnlock?.Kdf.Parallelism
                              ?? KdfParallelism;
 
         // PM-28143 - Remove line below in favor of using the unlock data.
