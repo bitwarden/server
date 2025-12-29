@@ -6,7 +6,6 @@ using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
-using OneOf.Types;
 using Stripe;
 using Xunit;
 using PremiumPlan = Bit.Core.Billing.Pricing.Premium.Plan;
