@@ -18,9 +18,11 @@ if (organization.PlanType == PlanType.Enterprise ||
 {
     // allow feature...
 }
+```
 
 ### ❌ Don't Do This
 
+```csharp
 // Piggybacking off another feature's ability
 if (organization.PlanType == PlanType.Enterprise && organization.UseEvents)
 {
@@ -98,11 +100,11 @@ When developing a new plan-gated feature:
 
 4. **Update organization creation/upgrade logic** — Ensure the ability is set based on the plan.
 
-5. **Update the organization license claims** (if applicable) - To make the feature available on self-hosted instances.
+5. **Update the organization license claims** (if applicable) - to make the feature available on self-hosted instances.
 
 6. **Implement checks throughout client and server** — Use the ability consistently everywhere the feature is accessed.
-   - clients: get the organization object from `OrganizationService`.
-   - server: use the organization object if it's already in scope, or check the OrganizationAbility via IApplicationCacheService for a high speed cache.
+   - Clients: get the organization object from `OrganizationService`.
+   - Server: use the organization object if it's already in scope, or check the OrganizationAbility via IApplicationCacheService for a high-speed cache.
 
 ## Existing Abilities
 
