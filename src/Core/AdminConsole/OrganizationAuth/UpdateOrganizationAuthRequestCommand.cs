@@ -89,7 +89,7 @@ public class UpdateOrganizationAuthRequestCommand : IUpdateOrganizationAuthReque
                 AuthRequestExpiresAfter = _globalSettings.PasswordlessAuth.AdminRequestExpiration
             }
         );
-        processor.Process((Exception e) => _logger.LogError(e.Message));
+        processor.Process((Exception e) => _logger.LogError("Error processing organization auth request: {Message}", e.Message));
         await processor.Save((IEnumerable<OrganizationAdminAuthRequest> authRequests) => _authRequestRepository.UpdateManyAsync(authRequests));
         await processor.SendPushNotifications((ar) => _pushNotificationService.PushAuthRequestResponseAsync(ar));
         await processor.SendApprovalEmailsForProcessedRequests(SendApprovalEmail);
@@ -114,7 +114,7 @@ public class UpdateOrganizationAuthRequestCommand : IUpdateOrganizationAuthReque
         // This should be impossible
         if (user == null)
         {
-            _logger.LogError($"User {authRequest.UserId} not found. Trusted device admin approval email not sent.");
+            _logger.LogError("User {UserId} not found. Trusted device admin approval email not sent.", authRequest.UserId);
             return;
         }
 

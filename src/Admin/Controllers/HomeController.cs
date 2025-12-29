@@ -61,7 +61,7 @@ public class HomeController : Controller
         }
         catch (HttpRequestException e)
         {
-            _logger.LogError(e, $"Error encountered while sending GET request to {requestUri}");
+            _logger.LogError(e, "Error encountered while sending GET request to {RequestUri}", requestUri);
             return new JsonResult("Unable to fetch latest version") { StatusCode = StatusCodes.Status500InternalServerError };
         }
 
@@ -83,7 +83,7 @@ public class HomeController : Controller
         }
         catch (HttpRequestException e)
         {
-            _logger.LogError(e, $"Error encountered while sending GET request to {requestUri}");
+            _logger.LogError(e, "Error encountered while sending GET request to {RequestUri}", requestUri);
             return new JsonResult("Unable to fetch installed version") { StatusCode = StatusCodes.Status500InternalServerError };
         }
 

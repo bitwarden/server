@@ -9,7 +9,7 @@ namespace Bit.Core.Billing.Organizations.Models;
 
 public class OrganizationSale
 {
-    private OrganizationSale() { }
+    internal OrganizationSale() { }
 
     public void Deconstruct(
         out Organization organization,

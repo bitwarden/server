@@ -1,6 +1,5 @@
 ﻿using System.Text.Json;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.Context;
@@ -8,13 +7,11 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.AdminConsole.Controllers;
 
-[RequireFeature(FeatureFlagKeys.EventBasedOrganizationIntegrations)]
 [Route("organizations")]
 [Authorize("Application")]
 public class SlackIntegrationController(
@@ -32,7 +29,7 @@ public class SlackIntegrationController(
         }
 
         string? callbackUrl = Url.RouteUrl(
-            routeName: nameof(CreateAsync),
+            routeName: "SlackIntegration_Create",
             values: null,
             protocol: currentContext.HttpContext.Request.Scheme,
             host: currentContext.HttpContext.Request.Host.ToUriComponent()
@@ -76,7 +73,7 @@ public class SlackIntegrationController(
         return Redirect(redirectUrl);
     }
 
-    [HttpGet("integrations/slack/create", Name = nameof(CreateAsync))]
+    [HttpGet("integrations/slack/create", Name = "SlackIntegration_Create")]
     [AllowAnonymous]
     public async Task<IActionResult> CreateAsync([FromQuery] string code, [FromQuery] string state)
     {
@@ -103,7 +100,7 @@ public class SlackIntegrationController(
 
         // Fetch token from Slack and store to DB
         string? callbackUrl = Url.RouteUrl(
-            routeName: nameof(CreateAsync),
+            routeName: "SlackIntegration_Create",
             values: null,
             protocol: currentContext.HttpContext.Request.Scheme,
             host: currentContext.HttpContext.Request.Host.ToUriComponent()

@@ -218,7 +218,7 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
         _ownerEmail = $"org-user-integration-test-{Guid.NewGuid()}@bitwarden.com";
         await _factory.LoginWithNewAccount(_ownerEmail);
 
-        (_organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseAnnually2023,
+        (_organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseAnnually,
             ownerEmail: _ownerEmail, passwordManagerSeats: 5, paymentMethod: PaymentMethodType.Card);
     }
 

@@ -1,12 +1,11 @@
-﻿#nullable enable
-
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
@@ -17,7 +16,7 @@ using Bit.Core.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 
-public class SingleOrgPolicyValidator : IPolicyValidator
+public class SingleOrgPolicyValidator : IPolicyValidator, IPolicyValidationEvent, IOnPolicyPreUpdateEvent
 {
     public PolicyType Type => PolicyType.SingleOrg;
     private const string OrganizationNotFoundErrorMessage = "Organization not found.";
@@ -28,8 +27,6 @@ public class SingleOrgPolicyValidator : IPolicyValidator
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly ICurrentContext _currentContext;
-    private readonly IFeatureService _featureService;
-    private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
     private readonly IOrganizationHasVerifiedDomainsQuery _organizationHasVerifiedDomainsQuery;
     private readonly IRevokeNonCompliantOrganizationUserCommand _revokeNonCompliantOrganizationUserCommand;
 
@@ -39,8 +36,6 @@ public class SingleOrgPolicyValidator : IPolicyValidator
         IOrganizationRepository organizationRepository,
         ISsoConfigRepository ssoConfigRepository,
         ICurrentContext currentContext,
-        IFeatureService featureService,
-        IRemoveOrganizationUserCommand removeOrganizationUserCommand,
         IOrganizationHasVerifiedDomainsQuery organizationHasVerifiedDomainsQuery,
         IRevokeNonCompliantOrganizationUserCommand revokeNonCompliantOrganizationUserCommand)
     {
@@ -49,13 +44,21 @@ public class SingleOrgPolicyValidator : IPolicyValidator
         _organizationRepository = organizationRepository;
         _ssoConfigRepository = ssoConfigRepository;
         _currentContext = currentContext;
-        _featureService = featureService;
-        _removeOrganizationUserCommand = removeOrganizationUserCommand;
         _organizationHasVerifiedDomainsQuery = organizationHasVerifiedDomainsQuery;
         _revokeNonCompliantOrganizationUserCommand = revokeNonCompliantOrganizationUserCommand;
     }
 
     public IEnumerable<PolicyType> RequiredPolicies => [];
+
+    public async Task<string> ValidateAsync(SavePolicyModel policyRequest, Policy? currentPolicy)
+    {
+        return await ValidateAsync(policyRequest.PolicyUpdate, currentPolicy);
+    }
+
+    public async Task ExecutePreUpsertSideEffectAsync(SavePolicyModel policyRequest, Policy? currentPolicy)
+    {
+        await OnSaveSideEffectsAsync(policyRequest.PolicyUpdate, currentPolicy);
+    }
 
     public async Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
     {

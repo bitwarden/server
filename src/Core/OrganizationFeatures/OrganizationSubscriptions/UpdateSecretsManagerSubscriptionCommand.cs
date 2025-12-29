@@ -3,6 +3,7 @@
 
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -18,7 +19,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubscriptionCommand
 {
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IPaymentService _paymentService;
+    private readonly IStripePaymentService _paymentService;
     private readonly IMailService _mailService;
     private readonly ILogger<UpdateSecretsManagerSubscriptionCommand> _logger;
     private readonly IServiceAccountRepository _serviceAccountRepository;
@@ -29,7 +30,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
 
     public UpdateSecretsManagerSubscriptionCommand(
         IOrganizationUserRepository organizationUserRepository,
-        IPaymentService paymentService,
+        IStripePaymentService paymentService,
         IMailService mailService,
         ILogger<UpdateSecretsManagerSubscriptionCommand> logger,
         IServiceAccountRepository serviceAccountRepository,
@@ -226,7 +227,11 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         // Check minimum seats currently in use by the organization
         if (organization.SmSeats.Value > update.SmSeats.Value)
         {
+            // Retrieve the number of currently occupied Secrets Manager seats for the organization.
             var occupiedSeats = await _organizationUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id);
+
+            // Check if the occupied number of seats exceeds the updated seat count.
+            // If so, throw an exception indicating that the subscription cannot be decreased below the current usage.
             if (occupiedSeats > update.SmSeats.Value)
             {
                 throw new BadRequestException($"{occupiedSeats} users are currently occupying Secrets Manager seats. " +
@@ -315,7 +320,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             throw new BadRequestException($"Cannot set max Secrets Manager seat autoscaling below current Secrets Manager seat count.");
         }
 
-        if (plan.SecretsManager.MaxSeats.HasValue && update.MaxAutoscaleSmSeats.Value > plan.SecretsManager.MaxSeats)
+        if (plan.SecretsManager.MaxSeats.HasValue && plan.SecretsManager.MaxSeats.Value > 0 && update.MaxAutoscaleSmSeats.Value > plan.SecretsManager.MaxSeats)
         {
             throw new BadRequestException(string.Concat(
                 $"Your plan has a Secrets Manager seat limit of {plan.SecretsManager.MaxSeats}, ",
@@ -412,7 +417,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
     }
 
     /// <summary>
-    /// Requests the number of Secret Manager seats and service accounts are currently used by the organization
+    /// Requests the number of Secret Manager seats and service accounts currently used by the organization
     /// </summary>
     /// <param name="organizationId"> The id of the organization</param>
     /// <returns > A tuple containing the occupied seats and the occupied service account counts</returns>

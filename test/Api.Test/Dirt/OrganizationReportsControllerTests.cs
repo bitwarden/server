@@ -1,4 +1,5 @@
 ﻿using Bit.Api.Dirt.Controllers;
+using Bit.Api.Dirt.Models.Response;
 using Bit.Core.Context;
 using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Models.Data;
@@ -39,7 +40,8 @@ public class OrganizationReportControllerTests
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
-        Assert.Equal(expectedReport, okResult.Value);
+        var expectedResponse = new OrganizationReportResponseModel(expectedReport);
+        Assert.Equivalent(expectedResponse, okResult.Value);
     }
 
     [Theory, BitAutoData]
@@ -262,7 +264,8 @@ public class OrganizationReportControllerTests
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
-        Assert.Equal(expectedReport, okResult.Value);
+        var expectedResponse = new OrganizationReportResponseModel(expectedReport);
+        Assert.Equivalent(expectedResponse, okResult.Value);
     }
 
     [Theory, BitAutoData]
@@ -365,7 +368,8 @@ public class OrganizationReportControllerTests
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
-        Assert.Equal(expectedReport, okResult.Value);
+        var expectedResponse = new OrganizationReportResponseModel(expectedReport);
+        Assert.Equivalent(expectedResponse, okResult.Value);
     }
 
     [Theory, BitAutoData]
@@ -597,7 +601,8 @@ public class OrganizationReportControllerTests
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
-        Assert.Equal(expectedReport, okResult.Value);
+        var expectedResponse = new OrganizationReportResponseModel(expectedReport);
+        Assert.Equivalent(expectedResponse, okResult.Value);
     }
 
     [Theory, BitAutoData]
@@ -812,7 +817,8 @@ public class OrganizationReportControllerTests
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
-        Assert.Equal(expectedReport, okResult.Value);
+        var expectedResponse = new OrganizationReportResponseModel(expectedReport);
+        Assert.Equivalent(expectedResponse, okResult.Value);
     }
 
     [Theory, BitAutoData]
@@ -1050,7 +1056,8 @@ public class OrganizationReportControllerTests
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
-        Assert.Equal(expectedReport, okResult.Value);
+        var expectedResponse = new OrganizationReportResponseModel(expectedReport);
+        Assert.Equivalent(expectedResponse, okResult.Value);
     }
 
     [Theory, BitAutoData]

@@ -2,8 +2,8 @@
 #nullable disable
 
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Models;
-using Bit.Core.Services;
 using Stripe;
 
 namespace Bit.Core.Billing;
@@ -22,7 +22,7 @@ public static class Utilities
             return null;
         }
 
-        var openInvoices = await stripeAdapter.InvoiceSearchAsync(new InvoiceSearchOptions
+        var openInvoices = await stripeAdapter.SearchInvoiceAsync(new InvoiceSearchOptions
         {
             Query = $"subscription:'{subscription.Id}' status:'open'"
         });

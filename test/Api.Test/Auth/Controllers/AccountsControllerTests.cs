@@ -11,6 +11,9 @@ using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Kdf;
+using Bit.Core.KeyManagement.Models.Api.Request;
+using Bit.Core.KeyManagement.Models.Data;
+using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -33,9 +36,10 @@ public class AccountsControllerTests : IDisposable
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly ITdeOffboardingPasswordCommand _tdeOffboardingPasswordCommand;
     private readonly IFeatureService _featureService;
+    private readonly IUserAccountKeysQuery _userAccountKeysQuery;
     private readonly ITwoFactorEmailService _twoFactorEmailService;
     private readonly IChangeKdfCommand _changeKdfCommand;
-
+    private readonly IUserRepository _userRepository;
 
     public AccountsControllerTests()
     {
@@ -48,8 +52,10 @@ public class AccountsControllerTests : IDisposable
         _twoFactorIsEnabledQuery = Substitute.For<ITwoFactorIsEnabledQuery>();
         _tdeOffboardingPasswordCommand = Substitute.For<ITdeOffboardingPasswordCommand>();
         _featureService = Substitute.For<IFeatureService>();
+        _userAccountKeysQuery = Substitute.For<IUserAccountKeysQuery>();
         _twoFactorEmailService = Substitute.For<ITwoFactorEmailService>();
         _changeKdfCommand = Substitute.For<IChangeKdfCommand>();
+        _userRepository = Substitute.For<IUserRepository>();
 
         _sut = new AccountsController(
             _organizationService,
@@ -61,8 +67,10 @@ public class AccountsControllerTests : IDisposable
             _tdeOffboardingPasswordCommand,
             _twoFactorIsEnabledQuery,
             _featureService,
+            _userAccountKeysQuery,
             _twoFactorEmailService,
-            _changeKdfCommand
+            _changeKdfCommand,
+            _userRepository
         );
     }
 
@@ -616,6 +624,16 @@ public class AccountsControllerTests : IDisposable
 
     [Theory]
     [BitAutoData]
+    public async Task PostKdf_UserNotFound_ShouldFail(PasswordRequestModel model)
+    {
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult<User>(null));
+
+        // Act
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _sut.PostKdf(model));
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task PostKdf_WithNullAuthenticationData_ShouldFail(
         User user, PasswordRequestModel model)
     {
@@ -623,7 +641,9 @@ public class AccountsControllerTests : IDisposable
         model.AuthenticationData = null;
 
         // Act
-        await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostKdf(model));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostKdf(model));
+
+        Assert.Contains("AuthenticationData and UnlockData must be provided.", exception.Message);
     }
 
     [Theory]
@@ -635,7 +655,72 @@ public class AccountsControllerTests : IDisposable
         model.UnlockData = null;
 
         // Act
-        await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostKdf(model));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostKdf(model));
+
+        Assert.Contains("AuthenticationData and UnlockData must be provided.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostKdf_ChangeKdfFailed_ShouldFail(
+        User user, PasswordRequestModel model)
+    {
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+        _changeKdfCommand.ChangeKdfAsync(Arg.Any<User>(), Arg.Any<string>(),
+                Arg.Any<MasterPasswordAuthenticationData>(), Arg.Any<MasterPasswordUnlockData>())
+            .Returns(Task.FromResult(IdentityResult.Failed(new IdentityError { Description = "Change KDF failed" })));
+
+        // Act
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostKdf(model));
+
+        Assert.NotNull(exception.ModelState);
+        Assert.Contains("Change KDF failed",
+            exception.ModelState.Values.SelectMany(x => x.Errors).Select(x => x.ErrorMessage));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostKdf_ChangeKdfSuccess_NoError(
+        User user, PasswordRequestModel model)
+    {
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+        _changeKdfCommand.ChangeKdfAsync(Arg.Any<User>(), Arg.Any<string>(),
+                Arg.Any<MasterPasswordAuthenticationData>(), Arg.Any<MasterPasswordUnlockData>())
+            .Returns(Task.FromResult(IdentityResult.Success));
+
+        // Act
+        await _sut.PostKdf(model);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostKeys_NoUser_Errors(KeysRequestModel model)
+    {
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult<User>(null));
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _sut.PostKeys(model));
+    }
+
+    [Theory]
+    [BitAutoData("existing", "existing")]
+    [BitAutoData((string)null, "existing")]
+    [BitAutoData("", "existing")]
+    [BitAutoData(" ", "existing")]
+    [BitAutoData("existing", null)]
+    [BitAutoData("existing", "")]
+    [BitAutoData("existing", " ")]
+    public async Task PostKeys_UserAlreadyHasKeys_Errors(string? existingPrivateKey, string? existingPublicKey,
+        KeysRequestModel model)
+    {
+        var user = GenerateExampleUser();
+        user.PrivateKey = existingPrivateKey;
+        user.PublicKey = existingPublicKey;
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostKeys(model));
+
+        Assert.NotNull(exception.Message);
+        Assert.Contains("User has existing keypair", exception.Message);
     }
 
     // Below are helper functions that currently belong to this
@@ -687,6 +772,78 @@ public class AccountsControllerTests : IDisposable
     {
         _userService.GetUserByIdAsync(Arg.Any<Guid>())
                     .Returns(Task.FromResult((User)null));
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostKeys_WithAccountKeys_CallsSetV2AccountCryptographicState(
+        User user,
+        KeysRequestModel model)
+    {
+        // Arrange
+        user.PublicKey = null;
+        user.PrivateKey = null;
+        model.AccountKeys = new AccountKeysRequestModel
+        {
+            UserKeyEncryptedAccountPrivateKey = "wrapped-private-key",
+            AccountPublicKey = "public-key",
+            PublicKeyEncryptionKeyPair = new PublicKeyEncryptionKeyPairRequestModel
+            {
+                PublicKey = "public-key",
+                WrappedPrivateKey = "wrapped-private-key",
+                SignedPublicKey = "signed-public-key"
+            },
+            SignatureKeyPair = new SignatureKeyPairRequestModel
+            {
+                VerifyingKey = "verifying-key",
+                SignatureAlgorithm = "ed25519",
+                WrappedSigningKey = "wrapped-signing-key"
+            },
+            SecurityState = new SecurityStateModel
+            {
+                SecurityState = "security-state",
+                SecurityVersion = 2
+            }
+        };
+
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+
+        // Act
+        var result = await _sut.PostKeys(model);
+
+        // Assert
+        await _userRepository.Received(1).SetV2AccountCryptographicStateAsync(
+            user.Id,
+            Arg.Any<UserAccountKeysData>());
+        await _userService.DidNotReceiveWithAnyArgs().SaveUserAsync(Arg.Any<User>());
+        Assert.NotNull(result);
+        Assert.Equal("keys", result.Object);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostKeys_WithoutAccountKeys_CallsSaveUser(
+        User user,
+        KeysRequestModel model)
+    {
+        // Arrange
+        user.PublicKey = null;
+        user.PrivateKey = null;
+        model.AccountKeys = null;
+        model.PublicKey = "public-key";
+        model.EncryptedPrivateKey = "encrypted-private-key";
+
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+
+        // Act
+        var result = await _sut.PostKeys(model);
+
+        // Assert
+        await _userService.Received(1).SaveUserAsync(Arg.Is<User>(u =>
+            u.PublicKey == model.PublicKey &&
+            u.PrivateKey == model.EncryptedPrivateKey));
+        await _userRepository.DidNotReceiveWithAnyArgs()
+            .SetV2AccountCryptographicStateAsync(Arg.Any<Guid>(), Arg.Any<UserAccountKeysData>());
+        Assert.NotNull(result);
+        Assert.Equal("keys", result.Object);
     }
 }
 

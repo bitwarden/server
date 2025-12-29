@@ -1,4 +1,5 @@
-﻿using Event = Stripe.Event;
+﻿using Bit.Core.Billing.Constants;
+using Event = Stripe.Event;
 
 namespace Bit.Billing.Services.Implementations;
 
@@ -35,13 +36,13 @@ public class InvoiceCreatedHandler(
             if (usingPayPal && invoice is
                 {
                     AmountDue: > 0,
-                    Paid: false,
+                    Status: not StripeConstants.InvoiceStatus.Paid,
                     CollectionMethod: "charge_automatically",
                     BillingReason:
                     "subscription_create" or
                     "subscription_cycle" or
                     "automatic_pending_invoice_item_invoice",
-                    SubscriptionId: not null and not ""
+                    Parent.SubscriptionDetails: not null
                 })
             {
                 await stripeEventUtilityService.AttemptToPayInvoiceAsync(invoice);

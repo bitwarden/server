@@ -203,31 +203,17 @@ Currently, there are integrations / handlers for Slack, webhooks, and HTTP Event
 
 - The top-level object that enables a specific integration for the organization.
 - Includes any properties that apply to the entire integration across all events.
-    - For Slack, it consists of the token: `{ "Token": "xoxb-token-from-slack" }`.
-    - For webhooks, it is optional. Webhooks can either be configured at this level or the configuration level,
-      but the configuration level takes precedence. However, even though it is optional, an organization must
-      have a webhook `OrganizationIntegration` (even will a `null` `Configuration`) to enable configuration
-      via `OrganizationIntegrationConfiguration`.
-    - For HEC, it consists of the scheme, token, and URI:
-
-```json
-    {
-      "Scheme": "Bearer",
-      "Token": "Auth-token-from-HEC-service",
-      "Uri": "https://example.com/api"
-    }
-```
+  - For example, Slack stores the token in the `Configuration` which applies to every event, but stores the
+channel id in the `Configuration` of the `OrganizationIntegrationConfiguration`. The token applies to the entire Slack
+integration, but the channel could be configured differently depending on event type.
+  - See the table below for more examples / details on what is stored at which level.
 
 ### `OrganizationIntegrationConfiguration`
 
 - This contains the configurations specific to each `EventType` for the integration.
 - `Configuration` contains the event-specific configuration.
-    - For Slack, this would contain what channel to send the message to: `{ "channelId": "C123456" }`
-    - For webhooks, this is the URL the request should be sent to: `{ "url": "https://api.example.com" }`
-      - Optionally this also can include a `Scheme` and `Token` if this webhook needs Authentication.
-      - As stated above, all of this information can be specified here or at the `OrganizationIntegration`
-        level, but any properties declared here will take precedence over the ones above.
-    - For HEC, this must be null. HEC is configured only at the `OrganizationIntegration` level.
+    - Any properties at this level override the `Configuration` form the `OrganizationIntegration`.
+    - See the table below for examples of specific integrations.
 - `Template` contains a template string that is expected to be filled in with the contents of the actual event.
     - The tokens in the string are wrapped in `#` characters. For instance, the UserId would be `#UserId#`.
     - The `IntegrationTemplateProcessor` does the actual work of replacing these tokens with introspected values from
@@ -244,6 +230,23 @@ Currently, there are integrations / handlers for Slack, webhooks, and HTTP Event
   both will receive the value declared in `OrganizationIntegrationConfiguration`.
 - An array of `OrganizationIntegrationConfigurationDetails` is what the `EventIntegrationHandler` fetches from
   the database to determine what to publish at the integration level.
+
+### Existing integrations and the configurations at each level
+
+The following table illustrates how each integration is configured and what exactly is stored in the `Configuration`
+property at each level (`OrganizationIntegration` or `OrganizationIntegrationConfiguration`). Under
+`OrganizationIntegration` the valid `OrganizationIntegrationStatus` are in bold, with an example of what would be
+stored at each status.
+
+| **Integration**  | **OrganizationIntegration**                                                                                                                                                                                                                                                                 | **OrganizationIntegrationConfiguration**                                                                                                           |
+|------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
+| CloudBillingSync | **Not Applicable** (not yet used)                                                                                                                                                                                                                                                           | **Not Applicable** (not yet used)                                                                                                                  |
+| Scim             | **Not Applicable** (not yet used)                                                                                                                                                                                                                                                           | **Not Applicable** (not yet used)                                                                                                                  |
+| Slack            | **Initiated**: `null`<br/>**Completed**:<br/>`{ "Token": "xoxb-token-from-slack" }`                                                                                                                                                                                                         | `{ "channelId": "C123456" }`                                                                                                                       |
+| Webhook          | `null` or `{ "Scheme": "Bearer", "Token": "AUTH-TOKEN", "Uri": "https://example.com" }`                                                                                                                                                                                                     | `null` or `{ "Scheme": "Bearer", "Token":"AUTH-TOKEN", "Uri": "https://example.com" }`<br/><br/>Whatever is defined at this level takes precedence |
+| Hec              | `{ "Scheme": "Bearer", "Token": "AUTH-TOKEN", "Uri": "https://example.com" }`                                                                                                                                                                                                               | Always `null`                                                                                                                                      |
+| Datadog          | `{ "ApiKey": "TheKey12345", "Uri": "https://api.us5.datadoghq.com/api/v1/events"}`                                                                                                                                                                                                          | Always `null`                                                                                                                                      |
+| Teams            | **Initiated**: `null`<br/>**In Progress**: <br/> `{ "TenantID": "tenant", "Teams": ["Id": "team", DisplayName: "MyTeam"]}`<br/>**Completed**: <br/>`{ "TenantID": "tenant", "Teams": ["Id": "team", DisplayName: "MyTeam"], "ServiceUrl":"https://example.com", ChannelId: "channel-1234"}` | Always `null`                                                                                                                                      |
 
 ## Filtering
 
@@ -292,33 +295,60 @@ graph TD
 ```
 ## Caching
 
-To reduce database load and improve performance, integration configurations are cached in-memory as a Dictionary
-with a periodic load of all configurations. Without caching, each incoming `EventMessage` would trigger a database
+To reduce database load and improve performance, event integrations uses its own named extended cache (see
+[CACHING in Utilities](https://github.com/bitwarden/server/blob/main/src/Core/Utilities/CACHING.md)
+for more information). Without caching, for instance, each incoming `EventMessage` would trigger a database
 query to retrieve the relevant `OrganizationIntegrationConfigurationDetails`.
 
-By loading all configurations into memory on a fixed interval, we ensure:
+### `EventIntegrationsCacheConstants`
 
-- Consistent performance for reads.
-- Reduced database pressure.
-- Predictable refresh timing, independent of event activity.
+`EventIntegrationsCacheConstants` allows the code to have strongly typed references to a number of cache-related
+details when working with the extended cache. The cache name and all cache keys and tags are programmatically accessed
+from `EventIntegrationsCacheConstants` rather than simple strings. For instance,
+`EventIntegrationsCacheConstants.CacheName` is used in the cache setup, keyed services, dependency injection, etc.,
+rather than using a string literal (i.e. "EventIntegrations") in code.
 
-### Architecture / Design
+### `OrganizationIntegrationConfigurationDetails`
 
-- The cache is read-only for consumers. It is only updated in bulk by a background refresh process.
-- The cache is fully replaced on each refresh to avoid locking or partial state.
+- This is one of the most actively used portions of the architecture because any event that has an associated
+  organization requires a check of the configurations to determine if we need to fire off an integration.
+- By using the extended cache, all reads are hitting the L1 or L2 cache before needing to access the database.
 - Reads return a `List<OrganizationIntegrationConfigurationDetails>` for a given key or an empty list if no
   match exists.
-- Failures or delays in the loading process do not affect the existing cache state. The cache will continue serving
-  the last known good state until the update replaces the whole cache.
+- The TTL is set very high on these records (1 day). This is because when the admin API makes any changes, it
+  tells the cache to remove that key. This propagates to the event listening code via the extended cache backplane,
+  which means that the cache is then expired and the next read will fetch the new values. This allows us to have
+  a high TTL and avoid needing to refresh values except when necessary.
 
-### Background Refresh
+#### Tagging per integration
 
-A hosted service (`IntegrationConfigurationDetailsCacheService`) runs in the background and:
+- Each entry in the cache (which again, returns `List<OrganizationIntegrationConfigurationDetails>`) is tagged with
+  the organization id and the integration type.
+- This allows us to remove all of a given organization's configuration details for an integration when the admin
+  makes changes at the integration level.
+    - For instance, if there were 5 events configured for a given organization's webhook and the admin changed the URL
+      at the integration level, the updates would need to be propagated or else the cache will continue returning the
+      stale URL.
+    - By tagging each of the entries, the API can ask the extended cache to remove all the entries for a given
+      organization integration in one call. The cache will handle dropping / refreshing these entries in a
+      performant way.
+- There are two places in the code that are both aware of the tagging functionality
+    - The `EventIntegrationHandler` must use the tag when fetching relevant configuration details. This tells the cache
+      to store the entry with the tag when it successfully loads from the repository.
+    - The `CreateOrganizationIntegrationCommand`, `UpdateOrganizationIntegrationCommand`, and
+      `DeleteOrganizationIntegrationCommand` commands need to use the tag to remove all the tagged entries when an admin
+      creates, updates, or deletes an integration.
+    - To ensure both places are synchronized on how to tag entries, they both use
+      `EventIntegrationsCacheConstants.BuildCacheTagForOrganizationIntegration` to build the tag.
 
-- Loads all configuration records at application startup.
-- Refreshes the cache on a configurable interval.
-- Logs timing and entry count on success.
-- Logs exceptions on failure without disrupting application flow.
+### Template Properties
+
+- The `IntegrationTemplateProcessor` supports some properties that require an additional lookup. For instance,
+  the `UserId` is provided as part of the `EventMessage`, but `UserName` means an additional lookup to map the user
+  id to the actual name.
+- The properties for a `User` (which includes `ActingUser`), `Group`, and `Organization` are cached via the
+  extended cache with a default TTL of 30 minutes.
+- This is cached in both the L1 (Memory) and L2 (Redis) and will be automatically refreshed as needed.
 
 # Building a new integration
 
@@ -349,10 +379,20 @@ and event type.
     - This will be the deserialized version of the `MergedConfiguration` in
       `OrganizationIntegrationConfigurationDetails`.
 
+A new row with the new integration should be added to this doc in the table above [Existing integrations
+and the configurations at each level](#existing-integrations-and-the-configurations-at-each-level).
+
 ## Request Models
 
 1. Add a new case to the switch method in `OrganizationIntegrationRequestModel.Validate`.
+   - Additionally, add tests in `OrganizationIntegrationRequestModelTests`
 2. Add a new case to the switch method in `OrganizationIntegrationConfigurationRequestModel.IsValidForType`.
+    - Additionally, add / update tests in `OrganizationIntegrationConfigurationRequestModelTests`
+
+## Response Model
+
+1. Add a new case to the switch method in `OrganizationIntegrationResponseModel.Status`.
+    - Additionally, add / update tests in `OrganizationIntegrationResponseModelTests`
 
 ## Integration Handler
 

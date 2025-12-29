@@ -86,7 +86,8 @@ public abstract class PushTestBase
     protected abstract JsonNode GetPushSyncOrganizationsPayload(Guid userId);
     protected abstract JsonNode GetPushSyncOrgKeysPayload(Guid userId);
     protected abstract JsonNode GetPushSyncSettingsPayload(Guid userId);
-    protected abstract JsonNode GetPushLogOutPayload(Guid userId, bool excludeCurrentContext);
+    protected abstract JsonNode GetPushLogOutPayload(Guid userId, bool excludeCurrentContext,
+        PushNotificationLogOutReason? reason);
     protected abstract JsonNode GetPushSendCreatePayload(Send send);
     protected abstract JsonNode GetPushSendUpdatePayload(Send send);
     protected abstract JsonNode GetPushSendDeletePayload(Send send);
@@ -263,15 +264,18 @@ public abstract class PushTestBase
     }
 
     [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task PushLogOutAsync_SendsExpectedResponse(bool excludeCurrentContext)
+    [InlineData(true, null)]
+    [InlineData(true, PushNotificationLogOutReason.KdfChange)]
+    [InlineData(false, null)]
+    [InlineData(false, PushNotificationLogOutReason.KdfChange)]
+    public async Task PushLogOutAsync_SendsExpectedResponse(bool excludeCurrentContext,
+        PushNotificationLogOutReason? reason)
     {
         var userId = Guid.NewGuid();
 
         await VerifyNotificationAsync(
-            async sut => await sut.PushLogOutAsync(userId, excludeCurrentContext),
-            GetPushLogOutPayload(userId, excludeCurrentContext)
+            async sut => await sut.PushLogOutAsync(userId, excludeCurrentContext, reason),
+            GetPushLogOutPayload(userId, excludeCurrentContext, reason)
         );
     }
 

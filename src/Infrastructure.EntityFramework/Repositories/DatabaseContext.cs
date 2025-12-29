@@ -63,6 +63,7 @@ public class DatabaseContext : DbContext
     public DbSet<Policy> Policies { get; set; }
     public DbSet<Provider> Providers { get; set; }
     public DbSet<Secret> Secret { get; set; }
+    public DbSet<SecretVersion> SecretVersion { get; set; }
     public DbSet<ServiceAccount> ServiceAccount { get; set; }
     public DbSet<Project> Project { get; set; }
     public DbSet<ProviderUser> ProviderUsers { get; set; }
@@ -73,6 +74,7 @@ public class DatabaseContext : DbContext
     public DbSet<TaxRate> TaxRates { get; set; }
     public DbSet<Transaction> Transactions { get; set; }
     public DbSet<User> Users { get; set; }
+    public DbSet<UserSignatureKeyPair> UserSignatureKeyPairs { get; set; }
     public DbSet<AuthRequest> AuthRequests { get; set; }
     public DbSet<OrganizationDomain> OrganizationDomains { get; set; }
     public DbSet<WebAuthnCredential> WebAuthnCredentials { get; set; }

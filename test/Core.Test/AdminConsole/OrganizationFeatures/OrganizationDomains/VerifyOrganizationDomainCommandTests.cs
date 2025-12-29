@@ -2,8 +2,8 @@
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -182,13 +182,40 @@ public class VerifyOrganizationDomainCommandTests
 
         _ = await sutProvider.Sut.UserVerifyOrganizationDomainAsync(domain);
 
-        await sutProvider.GetDependency<ISavePolicyCommand>()
+        await sutProvider.GetDependency<IVNextSavePolicyCommand>()
             .Received(1)
-            .SaveAsync(Arg.Is<PolicyUpdate>(x => x.Type == PolicyType.SingleOrg &&
-                x.OrganizationId == domain.OrganizationId &&
-                x.Enabled &&
+            .SaveAsync(Arg.Is<SavePolicyModel>(x => x.PolicyUpdate.Type == PolicyType.SingleOrg &&
+                                                    x.PolicyUpdate.OrganizationId == domain.OrganizationId &&
+                                                    x.PolicyUpdate.Enabled &&
                 x.PerformedBy is StandardUser &&
                 x.PerformedBy.UserId == userId));
+    }
+
+    [Theory, BitAutoData]
+    public async Task UserVerifyOrganizationDomainAsync_UsesVNextSavePolicyCommand(
+        OrganizationDomain domain, Guid userId, SutProvider<VerifyOrganizationDomainCommand> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .GetClaimedDomainsByDomainNameAsync(domain.DomainName)
+            .Returns([]);
+
+        sutProvider.GetDependency<IDnsResolverService>()
+            .ResolveAsync(domain.DomainName, domain.Txt)
+            .Returns(true);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .UserId.Returns(userId);
+
+        _ = await sutProvider.Sut.UserVerifyOrganizationDomainAsync(domain);
+
+        await sutProvider.GetDependency<IVNextSavePolicyCommand>()
+            .Received(1)
+            .SaveAsync(Arg.Is<SavePolicyModel>(m =>
+                m.PolicyUpdate.Type == PolicyType.SingleOrg &&
+                m.PolicyUpdate.OrganizationId == domain.OrganizationId &&
+                m.PolicyUpdate.Enabled &&
+                m.PerformedBy is StandardUser &&
+                m.PerformedBy.UserId == userId));
     }
 
     [Theory, BitAutoData]
@@ -208,9 +235,9 @@ public class VerifyOrganizationDomainCommandTests
 
         _ = await sutProvider.Sut.UserVerifyOrganizationDomainAsync(domain);
 
-        await sutProvider.GetDependency<ISavePolicyCommand>()
+        await sutProvider.GetDependency<IVNextSavePolicyCommand>()
             .DidNotReceive()
-            .SaveAsync(Arg.Any<PolicyUpdate>());
+            .SaveAsync(Arg.Any<SavePolicyModel>());
     }
 
     [Theory, BitAutoData]

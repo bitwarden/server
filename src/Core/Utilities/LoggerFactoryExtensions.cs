@@ -1,165 +1,78 @@
-﻿using System.Security.Cryptography.X509Certificates;
-using Bit.Core.Settings;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
+﻿using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Serilog;
-using Serilog.Events;
-using Serilog.Sinks.Syslog;
 
 namespace Bit.Core.Utilities;
 
 public static class LoggerFactoryExtensions
 {
-    public static void UseSerilog(
-        this IApplicationBuilder appBuilder,
-        IWebHostEnvironment env,
-        IHostApplicationLifetime applicationLifetime,
-        GlobalSettings globalSettings)
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="hostBuilder"></param>
+    /// <returns></returns>
+    public static IHostBuilder AddSerilogFileLogging(this IHostBuilder hostBuilder)
     {
-        if (env.IsDevelopment() && !globalSettings.EnableDevLogging)
+        return hostBuilder.ConfigureLogging((context, logging) =>
         {
-            return;
-        }
-
-        applicationLifetime.ApplicationStopped.Register(Log.CloseAndFlush);
-    }
-
-    public static ILoggingBuilder AddSerilog(
-        this ILoggingBuilder builder,
-        WebHostBuilderContext context,
-        Func<LogEvent, IGlobalSettings, bool>? filter = null)
-    {
-        var globalSettings = new GlobalSettings();
-        ConfigurationBinder.Bind(context.Configuration.GetSection("GlobalSettings"), globalSettings);
-
-        if (context.HostingEnvironment.IsDevelopment() && !globalSettings.EnableDevLogging)
-        {
-            return builder;
-        }
-
-        bool inclusionPredicate(LogEvent e)
-        {
-            if (filter == null)
+            if (context.HostingEnvironment.IsDevelopment())
             {
-                return true;
+                return;
             }
-            var eventId = e.Properties.TryGetValue("EventId", out var eventIdValue) ? eventIdValue.ToString() : null;
-            if (eventId?.Contains(Constants.BypassFiltersEventId.ToString()) ?? false)
+
+            // If they have begun using the new settings location, use that
+            if (!string.IsNullOrEmpty(context.Configuration["Logging:PathFormat"]))
             {
-                return true;
-            }
-            return filter(e, globalSettings);
-        }
-
-        var logSentryWarning = false;
-        var logSyslogWarning = false;
-
-        // Path format is the only required option for file logging, we will use that as
-        // the keystone for if they have configured the new location.
-        var newPathFormat = context.Configuration["Logging:PathFormat"];
-
-        var config = new LoggerConfiguration()
-            .MinimumLevel.Verbose()
-            .Enrich.FromLogContext()
-            .Filter.ByIncludingOnly(inclusionPredicate);
-
-        if (CoreHelpers.SettingHasValue(globalSettings.Sentry.Dsn))
-        {
-            config.WriteTo.Sentry(globalSettings.Sentry.Dsn)
-                .Enrich.FromLogContext()
-                .Enrich.WithProperty("Project", globalSettings.ProjectName);
-        }
-        else if (CoreHelpers.SettingHasValue(globalSettings.Syslog.Destination))
-        {
-            logSyslogWarning = true;
-            // appending sitename to project name to allow easier identification in syslog.
-            var appName = $"{globalSettings.SiteName}-{globalSettings.ProjectName}";
-            if (globalSettings.Syslog.Destination.Equals("local", StringComparison.OrdinalIgnoreCase))
-            {
-                config.WriteTo.LocalSyslog(appName);
-            }
-            else if (Uri.TryCreate(globalSettings.Syslog.Destination, UriKind.Absolute, out var syslogAddress))
-            {
-                // Syslog's standard port is 514 (both UDP and TCP). TLS does not have a standard port, so assume 514.
-                int port = syslogAddress.Port >= 0
-                    ? syslogAddress.Port
-                    : 514;
-
-                if (syslogAddress.Scheme.Equals("udp"))
-                {
-                    config.WriteTo.UdpSyslog(syslogAddress.Host, port, appName);
-                }
-                else if (syslogAddress.Scheme.Equals("tcp"))
-                {
-                    config.WriteTo.TcpSyslog(syslogAddress.Host, port, appName);
-                }
-                else if (syslogAddress.Scheme.Equals("tls"))
-                {
-                    if (CoreHelpers.SettingHasValue(globalSettings.Syslog.CertificateThumbprint))
-                    {
-                        config.WriteTo.TcpSyslog(syslogAddress.Host, port, appName,
-                            useTls: true,
-                            certProvider: new CertificateStoreProvider(StoreName.My, StoreLocation.CurrentUser,
-                                                                       globalSettings.Syslog.CertificateThumbprint));
-                    }
-                    else
-                    {
-                        config.WriteTo.TcpSyslog(syslogAddress.Host, port, appName,
-                            useTls: true,
-                            certProvider: new CertificateFileProvider(globalSettings.Syslog.CertificatePath,
-                                                                      globalSettings.Syslog?.CertificatePassword ?? string.Empty));
-                    }
-                }
-            }
-        }
-        else if (!string.IsNullOrEmpty(newPathFormat))
-        {
-            // Use new location
-            builder.AddFile(context.Configuration.GetSection("Logging"));
-        }
-        else if (CoreHelpers.SettingHasValue(globalSettings.LogDirectory))
-        {
-            if (globalSettings.LogRollBySizeLimit.HasValue)
-            {
-                var pathFormat = Path.Combine(globalSettings.LogDirectory, $"{globalSettings.ProjectName.ToLowerInvariant()}.log");
-                if (globalSettings.LogDirectoryByProject)
-                {
-                    pathFormat = Path.Combine(globalSettings.LogDirectory, globalSettings.ProjectName, "log.txt");
-                }
-                config.WriteTo.File(pathFormat, rollOnFileSizeLimit: true,
-                    fileSizeLimitBytes: globalSettings.LogRollBySizeLimit);
+                logging.AddFile(context.Configuration.GetSection("Logging"));
             }
             else
             {
-                var pathFormat = Path.Combine(globalSettings.LogDirectory, $"{globalSettings.ProjectName.ToLowerInvariant()}_{{Date}}.log");
-                if (globalSettings.LogDirectoryByProject)
+                var globalSettingsSection = context.Configuration.GetSection("GlobalSettings");
+                var loggingOptions = new LegacyFileLoggingOptions();
+                globalSettingsSection.Bind(loggingOptions);
+
+                if (string.IsNullOrWhiteSpace(loggingOptions.LogDirectory))
                 {
-                    pathFormat = Path.Combine(globalSettings.LogDirectory, globalSettings.ProjectName, "{Date}.txt");
+                    return;
                 }
-                config.WriteTo.RollingFile(pathFormat);
+
+                var projectName = loggingOptions.ProjectName
+                    ?? context.HostingEnvironment.ApplicationName;
+
+                if (loggingOptions.LogRollBySizeLimit.HasValue)
+                {
+                    var pathFormat = loggingOptions.LogDirectoryByProject
+                        ? Path.Combine(loggingOptions.LogDirectory, projectName, "log.txt")
+                        : Path.Combine(loggingOptions.LogDirectory, $"{projectName.ToLowerInvariant()}.log");
+
+                    logging.AddFile(
+                        pathFormat: pathFormat,
+                        fileSizeLimitBytes: loggingOptions.LogRollBySizeLimit.Value
+                    );
+                }
+                else
+                {
+                    var pathFormat = loggingOptions.LogDirectoryByProject
+                        ? Path.Combine(loggingOptions.LogDirectory, projectName, "{Date}.txt")
+                        : Path.Combine(loggingOptions.LogDirectory, $"{projectName.ToLowerInvariant()}_{{Date}}.log");
+
+                    logging.AddFile(
+                        pathFormat: pathFormat
+                    );
+                }
             }
-            config
-                .Enrich.FromLogContext()
-                .Enrich.WithProperty("Project", globalSettings.ProjectName);
-        }
+        });
+    }
 
-        var serilog = config.CreateLogger();
-
-        if (logSentryWarning)
-        {
-            serilog.Warning("Sentry for logging has been deprecated. Read more: https://btwrdn.com/log-deprecation");
-        }
-
-        if (logSyslogWarning)
-        {
-            serilog.Warning("Syslog for logging has been deprecated. Read more: https://btwrdn.com/log-deprecation");
-        }
-
-        builder.AddSerilog(serilog);
-
-        return builder;
+    /// <summary>
+    /// Our own proprietary options that we've always supported in `GlobalSettings` configuration section.
+    /// </summary>
+    private class LegacyFileLoggingOptions
+    {
+        public string? ProjectName { get; set; }
+        public string? LogDirectory { get; set; } = "/etc/bitwarden/logs";
+        public bool LogDirectoryByProject { get; set; } = true;
+        public long? LogRollBySizeLimit { get; set; }
     }
 }

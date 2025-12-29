@@ -2,8 +2,6 @@
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
 
-#nullable enable
-
 namespace Bit.Core.AdminConsole.Entities;
 
 public class OrganizationIntegration : ITableObject<Guid>

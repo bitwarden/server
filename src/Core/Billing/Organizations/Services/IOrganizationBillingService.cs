@@ -56,4 +56,11 @@ public interface IOrganizationBillingService
     /// <exception cref="ArgumentNullException">Thrown when the <paramref name="organization"/> is <see langword="null"/>.</exception>
     /// <exception cref="BillingException">Thrown when no payment method is found for the customer, no plan IDs are provided, or subscription update fails.</exception>
     Task UpdateSubscriptionPlanFrequency(Organization organization, PlanType newPlanType);
+
+    /// <summary>
+    /// Updates the organization name and email on the Stripe customer entry.
+    /// This only updates Stripe, not the Bitwarden database.
+    /// </summary>
+    /// <param name="organization">The organization to update in Stripe.</param>
+    Task UpdateOrganizationNameAndEmail(Organization organization);
 }

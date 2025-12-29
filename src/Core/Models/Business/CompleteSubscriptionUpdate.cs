@@ -299,7 +299,7 @@ public class CompleteSubscriptionUpdate : SubscriptionUpdate
                 ? organization.SmServiceAccounts - plan.SecretsManager.BaseServiceAccount
                 : 0,
             PurchasedAdditionalStorage = organization.MaxStorageGb.HasValue
-                ? organization.MaxStorageGb.Value - (plan.PasswordManager.BaseStorageGb ?? 0) :
+                ? organization.MaxStorageGb.Value - plan.PasswordManager.BaseStorageGb :
                 0
         };
 }

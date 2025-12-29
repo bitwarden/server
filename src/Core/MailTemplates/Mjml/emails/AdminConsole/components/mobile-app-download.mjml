@@ -1,0 +1,38 @@
+
+<mj-section background-color="#fff" padding="30px 30px 10px 30px">
+    <mj-column>
+        <mj-text font-size="18px" font-weight="700" line-height="32px" padding="0 0 15px 0">
+            Download Bitwarden on all devices
+        </mj-text>
+        <mj-text font-size="15px" line-height="16px" padding="0 0 20px 0">
+            Already using the <a href="https://bitwarden.com/download/" class="link">browser extension</a>?
+            Download the Bitwarden mobile app from the
+            <a href="https://apps.apple.com/us/app/bitwarden-password-manager/id1137397744" class="link">App Store</a>
+            or <a href="https://play.google.com/store/apps/details?id=com.x8bit.bitwarden" class="link">Google Play</a>
+            to quickly save logins and autofill forms on the go.
+        </mj-text>
+    </mj-column>
+</mj-section>
+
+<mj-section background-color="#fff" padding="0 30px 20px 30px">
+    <mj-group>
+        <mj-column width="120px" vertical-align="middle">
+            <mj-image
+                href="https://apps.apple.com/us/app/bitwarden-password-manager/id1137397744"
+                src="https://assets.bitwarden.com/email/v1/App-store.png"
+                alt="Download on the App Store"
+                width="120px"
+                padding="0"
+            />
+        </mj-column>
+        <mj-column width="150px" vertical-align="middle">
+            <mj-image
+                href="https://play.google.com/store/apps/details?id=com.x8bit.bitwarden"
+                src="https://assets.bitwarden.com/email/v1/google-play-badge.png"
+                alt="Get it on Google Play"
+                width="150px"
+                padding="0 0 0 10px"
+            />
+        </mj-column>
+    </mj-group>
+</mj-section>

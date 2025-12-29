@@ -32,7 +32,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
             .IsEnabled(FeatureFlagKeys.CreateDefaultLocation)
             .Returns(false);
 
-        var policyRequest = new SavePolicyModel(policyUpdate, null, new OrganizationModelOwnershipPolicyModel(_defaultUserCollectionName));
+        var policyRequest = new SavePolicyModel(policyUpdate, new OrganizationModelOwnershipPolicyModel(_defaultUserCollectionName));
 
         // Act
         await sutProvider.Sut.ExecuteSideEffectsAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
@@ -58,7 +58,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
             .IsEnabled(FeatureFlagKeys.CreateDefaultLocation)
             .Returns(true);
 
-        var policyRequest = new SavePolicyModel(policyUpdate, null, new OrganizationModelOwnershipPolicyModel(_defaultUserCollectionName));
+        var policyRequest = new SavePolicyModel(policyUpdate, new OrganizationModelOwnershipPolicyModel(_defaultUserCollectionName));
 
         // Act
         await sutProvider.Sut.ExecuteSideEffectsAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
@@ -84,7 +84,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
             .IsEnabled(FeatureFlagKeys.CreateDefaultLocation)
             .Returns(true);
 
-        var policyRequest = new SavePolicyModel(policyUpdate, null, new OrganizationModelOwnershipPolicyModel(_defaultUserCollectionName));
+        var policyRequest = new SavePolicyModel(policyUpdate, new OrganizationModelOwnershipPolicyModel(_defaultUserCollectionName));
 
         // Act
         await sutProvider.Sut.ExecuteSideEffectsAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
@@ -110,7 +110,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         var collectionRepository = Substitute.For<ICollectionRepository>();
 
         var sut = ArrangeSut(factory, policyRepository, collectionRepository);
-        var policyRequest = new SavePolicyModel(policyUpdate, null, new OrganizationModelOwnershipPolicyModel(_defaultUserCollectionName));
+        var policyRequest = new SavePolicyModel(policyUpdate, new OrganizationModelOwnershipPolicyModel(_defaultUserCollectionName));
 
         // Act
         await sut.ExecuteSideEffectsAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
@@ -199,7 +199,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         var collectionRepository = Substitute.For<ICollectionRepository>();
 
         var sut = ArrangeSut(factory, policyRepository, collectionRepository);
-        var policyRequest = new SavePolicyModel(policyUpdate, null, new OrganizationModelOwnershipPolicyModel(_defaultUserCollectionName));
+        var policyRequest = new SavePolicyModel(policyUpdate, new OrganizationModelOwnershipPolicyModel(_defaultUserCollectionName));
 
         // Act
         await sut.ExecuteSideEffectsAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
@@ -238,7 +238,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
             .IsEnabled(FeatureFlagKeys.CreateDefaultLocation)
             .Returns(true);
 
-        var policyRequest = new SavePolicyModel(policyUpdate, null, metadata);
+        var policyRequest = new SavePolicyModel(policyUpdate, metadata);
 
         // Act
         await sutProvider.Sut.ExecuteSideEffectsAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
@@ -274,4 +274,176 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         return sut;
     }
 
+    [Theory, BitAutoData]
+    public async Task ExecutePostUpsertSideEffectAsync_FeatureFlagDisabled_DoesNothing(
+        [PolicyUpdate(PolicyType.OrganizationDataOwnership, false)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.OrganizationDataOwnership, false)] Policy postUpdatedPolicy,
+        [Policy(PolicyType.OrganizationDataOwnership, false)] Policy previousPolicyState,
+        SutProvider<OrganizationDataOwnershipPolicyValidator> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.CreateDefaultLocation)
+            .Returns(false);
+
+        var policyRequest = new SavePolicyModel(policyUpdate, new OrganizationModelOwnershipPolicyModel(_defaultUserCollectionName));
+
+        // Act
+        await sutProvider.Sut.ExecutePostUpsertSideEffectAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
+
+        // Assert
+        await sutProvider.GetDependency<ICollectionRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .UpsertDefaultCollectionsAsync(default, default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ExecutePostUpsertSideEffectAsync_PolicyAlreadyEnabled_DoesNothing(
+        [PolicyUpdate(PolicyType.OrganizationDataOwnership, true)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.OrganizationDataOwnership, true)] Policy postUpdatedPolicy,
+        [Policy(PolicyType.OrganizationDataOwnership, true)] Policy previousPolicyState,
+        SutProvider<OrganizationDataOwnershipPolicyValidator> sutProvider)
+    {
+        // Arrange
+        postUpdatedPolicy.OrganizationId = policyUpdate.OrganizationId;
+        previousPolicyState.OrganizationId = policyUpdate.OrganizationId;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.CreateDefaultLocation)
+            .Returns(true);
+
+        var policyRequest = new SavePolicyModel(policyUpdate, new OrganizationModelOwnershipPolicyModel(_defaultUserCollectionName));
+
+        // Act
+        await sutProvider.Sut.ExecutePostUpsertSideEffectAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
+
+        // Assert
+        await sutProvider.GetDependency<ICollectionRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .UpsertDefaultCollectionsAsync(default, default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ExecutePostUpsertSideEffectAsync_PolicyBeingDisabled_DoesNothing(
+        [PolicyUpdate(PolicyType.OrganizationDataOwnership, false)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.OrganizationDataOwnership, false)] Policy postUpdatedPolicy,
+        [Policy(PolicyType.OrganizationDataOwnership)] Policy previousPolicyState,
+        SutProvider<OrganizationDataOwnershipPolicyValidator> sutProvider)
+    {
+        // Arrange
+        previousPolicyState.OrganizationId = policyUpdate.OrganizationId;
+        postUpdatedPolicy.OrganizationId = policyUpdate.OrganizationId;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.CreateDefaultLocation)
+            .Returns(true);
+
+        var policyRequest = new SavePolicyModel(policyUpdate, new OrganizationModelOwnershipPolicyModel(_defaultUserCollectionName));
+
+        // Act
+        await sutProvider.Sut.ExecutePostUpsertSideEffectAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
+
+        // Assert
+        await sutProvider.GetDependency<ICollectionRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .UpsertDefaultCollectionsAsync(default, default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ExecutePostUpsertSideEffectAsync_WhenNoUsersExist_DoNothing(
+        [PolicyUpdate(PolicyType.OrganizationDataOwnership, true)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.OrganizationDataOwnership, true)] Policy postUpdatedPolicy,
+        [Policy(PolicyType.OrganizationDataOwnership, false)] Policy previousPolicyState,
+        OrganizationDataOwnershipPolicyRequirementFactory factory)
+    {
+        // Arrange
+        postUpdatedPolicy.OrganizationId = policyUpdate.OrganizationId;
+        previousPolicyState.OrganizationId = policyUpdate.OrganizationId;
+
+        var policyRepository = ArrangePolicyRepository([]);
+        var collectionRepository = Substitute.For<ICollectionRepository>();
+
+        var sut = ArrangeSut(factory, policyRepository, collectionRepository);
+        var policyRequest = new SavePolicyModel(policyUpdate, new OrganizationModelOwnershipPolicyModel(_defaultUserCollectionName));
+
+        // Act
+        await sut.ExecutePostUpsertSideEffectAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
+
+        // Assert
+        await collectionRepository
+            .DidNotReceiveWithAnyArgs()
+            .UpsertDefaultCollectionsAsync(
+                default,
+                default,
+                default);
+
+        await policyRepository
+            .Received(1)
+            .GetPolicyDetailsByOrganizationIdAsync(
+                policyUpdate.OrganizationId,
+                PolicyType.OrganizationDataOwnership);
+    }
+
+    [Theory]
+    [BitMemberAutoData(nameof(ShouldUpsertDefaultCollectionsTestCases))]
+    public async Task ExecutePostUpsertSideEffectAsync_WithRequirements_ShouldUpsertDefaultCollections(
+        Policy postUpdatedPolicy,
+        Policy? previousPolicyState,
+        [PolicyUpdate(PolicyType.OrganizationDataOwnership)] PolicyUpdate policyUpdate,
+        [OrganizationPolicyDetails(PolicyType.OrganizationDataOwnership)] IEnumerable<OrganizationPolicyDetails> orgPolicyDetails,
+        OrganizationDataOwnershipPolicyRequirementFactory factory)
+    {
+        // Arrange
+        var orgPolicyDetailsList = orgPolicyDetails.ToList();
+        foreach (var policyDetail in orgPolicyDetailsList)
+        {
+            policyDetail.OrganizationId = policyUpdate.OrganizationId;
+        }
+
+        var policyRepository = ArrangePolicyRepository(orgPolicyDetailsList);
+        var collectionRepository = Substitute.For<ICollectionRepository>();
+
+        var sut = ArrangeSut(factory, policyRepository, collectionRepository);
+        var policyRequest = new SavePolicyModel(policyUpdate, new OrganizationModelOwnershipPolicyModel(_defaultUserCollectionName));
+
+        // Act
+        await sut.ExecutePostUpsertSideEffectAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
+
+        // Assert
+        await collectionRepository
+            .Received(1)
+            .UpsertDefaultCollectionsAsync(
+                policyUpdate.OrganizationId,
+                Arg.Is<IEnumerable<Guid>>(ids => ids.Count() == 3),
+                _defaultUserCollectionName);
+    }
+
+    [Theory]
+    [BitMemberAutoData(nameof(WhenDefaultCollectionsDoesNotExistTestCases))]
+    public async Task ExecutePostUpsertSideEffectAsync_WhenDefaultCollectionNameIsInvalid_DoesNothing(
+        IPolicyMetadataModel metadata,
+        [PolicyUpdate(PolicyType.OrganizationDataOwnership)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.OrganizationDataOwnership, true)] Policy postUpdatedPolicy,
+        [Policy(PolicyType.OrganizationDataOwnership, false)] Policy previousPolicyState,
+        SutProvider<OrganizationDataOwnershipPolicyValidator> sutProvider)
+    {
+        // Arrange
+        postUpdatedPolicy.OrganizationId = policyUpdate.OrganizationId;
+        previousPolicyState.OrganizationId = policyUpdate.OrganizationId;
+        policyUpdate.Enabled = true;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.CreateDefaultLocation)
+            .Returns(true);
+
+        var policyRequest = new SavePolicyModel(policyUpdate, metadata);
+
+        // Act
+        await sutProvider.Sut.ExecutePostUpsertSideEffectAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
+
+        // Assert
+        await sutProvider.GetDependency<ICollectionRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .UpsertDefaultCollectionsAsync(default, default, default);
+    }
 }

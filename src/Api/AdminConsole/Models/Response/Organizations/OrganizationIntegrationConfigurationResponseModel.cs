@@ -2,8 +2,6 @@
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 
-#nullable enable
-
 namespace Bit.Api.AdminConsole.Models.Response.Organizations;
 
 public class OrganizationIntegrationConfigurationResponseModel : ResponseModel
@@ -11,8 +9,6 @@ public class OrganizationIntegrationConfigurationResponseModel : ResponseModel
     public OrganizationIntegrationConfigurationResponseModel(OrganizationIntegrationConfiguration organizationIntegrationConfiguration, string obj = "organizationIntegrationConfiguration")
         : base(obj)
     {
-        ArgumentNullException.ThrowIfNull(organizationIntegrationConfiguration);
-
         Id = organizationIntegrationConfiguration.Id;
         Configuration = organizationIntegrationConfiguration.Configuration;
         CreationDate = organizationIntegrationConfiguration.CreationDate;
