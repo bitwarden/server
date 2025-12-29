@@ -3,7 +3,7 @@
 
 using Bit.Core.Exceptions;
 
-namespace Bit.Api.Models.Public.Request;
+namespace Bit.Api.Dirt.Public.Models;
 
 public class EventFilterRequestModel
 {
