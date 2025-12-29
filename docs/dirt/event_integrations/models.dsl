@@ -243,7 +243,7 @@
     }
     event_integrations_extended_cache = component "EventIntegrationsExtendedCache" {
         tags "Self-Hosted-Only"
-        description "Caches all configurations for integrations in memory so that events can be handled without adding database load."
+        description "Caches all configurations for integrations so that events can be handled without adding database load."
     }
     slack_service = component "SlackService" {
         tags "Self-Hosted-Only"
@@ -255,7 +255,7 @@
     }
     http_client = component "HttpClient" {
         tags "Self-Hosted-Only"
-        description "Performs any Http functions for Datadog / Webhooks / HEC."
+        description "Performs any HTTP functions for Datadog / Webhooks / HEC."
     }
     integration_filter_service = component "IntegrationFilterService" {
         tags "Self-Hosted-Only"
@@ -288,7 +288,7 @@ external_services = softwareSystem "External Services" {
     }
 
     crowdstrike = container "Crowdstrike Falcon" {
-        tags "External", "Events", "Integrations", "Crowdstrike Falcon", "Crowdstrike"
-        description "Crowdstrike Falcon SIEM service. Receives events via configured event integrations."
+        tags "External", "Events", "Integrations", "CrowdStrike Falcon", "CrowdStrike"
+        description "CrowdStrike Falcon SIEM service. Receives events via configured event integrations."
     }
 }
