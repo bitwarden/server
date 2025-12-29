@@ -229,6 +229,7 @@ public static class FeatureFlagKeys
     public const string CxpExportMobile = "cxp-export-mobile";
 
     /* Platform Team */
+    public const string WebPush = "web-push";
     public const string IpcChannelFramework = "ipc-channel-framework";
     public const string PushNotificationsWhenLocked = "pm-19388-push-notifications-when-locked";
     public const string PushNotificationsWhenInactive = "pm-25130-receive-push-notifications-for-inactive-users";
