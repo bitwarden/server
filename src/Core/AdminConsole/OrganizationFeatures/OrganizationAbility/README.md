@@ -104,11 +104,14 @@ When developing a new plan-gated feature:
 
 6. **Implement checks throughout client and server** — Use the ability consistently everywhere the feature is accessed.
    - Clients: get the organization object from `OrganizationService`.
-   - Server: use the organization object if it's already in scope, or check the OrganizationAbility via IApplicationCacheService for a high-speed cache.
+   - Server: if you already have the full `Organization` object in scope, you can use it directly. If not, use the
+     `IApplicationCacheService` to retrieve the `OrganizationAbility`, which is a simplified, cached representation
+     of the organization ability flags. Note that some older flags may be missing from `OrganizationAbility` but
+     can be added if needed.
 
 ## Existing Abilities
 
-For reference, here are some current organization ability flags:
+For reference, here are some current organization ability flags (not a complete list):
 
 | Ability                  | Description                   | Plans             |
 | ------------------------ | ----------------------------- | ----------------- |
