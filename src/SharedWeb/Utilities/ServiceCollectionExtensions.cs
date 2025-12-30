@@ -675,7 +675,7 @@ public static class ServiceCollectionExtensions
                 options.Configuration = globalSettings.DistributedCache.Redis.ConnectionString;
             });
         }
-        else
+        else if (globalSettings.SelfHosted)
         {
             var (databaseProvider, databaseConnectionString) = GetDatabaseProvider(globalSettings);
             if (databaseProvider == SupportedDatabaseProviders.SqlServer)
