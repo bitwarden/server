@@ -12,7 +12,6 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Data;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -292,21 +291,10 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
             return;
         }
 
-        var defaultCollection = new Collection
-        {
-            OrganizationId = organizationUser.OrganizationId,
-            Name = defaultUserCollectionName,
-            Type = CollectionType.DefaultUserCollection
-        };
-        var collectionUser = new CollectionAccessSelection
-        {
-            Id = organizationUser.Id,
-            ReadOnly = false,
-            HidePasswords = false,
-            Manage = true
-        };
-
-        await _collectionRepository.CreateAsync(defaultCollection, groups: null, users: [collectionUser]);
+        await _collectionRepository.CreateDefaultCollectionsAsync(
+            organizationUser.OrganizationId,
+            [organizationUser.Id],
+            defaultUserCollectionName);
     }
 
     /// <summary>
@@ -337,6 +325,6 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
             return;
         }
 
-        await _collectionRepository.UpsertDefaultCollectionsAsync(organizationId, eligibleOrganizationUserIds, defaultUserCollectionName);
+        await _collectionRepository.CreateDefaultCollectionsAsync(organizationId, eligibleOrganizationUserIds, defaultUserCollectionName);
     }
 }
