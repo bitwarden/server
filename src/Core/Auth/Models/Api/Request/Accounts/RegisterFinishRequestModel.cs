@@ -114,9 +114,6 @@ public class RegisterFinishRequestModel : IValidatableObject
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         // PM-28143 - Remove line below
-        MasterPasswordUnlockDataRequestModel.ThrowIfExistsAndNotMatchingAuthenticationData(MasterPasswordAuthentication, MasterPasswordUnlock);
-
-        // PM-28143 - Remove line below
         MasterPasswordAuthenticationDataRequestModel.ThrowIfExistsAndHashIsNotEqual(MasterPasswordAuthentication, MasterPasswordHash);
 
         // PM-28143 - Remove line below
