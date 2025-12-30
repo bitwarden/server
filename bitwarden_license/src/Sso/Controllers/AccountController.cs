@@ -587,7 +587,7 @@ public class AccountController : Controller
 
             // Since we're in the auto-provisioning logic, this means that the user exists, but they have not
             // authenticated with the org's SSO provider before now (otherwise we wouldn't be auto-provisioning them).
-            // We've verified that the user is Accepted or Confnirmed, so we can create an SsoUser link and proceed
+            // We've verified that the user is Accepted or Confirmed, so we can create an SsoUser link and proceed
             // with authentication.
             await CreateSsoUserRecordAsync(providerUserId, guaranteedExistingUser.Id, organization.Id, guaranteedOrgUser);
 
