@@ -3,6 +3,7 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationConfirmation;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
@@ -813,5 +814,53 @@ public class ConfirmOrganizationUserCommandTests
         Assert.Empty(result[0].Item2);
         Assert.Empty(result[1].Item2);
         Assert.Equal(new OtherOrganizationDoesNotAllowOtherMembership().Message, result[2].Item2);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SendOrganizationConfirmedEmailAsync_WithFeatureFlagOn_UsesNewMailer(
+        Organization org,
+        string userEmail,
+        SutProvider<ConfirmOrganizationUserCommand> sutProvider)
+    {
+        // Arrange
+        const bool accessSecretsManager = true;
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.OrganizationConfirmationEmail)
+            .Returns(true);
+
+        // Act
+        await sutProvider.Sut.SendOrganizationConfirmedEmailAsync(org, userEmail, accessSecretsManager);
+
+        // Assert - verify new mailer is called, not legacy mail service
+        await sutProvider.GetDependency<ISendOrganizationConfirmationCommand>()
+            .Received(1)
+            .SendConfirmationAsync(org, userEmail, accessSecretsManager);
+        await sutProvider.GetDependency<IMailService>()
+            .DidNotReceive()
+            .SendOrganizationConfirmedEmailAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task SendOrganizationConfirmedEmailAsync_WithFeatureFlagOff_UsesLegacyMailService(
+        Organization org,
+        string userEmail,
+        SutProvider<ConfirmOrganizationUserCommand> sutProvider)
+    {
+        // Arrange
+        const bool accessSecretsManager = false;
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.OrganizationConfirmationEmail)
+            .Returns(false);
+
+        // Act
+        await sutProvider.Sut.SendOrganizationConfirmedEmailAsync(org, userEmail, accessSecretsManager);
+
+        // Assert
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendOrganizationConfirmedEmailAsync(org.DisplayName(), userEmail, accessSecretsManager);
+        await sutProvider.GetDependency<ISendOrganizationConfirmationCommand>()
+            .DidNotReceive()
+            .SendConfirmationAsync(Arg.Any<Organization>(), Arg.Any<string>(), Arg.Any<bool>());
     }
 }
