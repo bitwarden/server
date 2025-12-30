@@ -369,6 +369,29 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         }
 
         await using var connection = new SqlConnection(ConnectionString);
+        await connection.OpenAsync();
+
+        var organizationUserIdsJson = JsonSerializer.Serialize(organizationUserIds);
+        await connection.ExecuteAsync(
+            "[dbo].[Collection_UpsertDefaultCollections]",
+            new
+            {
+                OrganizationId = organizationId,
+                DefaultCollectionName = defaultCollectionName,
+                OrganizationUserIdsJson = organizationUserIdsJson
+            },
+            commandType: CommandType.StoredProcedure);
+    }
+
+    public async Task UpsertDefaultCollectionsBulkAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName)
+    {
+        organizationUserIds = organizationUserIds.ToList();
+        if (!organizationUserIds.Any())
+        {
+            return;
+        }
+
+        await using var connection = new SqlConnection(ConnectionString);
         connection.Open();
         await using var transaction = connection.BeginTransaction();
         try
@@ -384,6 +407,17 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
                 return;
             }
 
+            // CRITICAL: Insert semaphore entries BEFORE collections
+            // TODO: this will result in a creation date of the semaphore AFTER that of the collection, which is weird
+            var now = DateTime.UtcNow;
+            var semaphores = collectionUsers.Select(c => new DefaultCollectionSemaphore
+            {
+                OrganizationId = organizationId,
+                OrganizationUserId = c.OrganizationUserId,
+                CreationDate = now
+            }).ToList();
+
+            await BulkInsertDefaultCollectionSemaphoresAsync(connection, transaction, semaphores);
             await BulkResourceCreationService.CreateCollectionsAsync(connection, transaction, collections);
             await BulkResourceCreationService.CreateCollectionsUsersAsync(connection, transaction, collectionUsers);
 
@@ -453,6 +487,56 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         }
 
         return (collectionUsers, collections);
+    }
+
+    private async Task BulkInsertDefaultCollectionSemaphoresAsync(SqlConnection connection, SqlTransaction transaction, List<DefaultCollectionSemaphore> semaphores)
+    {
+        if (!semaphores.Any())
+        {
+            return;
+        }
+
+        // Sort by composite key to reduce deadlocks
+        var sortedSemaphores = semaphores
+            .OrderBy(s => s.OrganizationId)
+            .ThenBy(s => s.OrganizationUserId)
+            .ToList();
+
+        using var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction);
+        bulkCopy.DestinationTableName = "[dbo].[DefaultCollectionSemaphore]";
+        bulkCopy.BatchSize = 500;
+        bulkCopy.BulkCopyTimeout = 120;
+        bulkCopy.EnableStreaming = true;
+
+        var dataTable = new DataTable("DefaultCollectionSemaphoreDataTable");
+
+        var organizationIdColumn = new DataColumn(nameof(DefaultCollectionSemaphore.OrganizationId), typeof(Guid));
+        dataTable.Columns.Add(organizationIdColumn);
+        var organizationUserIdColumn = new DataColumn(nameof(DefaultCollectionSemaphore.OrganizationUserId), typeof(Guid));
+        dataTable.Columns.Add(organizationUserIdColumn);
+        var creationDateColumn = new DataColumn(nameof(DefaultCollectionSemaphore.CreationDate), typeof(DateTime));
+        dataTable.Columns.Add(creationDateColumn);
+
+        foreach (DataColumn col in dataTable.Columns)
+        {
+            bulkCopy.ColumnMappings.Add(col.ColumnName, col.ColumnName);
+        }
+
+        var keys = new DataColumn[2];
+        keys[0] = organizationIdColumn;
+        keys[1] = organizationUserIdColumn;
+        dataTable.PrimaryKey = keys;
+
+        foreach (var semaphore in sortedSemaphores)
+        {
+            var row = dataTable.NewRow();
+            row[organizationIdColumn] = semaphore.OrganizationId;
+            row[organizationUserIdColumn] = semaphore.OrganizationUserId;
+            row[creationDateColumn] = semaphore.CreationDate;
+            dataTable.Rows.Add(row);
+        }
+
+        await bulkCopy.WriteToServerAsync(dataTable);
     }
 
     public class CollectionWithGroupsAndUsers : Collection

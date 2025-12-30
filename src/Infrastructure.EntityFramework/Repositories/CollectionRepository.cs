@@ -3,6 +3,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
+using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using LinqToDB.EntityFrameworkCore;
@@ -815,10 +816,27 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
             return;
         }
 
+        // CRITICAL: Insert semaphore entries BEFORE collections
+        // TODO: this will result in a creation date of the semaphore AFTER that of the collection, which is weird
+        var now = DateTime.UtcNow;
+        var semaphores = collectionUsers.Select(c => new DefaultCollectionSemaphore
+        {
+            OrganizationId = organizationId,
+            OrganizationUserId = c.OrganizationUserId,
+            CreationDate = now
+        }).ToList();
+
+        await dbContext.BulkCopyAsync(semaphores);
         await dbContext.BulkCopyAsync(collections);
         await dbContext.BulkCopyAsync(collectionUsers);
 
         await dbContext.SaveChangesAsync();
+    }
+
+    public async Task UpsertDefaultCollectionsBulkAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName)
+    {
+        // EF uses the same bulk copy approach as the main method
+        await UpsertDefaultCollectionsAsync(organizationId, organizationUserIds, defaultCollectionName);
     }
 
     private async Task<HashSet<Guid>> GetOrgUserIdsWithDefaultCollectionAsync(DatabaseContext dbContext, Guid organizationId)
