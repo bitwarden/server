@@ -1,7 +1,8 @@
 ﻿using System.Text.Json;
 using Bit.Core.Models.Data;
+using Bit.Core.Services;
 
-namespace Bit.Core.Services;
+namespace Bit.Core.Dirt.Services.Implementations;
 public class EventIntegrationEventWriteService : IEventWriteService, IAsyncDisposable
 {
     private readonly IEventIntegrationPublisher _eventIntegrationPublisher;
