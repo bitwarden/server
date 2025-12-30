@@ -85,11 +85,6 @@ public class AccountBillingVNextController(
     public async Task<IResult> GetLicenseAsync(
         [BindNever] User user)
     {
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
         var response = await getUserLicenseQuery.Run(user);
         return TypedResults.Ok(response);
     }
