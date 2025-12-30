@@ -24,7 +24,8 @@ public class AccountsController(
     IUserService userService,
     ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
     IUserAccountKeysQuery userAccountKeysQuery,
-    IFeatureService featureService) : Controller
+    IFeatureService featureService,
+    ILicensingService licensingService) : Controller
 {
     // TODO: Remove when pm-24996-implement-upgrade-from-free-dialog is removed
     [HttpPost("premium")]
@@ -86,6 +87,11 @@ public class AccountsController(
             throw new UnauthorizedAccessException();
         }
 
+        // Check if the new premium subscription page feature flag is enabled
+        // When enabled, clients should use the separate /license endpoint
+        // When disabled, include license in subscription response for backward compatibility
+        var useNewPremiumPage = featureService.IsEnabled(FeatureFlagKeys.PM24996ImplementUpgradeFromFreeDialog);
+
         // Only cloud-hosted users with payment gateways have subscription and discount information
         if (!globalSettings.SelfHosted)
         {
@@ -96,11 +102,34 @@ public class AccountsController(
                 // The feature flag controls the broader Milestone 2 feature set, not just this specific task.
                 var includeMilestone2Discount = featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2);
                 var subscriptionInfo = await paymentService.GetSubscriptionAsync(user);
-                return new SubscriptionResponseModel(user, subscriptionInfo, includeMilestone2Discount);
+
+                if (useNewPremiumPage)
+                {
+                    // New flow: Don't include license, clients should call /license endpoint
+                    return new SubscriptionResponseModel(user, subscriptionInfo, includeMilestone2Discount);
+                }
+                else
+                {
+                    // Old flow: Include license for backward compatibility
+                    var license = await userService.GenerateLicenseAsync(user, subscriptionInfo);
+                    var claimsPrincipal = licensingService.GetClaimsPrincipalFromLicense(license);
+                    return new SubscriptionResponseModel(user, subscriptionInfo, license, claimsPrincipal, includeMilestone2Discount);
+                }
             }
             else
             {
-                return new SubscriptionResponseModel(user, null);
+                if (useNewPremiumPage)
+                {
+                    // New flow: Don't include license
+                    return new SubscriptionResponseModel(user, null);
+                }
+                else
+                {
+                    // Old flow: Include license for backward compatibility
+                    var license = await userService.GenerateLicenseAsync(user);
+                    var claimsPrincipal = licensingService.GetClaimsPrincipalFromLicense(license);
+                    return new SubscriptionResponseModel(user, null, license, claimsPrincipal);
+                }
             }
         }
         else

@@ -1,10 +1,9 @@
 ﻿using System.Security.Claims;
-using Bit.Core.Billing.Licenses;
 using Bit.Core.Billing.Licenses.Extensions;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Models.Api;
 
-namespace Bit.Api.Models.Response;
+namespace Bit.Core.Billing.Licenses.Models.Api.Response;
 
 /// <summary>
 /// Response model containing user license information.
