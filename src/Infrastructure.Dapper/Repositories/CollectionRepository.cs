@@ -502,7 +502,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
             .ThenBy(s => s.OrganizationUserId)
             .ToList();
 
-        using var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction);
+        using var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity & SqlBulkCopyOptions.CheckConstraints, transaction);
         bulkCopy.DestinationTableName = "[dbo].[DefaultCollectionSemaphore]";
         bulkCopy.BatchSize = 500;
         bulkCopy.BulkCopyTimeout = 120;
