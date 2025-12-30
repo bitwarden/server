@@ -1,4 +1,4 @@
-using Bit.Core.Billing.Licenses.Models.Api.Response;
+﻿using Bit.Core.Billing.Licenses.Models.Api.Response;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Services;

@@ -1,4 +1,4 @@
-using Bit.Core.Billing.Licenses.Queries;
+﻿using Bit.Core.Billing.Licenses.Queries;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Core.Billing.Licenses;
