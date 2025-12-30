@@ -3,6 +3,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Update;
 using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -162,8 +163,9 @@ public class OrganizationUpdateCommandTests
             OrganizationId = organizationId,
             Name = organization.Name,
             BillingEmail = organization.BillingEmail,
-            PublicKey = publicKey,
-            EncryptedPrivateKey = encryptedPrivateKey
+            Keys = new PublicKeyEncryptionKeyPairData(
+                wrappedPrivateKey: encryptedPrivateKey,
+                publicKey: publicKey)
         };
 
         // Act
@@ -207,8 +209,9 @@ public class OrganizationUpdateCommandTests
             OrganizationId = organizationId,
             Name = organization.Name,
             BillingEmail = organization.BillingEmail,
-            PublicKey = newPublicKey,
-            EncryptedPrivateKey = newEncryptedPrivateKey
+            Keys = new PublicKeyEncryptionKeyPairData(
+                wrappedPrivateKey: newEncryptedPrivateKey,
+                publicKey: newPublicKey)
         };
 
         // Act
@@ -394,8 +397,9 @@ public class OrganizationUpdateCommandTests
             OrganizationId = organizationId,
             Name = newName, // Should be ignored
             BillingEmail = newBillingEmail, // Should be ignored
-            PublicKey = publicKey,
-            EncryptedPrivateKey = encryptedPrivateKey
+            Keys = new PublicKeyEncryptionKeyPairData(
+                wrappedPrivateKey: encryptedPrivateKey,
+                publicKey: publicKey)
         };
 
         // Act
