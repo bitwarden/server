@@ -107,7 +107,7 @@ public abstract class BaseJobsHostedService : IHostedService, IDisposable
                             throw new Exception("Job failed to start after 10 retries.");
                         }
 
-                        _logger.LogWarning($"Exception while trying to schedule job: {job.FullName}, {e}");
+                        _logger.LogWarning(e, "Exception while trying to schedule job: {JobName}", job.FullName);
                         var random = new Random();
                         await Task.Delay(random.Next(50, 250));
                     }
@@ -125,7 +125,7 @@ public abstract class BaseJobsHostedService : IHostedService, IDisposable
                 continue;
             }
 
-            _logger.LogInformation($"Deleting old job with key {key}");
+            _logger.LogInformation("Deleting old job with key {Key}", key);
             await _scheduler.DeleteJob(key);
         }
 
@@ -138,7 +138,7 @@ public abstract class BaseJobsHostedService : IHostedService, IDisposable
                 continue;
             }
 
-            _logger.LogInformation($"Unscheduling old trigger with key {key}");
+            _logger.LogInformation("Unscheduling old trigger with key {Key}", key);
             await _scheduler.UnscheduleJob(key);
         }
     }

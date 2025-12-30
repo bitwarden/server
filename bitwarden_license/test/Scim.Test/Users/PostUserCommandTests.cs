@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -36,7 +37,7 @@ public class PostUserCommandTests
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(organization);
 
-        sutProvider.GetDependency<IPaymentService>().HasSecretsManagerStandalone(organization).Returns(true);
+        sutProvider.GetDependency<IStripePaymentService>().HasSecretsManagerStandalone(organization).Returns(true);
 
         sutProvider.GetDependency<IOrganizationService>()
             .InviteUserAsync(organizationId,

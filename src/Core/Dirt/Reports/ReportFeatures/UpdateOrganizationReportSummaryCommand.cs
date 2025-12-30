@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Dirt.Entities;
+using Bit.Core.Dirt.Reports.Models.Data;
 using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
 using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 using Bit.Core.Dirt.Repositories;
@@ -53,7 +54,8 @@ public class UpdateOrganizationReportSummaryCommand : IUpdateOrganizationReportS
                 throw new BadRequestException("Organization report does not belong to the specified organization");
             }
 
-            var updatedReport = await _organizationReportRepo.UpdateSummaryDataAsync(request.OrganizationId, request.ReportId, request.SummaryData);
+            await _organizationReportRepo.UpdateMetricsAsync(request.ReportId, OrganizationReportMetricsData.From(request.OrganizationId, request.Metrics));
+            var updatedReport = await _organizationReportRepo.UpdateSummaryDataAsync(request.OrganizationId, request.ReportId, request.SummaryData ?? string.Empty);
 
             _logger.LogInformation(Constants.BypassFiltersEventId, "Successfully updated organization report summary {reportId} for organization {organizationId}",
                 request.ReportId, request.OrganizationId);

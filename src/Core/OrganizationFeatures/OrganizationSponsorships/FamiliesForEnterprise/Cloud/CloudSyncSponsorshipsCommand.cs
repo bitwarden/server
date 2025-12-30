@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -7,7 +8,6 @@ using Bit.Core.Models.Data.Organizations.OrganizationSponsorships;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
 
@@ -54,10 +54,9 @@ public class CloudSyncSponsorshipsCommand : ICloudSyncSponsorshipsCommand
 
         foreach (var selfHostedSponsorship in sponsorshipsData)
         {
-            var requiredSponsoringProductType = StaticStore.GetSponsoredPlan(selfHostedSponsorship.PlanSponsorshipType)?.SponsoringProductTierType;
+            var requiredSponsoringProductType = SponsoredPlans.Get(selfHostedSponsorship.PlanSponsorshipType).SponsoringProductTierType;
             var sponsoringOrgProductTier = sponsoringOrg.PlanType.GetProductTier();
-            if (requiredSponsoringProductType == null
-                || sponsoringOrgProductTier != requiredSponsoringProductType.Value)
+            if (sponsoringOrgProductTier != requiredSponsoringProductType)
             {
                 continue; // prevent unsupported sponsorships
             }

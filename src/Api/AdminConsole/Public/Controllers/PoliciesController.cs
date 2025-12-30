@@ -6,9 +6,8 @@ using Bit.Api.AdminConsole.Public.Models.Request;
 using Bit.Api.AdminConsole.Public.Models.Response;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Context;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -20,20 +19,17 @@ namespace Bit.Api.AdminConsole.Public.Controllers;
 public class PoliciesController : Controller
 {
     private readonly IPolicyRepository _policyRepository;
-    private readonly IPolicyService _policyService;
     private readonly ICurrentContext _currentContext;
-    private readonly ISavePolicyCommand _savePolicyCommand;
+    private readonly IVNextSavePolicyCommand _vNextSavePolicyCommand;
 
     public PoliciesController(
         IPolicyRepository policyRepository,
-        IPolicyService policyService,
         ICurrentContext currentContext,
-        ISavePolicyCommand savePolicyCommand)
+        IVNextSavePolicyCommand vNextSavePolicyCommand)
     {
         _policyRepository = policyRepository;
-        _policyService = policyService;
         _currentContext = currentContext;
-        _savePolicyCommand = savePolicyCommand;
+        _vNextSavePolicyCommand = vNextSavePolicyCommand;
     }
 
     /// <summary>
@@ -87,8 +83,8 @@ public class PoliciesController : Controller
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
     public async Task<IActionResult> Put(PolicyType type, [FromBody] PolicyUpdateRequestModel model)
     {
-        var policyUpdate = model.ToPolicyUpdate(_currentContext.OrganizationId!.Value, type);
-        var policy = await _savePolicyCommand.SaveAsync(policyUpdate);
+        var savePolicyModel = model.ToSavePolicyModel(_currentContext.OrganizationId!.Value, type);
+        var policy = await _vNextSavePolicyCommand.SaveAsync(savePolicyModel);
 
         var response = new PolicyResponseModel(policy);
         return new JsonResult(response);

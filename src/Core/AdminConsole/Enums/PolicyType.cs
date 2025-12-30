@@ -21,6 +21,7 @@ public enum PolicyType : byte
     UriMatchDefaults = 16,
     AutotypeDefaultSetting = 17,
     AutomaticUserConfirmation = 18,
+    BlockClaimedDomainAccountCreation = 19,
 }
 
 public static class PolicyTypeExtensions
@@ -45,13 +46,14 @@ public static class PolicyTypeExtensions
             PolicyType.MaximumVaultTimeout => "Vault timeout",
             PolicyType.DisablePersonalVaultExport => "Remove individual vault export",
             PolicyType.ActivateAutofill => "Active auto-fill",
-            PolicyType.AutomaticAppLogIn => "Automatically log in users for allowed applications",
+            PolicyType.AutomaticAppLogIn => "Automatic login with SSO",
             PolicyType.FreeFamiliesSponsorshipPolicy => "Remove Free Bitwarden Families sponsorship",
             PolicyType.RemoveUnlockWithPin => "Remove unlock with PIN",
             PolicyType.RestrictedItemTypesPolicy => "Restricted item types",
             PolicyType.UriMatchDefaults => "URI match defaults",
             PolicyType.AutotypeDefaultSetting => "Autotype default setting",
             PolicyType.AutomaticUserConfirmation => "Automatically confirm invited users",
+            PolicyType.BlockClaimedDomainAccountCreation => "Block account creation for claimed domains",
         };
     }
 }

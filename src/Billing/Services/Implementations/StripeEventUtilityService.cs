@@ -2,12 +2,13 @@
 #nullable disable
 
 using Bit.Billing.Constants;
+using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Models;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Braintree;
 using Stripe;
 using Customer = Stripe.Customer;
@@ -87,25 +88,6 @@ public class StripeEventUtilityService : IStripeEventUtilityService
     /// <returns></returns>
     public async Task<(Guid?, Guid?, Guid?)> GetEntityIdsFromChargeAsync(Charge charge)
     {
-        Guid? organizationId = null;
-        Guid? userId = null;
-        Guid? providerId = null;
-
-        if (charge.InvoiceId != null)
-        {
-            var invoice = await _stripeFacade.GetInvoice(charge.InvoiceId);
-            if (invoice?.SubscriptionId != null)
-            {
-                var subscription = await _stripeFacade.GetSubscription(invoice.SubscriptionId);
-                (organizationId, userId, providerId) = GetIdsFromMetadata(subscription?.Metadata);
-            }
-        }
-
-        if (organizationId.HasValue || userId.HasValue || providerId.HasValue)
-        {
-            return (organizationId, userId, providerId);
-        }
-
         var subscriptions = await _stripeFacade.ListSubscriptions(new SubscriptionListOptions
         {
             Customer = charge.CustomerId
@@ -118,7 +100,7 @@ public class StripeEventUtilityService : IStripeEventUtilityService
                 continue;
             }
 
-            (organizationId, userId, providerId) = GetIdsFromMetadata(subscription.Metadata);
+            var (organizationId, userId, providerId) = GetIdsFromMetadata(subscription.Metadata);
 
             if (organizationId.HasValue || userId.HasValue || providerId.HasValue)
             {
@@ -130,7 +112,7 @@ public class StripeEventUtilityService : IStripeEventUtilityService
     }
 
     public bool IsSponsoredSubscription(Subscription subscription) =>
-        StaticStore.SponsoredPlans
+        SponsoredPlans.All
             .Any(p => subscription.Items
                 .Any(i => i.Plan.Id == p.StripePlanId));
 
@@ -142,7 +124,7 @@ public class StripeEventUtilityService : IStripeEventUtilityService
     /// <param name="userId"></param>
     /// /// <param name="providerId"></param>
     /// <returns></returns>
-    public Transaction FromChargeToTransaction(Charge charge, Guid? organizationId, Guid? userId, Guid? providerId)
+    public async Task<Transaction> FromChargeToTransactionAsync(Charge charge, Guid? organizationId, Guid? userId, Guid? providerId)
     {
         var transaction = new Transaction
         {
@@ -227,6 +209,24 @@ public class StripeEventUtilityService : IStripeEventUtilityService
                         transaction.PaymentMethodType = PaymentMethodType.BankAccount;
                         transaction.Details = $"ACH => {achCreditTransfer.BankName}, {achCreditTransfer.AccountNumber}";
                     }
+                    else if (charge.PaymentMethodDetails.CustomerBalance != null)
+                    {
+                        var bankTransferType = await GetFundingBankTransferTypeAsync(charge);
+
+                        if (!string.IsNullOrEmpty(bankTransferType))
+                        {
+                            transaction.PaymentMethodType = PaymentMethodType.BankAccount;
+                            transaction.Details = bankTransferType switch
+                            {
+                                "eu_bank_transfer" => "EU Bank Transfer",
+                                "gb_bank_transfer" => "GB Bank Transfer",
+                                "jp_bank_transfer" => "JP Bank Transfer",
+                                "mx_bank_transfer" => "MX Bank Transfer",
+                                "us_bank_transfer" => "US Bank Transfer",
+                                _ => "Bank Transfer"
+                            };
+                        }
+                    }
 
                     break;
                 }
@@ -256,10 +256,10 @@ public class StripeEventUtilityService : IStripeEventUtilityService
         invoice is
         {
             AmountDue: > 0,
-            Paid: false,
+            Status: not StripeConstants.InvoiceStatus.Paid,
             CollectionMethod: "charge_automatically",
             BillingReason: "subscription_cycle" or "automatic_pending_invoice_item_invoice",
-            SubscriptionId: not null
+            Parent.SubscriptionDetails: not null
         };
 
     private async Task<bool> AttemptToPayInvoiceWithBraintreeAsync(Invoice invoice, Customer customer)
@@ -272,7 +272,13 @@ public class StripeEventUtilityService : IStripeEventUtilityService
             return false;
         }
 
-        var subscription = await _stripeFacade.GetSubscription(invoice.SubscriptionId);
+        if (invoice.Parent?.SubscriptionDetails == null)
+        {
+            _logger.LogWarning("Invoice parent was not a subscription.");
+            return false;
+        }
+
+        var subscription = await _stripeFacade.GetSubscription(invoice.Parent.SubscriptionDetails.SubscriptionId);
         var (organizationId, userId, providerId) = GetIdsFromMetadata(subscription?.Metadata);
         if (!organizationId.HasValue && !userId.HasValue && !providerId.HasValue)
         {
@@ -301,20 +307,13 @@ public class StripeEventUtilityService : IStripeEventUtilityService
         }
         var btInvoiceAmount = Math.Round(invoice.AmountDue / 100M, 2);
 
-        var existingTransactions = organizationId.HasValue
-            ? await _transactionRepository.GetManyByOrganizationIdAsync(organizationId.Value)
-            : userId.HasValue
-                ? await _transactionRepository.GetManyByUserIdAsync(userId.Value)
-                : await _transactionRepository.GetManyByProviderIdAsync(providerId.Value);
-
-        var duplicateTimeSpan = TimeSpan.FromHours(24);
-        var now = DateTime.UtcNow;
-        var duplicateTransaction = existingTransactions?
-            .FirstOrDefault(t => (now - t.CreationDate) < duplicateTimeSpan);
-        if (duplicateTransaction != null)
+        // Check if this invoice already has a Braintree transaction ID to prevent duplicate charges
+        if (invoice.Metadata?.ContainsKey("btTransactionId") ?? false)
         {
-            _logger.LogWarning("There is already a recent PayPal transaction ({0}). " +
-                "Do not charge again to prevent possible duplicate.", duplicateTransaction.GatewayId);
+            _logger.LogWarning("Invoice {InvoiceId} already has a Braintree transaction ({TransactionId}). " +
+                "Do not charge again to prevent duplicate.",
+                invoice.Id,
+                invoice.Metadata["btTransactionId"]);
             return false;
         }
 
@@ -424,5 +423,56 @@ public class StripeEventUtilityService : IStripeEventUtilityService
 
             throw;
         }
+    }
+
+    /// <summary>
+    /// Retrieves the bank transfer type that funded a charge paid via customer balance.
+    /// </summary>
+    /// <param name="charge">The charge to analyze.</param>
+    /// <returns>
+    /// The bank transfer type (e.g., "us_bank_transfer", "eu_bank_transfer") if the charge was funded
+    /// by a bank transfer via customer balance, otherwise null.
+    /// </returns>
+    private async Task<string> GetFundingBankTransferTypeAsync(Charge charge)
+    {
+        if (charge is not
+            {
+                CustomerId: not null,
+                PaymentIntentId: not null,
+                PaymentMethodDetails: { Type: "customer_balance" }
+            })
+        {
+            return null;
+        }
+
+        var cashBalanceTransactions = _stripeFacade.GetCustomerCashBalanceTransactions(charge.CustomerId);
+
+        string bankTransferType = null;
+        var matchingPaymentIntentFound = false;
+
+        await foreach (var cashBalanceTransaction in cashBalanceTransactions)
+        {
+            switch (cashBalanceTransaction)
+            {
+                case { Type: "funded", Funded: not null }:
+                    {
+                        bankTransferType = cashBalanceTransaction.Funded.BankTransfer.Type;
+                        break;
+                    }
+                case { Type: "applied_to_payment", AppliedToPayment: not null }
+                    when cashBalanceTransaction.AppliedToPayment.PaymentIntentId == charge.PaymentIntentId:
+                    {
+                        matchingPaymentIntentFound = true;
+                        break;
+                    }
+            }
+
+            if (matchingPaymentIntentFound && !string.IsNullOrEmpty(bankTransferType))
+            {
+                return bankTransferType;
+            }
+        }
+
+        return null;
     }
 }

@@ -12,13 +12,15 @@ using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Models.Data;
+using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Test.Billing.Mocks;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Repositories;
-using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
@@ -74,6 +76,7 @@ public class SyncControllerTests
         var policyRepository = sutProvider.GetDependency<IPolicyRepository>();
         var collectionRepository = sutProvider.GetDependency<ICollectionRepository>();
         var collectionCipherRepository = sutProvider.GetDependency<ICollectionCipherRepository>();
+        var userAccountKeysQuery = sutProvider.GetDependency<IUserAccountKeysQuery>();
 
         // Adjust random data to match required formats / test intentions
         user.EquivalentDomains = JsonSerializer.Serialize(userEquivalentDomains);
@@ -98,6 +101,11 @@ public class SyncControllerTests
 
         // Setup returns
         userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsForAnyArgs(user);
+        userAccountKeysQuery.Run(user).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = user.GetPublicKeyEncryptionKeyPair(),
+            SignatureKeyPairData = null,
+        });
 
         organizationUserRepository
             .GetManyDetailsByUserAsync(user.Id, OrganizationUserStatusType.Confirmed).Returns(organizationUserDetails);
@@ -126,7 +134,6 @@ public class SyncControllerTests
 
         // Execute GET
         var result = await sutProvider.Sut.Get();
-
 
         // Asserts
         // Assert that methods are called
@@ -166,6 +173,7 @@ public class SyncControllerTests
         var policyRepository = sutProvider.GetDependency<IPolicyRepository>();
         var collectionRepository = sutProvider.GetDependency<ICollectionRepository>();
         var collectionCipherRepository = sutProvider.GetDependency<ICollectionCipherRepository>();
+        var userAccountKeysQuery = sutProvider.GetDependency<IUserAccountKeysQuery>();
 
         // Adjust random data to match required formats / test intentions
         user.EquivalentDomains = JsonSerializer.Serialize(userEquivalentDomains);
@@ -189,6 +197,11 @@ public class SyncControllerTests
 
         // Setup returns
         userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsForAnyArgs(user);
+        userAccountKeysQuery.Run(user).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = user.GetPublicKeyEncryptionKeyPair(),
+            SignatureKeyPairData = null,
+        });
 
         organizationUserRepository
             .GetManyDetailsByUserAsync(user.Id, OrganizationUserStatusType.Confirmed).Returns(organizationUserDetails);
@@ -256,6 +269,7 @@ public class SyncControllerTests
         var policyRepository = sutProvider.GetDependency<IPolicyRepository>();
         var collectionRepository = sutProvider.GetDependency<ICollectionRepository>();
         var collectionCipherRepository = sutProvider.GetDependency<ICollectionCipherRepository>();
+        var userAccountKeysQuery = sutProvider.GetDependency<IUserAccountKeysQuery>();
 
         // Adjust random data to match required formats / test intentions
         user.EquivalentDomains = JsonSerializer.Serialize(userEquivalentDomains);
@@ -271,6 +285,10 @@ public class SyncControllerTests
         providerUserRepository
             .GetManyDetailsByUserAsync(user.Id, ProviderUserStatusType.Confirmed).Returns(providerUserDetails);
 
+        foreach (var p in providerUserOrganizationDetails)
+        {
+            p.SsoConfig = null;
+        }
         providerUserRepository
             .GetManyOrganizationDetailsByUserAsync(user.Id, ProviderUserStatusType.Confirmed)
             .Returns(providerUserOrganizationDetails);
@@ -289,6 +307,12 @@ public class SyncControllerTests
         // Back to standard test setup
         twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user).Returns(false);
         userService.HasPremiumFromOrganization(user).Returns(false);
+
+        userAccountKeysQuery.Run(user).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = user.GetPublicKeyEncryptionKeyPair(),
+            SignatureKeyPairData = null,
+        });
 
         // Execute GET
         var result = await sutProvider.Sut.Get();
@@ -311,7 +335,7 @@ public class SyncControllerTests
 
             if (matchedProviderUserOrgDetails != null)
             {
-                var providerOrgProductType = StaticStore.GetPlan(matchedProviderUserOrgDetails.PlanType).ProductTier;
+                var providerOrgProductType = MockPlans.Get(matchedProviderUserOrgDetails.PlanType).ProductTier;
                 Assert.Equal(providerOrgProductType, profProviderOrg.ProductTierType);
             }
         }
@@ -326,6 +350,13 @@ public class SyncControllerTests
         user.ExcludedGlobalEquivalentDomains = null;
 
         user.MasterPassword = null;
+
+        var userAccountKeysQuery = sutProvider.GetDependency<IUserAccountKeysQuery>();
+        userAccountKeysQuery.Run(user).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = user.GetPublicKeyEncryptionKeyPair(),
+            SignatureKeyPairData = null,
+        });
 
         var userService = sutProvider.GetDependency<IUserService>();
         userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsForAnyArgs(user);
@@ -351,6 +382,13 @@ public class SyncControllerTests
         user.KdfIterations = kdfIterations;
         user.KdfMemory = kdfMemory;
         user.KdfParallelism = kdfParallelism;
+
+        var userAccountKeysQuery = sutProvider.GetDependency<IUserAccountKeysQuery>();
+        userAccountKeysQuery.Run(user).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = user.GetPublicKeyEncryptionKeyPair(),
+            SignatureKeyPairData = null,
+        });
 
         var userService = sutProvider.GetDependency<IUserService>();
         userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsForAnyArgs(user);

@@ -12,6 +12,12 @@ public static class StripeConstants
         public const string UnrecognizedLocation = "unrecognized_location";
     }
 
+    public static class BillingReasons
+    {
+        public const string SubscriptionCreate = "subscription_create";
+        public const string SubscriptionCycle = "subscription_cycle";
+    }
+
     public static class CollectionMethod
     {
         public const string ChargeAutomatically = "charge_automatically";
@@ -22,6 +28,8 @@ public static class StripeConstants
     {
         public const string LegacyMSPDiscount = "msp-discount-35";
         public const string SecretsManagerStandalone = "sm-standalone";
+        public const string Milestone2SubscriptionDiscount = "milestone-2c";
+        public const string Milestone3SubscriptionDiscount = "milestone-3";
 
         public static class MSPDiscounts
         {
@@ -63,6 +71,7 @@ public static class StripeConstants
         public const string Region = "region";
         public const string RetiredBraintreeCustomerId = "btCustomerId_old";
         public const string UserId = "userId";
+        public const string StorageReconciled2025 = "storage_reconciled_2025";
     }
 
     public static class PaymentBehavior

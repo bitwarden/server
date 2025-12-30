@@ -15,8 +15,10 @@
   },
   "homepage": "https://bitwarden.com",
   "scripts": {
-    "build": "./build.sh",
-    "watch": "nodemon --exec ./build.sh --watch ./components --watch ./emails --ext js,mjml",
+    "build": "node ./build.js",
+    "build:hbs": "node ./build.js --hbs",
+    "build:minify": "node ./build.js --hbs --minify",
+    "build:watch": "nodemon ./build.js --watch emails --watch components --ext mjml,js",
     "prettier": "prettier --cache --write ."
   },
   "dependencies": {

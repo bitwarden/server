@@ -143,6 +143,7 @@ public class OrganizationLicense : ILicense
     public int? SmSeats { get; set; }
     public int? SmServiceAccounts { get; set; }
     public bool UseRiskInsights { get; set; }
+    public bool UsePhishingBlocker { get; set; }
 
     // Deprecated. Left for backwards compatibility with old license versions.
     public bool LimitCollectionCreationDeletion { get; set; } = true;
@@ -153,6 +154,7 @@ public class OrganizationLicense : ILicense
     public LicenseType? LicenseType { get; set; }
     public bool UseOrganizationDomains { get; set; }
     public bool UseAdminSponsoredFamilies { get; set; }
+    public bool UseAutomaticUserConfirmation { get; set; }
     public string Hash { get; set; }
     public string Signature { get; set; }
     public string Token { get; set; }
@@ -226,7 +228,9 @@ public class OrganizationLicense : ILicense
                     // any new fields added need to be added here so that they're ignored
                     !p.Name.Equals(nameof(UseRiskInsights)) &&
                     !p.Name.Equals(nameof(UseAdminSponsoredFamilies)) &&
-                    !p.Name.Equals(nameof(UseOrganizationDomains)))
+                    !p.Name.Equals(nameof(UseOrganizationDomains)) &&
+                    !p.Name.Equals(nameof(UseAutomaticUserConfirmation)) &&
+                    !p.Name.Equals(nameof(UsePhishingBlocker)))
                 .OrderBy(p => p.Name)
                 .Select(p => $"{p.Name}:{Core.Utilities.CoreHelpers.FormatLicenseSignatureValue(p.GetValue(this, null))}")
                 .Aggregate((c, n) => $"{c}|{n}");
@@ -397,7 +401,6 @@ public class OrganizationLicense : ILicense
         var installationId = claimsPrincipal.GetValue<Guid>(nameof(InstallationId));
         var licenseKey = claimsPrincipal.GetValue<string>(nameof(LicenseKey));
         var enabled = claimsPrincipal.GetValue<bool>(nameof(Enabled));
-        var planType = claimsPrincipal.GetValue<PlanType>(nameof(PlanType));
         var seats = claimsPrincipal.GetValue<int?>(nameof(Seats));
         var maxCollections = claimsPrincipal.GetValue<short?>(nameof(MaxCollections));
         var useGroups = claimsPrincipal.GetValue<bool>(nameof(UseGroups));
@@ -421,13 +424,20 @@ public class OrganizationLicense : ILicense
         var smServiceAccounts = claimsPrincipal.GetValue<int?>(nameof(SmServiceAccounts));
         var useAdminSponsoredFamilies = claimsPrincipal.GetValue<bool>(nameof(UseAdminSponsoredFamilies));
         var useOrganizationDomains = claimsPrincipal.GetValue<bool>(nameof(UseOrganizationDomains));
+        var useAutomaticUserConfirmation = claimsPrincipal.GetValue<bool>(nameof(UseAutomaticUserConfirmation));
+
+        var claimedPlanType = claimsPrincipal.GetValue<PlanType>(nameof(PlanType));
+
+        var planTypesMatch = claimedPlanType == PlanType.FamiliesAnnually
+            ? organization.PlanType is PlanType.FamiliesAnnually or PlanType.FamiliesAnnually2025
+            : organization.PlanType == claimedPlanType;
 
         return issued <= DateTime.UtcNow &&
                expires >= DateTime.UtcNow &&
                installationId == globalSettings.Installation.Id &&
                licenseKey == organization.LicenseKey &&
                enabled == organization.Enabled &&
-               planType == organization.PlanType &&
+               planTypesMatch &&
                seats == organization.Seats &&
                maxCollections == organization.MaxCollections &&
                useGroups == organization.UseGroups &&
@@ -450,7 +460,8 @@ public class OrganizationLicense : ILicense
                smSeats == organization.SmSeats &&
                smServiceAccounts == organization.SmServiceAccounts &&
                useAdminSponsoredFamilies == organization.UseAdminSponsoredFamilies &&
-               useOrganizationDomains == organization.UseOrganizationDomains;
+               useOrganizationDomains == organization.UseOrganizationDomains &&
+               useAutomaticUserConfirmation == organization.UseAutomaticUserConfirmation;
 
     }
 

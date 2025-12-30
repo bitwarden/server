@@ -1,6 +1,7 @@
 ﻿using AutoFixture;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Dirt.Entities;
+using Bit.Core.Dirt.Reports.Models.Data;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Repositories;
 using Bit.Core.Test.AutoFixture.Attributes;
@@ -50,6 +51,75 @@ public class OrganizationReportRepositoryTests
     }
 
     [CiSkippedTheory, EfOrganizationReportAutoData]
+    public async Task CreateAsync_ShouldPersistAllMetricProperties_WhenSet(
+        List<EntityFramework.Dirt.Repositories.OrganizationReportRepository> suts,
+        List<EfRepo.OrganizationRepository> efOrganizationRepos,
+        OrganizationReportRepository sqlOrganizationReportRepo,
+        SqlRepo.OrganizationRepository sqlOrganizationRepo)
+    {
+        // Arrange - Create a report with explicit metric values
+        var fixture = new Fixture();
+        var organization = fixture.Create<Organization>();
+        var report = fixture.Build<OrganizationReport>()
+            .With(x => x.ApplicationCount, 10)
+            .With(x => x.ApplicationAtRiskCount, 3)
+            .With(x => x.CriticalApplicationCount, 5)
+            .With(x => x.CriticalApplicationAtRiskCount, 2)
+            .With(x => x.MemberCount, 25)
+            .With(x => x.MemberAtRiskCount, 7)
+            .With(x => x.CriticalMemberCount, 12)
+            .With(x => x.CriticalMemberAtRiskCount, 4)
+            .With(x => x.PasswordCount, 100)
+            .With(x => x.PasswordAtRiskCount, 15)
+            .With(x => x.CriticalPasswordCount, 50)
+            .With(x => x.CriticalPasswordAtRiskCount, 8)
+            .Create();
+
+        var retrievedReports = new List<OrganizationReport>();
+
+        // Act & Assert - Test EF repositories
+        foreach (var sut in suts)
+        {
+            var i = suts.IndexOf(sut);
+            var efOrganization = await efOrganizationRepos[i].CreateAsync(organization);
+            sut.ClearChangeTracking();
+
+            report.OrganizationId = efOrganization.Id;
+            var createdReport = await sut.CreateAsync(report);
+            sut.ClearChangeTracking();
+
+            var savedReport = await sut.GetByIdAsync(createdReport.Id);
+            retrievedReports.Add(savedReport);
+        }
+
+        // Act & Assert - Test SQL repository
+        var sqlOrganization = await sqlOrganizationRepo.CreateAsync(organization);
+        report.OrganizationId = sqlOrganization.Id;
+        var sqlCreatedReport = await sqlOrganizationReportRepo.CreateAsync(report);
+        var savedSqlReport = await sqlOrganizationReportRepo.GetByIdAsync(sqlCreatedReport.Id);
+        retrievedReports.Add(savedSqlReport);
+
+        // Assert - Verify all metric properties are persisted correctly across all repositories
+        Assert.True(retrievedReports.Count == 4);
+        foreach (var retrievedReport in retrievedReports)
+        {
+            Assert.NotNull(retrievedReport);
+            Assert.Equal(10, retrievedReport.ApplicationCount);
+            Assert.Equal(3, retrievedReport.ApplicationAtRiskCount);
+            Assert.Equal(5, retrievedReport.CriticalApplicationCount);
+            Assert.Equal(2, retrievedReport.CriticalApplicationAtRiskCount);
+            Assert.Equal(25, retrievedReport.MemberCount);
+            Assert.Equal(7, retrievedReport.MemberAtRiskCount);
+            Assert.Equal(12, retrievedReport.CriticalMemberCount);
+            Assert.Equal(4, retrievedReport.CriticalMemberAtRiskCount);
+            Assert.Equal(100, retrievedReport.PasswordCount);
+            Assert.Equal(15, retrievedReport.PasswordAtRiskCount);
+            Assert.Equal(50, retrievedReport.CriticalPasswordCount);
+            Assert.Equal(8, retrievedReport.CriticalPasswordAtRiskCount);
+        }
+    }
+
+    [CiSkippedTheory, EfOrganizationReportAutoData]
     public async Task RetrieveByOrganisation_Works(
         OrganizationReportRepository sqlOrganizationReportRepo,
         SqlRepo.OrganizationRepository sqlOrganizationRepo)
@@ -64,6 +134,67 @@ public class OrganizationReportRepositoryTests
         Assert.NotNull(secondRetrievedReport);
         Assert.Equal(firstOrg.Id, firstRetrievedReport.OrganizationId);
         Assert.Equal(secondOrg.Id, secondRetrievedReport.OrganizationId);
+    }
+
+    [CiSkippedTheory, EfOrganizationReportAutoData]
+    public async Task UpdateAsync_ShouldUpdateAllMetricProperties_WhenChanged(
+        OrganizationReportRepository sqlOrganizationReportRepo,
+        SqlRepo.OrganizationRepository sqlOrganizationRepo)
+    {
+        // Arrange - Create initial report with specific metric values
+        var fixture = new Fixture();
+        var organization = fixture.Create<Organization>();
+        var org = await sqlOrganizationRepo.CreateAsync(organization);
+
+        var report = fixture.Build<OrganizationReport>()
+            .With(x => x.OrganizationId, org.Id)
+            .With(x => x.ApplicationCount, 10)
+            .With(x => x.ApplicationAtRiskCount, 3)
+            .With(x => x.CriticalApplicationCount, 5)
+            .With(x => x.CriticalApplicationAtRiskCount, 2)
+            .With(x => x.MemberCount, 25)
+            .With(x => x.MemberAtRiskCount, 7)
+            .With(x => x.CriticalMemberCount, 12)
+            .With(x => x.CriticalMemberAtRiskCount, 4)
+            .With(x => x.PasswordCount, 100)
+            .With(x => x.PasswordAtRiskCount, 15)
+            .With(x => x.CriticalPasswordCount, 50)
+            .With(x => x.CriticalPasswordAtRiskCount, 8)
+            .Create();
+
+        var createdReport = await sqlOrganizationReportRepo.CreateAsync(report);
+
+        // Act - Update all metric properties with new values
+        createdReport.ApplicationCount = 20;
+        createdReport.ApplicationAtRiskCount = 6;
+        createdReport.CriticalApplicationCount = 10;
+        createdReport.CriticalApplicationAtRiskCount = 4;
+        createdReport.MemberCount = 50;
+        createdReport.MemberAtRiskCount = 14;
+        createdReport.CriticalMemberCount = 24;
+        createdReport.CriticalMemberAtRiskCount = 8;
+        createdReport.PasswordCount = 200;
+        createdReport.PasswordAtRiskCount = 30;
+        createdReport.CriticalPasswordCount = 100;
+        createdReport.CriticalPasswordAtRiskCount = 16;
+
+        await sqlOrganizationReportRepo.UpsertAsync(createdReport);
+
+        // Assert - Verify all metric properties were updated correctly
+        var updatedReport = await sqlOrganizationReportRepo.GetByIdAsync(createdReport.Id);
+        Assert.NotNull(updatedReport);
+        Assert.Equal(20, updatedReport.ApplicationCount);
+        Assert.Equal(6, updatedReport.ApplicationAtRiskCount);
+        Assert.Equal(10, updatedReport.CriticalApplicationCount);
+        Assert.Equal(4, updatedReport.CriticalApplicationAtRiskCount);
+        Assert.Equal(50, updatedReport.MemberCount);
+        Assert.Equal(14, updatedReport.MemberAtRiskCount);
+        Assert.Equal(24, updatedReport.CriticalMemberCount);
+        Assert.Equal(8, updatedReport.CriticalMemberAtRiskCount);
+        Assert.Equal(200, updatedReport.PasswordCount);
+        Assert.Equal(30, updatedReport.PasswordAtRiskCount);
+        Assert.Equal(100, updatedReport.CriticalPasswordCount);
+        Assert.Equal(16, updatedReport.CriticalPasswordAtRiskCount);
     }
 
     [CiSkippedTheory, EfOrganizationReportAutoData]
@@ -358,6 +489,49 @@ public class OrganizationReportRepositoryTests
         // Assert
         Assert.Null(result);
     }
+
+    [CiSkippedTheory, EfOrganizationReportAutoData]
+    public async Task UpdateMetricsAsync_ShouldUpdateMetricsCorrectly(
+        OrganizationReportRepository sqlOrganizationReportRepo,
+        SqlRepo.OrganizationRepository sqlOrganizationRepo)
+    {
+        // Arrange
+        var (org, report) = await CreateOrganizationAndReportAsync(sqlOrganizationRepo, sqlOrganizationReportRepo);
+        var metrics = new OrganizationReportMetricsData
+        {
+            ApplicationCount = 10,
+            ApplicationAtRiskCount = 2,
+            CriticalApplicationCount = 5,
+            CriticalApplicationAtRiskCount = 1,
+            MemberCount = 20,
+            MemberAtRiskCount = 4,
+            CriticalMemberCount = 10,
+            CriticalMemberAtRiskCount = 2,
+            PasswordCount = 100,
+            PasswordAtRiskCount = 15,
+            CriticalPasswordCount = 50,
+            CriticalPasswordAtRiskCount = 5
+        };
+
+        // Act
+        await sqlOrganizationReportRepo.UpdateMetricsAsync(report.Id, metrics);
+        var updatedReport = await sqlOrganizationReportRepo.GetByIdAsync(report.Id);
+
+        // Assert
+        Assert.Equal(metrics.ApplicationCount, updatedReport.ApplicationCount);
+        Assert.Equal(metrics.ApplicationAtRiskCount, updatedReport.ApplicationAtRiskCount);
+        Assert.Equal(metrics.CriticalApplicationCount, updatedReport.CriticalApplicationCount);
+        Assert.Equal(metrics.CriticalApplicationAtRiskCount, updatedReport.CriticalApplicationAtRiskCount);
+        Assert.Equal(metrics.MemberCount, updatedReport.MemberCount);
+        Assert.Equal(metrics.MemberAtRiskCount, updatedReport.MemberAtRiskCount);
+        Assert.Equal(metrics.CriticalMemberCount, updatedReport.CriticalMemberCount);
+        Assert.Equal(metrics.CriticalMemberAtRiskCount, updatedReport.CriticalMemberAtRiskCount);
+        Assert.Equal(metrics.PasswordCount, updatedReport.PasswordCount);
+        Assert.Equal(metrics.PasswordAtRiskCount, updatedReport.PasswordAtRiskCount);
+        Assert.Equal(metrics.CriticalPasswordCount, updatedReport.CriticalPasswordCount);
+        Assert.Equal(metrics.CriticalPasswordAtRiskCount, updatedReport.CriticalPasswordAtRiskCount);
+    }
+
 
     private async Task<(Organization, OrganizationReport)> CreateOrganizationAndReportAsync(
         IOrganizationRepository orgRepo,

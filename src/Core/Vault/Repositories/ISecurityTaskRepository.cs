@@ -35,4 +35,10 @@ public interface ISecurityTaskRepository : IRepository<SecurityTask, Guid>
     /// <param name="organizationId">The id of the organization</param>
     /// <returns>A collection of security task metrics</returns>
     Task<SecurityTaskMetrics> GetTaskMetricsAsync(Guid organizationId);
+
+    /// <summary>
+    /// Marks all tasks associated with the respective ciphers as complete.
+    /// </summary>
+    /// <param name="cipherIds">Collection of cipher IDs</param>
+    Task MarkAsCompleteByCipherIds(IEnumerable<Guid> cipherIds);
 }

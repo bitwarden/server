@@ -85,4 +85,19 @@ public class SecurityTaskRepository : Repository<SecurityTask, Guid>, ISecurityT
 
         return tasksList;
     }
+
+    /// <inheritdoc />
+    public async Task MarkAsCompleteByCipherIds(IEnumerable<Guid> cipherIds)
+    {
+        if (!cipherIds.Any())
+        {
+            return;
+        }
+
+        await using var connection = new SqlConnection(ConnectionString);
+        await connection.ExecuteAsync(
+            $"[{Schema}].[SecurityTask_MarkCompleteByCipherIds]",
+            new { CipherIds = cipherIds.ToGuidIdArrayTVP() },
+            commandType: CommandType.StoredProcedure);
+    }
 }

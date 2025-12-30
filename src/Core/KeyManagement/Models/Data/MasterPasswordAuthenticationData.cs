@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Entities;
+using Bit.Core.Exceptions;
 
 namespace Bit.Core.KeyManagement.Models.Data;
 
@@ -12,7 +13,7 @@ public class MasterPasswordAuthenticationData
     {
         if (user.GetMasterPasswordSalt() != Salt)
         {
-            throw new ArgumentException("Invalid master password salt.");
+            throw new BadRequestException("Invalid master password salt.");
         }
     }
 }

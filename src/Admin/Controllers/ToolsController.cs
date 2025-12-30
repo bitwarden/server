@@ -1,7 +1,6 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
-using System.Text;
 using System.Text.Json;
 using Bit.Admin.Enums;
 using Bit.Admin.Models;
@@ -9,8 +8,8 @@ using Bit.Admin.Utilities;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Organizations.Queries;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
-using Bit.Core.Models.BitStripe;
 using Bit.Core.Platform.Installations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -33,7 +32,6 @@ public class ToolsController : Controller
     private readonly IInstallationRepository _installationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IProviderUserRepository _providerUserRepository;
-    private readonly IPaymentService _paymentService;
     private readonly IStripeAdapter _stripeAdapter;
     private readonly IWebHostEnvironment _environment;
 
@@ -46,7 +44,6 @@ public class ToolsController : Controller
         IInstallationRepository installationRepository,
         IOrganizationUserRepository organizationUserRepository,
         IProviderUserRepository providerUserRepository,
-        IPaymentService paymentService,
         IStripeAdapter stripeAdapter,
         IWebHostEnvironment environment)
     {
@@ -58,7 +55,6 @@ public class ToolsController : Controller
         _installationRepository = installationRepository;
         _organizationUserRepository = organizationUserRepository;
         _providerUserRepository = providerUserRepository;
-        _paymentService = paymentService;
         _stripeAdapter = stripeAdapter;
         _environment = environment;
     }
@@ -340,139 +336,5 @@ public class ToolsController : Controller
         {
             throw new Exception("No license to generate.");
         }
-    }
-
-    [RequirePermission(Permission.Tools_ManageStripeSubscriptions)]
-    public async Task<IActionResult> StripeSubscriptions(StripeSubscriptionListOptions options)
-    {
-        options = options ?? new StripeSubscriptionListOptions();
-        options.Limit = 10;
-        options.Expand = new List<string>() { "data.customer", "data.latest_invoice" };
-        options.SelectAll = false;
-
-        var subscriptions = await _stripeAdapter.SubscriptionListAsync(options);
-
-        options.StartingAfter = subscriptions.LastOrDefault()?.Id;
-        options.EndingBefore = await StripeSubscriptionsGetHasPreviousPage(subscriptions, options) ?
-            subscriptions.FirstOrDefault()?.Id :
-            null;
-
-        var isProduction = _environment.IsProduction();
-        var model = new StripeSubscriptionsModel()
-        {
-            Items = subscriptions.Select(s => new StripeSubscriptionRowModel(s)).ToList(),
-            Prices = (await _stripeAdapter.PriceListAsync(new Stripe.PriceListOptions() { Limit = 100 })).Data,
-            TestClocks = isProduction ? new List<Stripe.TestHelpers.TestClock>() : await _stripeAdapter.TestClockListAsync(),
-            Filter = options
-        };
-        return View(model);
-    }
-
-    [HttpPost]
-    [RequirePermission(Permission.Tools_ManageStripeSubscriptions)]
-    public async Task<IActionResult> StripeSubscriptions([FromForm] StripeSubscriptionsModel model)
-    {
-        if (!ModelState.IsValid)
-        {
-            var isProduction = _environment.IsProduction();
-            model.Prices = (await _stripeAdapter.PriceListAsync(new Stripe.PriceListOptions() { Limit = 100 })).Data;
-            model.TestClocks = isProduction ? new List<Stripe.TestHelpers.TestClock>() : await _stripeAdapter.TestClockListAsync();
-            return View(model);
-        }
-
-        if (model.Action == StripeSubscriptionsAction.Export || model.Action == StripeSubscriptionsAction.BulkCancel)
-        {
-            var subscriptions = model.Filter.SelectAll ?
-                await _stripeAdapter.SubscriptionListAsync(model.Filter) :
-                model.Items.Where(x => x.Selected).Select(x => x.Subscription);
-
-            if (model.Action == StripeSubscriptionsAction.Export)
-            {
-                return StripeSubscriptionsExport(subscriptions);
-            }
-
-            if (model.Action == StripeSubscriptionsAction.BulkCancel)
-            {
-                await StripeSubscriptionsCancel(subscriptions);
-            }
-        }
-        else
-        {
-            if (model.Action == StripeSubscriptionsAction.PreviousPage || model.Action == StripeSubscriptionsAction.Search)
-            {
-                model.Filter.StartingAfter = null;
-            }
-
-            if (model.Action == StripeSubscriptionsAction.NextPage || model.Action == StripeSubscriptionsAction.Search)
-            {
-                if (!string.IsNullOrEmpty(model.Filter.StartingAfter))
-                {
-                    var subscription = await _stripeAdapter.SubscriptionGetAsync(model.Filter.StartingAfter);
-                    if (subscription.Status == "canceled")
-                    {
-                        model.Filter.StartingAfter = null;
-                    }
-                }
-                model.Filter.EndingBefore = null;
-            }
-        }
-
-
-        return RedirectToAction("StripeSubscriptions", model.Filter);
-    }
-
-    // This requires a redundant API call to Stripe because of the way they handle pagination.
-    // The StartingBefore value has to be inferred from the list we get, and isn't supplied by Stripe.
-    private async Task<bool> StripeSubscriptionsGetHasPreviousPage(List<Stripe.Subscription> subscriptions, StripeSubscriptionListOptions options)
-    {
-        var hasPreviousPage = false;
-        if (subscriptions.FirstOrDefault()?.Id != null)
-        {
-            var previousPageSearchOptions = new StripeSubscriptionListOptions()
-            {
-                EndingBefore = subscriptions.FirstOrDefault().Id,
-                Limit = 1,
-                Status = options.Status,
-                CurrentPeriodEndDate = options.CurrentPeriodEndDate,
-                CurrentPeriodEndRange = options.CurrentPeriodEndRange,
-                Price = options.Price
-            };
-            hasPreviousPage = (await _stripeAdapter.SubscriptionListAsync(previousPageSearchOptions)).Count > 0;
-        }
-        return hasPreviousPage;
-    }
-
-    private async Task StripeSubscriptionsCancel(IEnumerable<Stripe.Subscription> subscriptions)
-    {
-        foreach (var s in subscriptions)
-        {
-            await _stripeAdapter.SubscriptionCancelAsync(s.Id);
-            if (s.LatestInvoice?.Status == "open")
-            {
-                await _stripeAdapter.InvoiceVoidInvoiceAsync(s.LatestInvoiceId);
-            }
-        }
-    }
-
-    private FileResult StripeSubscriptionsExport(IEnumerable<Stripe.Subscription> subscriptions)
-    {
-        var fieldsToExport = subscriptions.Select(s => new
-        {
-            StripeId = s.Id,
-            CustomerEmail = s.Customer?.Email,
-            SubscriptionStatus = s.Status,
-            InvoiceDueDate = s.CurrentPeriodEnd,
-            SubscriptionProducts = s.Items?.Data.Select(p => p.Plan.Id)
-        });
-
-        var options = new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            WriteIndented = true
-        };
-
-        var result = System.Text.Json.JsonSerializer.Serialize(fieldsToExport, options);
-        var bytes = Encoding.UTF8.GetBytes(result);
-        return File(bytes, "application/json", "StripeSubscriptionsSearch.json");
     }
 }

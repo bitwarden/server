@@ -123,3 +123,12 @@ csharp_style_namespace_declarations = file_scoped:warning
 # Switch expression
 dotnet_diagnostic.CS8509.severity = error # missing switch case for named enum value
 dotnet_diagnostic.CS8524.severity = none # missing switch case for unnamed enum value
+
+# CA2253: Named placeholders should nto be numeric values
+dotnet_diagnostic.CA2253.severity = suggestion
+
+# CA2254: Template should be a static expression
+dotnet_diagnostic.CA2254.severity = warning
+
+# CA1727: Use PascalCase for named placeholders
+dotnet_diagnostic.CA1727.severity = suggestion

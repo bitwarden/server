@@ -16,7 +16,7 @@ using Bit.Core.SecretsManager.Models.Data;
 using Bit.Core.SecretsManager.Queries.ServiceAccounts.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
+using Bit.Core.Test.Billing.Mocks;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
@@ -121,7 +121,7 @@ public class ServiceAccountsControllerTests
     {
         ArrangeCreateServiceAccountAutoScalingTest(newSlotsRequired, sutProvider, data, organization);
 
-        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType).Returns(StaticStore.GetPlan(organization.PlanType));
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType).Returns(MockPlans.Get(organization.PlanType));
 
         await sutProvider.Sut.CreateAsync(organization.Id, data);
 

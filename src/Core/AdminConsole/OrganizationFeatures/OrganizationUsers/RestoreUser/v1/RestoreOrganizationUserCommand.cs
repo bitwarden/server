@@ -4,6 +4,7 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
@@ -29,7 +30,8 @@ public class RestoreOrganizationUserCommand(
     IUserRepository userRepository,
     IOrganizationService organizationService,
     IFeatureService featureService,
-    IPolicyRequirementQuery policyRequirementQuery) : IRestoreOrganizationUserCommand
+    IPolicyRequirementQuery policyRequirementQuery,
+    IAutomaticUserConfirmationPolicyEnforcementValidator automaticUserConfirmationPolicyEnforcementValidator) : IRestoreOrganizationUserCommand
 {
     public async Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId)
     {
@@ -299,6 +301,25 @@ public class RestoreOrganizationUserCommand(
         else if (!twoFactorCompliant)
         {
             throw new BadRequestException(user.Email + " is not compliant with the two-step login policy");
+        }
+
+        if (featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
+        {
+            var validationResult = await automaticUserConfirmationPolicyEnforcementValidator.IsCompliantAsync(
+                new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser.OrganizationId,
+                    allOrgUsers,
+                    user!));
+
+            var badRequestException = validationResult.Match(
+                error => new BadRequestException(user.Email +
+                                                 " is not compliant with the automatic user confirmation policy: " +
+                                                 error.Message),
+                _ => null);
+
+            if (badRequestException is not null)
+            {
+                throw badRequestException;
+            }
         }
     }
 

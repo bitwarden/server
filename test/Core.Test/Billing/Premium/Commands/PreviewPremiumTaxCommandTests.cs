@@ -1,23 +1,38 @@
 ﻿using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Premium.Commands;
-using Bit.Core.Services;
+using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Stripe;
 using Xunit;
 using static Bit.Core.Billing.Constants.StripeConstants;
+using PremiumPlan = Bit.Core.Billing.Pricing.Premium.Plan;
+using PremiumPurchasable = Bit.Core.Billing.Pricing.Premium.Purchasable;
 
 namespace Bit.Core.Test.Billing.Premium.Commands;
 
 public class PreviewPremiumTaxCommandTests
 {
     private readonly ILogger<PreviewPremiumTaxCommand> _logger = Substitute.For<ILogger<PreviewPremiumTaxCommand>>();
+    private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
     private readonly PreviewPremiumTaxCommand _command;
 
     public PreviewPremiumTaxCommandTests()
     {
-        _command = new PreviewPremiumTaxCommand(_logger, _stripeAdapter);
+        // Setup default premium plan with standard pricing
+        var premiumPlan = new PremiumPlan
+        {
+            Name = "Premium",
+            Available = true,
+            LegacyYear = null,
+            Seat = new PremiumPurchasable { Price = 10M, StripePriceId = Prices.PremiumAnnually },
+            Storage = new PremiumPurchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
+        };
+        _pricingClient.GetAvailablePremiumPlan().Returns(premiumPlan);
+
+        _command = new PreviewPremiumTaxCommand(_logger, _pricingClient, _stripeAdapter);
     }
 
     [Fact]
@@ -31,11 +46,11 @@ public class PreviewPremiumTaxCommandTests
 
         var invoice = new Invoice
         {
-            Tax = 300,
+            TotalTaxes = [new InvoiceTotalTax { Amount = 300 }],
             Total = 3300
         };
 
-        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
         var result = await _command.Run(0, billingAddress);
 
@@ -44,7 +59,7 @@ public class PreviewPremiumTaxCommandTests
         Assert.Equal(3.00m, tax);
         Assert.Equal(33.00m, total);
 
-        await _stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
             options.AutomaticTax.Enabled == true &&
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "US" &&
@@ -65,11 +80,11 @@ public class PreviewPremiumTaxCommandTests
 
         var invoice = new Invoice
         {
-            Tax = 500,
+            TotalTaxes = [new InvoiceTotalTax { Amount = 500 }],
             Total = 5500
         };
 
-        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
         var result = await _command.Run(5, billingAddress);
 
@@ -78,7 +93,7 @@ public class PreviewPremiumTaxCommandTests
         Assert.Equal(5.00m, tax);
         Assert.Equal(55.00m, total);
 
-        await _stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
             options.AutomaticTax.Enabled == true &&
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "CA" &&
@@ -101,11 +116,11 @@ public class PreviewPremiumTaxCommandTests
 
         var invoice = new Invoice
         {
-            Tax = 250,
+            TotalTaxes = [new InvoiceTotalTax { Amount = 250 }],
             Total = 2750
         };
 
-        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
         var result = await _command.Run(0, billingAddress);
 
@@ -114,7 +129,7 @@ public class PreviewPremiumTaxCommandTests
         Assert.Equal(2.50m, tax);
         Assert.Equal(27.50m, total);
 
-        await _stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
             options.AutomaticTax.Enabled == true &&
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "GB" &&
@@ -135,11 +150,11 @@ public class PreviewPremiumTaxCommandTests
 
         var invoice = new Invoice
         {
-            Tax = 800,
+            TotalTaxes = [new InvoiceTotalTax { Amount = 800 }],
             Total = 8800
         };
 
-        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
         var result = await _command.Run(20, billingAddress);
 
@@ -148,7 +163,7 @@ public class PreviewPremiumTaxCommandTests
         Assert.Equal(8.00m, tax);
         Assert.Equal(88.00m, total);
 
-        await _stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
             options.AutomaticTax.Enabled == true &&
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "DE" &&
@@ -171,11 +186,11 @@ public class PreviewPremiumTaxCommandTests
 
         var invoice = new Invoice
         {
-            Tax = 450,
+            TotalTaxes = [new InvoiceTotalTax { Amount = 450 }],
             Total = 4950
         };
 
-        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
         var result = await _command.Run(10, billingAddress);
 
@@ -184,7 +199,7 @@ public class PreviewPremiumTaxCommandTests
         Assert.Equal(4.50m, tax);
         Assert.Equal(49.50m, total);
 
-        await _stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
             options.AutomaticTax.Enabled == true &&
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "AU" &&
@@ -207,11 +222,11 @@ public class PreviewPremiumTaxCommandTests
 
         var invoice = new Invoice
         {
-            Tax = 0,
+            TotalTaxes = [new InvoiceTotalTax { Amount = 0 }],
             Total = 3000
         };
 
-        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
         var result = await _command.Run(0, billingAddress);
 
@@ -220,7 +235,7 @@ public class PreviewPremiumTaxCommandTests
         Assert.Equal(0.00m, tax);
         Assert.Equal(30.00m, total);
 
-        await _stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
             options.AutomaticTax.Enabled == true &&
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "US" &&
@@ -241,11 +256,11 @@ public class PreviewPremiumTaxCommandTests
 
         var invoice = new Invoice
         {
-            Tax = 600,
+            TotalTaxes = [new InvoiceTotalTax { Amount = 600 }],
             Total = 6600
         };
 
-        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
         var result = await _command.Run(-5, billingAddress);
 
@@ -254,7 +269,7 @@ public class PreviewPremiumTaxCommandTests
         Assert.Equal(6.00m, tax);
         Assert.Equal(66.00m, total);
 
-        await _stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
             options.AutomaticTax.Enabled == true &&
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "FR" &&
@@ -276,11 +291,11 @@ public class PreviewPremiumTaxCommandTests
         // Stripe amounts are in cents
         var invoice = new Invoice
         {
-            Tax = 123, // $1.23
+            TotalTaxes = [new InvoiceTotalTax { Amount = 123 }], // $1.23
             Total = 3123 // $31.23
         };
 
-        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
         var result = await _command.Run(0, billingAddress);
 

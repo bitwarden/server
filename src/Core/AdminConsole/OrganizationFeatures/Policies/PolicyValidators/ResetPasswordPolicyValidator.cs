@@ -4,12 +4,13 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 
-public class ResetPasswordPolicyValidator : IPolicyValidator
+public class ResetPasswordPolicyValidator : IPolicyValidator, IPolicyValidationEvent, IEnforceDependentPoliciesEvent
 {
     private readonly ISsoConfigRepository _ssoConfigRepository;
     public PolicyType Type => PolicyType.ResetPassword;
@@ -18,6 +19,11 @@ public class ResetPasswordPolicyValidator : IPolicyValidator
     public ResetPasswordPolicyValidator(ISsoConfigRepository ssoConfigRepository)
     {
         _ssoConfigRepository = ssoConfigRepository;
+    }
+
+    public async Task<string> ValidateAsync(SavePolicyModel policyRequest, Policy? currentPolicy)
+    {
+        return await ValidateAsync(policyRequest.PolicyUpdate, currentPolicy);
     }
 
     public async Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)

@@ -23,4 +23,10 @@ BEGIN
 
     DECLARE @UpdateCollectionsSuccess INT
     EXEC @UpdateCollectionsSuccess = [dbo].[Cipher_UpdateCollections] @Id, @UserId, @OrganizationId, @CollectionIds
+
+    -- Bump the account revision date AFTER collections are assigned.
+    IF @UpdateCollectionsSuccess = 0
+    BEGIN
+        EXEC [dbo].[User_BumpAccountRevisionDateByCipherId] @Id, @OrganizationId
+    END
 END
