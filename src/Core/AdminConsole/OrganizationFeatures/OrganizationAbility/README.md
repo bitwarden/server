@@ -2,7 +2,10 @@
 
 ## Overview
 
-Many Bitwarden features are tied to specific subscription plans. For example, SCIM and SSO are Enterprise features, while Event Logs are available to Teams and Enterprise plans. When developing features that require plan-based access control, we use **Organization Ability Flags** (or simply _abilities_) — explicit boolean properties on the Organization entity that indicate whether an organization can use a specific feature.
+Many Bitwarden features are tied to specific subscription plans. For example, SCIM and SSO are Enterprise features,
+while Event Logs are available to Teams and Enterprise plans. When developing features that require plan-based access
+control, we use **Organization Ability Flags** (or simply _abilities_) — explicit boolean properties on the Organization
+entity that indicate whether an organization can use a specific feature.
 
 ## The Rule
 
@@ -46,18 +49,21 @@ Using explicit ability flags instead of plan type checks provides several benefi
 
 1. **Simplicity** — A single boolean check is cleaner and less error-prone than maintaining lists of plan types.
 
-2. **Centralized Control** — Feature access is managed in one place: the ability assignment during organization creation/upgrade. No need to hunt through the codebase for scattered plan type checks.
+2. **Centralized Control** — Feature access is managed in one place: the ability assignment during organization
+   creation/upgrade. No need to hunt through the codebase for scattered plan type checks.
 
 3. **Flexibility** — Abilities can be set independently of plan type, enabling:
 
-   - Early access programs for features not yet tied to a plan
-   - Trial access to help customers evaluate a feature before upgrading
-   - Custom arrangements for specific customers
-   - A/B testing of features across different cohorts
+    - Early access programs for features not yet tied to a plan
+    - Trial access to help customers evaluate a feature before upgrading
+    - Custom arrangements for specific customers
+    - A/B testing of features across different cohorts
 
-4. **Safe Refactoring** — When plans change (e.g., adding a new plan tier, renaming plans, or moving features between tiers), we only update the ability assignment logic—not every place the feature is used.
+4. **Safe Refactoring** — When plans change (e.g., adding a new plan tier, renaming plans, or moving features between
+   tiers), we only update the ability assignment logic—not every place the feature is used.
 
-5. **Graceful Downgrades** — When an organization downgrades, we update their abilities. All feature checks automatically respect the new access level.
+5. **Graceful Downgrades** — When an organization downgrades, we update their abilities. All feature checks
+   automatically respect the new access level.
 
 ## How It Works
 
@@ -77,7 +83,8 @@ organization.UseEvents = plan.HasEvents;
 
 ### Modifying Abilities for Existing Organizations
 
-To change abilities for existing organizations (e.g., rolling out a feature to a new plan tier), create a database migration that updates the relevant flag:
+To change abilities for existing organizations (e.g., rolling out a feature to a new plan tier), create a database
+migration that updates the relevant flag:
 
 ```sql
 -- Example: Enable UseEvents for all Teams organizations
@@ -92,29 +99,31 @@ Then update the plan-to-ability assignment code so new organizations get the cor
 
 When developing a new plan-gated feature:
 
-1. **Add the ability to the Organization and OrganizationAbility entities** — Create a `Use[FeatureName]` boolean property.
+1. **Add the ability to the Organization and OrganizationAbility entities** — Create a `Use[FeatureName]` boolean
+   property.
 
 2. **Add a database migration** — Add the new column to the Organization table.
 
-3. **Update plan definitions** — Add a corresponding `Has[FeatureName]` property to the Plan model and configure which plans include it.
+3. **Update plan definitions** — Add a corresponding `Has[FeatureName]` property to the Plan model and configure which
+   plans include it.
 
 4. **Update organization creation/upgrade logic** — Ensure the ability is set based on the plan.
 
 5. **Update the organization license claims** (if applicable) - to make the feature available on self-hosted instances.
 
 6. **Implement checks throughout client and server** — Use the ability consistently everywhere the feature is accessed.
-   - Clients: get the organization object from `OrganizationService`.
-   - Server: if you already have the full `Organization` object in scope, you can use it directly. If not, use the
-     `IApplicationCacheService` to retrieve the `OrganizationAbility`, which is a simplified, cached representation
-     of the organization ability flags. Note that some older flags may be missing from `OrganizationAbility` but
-     can be added if needed.
+    - Clients: get the organization object from `OrganizationService`.
+    - Server: if you already have the full `Organization` object in scope, you can use it directly. If not, use the
+      `IApplicationCacheService` to retrieve the `OrganizationAbility`, which is a simplified, cached representation
+      of the organization ability flags. Note that some older flags may be missing from `OrganizationAbility` but
+      can be added if needed.
 
 ## Existing Abilities
 
 For reference, here are some current organization ability flags (not a complete list):
 
 | Ability                  | Description                   | Plans             |
-| ------------------------ | ----------------------------- | ----------------- |
+|--------------------------|-------------------------------|-------------------|
 | `UseGroups`              | Group-based collection access | Teams, Enterprise |
 | `UseDirectory`           | Directory Connector sync      | Teams, Enterprise |
 | `UseEvents`              | Event logging                 | Teams, Enterprise |
@@ -127,4 +136,6 @@ For reference, here are some current organization ability flags (not a complete 
 
 ## Questions?
 
-If you're unsure whether your feature needs a new ability or which existing ability to use, reach out to your team lead or members of the Admin Console or Architecture teams. When in doubt, adding an explicit ability is almost always the right choice—it's easy to do and keeps our access control clean and maintainable.
+If you're unsure whether your feature needs a new ability or which existing ability to use, reach out to your team lead
+or members of the Admin Console or Architecture teams. When in doubt, adding an explicit ability is almost always the
+right choice—it's easy to do and keeps our access control clean and maintainable.
