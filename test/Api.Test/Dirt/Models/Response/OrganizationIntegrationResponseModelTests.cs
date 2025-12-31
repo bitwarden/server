@@ -14,29 +14,85 @@ namespace Bit.Api.Test.Dirt.Models.Response;
 public class OrganizationIntegrationResponseModelTests
 {
     [Theory, BitAutoData]
-    public void Status_CloudBillingSync_AlwaysNotApplicable(OrganizationIntegration oi)
+    public void Status_CloudBillingSync_NullConfig_ReturnsInvalid(OrganizationIntegration oi)
     {
         oi.Type = IntegrationType.CloudBillingSync;
         oi.Configuration = null;
 
         var model = new OrganizationIntegrationResponseModel(oi);
-        Assert.Equal(OrganizationIntegrationStatus.NotApplicable, model.Status);
 
-        model.Configuration = "{}";
-        Assert.Equal(OrganizationIntegrationStatus.NotApplicable, model.Status);
+        Assert.Equal(OrganizationIntegrationStatus.Invalid, model.Status);
     }
 
     [Theory, BitAutoData]
-    public void Status_Scim_AlwaysNotApplicable(OrganizationIntegration oi)
+    public void Status_CloudBillingSync_EnabledFalse_ReturnsInvalid(OrganizationIntegration oi)
+    {
+        oi.Type = IntegrationType.CloudBillingSync;
+        oi.Configuration = JsonSerializer.Serialize(new CloudBillingSyncIntegration
+        {
+            Enabled = false,
+            BillingSyncKey = "test-key",
+            CloudOrganizationId = Guid.NewGuid()
+        });
+
+        var model = new OrganizationIntegrationResponseModel(oi);
+
+        Assert.Equal(OrganizationIntegrationStatus.Invalid, model.Status);
+    }
+
+    [Theory, BitAutoData]
+    public void Status_CloudBillingSync_EnabledTrue_ReturnsCompleted(OrganizationIntegration oi)
+    {
+        oi.Type = IntegrationType.CloudBillingSync;
+        oi.Configuration = JsonSerializer.Serialize(new CloudBillingSyncIntegration
+        {
+            Enabled = true,
+            BillingSyncKey = "test-key",
+            CloudOrganizationId = Guid.NewGuid()
+        });
+
+        var model = new OrganizationIntegrationResponseModel(oi);
+
+        Assert.Equal(OrganizationIntegrationStatus.Completed, model.Status);
+    }
+
+    [Theory, BitAutoData]
+    public void Status_Scim_NullConfig_ReturnsInvalid(OrganizationIntegration oi)
     {
         oi.Type = IntegrationType.Scim;
         oi.Configuration = null;
 
         var model = new OrganizationIntegrationResponseModel(oi);
-        Assert.Equal(OrganizationIntegrationStatus.NotApplicable, model.Status);
 
-        model.Configuration = "{}";
-        Assert.Equal(OrganizationIntegrationStatus.NotApplicable, model.Status);
+        Assert.Equal(OrganizationIntegrationStatus.Invalid, model.Status);
+    }
+
+    [Theory, BitAutoData]
+    public void Status_Scim_EnabledFalse_ReturnsInvalid(OrganizationIntegration oi)
+    {
+        oi.Type = IntegrationType.Scim;
+        oi.Configuration = JsonSerializer.Serialize(new ScimIntegration
+        {
+            Enabled = false
+        });
+
+        var model = new OrganizationIntegrationResponseModel(oi);
+
+        Assert.Equal(OrganizationIntegrationStatus.Invalid, model.Status);
+    }
+
+    [Theory, BitAutoData]
+    public void Status_Scim_EnabledTrue_ReturnsCompleted(OrganizationIntegration oi)
+    {
+        oi.Type = IntegrationType.Scim;
+        oi.Configuration = JsonSerializer.Serialize(new ScimIntegration
+        {
+            Enabled = true
+        });
+
+        var model = new OrganizationIntegrationResponseModel(oi);
+
+        Assert.Equal(OrganizationIntegrationStatus.Completed, model.Status);
     }
 
     [Theory, BitAutoData]

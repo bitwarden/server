@@ -24,9 +24,21 @@ public class OrganizationIntegrationResponseModel : ResponseModel
 
     public OrganizationIntegrationStatus Status => Type switch
     {
-        // Not yet implemented, shouldn't be present, NotApplicable
-        IntegrationType.CloudBillingSync => OrganizationIntegrationStatus.NotApplicable,
-        IntegrationType.Scim => OrganizationIntegrationStatus.NotApplicable,
+        // CloudBillingSync: Check if configuration exists and Enabled property is true
+        // If null, invalid config, or Enabled is false, status is Invalid
+        IntegrationType.CloudBillingSync => string.IsNullOrWhiteSpace(Configuration)
+            ? OrganizationIntegrationStatus.Invalid
+            : (JsonSerializer.Deserialize<CloudBillingSyncIntegration>(Configuration)?.Enabled ?? false)
+                ? OrganizationIntegrationStatus.Completed
+                : OrganizationIntegrationStatus.Invalid,
+
+        // Scim: Check if configuration exists and Enabled property is true
+        // If null, invalid config, or Enabled is false, status is Invalid
+        IntegrationType.Scim => string.IsNullOrWhiteSpace(Configuration)
+            ? OrganizationIntegrationStatus.Invalid
+            : (JsonSerializer.Deserialize<ScimIntegration>(Configuration)?.Enabled ?? false)
+                ? OrganizationIntegrationStatus.Completed
+                : OrganizationIntegrationStatus.Invalid,
 
         // Webhook is allowed to be null. If it's present, it's Completed
         IntegrationType.Webhook => OrganizationIntegrationStatus.Completed,
