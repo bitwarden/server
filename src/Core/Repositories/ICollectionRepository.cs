@@ -82,4 +82,11 @@ public interface ICollectionRepository : IRepository<Collection, Guid>
     /// <param name="defaultCollectionName">The encrypted string to use as the default collection name.</param>
     /// <returns></returns>
     Task UpsertDefaultCollectionsBulkAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName);
+
+    /// <summary>
+    /// Gets organization user IDs that have default collection semaphore entries for the specified organization.
+    /// </summary>
+    /// <param name="organizationId">The Organization ID.</param>
+    /// <returns>Collection of organization user IDs that have default collection semaphores.</returns>
+    Task<IEnumerable<Guid>> GetDefaultCollectionSemaphoresAsync(Guid organizationId);
 }

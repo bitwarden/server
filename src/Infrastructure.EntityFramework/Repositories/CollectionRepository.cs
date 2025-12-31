@@ -839,6 +839,19 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         await UpsertDefaultCollectionsAsync(organizationId, organizationUserIds, defaultCollectionName);
     }
 
+    public async Task<IEnumerable<Guid>> GetDefaultCollectionSemaphoresAsync(Guid organizationId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var organizationUserIds = await dbContext.DefaultCollectionSemaphores
+            .Where(s => s.OrganizationId == organizationId)
+            .Select(s => s.OrganizationUserId)
+            .ToListAsync();
+
+        return organizationUserIds;
+    }
+
     private async Task<HashSet<Guid>> GetOrgUserIdsWithDefaultCollectionAsync(DatabaseContext dbContext, Guid organizationId)
     {
         var results = await dbContext.DefaultCollectionSemaphores
