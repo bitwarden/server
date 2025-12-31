@@ -91,7 +91,6 @@ jobs:
           - project_name: Nginx
           - project_name: Notifications
           - project_name: Scim
-          - project_name: Server
           - project_name: Setup
           - project_name: Sso
     steps:
