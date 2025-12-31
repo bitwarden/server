@@ -2,7 +2,7 @@ name: Code Review
 
 on:
   pull_request:
-    types: [opened, labeled]
+    types: [opened, synchronize, reopened]
 
 permissions: {}
 
