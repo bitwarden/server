@@ -434,16 +434,11 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
     {
         const string sql = @"
                     SELECT
-                        ou.Id AS OrganizationUserId
+                        OrganizationUserId
                     FROM
-                        OrganizationUser ou
-                    INNER JOIN
-                        CollectionUser cu ON cu.OrganizationUserId = ou.Id
-                    INNER JOIN
-                        Collection c ON c.Id = cu.CollectionId
+                        [DefaultCollectionSemaphore] dcs
                     WHERE
-                        ou.OrganizationId = @OrganizationId
-                        AND c.Type = @CollectionType;
+                       OrganizationId = @OrganizationId
                 ";
 
         var organizationUserIds = await connection.QueryAsync<Guid>(

@@ -841,22 +841,9 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
 
     private async Task<HashSet<Guid>> GetOrgUserIdsWithDefaultCollectionAsync(DatabaseContext dbContext, Guid organizationId)
     {
-        var results = await dbContext.OrganizationUsers
+        var results = await dbContext.DefaultCollectionSemaphores
                  .Where(ou => ou.OrganizationId == organizationId)
-                 .Join(
-                     dbContext.CollectionUsers,
-                     ou => ou.Id,
-                     cu => cu.OrganizationUserId,
-                     (ou, cu) => new { ou, cu }
-                 )
-                 .Join(
-                     dbContext.Collections,
-                     temp => temp.cu.CollectionId,
-                     c => c.Id,
-                     (temp, c) => new { temp.ou, Collection = c }
-                 )
-                 .Where(x => x.Collection.Type == CollectionType.DefaultUserCollection)
-                 .Select(x => x.ou.Id)
+                 .Select(x => x.OrganizationUserId)
                  .ToListAsync();
 
         return results.ToHashSet();
