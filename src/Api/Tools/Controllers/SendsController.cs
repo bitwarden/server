@@ -7,7 +7,6 @@ using Bit.Api.Utilities;
 using Bit.Core;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
-using Bit.Core.Settings;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Repositories;
@@ -35,7 +34,6 @@ public class SendsController : Controller
     private readonly ISendOwnerQuery _sendOwnerQuery;
 
     private readonly ILogger<SendsController> _logger;
-    private readonly GlobalSettings _globalSettings;
 
     public SendsController(
         ISendRepository sendRepository,
@@ -45,8 +43,7 @@ public class SendsController : Controller
         INonAnonymousSendCommand nonAnonymousSendCommand,
         ISendOwnerQuery sendOwnerQuery,
         ISendFileStorageService sendFileStorageService,
-        ILogger<SendsController> logger,
-        GlobalSettings globalSettings)
+        ILogger<SendsController> logger)
     {
         _sendRepository = sendRepository;
         _userService = userService;
@@ -56,7 +53,6 @@ public class SendsController : Controller
         _sendOwnerQuery = sendOwnerQuery;
         _sendFileStorageService = sendFileStorageService;
         _logger = logger;
-        _globalSettings = globalSettings;
     }
 
     #region Anonymous endpoints
