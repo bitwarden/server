@@ -279,7 +279,6 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
         requestModel.EmailVerificationToken = RegistrationTokens[requestModel.Email];
 
         var postRegisterFinishHttpContext = await PostRegisterFinishAsync(requestModel);
-
         Assert.Equal(StatusCodes.Status200OK, postRegisterFinishHttpContext.Response.StatusCode);
 
         var database = GetDatabaseContext();
@@ -290,4 +289,5 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
 
         return user;
     }
+
 }

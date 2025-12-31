@@ -1,4 +1,7 @@
-﻿using System.Text;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text;
 using Bit.Core;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
@@ -38,7 +41,7 @@ public class AccountsController : Controller
     private readonly IFeatureService _featureService;
     private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _registrationEmailVerificationTokenDataFactory;
 
-    private readonly byte[]? _defaultKdfHmacKey = null;
+    private readonly byte[] _defaultKdfHmacKey = null;
     private static readonly List<UserKdfInformation> _defaultKdfResults =
     [
         // The first result (index 0) should always return the "normal" default.
@@ -144,7 +147,7 @@ public class AccountsController : Controller
         User user = model.ToUser();
 
         // Users will either have an emailed token or an email verification token - not both.
-        IdentityResult? identityResult = null;
+        IdentityResult identityResult = null;
 
         // PM-28143 - Just use the MasterPasswordAuthenticationData.MasterPasswordAuthenticationHash
         string masterPasswordHash = model.MasterPasswordAuthentication?.MasterPasswordAuthenticationHash
@@ -156,38 +159,38 @@ public class AccountsController : Controller
                 identityResult = await _registerUserCommand.RegisterUserViaEmailVerificationToken(
                     user,
                     masterPasswordHash,
-                    model.EmailVerificationTokenRequired);
+                    model.EmailVerificationToken);
                 return ProcessRegistrationResult(identityResult, user);
 
             case RegisterFinishTokenType.OrganizationInvite:
                 identityResult = await _registerUserCommand.RegisterUserViaOrganizationInviteToken(
                     user,
                     masterPasswordHash,
-                    model.OrgInviteTokenRequired,
-                    model.OrganizationUserIdRequired);
+                    model.OrgInviteToken,
+                    model.OrganizationUserId);
                 return ProcessRegistrationResult(identityResult, user);
 
             case RegisterFinishTokenType.OrgSponsoredFreeFamilyPlan:
                 identityResult = await _registerUserCommand.RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(
                     user,
                     masterPasswordHash,
-                    model.OrgSponsoredFreeFamilyPlanTokenRequired);
+                    model.OrgSponsoredFreeFamilyPlanToken);
                 return ProcessRegistrationResult(identityResult, user);
 
             case RegisterFinishTokenType.EmergencyAccessInvite:
                 identityResult = await _registerUserCommand.RegisterUserViaAcceptEmergencyAccessInviteToken(
                     user,
                     masterPasswordHash,
-                    model.AcceptEmergencyAccessInviteTokenRequired,
-                    model.AcceptEmergencyAccessIdRequired);
+                    model.AcceptEmergencyAccessInviteToken,
+                    (Guid)model.AcceptEmergencyAccessId);
                 return ProcessRegistrationResult(identityResult, user);
 
             case RegisterFinishTokenType.ProviderInvite:
                 identityResult = await _registerUserCommand.RegisterUserViaProviderInviteToken(
                     user,
                     masterPasswordHash,
-                    model.ProviderInviteTokenRequired,
-                    model.ProviderUserIdRequired);
+                    model.ProviderInviteToken,
+                    (Guid)model.ProviderUserId);
                 return ProcessRegistrationResult(identityResult, user);
 
             default:
@@ -202,10 +205,11 @@ public class AccountsController : Controller
             return new RegisterFinishResponseModel();
         }
 
-        foreach (var error in result.Errors.Where(e => e.Code != "DuplicateUserName"))
-        {
-            ModelState.AddModelError(string.Empty, error.Description);
-        }
+        if (result.Errors != null)
+            foreach (var error in result.Errors.Where(e => e.Code != "DuplicateUserName"))
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
 
         throw new BadRequestException(ModelState);
     }

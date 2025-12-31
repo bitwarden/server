@@ -62,49 +62,6 @@ public class RegisterFinishRequestModel : IValidatableObject
 
     public Guid? ProviderUserId { get; set; }
 
-    // Strongly-typed accessors for post-validation usage to satisfy nullability
-    // Ignore serialization, these are just null safe accessors.
-    [System.Text.Json.Serialization.JsonIgnore]
-    [Newtonsoft.Json.JsonIgnore]
-    public string EmailVerificationTokenRequired =>
-        EmailVerificationToken
-        ?? throw new BadRequestException("Email verification token absent when processing register/finish.");
-    [System.Text.Json.Serialization.JsonIgnore]
-    [Newtonsoft.Json.JsonIgnore]
-    public string OrgInviteTokenRequired =>
-        OrgInviteToken
-        ?? throw new BadRequestException("Organization invite token absent when processing register/finish.");
-    [System.Text.Json.Serialization.JsonIgnore]
-    [Newtonsoft.Json.JsonIgnore]
-    public Guid OrganizationUserIdRequired =>
-        OrganizationUserId
-        ?? throw new BadRequestException("Organization user id absent when processing register/finish.");
-    [System.Text.Json.Serialization.JsonIgnore]
-    [Newtonsoft.Json.JsonIgnore]
-    public string OrgSponsoredFreeFamilyPlanTokenRequired =>
-        OrgSponsoredFreeFamilyPlanToken
-        ?? throw new BadRequestException("Organization sponsored free family plan token absent when processing register/finish.");
-    [System.Text.Json.Serialization.JsonIgnore]
-    [Newtonsoft.Json.JsonIgnore]
-    public string AcceptEmergencyAccessInviteTokenRequired =>
-        AcceptEmergencyAccessInviteToken
-        ?? throw new BadRequestException("Accept emergency access invite token absent when processing register/finish.");
-    [System.Text.Json.Serialization.JsonIgnore]
-    [Newtonsoft.Json.JsonIgnore]
-    public Guid AcceptEmergencyAccessIdRequired =>
-        AcceptEmergencyAccessId
-        ?? throw new BadRequestException("Accept emergency access id absent when processing register/finish.");
-    [System.Text.Json.Serialization.JsonIgnore]
-    [Newtonsoft.Json.JsonIgnore]
-    public string ProviderInviteTokenRequired =>
-        ProviderInviteToken
-        ?? throw new BadRequestException("Provider invite token absent when processing register/finish.");
-    [System.Text.Json.Serialization.JsonIgnore]
-    [Newtonsoft.Json.JsonIgnore]
-    public Guid ProviderUserIdRequired =>
-        ProviderUserId
-        ?? throw new BadRequestException("Provider user id absent when processing register/finish.");
-
     public User ToUser()
     {
         var user = new User
@@ -134,7 +91,9 @@ public class RegisterFinishRequestModel : IValidatableObject
         {
             return RegisterFinishTokenType.EmailVerification;
         }
-        if (!string.IsNullOrEmpty(OrgInviteToken) && OrganizationUserId.HasValue)
+        if (!string.IsNullOrEmpty(OrgInviteToken)
+            && OrganizationUserId.HasValue
+            && OrganizationUserId.Value != Guid.Empty)
         {
             return RegisterFinishTokenType.OrganizationInvite;
         }
@@ -142,11 +101,15 @@ public class RegisterFinishRequestModel : IValidatableObject
         {
             return RegisterFinishTokenType.OrgSponsoredFreeFamilyPlan;
         }
-        if (!string.IsNullOrWhiteSpace(AcceptEmergencyAccessInviteToken) && AcceptEmergencyAccessId.HasValue)
+        if (!string.IsNullOrWhiteSpace(AcceptEmergencyAccessInviteToken)
+            && AcceptEmergencyAccessId.HasValue
+            && AcceptEmergencyAccessId.Value != Guid.Empty)
         {
             return RegisterFinishTokenType.EmergencyAccessInvite;
         }
-        if (!string.IsNullOrWhiteSpace(ProviderInviteToken) && ProviderUserId.HasValue)
+        if (!string.IsNullOrWhiteSpace(ProviderInviteToken)
+            && ProviderUserId.HasValue
+            && ProviderUserId.Value != Guid.Empty)
         {
             return RegisterFinishTokenType.ProviderInvite;
         }
@@ -163,10 +126,16 @@ public class RegisterFinishRequestModel : IValidatableObject
 
         // Ensure exactly one registration token type is provided
         var hasEmailVerification = !string.IsNullOrWhiteSpace(EmailVerificationToken);
-        var hasOrgInvite = !string.IsNullOrEmpty(OrgInviteToken) && OrganizationUserId.HasValue;
+        var hasOrgInvite = !string.IsNullOrEmpty(OrgInviteToken)
+                           && OrganizationUserId.HasValue
+                           && OrganizationUserId.Value != Guid.Empty;
         var hasOrgSponsoredFreeFamilyPlan = !string.IsNullOrWhiteSpace(OrgSponsoredFreeFamilyPlanToken);
-        var hasEmergencyAccessInvite = !string.IsNullOrWhiteSpace(AcceptEmergencyAccessInviteToken) && AcceptEmergencyAccessId.HasValue;
-        var hasProviderInvite = !string.IsNullOrWhiteSpace(ProviderInviteToken) && ProviderUserId.HasValue;
+        var hasEmergencyAccessInvite = !string.IsNullOrWhiteSpace(AcceptEmergencyAccessInviteToken)
+                                       && AcceptEmergencyAccessId.HasValue
+                                       && AcceptEmergencyAccessId.Value != Guid.Empty;
+        var hasProviderInvite = !string.IsNullOrWhiteSpace(ProviderInviteToken)
+                                && ProviderUserId.HasValue
+                                && ProviderUserId.Value != Guid.Empty;
         var tokenCount = (hasEmailVerification ? 1 : 0)
                          + (hasOrgInvite ? 1 : 0)
                          + (hasOrgSponsoredFreeFamilyPlan ? 1 : 0)
@@ -230,7 +199,7 @@ public class RegisterFinishRequestModel : IValidatableObject
         IEnumerable<ValidationResult> kdfValidationResults;
         if (MasterPasswordUnlock != null && MasterPasswordAuthentication != null)
         {
-            kdfValidationResults = KdfSettingsValidator.Validate(MasterPasswordUnlock.ToData());
+            kdfValidationResults = KdfSettingsValidator.Validate(MasterPasswordUnlock?.ToData() ?? throw new InvalidOperationException("Error Here"));
         }
         else
         {
