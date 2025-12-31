@@ -78,6 +78,22 @@ public class RustSdkService
         }
     }
 
+    public unsafe string EncryptString(string plaintext, string key)
+    {
+        var plaintextBytes = StringToRustString(plaintext);
+        var keyBytes = StringToRustString(key);
+
+        fixed (byte* plaintextPtr = plaintextBytes)
+        fixed (byte* keyPtr = keyBytes)
+        {
+            var resultPtr = NativeMethods.encrypt_string(plaintextPtr, keyPtr);
+
+            var result = TakeAndDestroyRustString(resultPtr);
+
+            return result;
+        }
+    }
+
 
     private static byte[] StringToRustString(string str)
     {

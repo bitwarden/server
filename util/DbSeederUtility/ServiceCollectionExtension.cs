@@ -1,5 +1,6 @@
 ﻿using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -19,6 +20,9 @@ public static class ServiceCollectionExtension
         // Add Data Protection services
         services.AddDataProtection()
             .SetApplicationName("Bitwarden");
+
+        // Add password hasher for user seeding
+        services.AddScoped<IPasswordHasher<Bit.Core.Entities.User>, PasswordHasher<Bit.Core.Entities.User>>();
 
         services.AddDatabaseRepositories(globalSettings);
     }
