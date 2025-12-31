@@ -26,6 +26,7 @@ public class AccountBillingVNextControllerTests
             Substitute.For<Core.Billing.Premium.Commands.ICreatePremiumCloudHostedSubscriptionCommand>(),
             Substitute.For<Core.Billing.Payment.Queries.IGetCreditQuery>(),
             Substitute.For<Core.Billing.Payment.Queries.IGetPaymentMethodQuery>(),
+            Substitute.For<Core.Billing.Licenses.Queries.IGetUserLicenseQuery>(),
             Substitute.For<Core.Billing.Payment.Commands.IUpdatePaymentMethodCommand>(),
             _updatePremiumStorageCommand);
     }
