@@ -199,7 +199,7 @@ public class RegisterFinishRequestModel : IValidatableObject
         IEnumerable<ValidationResult> kdfValidationResults;
         if (MasterPasswordUnlock != null && MasterPasswordAuthentication != null)
         {
-            kdfValidationResults = KdfSettingsValidator.Validate(MasterPasswordUnlock?.ToData() ?? throw new InvalidOperationException("Error Here"));
+            kdfValidationResults = KdfSettingsValidator.Validate(MasterPasswordUnlock.ToData().Kdf);
         }
         else
         {
