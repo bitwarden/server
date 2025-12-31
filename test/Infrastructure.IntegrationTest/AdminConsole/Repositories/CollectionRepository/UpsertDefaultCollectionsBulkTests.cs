@@ -23,8 +23,7 @@ public class UpsertDefaultCollectionsBulkTests
             CreateUserForOrgAsync(userRepository, organizationUserRepository, organization)
             );
 
-
-        var affectedOrgUserIds = resultOrganizationUsers.Select(organizationUser => organizationUser.Id);
+        var affectedOrgUserIds = resultOrganizationUsers.Select(organizationUser => organizationUser.Id).ToList();
         var defaultCollectionName = $"default-name-{organization.Id}";
 
         // Act
@@ -32,6 +31,7 @@ public class UpsertDefaultCollectionsBulkTests
 
         // Assert
         await AssertAllUsersHaveOneDefaultCollectionAsync(collectionRepository, resultOrganizationUsers, organization.Id);
+        await AssertSempahoresCreatedAsync(collectionRepository, affectedOrgUserIds, organization.Id);
 
         await CleanupAsync(organizationRepository, userRepository, organization, resultOrganizationUsers);
     }
@@ -54,22 +54,22 @@ public class UpsertDefaultCollectionsBulkTests
         var arrangedOrgUserIds = arrangedOrganizationUsers.Select(organizationUser => organizationUser.Id);
         var defaultCollectionName = $"default-name-{organization.Id}";
 
-
         await CreateUsersWithExistingDefaultCollectionsAsync(collectionRepository, organization.Id, arrangedOrgUserIds, defaultCollectionName, arrangedOrganizationUsers);
 
-        var newOrganizationUsers = new List<OrganizationUser>()
+        var newOrganizationUsers = new List<OrganizationUser>
         {
             await CreateUserForOrgAsync(userRepository, organizationUserRepository, organization)
         };
 
         var affectedOrgUsers = newOrganizationUsers.Concat(arrangedOrganizationUsers);
-        var affectedOrgUserIds = affectedOrgUsers.Select(organizationUser => organizationUser.Id);
+        var affectedOrgUserIds = affectedOrgUsers.Select(organizationUser => organizationUser.Id).ToList();
 
         // Act
         await collectionRepository.UpsertDefaultCollectionsBulkAsync(organization.Id, affectedOrgUserIds, defaultCollectionName);
 
         // Assert
         await AssertAllUsersHaveOneDefaultCollectionAsync(collectionRepository, arrangedOrganizationUsers, organization.Id);
+        await AssertSempahoresCreatedAsync(collectionRepository, affectedOrgUserIds, organization.Id);
 
         await CleanupAsync(organizationRepository, userRepository, organization, affectedOrgUsers);
     }
@@ -89,9 +89,8 @@ public class UpsertDefaultCollectionsBulkTests
             CreateUserForOrgAsync(userRepository, organizationUserRepository, organization)
         );
 
-        var affectedOrgUserIds = resultOrganizationUsers.Select(organizationUser => organizationUser.Id);
+        var affectedOrgUserIds = resultOrganizationUsers.Select(organizationUser => organizationUser.Id).ToList();
         var defaultCollectionName = $"default-name-{organization.Id}";
-
 
         await CreateUsersWithExistingDefaultCollectionsAsync(collectionRepository, organization.Id, affectedOrgUserIds, defaultCollectionName, resultOrganizationUsers);
 
@@ -100,6 +99,7 @@ public class UpsertDefaultCollectionsBulkTests
 
         // Assert
         await AssertAllUsersHaveOneDefaultCollectionAsync(collectionRepository, resultOrganizationUsers, organization.Id);
+        await AssertSempahoresCreatedAsync(collectionRepository, affectedOrgUserIds, organization.Id);
 
         await CleanupAsync(organizationRepository, userRepository, organization, resultOrganizationUsers);
     }
@@ -131,11 +131,17 @@ public class UpsertDefaultCollectionsBulkTests
     private static async Task<OrganizationUser> CreateUserForOrgAsync(IUserRepository userRepository,
         IOrganizationUserRepository organizationUserRepository, Organization organization)
     {
-
         var user = await userRepository.CreateTestUserAsync();
         var orgUser = await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user);
 
         return orgUser;
+    }
+
+    private static async Task AssertSempahoresCreatedAsync(ICollectionRepository collectionRepository,
+        IEnumerable<Guid> organizationUserIds, Guid organizationId)
+    {
+        var semaphores = await collectionRepository.GetDefaultCollectionSemaphoresAsync(organizationId);
+        Assert.Equal(organizationUserIds.ToHashSet(), semaphores.ToHashSet());
     }
 
     private static async Task CleanupAsync(IOrganizationRepository organizationRepository,
