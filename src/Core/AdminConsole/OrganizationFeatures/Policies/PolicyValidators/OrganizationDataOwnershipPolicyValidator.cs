@@ -71,7 +71,7 @@ public class OrganizationDataOwnershipPolicyValidator(
             return;
         }
 
-        await collectionRepository.UpsertDefaultCollectionsAsync(
+        await collectionRepository.UpsertDefaultCollectionsBulkAsync(
             policyUpdate.OrganizationId,
             userOrgIds,
             defaultCollectionName);
