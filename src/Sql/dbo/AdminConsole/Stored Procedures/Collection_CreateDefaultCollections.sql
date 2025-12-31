@@ -35,12 +35,10 @@ BEGIN
         -- If this fails due to duplicate key, the entire transaction will be rolled back
         INSERT INTO [dbo].[DefaultCollectionSemaphore]
         (
-            [OrganizationId],
             [OrganizationUserId],
             [CreationDate]
         )
         SELECT
-            @OrganizationId,
             ou.[OrganizationUserId],
             GETUTCDATE()
         FROM

@@ -1,10 +1,4 @@
-using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Billing.Enums;
-using Bit.Core.Entities;
-using Bit.Core.Enums;
-using Bit.Core.Repositories;
-using Bit.Infrastructure.EntityFramework.Repositories;
-using Microsoft.EntityFrameworkCore;
+﻿using Bit.Core.Repositories;
 using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories.CollectionRepository;
@@ -32,14 +26,14 @@ public class DefaultCollectionSemaphoreTests
             "My Items");
 
         // Verify semaphore exists
-        var semaphoreBefore = await collectionRepository.GetDefaultCollectionSemaphoresAsync(organization.Id);
+        var semaphoreBefore = await collectionRepository.GetDefaultCollectionSemaphoresAsync([orgUser.Id]);
         Assert.Single(semaphoreBefore, s => s == orgUser.Id);
 
         // Act - Delete organization user
         await organizationUserRepository.DeleteAsync(orgUser);
 
         // Assert - Semaphore should be cascade deleted
-        var semaphoreAfter = await collectionRepository.GetDefaultCollectionSemaphoresAsync(organization.Id);
+        var semaphoreAfter = await collectionRepository.GetDefaultCollectionSemaphoresAsync([orgUser.Id]);
         Assert.Empty(semaphoreAfter);
     }
 
@@ -65,14 +59,14 @@ public class DefaultCollectionSemaphoreTests
             "My Items");
 
         // Verify semaphore exists
-        var semaphoreBefore = await collectionRepository.GetDefaultCollectionSemaphoresAsync(organization.Id);
+        var semaphoreBefore = await collectionRepository.GetDefaultCollectionSemaphoresAsync([orgUser.Id]);
         Assert.Single(semaphoreBefore, s => s == orgUser.Id);
 
         // Act - Delete organization (which cascades to OrganizationUser, which cascades to semaphore)
         await organizationRepository.DeleteAsync(organization);
 
         // Assert - Semaphore should be cascade deleted via OrganizationUser
-        var semaphoreAfter = await collectionRepository.GetDefaultCollectionSemaphoresAsync(organization.Id);
+        var semaphoreAfter = await collectionRepository.GetDefaultCollectionSemaphoresAsync([orgUser.Id]);
         Assert.Empty(semaphoreAfter);
     }
 }

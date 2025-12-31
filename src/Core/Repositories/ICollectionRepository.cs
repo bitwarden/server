@@ -82,9 +82,15 @@ public interface ICollectionRepository : IRepository<Collection, Guid>
     Task UpsertDefaultCollectionsBulkAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName);
 
     /// <summary>
-    /// Gets organization user IDs that have default collection semaphore entries for the specified organization.
+    /// Gets default collection semaphores for the given organizationUserIds.
+    /// If an organizationUserId is missing from the result set, they do not have a semaphore set.
     /// </summary>
-    /// <param name="organizationId">The Organization ID.</param>
+    /// <param name="organizationUserIds">The organization User IDs to check semaphores for.</param>
     /// <returns>Collection of organization user IDs that have default collection semaphores.</returns>
-    Task<IEnumerable<Guid>> GetDefaultCollectionSemaphoresAsync(Guid organizationId);
+    /// <remarks>
+    /// The semaphore table is used to ensure that an organizationUser can only have 1 default collection.
+    /// (That is, a user may only have 1 default collection per organization.)
+    /// If a semaphore is returned, that user already has a default collection for that organization.
+    /// </remarks>
+    Task<HashSet<Guid>> GetDefaultCollectionSemaphoresAsync(IEnumerable<Guid> organizationUserIds);
 }

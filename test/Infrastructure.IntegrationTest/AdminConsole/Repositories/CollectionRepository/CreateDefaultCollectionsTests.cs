@@ -1,4 +1,4 @@
-using Bit.Core.Enums;
+﻿using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Xunit;
 
@@ -40,8 +40,8 @@ public class CreateDefaultCollectionsTests
         Assert.All(defaultCollections, c => Assert.Equal("My Items", c.Item1.Name));
         Assert.All(defaultCollections, c => Assert.Equal(organization.Id, c.Item1.OrganizationId));
 
-        var semaphores = await collectionRepository.GetDefaultCollectionSemaphoresAsync(organization.Id);
-        Assert.Equal([orgUser1.Id, orgUser2.Id], semaphores.ToHashSet());
+        var semaphores = await collectionRepository.GetDefaultCollectionSemaphoresAsync([orgUser1.Id, orgUser2.Id]);
+        Assert.Equal([orgUser1.Id, orgUser2.Id], semaphores);
 
         // Verify each user has exactly 1 collection with correct permissions
         var orgUser1Collection = Assert.Single(defaultCollections,
@@ -100,7 +100,7 @@ public class CreateDefaultCollectionsTests
 
         Assert.Single(defaultCollections);
 
-        var semaphores = await collectionRepository.GetDefaultCollectionSemaphoresAsync(organization.Id);
+        var semaphores = await collectionRepository.GetDefaultCollectionSemaphoresAsync([orgUser.Id]);
         Assert.Equal([orgUser.Id], semaphores);
 
         var access = await collectionRepository.GetManyUsersByIdAsync(defaultCollections.Single().Id);

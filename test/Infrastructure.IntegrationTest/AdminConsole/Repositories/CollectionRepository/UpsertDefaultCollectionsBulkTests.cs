@@ -31,7 +31,7 @@ public class UpsertDefaultCollectionsBulkTests
 
         // Assert
         await AssertAllUsersHaveOneDefaultCollectionAsync(collectionRepository, resultOrganizationUsers, organization.Id);
-        await AssertSempahoresCreatedAsync(collectionRepository, affectedOrgUserIds, organization.Id);
+        await AssertSempahoresCreatedAsync(collectionRepository, affectedOrgUserIds);
 
         await CleanupAsync(organizationRepository, userRepository, organization, resultOrganizationUsers);
     }
@@ -69,7 +69,7 @@ public class UpsertDefaultCollectionsBulkTests
 
         // Assert
         await AssertAllUsersHaveOneDefaultCollectionAsync(collectionRepository, arrangedOrganizationUsers, organization.Id);
-        await AssertSempahoresCreatedAsync(collectionRepository, affectedOrgUserIds, organization.Id);
+        await AssertSempahoresCreatedAsync(collectionRepository, affectedOrgUserIds);
 
         await CleanupAsync(organizationRepository, userRepository, organization, affectedOrgUsers);
     }
@@ -99,7 +99,7 @@ public class UpsertDefaultCollectionsBulkTests
 
         // Assert
         await AssertAllUsersHaveOneDefaultCollectionAsync(collectionRepository, resultOrganizationUsers, organization.Id);
-        await AssertSempahoresCreatedAsync(collectionRepository, affectedOrgUserIds, organization.Id);
+        await AssertSempahoresCreatedAsync(collectionRepository, affectedOrgUserIds);
 
         await CleanupAsync(organizationRepository, userRepository, organization, resultOrganizationUsers);
     }
@@ -138,10 +138,11 @@ public class UpsertDefaultCollectionsBulkTests
     }
 
     private static async Task AssertSempahoresCreatedAsync(ICollectionRepository collectionRepository,
-        IEnumerable<Guid> organizationUserIds, Guid organizationId)
+        IEnumerable<Guid> organizationUserIds)
     {
-        var semaphores = await collectionRepository.GetDefaultCollectionSemaphoresAsync(organizationId);
-        Assert.Equal(organizationUserIds.ToHashSet(), semaphores.ToHashSet());
+        var organizationUserIdHashSet = organizationUserIds.ToHashSet();
+        var semaphores = await collectionRepository.GetDefaultCollectionSemaphoresAsync(organizationUserIdHashSet);
+        Assert.Equal(organizationUserIdHashSet, semaphores);
     }
 
     private static async Task CleanupAsync(IOrganizationRepository organizationRepository,

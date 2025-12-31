@@ -803,11 +803,11 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
             return;
         }
 
+        var orgUserIdWithDefaultCollection = await GetDefaultCollectionSemaphoresAsync(organizationUserIds);
+        var missingDefaultCollectionUserIds = organizationUserIds.Except(orgUserIdWithDefaultCollection);
+
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
-
-        var orgUserIdWithDefaultCollection = await GetOrgUserIdsWithDefaultCollectionAsync(dbContext, organizationId);
-        var missingDefaultCollectionUserIds = organizationUserIds.Except(orgUserIdWithDefaultCollection);
 
         var (collectionUsers, collections) = BuildDefaultCollectionForUsers(organizationId, missingDefaultCollectionUserIds, defaultCollectionName);
 
@@ -821,7 +821,6 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         var now = DateTime.UtcNow;
         var semaphores = collectionUsers.Select(c => new DefaultCollectionSemaphore
         {
-            OrganizationId = organizationId,
             OrganizationUserId = c.OrganizationUserId,
             CreationDate = now
         }).ToList();
@@ -839,27 +838,19 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         await CreateDefaultCollectionsAsync(organizationId, organizationUserIds, defaultCollectionName);
     }
 
-    public async Task<IEnumerable<Guid>> GetDefaultCollectionSemaphoresAsync(Guid organizationId)
+    public async Task<HashSet<Guid>> GetDefaultCollectionSemaphoresAsync(IEnumerable<Guid> organizationUserIds)
     {
+        var organizationUserIdsHashSet = organizationUserIds.ToHashSet();
+
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        var organizationUserIds = await dbContext.DefaultCollectionSemaphores
-            .Where(s => s.OrganizationId == organizationId)
+        var result = await dbContext.DefaultCollectionSemaphores
+            .Where(s => organizationUserIdsHashSet.Contains(s.OrganizationUserId))
             .Select(s => s.OrganizationUserId)
             .ToListAsync();
 
-        return organizationUserIds;
-    }
-
-    private async Task<HashSet<Guid>> GetOrgUserIdsWithDefaultCollectionAsync(DatabaseContext dbContext, Guid organizationId)
-    {
-        var results = await dbContext.DefaultCollectionSemaphores
-                 .Where(ou => ou.OrganizationId == organizationId)
-                 .Select(x => x.OrganizationUserId)
-                 .ToListAsync();
-
-        return results.ToHashSet();
+        return result.ToHashSet();
     }
 
     private (List<CollectionUser> collectionUser, List<Collection> collection) BuildDefaultCollectionForUsers(Guid organizationId, IEnumerable<Guid> missingDefaultCollectionUserIds, string defaultCollectionName)

@@ -391,15 +391,15 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
             return;
         }
 
+        var orgUserIdWithDefaultCollection = await GetDefaultCollectionSemaphoresAsync(organizationUserIds);
+        var missingDefaultCollectionUserIds = organizationUserIds.Except(orgUserIdWithDefaultCollection);
+
         await using var connection = new SqlConnection(ConnectionString);
         connection.Open();
         await using var transaction = connection.BeginTransaction();
+
         try
         {
-            var orgUserIdWithDefaultCollection = await GetOrgUserIdsWithDefaultCollectionAsync(connection, transaction, organizationId);
-
-            var missingDefaultCollectionUserIds = organizationUserIds.Except(orgUserIdWithDefaultCollection);
-
             var (collectionUsers, collections) = BuildDefaultCollectionForUsers(organizationId, missingDefaultCollectionUserIds, defaultCollectionName);
 
             if (!collectionUsers.Any() || !collections.Any())
@@ -412,7 +412,6 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
             var now = DateTime.UtcNow;
             var semaphores = collectionUsers.Select(c => new DefaultCollectionSemaphore
             {
-                OrganizationId = organizationId,
                 OrganizationUserId = c.OrganizationUserId,
                 CreationDate = now
             }).ToList();
@@ -430,37 +429,16 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         }
     }
 
-    public async Task<IEnumerable<Guid>> GetDefaultCollectionSemaphoresAsync(Guid organizationId)
+    public async Task<HashSet<Guid>> GetDefaultCollectionSemaphoresAsync(IEnumerable<Guid> organizationUserIds)
     {
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            var results = await connection.QueryAsync<Guid>(
-                "[dbo].[DefaultCollectionSemaphore_ReadByOrganizationId]",
-                new { OrganizationId = organizationId },
-                commandType: CommandType.StoredProcedure);
+        await using var connection = new SqlConnection(ConnectionString);
 
-            return results.ToList();
-        }
-    }
+        var results = await connection.QueryAsync<Guid>(
+            "[dbo].[DefaultCollectionSemaphore_ReadByOrganizationUserIds]",
+            new { OrganizationUserIds = organizationUserIds.ToGuidIdArrayTVP() },
+            commandType: CommandType.StoredProcedure);
 
-    private async Task<HashSet<Guid>> GetOrgUserIdsWithDefaultCollectionAsync(SqlConnection connection, SqlTransaction transaction, Guid organizationId)
-    {
-        const string sql = @"
-                    SELECT
-                        OrganizationUserId
-                    FROM
-                        [DefaultCollectionSemaphore] dcs
-                    WHERE
-                       OrganizationId = @OrganizationId
-                ";
-
-        var organizationUserIds = await connection.QueryAsync<Guid>(
-            sql,
-            new { OrganizationId = organizationId, CollectionType = CollectionType.DefaultUserCollection },
-            transaction: transaction
-        );
-
-        return organizationUserIds.ToHashSet();
+        return results.ToHashSet();
     }
 
     private (List<CollectionUser> collectionUser, List<Collection> collection) BuildDefaultCollectionForUsers(Guid organizationId, IEnumerable<Guid> missingDefaultCollectionUserIds, string defaultCollectionName)
@@ -506,8 +484,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
 
         // Sort by composite key to reduce deadlocks
         var sortedSemaphores = semaphores
-            .OrderBy(s => s.OrganizationId)
-            .ThenBy(s => s.OrganizationUserId)
+            .OrderBy(s => s.OrganizationUserId)
             .ToList();
 
         using var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity & SqlBulkCopyOptions.CheckConstraints, transaction);
@@ -518,8 +495,6 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
 
         var dataTable = new DataTable("DefaultCollectionSemaphoreDataTable");
 
-        var organizationIdColumn = new DataColumn(nameof(DefaultCollectionSemaphore.OrganizationId), typeof(Guid));
-        dataTable.Columns.Add(organizationIdColumn);
         var organizationUserIdColumn = new DataColumn(nameof(DefaultCollectionSemaphore.OrganizationUserId), typeof(Guid));
         dataTable.Columns.Add(organizationUserIdColumn);
         var creationDateColumn = new DataColumn(nameof(DefaultCollectionSemaphore.CreationDate), typeof(DateTime));
@@ -530,15 +505,13 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
             bulkCopy.ColumnMappings.Add(col.ColumnName, col.ColumnName);
         }
 
-        var keys = new DataColumn[2];
-        keys[0] = organizationIdColumn;
-        keys[1] = organizationUserIdColumn;
+        var keys = new DataColumn[1];
+        keys[0] = organizationUserIdColumn;
         dataTable.PrimaryKey = keys;
 
         foreach (var semaphore in sortedSemaphores)
         {
             var row = dataTable.NewRow();
-            row[organizationIdColumn] = semaphore.OrganizationId;
             row[organizationUserIdColumn] = semaphore.OrganizationUserId;
             row[creationDateColumn] = semaphore.CreationDate;
             dataTable.Rows.Add(row);

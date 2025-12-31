@@ -5,26 +5,18 @@ IF OBJECT_ID('[dbo].[DefaultCollectionSemaphore]') IS NULL
 BEGIN
     CREATE TABLE [dbo].[DefaultCollectionSemaphore]
     (
-        [OrganizationId] UNIQUEIDENTIFIER NOT NULL,
-        [OrganizationUserId] UNIQUEIDENTIFIER NOT NULL,
-        [CreationDate] DATETIME2(7) NOT NULL,
-        CONSTRAINT [PK_DefaultCollectionSemaphore] PRIMARY KEY CLUSTERED
-        (
-            [OrganizationId] ASC,
-            [OrganizationUserId] ASC
-        ),
-        CONSTRAINT [FK_DefaultCollectionSemaphore_Organization] FOREIGN KEY ([OrganizationId])
-            REFERENCES [dbo].[Organization] ([Id]), -- NO ACTION to avoid competing cascades
-        CONSTRAINT [FK_DefaultCollectionSemaphore_OrganizationUser] FOREIGN KEY ([OrganizationUserId])
-            REFERENCES [dbo].[OrganizationUser] ([Id])
-            ON DELETE CASCADE -- Cascades from OrganizationUser deletion
+    [OrganizationUserId] UNIQUEIDENTIFIER NOT NULL,
+    [CreationDate]       DATETIME2 (7)    NOT NULL,
+    CONSTRAINT [PK_DefaultCollectionSemaphore] PRIMARY KEY CLUSTERED ([OrganizationUserId] ASC),
+    CONSTRAINT [FK_DefaultCollectionSemaphore_OrganizationUser] FOREIGN KEY ([OrganizationUserId])
+        REFERENCES [dbo].[OrganizationUser] ([Id]) ON DELETE CASCADE
     );
 END
 GO
 
--- Create stored procedure to read semaphores by organization
-CREATE OR ALTER PROCEDURE [dbo].[DefaultCollectionSemaphore_ReadByOrganizationId]
-    @OrganizationId UNIQUEIDENTIFIER
+-- Create stored procedure to read semaphores by OrganizationUserId
+CREATE OR ALTER PROCEDURE [dbo].[DefaultCollectionSemaphore_ReadByOrganizationUserIds]
+    @OrganizationUserIds AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN
     SET NOCOUNT ON
@@ -32,8 +24,8 @@ BEGIN
     SELECT
         [OrganizationUserId]
     FROM
-        [dbo].[DefaultCollectionSemaphore]
-    WHERE
-        [OrganizationId] = @OrganizationId
+        [dbo].[DefaultCollectionSemaphore] DCS
+    INNER JOIN
+        @OrganizationUserIds OU ON [OU].[Id] = [DCS].[OrganizationUserId]
 END
 GO
