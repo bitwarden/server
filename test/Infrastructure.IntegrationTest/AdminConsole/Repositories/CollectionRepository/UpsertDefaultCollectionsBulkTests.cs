@@ -6,10 +6,10 @@ using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories.CollectionRepository;
 
-public class UpsertDefaultCollectionsTests
+public class UpsertDefaultCollectionsBulkTests
 {
     [Theory, DatabaseData]
-    public async Task UpsertDefaultCollectionsAsync_ShouldCreateDefaultCollection_WhenUsersDoNotHaveDefaultCollection(
+    public async Task UpsertDefaultCollectionsBulkAsync_ShouldCreateDefaultCollection_WhenUsersDoNotHaveDefaultCollection(
         IOrganizationRepository organizationRepository,
         IUserRepository userRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -28,7 +28,7 @@ public class UpsertDefaultCollectionsTests
         var defaultCollectionName = $"default-name-{organization.Id}";
 
         // Act
-        await collectionRepository.UpsertDefaultCollectionsAsync(organization.Id, affectedOrgUserIds, defaultCollectionName);
+        await collectionRepository.UpsertDefaultCollectionsBulkAsync(organization.Id, affectedOrgUserIds, defaultCollectionName);
 
         // Assert
         await AssertAllUsersHaveOneDefaultCollectionAsync(collectionRepository, resultOrganizationUsers, organization.Id);
@@ -37,7 +37,7 @@ public class UpsertDefaultCollectionsTests
     }
 
     [Theory, DatabaseData]
-    public async Task UpsertDefaultCollectionsAsync_ShouldUpsertCreateDefaultCollection_ForUsersWithAndWithoutDefaultCollectionsExist(
+    public async Task UpsertDefaultCollectionsBulkAsync_ShouldUpsertCreateDefaultCollection_ForUsersWithAndWithoutDefaultCollectionsExist(
         IOrganizationRepository organizationRepository,
         IUserRepository userRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -66,7 +66,7 @@ public class UpsertDefaultCollectionsTests
         var affectedOrgUserIds = affectedOrgUsers.Select(organizationUser => organizationUser.Id);
 
         // Act
-        await collectionRepository.UpsertDefaultCollectionsAsync(organization.Id, affectedOrgUserIds, defaultCollectionName);
+        await collectionRepository.UpsertDefaultCollectionsBulkAsync(organization.Id, affectedOrgUserIds, defaultCollectionName);
 
         // Assert
         await AssertAllUsersHaveOneDefaultCollectionAsync(collectionRepository, arrangedOrganizationUsers, organization.Id);
@@ -75,7 +75,7 @@ public class UpsertDefaultCollectionsTests
     }
 
     [Theory, DatabaseData]
-    public async Task UpsertDefaultCollectionsAsync_ShouldNotCreateDefaultCollection_WhenUsersAlreadyHaveOne(
+    public async Task UpsertDefaultCollectionsBulkAsync_ShouldNotCreateDefaultCollection_WhenUsersAlreadyHaveOne(
         IOrganizationRepository organizationRepository,
         IUserRepository userRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -96,7 +96,7 @@ public class UpsertDefaultCollectionsTests
         await CreateUsersWithExistingDefaultCollectionsAsync(collectionRepository, organization.Id, affectedOrgUserIds, defaultCollectionName, resultOrganizationUsers);
 
         // Act
-        await collectionRepository.UpsertDefaultCollectionsAsync(organization.Id, affectedOrgUserIds, defaultCollectionName);
+        await collectionRepository.UpsertDefaultCollectionsBulkAsync(organization.Id, affectedOrgUserIds, defaultCollectionName);
 
         // Assert
         await AssertAllUsersHaveOneDefaultCollectionAsync(collectionRepository, resultOrganizationUsers, organization.Id);
@@ -108,7 +108,7 @@ public class UpsertDefaultCollectionsTests
         Guid organizationId, IEnumerable<Guid> affectedOrgUserIds, string defaultCollectionName,
         OrganizationUser[] resultOrganizationUsers)
     {
-        await collectionRepository.UpsertDefaultCollectionsAsync(organizationId, affectedOrgUserIds, defaultCollectionName);
+        await collectionRepository.UpsertDefaultCollectionsBulkAsync(organizationId, affectedOrgUserIds, defaultCollectionName);
 
         await AssertAllUsersHaveOneDefaultCollectionAsync(collectionRepository, resultOrganizationUsers, organizationId);
     }
