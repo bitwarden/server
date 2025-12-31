@@ -3,6 +3,10 @@ using Bit.Core.KeyManagement.Models.Data;
 
 namespace Bit.Core.KeyManagement.Models.Api.Request;
 
+/// <summary>
+/// Use this datatype when interfacing with requests to create a separation of concern.
+/// See <see cref="MasterPasswordAuthenticationData"/> to
+/// </summary>
 public class MasterPasswordAuthenticationDataRequestModel
 {
     public required KdfRequestModel Kdf { get; init; }
@@ -17,18 +21,5 @@ public class MasterPasswordAuthenticationDataRequestModel
             MasterPasswordAuthenticationHash = MasterPasswordAuthenticationHash,
             Salt = Salt
         };
-    }
-
-    public static void ThrowIfExistsAndHashIsNotEqual(
-        MasterPasswordAuthenticationDataRequestModel? authenticationData,
-        string? hash)
-    {
-        if (authenticationData != null && hash != null)
-        {
-            if (authenticationData.MasterPasswordAuthenticationHash != hash)
-            {
-                throw new Exception("Master password hash and hash are not equal.");
-            }
-        }
     }
 }

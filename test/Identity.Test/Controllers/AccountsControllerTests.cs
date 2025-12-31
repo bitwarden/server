@@ -1085,11 +1085,16 @@ public class AccountsControllerTests : IDisposable
             }
         };
 
+        // Provide a minimal valid token type to satisfy model-level token validation
+        model.EmailVerificationToken = "test-token";
+
         var ctx = new ValidationContext(model);
 
-        // Act & Assert
-        var ex = Assert.Throws<Exception>(() => model.Validate(ctx).ToList());
-        Assert.Equal("KDF settings and salt must match between authentication and unlock data.", ex.Message);
+        // Act
+        var results = model.Validate(ctx).ToList();
+
+        // Assert mismatched auth/unlock is allowed
+        Assert.Empty(results);
     }
 
     [Theory, BitAutoData]
@@ -1131,11 +1136,16 @@ public class AccountsControllerTests : IDisposable
             }
         };
 
+        // Provide a minimal valid token type to satisfy model-level token validation
+        model.EmailVerificationToken = "test-token";
+
         var ctx = new ValidationContext(model);
 
-        // Act & Assert
-        var ex = Assert.Throws<Exception>(() => model.Validate(ctx).ToList());
-        Assert.Equal("KDF settings and salt must match between authentication and unlock data.", ex.Message);
+        // Act
+        var results = model.Validate(ctx).ToList();
+
+        // Assert mismatched salts between auth/unlock are allowed
+        Assert.Empty(results);
     }
 
     [Theory, BitAutoData]
@@ -1181,7 +1191,7 @@ public class AccountsControllerTests : IDisposable
         var ctx = new ValidationContext(model);
 
         // Act & Assert
-        var ex = Assert.Throws<Exception>(() => model.Validate(ctx).ToList());
+        var ex = Assert.Throws<BadRequestException>(() => model.Validate(ctx).ToList());
         Assert.Equal("Master password hash and hash are not equal.", ex.Message);
     }
 

@@ -141,16 +141,7 @@ public class AccountsController : Controller
     [HttpPost("register/finish")]
     public async Task<RegisterFinishResponseModel> PostRegisterFinish([FromBody] RegisterFinishRequestModel model)
     {
-        User user;
-
-        try
-        {
-            user = model.ToUser();
-        }
-        catch (Exception e)
-        {
-            throw new BadRequestException(e.Message);
-        }
+        User user = model.ToUser();
 
         // Users will either have an emailed token or an email verification token - not both.
         IdentityResult? identityResult = null;
@@ -162,62 +153,41 @@ public class AccountsController : Controller
         switch (model.GetTokenType())
         {
             case RegisterFinishTokenType.EmailVerification:
-                if (string.IsNullOrEmpty(model.EmailVerificationToken))
-                    throw new BadRequestException("Email verification token absent when processing register/finish.");
-
                 identityResult = await _registerUserCommand.RegisterUserViaEmailVerificationToken(
                     user,
                     masterPasswordHash,
-                    model.EmailVerificationToken);
+                    model.EmailVerificationTokenRequired);
                 return ProcessRegistrationResult(identityResult, user);
 
             case RegisterFinishTokenType.OrganizationInvite:
-                if (string.IsNullOrEmpty(model.OrgInviteToken))
-                    throw new BadRequestException("Organization invite token absent when processing register/finish.");
-
                 identityResult = await _registerUserCommand.RegisterUserViaOrganizationInviteToken(
                     user,
                     masterPasswordHash,
-                    model.OrgInviteToken,
-                    model.OrganizationUserId);
+                    model.OrgInviteTokenRequired,
+                    model.OrganizationUserIdRequired);
                 return ProcessRegistrationResult(identityResult, user);
 
             case RegisterFinishTokenType.OrgSponsoredFreeFamilyPlan:
-                if (string.IsNullOrEmpty(model.OrgSponsoredFreeFamilyPlanToken))
-                    throw new BadRequestException("Organization sponsored free family plan token absent when processing register/finish.");
-
                 identityResult = await _registerUserCommand.RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(
                     user,
                     masterPasswordHash,
-                    model.OrgSponsoredFreeFamilyPlanToken);
+                    model.OrgSponsoredFreeFamilyPlanTokenRequired);
                 return ProcessRegistrationResult(identityResult, user);
 
             case RegisterFinishTokenType.EmergencyAccessInvite:
-                if (string.IsNullOrEmpty(model.AcceptEmergencyAccessInviteToken))
-                    throw new BadRequestException("Accept emergency access invite token absent when processing register/finish.");
-
-                if (model.AcceptEmergencyAccessId == null || model.AcceptEmergencyAccessId == Guid.Empty)
-                    throw new BadRequestException("Accept emergency access id absent when processing register/finish.");
-
                 identityResult = await _registerUserCommand.RegisterUserViaAcceptEmergencyAccessInviteToken(
                     user,
                     masterPasswordHash,
-                    model.AcceptEmergencyAccessInviteToken,
-                    model.AcceptEmergencyAccessId.Value);
+                    model.AcceptEmergencyAccessInviteTokenRequired,
+                    model.AcceptEmergencyAccessIdRequired);
                 return ProcessRegistrationResult(identityResult, user);
 
             case RegisterFinishTokenType.ProviderInvite:
-                if (string.IsNullOrEmpty(model.ProviderInviteToken))
-                    throw new BadRequestException("Provider invite token absent when processing register/finish.");
-
-                if (model.ProviderUserId == null || model.ProviderUserId == Guid.Empty)
-                    throw new BadRequestException("Provider user id absent when processing register/finish.");
-
                 identityResult = await _registerUserCommand.RegisterUserViaProviderInviteToken(
                     user,
                     masterPasswordHash,
-                    model.ProviderInviteToken,
-                    model.ProviderUserId.Value);
+                    model.ProviderInviteTokenRequired,
+                    model.ProviderUserIdRequired);
                 return ProcessRegistrationResult(identityResult, user);
 
             default:
