@@ -92,7 +92,7 @@ public class CreateDefaultCollectionsTests
             collectionRepository.CreateDefaultCollectionsAsync(
                 organization.Id,
                 [orgUser.Id],
-                "My Items"));
+                "My Items Duplicate"));
 
         // Assert - Only one collection should exist
         var collections = await collectionRepository.GetManyByOrganizationIdAsync(organization.Id);
