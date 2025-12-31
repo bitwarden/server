@@ -34,11 +34,12 @@ public class AccountBillingVNextControllerTests
             _updatePremiumStorageCommand);
     }
 
-   [Theory, BitAutoData]
-    public async Task GetLicenseAsync_ValidUser_ReturnsLicenseResponse(User user,
+    [Theory, BitAutoData]
+    public async Task GetLicenseAsync_ValidUser_ReturnsLicenseResponse(
+        User user,
         Core.Billing.Licenses.Models.Api.Response.LicenseResponseModel licenseResponse)
     {
-         // Arrange
+        // Arrange
         _getUserLicenseQuery.Run(user).Returns(licenseResponse);
         // Act
         var result = await _sut.GetLicenseAsync(user);
