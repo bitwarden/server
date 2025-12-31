@@ -1,6 +1,7 @@
 ﻿using Bit.Api.Billing.Controllers.VNext;
 using Bit.Api.Billing.Models.Requests.Storage;
 using Bit.Core.Billing.Commands;
+using Bit.Core.Billing.Licenses.Queries;
 using Bit.Core.Billing.Premium.Commands;
 using Bit.Core.Entities;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -15,20 +16,35 @@ namespace Bit.Api.Test.Billing.Controllers.VNext;
 public class AccountBillingVNextControllerTests
 {
     private readonly IUpdatePremiumStorageCommand _updatePremiumStorageCommand;
+    private readonly IGetUserLicenseQuery _getUserLicenseQuery;
     private readonly AccountBillingVNextController _sut;
 
     public AccountBillingVNextControllerTests()
     {
         _updatePremiumStorageCommand = Substitute.For<IUpdatePremiumStorageCommand>();
+        _getUserLicenseQuery = Substitute.For<IGetUserLicenseQuery>();
 
         _sut = new AccountBillingVNextController(
             Substitute.For<Core.Billing.Payment.Commands.ICreateBitPayInvoiceForCreditCommand>(),
             Substitute.For<Core.Billing.Premium.Commands.ICreatePremiumCloudHostedSubscriptionCommand>(),
             Substitute.For<Core.Billing.Payment.Queries.IGetCreditQuery>(),
             Substitute.For<Core.Billing.Payment.Queries.IGetPaymentMethodQuery>(),
-            Substitute.For<Core.Billing.Licenses.Queries.IGetUserLicenseQuery>(),
+            _getUserLicenseQuery,
             Substitute.For<Core.Billing.Payment.Commands.IUpdatePaymentMethodCommand>(),
             _updatePremiumStorageCommand);
+    }
+
+   [Theory, BitAutoData]
+    public async Task GetLicenseAsync_ValidUser_ReturnsLicenseResponse(User user,
+        Core.Billing.Licenses.Models.Api.Response.LicenseResponseModel licenseResponse)
+    {
+         // Arrange
+        _getUserLicenseQuery.Run(user).Returns(licenseResponse);
+        // Act
+        var result = await _sut.GetLicenseAsync(user);
+        // Assert
+        var okResult = Assert.IsAssignableFrom<IResult>(result);
+        await _getUserLicenseQuery.Received(1).Run(user);
     }
 
     [Theory, BitAutoData]
