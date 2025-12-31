@@ -40,6 +40,9 @@ public class CreateDefaultCollectionsTests
         Assert.All(defaultCollections, c => Assert.Equal("My Items", c.Item1.Name));
         Assert.All(defaultCollections, c => Assert.Equal(organization.Id, c.Item1.OrganizationId));
 
+        var semaphores = await collectionRepository.GetDefaultCollectionSemaphoresAsync(organization.Id);
+        Assert.Equal([orgUser1.Id, orgUser2.Id], semaphores.ToHashSet());
+
         // Verify each user has exactly 1 collection with correct permissions
         var orgUser1Collection = Assert.Single(defaultCollections,
             c => c.Item2.Users.FirstOrDefault()?.Id == orgUser1.Id);
@@ -96,6 +99,9 @@ public class CreateDefaultCollectionsTests
         var defaultCollections = collections.Where(c => c.Type == CollectionType.DefaultUserCollection).ToList();
 
         Assert.Single(defaultCollections);
+
+        var semaphores = await collectionRepository.GetDefaultCollectionSemaphoresAsync(organization.Id);
+        Assert.Equal([orgUser.Id], semaphores);
 
         var access = await collectionRepository.GetManyUsersByIdAsync(defaultCollections.Single().Id);
         var userAccess = Assert.Single(access);
