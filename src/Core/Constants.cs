@@ -228,6 +228,7 @@ public static class FeatureFlagKeys
     public const string CxpExportMobile = "cxp-export-mobile";
 
     /* Platform Team */
+    public const string WebPush = "web-push";
     public const string IpcChannelFramework = "ipc-channel-framework";
     public const string PushNotificationsWhenLocked = "pm-19388-push-notifications-when-locked";
     public const string PushNotificationsWhenInactive = "pm-25130-receive-push-notifications-for-inactive-users";
@@ -244,7 +245,6 @@ public static class FeatureFlagKeys
     public const string CipherKeyEncryption = "cipher-key-encryption";
     public const string PM19941MigrateCipherDomainToSdk = "pm-19941-migrate-cipher-domain-to-sdk";
     public const string PhishingDetection = "phishing-detection";
-    public const string RemoveCardItemTypePolicy = "pm-16442-remove-card-item-type-policy";
     public const string PM22134SdkCipherListView = "pm-22134-sdk-cipher-list-view";
     public const string PM22136_SdkCipherEncryption = "pm-22136-sdk-cipher-encryption";
     public const string PM23904_RiskInsightsForPremium = "pm-23904-risk-insights-for-premium";
