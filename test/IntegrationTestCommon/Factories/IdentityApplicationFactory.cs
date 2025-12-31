@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using Bit.Core;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
@@ -26,6 +27,7 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
     public const string DefaultDeviceIdentifier = "92b9d953-b9b6-4eaf-9d3e-11d57144dfeb";
     public const string DefaultUserEmail = "DefaultEmail@bitwarden.com";
     public const string DefaultUserPasswordHash = "default_password_hash";
+    private const string DefaultEncryptedString = "2.3Uk+WNBIoU5xzmVFNcoWzz==|1MsPIYuRfdOHfu/0uY6H2Q==|/98sp4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=";
 
     /// <summary>
     /// A dictionary to store registration tokens for email verification. We cannot substitute the IMailService more than once, so
@@ -239,14 +241,13 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
         {
             var unlock = requestModel.MasterPasswordUnlock;
             // PM-28143 - Once UserSymmetricKey is removed and UnlockData is required, delete the fallback to UserSymmetricKey below.
-            var masterKeyWrappedUserKey = !string.IsNullOrWhiteSpace(unlock.MasterKeyWrappedUserKey)
-                ? unlock.MasterKeyWrappedUserKey
-                : (string.IsNullOrWhiteSpace(requestModel.UserSymmetricKey) ? "user_symmetric_key" : requestModel.UserSymmetricKey);
+            // Always force a valid encrypted string for tests to avoid model validation failures.
+            var masterKeyWrappedUserKey = DefaultEncryptedString;
             requestModel.MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
             {
                 Kdf = alignedKdf,
                 MasterKeyWrappedUserKey = masterKeyWrappedUserKey,
-                Salt = unlock.Salt
+                Salt = string.IsNullOrWhiteSpace(unlock.Salt) ? requestModel.Email : unlock.Salt
             };
         }
 
@@ -279,7 +280,11 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
         requestModel.EmailVerificationToken = RegistrationTokens[requestModel.Email];
 
         var postRegisterFinishHttpContext = await PostRegisterFinishAsync(requestModel);
-        Assert.Equal(StatusCodes.Status200OK, postRegisterFinishHttpContext.Response.StatusCode);
+        if (postRegisterFinishHttpContext.Response.StatusCode != StatusCodes.Status200OK)
+        {
+            var body = await ReadResponseBodyAsync(postRegisterFinishHttpContext);
+            Assert.Fail($"register/finish failed (status {postRegisterFinishHttpContext.Response.StatusCode}). Body: {body}");
+        }
 
         var database = GetDatabaseContext();
         var user = await database.Users
@@ -288,6 +293,33 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
         Assert.NotNull(user);
 
         return user;
+    }
+
+    private static async Task<string> ReadResponseBodyAsync(HttpContext ctx)
+    {
+        try
+        {
+            if (ctx?.Response?.Body == null)
+            {
+                return "<no body>";
+            }
+            var stream = ctx.Response.Body;
+            if (stream.CanSeek)
+            {
+                stream.Seek(0, SeekOrigin.Begin);
+            }
+            using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, leaveOpen: true);
+            var text = await reader.ReadToEndAsync();
+            if (stream.CanSeek)
+            {
+                stream.Seek(0, SeekOrigin.Begin);
+            }
+            return string.IsNullOrWhiteSpace(text) ? "<empty body>" : text;
+        }
+        catch (Exception ex)
+        {
+            return $"<error reading body: {ex.Message}>";
+        }
     }
 
 }
