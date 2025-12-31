@@ -1,4 +1,4 @@
-using Bit.Core.Billing.Commands;
+﻿using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
