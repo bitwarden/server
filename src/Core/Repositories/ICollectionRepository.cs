@@ -64,23 +64,21 @@ public interface ICollectionRepository : IRepository<Collection, Guid>
         IEnumerable<CollectionAccessSelection> users, IEnumerable<CollectionAccessSelection> groups);
 
     /// <summary>
-    /// Creates default user collections for the specified organization users if they do not already have one.
-    /// Uses the stored procedure approach with semaphore-based duplicate prevention.
+    /// Creates default user collections for the specified organization users.
+    /// Throws an exception if any user already has a default collection for the organization.
     /// </summary>
     /// <param name="organizationId">The Organization ID.</param>
     /// <param name="organizationUserIds">The Organization User IDs to create default collections for.</param>
     /// <param name="defaultCollectionName">The encrypted string to use as the default collection name.</param>
-    /// <returns></returns>
-    Task UpsertDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName);
+    Task CreateDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName);
 
     /// <summary>
     /// Creates default user collections for the specified organization users using bulk insert operations.
-    /// Inserts semaphore entries before collections to prevent duplicates.
+    /// Gracefully skips users who already have a default collection for the organization.
     /// </summary>
     /// <param name="organizationId">The Organization ID.</param>
     /// <param name="organizationUserIds">The Organization User IDs to create default collections for.</param>
     /// <param name="defaultCollectionName">The encrypted string to use as the default collection name.</param>
-    /// <returns></returns>
     Task UpsertDefaultCollectionsBulkAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName);
 
     /// <summary>

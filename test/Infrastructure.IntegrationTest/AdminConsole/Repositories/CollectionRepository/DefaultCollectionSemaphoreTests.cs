@@ -26,7 +26,7 @@ public class DefaultCollectionSemaphoreTests
         var organization = await organizationRepository.CreateTestOrganizationAsync();
         var orgUser = await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user);
 
-        await collectionRepository.UpsertDefaultCollectionsAsync(
+        await collectionRepository.CreateDefaultCollectionsAsync(
             organization.Id,
             [orgUser.Id],
             "My Items");
@@ -59,7 +59,7 @@ public class DefaultCollectionSemaphoreTests
         var organization = await organizationRepository.CreateTestOrganizationAsync();
         var orgUser = await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user);
 
-        await collectionRepository.UpsertDefaultCollectionsAsync(
+        await collectionRepository.CreateDefaultCollectionsAsync(
             organization.Id,
             [orgUser.Id],
             "My Items");

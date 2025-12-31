@@ -10,10 +10,10 @@ using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories.CollectionRepository;
 
-public class CollectionRepositoryUpsertDefaultCollectionsTests
+public class CreateDefaultCollectionsTests
 {
     /// <summary>
-    /// Test that UpsertDefaultCollectionsAsync successfully creates default collections for new users
+    /// Test that CreateDefaultCollectionsAsync successfully creates default collections for new users
     /// </summary>
     [DatabaseTheory, DatabaseData]
     public async Task UpsertDefaultCollectionsAsync_CreatesDefaultCollections_Success(
@@ -62,7 +62,7 @@ public class CollectionRepositoryUpsertDefaultCollectionsTests
         });
 
         // Act
-        await collectionRepository.UpsertDefaultCollectionsAsync(
+        await collectionRepository.CreateDefaultCollectionsAsync(
             organization.Id,
             new[] { orgUser1.Id, orgUser2.Id },
             "My Items");
@@ -77,7 +77,7 @@ public class CollectionRepositoryUpsertDefaultCollectionsTests
     }
 
     /// <summary>
-    /// Test that calling UpsertDefaultCollectionsAsync multiple times does NOT create duplicates
+    /// Test that calling CreateDefaultCollectionsAsync multiple times does NOT create duplicates
     /// </summary>
     [DatabaseTheory, DatabaseData]
     public async Task UpsertDefaultCollectionsAsync_CalledMultipleTimes_DoesNotCreateDuplicates(
@@ -111,14 +111,14 @@ public class CollectionRepositoryUpsertDefaultCollectionsTests
         });
 
         // Act - Call twice
-        await collectionRepository.UpsertDefaultCollectionsAsync(
+        await collectionRepository.CreateDefaultCollectionsAsync(
             organization.Id,
             new[] { orgUser.Id },
             "My Items");
 
         // Second call should not create duplicate
         await Assert.ThrowsAnyAsync<Exception>(() =>
-            collectionRepository.UpsertDefaultCollectionsAsync(
+            collectionRepository.CreateDefaultCollectionsAsync(
                 organization.Id,
                 new[] { orgUser.Id },
                 "My Items"));
@@ -221,7 +221,7 @@ public class CollectionRepositoryUpsertDefaultCollectionsTests
             Status = OrganizationUserStatusType.Confirmed,
         });
 
-        await collectionRepository.UpsertDefaultCollectionsAsync(
+        await collectionRepository.CreateDefaultCollectionsAsync(
             organization.Id,
             new[] { orgUser.Id },
             "My Items");
@@ -276,7 +276,7 @@ public class CollectionRepositoryUpsertDefaultCollectionsTests
             Status = OrganizationUserStatusType.Confirmed,
         });
 
-        await collectionRepository.UpsertDefaultCollectionsAsync(
+        await collectionRepository.CreateDefaultCollectionsAsync(
             organization.Id,
             new[] { orgUser.Id },
             "My Items");
@@ -296,7 +296,7 @@ public class CollectionRepositoryUpsertDefaultCollectionsTests
     }
 
     /// <summary>
-    /// Test that UpsertDefaultCollectionsAsync with empty user list does nothing
+    /// Test that CreateDefaultCollectionsAsync with empty user list does nothing
     /// </summary>
     [DatabaseTheory, DatabaseData]
     public async Task UpsertDefaultCollectionsAsync_WithEmptyList_DoesNothing(
@@ -313,7 +313,7 @@ public class CollectionRepositoryUpsertDefaultCollectionsTests
         });
 
         // Act
-        await collectionRepository.UpsertDefaultCollectionsAsync(
+        await collectionRepository.CreateDefaultCollectionsAsync(
             organization.Id,
             Array.Empty<Guid>(),
             "My Items");
@@ -324,7 +324,7 @@ public class CollectionRepositoryUpsertDefaultCollectionsTests
     }
 
     /// <summary>
-    /// Test that UpsertDefaultCollectionsAsync creates CollectionUser entries with correct permissions
+    /// Test that CreateDefaultCollectionsAsync creates CollectionUser entries with correct permissions
     /// </summary>
     [DatabaseTheory, DatabaseData]
     public async Task UpsertDefaultCollectionsAsync_CreatesCollectionUsersWithCorrectPermissions(
@@ -358,7 +358,7 @@ public class CollectionRepositoryUpsertDefaultCollectionsTests
         });
 
         // Act
-        await collectionRepository.UpsertDefaultCollectionsAsync(
+        await collectionRepository.CreateDefaultCollectionsAsync(
             organization.Id,
             new[] { orgUser.Id },
             "My Items");

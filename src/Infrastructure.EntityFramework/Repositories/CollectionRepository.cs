@@ -795,7 +795,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         // SaveChangesAsync is expected to be called outside this method
     }
 
-    public async Task UpsertDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName)
+    public async Task CreateDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName)
     {
         organizationUserIds = organizationUserIds.ToList();
         if (!organizationUserIds.Any())
@@ -836,7 +836,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
     public async Task UpsertDefaultCollectionsBulkAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName)
     {
         // EF uses the same bulk copy approach as the main method
-        await UpsertDefaultCollectionsAsync(organizationId, organizationUserIds, defaultCollectionName);
+        await CreateDefaultCollectionsAsync(organizationId, organizationUserIds, defaultCollectionName);
     }
 
     public async Task<IEnumerable<Guid>> GetDefaultCollectionSemaphoresAsync(Guid organizationId)
