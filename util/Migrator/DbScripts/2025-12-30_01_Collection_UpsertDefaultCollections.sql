@@ -1,4 +1,4 @@
-CREATE OR ALTER PROCEDURE [dbo].[Collection_UpsertDefaultCollections]
+CREATE OR ALTER PROCEDURE [dbo].[Collection_CreateDefaultCollections]
     @OrganizationId UNIQUEIDENTIFIER,
     @DefaultCollectionName VARCHAR(MAX),
     @OrganizationUserIdsJson NVARCHAR(MAX)

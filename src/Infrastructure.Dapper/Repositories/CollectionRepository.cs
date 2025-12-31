@@ -373,7 +373,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
 
         var organizationUserIdsJson = JsonSerializer.Serialize(organizationUserIds);
         await connection.ExecuteAsync(
-            "[dbo].[Collection_UpsertDefaultCollections]",
+            "[dbo].[Collection_CreateDefaultCollections]",
             new
             {
                 OrganizationId = organizationId,

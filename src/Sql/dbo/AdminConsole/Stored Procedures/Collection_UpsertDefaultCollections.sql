@@ -2,7 +2,7 @@
 -- Uses semaphore table to prevent duplicate default collections at database level
 -- Cascade behavior: Organization -> OrganizationUser (CASCADE) -> DefaultCollectionSemaphore (CASCADE)
 -- Organization FK uses NoAction to avoid competing cascade paths
-CREATE PROCEDURE [dbo].[Collection_UpsertDefaultCollections]
+CREATE PROCEDURE [dbo].[Collection_CreateDefaultCollections]
     @OrganizationId UNIQUEIDENTIFIER,
     @DefaultCollectionName VARCHAR(MAX),
     @OrganizationUserIdsJson NVARCHAR(MAX)
