@@ -85,6 +85,7 @@ public class AccountsControllerTests : IDisposable
         _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
         _paymentService.GetSubscriptionAsync(user).Returns(subscriptionInfo);
         _userService.GenerateLicenseAsync(user, subscriptionInfo).Returns(license);
+        _licensingService.GetClaimsPrincipalFromLicense(license).Returns(new ClaimsPrincipal());
 
         user.Gateway = GatewayType.Stripe; // User has payment gateway
 
@@ -124,6 +125,7 @@ public class AccountsControllerTests : IDisposable
         _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(false);
         _paymentService.GetSubscriptionAsync(user).Returns(subscriptionInfo);
         _userService.GenerateLicenseAsync(user, subscriptionInfo).Returns(license);
+        _licensingService.GetClaimsPrincipalFromLicense(license).Returns(new ClaimsPrincipal());
 
         user.Gateway = GatewayType.Stripe; // User has payment gateway
 
@@ -161,6 +163,7 @@ public class AccountsControllerTests : IDisposable
         _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
         _paymentService.GetSubscriptionAsync(user).Returns(subscriptionInfo);
         _userService.GenerateLicenseAsync(user, subscriptionInfo).Returns(license);
+        _licensingService.GetClaimsPrincipalFromLicense(license).Returns(new ClaimsPrincipal());
 
         user.Gateway = GatewayType.Stripe; // User has payment gateway
 
@@ -207,6 +210,7 @@ public class AccountsControllerTests : IDisposable
         };
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
         _userService.GenerateLicenseAsync(user).Returns(license);
+        _licensingService.GetClaimsPrincipalFromLicense(license).Returns(new ClaimsPrincipal());
 
         // Act
         var result = await _sut.GetSubscriptionAsync(_globalSettings, _paymentService);
@@ -243,6 +247,7 @@ public class AccountsControllerTests : IDisposable
         _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
         _paymentService.GetSubscriptionAsync(user).Returns(subscriptionInfo);
         _userService.GenerateLicenseAsync(user, subscriptionInfo).Returns(license);
+        _licensingService.GetClaimsPrincipalFromLicense(license).Returns(new ClaimsPrincipal());
 
         user.Gateway = GatewayType.Stripe; // User has payment gateway
 
@@ -293,6 +298,7 @@ public class AccountsControllerTests : IDisposable
         _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
         _paymentService.GetSubscriptionAsync(user).Returns(subscriptionInfo);
         _userService.GenerateLicenseAsync(user, subscriptionInfo).Returns(license);
+        _licensingService.GetClaimsPrincipalFromLicense(license).Returns(new ClaimsPrincipal());
 
         user.Gateway = GatewayType.Stripe;
 
@@ -349,6 +355,7 @@ public class AccountsControllerTests : IDisposable
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
         _paymentService.GetSubscriptionAsync(user).Returns(subscriptionInfo);
         _userService.GenerateLicenseAsync(user, subscriptionInfo).Returns(license);
+        _licensingService.GetClaimsPrincipalFromLicense(license).Returns(new ClaimsPrincipal());
         user.Gateway = GatewayType.Stripe;
 
         // Act & Assert - Feature flag ENABLED
@@ -413,6 +420,7 @@ public class AccountsControllerTests : IDisposable
         _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
         _paymentService.GetSubscriptionAsync(user).Returns(subscriptionInfo);
         _userService.GenerateLicenseAsync(user, subscriptionInfo).Returns(license);
+        _licensingService.GetClaimsPrincipalFromLicense(license).Returns(new ClaimsPrincipal());
         user.Gateway = GatewayType.Stripe;
 
         // Act - Step 4: Call AccountsController.GetSubscriptionAsync
@@ -507,6 +515,7 @@ public class AccountsControllerTests : IDisposable
         _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
         _paymentService.GetSubscriptionAsync(user).Returns(subscriptionInfo);
         _userService.GenerateLicenseAsync(user, subscriptionInfo).Returns(license);
+        _licensingService.GetClaimsPrincipalFromLicense(license).Returns(new ClaimsPrincipal());
         user.Gateway = GatewayType.Stripe;
 
         // Act
@@ -558,6 +567,7 @@ public class AccountsControllerTests : IDisposable
         _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
         _paymentService.GetSubscriptionAsync(user).Returns(subscriptionInfo);
         _userService.GenerateLicenseAsync(user, subscriptionInfo).Returns(license);
+        _licensingService.GetClaimsPrincipalFromLicense(license).Returns(new ClaimsPrincipal());
         user.Gateway = GatewayType.Stripe;
 
         // Act
@@ -611,6 +621,7 @@ public class AccountsControllerTests : IDisposable
         _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
         _paymentService.GetSubscriptionAsync(user).Returns(subscriptionInfo);
         _userService.GenerateLicenseAsync(user, subscriptionInfo).Returns(license);
+        _licensingService.GetClaimsPrincipalFromLicense(license).Returns(new ClaimsPrincipal());
         user.Gateway = GatewayType.Stripe;
 
         // Act
@@ -658,6 +669,7 @@ public class AccountsControllerTests : IDisposable
         _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
         _paymentService.GetSubscriptionAsync(user).Returns(subscriptionInfo);
         _userService.GenerateLicenseAsync(user, subscriptionInfo).Returns(license);
+        _licensingService.GetClaimsPrincipalFromLicense(license).Returns(new ClaimsPrincipal());
         user.Gateway = GatewayType.Stripe;
 
         // Act
@@ -726,6 +738,7 @@ public class AccountsControllerTests : IDisposable
         _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
         _paymentService.GetSubscriptionAsync(user).Returns(subscriptionInfo);
         _userService.GenerateLicenseAsync(user, subscriptionInfo).Returns(license);
+        _licensingService.GetClaimsPrincipalFromLicense(license).Returns(new ClaimsPrincipal());
         user.Gateway = GatewayType.Stripe;
 
         // Act - Full pipeline: Stripe → SubscriptionInfo → SubscriptionResponseModel → API response
@@ -791,6 +804,7 @@ public class AccountsControllerTests : IDisposable
         };
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
         _userService.GenerateLicenseAsync(user).Returns(license);
+        _licensingService.GetClaimsPrincipalFromLicense(license).Returns(new ClaimsPrincipal());
         _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true); // Flag enabled
 
         // Act
