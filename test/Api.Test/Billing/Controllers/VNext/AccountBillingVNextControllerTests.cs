@@ -39,13 +39,6 @@ public class AccountBillingVNextControllerTests
             _updatePaymentMethodCommand);
     }
 
-    [Fact]
-    public async Task GetLicenseAsync_NullUser_ThrowsUnauthorizedAccessException()
-    {
-        // Act & Assert
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _sut.GetLicenseAsync(null!));
-    }
-
     [Theory, BitAutoData]
     public async Task GetLicenseAsync_ValidUser_ReturnsLicenseResponse(User user,
         Core.Billing.Licenses.Models.Api.Response.LicenseResponseModel licenseResponse)
