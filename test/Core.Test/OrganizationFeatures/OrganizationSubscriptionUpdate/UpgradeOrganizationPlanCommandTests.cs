@@ -2,6 +2,7 @@
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
@@ -241,5 +242,135 @@ public class UpgradeOrganizationPlanCommandTests
         Assert.Contains($"Your organization currently has {currentServiceAccounts} machine accounts. Your new plan only allows", exception.Message);
 
         await sutProvider.GetDependency<IOrganizationService>().DidNotReceiveWithAnyArgs().ReplaceAndUpdateCacheAsync(default);
+    }
+
+    [Theory]
+    [FreeOrganizationUpgradeCustomize, BitAutoData]
+    public async Task UpgradePlan_WhenOrganizationIsMissingPublicAndPrivateKeys_Backfills(
+        Organization organization,
+        OrganizationUpgrade upgrade,
+        string newPublicKey,
+        string newPrivateKey,
+        SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
+    {
+        organization.PublicKey = null;
+        organization.PrivateKey = null;
+
+        upgrade.Plan = PlanType.TeamsAnnually;
+        upgrade.Keys = new PublicKeyEncryptionKeyPairData(
+            wrappedPrivateKey: newPrivateKey,
+            publicKey: newPublicKey);
+        upgrade.AdditionalSeats = 10;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(organization.PlanType)
+            .Returns(MockPlans.Get(organization.PlanType));
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(upgrade.Plan)
+            .Returns(MockPlans.Get(upgrade.Plan));
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Sponsored = 0, Users = 1 });
+
+        // Act
+        await sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade);
+
+        // Assert
+        Assert.Equal(newPublicKey, organization.PublicKey);
+        Assert.Equal(newPrivateKey, organization.PrivateKey);
+        await sutProvider.GetDependency<IOrganizationService>()
+            .Received(1)
+            .ReplaceAndUpdateCacheAsync(organization);
+    }
+
+    [Theory]
+    [FreeOrganizationUpgradeCustomize, BitAutoData]
+    public async Task UpgradePlan_WhenOrganizationAlreadyHasPublicAndPrivateKeys_DoesNotOverwriteWithNull(
+        Organization organization,
+        OrganizationUpgrade upgrade,
+        SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
+    {
+        // Arrange
+        const string existingPublicKey = "existing-public-key";
+        const string existingPrivateKey = "existing-private-key";
+
+        organization.PublicKey = existingPublicKey;
+        organization.PrivateKey = existingPrivateKey;
+
+        upgrade.Plan = PlanType.TeamsAnnually;
+        upgrade.Keys = null;
+        upgrade.AdditionalSeats = 10;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(organization.PlanType)
+            .Returns(MockPlans.Get(organization.PlanType));
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(upgrade.Plan)
+            .Returns(MockPlans.Get(upgrade.Plan));
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Sponsored = 0, Users = 1 });
+
+        // Act
+        await sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade);
+
+        // Assert
+        Assert.Equal(existingPublicKey, organization.PublicKey);
+        Assert.Equal(existingPrivateKey, organization.PrivateKey);
+        await sutProvider.GetDependency<IOrganizationService>()
+            .Received(1)
+            .ReplaceAndUpdateCacheAsync(organization);
+    }
+
+    [Theory]
+    [FreeOrganizationUpgradeCustomize, BitAutoData]
+    public async Task UpgradePlan_WhenOrganizationAlreadyHasPublicAndPrivateKeys_DoesNotBackfillWithNewKeys(
+        Organization organization,
+        OrganizationUpgrade upgrade,
+        SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
+    {
+        // Arrange
+        const string existingPublicKey = "existing-public-key";
+        const string existingPrivateKey = "existing-private-key";
+        const string newPublicKey = "new-public-key";
+        const string newPrivateKey = "new-private-key";
+
+        organization.PublicKey = existingPublicKey;
+        organization.PrivateKey = existingPrivateKey;
+
+        upgrade.Plan = PlanType.TeamsAnnually;
+        upgrade.Keys = new PublicKeyEncryptionKeyPairData(
+            wrappedPrivateKey: newPrivateKey,
+            publicKey: newPublicKey);
+        upgrade.AdditionalSeats = 10;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(organization.PlanType)
+            .Returns(MockPlans.Get(organization.PlanType));
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(upgrade.Plan)
+            .Returns(MockPlans.Get(upgrade.Plan));
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Sponsored = 0, Users = 1 });
+
+        // Act
+        await sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade);
+
+        // Assert
+        Assert.Equal(existingPublicKey, organization.PublicKey);
+        Assert.Equal(existingPrivateKey, organization.PrivateKey);
+        await sutProvider.GetDependency<IOrganizationService>()
+            .Received(1)
+            .ReplaceAndUpdateCacheAsync(organization);
     }
 }

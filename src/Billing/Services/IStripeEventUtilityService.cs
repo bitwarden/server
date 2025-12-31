@@ -36,7 +36,7 @@ public interface IStripeEventUtilityService
     /// <param name="userId"></param>
     /// /// <param name="providerId"></param>
     /// <returns></returns>
-    Transaction FromChargeToTransaction(Charge charge, Guid? organizationId, Guid? userId, Guid? providerId);
+    Task<Transaction> FromChargeToTransactionAsync(Charge charge, Guid? organizationId, Guid? userId, Guid? providerId);
 
     /// <summary>
     /// Attempts to pay the specified invoice. If a customer is eligible, the invoice is paid using Braintree or Stripe.

@@ -66,6 +66,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual NotificationHubPoolSettings NotificationHubPool { get; set; } = new();
     public virtual YubicoSettings Yubico { get; set; } = new YubicoSettings();
     public virtual DuoSettings Duo { get; set; } = new DuoSettings();
+    public virtual WebAuthnSettings WebAuthn { get; set; } = new WebAuthnSettings();
     public virtual BraintreeSettings Braintree { get; set; } = new BraintreeSettings();
     public virtual ImportCiphersLimitationSettings ImportCiphersLimitation { get; set; } = new ImportCiphersLimitationSettings();
     public virtual BitPaySettings BitPay { get; set; } = new BitPaySettings();
@@ -81,7 +82,6 @@ public class GlobalSettings : IGlobalSettings
     public virtual ILaunchDarklySettings LaunchDarkly { get; set; } = new LaunchDarklySettings();
     public virtual string DevelopmentDirectory { get; set; }
     public virtual IWebPushSettings WebPush { get; set; } = new WebPushSettings();
-    public virtual IPhishingDomainSettings PhishingDomain { get; set; } = new PhishingDomainSettings();
 
     public virtual int SendAccessTokenLifetimeInMinutes { get; set; } = 5;
     public virtual bool EnableEmailVerification { get; set; }
@@ -614,6 +614,12 @@ public class GlobalSettings : IGlobalSettings
         public string AKey { get; set; }
     }
 
+    public class WebAuthnSettings
+    {
+        public int PremiumMaximumAllowedCredentials { get; set; } = 10;
+        public int NonPremiumMaximumAllowedCredentials { get; set; } = 5;
+    }
+
     public class BraintreeSettings
     {
         public bool Production { get; set; }
@@ -688,12 +694,6 @@ public class GlobalSettings : IGlobalSettings
     {
         public string ApiKey { get; set; }
         public int MaxNetworkRetries { get; set; } = 2;
-    }
-
-    public class PhishingDomainSettings : IPhishingDomainSettings
-    {
-        public string UpdateUrl { get; set; }
-        public string ChecksumUrl { get; set; }
     }
 
     public class DistributedIpRateLimitingSettings

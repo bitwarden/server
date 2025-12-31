@@ -3,6 +3,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Update;
 using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -30,7 +31,7 @@ public class OrganizationUpdateCommandTests
         var organizationBillingService = sutProvider.GetDependency<IOrganizationBillingService>();
 
         organization.Id = organizationId;
-        organization.GatewayCustomerId = null; // No Stripe customer, so no billing update
+        organization.GatewayCustomerId = null; // No Stripe customer, but billing update is still called
 
         organizationRepository
             .GetByIdAsync(organizationId)
@@ -61,8 +62,8 @@ public class OrganizationUpdateCommandTests
                 result,
                 EventType.Organization_Updated);
         await organizationBillingService
-            .DidNotReceiveWithAnyArgs()
-            .UpdateOrganizationNameAndEmail(Arg.Any<Organization>());
+            .Received(1)
+            .UpdateOrganizationNameAndEmail(result);
     }
 
     [Theory, BitAutoData]
@@ -93,7 +94,7 @@ public class OrganizationUpdateCommandTests
     [Theory]
     [BitAutoData("")]
     [BitAutoData((string)null)]
-    public async Task UpdateAsync_WhenGatewayCustomerIdIsNullOrEmpty_SkipsBillingUpdate(
+    public async Task UpdateAsync_WhenGatewayCustomerIdIsNullOrEmpty_CallsBillingUpdateButHandledGracefully(
         string gatewayCustomerId,
         Guid organizationId,
         Organization organization,
@@ -133,8 +134,8 @@ public class OrganizationUpdateCommandTests
                 result,
                 EventType.Organization_Updated);
         await organizationBillingService
-            .DidNotReceiveWithAnyArgs()
-            .UpdateOrganizationNameAndEmail(Arg.Any<Organization>());
+            .Received(1)
+            .UpdateOrganizationNameAndEmail(result);
     }
 
     [Theory, BitAutoData]
@@ -162,8 +163,9 @@ public class OrganizationUpdateCommandTests
             OrganizationId = organizationId,
             Name = organization.Name,
             BillingEmail = organization.BillingEmail,
-            PublicKey = publicKey,
-            EncryptedPrivateKey = encryptedPrivateKey
+            Keys = new PublicKeyEncryptionKeyPairData(
+                wrappedPrivateKey: encryptedPrivateKey,
+                publicKey: publicKey)
         };
 
         // Act
@@ -207,8 +209,9 @@ public class OrganizationUpdateCommandTests
             OrganizationId = organizationId,
             Name = organization.Name,
             BillingEmail = organization.BillingEmail,
-            PublicKey = newPublicKey,
-            EncryptedPrivateKey = newEncryptedPrivateKey
+            Keys = new PublicKeyEncryptionKeyPairData(
+                wrappedPrivateKey: newEncryptedPrivateKey,
+                publicKey: newPublicKey)
         };
 
         // Act
@@ -394,8 +397,9 @@ public class OrganizationUpdateCommandTests
             OrganizationId = organizationId,
             Name = newName, // Should be ignored
             BillingEmail = newBillingEmail, // Should be ignored
-            PublicKey = publicKey,
-            EncryptedPrivateKey = encryptedPrivateKey
+            Keys = new PublicKeyEncryptionKeyPairData(
+                wrappedPrivateKey: encryptedPrivateKey,
+                publicKey: publicKey)
         };
 
         // Act

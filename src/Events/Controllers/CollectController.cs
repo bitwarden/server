@@ -21,17 +21,21 @@ public class CollectController : Controller
     private readonly IEventService _eventService;
     private readonly ICipherRepository _cipherRepository;
     private readonly IOrganizationRepository _organizationRepository;
+    private readonly IOrganizationUserRepository _organizationUserRepository;
 
     public CollectController(
         ICurrentContext currentContext,
         IEventService eventService,
         ICipherRepository cipherRepository,
-        IOrganizationRepository organizationRepository)
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository
+        )
     {
         _currentContext = currentContext;
         _eventService = eventService;
         _cipherRepository = cipherRepository;
         _organizationRepository = organizationRepository;
+        _organizationUserRepository = organizationUserRepository;
     }
 
     [HttpPost]
@@ -53,6 +57,24 @@ public class CollectController : Controller
                 case EventType.User_ClientExportedVault:
                     await _eventService.LogUserEventAsync(_currentContext.UserId.Value, eventModel.Type, eventModel.Date);
                     break;
+
+                case EventType.Organization_ItemOrganization_Accepted:
+                case EventType.Organization_ItemOrganization_Declined:
+                    if (!eventModel.OrganizationId.HasValue || !_currentContext.UserId.HasValue)
+                    {
+                        continue;
+                    }
+
+                    var orgUser = await _organizationUserRepository.GetByOrganizationAsync(eventModel.OrganizationId.Value, _currentContext.UserId.Value);
+
+                    if (orgUser == null)
+                    {
+                        continue;
+                    }
+
+                    await _eventService.LogOrganizationUserEventAsync(orgUser, eventModel.Type, eventModel.Date);
+
+                    continue;
 
                 // Cipher events
                 case EventType.Cipher_ClientAutofilled:
