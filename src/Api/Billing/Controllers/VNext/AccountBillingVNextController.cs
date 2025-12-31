@@ -21,7 +21,8 @@ public class AccountBillingVNextController(
     ICreatePremiumCloudHostedSubscriptionCommand createPremiumCloudHostedSubscriptionCommand,
     IGetCreditQuery getCreditQuery,
     IGetPaymentMethodQuery getPaymentMethodQuery,
-    IUpdatePaymentMethodCommand updatePaymentMethodCommand) : BaseBillingController
+    IUpdatePaymentMethodCommand updatePaymentMethodCommand,
+    IUpgradePremiumToOrganizationCommand upgradePremiumToOrganizationCommand) : BaseBillingController
 {
     [HttpGet("credit")]
     [InjectUser]
@@ -75,6 +76,18 @@ public class AccountBillingVNextController(
         var (paymentMethod, billingAddress, additionalStorageGb) = request.ToDomain();
         var result = await createPremiumCloudHostedSubscriptionCommand.Run(
             user, paymentMethod, billingAddress, additionalStorageGb);
+        return Handle(result);
+    }
+
+    [HttpPost("upgrade")]
+    [InjectUser]
+    public async Task<IResult> UpgradePremiumToOrganizationAsync(
+        [BindNever] User user,
+        [FromBody] UpgradePremiumToOrganizationRequest request)
+    {
+        var (planType, seats, premiumAccess, storage, trialEndDate) = request.ToDomain();
+        var result = await upgradePremiumToOrganizationCommand.Run(
+            user, planType, seats, premiumAccess, storage, trialEndDate);
         return Handle(result);
     }
 }
