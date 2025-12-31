@@ -63,38 +63,47 @@ public class RegisterFinishRequestModel : IValidatableObject
     public Guid? ProviderUserId { get; set; }
 
     // Strongly-typed accessors for post-validation usage to satisfy nullability
+    // Ignore serialization, these are just null safe accessors.
     [System.Text.Json.Serialization.JsonIgnore]
     [Newtonsoft.Json.JsonIgnore]
     public string EmailVerificationTokenRequired =>
-        EmailVerificationToken ?? throw new BadRequestException("Email verification token absent when processing register/finish.");
+        EmailVerificationToken
+        ?? throw new BadRequestException("Email verification token absent when processing register/finish.");
     [System.Text.Json.Serialization.JsonIgnore]
     [Newtonsoft.Json.JsonIgnore]
     public string OrgInviteTokenRequired =>
-        OrgInviteToken ?? throw new BadRequestException("Organization invite token absent when processing register/finish.");
+        OrgInviteToken
+        ?? throw new BadRequestException("Organization invite token absent when processing register/finish.");
     [System.Text.Json.Serialization.JsonIgnore]
     [Newtonsoft.Json.JsonIgnore]
     public Guid OrganizationUserIdRequired =>
-        OrganizationUserId ?? throw new BadRequestException("Organization user id absent when processing register/finish.");
+        OrganizationUserId
+        ?? throw new BadRequestException("Organization user id absent when processing register/finish.");
     [System.Text.Json.Serialization.JsonIgnore]
     [Newtonsoft.Json.JsonIgnore]
     public string OrgSponsoredFreeFamilyPlanTokenRequired =>
-        OrgSponsoredFreeFamilyPlanToken ?? throw new BadRequestException("Organization sponsored free family plan token absent when processing register/finish.");
+        OrgSponsoredFreeFamilyPlanToken
+        ?? throw new BadRequestException("Organization sponsored free family plan token absent when processing register/finish.");
     [System.Text.Json.Serialization.JsonIgnore]
     [Newtonsoft.Json.JsonIgnore]
     public string AcceptEmergencyAccessInviteTokenRequired =>
-        AcceptEmergencyAccessInviteToken ?? throw new BadRequestException("Accept emergency access invite token absent when processing register/finish.");
+        AcceptEmergencyAccessInviteToken
+        ?? throw new BadRequestException("Accept emergency access invite token absent when processing register/finish.");
     [System.Text.Json.Serialization.JsonIgnore]
     [Newtonsoft.Json.JsonIgnore]
     public Guid AcceptEmergencyAccessIdRequired =>
-        AcceptEmergencyAccessId ?? throw new BadRequestException("Accept emergency access id absent when processing register/finish.");
+        AcceptEmergencyAccessId
+        ?? throw new BadRequestException("Accept emergency access id absent when processing register/finish.");
     [System.Text.Json.Serialization.JsonIgnore]
     [Newtonsoft.Json.JsonIgnore]
     public string ProviderInviteTokenRequired =>
-        ProviderInviteToken ?? throw new BadRequestException("Provider invite token absent when processing register/finish.");
+        ProviderInviteToken
+        ?? throw new BadRequestException("Provider invite token absent when processing register/finish.");
     [System.Text.Json.Serialization.JsonIgnore]
     [Newtonsoft.Json.JsonIgnore]
     public Guid ProviderUserIdRequired =>
-        ProviderUserId ?? throw new BadRequestException("Provider user id absent when processing register/finish.");
+        ProviderUserId
+        ?? throw new BadRequestException("Provider user id absent when processing register/finish.");
 
     public User ToUser()
     {
@@ -110,7 +119,7 @@ public class RegisterFinishRequestModel : IValidatableObject
             KdfMemory = MasterPasswordUnlock?.Kdf.Memory ?? KdfMemory,
             KdfParallelism = MasterPasswordUnlock?.Kdf.Parallelism ?? KdfParallelism,
             // PM-28827 To be added when MasterPasswordSalt is added to the user column
-            // MasterPasswordSalt = MasterPasswordUnlockData?.Salt ?? Email.ToLower().Trim(),
+            // MasterPasswordSalt = MasterPasswordUnlock?.Salt ?? Email.ToLower().Trim(),
             Key = MasterPasswordUnlock?.MasterKeyWrappedUserKey ?? UserSymmetricKey ?? throw new BadRequestException("MasterKeyWrappedUserKey couldn't be found on either the MasterPasswordUnlockData or the UserSymmetricKey property passed in."),
         };
 
@@ -150,6 +159,8 @@ public class RegisterFinishRequestModel : IValidatableObject
         // PM-28143 - Remove this check
         ThrowIfExistsAndHashIsNotEqual(MasterPasswordAuthentication, MasterPasswordHash);
 
+        // 1. Access Token Presence Verification Check
+
         // Ensure exactly one registration token type is provided
         var hasEmailVerification = !string.IsNullOrWhiteSpace(EmailVerificationToken);
         var hasOrgInvite = !string.IsNullOrEmpty(OrgInviteToken) && OrganizationUserId.HasValue;
@@ -170,21 +181,6 @@ public class RegisterFinishRequestModel : IValidatableObject
             throw new BadRequestException("Multiple registration token types provided.");
         }
 
-        IEnumerable<ValidationResult> kdfValidationResults;
-        if (MasterPasswordUnlock != null && MasterPasswordAuthentication != null)
-        {
-            kdfValidationResults = KdfSettingsValidator.Validate(MasterPasswordUnlock.ToData());
-        }
-        else
-        {
-            kdfValidationResults = KdfSettingsValidator.Validate(
-                Kdf ?? throw new BadRequestException($"{nameof(Kdf)} not found on RequestModel"),
-                KdfIterations ?? throw new BadRequestException($"{nameof(KdfIterations)} not found on RequestModel"),
-                KdfMemory,
-                KdfParallelism);
-        }
-
-        // Move token presence validation from controller into the request model
         switch (GetTokenType())
         {
             case RegisterFinishTokenType.EmailVerification:
@@ -227,6 +223,22 @@ public class RegisterFinishRequestModel : IValidatableObject
                 break;
             default:
                 throw new BadRequestException("Invalid registration finish request");
+        }
+
+        // 2. Validate kdf settings.
+
+        IEnumerable<ValidationResult> kdfValidationResults;
+        if (MasterPasswordUnlock != null && MasterPasswordAuthentication != null)
+        {
+            kdfValidationResults = KdfSettingsValidator.Validate(MasterPasswordUnlock.ToData());
+        }
+        else
+        {
+            kdfValidationResults = KdfSettingsValidator.Validate(
+                Kdf ?? throw new BadRequestException($"{nameof(Kdf)} not found on RequestModel"),
+                KdfIterations ?? throw new BadRequestException($"{nameof(KdfIterations)} not found on RequestModel"),
+                KdfMemory,
+                KdfParallelism);
         }
 
         return kdfValidationResults;
