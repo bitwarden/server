@@ -2,6 +2,7 @@
 using Bit.Api.Billing.Models.Requests.Payment;
 using Bit.Api.Billing.Models.Requests.Premium;
 using Bit.Core;
+using Bit.Core.Billing.Licenses.Queries;
 using Bit.Core.Billing.Payment.Commands;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Premium.Commands;
@@ -21,6 +22,7 @@ public class AccountBillingVNextController(
     ICreatePremiumCloudHostedSubscriptionCommand createPremiumCloudHostedSubscriptionCommand,
     IGetCreditQuery getCreditQuery,
     IGetPaymentMethodQuery getPaymentMethodQuery,
+    IGetUserLicenseQuery getUserLicenseQuery,
     IUpdatePaymentMethodCommand updatePaymentMethodCommand) : BaseBillingController
 {
     [HttpGet("credit")]
@@ -76,5 +78,14 @@ public class AccountBillingVNextController(
         var result = await createPremiumCloudHostedSubscriptionCommand.Run(
             user, paymentMethod, billingAddress, additionalStorageGb);
         return Handle(result);
+    }
+
+    [HttpGet("license")]
+    [InjectUser]
+    public async Task<IResult> GetLicenseAsync(
+        [BindNever] User user)
+    {
+        var response = await getUserLicenseQuery.Run(user);
+        return TypedResults.Ok(response);
     }
 }
