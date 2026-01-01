@@ -537,18 +537,9 @@ public class ConfirmOrganizationUserCommandTests
         sutProvider.GetDependency<IUserRepository>().GetManyAsync(default).ReturnsForAnyArgs(new[] { user });
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.CreateDefaultLocation).Returns(true);
 
-        var policyDetails = new PolicyDetails
-        {
-            OrganizationId = org.Id,
-            OrganizationUserId = orgUser.Id,
-            IsProvider = false,
-            OrganizationUserStatus = orgUser.Status,
-            OrganizationUserType = orgUser.Type,
-            PolicyType = PolicyType.OrganizationDataOwnership
-        };
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<OrganizationDataOwnershipPolicyRequirement>(orgUser.UserId!.Value)
-            .Returns(new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Disabled, [policyDetails]));
+            .Returns(new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Disabled, []));
 
         await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, collectionName);
 
