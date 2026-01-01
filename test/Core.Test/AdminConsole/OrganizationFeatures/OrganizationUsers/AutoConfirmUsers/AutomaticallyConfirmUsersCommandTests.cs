@@ -203,14 +203,10 @@ public class AutomaticallyConfirmUsersCommandTests
 
         await sutProvider.GetDependency<ICollectionRepository>()
             .Received(1)
-            .CreateAsync(
-                Arg.Is<Collection>(c =>
-                    c.OrganizationId == organization.Id &&
-                    c.Name == defaultCollectionName &&
-                    c.Type == CollectionType.DefaultUserCollection),
-                Arg.Is<IEnumerable<CollectionAccessSelection>>(groups => groups == null),
-                Arg.Is<IEnumerable<CollectionAccessSelection>>(access =>
-                    access.FirstOrDefault(x => x.Id == organizationUser.Id && x.Manage) != null));
+            .CreateDefaultCollectionsAsync(
+                organization.Id,
+                Arg.Is<IEnumerable<Guid>>(ids => ids.Single() == organizationUser.Id),
+                defaultCollectionName);
     }
 
     [Theory]
@@ -252,9 +248,7 @@ public class AutomaticallyConfirmUsersCommandTests
 
         await sutProvider.GetDependency<ICollectionRepository>()
             .DidNotReceive()
-            .CreateAsync(Arg.Any<Collection>(),
-                Arg.Any<IEnumerable<CollectionAccessSelection>>(),
-                Arg.Any<IEnumerable<CollectionAccessSelection>>());
+            .CreateDefaultCollectionsAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<string>());
     }
 
     [Theory]
@@ -290,9 +284,7 @@ public class AutomaticallyConfirmUsersCommandTests
 
         var collectionException = new Exception("Collection creation failed");
         sutProvider.GetDependency<ICollectionRepository>()
-            .CreateAsync(Arg.Any<Collection>(),
-                Arg.Any<IEnumerable<CollectionAccessSelection>>(),
-                Arg.Any<IEnumerable<CollectionAccessSelection>>())
+            .CreateDefaultCollectionsAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<string>())
             .ThrowsAsync(collectionException);
 
         // Act

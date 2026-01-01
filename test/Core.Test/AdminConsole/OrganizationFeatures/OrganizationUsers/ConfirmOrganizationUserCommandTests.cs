@@ -494,15 +494,10 @@ public class ConfirmOrganizationUserCommandTests
 
         await sutProvider.GetDependency<ICollectionRepository>()
             .Received(1)
-            .CreateAsync(
-                Arg.Is<Collection>(c =>
-                    c.Name == collectionName &&
-                    c.OrganizationId == organization.Id &&
-                    c.Type == CollectionType.DefaultUserCollection),
-                Arg.Any<IEnumerable<CollectionAccessSelection>>(),
-                Arg.Is<IEnumerable<CollectionAccessSelection>>(cu =>
-                    cu.Single().Id == orgUser.Id &&
-                    cu.Single().Manage));
+            .CreateDefaultCollectionsAsync(
+                organization.Id,
+                Arg.Is<IEnumerable<Guid>>(ids => ids.Single() == orgUser.Id),
+                collectionName);
     }
 
     [Theory, BitAutoData]

@@ -297,21 +297,10 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
             return;
         }
 
-        var defaultCollection = new Collection
-        {
-            OrganizationId = organizationUser.OrganizationId,
-            Name = defaultUserCollectionName,
-            Type = CollectionType.DefaultUserCollection
-        };
-        var collectionUser = new CollectionAccessSelection
-        {
-            Id = organizationUser.Id,
-            ReadOnly = false,
-            HidePasswords = false,
-            Manage = true
-        };
-
-        await _collectionRepository.CreateAsync(defaultCollection, groups: null, users: [collectionUser]);
+        await _collectionRepository.CreateDefaultCollectionsAsync(
+            organizationUser.OrganizationId,
+            [organizationUser.Id],
+            defaultUserCollectionName);
     }
 
     /// <summary>
