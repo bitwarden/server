@@ -266,6 +266,7 @@ public static class FeatureFlagKeys
     public const string VaultLoadingSkeletons = "pm-25081-vault-skeleton-loaders";
     public const string BrowserPremiumSpotlight = "pm-23384-browser-premium-spotlight";
     public const string MigrateMyVaultToMyItems = "pm-20558-migrate-myvault-to-myitems";
+    public const string PM27632_CipherCrudOperationsToSdk = "pm-27632-cipher-crud-operations-to-sdk";
 
     /* Innovation Team */
     public const string ArchiveVaultItems = "pm-19148-innovation-archive";
