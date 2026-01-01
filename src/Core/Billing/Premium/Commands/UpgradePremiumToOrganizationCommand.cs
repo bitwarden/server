@@ -1,18 +1,22 @@
-﻿using Bit.Core.Billing.Commands;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 using OneOf.Types;
 using Stripe;
 
 namespace Bit.Core.Billing.Premium.Commands;
 /// <summary>
-/// Upgrades a user's Premium subscription to an Organization plan by modifying the existing Stripe subscription.
+/// Upgrades a user's Premium subscription to an Organization plan by creating a new Organization
+/// and transferring the subscription from the User to the Organization.
 /// </summary>
 public interface IUpgradePremiumToOrganizationCommand
 {
@@ -39,8 +43,11 @@ public class UpgradePremiumToOrganizationCommand(
     ILogger<UpgradePremiumToOrganizationCommand> logger,
     IPricingClient pricingClient,
     IStripeAdapter stripeAdapter,
-    ISubscriberService subscriberService,
-    IUserService userService)
+    IUserService userService,
+    IOrganizationRepository organizationRepository,
+    IOrganizationUserRepository organizationUserRepository,
+    IOrganizationApiKeyRepository organizationApiKeyRepository,
+    IApplicationCacheService applicationCacheService)
     : BaseBillingCommand<UpgradePremiumToOrganizationCommand>(logger), IUpgradePremiumToOrganizationCommand
 {
     public Task<BillingCommandResult<None>> Run(
@@ -52,14 +59,9 @@ public class UpgradePremiumToOrganizationCommand(
         DateTime? trialEndDate) => HandleAsync<None>(async () =>
     {
         // Validate that the user has an active Premium subscription
-        if (!user.Premium)
+        if (user is not { Premium: true, GatewaySubscriptionId: not null and not "" })
         {
             return new BadRequest("User does not have an active Premium subscription.");
-        }
-
-        if (string.IsNullOrEmpty(user.GatewaySubscriptionId))
-        {
-            return new BadRequest("User does not have a Stripe subscription.");
         }
 
         if (seats < 1)
@@ -73,10 +75,7 @@ public class UpgradePremiumToOrganizationCommand(
         }
 
         // Fetch the current Premium subscription from Stripe
-        var currentSubscription = await subscriberService.GetSubscriptionOrThrow(user, new SubscriptionGetOptions
-        {
-            Expand = ["items.data.price"]
-        });
+        var currentSubscription = await stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId);
 
         // Get the target organization plan
         var targetPlan = await pricingClient.GetPlanOrThrow(targetPlanType);
@@ -160,11 +159,81 @@ public class UpgradePremiumToOrganizationCommand(
             subscriptionUpdateOptions.TrialEnd = trialEndDate.Value;
         }
 
+        // Create the Organization entity
+        var organization = new Organization
+        {
+            Id = CoreHelpers.GenerateComb(),
+            Name = $"{user.Email}'s Organization",
+            BillingEmail = user.Email,
+            PlanType = targetPlan.Type,
+            Seats = (short)seats,
+            MaxCollections = targetPlan.PasswordManager.MaxCollections,
+            MaxStorageGb = (short)(targetPlan.PasswordManager.BaseStorageGb + (storage ?? 0)),
+            UsePolicies = targetPlan.HasPolicies,
+            UseSso = targetPlan.HasSso,
+            UseGroups = targetPlan.HasGroups,
+            UseEvents = targetPlan.HasEvents,
+            UseDirectory = targetPlan.HasDirectory,
+            UseTotp = targetPlan.HasTotp,
+            Use2fa = targetPlan.Has2fa,
+            UseApi = targetPlan.HasApi,
+            UseResetPassword = targetPlan.HasResetPassword,
+            SelfHost = targetPlan.HasSelfHost,
+            UsersGetPremium = targetPlan.UsersGetPremium || premiumAccess,
+            UseCustomPermissions = targetPlan.HasCustomPermissions,
+            UseScim = targetPlan.HasScim,
+            Plan = targetPlan.Name,
+            Gateway = null,
+            Enabled = true,
+            LicenseKey = CoreHelpers.SecureRandomString(20),
+            CreationDate = DateTime.UtcNow,
+            RevisionDate = DateTime.UtcNow,
+            Status = OrganizationStatusType.Created,
+            UsePasswordManager = true,
+            UseSecretsManager = false,
+            UseOrganizationDomains = targetPlan.HasOrganizationDomains,
+            GatewayCustomerId = user.GatewayCustomerId,
+            GatewaySubscriptionId = currentSubscription.Id
+        };
+
         // Update the subscription in Stripe
         await stripeAdapter.UpdateSubscriptionAsync(currentSubscription.Id, subscriptionUpdateOptions);
 
-        // Update user record
-        user.PremiumExpirationDate = trialEndDate ?? currentSubscription.GetCurrentPeriodEnd();
+        // Save the organization
+        await organizationRepository.CreateAsync(organization);
+
+        // Create organization API key
+        await organizationApiKeyRepository.CreateAsync(new OrganizationApiKey
+        {
+            OrganizationId = organization.Id,
+            ApiKey = CoreHelpers.SecureRandomString(30),
+            Type = OrganizationApiKeyType.Default,
+            RevisionDate = DateTime.UtcNow,
+        });
+
+        // Update cache
+        await applicationCacheService.UpsertOrganizationAbilityAsync(organization);
+
+        // Create OrganizationUser for the upgrading user as owner
+        var organizationUser = new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = user.Id,
+            Key = null, // Will need to be set by client
+            AccessSecretsManager = false,
+            Type = OrganizationUserType.Owner,
+            Status = OrganizationUserStatusType.Confirmed,
+            CreationDate = organization.CreationDate,
+            RevisionDate = organization.CreationDate
+        };
+        organizationUser.SetNewId();
+        await organizationUserRepository.CreateAsync(organizationUser);
+
+        // Remove subscription from user
+        user.Premium = false;
+        user.PremiumExpirationDate = null;
+        user.GatewaySubscriptionId = null;
+        user.GatewayCustomerId = null;
         user.RevisionDate = DateTime.UtcNow;
         await userService.SaveUserAsync(user);
 

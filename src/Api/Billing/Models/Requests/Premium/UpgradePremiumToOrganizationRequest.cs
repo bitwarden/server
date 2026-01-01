@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using Bit.Core.Billing.Enums;
 
 namespace Bit.Api.Billing.Models.Requests.Premium;
@@ -6,18 +7,26 @@ namespace Bit.Api.Billing.Models.Requests.Premium;
 public class UpgradePremiumToOrganizationRequest
 {
     [Required]
-    public required PlanType PlanType { get; set; }
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public ProductTierType Tier { get; set; }
 
-    [Range(1, int.MaxValue)]
-    public int Seats { get; set; }
+    [Required]
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public PlanCadenceType Cadence { get; set; }
 
-    public bool PremiumAccess { get; set; } = false;
-
-    [Range(0, 99)]
-    public int Storage { get; set; } = 0;
-
-    public DateTime? TrialEndDate { get; set; }
+    private PlanType PlanType =>
+        Tier switch
+        {
+            ProductTierType.Families => PlanType.FamiliesAnnually,
+            ProductTierType.Teams => Cadence == PlanCadenceType.Monthly
+                ? PlanType.TeamsMonthly
+                : PlanType.TeamsAnnually,
+            ProductTierType.Enterprise => Cadence == PlanCadenceType.Monthly
+                ? PlanType.EnterpriseMonthly
+                : PlanType.EnterpriseAnnually,
+            _ => throw new InvalidOperationException("Cannot upgrade to an Organization subscription that isn't Families, Teams or Enterprise.")
+        };
 
     public (PlanType, int, bool, int?, DateTime?) ToDomain() =>
-        (PlanType, Seats, PremiumAccess, Storage > 0 ? Storage : null, TrialEndDate);
+        (PlanType, 1, false, null, null);
 }

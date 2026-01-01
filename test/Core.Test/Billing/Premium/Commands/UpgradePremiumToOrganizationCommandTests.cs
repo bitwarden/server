@@ -1,8 +1,10 @@
-﻿using Bit.Core.Billing.Enums;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Premium.Commands;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.Extensions.Logging;
@@ -88,8 +90,11 @@ public class UpgradePremiumToOrganizationCommandTests
 
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
-    private readonly ISubscriberService _subscriberService = Substitute.For<ISubscriberService>();
     private readonly IUserService _userService = Substitute.For<IUserService>();
+    private readonly IOrganizationRepository _organizationRepository = Substitute.For<IOrganizationRepository>();
+    private readonly IOrganizationUserRepository _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
+    private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository = Substitute.For<IOrganizationApiKeyRepository>();
+    private readonly IApplicationCacheService _applicationCacheService = Substitute.For<IApplicationCacheService>();
     private readonly ILogger<UpgradePremiumToOrganizationCommand> _logger = Substitute.For<ILogger<UpgradePremiumToOrganizationCommand>>();
     private readonly UpgradePremiumToOrganizationCommand _command;
 
@@ -99,8 +104,11 @@ public class UpgradePremiumToOrganizationCommandTests
             _logger,
             _pricingClient,
             _stripeAdapter,
-            _subscriberService,
-            _userService);
+            _userService,
+            _organizationRepository,
+            _organizationUserRepository,
+            _organizationApiKeyRepository,
+            _applicationCacheService);
     }
 
     [Theory, BitAutoData]
@@ -131,7 +139,7 @@ public class UpgradePremiumToOrganizationCommandTests
         // Assert
         Assert.True(result.IsT1);
         var badRequest = result.AsT1;
-        Assert.Equal("User does not have a Stripe subscription.", badRequest.Response);
+        Assert.Equal("User does not have an active Premium subscription.", badRequest.Response);
     }
 
     [Theory, BitAutoData]
@@ -147,7 +155,7 @@ public class UpgradePremiumToOrganizationCommandTests
         // Assert
         Assert.True(result.IsT1);
         var badRequest = result.AsT1;
-        Assert.Equal("User does not have a Stripe subscription.", badRequest.Response);
+        Assert.Equal("User does not have an active Premium subscription.", badRequest.Response);
     }
 
     [Theory, BitAutoData]
@@ -212,7 +220,7 @@ public class UpgradePremiumToOrganizationCommandTests
             stripePremiumAccessPlanId: null // No premium access support
         );
 
-        _subscriberService.GetSubscriptionOrThrow(user, Arg.Any<SubscriptionGetOptions>())
+        _stripeAdapter.GetSubscriptionAsync("sub_123")
             .Returns(mockSubscription);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
 
@@ -254,7 +262,7 @@ public class UpgradePremiumToOrganizationCommandTests
             stripeStoragePlanId: null // No storage support
         );
 
-        _subscriberService.GetSubscriptionOrThrow(user, Arg.Any<SubscriptionGetOptions>())
+        _stripeAdapter.GetSubscriptionAsync("sub_123")
             .Returns(mockSubscription);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
 
@@ -273,6 +281,7 @@ public class UpgradePremiumToOrganizationCommandTests
         // Arrange
         user.Premium = true;
         user.GatewaySubscriptionId = "sub_123";
+        user.GatewayCustomerId = "cus_123";
         user.Id = Guid.NewGuid();
 
         var currentPeriodEnd = DateTime.UtcNow.AddMonths(1);
@@ -301,11 +310,15 @@ public class UpgradePremiumToOrganizationCommandTests
             stripeStoragePlanId: "storage-plan-teams"
         );
 
-        _subscriberService.GetSubscriptionOrThrow(user, Arg.Any<SubscriptionGetOptions>())
+        _stripeAdapter.GetSubscriptionAsync("sub_123")
             .Returns(mockSubscription);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
         _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
             .Returns(Task.FromResult(mockSubscription));
+        _organizationRepository.CreateAsync(Arg.Any<Organization>()).Returns(callInfo => Task.FromResult(callInfo.Arg<Organization>()));
+        _organizationApiKeyRepository.CreateAsync(Arg.Any<OrganizationApiKey>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationApiKey>()));
+        _organizationUserRepository.CreateAsync(Arg.Any<OrganizationUser>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationUser>()));
+        _applicationCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
         _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
 
         // Act
@@ -323,8 +336,16 @@ public class UpgradePremiumToOrganizationCommandTests
                 opts.Items.Any(i => i.Price == "teams-premium-access-annually" && i.Quantity == 1) &&
                 opts.Items.Any(i => i.Price == "storage-plan-teams" && i.Quantity == 10)));
 
-        await _userService.Received(1).SaveUserAsync(user);
-        Assert.Equal(currentPeriodEnd, user.PremiumExpirationDate);
+        await _organizationRepository.Received(1).CreateAsync(Arg.Is<Organization>(o =>
+            o.GatewaySubscriptionId == "sub_123" &&
+            o.GatewayCustomerId == "cus_123"));
+        await _organizationUserRepository.Received(1).CreateAsync(Arg.Any<OrganizationUser>());
+        await _organizationApiKeyRepository.Received(1).CreateAsync(Arg.Any<OrganizationApiKey>());
+
+        await _userService.Received(1).SaveUserAsync(Arg.Is<User>(u =>
+            u.Premium == false &&
+            u.GatewaySubscriptionId == null &&
+            u.GatewayCustomerId == null));
     }
 
     [Theory, BitAutoData]
@@ -333,6 +354,7 @@ public class UpgradePremiumToOrganizationCommandTests
         // Arrange
         user.Premium = true;
         user.GatewaySubscriptionId = "sub_123";
+        user.GatewayCustomerId = "cus_123";
 
         var currentPeriodEnd = DateTime.UtcNow.AddMonths(1);
         var mockSubscription = new Subscription
@@ -359,11 +381,15 @@ public class UpgradePremiumToOrganizationCommandTests
             stripeSeatPlanId: null // Non-seat-based
         );
 
-        _subscriberService.GetSubscriptionOrThrow(user, Arg.Any<SubscriptionGetOptions>())
+        _stripeAdapter.GetSubscriptionAsync("sub_123")
             .Returns(mockSubscription);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(mockPlan);
         _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
             .Returns(Task.FromResult(mockSubscription));
+        _organizationRepository.CreateAsync(Arg.Any<Organization>()).Returns(callInfo => Task.FromResult(callInfo.Arg<Organization>()));
+        _organizationApiKeyRepository.CreateAsync(Arg.Any<OrganizationApiKey>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationApiKey>()));
+        _organizationUserRepository.CreateAsync(Arg.Any<OrganizationUser>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationUser>()));
+        _applicationCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
         _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
 
         // Act
@@ -379,7 +405,10 @@ public class UpgradePremiumToOrganizationCommandTests
                 opts.Items.Any(i => i.Deleted == true) &&
                 opts.Items.Any(i => i.Price == "families-plan-annually" && i.Quantity == 1)));
 
-        await _userService.Received(1).SaveUserAsync(user);
+        await _organizationRepository.Received(1).CreateAsync(Arg.Any<Organization>());
+        await _userService.Received(1).SaveUserAsync(Arg.Is<User>(u =>
+            u.Premium == false &&
+            u.GatewaySubscriptionId == null));
     }
 
     [Theory, BitAutoData]
@@ -412,7 +441,7 @@ public class UpgradePremiumToOrganizationCommandTests
             stripeSeatPlanId: "teams-seat-annually"
         );
 
-        _subscriberService.GetSubscriptionOrThrow(user, Arg.Any<SubscriptionGetOptions>())
+        _stripeAdapter.GetSubscriptionAsync("sub_123")
             .Returns(mockSubscription);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
         _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
@@ -429,8 +458,6 @@ public class UpgradePremiumToOrganizationCommandTests
             "sub_123",
             Arg.Is<SubscriptionUpdateOptions>(opts =>
                 opts.TrialEnd == trialEndDate));
-
-        Assert.Equal(trialEndDate, user.PremiumExpirationDate);
     }
 
     [Theory, BitAutoData]
@@ -466,7 +493,7 @@ public class UpgradePremiumToOrganizationCommandTests
             stripeSeatPlanId: "teams-seat-annually"
         );
 
-        _subscriberService.GetSubscriptionOrThrow(user, Arg.Any<SubscriptionGetOptions>())
+        _stripeAdapter.GetSubscriptionAsync("sub_123")
             .Returns(mockSubscription);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
         _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
