@@ -1,7 +1,4 @@
-﻿using System.Data.Common;
-using Microsoft.EntityFrameworkCore;
-
-namespace Bit.Infrastructure.EntityFramework.Repositories;
+﻿namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 #nullable enable
 

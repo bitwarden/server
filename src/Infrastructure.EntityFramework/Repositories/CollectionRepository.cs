@@ -1,5 +1,4 @@
-﻿using System.Data.Common;
-using AutoMapper;
+﻿using AutoMapper;
 using Bit.Core.AdminConsole.Collections;
 using Bit.Core.AdminConsole.OrganizationFeatures.Collections;
 using Bit.Core.Enums;
