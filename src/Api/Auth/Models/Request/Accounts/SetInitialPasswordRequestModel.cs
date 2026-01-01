@@ -4,7 +4,6 @@ using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.Utilities;
 
@@ -71,7 +70,8 @@ public class SetInitialPasswordRequestModel : IValidatableObject
             // Currently, KDF settings are not saved separately for authentication and unlock and must therefore be equal
             if (!authenticationKdf.Equals(unlockKdf))
             {
-                throw new BadRequestException("KDF settings must be equal for authentication and unlock.");
+                yield return new ValidationResult("KDF settings must be equal for authentication and unlock.",
+                    [nameof(MasterPasswordAuthentication.Kdf), nameof(MasterPasswordUnlock.Kdf)]);
             }
 
             var authenticationValidationErrors = KdfSettingsValidator.Validate(authenticationKdf).ToList();
