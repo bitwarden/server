@@ -64,16 +64,26 @@ public class OrganizationDataOwnershipPolicyValidator(
         var userOrgIds = requirements
             .Select(requirement => requirement.GetDefaultCollectionRequestOnPolicyEnable(policyUpdate.OrganizationId))
             .Where(request => request.ShouldCreateDefaultCollection)
-            .Select(request => request.OrganizationUserId);
+            .Select(request => request.OrganizationUserId)
+            .ToList();
 
         if (!userOrgIds.Any())
         {
             return;
         }
 
-        await collectionRepository.UpsertDefaultCollectionsBulkAsync(
+        // Filter out users who already have default collections
+        var existingSemaphores = await collectionRepository.GetDefaultCollectionSemaphoresAsync(userOrgIds);
+        var usersNeedingDefaultCollections = userOrgIds.Except(existingSemaphores).ToList();
+
+        if (!usersNeedingDefaultCollections.Any())
+        {
+            return;
+        }
+
+        await collectionRepository.CreateDefaultCollectionsBulkAsync(
             policyUpdate.OrganizationId,
-            userOrgIds,
+            usersNeedingDefaultCollections,
             defaultCollectionName);
     }
 }

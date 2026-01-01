@@ -803,21 +803,13 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
             return;
         }
 
-        var orgUserIdWithDefaultCollection = await GetDefaultCollectionSemaphoresAsync(organizationUserIds);
-        var missingDefaultCollectionUserIds = organizationUserIds.Except(orgUserIdWithDefaultCollection);
+        var (collectionUsers, collections) = BuildDefaultCollectionForUsers(organizationId, organizationUserIds, defaultCollectionName);
 
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        var (collectionUsers, collections) = BuildDefaultCollectionForUsers(organizationId, missingDefaultCollectionUserIds, defaultCollectionName);
-
-        if (!collectionUsers.Any() || !collections.Any())
-        {
-            return;
-        }
-
         // CRITICAL: Insert semaphore entries BEFORE collections
-        // TODO: this will result in a creation date of the semaphore AFTER that of the collection, which is weird
+        // Database will throw on duplicate primary key (OrganizationUserId)
         var now = DateTime.UtcNow;
         var semaphores = collectionUsers.Select(c => new DefaultCollectionSemaphore
         {
@@ -832,7 +824,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         await dbContext.SaveChangesAsync();
     }
 
-    public async Task UpsertDefaultCollectionsBulkAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName)
+    public async Task CreateDefaultCollectionsBulkAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName)
     {
         // EF uses the same bulk copy approach as the main method
         await CreateDefaultCollectionsAsync(organizationId, organizationUserIds, defaultCollectionName);

@@ -74,12 +74,17 @@ public interface ICollectionRepository : IRepository<Collection, Guid>
 
     /// <summary>
     /// Creates default user collections for the specified organization users using bulk insert operations.
-    /// Gracefully skips users who already have a default collection for the organization.
+    /// Use this if you need to create collections for > ~1k users.
+    /// Throws an exception if any user already has a default collection for the organization.
     /// </summary>
     /// <param name="organizationId">The Organization ID.</param>
     /// <param name="organizationUserIds">The Organization User IDs to create default collections for.</param>
     /// <param name="defaultCollectionName">The encrypted string to use as the default collection name.</param>
-    Task UpsertDefaultCollectionsBulkAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName);
+    /// <remarks>
+    /// If any of the OrganizationUsers may already have default collections, the caller should first filter out these
+    /// users using GetDefaultCollectionSemaphoresAsync before calling this method.
+    /// </remarks>
+    Task CreateDefaultCollectionsBulkAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName);
 
     /// <summary>
     /// Gets default collection semaphores for the given organizationUserIds.
