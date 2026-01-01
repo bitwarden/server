@@ -2,14 +2,12 @@
 -- This migration is idempotent and can be run multiple times safely
 INSERT INTO [dbo].[DefaultCollectionSemaphore]
 (
-    [OrganizationId],
     [OrganizationUserId],
     [CreationDate]
 )
 SELECT DISTINCT
-    c.[OrganizationId],
     cu.[OrganizationUserId],
-    c.[CreationDate]
+    GETUTCDATE()
 FROM
     [dbo].[Collection] c
 INNER JOIN
@@ -23,7 +21,6 @@ WHERE
         FROM
             [dbo].[DefaultCollectionSemaphore] dcs
         WHERE
-            dcs.[OrganizationId] = c.[OrganizationId]
-            AND dcs.[OrganizationUserId] = cu.[OrganizationUserId]
+            dcs.[OrganizationUserId] = cu.[OrganizationUserId]
     );
 GO

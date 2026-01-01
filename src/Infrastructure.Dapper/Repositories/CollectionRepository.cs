@@ -453,7 +453,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
             .OrderBy(s => s.OrganizationUserId)
             .ToList();
 
-        using var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity & SqlBulkCopyOptions.CheckConstraints, transaction);
+        using var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity | SqlBulkCopyOptions.CheckConstraints, transaction);
         bulkCopy.DestinationTableName = "[dbo].[DefaultCollectionSemaphore]";
         bulkCopy.BatchSize = 500;
         bulkCopy.BulkCopyTimeout = 120;
