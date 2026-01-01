@@ -398,7 +398,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
             return;
         }
 
-        var (collections, collectionUsers) =
+        var (semaphores, collections, collectionUsers) =
             CollectionUtils.BuildDefaultUserCollections(organizationId, organizationUserIds, defaultCollectionName);
 
         await using var connection = new SqlConnection(ConnectionString);
@@ -410,13 +410,6 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
 
             // CRITICAL: Insert semaphore entries BEFORE collections
             // Database will throw on duplicate primary key (OrganizationUserId)
-            var now = DateTime.UtcNow;
-            var semaphores = collectionUsers.Select(c => new DefaultCollectionSemaphore
-            {
-                OrganizationUserId = c.OrganizationUserId,
-                CreationDate = now
-            }).ToList();
-
             await BulkInsertDefaultCollectionSemaphoresAsync(connection, transaction, semaphores);
             await BulkResourceCreationService.CreateCollectionsAsync(connection, transaction, collections);
             await BulkResourceCreationService.CreateCollectionsUsersAsync(connection, transaction, collectionUsers);
@@ -447,8 +440,9 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         return results.ToHashSet();
     }
 
-    private async Task BulkInsertDefaultCollectionSemaphoresAsync(SqlConnection connection, SqlTransaction transaction, List<DefaultCollectionSemaphore> semaphores)
+    private async Task BulkInsertDefaultCollectionSemaphoresAsync(SqlConnection connection, SqlTransaction transaction, IEnumerable<DefaultCollectionSemaphore> semaphores)
     {
+        semaphores = semaphores.ToList();
         if (!semaphores.Any())
         {
             return;

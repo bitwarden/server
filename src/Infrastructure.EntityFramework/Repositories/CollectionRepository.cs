@@ -805,7 +805,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
             return;
         }
 
-        var (collections, collectionUsers) =
+        var (semaphores, collections, collectionUsers) =
             CollectionUtils.BuildDefaultUserCollections(organizationId, organizationUserIds, defaultCollectionName);
 
         using var scope = ServiceScopeFactory.CreateScope();
@@ -815,14 +815,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         {
             // CRITICAL: Insert semaphore entries BEFORE collections
             // Database will throw on duplicate primary key (OrganizationUserId)
-            var now = DateTime.UtcNow;
-            var semaphores = collectionUsers.Select(c => new DefaultCollectionSemaphore
-            {
-                OrganizationUserId = c.OrganizationUserId,
-                CreationDate = now
-            }).ToList();
-
-            await dbContext.BulkCopyAsync(semaphores);
+            await dbContext.BulkCopyAsync(Mapper.Map<IEnumerable<DefaultCollectionSemaphore>>(semaphores));
             await dbContext.BulkCopyAsync(Mapper.Map<IEnumerable<Collection>>(collections));
             await dbContext.BulkCopyAsync(Mapper.Map<IEnumerable<CollectionUser>>(collectionUsers));
 

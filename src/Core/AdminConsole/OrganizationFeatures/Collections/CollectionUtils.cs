@@ -7,16 +7,21 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Collections;
 public static class CollectionUtils
 {
     /// <summary>
-    /// Arranges Collection and CollectionUser objects to create default user collections.
+    /// Arranges semaphore, Collection and CollectionUser objects to create default user collections.
     /// </summary>
     /// <param name="organizationId">The organization ID.</param>
     /// <param name="organizationUserIds">The IDs for organization users who need default collections.</param>
     /// <param name="defaultCollectionName">The encrypted string to use as the default collection name.</param>
     /// <returns></returns>
-    public static (IEnumerable<Collection> collection, IEnumerable<CollectionUser> collectionUsers)
+    public static (IEnumerable<DefaultCollectionSemaphore> semaphores,
+        IEnumerable<Collection> collection,
+        IEnumerable<CollectionUser> collectionUsers)
         BuildDefaultUserCollections(Guid organizationId, IEnumerable<Guid> organizationUserIds,
             string defaultCollectionName)
     {
+        var now = DateTime.UtcNow;
+
+        var semaphores = new List<DefaultCollectionSemaphore>();
         var collectionUsers = new List<CollectionUser>();
         var collections = new List<Collection>();
 
@@ -24,13 +29,19 @@ public static class CollectionUtils
         {
             var collectionId = CoreHelpers.GenerateComb();
 
+            semaphores.Add(new DefaultCollectionSemaphore
+            {
+                OrganizationUserId = orgUserId,
+                CreationDate = now
+            });
+
             collections.Add(new Collection
             {
                 Id = collectionId,
                 OrganizationId = organizationId,
                 Name = defaultCollectionName,
-                CreationDate = DateTime.UtcNow,
-                RevisionDate = DateTime.UtcNow,
+                CreationDate = now,
+                RevisionDate = now,
                 Type = CollectionType.DefaultUserCollection,
                 DefaultUserCollectionEmail = null
 
@@ -46,6 +57,6 @@ public static class CollectionUtils
             });
         }
 
-        return (collections, collectionUsers);
+        return (semaphores, collections, collectionUsers);
     }
 }
