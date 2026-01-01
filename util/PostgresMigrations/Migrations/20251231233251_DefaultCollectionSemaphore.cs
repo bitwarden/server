@@ -1,40 +1,38 @@
-﻿using System;
-using Microsoft.EntityFrameworkCore.Migrations;
+﻿using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Bit.PostgresMigrations.Migrations
+namespace Bit.PostgresMigrations.Migrations;
+
+/// <inheritdoc />
+public partial class DefaultCollectionSemaphore : Migration
 {
     /// <inheritdoc />
-    public partial class DefaultCollectionSemaphore : Migration
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.CreateTable(
-                name: "DefaultCollectionSemaphore",
-                columns: table => new
-                {
-                    OrganizationUserId = table.Column<Guid>(type: "uuid", nullable: false),
-                    CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_DefaultCollectionSemaphore", x => x.OrganizationUserId);
-                    table.ForeignKey(
-                        name: "FK_DefaultCollectionSemaphore_OrganizationUser_OrganizationUse~",
-                        column: x => x.OrganizationUserId,
-                        principalTable: "OrganizationUser",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-        }
+        migrationBuilder.CreateTable(
+            name: "DefaultCollectionSemaphore",
+            columns: table => new
+            {
+                OrganizationUserId = table.Column<Guid>(type: "uuid", nullable: false),
+                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+            },
+            constraints: table =>
+            {
+                table.PrimaryKey("PK_DefaultCollectionSemaphore", x => x.OrganizationUserId);
+                table.ForeignKey(
+                    name: "FK_DefaultCollectionSemaphore_OrganizationUser_OrganizationUse~",
+                    column: x => x.OrganizationUserId,
+                    principalTable: "OrganizationUser",
+                    principalColumn: "Id",
+                    onDelete: ReferentialAction.Cascade);
+            });
+    }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropTable(
-                name: "DefaultCollectionSemaphore");
-        }
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.DropTable(
+            name: "DefaultCollectionSemaphore");
     }
 }

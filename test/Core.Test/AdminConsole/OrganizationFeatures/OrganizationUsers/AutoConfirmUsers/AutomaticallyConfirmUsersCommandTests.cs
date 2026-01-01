@@ -9,7 +9,6 @@ using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Data;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
