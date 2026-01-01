@@ -71,7 +71,8 @@ public class SetInitialPasswordRequestModel : IValidatableObject
             if (!authenticationKdf.Equals(unlockKdf))
             {
                 yield return new ValidationResult("KDF settings must be equal for authentication and unlock.",
-                    [nameof(MasterPasswordAuthentication.Kdf), nameof(MasterPasswordUnlock.Kdf)]);
+                    [$"{nameof(MasterPasswordAuthentication)}.{nameof(MasterPasswordAuthenticationDataRequestModel.Kdf)}",
+                        $"{nameof(MasterPasswordUnlock)}.{nameof(MasterPasswordUnlockDataRequestModel.Kdf)}"]);
             }
 
             var authenticationValidationErrors = KdfSettingsValidator.Validate(authenticationKdf).ToList();
@@ -104,11 +105,13 @@ public class SetInitialPasswordRequestModel : IValidatableObject
         if (Kdf == null)
         {
             yield return new ValidationResult("Kdf must be supplied.");
+            yield break;
         }
 
         if (KdfIterations == null)
         {
             yield return new ValidationResult("KdfIterations must be supplied.");
+            yield break;
         }
 
         if (Kdf == KdfType.Argon2id)

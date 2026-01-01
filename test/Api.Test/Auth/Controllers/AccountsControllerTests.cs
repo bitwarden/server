@@ -1,15 +1,18 @@
 ﻿using System.Security.Claims;
 using Bit.Api.Auth.Controllers;
 using Bit.Api.Auth.Models.Request.Accounts;
+using Bit.Api.KeyManagement.Models.Requests;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
+using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.TdeOnboardingPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Models.Api.Request;
@@ -386,7 +389,7 @@ public class AccountsControllerTests : IDisposable
     [BitAutoData(true, null, "newPublicKey", false)]
     // reject overwriting existing keys
     [BitAutoData(true, "newPrivateKey", "newPublicKey", false)]
-    public async Task PostSetPasswordAsync_WhenUserExistsAndSettingPasswordSucceeds_ShouldHandleKeysCorrectlyAndReturn(
+    public async Task PostSetPasswordAsync_V1_WhenUserExistsAndSettingPasswordSucceeds_ShouldHandleKeysCorrectlyAndReturn(
         bool hasExistingKeys,
         string requestPrivateKey,
         string requestPublicKey,
@@ -460,7 +463,7 @@ public class AccountsControllerTests : IDisposable
 
     [Theory]
     [BitAutoData]
-    public async Task PostSetPasswordAsync_WhenUserExistsAndHasKeysAndKeysAreUpdated_ShouldThrowAsync(
+    public async Task PostSetPasswordAsync_V1_WhenUserExistsAndHasKeysAndKeysAreUpdated_ShouldThrowAsync(
     User user,
     SetInitialPasswordRequestModel setInitialPasswordRequestModel)
     {
@@ -497,7 +500,7 @@ public class AccountsControllerTests : IDisposable
 
     [Theory]
     [BitAutoData]
-    public async Task PostSetPasswordAsync_WhenUserDoesNotExist_ShouldThrowUnauthorizedAccessException(
+    public async Task PostSetPasswordAsync_V1_WhenUserDoesNotExist_ShouldThrowUnauthorizedAccessException(
         SetInitialPasswordRequestModel setInitialPasswordRequestModel)
     {
         UpdateSetInitialPasswordRequestModelToV1(setInitialPasswordRequestModel);
@@ -511,7 +514,7 @@ public class AccountsControllerTests : IDisposable
 
     [Theory]
     [BitAutoData]
-    public async Task PostSetPasswordAsync_WhenSettingPasswordFails_ShouldThrowBadRequestException(
+    public async Task PostSetPasswordAsync_V1_WhenSettingPasswordFails_ShouldThrowBadRequestException(
         User user,
         SetInitialPasswordRequestModel model)
     {
@@ -860,11 +863,138 @@ public class AccountsControllerTests : IDisposable
         Assert.Equal("keys", result.Object);
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task PostSetPasswordAsync_V2_WhenUserExistsAndSettingPasswordSucceeds_ShouldSetInitialMasterPassword(
+        User user,
+        SetInitialPasswordRequestModel setInitialPasswordRequestModel)
+    {
+        // Arrange
+        UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel);
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+        _setInitialMasterPasswordCommand.SetInitialMasterPasswordAsync(user, Arg.Any<SetInitialMasterPasswordDataModel>())
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await _sut.PostSetPasswordAsync(setInitialPasswordRequestModel);
+
+        // Assert
+        await _setInitialMasterPasswordCommand.Received(1)
+            .SetInitialMasterPasswordAsync(
+                Arg.Is<User>(u => u == user),
+                Arg.Is<SetInitialMasterPasswordDataModel>(d =>
+                    d.MasterPasswordAuthentication != null &&
+                    d.MasterPasswordUnlock != null &&
+                    d.AccountKeys != null &&
+                    d.OrgSsoIdentifier == setInitialPasswordRequestModel.OrgIdentifier));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostSetPasswordAsync_V2_WithTdeOnboarding_ShouldCallTdeOnboardingCommand(
+        User user,
+        SetInitialPasswordRequestModel setInitialPasswordRequestModel)
+    {
+        // Arrange
+        UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel, includeTdeOnboarding: true);
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+        _tdeOnboardingPasswordCommand.OnboardMasterPasswordAsync(user, Arg.Any<SetInitialMasterPasswordDataModel>())
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await _sut.PostSetPasswordAsync(setInitialPasswordRequestModel);
+
+        // Assert
+        await _tdeOnboardingPasswordCommand.Received(1)
+            .OnboardMasterPasswordAsync(
+                Arg.Is<User>(u => u == user),
+                Arg.Is<SetInitialMasterPasswordDataModel>(d =>
+                    d.MasterPasswordAuthentication != null &&
+                    d.MasterPasswordUnlock != null &&
+                    d.AccountKeys == null &&
+                    d.OrgSsoIdentifier == setInitialPasswordRequestModel.OrgIdentifier));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostSetPasswordAsync_V2_WhenUserDoesNotExist_ShouldThrowUnauthorizedAccessException(
+        SetInitialPasswordRequestModel setInitialPasswordRequestModel)
+    {
+        // Arrange
+        UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel);
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult((User)null));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _sut.PostSetPasswordAsync(setInitialPasswordRequestModel));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostSetPasswordAsync_V2_WhenSettingPasswordFails_ShouldThrowException(
+        User user,
+        SetInitialPasswordRequestModel setInitialPasswordRequestModel)
+    {
+        // Arrange
+        UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel);
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+        _setInitialMasterPasswordCommand.SetInitialMasterPasswordAsync(user, Arg.Any<SetInitialMasterPasswordDataModel>())
+            .Returns(Task.FromException(new Exception("Setting password failed")));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<Exception>(() => _sut.PostSetPasswordAsync(setInitialPasswordRequestModel));
+    }
+
     private void UpdateSetInitialPasswordRequestModelToV1(SetInitialPasswordRequestModel model)
     {
         model.MasterPasswordAuthentication = null;
         model.MasterPasswordUnlock = null;
         model.AccountKeys = null;
+    }
+
+    private void UpdateSetInitialPasswordRequestModelToV2(SetInitialPasswordRequestModel model, bool includeTdeOnboarding = false)
+    {
+        var kdf = new KdfRequestModel
+        {
+            KdfType = KdfType.PBKDF2_SHA256,
+            Iterations = 600000
+        };
+
+        model.MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
+        {
+            Kdf = kdf,
+            MasterPasswordAuthenticationHash = "authHash",
+            Salt = "salt"
+        };
+
+        model.MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
+        {
+            Kdf = kdf,
+            MasterKeyWrappedUserKey = "wrappedKey",
+            Salt = "salt"
+        };
+
+        if (includeTdeOnboarding)
+        {
+            // TDE onboarding does not include AccountKeys
+            model.AccountKeys = null;
+        }
+        else
+        {
+            model.AccountKeys = new AccountKeysRequestModel
+            {
+                UserKeyEncryptedAccountPrivateKey = "privateKey",
+                AccountPublicKey = "publicKey"
+            };
+        }
+
+        // Clear V1 properties
+        model.MasterPasswordHash = null;
+        model.Key = null;
+        model.Keys = null;
+        model.Kdf = null;
+        model.KdfIterations = null;
+        model.KdfMemory = null;
+        model.KdfParallelism = null;
     }
 }
 
