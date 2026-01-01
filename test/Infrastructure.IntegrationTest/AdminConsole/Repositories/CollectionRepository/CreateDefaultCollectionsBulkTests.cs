@@ -1,4 +1,6 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿
+using Bit.Core.AdminConsole.Collections;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -96,8 +98,8 @@ public class CreateDefaultCollectionsBulkTests
 
         await CreateUsersWithExistingDefaultCollectionsAsync(collectionRepository, organization.Id, affectedOrgUserIds, defaultCollectionName, resultOrganizationUsers);
 
-        // Act - Try to create again, should throw database constraint exception
-        await Assert.ThrowsAnyAsync<Exception>(() =>
+        // Act - Try to create again, should throw specific duplicate collection exception
+        await Assert.ThrowsAsync<DuplicateDefaultCollectionException>(() =>
             collectionRepository.CreateDefaultCollectionsBulkAsync(organization.Id, affectedOrgUserIds, defaultCollectionName));
 
         // Assert - Original collections should remain unchanged
@@ -125,7 +127,7 @@ public class CreateDefaultCollectionsBulkTests
         await collectionRepository.CreateDefaultCollectionsBulkAsync(organization.Id, [existingUser.Id], defaultCollectionName);
 
         // Act - Try to create for both without filtering (incorrect usage)
-        await Assert.ThrowsAnyAsync<Exception>(() =>
+        await Assert.ThrowsAsync<DuplicateDefaultCollectionException>(() =>
             collectionRepository.CreateDefaultCollectionsBulkAsync(
                 organization.Id,
                 [existingUser.Id, newUser.Id],

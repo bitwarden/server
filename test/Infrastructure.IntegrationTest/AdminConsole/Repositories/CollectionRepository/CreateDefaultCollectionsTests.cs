@@ -1,4 +1,5 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.AdminConsole.Collections;
+using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Xunit;
 
@@ -87,8 +88,8 @@ public class CreateDefaultCollectionsTests
             [orgUser.Id],
             "My Items");
 
-        // Second call should throw and should not create duplicate
-        await Assert.ThrowsAnyAsync<Exception>(() =>
+        // Second call should throw specific exception and should not create duplicate
+        await Assert.ThrowsAsync<DuplicateDefaultCollectionException>(() =>
             collectionRepository.CreateDefaultCollectionsAsync(
                 organization.Id,
                 [orgUser.Id],

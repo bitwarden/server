@@ -1,9 +1,10 @@
-﻿using AutoMapper;
+﻿using System.Data.Common;
+using AutoMapper;
+using Bit.Core.AdminConsole.Collections;
 using Bit.Core.AdminConsole.OrganizationFeatures.Collections;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
-using Bit.Core.Utilities;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
@@ -810,20 +811,27 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        // CRITICAL: Insert semaphore entries BEFORE collections
-        // Database will throw on duplicate primary key (OrganizationUserId)
-        var now = DateTime.UtcNow;
-        var semaphores = collectionUsers.Select(c => new DefaultCollectionSemaphore
+        try
         {
-            OrganizationUserId = c.OrganizationUserId,
-            CreationDate = now
-        }).ToList();
+            // CRITICAL: Insert semaphore entries BEFORE collections
+            // Database will throw on duplicate primary key (OrganizationUserId)
+            var now = DateTime.UtcNow;
+            var semaphores = collectionUsers.Select(c => new DefaultCollectionSemaphore
+            {
+                OrganizationUserId = c.OrganizationUserId,
+                CreationDate = now
+            }).ToList();
 
-        await dbContext.BulkCopyAsync(semaphores);
-        await dbContext.BulkCopyAsync(Mapper.Map<IEnumerable<Collection>>(collections));
-        await dbContext.BulkCopyAsync(Mapper.Map<IEnumerable<CollectionUser>>(collectionUsers));
+            await dbContext.BulkCopyAsync(semaphores);
+            await dbContext.BulkCopyAsync(Mapper.Map<IEnumerable<Collection>>(collections));
+            await dbContext.BulkCopyAsync(Mapper.Map<IEnumerable<CollectionUser>>(collectionUsers));
 
-        await dbContext.SaveChangesAsync();
+            await dbContext.SaveChangesAsync();
+        }
+        catch (Exception ex) when (DatabaseExceptionHelpers.IsDuplicateKeyException(ex))
+        {
+            throw new DuplicateDefaultCollectionException();
+        }
     }
 
     public async Task CreateDefaultCollectionsBulkAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName)

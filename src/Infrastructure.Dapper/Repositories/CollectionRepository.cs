@@ -1,13 +1,12 @@
 ﻿using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
+using Bit.Core.AdminConsole.Collections;
 using Bit.Core.AdminConsole.OrganizationFeatures.Collections;
 using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Bit.Infrastructure.Dapper.AdminConsole.Helpers;
 using Dapper;
 using Microsoft.Data.SqlClient;
@@ -372,16 +371,23 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         await using var connection = new SqlConnection(ConnectionString);
         await connection.OpenAsync();
 
-        var organizationUserIdsJson = JsonSerializer.Serialize(organizationUserIds);
-        await connection.ExecuteAsync(
-            "[dbo].[Collection_CreateDefaultCollections]",
-            new
-            {
-                OrganizationId = organizationId,
-                DefaultCollectionName = defaultCollectionName,
-                OrganizationUserIdsJson = organizationUserIdsJson
-            },
-            commandType: CommandType.StoredProcedure);
+        try
+        {
+            var organizationUserIdsJson = JsonSerializer.Serialize(organizationUserIds);
+            await connection.ExecuteAsync(
+                "[dbo].[Collection_CreateDefaultCollections]",
+                new
+                {
+                    OrganizationId = organizationId,
+                    DefaultCollectionName = defaultCollectionName,
+                    OrganizationUserIdsJson = organizationUserIdsJson
+                },
+                commandType: CommandType.StoredProcedure);
+        }
+        catch (Exception ex) when (DatabaseExceptionHelpers.IsDuplicateKeyException(ex))
+        {
+            throw new DuplicateDefaultCollectionException();
+        }
     }
 
     public async Task CreateDefaultCollectionsBulkAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName)
@@ -416,6 +422,11 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
             await BulkResourceCreationService.CreateCollectionsUsersAsync(connection, transaction, collectionUsers);
 
             transaction.Commit();
+        }
+        catch (Exception ex) when (DatabaseExceptionHelpers.IsDuplicateKeyException(ex))
+        {
+            transaction.Rollback();
+            throw new DuplicateDefaultCollectionException();
         }
         catch
         {
