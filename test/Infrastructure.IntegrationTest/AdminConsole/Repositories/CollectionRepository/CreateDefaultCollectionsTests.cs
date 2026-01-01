@@ -71,7 +71,7 @@ public class CreateDefaultCollectionsTests
     /// Test that calling CreateDefaultCollectionsAsync multiple times does NOT create duplicates
     /// </summary>
     [Theory, DatabaseData]
-    public async Task CreateDefaultCollectionsAsync_CalledMultipleTimes_DoesNotCreateDuplicates(
+    public async Task CreateDefaultCollectionsAsync_CalledMultipleTimesForSameOrganizationUser_Throws(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         ICollectionRepository collectionRepository,

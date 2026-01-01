@@ -1,32 +1,32 @@
 -- Creates default user collections for organization users
 -- Uses semaphore table to prevent duplicate default collections at database level
--- Cascade behavior: Organization -> OrganizationUser (CASCADE) -> DefaultCollectionSemaphore (CASCADE)
--- Organization FK uses NoAction to avoid competing cascade paths
 CREATE PROCEDURE [dbo].[Collection_CreateDefaultCollections]
     @OrganizationId UNIQUEIDENTIFIER,
     @DefaultCollectionName VARCHAR(MAX),
-    @OrganizationUserIdsJson NVARCHAR(MAX)
+    @OrganizationUserIds AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN
     SET NOCOUNT ON
 
-    -- Parse JSON once into table variable with pre-generated collection IDs
-    DECLARE @OrganizationUserIds TABLE
-    (
-        [OrganizationUserId] UNIQUEIDENTIFIER,
-        [CollectionId] UNIQUEIDENTIFIER
-    );
+    DECLARE @Now DATETIME2(7) = GETUTCDATE()
 
-    INSERT INTO @OrganizationUserIds
+    -- Create temporary table to allocate collection IDs to each organizationUser
+    DECLARE @CollectionsToInsert TABLE
+                                 (
+                                     [OrganizationUserId] UNIQUEIDENTIFIER,
+                                     [CollectionId] UNIQUEIDENTIFIER
+                                 );
+
+    INSERT INTO @CollectionsToInsert
     (
         [OrganizationUserId],
         [CollectionId]
     )
     SELECT
-        CAST([value] AS UNIQUEIDENTIFIER),
+        ou.Id,
         NEWID()
     FROM
-        OPENJSON(@OrganizationUserIdsJson);
+        @OrganizationUserIds ou
 
     BEGIN TRANSACTION;
 
@@ -40,9 +40,9 @@ BEGIN
         )
         SELECT
             ou.[OrganizationUserId],
-            GETUTCDATE()
+            @Now
         FROM
-            @OrganizationUserIds ou;
+            @CollectionsToInsert ou;
 
         -- Insert collections for users who obtained semaphore entries
         INSERT INTO [dbo].[Collection]
@@ -60,13 +60,13 @@ BEGIN
             ou.[CollectionId],
             @OrganizationId,
             @DefaultCollectionName,
-            GETUTCDATE(),
-            GETUTCDATE(),
+            @Now,
+            @Now,
             1, -- CollectionType.DefaultUserCollection
             NULL,
             NULL
         FROM
-            @OrganizationUserIds ou;
+            @CollectionsToInsert ou;
 
         -- Insert collection user mappings
         INSERT INTO [dbo].[CollectionUser]
@@ -84,7 +84,7 @@ BEGIN
             0, -- HidePasswords = false
             1  -- Manage = true
         FROM
-            @OrganizationUserIds ou;
+            @CollectionsToInsert ou;
 
         COMMIT TRANSACTION;
     END TRY

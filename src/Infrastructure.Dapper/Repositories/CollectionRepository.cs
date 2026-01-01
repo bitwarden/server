@@ -373,14 +373,13 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
 
         try
         {
-            var organizationUserIdsJson = JsonSerializer.Serialize(organizationUserIds);
             await connection.ExecuteAsync(
                 "[dbo].[Collection_CreateDefaultCollections]",
                 new
                 {
                     OrganizationId = organizationId,
                     DefaultCollectionName = defaultCollectionName,
-                    OrganizationUserIdsJson = organizationUserIdsJson
+                    OrganizationUserIds = organizationUserIds.ToGuidIdArrayTVP()
                 },
                 commandType: CommandType.StoredProcedure);
         }
