@@ -69,9 +69,9 @@ public class RegisterFinishRequestModel : IValidatableObject
             Email = Email,
             MasterPasswordHint = MasterPasswordHint,
             Kdf = MasterPasswordUnlock?.Kdf.KdfType ?? Kdf
-                ?? throw new BadRequestException("KdfType couldn't be found on either the MasterPasswordUnlockData or the Kdf property passed in."),
+                ?? throw new BadRequestException("KdfType couldn't be found on either the MasterPasswordUnlock or the Kdf property passed in."),
             KdfIterations = MasterPasswordUnlock?.Kdf.Iterations ?? KdfIterations
-                ?? throw new BadRequestException("KdfIterations couldn't be found on either the MasterPasswordUnlockData or the KdfIterations property passed in."),
+                ?? throw new BadRequestException("KdfIterations couldn't be found on either the MasterPasswordUnlock or the KdfIterations property passed in."),
             // KdfMemory and KdfParallelism are optional (only used for Argon2id)
             KdfMemory = MasterPasswordUnlock?.Kdf.Memory ?? KdfMemory,
             KdfParallelism = MasterPasswordUnlock?.Kdf.Parallelism ?? KdfParallelism,
@@ -123,33 +123,6 @@ public class RegisterFinishRequestModel : IValidatableObject
         ThrowIfExistsAndHashIsNotEqual(MasterPasswordAuthentication, MasterPasswordHash);
 
         // 1. Access Token Presence Verification Check
-
-        // Ensure exactly one registration token type is provided
-        var hasEmailVerification = !string.IsNullOrWhiteSpace(EmailVerificationToken);
-        var hasOrgInvite = !string.IsNullOrEmpty(OrgInviteToken)
-                           && OrganizationUserId.HasValue
-                           && OrganizationUserId.Value != Guid.Empty;
-        var hasOrgSponsoredFreeFamilyPlan = !string.IsNullOrWhiteSpace(OrgSponsoredFreeFamilyPlanToken);
-        var hasEmergencyAccessInvite = !string.IsNullOrWhiteSpace(AcceptEmergencyAccessInviteToken)
-                                       && AcceptEmergencyAccessId.HasValue
-                                       && AcceptEmergencyAccessId.Value != Guid.Empty;
-        var hasProviderInvite = !string.IsNullOrWhiteSpace(ProviderInviteToken)
-                                && ProviderUserId.HasValue
-                                && ProviderUserId.Value != Guid.Empty;
-        var tokenCount = (hasEmailVerification ? 1 : 0)
-                         + (hasOrgInvite ? 1 : 0)
-                         + (hasOrgSponsoredFreeFamilyPlan ? 1 : 0)
-                         + (hasEmergencyAccessInvite ? 1 : 0)
-                         + (hasProviderInvite ? 1 : 0);
-        if (tokenCount == 0)
-        {
-            throw new BadRequestException("Invalid registration finish request");
-        }
-        if (tokenCount > 1)
-        {
-            throw new BadRequestException("Multiple registration token types provided.");
-        }
-
         switch (GetTokenType())
         {
             case RegisterFinishTokenType.EmailVerification:
@@ -222,7 +195,7 @@ public class RegisterFinishRequestModel : IValidatableObject
         {
             if (authenticationData.MasterPasswordAuthenticationHash != hash)
             {
-                throw new BadRequestException("Master password hash and hash are not equal.");
+                throw new BadRequestException("AuthenticationData MasterPasswordHash and root level MasterPasswordHash provided and are not equal. Only provide one.");
             }
         }
     }

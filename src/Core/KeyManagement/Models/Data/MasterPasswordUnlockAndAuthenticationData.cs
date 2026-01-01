@@ -1,15 +1,8 @@
-﻿#nullable enable
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 
 namespace Bit.Core.KeyManagement.Models.Data;
 
-/// <summary>
-/// Probably shouldn't be used as we want to make sure that the unlock data and authentication data
-/// can use separate kdf settings.
-///
-/// Should be cleaned up in the near future.
-/// </summary>
 public class MasterPasswordUnlockAndAuthenticationData
 {
     public KdfType KdfType { get; set; }
