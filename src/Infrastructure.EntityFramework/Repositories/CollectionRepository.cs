@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Bit.Core.AdminConsole.OrganizationFeatures.Collections;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
@@ -803,7 +804,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
             return;
         }
 
-        var (collectionUsers, collections) = BuildDefaultCollectionForUsers(organizationId, organizationUserIds, defaultCollectionName);
+        var (collections, collectionUsers) =
+            CollectionUtils.BuildDefaultUserCollections(organizationId, organizationUserIds, defaultCollectionName);
 
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
@@ -818,8 +820,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         }).ToList();
 
         await dbContext.BulkCopyAsync(semaphores);
-        await dbContext.BulkCopyAsync(collections);
-        await dbContext.BulkCopyAsync(collectionUsers);
+        await dbContext.BulkCopyAsync(Mapper.Map<IEnumerable<Collection>>(collections));
+        await dbContext.BulkCopyAsync(Mapper.Map<IEnumerable<CollectionUser>>(collectionUsers));
 
         await dbContext.SaveChangesAsync();
     }
@@ -843,39 +845,5 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
             .ToListAsync();
 
         return result.ToHashSet();
-    }
-
-    private (List<CollectionUser> collectionUser, List<Collection> collection) BuildDefaultCollectionForUsers(Guid organizationId, IEnumerable<Guid> missingDefaultCollectionUserIds, string defaultCollectionName)
-    {
-        var collectionUsers = new List<CollectionUser>();
-        var collections = new List<Collection>();
-
-        foreach (var orgUserId in missingDefaultCollectionUserIds)
-        {
-            var collectionId = CoreHelpers.GenerateComb();
-
-            collections.Add(new Collection
-            {
-                Id = collectionId,
-                OrganizationId = organizationId,
-                Name = defaultCollectionName,
-                CreationDate = DateTime.UtcNow,
-                RevisionDate = DateTime.UtcNow,
-                Type = CollectionType.DefaultUserCollection,
-                DefaultUserCollectionEmail = null
-
-            });
-
-            collectionUsers.Add(new CollectionUser
-            {
-                CollectionId = collectionId,
-                OrganizationUserId = orgUserId,
-                ReadOnly = false,
-                HidePasswords = false,
-                Manage = true,
-            });
-        }
-
-        return (collectionUsers, collections);
     }
 }

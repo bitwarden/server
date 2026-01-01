@@ -1,6 +1,7 @@
 ﻿using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
+using Bit.Core.AdminConsole.OrganizationFeatures.Collections;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -391,7 +392,8 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
             return;
         }
 
-        var (collectionUsers, collections) = BuildDefaultCollectionForUsers(organizationId, organizationUserIds, defaultCollectionName);
+        var (collections, collectionUsers) =
+            CollectionUtils.BuildDefaultUserCollections(organizationId, organizationUserIds, defaultCollectionName);
 
         await using var connection = new SqlConnection(ConnectionString);
         connection.Open();
@@ -432,40 +434,6 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
             commandType: CommandType.StoredProcedure);
 
         return results.ToHashSet();
-    }
-
-    private (List<CollectionUser> collectionUser, List<Collection> collection) BuildDefaultCollectionForUsers(Guid organizationId, IEnumerable<Guid> missingDefaultCollectionUserIds, string defaultCollectionName)
-    {
-        var collectionUsers = new List<CollectionUser>();
-        var collections = new List<Collection>();
-
-        foreach (var orgUserId in missingDefaultCollectionUserIds)
-        {
-            var collectionId = CoreHelpers.GenerateComb();
-
-            collections.Add(new Collection
-            {
-                Id = collectionId,
-                OrganizationId = organizationId,
-                Name = defaultCollectionName,
-                CreationDate = DateTime.UtcNow,
-                RevisionDate = DateTime.UtcNow,
-                Type = CollectionType.DefaultUserCollection,
-                DefaultUserCollectionEmail = null
-
-            });
-
-            collectionUsers.Add(new CollectionUser
-            {
-                CollectionId = collectionId,
-                OrganizationUserId = orgUserId,
-                ReadOnly = false,
-                HidePasswords = false,
-                Manage = true,
-            });
-        }
-
-        return (collectionUsers, collections);
     }
 
     private async Task BulkInsertDefaultCollectionSemaphoresAsync(SqlConnection connection, SqlTransaction transaction, List<DefaultCollectionSemaphore> semaphores)
