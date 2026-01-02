@@ -23,7 +23,8 @@ public class AccountBillingVNextController(
     IGetCreditQuery getCreditQuery,
     IGetPaymentMethodQuery getPaymentMethodQuery,
     IGetUserLicenseQuery getUserLicenseQuery,
-    IUpdatePaymentMethodCommand updatePaymentMethodCommand) : BaseBillingController
+    IUpdatePaymentMethodCommand updatePaymentMethodCommand,
+    IUpgradePremiumToOrganizationCommand upgradePremiumToOrganizationCommand) : BaseBillingController
 {
     [HttpGet("credit")]
     [InjectUser]
@@ -87,5 +88,17 @@ public class AccountBillingVNextController(
     {
         var response = await getUserLicenseQuery.Run(user);
         return TypedResults.Ok(response);
+    }
+
+    [HttpPost("upgrade")]
+    [InjectUser]
+    public async Task<IResult> UpgradePremiumToOrganizationAsync(
+        [BindNever] User user,
+        [FromBody] UpgradePremiumToOrganizationRequest request)
+    {
+        var (planType, seats, premiumAccess, storage, trialEndDate) = request.ToDomain();
+        var result = await upgradePremiumToOrganizationCommand.Run(
+            user, planType, seats, premiumAccess, storage, trialEndDate);
+        return Handle(result);
     }
 }
