@@ -1,0 +1,30 @@
+name: Lint
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.ref }}-${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-24.04
+    permissions:
+      pull-requests: write
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
+
+      - name: Lint with MegaLinter
+        uses: oxsecurity/megalinter/flavors/dotnetweb@55a59b24a441e0e1943080d4a512d827710d4a9d # v9.2.0
+        env:
+          VALIDATE_ALL_CODEBASE: false

@@ -30,7 +30,7 @@ Please refer to the [Server Setup Guide](https://contributing.bitwarden.com/gett
 
 You can deploy Bitwarden using Docker containers on Windows, macOS, and Linux distributions. Use the provided PowerShell and Bash scripts to get started quickly. Find all of the Bitwarden images on [GitHub Container Registry](https://github.com/orgs/bitwarden/packages).
 
-Full documentation for deploying Bitwarden with Docker can be found in our help center at: https://help.bitwarden.com/article/install-on-premise/
+Full documentation for deploying Bitwarden with Docker can be found in our help center at: <https://help.bitwarden.com/article/install-on-premise/>
 
 ### Requirements
 
@@ -66,35 +66,35 @@ Invoke-RestMethod -OutFile bitwarden.ps1 `
 
 ### US Production Cluster
 
-| Service | Image Hash |
-|---------|------------|
-| **Admin** | ![admin](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fbitwarden%2Fserver%2Frefs%2Fheads%2Fmetadata%2Fbadges%2Fshieldsio-badge-us.json&query=%24.admin&style=flat-square&logo=docker&logoColor=white&label=&color=2496ED) |
-| **API** | ![api](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fbitwarden%2Fserver%2Frefs%2Fheads%2Fmetadata%2Fbadges%2Fshieldsio-badge-us.json&query=%24.api&style=flat-square&logo=docker&logoColor=white&label=&color=2496ED) |
-| **Billing** | ![billing](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fbitwarden%2Fserver%2Frefs%2Fheads%2Fmetadata%2Fbadges%2Fshieldsio-badge-us.json&query=%24.billing&style=flat-square&logo=docker&logoColor=white&label=&color=2496ED) |
-| **Events** | ![events](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fbitwarden%2Fserver%2Frefs%2Fheads%2Fmetadata%2Fbadges%2Fshieldsio-badge-us.json&query=%24.events&style=flat-square&logo=docker&logoColor=white&label=&color=2496ED) |
+| Service             | Image Hash                                                                                                                                                                                                                                                                              |
+|---------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Admin**           | ![admin](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fbitwarden%2Fserver%2Frefs%2Fheads%2Fmetadata%2Fbadges%2Fshieldsio-badge-us.json&query=%24.admin&style=flat-square&logo=docker&logoColor=white&label=&color=2496ED)                     |
+| **API**             | ![api](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fbitwarden%2Fserver%2Frefs%2Fheads%2Fmetadata%2Fbadges%2Fshieldsio-badge-us.json&query=%24.api&style=flat-square&logo=docker&logoColor=white&label=&color=2496ED)                         |
+| **Billing**         | ![billing](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fbitwarden%2Fserver%2Frefs%2Fheads%2Fmetadata%2Fbadges%2Fshieldsio-badge-us.json&query=%24.billing&style=flat-square&logo=docker&logoColor=white&label=&color=2496ED)                 |
+| **Events**          | ![events](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fbitwarden%2Fserver%2Frefs%2Fheads%2Fmetadata%2Fbadges%2Fshieldsio-badge-us.json&query=%24.events&style=flat-square&logo=docker&logoColor=white&label=&color=2496ED)                   |
 | **EventsProcessor** | ![eventsprocessor](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fbitwarden%2Fserver%2Frefs%2Fheads%2Fmetadata%2Fbadges%2Fshieldsio-badge-us.json&query=%24.eventsprocessor&style=flat-square&logo=docker&logoColor=white&label=&color=2496ED) |
-| **Identity** | ![identity](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fbitwarden%2Fserver%2Frefs%2Fheads%2Fmetadata%2Fbadges%2Fshieldsio-badge-us.json&query=%24.identity&style=flat-square&logo=docker&logoColor=white&label=&color=2496ED) |
-| **Notifications** | ![notifications](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fbitwarden%2Fserver%2Frefs%2Fheads%2Fmetadata%2Fbadges%2Fshieldsio-badge-us.json&query=%24.notifications&style=flat-square&logo=docker&logoColor=white&label=&color=2496ED) |
-| **SCIM** | ![scim](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fbitwarden%2Fserver%2Frefs%2Fheads%2Fmetadata%2Fbadges%2Fshieldsio-badge-us.json&query=%24.scim&style=flat-square&logo=docker&logoColor=white&label=&color=2496ED) |
-| **SSO** | ![sso](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fbitwarden%2Fserver%2Frefs%2Fheads%2Fmetadata%2Fbadges%2Fshieldsio-badge-us.json&query=%24.sso&style=flat-square&logo=docker&logoColor=white&label=&color=2496ED) |
+| **Identity**        | ![identity](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fbitwarden%2Fserver%2Frefs%2Fheads%2Fmetadata%2Fbadges%2Fshieldsio-badge-us.json&query=%24.identity&style=flat-square&logo=docker&logoColor=white&label=&color=2496ED)               |
+| **Notifications**   | ![notifications](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fbitwarden%2Fserver%2Frefs%2Fheads%2Fmetadata%2Fbadges%2Fshieldsio-badge-us.json&query=%24.notifications&style=flat-square&logo=docker&logoColor=white&label=&color=2496ED)     |
+| **SCIM**            | ![scim](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fbitwarden%2Fserver%2Frefs%2Fheads%2Fmetadata%2Fbadges%2Fshieldsio-badge-us.json&query=%24.scim&style=flat-square&logo=docker&logoColor=white&label=&color=2496ED)                       |
+| **SSO**             | ![sso](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fbitwarden%2Fserver%2Frefs%2Fheads%2Fmetadata%2Fbadges%2Fshieldsio-badge-us.json&query=%24.sso&style=flat-square&logo=docker&logoColor=white&label=&color=2496ED)                         |
 
 ### EU Production Cluster
 
-| Service | Image Hash |
-|---------|------------|
-| **Admin** | ![admin](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fbitwarden%2Fserver%2Frefs%2Fheads%2Fmetadata%2Fbadges%2Fshieldsio-badge-eu.json&query=%24.admin&style=flat-square&logo=docker&logoColor=white&label=&color=2496ED) |
-| **API** | ![api](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fbitwarden%2Fserver%2Frefs%2Fheads%2Fmetadata%2Fbadges%2Fshieldsio-badge-eu.json&query=%24.api&style=flat-square&logo=docker&logoColor=white&label=&color=2496ED) |
-| **Billing** | ![billing](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fbitwarden%2Fserver%2Frefs%2Fheads%2Fmetadata%2Fbadges%2Fshieldsio-badge-eu.json&query=%24.billing&style=flat-square&logo=docker&logoColor=white&label=&color=2496ED) |
-| **Events** | ![events](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fbitwarden%2Fserver%2Frefs%2Fheads%2Fmetadata%2Fbadges%2Fshieldsio-badge-eu.json&query=%24.events&style=flat-square&logo=docker&logoColor=white&label=&color=2496ED) |
+| Service             | Image Hash                                                                                                                                                                                                                                                                              |
+|---------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Admin**           | ![admin](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fbitwarden%2Fserver%2Frefs%2Fheads%2Fmetadata%2Fbadges%2Fshieldsio-badge-eu.json&query=%24.admin&style=flat-square&logo=docker&logoColor=white&label=&color=2496ED)                     |
+| **API**             | ![api](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fbitwarden%2Fserver%2Frefs%2Fheads%2Fmetadata%2Fbadges%2Fshieldsio-badge-eu.json&query=%24.api&style=flat-square&logo=docker&logoColor=white&label=&color=2496ED)                         |
+| **Billing**         | ![billing](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fbitwarden%2Fserver%2Frefs%2Fheads%2Fmetadata%2Fbadges%2Fshieldsio-badge-eu.json&query=%24.billing&style=flat-square&logo=docker&logoColor=white&label=&color=2496ED)                 |
+| **Events**          | ![events](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fbitwarden%2Fserver%2Frefs%2Fheads%2Fmetadata%2Fbadges%2Fshieldsio-badge-eu.json&query=%24.events&style=flat-square&logo=docker&logoColor=white&label=&color=2496ED)                   |
 | **EventsProcessor** | ![eventsprocessor](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fbitwarden%2Fserver%2Frefs%2Fheads%2Fmetadata%2Fbadges%2Fshieldsio-badge-eu.json&query=%24.eventsprocessor&style=flat-square&logo=docker&logoColor=white&label=&color=2496ED) |
-| **Identity** | ![identity](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fbitwarden%2Fserver%2Frefs%2Fheads%2Fmetadata%2Fbadges%2Fshieldsio-badge-eu.json&query=%24.identity&style=flat-square&logo=docker&logoColor=white&label=&color=2496ED) |
-| **Notifications** | ![notifications](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fbitwarden%2Fserver%2Frefs%2Fheads%2Fmetadata%2Fbadges%2Fshieldsio-badge-eu.json&query=%24.notifications&style=flat-square&logo=docker&logoColor=white&label=&color=2496ED) |
-| **SCIM** | ![scim](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fbitwarden%2Fserver%2Frefs%2Fheads%2Fmetadata%2Fbadges%2Fshieldsio-badge-eu.json&query=%24.scim&style=flat-square&logo=docker&logoColor=white&label=&color=2496ED) |
-| **SSO** | ![sso](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fbitwarden%2Fserver%2Frefs%2Fheads%2Fmetadata%2Fbadges%2Fshieldsio-badge-eu.json&query=%24.sso&style=flat-square&logo=docker&logoColor=white&label=&color=2496ED) |
+| **Identity**        | ![identity](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fbitwarden%2Fserver%2Frefs%2Fheads%2Fmetadata%2Fbadges%2Fshieldsio-badge-eu.json&query=%24.identity&style=flat-square&logo=docker&logoColor=white&label=&color=2496ED)               |
+| **Notifications**   | ![notifications](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fbitwarden%2Fserver%2Frefs%2Fheads%2Fmetadata%2Fbadges%2Fshieldsio-badge-eu.json&query=%24.notifications&style=flat-square&logo=docker&logoColor=white&label=&color=2496ED)     |
+| **SCIM**            | ![scim](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fbitwarden%2Fserver%2Frefs%2Fheads%2Fmetadata%2Fbadges%2Fshieldsio-badge-eu.json&query=%24.scim&style=flat-square&logo=docker&logoColor=white&label=&color=2496ED)                       |
+| **SSO**             | ![sso](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fbitwarden%2Fserver%2Frefs%2Fheads%2Fmetadata%2Fbadges%2Fshieldsio-badge-eu.json&query=%24.sso&style=flat-square&logo=docker&logoColor=white&label=&color=2496ED)                         |
 
 </details>
 
-## We're Hiring!
+## We're Hiring
 
 Interested in contributing in a big way? Consider joining our team! We're hiring for many positions. Please take a look at our [Careers page](https://bitwarden.com/careers/) to see what opportunities are currently open as well as what it's like to work at Bitwarden.
 
@@ -106,9 +106,9 @@ Security audits and feedback are welcome. Please open an issue or email us priva
 
 No grant of any rights in the trademarks, service marks, or logos of Bitwarden is made (except as may be necessary to comply with the notice requirements as applicable), and use of any Bitwarden trademarks must comply with [Bitwarden Trademark Guidelines](https://github.com/bitwarden/server/blob/main/TRADEMARK_GUIDELINES.md).
 
-### Dotnet-format
+### Hooks
 
-Consider installing our git pre-commit hook for automatic formatting.
+To gain enhanced functionality such as local linting, install the hooks for this repository:
 
 ```bash
 git config --local core.hooksPath .git-hooks
