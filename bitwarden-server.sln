@@ -134,9 +134,14 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DbSeederUtility", "util\DbSeederUtility\DbSeederUtility.csproj", "{17A89266-260A-4A03-81AE-C0468C6EE06E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RustSdk", "util\RustSdk\RustSdk.csproj", "{D1513D90-E4F5-44A9-9121-5E46E3E4A3F7}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharedWeb.Test", "test\SharedWeb.Test\SharedWeb.Test.csproj", "{AD59537D-5259-4B7A-948F-0CF58E80B359}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SSO.Test", "bitwarden_license\test\SSO.Test\SSO.Test.csproj", "{7D98784C-C253-43FB-9873-25B65C6250D6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AppHost", "AppHost\AppHost.csproj", "{B4CC25D0-BD09-459E-9885-DF9A56E304F6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServiceDefaults", "ServiceDefaults\ServiceDefaults.csproj", "{7D6F3351-9CA6-4B35-956F-1EE346330A41}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -354,6 +359,14 @@ Global
 		{7D98784C-C253-43FB-9873-25B65C6250D6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7D98784C-C253-43FB-9873-25B65C6250D6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7D98784C-C253-43FB-9873-25B65C6250D6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B4CC25D0-BD09-459E-9885-DF9A56E304F6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B4CC25D0-BD09-459E-9885-DF9A56E304F6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B4CC25D0-BD09-459E-9885-DF9A56E304F6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B4CC25D0-BD09-459E-9885-DF9A56E304F6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7D6F3351-9CA6-4B35-956F-1EE346330A41}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7D6F3351-9CA6-4B35-956F-1EE346330A41}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7D6F3351-9CA6-4B35-956F-1EE346330A41}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7D6F3351-9CA6-4B35-956F-1EE346330A41}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -27,6 +27,7 @@ $projects = @{
     Sso = "../bitwarden_license/src/Sso"
     Scim = "../bitwarden_license/src/Scim"
     IntegrationTests = "../test/Infrastructure.IntegrationTest"
+    AppHost = "../AppHost"
 }
 
 foreach ($key in $projects.keys) {
