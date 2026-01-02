@@ -88,6 +88,7 @@ public static class EntityFrameworkServiceCollectionExtensions
         services.AddSingleton<IOrganizationRepository, OrganizationRepository>();
         services.AddSingleton<IOrganizationSponsorshipRepository, OrganizationSponsorshipRepository>();
         services.AddSingleton<IOrganizationUserRepository, OrganizationUserRepository>();
+        services.AddSingleton<IPlayDataRepository, PlayDataRepository>();
         services.AddSingleton<IPolicyRepository, PolicyRepository>();
         services.AddSingleton<IProviderOrganizationRepository, ProviderOrganizationRepository>();
         services.AddSingleton<IProviderRepository, ProviderRepository>();
@@ -118,5 +119,16 @@ public static class EntityFrameworkServiceCollectionExtensions
         {
             services.AddSingleton<IEventRepository, EventRepository>();
         }
+    }
+
+    /// <summary>
+    /// Adds PlayId tracking decorators for User and Organization repositories.
+    /// This replaces the standard repository implementations with tracking versions
+    /// that record created entities for test data cleanup. Only call when TestPlayIdTrackingEnabled is true.
+    /// </summary>
+    public static void AddPlayIdTrackingEFRepositories(this IServiceCollection services)
+    {
+        services.AddSingleton<IOrganizationRepository, TestOrganizationTrackingOrganizationRepository>();
+        services.AddSingleton<IUserRepository, TestUserTrackingUserRepository>();
     }
 }

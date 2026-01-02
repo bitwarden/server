@@ -114,6 +114,31 @@ public static class ServiceCollectionExtensions
             services.AddKeyedSingleton<IGrantRepository, Core.Auth.Repositories.Cosmos.GrantRepository>("cosmos");
         }
 
+        if (globalSettings.TestPlayIdTrackingEnabled)
+        {
+            // Include PlayIdService for tracking Play Ids in repositories
+            // We need the http context accessor to use the Singleton version, which pulls from the scoped version
+            services.AddHttpContextAccessor();
+
+            services.AddSingleton<IPlayDataService, PlayDataService>();
+            services.AddSingleton<IPlayIdService, PlayIdSingletonService>();
+            services.AddScoped<PlayIdService>();
+
+            // Replace standard repositories with PlayId tracking decorators
+            if (provider == SupportedDatabaseProviders.SqlServer)
+            {
+                services.AddPlayIdTrackingRepositories();
+            }
+            else
+            {
+                services.AddPlayIdTrackingEFRepositories();
+            }
+        }
+        else
+        {
+            services.AddSingleton<IPlayIdService, NeverPlayIdServices>();
+        }
+
         return provider;
     }
 
@@ -522,6 +547,10 @@ public static class ServiceCollectionExtensions
         IWebHostEnvironment env, GlobalSettings globalSettings)
     {
         app.UseMiddleware<RequestLoggingMiddleware>();
+        if (globalSettings.TestPlayIdTrackingEnabled)
+        {
+            app.UseMiddleware<PlayIdMiddleware>();
+        }
     }
 
     public static void UseForwardedHeaders(this IApplicationBuilder app, IGlobalSettings globalSettings)
