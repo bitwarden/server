@@ -9,7 +9,6 @@ using Bit.Api.Tools.Models.Response;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
-using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Data;
@@ -28,7 +27,6 @@ namespace Bit.Api.Test.Tools.Controllers;
 public class SendsControllerTests : IDisposable
 {
     private readonly SendsController _sut;
-    private readonly GlobalSettings _globalSettings;
     private readonly IUserService _userService;
     private readonly ISendRepository _sendRepository;
     private readonly INonAnonymousSendCommand _nonAnonymousSendCommand;
@@ -37,6 +35,8 @@ public class SendsControllerTests : IDisposable
     private readonly ISendAuthorizationService _sendAuthorizationService;
     private readonly ISendFileStorageService _sendFileStorageService;
     private readonly ILogger<SendsController> _logger;
+    private readonly IFeatureService _featureService;
+    private readonly ISendAuthenticationQuery _sendAuthenticationQuery;
 
     public SendsControllerTests()
     {
@@ -47,8 +47,9 @@ public class SendsControllerTests : IDisposable
         _sendOwnerQuery = Substitute.For<ISendOwnerQuery>();
         _sendAuthorizationService = Substitute.For<ISendAuthorizationService>();
         _sendFileStorageService = Substitute.For<ISendFileStorageService>();
-        _globalSettings = new GlobalSettings();
         _logger = Substitute.For<ILogger<SendsController>>();
+        _featureService = Substitute.For<IFeatureService>();
+        _sendAuthenticationQuery = Substitute.For<ISendAuthenticationQuery>();
 
         _sut = new SendsController(
             _sendRepository,
@@ -59,7 +60,8 @@ public class SendsControllerTests : IDisposable
             _sendOwnerQuery,
             _sendFileStorageService,
             _logger,
-            _globalSettings
+            _featureService,
+            _sendAuthenticationQuery
         );
     }
 
