@@ -13,6 +13,7 @@ namespace Bit.Identity.IntegrationTest.Login;
 public class ClientVersionGateTests : IClassFixture<IdentityApplicationFactory>
 {
     private readonly IdentityApplicationFactory _factory;
+    private const string DefaultEncryptedString = "2.3Uk+WNBIoU5xzmVFNcoWzz==|1MsPIYuRfdOHfu/0uY6H2Q==|/98sp4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=";
 
     public ClientVersionGateTests(IdentityApplicationFactory factory)
     {
@@ -23,6 +24,7 @@ public class ClientVersionGateTests : IClassFixture<IdentityApplicationFactory>
     [Theory, BitAutoData, RegisterFinishRequestModelCustomize]
     public async Task TokenEndpoint_GrantTypePassword_V2User_OnOldClientVersion_Blocked(RegisterFinishRequestModel requestModel)
     {
+        NormalizeEncryptedStrings(requestModel);
         var localFactory = new IdentityApplicationFactory
         {
             UseMockClientVersionValidator = false
@@ -72,6 +74,7 @@ public class ClientVersionGateTests : IClassFixture<IdentityApplicationFactory>
     [Theory, BitAutoData, RegisterFinishRequestModelCustomize]
     public async Task TokenEndpoint_GrantTypePassword_V2User_OnMinClientVersion_Succeeds(RegisterFinishRequestModel requestModel)
     {
+        NormalizeEncryptedStrings(requestModel);
         var localFactory = new IdentityApplicationFactory
         {
             UseMockClientVersionValidator = false
@@ -122,5 +125,25 @@ public class ClientVersionGateTests : IClassFixture<IdentityApplicationFactory>
         databaseContext.Organizations.RemoveRange(databaseContext.Organizations);
         databaseContext.Users.RemoveRange(databaseContext.Users);
         databaseContext.SaveChanges();
+    }
+
+    private static void NormalizeEncryptedStrings(RegisterFinishRequestModel requestModel)
+    {
+        var accountKeys = requestModel.UserAsymmetricKeys.AccountKeys;
+        if (accountKeys == null)
+        {
+            return;
+        }
+
+        accountKeys.UserKeyEncryptedAccountPrivateKey = DefaultEncryptedString;
+        if (accountKeys.PublicKeyEncryptionKeyPair != null)
+        {
+            accountKeys.PublicKeyEncryptionKeyPair.WrappedPrivateKey = DefaultEncryptedString;
+        }
+        if (accountKeys.SignatureKeyPair != null)
+        {
+            accountKeys.SignatureKeyPair.WrappedSigningKey = DefaultEncryptedString;
+            accountKeys.SignatureKeyPair.SignatureAlgorithm = "ed25519";
+        }
     }
 }
