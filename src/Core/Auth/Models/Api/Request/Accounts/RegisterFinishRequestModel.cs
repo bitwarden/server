@@ -192,14 +192,23 @@ public class RegisterFinishRequestModel : IValidatableObject
         }
 
         // 2. Validate kdf settings.
-        if (MasterPasswordUnlock != null && MasterPasswordAuthentication != null)
+        if (MasterPasswordUnlock != null)
         {
             foreach (var validationResult in KdfSettingsValidator.Validate(MasterPasswordUnlock.ToData().Kdf))
             {
                 yield return validationResult;
             }
         }
-        else
+
+        if (MasterPasswordAuthentication != null)
+        {
+            foreach (var validationResult in KdfSettingsValidator.Validate(MasterPasswordAuthentication.ToData().Kdf))
+            {
+                yield return validationResult;
+            }
+        }
+
+        if (MasterPasswordUnlock == null && MasterPasswordAuthentication == null)
         {
             var hasMissingRequiredKdfInputs = false;
             if (Kdf == null)
@@ -224,6 +233,16 @@ public class RegisterFinishRequestModel : IValidatableObject
                     yield return validationResult;
                 }
             }
+        }
+        else if (MasterPasswordUnlock == null && MasterPasswordAuthentication != null)
+        {
+            // Authentication provided but Unlock missing
+            yield return new ValidationResult($"{nameof(MasterPasswordUnlock)} not found on RequestModel", [nameof(MasterPasswordUnlock)]);
+        }
+        else if (MasterPasswordUnlock != null && MasterPasswordAuthentication == null)
+        {
+            // Unlock provided but Authentication missing
+            yield return new ValidationResult($"{nameof(MasterPasswordAuthentication)} not found on RequestModel", [nameof(MasterPasswordAuthentication)]);
         }
     }
 }
