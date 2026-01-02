@@ -809,6 +809,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
 
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
 
         try
         {
@@ -819,9 +820,11 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
             await dbContext.BulkCopyAsync(Mapper.Map<IEnumerable<CollectionUser>>(collectionUsers));
 
             await dbContext.SaveChangesAsync();
+            await transaction.CommitAsync();
         }
         catch (Exception ex) when (DatabaseExceptionHelpers.IsDuplicateKeyException(ex))
         {
+            await transaction.RollbackAsync();
             throw new DuplicateDefaultCollectionException();
         }
     }
