@@ -91,6 +91,9 @@ public class OrganizationDataOwnershipPolicyRequirement : IPolicyRequirement
     /// </summary>
     /// <param name="organizationId">The organization ID to check.</param>
     /// <returns>True if the user is eligible for self-revocation (policy applies to them), false otherwise.</returns>
+    /// <remarks>
+    /// Self-revoke is used to opt out of migrating the user's personal vault to the organization as required by this policy.
+    /// </remarks>
     public bool EligibleForSelfRevoke(Guid organizationId)
     {
         var policyDetail = _policyDetails
