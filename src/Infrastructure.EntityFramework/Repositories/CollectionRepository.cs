@@ -827,6 +827,10 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
             await transaction.RollbackAsync();
             throw new DuplicateDefaultCollectionException();
         }
+        catch
+        {
+            await transaction.RollbackAsync();
+        }
     }
 
     public async Task CreateDefaultCollectionsBulkAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName)
