@@ -119,83 +119,110 @@ public class RegisterFinishRequestModel : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        // PM-28143 - Remove this check
-        ThrowIfExistsAndHashIsNotEqual(MasterPasswordAuthentication, MasterPasswordHash);
+        // 1. Authentication data containing hash and hash at root level check
+        if (MasterPasswordAuthentication != null && MasterPasswordHash != null)
+        {
+            if (MasterPasswordAuthentication.MasterPasswordAuthenticationHash != MasterPasswordHash)
+            {
+                yield return new ValidationResult(
+                    $"{nameof(MasterPasswordAuthentication.MasterPasswordAuthenticationHash)} and root level {nameof(MasterPasswordHash)} provided and are not equal. Only provide one.",
+                    [nameof(MasterPasswordAuthentication.MasterPasswordAuthenticationHash), nameof(MasterPasswordHash)]);
+            }
+        }
 
-        // 1. Access Token Presence Verification Check
+
+        // 1. Access token presence verification check
         switch (GetTokenType())
         {
             case RegisterFinishTokenType.EmailVerification:
                 if (string.IsNullOrEmpty(EmailVerificationToken))
                 {
-                    throw new BadRequestException("Email verification token absent when processing register/finish.");
+                    yield return new ValidationResult(
+                        $"{nameof(EmailVerificationToken)} absent when processing register/finish.",
+                        [nameof(EmailVerificationToken)]);
                 }
                 break;
             case RegisterFinishTokenType.OrganizationInvite:
                 if (string.IsNullOrEmpty(OrgInviteToken))
                 {
-                    throw new BadRequestException("Organization invite token absent when processing register/finish.");
+                    yield return new ValidationResult(
+                        $"{nameof(OrgInviteToken)} absent when processing register/finish.",
+                        [nameof(OrgInviteToken)]);
                 }
                 break;
             case RegisterFinishTokenType.OrgSponsoredFreeFamilyPlan:
                 if (string.IsNullOrEmpty(OrgSponsoredFreeFamilyPlanToken))
                 {
-                    throw new BadRequestException("Organization sponsored free family plan token absent when processing register/finish.");
+                    yield return new ValidationResult(
+                        $"{nameof(OrgSponsoredFreeFamilyPlanToken)} absent when processing register/finish.",
+                        [nameof(OrgSponsoredFreeFamilyPlanToken)]);
                 }
                 break;
             case RegisterFinishTokenType.EmergencyAccessInvite:
                 if (string.IsNullOrEmpty(AcceptEmergencyAccessInviteToken))
                 {
-                    throw new BadRequestException("Accept emergency access invite token absent when processing register/finish.");
+                    yield return new ValidationResult(
+                        $"{nameof(AcceptEmergencyAccessInviteToken)} absent when processing register/finish.",
+                        [nameof(AcceptEmergencyAccessInviteToken)]);
                 }
                 if (!AcceptEmergencyAccessId.HasValue || AcceptEmergencyAccessId.Value == Guid.Empty)
                 {
-                    throw new BadRequestException("Accept emergency access id absent when processing register/finish.");
+                    yield return new ValidationResult(
+                        $"{nameof(AcceptEmergencyAccessId)} absent when processing register/finish.",
+                        [nameof(AcceptEmergencyAccessId)]);
                 }
                 break;
             case RegisterFinishTokenType.ProviderInvite:
                 if (string.IsNullOrEmpty(ProviderInviteToken))
                 {
-                    throw new BadRequestException("Provider invite token absent when processing register/finish.");
+                    yield return new ValidationResult(
+                        $"{nameof(ProviderInviteToken)} absent when processing register/finish.",
+                        [nameof(ProviderInviteToken)]);
                 }
                 if (!ProviderUserId.HasValue || ProviderUserId.Value == Guid.Empty)
                 {
-                    throw new BadRequestException("Provider user id absent when processing register/finish.");
+                    yield return new ValidationResult(
+                        $"{nameof(ProviderUserId)} absent when processing register/finish.",
+                        [nameof(ProviderUserId)]);
                 }
                 break;
             default:
-                throw new BadRequestException("Invalid registration finish request");
+                yield return new ValidationResult("Invalid registration finish request");
+                break;
         }
 
         // 2. Validate kdf settings.
-
-        IEnumerable<ValidationResult> kdfValidationResults;
         if (MasterPasswordUnlock != null && MasterPasswordAuthentication != null)
         {
-            kdfValidationResults = KdfSettingsValidator.Validate(MasterPasswordUnlock.ToData().Kdf);
+            foreach (var validationResult in KdfSettingsValidator.Validate(MasterPasswordUnlock.ToData().Kdf))
+            {
+                yield return validationResult;
+            }
         }
         else
         {
-            kdfValidationResults = KdfSettingsValidator.Validate(
-                Kdf ?? throw new BadRequestException($"{nameof(Kdf)} not found on RequestModel"),
-                KdfIterations ?? throw new BadRequestException($"{nameof(KdfIterations)} not found on RequestModel"),
-                KdfMemory,
-                KdfParallelism);
-        }
-
-        return kdfValidationResults;
-    }
-
-    // PM-28143 - Remove function
-    private static void ThrowIfExistsAndHashIsNotEqual(
-        MasterPasswordAuthenticationDataRequestModel? authenticationData,
-        string? hash)
-    {
-        if (authenticationData != null && hash != null)
-        {
-            if (authenticationData.MasterPasswordAuthenticationHash != hash)
+            var hasMissingRequiredKdfInputs = false;
+            if (Kdf == null)
             {
-                throw new BadRequestException("AuthenticationData MasterPasswordHash and root level MasterPasswordHash provided and are not equal. Only provide one.");
+                yield return new ValidationResult($"{nameof(Kdf)} not found on RequestModel", [nameof(Kdf)]);
+                hasMissingRequiredKdfInputs = true;
+            }
+            if (KdfIterations == null)
+            {
+                yield return new ValidationResult($"{nameof(KdfIterations)} not found on RequestModel", [nameof(KdfIterations)]);
+                hasMissingRequiredKdfInputs = true;
+            }
+
+            if (!hasMissingRequiredKdfInputs)
+            {
+                foreach (var validationResult in KdfSettingsValidator.Validate(
+                             Kdf!.Value,
+                             KdfIterations!.Value,
+                             KdfMemory,
+                             KdfParallelism))
+                {
+                    yield return validationResult;
+                }
             }
         }
     }

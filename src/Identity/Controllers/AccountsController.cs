@@ -202,11 +202,10 @@ public class AccountsController : Controller
             return new RegisterFinishResponseModel();
         }
 
-        if (result.Errors != null)
-            foreach (var error in result.Errors.Where(e => e.Code != "DuplicateUserName"))
-            {
-                ModelState.AddModelError(string.Empty, error.Description);
-            }
+        foreach (var error in result.Errors.Where(e => e.Code != "DuplicateUserName"))
+        {
+            ModelState.AddModelError(string.Empty, error.Description);
+        }
 
         throw new BadRequestException(ModelState);
     }

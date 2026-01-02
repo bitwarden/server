@@ -1187,11 +1187,20 @@ public class AccountsControllerTests : IDisposable
             }
         };
 
+        // Provide a minimal valid token type to satisfy model-level token validation
+        model.EmailVerificationToken = "test-token";
+
         var ctx = new ValidationContext(model);
 
-        // Act & Assert
-        var ex = Assert.Throws<BadRequestException>(() => model.Validate(ctx).ToList());
-        Assert.Equal("AuthenticationData MasterPasswordHash and root level MasterPasswordHash provided and are not equal. Only provide one.", ex.Message);
+        // Act
+        var results = model.Validate(ctx).ToList();
+
+        // Assert: validation result exists with expected message and member names
+        var mismatchResult = Assert.Single(results.Where(r =>
+            r.ErrorMessage ==
+            "MasterPasswordAuthenticationHash and root level MasterPasswordHash provided and are not equal. Only provide one."));
+        Assert.Contains("MasterPasswordAuthenticationHash", mismatchResult.MemberNames);
+        Assert.Contains("MasterPasswordHash", mismatchResult.MemberNames);
     }
 
     private void SetDefaultKdfHmacKey(byte[]? newKey)
