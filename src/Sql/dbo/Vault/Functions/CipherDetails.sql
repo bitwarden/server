@@ -28,6 +28,12 @@ SELECT
     C.[DeletedDate],
     C.[Reprompt],
     C.[Key],
-    C.[ArchivedDate]
+    CASE
+        WHEN
+            @UserId IS NULL
+            OR C.[Archives] IS NULL
+        THEN NULL
+        ELSE TRY_CONVERT(DATETIME2(7), JSON_VALUE(C.[Archives], CONCAT('$."', @UserId, '"')))
+    END [ArchivedDate]
 FROM
-    [dbo].[Cipher] C
+    [dbo].[Cipher] C;

@@ -2303,7 +2303,7 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime?>("ArchivedDate")
+                    b.Property<string>("Archives")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Attachments")
