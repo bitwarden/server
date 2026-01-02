@@ -47,7 +47,7 @@ public class TdeOnboardingPasswordCommand : ITdeOnboardingPasswordCommand
         var org = await _organizationRepository.GetByIdentifierAsync(masterPasswordDataModel.OrgSsoIdentifier);
         if (org == null)
         {
-            throw new BadRequestException("Organization invalid.");
+            throw new BadRequestException("Organization SSO identifier is invalid.");
         }
 
         var orgUser = await _organizationUserRepository.GetByOrganizationAsync(org.Id, user.Id);
