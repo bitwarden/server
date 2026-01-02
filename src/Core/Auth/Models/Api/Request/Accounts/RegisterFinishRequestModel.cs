@@ -130,9 +130,81 @@ public class RegisterFinishRequestModel : IValidatableObject
             }
         }
 
+        // 2. Validate kdf settings.
+        if (MasterPasswordUnlock != null)
+        {
+            foreach (var validationResult in KdfSettingsValidator.Validate(MasterPasswordUnlock.ToData().Kdf))
+            {
+                yield return validationResult;
+            }
+        }
 
-        // 1. Access token presence verification check
-        switch (GetTokenType())
+        if (MasterPasswordAuthentication != null)
+        {
+            foreach (var validationResult in KdfSettingsValidator.Validate(MasterPasswordAuthentication.ToData().Kdf))
+            {
+                yield return validationResult;
+            }
+        }
+
+        // 3. Validate root kdf values if kdf values are not in the unlock and authentication.
+        if (MasterPasswordUnlock == null && MasterPasswordAuthentication == null)
+        {
+            var hasMissingRequiredKdfInputs = false;
+            if (Kdf == null)
+            {
+                yield return new ValidationResult($"{nameof(Kdf)} not found on RequestModel", [nameof(Kdf)]);
+                hasMissingRequiredKdfInputs = true;
+            }
+            if (KdfIterations == null)
+            {
+                yield return new ValidationResult($"{nameof(KdfIterations)} not found on RequestModel", [nameof(KdfIterations)]);
+                hasMissingRequiredKdfInputs = true;
+            }
+
+            if (!hasMissingRequiredKdfInputs)
+            {
+                foreach (var validationResult in KdfSettingsValidator.Validate(
+                             Kdf!.Value,
+                             KdfIterations!.Value,
+                             KdfMemory,
+                             KdfParallelism))
+                {
+                    yield return validationResult;
+                }
+            }
+        }
+        else if (MasterPasswordUnlock == null && MasterPasswordAuthentication != null)
+        {
+            // Authentication provided but Unlock missing
+            yield return new ValidationResult($"{nameof(MasterPasswordUnlock)} not found on RequestModel", [nameof(MasterPasswordUnlock)]);
+        }
+        else if (MasterPasswordUnlock != null && MasterPasswordAuthentication == null)
+        {
+            // Unlock provided but Authentication missing
+            yield return new ValidationResult($"{nameof(MasterPasswordAuthentication)} not found on RequestModel", [nameof(MasterPasswordAuthentication)]);
+        }
+
+        // 3. Lastly, validate access token type and presence. Must be done last because of yield break.
+        RegisterFinishTokenType tokenType;
+        var tokenTypeResolved = true;
+        try
+        {
+            tokenType = GetTokenType();
+        }
+        catch (InvalidOperationException)
+        {
+            tokenTypeResolved = false;
+            tokenType = default;
+        }
+
+        if (!tokenTypeResolved)
+        {
+            yield return new ValidationResult("No valid registration token provided");
+            yield break;
+        }
+
+        switch (tokenType)
         {
             case RegisterFinishTokenType.EmailVerification:
                 if (string.IsNullOrEmpty(EmailVerificationToken))
@@ -189,60 +261,6 @@ public class RegisterFinishRequestModel : IValidatableObject
             default:
                 yield return new ValidationResult("Invalid registration finish request");
                 break;
-        }
-
-        // 2. Validate kdf settings.
-        if (MasterPasswordUnlock != null)
-        {
-            foreach (var validationResult in KdfSettingsValidator.Validate(MasterPasswordUnlock.ToData().Kdf))
-            {
-                yield return validationResult;
-            }
-        }
-
-        if (MasterPasswordAuthentication != null)
-        {
-            foreach (var validationResult in KdfSettingsValidator.Validate(MasterPasswordAuthentication.ToData().Kdf))
-            {
-                yield return validationResult;
-            }
-        }
-
-        if (MasterPasswordUnlock == null && MasterPasswordAuthentication == null)
-        {
-            var hasMissingRequiredKdfInputs = false;
-            if (Kdf == null)
-            {
-                yield return new ValidationResult($"{nameof(Kdf)} not found on RequestModel", [nameof(Kdf)]);
-                hasMissingRequiredKdfInputs = true;
-            }
-            if (KdfIterations == null)
-            {
-                yield return new ValidationResult($"{nameof(KdfIterations)} not found on RequestModel", [nameof(KdfIterations)]);
-                hasMissingRequiredKdfInputs = true;
-            }
-
-            if (!hasMissingRequiredKdfInputs)
-            {
-                foreach (var validationResult in KdfSettingsValidator.Validate(
-                             Kdf!.Value,
-                             KdfIterations!.Value,
-                             KdfMemory,
-                             KdfParallelism))
-                {
-                    yield return validationResult;
-                }
-            }
-        }
-        else if (MasterPasswordUnlock == null && MasterPasswordAuthentication != null)
-        {
-            // Authentication provided but Unlock missing
-            yield return new ValidationResult($"{nameof(MasterPasswordUnlock)} not found on RequestModel", [nameof(MasterPasswordUnlock)]);
-        }
-        else if (MasterPasswordUnlock != null && MasterPasswordAuthentication == null)
-        {
-            // Unlock provided but Authentication missing
-            yield return new ValidationResult($"{nameof(MasterPasswordAuthentication)} not found on RequestModel", [nameof(MasterPasswordAuthentication)]);
         }
     }
 }
