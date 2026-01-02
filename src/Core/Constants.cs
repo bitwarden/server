@@ -228,11 +228,16 @@ public static class FeatureFlagKeys
     public const string CxpExportMobile = "cxp-export-mobile";
 
     /* Platform Team */
+    public const string WebPush = "web-push";
     public const string IpcChannelFramework = "ipc-channel-framework";
     public const string PushNotificationsWhenLocked = "pm-19388-push-notifications-when-locked";
     public const string PushNotificationsWhenInactive = "pm-25130-receive-push-notifications-for-inactive-users";
 
     /* Tools Team */
+    /// <summary>
+    /// Enable this flag to share the send view used by the web and browser clients
+    /// on the desktop client.
+    /// </summary>
     public const string DesktopSendUIRefresh = "desktop-send-ui-refresh";
     public const string UseSdkPasswordGenerators = "pm-19976-use-sdk-password-generators";
     public const string UseChromiumImporter = "pm-23982-chromium-importer";
@@ -240,11 +245,20 @@ public static class FeatureFlagKeys
     public const string SendUIRefresh = "pm-28175-send-ui-refresh";
     public const string SendEmailOTP = "pm-19051-send-email-verification";
 
+    /// <summary>
+    /// Enable this flag to output email/OTP authenticated sends from the `GET sends` endpoint. When
+    /// this flag is disabled, the `GET sends` endpoint omits email/OTP authenticated sends.
+    /// </summary>
+    /// <remarks>
+    /// This flag is server-side only, and only inhibits the endpoint returning all sends.
+    /// Email/OTP sends can still be created and downloaded through other endpoints.
+    /// </remarks>
+    public const string PM19051_ListEmailOtpSends = "tools-send-email-otp-listing";
+
     /* Vault Team */
     public const string CipherKeyEncryption = "cipher-key-encryption";
     public const string PM19941MigrateCipherDomainToSdk = "pm-19941-migrate-cipher-domain-to-sdk";
     public const string PhishingDetection = "phishing-detection";
-    public const string RemoveCardItemTypePolicy = "pm-16442-remove-card-item-type-policy";
     public const string PM22134SdkCipherListView = "pm-22134-sdk-cipher-list-view";
     public const string PM22136_SdkCipherEncryption = "pm-22136-sdk-cipher-encryption";
     public const string PM23904_RiskInsightsForPremium = "pm-23904-risk-insights-for-premium";
