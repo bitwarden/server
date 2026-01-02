@@ -22,9 +22,12 @@ namespace Bit.MySqlMigrations.Migrations
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
 
-            modelBuilder.Entity("Bit.Core.Dirt.Reports.Models.Data.OrganizationMemberBaseDetail", b =>
+            modelBuilder.Entity("Bit.Core.Dirt.Models.Data.OrganizationMemberBaseDetail", b =>
                 {
-                    b.Property<Guid>("CipherId")
+                    b.Property<string>("AvatarColor")
+                        .HasColumnType("longtext");
+
+                    b.Property<Guid?>("CipherId")
                         .HasColumnType("char(36)");
 
                     b.Property<Guid?>("CollectionId")
@@ -48,16 +51,22 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool?>("Manage")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<Guid?>("OrganizationUserId")
+                        .HasColumnType("char(36)");
+
                     b.Property<bool?>("ReadOnly")
                         .HasColumnType("tinyint(1)");
 
                     b.Property<string>("ResetPasswordKey")
                         .HasColumnType("longtext");
 
+                    b.Property<short>("Status")
+                        .HasColumnType("smallint");
+
                     b.Property<string>("TwoFactorProviders")
                         .HasColumnType("longtext");
 
-                    b.Property<Guid?>("UserGuid")
+                    b.Property<Guid?>("UserId")
                         .HasColumnType("char(36)");
 
                     b.Property<string>("UserName")
