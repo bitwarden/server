@@ -1,6 +1,6 @@
 <mjml>
     <mj-head>
-        <mj-include path="../../components/head.mjml" />
+        <mj-include path="../../../../components/head.mjml" />
     </mj-head>
     <mj-body css-class="border-fix">
         <!-- Blue Header Section -->
@@ -26,6 +26,6 @@
         </mj-wrapper>
 
         <!-- Footer -->
-        <mj-include path="../../components/footer.mjml" />
+        <mj-include path="../../../../components/footer.mjml" />
     </mj-body>
 </mjml>
