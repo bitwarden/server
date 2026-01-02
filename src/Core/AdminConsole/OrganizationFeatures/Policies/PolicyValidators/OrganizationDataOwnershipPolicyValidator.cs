@@ -6,15 +6,13 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 
 public class OrganizationDataOwnershipPolicyValidator(
     IPolicyRepository policyRepository,
     ICollectionRepository collectionRepository,
-    IEnumerable<IPolicyRequirementFactory<IPolicyRequirement>> factories,
-    IFeatureService featureService)
+    IEnumerable<IPolicyRequirementFactory<IPolicyRequirement>> factories)
     : OrganizationPolicyValidator(policyRepository, factories), IPostSavePolicySideEffect, IOnPolicyPostUpdateEvent
 {
     public PolicyType Type => PolicyType.OrganizationDataOwnership;
@@ -32,11 +30,6 @@ public class OrganizationDataOwnershipPolicyValidator(
         Policy postUpdatedPolicy,
         Policy? previousPolicyState)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation))
-        {
-            return;
-        }
-
         if (policyRequest.Metadata is not OrganizationModelOwnershipPolicyModel metadata)
         {
             return;

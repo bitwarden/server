@@ -280,11 +280,6 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
     /// <param name="defaultUserCollectionName">The encrypted default user collection name.</param>
     private async Task CreateDefaultCollectionAsync(OrganizationUser organizationUser, string defaultUserCollectionName)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation))
-        {
-            return;
-        }
-
         // Skip if no collection name provided (backwards compatibility)
         if (string.IsNullOrWhiteSpace(defaultUserCollectionName))
         {
@@ -323,11 +318,6 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
     private async Task CreateManyDefaultCollectionsAsync(Guid organizationId,
         IEnumerable<OrganizationUser> confirmedOrganizationUsers, string defaultUserCollectionName)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation))
-        {
-            return;
-        }
-
         // Skip if no collection name provided (backwards compatibility)
         if (string.IsNullOrWhiteSpace(defaultUserCollectionName))
         {
