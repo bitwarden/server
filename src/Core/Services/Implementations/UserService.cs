@@ -1194,7 +1194,7 @@ public class UserService : UserManager<User>, IUserService
     {
         if (validatePassword)
         {
-            var validate = await ValidatePasswordHashAsync(user, newPassword);
+            var validate = await ValidatePasswordInternal(user, newPassword);
             if (!validate.Succeeded)
             {
                 return validate;
@@ -1247,12 +1247,12 @@ public class UserService : UserManager<User>, IUserService
         return user.Key == null && user.MasterPassword != null && user.PrivateKey != null;
     }
 
-    public async Task<IdentityResult> ValidatePasswordHashAsync(User user, string passwordHash)
+    private async Task<IdentityResult> ValidatePasswordInternal(User user, string password)
     {
         var errors = new List<IdentityError>();
         foreach (var v in _passwordValidators)
         {
-            var result = await v.ValidateAsync(this, user, passwordHash);
+            var result = await v.ValidateAsync(this, user, password);
             if (!result.Succeeded)
             {
                 errors.AddRange(result.Errors);

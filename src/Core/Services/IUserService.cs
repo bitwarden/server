@@ -144,12 +144,4 @@ public interface IUserService
     /// </summary>
     /// <inheritdoc cref="IsClaimedByAnyOrganizationAsync"/>
     Task<IEnumerable<Organization>> GetOrganizationsClaimingUserAsync(Guid userId);
-
-    /// <summary>
-    /// Validates the provided password hash against the user password requirements.
-    /// </summary>
-    /// <param name="user">The user to validate the password hash for.</param>
-    /// <param name="passwordHash">The password hash to validate.</param>
-    /// <returns></returns>
-    Task<IdentityResult> ValidatePasswordHashAsync(User user, string passwordHash);
 }

@@ -63,13 +63,6 @@ public class SetInitialMasterPasswordCommand : ISetInitialMasterPasswordCommand
             throw new BadRequestException("User not found within organization.");
         }
 
-        var result = await _userService.ValidatePasswordHashAsync(user,
-            masterPasswordDataModel.MasterPasswordAuthentication.MasterPasswordAuthenticationHash);
-        if (!result.Succeeded)
-        {
-            throw new BadRequestException(result.Errors);
-        }
-
         // Hash the provided user master password hash on the server side
         var serverSideMasterPasswordHash = _passwordHasher.HashPassword(user,
             masterPasswordDataModel.MasterPasswordAuthentication.MasterPasswordAuthenticationHash);

@@ -11,18 +11,16 @@ namespace Bit.Core.Auth.UserFeatures.TdeOnboardingPassword;
 
 public class TdeOnboardingPasswordCommand : ITdeOnboardingPasswordCommand
 {
-    private readonly IUserService _userService;
     private readonly IUserRepository _userRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IPasswordHasher<User> _passwordHasher;
     private readonly IEventService _eventService;
 
-    public TdeOnboardingPasswordCommand(IUserService userService, IUserRepository userRepository,
+    public TdeOnboardingPasswordCommand(IUserRepository userRepository,
         IOrganizationUserRepository organizationUserRepository, IOrganizationRepository organizationRepository,
         IPasswordHasher<User> passwordHasher, IEventService eventService)
     {
-        _userService = userService;
         _userRepository = userRepository;
         _organizationUserRepository = organizationUserRepository;
         _organizationRepository = organizationRepository;
@@ -56,13 +54,6 @@ public class TdeOnboardingPasswordCommand : ITdeOnboardingPasswordCommand
         if (orgUser == null)
         {
             throw new BadRequestException("User not found within organization.");
-        }
-
-        var result = await _userService.ValidatePasswordHashAsync(user,
-            masterPasswordDataModel.MasterPasswordAuthentication.MasterPasswordAuthenticationHash);
-        if (!result.Succeeded)
-        {
-            throw new BadRequestException(result.Errors);
         }
 
         // Hash the provided user master password hash on the server side
