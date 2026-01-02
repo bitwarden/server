@@ -11,7 +11,6 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Models.Api.Request;
-using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -963,7 +962,7 @@ public class AccountsControllerTests : IDisposable
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostRegisterFinish(model));
-        Assert.Equal("KdfType couldn't be found on either the MasterPasswordUnlockData or the Kdf property passed in.", ex.Message);
+        Assert.Equal("KdfType couldn't be found on either the MasterPasswordUnlock or the Kdf property passed in.", ex.Message);
     }
 
     [Theory, BitAutoData]
@@ -1001,7 +1000,7 @@ public class AccountsControllerTests : IDisposable
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostRegisterFinish(model));
-        Assert.Equal("KdfIterations couldn't be found on either the MasterPasswordUnlockData or the KdfIterations property passed in.", ex.Message);
+        Assert.Equal("KdfIterations couldn't be found on either the MasterPasswordUnlock or the KdfIterations property passed in.", ex.Message);
     }
 
     [Theory, BitAutoData]
@@ -1192,7 +1191,7 @@ public class AccountsControllerTests : IDisposable
 
         // Act & Assert
         var ex = Assert.Throws<BadRequestException>(() => model.Validate(ctx).ToList());
-        Assert.Equal("Master password hash and hash are not equal.", ex.Message);
+        Assert.Equal("AuthenticationData MasterPasswordHash and root level MasterPasswordHash provided and are not equal. Only provide one.", ex.Message);
     }
 
     private void SetDefaultKdfHmacKey(byte[]? newKey)
