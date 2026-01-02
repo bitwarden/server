@@ -830,6 +830,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         catch
         {
             await transaction.RollbackAsync();
+            throw;
         }
     }
 
