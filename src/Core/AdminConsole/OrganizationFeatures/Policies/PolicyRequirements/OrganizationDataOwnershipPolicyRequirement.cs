@@ -72,6 +72,17 @@ public class OrganizationDataOwnershipPolicyRequirement : IPolicyRequirement
     {
         return _policyDetails.Any(p => p.OrganizationId == organizationId);
     }
+
+    /// <summary>
+    /// Ignore storage limits if the organization has data ownership policy enabled.
+    /// Allows users to seamlessly migrate their data into the organization without being blocked by storage limits.
+    /// Organization admins will need to manage storage after migration should overages occur.
+    /// </summary>
+    public bool IgnoreStorageLimitsOnMigration(Guid organizationId)
+    {
+        return _policyDetails.Any(p => p.OrganizationId == organizationId &&
+                                       p.OrganizationUserStatus == OrganizationUserStatusType.Confirmed);
+    }
 }
 
 public record DefaultCollectionRequest(Guid OrganizationUserId, bool ShouldCreateDefaultCollection)
