@@ -46,6 +46,7 @@ ENV ASPNETCORE_URLS=http://+:5000
 ENV SSL_CERT_DIR=/etc/bitwarden/ca-certificates
 ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
 EXPOSE 5000
+EXPOSE 5001
 
 RUN apk add --no-cache curl \
     krb5 \
