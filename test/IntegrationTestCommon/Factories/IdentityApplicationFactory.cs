@@ -10,7 +10,6 @@ using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Api.Request;
-using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Services;
 using Bit.Identity;
 using Bit.Test.Common.Helpers;
