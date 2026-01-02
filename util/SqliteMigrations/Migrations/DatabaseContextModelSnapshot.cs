@@ -1624,6 +1624,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<int>("AccessCount")
                         .HasColumnType("INTEGER");
 
+                    b.Property<byte?>("AuthType")
+                        .HasColumnType("INTEGER");
+
                     b.Property<Guid?>("CipherId")
                         .HasColumnType("TEXT");
 
@@ -1640,7 +1643,7 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Emails")
-                        .HasMaxLength(1024)
+                        .HasMaxLength(4000)
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("ExpirationDate")

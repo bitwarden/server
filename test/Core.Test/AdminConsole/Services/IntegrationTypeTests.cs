@@ -1,4 +1,4 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.Dirt.Enums;
 using Xunit;
 
 namespace Bit.Core.Test.Services;

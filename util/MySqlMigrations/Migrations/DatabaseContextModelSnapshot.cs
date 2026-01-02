@@ -1635,6 +1635,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<int>("AccessCount")
                         .HasColumnType("int");
 
+                    b.Property<byte?>("AuthType")
+                        .HasColumnType("tinyint unsigned");
+
                     b.Property<Guid?>("CipherId")
                         .HasColumnType("char(36)");
 
@@ -1651,8 +1654,8 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("tinyint(1)");
 
                     b.Property<string>("Emails")
-                        .HasMaxLength(1024)
-                        .HasColumnType("varchar(1024)");
+                        .HasMaxLength(4000)
+                        .HasColumnType("varchar(4000)");
 
                     b.Property<DateTime?>("ExpirationDate")
                         .HasColumnType("datetime(6)");
