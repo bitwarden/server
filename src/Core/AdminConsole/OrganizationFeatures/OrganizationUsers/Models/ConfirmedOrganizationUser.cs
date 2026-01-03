@@ -1,8 +1,8 @@
-using Bit.Core.AdminConsole.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models;
+using Bit.Core.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Models;
 
@@ -70,9 +70,14 @@ public class ConfirmedOrganizationUser : IExternal, IOrganizationUserPermissions
     public bool AccessSecretsManager { get; set; }
 
     /// <summary>
+    /// True if the user's access has been revoked, false otherwise.
+    /// </summary>
+    public bool Revoked { get; set; }
+
+    /// <summary>
     /// Converts this model to an <see cref="OrganizationUser"/> entity.
     /// </summary>
-    /// <returns>An <see cref="OrganizationUser"/> entity with Status set to Confirmed.</returns>
+    /// <returns>An <see cref="OrganizationUser"/> entity with Status set to Confirmed or Revoked based on the Revoked flag.</returns>
     public OrganizationUser ToEntity()
     {
         return new OrganizationUser
@@ -83,7 +88,7 @@ public class ConfirmedOrganizationUser : IExternal, IOrganizationUserPermissions
             Email = null,
             Key = Key,
             ResetPasswordKey = ResetPasswordKey,
-            Status = OrganizationUserStatusType.Confirmed,
+            Status = Revoked ? OrganizationUserStatusType.Revoked : OrganizationUserStatusType.Confirmed,
             Type = Type,
             ExternalId = ExternalId,
             CreationDate = CreationDate,
@@ -96,14 +101,26 @@ public class ConfirmedOrganizationUser : IExternal, IOrganizationUserPermissions
     /// <summary>
     /// Creates a <see cref="ConfirmedOrganizationUser"/> from an <see cref="OrganizationUser"/> entity.
     /// </summary>
-    /// <param name="entity">The entity to convert from. Must have Status = Confirmed, UserId and Key must not be null.</param>
+    /// <param name="entity">The entity to convert from. Must have Status = Confirmed or Revoked (with pre-revoked status of Confirmed), UserId and Key must not be null.</param>
     /// <returns>A new <see cref="ConfirmedOrganizationUser"/> instance.</returns>
-    /// <exception cref="InvalidOperationException">Thrown if the entity is not in Confirmed status, or UserId or Key is null.</exception>
+    /// <exception cref="InvalidOperationException">Thrown if the entity status is invalid, or UserId or Key is null.</exception>
     public static ConfirmedOrganizationUser FromEntity(OrganizationUser entity)
     {
-        if (entity.Status != OrganizationUserStatusType.Confirmed)
+        var isRevoked = entity.Status == OrganizationUserStatusType.Revoked;
+
+        if (!isRevoked && entity.Status != OrganizationUserStatusType.Confirmed)
         {
             throw new InvalidOperationException($"Cannot create ConfirmedOrganizationUser from entity with status {entity.Status}");
+        }
+
+        if (isRevoked)
+        {
+            // Validate that the revoked user's pre-revoked status is Confirmed
+            var preRevokedStatus = OrganizationService.GetPriorActiveOrganizationUserStatusType(entity);
+            if (preRevokedStatus != OrganizationUserStatusType.Confirmed)
+            {
+                throw new InvalidOperationException($"Cannot create ConfirmedOrganizationUser from revoked entity with pre-revoked status {preRevokedStatus}");
+            }
         }
 
         if (!entity.UserId.HasValue)
@@ -128,7 +145,8 @@ public class ConfirmedOrganizationUser : IExternal, IOrganizationUserPermissions
             CreationDate = entity.CreationDate,
             RevisionDate = entity.RevisionDate,
             Permissions = entity.Permissions,
-            AccessSecretsManager = entity.AccessSecretsManager
+            AccessSecretsManager = entity.AccessSecretsManager,
+            Revoked = isRevoked
         };
     }
 }

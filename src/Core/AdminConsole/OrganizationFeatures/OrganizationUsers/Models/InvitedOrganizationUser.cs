@@ -2,6 +2,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models;
+using Bit.Core.Services;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Models;
@@ -57,6 +58,11 @@ public class InvitedOrganizationUser : IExternal, IOrganizationUserPermissions
     /// </summary>
     public bool AccessSecretsManager { get; set; }
 
+    /// <summary>
+    /// True if the user's access has been revoked, false otherwise.
+    /// </summary>
+    public bool Revoked { get; set; }
+
     public void SetNewId()
     {
         Id = CoreHelpers.GenerateComb();
@@ -67,8 +73,14 @@ public class InvitedOrganizationUser : IExternal, IOrganizationUserPermissions
     /// </summary>
     /// <param name="userId">The ID of the User who accepted the invitation.</param>
     /// <returns>A new <see cref="AcceptedOrganizationUser"/> instance.</returns>
+    /// <exception cref="InvalidOperationException">Thrown if the user is revoked.</exception>
     public AcceptedOrganizationUser ToAccepted(Guid userId)
     {
+        if (Revoked)
+        {
+            throw new InvalidOperationException("Cannot transition a revoked user to accepted status");
+        }
+
         return new AcceptedOrganizationUser
         {
             Id = Id,
@@ -79,14 +91,15 @@ public class InvitedOrganizationUser : IExternal, IOrganizationUserPermissions
             CreationDate = CreationDate,
             RevisionDate = DateTime.UtcNow,
             Permissions = Permissions,
-            AccessSecretsManager = AccessSecretsManager
+            AccessSecretsManager = AccessSecretsManager,
+            Revoked = false
         };
     }
 
     /// <summary>
     /// Converts this model to an <see cref="OrganizationUser"/> entity.
     /// </summary>
-    /// <returns>An <see cref="OrganizationUser"/> entity with Status set to Invited.</returns>
+    /// <returns>An <see cref="OrganizationUser"/> entity with Status set to Invited or Revoked based on the Revoked flag.</returns>
     public OrganizationUser ToEntity()
     {
         return new OrganizationUser
@@ -97,7 +110,7 @@ public class InvitedOrganizationUser : IExternal, IOrganizationUserPermissions
             Email = Email,
             Key = null,
             ResetPasswordKey = null,
-            Status = OrganizationUserStatusType.Invited,
+            Status = Revoked ? OrganizationUserStatusType.Revoked : OrganizationUserStatusType.Invited,
             Type = Type,
             ExternalId = ExternalId,
             CreationDate = CreationDate,
@@ -110,14 +123,26 @@ public class InvitedOrganizationUser : IExternal, IOrganizationUserPermissions
     /// <summary>
     /// Creates an <see cref="InvitedOrganizationUser"/> from an <see cref="OrganizationUser"/> entity.
     /// </summary>
-    /// <param name="entity">The entity to convert from. Must have Status = Invited and Email must not be null.</param>
+    /// <param name="entity">The entity to convert from. Must have Status = Invited or Revoked (with pre-revoked status of Invited), and Email must not be null.</param>
     /// <returns>A new <see cref="InvitedOrganizationUser"/> instance.</returns>
-    /// <exception cref="InvalidOperationException">Thrown if the entity is not in Invited status or Email is null.</exception>
+    /// <exception cref="InvalidOperationException">Thrown if the entity status is invalid or Email is null.</exception>
     public static InvitedOrganizationUser FromEntity(OrganizationUser entity)
     {
-        if (entity.Status != OrganizationUserStatusType.Invited)
+        var isRevoked = entity.Status == OrganizationUserStatusType.Revoked;
+
+        if (!isRevoked && entity.Status != OrganizationUserStatusType.Invited)
         {
             throw new InvalidOperationException($"Cannot create InvitedOrganizationUser from entity with status {entity.Status}");
+        }
+
+        if (isRevoked)
+        {
+            // Validate that the revoked user's pre-revoked status is Invited
+            var preRevokedStatus = OrganizationService.GetPriorActiveOrganizationUserStatusType(entity);
+            if (preRevokedStatus != OrganizationUserStatusType.Invited)
+            {
+                throw new InvalidOperationException($"Cannot create InvitedOrganizationUser from revoked entity with pre-revoked status {preRevokedStatus}");
+            }
         }
 
         if (string.IsNullOrEmpty(entity.Email))
@@ -135,7 +160,8 @@ public class InvitedOrganizationUser : IExternal, IOrganizationUserPermissions
             CreationDate = entity.CreationDate,
             RevisionDate = entity.RevisionDate,
             Permissions = entity.Permissions,
-            AccessSecretsManager = entity.AccessSecretsManager
+            AccessSecretsManager = entity.AccessSecretsManager,
+            Revoked = isRevoked
         };
     }
 }

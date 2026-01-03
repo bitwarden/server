@@ -1,8 +1,8 @@
-using Bit.Core.AdminConsole.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models;
+using Bit.Core.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Models;
 
@@ -58,12 +58,23 @@ public class AcceptedOrganizationUser : IExternal, IOrganizationUserPermissions
     public bool AccessSecretsManager { get; set; }
 
     /// <summary>
+    /// True if the user's access has been revoked, false otherwise.
+    /// </summary>
+    public bool Revoked { get; set; }
+
+    /// <summary>
     /// Transitions this accepted user to a confirmed state when an organization admin confirms them.
     /// </summary>
     /// <param name="key">The Organization symmetric key encrypted with the User's public key.</param>
     /// <returns>A new <see cref="ConfirmedOrganizationUser"/> instance.</returns>
+    /// <exception cref="InvalidOperationException">Thrown if the user is revoked.</exception>
     public ConfirmedOrganizationUser ToConfirmed(string key)
     {
+        if (Revoked)
+        {
+            throw new InvalidOperationException("Cannot transition a revoked user to confirmed status");
+        }
+
         return new ConfirmedOrganizationUser
         {
             Id = Id,
@@ -76,14 +87,15 @@ public class AcceptedOrganizationUser : IExternal, IOrganizationUserPermissions
             CreationDate = CreationDate,
             RevisionDate = DateTime.UtcNow,
             Permissions = Permissions,
-            AccessSecretsManager = AccessSecretsManager
+            AccessSecretsManager = AccessSecretsManager,
+            Revoked = false
         };
     }
 
     /// <summary>
     /// Converts this model to an <see cref="OrganizationUser"/> entity.
     /// </summary>
-    /// <returns>An <see cref="OrganizationUser"/> entity with Status set to Accepted.</returns>
+    /// <returns>An <see cref="OrganizationUser"/> entity with Status set to Accepted or Revoked based on the Revoked flag.</returns>
     public OrganizationUser ToEntity()
     {
         return new OrganizationUser
@@ -94,7 +106,7 @@ public class AcceptedOrganizationUser : IExternal, IOrganizationUserPermissions
             Email = null,
             Key = null,
             ResetPasswordKey = null,
-            Status = OrganizationUserStatusType.Accepted,
+            Status = Revoked ? OrganizationUserStatusType.Revoked : OrganizationUserStatusType.Accepted,
             Type = Type,
             ExternalId = ExternalId,
             CreationDate = CreationDate,
@@ -107,14 +119,26 @@ public class AcceptedOrganizationUser : IExternal, IOrganizationUserPermissions
     /// <summary>
     /// Creates an <see cref="AcceptedOrganizationUser"/> from an <see cref="OrganizationUser"/> entity.
     /// </summary>
-    /// <param name="entity">The entity to convert from. Must have Status = Accepted and UserId must not be null.</param>
+    /// <param name="entity">The entity to convert from. Must have Status = Accepted or Revoked (with pre-revoked status of Accepted), and UserId must not be null.</param>
     /// <returns>A new <see cref="AcceptedOrganizationUser"/> instance.</returns>
-    /// <exception cref="InvalidOperationException">Thrown if the entity is not in Accepted status or UserId is null.</exception>
+    /// <exception cref="InvalidOperationException">Thrown if the entity status is invalid or UserId is null.</exception>
     public static AcceptedOrganizationUser FromEntity(OrganizationUser entity)
     {
-        if (entity.Status != OrganizationUserStatusType.Accepted)
+        var isRevoked = entity.Status == OrganizationUserStatusType.Revoked;
+
+        if (!isRevoked && entity.Status != OrganizationUserStatusType.Accepted)
         {
             throw new InvalidOperationException($"Cannot create AcceptedOrganizationUser from entity with status {entity.Status}");
+        }
+
+        if (isRevoked)
+        {
+            // Validate that the revoked user's pre-revoked status is Accepted
+            var preRevokedStatus = OrganizationService.GetPriorActiveOrganizationUserStatusType(entity);
+            if (preRevokedStatus != OrganizationUserStatusType.Accepted)
+            {
+                throw new InvalidOperationException($"Cannot create AcceptedOrganizationUser from revoked entity with pre-revoked status {preRevokedStatus}");
+            }
         }
 
         if (!entity.UserId.HasValue)
@@ -132,7 +156,8 @@ public class AcceptedOrganizationUser : IExternal, IOrganizationUserPermissions
             CreationDate = entity.CreationDate,
             RevisionDate = entity.RevisionDate,
             Permissions = entity.Permissions,
-            AccessSecretsManager = entity.AccessSecretsManager
+            AccessSecretsManager = entity.AccessSecretsManager,
+            Revoked = isRevoked
         };
     }
 }
