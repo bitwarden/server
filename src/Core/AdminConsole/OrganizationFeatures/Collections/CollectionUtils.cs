@@ -12,9 +12,9 @@ public static class CollectionUtils
     /// <param name="organizationId">The organization ID.</param>
     /// <param name="organizationUserIds">The IDs for organization users who need default collections.</param>
     /// <param name="defaultCollectionName">The encrypted string to use as the default collection name.</param>
-    /// <returns></returns>
+    /// <returns>A tuple containing the semaphores, collections, and collection users.</returns>
     public static (IEnumerable<DefaultCollectionSemaphore> semaphores,
-        IEnumerable<Collection> collection,
+        IEnumerable<Collection> collections,
         IEnumerable<CollectionUser> collectionUsers)
         BuildDefaultUserCollections(Guid organizationId, IEnumerable<Guid> organizationUserIds,
             string defaultCollectionName)

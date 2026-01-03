@@ -406,7 +406,6 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
 
         try
         {
-
             // CRITICAL: Insert semaphore entries BEFORE collections
             // Database will throw on duplicate primary key (OrganizationUserId)
             await BulkInsertDefaultCollectionSemaphoresAsync(connection, transaction, semaphores);
