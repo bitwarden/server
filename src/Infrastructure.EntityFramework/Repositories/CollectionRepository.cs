@@ -1,8 +1,10 @@
 ﻿using AutoMapper;
+using Bit.Core.AdminConsole.Collections;
+using Bit.Core.AdminConsole.OrganizationFeatures.Collections;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
-using Bit.Core.Utilities;
+using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using LinqToDB.EntityFrameworkCore;
@@ -794,7 +796,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         // SaveChangesAsync is expected to be called outside this method
     }
 
-    public async Task UpsertDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName)
+    public async Task CreateDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName)
     {
         organizationUserIds = organizationUserIds.ToList();
         if (!organizationUserIds.Any())
@@ -802,79 +804,53 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
             return;
         }
 
+        var (semaphores, collections, collectionUsers) =
+            CollectionUtils.BuildDefaultUserCollections(organizationId, organizationUserIds, defaultCollectionName);
+
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
+        try
+        {
+            // CRITICAL: Insert semaphore entries BEFORE collections
+            // Database will throw on duplicate primary key (OrganizationUserId)
+            await dbContext.BulkCopyAsync(Mapper.Map<IEnumerable<DefaultCollectionSemaphore>>(semaphores));
+            await dbContext.BulkCopyAsync(Mapper.Map<IEnumerable<Collection>>(collections));
+            await dbContext.BulkCopyAsync(Mapper.Map<IEnumerable<CollectionUser>>(collectionUsers));
+
+            await transaction.CommitAsync();
+        }
+        catch (Exception ex) when (DatabaseExceptionHelpers.IsDuplicateKeyException(ex))
+        {
+            await transaction.RollbackAsync();
+            throw new DuplicateDefaultCollectionException();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
+    public async Task CreateDefaultCollectionsBulkAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName)
+    {
+        // EF uses the same bulk copy approach as the main method
+        await CreateDefaultCollectionsAsync(organizationId, organizationUserIds, defaultCollectionName);
+    }
+
+    public async Task<HashSet<Guid>> GetDefaultCollectionSemaphoresAsync(IEnumerable<Guid> organizationUserIds)
+    {
+        var organizationUserIdsHashSet = organizationUserIds.ToHashSet();
+
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        var orgUserIdWithDefaultCollection = await GetOrgUserIdsWithDefaultCollectionAsync(dbContext, organizationId);
-        var missingDefaultCollectionUserIds = organizationUserIds.Except(orgUserIdWithDefaultCollection);
+        var result = await dbContext.DefaultCollectionSemaphores
+            .Where(s => organizationUserIdsHashSet.Contains(s.OrganizationUserId))
+            .Select(s => s.OrganizationUserId)
+            .ToListAsync();
 
-        var (collectionUsers, collections) = BuildDefaultCollectionForUsers(organizationId, missingDefaultCollectionUserIds, defaultCollectionName);
-
-        if (!collectionUsers.Any() || !collections.Any())
-        {
-            return;
-        }
-
-        await dbContext.BulkCopyAsync(collections);
-        await dbContext.BulkCopyAsync(collectionUsers);
-
-        await dbContext.SaveChangesAsync();
-    }
-
-    private async Task<HashSet<Guid>> GetOrgUserIdsWithDefaultCollectionAsync(DatabaseContext dbContext, Guid organizationId)
-    {
-        var results = await dbContext.OrganizationUsers
-                 .Where(ou => ou.OrganizationId == organizationId)
-                 .Join(
-                     dbContext.CollectionUsers,
-                     ou => ou.Id,
-                     cu => cu.OrganizationUserId,
-                     (ou, cu) => new { ou, cu }
-                 )
-                 .Join(
-                     dbContext.Collections,
-                     temp => temp.cu.CollectionId,
-                     c => c.Id,
-                     (temp, c) => new { temp.ou, Collection = c }
-                 )
-                 .Where(x => x.Collection.Type == CollectionType.DefaultUserCollection)
-                 .Select(x => x.ou.Id)
-                 .ToListAsync();
-
-        return results.ToHashSet();
-    }
-
-    private (List<CollectionUser> collectionUser, List<Collection> collection) BuildDefaultCollectionForUsers(Guid organizationId, IEnumerable<Guid> missingDefaultCollectionUserIds, string defaultCollectionName)
-    {
-        var collectionUsers = new List<CollectionUser>();
-        var collections = new List<Collection>();
-
-        foreach (var orgUserId in missingDefaultCollectionUserIds)
-        {
-            var collectionId = CoreHelpers.GenerateComb();
-
-            collections.Add(new Collection
-            {
-                Id = collectionId,
-                OrganizationId = organizationId,
-                Name = defaultCollectionName,
-                CreationDate = DateTime.UtcNow,
-                RevisionDate = DateTime.UtcNow,
-                Type = CollectionType.DefaultUserCollection,
-                DefaultUserCollectionEmail = null
-
-            });
-
-            collectionUsers.Add(new CollectionUser
-            {
-                CollectionId = collectionId,
-                OrganizationUserId = orgUserId,
-                ReadOnly = false,
-                HidePasswords = false,
-                Manage = true,
-            });
-        }
-
-        return (collectionUsers, collections);
+        return result.ToHashSet();
     }
 }

@@ -12,7 +12,6 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
@@ -494,15 +493,10 @@ public class ConfirmOrganizationUserCommandTests
 
         await sutProvider.GetDependency<ICollectionRepository>()
             .Received(1)
-            .CreateAsync(
-                Arg.Is<Collection>(c =>
-                    c.Name == collectionName &&
-                    c.OrganizationId == organization.Id &&
-                    c.Type == CollectionType.DefaultUserCollection),
-                Arg.Any<IEnumerable<CollectionAccessSelection>>(),
-                Arg.Is<IEnumerable<CollectionAccessSelection>>(cu =>
-                    cu.Single().Id == orgUser.Id &&
-                    cu.Single().Manage));
+            .CreateDefaultCollectionsAsync(
+                organization.Id,
+                Arg.Is<IEnumerable<Guid>>(ids => ids.Single() == orgUser.Id),
+                collectionName);
     }
 
     [Theory, BitAutoData]
@@ -525,7 +519,7 @@ public class ConfirmOrganizationUserCommandTests
 
         await sutProvider.GetDependency<ICollectionRepository>()
             .DidNotReceive()
-            .UpsertDefaultCollectionsAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<string>());
+            .CreateDefaultCollectionsAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<string>());
     }
 
     [Theory, BitAutoData]
@@ -543,24 +537,15 @@ public class ConfirmOrganizationUserCommandTests
         sutProvider.GetDependency<IUserRepository>().GetManyAsync(default).ReturnsForAnyArgs(new[] { user });
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.CreateDefaultLocation).Returns(true);
 
-        var policyDetails = new PolicyDetails
-        {
-            OrganizationId = org.Id,
-            OrganizationUserId = orgUser.Id,
-            IsProvider = false,
-            OrganizationUserStatus = orgUser.Status,
-            OrganizationUserType = orgUser.Type,
-            PolicyType = PolicyType.OrganizationDataOwnership
-        };
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<OrganizationDataOwnershipPolicyRequirement>(orgUser.UserId!.Value)
-            .Returns(new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Disabled, [policyDetails]));
+            .Returns(new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Disabled, []));
 
         await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, collectionName);
 
         await sutProvider.GetDependency<ICollectionRepository>()
             .DidNotReceive()
-            .UpsertDefaultCollectionsAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<string>());
+            .CreateDefaultCollectionsAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<string>());
     }
 
     [Theory, BitAutoData]

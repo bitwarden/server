@@ -1,8 +1,9 @@
 ﻿using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
+using Bit.Core.AdminConsole.Collections;
+using Bit.Core.AdminConsole.OrganizationFeatures.Collections;
 using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
@@ -360,7 +361,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         }
     }
 
-    public async Task UpsertDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName)
+    public async Task CreateDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName)
     {
         organizationUserIds = organizationUserIds.ToList();
         if (!organizationUserIds.Any())
@@ -368,91 +369,134 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
             return;
         }
 
+        var organizationUserCollectionIds = organizationUserIds
+            .Select(ou => (ou, CoreHelpers.GenerateComb()))
+            .ToTwoGuidIdArrayTVP();
+
         await using var connection = new SqlConnection(ConnectionString);
-        connection.Open();
+        await connection.OpenAsync();
         await using var transaction = connection.BeginTransaction();
+
         try
         {
-            var orgUserIdWithDefaultCollection = await GetOrgUserIdsWithDefaultCollectionAsync(connection, transaction, organizationId);
+            await connection.ExecuteAsync(
+                "[dbo].[Collection_CreateDefaultCollections]",
+                new
+                {
+                    OrganizationId = organizationId,
+                    DefaultCollectionName = defaultCollectionName,
+                    OrganizationUserCollectionIds = organizationUserCollectionIds
+                },
+                commandType: CommandType.StoredProcedure,
+                transaction: transaction);
 
-            var missingDefaultCollectionUserIds = organizationUserIds.Except(orgUserIdWithDefaultCollection);
-
-            var (collectionUsers, collections) = BuildDefaultCollectionForUsers(organizationId, missingDefaultCollectionUserIds, defaultCollectionName);
-
-            if (!collectionUsers.Any() || !collections.Any())
-            {
-                return;
-            }
-
-            await BulkResourceCreationService.CreateCollectionsAsync(connection, transaction, collections);
-            await BulkResourceCreationService.CreateCollectionsUsersAsync(connection, transaction, collectionUsers);
-
-            transaction.Commit();
+            await transaction.CommitAsync();
+        }
+        catch (Exception ex) when (DatabaseExceptionHelpers.IsDuplicateKeyException(ex))
+        {
+            await transaction.RollbackAsync();
+            throw new DuplicateDefaultCollectionException();
         }
         catch
         {
-            transaction.Rollback();
+            await transaction.RollbackAsync();
             throw;
         }
     }
 
-    private async Task<HashSet<Guid>> GetOrgUserIdsWithDefaultCollectionAsync(SqlConnection connection, SqlTransaction transaction, Guid organizationId)
+    public async Task CreateDefaultCollectionsBulkAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName)
     {
-        const string sql = @"
-                    SELECT
-                        ou.Id AS OrganizationUserId
-                    FROM
-                        OrganizationUser ou
-                    INNER JOIN
-                        CollectionUser cu ON cu.OrganizationUserId = ou.Id
-                    INNER JOIN
-                        Collection c ON c.Id = cu.CollectionId
-                    WHERE
-                        ou.OrganizationId = @OrganizationId
-                        AND c.Type = @CollectionType;
-                ";
-
-        var organizationUserIds = await connection.QueryAsync<Guid>(
-            sql,
-            new { OrganizationId = organizationId, CollectionType = CollectionType.DefaultUserCollection },
-            transaction: transaction
-        );
-
-        return organizationUserIds.ToHashSet();
-    }
-
-    private (List<CollectionUser> collectionUser, List<Collection> collection) BuildDefaultCollectionForUsers(Guid organizationId, IEnumerable<Guid> missingDefaultCollectionUserIds, string defaultCollectionName)
-    {
-        var collectionUsers = new List<CollectionUser>();
-        var collections = new List<Collection>();
-
-        foreach (var orgUserId in missingDefaultCollectionUserIds)
+        organizationUserIds = organizationUserIds.ToList();
+        if (!organizationUserIds.Any())
         {
-            var collectionId = CoreHelpers.GenerateComb();
-
-            collections.Add(new Collection
-            {
-                Id = collectionId,
-                OrganizationId = organizationId,
-                Name = defaultCollectionName,
-                CreationDate = DateTime.UtcNow,
-                RevisionDate = DateTime.UtcNow,
-                Type = CollectionType.DefaultUserCollection,
-                DefaultUserCollectionEmail = null
-
-            });
-
-            collectionUsers.Add(new CollectionUser
-            {
-                CollectionId = collectionId,
-                OrganizationUserId = orgUserId,
-                ReadOnly = false,
-                HidePasswords = false,
-                Manage = true,
-            });
+            return;
         }
 
-        return (collectionUsers, collections);
+        var (semaphores, collections, collectionUsers) =
+            CollectionUtils.BuildDefaultUserCollections(organizationId, organizationUserIds, defaultCollectionName);
+
+        await using var connection = new SqlConnection(ConnectionString);
+        connection.Open();
+        await using var transaction = connection.BeginTransaction();
+
+        try
+        {
+            // CRITICAL: Insert semaphore entries BEFORE collections
+            // Database will throw on duplicate primary key (OrganizationUserId)
+            await BulkInsertDefaultCollectionSemaphoresAsync(connection, transaction, semaphores);
+            await BulkResourceCreationService.CreateCollectionsAsync(connection, transaction, collections);
+            await BulkResourceCreationService.CreateCollectionsUsersAsync(connection, transaction, collectionUsers);
+
+            await transaction.CommitAsync();
+        }
+        catch (Exception ex) when (DatabaseExceptionHelpers.IsDuplicateKeyException(ex))
+        {
+            await transaction.RollbackAsync();
+            throw new DuplicateDefaultCollectionException();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
+    public async Task<HashSet<Guid>> GetDefaultCollectionSemaphoresAsync(IEnumerable<Guid> organizationUserIds)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        var results = await connection.QueryAsync<Guid>(
+            "[dbo].[DefaultCollectionSemaphore_ReadByOrganizationUserIds]",
+            new { OrganizationUserIds = organizationUserIds.ToGuidIdArrayTVP() },
+            commandType: CommandType.StoredProcedure);
+
+        return results.ToHashSet();
+    }
+
+    private async Task BulkInsertDefaultCollectionSemaphoresAsync(SqlConnection connection, SqlTransaction transaction, IEnumerable<DefaultCollectionSemaphore> semaphores)
+    {
+        semaphores = semaphores.ToList();
+        if (!semaphores.Any())
+        {
+            return;
+        }
+
+        // Sort by composite key to reduce deadlocks
+        var sortedSemaphores = semaphores
+            .OrderBy(s => s.OrganizationUserId)
+            .ToList();
+
+        using var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity | SqlBulkCopyOptions.CheckConstraints, transaction);
+        bulkCopy.DestinationTableName = "[dbo].[DefaultCollectionSemaphore]";
+        bulkCopy.BatchSize = 500;
+        bulkCopy.BulkCopyTimeout = 120;
+        bulkCopy.EnableStreaming = true;
+
+        var dataTable = new DataTable("DefaultCollectionSemaphoreDataTable");
+
+        var organizationUserIdColumn = new DataColumn(nameof(DefaultCollectionSemaphore.OrganizationUserId), typeof(Guid));
+        dataTable.Columns.Add(organizationUserIdColumn);
+        var creationDateColumn = new DataColumn(nameof(DefaultCollectionSemaphore.CreationDate), typeof(DateTime));
+        dataTable.Columns.Add(creationDateColumn);
+
+        foreach (DataColumn col in dataTable.Columns)
+        {
+            bulkCopy.ColumnMappings.Add(col.ColumnName, col.ColumnName);
+        }
+
+        var keys = new DataColumn[1];
+        keys[0] = organizationUserIdColumn;
+        dataTable.PrimaryKey = keys;
+
+        foreach (var semaphore in sortedSemaphores)
+        {
+            var row = dataTable.NewRow();
+            row[organizationUserIdColumn] = semaphore.OrganizationUserId;
+            row[creationDateColumn] = semaphore.CreationDate;
+            dataTable.Rows.Add(row);
+        }
+
+        await bulkCopy.WriteToServerAsync(dataTable);
     }
 
     public class CollectionWithGroupsAndUsers : Collection
