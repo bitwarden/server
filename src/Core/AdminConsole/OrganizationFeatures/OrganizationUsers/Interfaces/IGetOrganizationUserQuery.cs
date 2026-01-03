@@ -1,8 +1,4 @@
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Models;
-using OneOf;
-using OneOf.Types;
-
-namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+﻿namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 
 public interface IGetOrganizationUserQuery
 {
