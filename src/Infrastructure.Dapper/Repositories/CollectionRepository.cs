@@ -7,6 +7,7 @@ using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Bit.Infrastructure.Dapper.AdminConsole.Helpers;
 using Dapper;
 using Microsoft.Data.SqlClient;
@@ -368,6 +369,10 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
             return;
         }
 
+        var organizationUserCollectionIds = organizationUserIds
+            .Select(ou => (ou, CoreHelpers.GenerateComb()))
+            .ToTwoGuidIdArrayTVP();
+
         await using var connection = new SqlConnection(ConnectionString);
         await connection.OpenAsync();
 
@@ -379,7 +384,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
                 {
                     OrganizationId = organizationId,
                     DefaultCollectionName = defaultCollectionName,
-                    OrganizationUserIds = organizationUserIds.ToGuidIdArrayTVP()
+                    OrganizationUserCollectionIds = organizationUserCollectionIds
                 },
                 commandType: CommandType.StoredProcedure);
         }

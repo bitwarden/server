@@ -1,30 +1,14 @@
+-- Creates default user collections for organization users
+-- Uses semaphore table to prevent duplicate default collections at database level
 CREATE OR ALTER PROCEDURE [dbo].[Collection_CreateDefaultCollections]
     @OrganizationId UNIQUEIDENTIFIER,
     @DefaultCollectionName VARCHAR(MAX),
-    @OrganizationUserIds AS [dbo].[GuidIdArray] READONLY
+    @OrganizationUserCollectionIds AS [dbo].[TwoGuidIdArray] READONLY -- OrganizationUserId, CollectionId
 AS
 BEGIN
     SET NOCOUNT ON
 
     DECLARE @Now DATETIME2(7) = GETUTCDATE()
-
-    -- Create temporary table to allocate collection IDs to each organizationUser
-    DECLARE @CollectionsToInsert TABLE
-    (
-        [OrganizationUserId] UNIQUEIDENTIFIER,
-        [CollectionId] UNIQUEIDENTIFIER
-    );
-
-    INSERT INTO @CollectionsToInsert
-    (
-        [OrganizationUserId],
-        [CollectionId]
-    )
-    SELECT
-        ou.Id,
-        NEWID()
-    FROM
-        @OrganizationUserIds ou
 
     BEGIN TRANSACTION;
 
@@ -37,10 +21,10 @@ BEGIN
             [CreationDate]
         )
         SELECT
-            ou.[OrganizationUserId],
+            ids.[Id1], -- OrganizationUserId
             @Now
         FROM
-            @CollectionsToInsert ou;
+            @OrganizationUserCollectionIds ids;
 
         -- Insert collections for users who obtained semaphore entries
         INSERT INTO [dbo].[Collection]
@@ -55,7 +39,7 @@ BEGIN
             [DefaultUserCollectionEmail]
         )
         SELECT
-            ou.[CollectionId],
+            ids.[Id2], -- CollectionId
             @OrganizationId,
             @DefaultCollectionName,
             @Now,
@@ -64,7 +48,7 @@ BEGIN
             NULL,
             NULL
         FROM
-            @CollectionsToInsert ou;
+            @OrganizationUserCollectionIds ids;
 
         -- Insert collection user mappings
         INSERT INTO [dbo].[CollectionUser]
@@ -76,13 +60,13 @@ BEGIN
             [Manage]
         )
         SELECT
-            ou.[CollectionId],
-            ou.[OrganizationUserId],
+            ids.[Id2], -- CollectionId
+            ids.[Id1], -- OrganizationUserId
             0, -- ReadOnly = false
             0, -- HidePasswords = false
             1  -- Manage = true
         FROM
-            @CollectionsToInsert ou;
+            @OrganizationUserCollectionIds ids;
 
         COMMIT TRANSACTION;
     END TRY
