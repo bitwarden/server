@@ -400,6 +400,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         catch
         {
             await transaction.RollbackAsync();
+            throw;
         }
     }
 
