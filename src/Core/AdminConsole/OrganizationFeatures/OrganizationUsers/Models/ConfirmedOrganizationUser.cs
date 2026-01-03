@@ -1,5 +1,6 @@
 using Bit.Core.AdminConsole.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 
@@ -67,4 +68,67 @@ public class ConfirmedOrganizationUser : IExternal, IOrganizationUserPermissions
     /// True if the User has access to Secrets Manager for this Organization, false otherwise.
     /// </summary>
     public bool AccessSecretsManager { get; set; }
+
+    /// <summary>
+    /// Converts this model to an <see cref="OrganizationUser"/> entity.
+    /// </summary>
+    /// <returns>An <see cref="OrganizationUser"/> entity with Status set to Confirmed.</returns>
+    public OrganizationUser ToEntity()
+    {
+        return new OrganizationUser
+        {
+            Id = Id,
+            OrganizationId = OrganizationId,
+            UserId = UserId,
+            Email = null,
+            Key = Key,
+            ResetPasswordKey = ResetPasswordKey,
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = Type,
+            ExternalId = ExternalId,
+            CreationDate = CreationDate,
+            RevisionDate = RevisionDate,
+            Permissions = Permissions,
+            AccessSecretsManager = AccessSecretsManager
+        };
+    }
+
+    /// <summary>
+    /// Creates a <see cref="ConfirmedOrganizationUser"/> from an <see cref="OrganizationUser"/> entity.
+    /// </summary>
+    /// <param name="entity">The entity to convert from. Must have Status = Confirmed, UserId and Key must not be null.</param>
+    /// <returns>A new <see cref="ConfirmedOrganizationUser"/> instance.</returns>
+    /// <exception cref="InvalidOperationException">Thrown if the entity is not in Confirmed status, or UserId or Key is null.</exception>
+    public static ConfirmedOrganizationUser FromEntity(OrganizationUser entity)
+    {
+        if (entity.Status != OrganizationUserStatusType.Confirmed)
+        {
+            throw new InvalidOperationException($"Cannot create ConfirmedOrganizationUser from entity with status {entity.Status}");
+        }
+
+        if (!entity.UserId.HasValue)
+        {
+            throw new InvalidOperationException("Cannot create ConfirmedOrganizationUser from entity with null UserId");
+        }
+
+        if (string.IsNullOrEmpty(entity.Key))
+        {
+            throw new InvalidOperationException("Cannot create ConfirmedOrganizationUser from entity with null Key");
+        }
+
+        return new ConfirmedOrganizationUser
+        {
+            Id = entity.Id,
+            OrganizationId = entity.OrganizationId,
+            UserId = entity.UserId.Value,
+            Key = entity.Key,
+            ResetPasswordKey = entity.ResetPasswordKey,
+            Type = entity.Type,
+            ExternalId = entity.ExternalId,
+            CreationDate = entity.CreationDate,
+            RevisionDate = entity.RevisionDate,
+            Permissions = entity.Permissions,
+            AccessSecretsManager = entity.AccessSecretsManager
+        };
+    }
 }

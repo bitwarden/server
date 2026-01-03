@@ -1,5 +1,6 @@
 using Bit.Core.AdminConsole.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 
@@ -55,4 +56,83 @@ public class AcceptedOrganizationUser : IExternal, IOrganizationUserPermissions
     /// True if the User has access to Secrets Manager for this Organization, false otherwise.
     /// </summary>
     public bool AccessSecretsManager { get; set; }
+
+    /// <summary>
+    /// Transitions this accepted user to a confirmed state when an organization admin confirms them.
+    /// </summary>
+    /// <param name="key">The Organization symmetric key encrypted with the User's public key.</param>
+    /// <returns>A new <see cref="ConfirmedOrganizationUser"/> instance.</returns>
+    public ConfirmedOrganizationUser ToConfirmed(string key)
+    {
+        return new ConfirmedOrganizationUser
+        {
+            Id = Id,
+            OrganizationId = OrganizationId,
+            UserId = UserId,
+            Key = key,
+            ResetPasswordKey = null,
+            Type = Type,
+            ExternalId = ExternalId,
+            CreationDate = CreationDate,
+            RevisionDate = DateTime.UtcNow,
+            Permissions = Permissions,
+            AccessSecretsManager = AccessSecretsManager
+        };
+    }
+
+    /// <summary>
+    /// Converts this model to an <see cref="OrganizationUser"/> entity.
+    /// </summary>
+    /// <returns>An <see cref="OrganizationUser"/> entity with Status set to Accepted.</returns>
+    public OrganizationUser ToEntity()
+    {
+        return new OrganizationUser
+        {
+            Id = Id,
+            OrganizationId = OrganizationId,
+            UserId = UserId,
+            Email = null,
+            Key = null,
+            ResetPasswordKey = null,
+            Status = OrganizationUserStatusType.Accepted,
+            Type = Type,
+            ExternalId = ExternalId,
+            CreationDate = CreationDate,
+            RevisionDate = RevisionDate,
+            Permissions = Permissions,
+            AccessSecretsManager = AccessSecretsManager
+        };
+    }
+
+    /// <summary>
+    /// Creates an <see cref="AcceptedOrganizationUser"/> from an <see cref="OrganizationUser"/> entity.
+    /// </summary>
+    /// <param name="entity">The entity to convert from. Must have Status = Accepted and UserId must not be null.</param>
+    /// <returns>A new <see cref="AcceptedOrganizationUser"/> instance.</returns>
+    /// <exception cref="InvalidOperationException">Thrown if the entity is not in Accepted status or UserId is null.</exception>
+    public static AcceptedOrganizationUser FromEntity(OrganizationUser entity)
+    {
+        if (entity.Status != OrganizationUserStatusType.Accepted)
+        {
+            throw new InvalidOperationException($"Cannot create AcceptedOrganizationUser from entity with status {entity.Status}");
+        }
+
+        if (!entity.UserId.HasValue)
+        {
+            throw new InvalidOperationException("Cannot create AcceptedOrganizationUser from entity with null UserId");
+        }
+
+        return new AcceptedOrganizationUser
+        {
+            Id = entity.Id,
+            OrganizationId = entity.OrganizationId,
+            UserId = entity.UserId.Value,
+            Type = entity.Type,
+            ExternalId = entity.ExternalId,
+            CreationDate = entity.CreationDate,
+            RevisionDate = entity.RevisionDate,
+            Permissions = entity.Permissions,
+            AccessSecretsManager = entity.AccessSecretsManager
+        };
+    }
 }
