@@ -819,7 +819,6 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
             await dbContext.BulkCopyAsync(Mapper.Map<IEnumerable<Collection>>(collections));
             await dbContext.BulkCopyAsync(Mapper.Map<IEnumerable<CollectionUser>>(collectionUsers));
 
-            await dbContext.SaveChangesAsync();
             await transaction.CommitAsync();
         }
         catch (Exception ex) when (DatabaseExceptionHelpers.IsDuplicateKeyException(ex))

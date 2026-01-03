@@ -375,6 +375,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
 
         await using var connection = new SqlConnection(ConnectionString);
         await connection.OpenAsync();
+        await using var transaction = connection.BeginTransaction();
 
         try
         {
@@ -386,11 +387,19 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
                     DefaultCollectionName = defaultCollectionName,
                     OrganizationUserCollectionIds = organizationUserCollectionIds
                 },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure,
+                transaction: transaction);
+
+            await transaction.CommitAsync();
         }
         catch (Exception ex) when (DatabaseExceptionHelpers.IsDuplicateKeyException(ex))
         {
+            await transaction.RollbackAsync();
             throw new DuplicateDefaultCollectionException();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
         }
     }
 
@@ -417,16 +426,16 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
             await BulkResourceCreationService.CreateCollectionsAsync(connection, transaction, collections);
             await BulkResourceCreationService.CreateCollectionsUsersAsync(connection, transaction, collectionUsers);
 
-            transaction.Commit();
+            await transaction.CommitAsync();
         }
         catch (Exception ex) when (DatabaseExceptionHelpers.IsDuplicateKeyException(ex))
         {
-            transaction.Rollback();
+            await transaction.RollbackAsync();
             throw new DuplicateDefaultCollectionException();
         }
         catch
         {
-            transaction.Rollback();
+            await transaction.RollbackAsync();
             throw;
         }
     }
