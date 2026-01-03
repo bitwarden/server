@@ -3,6 +3,7 @@
 
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
@@ -23,6 +24,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
 {
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly IGetOrganizationUserQuery _getOrganizationUserQuery;
     private readonly IUserRepository _userRepository;
     private readonly IEventService _eventService;
     private readonly IMailService _mailService;
@@ -39,6 +41,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
     public ConfirmOrganizationUserCommand(
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
+        IGetOrganizationUserQuery getOrganizationUserQuery,
         IUserRepository userRepository,
         IEventService eventService,
         IMailService mailService,
@@ -54,6 +57,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
+        _getOrganizationUserQuery = getOrganizationUserQuery;
         _userRepository = userRepository;
         _eventService = eventService;
         _mailService = mailService;
@@ -117,9 +121,11 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
     private async Task<List<Tuple<OrganizationUser, string>>> SaveChangesToDatabaseAsync(Guid organizationId, Dictionary<Guid, string> keys,
         Guid confirmingUserId)
     {
-        var selectedOrganizationUsers = await _organizationUserRepository.GetManyAsync(keys.Keys);
+        // Use the query to fetch strongly-typed models instead of raw entities
+        var selectedOrganizationUsers = await _getOrganizationUserQuery.GetManyOrganizationUsersAsync(keys.Keys);
         var validSelectedOrganizationUsers = selectedOrganizationUsers
-            .Where(u => u.Status == OrganizationUserStatusType.Accepted && u.OrganizationId == organizationId && u.UserId != null)
+            .OfType<AcceptedOrganizationUser>()
+            .Where(ou => !ou.Revoked)
             .ToList();
 
         if (!validSelectedOrganizationUsers.Any())
@@ -127,7 +133,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
             return new List<Tuple<OrganizationUser, string>>();
         }
 
-        var validSelectedUserIds = validSelectedOrganizationUsers.Select(u => u.UserId.Value).ToList();
+        var validSelectedUserIds = validSelectedOrganizationUsers.Select(u => u.UserId).ToList();
 
         var organization = await _organizationRepository.GetByIdAsync(organizationId);
         var allUsersOrgs = await _organizationUserRepository.GetManyByManyUsersAsync(validSelectedUserIds);
@@ -135,7 +141,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         var users = await _userRepository.GetManyAsync(validSelectedUserIds);
         var usersTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(validSelectedUserIds);
 
-        var keyedFilteredUsers = validSelectedOrganizationUsers.ToDictionary(u => u.UserId.Value, u => u);
+        var keyedFilteredUsers = validSelectedOrganizationUsers.ToDictionary(u => u.UserId, u => u);
         var keyedOrganizationUsers = allUsersOrgs.GroupBy(u => u.UserId.Value)
             .ToDictionary(u => u.Key, u => u.ToList());
 
@@ -165,18 +171,21 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
 
                 var userTwoFactorEnabled = usersTwoFactorEnabled.FirstOrDefault(tuple => tuple.userId == user.Id).twoFactorIsEnabled;
                 await CheckPoliciesAsync(organizationId, user, orgUsers, userTwoFactorEnabled);
-                orgUser.Status = OrganizationUserStatusType.Confirmed;
-                orgUser.Key = keys[orgUser.Id];
-                orgUser.Email = null;
 
-                await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
-                await _mailService.SendOrganizationConfirmedEmailAsync(organization.DisplayName(), user.Email, orgUser.AccessSecretsManager);
-                succeededUsers.Add(orgUser);
-                result.Add(Tuple.Create(orgUser, ""));
+                // Use the strongly-typed model to transition from Accepted to Confirmed state
+                var confirmedOrgUser = orgUser.ToConfirmed(keys[orgUser.Id]);
+
+                // Ideally these would accept an interface, but for now we'll convert it back
+                var confirmedEntity = confirmedOrgUser.ToEntity();
+                await _eventService.LogOrganizationUserEventAsync(confirmedEntity, EventType.OrganizationUser_Confirmed);
+                await _mailService.SendOrganizationConfirmedEmailAsync(organization.DisplayName(), user.Email, confirmedOrgUser.AccessSecretsManager);
+
+                succeededUsers.Add(confirmedEntity);
+                result.Add(Tuple.Create(confirmedEntity, ""));
             }
             catch (BadRequestException e)
             {
-                result.Add(Tuple.Create(orgUser, e.Message));
+                result.Add(Tuple.Create(orgUser.ToEntity(), e.Message));
             }
         }
 
