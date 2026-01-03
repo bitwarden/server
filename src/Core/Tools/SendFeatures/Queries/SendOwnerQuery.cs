@@ -12,7 +12,6 @@ namespace Bit.Core.Tools.SendFeatures.Queries;
 public class SendOwnerQuery : ISendOwnerQuery
 {
     private readonly ISendRepository _repository;
-    private readonly IFeatureService _features;
     private readonly IUserService _users;
 
     /// <summary>
@@ -24,10 +23,9 @@ public class SendOwnerQuery : ISendOwnerQuery
     /// <exception cref="ArgumentNullException">
     /// Thrown when <paramref name="sendRepository"/> is <see langword="null"/>.
     /// </exception>
-    public SendOwnerQuery(ISendRepository sendRepository, IFeatureService features, IUserService users)
+    public SendOwnerQuery(ISendRepository sendRepository, IUserService users)
     {
         _repository = sendRepository;
-        _features = features ?? throw new ArgumentNullException(nameof(features));
         _users = users ?? throw new ArgumentNullException(nameof(users));
     }
 
@@ -50,16 +48,6 @@ public class SendOwnerQuery : ISendOwnerQuery
     {
         var userId = _users.GetProperUserId(user) ?? throw new BadRequestException("invalid user.");
         var sends = await _repository.GetManyByUserIdAsync(userId);
-
-        var removeEmailOtp = !_features.IsEnabled(FeatureFlagKeys.PM19051_ListEmailOtpSends);
-        if (removeEmailOtp)
-        {
-            // reify list to avoid invalidating the enumerator
-            foreach (var s in sends.Where(s => s.Emails != null).ToList())
-            {
-                sends.Remove(s);
-            }
-        }
 
         return sends;
     }
