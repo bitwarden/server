@@ -11,7 +11,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Models;
 /// by an organization administrator. At this stage, the user is linked to a User account but does not yet have
 /// access to encrypted organization data.
 /// </summary>
-public class AcceptedOrganizationUser : IExternal, IOrganizationUserPermissions
+public class AcceptedOrganizationUser : ITypedOrganizationUser
 {
     /// <summary>
     /// A unique identifier for the organization user.
@@ -159,5 +159,13 @@ public class AcceptedOrganizationUser : IExternal, IOrganizationUserPermissions
             AccessSecretsManager = entity.AccessSecretsManager,
             Revoked = isRevoked
         };
+    }
+
+    /// <summary>
+    /// Implicitly converts an AcceptedOrganizationUser to an OrganizationUser entity.
+    /// </summary>
+    public static implicit operator OrganizationUser(AcceptedOrganizationUser accepted)
+    {
+        return accepted.ToEntity();
     }
 }

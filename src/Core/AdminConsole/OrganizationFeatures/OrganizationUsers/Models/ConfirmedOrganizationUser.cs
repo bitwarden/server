@@ -11,7 +11,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Models;
 /// confirmed by an organization administrator. At this stage, the user has access to encrypted organization data
 /// through the encrypted organization key.
 /// </summary>
-public class ConfirmedOrganizationUser : IExternal, IOrganizationUserPermissions
+public class ConfirmedOrganizationUser : ITypedOrganizationUser
 {
     /// <summary>
     /// A unique identifier for the organization user.
@@ -148,5 +148,13 @@ public class ConfirmedOrganizationUser : IExternal, IOrganizationUserPermissions
             AccessSecretsManager = entity.AccessSecretsManager,
             Revoked = isRevoked
         };
+    }
+
+    /// <summary>
+    /// Implicitly converts a ConfirmedOrganizationUser to an OrganizationUser entity.
+    /// </summary>
+    public static implicit operator OrganizationUser(ConfirmedOrganizationUser confirmed)
+    {
+        return confirmed.ToEntity();
     }
 }

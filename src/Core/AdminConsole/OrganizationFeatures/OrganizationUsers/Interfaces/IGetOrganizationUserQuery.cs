@@ -11,12 +11,12 @@ public interface IGetOrganizationUserQuery
     /// based on their status (Invited, Accepted, Confirmed, or Revoked).
     /// </summary>
     /// <param name="organizationUserId">The ID of the organization user to retrieve.</param>
-    /// <returns>
-    /// A OneOf containing either:
-    /// - InvitedOrganizationUser (status: Invited or Revoked-Invited)
-    /// - AcceptedOrganizationUser (status: Accepted or Revoked-Accepted)
-    /// - ConfirmedOrganizationUser (status: Confirmed or Revoked-Confirmed)
-    /// - None if the user is not found
-    /// </returns>
-    Task<OneOf<InvitedOrganizationUser, AcceptedOrganizationUser, ConfirmedOrganizationUser, None>> GetOrganizationUserAsync(Guid organizationUserId);
+    Task<ITypedOrganizationUser?> GetOrganizationUserAsync(Guid organizationUserId);
+
+    /// <summary>
+    /// Retrieves multiple organization users by their IDs and returns the appropriate strongly-typed models
+    /// based on their status (Invited, Accepted, Confirmed, or Revoked).
+    /// </summary>
+    /// <param name="organizationUserIds">The IDs of the organization users to retrieve.</param>
+    Task<IEnumerable<ITypedOrganizationUser>> GetManyOrganizationUsersAsync(IEnumerable<Guid> organizationUserIds);
 }

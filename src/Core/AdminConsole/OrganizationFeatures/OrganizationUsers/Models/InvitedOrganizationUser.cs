@@ -11,7 +11,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Models;
 /// Represents an invitation to join an organization.
 /// At this stage, the invitation is sent to an email address but is not yet linked to a specific User account.
 /// </summary>
-public class InvitedOrganizationUser : IExternal, IOrganizationUserPermissions
+public class InvitedOrganizationUser : ITypedOrganizationUser
 {
     /// <summary>
     /// A unique identifier for the organization user.
@@ -66,6 +66,14 @@ public class InvitedOrganizationUser : IExternal, IOrganizationUserPermissions
     public void SetNewId()
     {
         Id = CoreHelpers.GenerateComb();
+    }
+
+    /// <summary>
+    /// Implicitly converts an InvitedOrganizationUser to an OrganizationUser entity.
+    /// </summary>
+    public static implicit operator OrganizationUser(InvitedOrganizationUser invited)
+    {
+        return invited.ToEntity();
     }
 
     /// <summary>
