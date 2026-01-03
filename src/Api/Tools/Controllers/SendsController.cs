@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Azure.Messaging.EventGrid;
 using Bit.Api.Models.Response;
 using Bit.Api.Tools.Models.Request;

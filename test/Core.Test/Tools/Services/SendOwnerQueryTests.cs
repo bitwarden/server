@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Tools.Entities;
