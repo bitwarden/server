@@ -344,6 +344,12 @@ public class UserService : UserManager<User>, IUserService
         await _mailService.SendMasterPasswordHintEmailAsync(email, user.MasterPasswordHint);
     }
 
+    /// <summary>
+    /// Initiates WebAuthn 2FA credential registration and generates a challenge for adding a new security key.
+    /// </summary>
+    /// <param name="user">The current user.</param>
+    /// <returns></returns>
+    /// <exception cref="BadRequestException">Maximum allowed number of credentials already registered.</exception>
     public async Task<CredentialCreateOptions> StartWebAuthnRegistrationAsync(User user)
     {
         var providers = user.GetTwoFactorProviders();
@@ -362,6 +368,17 @@ public class UserService : UserManager<User>, IUserService
         if (provider.MetaData == null)
         {
             provider.MetaData = new Dictionary<string, object>();
+        }
+
+        // Boundary validation to provide a better UX. There is also second-level enforcement at persistence time.
+        var maximumAllowedCredentialCount = await _hasPremiumAccessQuery.HasPremiumAccessAsync(user.Id)
+            ? _globalSettings.WebAuthn.PremiumMaximumAllowedCredentials
+            : _globalSettings.WebAuthn.NonPremiumMaximumAllowedCredentials;
+        // Count only saved credentials ("Key{id}") toward the limit.
+        if (provider.MetaData.Count(k => k.Key.StartsWith("Key")) >=
+            maximumAllowedCredentialCount)
+        {
+            throw new BadRequestException("Maximum allowed WebAuthn credential count exceeded.");
         }
 
         var fidoUser = new Fido2User
@@ -400,6 +417,17 @@ public class UserService : UserManager<User>, IUserService
         if (provider?.MetaData is null || !provider.MetaData.TryGetValue("pending", out var pendingValue))
         {
             return false;
+        }
+
+        // Persistence-time validation for comprehensive enforcement. There is also boundary validation for best-possible UX.
+        var maximumAllowedCredentialCount = await _hasPremiumAccessQuery.HasPremiumAccessAsync(user.Id)
+            ? _globalSettings.WebAuthn.PremiumMaximumAllowedCredentials
+            : _globalSettings.WebAuthn.NonPremiumMaximumAllowedCredentials;
+        // Count only saved credentials ("Key{id}") toward the limit.
+        if (provider.MetaData.Count(k => k.Key.StartsWith("Key")) >=
+            maximumAllowedCredentialCount)
+        {
+            throw new BadRequestException("Maximum allowed WebAuthn credential count exceeded.");
         }
 
         var options = CredentialCreateOptions.FromJson((string)pendingValue);
