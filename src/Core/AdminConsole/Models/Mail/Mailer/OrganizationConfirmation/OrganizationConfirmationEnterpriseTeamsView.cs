@@ -8,5 +8,5 @@ public class OrganizationConfirmationEnterpriseTeamsView : OrganizationConfirmat
 
 public class OrganizationConfirmationEnterpriseTeams : BaseMail<OrganizationConfirmationEnterpriseTeamsView>
 {
-    public override string Subject { get; set; } = "";
+    public override required string Subject { get; set; }
 }
