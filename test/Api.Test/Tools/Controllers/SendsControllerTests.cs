@@ -8,6 +8,7 @@ using Bit.Api.Tools.Models.Request;
 using Bit.Api.Tools.Models.Response;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
+using Bit.Core.Platform.Push;
 using Bit.Core.Services;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
@@ -36,7 +37,7 @@ public class SendsControllerTests : IDisposable
     private readonly ISendFileStorageService _sendFileStorageService;
     private readonly ILogger<SendsController> _logger;
     private readonly IFeatureService _featureService;
-    private readonly ISendAuthenticationQuery _sendAuthenticationQuery;
+    private readonly IPushNotificationService _pushNotificationService;
 
     public SendsControllerTests()
     {
@@ -49,7 +50,7 @@ public class SendsControllerTests : IDisposable
         _sendFileStorageService = Substitute.For<ISendFileStorageService>();
         _logger = Substitute.For<ILogger<SendsController>>();
         _featureService = Substitute.For<IFeatureService>();
-        _sendAuthenticationQuery = Substitute.For<ISendAuthenticationQuery>();
+        _pushNotificationService = Substitute.For<IPushNotificationService>();
 
         _sut = new SendsController(
             _sendRepository,
@@ -61,7 +62,7 @@ public class SendsControllerTests : IDisposable
             _sendFileStorageService,
             _logger,
             _featureService,
-            _sendAuthenticationQuery
+            _pushNotificationService
         );
     }
 
@@ -776,7 +777,7 @@ public class SendsControllerTests : IDisposable
         _sendRepository.GetByIdAsync(sendId).Returns(send);
         _userService.GetUserByIdAsync(creator.Id).Returns(creator);
 
-        var result = await _sut.AccessUsingAuth(new SendAccessRequestModel());
+        var result = await _sut.AccessUsingAuth();
 
         Assert.NotNull(result);
         var objectResult = Assert.IsType<ObjectResult>(result);
@@ -802,7 +803,7 @@ public class SendsControllerTests : IDisposable
         _sut.ControllerContext = CreateControllerContextWithUser(user);
         _sendRepository.GetByIdAsync(sendId).Returns(send);
 
-        var result = await _sut.AccessUsingAuth(new SendAccessRequestModel());
+        var result = await _sut.AccessUsingAuth();
 
         Assert.NotNull(result);
         var objectResult = Assert.IsType<ObjectResult>(result);
@@ -828,7 +829,7 @@ public class SendsControllerTests : IDisposable
         _sut.ControllerContext = CreateControllerContextWithUser(user);
         _sendRepository.GetByIdAsync(sendId).Returns(send);
 
-        var result = await _sut.AccessUsingAuth(new SendAccessRequestModel());
+        var result = await _sut.AccessUsingAuth();
 
         Assert.NotNull(result);
         var objectResult = Assert.IsType<ObjectResult>(result);
@@ -847,7 +848,7 @@ public class SendsControllerTests : IDisposable
         _sendRepository.GetByIdAsync(sendId).Returns((Send)null);
 
         var exception =
-            await Assert.ThrowsAsync<BadRequestException>(() => _sut.AccessUsingAuth(new SendAccessRequestModel()));
+            await Assert.ThrowsAsync<BadRequestException>(() => _sut.AccessUsingAuth());
 
         Assert.Equal("Could not locate send", exception.Message);
         await _sendRepository.Received(1).GetByIdAsync(sendId);
@@ -870,7 +871,7 @@ public class SendsControllerTests : IDisposable
         _sendRepository.GetByIdAsync(sendId).Returns(send);
         _userService.GetUserByIdAsync(creator.Id).Returns(creator);
 
-        var result = await _sut.AccessUsingAuth(new SendAccessRequestModel());
+        var result = await _sut.AccessUsingAuth();
 
         Assert.NotNull(result);
         var objectResult = Assert.IsType<ObjectResult>(result);

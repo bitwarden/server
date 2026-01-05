@@ -8,6 +8,7 @@ using Bit.Core;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.UserFeatures.SendAccess;
 using Bit.Core.Exceptions;
+using Bit.Core.Platform.Push;
 using Bit.Core.Services;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Data;
@@ -35,7 +36,7 @@ public class SendsController : Controller
     private readonly ISendOwnerQuery _sendOwnerQuery;
     private readonly ILogger<SendsController> _logger;
     private readonly IFeatureService _featureService;
-    private readonly ISendAuthenticationQuery _sendAuthenticationQuery;
+    private readonly IPushNotificationService _pushNotificationService;
 
     public SendsController(
         ISendRepository sendRepository,
@@ -47,7 +48,7 @@ public class SendsController : Controller
         ISendFileStorageService sendFileStorageService,
         ILogger<SendsController> logger,
         IFeatureService featureService,
-        ISendAuthenticationQuery sendAuthenticationQuery)
+        IPushNotificationService pushNotificationService)
     {
         _sendRepository = sendRepository;
         _userService = userService;
@@ -58,7 +59,7 @@ public class SendsController : Controller
         _sendFileStorageService = sendFileStorageService;
         _logger = logger;
         _featureService = featureService;
-        _sendAuthenticationQuery = sendAuthenticationQuery;
+        _pushNotificationService = pushNotificationService;
     }
 
     #region Anonymous endpoints
@@ -77,17 +78,16 @@ public class SendsController : Controller
         var guid = new Guid(CoreHelpers.Base64UrlDecode(id));
         var send = await _sendRepository.GetByIdAsync(guid);
 
-        var sendEmailOtpEnabled = _featureService.IsEnabled(FeatureFlagKeys.SendEmailOTP);
-        var authMethod = await _sendAuthenticationQuery.GetAuthenticationMethod(guid);
-
-        if (authMethod is EmailOtp && sendEmailOtpEnabled)
-        {
-            return new UnauthorizedResult();
-        }
-
         if (send == null)
         {
             throw new BadRequestException("Could not locate send");
+        }
+
+        /* This guard can be removed once feature flag is retired*/
+        var sendEmailOtpEnabled = _featureService.IsEnabled(FeatureFlagKeys.SendEmailOTP);
+        if (sendEmailOtpEnabled && send.AuthType == AuthType.Email && send.Emails is not null)
+        {
+            return new UnauthorizedResult();
         }
 
         var sendAuthResult =
@@ -133,17 +133,16 @@ public class SendsController : Controller
         var sendId = new Guid(CoreHelpers.Base64UrlDecode(encodedSendId));
         var send = await _sendRepository.GetByIdAsync(sendId);
 
-        var sendEmailOtpEnabled = _featureService.IsEnabled(FeatureFlagKeys.SendEmailOTP);
-        var authMethod = await _sendAuthenticationQuery.GetAuthenticationMethod(sendId);
-
-        if (authMethod is EmailOtp && sendEmailOtpEnabled)
-        {
-            return new UnauthorizedResult();
-        }
-
         if (send == null)
         {
             throw new BadRequestException("Could not locate send");
+        }
+
+        /* This guard can be removed once feature flag is retired*/
+        var sendEmailOtpEnabled = _featureService.IsEnabled(FeatureFlagKeys.SendEmailOTP);
+        if (sendEmailOtpEnabled && send.AuthType == AuthType.Email && send.Emails is not null)
+        {
+            return new UnauthorizedResult();
         }
 
         var (url, result) = await _anonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId,
@@ -231,7 +230,7 @@ public class SendsController : Controller
     [Authorize(Policy = Policies.Send)]
     // [RequireFeature(FeatureFlagKeys.SendEmailOTP)]  /* Uncomment once client fallback re-try logic is added */
     [HttpPost("access/")]
-    public async Task<IActionResult> AccessUsingAuth([FromBody] SendAccessRequestModel model)
+    public async Task<IActionResult> AccessUsingAuth()
     {
         var guid = User.GetSendId();
         var send = await _sendRepository.GetByIdAsync(guid);
@@ -246,6 +245,10 @@ public class SendsController : Controller
             var creator = await _userService.GetUserByIdAsync(send.UserId.Value);
             sendResponse.CreatorIdentifier = creator.Email;
         }
+
+        send.AccessCount++;
+        await _sendRepository.ReplaceAsync(send);
+        await _pushNotificationService.PushSyncSendUpdateAsync(send);
 
         return new ObjectResult(sendResponse);
     }
@@ -264,6 +267,10 @@ public class SendsController : Controller
         }
 
         var url = await _sendFileStorageService.GetSendFileDownloadUrlAsync(send, fileId);
+
+        send.AccessCount++;
+        await _sendRepository.ReplaceAsync(send);
+        await _pushNotificationService.PushSyncSendUpdateAsync(send);
 
         return new ObjectResult(new SendFileDownloadDataResponseModel() { Id = fileId, Url = url });
     }
