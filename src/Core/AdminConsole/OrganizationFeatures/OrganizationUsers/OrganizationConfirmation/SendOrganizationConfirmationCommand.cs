@@ -9,6 +9,15 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Organizat
 
 public class SendOrganizationConfirmationCommand(IMailer mailer, GlobalSettings globalSettings) : ISendOrganizationConfirmationCommand
 {
+    private const string _titleFirst = "You're confirmed as a member of ";
+    private const string _titleThird = "!";
+
+    private static string GetConfirmationSubject(string organizationName) =>
+        $"You Have Been Confirmed To {organizationName}";
+    private string GetWebVaultUrl(bool accessSecretsManager) => accessSecretsManager
+        ? globalSettings.BaseServiceUri.VaultWithHashAndSecretManagerProduct
+        : globalSettings.BaseServiceUri.VaultWithHash;
+
     public async Task SendConfirmationAsync(Organization organization, string userEmail, bool accessSecretsManager = false)
     {
         await SendConfirmationsAsync(organization, [userEmail], accessSecretsManager);
@@ -39,16 +48,14 @@ public class SendOrganizationConfirmationCommand(IMailer mailer, GlobalSettings 
         var mail = new OrganizationConfirmationEnterpriseTeams
         {
             ToEmails = userEmailsList,
-            Subject = $"You Have Been Confirmed To {organizationName}",
+            Subject = GetConfirmationSubject(organizationName),
             View = new OrganizationConfirmationEnterpriseTeamsView
             {
                 OrganizationName = organizationName,
-                TitleFirst = "You're confirmed as a member of ",
+                TitleFirst = _titleFirst,
                 TitleSecondBold = organizationName,
-                TitleThird = "!",
-                WebVaultUrl = accessSecretsManager
-                    ? globalSettings.BaseServiceUri.VaultWithHashAndSecretManagerProduct
-                    : globalSettings.BaseServiceUri.VaultWithHash
+                TitleThird = _titleThird,
+                WebVaultUrl = GetWebVaultUrl(accessSecretsManager)
             }
         };
 
@@ -60,16 +67,14 @@ public class SendOrganizationConfirmationCommand(IMailer mailer, GlobalSettings 
         var mail = new OrganizationConfirmationFamilyFree
         {
             ToEmails = userEmailsList,
-            Subject = $"You Have Been Confirmed To {organizationName}",
+            Subject = GetConfirmationSubject(organizationName),
             View = new OrganizationConfirmationFamilyFreeView
             {
                 OrganizationName = organizationName,
-                TitleFirst = "You're confirmed as a member of ",
+                TitleFirst = _titleFirst,
                 TitleSecondBold = organizationName,
-                TitleThird = "!",
-                WebVaultUrl = accessSecretsManager
-                    ? globalSettings.BaseServiceUri.VaultWithHashAndSecretManagerProduct
-                    : globalSettings.BaseServiceUri.VaultWithHash
+                TitleThird = _titleThird,
+                WebVaultUrl = GetWebVaultUrl(accessSecretsManager)
             }
         };
 

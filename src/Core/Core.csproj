@@ -76,7 +76,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="MailTemplates\Handlebars\MJML\AdminConsole\OrganizationConfirmation\" />
     <Folder Include="Resources\" />
     <Folder Include="Properties\" />
   </ItemGroup>

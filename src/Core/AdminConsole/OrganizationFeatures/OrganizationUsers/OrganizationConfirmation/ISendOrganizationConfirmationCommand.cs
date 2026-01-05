@@ -2,8 +2,6 @@
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationConfirmation;
 
-#nullable enable
-
 public interface ISendOrganizationConfirmationCommand
 {
     /// <summary>
