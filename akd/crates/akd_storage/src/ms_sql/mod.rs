@@ -173,6 +173,41 @@ impl MsSql {
 }
 
 impl MsSql {
+    pub async fn get_existing_vrf_root_key_hash(
+        &self,
+    ) -> Result<Option<Vec<u8>>, VrfKeyStorageError> {
+        debug!("Checking for existence of any VRF key in database");
+
+        let mut conn = self.get_connection().await.map_err(|err| {
+            error!(%err, "Failed to get DB connection for VRF key existence check");
+            VrfKeyStorageError
+        })?;
+
+        let sql = vrf_key::get_first_root_key_hash();
+        let query_stream = conn.query(sql.sql(), &sql.params()).await.map_err(|err| {
+            error!(%err, "Failed to execute VRF key count query");
+            VrfKeyStorageError
+        })?;
+        let row = query_stream.into_row().await.map_err(|err| {
+            error!(%err, "Failed to fetch VRF key count row");
+            VrfKeyStorageError
+        })?;
+        match row {
+            Some(row) => {
+                let hash = sql.parse(&row).map_err(|err| {
+                    error!(%err, "Failed to parse VRF key count from row");
+                    VrfKeyStorageError
+                })?;
+                debug!("Existing VRF key found in database");
+                Ok(Some(hash))
+            }
+            None => {
+                debug!("No VRF keys found in database");
+                Ok(None)
+            }
+        }
+    }
+
     #[instrument(skip(self, config), level = "debug")]
     pub async fn get_vrf_key(
         &self,

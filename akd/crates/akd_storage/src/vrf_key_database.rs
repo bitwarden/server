@@ -32,6 +32,12 @@ pub struct VrfKeyCreationError;
 #[error("Internal VRF key storage error")]
 pub struct VrfKeyStorageError;
 
+#[derive(Debug, Error)]
+#[error(
+    "VRF key configuration error. Check root key settings are valid for the existing AKD database."
+)]
+pub struct VrfKeyConfigError;
+
 #[derive(Debug, Clone)]
 pub struct VrfKeyDatabase {
     db: DatabaseType,
@@ -40,13 +46,44 @@ pub struct VrfKeyDatabase {
 }
 
 impl VrfKeyDatabase {
-    pub fn new(db: DatabaseType, config: VrfKeyConfig) -> VrfKeyDatabase {
-        VrfKeyDatabase {
-            db,
-            vrf_key_config: config,
+    pub async fn new(
+        db: DatabaseType,
+        config: VrfKeyConfig,
+    ) -> Result<VrfKeyDatabase, VrfKeyConfigError> {
+        let new_key_database = VrfKeyDatabase {
+            db: db.clone(),
+            vrf_key_config: config.clone(),
             cached_vrf_key: None,
+        };
+
+        let expected_key_hash = config.root_key_hash().map_err(|_| {
+            error!("Failed to compute root key hash from configuration. Likely due to invalid key material.");
+            VrfKeyConfigError
+        })?;
+
+        let existing_key_hash = db.get_existing_vrf_root_key_hash().await.map_err(|err| {
+            error!(%err, "Error checking for existing VRF key in database");
+            VrfKeyConfigError
+        })?;
+
+        match existing_key_hash {
+            Some(hash) => {
+                if hash != expected_key_hash {
+                    error!(
+                        "Existing VRF root key hash in database does not match configured root key hash. \
+                        This indicates a misconfiguration or potential security issue."
+                    );
+                    return Err(VrfKeyConfigError);
+                }
+                Ok(new_key_database)
+            }
+            None => {
+                info!("No existing VRF key found in database. Proceeding to create a new key if needed.");
+                Ok(new_key_database)
+            }
         }
     }
+
     async fn get_vrf_key(&self) -> Result<VrfKeyTableData, VrfKeyRetrievalError> {
         match &self.db {
             DatabaseType::MsSql(db) => db.get_vrf_key(&self.vrf_key_config).await,

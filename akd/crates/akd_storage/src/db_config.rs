@@ -1,7 +1,7 @@
 use akd::errors::StorageError;
 use serde::{Deserialize, Serialize};
 
-use crate::ms_sql::MsSql;
+use crate::{ms_sql::MsSql, vrf_key_database::VrfKeyStorageError};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
@@ -35,5 +35,15 @@ impl DbConfig {
         };
 
         Ok(db)
+    }
+}
+
+impl DatabaseType {
+    pub async fn get_existing_vrf_root_key_hash(
+        &self,
+    ) -> Result<Option<Vec<u8>>, VrfKeyStorageError> {
+        match self {
+            DatabaseType::MsSql(db) => db.get_existing_vrf_root_key_hash().await,
+        }
     }
 }

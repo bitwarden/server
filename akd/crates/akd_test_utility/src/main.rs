@@ -180,7 +180,9 @@ async fn main() -> Result<()> {
         return Ok(());
     }
 
-    let mut directory = Directory::<TC, _, _>::new(storage_manager, state.vrf_key_database())
+    let vrf_key_database = state.vrf_key_database().await?;
+
+    let mut directory = Directory::<TC, _, _>::new(storage_manager, vrf_key_database)
         .await
         .context("Failed to create AKD directory")?;
 

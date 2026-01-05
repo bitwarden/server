@@ -11,7 +11,9 @@ use akd::{
 use async_trait::async_trait;
 
 use crate::{
-    db_config::DatabaseType, vrf_key_config::VrfKeyConfig, vrf_key_database::VrfKeyDatabase,
+    db_config::DatabaseType,
+    vrf_key_config::VrfKeyConfig,
+    vrf_key_database::{VrfKeyConfigError, VrfKeyDatabase},
 };
 
 #[derive(Debug, Clone)]
@@ -29,8 +31,8 @@ impl AkdDatabase {
         AkdDatabase { db, vrf_key_config }
     }
 
-    pub fn vrf_key_database(&self) -> VrfKeyDatabase {
-        VrfKeyDatabase::new(self.db.clone(), self.vrf_key_config.clone())
+    pub async fn vrf_key_database(&self) -> Result<VrfKeyDatabase, VrfKeyConfigError> {
+        VrfKeyDatabase::new(self.db.clone(), self.vrf_key_config.clone()).await
     }
 }
 

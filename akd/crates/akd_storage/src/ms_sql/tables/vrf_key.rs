@@ -11,6 +11,23 @@ use crate::{
     vrf_key_database::VrfKeyTableData,
 };
 
+pub fn get_first_root_key_hash() -> QueryStatement<Vec<u8>> {
+    debug!("Building has_vrf_key statement");
+    let sql = format!(
+        r#"
+        SELECT TOP 1 root_key_hash
+        FROM {}
+        "#,
+        TABLE_VRF_KEYS
+    );
+    QueryStatement::new(sql, SqlParams::new(), |row: &ms_database::Row| {
+        let hash: &[u8] = row
+            .get("root_key_hash")
+            .ok_or_else(|| StorageError::Other("root_key_hash is NULL or missing".to_string()))?;
+        Ok(hash.to_vec())
+    })
+}
+
 pub fn get_statement(
     config: &VrfKeyConfig,
 ) -> Result<QueryStatement<VrfKeyTableData>, VrfRootKeyError> {
