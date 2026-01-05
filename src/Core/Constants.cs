@@ -196,6 +196,7 @@ public static class FeatureFlagKeys
     public const string PM26462_Milestone_3 = "pm-26462-milestone-3";
     public const string PM28265_EnableReconcileAdditionalStorageJob = "pm-28265-enable-reconcile-additional-storage-job";
     public const string PM28265_ReconcileAdditionalStorageJobEnableLiveMode = "pm-28265-reconcile-additional-storage-job-enable-live-mode";
+    public const string PM29594_UpdateIndividualSubscriptionPage = "pm-29594-update-individual-subscription-page";
 
     /* Key Management Team */
     public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
@@ -234,12 +235,26 @@ public static class FeatureFlagKeys
     public const string PushNotificationsWhenInactive = "pm-25130-receive-push-notifications-for-inactive-users";
 
     /* Tools Team */
+    /// <summary>
+    /// Enable this flag to share the send view used by the web and browser clients
+    /// on the desktop client.
+    /// </summary>
     public const string DesktopSendUIRefresh = "desktop-send-ui-refresh";
     public const string UseSdkPasswordGenerators = "pm-19976-use-sdk-password-generators";
     public const string UseChromiumImporter = "pm-23982-chromium-importer";
     public const string ChromiumImporterWithABE = "pm-25855-chromium-importer-abe";
     public const string SendUIRefresh = "pm-28175-send-ui-refresh";
     public const string SendEmailOTP = "pm-19051-send-email-verification";
+
+    /// <summary>
+    /// Enable this flag to output email/OTP authenticated sends from the `GET sends` endpoint. When
+    /// this flag is disabled, the `GET sends` endpoint omits email/OTP authenticated sends.
+    /// </summary>
+    /// <remarks>
+    /// This flag is server-side only, and only inhibits the endpoint returning all sends.
+    /// Email/OTP sends can still be created and downloaded through other endpoints.
+    /// </remarks>
+    public const string PM19051_ListEmailOtpSends = "tools-send-email-otp-listing";
 
     /* Vault Team */
     public const string CipherKeyEncryption = "cipher-key-encryption";
