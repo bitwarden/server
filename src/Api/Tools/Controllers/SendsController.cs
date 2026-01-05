@@ -229,7 +229,7 @@ public class SendsController : Controller
     }
 
     [Authorize(Policy = Policies.Send)]
-    // [RequireFeature(FeatureFlagKeys.SendEmailOTP)]  /* Uncomment this once client re-try logic is removed */
+    // [RequireFeature(FeatureFlagKeys.SendEmailOTP)]  /* Uncomment once client fallback re-try logic is added */
     [HttpPost("access/")]
     public async Task<IActionResult> AccessUsingAuth([FromBody] SendAccessRequestModel model)
     {
@@ -251,7 +251,7 @@ public class SendsController : Controller
     }
 
     [Authorize(Policy = Policies.Send)]
-    // [RequireFeature(FeatureFlagKeys.SendEmailOTP)]  /* Uncomment this once client re-try logic is removed */
+    // [RequireFeature(FeatureFlagKeys.SendEmailOTP)]  /* Uncomment once client fallback re-try logic is added */
     [HttpPost("access/file/{fileId}")]
     public async Task<IActionResult> GetSendFileDownloadDataUsingAuth(string fileId)
     {
