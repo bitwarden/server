@@ -62,6 +62,7 @@ public class SendsController : Controller
     }
 
     #region Anonymous endpoints
+
     [AllowAnonymous]
     [HttpPost("access/{id}")]
     public async Task<IActionResult> Access(string id, [FromBody] SendAccessRequestModel model)
@@ -228,9 +229,9 @@ public class SendsController : Controller
     }
 
     [Authorize(Policy = Policies.Send)]
-    [RequireFeature(FeatureFlagKeys.SendEmailOTP)]
+    // [RequireFeature(FeatureFlagKeys.SendEmailOTP)]  /* Uncomment this once client re-try logic is removed */
     [HttpPost("access/")]
-    public async Task<IActionResult> Access([FromBody] SendAccessRequestModel model)
+    public async Task<IActionResult> AccessUsingAuth([FromBody] SendAccessRequestModel model)
     {
         var guid = User.GetSendId();
         var send = await _sendRepository.GetByIdAsync(guid);
@@ -250,9 +251,9 @@ public class SendsController : Controller
     }
 
     [Authorize(Policy = Policies.Send)]
-    [RequireFeature(FeatureFlagKeys.SendEmailOTP)]
+    // [RequireFeature(FeatureFlagKeys.SendEmailOTP)]  /* Uncomment this once client re-try logic is removed */
     [HttpPost("access/file/{fileId}")]
-    public async Task<IActionResult> GetSendFileDownloadData(string fileId)
+    public async Task<IActionResult> GetSendFileDownloadDataUsingAuth(string fileId)
     {
         var sendId = User.GetSendId();
         var send = await _sendRepository.GetByIdAsync(sendId);
@@ -386,6 +387,27 @@ public class SendsController : Controller
         await _nonAnonymousSendCommand.SaveSendAsync(send);
         return new SendResponseModel(send);
     }
+
+    // Removes ALL authentication (email or password) if any is present
+    [HttpPut("{id}/remove-auth")]
+    public async Task<SendResponseModel> PutRemoveAuth(string id)
+    {
+        var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
+        var send = await _sendRepository.GetByIdAsync(new Guid(id));
+        if (send == null || send.UserId != userId)
+        {
+            throw new NotFoundException();
+        }
+
+        // This endpoint exists because PUT preserves existing Password/Emails when not provided.
+        // This allows clients to update other fields without re-submitting sensitive auth data.
+        send.Password = null;
+        send.Emails = null;
+        send.AuthType = AuthType.None;
+        await _nonAnonymousSendCommand.SaveSendAsync(send);
+        return new SendResponseModel(send);
+    }
+
 
     [HttpDelete("{id}")]
     public async Task Delete(string id)
