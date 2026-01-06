@@ -167,21 +167,11 @@ public static class FeatureFlagKeys
     public const string RedirectOnSsoRequired = "pm-1632-redirect-on-sso-required";
 
     /* Autofill Team */
-    public const string IdpAutoSubmitLogin = "idp-auto-submit-login";
-    public const string UseTreeWalkerApiForPageDetailsCollection = "use-tree-walker-api-for-page-details-collection";
-    public const string InlineMenuFieldQualification = "inline-menu-field-qualification";
-    public const string InlineMenuPositioningImprovements = "inline-menu-positioning-improvements";
     public const string SSHAgent = "ssh-agent";
     public const string SSHAgentV2 = "ssh-agent-v2";
     public const string SSHVersionCheckQAOverride = "ssh-version-check-qa-override";
-    public const string GenerateIdentityFillScriptRefactor = "generate-identity-fill-script-refactor";
-    public const string DelayFido2PageScriptInitWithinMv2 = "delay-fido2-page-script-init-within-mv2";
-    public const string NotificationBarAddLoginImprovements = "notification-bar-add-login-improvements";
-    public const string BlockBrowserInjectionsByDomain = "block-browser-injections-by-domain";
     public const string NotificationRefresh = "notification-refresh";
-    public const string EnableNewCardCombinedExpiryAutofill = "enable-new-card-combined-expiry-autofill";
     public const string MacOsNativeCredentialSync = "macos-native-credential-sync";
-    public const string InlineMenuTotp = "inline-menu-totp";
     public const string WindowsDesktopAutotype = "windows-desktop-autotype";
     public const string WindowsDesktopAutotypeGA = "windows-desktop-autotype-ga";
 
@@ -195,6 +185,7 @@ public static class FeatureFlagKeys
     public const string PM26462_Milestone_3 = "pm-26462-milestone-3";
     public const string PM28265_EnableReconcileAdditionalStorageJob = "pm-28265-enable-reconcile-additional-storage-job";
     public const string PM28265_ReconcileAdditionalStorageJobEnableLiveMode = "pm-28265-reconcile-additional-storage-job-enable-live-mode";
+    public const string PM29594_UpdateIndividualSubscriptionPage = "pm-29594-update-individual-subscription-page";
 
     /* Key Management Team */
     public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
@@ -233,12 +224,26 @@ public static class FeatureFlagKeys
     public const string PushNotificationsWhenInactive = "pm-25130-receive-push-notifications-for-inactive-users";
 
     /* Tools Team */
+    /// <summary>
+    /// Enable this flag to share the send view used by the web and browser clients
+    /// on the desktop client.
+    /// </summary>
     public const string DesktopSendUIRefresh = "desktop-send-ui-refresh";
     public const string UseSdkPasswordGenerators = "pm-19976-use-sdk-password-generators";
     public const string UseChromiumImporter = "pm-23982-chromium-importer";
     public const string ChromiumImporterWithABE = "pm-25855-chromium-importer-abe";
     public const string SendUIRefresh = "pm-28175-send-ui-refresh";
     public const string SendEmailOTP = "pm-19051-send-email-verification";
+
+    /// <summary>
+    /// Enable this flag to output email/OTP authenticated sends from the `GET sends` endpoint. When
+    /// this flag is disabled, the `GET sends` endpoint omits email/OTP authenticated sends.
+    /// </summary>
+    /// <remarks>
+    /// This flag is server-side only, and only inhibits the endpoint returning all sends.
+    /// Email/OTP sends can still be created and downloaded through other endpoints.
+    /// </remarks>
+    public const string PM19051_ListEmailOtpSends = "tools-send-email-otp-listing";
 
     /* Vault Team */
     public const string CipherKeyEncryption = "cipher-key-encryption";
@@ -256,7 +261,6 @@ public static class FeatureFlagKeys
     public const string ArchiveVaultItems = "pm-19148-innovation-archive";
 
     /* DIRT Team */
-    public const string PM22887_RiskInsightsActivityTab = "pm-22887-risk-insights-activity-tab";
     public const string EventManagementForDataDogAndCrowdStrike = "event-management-for-datadog-and-crowdstrike";
     public const string EventDiagnosticLogging = "pm-27666-siem-event-log-debugging";
 
