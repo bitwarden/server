@@ -24,7 +24,6 @@ using Microsoft.AspNetCore.Mvc;
 namespace Bit.Api.Tools.Controllers;
 
 [Route("sends")]
-[Authorize("Application")]
 public class SendsController : Controller
 {
     private readonly ISendRepository _sendRepository;
@@ -209,6 +208,7 @@ public class SendsController : Controller
 
     #region Non-anonymous endpoints
 
+    [Authorize(Policies.Application)]
     [HttpGet("{id}")]
     public async Task<SendResponseModel> Get(string id)
     {
@@ -217,6 +217,7 @@ public class SendsController : Controller
         return new SendResponseModel(send);
     }
 
+    [Authorize(Policies.Application)]
     [HttpGet("")]
     public async Task<ListResponseModel<SendResponseModel>> GetAll()
     {
@@ -287,6 +288,7 @@ public class SendsController : Controller
         return new ObjectResult(new SendFileDownloadDataResponseModel() { Id = fileId, Url = url });
     }
 
+    [Authorize(Policies.Application)]
     [HttpPost("")]
     public async Task<SendResponseModel> Post([FromBody] SendRequestModel model)
     {
@@ -297,6 +299,7 @@ public class SendsController : Controller
         return new SendResponseModel(send);
     }
 
+    [Authorize(Policies.Application)]
     [HttpPost("file/v2")]
     public async Task<SendFileUploadDataResponseModel> PostFile([FromBody] SendRequestModel model)
     {
@@ -327,6 +330,7 @@ public class SendsController : Controller
         };
     }
 
+    [Authorize(Policies.Application)]
     [HttpGet("{id}/file/{fileId}")]
     public async Task<SendFileUploadDataResponseModel> RenewFileUpload(string id, string fileId)
     {
@@ -351,6 +355,7 @@ public class SendsController : Controller
         };
     }
 
+    [Authorize(Policies.Application)]
     [HttpPost("{id}/file/{fileId}")]
     [SelfHosted(SelfHostedOnly = true)]
     [RequestSizeLimit(Constants.FileSize501mb)]
@@ -374,6 +379,7 @@ public class SendsController : Controller
         });
     }
 
+    [Authorize(Policies.Application)]
     [HttpPut("{id}")]
     public async Task<SendResponseModel> Put(string id, [FromBody] SendRequestModel model)
     {
@@ -389,6 +395,7 @@ public class SendsController : Controller
         return new SendResponseModel(send);
     }
 
+    [Authorize(Policies.Application)]
     [HttpPut("{id}/remove-password")]
     public async Task<SendResponseModel> PutRemovePassword(string id)
     {
@@ -408,6 +415,7 @@ public class SendsController : Controller
     }
 
     // Removes ALL authentication (email or password) if any is present
+    [Authorize(Policies.Application)]
     [HttpPut("{id}/remove-auth")]
     public async Task<SendResponseModel> PutRemoveAuth(string id)
     {
@@ -427,7 +435,7 @@ public class SendsController : Controller
         return new SendResponseModel(send);
     }
 
-
+    [Authorize(Policies.Application)]
     [HttpDelete("{id}")]
     public async Task Delete(string id)
     {
