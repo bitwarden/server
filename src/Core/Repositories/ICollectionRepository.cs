@@ -65,7 +65,7 @@ public interface ICollectionRepository : IRepository<Collection, Guid>
 
     /// <summary>
     /// Creates default user collections for the specified organization users.
-    /// Throws an exception if any user already has a default collection for the organization.
+    /// Filters internally to only create collections for users who don't already have one.
     /// </summary>
     /// <param name="organizationId">The Organization ID.</param>
     /// <param name="organizationUserIds">The Organization User IDs to create default collections for.</param>
@@ -75,27 +75,11 @@ public interface ICollectionRepository : IRepository<Collection, Guid>
     /// <summary>
     /// Creates default user collections for the specified organization users using bulk insert operations.
     /// Use this if you need to create collections for > ~1k users.
-    /// Throws an exception if any user already has a default collection for the organization.
+    /// Filters internally to only create collections for users who don't already have one.
     /// </summary>
     /// <param name="organizationId">The Organization ID.</param>
     /// <param name="organizationUserIds">The Organization User IDs to create default collections for.</param>
     /// <param name="defaultCollectionName">The encrypted string to use as the default collection name.</param>
-    /// <remarks>
-    /// If any of the OrganizationUsers may already have default collections, the caller should first filter out these
-    /// users using GetDefaultCollectionSemaphoresAsync before calling this method.
-    /// </remarks>
     Task CreateDefaultCollectionsBulkAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName);
 
-    /// <summary>
-    /// Gets default collection semaphores for the given organizationUserIds.
-    /// If an organizationUserId is missing from the result set, they do not have a semaphore set.
-    /// </summary>
-    /// <param name="organizationUserIds">The organization User IDs to check semaphores for.</param>
-    /// <returns>Collection of organization user IDs that have default collection semaphores.</returns>
-    /// <remarks>
-    /// The semaphore table is used to ensure that an organizationUser can only have 1 default collection.
-    /// (That is, a user may only have 1 default collection per organization.)
-    /// If a semaphore is returned, that user already has a default collection for that organization.
-    /// </remarks>
-    Task<HashSet<Guid>> GetDefaultCollectionSemaphoresAsync(IEnumerable<Guid> organizationUserIds);
 }

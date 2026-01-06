@@ -1,5 +1,4 @@
-﻿using Bit.Core.AdminConsole.Collections;
-using Bit.Core.Enums;
+﻿using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Xunit;
 
@@ -41,9 +40,6 @@ public class CreateDefaultCollectionsTests
         Assert.All(defaultCollections, c => Assert.Equal("My Items", c.Item1.Name));
         Assert.All(defaultCollections, c => Assert.Equal(organization.Id, c.Item1.OrganizationId));
 
-        var semaphores = await collectionRepository.GetDefaultCollectionSemaphoresAsync([orgUser1.Id, orgUser2.Id]);
-        Assert.Equal([orgUser1.Id, orgUser2.Id], semaphores);
-
         // Verify each user has exactly 1 collection with correct permissions
         var orgUser1Collection = Assert.Single(defaultCollections,
             c => c.Item2.Users.FirstOrDefault()?.Id == orgUser1.Id);
@@ -71,7 +67,7 @@ public class CreateDefaultCollectionsTests
     /// Test that calling CreateDefaultCollectionsAsync multiple times does NOT create duplicates
     /// </summary>
     [Theory, DatabaseData]
-    public async Task CreateDefaultCollectionsAsync_CalledMultipleTimesForSameOrganizationUser_Throws(
+    public async Task CreateDefaultCollectionsAsync_CalledMultipleTimesForSameOrganizationUser_DoesNotCreateDuplicates(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         ICollectionRepository collectionRepository,
@@ -88,21 +84,17 @@ public class CreateDefaultCollectionsTests
             [orgUser.Id],
             "My Items");
 
-        // Second call should throw specific exception and should not create duplicate
-        await Assert.ThrowsAsync<DuplicateDefaultCollectionException>(() =>
-            collectionRepository.CreateDefaultCollectionsAsync(
-                organization.Id,
-                [orgUser.Id],
-                "My Items Duplicate"));
+        // Second call should silently filter and not create duplicate
+        await collectionRepository.CreateDefaultCollectionsAsync(
+            organization.Id,
+            [orgUser.Id],
+            "My Items Duplicate");
 
         // Assert - Only one collection should exist
         var collections = await collectionRepository.GetManyByOrganizationIdAsync(organization.Id);
         var defaultCollections = collections.Where(c => c.Type == CollectionType.DefaultUserCollection).ToList();
 
         Assert.Single(defaultCollections);
-
-        var semaphores = await collectionRepository.GetDefaultCollectionSemaphoresAsync([orgUser.Id]);
-        Assert.Equal([orgUser.Id], semaphores);
 
         var access = await collectionRepository.GetManyUsersByIdAsync(defaultCollections.Single().Id);
         var userAccess = Assert.Single(access);

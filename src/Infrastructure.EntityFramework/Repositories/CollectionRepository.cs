@@ -1,5 +1,4 @@
 ﻿using AutoMapper;
-using Bit.Core.AdminConsole.Collections;
 using Bit.Core.AdminConsole.OrganizationFeatures.Collections;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -804,27 +803,37 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
             return;
         }
 
-        var (semaphores, collections, collectionUsers) =
-            CollectionUtils.BuildDefaultUserCollections(organizationId, organizationUserIds, defaultCollectionName);
-
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
+
+        // Query for users who already have default collections
+        var organizationUserIdsHashSet = organizationUserIds.ToHashSet();
+        var existingOrgUserIds = await dbContext.CollectionUsers
+            .Where(cu => organizationUserIdsHashSet.Contains(cu.OrganizationUserId))
+            .Where(cu => cu.Collection.Type == CollectionType.DefaultUserCollection)
+            .Where(cu => cu.Collection.OrganizationId == organizationId)
+            .Select(cu => cu.OrganizationUserId)
+            .ToListAsync();
+
+        // Filter to only users who need collections
+        var filteredOrgUserIds = organizationUserIds.Except(existingOrgUserIds).ToList();
+
+        if (!filteredOrgUserIds.Any())
+        {
+            return;
+        }
+
+        var (collections, collectionUsers) =
+            CollectionUtils.BuildDefaultUserCollections(organizationId, filteredOrgUserIds, defaultCollectionName);
+
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
 
         try
         {
-            // CRITICAL: Insert semaphore entries BEFORE collections
-            // Database will throw on duplicate primary key (OrganizationUserId)
-            await dbContext.BulkCopyAsync(Mapper.Map<IEnumerable<DefaultCollectionSemaphore>>(semaphores));
             await dbContext.BulkCopyAsync(Mapper.Map<IEnumerable<Collection>>(collections));
             await dbContext.BulkCopyAsync(Mapper.Map<IEnumerable<CollectionUser>>(collectionUsers));
 
             await transaction.CommitAsync();
-        }
-        catch (Exception ex) when (DatabaseExceptionHelpers.IsDuplicateKeyException(ex))
-        {
-            await transaction.RollbackAsync();
-            throw new DuplicateDefaultCollectionException();
         }
         catch
         {
@@ -839,18 +848,4 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         await CreateDefaultCollectionsAsync(organizationId, organizationUserIds, defaultCollectionName);
     }
 
-    public async Task<HashSet<Guid>> GetDefaultCollectionSemaphoresAsync(IEnumerable<Guid> organizationUserIds)
-    {
-        var organizationUserIdsHashSet = organizationUserIds.ToHashSet();
-
-        using var scope = ServiceScopeFactory.CreateScope();
-        var dbContext = GetDatabaseContext(scope);
-
-        var result = await dbContext.DefaultCollectionSemaphores
-            .Where(s => organizationUserIdsHashSet.Contains(s.OrganizationUserId))
-            .Select(s => s.OrganizationUserId)
-            .ToListAsync();
-
-        return result.ToHashSet();
-    }
 }

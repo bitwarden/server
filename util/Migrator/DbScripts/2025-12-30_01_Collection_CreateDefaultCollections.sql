@@ -1,6 +1,6 @@
 -- Creates default user collections for organization users
--- Uses semaphore table to prevent duplicate default collections at database level
--- NOTE: this MUST be executed in a single transaction to obtain semaphore protection
+-- Filters out existing default collections at database level
+-- NOTE: this MUST be executed in a single transaction to ensure consistency
 CREATE OR ALTER PROCEDURE [dbo].[Collection_CreateDefaultCollections]
     @OrganizationId UNIQUEIDENTIFIER,
     @DefaultCollectionName VARCHAR(MAX),
@@ -11,20 +11,20 @@ BEGIN
 
     DECLARE @Now DATETIME2(7) = GETUTCDATE()
 
-    -- Insert semaphore entries first to obtain the "lock"
-    -- If this fails due to duplicate key, the entire transaction will be rolled back
-    INSERT INTO [dbo].[DefaultCollectionSemaphore]
-    (
-        [OrganizationUserId],
-        [CreationDate]
-    )
-    SELECT
-        ids.[Id1], -- OrganizationUserId
-        @Now
-    FROM
-        @OrganizationUserCollectionIds ids;
+    -- Filter to only users who don't have default collections
+    SELECT ids.Id1, ids.Id2
+    INTO #FilteredIds
+    FROM @OrganizationUserCollectionIds ids
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM [dbo].[CollectionUser] cu
+        INNER JOIN [dbo].[Collection] c ON c.Id = cu.CollectionId
+        WHERE c.OrganizationId = @OrganizationId
+          AND c.[Type] = 1 -- CollectionType.DefaultUserCollection
+          AND cu.OrganizationUserId = ids.Id1
+    );
 
-    -- Insert collections for users who obtained semaphore entries
+    -- Insert collections only for users who don't have default collections yet
     INSERT INTO [dbo].[Collection]
     (
         [Id],
@@ -37,7 +37,7 @@ BEGIN
         [DefaultUserCollectionEmail]
     )
     SELECT
-        ids.[Id2], -- CollectionId
+        ids.Id2, -- CollectionId
         @OrganizationId,
         @DefaultCollectionName,
         @Now,
@@ -46,7 +46,7 @@ BEGIN
         NULL,
         NULL
     FROM
-        @OrganizationUserCollectionIds ids;
+        #FilteredIds ids;
 
     -- Insert collection user mappings
     INSERT INTO [dbo].[CollectionUser]
@@ -58,12 +58,14 @@ BEGIN
         [Manage]
     )
     SELECT
-        ids.[Id2], -- CollectionId
-        ids.[Id1], -- OrganizationUserId
+        ids.Id2, -- CollectionId
+        ids.Id1, -- OrganizationUserId
         0, -- ReadOnly = false
         0, -- HidePasswords = false
         1  -- Manage = true
     FROM
-        @OrganizationUserCollectionIds ids;
+        #FilteredIds ids;
+
+    DROP TABLE #FilteredIds;
 END
 GO

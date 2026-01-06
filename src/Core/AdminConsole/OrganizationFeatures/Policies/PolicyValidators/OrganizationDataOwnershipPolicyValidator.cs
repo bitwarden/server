@@ -72,18 +72,9 @@ public class OrganizationDataOwnershipPolicyValidator(
             return;
         }
 
-        // Filter out users who already have default collections
-        var existingSemaphores = await collectionRepository.GetDefaultCollectionSemaphoresAsync(userOrgIds);
-        var usersNeedingDefaultCollections = userOrgIds.Except(existingSemaphores).ToList();
-
-        if (!usersNeedingDefaultCollections.Any())
-        {
-            return;
-        }
-
         await collectionRepository.CreateDefaultCollectionsBulkAsync(
             policyUpdate.OrganizationId,
-            usersNeedingDefaultCollections,
+            userOrgIds,
             defaultCollectionName);
     }
 }

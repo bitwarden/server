@@ -1,7 +1,6 @@
 ﻿using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
-using Bit.Core.AdminConsole.Collections;
 using Bit.Core.AdminConsole.OrganizationFeatures.Collections;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data;
@@ -392,11 +391,6 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
 
             await transaction.CommitAsync();
         }
-        catch (Exception ex) when (DatabaseExceptionHelpers.IsDuplicateKeyException(ex))
-        {
-            await transaction.RollbackAsync();
-            throw new DuplicateDefaultCollectionException();
-        }
         catch
         {
             await transaction.RollbackAsync();
@@ -406,97 +400,8 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
 
     public async Task CreateDefaultCollectionsBulkAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName)
     {
-        organizationUserIds = organizationUserIds.ToList();
-        if (!organizationUserIds.Any())
-        {
-            return;
-        }
-
-        var (semaphores, collections, collectionUsers) =
-            CollectionUtils.BuildDefaultUserCollections(organizationId, organizationUserIds, defaultCollectionName);
-
-        await using var connection = new SqlConnection(ConnectionString);
-        connection.Open();
-        await using var transaction = connection.BeginTransaction();
-
-        try
-        {
-            // CRITICAL: Insert semaphore entries BEFORE collections
-            // Database will throw on duplicate primary key (OrganizationUserId)
-            await BulkInsertDefaultCollectionSemaphoresAsync(connection, transaction, semaphores);
-            await BulkResourceCreationService.CreateCollectionsAsync(connection, transaction, collections);
-            await BulkResourceCreationService.CreateCollectionsUsersAsync(connection, transaction, collectionUsers);
-
-            await transaction.CommitAsync();
-        }
-        catch (Exception ex) when (DatabaseExceptionHelpers.IsDuplicateKeyException(ex))
-        {
-            await transaction.RollbackAsync();
-            throw new DuplicateDefaultCollectionException();
-        }
-        catch
-        {
-            await transaction.RollbackAsync();
-            throw;
-        }
-    }
-
-    public async Task<HashSet<Guid>> GetDefaultCollectionSemaphoresAsync(IEnumerable<Guid> organizationUserIds)
-    {
-        await using var connection = new SqlConnection(ConnectionString);
-
-        var results = await connection.QueryAsync<Guid>(
-            "[dbo].[DefaultCollectionSemaphore_ReadByOrganizationUserIds]",
-            new { OrganizationUserIds = organizationUserIds.ToGuidIdArrayTVP() },
-            commandType: CommandType.StoredProcedure);
-
-        return results.ToHashSet();
-    }
-
-    private async Task BulkInsertDefaultCollectionSemaphoresAsync(SqlConnection connection, SqlTransaction transaction, IEnumerable<DefaultCollectionSemaphore> semaphores)
-    {
-        semaphores = semaphores.ToList();
-        if (!semaphores.Any())
-        {
-            return;
-        }
-
-        // Sort by composite key to reduce deadlocks
-        var sortedSemaphores = semaphores
-            .OrderBy(s => s.OrganizationUserId)
-            .ToList();
-
-        using var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity | SqlBulkCopyOptions.CheckConstraints, transaction);
-        bulkCopy.DestinationTableName = "[dbo].[DefaultCollectionSemaphore]";
-        bulkCopy.BatchSize = 500;
-        bulkCopy.BulkCopyTimeout = 120;
-        bulkCopy.EnableStreaming = true;
-
-        var dataTable = new DataTable("DefaultCollectionSemaphoreDataTable");
-
-        var organizationUserIdColumn = new DataColumn(nameof(DefaultCollectionSemaphore.OrganizationUserId), typeof(Guid));
-        dataTable.Columns.Add(organizationUserIdColumn);
-        var creationDateColumn = new DataColumn(nameof(DefaultCollectionSemaphore.CreationDate), typeof(DateTime));
-        dataTable.Columns.Add(creationDateColumn);
-
-        foreach (DataColumn col in dataTable.Columns)
-        {
-            bulkCopy.ColumnMappings.Add(col.ColumnName, col.ColumnName);
-        }
-
-        var keys = new DataColumn[1];
-        keys[0] = organizationUserIdColumn;
-        dataTable.PrimaryKey = keys;
-
-        foreach (var semaphore in sortedSemaphores)
-        {
-            var row = dataTable.NewRow();
-            row[organizationUserIdColumn] = semaphore.OrganizationUserId;
-            row[creationDateColumn] = semaphore.CreationDate;
-            dataTable.Rows.Add(row);
-        }
-
-        await bulkCopy.WriteToServerAsync(dataTable);
+        // Use the stored procedure approach which handles filtering internally
+        await CreateDefaultCollectionsAsync(organizationId, organizationUserIds, defaultCollectionName);
     }
 
     public class CollectionWithGroupsAndUsers : Collection
