@@ -47,8 +47,7 @@ public class ReconcileAdditionalStorageJob(
 
         // Execution tracking
         var subscriptionsFound = 0;
-        var subscriptionsUpdatedInStripe = 0;
-        var subscriptionsUpdatedInDatabase = 0;
+        var subscriptionsUpdated = 0;
         var subscriptionsWithErrors = 0;
         var databaseUpdatesFailed = 0;
         var failures = new List<string>();
@@ -87,11 +86,13 @@ public class ReconcileAdditionalStorageJob(
                 {
                     logger.LogWarning(
                         "Job cancelled!! Exiting. Progress at time of cancellation: Subscriptions found: {SubscriptionsFound}, " +
-                        "Updated: {SubscriptionsUpdated}, Errors: {SubscriptionsWithErrors}{Failures}",
+                        "Stripe updates: {StripeUpdates}, Database updates: {DatabaseFailed} failed, " +
+                        "Errors: {SubscriptionsWithErrors}{Failures}",
                         subscriptionsFound,
                         liveMode
-                            ? subscriptionsUpdatedInStripe
-                            : $"(In live mode, would have updated) {subscriptionsUpdatedInStripe}",
+                            ? subscriptionsUpdated
+                            : $"(In live mode, would have updated) {subscriptionsUpdated}",
+                        databaseUpdatesFailed,
                         subscriptionsWithErrors,
                         failures.Count > 0
                             ? $", Failures: {Environment.NewLine}{string.Join(Environment.NewLine, failures)}"
@@ -133,7 +134,7 @@ public class ReconcileAdditionalStorageJob(
                     continue;
                 }
 
-                subscriptionsUpdatedInStripe++;
+                subscriptionsUpdated++;
 
                 // Now, prepare the database update so we can log details out if not in live mode
                 var subscriptionPlanTier = DetermineSubscriptionPlanTier(subscription, personalPremiumPlans, organizationPlans);
@@ -177,10 +178,6 @@ public class ReconcileAdditionalStorageJob(
                         databaseUpdatesFailed++;
                         failures.Add($"Subscription {subscription.Id}: Database update failed");
                     }
-                    else
-                    {
-                        subscriptionsUpdatedInDatabase++;
-                    }
                 }
                 catch (Exception ex)
                 {
@@ -194,15 +191,12 @@ public class ReconcileAdditionalStorageJob(
 
         logger.LogInformation(
             "ReconcileAdditionalStorageJob FINISHED. Subscriptions found: {SubscriptionsFound}, " +
-            "Stripe updates: {StripeUpdates}, Database updates: {DatabaseUpdates} succeeded / {DatabaseFailed} failed, " +
+            "Stripe updates: {StripeUpdates}, Database updates: {DatabaseFailed} failed, " +
             "Errors: {SubscriptionsWithErrors}{Failures}",
             subscriptionsFound,
             liveMode
-                ? subscriptionsUpdatedInStripe
-                : $"(In live mode, would have updated) {subscriptionsUpdatedInStripe}",
-            liveMode
-                ? subscriptionsUpdatedInDatabase
-                : $"(In live mode, would have updated) {subscriptionsUpdatedInDatabase}",
+                ? subscriptionsUpdated
+                : $"(In live mode, would have updated) {subscriptionsUpdated}",
             databaseUpdatesFailed,
             subscriptionsWithErrors,
             failures.Count > 0
