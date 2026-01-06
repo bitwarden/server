@@ -1,5 +1,4 @@
-﻿
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -37,7 +36,7 @@ public class CreateDefaultCollectionsBulkTests
     }
 
     [Theory, DatabaseData]
-    public async Task CreateDefaultCollectionsBulkAsync_CreatesForNewUsersOnly_AutoFiltersExisting(
+    public async Task CreateDefaultCollectionsBulkAsync_CreatesForNewUsersOnly_AndIgnoresExistingUsers(
         IOrganizationRepository organizationRepository,
         IUserRepository userRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -61,20 +60,20 @@ public class CreateDefaultCollectionsBulkTests
             await CreateUserForOrgAsync(userRepository, organizationUserRepository, organization)
         };
 
-        var affectedOrgUsers = newOrganizationUsers.Concat(arrangedOrganizationUsers);
+        var affectedOrgUsers = newOrganizationUsers.Concat(arrangedOrganizationUsers).ToList();
         var affectedOrgUserIds = affectedOrgUsers.Select(organizationUser => organizationUser.Id).ToList();
 
-        // Act - Pass all user IDs, method should auto-filter existing users
+        // Act
         await collectionRepository.CreateDefaultCollectionsBulkAsync(organization.Id, affectedOrgUserIds, defaultCollectionName);
 
-        // Assert - All users now have exactly one collection
+        // Assert
         await AssertAllUsersHaveOneDefaultCollectionAsync(collectionRepository, affectedOrgUsers, organization.Id);
 
         await CleanupAsync(organizationRepository, userRepository, organization, affectedOrgUsers);
     }
 
     [Theory, DatabaseData]
-    public async Task CreateDefaultCollectionsBulkAsync_DoesNotCreateDuplicates_WhenUsersAlreadyHaveOne(
+    public async Task CreateDefaultCollectionsBulkAsync_IgnoresAllExistingUsers(
         IOrganizationRepository organizationRepository,
         IUserRepository userRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -100,45 +99,6 @@ public class CreateDefaultCollectionsBulkTests
         await AssertAllUsersHaveOneDefaultCollectionAsync(collectionRepository, resultOrganizationUsers, organization.Id);
 
         await CleanupAsync(organizationRepository, userRepository, organization, resultOrganizationUsers);
-    }
-
-    [Theory, DatabaseData]
-    public async Task CreateDefaultCollectionsBulkAsync_AutoFilters_WhenMixedUsersProvided(
-        IOrganizationRepository organizationRepository,
-        IUserRepository userRepository,
-        IOrganizationUserRepository organizationUserRepository,
-        ICollectionRepository collectionRepository)
-    {
-        // Arrange
-        var organization = await organizationRepository.CreateTestOrganizationAsync();
-
-        var existingUser = await CreateUserForOrgAsync(userRepository, organizationUserRepository, organization);
-        var newUser = await CreateUserForOrgAsync(userRepository, organizationUserRepository, organization);
-        var defaultCollectionName = $"default-name-{organization.Id}";
-
-        // Create collection for existing user
-        await collectionRepository.CreateDefaultCollectionsBulkAsync(organization.Id, [existingUser.Id], defaultCollectionName);
-
-        // Act - Pass both users, method should auto-filter and only create for new user
-        await collectionRepository.CreateDefaultCollectionsBulkAsync(
-            organization.Id,
-            [existingUser.Id, newUser.Id],
-            defaultCollectionName);
-
-        // Assert - Verify existing user still has exactly one collection
-        var existingUserCollections = await collectionRepository.GetManyByUserIdAsync(existingUser.UserId!.Value);
-        var existingUserDefaultCollections = existingUserCollections
-            .Where(c => c.OrganizationId == organization.Id && c.Type == CollectionType.DefaultUserCollection)
-            .ToList();
-        Assert.Single(existingUserDefaultCollections);
-
-        // Verify new user now has collection (was created)
-        var newUserCollections = await collectionRepository.GetManyByUserIdAsync(newUser.UserId!.Value);
-        var newUserDefaultCollection = newUserCollections
-            .SingleOrDefault(c => c.OrganizationId == organization.Id && c.Type == CollectionType.DefaultUserCollection);
-        Assert.NotNull(newUserDefaultCollection);
-
-        await CleanupAsync(organizationRepository, userRepository, organization, [existingUser, newUser]);
     }
 
     private static async Task CreateUsersWithExistingDefaultCollectionsAsync(ICollectionRepository collectionRepository,
