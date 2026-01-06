@@ -2,7 +2,6 @@
 using Bit.Billing.Services;
 using Bit.Core;
 using Bit.Core.Billing.Constants;
-using Bit.Core.Billing.Pricing;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
@@ -21,7 +20,7 @@ public class ReconcileAdditionalStorageJobTests
     private readonly IFeatureService _featureService;
     private readonly IUserRepository _userRepository;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IPricingClient _pricingClient;
+    private readonly IStripeEventUtilityService _stripeEventUtilityService;
     private readonly ReconcileAdditionalStorageJob _sut;
 
     public ReconcileAdditionalStorageJobTests()
@@ -31,10 +30,10 @@ public class ReconcileAdditionalStorageJobTests
         _featureService = Substitute.For<IFeatureService>();
         _userRepository = Substitute.For<IUserRepository>();
         _organizationRepository = Substitute.For<IOrganizationRepository>();
-        _pricingClient = Substitute.For<IPricingClient>();
+        _stripeEventUtilityService = Substitute.For<IStripeEventUtilityService>();
 
-        _pricingClient.ListPremiumPlans().Returns([]);
-        _pricingClient.ListPlans().Returns([]);
+        _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
+            .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, null, null));
 
         _sut = new ReconcileAdditionalStorageJob(
             _stripeFacade,
@@ -42,7 +41,7 @@ public class ReconcileAdditionalStorageJobTests
             _featureService,
             _userRepository,
             _organizationRepository,
-            _pricingClient);
+            _stripeEventUtilityService);
     }
 
     #region Feature Flag Tests
@@ -114,23 +113,25 @@ public class ReconcileAdditionalStorageJobTests
         _featureService.IsEnabled(FeatureFlagKeys.PM28265_EnableReconcileAdditionalStorageJob).Returns(true);
         _featureService.IsEnabled(FeatureFlagKeys.PM28265_ReconcileAdditionalStorageJobEnableLiveMode).Returns(false); // Dry run ON
 
-        // Set up pricing client to return plans so subscription type can be determined
-        var premiumPlan = CreatePremiumPlan();
-        _pricingClient.ListPremiumPlans().Returns([premiumPlan]);
-        _pricingClient.ListPlans().Returns([]);
-
         // Create a personal subscription that would normally trigger a database update
+        var userId = Guid.NewGuid();
         var subscription = CreateSubscription("sub_123", "storage-gb-monthly", quantity: 10);
+        subscription.Metadata = new Dictionary<string, string> { ["userId"] = userId.ToString() };
+
         _stripeFacade.ListSubscriptionsAutoPagingAsync(Arg.Any<SubscriptionListOptions>())
             .Returns(AsyncEnumerable.Create(subscription));
+
+        // Mock GetIdsFromMetadata to return userId
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, userId, null));
 
         // Act
         await _sut.Execute(context);
 
         // Assert - Verify database repositories are never called
-        await _userRepository.DidNotReceiveWithAnyArgs().GetByGatewaySubscriptionIdAsync(default!);
+        await _userRepository.DidNotReceiveWithAnyArgs().GetByIdAsync(default);
         await _userRepository.DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
-        await _organizationRepository.DidNotReceiveWithAnyArgs().GetByGatewaySubscriptionIdAsync(default!);
+        await _organizationRepository.DidNotReceiveWithAnyArgs().GetByIdAsync(default);
         await _organizationRepository.DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
     }
 
@@ -142,7 +143,11 @@ public class ReconcileAdditionalStorageJobTests
         _featureService.IsEnabled(FeatureFlagKeys.PM28265_EnableReconcileAdditionalStorageJob).Returns(true);
         _featureService.IsEnabled(FeatureFlagKeys.PM28265_ReconcileAdditionalStorageJobEnableLiveMode).Returns(true); // Dry run OFF
 
+        var userId = Guid.NewGuid();
         var subscription = CreateSubscription("sub_123", "storage-gb-monthly", quantity: 10);
+        _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
+            .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, userId, null));
+
         _stripeFacade.ListSubscriptionsAutoPagingAsync(Arg.Any<SubscriptionListOptions>())
             .Returns(AsyncEnumerable.Create(subscription));
         _stripeFacade.UpdateSubscription(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
@@ -165,29 +170,31 @@ public class ReconcileAdditionalStorageJobTests
         _featureService.IsEnabled(FeatureFlagKeys.PM28265_EnableReconcileAdditionalStorageJob).Returns(true);
         _featureService.IsEnabled(FeatureFlagKeys.PM28265_ReconcileAdditionalStorageJobEnableLiveMode).Returns(true);
 
-        // Setup pricing client with premium plan
-        var premiumPlan = CreatePremiumPlan();
-        _pricingClient.ListPremiumPlans().Returns([premiumPlan]);
-        _pricingClient.ListPlans().Returns([]);
+        // Setup user
+        var userId = Guid.NewGuid();
+        var user = new Bit.Core.Entities.User
+        {
+            Id = userId,
+            Email = "test@example.com",
+            GatewaySubscriptionId = "sub_personal",
+            MaxStorageGb = 15 // Old value
+        };
+        _userRepository.GetByIdAsync(userId).Returns(user);
+        _userRepository.ReplaceAsync(user).Returns(Task.CompletedTask);
 
         // Create personal subscription with premium seat + 10 GB storage (will be reduced to 6 GB)
         var subscription = CreateSubscriptionWithMultipleItems("sub_personal",
             [("premium-annually", 1L), ("storage-gb-monthly", 10L)]);
+        subscription.Metadata = new Dictionary<string, string> { ["userId"] = userId.ToString() };
+
         _stripeFacade.ListSubscriptionsAutoPagingAsync(Arg.Any<SubscriptionListOptions>())
             .Returns(AsyncEnumerable.Create(subscription));
         _stripeFacade.UpdateSubscription(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
             .Returns(subscription);
 
-        // Setup user repository
-        var user = new Bit.Core.Entities.User
-        {
-            Id = Guid.NewGuid(),
-            Email = "test@example.com",
-            GatewaySubscriptionId = "sub_personal",
-            MaxStorageGb = 15 // Old value
-        };
-        _userRepository.GetByGatewaySubscriptionIdAsync("sub_personal").Returns(user);
-        _userRepository.ReplaceAsync(user).Returns(Task.CompletedTask);
+        // Mock GetIdsFromMetadata to return userId
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, userId, null));
 
         // Act
         await _sut.Execute(context);
@@ -198,7 +205,7 @@ public class ReconcileAdditionalStorageJobTests
             Arg.Is<SubscriptionUpdateOptions>(o => o.Items.Count == 1 && o.Items[0].Quantity == 6));
 
         // Assert - Verify database update with correct MaxStorageGb (5 included + 6 new quantity = 11)
-        await _userRepository.Received(1).GetByGatewaySubscriptionIdAsync("sub_personal");
+        await _userRepository.Received(1).GetByIdAsync(userId);
         await _userRepository.Received(1).ReplaceAsync(user);
         Assert.Equal((short)11, user.MaxStorageGb);
     }
@@ -211,29 +218,31 @@ public class ReconcileAdditionalStorageJobTests
         _featureService.IsEnabled(FeatureFlagKeys.PM28265_EnableReconcileAdditionalStorageJob).Returns(true);
         _featureService.IsEnabled(FeatureFlagKeys.PM28265_ReconcileAdditionalStorageJobEnableLiveMode).Returns(true);
 
-        // Setup pricing client with organization plan
-        var teamsPlan = CreateTeamsPlan();
-        _pricingClient.ListPremiumPlans().Returns([]);
-        _pricingClient.ListPlans().Returns([teamsPlan]);
+        // Setup organization
+        var organizationId = Guid.NewGuid();
+        var organization = new Bit.Core.AdminConsole.Entities.Organization
+        {
+            Id = organizationId,
+            Name = "Test Organization",
+            GatewaySubscriptionId = "sub_org",
+            MaxStorageGb = 13 // Old value
+        };
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _organizationRepository.ReplaceAsync(organization).Returns(Task.CompletedTask);
 
         // Create organization subscription with org seat plan + 8 GB storage (will be reduced to 4 GB)
         var subscription = CreateSubscriptionWithMultipleItems("sub_org",
             [("2023-teams-org-seat-annually", 5L), ("storage-gb-monthly", 8L)]);
+        subscription.Metadata = new Dictionary<string, string> { ["organizationId"] = organizationId.ToString() };
+
         _stripeFacade.ListSubscriptionsAutoPagingAsync(Arg.Any<SubscriptionListOptions>())
             .Returns(AsyncEnumerable.Create(subscription));
         _stripeFacade.UpdateSubscription(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
             .Returns(subscription);
 
-        // Setup organization repository
-        var organization = new Bit.Core.AdminConsole.Entities.Organization
-        {
-            Id = Guid.NewGuid(),
-            Name = "Test Organization",
-            GatewaySubscriptionId = "sub_org",
-            MaxStorageGb = 13 // Old value
-        };
-        _organizationRepository.GetByGatewaySubscriptionIdAsync("sub_org").Returns(organization);
-        _organizationRepository.ReplaceAsync(organization).Returns(Task.CompletedTask);
+        // Mock GetIdsFromMetadata to return organizationId
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(Tuple.Create<Guid?, Guid?, Guid?>(organizationId, null, null));
 
         // Act
         await _sut.Execute(context);
@@ -244,7 +253,7 @@ public class ReconcileAdditionalStorageJobTests
             Arg.Is<SubscriptionUpdateOptions>(o => o.Items.Count == 1 && o.Items[0].Quantity == 4));
 
         // Assert - Verify database update with correct MaxStorageGb (5 included + 4 new quantity = 9)
-        await _organizationRepository.Received(1).GetByGatewaySubscriptionIdAsync("sub_org");
+        await _organizationRepository.Received(1).GetByIdAsync(organizationId);
         await _organizationRepository.Received(1).ReplaceAsync(organization);
         Assert.Equal((short)9, organization.MaxStorageGb);
     }
@@ -257,29 +266,31 @@ public class ReconcileAdditionalStorageJobTests
         _featureService.IsEnabled(FeatureFlagKeys.PM28265_EnableReconcileAdditionalStorageJob).Returns(true);
         _featureService.IsEnabled(FeatureFlagKeys.PM28265_ReconcileAdditionalStorageJobEnableLiveMode).Returns(true);
 
-        // Setup pricing client with premium plan
-        var premiumPlan = CreatePremiumPlan();
-        _pricingClient.ListPremiumPlans().Returns([premiumPlan]);
-        _pricingClient.ListPlans().Returns([]);
+        // Setup user
+        var userId = Guid.NewGuid();
+        var user = new Bit.Core.Entities.User
+        {
+            Id = userId,
+            Email = "test@example.com",
+            GatewaySubscriptionId = "sub_delete",
+            MaxStorageGb = 8 // Old value
+        };
+        _userRepository.GetByIdAsync(userId).Returns(user);
+        _userRepository.ReplaceAsync(user).Returns(Task.CompletedTask);
 
         // Create personal subscription with premium seat + 3 GB storage (will be deleted since 3 < 4)
         var subscription = CreateSubscriptionWithMultipleItems("sub_delete",
             [("premium-annually", 1L), ("storage-gb-monthly", 3L)]);
+        subscription.Metadata = new Dictionary<string, string> { ["userId"] = userId.ToString() };
+
         _stripeFacade.ListSubscriptionsAutoPagingAsync(Arg.Any<SubscriptionListOptions>())
             .Returns(AsyncEnumerable.Create(subscription));
         _stripeFacade.UpdateSubscription(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
             .Returns(subscription);
 
-        // Setup user repository
-        var user = new Bit.Core.Entities.User
-        {
-            Id = Guid.NewGuid(),
-            Email = "test@example.com",
-            GatewaySubscriptionId = "sub_delete",
-            MaxStorageGb = 8 // Old value
-        };
-        _userRepository.GetByGatewaySubscriptionIdAsync("sub_delete").Returns(user);
-        _userRepository.ReplaceAsync(user).Returns(Task.CompletedTask);
+        // Mock GetIdsFromMetadata to return userId
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, userId, null));
 
         // Act
         await _sut.Execute(context);
@@ -290,7 +301,7 @@ public class ReconcileAdditionalStorageJobTests
             Arg.Is<SubscriptionUpdateOptions>(o => o.Items.Count == 1 && o.Items[0].Deleted == true));
 
         // Assert - Verify database update with base storage only (5 GB)
-        await _userRepository.Received(1).GetByGatewaySubscriptionIdAsync("sub_delete");
+        await _userRepository.Received(1).GetByIdAsync(userId);
         await _userRepository.Received(1).ReplaceAsync(user);
         Assert.Equal((short)5, user.MaxStorageGb);
     }
@@ -358,11 +369,14 @@ public class ReconcileAdditionalStorageJobTests
         _featureService.IsEnabled(FeatureFlagKeys.PM28265_EnableReconcileAdditionalStorageJob).Returns(true);
         _featureService.IsEnabled(FeatureFlagKeys.PM28265_ReconcileAdditionalStorageJobEnableLiveMode).Returns(true);
 
+        var userId = Guid.NewGuid();
         var metadata = new Dictionary<string, string>
         {
             [StripeConstants.MetadataKeys.StorageReconciled2025] = "invalid-date"
         };
         var subscription = CreateSubscription("sub_123", "storage-gb-monthly", quantity: 10, metadata: metadata);
+        _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
+            .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, userId, null));
 
         _stripeFacade.ListSubscriptionsAutoPagingAsync(Arg.Any<SubscriptionListOptions>())
             .Returns(AsyncEnumerable.Create(subscription));
@@ -384,7 +398,10 @@ public class ReconcileAdditionalStorageJobTests
         _featureService.IsEnabled(FeatureFlagKeys.PM28265_EnableReconcileAdditionalStorageJob).Returns(true);
         _featureService.IsEnabled(FeatureFlagKeys.PM28265_ReconcileAdditionalStorageJobEnableLiveMode).Returns(true);
 
+        var userId = Guid.NewGuid();
         var subscription = CreateSubscription("sub_123", "storage-gb-monthly", quantity: 10, metadata: null);
+        _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
+            .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, userId, null));
 
         _stripeFacade.ListSubscriptionsAutoPagingAsync(Arg.Any<SubscriptionListOptions>())
             .Returns(AsyncEnumerable.Create(subscription));
@@ -410,7 +427,10 @@ public class ReconcileAdditionalStorageJobTests
         _featureService.IsEnabled(FeatureFlagKeys.PM28265_EnableReconcileAdditionalStorageJob).Returns(true);
         _featureService.IsEnabled(FeatureFlagKeys.PM28265_ReconcileAdditionalStorageJobEnableLiveMode).Returns(true);
 
+        var userId = Guid.NewGuid();
         var subscription = CreateSubscription("sub_123", "storage-gb-monthly", quantity: 10);
+        _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
+            .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, userId, null));
 
         _stripeFacade.ListSubscriptionsAutoPagingAsync(Arg.Any<SubscriptionListOptions>())
             .Returns(AsyncEnumerable.Create(subscription));
@@ -437,7 +457,10 @@ public class ReconcileAdditionalStorageJobTests
         _featureService.IsEnabled(FeatureFlagKeys.PM28265_EnableReconcileAdditionalStorageJob).Returns(true);
         _featureService.IsEnabled(FeatureFlagKeys.PM28265_ReconcileAdditionalStorageJobEnableLiveMode).Returns(true);
 
+        var userId = Guid.NewGuid();
         var subscription = CreateSubscription("sub_123", "storage-gb-monthly", quantity: 4);
+        _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
+            .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, userId, null));
 
         _stripeFacade.ListSubscriptionsAutoPagingAsync(Arg.Any<SubscriptionListOptions>())
             .Returns(AsyncEnumerable.Create(subscription));
@@ -463,7 +486,10 @@ public class ReconcileAdditionalStorageJobTests
         _featureService.IsEnabled(FeatureFlagKeys.PM28265_EnableReconcileAdditionalStorageJob).Returns(true);
         _featureService.IsEnabled(FeatureFlagKeys.PM28265_ReconcileAdditionalStorageJobEnableLiveMode).Returns(true);
 
+        var userId = Guid.NewGuid();
         var subscription = CreateSubscription("sub_123", "storage-gb-monthly", quantity: 2);
+        _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
+            .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, userId, null));
 
         _stripeFacade.ListSubscriptionsAutoPagingAsync(Arg.Any<SubscriptionListOptions>())
             .Returns(AsyncEnumerable.Create(subscription));
@@ -493,7 +519,10 @@ public class ReconcileAdditionalStorageJobTests
         _featureService.IsEnabled(FeatureFlagKeys.PM28265_EnableReconcileAdditionalStorageJob).Returns(true);
         _featureService.IsEnabled(FeatureFlagKeys.PM28265_ReconcileAdditionalStorageJobEnableLiveMode).Returns(true);
 
+        var userId = Guid.NewGuid();
         var subscription = CreateSubscription("sub_123", "storage-gb-monthly", quantity: 10);
+        _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
+            .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, userId, null));
 
         _stripeFacade.ListSubscriptionsAutoPagingAsync(Arg.Any<SubscriptionListOptions>())
             .Returns(AsyncEnumerable.Create(subscription));
@@ -517,7 +546,10 @@ public class ReconcileAdditionalStorageJobTests
         _featureService.IsEnabled(FeatureFlagKeys.PM28265_EnableReconcileAdditionalStorageJob).Returns(true);
         _featureService.IsEnabled(FeatureFlagKeys.PM28265_ReconcileAdditionalStorageJobEnableLiveMode).Returns(true);
 
+        var userId = Guid.NewGuid();
         var subscription = CreateSubscription("sub_123", "storage-gb-monthly", quantity: 10);
+        _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
+            .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, userId, null));
 
         _stripeFacade.ListSubscriptionsAutoPagingAsync(Arg.Any<SubscriptionListOptions>())
             .Returns(AsyncEnumerable.Create(subscription));
@@ -613,9 +645,12 @@ public class ReconcileAdditionalStorageJobTests
         _featureService.IsEnabled(FeatureFlagKeys.PM28265_EnableReconcileAdditionalStorageJob).Returns(true);
         _featureService.IsEnabled(FeatureFlagKeys.PM28265_ReconcileAdditionalStorageJobEnableLiveMode).Returns(true);
 
+        var userId = Guid.NewGuid();
         var subscription1 = CreateSubscription("sub_1", "storage-gb-monthly", quantity: 10);
         var subscription2 = CreateSubscription("sub_2", "storage-gb-monthly", quantity: 5);
         var subscription3 = CreateSubscription("sub_3", "storage-gb-monthly", quantity: 3);
+        _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
+            .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, userId, null));
 
         _stripeFacade.ListSubscriptionsAutoPagingAsync(Arg.Any<SubscriptionListOptions>())
             .Returns(AsyncEnumerable.Create(subscription1, subscription2, subscription3));
@@ -645,6 +680,7 @@ public class ReconcileAdditionalStorageJobTests
         _featureService.IsEnabled(FeatureFlagKeys.PM28265_EnableReconcileAdditionalStorageJob).Returns(true);
         _featureService.IsEnabled(FeatureFlagKeys.PM28265_ReconcileAdditionalStorageJobEnableLiveMode).Returns(true);
 
+        var userId = Guid.NewGuid();
         var processedMetadata = new Dictionary<string, string>
         {
             [StripeConstants.MetadataKeys.StorageReconciled2025] = DateTime.UtcNow.ToString("o")
@@ -653,6 +689,8 @@ public class ReconcileAdditionalStorageJobTests
         var subscription1 = CreateSubscription("sub_1", "storage-gb-monthly", quantity: 10);
         var subscription2 = CreateSubscription("sub_2", "storage-gb-monthly", quantity: 5, metadata: processedMetadata);
         var subscription3 = CreateSubscription("sub_3", "storage-gb-monthly", quantity: 3);
+        _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
+            .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, userId, null));
 
         _stripeFacade.ListSubscriptionsAutoPagingAsync(Arg.Any<SubscriptionListOptions>())
             .Returns(AsyncEnumerable.Create(subscription1, subscription2, subscription3));
@@ -685,9 +723,12 @@ public class ReconcileAdditionalStorageJobTests
         _featureService.IsEnabled(FeatureFlagKeys.PM28265_EnableReconcileAdditionalStorageJob).Returns(true);
         _featureService.IsEnabled(FeatureFlagKeys.PM28265_ReconcileAdditionalStorageJobEnableLiveMode).Returns(true);
 
+        var userId = Guid.NewGuid();
         var subscription1 = CreateSubscription("sub_1", "storage-gb-monthly", quantity: 10);
         var subscription2 = CreateSubscription("sub_2", "storage-gb-monthly", quantity: 5);
         var subscription3 = CreateSubscription("sub_3", "storage-gb-monthly", quantity: 3);
+        _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
+            .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, userId, null));
 
         _stripeFacade.ListSubscriptionsAutoPagingAsync(Arg.Any<SubscriptionListOptions>())
             .Returns(AsyncEnumerable.Create(subscription1, subscription2, subscription3));
@@ -747,7 +788,10 @@ public class ReconcileAdditionalStorageJobTests
         _featureService.IsEnabled(FeatureFlagKeys.PM28265_EnableReconcileAdditionalStorageJob).Returns(true);
         _featureService.IsEnabled(FeatureFlagKeys.PM28265_ReconcileAdditionalStorageJobEnableLiveMode).Returns(true);
 
+        var userId = Guid.NewGuid();
         var subscription = CreateSubscription("sub_123", "storage-gb-monthly", quantity: 10, status: StripeConstants.SubscriptionStatus.Active);
+        _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
+            .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, userId, null));
 
         _stripeFacade.ListSubscriptionsAutoPagingAsync(Arg.Any<SubscriptionListOptions>())
             .Returns(AsyncEnumerable.Create(subscription));
@@ -769,7 +813,10 @@ public class ReconcileAdditionalStorageJobTests
         _featureService.IsEnabled(FeatureFlagKeys.PM28265_EnableReconcileAdditionalStorageJob).Returns(true);
         _featureService.IsEnabled(FeatureFlagKeys.PM28265_ReconcileAdditionalStorageJobEnableLiveMode).Returns(true);
 
+        var userId = Guid.NewGuid();
         var subscription = CreateSubscription("sub_123", "storage-gb-monthly", quantity: 10, status: StripeConstants.SubscriptionStatus.Trialing);
+        _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
+            .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, userId, null));
 
         _stripeFacade.ListSubscriptionsAutoPagingAsync(Arg.Any<SubscriptionListOptions>())
             .Returns(AsyncEnumerable.Create(subscription));
@@ -791,7 +838,10 @@ public class ReconcileAdditionalStorageJobTests
         _featureService.IsEnabled(FeatureFlagKeys.PM28265_EnableReconcileAdditionalStorageJob).Returns(true);
         _featureService.IsEnabled(FeatureFlagKeys.PM28265_ReconcileAdditionalStorageJobEnableLiveMode).Returns(true);
 
+        var userId = Guid.NewGuid();
         var subscription = CreateSubscription("sub_123", "storage-gb-monthly", quantity: 10, status: StripeConstants.SubscriptionStatus.PastDue);
+        _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
+            .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, userId, null));
 
         _stripeFacade.ListSubscriptionsAutoPagingAsync(Arg.Any<SubscriptionListOptions>())
             .Returns(AsyncEnumerable.Create(subscription));
@@ -853,11 +903,14 @@ public class ReconcileAdditionalStorageJobTests
         _featureService.IsEnabled(FeatureFlagKeys.PM28265_EnableReconcileAdditionalStorageJob).Returns(true);
         _featureService.IsEnabled(FeatureFlagKeys.PM28265_ReconcileAdditionalStorageJobEnableLiveMode).Returns(true);
 
+        var userId = Guid.NewGuid();
         var activeSubscription = CreateSubscription("sub_active", "storage-gb-monthly", quantity: 10, status: StripeConstants.SubscriptionStatus.Active);
         var trialingSubscription = CreateSubscription("sub_trialing", "storage-gb-monthly", quantity: 8, status: StripeConstants.SubscriptionStatus.Trialing);
         var pastDueSubscription = CreateSubscription("sub_pastdue", "storage-gb-monthly", quantity: 6, status: StripeConstants.SubscriptionStatus.PastDue);
         var canceledSubscription = CreateSubscription("sub_canceled", "storage-gb-monthly", quantity: 5, status: StripeConstants.SubscriptionStatus.Canceled);
         var incompleteSubscription = CreateSubscription("sub_incomplete", "storage-gb-monthly", quantity: 4, status: StripeConstants.SubscriptionStatus.Incomplete);
+        _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
+            .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, userId, null));
 
         _stripeFacade.ListSubscriptionsAutoPagingAsync(Arg.Any<SubscriptionListOptions>())
             .Returns(AsyncEnumerable.Create(activeSubscription, trialingSubscription, pastDueSubscription, canceledSubscription, incompleteSubscription));
@@ -920,133 +973,56 @@ public class ReconcileAdditionalStorageJobTests
     #region DetermineSubscriptionPlanTier Tests
 
     [Fact]
-    public void DetermineSubscriptionPlanTier_PersonalSubscription_ReturnsPersonal()
+    public void DetermineSubscriptionPlanTier_WithUserId_ReturnsPersonal()
     {
         // Arrange
-        var premiumPlan = CreatePremiumPlan();
-        const string personalPriceId = "premium-annually"; // Price ID from PremiumPlan mock
-        var subscription = CreateSubscriptionWithMultipleItems("sub_123",
-            [(personalPriceId, 1L), ("storage-gb-monthly", 5L)]);
+        var userId = Guid.NewGuid();
+        Guid? organizationId = null;
 
         // Act
-        var result = _sut.DetermineSubscriptionPlanTier(
-            subscription,
-            [premiumPlan],
-            []);
+        var result = _sut.DetermineSubscriptionPlanTier(userId, organizationId);
 
         // Assert
         Assert.Equal(ReconcileAdditionalStorageJob.SubscriptionPlanTier.Personal, result);
     }
 
     [Fact]
-    public void DetermineSubscriptionPlanTier_OrganizationSubscriptionWithSeatPlan_ReturnsOrganization()
+    public void DetermineSubscriptionPlanTier_WithOrganizationId_ReturnsOrganization()
     {
         // Arrange
-        var orgPlan = CreateTeamsPlan(); // TeamsPlan has seat plan
-        const string orgSeatPriceId = "2023-teams-org-seat-annually"; // Price ID from TeamsPlan mock
-        var subscription = CreateSubscriptionWithMultipleItems("sub_123",
-            [(orgSeatPriceId, 10L), ("storage-gb-monthly", 5L)]);
+        Guid? userId = null;
+        var organizationId = Guid.NewGuid();
 
         // Act
-        var result = _sut.DetermineSubscriptionPlanTier(
-            subscription,
-            [],
-            [orgPlan]);
+        var result = _sut.DetermineSubscriptionPlanTier(userId, organizationId);
 
         // Assert
         Assert.Equal(ReconcileAdditionalStorageJob.SubscriptionPlanTier.Organization, result);
     }
 
     [Fact]
-    public void DetermineSubscriptionPlanTier_OrganizationSubscriptionWithBasePlan_ReturnsOrganization()
+    public void DetermineSubscriptionPlanTier_WithBothIds_ReturnsPersonal()
     {
-        // Arrange
-        var orgPlan = CreateFamiliesPlan(); // FamiliesPlan has base plan
-        const string orgBasePriceId = "2020-families-org-annually"; // Price ID from FamiliesPlan mock
-        var subscription = CreateSubscriptionWithMultipleItems("sub_123",
-            [(orgBasePriceId, 1L), ("storage-gb-monthly", 5L)]);
+        // Arrange - Personal takes precedence
+        var userId = Guid.NewGuid();
+        var organizationId = Guid.NewGuid();
 
         // Act
-        var result = _sut.DetermineSubscriptionPlanTier(
-            subscription,
-            [],
-            [orgPlan]);
+        var result = _sut.DetermineSubscriptionPlanTier(userId, organizationId);
 
         // Assert
-        Assert.Equal(ReconcileAdditionalStorageJob.SubscriptionPlanTier.Organization, result);
+        Assert.Equal(ReconcileAdditionalStorageJob.SubscriptionPlanTier.Personal, result);
     }
 
     [Fact]
-    public void DetermineSubscriptionPlanTier_NoMatchingPlan_ReturnsUnknown()
+    public void DetermineSubscriptionPlanTier_WithNoIds_ReturnsUnknown()
     {
         // Arrange
-        var subscription = CreateSubscriptionWithMultipleItems("sub_123",
-            [("unknown_price_id", 1L), ("storage-gb-monthly", 5L)]);
+        Guid? userId = null;
+        Guid? organizationId = null;
 
         // Act
-        var result = _sut.DetermineSubscriptionPlanTier(
-            subscription,
-            [],
-            []);
-
-        // Assert
-        Assert.Equal(ReconcileAdditionalStorageJob.SubscriptionPlanTier.Unknown, result);
-    }
-
-    [Fact]
-    public void DetermineSubscriptionPlanTier_NullSubscriptionItems_ReturnsUnknown()
-    {
-        // Arrange
-        var subscription = new Subscription { Id = "sub_123", Items = null };
-
-        // Act
-        var result = _sut.DetermineSubscriptionPlanTier(
-            subscription,
-            [],
-            []);
-
-        // Assert
-        Assert.Equal(ReconcileAdditionalStorageJob.SubscriptionPlanTier.Unknown, result);
-    }
-
-    [Fact]
-    public void DetermineSubscriptionPlanTier_EmptySubscriptionItems_ReturnsUnknown()
-    {
-        // Arrange
-        var subscription = new Subscription
-        {
-            Id = "sub_123",
-            Items = new StripeList<SubscriptionItem> { Data = [] }
-        };
-
-        // Act
-        var result = _sut.DetermineSubscriptionPlanTier(
-            subscription,
-            [],
-            []);
-
-        // Assert
-        Assert.Equal(ReconcileAdditionalStorageJob.SubscriptionPlanTier.Unknown, result);
-    }
-
-    [Fact]
-    public void DetermineSubscriptionPlanTier_ItemsWithNullPriceId_ReturnsUnknown()
-    {
-        // Arrange
-        var subscription = new Subscription
-        {
-            Id = "sub_123",
-            Items = new StripeList<SubscriptionItem>
-            {
-                Data = [new SubscriptionItem { Id = "si_1", Price = new Price { Id = null }, Quantity = 1 }]
-            }
-        };
-
-        // Act
-        var result = _sut.DetermineSubscriptionPlanTier(
-            subscription,
-            [],
-            []);
+        var result = _sut.DetermineSubscriptionPlanTier(userId, organizationId);
 
         // Assert
         Assert.Equal(ReconcileAdditionalStorageJob.SubscriptionPlanTier.Unknown, result);
@@ -1234,25 +1210,27 @@ public class ReconcileAdditionalStorageJobTests
     public async Task UpdateDatabaseMaxStorageAsync_PersonalTier_UpdatesUser()
     {
         // Arrange
+        var userId = Guid.NewGuid();
         var user = new Bit.Core.Entities.User
         {
-            Id = Guid.NewGuid(),
+            Id = userId,
             Email = "test@example.com",
             GatewaySubscriptionId = "sub_123"
         };
-        _userRepository.GetByGatewaySubscriptionIdAsync("sub_123").Returns(user);
+        _userRepository.GetByIdAsync(userId).Returns(user);
         _userRepository.ReplaceAsync(user).Returns(Task.CompletedTask);
 
         // Act
         var result = await _sut.UpdateDatabaseMaxStorageAsync(
             ReconcileAdditionalStorageJob.SubscriptionPlanTier.Personal,
-            "sub_123",
-            10);
+            userId,
+            10,
+            "sub_123");
 
         // Assert
         Assert.True(result);
         Assert.Equal((short)10, user.MaxStorageGb);
-        await _userRepository.Received(1).GetByGatewaySubscriptionIdAsync("sub_123");
+        await _userRepository.Received(1).GetByIdAsync(userId);
         await _userRepository.Received(1).ReplaceAsync(user);
     }
 
@@ -1260,13 +1238,15 @@ public class ReconcileAdditionalStorageJobTests
     public async Task UpdateDatabaseMaxStorageAsync_PersonalTier_UserNotFound_ReturnsFalse()
     {
         // Arrange
-        _userRepository.GetByGatewaySubscriptionIdAsync("sub_123").Returns((Bit.Core.Entities.User?)null);
+        var userId = Guid.NewGuid();
+        _userRepository.GetByIdAsync(userId).Returns((Bit.Core.Entities.User?)null);
 
         // Act
         var result = await _sut.UpdateDatabaseMaxStorageAsync(
             ReconcileAdditionalStorageJob.SubscriptionPlanTier.Personal,
-            "sub_123",
-            10);
+            userId,
+            10,
+            "sub_123");
 
         // Assert
         Assert.False(result);
@@ -1277,20 +1257,22 @@ public class ReconcileAdditionalStorageJobTests
     public async Task UpdateDatabaseMaxStorageAsync_PersonalTier_ReplaceThrowsException_ReturnsFalse()
     {
         // Arrange
+        var userId = Guid.NewGuid();
         var user = new Bit.Core.Entities.User
         {
-            Id = Guid.NewGuid(),
+            Id = userId,
             Email = "test@example.com",
             GatewaySubscriptionId = "sub_123"
         };
-        _userRepository.GetByGatewaySubscriptionIdAsync("sub_123").Returns(user);
+        _userRepository.GetByIdAsync(userId).Returns(user);
         _userRepository.ReplaceAsync(user).Throws(new Exception("Database error"));
 
         // Act
         var result = await _sut.UpdateDatabaseMaxStorageAsync(
             ReconcileAdditionalStorageJob.SubscriptionPlanTier.Personal,
-            "sub_123",
-            10);
+            userId,
+            10,
+            "sub_123");
 
         // Assert
         Assert.False(result);
@@ -1300,25 +1282,27 @@ public class ReconcileAdditionalStorageJobTests
     public async Task UpdateDatabaseMaxStorageAsync_OrganizationTier_UpdatesOrganization()
     {
         // Arrange
+        var organizationId = Guid.NewGuid();
         var organization = new Bit.Core.AdminConsole.Entities.Organization
         {
-            Id = Guid.NewGuid(),
+            Id = organizationId,
             Name = "Test Org",
             GatewaySubscriptionId = "sub_456"
         };
-        _organizationRepository.GetByGatewaySubscriptionIdAsync("sub_456").Returns(organization);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
         _organizationRepository.ReplaceAsync(organization).Returns(Task.CompletedTask);
 
         // Act
         var result = await _sut.UpdateDatabaseMaxStorageAsync(
             ReconcileAdditionalStorageJob.SubscriptionPlanTier.Organization,
-            "sub_456",
-            20);
+            organizationId,
+            20,
+            "sub_456");
 
         // Assert
         Assert.True(result);
         Assert.Equal((short)20, organization.MaxStorageGb);
-        await _organizationRepository.Received(1).GetByGatewaySubscriptionIdAsync("sub_456");
+        await _organizationRepository.Received(1).GetByIdAsync(organizationId);
         await _organizationRepository.Received(1).ReplaceAsync(organization);
     }
 
@@ -1326,14 +1310,16 @@ public class ReconcileAdditionalStorageJobTests
     public async Task UpdateDatabaseMaxStorageAsync_OrganizationTier_OrganizationNotFound_ReturnsFalse()
     {
         // Arrange
-        _organizationRepository.GetByGatewaySubscriptionIdAsync("sub_456")
+        var organizationId = Guid.NewGuid();
+        _organizationRepository.GetByIdAsync(organizationId)
             .Returns((Bit.Core.AdminConsole.Entities.Organization?)null);
 
         // Act
         var result = await _sut.UpdateDatabaseMaxStorageAsync(
             ReconcileAdditionalStorageJob.SubscriptionPlanTier.Organization,
-            "sub_456",
-            20);
+            organizationId,
+            20,
+            "sub_456");
 
         // Assert
         Assert.False(result);
@@ -1344,20 +1330,22 @@ public class ReconcileAdditionalStorageJobTests
     public async Task UpdateDatabaseMaxStorageAsync_OrganizationTier_ReplaceThrowsException_ReturnsFalse()
     {
         // Arrange
+        var organizationId = Guid.NewGuid();
         var organization = new Bit.Core.AdminConsole.Entities.Organization
         {
-            Id = Guid.NewGuid(),
+            Id = organizationId,
             Name = "Test Org",
             GatewaySubscriptionId = "sub_456"
         };
-        _organizationRepository.GetByGatewaySubscriptionIdAsync("sub_456").Returns(organization);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
         _organizationRepository.ReplaceAsync(organization).Throws(new Exception("Database error"));
 
         // Act
         var result = await _sut.UpdateDatabaseMaxStorageAsync(
             ReconcileAdditionalStorageJob.SubscriptionPlanTier.Organization,
-            "sub_456",
-            20);
+            organizationId,
+            20,
+            "sub_456");
 
         // Assert
         Assert.False(result);
@@ -1367,15 +1355,17 @@ public class ReconcileAdditionalStorageJobTests
     public async Task UpdateDatabaseMaxStorageAsync_UnknownTier_ReturnsFalse()
     {
         // Arrange & Act
+        var entityId = Guid.NewGuid();
         var result = await _sut.UpdateDatabaseMaxStorageAsync(
             ReconcileAdditionalStorageJob.SubscriptionPlanTier.Unknown,
-            "sub_789",
-            15);
+            entityId,
+            15,
+            "sub_789");
 
         // Assert
         Assert.False(result);
-        await _userRepository.DidNotReceiveWithAnyArgs().GetByGatewaySubscriptionIdAsync(default!);
-        await _organizationRepository.DidNotReceiveWithAnyArgs().GetByGatewaySubscriptionIdAsync(default!);
+        await _userRepository.DidNotReceiveWithAnyArgs().GetByIdAsync(default);
+        await _organizationRepository.DidNotReceiveWithAnyArgs().GetByIdAsync(default);
     }
 
     #endregion
@@ -1416,21 +1406,6 @@ public class ReconcileAdditionalStorageJobTests
                 Data = [item]
             }
         };
-    }
-
-    private static Bit.Core.Test.Billing.Mocks.Plans.PremiumPlan CreatePremiumPlan()
-    {
-        return new Bit.Core.Test.Billing.Mocks.Plans.PremiumPlan();
-    }
-
-    private static Bit.Core.Test.Billing.Mocks.Plans.FamiliesPlan CreateFamiliesPlan()
-    {
-        return new Bit.Core.Test.Billing.Mocks.Plans.FamiliesPlan();
-    }
-
-    private static Bit.Core.Test.Billing.Mocks.Plans.TeamsPlan CreateTeamsPlan()
-    {
-        return new Bit.Core.Test.Billing.Mocks.Plans.TeamsPlan(isAnnual: true);
     }
 
     private static Subscription CreateSubscriptionWithMultipleItems(string id, (string priceId, long quantity)[] items)

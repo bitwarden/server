@@ -3,14 +3,11 @@ using System.Text.Json;
 using Bit.Billing.Services;
 using Bit.Core;
 using Bit.Core.Billing.Constants;
-using Bit.Core.Billing.Pricing;
 using Bit.Core.Jobs;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Quartz;
 using Stripe;
-using OrganizationPlan = Bit.Core.Models.StaticStore.Plan;
-using PremiumPlan = Bit.Core.Billing.Pricing.Premium.Plan;
 
 namespace Bit.Billing.Jobs;
 
@@ -20,7 +17,7 @@ public class ReconcileAdditionalStorageJob(
     IFeatureService featureService,
     IUserRepository userRepository,
     IOrganizationRepository organizationRepository,
-    IPricingClient pricingClient) : BaseJob(logger)
+    IStripeEventUtilityService stripeEventUtilityService) : BaseJob(logger)
 {
     private const string _storageGbMonthlyPriceId = "storage-gb-monthly";
     private const string _storageGbAnnuallyPriceId = "storage-gb-annually";
@@ -53,25 +50,6 @@ public class ReconcileAdditionalStorageJob(
         var failures = new List<string>();
 
         logger.LogInformation("Starting ReconcileAdditionalStorageJob (live mode: {LiveMode})", liveMode);
-
-        // Load plans for subscription type determination
-        List<PremiumPlan> personalPremiumPlans;
-        List<OrganizationPlan> organizationPlans;
-        try
-        {
-            personalPremiumPlans = await pricingClient.ListPremiumPlans();
-            organizationPlans = await pricingClient.ListPlans();
-
-            logger.LogInformation(
-                "Loaded {PremiumCount} personal/premium plans and {OrgCount} organization plans from pricing client",
-                personalPremiumPlans.Count,
-                organizationPlans.Count);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to load pricing plans from pricing client. Cannot proceed with job execution.");
-            return;
-        }
 
         var priceIds = new[] { _storageGbMonthlyPriceId, _storageGbAnnuallyPriceId, _personalStorageGbAnnuallyPriceId };
         var stripeStatusesToProcess = new[] { StripeConstants.SubscriptionStatus.Active, StripeConstants.SubscriptionStatus.Trialing, StripeConstants.SubscriptionStatus.PastDue };
@@ -137,7 +115,26 @@ public class ReconcileAdditionalStorageJob(
                 subscriptionsUpdated++;
 
                 // Now, prepare the database update so we can log details out if not in live mode
-                var subscriptionPlanTier = DetermineSubscriptionPlanTier(subscription, personalPremiumPlans, organizationPlans);
+                var (organizationId, userId, _) = stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata ?? new Dictionary<string, string>());
+                var subscriptionPlanTier = DetermineSubscriptionPlanTier(userId, organizationId);
+
+                if (subscriptionPlanTier == SubscriptionPlanTier.Unknown)
+                {
+                    logger.LogError(
+                        "Cannot determine subscription plan tier for {SubscriptionId}. Skipping subscription. ",
+                        subscription.Id);
+                    subscriptionsWithErrors++;
+                    continue;
+                }
+
+                var entityId =
+                    subscriptionPlanTier switch
+                    {
+                        SubscriptionPlanTier.Personal => userId!.Value,
+                        SubscriptionPlanTier.Organization => organizationId!.Value,
+                        _ => throw new ArgumentOutOfRangeException(nameof(subscriptionPlanTier), subscriptionPlanTier, null)
+                    };
+
                 // Calculate new MaxStorageGb
                 var currentStorageQuantity = GetCurrentStorageQuantityFromSubscription(subscription, priceId);
                 var newMaxStorageGb = CalculateNewMaxStorageGb(currentStorageQuantity, updateOptions);
@@ -170,8 +167,9 @@ public class ReconcileAdditionalStorageJob(
 
                     var dbUpdateSuccess = await UpdateDatabaseMaxStorageAsync(
                         subscriptionPlanTier,
-                        subscription.Id,
-                        newMaxStorageGb);
+                        entityId,
+                        newMaxStorageGb,
+                        subscription.Id);
 
                     if (!dbUpdateSuccess)
                     {
@@ -191,8 +189,8 @@ public class ReconcileAdditionalStorageJob(
 
         logger.LogInformation(
             "ReconcileAdditionalStorageJob FINISHED. Subscriptions found: {SubscriptionsFound}, " +
-            "Stripe updates: {StripeUpdates}, Database updates: {DatabaseFailed} failed, " +
-            "Errors: {SubscriptionsWithErrors}{Failures}",
+            "Subscriptions updated: {SubscriptionsUpdated}, Database failures: {DatabaseFailed}, " +
+            "Total Subscriptions With Errors: {SubscriptionsWithErrors}{Failures}",
             subscriptionsFound,
             liveMode
                 ? subscriptionsUpdated
@@ -250,32 +248,14 @@ public class ReconcileAdditionalStorageJob(
     }
 
     public SubscriptionPlanTier DetermineSubscriptionPlanTier(
-        Subscription subscription,
-        List<PremiumPlan> personalPremiumPlans,
-        List<OrganizationPlan> organizationPlans)
+        Guid? userId,
+        Guid? organizationId)
     {
-        if (subscription.Items?.Data == null)
-        {
-            return SubscriptionPlanTier.Unknown;
-        }
-
-        foreach (var item in subscription.Items.Data)
-        {
-            if (item?.Price?.Id == null)
-            {
-                continue;
-            }
-
-            // eagerly match the first id found to determine if personal or org
-            if (personalPremiumPlans.Any(p => p.Seat.StripePriceId == item.Price.Id)) return SubscriptionPlanTier.Personal;
-
-            if (organizationPlans.Any(p =>
-                    p.PasswordManager.StripeSeatPlanId == item.Price.Id ||
-                    p.PasswordManager.StripePlanId == item.Price.Id))
-                return SubscriptionPlanTier.Organization;
-        }
-
-        return SubscriptionPlanTier.Unknown;
+        return userId.HasValue
+            ? SubscriptionPlanTier.Personal
+            : organizationId.HasValue
+                ? SubscriptionPlanTier.Organization
+                : SubscriptionPlanTier.Unknown;
     }
 
     public long GetCurrentStorageQuantityFromSubscription(
@@ -313,8 +293,9 @@ public class ReconcileAdditionalStorageJob(
 
     public async Task<bool> UpdateDatabaseMaxStorageAsync(
         SubscriptionPlanTier subscriptionPlanTier,
-        string subscriptionId,
-        short newMaxStorageGb)
+        Guid entityId,
+        short newMaxStorageGb,
+        string subscriptionId)
     {
         try
         {
@@ -322,7 +303,7 @@ public class ReconcileAdditionalStorageJob(
             {
                 case SubscriptionPlanTier.Personal:
                     {
-                        var user = await userRepository.GetByGatewaySubscriptionIdAsync(subscriptionId);
+                        var user = await userRepository.GetByIdAsync(entityId);
                         if (user == null)
                         {
                             logger.LogError(
@@ -343,7 +324,7 @@ public class ReconcileAdditionalStorageJob(
                     }
                 case SubscriptionPlanTier.Organization:
                     {
-                        var organization = await organizationRepository.GetByGatewaySubscriptionIdAsync(subscriptionId);
+                        var organization = await organizationRepository.GetByIdAsync(entityId);
                         if (organization == null)
                         {
                             logger.LogError(

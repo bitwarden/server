@@ -49,20 +49,6 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         }
     }
 
-    public async Task<User?> GetByGatewaySubscriptionIdAsync(string gatewaySubscriptionId)
-    {
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            var results = await connection.QueryAsync<User>(
-                $"[{Schema}].[{Table}_ReadByGatewaySubscriptionId]",
-                new { GatewaySubscriptionId = gatewaySubscriptionId },
-                commandType: CommandType.StoredProcedure);
-
-            UnprotectData(results);
-            return results.SingleOrDefault();
-        }
-    }
-
     public async Task<IEnumerable<User>> GetManyByEmailsAsync(IEnumerable<string> emails)
     {
         var emailTable = new DataTable();

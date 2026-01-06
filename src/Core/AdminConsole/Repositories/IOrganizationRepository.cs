@@ -14,7 +14,6 @@ public interface IOrganizationRepository : IRepository<Organization, Guid>
     Task<ICollection<Organization>> GetManyByUserIdAsync(Guid userId);
     Task<ICollection<Organization>> SearchAsync(string name, string userEmail, bool? paid, int skip, int take);
     Task UpdateStorageAsync(Guid id);
-    Task<Organization?> GetByGatewaySubscriptionIdAsync(string gatewaySubscriptionId);
     Task<ICollection<OrganizationAbility>> GetManyAbilitiesAsync();
     Task<Organization?> GetByLicenseKeyAsync(string licenseKey);
     Task<SelfHostedOrganizationDetails?> GetSelfHostedOrganizationDetailsById(Guid id);
