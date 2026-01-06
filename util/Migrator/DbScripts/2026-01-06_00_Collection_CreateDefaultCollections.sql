@@ -1,6 +1,5 @@
 -- Creates default user collections for organization users
 -- Filters out existing default collections at database level
--- NOTE: this MUST be executed in a single transaction to ensure consistency
 CREATE OR ALTER PROCEDURE [dbo].[Collection_CreateDefaultCollections]
     @OrganizationId UNIQUEIDENTIFIER,
     @DefaultCollectionName VARCHAR(MAX),
