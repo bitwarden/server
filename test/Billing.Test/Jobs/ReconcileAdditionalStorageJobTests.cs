@@ -1149,7 +1149,7 @@ public class ReconcileAdditionalStorageJobTests
     }
 
     [Fact]
-    public void CalculateNewMaxStorageGb_WithNullUpdateOptions_ReturnsCurrentQuantity()
+    public void CalculateNewMaxStorageGb_WithNullUpdateOptions_ReturnsCurrentQuantityPlusBaseIncluded()
     {
         // Arrange
         const long currentQuantity = 10;
@@ -1158,11 +1158,11 @@ public class ReconcileAdditionalStorageJobTests
         var result = _sut.CalculateNewMaxStorageGb(currentQuantity, null);
 
         // Assert
-        Assert.Equal((short)currentQuantity, result);
+        Assert.Equal((short)(5 + currentQuantity), result);
     }
 
     [Fact]
-    public void CalculateNewMaxStorageGb_WithNullItems_ReturnsCurrentQuantity()
+    public void CalculateNewMaxStorageGb_WithNullItems_ReturnsCurrentQuantityPlusBaseIncluded()
     {
         // Arrange
         const long currentQuantity = 10;
@@ -1172,7 +1172,7 @@ public class ReconcileAdditionalStorageJobTests
         var result = _sut.CalculateNewMaxStorageGb(currentQuantity, updateOptions);
 
         // Assert
-        Assert.Equal((short)currentQuantity, result);
+        Assert.Equal(5 + currentQuantity, result);
     }
 
     [Fact]

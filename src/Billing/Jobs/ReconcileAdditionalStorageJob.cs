@@ -291,7 +291,7 @@ public class ReconcileAdditionalStorageJob(
     {
         if (updateOptions?.Items == null)
         {
-            return (short)currentQuantity;
+            return (short)(_includedStorageGb + currentQuantity);
         }
 
         // If the update marks item as deleted, new quantity is whatever the base storage gb
@@ -346,7 +346,7 @@ public class ReconcileAdditionalStorageJob(
                         var organization = await organizationRepository.GetByGatewaySubscriptionIdAsync(subscriptionId);
                         if (organization == null)
                         {
-                            logger.LogWarning(
+                            logger.LogError(
                                 "Organization not found for subscription {SubscriptionId}. Database not updated.",
                                 subscriptionId);
                             return false;
