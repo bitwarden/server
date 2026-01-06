@@ -459,6 +459,120 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
 
     [Theory]
     [BitAutoData]
+    public async Task PostSetPasswordAsync_V1_MasterPasswordDecryption_Success(string organizationSsoIdentifier)
+    {
+        // Arrange - Create organization and user
+        var ownerEmail = $"owner-{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(ownerEmail);
+
+        var (organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory,
+            ownerEmail: ownerEmail,
+            name: "Test Org V1");
+        organization.UseSso = true;
+        organization.Identifier = organizationSsoIdentifier;
+        await _organizationRepository.ReplaceAsync(organization);
+
+        await _ssoConfigRepository.CreateAsync(new SsoConfig
+        {
+            OrganizationId = organization.Id,
+            Enabled = true,
+            Data = JsonSerializer.Serialize(new SsoConfigurationData
+            {
+                MemberDecryptionType = MemberDecryptionType.MasterPassword,
+            }, JsonHelpers.CamelCase),
+        });
+
+        // Create user with password initially, so we can login
+        var userEmail = $"user-{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(userEmail);
+
+        // Add user to organization
+        var user = await _userRepository.GetByEmailAsync(userEmail);
+        Assert.NotNull(user);
+        await OrganizationTestHelpers.CreateUserAsync(_factory, organization.Id, userEmail,
+            OrganizationUserType.User, userStatusType: OrganizationUserStatusType.Invited);
+
+        // Login as the user
+        await _loginHelper.LoginAsync(userEmail);
+
+        // Remove the master password and keys to simulate newly registered SSO user
+        user.MasterPassword = null;
+        user.Key = null;
+        user.PrivateKey = null;
+        user.PublicKey = null;
+        await _userRepository.ReplaceAsync(user);
+
+        // V1 (Obsolete) request format - to be removed with PM-27327
+        var request = new
+        {
+            masterPasswordHash = _newMasterPasswordHash,
+            key = _masterKeyWrappedUserKey,
+            keys = new
+            {
+                publicKey = "v1-publicKey",
+                encryptedPrivateKey = "v1-encryptedPrivateKey"
+            },
+            kdf = 0,  // PBKDF2_SHA256
+            kdfIterations = 600000,
+            kdfMemory = (int?)null,
+            kdfParallelism = (int?)null,
+            masterPasswordHint = "v1-integration-test-hint",
+            orgIdentifier = organization.Identifier
+        };
+
+        var jsonRequest = JsonSerializer.Serialize(request, JsonHelpers.CamelCase);
+
+        // Act
+        using var message = new HttpRequestMessage(HttpMethod.Post, "/accounts/set-password");
+        message.Content = new StringContent(jsonRequest, System.Text.Encoding.UTF8, "application/json");
+        var response = await _client.SendAsync(message);
+
+        // Assert
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorContent = await response.Content.ReadAsStringAsync();
+            Assert.Fail($"Expected success but got {response.StatusCode}. Error: {errorContent}");
+        }
+
+        // Verify user in database
+        var updatedUser = await _userRepository.GetByEmailAsync(userEmail);
+        Assert.NotNull(updatedUser);
+        Assert.Equal("v1-integration-test-hint", updatedUser.MasterPasswordHint);
+
+        // Verify the master password is hashed and stored
+        Assert.NotNull(updatedUser.MasterPassword);
+        var verificationResult = _passwordHasher.VerifyHashedPassword(updatedUser, updatedUser.MasterPassword, _newMasterPasswordHash);
+        Assert.Equal(PasswordVerificationResult.Success, verificationResult);
+
+        // Verify KDF settings
+        Assert.Equal(KdfType.PBKDF2_SHA256, updatedUser.Kdf);
+        Assert.Equal(600_000, updatedUser.KdfIterations);
+        Assert.Null(updatedUser.KdfMemory);
+        Assert.Null(updatedUser.KdfParallelism);
+
+        // Verify timestamps are updated
+        Assert.Equal(DateTime.UtcNow, updatedUser.RevisionDate, TimeSpan.FromMinutes(1));
+        Assert.Equal(DateTime.UtcNow, updatedUser.AccountRevisionDate, TimeSpan.FromMinutes(1));
+
+        // Verify keys are set (V1 uses Keys property)
+        Assert.Equal(_masterKeyWrappedUserKey, updatedUser.Key);
+        Assert.Equal("v1-publicKey", updatedUser.PublicKey);
+        Assert.Equal("v1-encryptedPrivateKey", updatedUser.PrivateKey);
+
+        // Verify User_ChangedPassword event was logged
+        var events = await _eventRepository.GetManyByUserAsync(updatedUser.Id, DateTime.UtcNow.AddMinutes(-5), DateTime.UtcNow.AddMinutes(1), new PageOptions { PageSize = 100 });
+        Assert.NotNull(events);
+        Assert.Contains(events.Data, e => e.Type == EventType.User_ChangedPassword && e.UserId == updatedUser.Id);
+
+        // Verify user was accepted into the organization
+        var orgUsers = await _organizationUserRepository.GetManyByUserAsync(updatedUser.Id);
+        var orgUser = orgUsers.FirstOrDefault(ou => ou.OrganizationId == organization.Id);
+        Assert.NotNull(orgUser);
+        Assert.Equal(OrganizationUserStatusType.Accepted, orgUser.Status);
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task PostSetPasswordAsync_V2_MasterPasswordDecryption_Success(string organizationSsoIdentifier)
     {
         // Arrange - Create organization and user
@@ -809,7 +923,6 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
-    // Helper methods for creating V2 request JSON strings
     private static string CreateV2SetPasswordRequestJson(
         string userEmail,
         string orgIdentifier,
