@@ -6,10 +6,6 @@ namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories.Collectio
 
 public class CreateDefaultCollectionsTests
 {
-    /// <summary>
-    /// Test that CreateDefaultCollectionsAsync successfully creates default collections for new users
-    /// with correct permissions
-    /// </summary>
     [Theory, DatabaseData]
     public async Task CreateDefaultCollectionsAsync_CreatesDefaultCollections_Success(
         IUserRepository userRepository,
@@ -63,9 +59,6 @@ public class CreateDefaultCollectionsTests
         Assert.True(orgUser2CollectionUser.Manage);
     }
 
-    /// <summary>
-    /// Test that calling CreateDefaultCollectionsAsync multiple times does NOT create duplicates
-    /// </summary>
     [Theory, DatabaseData]
     public async Task CreateDefaultCollectionsAsync_CalledMultipleTimesForSameOrganizationUser_DoesNotCreateDuplicates(
         IUserRepository userRepository,

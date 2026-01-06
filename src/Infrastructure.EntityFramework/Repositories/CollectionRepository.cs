@@ -797,8 +797,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
 
     public async Task CreateDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName)
     {
-        organizationUserIds = organizationUserIds.ToList();
-        if (!organizationUserIds.Any())
+        var organizationUserIdsHashSet = organizationUserIds.ToHashSet();
+        if (organizationUserIdsHashSet.Count == 0)
         {
             return;
         }
@@ -807,18 +807,15 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         var dbContext = GetDatabaseContext(scope);
 
         // Query for users who already have default collections
-        var organizationUserIdsHashSet = organizationUserIds.ToHashSet();
-        var existingOrgUserIds = await dbContext.CollectionUsers
+        var existingOrgUserIds = dbContext.CollectionUsers
             .Where(cu => organizationUserIdsHashSet.Contains(cu.OrganizationUserId))
             .Where(cu => cu.Collection.Type == CollectionType.DefaultUserCollection)
             .Where(cu => cu.Collection.OrganizationId == organizationId)
-            .Select(cu => cu.OrganizationUserId)
-            .ToListAsync();
+            .Select(cu => cu.OrganizationUserId);
 
         // Filter to only users who need collections
-        var filteredOrgUserIds = organizationUserIds.Except(existingOrgUserIds).ToList();
-
-        if (!filteredOrgUserIds.Any())
+        var filteredOrgUserIds = organizationUserIdsHashSet.Except(existingOrgUserIds).ToList();
+        if (filteredOrgUserIds.Count == 0)
         {
             return;
         }

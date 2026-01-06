@@ -13,8 +13,7 @@ public static class CollectionUtils
     /// <param name="organizationUserIds">The IDs for organization users who need default collections.</param>
     /// <param name="defaultCollectionName">The encrypted string to use as the default collection name.</param>
     /// <returns>A tuple containing the collections and collection users.</returns>
-    public static (IEnumerable<Collection> collections,
-        IEnumerable<CollectionUser> collectionUsers)
+    public static (ICollection<Collection> collections, ICollection<CollectionUser> collectionUsers)
         BuildDefaultUserCollections(Guid organizationId, IEnumerable<Guid> organizationUserIds,
             string defaultCollectionName)
     {

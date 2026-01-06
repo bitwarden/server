@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Bit.Core.AdminConsole.OrganizationFeatures.Collections;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
@@ -400,8 +401,64 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
 
     public async Task CreateDefaultCollectionsBulkAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName)
     {
-        // Use the stored procedure approach which handles filtering internally
-        await CreateDefaultCollectionsAsync(organizationId, organizationUserIds, defaultCollectionName);
+        organizationUserIds = organizationUserIds.ToList();
+        if (!organizationUserIds.Any())
+        {
+            return;
+        }
+
+        await using var connection = new SqlConnection(ConnectionString);
+        connection.Open();
+        await using var transaction = connection.BeginTransaction();
+        try
+        {
+            var orgUserIdWithDefaultCollection = await GetOrgUserIdsWithDefaultCollectionAsync(connection, transaction, organizationId);
+
+            var missingDefaultCollectionUserIds = organizationUserIds.Except(orgUserIdWithDefaultCollection);
+
+            var (collections, collectionUsers) =
+                CollectionUtils.BuildDefaultUserCollections(organizationId, missingDefaultCollectionUserIds, defaultCollectionName);
+
+            if (!collectionUsers.Any() || !collections.Any())
+            {
+                return;
+            }
+
+            await BulkResourceCreationService.CreateCollectionsAsync(connection, transaction, collections);
+            await BulkResourceCreationService.CreateCollectionsUsersAsync(connection, transaction, collectionUsers);
+
+            transaction.Commit();
+        }
+        catch
+        {
+            transaction.Rollback();
+            throw;
+        }
+    }
+
+    private async Task<HashSet<Guid>> GetOrgUserIdsWithDefaultCollectionAsync(SqlConnection connection, SqlTransaction transaction, Guid organizationId)
+    {
+        const string sql = @"
+                    SELECT
+                        ou.Id AS OrganizationUserId
+                    FROM
+                        OrganizationUser ou
+                    INNER JOIN
+                        CollectionUser cu ON cu.OrganizationUserId = ou.Id
+                    INNER JOIN
+                        Collection c ON c.Id = cu.CollectionId
+                    WHERE
+                        ou.OrganizationId = @OrganizationId
+                        AND c.Type = @CollectionType;
+                ";
+
+        var organizationUserIds = await connection.QueryAsync<Guid>(
+            sql,
+            new { OrganizationId = organizationId, CollectionType = CollectionType.DefaultUserCollection },
+            transaction: transaction
+        );
+
+        return organizationUserIds.ToHashSet();
     }
 
     public class CollectionWithGroupsAndUsers : Collection
