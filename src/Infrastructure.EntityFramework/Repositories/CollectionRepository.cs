@@ -3,7 +3,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Collections;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
-using Bit.Core.Utilities;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using LinqToDB.EntityFrameworkCore;
@@ -809,15 +808,15 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         var orgUserIdWithDefaultCollection = await GetOrgUserIdsWithDefaultCollectionAsync(dbContext, organizationId);
         var missingDefaultCollectionUserIds = organizationUserIds.Except(orgUserIdWithDefaultCollection);
 
-        var (collectionUsers, collections) = CollectionUtils.BuildDefaultUserCollections(organizationId, missingDefaultCollectionUserIds, defaultCollectionName);
+        var (collections, collectionUsers) = CollectionUtils.BuildDefaultUserCollections(organizationId, missingDefaultCollectionUserIds, defaultCollectionName);
 
-        if (!collectionUsers.Any() || !collections.Any())
+        if (!collections.Any() || !collectionUsers.Any())
         {
             return;
         }
 
-        await dbContext.BulkCopyAsync(collections);
-        await dbContext.BulkCopyAsync(collectionUsers);
+        await dbContext.BulkCopyAsync(Mapper.Map<IEnumerable<Collection>>(collections));
+        await dbContext.BulkCopyAsync(Mapper.Map<IEnumerable<CollectionUser>>(collectionUsers));
 
         await dbContext.SaveChangesAsync();
     }
