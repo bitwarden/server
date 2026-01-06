@@ -1165,7 +1165,7 @@ public class ReconcileAdditionalStorageJobTests
         var result = _sut.CalculateNewMaxStorageGb(currentQuantity, updateOptions);
 
         // Assert
-        Assert.Equal((short)currentQuantity, result);
+        Assert.Equal(5 + currentQuantity, result);
     }
 
     [Fact]
@@ -1199,7 +1199,7 @@ public class ReconcileAdditionalStorageJobTests
         var result = _sut.CalculateNewMaxStorageGb(currentQuantity, updateOptions);
 
         // Assert
-        Assert.Equal((short)currentQuantity, result);
+        Assert.Equal(5 + currentQuantity, result);
     }
 
     #endregion

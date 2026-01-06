@@ -288,7 +288,7 @@ public class ReconcileAdditionalStorageJob(
         }
 
         // Otherwise, no change
-        return (short)currentQuantity;
+        return (short)(_includedStorageGb + currentQuantity);
     }
 
     public async Task<bool> UpdateDatabaseMaxStorageAsync(
