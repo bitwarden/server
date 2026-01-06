@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Premium.Commands;
 using Bit.Core.Billing.Pricing;
@@ -118,7 +119,7 @@ public class UpgradePremiumToOrganizationCommandTests
         user.Premium = false;
 
         // Act
-        var result = await _command.Run(user, PlanType.TeamsAnnually, 5, false, null, null);
+        var result = await _command.Run(user, PlanType.TeamsAnnually);
 
         // Assert
         Assert.True(result.IsT1);
@@ -134,7 +135,7 @@ public class UpgradePremiumToOrganizationCommandTests
         user.GatewaySubscriptionId = null;
 
         // Act
-        var result = await _command.Run(user, PlanType.TeamsAnnually, 5, false, null, null);
+        var result = await _command.Run(user, PlanType.TeamsAnnually);
 
         // Assert
         Assert.True(result.IsT1);
@@ -150,129 +151,12 @@ public class UpgradePremiumToOrganizationCommandTests
         user.GatewaySubscriptionId = "";
 
         // Act
-        var result = await _command.Run(user, PlanType.TeamsAnnually, 5, false, null, null);
+        var result = await _command.Run(user, PlanType.TeamsAnnually);
 
         // Assert
         Assert.True(result.IsT1);
         var badRequest = result.AsT1;
         Assert.Equal("User does not have an active Premium subscription.", badRequest.Response);
-    }
-
-    [Theory, BitAutoData]
-    public async Task Run_SeatsLessThanOne_ReturnsBadRequest(User user)
-    {
-        // Arrange
-        user.Premium = true;
-        user.GatewaySubscriptionId = "sub_123";
-
-        // Act
-        var result = await _command.Run(user, PlanType.TeamsAnnually, 0, false, null, null);
-
-        // Assert
-        Assert.True(result.IsT1);
-        var badRequest = result.AsT1;
-        Assert.Equal("Seats must be at least 1.", badRequest.Response);
-    }
-
-    [Theory, BitAutoData]
-    public async Task Run_TrialEndDateInPast_ReturnsBadRequest(User user)
-    {
-        // Arrange
-        user.Premium = true;
-        user.GatewaySubscriptionId = "sub_123";
-        var pastDate = DateTime.UtcNow.AddDays(-1);
-
-        // Act
-        var result = await _command.Run(user, PlanType.TeamsAnnually, 5, false, null, pastDate);
-
-        // Assert
-        Assert.True(result.IsT1);
-        var badRequest = result.AsT1;
-        Assert.Equal("Trial end date cannot be in the past.", badRequest.Response);
-    }
-
-    [Theory, BitAutoData]
-    public async Task Run_PlanDoesNotSupportPremiumAccess_ReturnsBadRequest(User user)
-    {
-        // Arrange
-        user.Premium = true;
-        user.GatewaySubscriptionId = "sub_123";
-
-        var mockSubscription = new Subscription
-        {
-            Id = "sub_123",
-            Items = new StripeList<SubscriptionItem>
-            {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
-                    {
-                        Id = "si_123",
-                        Price = new Price { Id = "price_premium" }
-                    }
-                }
-            }
-        };
-
-        var mockPlan = CreateTestPlan(
-            PlanType.TeamsAnnually,
-            stripeSeatPlanId: "teams-seat-annually",
-            stripePremiumAccessPlanId: null // No premium access support
-        );
-
-        _stripeAdapter.GetSubscriptionAsync("sub_123")
-            .Returns(mockSubscription);
-        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
-
-        // Act
-        var result = await _command.Run(user, PlanType.TeamsAnnually, 5, true, null, null);
-
-        // Assert
-        Assert.True(result.IsT1);
-        var badRequest = result.AsT1;
-        Assert.Equal("The selected plan does not support premium access.", badRequest.Response);
-    }
-
-    [Theory, BitAutoData]
-    public async Task Run_PlanDoesNotSupportStorage_ReturnsBadRequest(User user)
-    {
-        // Arrange
-        user.Premium = true;
-        user.GatewaySubscriptionId = "sub_123";
-
-        var mockSubscription = new Subscription
-        {
-            Id = "sub_123",
-            Items = new StripeList<SubscriptionItem>
-            {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
-                    {
-                        Id = "si_123",
-                        Price = new Price { Id = "price_premium" }
-                    }
-                }
-            }
-        };
-
-        var mockPlan = CreateTestPlan(
-            PlanType.TeamsAnnually,
-            stripeSeatPlanId: "teams-seat-annually",
-            stripeStoragePlanId: null // No storage support
-        );
-
-        _stripeAdapter.GetSubscriptionAsync("sub_123")
-            .Returns(mockSubscription);
-        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
-
-        // Act
-        var result = await _command.Run(user, PlanType.TeamsAnnually, 5, false, 10, null);
-
-        // Assert
-        Assert.True(result.IsT1);
-        var badRequest = result.AsT1;
-        Assert.Equal("The selected plan does not support additional storage.", badRequest.Response);
     }
 
     [Theory, BitAutoData]
@@ -295,7 +179,7 @@ public class UpgradePremiumToOrganizationCommandTests
                     new SubscriptionItem
                     {
                         Id = "si_premium",
-                        Price = new Price { Id = "price_premium" },
+                        Price = new Price { Id = StripeConstants.Prices.PremiumAnnually },
                         CurrentPeriodEnd = currentPeriodEnd
                     }
                 }
@@ -305,9 +189,7 @@ public class UpgradePremiumToOrganizationCommandTests
 
         var mockPlan = CreateTestPlan(
             PlanType.TeamsAnnually,
-            stripeSeatPlanId: "teams-seat-annually",
-            stripePremiumAccessPlanId: "teams-premium-access-annually",
-            stripeStoragePlanId: "storage-plan-teams"
+            stripeSeatPlanId: "teams-seat-annually"
         );
 
         _stripeAdapter.GetSubscriptionAsync("sub_123")
@@ -322,7 +204,7 @@ public class UpgradePremiumToOrganizationCommandTests
         _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
 
         // Act
-        var result = await _command.Run(user, PlanType.TeamsAnnually, 5, true, 10, null);
+        var result = await _command.Run(user, PlanType.TeamsAnnually);
 
         // Assert
         Assert.True(result.IsT0);
@@ -330,11 +212,9 @@ public class UpgradePremiumToOrganizationCommandTests
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
             "sub_123",
             Arg.Is<SubscriptionUpdateOptions>(opts =>
-                opts.Items.Count == 4 && // 1 deleted + 1 seat + 1 premium + 1 storage
+                opts.Items.Count == 2 && // 1 deleted + 1 seat (no storage)
                 opts.Items.Any(i => i.Deleted == true) &&
-                opts.Items.Any(i => i.Price == "teams-seat-annually" && i.Quantity == 5) &&
-                opts.Items.Any(i => i.Price == "teams-premium-access-annually" && i.Quantity == 1) &&
-                opts.Items.Any(i => i.Price == "storage-plan-teams" && i.Quantity == 10)));
+                opts.Items.Any(i => i.Price == "teams-seat-annually" && i.Quantity == 1)));
 
         await _organizationRepository.Received(1).CreateAsync(Arg.Is<Organization>(o =>
             o.GatewaySubscriptionId == "sub_123" &&
@@ -367,7 +247,7 @@ public class UpgradePremiumToOrganizationCommandTests
                     new SubscriptionItem
                     {
                         Id = "si_premium",
-                        Price = new Price { Id = "price_premium" },
+                        Price = new Price { Id = StripeConstants.Prices.PremiumAnnually },
                         CurrentPeriodEnd = currentPeriodEnd
                     }
                 }
@@ -393,7 +273,7 @@ public class UpgradePremiumToOrganizationCommandTests
         _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
 
         // Act
-        var result = await _command.Run(user, PlanType.FamiliesAnnually, 5, false, null, null);
+        var result = await _command.Run(user, PlanType.FamiliesAnnually);
 
         // Assert
         Assert.True(result.IsT0);
@@ -411,54 +291,6 @@ public class UpgradePremiumToOrganizationCommandTests
             u.GatewaySubscriptionId == null));
     }
 
-    [Theory, BitAutoData]
-    public async Task Run_WithTrialEndDate_SetsTrialEndOnSubscription(User user)
-    {
-        // Arrange
-        user.Premium = true;
-        user.GatewaySubscriptionId = "sub_123";
-
-        var trialEndDate = DateTime.UtcNow.AddDays(14);
-        var mockSubscription = new Subscription
-        {
-            Id = "sub_123",
-            Items = new StripeList<SubscriptionItem>
-            {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
-                    {
-                        Id = "si_premium",
-                        Price = new Price { Id = "price_premium" }
-                    }
-                }
-            },
-            Metadata = new Dictionary<string, string>()
-        };
-
-        var mockPlan = CreateTestPlan(
-            PlanType.TeamsAnnually,
-            stripeSeatPlanId: "teams-seat-annually"
-        );
-
-        _stripeAdapter.GetSubscriptionAsync("sub_123")
-            .Returns(mockSubscription);
-        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
-        _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
-            .Returns(Task.FromResult(mockSubscription));
-        _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
-
-        // Act
-        var result = await _command.Run(user, PlanType.TeamsAnnually, 5, false, null, trialEndDate);
-
-        // Assert
-        Assert.True(result.IsT0);
-
-        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
-            "sub_123",
-            Arg.Is<SubscriptionUpdateOptions>(opts =>
-                opts.TrialEnd == trialEndDate));
-    }
 
     [Theory, BitAutoData]
     public async Task Run_AddsMetadataWithOriginalPremiumPriceId(User user)
@@ -477,7 +309,7 @@ public class UpgradePremiumToOrganizationCommandTests
                     new SubscriptionItem
                     {
                         Id = "si_premium",
-                        Price = new Price { Id = "original_premium_price_id" },
+                        Price = new Price { Id = StripeConstants.Prices.PremiumAnnually },
                         CurrentPeriodEnd = DateTime.UtcNow.AddMonths(1)
                     }
                 }
@@ -501,7 +333,7 @@ public class UpgradePremiumToOrganizationCommandTests
         _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
 
         // Act
-        var result = await _command.Run(user, PlanType.TeamsAnnually, 5, false, null, null);
+        var result = await _command.Run(user, PlanType.TeamsAnnually);
 
         // Assert
         Assert.True(result.IsT0);
@@ -509,8 +341,9 @@ public class UpgradePremiumToOrganizationCommandTests
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
             "sub_123",
             Arg.Is<SubscriptionUpdateOptions>(opts =>
-                opts.Metadata.ContainsKey("premium_upgrade_metadata") &&
-                opts.Metadata["premium_upgrade_metadata"] == "original_premium_price_id" &&
+                opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.PreviousPremiumPriceId) &&
+                opts.Metadata[StripeConstants.MetadataKeys.PreviousPremiumPriceId] == StripeConstants.Prices.PremiumAnnually &&
+                opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.PreviousPeriodEndDate) &&
                 opts.Metadata.ContainsKey("userId"))); // Preserves existing metadata
     }
 }

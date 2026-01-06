@@ -27,6 +27,5 @@ public class UpgradePremiumToOrganizationRequest
             _ => throw new InvalidOperationException("Cannot upgrade to an Organization subscription that isn't Families, Teams or Enterprise.")
         };
 
-    public (PlanType, int, bool, int?, DateTime?) ToDomain() =>
-        (PlanType, 1, false, null, null);
+    public PlanType ToDomain() => PlanType;
 }

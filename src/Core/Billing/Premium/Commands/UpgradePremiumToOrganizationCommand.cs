@@ -2,6 +2,7 @@
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
@@ -25,18 +26,10 @@ public interface IUpgradePremiumToOrganizationCommand
     /// </summary>
     /// <param name="user">The user with an active Premium subscription to upgrade.</param>
     /// <param name="targetPlanType">The target organization plan type to upgrade to.</param>
-    /// <param name="seats">The number of seats for the organization plan.</param>
-    /// <param name="premiumAccess">Whether to include premium access for the organization.</param>
-    /// <param name="storage">Additional storage in GB for the organization.</param>
-    /// <param name="trialEndDate">The trial end date to apply to the upgraded subscription.</param>
     /// <returns>A billing command result indicating success or failure with appropriate error details.</returns>
     Task<BillingCommandResult<None>> Run(
         User user,
-        PlanType targetPlanType,
-        int seats,
-        bool premiumAccess,
-        int? storage,
-        DateTime? trialEndDate);
+        PlanType targetPlanType);
 }
 
 public class UpgradePremiumToOrganizationCommand(
@@ -52,11 +45,7 @@ public class UpgradePremiumToOrganizationCommand(
 {
     public Task<BillingCommandResult<None>> Run(
         User user,
-        PlanType targetPlanType,
-        int seats,
-        bool premiumAccess,
-        int? storage,
-        DateTime? trialEndDate) => HandleAsync<None>(async () =>
+        PlanType targetPlanType) => HandleAsync<None>(async () =>
     {
         // Validate that the user has an active Premium subscription
         if (user is not { Premium: true, GatewaySubscriptionId: not null and not "" })
@@ -64,15 +53,9 @@ public class UpgradePremiumToOrganizationCommand(
             return new BadRequest("User does not have an active Premium subscription.");
         }
 
-        if (seats < 1)
-        {
-            return new BadRequest("Seats must be at least 1.");
-        }
-
-        if (trialEndDate.HasValue && trialEndDate.Value < DateTime.UtcNow)
-        {
-            return new BadRequest("Trial end date cannot be in the past.");
-        }
+        // Hardcode seats to 1 and storage to null for upgrade flow
+        const int seats = 1;
+        int? storage = null;
 
         // Fetch the current Premium subscription from Stripe
         var currentSubscription = await stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId);
@@ -80,28 +63,25 @@ public class UpgradePremiumToOrganizationCommand(
         // Get the target organization plan
         var targetPlan = await pricingClient.GetPlanOrThrow(targetPlanType);
 
-        // Validate plan supports requested features
-        if (premiumAccess && string.IsNullOrEmpty(targetPlan.PasswordManager.StripePremiumAccessPlanId))
-        {
-            return new BadRequest("The selected plan does not support premium access.");
-        }
-
-        if (storage is > 0 && string.IsNullOrEmpty(targetPlan.PasswordManager.StripeStoragePlanId))
-        {
-            return new BadRequest("The selected plan does not support additional storage.");
-        }
-
         // Build the list of subscription item updates
         var subscriptionItemOptions = new List<SubscriptionItemOptions>();
 
         // Mark existing Premium subscription items for deletion
+        // Only delete Premium and storage items, not other potential subscription items
         foreach (var item in currentSubscription.Items.Data)
         {
-            subscriptionItemOptions.Add(new SubscriptionItemOptions
+            var priceId = item.Price.Id;
+            var isPremiumItem = priceId == StripeConstants.Prices.PremiumAnnually;
+            var isStorageItem = priceId == StripeConstants.Prices.StoragePlanPersonal;
+
+            if (isPremiumItem || isStorageItem)
             {
-                Id = item.Id,
-                Deleted = true
-            });
+                subscriptionItemOptions.Add(new SubscriptionItemOptions
+                {
+                    Id = item.Id,
+                    Deleted = true
+                });
+            }
         }
 
         // Add new organization subscription items
@@ -122,15 +102,6 @@ public class UpgradePremiumToOrganizationCommand(
             });
         }
 
-        if (premiumAccess)
-        {
-            subscriptionItemOptions.Add(new SubscriptionItemOptions
-            {
-                Price = targetPlan.PasswordManager.StripePremiumAccessPlanId,
-                Quantity = 1
-            });
-        }
-
         if (storage is > 0)
         {
             subscriptionItemOptions.Add(new SubscriptionItemOptions
@@ -147,17 +118,12 @@ public class UpgradePremiumToOrganizationCommand(
             ProrationBehavior = StripeConstants.ProrationBehavior.None,
             Metadata = new Dictionary<string, string>(currentSubscription.Metadata ?? new Dictionary<string, string>())
             {
-                ["premium_upgrade_metadata"] = currentSubscription.Items.Data
+                [StripeConstants.MetadataKeys.PreviousPremiumPriceId] = currentSubscription.Items.Data
                     .Select(item => item.Price.Id)
-                    .FirstOrDefault() ?? "premium"
+                    .FirstOrDefault() ?? "premium",
+                [StripeConstants.MetadataKeys.PreviousPeriodEndDate] = currentSubscription.GetCurrentPeriodEnd()?.ToString("O") ?? string.Empty
             }
         };
-
-        // Apply trial period if specified
-        if (trialEndDate.HasValue)
-        {
-            subscriptionUpdateOptions.TrialEnd = trialEndDate.Value;
-        }
 
         // Create the Organization entity
         var organization = new Organization
@@ -179,7 +145,7 @@ public class UpgradePremiumToOrganizationCommand(
             UseApi = targetPlan.HasApi,
             UseResetPassword = targetPlan.HasResetPassword,
             SelfHost = targetPlan.HasSelfHost,
-            UsersGetPremium = targetPlan.UsersGetPremium || premiumAccess,
+            UsersGetPremium = targetPlan.UsersGetPremium,
             UseCustomPermissions = targetPlan.HasCustomPermissions,
             UseScim = targetPlan.HasScim,
             Plan = targetPlan.Name,
