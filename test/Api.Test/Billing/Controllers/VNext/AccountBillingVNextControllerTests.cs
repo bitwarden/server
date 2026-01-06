@@ -34,7 +34,6 @@ public class AccountBillingVNextControllerTests
             _getUserLicenseQuery,
             Substitute.For<Core.Billing.Payment.Commands.IUpdatePaymentMethodCommand>(),
             _updatePremiumStorageCommand,
-            _updatePaymentMethodCommand,
             _upgradePremiumToOrganizationCommand);
     }
 
