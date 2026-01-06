@@ -21,14 +21,14 @@ public class CreateDefaultCollectionsAsyncTests
     }
 
     [Theory, DatabaseData]
-    public async Task CreateDefaultCollectionsBulkAsync_CreatesForNewUsersOnly_AndIgnoresExistingUsers(
+    public async Task CreateDefaultCollectionsAsync_CreatesForNewUsersOnly_AndIgnoresExistingUsers(
         IOrganizationRepository organizationRepository,
         IUserRepository userRepository,
         IOrganizationUserRepository organizationUserRepository,
         ICollectionRepository collectionRepository)
     {
         await CreateDefaultCollectionsSharedTests.CreatesForNewUsersOnly_AndIgnoresExistingUsers(
-            collectionRepository.CreateDefaultCollectionsBulkAsync,
+            collectionRepository.CreateDefaultCollectionsAsync,
             organizationRepository,
             userRepository,
             organizationUserRepository,

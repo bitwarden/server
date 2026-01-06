@@ -427,11 +427,11 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
             await BulkResourceCreationService.CreateCollectionsAsync(connection, transaction, collections);
             await BulkResourceCreationService.CreateCollectionsUsersAsync(connection, transaction, collectionUsers);
 
-            transaction.Commit();
+            await transaction.CommitAsync();
         }
         catch
         {
-            transaction.Rollback();
+            await transaction.RollbackAsync();
             throw;
         }
     }
