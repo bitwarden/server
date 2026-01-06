@@ -12,7 +12,6 @@ using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.KeyManagement.Repositories;
 using Bit.Core.Models.Data;
 using Bit.Core.Platform.Push;
@@ -504,15 +503,15 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         user.SignedPublicKey = null;
         await _userRepository.ReplaceAsync(user);
 
-        var requestModel = CreateV2SetPasswordRequest(
+        var jsonRequest = CreateV2SetPasswordRequestJson(
             userEmail,
             organization.Identifier,
             "integration-test-hint",
-            CreateV2AccountKeys());
+            includeAccountKeys: true);
 
         // Act
         using var message = new HttpRequestMessage(HttpMethod.Post, "/accounts/set-password");
-        message.Content = JsonContent.Create(requestModel);
+        message.Content = new StringContent(jsonRequest, System.Text.Encoding.UTF8, "application/json");
         var response = await _client.SendAsync(message);
 
         // Assert
@@ -643,15 +642,15 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
             await _userSignatureKeyPairRepository.CreateAsync(newKeyPair);
         }
 
-        var requestModel = CreateV2SetPasswordRequest(
+        var jsonRequest = CreateV2SetPasswordRequestJson(
             userEmail,
             organization.Identifier,
             "tde-test-hint",
-            accountKeys: null);
+            includeAccountKeys: false);
 
         // Act
         using var message = new HttpRequestMessage(HttpMethod.Post, "/accounts/set-password");
-        message.Content = JsonContent.Create(requestModel);
+        message.Content = new StringContent(jsonRequest, System.Text.Encoding.UTF8, "application/json");
         var response = await _client.SendAsync(message);
 
         // Assert
@@ -714,37 +713,15 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     public async Task PostSetPasswordAsync_V2_Unauthorized_ReturnsUnauthorized()
     {
         // Arrange - Don't login
-        var kdf = new KdfRequestModel
-        {
-            KdfType = KdfType.PBKDF2_SHA256,
-            Iterations = 600_000
-        };
-
-        var requestModel = new SetInitialPasswordRequestModel
-        {
-            MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
-            {
-                Kdf = kdf,
-                MasterPasswordAuthenticationHash = _newMasterPasswordHash,
-                Salt = "test@bitwarden.com"
-            },
-            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
-            {
-                Kdf = kdf,
-                MasterKeyWrappedUserKey = _masterKeyWrappedUserKey,
-                Salt = "test@bitwarden.com"
-            },
-            AccountKeys = new AccountKeysRequestModel
-            {
-                UserKeyEncryptedAccountPrivateKey = "7.AOs41Hd8OQiCPXjyJKCiDA==",
-                AccountPublicKey = "public-key"
-            },
-            OrgIdentifier = "test-org-identifier"
-        };
+        var jsonRequest = CreateV2SetPasswordRequestJson(
+            "test@bitwarden.com",
+            "test-org-identifier",
+            "test-hint",
+            includeAccountKeys: true);
 
         // Act
         using var message = new HttpRequestMessage(HttpMethod.Post, "/accounts/set-password");
-        message.Content = JsonContent.Create(requestModel);
+        message.Content = new StringContent(jsonRequest, System.Text.Encoding.UTF8, "application/json");
         var response = await _client.SendAsync(message);
 
         // Assert
@@ -759,31 +736,42 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         await _factory.LoginWithNewAccount(email);
         await _loginHelper.LoginAsync(email);
 
-        var requestModel = new SetInitialPasswordRequestModel
+        // Test mismatched KDF settings (600000 vs 650000 iterations)
+        var request = new
         {
-            MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
+            masterPasswordAuthentication = new
             {
-                Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = 600_000 },
-                MasterPasswordAuthenticationHash = _newMasterPasswordHash,
-                Salt = email
+                kdf = new
+                {
+                    kdfType = 0,
+                    iterations = 600000
+                },
+                masterPasswordAuthenticationHash = _newMasterPasswordHash,
+                salt = email
             },
-            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
+            masterPasswordUnlock = new
             {
-                Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = 650_000 }, // Different iterations
-                MasterKeyWrappedUserKey = _masterKeyWrappedUserKey,
-                Salt = email
+                kdf = new
+                {
+                    kdfType = 0,
+                    iterations = 650000  // Different from authentication KDF
+                },
+                masterKeyWrappedUserKey = _masterKeyWrappedUserKey,
+                salt = email
             },
-            AccountKeys = new AccountKeysRequestModel
+            accountKeys = new
             {
-                UserKeyEncryptedAccountPrivateKey = "7.AOs41Hd8OQiCPXjyJKCiDA==",
-                AccountPublicKey = "public-key"
+                userKeyEncryptedAccountPrivateKey = "7.AOs41Hd8OQiCPXjyJKCiDA==",
+                accountPublicKey = "public-key"
             },
-            OrgIdentifier = "test-org-identifier"
+            orgIdentifier = "test-org-identifier"
         };
+
+        var jsonRequest = JsonSerializer.Serialize(request, JsonHelpers.CamelCase);
 
         // Act
         using var message = new HttpRequestMessage(HttpMethod.Post, "/accounts/set-password");
-        message.Content = JsonContent.Create(requestModel);
+        message.Content = new StringContent(jsonRequest, System.Text.Encoding.UTF8, "application/json");
         var response = await _client.SendAsync(message);
 
         // Assert
@@ -802,95 +790,84 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         await _factory.LoginWithNewAccount(email);
         await _loginHelper.LoginAsync(email);
 
-        var kdfRequest = new KdfRequestModel
-        {
-            KdfType = kdf,
-            Iterations = kdfIterations,
-            Memory = kdfMemory,
-            Parallelism = kdfParallelism
-        };
-
-        var requestModel = new SetInitialPasswordRequestModel
-        {
-            MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
-            {
-                Kdf = kdfRequest,
-                MasterPasswordAuthenticationHash = _newMasterPasswordHash,
-                Salt = email
-            },
-            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
-            {
-                Kdf = kdfRequest,
-                MasterKeyWrappedUserKey = _masterKeyWrappedUserKey,
-                Salt = email
-            },
-            AccountKeys = new AccountKeysRequestModel
-            {
-                UserKeyEncryptedAccountPrivateKey = "7.AOs41Hd8OQiCPXjyJKCiDA==",
-                AccountPublicKey = "public-key"
-            },
-            OrgIdentifier = "test-org-identifier"
-        };
+        var jsonRequest = CreateV2SetPasswordRequestJson(
+            email,
+            "test-org-identifier",
+            "test-hint",
+            includeAccountKeys: true,
+            kdfType: kdf,
+            kdfIterations: kdfIterations,
+            kdfMemory: kdfMemory,
+            kdfParallelism: kdfParallelism);
 
         // Act
         using var message = new HttpRequestMessage(HttpMethod.Post, "/accounts/set-password");
-        message.Content = JsonContent.Create(requestModel);
+        message.Content = new StringContent(jsonRequest, System.Text.Encoding.UTF8, "application/json");
         var response = await _client.SendAsync(message);
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
-    // Helper methods for creating V2 request models
-    private static SetInitialPasswordRequestModel CreateV2SetPasswordRequest(
+    // Helper methods for creating V2 request JSON strings
+    private static string CreateV2SetPasswordRequestJson(
         string userEmail,
         string orgIdentifier,
         string hint,
-        AccountKeysRequestModel? accountKeys = null)
+        bool includeAccountKeys = true,
+        KdfType? kdfType = null,
+        int? kdfIterations = null,
+        int? kdfMemory = null,
+        int? kdfParallelism = null)
     {
-        return new SetInitialPasswordRequestModel
+        var kdf = new
         {
-            MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
-            {
-                Kdf = _defaultKdfRequest,
-                MasterPasswordAuthenticationHash = _newMasterPasswordHash,
-                Salt = userEmail
-            },
-            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
-            {
-                Kdf = _defaultKdfRequest,
-                MasterKeyWrappedUserKey = _masterKeyWrappedUserKey,
-                Salt = userEmail
-            },
-            AccountKeys = accountKeys,
-            MasterPasswordHint = hint,
-            OrgIdentifier = orgIdentifier
+            kdfType = (int)(kdfType ?? KdfType.PBKDF2_SHA256),
+            iterations = kdfIterations ?? 600000,
+            memory = kdfMemory,
+            parallelism = kdfParallelism
         };
-    }
 
-    private static AccountKeysRequestModel CreateV2AccountKeys()
-    {
-        return new AccountKeysRequestModel
+        var request = new
         {
-            AccountPublicKey = "publicKey",
-            UserKeyEncryptedAccountPrivateKey = _mockEncryptedType7String,
-            PublicKeyEncryptionKeyPair = new PublicKeyEncryptionKeyPairRequestModel
+            masterPasswordAuthentication = new
             {
-                PublicKey = "publicKey",
-                WrappedPrivateKey = _mockEncryptedType7String,
-                SignedPublicKey = "signedPublicKey"
+                kdf,
+                masterPasswordAuthenticationHash = _newMasterPasswordHash,
+                salt = userEmail
             },
-            SignatureKeyPair = new SignatureKeyPairRequestModel
+            masterPasswordUnlock = new
             {
-                SignatureAlgorithm = "ed25519",
-                WrappedSigningKey = _mockEncryptedType7WrappedSigningKey,
-                VerifyingKey = "verifyingKey"
+                kdf,
+                masterKeyWrappedUserKey = _masterKeyWrappedUserKey,
+                salt = userEmail
             },
-            SecurityState = new SecurityStateModel
+            accountKeys = includeAccountKeys ? new
             {
-                SecurityVersion = 2,
-                SecurityState = "v2"
-            }
+                accountPublicKey = "publicKey",
+                userKeyEncryptedAccountPrivateKey = _mockEncryptedType7String,
+                publicKeyEncryptionKeyPair = new
+                {
+                    publicKey = "publicKey",
+                    wrappedPrivateKey = _mockEncryptedType7String,
+                    signedPublicKey = "signedPublicKey"
+                },
+                signatureKeyPair = new
+                {
+                    signatureAlgorithm = "ed25519",
+                    wrappedSigningKey = _mockEncryptedType7WrappedSigningKey,
+                    verifyingKey = "verifyingKey"
+                },
+                securityState = new
+                {
+                    securityVersion = 2,
+                    securityState = "v2"
+                }
+            } : null,
+            masterPasswordHint = hint,
+            orgIdentifier
         };
+
+        return JsonSerializer.Serialize(request, JsonHelpers.CamelCase);
     }
 }
