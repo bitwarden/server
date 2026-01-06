@@ -2,6 +2,8 @@
 using Bit.Billing.Services;
 using Bit.Core;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Pricing;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -17,6 +19,9 @@ public class ReconcileAdditionalStorageJobTests
     private readonly IStripeFacade _stripeFacade;
     private readonly ILogger<ReconcileAdditionalStorageJob> _logger;
     private readonly IFeatureService _featureService;
+    private readonly IUserRepository _userRepository;
+    private readonly IOrganizationRepository _organizationRepository;
+    private readonly IPricingClient _pricingClient;
     private readonly ReconcileAdditionalStorageJob _sut;
 
     public ReconcileAdditionalStorageJobTests()
@@ -24,7 +29,20 @@ public class ReconcileAdditionalStorageJobTests
         _stripeFacade = Substitute.For<IStripeFacade>();
         _logger = Substitute.For<ILogger<ReconcileAdditionalStorageJob>>();
         _featureService = Substitute.For<IFeatureService>();
-        _sut = new ReconcileAdditionalStorageJob(_stripeFacade, _logger, _featureService);
+        _userRepository = Substitute.For<IUserRepository>();
+        _organizationRepository = Substitute.For<IOrganizationRepository>();
+        _pricingClient = Substitute.For<IPricingClient>();
+
+        _pricingClient.ListPremiumPlans().Returns([]);
+        _pricingClient.ListPlans().Returns([]);
+
+        _sut = new ReconcileAdditionalStorageJob(
+            _stripeFacade,
+            _logger,
+            _featureService,
+            _userRepository,
+            _organizationRepository,
+            _pricingClient);
     }
 
     #region Feature Flag Tests
@@ -89,6 +107,34 @@ public class ReconcileAdditionalStorageJobTests
     }
 
     [Fact]
+    public async Task Execute_DryRunMode_DoesNotUpdateDatabase()
+    {
+        // Arrange
+        var context = CreateJobExecutionContext();
+        _featureService.IsEnabled(FeatureFlagKeys.PM28265_EnableReconcileAdditionalStorageJob).Returns(true);
+        _featureService.IsEnabled(FeatureFlagKeys.PM28265_ReconcileAdditionalStorageJobEnableLiveMode).Returns(false); // Dry run ON
+
+        // Set up pricing client to return plans so subscription type can be determined
+        var premiumPlan = CreatePremiumPlan();
+        _pricingClient.ListPremiumPlans().Returns([premiumPlan]);
+        _pricingClient.ListPlans().Returns([]);
+
+        // Create a personal subscription that would normally trigger a database update
+        var subscription = CreateSubscription("sub_123", "storage-gb-monthly", quantity: 10);
+        _stripeFacade.ListSubscriptionsAutoPagingAsync(Arg.Any<SubscriptionListOptions>())
+            .Returns(AsyncEnumerable.Create(subscription));
+
+        // Act
+        await _sut.Execute(context);
+
+        // Assert - Verify database repositories are never called
+        await _userRepository.DidNotReceiveWithAnyArgs().GetByGatewaySubscriptionIdAsync(default!);
+        await _userRepository.DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
+        await _organizationRepository.DidNotReceiveWithAnyArgs().GetByGatewaySubscriptionIdAsync(default!);
+        await _organizationRepository.DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
+    }
+
+    [Fact]
     public async Task Execute_DryRunModeDisabled_UpdatesSubscriptions()
     {
         // Arrange
@@ -109,6 +155,144 @@ public class ReconcileAdditionalStorageJobTests
         await _stripeFacade.Received(1).UpdateSubscription(
             "sub_123",
             Arg.Is<SubscriptionUpdateOptions>(o => o.Items.Count == 1));
+    }
+
+    [Fact]
+    public async Task Execute_LiveMode_PersonalSubscription_UpdatesUserDatabase()
+    {
+        // Arrange
+        var context = CreateJobExecutionContext();
+        _featureService.IsEnabled(FeatureFlagKeys.PM28265_EnableReconcileAdditionalStorageJob).Returns(true);
+        _featureService.IsEnabled(FeatureFlagKeys.PM28265_ReconcileAdditionalStorageJobEnableLiveMode).Returns(true);
+
+        // Setup pricing client with premium plan
+        var premiumPlan = CreatePremiumPlan();
+        _pricingClient.ListPremiumPlans().Returns([premiumPlan]);
+        _pricingClient.ListPlans().Returns([]);
+
+        // Create personal subscription with premium seat + 10 GB storage (will be reduced to 6 GB)
+        var subscription = CreateSubscriptionWithMultipleItems("sub_personal",
+            [("premium-annually", 1L), ("storage-gb-monthly", 10L)]);
+        _stripeFacade.ListSubscriptionsAutoPagingAsync(Arg.Any<SubscriptionListOptions>())
+            .Returns(AsyncEnumerable.Create(subscription));
+        _stripeFacade.UpdateSubscription(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
+            .Returns(subscription);
+
+        // Setup user repository
+        var user = new Bit.Core.Entities.User
+        {
+            Id = Guid.NewGuid(),
+            Email = "test@example.com",
+            GatewaySubscriptionId = "sub_personal",
+            MaxStorageGb = 15 // Old value
+        };
+        _userRepository.GetByGatewaySubscriptionIdAsync("sub_personal").Returns(user);
+        _userRepository.ReplaceAsync(user).Returns(Task.CompletedTask);
+
+        // Act
+        await _sut.Execute(context);
+
+        // Assert - Verify Stripe update happened
+        await _stripeFacade.Received(1).UpdateSubscription(
+            "sub_personal",
+            Arg.Is<SubscriptionUpdateOptions>(o => o.Items.Count == 1 && o.Items[0].Quantity == 6));
+
+        // Assert - Verify database update with correct MaxStorageGb (5 included + 6 new quantity = 11)
+        await _userRepository.Received(1).GetByGatewaySubscriptionIdAsync("sub_personal");
+        await _userRepository.Received(1).ReplaceAsync(user);
+        Assert.Equal((short)11, user.MaxStorageGb);
+    }
+
+    [Fact]
+    public async Task Execute_LiveMode_OrganizationSubscription_UpdatesOrganizationDatabase()
+    {
+        // Arrange
+        var context = CreateJobExecutionContext();
+        _featureService.IsEnabled(FeatureFlagKeys.PM28265_EnableReconcileAdditionalStorageJob).Returns(true);
+        _featureService.IsEnabled(FeatureFlagKeys.PM28265_ReconcileAdditionalStorageJobEnableLiveMode).Returns(true);
+
+        // Setup pricing client with organization plan
+        var teamsPlan = CreateTeamsPlan();
+        _pricingClient.ListPremiumPlans().Returns([]);
+        _pricingClient.ListPlans().Returns([teamsPlan]);
+
+        // Create organization subscription with org seat plan + 8 GB storage (will be reduced to 4 GB)
+        var subscription = CreateSubscriptionWithMultipleItems("sub_org",
+            [("2023-teams-org-seat-annually", 5L), ("storage-gb-monthly", 8L)]);
+        _stripeFacade.ListSubscriptionsAutoPagingAsync(Arg.Any<SubscriptionListOptions>())
+            .Returns(AsyncEnumerable.Create(subscription));
+        _stripeFacade.UpdateSubscription(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
+            .Returns(subscription);
+
+        // Setup organization repository
+        var organization = new Bit.Core.AdminConsole.Entities.Organization
+        {
+            Id = Guid.NewGuid(),
+            Name = "Test Organization",
+            GatewaySubscriptionId = "sub_org",
+            MaxStorageGb = 13 // Old value
+        };
+        _organizationRepository.GetByGatewaySubscriptionIdAsync("sub_org").Returns(organization);
+        _organizationRepository.ReplaceAsync(organization).Returns(Task.CompletedTask);
+
+        // Act
+        await _sut.Execute(context);
+
+        // Assert - Verify Stripe update happened
+        await _stripeFacade.Received(1).UpdateSubscription(
+            "sub_org",
+            Arg.Is<SubscriptionUpdateOptions>(o => o.Items.Count == 1 && o.Items[0].Quantity == 4));
+
+        // Assert - Verify database update with correct MaxStorageGb (5 included + 4 new quantity = 9)
+        await _organizationRepository.Received(1).GetByGatewaySubscriptionIdAsync("sub_org");
+        await _organizationRepository.Received(1).ReplaceAsync(organization);
+        Assert.Equal((short)9, organization.MaxStorageGb);
+    }
+
+    [Fact]
+    public async Task Execute_LiveMode_StorageItemDeleted_UpdatesDatabaseWithBaseStorage()
+    {
+        // Arrange
+        var context = CreateJobExecutionContext();
+        _featureService.IsEnabled(FeatureFlagKeys.PM28265_EnableReconcileAdditionalStorageJob).Returns(true);
+        _featureService.IsEnabled(FeatureFlagKeys.PM28265_ReconcileAdditionalStorageJobEnableLiveMode).Returns(true);
+
+        // Setup pricing client with premium plan
+        var premiumPlan = CreatePremiumPlan();
+        _pricingClient.ListPremiumPlans().Returns([premiumPlan]);
+        _pricingClient.ListPlans().Returns([]);
+
+        // Create personal subscription with premium seat + 3 GB storage (will be deleted since 3 < 4)
+        var subscription = CreateSubscriptionWithMultipleItems("sub_delete",
+            [("premium-annually", 1L), ("storage-gb-monthly", 3L)]);
+        _stripeFacade.ListSubscriptionsAutoPagingAsync(Arg.Any<SubscriptionListOptions>())
+            .Returns(AsyncEnumerable.Create(subscription));
+        _stripeFacade.UpdateSubscription(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
+            .Returns(subscription);
+
+        // Setup user repository
+        var user = new Bit.Core.Entities.User
+        {
+            Id = Guid.NewGuid(),
+            Email = "test@example.com",
+            GatewaySubscriptionId = "sub_delete",
+            MaxStorageGb = 8 // Old value
+        };
+        _userRepository.GetByGatewaySubscriptionIdAsync("sub_delete").Returns(user);
+        _userRepository.ReplaceAsync(user).Returns(Task.CompletedTask);
+
+        // Act
+        await _sut.Execute(context);
+
+        // Assert - Verify Stripe update happened (item deleted)
+        await _stripeFacade.Received(1).UpdateSubscription(
+            "sub_delete",
+            Arg.Is<SubscriptionUpdateOptions>(o => o.Items.Count == 1 && o.Items[0].Deleted == true));
+
+        // Assert - Verify database update with base storage only (5 GB)
+        await _userRepository.Received(1).GetByGatewaySubscriptionIdAsync("sub_delete");
+        await _userRepository.Received(1).ReplaceAsync(user);
+        Assert.Equal((short)5, user.MaxStorageGb);
     }
 
     #endregion
@@ -731,6 +915,473 @@ public class ReconcileAdditionalStorageJobTests
 
     #endregion
 
+    #region Helper Method Tests
+
+    #region DetermineSubscriptionPlanTier Tests
+
+    [Fact]
+    public void DetermineSubscriptionPlanTier_PersonalSubscription_ReturnsPersonal()
+    {
+        // Arrange
+        var premiumPlan = CreatePremiumPlan();
+        const string personalPriceId = "premium-annually"; // Price ID from PremiumPlan mock
+        var subscription = CreateSubscriptionWithMultipleItems("sub_123",
+            [(personalPriceId, 1L), ("storage-gb-monthly", 5L)]);
+
+        // Act
+        var result = _sut.DetermineSubscriptionPlanTier(
+            subscription,
+            [premiumPlan],
+            []);
+
+        // Assert
+        Assert.Equal(ReconcileAdditionalStorageJob.SubscriptionPlanTier.Personal, result);
+    }
+
+    [Fact]
+    public void DetermineSubscriptionPlanTier_OrganizationSubscriptionWithSeatPlan_ReturnsOrganization()
+    {
+        // Arrange
+        var orgPlan = CreateTeamsPlan(); // TeamsPlan has seat plan
+        const string orgSeatPriceId = "2023-teams-org-seat-annually"; // Price ID from TeamsPlan mock
+        var subscription = CreateSubscriptionWithMultipleItems("sub_123",
+            [(orgSeatPriceId, 10L), ("storage-gb-monthly", 5L)]);
+
+        // Act
+        var result = _sut.DetermineSubscriptionPlanTier(
+            subscription,
+            [],
+            [orgPlan]);
+
+        // Assert
+        Assert.Equal(ReconcileAdditionalStorageJob.SubscriptionPlanTier.Organization, result);
+    }
+
+    [Fact]
+    public void DetermineSubscriptionPlanTier_OrganizationSubscriptionWithBasePlan_ReturnsOrganization()
+    {
+        // Arrange
+        var orgPlan = CreateFamiliesPlan(); // FamiliesPlan has base plan
+        const string orgBasePriceId = "2020-families-org-annually"; // Price ID from FamiliesPlan mock
+        var subscription = CreateSubscriptionWithMultipleItems("sub_123",
+            [(orgBasePriceId, 1L), ("storage-gb-monthly", 5L)]);
+
+        // Act
+        var result = _sut.DetermineSubscriptionPlanTier(
+            subscription,
+            [],
+            [orgPlan]);
+
+        // Assert
+        Assert.Equal(ReconcileAdditionalStorageJob.SubscriptionPlanTier.Organization, result);
+    }
+
+    [Fact]
+    public void DetermineSubscriptionPlanTier_NoMatchingPlan_ReturnsUnknown()
+    {
+        // Arrange
+        var subscription = CreateSubscriptionWithMultipleItems("sub_123",
+            [("unknown_price_id", 1L), ("storage-gb-monthly", 5L)]);
+
+        // Act
+        var result = _sut.DetermineSubscriptionPlanTier(
+            subscription,
+            [],
+            []);
+
+        // Assert
+        Assert.Equal(ReconcileAdditionalStorageJob.SubscriptionPlanTier.Unknown, result);
+    }
+
+    [Fact]
+    public void DetermineSubscriptionPlanTier_NullSubscriptionItems_ReturnsUnknown()
+    {
+        // Arrange
+        var subscription = new Subscription { Id = "sub_123", Items = null };
+
+        // Act
+        var result = _sut.DetermineSubscriptionPlanTier(
+            subscription,
+            [],
+            []);
+
+        // Assert
+        Assert.Equal(ReconcileAdditionalStorageJob.SubscriptionPlanTier.Unknown, result);
+    }
+
+    [Fact]
+    public void DetermineSubscriptionPlanTier_EmptySubscriptionItems_ReturnsUnknown()
+    {
+        // Arrange
+        var subscription = new Subscription
+        {
+            Id = "sub_123",
+            Items = new StripeList<SubscriptionItem> { Data = [] }
+        };
+
+        // Act
+        var result = _sut.DetermineSubscriptionPlanTier(
+            subscription,
+            [],
+            []);
+
+        // Assert
+        Assert.Equal(ReconcileAdditionalStorageJob.SubscriptionPlanTier.Unknown, result);
+    }
+
+    [Fact]
+    public void DetermineSubscriptionPlanTier_ItemsWithNullPriceId_ReturnsUnknown()
+    {
+        // Arrange
+        var subscription = new Subscription
+        {
+            Id = "sub_123",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem { Id = "si_1", Price = new Price { Id = null }, Quantity = 1 }]
+            }
+        };
+
+        // Act
+        var result = _sut.DetermineSubscriptionPlanTier(
+            subscription,
+            [],
+            []);
+
+        // Assert
+        Assert.Equal(ReconcileAdditionalStorageJob.SubscriptionPlanTier.Unknown, result);
+    }
+
+    #endregion
+
+    #region GetCurrentStorageQuantityFromSubscription Tests
+
+    [Theory]
+    [InlineData("storage-gb-monthly", 10L, 10L)]
+    [InlineData("storage-gb-annually", 25L, 25L)]
+    [InlineData("personal-storage-gb-annually", 5L, 5L)]
+    [InlineData("storage-gb-monthly", 0L, 0L)]
+    public void GetCurrentStorageQuantityFromSubscription_WithMatchingPriceId_ReturnsQuantity(
+        string priceId, long quantity, long expectedQuantity)
+    {
+        // Arrange
+        var subscription = CreateSubscription("sub_123", priceId, quantity);
+
+        // Act
+        var result = _sut.GetCurrentStorageQuantityFromSubscription(subscription, priceId);
+
+        // Assert
+        Assert.Equal(expectedQuantity, result);
+    }
+
+    [Fact]
+    public void GetCurrentStorageQuantityFromSubscription_WithNonMatchingPriceId_ReturnsZero()
+    {
+        // Arrange
+        var subscription = CreateSubscription("sub_123", "storage-gb-monthly", 10L);
+
+        // Act
+        var result = _sut.GetCurrentStorageQuantityFromSubscription(subscription, "different-price-id");
+
+        // Assert
+        Assert.Equal(0, result);
+    }
+
+    [Fact]
+    public void GetCurrentStorageQuantityFromSubscription_WithNullItems_ReturnsZero()
+    {
+        // Arrange
+        var subscription = new Subscription { Id = "sub_123", Items = null };
+
+        // Act
+        var result = _sut.GetCurrentStorageQuantityFromSubscription(subscription, "storage-gb-monthly");
+
+        // Assert
+        Assert.Equal(0, result);
+    }
+
+    [Fact]
+    public void GetCurrentStorageQuantityFromSubscription_WithEmptyItems_ReturnsZero()
+    {
+        // Arrange
+        var subscription = new Subscription
+        {
+            Id = "sub_123",
+            Items = new StripeList<SubscriptionItem> { Data = [] }
+        };
+
+        // Act
+        var result = _sut.GetCurrentStorageQuantityFromSubscription(subscription, "storage-gb-monthly");
+
+        // Assert
+        Assert.Equal(0, result);
+    }
+
+    #endregion
+
+    #region CalculateNewMaxStorageGb Tests
+
+    [Theory]
+    [InlineData(10L, 6L, 11)] // 5 included + 6 new quantity
+    [InlineData(15L, 11L, 16)] // 5 included + 11 new quantity
+    [InlineData(4L, 0L, 5)] // Item deleted, returns base storage
+    [InlineData(2L, 0L, 5)] // Item deleted, returns base storage
+    [InlineData(8L, 4L, 9)] // 5 included + 4 new quantity
+    public void CalculateNewMaxStorageGb_WithQuantityUpdate_ReturnsCorrectMaxStorage(
+        long currentQuantity, long newQuantity, short expectedMaxStorageGb)
+    {
+        // Arrange
+        var updateOptions = new SubscriptionUpdateOptions
+        {
+            Items =
+            [
+                newQuantity == 0
+                    ? new SubscriptionItemOptions { Id = "si_123", Deleted = true } // Item marked as deleted
+                    : new SubscriptionItemOptions { Id = "si_123", Quantity = newQuantity } // Item quantity updated
+            ]
+        };
+
+        // Act
+        var result = _sut.CalculateNewMaxStorageGb(currentQuantity, updateOptions);
+
+        // Assert
+        Assert.Equal(expectedMaxStorageGb, result);
+    }
+
+    [Fact]
+    public void CalculateNewMaxStorageGb_WithNullUpdateOptions_ReturnsCurrentQuantity()
+    {
+        // Arrange
+        const long currentQuantity = 10;
+
+        // Act
+        var result = _sut.CalculateNewMaxStorageGb(currentQuantity, null);
+
+        // Assert
+        Assert.Equal((short)currentQuantity, result);
+    }
+
+    [Fact]
+    public void CalculateNewMaxStorageGb_WithNullItems_ReturnsCurrentQuantity()
+    {
+        // Arrange
+        const long currentQuantity = 10;
+        var updateOptions = new SubscriptionUpdateOptions { Items = null };
+
+        // Act
+        var result = _sut.CalculateNewMaxStorageGb(currentQuantity, updateOptions);
+
+        // Assert
+        Assert.Equal((short)currentQuantity, result);
+    }
+
+    [Fact]
+    public void CalculateNewMaxStorageGb_WithEmptyItems_ReturnsCurrentQuantity()
+    {
+        // Arrange
+        const long currentQuantity = 10;
+        var updateOptions = new SubscriptionUpdateOptions
+        {
+            Items = []
+        };
+
+        // Act
+        var result = _sut.CalculateNewMaxStorageGb(currentQuantity, updateOptions);
+
+        // Assert
+        Assert.Equal((short)currentQuantity, result);
+    }
+
+    [Fact]
+    public void CalculateNewMaxStorageGb_WithDeletedItem_ReturnsBaseStorage()
+    {
+        // Arrange
+        const long currentQuantity = 100;
+        var updateOptions = new SubscriptionUpdateOptions
+        {
+            Items = [new SubscriptionItemOptions { Id = "si_123", Deleted = true }]
+        };
+
+        // Act
+        var result = _sut.CalculateNewMaxStorageGb(currentQuantity, updateOptions);
+
+        // Assert
+        Assert.Equal((short)5, result); // Base storage
+    }
+
+    [Fact]
+    public void CalculateNewMaxStorageGb_WithItemWithoutQuantity_ReturnsCurrentQuantity()
+    {
+        // Arrange
+        const long currentQuantity = 10;
+        var updateOptions = new SubscriptionUpdateOptions
+        {
+            Items = [new SubscriptionItemOptions { Id = "si_123", Quantity = null }]
+        };
+
+        // Act
+        var result = _sut.CalculateNewMaxStorageGb(currentQuantity, updateOptions);
+
+        // Assert
+        Assert.Equal((short)currentQuantity, result);
+    }
+
+    #endregion
+
+    #region UpdateDatabaseMaxStorageAsync Tests
+
+    [Fact]
+    public async Task UpdateDatabaseMaxStorageAsync_PersonalTier_UpdatesUser()
+    {
+        // Arrange
+        var user = new Bit.Core.Entities.User
+        {
+            Id = Guid.NewGuid(),
+            Email = "test@example.com",
+            GatewaySubscriptionId = "sub_123"
+        };
+        _userRepository.GetByGatewaySubscriptionIdAsync("sub_123").Returns(user);
+        _userRepository.ReplaceAsync(user).Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _sut.UpdateDatabaseMaxStorageAsync(
+            ReconcileAdditionalStorageJob.SubscriptionPlanTier.Personal,
+            "sub_123",
+            10);
+
+        // Assert
+        Assert.True(result);
+        Assert.Equal((short)10, user.MaxStorageGb);
+        await _userRepository.Received(1).GetByGatewaySubscriptionIdAsync("sub_123");
+        await _userRepository.Received(1).ReplaceAsync(user);
+    }
+
+    [Fact]
+    public async Task UpdateDatabaseMaxStorageAsync_PersonalTier_UserNotFound_ReturnsFalse()
+    {
+        // Arrange
+        _userRepository.GetByGatewaySubscriptionIdAsync("sub_123").Returns((Bit.Core.Entities.User?)null);
+
+        // Act
+        var result = await _sut.UpdateDatabaseMaxStorageAsync(
+            ReconcileAdditionalStorageJob.SubscriptionPlanTier.Personal,
+            "sub_123",
+            10);
+
+        // Assert
+        Assert.False(result);
+        await _userRepository.DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
+    }
+
+    [Fact]
+    public async Task UpdateDatabaseMaxStorageAsync_PersonalTier_ReplaceThrowsException_ReturnsFalse()
+    {
+        // Arrange
+        var user = new Bit.Core.Entities.User
+        {
+            Id = Guid.NewGuid(),
+            Email = "test@example.com",
+            GatewaySubscriptionId = "sub_123"
+        };
+        _userRepository.GetByGatewaySubscriptionIdAsync("sub_123").Returns(user);
+        _userRepository.ReplaceAsync(user).Throws(new Exception("Database error"));
+
+        // Act
+        var result = await _sut.UpdateDatabaseMaxStorageAsync(
+            ReconcileAdditionalStorageJob.SubscriptionPlanTier.Personal,
+            "sub_123",
+            10);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Fact]
+    public async Task UpdateDatabaseMaxStorageAsync_OrganizationTier_UpdatesOrganization()
+    {
+        // Arrange
+        var organization = new Bit.Core.AdminConsole.Entities.Organization
+        {
+            Id = Guid.NewGuid(),
+            Name = "Test Org",
+            GatewaySubscriptionId = "sub_456"
+        };
+        _organizationRepository.GetByGatewaySubscriptionIdAsync("sub_456").Returns(organization);
+        _organizationRepository.ReplaceAsync(organization).Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _sut.UpdateDatabaseMaxStorageAsync(
+            ReconcileAdditionalStorageJob.SubscriptionPlanTier.Organization,
+            "sub_456",
+            20);
+
+        // Assert
+        Assert.True(result);
+        Assert.Equal((short)20, organization.MaxStorageGb);
+        await _organizationRepository.Received(1).GetByGatewaySubscriptionIdAsync("sub_456");
+        await _organizationRepository.Received(1).ReplaceAsync(organization);
+    }
+
+    [Fact]
+    public async Task UpdateDatabaseMaxStorageAsync_OrganizationTier_OrganizationNotFound_ReturnsFalse()
+    {
+        // Arrange
+        _organizationRepository.GetByGatewaySubscriptionIdAsync("sub_456")
+            .Returns((Bit.Core.AdminConsole.Entities.Organization?)null);
+
+        // Act
+        var result = await _sut.UpdateDatabaseMaxStorageAsync(
+            ReconcileAdditionalStorageJob.SubscriptionPlanTier.Organization,
+            "sub_456",
+            20);
+
+        // Assert
+        Assert.False(result);
+        await _organizationRepository.DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
+    }
+
+    [Fact]
+    public async Task UpdateDatabaseMaxStorageAsync_OrganizationTier_ReplaceThrowsException_ReturnsFalse()
+    {
+        // Arrange
+        var organization = new Bit.Core.AdminConsole.Entities.Organization
+        {
+            Id = Guid.NewGuid(),
+            Name = "Test Org",
+            GatewaySubscriptionId = "sub_456"
+        };
+        _organizationRepository.GetByGatewaySubscriptionIdAsync("sub_456").Returns(organization);
+        _organizationRepository.ReplaceAsync(organization).Throws(new Exception("Database error"));
+
+        // Act
+        var result = await _sut.UpdateDatabaseMaxStorageAsync(
+            ReconcileAdditionalStorageJob.SubscriptionPlanTier.Organization,
+            "sub_456",
+            20);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Fact]
+    public async Task UpdateDatabaseMaxStorageAsync_UnknownTier_ReturnsFalse()
+    {
+        // Arrange & Act
+        var result = await _sut.UpdateDatabaseMaxStorageAsync(
+            ReconcileAdditionalStorageJob.SubscriptionPlanTier.Unknown,
+            "sub_789",
+            15);
+
+        // Assert
+        Assert.False(result);
+        await _userRepository.DidNotReceiveWithAnyArgs().GetByGatewaySubscriptionIdAsync(default!);
+        await _organizationRepository.DidNotReceiveWithAnyArgs().GetByGatewaySubscriptionIdAsync(default!);
+    }
+
+    #endregion
+
+    #endregion
+
     #region Helper Methods
 
     private static IJobExecutionContext CreateJobExecutionContext(CancellationToken cancellationToken = default)
@@ -762,7 +1413,42 @@ public class ReconcileAdditionalStorageJobTests
             Metadata = metadata,
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem> { item }
+                Data = [item]
+            }
+        };
+    }
+
+    private static Bit.Core.Test.Billing.Mocks.Plans.PremiumPlan CreatePremiumPlan()
+    {
+        return new Bit.Core.Test.Billing.Mocks.Plans.PremiumPlan();
+    }
+
+    private static Bit.Core.Test.Billing.Mocks.Plans.FamiliesPlan CreateFamiliesPlan()
+    {
+        return new Bit.Core.Test.Billing.Mocks.Plans.FamiliesPlan();
+    }
+
+    private static Bit.Core.Test.Billing.Mocks.Plans.TeamsPlan CreateTeamsPlan()
+    {
+        return new Bit.Core.Test.Billing.Mocks.Plans.TeamsPlan(isAnnual: true);
+    }
+
+    private static Subscription CreateSubscriptionWithMultipleItems(string id, (string priceId, long quantity)[] items)
+    {
+        var subscriptionItems = items.Select(i => new SubscriptionItem
+        {
+            Id = $"si_{id}_{i.priceId}",
+            Price = new Price { Id = i.priceId },
+            Quantity = i.quantity
+        }).ToList();
+
+        return new Subscription
+        {
+            Id = id,
+            Status = StripeConstants.SubscriptionStatus.Active,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = subscriptionItems
             }
         };
     }

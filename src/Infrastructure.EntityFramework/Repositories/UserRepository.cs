@@ -30,6 +30,16 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         }
     }
 
+    public async Task<Core.Entities.User?> GetByGatewaySubscriptionIdAsync(string gatewaySubscriptionId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var entity = await GetDbSet(dbContext).FirstOrDefaultAsync(e => e.GatewaySubscriptionId == gatewaySubscriptionId);
+            return Mapper.Map<Core.Entities.User>(entity);
+        }
+    }
+
     public async Task<IEnumerable<Core.Entities.User>> GetManyByEmailsAsync(IEnumerable<string> emails)
     {
         using (var scope = ServiceScopeFactory.CreateScope())

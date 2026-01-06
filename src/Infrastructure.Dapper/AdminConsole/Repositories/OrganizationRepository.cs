@@ -92,6 +92,19 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
         }
     }
 
+    public async Task<Organization?> GetByGatewaySubscriptionIdAsync(string gatewaySubscriptionId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<Organization>(
+                "[dbo].[Organization_ReadByGatewaySubscriptionId]",
+                new { GatewaySubscriptionId = gatewaySubscriptionId },
+                commandType: CommandType.StoredProcedure);
+
+            return results.SingleOrDefault();
+        }
+    }
+
     public async Task<ICollection<OrganizationAbility>> GetManyAbilitiesAsync()
     {
         using (var connection = new SqlConnection(ConnectionString))

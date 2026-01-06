@@ -20,6 +20,7 @@ public interface IUserRepository : IRepository<User, Guid>
     Task<DateTime> GetAccountRevisionDateAsync(Guid id);
     Task UpdateStorageAsync(Guid id);
     Task UpdateRenewalReminderDateAsync(Guid id, DateTime renewalReminderDate);
+    Task<User?> GetByGatewaySubscriptionIdAsync(string gatewaySubscriptionId);
     Task<IEnumerable<User>> GetManyAsync(IEnumerable<Guid> ids);
     /// <summary>
     /// Retrieves the data for the requested user IDs and includes an additional property indicating
