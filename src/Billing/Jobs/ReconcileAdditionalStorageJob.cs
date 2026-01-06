@@ -200,7 +200,9 @@ public class ReconcileAdditionalStorageJob(
             liveMode
                 ? subscriptionsUpdatedInStripe
                 : $"(In live mode, would have updated) {subscriptionsUpdatedInStripe}",
-            subscriptionsUpdatedInDatabase,
+            liveMode
+                ? subscriptionsUpdatedInDatabase
+                : $"(In live mode, would have updated) {subscriptionsUpdatedInDatabase}",
             databaseUpdatesFailed,
             subscriptionsWithErrors,
             failures.Count > 0
