@@ -238,6 +238,12 @@ public class SendsController : Controller
         {
             throw new BadRequestException("Could not locate send");
         }
+        if (send.MaxAccessCount.GetValueOrDefault(int.MaxValue) <= send.AccessCount ||
+            send.ExpirationDate.GetValueOrDefault(DateTime.MaxValue) < DateTime.UtcNow || send.Disabled ||
+            send.DeletionDate < DateTime.UtcNow)
+        {
+            throw new NotFoundException();
+        }
 
         var sendResponse = new SendAccessResponseModel(send);
         if (send.UserId.HasValue && !send.HideEmail.GetValueOrDefault())
@@ -264,6 +270,12 @@ public class SendsController : Controller
         if (send == null)
         {
             throw new BadRequestException("Could not locate send");
+        }
+        if (send.MaxAccessCount.GetValueOrDefault(int.MaxValue) <= send.AccessCount ||
+            send.ExpirationDate.GetValueOrDefault(DateTime.MaxValue) < DateTime.UtcNow || send.Disabled ||
+            send.DeletionDate < DateTime.UtcNow)
+        {
+            throw new NotFoundException();
         }
 
         var url = await _sendFileStorageService.GetSendFileDownloadUrlAsync(send, fileId);
