@@ -427,11 +427,11 @@ public class SetInitialPasswordRequestModelTests
 
     #endregion
 
-    #region IsTdeOnboardingPassword Tests
+    #region IsTdeSetPasswordRequest Tests
 
     [Theory]
     [BitAutoData]
-    public void IsTdeOnboardingPassword_WithNullAccountKeys_ReturnsTrue(string orgIdentifier)
+    public void IsTdeSetPasswordRequest_WithNullAccountKeys_ReturnsTrue(string orgIdentifier)
     {
         // Arrange
         var model = new SetInitialPasswordRequestModel
@@ -461,7 +461,7 @@ public class SetInitialPasswordRequestModelTests
         };
 
         // Act
-        var result = model.IsTdeOnboardingPassword();
+        var result = model.IsTdeSetPasswordRequest();
 
         // Assert
         Assert.True(result);
@@ -469,7 +469,7 @@ public class SetInitialPasswordRequestModelTests
 
     [Theory]
     [BitAutoData]
-    public void IsTdeOnboardingPassword_WithAccountKeys_ReturnsFalse(string orgIdentifier)
+    public void IsTdeSetPasswordRequest_WithAccountKeys_ReturnsFalse(string orgIdentifier)
     {
         // Arrange
         var model = new SetInitialPasswordRequestModel
@@ -503,7 +503,7 @@ public class SetInitialPasswordRequestModelTests
         };
 
         // Act
-        var result = model.IsTdeOnboardingPassword();
+        var result = model.IsTdeSetPasswordRequest();
 
         // Assert
         Assert.False(result);

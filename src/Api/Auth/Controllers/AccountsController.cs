@@ -224,7 +224,7 @@ public class AccountsController : Controller
 
         if (model.IsV2Request())
         {
-            if (model.IsTdeOnboardingPassword())
+            if (model.IsTdeSetPasswordRequest())
             {
                 await _tdeSetPasswordCommand.SetMasterPasswordAsync(user, model.ToData());
             }

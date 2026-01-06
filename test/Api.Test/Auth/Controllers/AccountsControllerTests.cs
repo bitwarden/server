@@ -890,12 +890,12 @@ public class AccountsControllerTests : IDisposable
 
     [Theory]
     [BitAutoData]
-    public async Task PostSetPasswordAsync_V2_WithTdeOnboarding_ShouldCallTdeOnboardingCommand(
+    public async Task PostSetPasswordAsync_V2_WithTdeSetPassword_ShouldCallTdeSetPasswordCommand(
         User user,
         SetInitialPasswordRequestModel setInitialPasswordRequestModel)
     {
         // Arrange
-        UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel, includeTdeOnboarding: true);
+        UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel, includeTdeSetPassword: true);
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
         _tdeSetPasswordCommand.SetMasterPasswordAsync(user, Arg.Any<SetInitialMasterPasswordDataModel>())
             .Returns(Task.CompletedTask);
@@ -950,7 +950,7 @@ public class AccountsControllerTests : IDisposable
         model.AccountKeys = null;
     }
 
-    private void UpdateSetInitialPasswordRequestModelToV2(SetInitialPasswordRequestModel model, bool includeTdeOnboarding = false)
+    private void UpdateSetInitialPasswordRequestModelToV2(SetInitialPasswordRequestModel model, bool includeTdeSetPassword = false)
     {
         var kdf = new KdfRequestModel
         {
@@ -972,9 +972,9 @@ public class AccountsControllerTests : IDisposable
             Salt = "salt"
         };
 
-        if (includeTdeOnboarding)
+        if (includeTdeSetPassword)
         {
-            // TDE onboarding does not include AccountKeys
+            // TDE set password does not include AccountKeys
             model.AccountKeys = null;
         }
         else

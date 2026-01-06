@@ -141,7 +141,7 @@ public class SetInitialPasswordRequestModel : IValidatableObject
         return MasterPasswordAuthentication != null && MasterPasswordUnlock != null;
     }
 
-    public bool IsTdeOnboardingPassword()
+    public bool IsTdeSetPasswordRequest()
     {
         return AccountKeys == null;
     }
