@@ -63,12 +63,12 @@ public class SetInitialMasterPasswordCommand : ISetInitialMasterPasswordCommand
             throw new BadRequestException("User not found within organization.");
         }
 
-        // Hash the provided user master password hash on the server side
-        var serverSideMasterPasswordHash = _passwordHasher.HashPassword(user,
+        // Hash the provided user master password authentication hash on the server side
+        var serverSideHashedMasterPasswordAuthenticationHash = _passwordHasher.HashPassword(user,
             masterPasswordDataModel.MasterPasswordAuthentication.MasterPasswordAuthenticationHash);
 
         var setMasterPasswordTask = _userRepository.SetMasterPassword(user.Id,
-            masterPasswordDataModel.MasterPasswordUnlock, serverSideMasterPasswordHash,
+            masterPasswordDataModel.MasterPasswordUnlock, serverSideHashedMasterPasswordAuthenticationHash,
             masterPasswordDataModel.MasterPasswordHint);
         await _userRepository.SetV2AccountCryptographicStateAsync(user.Id, masterPasswordDataModel.AccountKeys,
             [setMasterPasswordTask]);

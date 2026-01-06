@@ -8,7 +8,6 @@ using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
-using Bit.Core.Auth.UserFeatures.TdeOnboardingPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Entities;
@@ -39,7 +38,7 @@ public class AccountsControllerTests : IDisposable
     private readonly ISetInitialMasterPasswordCommand _setInitialMasterPasswordCommand;
     private readonly ISetInitialMasterPasswordCommandV1 _setInitialMasterPasswordCommandV1;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
-    private readonly ITdeOnboardingPasswordCommand _tdeOnboardingPasswordCommand;
+    private readonly ITdeSetPasswordCommand _tdeSetPasswordCommand;
     private readonly ITdeOffboardingPasswordCommand _tdeOffboardingPasswordCommand;
     private readonly IFeatureService _featureService;
     private readonly IUserAccountKeysQuery _userAccountKeysQuery;
@@ -57,7 +56,7 @@ public class AccountsControllerTests : IDisposable
         _setInitialMasterPasswordCommand = Substitute.For<ISetInitialMasterPasswordCommand>();
         _setInitialMasterPasswordCommandV1 = Substitute.For<ISetInitialMasterPasswordCommandV1>();
         _twoFactorIsEnabledQuery = Substitute.For<ITwoFactorIsEnabledQuery>();
-        _tdeOnboardingPasswordCommand = Substitute.For<ITdeOnboardingPasswordCommand>();
+        _tdeSetPasswordCommand = Substitute.For<ITdeSetPasswordCommand>();
         _tdeOffboardingPasswordCommand = Substitute.For<ITdeOffboardingPasswordCommand>();
         _featureService = Substitute.For<IFeatureService>();
         _userAccountKeysQuery = Substitute.For<IUserAccountKeysQuery>();
@@ -73,7 +72,7 @@ public class AccountsControllerTests : IDisposable
             _policyService,
             _setInitialMasterPasswordCommand,
             _setInitialMasterPasswordCommandV1,
-            _tdeOnboardingPasswordCommand,
+            _tdeSetPasswordCommand,
             _tdeOffboardingPasswordCommand,
             _twoFactorIsEnabledQuery,
             _featureService,
@@ -898,15 +897,15 @@ public class AccountsControllerTests : IDisposable
         // Arrange
         UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel, includeTdeOnboarding: true);
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
-        _tdeOnboardingPasswordCommand.OnboardMasterPasswordAsync(user, Arg.Any<SetInitialMasterPasswordDataModel>())
+        _tdeSetPasswordCommand.SetMasterPasswordAsync(user, Arg.Any<SetInitialMasterPasswordDataModel>())
             .Returns(Task.CompletedTask);
 
         // Act
         await _sut.PostSetPasswordAsync(setInitialPasswordRequestModel);
 
         // Assert
-        await _tdeOnboardingPasswordCommand.Received(1)
-            .OnboardMasterPasswordAsync(
+        await _tdeSetPasswordCommand.Received(1)
+            .SetMasterPasswordAsync(
                 Arg.Is<User>(u => u == user),
                 Arg.Is<SetInitialMasterPasswordDataModel>(d =>
                     d.MasterPasswordAuthentication != null &&

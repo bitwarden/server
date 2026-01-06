@@ -1,6 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Models.Data;
-using Bit.Core.Auth.UserFeatures.TdeOnboardingPassword;
+using Bit.Core.Auth.UserFeatures.UserMasterPassword;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -14,14 +14,14 @@ using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
 
-namespace Bit.Core.Test.Auth.UserFeatures.TdeOnboardingPassword;
+namespace Bit.Core.Test.Auth.UserFeatures.UserMasterPassword;
 
 [SutProviderCustomize]
-public class TdeOnboardingPasswordCommandTests
+public class TdeSetPasswordCommandTests
 {
     [Theory]
     [BitAutoData]
-    public async Task OnboardMasterPassword_Success(SutProvider<TdeOnboardingPasswordCommand> sutProvider,
+    public async Task OnboardMasterPassword_Success(SutProvider<TdeSetPasswordCommand> sutProvider,
         User user, KdfSettings kdfSettings,
         Organization org, OrganizationUser orgUser, string serverSideHash, string masterPasswordHint)
     {
@@ -50,7 +50,7 @@ public class TdeOnboardingPasswordCommandTests
             .Returns(mockUpdateUserData);
 
         // Act
-        await sutProvider.Sut.OnboardMasterPasswordAsync(user, model);
+        await sutProvider.Sut.SetMasterPasswordAsync(user, model);
 
         // Assert
         await sutProvider.GetDependency<IUserRepository>().Received(1)
@@ -68,7 +68,7 @@ public class TdeOnboardingPasswordCommandTests
     [Theory]
     [BitAutoData]
     public async Task OnboardMasterPassword_UserAlreadyHasPassword_ThrowsBadRequestException(
-        SutProvider<TdeOnboardingPasswordCommand> sutProvider,
+        SutProvider<TdeSetPasswordCommand> sutProvider,
         User user, KdfSettings kdfSettings, string orgSsoIdentifier, string masterPasswordHint)
     {
         // Arrange
@@ -76,8 +76,9 @@ public class TdeOnboardingPasswordCommandTests
         var model = CreateValidModel(user, kdfSettings, orgSsoIdentifier, masterPasswordHint);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            async () => await sutProvider.Sut.OnboardMasterPasswordAsync(user, model));
+        var exception =
+            await Assert.ThrowsAsync<BadRequestException>(async () =>
+                await sutProvider.Sut.SetMasterPasswordAsync(user, model));
         Assert.Equal("User already has a master password set.", exception.Message);
     }
 
@@ -87,7 +88,7 @@ public class TdeOnboardingPasswordCommandTests
     [BitAutoData([null, null])]
     public async Task OnboardMasterPassword_MissingAccountKeys_ThrowsBadRequestException(
         string? publicKey, string? privateKey,
-        SutProvider<TdeOnboardingPasswordCommand> sutProvider,
+        SutProvider<TdeSetPasswordCommand> sutProvider,
         User user, KdfSettings kdfSettings, string orgSsoIdentifier, string masterPasswordHint)
     {
         // Arrange
@@ -97,8 +98,9 @@ public class TdeOnboardingPasswordCommandTests
         var model = CreateValidModel(user, kdfSettings, orgSsoIdentifier, masterPasswordHint);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            async () => await sutProvider.Sut.OnboardMasterPasswordAsync(user, model));
+        var exception =
+            await Assert.ThrowsAsync<BadRequestException>(async () =>
+                await sutProvider.Sut.SetMasterPasswordAsync(user, model));
         Assert.Equal("TDE user account keys must be set before setting initial master password.", exception.Message);
     }
 
@@ -108,7 +110,7 @@ public class TdeOnboardingPasswordCommandTests
     [BitAutoData("wrong-salt", "different-wrong-salt")]
     public async Task OnboardMasterPassword_InvalidSalt_ThrowsBadRequestException(
         string? authSaltOverride, string? unlockSaltOverride,
-        SutProvider<TdeOnboardingPasswordCommand> sutProvider,
+        SutProvider<TdeSetPasswordCommand> sutProvider,
         User user, KdfSettings kdfSettings, string orgSsoIdentifier, string masterPasswordHint)
     {
         // Arrange
@@ -118,12 +120,13 @@ public class TdeOnboardingPasswordCommandTests
         var correctSalt = user.GetMasterPasswordSalt();
         var model = new SetInitialMasterPasswordDataModel
         {
-            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
-            {
-                Salt = authSaltOverride ?? correctSalt,
-                MasterPasswordAuthenticationHash = "hash",
-                Kdf = kdfSettings
-            },
+            MasterPasswordAuthentication =
+                new MasterPasswordAuthenticationData
+                {
+                    Salt = authSaltOverride ?? correctSalt,
+                    MasterPasswordAuthenticationHash = "hash",
+                    Kdf = kdfSettings
+                },
             MasterPasswordUnlock = new MasterPasswordUnlockData
             {
                 Salt = unlockSaltOverride ?? correctSalt,
@@ -136,15 +139,16 @@ public class TdeOnboardingPasswordCommandTests
         };
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            async () => await sutProvider.Sut.OnboardMasterPasswordAsync(user, model));
+        var exception =
+            await Assert.ThrowsAsync<BadRequestException>(async () =>
+                await sutProvider.Sut.SetMasterPasswordAsync(user, model));
         Assert.Equal("Invalid master password salt.", exception.Message);
     }
 
     [Theory]
     [BitAutoData]
     public async Task OnboardMasterPassword_InvalidOrgSsoIdentifier_ThrowsBadRequestException(
-        SutProvider<TdeOnboardingPasswordCommand> sutProvider,
+        SutProvider<TdeSetPasswordCommand> sutProvider,
         User user, KdfSettings kdfSettings, string orgSsoIdentifier, string masterPasswordHint)
     {
         // Arrange
@@ -158,15 +162,16 @@ public class TdeOnboardingPasswordCommandTests
             .ReturnsNull();
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            async () => await sutProvider.Sut.OnboardMasterPasswordAsync(user, model));
+        var exception =
+            await Assert.ThrowsAsync<BadRequestException>(async () =>
+                await sutProvider.Sut.SetMasterPasswordAsync(user, model));
         Assert.Equal("Organization SSO identifier is invalid.", exception.Message);
     }
 
     [Theory]
     [BitAutoData]
     public async Task OnboardMasterPassword_UserNotFoundInOrganization_ThrowsBadRequestException(
-        SutProvider<TdeOnboardingPasswordCommand> sutProvider,
+        SutProvider<TdeSetPasswordCommand> sutProvider,
         User user, KdfSettings kdfSettings, Organization org, string masterPasswordHint)
     {
         // Arrange
@@ -184,8 +189,9 @@ public class TdeOnboardingPasswordCommandTests
             .ReturnsNull();
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            async () => await sutProvider.Sut.OnboardMasterPasswordAsync(user, model));
+        var exception =
+            await Assert.ThrowsAsync<BadRequestException>(async () =>
+                await sutProvider.Sut.SetMasterPasswordAsync(user, model));
         Assert.Equal("User not found within organization.", exception.Message);
     }
 
@@ -195,18 +201,20 @@ public class TdeOnboardingPasswordCommandTests
         var salt = user.GetMasterPasswordSalt();
         return new SetInitialMasterPasswordDataModel
         {
-            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
-            {
-                Salt = salt,
-                MasterPasswordAuthenticationHash = "hash",
-                Kdf = kdfSettings
-            },
-            MasterPasswordUnlock = new MasterPasswordUnlockData
-            {
-                Salt = salt,
-                MasterKeyWrappedUserKey = "wrapped-key",
-                Kdf = kdfSettings
-            },
+            MasterPasswordAuthentication =
+                new MasterPasswordAuthenticationData
+                {
+                    Salt = salt,
+                    MasterPasswordAuthenticationHash = "hash",
+                    Kdf = kdfSettings
+                },
+            MasterPasswordUnlock =
+                new MasterPasswordUnlockData
+                {
+                    Salt = salt,
+                    MasterKeyWrappedUserKey = "wrapped-key",
+                    Kdf = kdfSettings
+                },
             AccountKeys = null,
             OrgSsoIdentifier = orgSsoIdentifier,
             MasterPasswordHint = masterPasswordHint

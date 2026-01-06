@@ -80,11 +80,11 @@ public interface IUserRepository : IRepository<User, Guid>
     /// </summary>
     /// <param name="userId">The user identifier.</param>
     /// <param name="masterPasswordUnlockData">Data for unlocking with the master password.</param>
-    /// <param name="serverSideMasterPasswordHash">Server side hash of the user master password hash</param>
+    /// <param name="serverSideHashedMasterPasswordAuthenticationHash">Server side hash of the user master authentication password hash</param>
     /// <param name="masterPasswordHint">Optional hint for the master password.</param>
     /// <returns>A task to complete the operation.</returns>
     UpdateUserData SetMasterPassword(Guid userId, MasterPasswordUnlockData masterPasswordUnlockData,
-        string serverSideMasterPasswordHash, string? masterPasswordHint);
+        string serverSideHashedMasterPasswordAuthenticationHash, string? masterPasswordHint);
 
     /// <summary>
     /// Updates multiple user data properties in a single transaction.

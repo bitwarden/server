@@ -511,7 +511,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
     }
 
     public UpdateUserData SetMasterPassword(Guid userId, MasterPasswordUnlockData masterPasswordUnlockData,
-        string serverSideMasterPasswordHash, string? masterPasswordHint)
+        string serverSideHashedMasterPasswordAuthenticationHash, string? masterPasswordHint)
     {
         return async (_, _) =>
         {
@@ -526,7 +526,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
             var timestamp = DateTime.UtcNow;
 
-            userEntity.MasterPassword = serverSideMasterPasswordHash;
+            userEntity.MasterPassword = serverSideHashedMasterPasswordAuthenticationHash;
             userEntity.MasterPasswordHint = masterPasswordHint;
             userEntity.Key = masterPasswordUnlockData.MasterKeyWrappedUserKey;
             userEntity.Kdf = masterPasswordUnlockData.Kdf.KdfType;

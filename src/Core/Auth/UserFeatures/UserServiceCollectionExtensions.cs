@@ -3,8 +3,6 @@ using Bit.Core.Auth.UserFeatures.DeviceTrust;
 using Bit.Core.Auth.UserFeatures.Registration;
 using Bit.Core.Auth.UserFeatures.Registration.Implementations;
 using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
-using Bit.Core.Auth.UserFeatures.TdeOnboardingPassword;
-using Bit.Core.Auth.UserFeatures.TdeOnboardingPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword;
@@ -28,7 +26,6 @@ public static class UserServiceCollectionExtensions
         services.AddUserPasswordCommands();
         services.AddUserRegistrationCommands();
         services.AddWebAuthnLoginCommands();
-        services.AddTdeOnboardingPasswordCommands();
         services.AddTdeOffboardingPasswordCommands();
         services.AddTwoFactorQueries();
         services.AddSsoQueries();
@@ -48,11 +45,7 @@ public static class UserServiceCollectionExtensions
     {
         services.AddScoped<ISetInitialMasterPasswordCommand, SetInitialMasterPasswordCommand>();
         services.AddScoped<ISetInitialMasterPasswordCommandV1, SetInitialMasterPasswordCommandV1>();
-    }
-
-    private static void AddTdeOnboardingPasswordCommands(this IServiceCollection services)
-    {
-        services.AddScoped<ITdeOnboardingPasswordCommand, TdeOnboardingPasswordCommand>();
+        services.AddScoped<ITdeSetPasswordCommand, TdeSetPasswordCommand>();
     }
 
     private static void AddTdeOffboardingPasswordCommands(this IServiceCollection services)
