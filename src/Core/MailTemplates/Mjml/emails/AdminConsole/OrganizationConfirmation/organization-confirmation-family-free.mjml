@@ -10,7 +10,7 @@
         img-src="https://assets.bitwarden.com/email/v1/spot-family-homes.png"
         title="You can now share passwords with members of {{OrganizationName}}!"
         button-text="Log in"
-        button-url="https://vault.bitwarden.com"
+        button-url="{{WebVaultUrl}}"
       />
     </mj-wrapper>
 
