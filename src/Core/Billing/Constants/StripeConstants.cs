@@ -66,8 +66,10 @@ public static class StripeConstants
     public static class MetadataKeys
     {
         public const string BraintreeCustomerId = "btCustomerId";
+        public const string BraintreeTransactionId = "btTransactionId";
         public const string InvoiceApproved = "invoice_approved";
         public const string OrganizationId = "organizationId";
+        public const string PayPalTransactionId = "btPayPalTransactionId";
         public const string PreviousAdditionalStorage = "previous_additional_storage";
         public const string PreviousPeriodEndDate = "previous_period_end_date";
         public const string PreviousPremiumPriceId = "previous_premium_price_id";
