@@ -456,12 +456,13 @@ public class UpgradePremiumToOrganizationCommandTests
         // Assert
         Assert.True(result.IsT0);
 
-        // Verify that BOTH legacy items (seat + storage) are deleted
+        // Verify that BOTH legacy items (password manager + storage) are deleted by ID
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
             "sub_123",
             Arg.Is<SubscriptionUpdateOptions>(opts =>
-                opts.Items.Count == 3 && // 2 deleted (legacy seat + legacy storage) + 1 new seat
-                opts.Items.Count(i => i.Deleted == true) == 2 && // Both legacy items deleted
+                opts.Items.Count == 3 && // 2 deleted (legacy PM + legacy storage) + 1 new seat
+                opts.Items.Count(i => i.Deleted == true && i.Id == "si_premium_legacy") == 1 && // Legacy PM deleted
+                opts.Items.Count(i => i.Deleted == true && i.Id == "si_storage_legacy") == 1 && // Legacy storage deleted
                 opts.Items.Any(i => i.Price == "teams-seat-annually" && i.Quantity == 1)));
     }
 
@@ -522,18 +523,19 @@ public class UpgradePremiumToOrganizationCommandTests
         // Assert
         Assert.True(result.IsT0);
 
-        // Verify that ONLY premium items are deleted, other products are preserved
+        // Verify that ONLY the premium password manager item is deleted (not other products)
+        // Note: We delete the specific premium item by ID, so other products are untouched
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
             "sub_123",
             Arg.Is<SubscriptionUpdateOptions>(opts =>
-                opts.Items.Count == 2 && // 1 deleted (premium) + 1 new seat (other product item NOT in update)
-                opts.Items.Count(i => i.Deleted == true) == 1 && // Only premium item deleted
-                opts.Items.Count(i => i.Id == "si_other_product") == 0 && // Other product NOT touched
+                opts.Items.Count == 2 && // 1 deleted (premium password manager) + 1 new seat
+                opts.Items.Count(i => i.Deleted == true && i.Id == "si_premium") == 1 && // Premium item deleted by ID
+                opts.Items.Count(i => i.Id == "si_other_product") == 0 && // Other product NOT in update (untouched)
                 opts.Items.Any(i => i.Price == "teams-seat-annually" && i.Quantity == 1)));
     }
 
     [Theory, BitAutoData]
-    public async Task Run_NoAvailablePremiumPlan_ThrowsBadRequest(User user)
+    public async Task Run_NoPremiumSubscriptionItemFound_ReturnsBadRequest(User user)
     {
         // Arrange
         user.Premium = true;
@@ -548,8 +550,8 @@ public class UpgradePremiumToOrganizationCommandTests
                 {
                     new SubscriptionItem
                     {
-                        Id = "si_premium",
-                        Price = new Price { Id = "premium-annually-2020" },
+                        Id = "si_other",
+                        Price = new Price { Id = "some-other-product" }, // Not a premium plan
                         CurrentPeriodEnd = DateTime.UtcNow.AddMonths(1)
                     }
                 }
@@ -557,16 +559,11 @@ public class UpgradePremiumToOrganizationCommandTests
             Metadata = new Dictionary<string, string>()
         };
 
-        // All plans are legacy (none available)
-        var allLegacyPlans = new List<PremiumPlan>
-        {
-            CreateTestPremiumPlan("premium-annually-2020", "personal-storage-gb-annually-2020", available: false),
-            CreateTestPremiumPlan("premium-annually-2019", "personal-storage-gb-annually-2019", available: false)
-        };
+        var mockPremiumPlans = CreateTestPremiumPlansList();
 
         _stripeAdapter.GetSubscriptionAsync("sub_123")
             .Returns(mockSubscription);
-        _pricingClient.ListPremiumPlans().Returns(allLegacyPlans);
+        _pricingClient.ListPremiumPlans().Returns(mockPremiumPlans);
 
         // Act
         var result = await _command.Run(user, "My Organization", "encrypted-key", PlanType.TeamsAnnually);
@@ -574,6 +571,6 @@ public class UpgradePremiumToOrganizationCommandTests
         // Assert
         Assert.True(result.IsT1);
         var badRequest = result.AsT1;
-        Assert.Equal("No available premium plan found.", badRequest.Response);
+        Assert.Equal("Premium subscription item not found.", badRequest.Response);
     }
 }

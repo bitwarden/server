@@ -65,19 +65,19 @@ public class UpgradePremiumToOrganizationCommand(
         // Fetch the current Premium subscription from Stripe
         var currentSubscription = await stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId);
 
-        // Get ALL premium plans (including legacy plans) to identify which price IDs to delete
+        // Fetch all premium plans to find which specific plan the user is on
         var premiumPlans = await pricingClient.ListPremiumPlans();
-        var availablePremiumPlan = premiumPlans.FirstOrDefault(p => p.Available);
 
-        if (availablePremiumPlan == null)
+        // Find the password manager subscription item (seat, not storage) and match it to a plan
+        var passwordManagerItem = currentSubscription.Items.Data.FirstOrDefault(i =>
+            premiumPlans.Any(p => p.Seat.StripePriceId == i.Price.Id));
+
+        if (passwordManagerItem == null)
         {
-            return new BadRequest("No available premium plan found.");
+            return new BadRequest("Premium subscription item not found.");
         }
 
-        // Build list of ALL premium price IDs (seat + storage for all plans, including legacy)
-        var premiumPriceIds = premiumPlans
-            .SelectMany(p => new[] { p.Seat.StripePriceId, p.Storage.StripePriceId })
-            .ToHashSet();
+        var usersPremiumPlan = premiumPlans.First(p => p.Seat.StripePriceId == passwordManagerItem.Price.Id);
 
         // Get the target organization plan
         var targetPlan = await pricingClient.GetPlanOrThrow(targetPlanType);
@@ -85,19 +85,24 @@ public class UpgradePremiumToOrganizationCommand(
         // Build the list of subscription item updates
         var subscriptionItemOptions = new List<SubscriptionItemOptions>();
 
-        // Mark existing Premium subscription items for deletion
-        // Only delete Premium and storage items (including legacy plans), not other potential subscription items
-        foreach (var item in currentSubscription.Items.Data)
+        // Delete the user's specific password manager item
+        subscriptionItemOptions.Add(new SubscriptionItemOptions
         {
-            var priceId = item.Price.Id;
-            if (premiumPriceIds.Contains(priceId))
+            Id = passwordManagerItem.Id,
+            Deleted = true
+        });
+
+        // Delete the storage item if it exists for this user's plan
+        var storageItem = currentSubscription.Items.Data.FirstOrDefault(i =>
+            i.Price.Id == usersPremiumPlan.Storage.StripePriceId);
+
+        if (storageItem != null)
+        {
+            subscriptionItemOptions.Add(new SubscriptionItemOptions
             {
-                subscriptionItemOptions.Add(new SubscriptionItemOptions
-                {
-                    Id = item.Id,
-                    Deleted = true
-                });
-            }
+                Id = storageItem.Id,
+                Deleted = true
+            });
         }
 
         // Add new organization subscription items
@@ -129,7 +134,7 @@ public class UpgradePremiumToOrganizationCommand(
             Metadata = new Dictionary<string, string>
             {
                 [StripeConstants.MetadataKeys.OrganizationId] = organizationId.ToString(),
-                [StripeConstants.MetadataKeys.PreviousPremiumPriceId] = availablePremiumPlan.Seat.StripePriceId,
+                [StripeConstants.MetadataKeys.PreviousPremiumPriceId] = usersPremiumPlan.Seat.StripePriceId,
                 [StripeConstants.MetadataKeys.PreviousPeriodEndDate] = currentSubscription.GetCurrentPeriodEnd()?.ToString("O") ?? string.Empty,
                 [StripeConstants.MetadataKeys.UserId] = string.Empty // Remove userId to unlink subscription from User
             }
