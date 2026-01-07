@@ -71,7 +71,6 @@ public class AccountBillingVNextController(
     }
 
     [HttpPost("subscription")]
-    [RequireFeature(FeatureFlagKeys.PM24996ImplementUpgradeFromFreeDialog)]
     [InjectUser]
     public async Task<IResult> CreateSubscriptionAsync(
         [BindNever] User user,
