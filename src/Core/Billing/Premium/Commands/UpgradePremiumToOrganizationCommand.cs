@@ -151,7 +151,7 @@ public class UpgradePremiumToOrganizationCommand(
             UseCustomPermissions = targetPlan.HasCustomPermissions,
             UseScim = targetPlan.HasScim,
             Plan = targetPlan.Name,
-            Gateway = null,
+            Gateway = GatewayType.Stripe,
             Enabled = true,
             LicenseKey = CoreHelpers.SecureRandomString(20),
             CreationDate = DateTime.UtcNow,

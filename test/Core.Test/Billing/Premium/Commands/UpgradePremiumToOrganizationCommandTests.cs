@@ -247,6 +247,7 @@ public class UpgradePremiumToOrganizationCommandTests
 
         await _organizationRepository.Received(1).CreateAsync(Arg.Is<Organization>(o =>
             o.Name == "My Organization" &&
+            o.Gateway == GatewayType.Stripe &&
             o.GatewaySubscriptionId == "sub_123" &&
             o.GatewayCustomerId == "cus_123"));
         await _organizationUserRepository.Received(1).CreateAsync(Arg.Is<OrganizationUser>(ou =>
