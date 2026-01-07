@@ -19,12 +19,17 @@ public class PolicyDataValidatorTests
     [Fact]
     public void ValidateAndSerialize_ValidData_ReturnsSerializedJson()
     {
-        var data = new Dictionary<string, object> { { "minLength", 12 } };
+        var data = new Dictionary<string, object>
+        {
+            { "minLength", 12 },
+            { "minComplexity", 4 }
+        };
 
         var result = PolicyDataValidator.ValidateAndSerialize(data, PolicyType.MasterPassword);
 
         Assert.NotNull(result);
         Assert.Contains("\"minLength\":12", result);
+        Assert.Contains("\"minComplexity\":4", result);
     }
 
     [Fact]
@@ -55,5 +60,27 @@ public class PolicyDataValidatorTests
         var result = PolicyDataValidator.ValidateAndDeserializeMetadata(metadata, PolicyType.OrganizationDataOwnership);
 
         Assert.IsType<OrganizationModelOwnershipPolicyModel>(result);
+    }
+
+    [Fact]
+    public void ValidateAndSerialize_ExcessiveMinLength_ThrowsBadRequestException()
+    {
+        var data = new Dictionary<string, object> { { "minLength", 129 } };
+
+        var exception = Assert.Throws<BadRequestException>(() =>
+            PolicyDataValidator.ValidateAndSerialize(data, PolicyType.MasterPassword));
+
+        Assert.Contains("Invalid data for MasterPassword policy", exception.Message);
+    }
+
+    [Fact]
+    public void ValidateAndSerialize_ExcessiveMinComplexity_ThrowsBadRequestException()
+    {
+        var data = new Dictionary<string, object> { { "minComplexity", 5 } };
+
+        var exception = Assert.Throws<BadRequestException>(() =>
+            PolicyDataValidator.ValidateAndSerialize(data, PolicyType.MasterPassword));
+
+        Assert.Contains("Invalid data for MasterPassword policy", exception.Message);
     }
 }
