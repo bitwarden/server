@@ -1,11 +1,14 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 namespace Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 
 public class MasterPasswordPolicyData : IPolicyDataModel
 {
     [JsonPropertyName("minComplexity")]
+    [Range(0, 4)]
     public int? MinComplexity { get; set; }
     [JsonPropertyName("minLength")]
+    [Range(12, 128)]
     public int? MinLength { get; set; }
     [JsonPropertyName("requireLower")]
     public bool? RequireLower { get; set; }
