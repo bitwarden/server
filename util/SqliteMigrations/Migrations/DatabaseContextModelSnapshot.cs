@@ -224,6 +224,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool>("UseDirectory")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("UseDisableSmAdsForUsers")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("UseEvents")
                         .HasColumnType("INTEGER");
 
@@ -2303,7 +2306,7 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime?>("ArchivedDate")
+                    b.Property<string>("Archives")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Attachments")

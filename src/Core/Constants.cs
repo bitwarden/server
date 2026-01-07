@@ -163,6 +163,7 @@ public static class FeatureFlagKeys
         "pm-23174-manage-account-recovery-permission-drives-the-need-to-set-master-password";
     public const string MJMLBasedEmailTemplates = "mjml-based-email-templates";
     public const string MjmlWelcomeEmailTemplates = "pm-21741-mjml-welcome-email";
+    public const string OrganizationConfirmationEmail = "pm-28402-update-confirmed-to-org-email-template";
     public const string MarketingInitiatedPremiumFlow = "pm-26140-marketing-initiated-premium-flow";
     public const string RedirectOnSsoRequired = "pm-1632-redirect-on-sso-required";
 
@@ -178,7 +179,6 @@ public static class FeatureFlagKeys
     /* Billing Team */
     public const string TrialPayment = "PM-8163-trial-payment";
     public const string PM25379_UseNewOrganizationMetadataStructure = "pm-25379-use-new-organization-metadata-structure";
-    public const string PM24996ImplementUpgradeFromFreeDialog = "pm-24996-implement-upgrade-from-free-dialog";
     public const string PM24032_NewNavigationPremiumUpgradeButton = "pm-24032-new-navigation-premium-upgrade-button";
     public const string PM23713_PremiumBadgeOpensNewPremiumUpgradeDialog = "pm-23713-premium-badge-opens-new-premium-upgrade-dialog";
     public const string PM26793_FetchPremiumPriceFromPricingService = "pm-26793-fetch-premium-price-from-pricing-service";
@@ -257,6 +257,7 @@ public static class FeatureFlagKeys
     public const string VaultLoadingSkeletons = "pm-25081-vault-skeleton-loaders";
     public const string BrowserPremiumSpotlight = "pm-23384-browser-premium-spotlight";
     public const string MigrateMyVaultToMyItems = "pm-20558-migrate-myvault-to-myitems";
+    public const string PM27632_CipherCrudOperationsToSdk = "pm-27632-cipher-crud-operations-to-sdk";
 
     /* Innovation Team */
     public const string ArchiveVaultItems = "pm-19148-innovation-archive";
@@ -267,6 +268,9 @@ public static class FeatureFlagKeys
 
     /* UIF Team */
     public const string RouterFocusManagement = "router-focus-management";
+
+    /* Secrets Manager Team */
+    public const string SM1719_RemoveSecretsManagerAds = "sm-1719-remove-secrets-manager-ads";
 
     public static List<string> GetAllKeys()
     {
