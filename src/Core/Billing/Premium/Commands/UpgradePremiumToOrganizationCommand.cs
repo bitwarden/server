@@ -65,8 +65,19 @@ public class UpgradePremiumToOrganizationCommand(
         // Fetch the current Premium subscription from Stripe
         var currentSubscription = await stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId);
 
-        // Get the premium plan to identify which price IDs to delete
-        var premiumPlan = await pricingClient.GetAvailablePremiumPlan();
+        // Get ALL premium plans (including legacy plans) to identify which price IDs to delete
+        var premiumPlans = await pricingClient.ListPremiumPlans();
+        var availablePremiumPlan = premiumPlans.FirstOrDefault(p => p.Available);
+
+        if (availablePremiumPlan == null)
+        {
+            return new BadRequest("No available premium plan found.");
+        }
+
+        // Build list of ALL premium price IDs (seat + storage for all plans, including legacy)
+        var premiumPriceIds = premiumPlans
+            .SelectMany(p => new[] { p.Seat.StripePriceId, p.Storage.StripePriceId })
+            .ToHashSet();
 
         // Get the target organization plan
         var targetPlan = await pricingClient.GetPlanOrThrow(targetPlanType);
@@ -75,14 +86,11 @@ public class UpgradePremiumToOrganizationCommand(
         var subscriptionItemOptions = new List<SubscriptionItemOptions>();
 
         // Mark existing Premium subscription items for deletion
-        // Only delete Premium and storage items, not other potential subscription items
+        // Only delete Premium and storage items (including legacy plans), not other potential subscription items
         foreach (var item in currentSubscription.Items.Data)
         {
             var priceId = item.Price.Id;
-            var isPremiumItem = priceId == premiumPlan.Seat.StripePriceId;
-            var isStorageItem = priceId == premiumPlan.Storage.StripePriceId;
-
-            if (isPremiumItem || isStorageItem)
+            if (premiumPriceIds.Contains(priceId))
             {
                 subscriptionItemOptions.Add(new SubscriptionItemOptions
                 {
@@ -121,7 +129,7 @@ public class UpgradePremiumToOrganizationCommand(
             Metadata = new Dictionary<string, string>
             {
                 [StripeConstants.MetadataKeys.OrganizationId] = organizationId.ToString(),
-                [StripeConstants.MetadataKeys.PreviousPremiumPriceId] = premiumPlan.Seat.StripePriceId,
+                [StripeConstants.MetadataKeys.PreviousPremiumPriceId] = availablePremiumPlan.Seat.StripePriceId,
                 [StripeConstants.MetadataKeys.PreviousPeriodEndDate] = currentSubscription.GetCurrentPeriodEnd()?.ToString("O") ?? string.Empty,
                 [StripeConstants.MetadataKeys.UserId] = string.Empty // Remove userId to unlink subscription from User
             }

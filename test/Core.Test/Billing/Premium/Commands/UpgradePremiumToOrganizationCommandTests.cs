@@ -93,13 +93,14 @@ public class UpgradePremiumToOrganizationCommandTests
 
     private static PremiumPlan CreateTestPremiumPlan(
         string seatPriceId = "premium-annually",
-        string storagePriceId = "personal-storage-gb-annually")
+        string storagePriceId = "personal-storage-gb-annually",
+        bool available = true)
     {
         return new PremiumPlan
         {
             Name = "Premium",
             LegacyYear = null,
-            Available = true,
+            Available = available,
             Seat = new PremiumPurchasable
             {
                 StripePriceId = seatPriceId,
@@ -112,6 +113,17 @@ public class UpgradePremiumToOrganizationCommandTests
                 Price = 4m,
                 Provided = 1
             }
+        };
+    }
+
+    private static List<PremiumPlan> CreateTestPremiumPlansList()
+    {
+        return new List<PremiumPlan>
+        {
+            // Current available plan
+            CreateTestPremiumPlan("premium-annually", "personal-storage-gb-annually", available: true),
+            // Legacy plan from 2020
+            CreateTestPremiumPlan("premium-annually-2020", "personal-storage-gb-annually-2020", available: false)
         };
     }
 
@@ -214,7 +226,7 @@ public class UpgradePremiumToOrganizationCommandTests
             Metadata = new Dictionary<string, string>()
         };
 
-        var mockPremiumPlan = CreateTestPremiumPlan();
+        var mockPremiumPlans = CreateTestPremiumPlansList();
         var mockPlan = CreateTestPlan(
             PlanType.TeamsAnnually,
             stripeSeatPlanId: "teams-seat-annually"
@@ -222,7 +234,7 @@ public class UpgradePremiumToOrganizationCommandTests
 
         _stripeAdapter.GetSubscriptionAsync("sub_123")
             .Returns(mockSubscription);
-        _pricingClient.GetAvailablePremiumPlan().Returns(mockPremiumPlan);
+        _pricingClient.ListPremiumPlans().Returns(mockPremiumPlans);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
         _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
             .Returns(Task.FromResult(mockSubscription));
@@ -288,7 +300,7 @@ public class UpgradePremiumToOrganizationCommandTests
             Metadata = new Dictionary<string, string>()
         };
 
-        var mockPremiumPlan = CreateTestPremiumPlan();
+        var mockPremiumPlans = CreateTestPremiumPlansList();
         var mockPlan = CreateTestPlan(
             PlanType.FamiliesAnnually,
             stripePlanId: "families-plan-annually",
@@ -297,7 +309,7 @@ public class UpgradePremiumToOrganizationCommandTests
 
         _stripeAdapter.GetSubscriptionAsync("sub_123")
             .Returns(mockSubscription);
-        _pricingClient.GetAvailablePremiumPlan().Returns(mockPremiumPlan);
+        _pricingClient.ListPremiumPlans().Returns(mockPremiumPlans);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(mockPlan);
         _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
             .Returns(Task.FromResult(mockSubscription));
@@ -356,7 +368,7 @@ public class UpgradePremiumToOrganizationCommandTests
             }
         };
 
-        var mockPremiumPlan = CreateTestPremiumPlan();
+        var mockPremiumPlans = CreateTestPremiumPlansList();
         var mockPlan = CreateTestPlan(
             PlanType.TeamsAnnually,
             stripeSeatPlanId: "teams-seat-annually"
@@ -364,7 +376,7 @@ public class UpgradePremiumToOrganizationCommandTests
 
         _stripeAdapter.GetSubscriptionAsync("sub_123")
             .Returns(mockSubscription);
-        _pricingClient.GetAvailablePremiumPlan().Returns(mockPremiumPlan);
+        _pricingClient.ListPremiumPlans().Returns(mockPremiumPlans);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
         _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
             .Returns(Task.FromResult(mockSubscription));
@@ -385,5 +397,183 @@ public class UpgradePremiumToOrganizationCommandTests
                 opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.PreviousPeriodEndDate) &&
                 opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.UserId) &&
                 opts.Metadata[StripeConstants.MetadataKeys.UserId] == string.Empty)); // Removes userId to unlink from User
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_UserOnLegacyPremiumPlan_SuccessfullyDeletesLegacyItems(User user)
+    {
+        // Arrange
+        user.Premium = true;
+        user.GatewaySubscriptionId = "sub_123";
+        user.GatewayCustomerId = "cus_123";
+
+        var currentPeriodEnd = DateTime.UtcNow.AddMonths(1);
+        var mockSubscription = new Subscription
+        {
+            Id = "sub_123",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = new List<SubscriptionItem>
+                {
+                    new SubscriptionItem
+                    {
+                        Id = "si_premium_legacy",
+                        Price = new Price { Id = "premium-annually-2020" }, // Legacy price ID
+                        CurrentPeriodEnd = currentPeriodEnd
+                    },
+                    new SubscriptionItem
+                    {
+                        Id = "si_storage_legacy",
+                        Price = new Price { Id = "personal-storage-gb-annually-2020" }, // Legacy storage price ID
+                        CurrentPeriodEnd = currentPeriodEnd
+                    }
+                }
+            },
+            Metadata = new Dictionary<string, string>()
+        };
+
+        var mockPremiumPlans = CreateTestPremiumPlansList();
+        var mockPlan = CreateTestPlan(
+            PlanType.TeamsAnnually,
+            stripeSeatPlanId: "teams-seat-annually"
+        );
+
+        _stripeAdapter.GetSubscriptionAsync("sub_123")
+            .Returns(mockSubscription);
+        _pricingClient.ListPremiumPlans().Returns(mockPremiumPlans);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
+        _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
+            .Returns(Task.FromResult(mockSubscription));
+        _organizationRepository.CreateAsync(Arg.Any<Organization>()).Returns(callInfo => Task.FromResult(callInfo.Arg<Organization>()));
+        _organizationApiKeyRepository.CreateAsync(Arg.Any<OrganizationApiKey>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationApiKey>()));
+        _organizationUserRepository.CreateAsync(Arg.Any<OrganizationUser>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationUser>()));
+        _applicationCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
+        _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _command.Run(user, "My Organization", "encrypted-key", PlanType.TeamsAnnually);
+
+        // Assert
+        Assert.True(result.IsT0);
+
+        // Verify that BOTH legacy items (seat + storage) are deleted
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            "sub_123",
+            Arg.Is<SubscriptionUpdateOptions>(opts =>
+                opts.Items.Count == 3 && // 2 deleted (legacy seat + legacy storage) + 1 new seat
+                opts.Items.Count(i => i.Deleted == true) == 2 && // Both legacy items deleted
+                opts.Items.Any(i => i.Price == "teams-seat-annually" && i.Quantity == 1)));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_UserHasPremiumPlusOtherProducts_OnlyDeletesPremiumItems(User user)
+    {
+        // Arrange
+        user.Premium = true;
+        user.GatewaySubscriptionId = "sub_123";
+        user.GatewayCustomerId = "cus_123";
+
+        var currentPeriodEnd = DateTime.UtcNow.AddMonths(1);
+        var mockSubscription = new Subscription
+        {
+            Id = "sub_123",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = new List<SubscriptionItem>
+                {
+                    new SubscriptionItem
+                    {
+                        Id = "si_premium",
+                        Price = new Price { Id = "premium-annually" },
+                        CurrentPeriodEnd = currentPeriodEnd
+                    },
+                    new SubscriptionItem
+                    {
+                        Id = "si_other_product",
+                        Price = new Price { Id = "some-other-product-id" }, // Non-premium item
+                        CurrentPeriodEnd = currentPeriodEnd
+                    }
+                }
+            },
+            Metadata = new Dictionary<string, string>()
+        };
+
+        var mockPremiumPlans = CreateTestPremiumPlansList();
+        var mockPlan = CreateTestPlan(
+            PlanType.TeamsAnnually,
+            stripeSeatPlanId: "teams-seat-annually"
+        );
+
+        _stripeAdapter.GetSubscriptionAsync("sub_123")
+            .Returns(mockSubscription);
+        _pricingClient.ListPremiumPlans().Returns(mockPremiumPlans);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
+        _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
+            .Returns(Task.FromResult(mockSubscription));
+        _organizationRepository.CreateAsync(Arg.Any<Organization>()).Returns(callInfo => Task.FromResult(callInfo.Arg<Organization>()));
+        _organizationApiKeyRepository.CreateAsync(Arg.Any<OrganizationApiKey>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationApiKey>()));
+        _organizationUserRepository.CreateAsync(Arg.Any<OrganizationUser>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationUser>()));
+        _applicationCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
+        _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _command.Run(user, "My Organization", "encrypted-key", PlanType.TeamsAnnually);
+
+        // Assert
+        Assert.True(result.IsT0);
+
+        // Verify that ONLY premium items are deleted, other products are preserved
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            "sub_123",
+            Arg.Is<SubscriptionUpdateOptions>(opts =>
+                opts.Items.Count == 2 && // 1 deleted (premium) + 1 new seat (other product item NOT in update)
+                opts.Items.Count(i => i.Deleted == true) == 1 && // Only premium item deleted
+                opts.Items.Count(i => i.Id == "si_other_product") == 0 && // Other product NOT touched
+                opts.Items.Any(i => i.Price == "teams-seat-annually" && i.Quantity == 1)));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_NoAvailablePremiumPlan_ThrowsBadRequest(User user)
+    {
+        // Arrange
+        user.Premium = true;
+        user.GatewaySubscriptionId = "sub_123";
+
+        var mockSubscription = new Subscription
+        {
+            Id = "sub_123",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = new List<SubscriptionItem>
+                {
+                    new SubscriptionItem
+                    {
+                        Id = "si_premium",
+                        Price = new Price { Id = "premium-annually-2020" },
+                        CurrentPeriodEnd = DateTime.UtcNow.AddMonths(1)
+                    }
+                }
+            },
+            Metadata = new Dictionary<string, string>()
+        };
+
+        // All plans are legacy (none available)
+        var allLegacyPlans = new List<PremiumPlan>
+        {
+            CreateTestPremiumPlan("premium-annually-2020", "personal-storage-gb-annually-2020", available: false),
+            CreateTestPremiumPlan("premium-annually-2019", "personal-storage-gb-annually-2019", available: false)
+        };
+
+        _stripeAdapter.GetSubscriptionAsync("sub_123")
+            .Returns(mockSubscription);
+        _pricingClient.ListPremiumPlans().Returns(allLegacyPlans);
+
+        // Act
+        var result = await _command.Run(user, "My Organization", "encrypted-key", PlanType.TeamsAnnually);
+
+        // Assert
+        Assert.True(result.IsT1);
+        var badRequest = result.AsT1;
+        Assert.Equal("No available premium plan found.", badRequest.Response);
     }
 }
