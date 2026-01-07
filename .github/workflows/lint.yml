@@ -25,6 +25,6 @@ jobs:
           persist-credentials: false
 
       - name: Lint with MegaLinter
-        uses: oxsecurity/megalinter/flavors/dotnetweb@55a59b24a441e0e1943080d4a512d827710d4a9d # v9.2.0
+        uses: oxsecurity/megalinter/flavors/dotnetweb@42bb470545e359597e7f12156947c436e4e3fb9a # v9.3.0
         env:
           VALIDATE_ALL_CODEBASE: false
