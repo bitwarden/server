@@ -18,7 +18,8 @@
     @DeletedDate DATETIME2(7),
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
-    @ArchivedDate DATETIME2(7) = NULL
+    @ArchivedDate DATETIME2(7) = NULL,
+    @Archives NVARCHAR(MAX) = NULL -- not used
 AS
 BEGIN
     SET NOCOUNT ON
@@ -40,7 +41,7 @@ BEGIN
         [DeletedDate],
         [Reprompt],
         [Key],
-        [ArchivedDate]
+        [Archives]
     )
     VALUES
     (
@@ -56,7 +57,7 @@ BEGIN
         @DeletedDate,
         @Reprompt,
         @Key,
-        @ArchivedDate
+        CASE WHEN @ArchivedDate IS NOT NULL THEN CONCAT('{', @UserIdKey, ':"', CONVERT(NVARCHAR(30), @ArchivedDate, 127), '"}') ELSE NULL END
     )
 
     IF @OrganizationId IS NOT NULL
