@@ -166,6 +166,7 @@ public static class FeatureFlagKeys
     public const string OrganizationConfirmationEmail = "pm-28402-update-confirmed-to-org-email-template";
     public const string MarketingInitiatedPremiumFlow = "pm-26140-marketing-initiated-premium-flow";
     public const string RedirectOnSsoRequired = "pm-1632-redirect-on-sso-required";
+    public const string PrefetchPasswordPrelogin = "pm-23801-prefetch-password-prelogin";
 
     /* Autofill Team */
     public const string SSHAgent = "ssh-agent";
