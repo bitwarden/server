@@ -25,10 +25,12 @@ public interface IUpgradePremiumToOrganizationCommand
     /// Upgrades a Premium subscription to an Organization subscription.
     /// </summary>
     /// <param name="user">The user with an active Premium subscription to upgrade.</param>
+    /// <param name="organizationName">The name for the new organization.</param>
     /// <param name="targetPlanType">The target organization plan type to upgrade to.</param>
     /// <returns>A billing command result indicating success or failure with appropriate error details.</returns>
     Task<BillingCommandResult<None>> Run(
         User user,
+        string organizationName,
         PlanType targetPlanType);
 }
 
@@ -45,6 +47,7 @@ public class UpgradePremiumToOrganizationCommand(
 {
     public Task<BillingCommandResult<None>> Run(
         User user,
+        string organizationName,
         PlanType targetPlanType) => HandleAsync<None>(async () =>
     {
         // Validate that the user has an active Premium subscription
@@ -53,12 +56,14 @@ public class UpgradePremiumToOrganizationCommand(
             return new BadRequest("User does not have an active Premium subscription.");
         }
 
-        // Hardcode seats to 1 and storage to null for upgrade flow
+        // Hardcode seats to 1 for upgrade flow
         const int seats = 1;
-        int? storage = null;
 
         // Fetch the current Premium subscription from Stripe
         var currentSubscription = await stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId);
+
+        // Get the premium plan to identify which price IDs to delete
+        var premiumPlan = await pricingClient.GetAvailablePremiumPlan();
 
         // Get the target organization plan
         var targetPlan = await pricingClient.GetPlanOrThrow(targetPlanType);
@@ -71,8 +76,8 @@ public class UpgradePremiumToOrganizationCommand(
         foreach (var item in currentSubscription.Items.Data)
         {
             var priceId = item.Price.Id;
-            var isPremiumItem = priceId == StripeConstants.Prices.PremiumAnnually;
-            var isStorageItem = priceId == StripeConstants.Prices.StoragePlanPersonal;
+            var isPremiumItem = priceId == premiumPlan.Seat.StripePriceId;
+            var isStorageItem = priceId == premiumPlan.Storage.StripePriceId;
 
             if (isPremiumItem || isStorageItem)
             {
@@ -102,25 +107,18 @@ public class UpgradePremiumToOrganizationCommand(
             });
         }
 
-        if (storage is > 0)
-        {
-            subscriptionItemOptions.Add(new SubscriptionItemOptions
-            {
-                Price = targetPlan.PasswordManager.StripeStoragePlanId,
-                Quantity = storage
-            });
-        }
+        // Generate organization ID early to include in metadata
+        var organizationId = CoreHelpers.GenerateComb();
 
         // Build the subscription update options
         var subscriptionUpdateOptions = new SubscriptionUpdateOptions
         {
             Items = subscriptionItemOptions,
             ProrationBehavior = StripeConstants.ProrationBehavior.None,
-            Metadata = new Dictionary<string, string>(currentSubscription.Metadata ?? new Dictionary<string, string>())
+            Metadata = new Dictionary<string, string>
             {
-                [StripeConstants.MetadataKeys.PreviousPremiumPriceId] = currentSubscription.Items.Data
-                    .Select(item => item.Price.Id)
-                    .FirstOrDefault() ?? "premium",
+                [StripeConstants.MetadataKeys.OrganizationId] = organizationId.ToString(),
+                [StripeConstants.MetadataKeys.PreviousPremiumPriceId] = premiumPlan.Seat.StripePriceId,
                 [StripeConstants.MetadataKeys.PreviousPeriodEndDate] = currentSubscription.GetCurrentPeriodEnd()?.ToString("O") ?? string.Empty
             }
         };
@@ -128,13 +126,13 @@ public class UpgradePremiumToOrganizationCommand(
         // Create the Organization entity
         var organization = new Organization
         {
-            Id = CoreHelpers.GenerateComb(),
-            Name = $"{user.Email}'s Organization",
+            Id = organizationId,
+            Name = organizationName,
             BillingEmail = user.Email,
             PlanType = targetPlan.Type,
             Seats = (short)seats,
             MaxCollections = targetPlan.PasswordManager.MaxCollections,
-            MaxStorageGb = (short)(targetPlan.PasswordManager.BaseStorageGb + (storage ?? 0)),
+            MaxStorageGb = targetPlan.PasswordManager.BaseStorageGb,
             UsePolicies = targetPlan.HasPolicies,
             UseSso = targetPlan.HasSso,
             UseGroups = targetPlan.HasGroups,

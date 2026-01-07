@@ -12,6 +12,8 @@ using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Stripe;
 using Xunit;
+using PremiumPlan = Bit.Core.Billing.Pricing.Premium.Plan;
+using PremiumPurchasable = Bit.Core.Billing.Pricing.Premium.Purchasable;
 
 namespace Bit.Core.Test.Billing.Premium.Commands;
 
@@ -88,6 +90,30 @@ public class UpgradePremiumToOrganizationCommandTests
         return new TestPlan(planType, stripePlanId, stripeSeatPlanId, stripePremiumAccessPlanId, stripeStoragePlanId);
     }
 
+    private static PremiumPlan CreateTestPremiumPlan(
+        string seatPriceId = "premium-annually",
+        string storagePriceId = "personal-storage-gb-annually")
+    {
+        return new PremiumPlan
+        {
+            Name = "Premium",
+            LegacyYear = null,
+            Available = true,
+            Seat = new PremiumPurchasable
+            {
+                StripePriceId = seatPriceId,
+                Price = 10m,
+                Provided = 1
+            },
+            Storage = new PremiumPurchasable
+            {
+                StripePriceId = storagePriceId,
+                Price = 4m,
+                Provided = 1
+            }
+        };
+    }
+
 
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
@@ -119,7 +145,7 @@ public class UpgradePremiumToOrganizationCommandTests
         user.Premium = false;
 
         // Act
-        var result = await _command.Run(user, PlanType.TeamsAnnually);
+        var result = await _command.Run(user, "My Organization", PlanType.TeamsAnnually);
 
         // Assert
         Assert.True(result.IsT1);
@@ -135,7 +161,7 @@ public class UpgradePremiumToOrganizationCommandTests
         user.GatewaySubscriptionId = null;
 
         // Act
-        var result = await _command.Run(user, PlanType.TeamsAnnually);
+        var result = await _command.Run(user, "My Organization", PlanType.TeamsAnnually);
 
         // Assert
         Assert.True(result.IsT1);
@@ -151,7 +177,7 @@ public class UpgradePremiumToOrganizationCommandTests
         user.GatewaySubscriptionId = "";
 
         // Act
-        var result = await _command.Run(user, PlanType.TeamsAnnually);
+        var result = await _command.Run(user, "My Organization", PlanType.TeamsAnnually);
 
         // Assert
         Assert.True(result.IsT1);
@@ -179,7 +205,7 @@ public class UpgradePremiumToOrganizationCommandTests
                     new SubscriptionItem
                     {
                         Id = "si_premium",
-                        Price = new Price { Id = StripeConstants.Prices.PremiumAnnually },
+                        Price = new Price { Id = "premium-annually" },
                         CurrentPeriodEnd = currentPeriodEnd
                     }
                 }
@@ -187,6 +213,7 @@ public class UpgradePremiumToOrganizationCommandTests
             Metadata = new Dictionary<string, string>()
         };
 
+        var mockPremiumPlan = CreateTestPremiumPlan();
         var mockPlan = CreateTestPlan(
             PlanType.TeamsAnnually,
             stripeSeatPlanId: "teams-seat-annually"
@@ -194,6 +221,7 @@ public class UpgradePremiumToOrganizationCommandTests
 
         _stripeAdapter.GetSubscriptionAsync("sub_123")
             .Returns(mockSubscription);
+        _pricingClient.GetAvailablePremiumPlan().Returns(mockPremiumPlan);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
         _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
             .Returns(Task.FromResult(mockSubscription));
@@ -204,7 +232,7 @@ public class UpgradePremiumToOrganizationCommandTests
         _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
 
         // Act
-        var result = await _command.Run(user, PlanType.TeamsAnnually);
+        var result = await _command.Run(user, "My Organization", PlanType.TeamsAnnually);
 
         // Assert
         Assert.True(result.IsT0);
@@ -217,6 +245,7 @@ public class UpgradePremiumToOrganizationCommandTests
                 opts.Items.Any(i => i.Price == "teams-seat-annually" && i.Quantity == 1)));
 
         await _organizationRepository.Received(1).CreateAsync(Arg.Is<Organization>(o =>
+            o.Name == "My Organization" &&
             o.GatewaySubscriptionId == "sub_123" &&
             o.GatewayCustomerId == "cus_123"));
         await _organizationUserRepository.Received(1).CreateAsync(Arg.Any<OrganizationUser>());
@@ -247,7 +276,7 @@ public class UpgradePremiumToOrganizationCommandTests
                     new SubscriptionItem
                     {
                         Id = "si_premium",
-                        Price = new Price { Id = StripeConstants.Prices.PremiumAnnually },
+                        Price = new Price { Id = "premium-annually" },
                         CurrentPeriodEnd = currentPeriodEnd
                     }
                 }
@@ -255,6 +284,7 @@ public class UpgradePremiumToOrganizationCommandTests
             Metadata = new Dictionary<string, string>()
         };
 
+        var mockPremiumPlan = CreateTestPremiumPlan();
         var mockPlan = CreateTestPlan(
             PlanType.FamiliesAnnually,
             stripePlanId: "families-plan-annually",
@@ -263,6 +293,7 @@ public class UpgradePremiumToOrganizationCommandTests
 
         _stripeAdapter.GetSubscriptionAsync("sub_123")
             .Returns(mockSubscription);
+        _pricingClient.GetAvailablePremiumPlan().Returns(mockPremiumPlan);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(mockPlan);
         _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
             .Returns(Task.FromResult(mockSubscription));
@@ -273,7 +304,7 @@ public class UpgradePremiumToOrganizationCommandTests
         _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
 
         // Act
-        var result = await _command.Run(user, PlanType.FamiliesAnnually);
+        var result = await _command.Run(user, "My Families Org", PlanType.FamiliesAnnually);
 
         // Assert
         Assert.True(result.IsT0);
@@ -285,7 +316,8 @@ public class UpgradePremiumToOrganizationCommandTests
                 opts.Items.Any(i => i.Deleted == true) &&
                 opts.Items.Any(i => i.Price == "families-plan-annually" && i.Quantity == 1)));
 
-        await _organizationRepository.Received(1).CreateAsync(Arg.Any<Organization>());
+        await _organizationRepository.Received(1).CreateAsync(Arg.Is<Organization>(o =>
+            o.Name == "My Families Org"));
         await _userService.Received(1).SaveUserAsync(Arg.Is<User>(u =>
             u.Premium == false &&
             u.GatewaySubscriptionId == null));
@@ -309,7 +341,7 @@ public class UpgradePremiumToOrganizationCommandTests
                     new SubscriptionItem
                     {
                         Id = "si_premium",
-                        Price = new Price { Id = StripeConstants.Prices.PremiumAnnually },
+                        Price = new Price { Id = "premium-annually" },
                         CurrentPeriodEnd = DateTime.UtcNow.AddMonths(1)
                     }
                 }
@@ -320,6 +352,7 @@ public class UpgradePremiumToOrganizationCommandTests
             }
         };
 
+        var mockPremiumPlan = CreateTestPremiumPlan();
         var mockPlan = CreateTestPlan(
             PlanType.TeamsAnnually,
             stripeSeatPlanId: "teams-seat-annually"
@@ -327,13 +360,14 @@ public class UpgradePremiumToOrganizationCommandTests
 
         _stripeAdapter.GetSubscriptionAsync("sub_123")
             .Returns(mockSubscription);
+        _pricingClient.GetAvailablePremiumPlan().Returns(mockPremiumPlan);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
         _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
             .Returns(Task.FromResult(mockSubscription));
         _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
 
         // Act
-        var result = await _command.Run(user, PlanType.TeamsAnnually);
+        var result = await _command.Run(user, "My Organization", PlanType.TeamsAnnually);
 
         // Assert
         Assert.True(result.IsT0);
@@ -341,9 +375,10 @@ public class UpgradePremiumToOrganizationCommandTests
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
             "sub_123",
             Arg.Is<SubscriptionUpdateOptions>(opts =>
+                opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.OrganizationId) &&
                 opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.PreviousPremiumPriceId) &&
-                opts.Metadata[StripeConstants.MetadataKeys.PreviousPremiumPriceId] == StripeConstants.Prices.PremiumAnnually &&
+                opts.Metadata[StripeConstants.MetadataKeys.PreviousPremiumPriceId] == "premium-annually" &&
                 opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.PreviousPeriodEndDate) &&
-                opts.Metadata.ContainsKey("userId"))); // Preserves existing metadata
+                !opts.Metadata.ContainsKey("userId"))); // Does NOT preserve existing metadata
     }
 }
