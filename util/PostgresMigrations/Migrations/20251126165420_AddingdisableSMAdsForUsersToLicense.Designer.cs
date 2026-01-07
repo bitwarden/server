@@ -3,6 +3,7 @@ using System;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20251126165420_AddingdisableSMAdsForUsersToLicense")]
+    partial class AddingdisableSMAdsForUsersToLicense
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -249,9 +252,6 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("UsePasswordManager")
                         .HasColumnType("boolean");
 
-                    b.Property<bool>("UsePhishingBlocker")
-                        .HasColumnType("boolean");
-
                     b.Property<bool>("UsePolicies")
                         .HasColumnType("boolean");
 
@@ -280,7 +280,7 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasIndex("Id", "Enabled");
 
-                    NpgsqlIndexBuilderExtensions.IncludeProperties(b.HasIndex("Id", "Enabled"), new[] { "UseTotp", "UsersGetPremium" });
+                    NpgsqlIndexBuilderExtensions.IncludeProperties(b.HasIndex("Id", "Enabled"), new[] { "UseTotp" });
 
                     b.ToTable("Organization", (string)null);
                 });
@@ -1640,9 +1640,6 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<int>("AccessCount")
                         .HasColumnType("integer");
 
-                    b.Property<byte?>("AuthType")
-                        .HasColumnType("smallint");
-
                     b.Property<Guid?>("CipherId")
                         .HasColumnType("uuid");
 
@@ -1659,8 +1656,8 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<string>("Emails")
-                        .HasMaxLength(4000)
-                        .HasColumnType("character varying(4000)");
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
 
                     b.Property<DateTime?>("ExpirationDate")
                         .HasColumnType("timestamp with time zone");
