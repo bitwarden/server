@@ -150,8 +150,8 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
                 Enabled = true,
                 Data = new Dictionary<string, object>
                 {
-                    { "minComplexity", 10 },
-                    { "minLength", 12 },
+                    { "minComplexity", 4 },
+                    { "minLength", 128 },
                     { "requireUpper", true },
                     { "requireLower", false },
                     { "requireNumbers", true },
@@ -396,5 +396,49 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Put_MasterPasswordPolicy_ExcessiveMinLength_ReturnsBadRequest()
+    {
+        // Arrange
+        var policyType = PolicyType.MasterPassword;
+        var request = new PolicyRequestModel
+        {
+            Enabled = true,
+            Data = new Dictionary<string, object>
+            {
+                { "minLength", 129 }
+            }
+        };
+
+        // Act
+        var response = await _client.PutAsync($"/organizations/{_organization.Id}/policies/{policyType}",
+            JsonContent.Create(request));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Put_MasterPasswordPolicy_ExcessiveMinComplexity_ReturnsBadRequest()
+    {
+        // Arrange
+        var policyType = PolicyType.MasterPassword;
+        var request = new PolicyRequestModel
+        {
+            Enabled = true,
+            Data = new Dictionary<string, object>
+            {
+                { "minComplexity", 5 }
+            }
+        };
+
+        // Act
+        var response = await _client.PutAsync($"/organizations/{_organization.Id}/policies/{policyType}",
+            JsonContent.Create(request));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 }
