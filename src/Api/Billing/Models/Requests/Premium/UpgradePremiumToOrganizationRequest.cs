@@ -10,6 +10,9 @@ public class UpgradePremiumToOrganizationRequest
     public string OrganizationName { get; set; } = null!;
 
     [Required]
+    public string Key { get; set; } = null!;
+
+    [Required]
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public ProductTierType Tier { get; set; }
 
@@ -30,5 +33,5 @@ public class UpgradePremiumToOrganizationRequest
             _ => throw new InvalidOperationException("Cannot upgrade to an Organization subscription that isn't Families, Teams or Enterprise.")
         };
 
-    public (string OrganizationName, PlanType PlanType) ToDomain() => (OrganizationName, PlanType);
+    public (string OrganizationName, string Key, PlanType PlanType) ToDomain() => (OrganizationName, Key, PlanType);
 }

@@ -26,11 +26,13 @@ public interface IUpgradePremiumToOrganizationCommand
     /// </summary>
     /// <param name="user">The user with an active Premium subscription to upgrade.</param>
     /// <param name="organizationName">The name for the new organization.</param>
+    /// <param name="key">The encrypted organization key for the owner.</param>
     /// <param name="targetPlanType">The target organization plan type to upgrade to.</param>
     /// <returns>A billing command result indicating success or failure with appropriate error details.</returns>
     Task<BillingCommandResult<None>> Run(
         User user,
         string organizationName,
+        string key,
         PlanType targetPlanType);
 }
 
@@ -48,6 +50,7 @@ public class UpgradePremiumToOrganizationCommand(
     public Task<BillingCommandResult<None>> Run(
         User user,
         string organizationName,
+        string key,
         PlanType targetPlanType) => HandleAsync<None>(async () =>
     {
         // Validate that the user has an active Premium subscription
@@ -119,7 +122,8 @@ public class UpgradePremiumToOrganizationCommand(
             {
                 [StripeConstants.MetadataKeys.OrganizationId] = organizationId.ToString(),
                 [StripeConstants.MetadataKeys.PreviousPremiumPriceId] = premiumPlan.Seat.StripePriceId,
-                [StripeConstants.MetadataKeys.PreviousPeriodEndDate] = currentSubscription.GetCurrentPeriodEnd()?.ToString("O") ?? string.Empty
+                [StripeConstants.MetadataKeys.PreviousPeriodEndDate] = currentSubscription.GetCurrentPeriodEnd()?.ToString("O") ?? string.Empty,
+                [StripeConstants.MetadataKeys.UserId] = string.Empty // Remove userId to unlink subscription from User
             }
         };
 
@@ -183,7 +187,7 @@ public class UpgradePremiumToOrganizationCommand(
         {
             OrganizationId = organization.Id,
             UserId = user.Id,
-            Key = null, // Will need to be set by client
+            Key = key,
             AccessSecretsManager = false,
             Type = OrganizationUserType.Owner,
             Status = OrganizationUserStatusType.Confirmed,

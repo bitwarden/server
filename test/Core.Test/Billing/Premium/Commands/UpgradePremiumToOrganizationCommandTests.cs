@@ -5,6 +5,7 @@ using Bit.Core.Billing.Premium.Commands;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -145,7 +146,7 @@ public class UpgradePremiumToOrganizationCommandTests
         user.Premium = false;
 
         // Act
-        var result = await _command.Run(user, "My Organization", PlanType.TeamsAnnually);
+        var result = await _command.Run(user, "My Organization", "encrypted-key", PlanType.TeamsAnnually);
 
         // Assert
         Assert.True(result.IsT1);
@@ -161,7 +162,7 @@ public class UpgradePremiumToOrganizationCommandTests
         user.GatewaySubscriptionId = null;
 
         // Act
-        var result = await _command.Run(user, "My Organization", PlanType.TeamsAnnually);
+        var result = await _command.Run(user, "My Organization", "encrypted-key", PlanType.TeamsAnnually);
 
         // Assert
         Assert.True(result.IsT1);
@@ -177,7 +178,7 @@ public class UpgradePremiumToOrganizationCommandTests
         user.GatewaySubscriptionId = "";
 
         // Act
-        var result = await _command.Run(user, "My Organization", PlanType.TeamsAnnually);
+        var result = await _command.Run(user, "My Organization", "encrypted-key", PlanType.TeamsAnnually);
 
         // Assert
         Assert.True(result.IsT1);
@@ -232,7 +233,7 @@ public class UpgradePremiumToOrganizationCommandTests
         _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
 
         // Act
-        var result = await _command.Run(user, "My Organization", PlanType.TeamsAnnually);
+        var result = await _command.Run(user, "My Organization", "encrypted-key", PlanType.TeamsAnnually);
 
         // Assert
         Assert.True(result.IsT0);
@@ -248,7 +249,9 @@ public class UpgradePremiumToOrganizationCommandTests
             o.Name == "My Organization" &&
             o.GatewaySubscriptionId == "sub_123" &&
             o.GatewayCustomerId == "cus_123"));
-        await _organizationUserRepository.Received(1).CreateAsync(Arg.Any<OrganizationUser>());
+        await _organizationUserRepository.Received(1).CreateAsync(Arg.Is<OrganizationUser>(ou =>
+            ou.Key == "encrypted-key" &&
+            ou.Status == OrganizationUserStatusType.Confirmed));
         await _organizationApiKeyRepository.Received(1).CreateAsync(Arg.Any<OrganizationApiKey>());
 
         await _userService.Received(1).SaveUserAsync(Arg.Is<User>(u =>
@@ -304,7 +307,7 @@ public class UpgradePremiumToOrganizationCommandTests
         _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
 
         // Act
-        var result = await _command.Run(user, "My Families Org", PlanType.FamiliesAnnually);
+        var result = await _command.Run(user, "My Families Org", "encrypted-key", PlanType.FamiliesAnnually);
 
         // Assert
         Assert.True(result.IsT0);
@@ -367,7 +370,7 @@ public class UpgradePremiumToOrganizationCommandTests
         _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
 
         // Act
-        var result = await _command.Run(user, "My Organization", PlanType.TeamsAnnually);
+        var result = await _command.Run(user, "My Organization", "encrypted-key", PlanType.TeamsAnnually);
 
         // Assert
         Assert.True(result.IsT0);
@@ -379,6 +382,7 @@ public class UpgradePremiumToOrganizationCommandTests
                 opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.PreviousPremiumPriceId) &&
                 opts.Metadata[StripeConstants.MetadataKeys.PreviousPremiumPriceId] == "premium-annually" &&
                 opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.PreviousPeriodEndDate) &&
-                !opts.Metadata.ContainsKey("userId"))); // Does NOT preserve existing metadata
+                opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.UserId) &&
+                opts.Metadata[StripeConstants.MetadataKeys.UserId] == string.Empty)); // Removes userId to unlink from User
     }
 }
