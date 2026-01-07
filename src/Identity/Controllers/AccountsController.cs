@@ -109,8 +109,12 @@ public class AccountsController : Controller
     [HttpPost("register/send-verification-email")]
     public async Task<IActionResult> PostRegisterSendVerificationEmail([FromBody] RegisterSendVerificationEmailRequestModel model)
     {
+        // Only pass fromMarketing if the feature flag is enabled
+        var isMarketingFeatureEnabled = _featureService.IsEnabled(FeatureFlagKeys.MarketingInitiatedPremiumFlow);
+        var fromMarketing = isMarketingFeatureEnabled ? model.FromMarketing : null;
+
         var token = await _sendVerificationEmailForRegistrationCommand.Run(model.Email, model.Name,
-            model.ReceiveMarketingEmails);
+            model.ReceiveMarketingEmails, fromMarketing);
 
         if (token != null)
         {

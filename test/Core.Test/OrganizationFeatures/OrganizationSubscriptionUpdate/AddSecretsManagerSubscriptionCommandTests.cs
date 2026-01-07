@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.StaticStore;
@@ -54,7 +55,7 @@ public class AddSecretsManagerSubscriptionCommandTests
                 c.AdditionalServiceAccounts == additionalServiceAccounts &&
                 c.AdditionalSeats == organization.Seats.GetValueOrDefault()));
 
-        await sutProvider.GetDependency<IPaymentService>().Received()
+        await sutProvider.GetDependency<IStripePaymentService>().Received()
             .AddSecretsManagerToSubscription(organization, plan, additionalSmSeats, additionalServiceAccounts);
 
         // TODO: call ReferenceEventService - see AC-1481
@@ -150,7 +151,7 @@ public class AddSecretsManagerSubscriptionCommandTests
 
     private static async Task VerifyDependencyNotCalledAsync(SutProvider<AddSecretsManagerSubscriptionCommand> sutProvider)
     {
-        await sutProvider.GetDependency<IPaymentService>().DidNotReceive()
+        await sutProvider.GetDependency<IStripePaymentService>().DidNotReceive()
             .AddSecretsManagerToSubscription(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>(), Arg.Any<int>());
 
         // TODO: call ReferenceEventService - see AC-1481

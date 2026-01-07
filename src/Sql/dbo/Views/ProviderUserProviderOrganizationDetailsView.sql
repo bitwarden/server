@@ -44,7 +44,9 @@ SELECT
     O.[UseOrganizationDomains],
     O.[UseAutomaticUserConfirmation],
     SS.[Enabled] SsoEnabled,
-    SS.[Data] SsoConfig
+    SS.[Data] SsoConfig,
+    O.[UsePhishingBlocker],
+    O.[UseDisableSmAdsForUsers]
 FROM
     [dbo].[ProviderUser] PU
 INNER JOIN

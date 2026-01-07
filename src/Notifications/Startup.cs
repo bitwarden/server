@@ -82,11 +82,9 @@ public class Startup
     public void Configure(
         IApplicationBuilder app,
         IWebHostEnvironment env,
-        IHostApplicationLifetime appLifetime,
         GlobalSettings globalSettings)
     {
         IdentityModelEventSource.ShowPII = true;
-        app.UseSerilog(env, appLifetime, globalSettings);
 
         // Add general security headers
         app.UseMiddleware<SecurityHeadersMiddleware>();

@@ -59,7 +59,9 @@ CREATE PROCEDURE [dbo].[Organization_Create]
     @UseOrganizationDomains BIT = 0,
     @UseAdminSponsoredFamilies BIT = 0,
     @SyncSeats BIT = 0,
-    @UseAutomaticUserConfirmation BIT = 0
+    @UseAutomaticUserConfirmation BIT = 0,
+    @UsePhishingBlocker BIT = 0,
+    @UseDisableSmAdsForUsers BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -126,7 +128,10 @@ BEGIN
         [UseOrganizationDomains],
         [UseAdminSponsoredFamilies],
         [SyncSeats],
-        [UseAutomaticUserConfirmation]
+        [UseAutomaticUserConfirmation],
+        [UsePhishingBlocker],
+        [MaxStorageGbIncreased],
+        [UseDisableSmAdsForUsers]
     )
     VALUES
         (
@@ -190,6 +195,9 @@ BEGIN
             @UseOrganizationDomains,
             @UseAdminSponsoredFamilies,
             @SyncSeats,
-            @UseAutomaticUserConfirmation
+            @UseAutomaticUserConfirmation,
+            @UsePhishingBlocker,
+            @MaxStorageGb,
+            @UseDisableSmAdsForUsers
         );
 END

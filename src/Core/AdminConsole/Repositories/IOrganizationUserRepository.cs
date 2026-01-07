@@ -97,4 +97,15 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     /// <param name="organizationUserToConfirm">Accepted OrganizationUser to confirm</param>
     /// <returns>True, if the user was updated. False, if not performed.</returns>
     Task<bool> ConfirmOrganizationUserAsync(AcceptedOrganizationUserToConfirm organizationUserToConfirm);
+
+    /// <summary>
+    /// Returns the OrganizationUserUserDetails if found.
+    /// </summary>
+    /// <param name="organizationId">The id of the organization</param>
+    /// <param name="userId">The id of the User to fetch</param>
+    /// <returns>OrganizationUserUserDetails of the specified user or null if not found</returns>
+    /// <remarks>
+    /// Similar to GetByOrganizationAsync, but returns the user details.
+    /// </remarks>
+    Task<OrganizationUserUserDetails?> GetDetailsByOrganizationIdUserIdAsync(Guid organizationId, Guid userId);
 }

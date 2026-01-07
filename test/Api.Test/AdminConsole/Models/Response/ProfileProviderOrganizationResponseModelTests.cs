@@ -45,6 +45,8 @@ public class ProfileProviderOrganizationResponseModelTests
             UsersGetPremium = organization.UsersGetPremium,
             UseCustomPermissions = organization.UseCustomPermissions,
             UseRiskInsights = organization.UseRiskInsights,
+            UsePhishingBlocker = organization.UsePhishingBlocker,
+            UseDisableSMAdsForUsers = organization.UseDisableSmAdsForUsers,
             UseOrganizationDomains = organization.UseOrganizationDomains,
             UseAdminSponsoredFamilies = organization.UseAdminSponsoredFamilies,
             UseAutomaticUserConfirmation = organization.UseAutomaticUserConfirmation,

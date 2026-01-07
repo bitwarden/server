@@ -61,6 +61,8 @@ SELECT
     [UseOrganizationDomains],
     [UseAdminSponsoredFamilies],
     [SyncSeats],
-    [UseAutomaticUserConfirmation]
+    [UseAutomaticUserConfirmation],
+    [UsePhishingBlocker],
+    [UseDisableSmAdsForUsers]
 FROM
     [dbo].[Organization]

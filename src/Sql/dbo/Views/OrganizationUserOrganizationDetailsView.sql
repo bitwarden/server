@@ -55,7 +55,9 @@ SELECT
     O.[UseAdminSponsoredFamilies],
     O.[UseOrganizationDomains],
     OS.[IsAdminInitiated],
-    O.[UseAutomaticUserConfirmation]
+    O.[UseAutomaticUserConfirmation],
+    O.[UsePhishingBlocker],
+    O.[UseDisableSmAdsForUsers]
 FROM
     [dbo].[OrganizationUser] OU
 LEFT JOIN

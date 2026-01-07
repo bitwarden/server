@@ -30,6 +30,14 @@
     </style>
     <![endif]-->
     
+      <!--[if !mso]><!-->
+        <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700" rel="stylesheet" type="text/css">
+        <style type="text/css">
+          @import url(https://fonts.googleapis.com/css?family=Roboto:300,400,500,700);
+        </style>
+      <!--<![endif]-->
+
+    
     
     <style type="text/css">
       @media only screen and (min-width:480px) {
@@ -53,11 +61,37 @@
     
     <style type="text/css">
 
+      @media only screen and (max-width:480px) {
+        .mj-bw-hero-responsive-img {
+          display: none !important;
+        }
+      }
+    
+
+      @media only screen and (max-width:480px) {
+        .mj-bw-learn-more-footer-responsive-img {
+          display: none !important;
+        }
+      }
+    
+
     @media only screen and (max-width:479px) {
       table.mj-full-width-mobile { width: 100% !important; }
       td.mj-full-width-mobile { width: auto !important; }
     }
   
+
+      @media only screen and (max-width:480px) {
+        .mj-bw-icon-row-text {
+          padding-left: 5px !important;
+          line-height: 20px;
+        }
+        .mj-bw-icon-row {
+          padding: 10px 15px;
+          width: fit-content !important;
+        }
+      }
+    
     </style>
      
     <style type="text/css">
@@ -67,29 +101,8 @@
   .border-fix > table > tbody > tr > td {
     border-radius: 3px;
   }
-@media only screen and (max-width: 480px) {
-    .hide-small-img {
-      display: none !important;
-    }
-    .send-bubble {
-      padding-left: 20px;
-      padding-right: 20px;
-      width: 90% !important;
-    }
-  }
-@media only screen and (max-width: 480px) {
-    .mj-bw-icon-row-text {
-      padding-left: 5px !important;
-      line-height: 20px;
-    }
-    .mj-bw-icon-row {
-      padding: 10px 15px;
-      width: fit-content !important;
-    }
-  }
     </style>
-    <!-- Responsive icon visibility -->
-<!-- Responsive styling for mj-bw-icon-row -->
+    
   </head>
   <body style="word-spacing:normal;background-color:#e6e9ef;">
     
@@ -156,7 +169,7 @@
             </h1>
             <mj-text color="#fff" padding-top="0" padding-bottom="0">
             <h2 style="font-weight: normal; font-size: 16px; line-height: 0px">
-              Let's get set up to autofill.
+              Let’s get you set up to autofill.
             </h2>
           </mj-text></div>
     
@@ -176,7 +189,7 @@
         <tbody>
           
               <tr>
-                <td align="center" class="hide-small-img" style="font-size:0px;padding:0px;word-break:break-word;">
+                <td align="center" class="mj-bw-hero-responsive-img" style="font-size:0px;padding:0px;word-break:break-word;">
                   
       <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:collapse;border-spacing:0px;">
         <tbody>
@@ -256,7 +269,7 @@
               <tr>
                 <td align="left" style="font-size:0px;padding:10px 15px;word-break:break-word;">
                   
-      <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:16px;line-height:24px;text-align:left;color:#1B2029;">A <b>{{OrganizationName}}</b> administrator will approve you
+      <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:16px;line-height:24px;text-align:left;color:#1B2029;">An administrator from <b>{{OrganizationName}}</b> will approve you
             before you can share passwords. While you wait for approval, get
             started with Bitwarden Password Manager:</div>
     
@@ -329,12 +342,12 @@
               <tr>
                 <td align="left" class="mj-bw-icon-row-text" style="font-size:0px;padding:5px 10px 0px 10px;word-break:break-word;">
                   
-      <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:16px;line-height:1;text-align:left;color:#1B2029;"><a href="https://bitwarden.com/download/" class="link" style="text-decoration: none; color: #175ddc; font-weight: 600;">
-                Get the browser extension
-                <span style="text-decoration: none">
-                  <img src="https://assets.bitwarden.com/email/v1/bwi-external-link-16px.png" alt="External Link Icon" width="16px" style="vertical-align: middle;">
-                </span>
-              </a></div>
+      <div style="font-family:Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:16px;font-weight:400;line-height:24px;text-align:left;color:#1B2029;"><a href="https://bitwarden.com/download/" class="link" style="text-decoration: none; color: #175ddc; font-weight: 600;">
+                    Get the browser extension
+                    <span style="text-decoration: none">
+                      <img src="https://assets.bitwarden.com/email/v1/bwi-external-link-16px.png" alt="External Link Icon" width="16px" style="vertical-align: middle;">
+                    </span>
+                  </a></div>
     
                 </td>
               </tr>
@@ -342,15 +355,7 @@
               <tr>
                 <td align="left" class="mj-bw-icon-row-text" style="font-size:0px;padding:5px 10px 0px 10px;word-break:break-word;">
                   
-      <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:16px;line-height:1;text-align:left;color:#1B2029;">With the Bitwarden extension, you can fill passwords with one click.</div>
-    
-                </td>
-              </tr>
-            
-              <tr>
-                <td align="left" class="mj-bw-icon-row-text" style="font-size:0px;padding:5px 10px 0px 10px;word-break:break-word;">
-                  
-      <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:16px;line-height:1;text-align:left;color:#1B2029;"></div>
+      <div style="font-family:Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:16px;font-weight:400;line-height:24px;text-align:left;color:#1B2029;">With the Bitwarden extension, you can fill passwords with one click.</div>
     
                 </td>
               </tr>
@@ -424,12 +429,12 @@
               <tr>
                 <td align="left" class="mj-bw-icon-row-text" style="font-size:0px;padding:5px 10px 0px 10px;word-break:break-word;">
                   
-      <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:16px;line-height:1;text-align:left;color:#1B2029;"><a href="https://bitwarden.com/help/import-data/" class="link" style="text-decoration: none; color: #175ddc; font-weight: 600;">
-                Add passwords to your vault
-                <span style="text-decoration: none">
-                  <img src="https://assets.bitwarden.com/email/v1/bwi-external-link-16px.png" alt="External Link Icon" width="16px" style="vertical-align: middle;">
-                </span>
-              </a></div>
+      <div style="font-family:Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:16px;font-weight:400;line-height:24px;text-align:left;color:#1B2029;"><a href="https://bitwarden.com/help/import-data/" class="link" style="text-decoration: none; color: #175ddc; font-weight: 600;">
+                    Add passwords to your vault
+                    <span style="text-decoration: none">
+                      <img src="https://assets.bitwarden.com/email/v1/bwi-external-link-16px.png" alt="External Link Icon" width="16px" style="vertical-align: middle;">
+                    </span>
+                  </a></div>
     
                 </td>
               </tr>
@@ -437,15 +442,7 @@
               <tr>
                 <td align="left" class="mj-bw-icon-row-text" style="font-size:0px;padding:5px 10px 0px 10px;word-break:break-word;">
                   
-      <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:16px;line-height:1;text-align:left;color:#1B2029;">Quickly transfer existing passwords to Bitwarden using the importer.</div>
-    
-                </td>
-              </tr>
-            
-              <tr>
-                <td align="left" class="mj-bw-icon-row-text" style="font-size:0px;padding:5px 10px 0px 10px;word-break:break-word;">
-                  
-      <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:16px;line-height:1;text-align:left;color:#1B2029;"></div>
+      <div style="font-family:Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:16px;font-weight:400;line-height:24px;text-align:left;color:#1B2029;">Quickly transfer existing passwords to Bitwarden using the importer.</div>
     
                 </td>
               </tr>
@@ -519,12 +516,12 @@
               <tr>
                 <td align="left" class="mj-bw-icon-row-text" style="font-size:0px;padding:5px 10px 0px 10px;word-break:break-word;">
                   
-      <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:16px;line-height:1;text-align:left;color:#1B2029;"><a href="https://bitwarden.com/download/" class="link" style="text-decoration: none; color: #175ddc; font-weight: 600;">
-                Download Bitwarden on all devices
-                <span style="text-decoration: none">
-                  <img src="https://assets.bitwarden.com/email/v1/bwi-external-link-16px.png" alt="External Link Icon" width="16px" style="vertical-align: middle;">
-                </span>
-              </a></div>
+      <div style="font-family:Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:16px;font-weight:400;line-height:24px;text-align:left;color:#1B2029;"><a href="https://bitwarden.com/download/" class="link" style="text-decoration: none; color: #175ddc; font-weight: 600;">
+                    Download Bitwarden on all devices
+                    <span style="text-decoration: none">
+                      <img src="https://assets.bitwarden.com/email/v1/bwi-external-link-16px.png" alt="External Link Icon" width="16px" style="vertical-align: middle;">
+                    </span>
+                  </a></div>
     
                 </td>
               </tr>
@@ -532,15 +529,7 @@
               <tr>
                 <td align="left" class="mj-bw-icon-row-text" style="font-size:0px;padding:5px 10px 0px 10px;word-break:break-word;">
                   
-      <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:16px;line-height:1;text-align:left;color:#1B2029;">Take your passwords with you anywhere.</div>
-    
-                </td>
-              </tr>
-            
-              <tr>
-                <td align="left" class="mj-bw-icon-row-text" style="font-size:0px;padding:5px 10px 0px 10px;word-break:break-word;">
-                  
-      <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:16px;line-height:1;text-align:left;color:#1B2029;"></div>
+      <div style="font-family:Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:16px;font-weight:400;line-height:24px;text-align:left;color:#1B2029;">Take your passwords with you anywhere.</div>
     
                 </td>
               </tr>
@@ -602,12 +591,12 @@
           <tbody>
             <tr>
               <td style="direction:ltr;font-size:0px;padding:5px 20px 10px 20px;text-align:center;">
-                <!--[if mso | IE]><table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr><td class="" width="660px" ><table align="center" border="0" cellpadding="0" cellspacing="0" class="" role="presentation" style="width:620px;" width="620" bgcolor="#f6f6f6" ><tr><td style="line-height:0px;font-size:0px;mso-line-height-rule:exactly;"><![endif]-->
+                <!--[if mso | IE]><table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr><td class="" width="660px" ><table align="center" border="0" cellpadding="0" cellspacing="0" class="" role="presentation" style="width:620px;" width="620" bgcolor="#F3F6F9" ><tr><td style="line-height:0px;font-size:0px;mso-line-height-rule:exactly;"><![endif]-->
     
       
-      <div style="background:#f6f6f6;background-color:#f6f6f6;margin:0px auto;border-radius:0px 0px 4px 4px;max-width:620px;">
+      <div style="background:#F3F6F9;background-color:#F3F6F9;margin:0px auto;border-radius:0px 0px 4px 4px;max-width:620px;">
         
-        <table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="background:#f6f6f6;background-color:#f6f6f6;width:100%;border-radius:0px 0px 4px 4px;">
+        <table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="background:#F3F6F9;background-color:#F3F6F9;width:100%;border-radius:0px 0px 4px 4px;">
           <tbody>
             <tr>
               <td style="direction:ltr;font-size:0px;padding:5px 10px 10px 10px;text-align:center;">
@@ -622,10 +611,10 @@
                 <td align="left" style="font-size:0px;padding:10px 25px;word-break:break-word;">
                   
       <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:16px;line-height:24px;text-align:left;color:#1B2029;"><p style="font-size: 18px; line-height: 28px; font-weight: bold;">
-        Learn more about Bitwarden
-      </p>
-      Find user guides, product documentation, and videos on the
-      <a href="https://bitwarden.com/help/" class="link" style="text-decoration: none; color: #175ddc; font-weight: 600;"> Bitwarden Help Center</a>.</div>
+              Learn more about Bitwarden
+            </p>
+            Find user guides, product documentation, and videos on the
+            <a href="https://bitwarden.com/help/" class="link" style="text-decoration: none; color: #175ddc; font-weight: 600;"> Bitwarden Help Center</a>.</div>
     
                 </td>
               </tr>
@@ -643,7 +632,7 @@
         <tbody>
           
               <tr>
-                <td align="center" class="hide-small-img" style="font-size:0px;padding:10px 25px;word-break:break-word;">
+                <td align="center" class="mj-bw-learn-more-footer-responsive-img" style="font-size:0px;padding:10px 25px;word-break:break-word;">
                   
       <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:collapse;border-spacing:0px;">
         <tbody>
@@ -695,8 +684,8 @@
         <table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="width:100%;">
           <tbody>
             <tr>
-              <td style="direction:ltr;font-size:0px;padding:20px 0;text-align:center;">
-                <!--[if mso | IE]><table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr><td class="" style="vertical-align:top;width:660px;" ><![endif]-->
+              <td style="direction:ltr;font-size:0px;padding:5px 20px 10px 20px;text-align:center;">
+                <!--[if mso | IE]><table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr><td class="" style="vertical-align:top;width:620px;" ><![endif]-->
             
       <div class="mj-column-per-100 mj-outlook-group-fix" style="font-size:0px;text-align:left;direction:ltr;display:inline-block;vertical-align:top;width:100%;">
         
@@ -712,13 +701,13 @@
                 <tbody>
                   
       <tr>
-        <td style="padding:10px;vertical-align:middle;">
-          <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-radius:3px;width:30px;">
+        <td style="padding:8px;vertical-align:middle;">
+          <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-radius:3px;width:24px;">
             <tbody>
               <tr>
-                <td style="font-size:0;height:30px;vertical-align:middle;width:30px;">
+                <td style="font-size:0;height:24px;vertical-align:middle;width:24px;">
                   <a href="https://x.com/bitwarden" target="_blank">
-                    <img alt height="30" src="https://assets.bitwarden.com/email/v1/mail-x.png" style="border-radius:3px;display:block;" width="30">
+                    <img alt height="24" src="https://assets.bitwarden.com/email/v1/social-icons-x-twitter.png" style="border-radius:3px;display:block;" width="24">
                   </a>
                 </td>
               </tr>
@@ -735,13 +724,13 @@
                 <tbody>
                   
       <tr>
-        <td style="padding:10px;vertical-align:middle;">
-          <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-radius:3px;width:30px;">
+        <td style="padding:8px;vertical-align:middle;">
+          <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-radius:3px;width:24px;">
             <tbody>
               <tr>
-                <td style="font-size:0;height:30px;vertical-align:middle;width:30px;">
+                <td style="font-size:0;height:24px;vertical-align:middle;width:24px;">
                   <a href="https://www.reddit.com/r/Bitwarden/" target="_blank">
-                    <img alt height="30" src="https://assets.bitwarden.com/email/v1/mail-reddit.png" style="border-radius:3px;display:block;" width="30">
+                    <img alt height="24" src="https://assets.bitwarden.com/email/v1/social-icons-reddit.png" style="border-radius:3px;display:block;" width="24">
                   </a>
                 </td>
               </tr>
@@ -758,13 +747,13 @@
                 <tbody>
                   
       <tr>
-        <td style="padding:10px;vertical-align:middle;">
-          <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-radius:3px;width:30px;">
+        <td style="padding:8px;vertical-align:middle;">
+          <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-radius:3px;width:24px;">
             <tbody>
               <tr>
-                <td style="font-size:0;height:30px;vertical-align:middle;width:30px;">
+                <td style="font-size:0;height:24px;vertical-align:middle;width:24px;">
                   <a href="https://community.bitwarden.com/" target="_blank">
-                    <img alt height="30" src="https://assets.bitwarden.com/email/v1/mail-discourse.png" style="border-radius:3px;display:block;" width="30">
+                    <img alt height="24" src="https://assets.bitwarden.com/email/v1/social-icons-discourse.png" style="border-radius:3px;display:block;" width="24">
                   </a>
                 </td>
               </tr>
@@ -781,13 +770,13 @@
                 <tbody>
                   
       <tr>
-        <td style="padding:10px;vertical-align:middle;">
-          <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-radius:3px;width:30px;">
+        <td style="padding:8px;vertical-align:middle;">
+          <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-radius:3px;width:24px;">
             <tbody>
               <tr>
-                <td style="font-size:0;height:30px;vertical-align:middle;width:30px;">
+                <td style="font-size:0;height:24px;vertical-align:middle;width:24px;">
                   <a href="https://github.com/bitwarden" target="_blank">
-                    <img alt height="30" src="https://assets.bitwarden.com/email/v1/mail-github.png" style="border-radius:3px;display:block;" width="30">
+                    <img alt height="24" src="https://assets.bitwarden.com/email/v1/social-icons-github.png" style="border-radius:3px;display:block;" width="24">
                   </a>
                 </td>
               </tr>
@@ -804,13 +793,13 @@
                 <tbody>
                   
       <tr>
-        <td style="padding:10px;vertical-align:middle;">
-          <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-radius:3px;width:30px;">
+        <td style="padding:8px;vertical-align:middle;">
+          <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-radius:3px;width:24px;">
             <tbody>
               <tr>
-                <td style="font-size:0;height:30px;vertical-align:middle;width:30px;">
+                <td style="font-size:0;height:24px;vertical-align:middle;width:24px;">
                   <a href="https://www.youtube.com/channel/UCId9a_jQqvJre0_dE2lE_Rw" target="_blank">
-                    <img alt height="30" src="https://assets.bitwarden.com/email/v1/mail-youtube.png" style="border-radius:3px;display:block;" width="30">
+                    <img alt height="24" src="https://assets.bitwarden.com/email/v1/social-icons-youtube.png" style="border-radius:3px;display:block;" width="24">
                   </a>
                 </td>
               </tr>
@@ -827,13 +816,13 @@
                 <tbody>
                   
       <tr>
-        <td style="padding:10px;vertical-align:middle;">
-          <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-radius:3px;width:30px;">
+        <td style="padding:8px;vertical-align:middle;">
+          <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-radius:3px;width:24px;">
             <tbody>
               <tr>
-                <td style="font-size:0;height:30px;vertical-align:middle;width:30px;">
+                <td style="font-size:0;height:24px;vertical-align:middle;width:24px;">
                   <a href="https://www.linkedin.com/company/bitwarden1/" target="_blank">
-                    <img alt height="30" src="https://assets.bitwarden.com/email/v1/mail-linkedin.png" style="border-radius:3px;display:block;" width="30">
+                    <img alt height="24" src="https://assets.bitwarden.com/email/v1/social-icons-linkedin.png" style="border-radius:3px;display:block;" width="24">
                   </a>
                 </td>
               </tr>
@@ -850,13 +839,13 @@
                 <tbody>
                   
       <tr>
-        <td style="padding:10px;vertical-align:middle;">
-          <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-radius:3px;width:30px;">
+        <td style="padding:8px;vertical-align:middle;">
+          <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-radius:3px;width:24px;">
             <tbody>
               <tr>
-                <td style="font-size:0;height:30px;vertical-align:middle;width:30px;">
+                <td style="font-size:0;height:24px;vertical-align:middle;width:24px;">
                   <a href="https://www.facebook.com/bitwarden/" target="_blank">
-                    <img alt height="30" src="https://assets.bitwarden.com/email/v1/mail-facebook.png" style="border-radius:3px;display:block;" width="30">
+                    <img alt height="24" src="https://assets.bitwarden.com/email/v1/social-icons-facebook.png" style="border-radius:3px;display:block;" width="24">
                   </a>
                 </td>
               </tr>
@@ -877,15 +866,15 @@
               <tr>
                 <td align="center" style="font-size:0px;padding:10px 25px;word-break:break-word;">
                   
-      <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:12px;line-height:16px;text-align:center;color:#5A6D91;"><p style="margin-bottom: 5px">
+      <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:12px;line-height:16px;text-align:center;color:#5A6D91;"><p style="margin-bottom: 5px; margin-top: 5px">
         © 2025 Bitwarden Inc. 1 N. Calle Cesar Chavez, Suite 102, Santa
         Barbara, CA, USA
       </p>
       <p style="margin-top: 5px">
         Always confirm you are on a trusted Bitwarden domain before logging
         in:<br>
-        <a href="https://bitwarden.com/">bitwarden.com</a> |
-        <a href="https://bitwarden.com/help/emails-from-bitwarden/">Learn why we include this</a>
+        <a href="https://bitwarden.com/" style="text-decoration:none;color:#175ddc; font-weight:400">bitwarden.com</a> |
+        <a href="https://bitwarden.com/help/emails-from-bitwarden/" style="text-decoration:none; color:#175ddc; font-weight:400">Learn why we include this</a>
       </p></div>
     
                 </td>

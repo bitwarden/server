@@ -89,6 +89,286 @@ public class ProviderUserRepositoryTests
         Assert.Equal(serializedSsoConfigData, orgWithSsoDetails.SsoConfig);
     }
 
+    [Theory, DatabaseData]
+    public async Task GetManyByManyUsersAsync_WithMultipleUsers_ReturnsAllProviderUsers(
+        IUserRepository userRepository,
+        IProviderRepository providerRepository,
+        IProviderUserRepository providerUserRepository)
+    {
+        var user1 = await userRepository.CreateTestUserAsync();
+        var user2 = await userRepository.CreateTestUserAsync();
+        var user3 = await userRepository.CreateTestUserAsync();
+
+        var provider1 = await providerRepository.CreateAsync(new Provider
+        {
+            Name = "Test Provider 1",
+            Enabled = true,
+            Type = ProviderType.Msp
+        });
+
+        var provider2 = await providerRepository.CreateAsync(new Provider
+        {
+            Name = "Test Provider 2",
+            Enabled = true,
+            Type = ProviderType.Reseller
+        });
+
+        var providerUser1 = await providerUserRepository.CreateAsync(new ProviderUser
+        {
+            Id = Guid.NewGuid(),
+            ProviderId = provider1.Id,
+            UserId = user1.Id,
+            Status = ProviderUserStatusType.Confirmed,
+            Type = ProviderUserType.ProviderAdmin
+        });
+
+        var providerUser2 = await providerUserRepository.CreateAsync(new ProviderUser
+        {
+            Id = Guid.NewGuid(),
+            ProviderId = provider1.Id,
+            UserId = user2.Id,
+            Status = ProviderUserStatusType.Invited,
+            Type = ProviderUserType.ServiceUser
+        });
+
+        var providerUser3 = await providerUserRepository.CreateAsync(new ProviderUser
+        {
+            Id = Guid.NewGuid(),
+            ProviderId = provider2.Id,
+            UserId = user3.Id,
+            Status = ProviderUserStatusType.Confirmed,
+            Type = ProviderUserType.ProviderAdmin
+        });
+
+        var userIds = new[] { user1.Id, user2.Id, user3.Id };
+
+        var results = (await providerUserRepository.GetManyByManyUsersAsync(userIds)).ToList();
+
+        Assert.Equal(3, results.Count);
+        Assert.Contains(results, pu => pu.Id == providerUser1.Id && pu.UserId == user1.Id);
+        Assert.Contains(results, pu => pu.Id == providerUser2.Id && pu.UserId == user2.Id);
+        Assert.Contains(results, pu => pu.Id == providerUser3.Id && pu.UserId == user3.Id);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetManyByManyUsersAsync_WithSingleUser_ReturnsSingleProviderUser(
+        IUserRepository userRepository,
+        IProviderRepository providerRepository,
+        IProviderUserRepository providerUserRepository)
+    {
+        var user = await userRepository.CreateTestUserAsync();
+
+        var provider = await providerRepository.CreateAsync(new Provider
+        {
+            Name = "Test Provider",
+            Enabled = true,
+            Type = ProviderType.Msp
+        });
+
+        var providerUser = await providerUserRepository.CreateAsync(new ProviderUser
+        {
+            Id = Guid.NewGuid(),
+            ProviderId = provider.Id,
+            UserId = user.Id,
+            Status = ProviderUserStatusType.Confirmed,
+            Type = ProviderUserType.ProviderAdmin
+        });
+
+        var results = (await providerUserRepository.GetManyByManyUsersAsync([user.Id])).ToList();
+
+        Assert.Single(results);
+        Assert.Equal(user.Id, results[0].UserId);
+        Assert.Equal(provider.Id, results[0].ProviderId);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetManyByManyUsersAsync_WithUserHavingMultipleProviders_ReturnsAllProviderUsers(
+        IUserRepository userRepository,
+        IProviderRepository providerRepository,
+        IProviderUserRepository providerUserRepository)
+    {
+        var user = await userRepository.CreateTestUserAsync();
+
+        var provider1 = await providerRepository.CreateAsync(new Provider
+        {
+            Name = "Test Provider 1",
+            Enabled = true,
+            Type = ProviderType.Msp
+        });
+
+        var provider2 = await providerRepository.CreateAsync(new Provider
+        {
+            Name = "Test Provider 2",
+            Enabled = true,
+            Type = ProviderType.Reseller
+        });
+
+        var providerUser1 = await providerUserRepository.CreateAsync(new ProviderUser
+        {
+            ProviderId = provider1.Id,
+            UserId = user.Id,
+            Status = ProviderUserStatusType.Confirmed,
+            Type = ProviderUserType.ProviderAdmin
+        });
+
+        var providerUser2 = await providerUserRepository.CreateAsync(new ProviderUser
+        {
+            ProviderId = provider2.Id,
+            UserId = user.Id,
+            Status = ProviderUserStatusType.Confirmed,
+            Type = ProviderUserType.ServiceUser
+        });
+
+        var results = (await providerUserRepository.GetManyByManyUsersAsync([user.Id])).ToList();
+
+        Assert.Equal(2, results.Count);
+        Assert.Contains(results, pu => pu.Id == providerUser1.Id);
+        Assert.Contains(results, pu => pu.Id == providerUser2.Id);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetManyByManyUsersAsync_WithEmptyUserIds_ReturnsEmpty(
+        IProviderUserRepository providerUserRepository)
+    {
+        var results = await providerUserRepository.GetManyByManyUsersAsync(Array.Empty<Guid>());
+
+        Assert.Empty(results);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetManyByManyUsersAsync_WithNonExistentUserIds_ReturnsEmpty(
+        IProviderUserRepository providerUserRepository)
+    {
+        var nonExistentUserIds = new[] { Guid.NewGuid(), Guid.NewGuid() };
+
+        var results = await providerUserRepository.GetManyByManyUsersAsync(nonExistentUserIds);
+
+        Assert.Empty(results);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetManyByManyUsersAsync_WithMixedExistentAndNonExistentUserIds_ReturnsOnlyExistent(
+        IUserRepository userRepository,
+        IProviderRepository providerRepository,
+        IProviderUserRepository providerUserRepository)
+    {
+        var existingUser = await userRepository.CreateTestUserAsync();
+
+        var provider = await providerRepository.CreateAsync(new Provider
+        {
+            Name = "Test Provider",
+            Enabled = true,
+            Type = ProviderType.Msp
+        });
+
+        var providerUser = await providerUserRepository.CreateAsync(new ProviderUser
+        {
+            ProviderId = provider.Id,
+            UserId = existingUser.Id,
+            Status = ProviderUserStatusType.Confirmed,
+            Type = ProviderUserType.ProviderAdmin
+        });
+
+        var userIds = new[] { existingUser.Id, Guid.NewGuid(), Guid.NewGuid() };
+
+        var results = (await providerUserRepository.GetManyByManyUsersAsync(userIds)).ToList();
+
+        Assert.Single(results);
+        Assert.Equal(existingUser.Id, results[0].UserId);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetManyByManyUsersAsync_ReturnsAllStatuses(
+        IUserRepository userRepository,
+        IProviderRepository providerRepository,
+        IProviderUserRepository providerUserRepository)
+    {
+        var user1 = await userRepository.CreateTestUserAsync();
+        var user2 = await userRepository.CreateTestUserAsync();
+        var user3 = await userRepository.CreateTestUserAsync();
+
+        var provider = await providerRepository.CreateAsync(new Provider
+        {
+            Name = "Test Provider",
+            Enabled = true,
+            Type = ProviderType.Msp
+        });
+
+        await providerUserRepository.CreateAsync(new ProviderUser
+        {
+            ProviderId = provider.Id,
+            UserId = user1.Id,
+            Status = ProviderUserStatusType.Invited,
+            Type = ProviderUserType.ServiceUser
+        });
+
+        await providerUserRepository.CreateAsync(new ProviderUser
+        {
+            ProviderId = provider.Id,
+            UserId = user2.Id,
+            Status = ProviderUserStatusType.Accepted,
+            Type = ProviderUserType.ServiceUser
+        });
+
+        await providerUserRepository.CreateAsync(new ProviderUser
+        {
+            ProviderId = provider.Id,
+            UserId = user3.Id,
+            Status = ProviderUserStatusType.Confirmed,
+            Type = ProviderUserType.ProviderAdmin
+        });
+
+        var userIds = new[] { user1.Id, user2.Id, user3.Id };
+
+        var results = (await providerUserRepository.GetManyByManyUsersAsync(userIds)).ToList();
+
+        Assert.Equal(3, results.Count);
+        Assert.Contains(results, pu => pu.UserId == user1.Id && pu.Status == ProviderUserStatusType.Invited);
+        Assert.Contains(results, pu => pu.UserId == user2.Id && pu.Status == ProviderUserStatusType.Accepted);
+        Assert.Contains(results, pu => pu.UserId == user3.Id && pu.Status == ProviderUserStatusType.Confirmed);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetManyByManyUsersAsync_ReturnsAllProviderUserTypes(
+        IUserRepository userRepository,
+        IProviderRepository providerRepository,
+        IProviderUserRepository providerUserRepository)
+    {
+        var user1 = await userRepository.CreateTestUserAsync();
+        var user2 = await userRepository.CreateTestUserAsync();
+
+        var provider = await providerRepository.CreateAsync(new Provider
+        {
+            Name = "Test Provider",
+            Enabled = true,
+            Type = ProviderType.Msp
+        });
+
+        await providerUserRepository.CreateAsync(new ProviderUser
+        {
+            ProviderId = provider.Id,
+            UserId = user1.Id,
+            Status = ProviderUserStatusType.Confirmed,
+            Type = ProviderUserType.ServiceUser
+        });
+
+        await providerUserRepository.CreateAsync(new ProviderUser
+        {
+            ProviderId = provider.Id,
+            UserId = user2.Id,
+            Status = ProviderUserStatusType.Confirmed,
+            Type = ProviderUserType.ProviderAdmin
+        });
+
+        var userIds = new[] { user1.Id, user2.Id };
+
+        var results = (await providerUserRepository.GetManyByManyUsersAsync(userIds)).ToList();
+
+        Assert.Equal(2, results.Count);
+        Assert.Contains(results, pu => pu.UserId == user1.Id && pu.Type == ProviderUserType.ServiceUser);
+        Assert.Contains(results, pu => pu.UserId == user2.Id && pu.Type == ProviderUserType.ProviderAdmin);
+    }
+
     private static void AssertProviderOrganizationDetails(
         ProviderUserOrganizationDetails actual,
         Organization expectedOrganization,
@@ -139,4 +419,6 @@ public class ProviderUserRepositoryTests
         Assert.Equal(expectedProviderUser.Status, actual.Status);
         Assert.Equal(expectedProviderUser.Type, actual.Type);
     }
+
+
 }
