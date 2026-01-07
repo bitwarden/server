@@ -12,6 +12,7 @@ using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Implementations;
 using Bit.Core.Billing.Subscriptions.Commands;
+using Bit.Core.Billing.Subscriptions.Queries;
 using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Billing.Tax.Services.Implementations;
 
@@ -39,6 +40,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IGetOrganizationWarningsQuery, GetOrganizationWarningsQuery>();
         services.AddTransient<IRestartSubscriptionCommand, RestartSubscriptionCommand>();
         services.AddTransient<IPreviewOrganizationTaxCommand, PreviewOrganizationTaxCommand>();
+        services.AddTransient<IGetBitwardenSubscriptionQuery, GetBitwardenSubscriptionQuery>();
     }
 
     private static void AddOrganizationLicenseCommandsQueries(this IServiceCollection services)

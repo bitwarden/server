@@ -7,6 +7,7 @@ using Bit.Core.Billing.Licenses.Queries;
 using Bit.Core.Billing.Payment.Commands;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Premium.Commands;
+using Bit.Core.Billing.Subscriptions.Queries;
 using Bit.Core.Entities;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
@@ -21,6 +22,7 @@ namespace Bit.Api.Billing.Controllers.VNext;
 public class AccountBillingVNextController(
     ICreateBitPayInvoiceForCreditCommand createBitPayInvoiceForCreditCommand,
     ICreatePremiumCloudHostedSubscriptionCommand createPremiumCloudHostedSubscriptionCommand,
+    IGetBitwardenSubscriptionQuery getBitwardenSubscriptionQuery,
     IGetCreditQuery getCreditQuery,
     IGetPaymentMethodQuery getPaymentMethodQuery,
     IGetUserLicenseQuery getUserLicenseQuery,
@@ -100,6 +102,16 @@ public class AccountBillingVNextController(
     {
         var result = await updatePremiumStorageCommand.Run(user, request.AdditionalStorageGb);
         return Handle(result);
+    }
+
+    [HttpGet("subscription")]
+    [RequireFeature(FeatureFlagKeys.PM29594_UpdateIndividualSubscriptionPage)]
+    [InjectUser]
+    public async Task<IResult> GetSubscriptionAsync(
+        [BindNever] User user)
+    {
+        var subscription = await getBitwardenSubscriptionQuery.Run(user);
+        return TypedResults.Ok(subscription);
     }
 
     [HttpPost("upgrade")]
