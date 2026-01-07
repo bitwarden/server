@@ -118,7 +118,7 @@ public class AccountsController(
             user.IsExpired());
     }
 
-    // TODO: Migrate to Command / AccountBillingVNextController as POST /account/billing/vnext/subscription/reinstate
+    // TODO: Remove with deletion of pm-29594-update-individual-subscription-page
     [HttpPost("reinstate-premium")]
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task PostReinstateAsync()

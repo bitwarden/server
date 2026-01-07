@@ -35,6 +35,7 @@ public class AccountBillingVNextControllerTests
             Substitute.For<Core.Billing.Payment.Queries.IGetCreditQuery>(),
             Substitute.For<Core.Billing.Payment.Queries.IGetPaymentMethodQuery>(),
             _getUserLicenseQuery,
+            Substitute.For<IReinstateSubscriptionCommand>(),
             Substitute.For<Core.Billing.Payment.Commands.IUpdatePaymentMethodCommand>(),
             _updatePremiumStorageCommand,
             _upgradePremiumToOrganizationCommand);

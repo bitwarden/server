@@ -7,6 +7,7 @@ using Bit.Core.Billing.Licenses.Queries;
 using Bit.Core.Billing.Payment.Commands;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Premium.Commands;
+using Bit.Core.Billing.Subscriptions.Commands;
 using Bit.Core.Billing.Subscriptions.Queries;
 using Bit.Core.Entities;
 using Bit.Core.Utilities;
@@ -26,6 +27,7 @@ public class AccountBillingVNextController(
     IGetCreditQuery getCreditQuery,
     IGetPaymentMethodQuery getPaymentMethodQuery,
     IGetUserLicenseQuery getUserLicenseQuery,
+    IReinstateSubscriptionCommand reinstateSubscriptionCommand,
     IUpdatePaymentMethodCommand updatePaymentMethodCommand,
     IUpdatePremiumStorageCommand updatePremiumStorageCommand,
     IUpgradePremiumToOrganizationCommand upgradePremiumToOrganizationCommand) : BaseBillingController
@@ -112,6 +114,16 @@ public class AccountBillingVNextController(
     {
         var subscription = await getBitwardenSubscriptionQuery.Run(user);
         return TypedResults.Ok(subscription);
+    }
+
+    [HttpPost("subscription/reinstate")]
+    [RequireFeature(FeatureFlagKeys.PM29594_UpdateIndividualSubscriptionPage)]
+    [InjectUser]
+    public async Task<IResult> ReinstateSubscriptionAsync(
+        [BindNever] User user)
+    {
+        var result = await reinstateSubscriptionCommand.Run(user);
+        return Handle(result);
     }
 
     [HttpPost("upgrade")]
