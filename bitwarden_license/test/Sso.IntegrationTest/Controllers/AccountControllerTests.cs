@@ -1,5 +1,4 @@
 using System.Net;
-using System.Security.Claims;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Entities;
@@ -7,18 +6,17 @@ using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Settings;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Duende.IdentityModel;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using NSubstitute;
 using Xunit;
 using AuthenticationSchemes = Bit.Core.AuthenticationSchemes;
+using Bit.Sso.IntegrationTest.Utilities;
+using Bitwarden.License.Test.Sso.IntegrationTest.Utilities;
 
 namespace Bit.Sso.IntegrationTest.Controllers;
 
@@ -98,23 +96,11 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
     public async Task ExternalCallback_WithMockedAuthenticationService_FailedAuth_ReturnsError()
     {
         // Arrange
-        var client = _factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureServices(services =>
-            {
-                var featureService = Substitute.For<IFeatureService>();
-                featureService.IsEnabled(FeatureFlagKeys.PM24579_PreventSsoOnExistingNonCompliantUsers).Returns(true);
-                services.AddSingleton(featureService);
+        var testData = await new SsoTestDataBuilder()
+            .WithFailedAuthentication()
+            .BuildAsync();
 
-                // Mock authentication service to return failed result
-                var authService = Substitute.For<IAuthenticationService>();
-                authService.AuthenticateAsync(
-                        Arg.Any<HttpContext>(),
-                        AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
-                    .Returns(AuthenticateResult.Fail("External authentication error"));
-                services.AddSingleton(authService);
-            });
-        }).CreateClient();
+        var client = testData.Factory.CreateClient();
 
         // Act
         var response = await client.GetAsync("/Account/ExternalCallback");
@@ -130,53 +116,11 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
     public async Task ExternalCallback_WithDisabledSsoConfig_ReturnsError()
     {
         // Arrange
-        var organizationId = Guid.NewGuid();
-        var providerUserId = Guid.NewGuid().ToString();
-        var testEmail = "test_user@integration.test";
-        var testName = "Test User";
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig(ssoConfig => ssoConfig!.Enabled = false)
+            .BuildAsync();
 
-        var organization = new Organization
-        {
-            Id = organizationId,
-            Enabled = true,
-            UseSso = true
-        };
-
-        // SSO config exists but is disabled
-        var ssoConfig = new SsoConfig
-        {
-            OrganizationId = organizationId,
-            Enabled = false
-        };
-        ssoConfig.SetData(new SsoConfigurationData());
-
-        var client = _factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureServices(services =>
-            {
-                var featureService = Substitute.For<IFeatureService>();
-                featureService.IsEnabled(FeatureFlagKeys.PM24579_PreventSsoOnExistingNonCompliantUsers).Returns(true);
-                services.AddSingleton(featureService);
-
-                // Mock organization repository
-                var orgRepo = Substitute.For<IOrganizationRepository>();
-                orgRepo.GetByIdAsync(organizationId).Returns(organization);
-                services.AddSingleton(orgRepo);
-
-                // Mock SSO config repository - returns config that is disabled
-                var ssoConfigRepo = Substitute.For<ISsoConfigRepository>();
-                ssoConfigRepo.GetByOrganizationIdAsync(organizationId).Returns(ssoConfig);
-                services.AddSingleton(ssoConfigRepo);
-
-                // Mock authentication service with successful external auth
-                var authService = Substitute.For<IAuthenticationService>();
-                authService.AuthenticateAsync(
-                        Arg.Any<HttpContext>(),
-                        AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
-                    .Returns(BuildSuccessfulAuthResult(organizationId, providerUserId, testEmail, testName));
-                services.AddSingleton(authService);
-            });
-        }).CreateClient();
+        var client = testData.Factory.CreateClient();
 
         // Act
         var response = await client.GetAsync("/Account/ExternalCallback");
@@ -191,72 +135,10 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
     public async Task ExternalCallback_FindUserFromExternalProviderAsync_OrganizationOrSsoConfigNotFound_ReturnsError()
     {
         // Arrange
-        var organizationId = Guid.NewGuid();
-        var providerUserId = Guid.NewGuid().ToString();
-        var userId = Guid.NewGuid();
-        var testEmail = "invited_user@integration.test";
-        var testName = "Invited User";
+        var testData = await new SsoTestDataBuilder()
+            .BuildAsync();
 
-        var existingUser = new User
-        {
-            Id = userId,
-            Email = testEmail,
-            Name = testName
-        };
-
-        var organization = new Organization
-        {
-            Id = organizationId,
-            Enabled = true,
-            UseSso = true
-        };
-
-        var orgUser = new OrganizationUser
-        {
-            Id = Guid.NewGuid(),
-            OrganizationId = organizationId,
-            UserId = userId,
-            Status = OrganizationUserStatusType.Confirmed
-        };
-
-        var client = _factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureServices(services =>
-            {
-                var featureService = Substitute.For<IFeatureService>();
-                featureService.IsEnabled(FeatureFlagKeys.PM24579_PreventSsoOnExistingNonCompliantUsers).Returns(true);
-                services.AddSingleton(featureService);
-
-                // Mock organization repository
-                var orgRepo = Substitute.For<IOrganizationRepository>();
-                orgRepo.GetByIdAsync(organizationId).Returns(organization);
-                services.AddSingleton(orgRepo);
-
-                // Mock SSO config repository
-                var ssoConfigRepo = Substitute.For<ISsoConfigRepository>();
-                ssoConfigRepo.GetByOrganizationIdAsync(organizationId).Returns(null as SsoConfig);
-                services.AddSingleton(ssoConfigRepo);
-
-                // Mock user repository
-                var userRepo = Substitute.For<IUserRepository>();
-                userRepo.GetBySsoUserAsync(providerUserId, organizationId).Returns((User?)null);
-                userRepo.GetByEmailAsync(testEmail).Returns(existingUser);
-                services.AddSingleton(userRepo);
-
-                // Mock organization user repository with invited user
-                var orgUserRepo = Substitute.For<IOrganizationUserRepository>();
-                orgUserRepo.GetManyByUserAsync(userId).Returns([orgUser]);
-                services.AddSingleton(orgUserRepo);
-
-                // Mock authentication service with successful external auth
-                var authService = Substitute.For<IAuthenticationService>();
-                authService.AuthenticateAsync(
-                        Arg.Any<HttpContext>(),
-                        AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
-                    .Returns(BuildSuccessfulAuthResult(organizationId, providerUserId, testEmail, testName));
-                services.AddSingleton(authService);
-            });
-        }).CreateClient();
+        var client = testData.Factory.CreateClient();
 
         // Act
         var response = await client.GetAsync("/Account/ExternalCallback");
@@ -275,59 +157,15 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
     public async Task ExternalCallback_WithExpectedAcrValue_AndInvalidAcr_ReturnsError()
     {
         // Arrange
-        var organizationId = Guid.NewGuid();
-        var providerUserId = Guid.NewGuid().ToString();
-        var testEmail = "test_user@integration.test";
-        var testName = "Test User";
-        var expectedAcrValue = "urn:expected:acr:value";
-        var invalidAcrValue = "wrong-acr-value";
-
-        var organization = new Organization
-        {
-            Id = organizationId,
-            Enabled = true,
-            UseSso = true
-        };
-
-        // SSO config with expected ACR value
-        var ssoConfigData = new SsoConfigurationData
-        {
-            ExpectedReturnAcrValue = expectedAcrValue
-        };
-        var ssoConfig = new SsoConfig
-        {
-            OrganizationId = organizationId,
-            Enabled = true
-        };
-        ssoConfig.SetData(ssoConfigData);
-
-        var client = _factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureServices(services =>
+        var testData = await new SsoTestDataBuilder()
+        .WithSsoConfig(ssoConfig => ssoConfig!.SetData(
+            new SsoConfigurationData
             {
-                var featureService = Substitute.For<IFeatureService>();
-                featureService.IsEnabled(FeatureFlagKeys.PM24579_PreventSsoOnExistingNonCompliantUsers).Returns(true);
-                services.AddSingleton(featureService);
+                ExpectedReturnAcrValue = "urn:expected:acr:value"
+            }))
+            .BuildAsync();
 
-                // Mock organization repository
-                var orgRepo = Substitute.For<IOrganizationRepository>();
-                orgRepo.GetByIdAsync(organizationId).Returns(organization);
-                services.AddSingleton(orgRepo);
-
-                // Mock SSO config repository with expected ACR value
-                var ssoConfigRepo = Substitute.For<ISsoConfigRepository>();
-                ssoConfigRepo.GetByOrganizationIdAsync(organizationId).Returns(ssoConfig);
-                services.AddSingleton(ssoConfigRepo);
-
-                // Mock authentication service with external auth that has missing/invalid ACR
-                var authService = Substitute.For<IAuthenticationService>();
-                authService.AuthenticateAsync(
-                        Arg.Any<HttpContext>(),
-                        AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
-                    .Returns(BuildSuccessfulAuthResult(organizationId, providerUserId, testEmail, testName, invalidAcrValue));
-                services.AddSingleton(authService);
-            });
-        }).CreateClient();
+        var client = testData.Factory.CreateClient();
 
         // Act
         var response = await client.GetAsync("/Account/ExternalCallback");
@@ -346,54 +184,15 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
     public async Task ExternalCallback_WithNoUserIdClaim_ReturnsError()
     {
         // Arrange
-        var organizationId = Guid.NewGuid();
-        var testEmail = "test_user@integration.test";
-        var testName = "Test User";
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig()
+            .OmitProviderUserId()
+            .BuildAsync();
 
-        var organization = new Organization
-        {
-            Id = organizationId,
-            Enabled = true,
-            UseSso = true
-        };
-
-        var ssoConfig = new SsoConfig
-        {
-            OrganizationId = organizationId,
-            Enabled = true
-        };
-        ssoConfig.SetData(new SsoConfigurationData());
-
-        var client = _factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureServices(services =>
-            {
-                var featureService = Substitute.For<IFeatureService>();
-                featureService.IsEnabled(FeatureFlagKeys.PM24579_PreventSsoOnExistingNonCompliantUsers).Returns(true);
-                services.AddSingleton(featureService);
-
-                // Mock organization repository
-                var orgRepo = Substitute.For<IOrganizationRepository>();
-                orgRepo.GetByIdAsync(organizationId).Returns(organization);
-                services.AddSingleton(orgRepo);
-
-                // Mock SSO config repository
-                var ssoConfigRepo = Substitute.For<ISsoConfigRepository>();
-                ssoConfigRepo.GetByOrganizationIdAsync(organizationId).Returns(ssoConfig);
-                services.AddSingleton(ssoConfigRepo);
-
-                // Mock authentication service with auth result that has NO user ID claims
-                var authService = Substitute.For<IAuthenticationService>();
-                authService.AuthenticateAsync(
-                        Arg.Any<HttpContext>(),
-                        AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
-                    .Returns(BuildSuccessfulAuthResult(organizationId, null, testEmail, testName));
-                services.AddSingleton(authService);
-            });
-        }).CreateClient();
+        var client = testData.Factory.CreateClient();
 
         // Act
-        var response = await client.GetAsync("/Account/ExternalCallback");
+        var response = await client.GetAsync("/Account/ExternalCallback"); ;
 
         // Assert - Should fail because no user ID claim was found
         var stringResponse = await response.Content.ReadAsStringAsync();
@@ -409,58 +208,12 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
     public async Task ExternalCallback_WithNoEmailClaim_ReturnsError()
     {
         // Arrange
-        var organizationId = Guid.NewGuid();
-        // Use a providerUserId WITHOUT @ so it can't be used as fallback email
-        var providerUserId = Guid.NewGuid().ToString();
-        var testName = "Test User";
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig()
+            .WithNullEmail()
+            .BuildAsync();
 
-        var organization = new Organization
-        {
-            Id = organizationId,
-            Enabled = true,
-            UseSso = true
-        };
-
-        var ssoConfig = new SsoConfig
-        {
-            OrganizationId = organizationId,
-            Enabled = true
-        };
-        ssoConfig.SetData(new SsoConfigurationData());
-
-        var client = _factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureServices(services =>
-            {
-                var featureService = Substitute.For<IFeatureService>();
-                featureService.IsEnabled(FeatureFlagKeys.PM24579_PreventSsoOnExistingNonCompliantUsers).Returns(true);
-                services.AddSingleton(featureService);
-
-                // Mock organization repository
-                var orgRepo = Substitute.For<IOrganizationRepository>();
-                orgRepo.GetByIdAsync(organizationId).Returns(organization);
-                orgRepo.GetByIdentifierAsync(organizationId.ToString()).Returns(organization);
-                services.AddSingleton(orgRepo);
-
-                // Mock SSO config repository
-                var ssoConfigRepo = Substitute.For<ISsoConfigRepository>();
-                ssoConfigRepo.GetByOrganizationIdAsync(organizationId).Returns(ssoConfig);
-                services.AddSingleton(ssoConfigRepo);
-
-                // Mock user repository - no existing user found via SSO
-                var userRepo = Substitute.For<IUserRepository>();
-                userRepo.GetBySsoUserAsync(providerUserId, organizationId).Returns((User?)null);
-                services.AddSingleton(userRepo);
-
-                // Mock authentication service with auth result that has NO email claim
-                var authService = Substitute.For<IAuthenticationService>();
-                authService.AuthenticateAsync(
-                        Arg.Any<HttpContext>(),
-                        AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
-                    .Returns(BuildSuccessfulAuthResult(organizationId, providerUserId, null, testName));
-                services.AddSingleton(authService);
-            });
-        }).CreateClient();
+        var client = testData.Factory.CreateClient();
 
         // Act
         var response = await client.GetAsync("/Account/ExternalCallback");
@@ -479,80 +232,51 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
     public async Task ExternalCallback_WithExistingKeyConnectorUser_AndNoOrgUser_ReturnsError()
     {
         // Arrange
-        var organizationId = Guid.NewGuid();
-        var providerUserId = Guid.NewGuid().ToString();
-        var userId = Guid.NewGuid();
-        var testEmail = "keyconnector_user@integration.test";
-        var testName = "Key Connector User";
-
-        // Existing user that uses Key Connector
-        var existingUser = new User
-        {
-            Id = userId,
-            Email = testEmail,
-            Name = testName,
-            UsesKeyConnector = true
-        };
-
-        var organization = new Organization
-        {
-            Id = organizationId,
-            Enabled = true,
-            UseSso = true
-        };
-
-        var ssoConfig = new SsoConfig
-        {
-            OrganizationId = organizationId,
-            Enabled = true
-        };
-        ssoConfig.SetData(new SsoConfigurationData());
-
-        var client = _factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureServices(services =>
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig()
+            .WithUser(user =>
             {
-                var featureService = Substitute.For<IFeatureService>();
-                featureService.IsEnabled(FeatureFlagKeys.PM24579_PreventSsoOnExistingNonCompliantUsers).Returns(true);
-                services.AddSingleton(featureService);
+                user.UsesKeyConnector = true;
+            })
+            .BuildAsync();
 
-                // Mock organization repository
-                var orgRepo = Substitute.For<IOrganizationRepository>();
-                orgRepo.GetByIdAsync(organizationId).Returns(organization);
-                orgRepo.GetByIdentifierAsync(organizationId.ToString()).Returns(organization);
-                services.AddSingleton(orgRepo);
-
-                // Mock SSO config repository
-                var ssoConfigRepo = Substitute.For<ISsoConfigRepository>();
-                ssoConfigRepo.GetByOrganizationIdAsync(organizationId).Returns(ssoConfig);
-                services.AddSingleton(ssoConfigRepo);
-
-                // Mock user repository - no SSO user, but existing user found by email
-                var userRepo = Substitute.For<IUserRepository>();
-                userRepo.GetBySsoUserAsync(providerUserId, organizationId).Returns((User?)null);
-                userRepo.GetByEmailAsync(testEmail).Returns(existingUser);
-                services.AddSingleton(userRepo);
-
-                // Mock organization user repository - NO org user record (user was removed)
-                var orgUserRepo = Substitute.For<IOrganizationUserRepository>();
-                orgUserRepo.GetManyByUserAsync(userId).Returns(new List<OrganizationUser>());
-                orgUserRepo.GetByOrganizationEmailAsync(organizationId, testEmail).Returns((OrganizationUser?)null);
-                services.AddSingleton(orgUserRepo);
-
-                // Mock authentication service
-                var authService = Substitute.For<IAuthenticationService>();
-                authService.AuthenticateAsync(
-                        Arg.Any<HttpContext>(),
-                        AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
-                    .Returns(BuildSuccessfulAuthResult(organizationId, providerUserId, testEmail, testName));
-                services.AddSingleton(authService);
-            });
-        }).CreateClient();
+        var client = testData.Factory.CreateClient();
 
         // Act
         var response = await client.GetAsync("/Account/ExternalCallback");
 
         // Assert - Should fail because user uses Key Connector but has no org user record
+        var stringResponse = await response.Content.ReadAsStringAsync();
+        Assert.Contains("You were removed from the organization managing single sign-on for your account", stringResponse);
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+    }
+
+    /*
+    * Test to verify /Account/ExternalCallback returns error when an existing user
+    * uses Key Connector and has an org user record in the invited status.
+    */
+    [Fact]
+    public async Task ExternalCallback_WithExistingKeyConnectorUser_AndInvitedOrgUser_ReturnsError()
+    {
+        // Arrange
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig(ssoConfig => { })
+            .WithUser(user =>
+            {
+                user.UsesKeyConnector = true;
+            })
+            .WithOrganizationUser(orgUser =>
+            {
+                orgUser.Status = OrganizationUserStatusType.Invited;
+            })
+            .BuildAsync();
+
+        var client = testData.Factory.CreateClient();
+
+        // Act
+        var response = await client.GetAsync("/Account/ExternalCallback");
+
+        // Assert - Should fail because user uses Key Connector but the Org user is in the invited status
         var stringResponse = await response.Content.ReadAsStringAsync();
         Assert.Contains("You were removed from the organization managing single sign-on for your account", stringResponse);
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
@@ -566,75 +290,12 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
     public async Task ExternalCallback_WithExistingUser_AndNoOrgUser_ReturnsError()
     {
         // Arrange
-        var organizationId = Guid.NewGuid();
-        var providerUserId = Guid.NewGuid().ToString();
-        var userId = Guid.NewGuid();
-        var testEmail = "existing_user@integration.test";
-        var testName = "Existing User";
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig()
+            .WithUser()
+            .BuildAsync();
 
-        // Existing user that does NOT use Key Connector
-        var existingUser = new User
-        {
-            Id = userId,
-            Email = testEmail,
-            Name = testName,
-            UsesKeyConnector = false
-        };
-
-        var organization = new Organization
-        {
-            Id = organizationId,
-            Enabled = true,
-            UseSso = true
-        };
-
-        var ssoConfig = new SsoConfig
-        {
-            OrganizationId = organizationId,
-            Enabled = true
-        };
-        ssoConfig.SetData(new SsoConfigurationData());
-
-        var client = _factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureServices(services =>
-            {
-                var featureService = Substitute.For<IFeatureService>();
-                featureService.IsEnabled(FeatureFlagKeys.PM24579_PreventSsoOnExistingNonCompliantUsers).Returns(true);
-                services.AddSingleton(featureService);
-
-                // Mock organization repository
-                var orgRepo = Substitute.For<IOrganizationRepository>();
-                orgRepo.GetByIdAsync(organizationId).Returns(organization);
-                orgRepo.GetByIdentifierAsync(organizationId.ToString()).Returns(organization);
-                services.AddSingleton(orgRepo);
-
-                // Mock SSO config repository
-                var ssoConfigRepo = Substitute.For<ISsoConfigRepository>();
-                ssoConfigRepo.GetByOrganizationIdAsync(organizationId).Returns(ssoConfig);
-                services.AddSingleton(ssoConfigRepo);
-
-                // Mock user repository - no SSO user, but existing user found by email
-                var userRepo = Substitute.For<IUserRepository>();
-                userRepo.GetBySsoUserAsync(providerUserId, organizationId).Returns((User?)null);
-                userRepo.GetByEmailAsync(testEmail).Returns(existingUser);
-                services.AddSingleton(userRepo);
-
-                // Mock organization user repository - NO org user record (user was removed)
-                var orgUserRepo = Substitute.For<IOrganizationUserRepository>();
-                orgUserRepo.GetManyByUserAsync(userId).Returns(new List<OrganizationUser>());
-                orgUserRepo.GetByOrganizationEmailAsync(organizationId, testEmail).Returns((OrganizationUser?)null);
-                services.AddSingleton(orgUserRepo);
-
-                // Mock authentication service
-                var authService = Substitute.For<IAuthenticationService>();
-                authService.AuthenticateAsync(
-                        Arg.Any<HttpContext>(),
-                        AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
-                    .Returns(BuildSuccessfulAuthResult(organizationId, providerUserId, testEmail, testName));
-                services.AddSingleton(authService);
-            });
-        }).CreateClient();
+        var client = testData.Factory.CreateClient();
 
         // Act
         var response = await client.GetAsync("/Account/ExternalCallback");
@@ -653,83 +314,16 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
     public async Task ExternalCallback_WithExistingUser_AndInvitedOrgUserStatus_ReturnsError()
     {
         // Arrange
-        var organizationId = Guid.NewGuid();
-        var providerUserId = Guid.NewGuid().ToString();
-        var userId = Guid.NewGuid();
-        var testEmail = "invited_existing_user@integration.test";
-        var testName = "Invited Existing User";
-
-        var existingUser = new User
-        {
-            Id = userId,
-            Email = testEmail,
-            Name = testName,
-            UsesKeyConnector = false
-        };
-
-        var organization = new Organization
-        {
-            Id = organizationId,
-            Name = "Test Organization",
-            Enabled = true,
-            UseSso = true
-        };
-
-        // Org user exists but with Invited status
-        var orgUser = new OrganizationUser
-        {
-            Id = Guid.NewGuid(),
-            OrganizationId = organizationId,
-            UserId = userId,
-            Status = OrganizationUserStatusType.Invited
-        };
-
-        var ssoConfig = new SsoConfig
-        {
-            OrganizationId = organizationId,
-            Enabled = true
-        };
-        ssoConfig.SetData(new SsoConfigurationData());
-
-        var client = _factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureServices(services =>
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig()
+            .WithUser()
+            .WithOrganizationUser(orgUser =>
             {
-                var featureService = Substitute.For<IFeatureService>();
-                featureService.IsEnabled(FeatureFlagKeys.PM24579_PreventSsoOnExistingNonCompliantUsers).Returns(true);
-                services.AddSingleton(featureService);
+                orgUser.Status = OrganizationUserStatusType.Invited;
+            })
+            .BuildAsync();
 
-                // Mock organization repository
-                var orgRepo = Substitute.For<IOrganizationRepository>();
-                orgRepo.GetByIdAsync(organizationId).Returns(organization);
-                orgRepo.GetByIdentifierAsync(organizationId.ToString()).Returns(organization);
-                services.AddSingleton(orgRepo);
-
-                // Mock SSO config repository
-                var ssoConfigRepo = Substitute.For<ISsoConfigRepository>();
-                ssoConfigRepo.GetByOrganizationIdAsync(organizationId).Returns(ssoConfig);
-                services.AddSingleton(ssoConfigRepo);
-
-                // Mock user repository - no SSO user, but existing user found by email
-                var userRepo = Substitute.For<IUserRepository>();
-                userRepo.GetBySsoUserAsync(providerUserId, organizationId).Returns((User?)null);
-                userRepo.GetByEmailAsync(testEmail).Returns(existingUser);
-                services.AddSingleton(userRepo);
-
-                // Mock organization user repository - org user exists with Invited status
-                var orgUserRepo = Substitute.For<IOrganizationUserRepository>();
-                orgUserRepo.GetManyByUserAsync(userId).Returns(new List<OrganizationUser> { orgUser });
-                services.AddSingleton(orgUserRepo);
-
-                // Mock authentication service
-                var authService = Substitute.For<IAuthenticationService>();
-                authService.AuthenticateAsync(
-                        Arg.Any<HttpContext>(),
-                        AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
-                    .Returns(BuildSuccessfulAuthResult(organizationId, providerUserId, testEmail, testName));
-                services.AddSingleton(authService);
-            });
-        }).CreateClient();
+        var client = testData.Factory.CreateClient();
 
         // Act
         var response = await client.GetAsync("/Account/ExternalCallback");
@@ -747,76 +341,16 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
     [Fact]
     public async Task ExternalCallback_WithNoAvailableSeats_OnSelfHosted_ReturnsError()
     {
-        // Arrange
-        var organizationId = Guid.NewGuid();
-        var providerUserId = Guid.NewGuid().ToString();
-        var testEmail = "new_user@integration.test";
-        var testName = "New User";
-
-        var organization = new Organization
-        {
-            Id = organizationId,
-            Name = "Test Organization",
-            Enabled = true,
-            UseSso = true,
-            Seats = 5 // Organization has seat limit
-        };
-
-        var ssoConfig = new SsoConfig
-        {
-            OrganizationId = organizationId,
-            Enabled = true
-        };
-        ssoConfig.SetData(new SsoConfigurationData());
-
-        // All seats are occupied
-        var seatCounts = new OrganizationSeatCounts { Users = 5, Sponsored = 0 };
-
-        var client = _factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureServices(services =>
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig()
+            .WithOrganization(org =>
             {
-                var featureService = Substitute.For<IFeatureService>();
-                featureService.IsEnabled(FeatureFlagKeys.PM24579_PreventSsoOnExistingNonCompliantUsers).Returns(true);
-                services.AddSingleton(featureService);
+                org.Seats = 5; // Organization has seat limit
+            })
+            .AsSelfHosted()
+            .BuildAsync();
 
-                // Mock GlobalSettings as self-hosted
-                var globalSettings = Substitute.For<IGlobalSettings>();
-                globalSettings.SelfHosted.Returns(true);
-                services.AddSingleton(globalSettings);
-
-                // Mock organization repository
-                var orgRepo = Substitute.For<IOrganizationRepository>();
-                orgRepo.GetByIdAsync(organizationId).Returns(organization);
-                orgRepo.GetByIdentifierAsync(organizationId.ToString()).Returns(organization);
-                orgRepo.GetOccupiedSeatCountByOrganizationIdAsync(organizationId).Returns(seatCounts);
-                services.AddSingleton(orgRepo);
-
-                // Mock SSO config repository
-                var ssoConfigRepo = Substitute.For<ISsoConfigRepository>();
-                ssoConfigRepo.GetByOrganizationIdAsync(organizationId).Returns(ssoConfig);
-                services.AddSingleton(ssoConfigRepo);
-
-                // Mock user repository - no existing user
-                var userRepo = Substitute.For<IUserRepository>();
-                userRepo.GetBySsoUserAsync(providerUserId, organizationId).Returns((User?)null);
-                userRepo.GetByEmailAsync(testEmail).Returns((User?)null);
-                services.AddSingleton(userRepo);
-
-                // Mock organization user repository - no org user
-                var orgUserRepo = Substitute.For<IOrganizationUserRepository>();
-                orgUserRepo.GetByOrganizationEmailAsync(organizationId, testEmail).Returns((OrganizationUser?)null);
-                services.AddSingleton(orgUserRepo);
-
-                // Mock authentication service
-                var authService = Substitute.For<IAuthenticationService>();
-                authService.AuthenticateAsync(
-                        Arg.Any<HttpContext>(),
-                        AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
-                    .Returns(BuildSuccessfulAuthResult(organizationId, providerUserId, testEmail, testName));
-                services.AddSingleton(authService);
-            });
-        }).CreateClient();
+        var client = testData.Factory.CreateClient();
 
         // Act
         var response = await client.GetAsync("/Account/ExternalCallback");
@@ -834,82 +368,16 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
     [Fact]
     public async Task ExternalCallback_WithNoAvailableSeats_AndAutoAddSeatsFails_ReturnsError()
     {
-        // Arrange
-        var organizationId = Guid.NewGuid();
-        var providerUserId = Guid.NewGuid().ToString();
-        var testEmail = "new_user@integration.test";
-        var testName = "New User";
-
-        var organization = new Organization
-        {
-            Id = organizationId,
-            Name = "Test Organization",
-            Enabled = true,
-            UseSso = true,
-            Seats = 5 // Organization has seat limit
-        };
-
-        var ssoConfig = new SsoConfig
-        {
-            OrganizationId = organizationId,
-            Enabled = true
-        };
-        ssoConfig.SetData(new SsoConfigurationData());
-
-        // All seats are occupied
-        var seatCounts = new OrganizationSeatCounts { Users = 5, Sponsored = 0 };
-
-        var client = _factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureServices(services =>
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig()
+            .WithOrganization(org =>
             {
-                var featureService = Substitute.For<IFeatureService>();
-                featureService.IsEnabled(FeatureFlagKeys.PM24579_PreventSsoOnExistingNonCompliantUsers).Returns(true);
-                services.AddSingleton(featureService);
+                org.Seats = 5;
+                org.MaxAutoscaleSeats = 5;
+            })
+            .BuildAsync();
 
-                // Mock GlobalSettings as cloud-hosted (not self-hosted)
-                var globalSettings = Substitute.For<IGlobalSettings>();
-                globalSettings.SelfHosted.Returns(false);
-                services.AddSingleton(globalSettings);
-
-                // Mock organization service - AutoAddSeatsAsync fails
-                var orgService = Substitute.For<IOrganizationService>();
-                orgService.AutoAddSeatsAsync(organization, 1)
-                    .Returns(Task.FromException(new Exception("Cannot add seats: payment method required")));
-                services.AddSingleton(orgService);
-
-                // Mock organization repository
-                var orgRepo = Substitute.For<IOrganizationRepository>();
-                orgRepo.GetByIdAsync(organizationId).Returns(organization);
-                orgRepo.GetByIdentifierAsync(organizationId.ToString()).Returns(organization);
-                orgRepo.GetOccupiedSeatCountByOrganizationIdAsync(organizationId).Returns(seatCounts);
-                services.AddSingleton(orgRepo);
-
-                // Mock SSO config repository
-                var ssoConfigRepo = Substitute.For<ISsoConfigRepository>();
-                ssoConfigRepo.GetByOrganizationIdAsync(organizationId).Returns(ssoConfig);
-                services.AddSingleton(ssoConfigRepo);
-
-                // Mock user repository - no existing user
-                var userRepo = Substitute.For<IUserRepository>();
-                userRepo.GetBySsoUserAsync(providerUserId, organizationId).Returns((User?)null);
-                userRepo.GetByEmailAsync(testEmail).Returns((User?)null);
-                services.AddSingleton(userRepo);
-
-                // Mock organization user repository - no org user
-                var orgUserRepo = Substitute.For<IOrganizationUserRepository>();
-                orgUserRepo.GetByOrganizationEmailAsync(organizationId, testEmail).Returns((OrganizationUser?)null);
-                services.AddSingleton(orgUserRepo);
-
-                // Mock authentication service
-                var authService = Substitute.For<IAuthenticationService>();
-                authService.AuthenticateAsync(
-                        Arg.Any<HttpContext>(),
-                        AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
-                    .Returns(BuildSuccessfulAuthResult(organizationId, providerUserId, testEmail, testName));
-                services.AddSingleton(authService);
-            });
-        }).CreateClient();
+        var client = testData.Factory.CreateClient();
 
         // Act
         var response = await client.GetAsync("/Account/ExternalCallback");
@@ -929,66 +397,13 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
     public async Task ExternalCallback_WithUserIdentifier_AndNoEmail_ReturnsError()
     {
         // Arrange
-        var organizationId = Guid.NewGuid();
-        var providerUserId = Guid.NewGuid().ToString();
-        var testName = "New User";
-        var userIdentifier = "manual-link,token-123"; // Non-empty to bypass first email check
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig()
+            .WithUserIdentifier("")
+            .WithNullEmail()
+            .BuildAsync();
 
-        var organization = new Organization
-        {
-            Id = organizationId,
-            Name = "Test Organization",
-            Enabled = true,
-            UseSso = true,
-            Seats = null // No seat limit to skip seat check
-        };
-
-        var ssoConfig = new SsoConfig
-        {
-            OrganizationId = organizationId,
-            Enabled = true
-        };
-        ssoConfig.SetData(new SsoConfigurationData());
-
-        var client = _factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureServices(services =>
-            {
-                var featureService = Substitute.For<IFeatureService>();
-                featureService.IsEnabled(FeatureFlagKeys.PM24579_PreventSsoOnExistingNonCompliantUsers).Returns(true);
-                services.AddSingleton(featureService);
-
-                // Mock organization repository
-                var orgRepo = Substitute.For<IOrganizationRepository>();
-                orgRepo.GetByIdAsync(organizationId).Returns(organization);
-                orgRepo.GetByIdentifierAsync(organizationId.ToString()).Returns(organization);
-                services.AddSingleton(orgRepo);
-
-                // Mock SSO config repository
-                var ssoConfigRepo = Substitute.For<ISsoConfigRepository>();
-                ssoConfigRepo.GetByOrganizationIdAsync(organizationId).Returns(ssoConfig);
-                services.AddSingleton(ssoConfigRepo);
-
-                // Mock user repository - no existing user via SSO or manual linking
-                var userRepo = Substitute.For<IUserRepository>();
-                userRepo.GetBySsoUserAsync(providerUserId, organizationId).Returns((User?)null);
-                userRepo.GetByIdAsync(Arg.Any<Guid>()).Returns((User?)null);
-                services.AddSingleton(userRepo);
-
-                // Mock organization user repository - no org user
-                var orgUserRepo = Substitute.For<IOrganizationUserRepository>();
-                orgUserRepo.GetByOrganizationEmailAsync(organizationId, Arg.Any<string>()).Returns((OrganizationUser?)null);
-                services.AddSingleton(orgUserRepo);
-
-                // Mock authentication service - NO email claim, but with userIdentifier
-                var authService = Substitute.For<IAuthenticationService>();
-                authService.AuthenticateAsync(
-                        Arg.Any<HttpContext>(),
-                        AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
-                    .Returns(BuildSuccessfulAuthResult(organizationId, providerUserId, null, testName, null, userIdentifier));
-                services.AddSingleton(authService);
-            });
-        }).CreateClient();
+        var client = testData.Factory.CreateClient();
 
         // Act
         var response = await client.GetAsync("/Account/ExternalCallback");
@@ -1008,82 +423,16 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
     public async Task ExternalCallback_WithUnknownOrgUserStatus_ReturnsError()
     {
         // Arrange
-        var organizationId = Guid.NewGuid();
-        var providerUserId = Guid.NewGuid().ToString();
-        var userId = Guid.NewGuid();
-        var testEmail = "unknown_status_user@integration.test";
-        var testName = "Unknown Status User";
-
-        var existingSsoUser = new User
-        {
-            Id = userId,
-            Email = testEmail,
-            Name = testName
-        };
-
-        var organization = new Organization
-        {
-            Id = organizationId,
-            Name = "Test Organization",
-            Enabled = true,
-            UseSso = true
-        };
-
-        // Org user with an invalid/unknown status (casting invalid integer to enum)
-        var orgUser = new OrganizationUser
-        {
-            Id = Guid.NewGuid(),
-            OrganizationId = organizationId,
-            UserId = userId,
-            Status = (OrganizationUserStatusType)99 // Invalid enum value - simulates future status or data corruption
-        };
-
-        var ssoConfig = new SsoConfig
-        {
-            OrganizationId = organizationId,
-            Enabled = true
-        };
-        ssoConfig.SetData(new SsoConfigurationData());
-
-        var client = _factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureServices(services =>
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig()
+            .WithUser()
+            .WithOrganizationUser(orgUser =>
             {
-                // Feature flag enabled to trigger PreventOrgUserLoginIfStatusInvalidAsync
-                var featureService = Substitute.For<IFeatureService>();
-                featureService.IsEnabled(FeatureFlagKeys.PM24579_PreventSsoOnExistingNonCompliantUsers).Returns(true);
-                services.AddSingleton(featureService);
+                orgUser.Status = (OrganizationUserStatusType)99; // Invalid enum value - simulates future status or data corruption
+            })
+            .BuildAsync();
 
-                // Mock organization repository
-                var orgRepo = Substitute.For<IOrganizationRepository>();
-                orgRepo.GetByIdAsync(organizationId).Returns(organization);
-                orgRepo.GetByIdentifierAsync(organizationId.ToString()).Returns(organization);
-                services.AddSingleton(orgRepo);
-
-                // Mock SSO config repository
-                var ssoConfigRepo = Substitute.For<ISsoConfigRepository>();
-                ssoConfigRepo.GetByOrganizationIdAsync(organizationId).Returns(ssoConfig);
-                services.AddSingleton(ssoConfigRepo);
-
-                // Mock user repository - user IS found via SSO lookup
-                var userRepo = Substitute.For<IUserRepository>();
-                userRepo.GetBySsoUserAsync(providerUserId, organizationId).Returns(existingSsoUser);
-                services.AddSingleton(userRepo);
-
-                // Mock organization user repository - returns org user with invalid status
-                var orgUserRepo = Substitute.For<IOrganizationUserRepository>();
-                orgUserRepo.GetManyByUserAsync(userId).Returns(new List<OrganizationUser> { orgUser });
-                services.AddSingleton(orgUserRepo);
-
-                // Mock authentication service
-                var authService = Substitute.For<IAuthenticationService>();
-                authService.AuthenticateAsync(
-                        Arg.Any<HttpContext>(),
-                        AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
-                    .Returns(BuildSuccessfulAuthResult(organizationId, providerUserId, testEmail, testName));
-                services.AddSingleton(authService);
-            });
-        }).CreateClient();
+        var client = testData.Factory.CreateClient();
 
         // Act
         var response = await client.GetAsync("/Account/ExternalCallback");
@@ -1094,73 +443,29 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
     }
 
-// Note: "User should be found ln 304" appears to be unreachable defensive code.
-// CreateUserAndOrgUserConditionallyAsync always returns a non-null user or throws an exception,
-// so possibleSsoLinkedUser cannot be null when the feature flag check executes.
+    // Note: "User should be found ln 304" appears to be unreachable defensive code.
+    // CreateUserAndOrgUserConditionallyAsync always returns a non-null user or throws an exception,
+    // so possibleSsoLinkedUser cannot be null when the feature flag check executes.
 
     /*
     * Test to verify /Account/ExternalCallback returns error when userIdentifier
     * is malformed (doesn't contain comma separator for userId,token format).
+    * There is only a single test case here but in the future we may need to expand the
+    * tests to cover other invalid formats.
     */
-    [Fact]
-    public async Task ExternalCallback_WithInvalidUserIdentifierFormat_ReturnsError()
+    [Theory]
+    [BitAutoData("No-Comas-Identifier")]
+    public async Task ExternalCallback_WithInvalidUserIdentifierFormat_ReturnsError(
+        string UserIdentifier
+    )
     {
         // Arrange
-        var organizationId = Guid.NewGuid();
-        var providerUserId = Guid.NewGuid().ToString();
-        var testEmail = "test_user@integration.test";
-        var testName = "Test User";
-        // Invalid format - missing comma separator (should be "userId,token")
-        var userIdentifier = "invalid-identifier-no-comma";
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig()
+            .WithUserIdentifier(UserIdentifier)
+            .BuildAsync();
 
-        var organization = new Organization
-        {
-            Id = organizationId,
-            Name = "Test Organization",
-            Enabled = true,
-            UseSso = true
-        };
-
-        var ssoConfig = new SsoConfig
-        {
-            OrganizationId = organizationId,
-            Enabled = true
-        };
-        ssoConfig.SetData(new SsoConfigurationData());
-
-        var client = _factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureServices(services =>
-            {
-                var featureService = Substitute.For<IFeatureService>();
-                featureService.IsEnabled(FeatureFlagKeys.PM24579_PreventSsoOnExistingNonCompliantUsers).Returns(true);
-                services.AddSingleton(featureService);
-
-                // Mock organization repository
-                var orgRepo = Substitute.For<IOrganizationRepository>();
-                orgRepo.GetByIdAsync(organizationId).Returns(organization);
-                orgRepo.GetByIdentifierAsync(organizationId.ToString()).Returns(organization);
-                services.AddSingleton(orgRepo);
-
-                // Mock SSO config repository
-                var ssoConfigRepo = Substitute.For<ISsoConfigRepository>();
-                ssoConfigRepo.GetByOrganizationIdAsync(organizationId).Returns(ssoConfig);
-                services.AddSingleton(ssoConfigRepo);
-
-                // Mock user repository - no existing user via SSO
-                var userRepo = Substitute.For<IUserRepository>();
-                userRepo.GetBySsoUserAsync(providerUserId, organizationId).Returns((User?)null);
-                services.AddSingleton(userRepo);
-
-                // Mock authentication service with invalid userIdentifier format
-                var authService = Substitute.For<IAuthenticationService>();
-                authService.AuthenticateAsync(
-                        Arg.Any<HttpContext>(),
-                        AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
-                    .Returns(BuildSuccessfulAuthResult(organizationId, providerUserId, testEmail, testName, null, userIdentifier));
-                services.AddSingleton(authService);
-            });
-        }).CreateClient();
+        var client = testData.Factory.CreateClient();
 
         // Act
         var response = await client.GetAsync("/Account/ExternalCallback");
@@ -1174,6 +479,14 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
     /*
     * Test to verify /Account/ExternalCallback returns error when userIdentifier
     * contains valid userId but invalid/mismatched token.
+    *
+    * NOTE: This test uses the substitute pattern instead of SsoTestDataBuilder because:
+    * - The userIdentifier in the auth result must contain a userId that matches a user in the system
+    * - User.SetNewId() always overwrites the Id (unlike Organization.SetNewId() which has a guard)
+    * - This means we cannot pre-set a User.Id before database insertion
+    * - The auth mock must be configured BEFORE accessing factory.Services (required by SubstituteService)
+    * - Therefore, we cannot coordinate the userId between the auth mock and the seeded user
+    * - Using substitutes allows us to control the exact userId and mock UserManager.VerifyUserTokenAsync
     */
     [Fact]
     public async Task ExternalCallback_WithUserIdentifier_AndInvalidToken_ReturnsError()
@@ -1254,7 +567,7 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
                 authService.AuthenticateAsync(
                         Arg.Any<HttpContext>(),
                         AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
-                    .Returns(BuildSuccessfulAuthResult(organizationId, providerUserId, testEmail, testName, null, userIdentifier));
+                    .Returns(MockSuccessfulAuthResult.Build(organizationId, providerUserId, testEmail, testName, null, userIdentifier));
                 services.AddSingleton(authService);
             });
         }).CreateClient();
@@ -1275,78 +588,23 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
     public async Task ExternalCallback_WithRevokedOrgUser_WithPM24579FeatureFlagEnabled_ReturnsError()
     {
         // Arrange
-        var organizationId = Guid.NewGuid();
-        var providerUserId = Guid.NewGuid().ToString();
-        var userId = Guid.NewGuid();
-        var testEmail = "invalid_status_user@integration.test";
-        var testName = "Invalid Status User";
-
-        var existingUser = new User
-        {
-            Id = userId,
-            Email = testEmail,
-            Name = testName
-        };
-
-        var organization = new Organization
-        {
-            Id = organizationId,
-            Enabled = true,
-            UseSso = true
-        };
-
-        var orgUser = new OrganizationUser
-        {
-            Id = Guid.NewGuid(),
-            OrganizationId = organizationId,
-            UserId = userId,
-            Status = OrganizationUserStatusType.Revoked
-        };
-
-        var ssoConfig = new SsoConfig
-        {
-            OrganizationId = organizationId,
-            Enabled = true
-        };
-        ssoConfig.SetData(new SsoConfigurationData());
-
-        var client = _factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureServices(services =>
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig()
+            .WithUser()
+            .WithOrganizationUser(orgUser =>
             {
-                var featureService = Substitute.For<IFeatureService>();
-                featureService.IsEnabled(FeatureFlagKeys.PM24579_PreventSsoOnExistingNonCompliantUsers).Returns(true);
-                services.AddSingleton(featureService);
+                orgUser.Status = OrganizationUserStatusType.Revoked;
+            })
+            .WithFeatureFlags(factoryService =>
+            {
+                factoryService.SubstituteService<IFeatureService>(srv =>
+                {
+                    srv.IsEnabled(FeatureFlagKeys.PM24579_PreventSsoOnExistingNonCompliantUsers).Returns(true);
+                });
+            })
+            .BuildAsync();
 
-                // Mock organization repository
-                var orgRepo = Substitute.For<IOrganizationRepository>();
-                orgRepo.GetByIdAsync(organizationId).Returns(organization);
-                services.AddSingleton(orgRepo);
-
-                // Mock SSO config repository
-                var ssoConfigRepo = Substitute.For<ISsoConfigRepository>();
-                ssoConfigRepo.GetByOrganizationIdAsync(organizationId).Returns(ssoConfig);
-                services.AddSingleton(ssoConfigRepo);
-
-                // Mock user repository - existing user via SSO
-                var userRepo = Substitute.For<IUserRepository>();
-                userRepo.GetBySsoUserAsync(providerUserId, organizationId).Returns(existingUser);
-                services.AddSingleton(userRepo);
-
-                // Mock organization user repository with org user
-                var orgUserRepo = Substitute.For<IOrganizationUserRepository>();
-                orgUserRepo.GetManyByUserAsync(userId).Returns([orgUser]);
-                services.AddSingleton(orgUserRepo);
-
-                // Mock authentication service with successful external auth
-                var authService = Substitute.For<IAuthenticationService>();
-                authService.AuthenticateAsync(
-                        Arg.Any<HttpContext>(),
-                        AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
-                    .Returns(BuildSuccessfulAuthResult(organizationId, providerUserId, testEmail, testName));
-                services.AddSingleton(authService);
-            });
-        }).CreateClient();
+        var client = testData.Factory.CreateClient();
 
         // Act
         var response = await client.GetAsync("/Account/ExternalCallback");
@@ -1354,7 +612,7 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
         // Assert - Should fail because user state is invalid
         var stringResponse = await response.Content.ReadAsStringAsync();
         Assert.Contains(
-            $"Your access to organization {organization.DisplayName()} has been revoked. Please contact your administrator for assistance.",
+            $"Your access to organization {testData.Organization?.DisplayName()} has been revoked. Please contact your administrator for assistance.",
             stringResponse);
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
     }
@@ -1366,79 +624,23 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
     public async Task ExternalCallback_WithRevokedOrgUserStatus_WithPM24579FeatureFlagDisabled_ReturnsError()
     {
         // Arrange
-        var organizationId = Guid.NewGuid();
-        var providerUserId = Guid.NewGuid().ToString();
-        var userId = Guid.NewGuid();
-        var testEmail = "revoked_user@integration.test";
-        var testName = "Revoked User";
-
-        var existingUser = new User
-        {
-            Id = userId,
-            Email = testEmail,
-            Name = testName
-        };
-
-        var organization = new Organization
-        {
-            Id = organizationId,
-            Enabled = true,
-            UseSso = true
-        };
-
-        var orgUser = new OrganizationUser
-        {
-            Id = Guid.NewGuid(),
-            OrganizationId = organizationId,
-            UserId = userId,
-            Status = OrganizationUserStatusType.Revoked
-        };
-
-        var ssoConfig = new SsoConfig
-        {
-            OrganizationId = organizationId,
-            Enabled = true
-        };
-        ssoConfig.SetData(new SsoConfigurationData());
-
-        var client = _factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureServices(services =>
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig()
+            .WithUser()
+            .WithOrganizationUser(orgUser =>
             {
-                var featureService = Substitute.For<IFeatureService>();
-                featureService.IsEnabled(FeatureFlagKeys.PM24579_PreventSsoOnExistingNonCompliantUsers).Returns(false);
-                services.AddSingleton(featureService);
+                orgUser.Status = OrganizationUserStatusType.Revoked;
+            })
+            .WithFeatureFlags(factoryService =>
+            {
+                factoryService.SubstituteService<IFeatureService>(srv =>
+                {
+                    srv.IsEnabled(FeatureFlagKeys.PM24579_PreventSsoOnExistingNonCompliantUsers).Returns(false);
+                });
+            })
+            .BuildAsync();
 
-                // Mock organization repository
-                var orgRepo = Substitute.For<IOrganizationRepository>();
-                orgRepo.GetByIdAsync(organizationId).Returns(organization);
-                services.AddSingleton(orgRepo);
-
-                // Mock SSO config repository
-                var ssoConfigRepo = Substitute.For<ISsoConfigRepository>();
-                ssoConfigRepo.GetByOrganizationIdAsync(organizationId).Returns(ssoConfig);
-                services.AddSingleton(ssoConfigRepo);
-
-                // Mock user repository
-                var userRepo = Substitute.For<IUserRepository>();
-                userRepo.GetBySsoUserAsync(providerUserId, organizationId).Returns((User?)null);
-                userRepo.GetByEmailAsync(testEmail).Returns(existingUser);
-                services.AddSingleton(userRepo);
-
-                // Mock organization user repository with invited user
-                var orgUserRepo = Substitute.For<IOrganizationUserRepository>();
-                orgUserRepo.GetManyByUserAsync(userId).Returns([orgUser]);
-                services.AddSingleton(orgUserRepo);
-
-                // Mock authentication service with successful external auth
-                var authService = Substitute.For<IAuthenticationService>();
-                authService.AuthenticateAsync(
-                        Arg.Any<HttpContext>(),
-                        AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
-                    .Returns(BuildSuccessfulAuthResult(organizationId, providerUserId, testEmail, testName));
-                services.AddSingleton(authService);
-            });
-        }).CreateClient();
+        var client = testData.Factory.CreateClient();
 
         // Act
         var response = await client.GetAsync("/Account/ExternalCallback");
@@ -1446,7 +648,7 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
         // Assert - Should fail because user has invalid status
         var stringResponse = await response.Content.ReadAsStringAsync();
         Assert.Contains(
-            $"Your access to organization {organization.DisplayName()} has been revoked. Please contact your administrator for assistance.",
+            $"Your access to organization {testData.Organization?.DisplayName()} has been revoked. Please contact your administrator for assistance.",
             stringResponse);
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
     }
@@ -1458,79 +660,23 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
     public async Task ExternalCallback_WithInvitedOrgUserStatus_WithPM24579FeatureFlagDisabled_ReturnsError()
     {
         // Arrange
-        var organizationId = Guid.NewGuid();
-        var providerUserId = Guid.NewGuid().ToString();
-        var userId = Guid.NewGuid();
-        var testEmail = "invited_user@integration.test";
-        var testName = "Invited User";
-
-        var existingUser = new User
-        {
-            Id = userId,
-            Email = testEmail,
-            Name = testName
-        };
-
-        var organization = new Organization
-        {
-            Id = organizationId,
-            Enabled = true,
-            UseSso = true
-        };
-
-        var orgUser = new OrganizationUser
-        {
-            Id = Guid.NewGuid(),
-            OrganizationId = organizationId,
-            UserId = userId,
-            Status = OrganizationUserStatusType.Invited
-        };
-
-        var ssoConfig = new SsoConfig
-        {
-            OrganizationId = organizationId,
-            Enabled = true
-        };
-        ssoConfig.SetData(new SsoConfigurationData());
-
-        var client = _factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureServices(services =>
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig()
+            .WithUser()
+            .WithOrganizationUser(orgUser =>
             {
-                var featureService = Substitute.For<IFeatureService>();
-                featureService.IsEnabled(FeatureFlagKeys.PM24579_PreventSsoOnExistingNonCompliantUsers).Returns(false);
-                services.AddSingleton(featureService);
+                orgUser.Status = OrganizationUserStatusType.Invited;
+            })
+            .WithFeatureFlags(factoryService =>
+            {
+                factoryService.SubstituteService<IFeatureService>(srv =>
+                {
+                    srv.IsEnabled(FeatureFlagKeys.PM24579_PreventSsoOnExistingNonCompliantUsers).Returns(false);
+                });
+            })
+            .BuildAsync();
 
-                // Mock organization repository
-                var orgRepo = Substitute.For<IOrganizationRepository>();
-                orgRepo.GetByIdAsync(organizationId).Returns(organization);
-                services.AddSingleton(orgRepo);
-
-                // Mock SSO config repository
-                var ssoConfigRepo = Substitute.For<ISsoConfigRepository>();
-                ssoConfigRepo.GetByOrganizationIdAsync(organizationId).Returns(ssoConfig);
-                services.AddSingleton(ssoConfigRepo);
-
-                // Mock user repository
-                var userRepo = Substitute.For<IUserRepository>();
-                userRepo.GetBySsoUserAsync(providerUserId, organizationId).Returns((User?)null);
-                userRepo.GetByEmailAsync(testEmail).Returns(existingUser);
-                services.AddSingleton(userRepo);
-
-                // Mock organization user repository with invited user
-                var orgUserRepo = Substitute.For<IOrganizationUserRepository>();
-                orgUserRepo.GetManyByUserAsync(userId).Returns([orgUser]);
-                services.AddSingleton(orgUserRepo);
-
-                // Mock authentication service with successful external auth
-                var authService = Substitute.For<IAuthenticationService>();
-                authService.AuthenticateAsync(
-                        Arg.Any<HttpContext>(),
-                        AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
-                    .Returns(BuildSuccessfulAuthResult(organizationId, providerUserId, testEmail, testName));
-                services.AddSingleton(authService);
-            });
-        }).CreateClient();
+        var client = testData.Factory.CreateClient();
 
         // Act
         var response = await client.GetAsync("/Account/ExternalCallback");
@@ -1538,7 +684,7 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
         // Assert - Should fail because user has invalid status
         var stringResponse = await response.Content.ReadAsStringAsync();
         Assert.Contains(
-        $"To accept your invite to {organization.DisplayName()}, you must first log in using your master password. Once your invite has been accepted, you will be able to log in using SSO.",
+        $"To accept your invite to {testData.Organization?.DisplayName()}, you must first log in using your master password. Once your invite has been accepted, you will be able to log in using SSO.",
             stringResponse);
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
     }
@@ -1552,75 +698,20 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
     public async Task ExternalCallback_WithSsoUser_AndNoOrgUser_WithFeatureFlagEnabled_ReturnsError()
     {
         // Arrange
-        var organizationId = Guid.NewGuid();
-        var providerUserId = Guid.NewGuid().ToString();
-        var userId = Guid.NewGuid();
-        var testEmail = "sso_user@integration.test";
-        var testName = "SSO User";
-
-        // User exists and was previously linked via SSO
-        var existingSsoUser = new User
-        {
-            Id = userId,
-            Email = testEmail,
-            Name = testName
-        };
-
-        var organization = new Organization
-        {
-            Id = organizationId,
-            Name = "Test Organization",
-            Enabled = true,
-            UseSso = true
-        };
-
-        var ssoConfig = new SsoConfig
-        {
-            OrganizationId = organizationId,
-            Enabled = true
-        };
-        ssoConfig.SetData(new SsoConfigurationData());
-
-        var client = _factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureServices(services =>
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig()
+            .WithUser()
+            .WithSsoUser()
+            .WithFeatureFlags(factoryService =>
             {
-                // Feature flag enabled - this triggers PreventOrgUserLoginIfStatusInvalidAsync
-                var featureService = Substitute.For<IFeatureService>();
-                featureService.IsEnabled(FeatureFlagKeys.PM24579_PreventSsoOnExistingNonCompliantUsers).Returns(true);
-                services.AddSingleton(featureService);
+                factoryService.SubstituteService<IFeatureService>(srv =>
+                {
+                    srv.IsEnabled(FeatureFlagKeys.PM24579_PreventSsoOnExistingNonCompliantUsers).Returns(true);
+                });
+            })
+            .BuildAsync();
 
-                // Mock organization repository
-                var orgRepo = Substitute.For<IOrganizationRepository>();
-                orgRepo.GetByIdAsync(organizationId).Returns(organization);
-                orgRepo.GetByIdentifierAsync(organizationId.ToString()).Returns(organization);
-                services.AddSingleton(orgRepo);
-
-                // Mock SSO config repository
-                var ssoConfigRepo = Substitute.For<ISsoConfigRepository>();
-                ssoConfigRepo.GetByOrganizationIdAsync(organizationId).Returns(ssoConfig);
-                services.AddSingleton(ssoConfigRepo);
-
-                // Mock user repository - user IS found via SSO lookup (previously linked)
-                var userRepo = Substitute.For<IUserRepository>();
-                userRepo.GetBySsoUserAsync(providerUserId, organizationId).Returns(existingSsoUser);
-                services.AddSingleton(userRepo);
-
-                // Mock organization user repository - NO org user record
-                var orgUserRepo = Substitute.For<IOrganizationUserRepository>();
-                orgUserRepo.GetManyByUserAsync(userId).Returns(new List<OrganizationUser>());
-                orgUserRepo.GetByOrganizationEmailAsync(organizationId, testEmail).Returns((OrganizationUser?)null);
-                services.AddSingleton(orgUserRepo);
-
-                // Mock authentication service
-                var authService = Substitute.For<IAuthenticationService>();
-                authService.AuthenticateAsync(
-                        Arg.Any<HttpContext>(),
-                        AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
-                    .Returns(BuildSuccessfulAuthResult(organizationId, providerUserId, testEmail, testName));
-                services.AddSingleton(authService);
-            });
-        }).CreateClient();
+        var client = testData.Factory.CreateClient();
 
         // Act
         var response = await client.GetAsync("/Account/ExternalCallback");
@@ -1630,58 +721,4 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
         Assert.Contains("Could not find organization user", stringResponse);
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
     }
-
-    #region Helper Methods
-
-    private static AuthenticateResult BuildSuccessfulAuthResult(
-        Guid organizationId,
-        string? providerUserId,
-        string? email,
-        string? name = null,
-        string? acrValue = null,
-        string? userIdentifier = null)
-    {
-        var claims = new List<Claim>();
-
-        if (!string.IsNullOrEmpty(email))
-        {
-            claims.Add(new Claim(JwtClaimTypes.Email, email));
-        }
-
-        if (!string.IsNullOrEmpty(providerUserId))
-        {
-            claims.Add(new Claim(JwtClaimTypes.Subject, providerUserId));
-        }
-
-        if (!string.IsNullOrEmpty(name))
-        {
-            claims.Add(new Claim(JwtClaimTypes.Name, name));
-        }
-
-        if (!string.IsNullOrEmpty(acrValue))
-        {
-            claims.Add(new Claim(JwtClaimTypes.AuthenticationContextClassReference, acrValue));
-        }
-
-        var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, "External"));
-        var properties = new AuthenticationProperties
-        {
-            Items =
-            {
-                ["scheme"] = organizationId.ToString(),
-                ["return_url"] = "~/",
-                ["state"] = "test-state",
-                ["user_identifier"] = userIdentifier ?? string.Empty
-            }
-        };
-
-        var ticket = new AuthenticationTicket(
-            principal,
-            properties,
-            AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
-
-        return AuthenticateResult.Success(ticket);
-    }
-
-    #endregion
 }
