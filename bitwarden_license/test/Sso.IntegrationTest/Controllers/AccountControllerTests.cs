@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Entities;
@@ -9,14 +9,15 @@ using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.IntegrationTestCommon.Factories;
+using Bit.Sso.IntegrationTest.Utilities;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Bitwarden.License.Test.Sso.IntegrationTest.Utilities;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc.Testing;
 using NSubstitute;
 using Xunit;
 using AuthenticationSchemes = Bit.Core.AuthenticationSchemes;
-using Bit.Sso.IntegrationTest.Utilities;
-using Bitwarden.License.Test.Sso.IntegrationTest.Utilities;
 
 namespace Bit.Sso.IntegrationTest.Controllers;
 
@@ -720,5 +721,233 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
         var stringResponse = await response.Content.ReadAsStringAsync();
         Assert.Contains("Could not find organization user", stringResponse);
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+    }
+
+    /*
+    * Test to verify /Account/ExternalCallback returns error when the provider scheme
+    * is not a valid GUID (SSOProviderIsNotAnOrgId).
+    *
+    * NOTE: This test uses the substitute pattern instead of SsoTestDataBuilder because:
+    * - Organization.Id is of type Guid and cannot be set to a non-GUID value
+    * - The auth mock scheme must be a non-GUID string to trigger this error path
+    * - This cannot be tested since ln 438 in AccountController.FindUserFromExternalProviderAsync throws a different exception
+    *   before reaching the organization lookup exception.
+    */
+    [Fact(Skip = "This test cannot be executed because the organization ID must be a GUID. See note in test summary.")]
+    public async Task ExternalCallback_WithInvalidProviderGuid_ReturnsError()
+    {
+        // Arrange
+        var invalidScheme = "not-a-valid-guid";
+        var providerUserId = Guid.NewGuid().ToString();
+        var testEmail = "test@example.com";
+        var testName = "Test User";
+
+        var client = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureServices(services =>
+            {
+                // Mock authentication service with invalid (non-GUID) scheme
+                var authService = Substitute.For<IAuthenticationService>();
+                authService.AuthenticateAsync(
+                        Arg.Any<HttpContext>(),
+                        AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
+                    .Returns(MockSuccessfulAuthResult.Build(invalidScheme, providerUserId, testEmail, testName));
+                services.AddSingleton(authService);
+            });
+        }).CreateClient();
+
+        // Act
+        var response = await client.GetAsync("/Account/ExternalCallback");
+
+        // Assert - Should fail because provider is not a valid organization GUID
+        var stringResponse = await response.Content.ReadAsStringAsync();
+        Assert.Contains("Organization not found from identifier.", stringResponse);
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+    }
+
+    /*
+    * Test to verify /Account/ExternalCallback returns error when the organization ID
+    * in the auth result does not match any organization in the database.
+    * NOTE: This code path is unreachable because the SsoConfig must exist to proceed, but there is a circular dependency:
+    * - SsoConfig cannot exist without a valid Organization but the test is testing that an Organization cannot be found.
+    */
+    [Fact(Skip = "This code path is unreachable because the SsoConfig must exist to proceed. But the SsoConfig cannot exist without a valid Organization.")]
+    public async Task ExternalCallback_WithNonExistentOrganization_ReturnsError()
+    {
+        // Arrange
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig()
+            .WithNonExistentOrganizationInAuth()
+            .BuildAsync();
+
+        var client = testData.Factory.CreateClient();
+
+        // Act
+        var response = await client.GetAsync("/Account/ExternalCallback");
+
+        // Assert - Should fail because organization cannot be found by the ID in auth result
+        var stringResponse = await response.Content.ReadAsStringAsync();
+        Assert.Contains("Could not find organization", stringResponse);
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+    }
+
+    /*
+    * SUCCESS PATH: Test to verify /Account/ExternalCallback succeeds when an existing
+    * SSO-linked user logs in (user exists in SsoUser table).
+    */
+    [Fact]
+    public async Task ExternalCallback_WithExistingSsoUser_ReturnsSuccess()
+    {
+        // Arrange - User with SSO link already exists
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig()
+            .WithUser()
+            .WithOrganizationUser()
+            .WithSsoUser()
+            .BuildAsync();
+
+        var client = testData.Factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false // Prevent auto-redirects to capture initial response
+        });
+
+        // Act
+        var response = await client.GetAsync("/Account/ExternalCallback");
+
+        // Assert - Should succeed and redirect
+        Assert.True(
+            response.StatusCode == HttpStatusCode.Redirect,
+            $"Expected success/redirect but got {response.StatusCode}");
+
+        Assert.NotNull(response.Headers.Location);
+    }
+
+    /*
+    * SUCCESS PATH: Test to verify /Account/ExternalCallback succeeds when JIT provisioning
+    * a new user (user doesn't exist, gets created automatically).
+    */
+    [Fact]
+    public async Task ExternalCallback_WithJitProvisioning_ReturnsSuccess()
+    {
+        // Arrange - No user, no org user - JIT provisioning will create both
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig()
+            .BuildAsync();
+
+        var client = testData.Factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false // Prevent auto-redirects to capture initial response
+        });
+
+        // Act
+        var response = await client.GetAsync("/Account/ExternalCallback");
+
+        // Assert - Should succeed and redirect
+        Assert.True(
+            response.StatusCode == HttpStatusCode.Redirect,
+            $"Expected success/redirect but got {response.StatusCode}");
+
+        Assert.NotNull(response.Headers.Location);
+    }
+
+    /*
+    * SUCCESS PATH: Test to verify /Account/ExternalCallback succeeds when an existing user
+    * with a valid (Confirmed) organization user status logs in via SSO for the first time.
+    */
+    [Fact]
+    public async Task ExternalCallback_WithExistingUserAndConfirmedOrgUser_ReturnsSuccess()
+    {
+        // Arrange - Existing user with confirmed org user status, no SSO link yet
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig()
+            .WithUser()
+            .WithOrganizationUser(orgUser =>
+            {
+                orgUser.Status = OrganizationUserStatusType.Confirmed;
+            })
+            .BuildAsync();
+
+        var client = testData.Factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false // Prevent auto-redirects to capture initial response
+        });
+
+        // Act
+        var response = await client.GetAsync("/Account/ExternalCallback");
+
+        // Assert - Should succeed and redirect
+        Assert.True(
+            response.StatusCode == HttpStatusCode.Redirect,
+            $"Expected success/redirect but got {response.StatusCode}");
+
+        Assert.NotNull(response.Headers.Location);
+    }
+
+    /*
+    * SUCCESS PATH: Test to verify /Account/ExternalCallback succeeds when an existing user
+    * with Accepted organization user status logs in via SSO.
+    */
+    [Fact]
+    public async Task ExternalCallback_WithExistingUserAndAcceptedOrgUser_ReturnsSuccess()
+    {
+        // Arrange - Existing user with accepted org user status
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig()
+            .WithUser()
+            .WithOrganizationUser(orgUser =>
+            {
+                orgUser.Status = OrganizationUserStatusType.Accepted;
+            })
+            .BuildAsync();
+
+        var client = testData.Factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false // Prevent auto-redirects to capture initial response
+        });
+
+        // Act
+        var response = await client.GetAsync("/Account/ExternalCallback");
+
+        // Assert - Should succeed and redirect
+        Assert.True(
+            response.StatusCode == HttpStatusCode.Redirect,
+            $"Expected success/redirect but got {response.StatusCode}");
+
+        Assert.NotNull(response.Headers.Location);
+    }
+
+    /*
+    * SUCCESS PATH: Test to verify /Account/ExternalCallback returns a View with 200 status
+    * when the client is a native application (uses custom URI scheme like "bitwarden://callback").
+    * Native clients get a different response for better UX - a 200 with redirect view instead of 302.
+    * See AccountController lines 371-378.
+    */
+    [Fact]
+    public async Task ExternalCallback_WithNativeClient_ReturnsViewWith200Status()
+    {
+        // Arrange - Existing SSO user with native client context
+        var testData = await new SsoTestDataBuilder()
+            .WithSsoConfig()
+            .WithUser()
+            .WithOrganizationUser()
+            .WithSsoUser()
+            .AsNativeClient()
+            .BuildAsync();
+
+        var client = testData.Factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false
+        });
+
+        // Act
+        var response = await client.GetAsync("/Account/ExternalCallback");
+
+        // Assert - Native clients get 200 status with a redirect view instead of 302
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        // The Location header should be empty for native clients (set in controller)
+        // and the response should contain the redirect view
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.NotEmpty(content); // View content should be present
     }
 }

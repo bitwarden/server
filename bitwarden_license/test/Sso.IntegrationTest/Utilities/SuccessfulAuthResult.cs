@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Bit.Core;
 using Duende.IdentityModel;
 using Microsoft.AspNetCore.Authentication;
@@ -23,6 +23,21 @@ internal static class MockSuccessfulAuthResult
     /// <returns></returns>
     public static AuthenticateResult Build(
             Guid organizationId,
+            string? providerUserId,
+            string? email,
+            string? name = null,
+            string? acrValue = null,
+            string? userIdentifier = null)
+    {
+        return Build(organizationId.ToString(), providerUserId, email, name, acrValue, userIdentifier);
+    }
+
+    /// <summary>
+    /// Overload that accepts a custom scheme string. Useful for testing invalid provider scenarios
+    /// where the scheme is not a valid GUID.
+    /// </summary>
+    public static AuthenticateResult Build(
+            string scheme,
             string? providerUserId,
             string? email,
             string? name = null,
@@ -56,7 +71,7 @@ internal static class MockSuccessfulAuthResult
         {
             Items =
             {
-                ["scheme"] = organizationId.ToString(),
+                ["scheme"] = scheme,
                 ["return_url"] = "~/",
                 ["state"] = "test-state",
                 ["user_identifier"] = userIdentifier ?? string.Empty

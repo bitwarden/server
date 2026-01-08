@@ -434,6 +434,7 @@ public class AccountController : Controller
         // FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
         var provider = result.Properties.Items["scheme"];
+        //Todo: Validate provider is a valid GUID with TryParse instead. When this is invalid it throws an exception
         var orgId = new Guid(provider);
         var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(orgId);
         if (ssoConfig == null || !ssoConfig.Enabled)

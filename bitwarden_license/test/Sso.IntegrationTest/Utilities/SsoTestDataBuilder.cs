@@ -1,4 +1,4 @@
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
@@ -8,6 +8,8 @@ using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.IntegrationTestCommon.Factories;
 using Bitwarden.License.Test.Sso.IntegrationTest.Utilities;
+using Duende.IdentityServer.Models;
+using Duende.IdentityServer.Services;
 using Microsoft.AspNetCore.Authentication;
 using NSubstitute;
 using AuthenticationSchemes = Bit.Core.AuthenticationSchemes;
@@ -49,6 +51,8 @@ public class SsoTestDataBuilder
     private bool _withNullEmail = false;
     private bool _IsSelfHosted = false;
     private bool _includeProviderUserId = true;
+    private bool _useNonExistentOrgInAuth = false;
+    private bool _isNativeClient = false;
 
     public SsoTestDataBuilder WithOrganization(Action<Organization> configure)
     {
@@ -120,6 +124,27 @@ public class SsoTestDataBuilder
         return this;
     }
 
+    /// <summary>
+    /// Causes the auth result to use a different (non-existent) organization ID than what is seeded
+    /// in the database. This simulates the "organization not found" scenario.
+    /// </summary>
+    public SsoTestDataBuilder WithNonExistentOrganizationInAuth()
+    {
+        _useNonExistentOrgInAuth = true;
+        return this;
+    }
+
+    /// <summary>
+    /// Configures the test to simulate a native client (non-browser) OIDC flow.
+    /// Native clients use custom URI schemes (e.g., "bitwarden://callback") instead of http/https.
+    /// This causes ExternalCallback to return a View with 200 status instead of a redirect.
+    /// </summary>
+    public SsoTestDataBuilder AsNativeClient()
+    {
+        _isNativeClient = true;
+        return this;
+    }
+
     public async Task<SsoTestData> BuildAsync()
     {
         // Create factory
@@ -127,6 +152,8 @@ public class SsoTestDataBuilder
 
         // Pre-generate IDs and values needed for auth mock (before accessing Services)
         var organizationId = Guid.NewGuid();
+        // Use a different org ID in auth if testing "organization not found" scenario
+        var authOrganizationId = _useNonExistentOrgInAuth ? Guid.NewGuid() : organizationId;
         var providerUserId = _includeProviderUserId ? Guid.NewGuid().ToString() : "";
         var userEmail = _withNullEmail ? null : $"user_{Guid.NewGuid()}@test.com";
         var userName = "TestUser";
@@ -140,7 +167,7 @@ public class SsoTestDataBuilder
                         Arg.Any<HttpContext>(),
                         AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
                     .Returns(MockSuccessfulAuthResult.Build(
-                        organizationId,
+                        authOrganizationId,
                         providerUserId,
                         userEmail,
                         userName,
@@ -164,6 +191,22 @@ public class SsoTestDataBuilder
 
         // 1.b configure setting feature flags
         _featureFlagConfig?.Invoke(factory);
+
+        // 1.c Configure IIdentityServerInteractionService for native client flow
+        if (_isNativeClient)
+        {
+            factory.SubstituteService<IIdentityServerInteractionService>(interaction =>
+            {
+                // Native clients have redirect URIs that don't start with http/https
+                // e.g., "bitwarden://callback" or "com.bitwarden.app://callback"
+                var authorizationRequest = new AuthorizationRequest
+                {
+                    RedirectUri = "bitwarden://sso-callback"
+                };
+                interaction.GetAuthorizationContextAsync(Arg.Any<string>())
+                    .Returns(authorizationRequest);
+            });
+        }
 
         if (!_successfulAuth)
         {
@@ -220,12 +263,12 @@ public class SsoTestDataBuilder
         }
 
         // 4.a Create many OrganizationUser to test seat count logic
-        if(organization.Seats > 1)
+        if (organization.Seats > 1)
         {
             var orgUserRepo = factory.Services.GetRequiredService<IOrganizationUserRepository>();
             var userRepo = factory.Services.GetRequiredService<IUserRepository>();
             var additionalOrgUsers = new List<OrganizationUser>();
-            for(var i = 1; i <= organization.Seats; i++)
+            for (var i = 1; i <= organization.Seats; i++)
             {
                 var additionalUser = new User
                 {
@@ -254,7 +297,7 @@ public class SsoTestDataBuilder
         {
             ssoConfig = new SsoConfig
             {
-                OrganizationId = organization.Id,
+                OrganizationId = authOrganizationId,
                 Enabled = true
             };
             ssoConfig.SetData(new SsoConfigurationData());
