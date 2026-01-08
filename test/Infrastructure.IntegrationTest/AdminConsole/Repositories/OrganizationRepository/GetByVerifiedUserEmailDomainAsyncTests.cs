@@ -2,6 +2,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bit.Infrastructure.IntegrationTest.AdminConsole;
 using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories.OrganizationRepository;
@@ -54,13 +55,7 @@ public class GetByVerifiedUserEmailDomainAsyncTests
             KdfParallelism = 3
         });
 
-        var organization = await organizationRepository.CreateAsync(new Organization
-        {
-            Name = $"Test Org {id}",
-            BillingEmail = user1.Email, // TODO: EF does not enforce this being NOT NULL
-            Plan = "Test", // TODO: EF does not enforce this being NOT NULL
-            PrivateKey = "privatekey",
-        });
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
 
         var organizationDomain = new OrganizationDomain
         {
@@ -73,29 +68,9 @@ public class GetByVerifiedUserEmailDomainAsyncTests
         organizationDomain.SetJobRunCount();
         await organizationDomainRepository.CreateAsync(organizationDomain);
 
-        await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            OrganizationId = organization.Id,
-            UserId = user1.Id,
-            Status = OrganizationUserStatusType.Confirmed,
-            ResetPasswordKey = "resetpasswordkey1",
-        });
-
-        await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            OrganizationId = organization.Id,
-            UserId = user2.Id,
-            Status = OrganizationUserStatusType.Confirmed,
-            ResetPasswordKey = "resetpasswordkey1",
-        });
-
-        await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            OrganizationId = organization.Id,
-            UserId = user3.Id,
-            Status = OrganizationUserStatusType.Confirmed,
-            ResetPasswordKey = "resetpasswordkey1",
-        });
+        await organizationUserRepository.CreateConfirmedTestOrganizationUserAsync(organization, user1);
+        await organizationUserRepository.CreateConfirmedTestOrganizationUserAsync(organization, user2);
+        await organizationUserRepository.CreateConfirmedTestOrganizationUserAsync(organization, user3);
 
         var user1Response = await organizationRepository.GetByVerifiedUserEmailDomainAsync(user1.Id);
         var user2Response = await organizationRepository.GetByVerifiedUserEmailDomainAsync(user2.Id);
@@ -129,13 +104,7 @@ public class GetByVerifiedUserEmailDomainAsyncTests
             KdfParallelism = 3
         });
 
-        var organization = await organizationRepository.CreateAsync(new Organization
-        {
-            Name = $"Test Org {id}",
-            BillingEmail = user.Email,
-            Plan = "Test",
-            PrivateKey = "privatekey",
-        });
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
 
         var organizationDomain = new OrganizationDomain
         {
@@ -147,13 +116,7 @@ public class GetByVerifiedUserEmailDomainAsyncTests
         organizationDomain.SetJobRunCount();
         await organizationDomainRepository.CreateAsync(organizationDomain);
 
-        await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            OrganizationId = organization.Id,
-            UserId = user.Id,
-            Status = OrganizationUserStatusType.Confirmed,
-            ResetPasswordKey = "resetpasswordkey",
-        });
+        await organizationUserRepository.CreateConfirmedTestOrganizationUserAsync(organization, user);
 
         var result = await organizationRepository.GetByVerifiedUserEmailDomainAsync(user.Id);
 
@@ -182,21 +145,8 @@ public class GetByVerifiedUserEmailDomainAsyncTests
             KdfParallelism = 3
         });
 
-        var organization1 = await organizationRepository.CreateAsync(new Organization
-        {
-            Name = $"Test Org 1 {id}",
-            BillingEmail = user.Email,
-            Plan = "Test",
-            PrivateKey = "privatekey1",
-        });
-
-        var organization2 = await organizationRepository.CreateAsync(new Organization
-        {
-            Name = $"Test Org 2 {id}",
-            BillingEmail = user.Email,
-            Plan = "Test",
-            PrivateKey = "privatekey2",
-        });
+        var organization1 = await organizationRepository.CreateTestOrganizationAsync();
+        var organization2 = await organizationRepository.CreateTestOrganizationAsync();
 
         var organizationDomain1 = new OrganizationDomain
         {
@@ -220,21 +170,8 @@ public class GetByVerifiedUserEmailDomainAsyncTests
         organizationDomain2.SetVerifiedDate();
         await organizationDomainRepository.CreateAsync(organizationDomain2);
 
-        await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            OrganizationId = organization1.Id,
-            UserId = user.Id,
-            Status = OrganizationUserStatusType.Confirmed,
-            ResetPasswordKey = "resetpasswordkey1",
-        });
-
-        await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            OrganizationId = organization2.Id,
-            UserId = user.Id,
-            Status = OrganizationUserStatusType.Confirmed,
-            ResetPasswordKey = "resetpasswordkey2",
-        });
+        await organizationUserRepository.CreateConfirmedTestOrganizationUserAsync(organization1, user);
+        await organizationUserRepository.CreateConfirmedTestOrganizationUserAsync(organization2, user);
 
         var result = await organizationRepository.GetByVerifiedUserEmailDomainAsync(user.Id);
 
@@ -284,13 +221,7 @@ public class GetByVerifiedUserEmailDomainAsyncTests
             KdfParallelism = 3
         });
 
-        var organization = await organizationRepository.CreateAsync(new Organization
-        {
-            Name = $"Test Org {id}",
-            BillingEmail = user.Email,
-            Plan = "Test",
-            PrivateKey = "privatekey",
-        });
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
 
         var organizationDomain = new OrganizationDomain
         {
@@ -340,13 +271,7 @@ public class GetByVerifiedUserEmailDomainAsyncTests
             KdfParallelism = 3
         });
 
-        var organization = await organizationRepository.CreateAsync(new Organization
-        {
-            Name = $"Test Org {id}",
-            BillingEmail = user.Email,
-            Plan = "Test",
-            PrivateKey = "privatekey",
-        });
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
 
         var organizationDomain = new OrganizationDomain
         {
@@ -359,12 +284,10 @@ public class GetByVerifiedUserEmailDomainAsyncTests
         organizationDomain.SetJobRunCount();
         await organizationDomainRepository.CreateAsync(organizationDomain);
 
-        // Create accepted user
         await organizationUserRepository.CreateAcceptedTestOrganizationUserAsync(organization, user);
 
         var result = await organizationRepository.GetByVerifiedUserEmailDomainAsync(user.Id);
 
-        // Accepted users should be included
         Assert.NotEmpty(result);
         Assert.Equal(organization.Id, result.First().Id);
     }
@@ -391,13 +314,7 @@ public class GetByVerifiedUserEmailDomainAsyncTests
             KdfParallelism = 3
         });
 
-        var organization = await organizationRepository.CreateAsync(new Organization
-        {
-            Name = $"Test Org {id}",
-            BillingEmail = user.Email,
-            Plan = "Test",
-            PrivateKey = "privatekey",
-        });
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
 
         var organizationDomain = new OrganizationDomain
         {
@@ -410,12 +327,10 @@ public class GetByVerifiedUserEmailDomainAsyncTests
         organizationDomain.SetJobRunCount();
         await organizationDomainRepository.CreateAsync(organizationDomain);
 
-        // Create revoked user
         await organizationUserRepository.CreateRevokedTestOrganizationUserAsync(organization, user);
 
         var result = await organizationRepository.GetByVerifiedUserEmailDomainAsync(user.Id);
 
-        // Revoked users should still be included (not excluded)
         Assert.NotEmpty(result);
         Assert.Equal(organization.Id, result.First().Id);
     }
