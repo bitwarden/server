@@ -4,9 +4,16 @@ namespace Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 
 public class MasterPasswordPolicyData : IPolicyDataModel
 {
+    /// <summary>
+    /// Minimum password complexity score (0-4). Null indicates no complexity requirement.
+    /// </summary>
     [JsonPropertyName("minComplexity")]
     [Range(0, 4)]
     public int? MinComplexity { get; set; }
+
+    /// <summary>
+    /// Minimum password length (12-128). Null indicates no minimum length requirement.
+    /// </summary>
     [JsonPropertyName("minLength")]
     [Range(12, 128)]
     public int? MinLength { get; set; }
