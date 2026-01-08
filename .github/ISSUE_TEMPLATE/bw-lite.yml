@@ -70,15 +70,6 @@ body:
         mariadb:10
         # Postgres Example
         postgres:14
-  - type: textarea
-    id: epic-label
-    attributes:
-      label: Issue-Link
-      description: Link to our pinned issue, tracking all Bitwarden lite
-      value: |
-        https://github.com/bitwarden/server/issues/2480
-    validations:
-      required: true
   - type: checkboxes
     id: issue-tracking-info
     attributes:

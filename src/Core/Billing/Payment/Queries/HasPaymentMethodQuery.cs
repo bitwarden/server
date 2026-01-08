@@ -3,7 +3,6 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
-using Bit.Core.Services;
 using Stripe;
 
 namespace Bit.Core.Billing.Payment.Queries;
@@ -48,7 +47,7 @@ public class HasPaymentMethodQuery(
             return false;
         }
 
-        var setupIntent = await stripeAdapter.SetupIntentGet(setupIntentId, new SetupIntentGetOptions
+        var setupIntent = await stripeAdapter.GetSetupIntentAsync(setupIntentId, new SetupIntentGetOptions
         {
             Expand = ["payment_method"]
         });

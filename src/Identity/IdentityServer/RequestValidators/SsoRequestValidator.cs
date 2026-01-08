@@ -48,8 +48,6 @@ public class SsoRequestValidator(
         // evaluated, and recovery will have been performed if requested.
         // We will send a descriptive message in these cases so clients can give the appropriate feedback and redirect
         // to /login.
-        // If the feature flag RecoveryCodeSupportForSsoRequiredUsers is set to false then this code is unreachable since
-        // Two Factor validation occurs after SSO validation in that scenario.
         if (context.TwoFactorRequired && context.TwoFactorRecoveryRequested)
         {
             await SetContextCustomResponseSsoErrorAsync(context, SsoConstants.RequestErrors.SsoTwoFactorRecoveryDescription);
@@ -63,10 +61,10 @@ public class SsoRequestValidator(
     /// <summary>
     /// Check if the user is required to authenticate via SSO. If the user requires SSO, but they are
     /// logging in using an API Key (client_credentials) then they are allowed to bypass the SSO requirement.
-    /// If the GrantType is authorization_code or client_credentials we know the user is trying to login
+    /// If the GrantType is authorization_code or client_credentials we know the user is trying to log in
     /// using the SSO flow so they are allowed to continue.
     /// </summary>
-    /// <param name="user">user trying to login</param>
+    /// <param name="user">user trying to log in</param>
     /// <param name="grantType">magic string identifying the grant type requested</param>
     /// <returns>true if sso required; false if not required or already in process</returns>
     private async Task<bool> RequireSsoAuthenticationAsync(User user, string grantType)
