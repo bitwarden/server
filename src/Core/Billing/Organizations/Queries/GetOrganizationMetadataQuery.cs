@@ -22,11 +22,6 @@ public class GetOrganizationMetadataQuery(
 {
     public async Task<OrganizationMetadata?> Run(Organization organization)
     {
-        if (organization == null)
-        {
-            return null;
-        }
-
         if (globalSettings.SelfHosted)
         {
             return OrganizationMetadata.Default;
@@ -42,10 +37,12 @@ public class GetOrganizationMetadataQuery(
             };
         }
 
-        var customer = await subscriberService.GetCustomer(organization,
-            new CustomerGetOptions { Expand = ["discount.coupon.applies_to"] });
+        var customer = await subscriberService.GetCustomer(organization);
 
-        var subscription = await subscriberService.GetSubscription(organization);
+        var subscription = await subscriberService.GetSubscription(organization, new SubscriptionGetOptions
+        {
+            Expand = ["discounts.coupon.applies_to"]
+        });
 
         if (customer == null || subscription == null)
         {
@@ -79,16 +76,17 @@ public class GetOrganizationMetadataQuery(
             return false;
         }
 
-        var hasCoupon = customer.Discount?.Coupon?.Id == StripeConstants.CouponIDs.SecretsManagerStandalone;
+        var coupon = subscription.Discounts?.FirstOrDefault(discount =>
+            discount.Coupon?.Id == StripeConstants.CouponIDs.SecretsManagerStandalone)?.Coupon;
 
-        if (!hasCoupon)
+        if (coupon == null)
         {
             return false;
         }
 
         var subscriptionProductIds = subscription.Items.Data.Select(item => item.Plan.ProductId);
 
-        var couponAppliesTo = customer.Discount?.Coupon?.AppliesTo?.Products;
+        var couponAppliesTo = coupon.AppliesTo?.Products;
 
         return subscriptionProductIds.Intersect(couponAppliesTo ?? []).Any();
     }

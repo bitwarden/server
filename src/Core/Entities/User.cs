@@ -69,6 +69,11 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     /// The security state is a signed object attesting to the version of the user's account.
     /// </summary>
     public string? SecurityState { get; set; }
+    /// <summary>
+    /// Indicates whether the user has a personal premium subscription.
+    /// Does not include premium access from organizations -
+    /// do not use this to check whether the user can access premium features.
+    /// </summary>
     public bool Premium { get; set; }
     public DateTime? PremiumExpirationDate { get; set; }
     public DateTime? RenewalReminderDate { get; set; }
@@ -198,11 +203,6 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     public Guid? GetUserId()
     {
         return Id;
-    }
-
-    public bool GetPremium()
-    {
-        return Premium;
     }
 
     public int GetSecurityVersion()

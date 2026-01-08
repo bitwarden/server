@@ -6,8 +6,11 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models;
 using Bit.Core.Models.Data.Organizations;
+using Bit.Core.Platform.Push;
 using Bit.Core.Services;
 using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Test.Common.AutoFixture;
@@ -95,7 +98,8 @@ public class SavePolicyCommandTests
                 Substitute.For<IPolicyRepository>(),
                 [new FakeSingleOrgPolicyValidator(), new FakeSingleOrgPolicyValidator()],
                 Substitute.For<TimeProvider>(),
-                Substitute.For<IPostSavePolicySideEffect>()));
+                Substitute.For<IPostSavePolicySideEffect>(),
+                Substitute.For<IPushNotificationService>()));
         Assert.Contains("Duplicate PolicyValidator for SingleOrg policy", exception.Message);
     }
 
@@ -358,6 +362,103 @@ public class SavePolicyCommandTests
         await sutProvider.GetDependency<IPostSavePolicySideEffect>()
             .DidNotReceiveWithAnyArgs()
             .ExecuteSideEffectsAsync(default!, default!, default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task VNextSaveAsync_SendsPushNotification(
+        [PolicyUpdate(PolicyType.SingleOrg)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.SingleOrg, false)] Policy currentPolicy)
+    {
+        // Arrange
+        var fakePolicyValidator = new FakeSingleOrgPolicyValidator();
+        fakePolicyValidator.ValidateAsyncMock(policyUpdate, null).Returns("");
+        var sutProvider = SutProviderFactory([fakePolicyValidator]);
+        var savePolicyModel = new SavePolicyModel(policyUpdate);
+
+        currentPolicy.OrganizationId = policyUpdate.OrganizationId;
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, policyUpdate.Type)
+            .Returns(currentPolicy);
+
+        ArrangeOrganization(sutProvider, policyUpdate);
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetManyByOrganizationIdAsync(policyUpdate.OrganizationId)
+            .Returns([currentPolicy]);
+
+        // Act
+        var result = await sutProvider.Sut.VNextSaveAsync(savePolicyModel);
+
+        // Assert
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1)
+            .PushAsync(Arg.Is<PushNotification<SyncPolicyPushNotification>>(p =>
+                p.Type == PushType.PolicyChanged &&
+                p.Target == NotificationTarget.Organization &&
+                p.TargetId == policyUpdate.OrganizationId &&
+                p.ExcludeCurrentContext == false &&
+                p.Payload.OrganizationId == policyUpdate.OrganizationId &&
+                p.Payload.Policy.Id == result.Id &&
+                p.Payload.Policy.Type == policyUpdate.Type &&
+                p.Payload.Policy.Enabled == policyUpdate.Enabled &&
+                p.Payload.Policy.Data == policyUpdate.Data));
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveAsync_SendsPushNotification([PolicyUpdate(PolicyType.SingleOrg)] PolicyUpdate policyUpdate)
+    {
+        var fakePolicyValidator = new FakeSingleOrgPolicyValidator();
+        fakePolicyValidator.ValidateAsyncMock(policyUpdate, null).Returns("");
+        var sutProvider = SutProviderFactory([fakePolicyValidator]);
+
+        ArrangeOrganization(sutProvider, policyUpdate);
+        sutProvider.GetDependency<IPolicyRepository>().GetManyByOrganizationIdAsync(policyUpdate.OrganizationId).Returns([]);
+
+        var result = await sutProvider.Sut.SaveAsync(policyUpdate);
+
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1)
+            .PushAsync(Arg.Is<PushNotification<SyncPolicyPushNotification>>(p =>
+                p.Type == PushType.PolicyChanged &&
+                p.Target == NotificationTarget.Organization &&
+                p.TargetId == policyUpdate.OrganizationId &&
+                p.ExcludeCurrentContext == false &&
+                p.Payload.OrganizationId == policyUpdate.OrganizationId &&
+                p.Payload.Policy.Id == result.Id &&
+                p.Payload.Policy.Type == policyUpdate.Type &&
+                p.Payload.Policy.Enabled == policyUpdate.Enabled &&
+                p.Payload.Policy.Data == policyUpdate.Data));
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveAsync_ExistingPolicy_SendsPushNotificationWithUpdatedPolicy(
+        [PolicyUpdate(PolicyType.SingleOrg)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.SingleOrg, false)] Policy currentPolicy)
+    {
+        var fakePolicyValidator = new FakeSingleOrgPolicyValidator();
+        fakePolicyValidator.ValidateAsyncMock(policyUpdate, null).Returns("");
+        var sutProvider = SutProviderFactory([fakePolicyValidator]);
+
+        currentPolicy.OrganizationId = policyUpdate.OrganizationId;
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, policyUpdate.Type)
+            .Returns(currentPolicy);
+
+        ArrangeOrganization(sutProvider, policyUpdate);
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetManyByOrganizationIdAsync(policyUpdate.OrganizationId)
+            .Returns([currentPolicy]);
+
+        var result = await sutProvider.Sut.SaveAsync(policyUpdate);
+
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1)
+            .PushAsync(Arg.Is<PushNotification<SyncPolicyPushNotification>>(p =>
+                p.Type == PushType.PolicyChanged &&
+                p.Target == NotificationTarget.Organization &&
+                p.TargetId == policyUpdate.OrganizationId &&
+                p.ExcludeCurrentContext == false &&
+                p.Payload.OrganizationId == policyUpdate.OrganizationId &&
+                p.Payload.Policy.Id == result.Id &&
+                p.Payload.Policy.Type == policyUpdate.Type &&
+                p.Payload.Policy.Enabled == policyUpdate.Enabled &&
+                p.Payload.Policy.Data == policyUpdate.Data));
     }
 
     /// <summary>

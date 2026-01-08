@@ -2,6 +2,7 @@
 #nullable disable
 
 using System.Text.Json;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
@@ -183,9 +184,8 @@ public class CipherService : ICipherService
         }
     }
 
-    public async Task UploadFileForExistingAttachmentAsync(Stream stream, Cipher cipher, CipherAttachment.MetaData attachment, DateTime? lastKnownRevisionDate = null)
+    public async Task UploadFileForExistingAttachmentAsync(Stream stream, Cipher cipher, CipherAttachment.MetaData attachment)
     {
-        ValidateCipherLastKnownRevisionDate(cipher, lastKnownRevisionDate);
         if (attachment == null)
         {
             throw new BadRequestException("Cipher attachment does not exist");
@@ -290,11 +290,10 @@ public class CipherService : ICipherService
     }
 
     public async Task CreateAttachmentShareAsync(Cipher cipher, Stream stream, string fileName, string key,
-        long requestLength, string attachmentId, Guid organizationId, DateTime? lastKnownRevisionDate = null)
+        long requestLength, string attachmentId, Guid organizationId)
     {
         try
         {
-            ValidateCipherLastKnownRevisionDate(cipher, lastKnownRevisionDate);
             if (requestLength < 1)
             {
                 throw new BadRequestException("No data to attach.");
@@ -720,13 +719,6 @@ public class CipherService : ICipherService
 
         cipherDetails.DeletedDate = cipherDetails.RevisionDate = DateTime.UtcNow;
 
-        if (cipherDetails.ArchivedDate.HasValue)
-        {
-            // If the cipher was archived, clear the archived date when soft deleting
-            // If a user were to restore an archived cipher, it should go back to the vault not the archive vault
-            cipherDetails.ArchivedDate = null;
-        }
-
         await _securityTaskRepository.MarkAsCompleteByCipherIds([cipherDetails.Id]);
         await _cipherRepository.UpsertAsync(cipherDetails);
         await _eventService.LogCipherEventAsync(cipherDetails, EventType.Cipher_SoftDeleted);
@@ -992,11 +984,6 @@ public class CipherService : ICipherService
             throw new BadRequestException("One or more ciphers do not belong to you.");
         }
 
-        if (cipher.ArchivedDate.HasValue)
-        {
-            throw new BadRequestException("Cipher cannot be shared with organization because it is archived.");
-        }
-
         var attachments = cipher.GetAttachments();
         var hasAttachments = attachments?.Any() ?? false;
         var org = await _organizationRepository.GetByIdAsync(organizationId);
@@ -1006,18 +993,41 @@ public class CipherService : ICipherService
             throw new BadRequestException("Could not find organization.");
         }
 
-        if (hasAttachments && !org.MaxStorageGb.HasValue)
+        if (!await IgnoreStorageLimitsOnMigrationAsync(sharingUserId, org))
         {
-            throw new BadRequestException("This organization cannot use attachments.");
-        }
+            if (hasAttachments && !org.MaxStorageGb.HasValue)
+            {
+                throw new BadRequestException("This organization cannot use attachments.");
+            }
 
-        var storageAdjustment = attachments?.Sum(a => a.Value.Size) ?? 0;
-        if (org.StorageBytesRemaining() < storageAdjustment)
-        {
-            throw new BadRequestException("Not enough storage available for this organization.");
+            var storageAdjustment = attachments?.Sum(a => a.Value.Size) ?? 0;
+            if (org.StorageBytesRemaining() < storageAdjustment)
+            {
+                throw new BadRequestException("Not enough storage available for this organization.");
+            }
         }
 
         ValidateCipherLastKnownRevisionDate(cipher, lastKnownRevisionDate);
+    }
+
+    /// <summary>
+    /// Checks if the storage limit for the org should be ignored due to the Organization Data Ownership Policy
+    /// </summary>
+    private async Task<bool> IgnoreStorageLimitsOnMigrationAsync(Guid userId, Organization organization)
+    {
+        if (!_featureService.IsEnabled(FeatureFlagKeys.MigrateMyVaultToMyItems))
+        {
+            return false;
+        }
+
+        if (!organization.UsePolicies)
+        {
+            return false;
+        }
+
+        var requirement = await _policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(userId);
+
+        return requirement.IgnoreStorageLimitsOnMigration(organization.Id);
     }
 
     private async Task ValidateViewPasswordUserAsync(Cipher cipher)
@@ -1036,11 +1046,8 @@ public class CipherService : ICipherService
             var existingCipherData = DeserializeCipherData(existingCipher);
             var newCipherData = DeserializeCipherData(cipher);
 
-            // "hidden password" users may not add cipher key encryption
-            if (existingCipher.Key == null && cipher.Key != null)
-            {
-                throw new BadRequestException("You do not have permission to add cipher key encryption.");
-            }
+            // For hidden-password users, never allow Key to change at all.
+            cipher.Key = existingCipher.Key;
             // Keep only non-hidden fileds from the new cipher
             var nonHiddenFields = newCipherData.Fields?.Where(f => f.Type != FieldType.Hidden) ?? [];
             // Get hidden fields from the existing cipher

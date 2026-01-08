@@ -6,7 +6,6 @@ using Bit.Core.Billing.Pricing.Organizations;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Billing.Pricing;
@@ -26,13 +25,6 @@ public class PricingClient(
         if (globalSettings.SelfHosted)
         {
             return null;
-        }
-
-        var usePricingService = featureService.IsEnabled(FeatureFlagKeys.UsePricingService);
-
-        if (!usePricingService)
-        {
-            return StaticStore.GetPlan(planType);
         }
 
         var lookupKey = GetLookupKey(planType);
@@ -77,13 +69,6 @@ public class PricingClient(
             return [];
         }
 
-        var usePricingService = featureService.IsEnabled(FeatureFlagKeys.UsePricingService);
-
-        if (!usePricingService)
-        {
-            return StaticStore.Plans.ToList();
-        }
-
         var response = await httpClient.GetAsync("plans/organization");
 
         if (response.IsSuccessStatusCode)
@@ -114,11 +99,10 @@ public class PricingClient(
             return [];
         }
 
-        var usePricingService = featureService.IsEnabled(FeatureFlagKeys.UsePricingService);
         var fetchPremiumPriceFromPricingService =
             featureService.IsEnabled(FeatureFlagKeys.PM26793_FetchPremiumPriceFromPricingService);
 
-        if (!usePricingService || !fetchPremiumPriceFromPricingService)
+        if (!fetchPremiumPriceFromPricingService)
         {
             return [CurrentPremiumPlan];
         }
@@ -186,6 +170,6 @@ public class PricingClient(
         Available = true,
         LegacyYear = null,
         Seat = new Purchasable { Price = 10M, StripePriceId = StripeConstants.Prices.PremiumAnnually },
-        Storage = new Purchasable { Price = 4M, StripePriceId = StripeConstants.Prices.StoragePlanPersonal }
+        Storage = new Purchasable { Price = 4M, StripePriceId = StripeConstants.Prices.StoragePlanPersonal, Provided = 1 }
     };
 }

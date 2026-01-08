@@ -1,7 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 using Bit.Core.Entities;
 using Bit.Core.Tokens;
 
@@ -26,7 +23,7 @@ public class OrgUserInviteTokenable : ExpiringTokenable
 
     public string Identifier { get; set; } = TokenIdentifier;
     public Guid OrgUserId { get; set; }
-    public string OrgUserEmail { get; set; }
+    public string? OrgUserEmail { get; set; }
 
     [JsonConstructor]
     public OrgUserInviteTokenable()

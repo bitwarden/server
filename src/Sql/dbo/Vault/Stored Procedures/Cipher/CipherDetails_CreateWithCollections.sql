@@ -18,8 +18,9 @@
     @DeletedDate DATETIME2(7),
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
-    @CollectionIds AS [dbo].[GuidIdArray] READONLY,
-    @ArchivedDate DATETIME2(7) = NULL
+    @ArchivedDate DATETIME2(7) = NULL,
+    @Archives NVARCHAR(MAX) = NULL, -- not used
+    @CollectionIds AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN
     SET NOCOUNT ON
@@ -30,4 +31,10 @@ BEGIN
 
     DECLARE @UpdateCollectionsSuccess INT
     EXEC @UpdateCollectionsSuccess = [dbo].[Cipher_UpdateCollections] @Id, @UserId, @OrganizationId, @CollectionIds
+
+    -- Bump the account revision date AFTER collections are assigned.
+    IF @UpdateCollectionsSuccess = 0
+    BEGIN
+        EXEC [dbo].[User_BumpAccountRevisionDateByCipherId] @Id, @OrganizationId
+    END
 END

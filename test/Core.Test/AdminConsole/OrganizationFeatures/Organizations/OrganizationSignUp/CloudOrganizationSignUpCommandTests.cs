@@ -10,7 +10,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
-using Bit.Core.Utilities;
+using Bit.Core.Test.Billing.Mocks;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -28,7 +28,7 @@ public class CloudICloudOrganizationSignUpCommandTests
     {
         signup.Plan = planType;
 
-        var plan = StaticStore.GetPlan(signup.Plan);
+        var plan = MockPlans.Get(signup.Plan);
 
         signup.AdditionalSeats = 0;
         signup.PaymentMethodType = PaymentMethodType.Card;
@@ -37,7 +37,7 @@ public class CloudICloudOrganizationSignUpCommandTests
         signup.IsFromSecretsManagerTrial = false;
         signup.IsFromProvider = false;
 
-        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(StaticStore.GetPlan(signup.Plan));
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
 
         var result = await sutProvider.Sut.SignUpOrganizationAsync(signup);
 
@@ -77,7 +77,7 @@ public class CloudICloudOrganizationSignUpCommandTests
         signup.UseSecretsManager = false;
         signup.IsFromProvider = false;
 
-        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(StaticStore.GetPlan(signup.Plan));
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
 
         // Extract orgUserId when created
         Guid? orgUserId = null;
@@ -112,7 +112,7 @@ public class CloudICloudOrganizationSignUpCommandTests
     {
         signup.Plan = planType;
 
-        var plan = StaticStore.GetPlan(signup.Plan);
+        var plan = MockPlans.Get(signup.Plan);
 
         signup.UseSecretsManager = true;
         signup.AdditionalSeats = 15;
@@ -123,7 +123,7 @@ public class CloudICloudOrganizationSignUpCommandTests
         signup.IsFromSecretsManagerTrial = false;
         signup.IsFromProvider = false;
 
-        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(StaticStore.GetPlan(signup.Plan));
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
 
         var result = await sutProvider.Sut.SignUpOrganizationAsync(signup);
 
@@ -164,7 +164,7 @@ public class CloudICloudOrganizationSignUpCommandTests
         signup.PremiumAccessAddon = false;
         signup.IsFromProvider = true;
 
-        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(StaticStore.GetPlan(signup.Plan));
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpOrganizationAsync(signup));
         Assert.Contains("Organizations with a Managed Service Provider do not support Secrets Manager.", exception.Message);
@@ -184,7 +184,7 @@ public class CloudICloudOrganizationSignUpCommandTests
         signup.AdditionalStorageGb = 0;
         signup.IsFromProvider = false;
 
-        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(StaticStore.GetPlan(signup.Plan));
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SignUpOrganizationAsync(signup));
@@ -204,7 +204,7 @@ public class CloudICloudOrganizationSignUpCommandTests
         signup.AdditionalServiceAccounts = 10;
         signup.IsFromProvider = false;
 
-        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(StaticStore.GetPlan(signup.Plan));
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
            () => sutProvider.Sut.SignUpOrganizationAsync(signup));
@@ -224,7 +224,7 @@ public class CloudICloudOrganizationSignUpCommandTests
         signup.AdditionalServiceAccounts = -10;
         signup.IsFromProvider = false;
 
-        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(StaticStore.GetPlan(signup.Plan));
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SignUpOrganizationAsync(signup));
@@ -244,7 +244,7 @@ public class CloudICloudOrganizationSignUpCommandTests
             Owner = new User { Id = Guid.NewGuid() }
         };
 
-        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(StaticStore.GetPlan(signup.Plan));
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetCountByFreeOrganizationAdminUserAsync(signup.Owner.Id)

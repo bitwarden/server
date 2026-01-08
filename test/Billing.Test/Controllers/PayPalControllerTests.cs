@@ -8,13 +8,13 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Divergic.Logging.Xunit;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
+using Neovolve.Logging.Xunit;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
@@ -23,14 +23,12 @@ using Transaction = Bit.Core.Entities.Transaction;
 
 namespace Bit.Billing.Test.Controllers;
 
-public class PayPalControllerTests
+public class PayPalControllerTests(ITestOutputHelper testOutputHelper)
 {
-    private readonly ITestOutputHelper _testOutputHelper;
-
     private readonly IOptions<BillingSettings> _billingSettings = Substitute.For<IOptions<BillingSettings>>();
     private readonly IMailService _mailService = Substitute.For<IMailService>();
     private readonly IOrganizationRepository _organizationRepository = Substitute.For<IOrganizationRepository>();
-    private readonly IPaymentService _paymentService = Substitute.For<IPaymentService>();
+    private readonly IStripePaymentService _paymentService = Substitute.For<IStripePaymentService>();
     private readonly ITransactionRepository _transactionRepository = Substitute.For<ITransactionRepository>();
     private readonly IUserRepository _userRepository = Substitute.For<IUserRepository>();
     private readonly IProviderRepository _providerRepository = Substitute.For<IProviderRepository>();
@@ -38,15 +36,10 @@ public class PayPalControllerTests
 
     private const string _defaultWebhookKey = "webhook-key";
 
-    public PayPalControllerTests(ITestOutputHelper testOutputHelper)
-    {
-        _testOutputHelper = testOutputHelper;
-    }
-
     [Fact]
     public async Task PostIpn_NullKey_BadRequest()
     {
-        var logger = _testOutputHelper.BuildLoggerFor<PayPalController>();
+        var logger = testOutputHelper.BuildLoggerFor<PayPalController>();
 
         var controller = ConfigureControllerContextWith(logger, null, null);
 
@@ -60,7 +53,7 @@ public class PayPalControllerTests
     [Fact]
     public async Task PostIpn_IncorrectKey_BadRequest()
     {
-        var logger = _testOutputHelper.BuildLoggerFor<PayPalController>();
+        var logger = testOutputHelper.BuildLoggerFor<PayPalController>();
 
         _billingSettings.Value.Returns(new BillingSettings
         {
@@ -79,7 +72,7 @@ public class PayPalControllerTests
     [Fact]
     public async Task PostIpn_EmptyIPNBody_BadRequest()
     {
-        var logger = _testOutputHelper.BuildLoggerFor<PayPalController>();
+        var logger = testOutputHelper.BuildLoggerFor<PayPalController>();
 
         _billingSettings.Value.Returns(new BillingSettings
         {
@@ -98,7 +91,7 @@ public class PayPalControllerTests
     [Fact]
     public async Task PostIpn_IPNHasNoEntityId_BadRequest()
     {
-        var logger = _testOutputHelper.BuildLoggerFor<PayPalController>();
+        var logger = testOutputHelper.BuildLoggerFor<PayPalController>();
 
         _billingSettings.Value.Returns(new BillingSettings
         {
@@ -119,14 +112,12 @@ public class PayPalControllerTests
     [Fact]
     public async Task PostIpn_OtherTransactionType_Unprocessed_Ok()
     {
-        var logger = _testOutputHelper.BuildLoggerFor<PayPalController>();
+        var logger = testOutputHelper.BuildLoggerFor<PayPalController>();
 
         _billingSettings.Value.Returns(new BillingSettings
         {
             PayPal = { WebhookKey = _defaultWebhookKey }
         });
-
-        var organizationId = new Guid("ca8c6f2b-2d7b-4639-809f-b0e5013a304e");
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.UnsupportedTransactionType);
 
@@ -142,7 +133,7 @@ public class PayPalControllerTests
     [Fact]
     public async Task PostIpn_MismatchedReceiverID_Unprocessed_Ok()
     {
-        var logger = _testOutputHelper.BuildLoggerFor<PayPalController>();
+        var logger = testOutputHelper.BuildLoggerFor<PayPalController>();
 
         _billingSettings.Value.Returns(new BillingSettings
         {
@@ -152,8 +143,6 @@ public class PayPalControllerTests
                 BusinessId = "INCORRECT"
             }
         });
-
-        var organizationId = new Guid("ca8c6f2b-2d7b-4639-809f-b0e5013a304e");
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.SuccessfulPayment);
 
@@ -169,7 +158,7 @@ public class PayPalControllerTests
     [Fact]
     public async Task PostIpn_RefundMissingParent_Unprocessed_Ok()
     {
-        var logger = _testOutputHelper.BuildLoggerFor<PayPalController>();
+        var logger = testOutputHelper.BuildLoggerFor<PayPalController>();
 
         _billingSettings.Value.Returns(new BillingSettings
         {
@@ -179,8 +168,6 @@ public class PayPalControllerTests
                 BusinessId = "NHDYKLQ3L4LWL"
             }
         });
-
-        var organizationId = new Guid("ca8c6f2b-2d7b-4639-809f-b0e5013a304e");
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.RefundMissingParentTransaction);
 
@@ -196,7 +183,7 @@ public class PayPalControllerTests
     [Fact]
     public async Task PostIpn_eCheckPayment_Unprocessed_Ok()
     {
-        var logger = _testOutputHelper.BuildLoggerFor<PayPalController>();
+        var logger = testOutputHelper.BuildLoggerFor<PayPalController>();
 
         _billingSettings.Value.Returns(new BillingSettings
         {
@@ -206,8 +193,6 @@ public class PayPalControllerTests
                 BusinessId = "NHDYKLQ3L4LWL"
             }
         });
-
-        var organizationId = new Guid("ca8c6f2b-2d7b-4639-809f-b0e5013a304e");
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.ECheckPayment);
 
@@ -223,7 +208,7 @@ public class PayPalControllerTests
     [Fact]
     public async Task PostIpn_NonUSD_Unprocessed_Ok()
     {
-        var logger = _testOutputHelper.BuildLoggerFor<PayPalController>();
+        var logger = testOutputHelper.BuildLoggerFor<PayPalController>();
 
         _billingSettings.Value.Returns(new BillingSettings
         {
@@ -233,8 +218,6 @@ public class PayPalControllerTests
                 BusinessId = "NHDYKLQ3L4LWL"
             }
         });
-
-        var organizationId = new Guid("ca8c6f2b-2d7b-4639-809f-b0e5013a304e");
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.NonUSDPayment);
 
@@ -250,7 +233,7 @@ public class PayPalControllerTests
     [Fact]
     public async Task PostIpn_Completed_ExistingTransaction_Unprocessed_Ok()
     {
-        var logger = _testOutputHelper.BuildLoggerFor<PayPalController>();
+        var logger = testOutputHelper.BuildLoggerFor<PayPalController>();
 
         _billingSettings.Value.Returns(new BillingSettings
         {
@@ -260,8 +243,6 @@ public class PayPalControllerTests
                 BusinessId = "NHDYKLQ3L4LWL"
             }
         });
-
-        var organizationId = new Guid("ca8c6f2b-2d7b-4639-809f-b0e5013a304e");
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.SuccessfulPayment);
 
@@ -281,7 +262,7 @@ public class PayPalControllerTests
     [Fact]
     public async Task PostIpn_Completed_CreatesTransaction_Ok()
     {
-        var logger = _testOutputHelper.BuildLoggerFor<PayPalController>();
+        var logger = testOutputHelper.BuildLoggerFor<PayPalController>();
 
         _billingSettings.Value.Returns(new BillingSettings
         {
@@ -291,8 +272,6 @@ public class PayPalControllerTests
                 BusinessId = "NHDYKLQ3L4LWL"
             }
         });
-
-        var organizationId = new Guid("ca8c6f2b-2d7b-4639-809f-b0e5013a304e");
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.SuccessfulPayment);
 
@@ -314,7 +293,7 @@ public class PayPalControllerTests
     [Fact]
     public async Task PostIpn_Completed_CreatesTransaction_CreditsOrganizationAccount_Ok()
     {
-        var logger = _testOutputHelper.BuildLoggerFor<PayPalController>();
+        var logger = testOutputHelper.BuildLoggerFor<PayPalController>();
 
         _billingSettings.Value.Returns(new BillingSettings
         {
@@ -362,7 +341,7 @@ public class PayPalControllerTests
     [Fact]
     public async Task PostIpn_Completed_CreatesTransaction_CreditsUserAccount_Ok()
     {
-        var logger = _testOutputHelper.BuildLoggerFor<PayPalController>();
+        var logger = testOutputHelper.BuildLoggerFor<PayPalController>();
 
         _billingSettings.Value.Returns(new BillingSettings
         {
@@ -406,7 +385,7 @@ public class PayPalControllerTests
     [Fact]
     public async Task PostIpn_Refunded_ExistingTransaction_Unprocessed_Ok()
     {
-        var logger = _testOutputHelper.BuildLoggerFor<PayPalController>();
+        var logger = testOutputHelper.BuildLoggerFor<PayPalController>();
 
         _billingSettings.Value.Returns(new BillingSettings
         {
@@ -416,8 +395,6 @@ public class PayPalControllerTests
                 BusinessId = "NHDYKLQ3L4LWL"
             }
         });
-
-        var organizationId = new Guid("ca8c6f2b-2d7b-4639-809f-b0e5013a304e");
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.SuccessfulRefund);
 
@@ -441,7 +418,7 @@ public class PayPalControllerTests
     [Fact]
     public async Task PostIpn_Refunded_MissingParentTransaction_Ok()
     {
-        var logger = _testOutputHelper.BuildLoggerFor<PayPalController>();
+        var logger = testOutputHelper.BuildLoggerFor<PayPalController>();
 
         _billingSettings.Value.Returns(new BillingSettings
         {
@@ -451,8 +428,6 @@ public class PayPalControllerTests
                 BusinessId = "NHDYKLQ3L4LWL"
             }
         });
-
-        var organizationId = new Guid("ca8c6f2b-2d7b-4639-809f-b0e5013a304e");
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.SuccessfulRefund);
 
@@ -480,7 +455,7 @@ public class PayPalControllerTests
     [Fact]
     public async Task PostIpn_Refunded_ReplacesParent_CreatesTransaction_Ok()
     {
-        var logger = _testOutputHelper.BuildLoggerFor<PayPalController>();
+        var logger = testOutputHelper.BuildLoggerFor<PayPalController>();
 
         _billingSettings.Value.Returns(new BillingSettings
         {
@@ -531,8 +506,8 @@ public class PayPalControllerTests
 
     private PayPalController ConfigureControllerContextWith(
         ILogger<PayPalController> logger,
-        string webhookKey,
-        string ipnBody)
+        string? webhookKey,
+        string? ipnBody)
     {
         var controller = new PayPalController(
             _billingSettings,
@@ -578,16 +553,16 @@ public class PayPalControllerTests
         Assert.Equal(statusCode, statusCodeActionResult.StatusCode);
     }
 
-    private static void Logged(ICacheLogger logger, LogLevel logLevel, string message)
+    private static void Logged(ICacheLogger<PayPalController> logger, LogLevel logLevel, string message)
     {
         Assert.NotNull(logger.Last);
         Assert.Equal(logLevel, logger.Last!.LogLevel);
         Assert.Equal(message, logger.Last!.Message);
     }
 
-    private static void LoggedError(ICacheLogger logger, string message)
+    private static void LoggedError(ICacheLogger<PayPalController> logger, string message)
         => Logged(logger, LogLevel.Error, message);
 
-    private static void LoggedWarning(ICacheLogger logger, string message)
+    private static void LoggedWarning(ICacheLogger<PayPalController> logger, string message)
         => Logged(logger, LogLevel.Warning, message);
 }

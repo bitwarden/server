@@ -39,7 +39,7 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         await _factory.LoginWithNewAccount(_ownerEmail);
 
         // Create the organization
-        (_organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseAnnually2023,
+        (_organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseAnnually,
             ownerEmail: _ownerEmail, passwordManagerSeats: 10, paymentMethod: PaymentMethodType.Card);
 
         // Authorize with the organization api key

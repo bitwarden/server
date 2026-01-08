@@ -80,6 +80,8 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
             return new BadRequest("Additional storage must be greater than 0.");
         }
 
+        var premiumPlan = await pricingClient.GetAvailablePremiumPlan();
+
         Customer? customer;
 
         /*
@@ -107,7 +109,7 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
 
         customer = await ReconcileBillingLocationAsync(customer, billingAddress);
 
-        var subscription = await CreateSubscriptionAsync(user.Id, customer, additionalStorageGb > 0 ? additionalStorageGb : null);
+        var subscription = await CreateSubscriptionAsync(user.Id, customer, premiumPlan, additionalStorageGb > 0 ? additionalStorageGb : null);
 
         paymentMethod.Switch(
             tokenized =>
@@ -140,7 +142,7 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
         user.Gateway = GatewayType.Stripe;
         user.GatewayCustomerId = customer.Id;
         user.GatewaySubscriptionId = subscription.Id;
-        user.MaxStorageGb = (short)(1 + additionalStorageGb);
+        user.MaxStorageGb = (short)(premiumPlan.Storage.Provided + additionalStorageGb);
         user.LicenseKey = CoreHelpers.SecureRandomString(20);
         user.RevisionDate = DateTime.UtcNow;
 
@@ -208,7 +210,7 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
             case TokenizablePaymentMethodType.BankAccount:
                 {
                     var setupIntent =
-                        (await stripeAdapter.SetupIntentList(new SetupIntentListOptions { PaymentMethod = tokenizedPaymentMethod.Token }))
+                        (await stripeAdapter.ListSetupIntentsAsync(new SetupIntentListOptions { PaymentMethod = tokenizedPaymentMethod.Token }))
                         .FirstOrDefault();
 
                     if (setupIntent == null)
@@ -241,7 +243,7 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
 
         try
         {
-            return await stripeAdapter.CustomerCreateAsync(customerCreateOptions);
+            return await stripeAdapter.CreateCustomerAsync(customerCreateOptions);
         }
         catch
         {
@@ -298,15 +300,15 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
                 ValidateLocation = ValidateTaxLocationTiming.Immediately
             }
         };
-        return await stripeAdapter.CustomerUpdateAsync(customer.Id, options);
+        return await stripeAdapter.UpdateCustomerAsync(customer.Id, options);
     }
 
     private async Task<Subscription> CreateSubscriptionAsync(
         Guid userId,
         Customer customer,
+        Pricing.Premium.Plan premiumPlan,
         int? storage)
     {
-        var premiumPlan = await pricingClient.GetAvailablePremiumPlan();
 
         var subscriptionItemOptionsList = new List<SubscriptionItemOptions>
         {
@@ -347,11 +349,11 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
             OffSession = true
         };
 
-        var subscription = await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
+        var subscription = await stripeAdapter.CreateSubscriptionAsync(subscriptionCreateOptions);
 
         if (usingPayPal)
         {
-            await stripeAdapter.InvoiceUpdateAsync(subscription.LatestInvoiceId, new InvoiceUpdateOptions
+            await stripeAdapter.UpdateInvoiceAsync(subscription.LatestInvoiceId, new InvoiceUpdateOptions
             {
                 AutoAdvance = false
             });
