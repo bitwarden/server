@@ -22,7 +22,7 @@ public class AccountsController(
     IFeatureService featureService,
     ILicensingService licensingService) : Controller
 {
-    // TODO: Migrate to Query / AccountBillingVNextController as part of Premium -> Organization upgrade work.
+    // TODO: Remove with deletion of pm-29594-update-individual-subscription-page
     [HttpGet("subscription")]
     public async Task<SubscriptionResponseModel> GetSubscriptionAsync(
         [FromServices] GlobalSettings globalSettings,
@@ -61,7 +61,7 @@ public class AccountsController(
         }
     }
 
-    // TODO: Migrate to Command / AccountBillingVNextController as PUT /account/billing/vnext/subscription
+    // TODO: Remove with deletion of pm-29594-update-individual-subscription-page
     [HttpPost("storage")]
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<PaymentResponseModel> PostStorageAsync([FromBody] StorageRequestModel model)
@@ -130,11 +130,5 @@ public class AccountsController(
         }
 
         await userService.ReinstatePremiumAsync(user);
-    }
-
-    private async Task<IEnumerable<Guid>> GetOrganizationIdsClaimingUserAsync(Guid userId)
-    {
-        var organizationsClaimingUser = await userService.GetOrganizationsClaimingUserAsync(userId);
-        return organizationsClaimingUser.Select(o => o.Id);
     }
 }
