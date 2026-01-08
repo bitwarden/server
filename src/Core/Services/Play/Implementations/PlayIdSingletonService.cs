@@ -1,33 +1,8 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 namespace Bit.Core.Services;
-
-public class PlayIdService(IHostEnvironment hostEnvironment) : IPlayIdService
-{
-    public string? PlayId { get; set; }
-    public bool InPlay(out string playId)
-    {
-        playId = PlayId ?? string.Empty;
-        return !string.IsNullOrEmpty(PlayId) && hostEnvironment.IsDevelopment();
-    }
-}
-
-public class NeverPlayIdServices : IPlayIdService
-{
-    public string? PlayId
-    {
-        get => null;
-        set { }
-    }
-
-    public bool InPlay(out string playId)
-    {
-        playId = string.Empty;
-        return false;
-    }
-}
 
 /// <summary>
 /// Singleton wrapper service that bridges singleton-scoped service boundaries for PlayId tracking.
