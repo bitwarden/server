@@ -95,17 +95,6 @@ public class AccountBillingVNextController(
         return TypedResults.Ok(response);
     }
 
-    [HttpPut("storage")]
-    [RequireFeature(FeatureFlagKeys.PM29594_UpdateIndividualSubscriptionPage)]
-    [InjectUser]
-    public async Task<IResult> UpdateStorageAsync(
-        [BindNever] User user,
-        [FromBody] StorageUpdateRequest request)
-    {
-        var result = await updatePremiumStorageCommand.Run(user, request.AdditionalStorageGb);
-        return Handle(result);
-    }
-
     [HttpGet("subscription")]
     [RequireFeature(FeatureFlagKeys.PM29594_UpdateIndividualSubscriptionPage)]
     [InjectUser]
@@ -123,6 +112,17 @@ public class AccountBillingVNextController(
         [BindNever] User user)
     {
         var result = await reinstateSubscriptionCommand.Run(user);
+        return Handle(result);
+    }
+
+    [HttpPut("subscription/storage")]
+    [RequireFeature(FeatureFlagKeys.PM29594_UpdateIndividualSubscriptionPage)]
+    [InjectUser]
+    public async Task<IResult> UpdateSubscriptionStorageAsync(
+        [BindNever] User user,
+        [FromBody] StorageUpdateRequest request)
+    {
+        var result = await updatePremiumStorageCommand.Run(user, request.AdditionalStorageGb);
         return Handle(result);
     }
 
