@@ -240,6 +240,6 @@ public class SendOrganizationConfirmationCommandTests
         }
     }
 
-    private static string GetSubject(string organizationName) => $"You Have Been Confirmed To {organizationName}";
+    private static string GetSubject(string organizationName) => $"You can now access items from {organizationName}";
 
 }
