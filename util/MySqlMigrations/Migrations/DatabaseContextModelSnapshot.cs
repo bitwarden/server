@@ -229,6 +229,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("UseDirectory")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<bool>("UseDisableSmAdsForUsers")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<bool>("UseEvents")
                         .HasColumnType("tinyint(1)");
 
@@ -1668,6 +1671,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<int>("AccessCount")
                         .HasColumnType("int");
 
+                    b.Property<byte?>("AuthType")
+                        .HasColumnType("tinyint unsigned");
+
                     b.Property<Guid?>("CipherId")
                         .HasColumnType("char(36)");
 
@@ -1684,8 +1690,8 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("tinyint(1)");
 
                     b.Property<string>("Emails")
-                        .HasMaxLength(1024)
-                        .HasColumnType("varchar(1024)");
+                        .HasMaxLength(4000)
+                        .HasColumnType("varchar(4000)");
 
                     b.Property<DateTime?>("ExpirationDate")
                         .HasColumnType("datetime(6)");
@@ -2347,8 +2353,8 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
 
-                    b.Property<DateTime?>("ArchivedDate")
-                        .HasColumnType("datetime(6)");
+                    b.Property<string>("Archives")
+                        .HasColumnType("longtext");
 
                     b.Property<string>("Attachments")
                         .HasColumnType("longtext");

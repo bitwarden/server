@@ -224,6 +224,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool>("UseDirectory")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("UseDisableSmAdsForUsers")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("UseEvents")
                         .HasColumnType("INTEGER");
 
@@ -1657,6 +1660,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<int>("AccessCount")
                         .HasColumnType("INTEGER");
 
+                    b.Property<byte?>("AuthType")
+                        .HasColumnType("INTEGER");
+
                     b.Property<Guid?>("CipherId")
                         .HasColumnType("TEXT");
 
@@ -1673,7 +1679,7 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Emails")
-                        .HasMaxLength(1024)
+                        .HasMaxLength(4000)
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("ExpirationDate")
@@ -2336,7 +2342,7 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime?>("ArchivedDate")
+                    b.Property<string>("Archives")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Attachments")
