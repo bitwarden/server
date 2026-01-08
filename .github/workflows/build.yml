@@ -39,8 +39,6 @@ jobs:
   build-artifacts:
     name: Build Docker images
     runs-on: ubuntu-22.04
-    needs:
-      - lint
     outputs:
       has_secrets: ${{ steps.check-secrets.outputs.has_secrets }}
     permissions:
@@ -401,8 +399,6 @@ jobs:
   build-mssqlmigratorutility:
     name: Build MSSQL migrator utility
     runs-on: ubuntu-22.04
-    needs:
-      - lint
     defaults:
       run:
         shell: bash
@@ -577,7 +573,6 @@ jobs:
     if: always()
     runs-on: ubuntu-22.04
     needs:
-      - lint
       - build-artifacts
       - upload
       - build-mssqlmigratorutility
