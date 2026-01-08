@@ -7,7 +7,7 @@ public class GetAllPlayIdsQuery(DatabaseContext databaseContext) : IGetAllPlayId
 {
     public List<string> GetAllPlayIds()
     {
-        return databaseContext.PlayData
+        return databaseContext.PlayItem
             .Select(pd => pd.PlayId)
             .Distinct()
             .ToList();

@@ -11,14 +11,14 @@ using Xunit;
 namespace Bit.Core.Test.Services;
 
 [SutProviderCustomize]
-public class PlayDataServiceTests
+public class PlayItemServiceTests
 {
     [Theory]
     [BitAutoData]
-    public async Task Record_User_WhenInPlay_RecordsPlayData(
+    public async Task Record_User_WhenInPlay_RecordsPlayItem(
         string playId,
         User user,
-        SutProvider<PlayDataService> sutProvider)
+        SutProvider<PlayItemService> sutProvider)
     {
         sutProvider.GetDependency<IPlayIdService>()
             .InPlay(out Arg.Any<string>())
@@ -30,14 +30,14 @@ public class PlayDataServiceTests
 
         await sutProvider.Sut.Record(user);
 
-        await sutProvider.GetDependency<IPlayDataRepository>()
+        await sutProvider.GetDependency<IPlayItemRepository>()
             .Received(1)
-            .CreateAsync(Arg.Is<PlayData>(pd =>
+            .CreateAsync(Arg.Is<PlayItem>(pd =>
                 pd.PlayId == playId &&
                 pd.UserId == user.Id &&
                 pd.OrganizationId == null));
 
-        sutProvider.GetDependency<ILogger<PlayDataService>>()
+        sutProvider.GetDependency<ILogger<PlayItemService>>()
             .Received(1)
             .Log(
                 LogLevel.Information,
@@ -49,9 +49,9 @@ public class PlayDataServiceTests
 
     [Theory]
     [BitAutoData]
-    public async Task Record_User_WhenNotInPlay_DoesNotRecordPlayData(
+    public async Task Record_User_WhenNotInPlay_DoesNotRecordPlayItem(
         User user,
-        SutProvider<PlayDataService> sutProvider)
+        SutProvider<PlayItemService> sutProvider)
     {
         sutProvider.GetDependency<IPlayIdService>()
             .InPlay(out Arg.Any<string>())
@@ -63,11 +63,11 @@ public class PlayDataServiceTests
 
         await sutProvider.Sut.Record(user);
 
-        await sutProvider.GetDependency<IPlayDataRepository>()
+        await sutProvider.GetDependency<IPlayItemRepository>()
             .DidNotReceive()
-            .CreateAsync(Arg.Any<PlayData>());
+            .CreateAsync(Arg.Any<PlayItem>());
 
-        sutProvider.GetDependency<ILogger<PlayDataService>>()
+        sutProvider.GetDependency<ILogger<PlayItemService>>()
             .DidNotReceive()
             .Log(
                 LogLevel.Information,
@@ -79,10 +79,10 @@ public class PlayDataServiceTests
 
     [Theory]
     [BitAutoData]
-    public async Task Record_Organization_WhenInPlay_RecordsPlayData(
+    public async Task Record_Organization_WhenInPlay_RecordsPlayItem(
         string playId,
         Organization organization,
-        SutProvider<PlayDataService> sutProvider)
+        SutProvider<PlayItemService> sutProvider)
     {
         sutProvider.GetDependency<IPlayIdService>()
             .InPlay(out Arg.Any<string>())
@@ -94,14 +94,14 @@ public class PlayDataServiceTests
 
         await sutProvider.Sut.Record(organization);
 
-        await sutProvider.GetDependency<IPlayDataRepository>()
+        await sutProvider.GetDependency<IPlayItemRepository>()
             .Received(1)
-            .CreateAsync(Arg.Is<PlayData>(pd =>
+            .CreateAsync(Arg.Is<PlayItem>(pd =>
                 pd.PlayId == playId &&
                 pd.OrganizationId == organization.Id &&
                 pd.UserId == null));
 
-        sutProvider.GetDependency<ILogger<PlayDataService>>()
+        sutProvider.GetDependency<ILogger<PlayItemService>>()
             .Received(1)
             .Log(
                 LogLevel.Information,
@@ -113,9 +113,9 @@ public class PlayDataServiceTests
 
     [Theory]
     [BitAutoData]
-    public async Task Record_Organization_WhenNotInPlay_DoesNotRecordPlayData(
+    public async Task Record_Organization_WhenNotInPlay_DoesNotRecordPlayItem(
         Organization organization,
-        SutProvider<PlayDataService> sutProvider)
+        SutProvider<PlayItemService> sutProvider)
     {
         sutProvider.GetDependency<IPlayIdService>()
             .InPlay(out Arg.Any<string>())
@@ -127,11 +127,11 @@ public class PlayDataServiceTests
 
         await sutProvider.Sut.Record(organization);
 
-        await sutProvider.GetDependency<IPlayDataRepository>()
+        await sutProvider.GetDependency<IPlayItemRepository>()
             .DidNotReceive()
-            .CreateAsync(Arg.Any<PlayData>());
+            .CreateAsync(Arg.Any<PlayItem>());
 
-        sutProvider.GetDependency<ILogger<PlayDataService>>()
+        sutProvider.GetDependency<ILogger<PlayItemService>>()
             .DidNotReceive()
             .Log(
                 LogLevel.Information,

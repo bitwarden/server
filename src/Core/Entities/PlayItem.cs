@@ -5,11 +5,11 @@ using Bit.Core.Utilities;
 namespace Bit.Core.Entities;
 
 /// <summary>
-/// PlayData is a join table tracking entities created during automated testing.
+/// PlayItem is a join table tracking entities created during automated testing.
 /// A `PlayId` is supplied by the clients in the `x-play-id` header to inform the server
 /// that any data created should be associated with the play, and therefore cleaned up with it.
 /// </summary>
-public class PlayData : ITableObject<Guid>
+public class PlayItem : ITableObject<Guid>
 {
     public Guid Id { get; set; }
     [MaxLength(256)]
@@ -27,14 +27,14 @@ public class PlayData : ITableObject<Guid>
     }
 
     /// <summary>
-    /// Creates a new PlayData record associated with a User.
+    /// Creates a new PlayItem record associated with a User.
     /// </summary>
     /// <param name="user">The user entity created during the play.</param>
     /// <param name="playId">The play identifier from the x-play-id header.</param>
-    /// <returns>A new PlayData instance tracking the user.</returns>
-    public static PlayData Create(User user, string playId)
+    /// <returns>A new PlayItem instance tracking the user.</returns>
+    public static PlayItem Create(User user, string playId)
     {
-        return new PlayData
+        return new PlayItem
         {
             PlayId = playId,
             UserId = user.Id,
@@ -43,14 +43,14 @@ public class PlayData : ITableObject<Guid>
     }
 
     /// <summary>
-    /// Creates a new PlayData record associated with an Organization.
+    /// Creates a new PlayItem record associated with an Organization.
     /// </summary>
     /// <param name="organization">The organization entity created during the play.</param>
     /// <param name="playId">The play identifier from the x-play-id header.</param>
-    /// <returns>A new PlayData instance tracking the organization.</returns>
-    public static PlayData Create(Organization organization, string playId)
+    /// <returns>A new PlayItem instance tracking the organization.</returns>
+    public static PlayItem Create(Organization organization, string playId)
     {
-        return new PlayData
+        return new PlayItem
         {
             PlayId = playId,
             OrganizationId = organization.Id,

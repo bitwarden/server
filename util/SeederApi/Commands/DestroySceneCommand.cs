@@ -9,16 +9,16 @@ public class DestroySceneCommand(
     DatabaseContext databaseContext,
     ILogger<DestroySceneCommand> logger,
     IUserRepository userRepository,
-    IPlayDataRepository playDataRepository,
+    IPlayItemRepository playItemRepository,
     IOrganizationRepository organizationRepository) : IDestroySceneCommand
 {
     public async Task<object?> DestroyAsync(string playId)
     {
-        // Note, delete cascade will remove PlayData entries
+        // Note, delete cascade will remove PlayItem entries
 
-        var playData = await playDataRepository.GetByPlayIdAsync(playId);
-        var userIds = playData.Select(pd => pd.UserId).Distinct().ToList();
-        var organizationIds = playData.Select(pd => pd.OrganizationId).Distinct().ToList();
+        var playItem = await playItemRepository.GetByPlayIdAsync(playId);
+        var userIds = playItem.Select(pd => pd.UserId).Distinct().ToList();
+        var organizationIds = playItem.Select(pd => pd.OrganizationId).Distinct().ToList();
 
         // Delete Users before Organizations to respect foreign key constraints
         if (userIds.Count > 0)

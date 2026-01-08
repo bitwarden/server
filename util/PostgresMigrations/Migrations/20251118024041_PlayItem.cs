@@ -2,10 +2,10 @@
 
 #nullable disable
 
-namespace Bit.MySqlMigrations.Migrations;
+namespace Bit.PostgresMigrations.Migrations;
 
 /// <inheritdoc />
-public partial class PlayData : Migration
+public partial class PlayItem : Migration
 {
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
@@ -16,51 +16,49 @@ public partial class PlayData : Migration
             type: "smallint",
             nullable: false,
             oldClrType: typeof(int),
-            oldType: "int");
+            oldType: "integer");
 
         migrationBuilder.CreateTable(
-            name: "PlayData",
+            name: "PlayItem",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                PlayId = table.Column<string>(type: "varchar(256)", maxLength: 256, nullable: false)
-                    .Annotation("MySql:CharSet", "utf8mb4"),
-                UserId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
-                OrganizationId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
-                CreationDate = table.Column<DateTime>(type: "datetime(6)", nullable: false)
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                PlayId = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
+                UserId = table.Column<Guid>(type: "uuid", nullable: true),
+                OrganizationId = table.Column<Guid>(type: "uuid", nullable: true),
+                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
             },
             constraints: table =>
             {
-                table.PrimaryKey("PK_PlayData", x => x.Id);
-                table.CheckConstraint("CK_PlayData_UserOrOrganization", "(\"UserId\" IS NOT NULL AND \"OrganizationId\" IS NULL) OR (\"UserId\" IS NULL AND \"OrganizationId\" IS NOT NULL)");
+                table.PrimaryKey("PK_PlayItem", x => x.Id);
+                table.CheckConstraint("CK_PlayItem_UserOrOrganization", "(\"UserId\" IS NOT NULL AND \"OrganizationId\" IS NULL) OR (\"UserId\" IS NULL AND \"OrganizationId\" IS NOT NULL)");
                 table.ForeignKey(
-                    name: "FK_PlayData_Organization_OrganizationId",
+                    name: "FK_PlayItem_Organization_OrganizationId",
                     column: x => x.OrganizationId,
                     principalTable: "Organization",
                     principalColumn: "Id",
                     onDelete: ReferentialAction.Cascade);
                 table.ForeignKey(
-                    name: "FK_PlayData_User_UserId",
+                    name: "FK_PlayItem_User_UserId",
                     column: x => x.UserId,
                     principalTable: "User",
                     principalColumn: "Id",
                     onDelete: ReferentialAction.Cascade);
-            })
-            .Annotation("MySql:CharSet", "utf8mb4");
+            });
 
         migrationBuilder.CreateIndex(
-            name: "IX_PlayData_OrganizationId",
-            table: "PlayData",
+            name: "IX_PlayItem_OrganizationId",
+            table: "PlayItem",
             column: "OrganizationId");
 
         migrationBuilder.CreateIndex(
-            name: "IX_PlayData_PlayId",
-            table: "PlayData",
+            name: "IX_PlayItem_PlayId",
+            table: "PlayItem",
             column: "PlayId");
 
         migrationBuilder.CreateIndex(
-            name: "IX_PlayData_UserId",
-            table: "PlayData",
+            name: "IX_PlayItem_UserId",
+            table: "PlayItem",
             column: "UserId");
     }
 
@@ -68,12 +66,12 @@ public partial class PlayData : Migration
     protected override void Down(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.DropTable(
-            name: "PlayData");
+            name: "PlayItem");
 
         migrationBuilder.AlterColumn<int>(
             name: "WaitTimeDays",
             table: "EmergencyAccess",
-            type: "int",
+            type: "integer",
             nullable: false,
             oldClrType: typeof(short),
             oldType: "smallint");

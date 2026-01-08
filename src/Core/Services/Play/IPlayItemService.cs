@@ -6,10 +6,10 @@ namespace Bit.Core.Services;
 /// <summary>
 /// Service used to track added users and organizations during a Play session.
 /// </summary>
-public interface IPlayDataService
+public interface IPlayItemService
 {
     /// <summary>
-    /// Records a PlayData entry for the given User created during a Play session.
+    /// Records a PlayItem entry for the given User created during a Play session.
     ///
     /// Does nothing if no Play Id is set for this http scope.
     /// </summary>
@@ -17,7 +17,7 @@ public interface IPlayDataService
     /// <returns></returns>
     Task Record(User user);
     /// <summary>
-    /// Records a PlayData entry for the given Organization created during a Play session.
+    /// Records a PlayItem entry for the given Organization created during a Play session.
     ///
     /// Does nothing if no Play Id is set for this http scope.
     /// </summary>

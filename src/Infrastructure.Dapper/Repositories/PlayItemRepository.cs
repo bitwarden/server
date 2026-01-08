@@ -9,22 +9,22 @@ using Microsoft.Data.SqlClient;
 
 namespace Bit.Infrastructure.Dapper.Repositories;
 
-public class PlayDataRepository : Repository<PlayData, Guid>, IPlayDataRepository
+public class PlayItemRepository : Repository<PlayItem, Guid>, IPlayItemRepository
 {
-    public PlayDataRepository(GlobalSettings globalSettings)
+    public PlayItemRepository(GlobalSettings globalSettings)
         : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
     { }
 
-    public PlayDataRepository(string connectionString, string readOnlyConnectionString)
+    public PlayItemRepository(string connectionString, string readOnlyConnectionString)
         : base(connectionString, readOnlyConnectionString)
     { }
 
-    public async Task<ICollection<PlayData>> GetByPlayIdAsync(string playId)
+    public async Task<ICollection<PlayItem>> GetByPlayIdAsync(string playId)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
-            var results = await connection.QueryAsync<PlayData>(
-                "[dbo].[PlayData_ReadByPlayId]",
+            var results = await connection.QueryAsync<PlayItem>(
+                "[dbo].[PlayItem_ReadByPlayId]",
                 new { PlayId = playId },
                 commandType: CommandType.StoredProcedure);
 
@@ -37,7 +37,7 @@ public class PlayDataRepository : Repository<PlayData, Guid>, IPlayDataRepositor
         using (var connection = new SqlConnection(ConnectionString))
         {
             await connection.ExecuteAsync(
-                "[dbo].[PlayData_DeleteByPlayId]",
+                "[dbo].[PlayItem_DeleteByPlayId]",
                 new { PlayId = playId },
                 commandType: CommandType.StoredProcedure);
         }

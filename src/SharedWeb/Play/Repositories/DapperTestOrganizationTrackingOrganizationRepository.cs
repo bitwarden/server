@@ -12,21 +12,21 @@ namespace Bit.SharedWeb.Play.Repositories;
 /// </summary>
 public class DapperTestOrganizationTrackingOrganizationRepository : OrganizationRepository
 {
-    private readonly IPlayDataService _playDataService;
+    private readonly IPlayItemService _playItemService;
 
     public DapperTestOrganizationTrackingOrganizationRepository(
-        IPlayDataService playDataService,
+        IPlayItemService playItemService,
         GlobalSettings globalSettings,
         ILogger<OrganizationRepository> logger)
         : base(globalSettings, logger)
     {
-        _playDataService = playDataService;
+        _playItemService = playItemService;
     }
 
     public override async Task<Organization> CreateAsync(Organization obj)
     {
         var createdOrganization = await base.CreateAsync(obj);
-        await _playDataService.Record(createdOrganization);
+        await _playItemService.Record(createdOrganization);
         return createdOrganization;
     }
 }

@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[PlayData_ReadByPlayId]
+CREATE PROCEDURE [dbo].[PlayItem_ReadByPlayId]
     @PlayId NVARCHAR(256)
 AS
 BEGIN
@@ -11,7 +11,7 @@ BEGIN
         [OrganizationId],
         [CreationDate]
     FROM
-        [dbo].[PlayData]
+        [dbo].[PlayItem]
     WHERE
         [PlayId] = @PlayId
 END

@@ -8,21 +8,21 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
-public class PlayDataRepository : Repository<Core.Entities.PlayData, PlayData, Guid>, IPlayDataRepository
+public class PlayItemRepository : Repository<Core.Entities.PlayItem, PlayItem, Guid>, IPlayItemRepository
 {
-    public PlayDataRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
-        : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.PlayData)
+    public PlayItemRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
+        : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.PlayItem)
     { }
 
-    public async Task<ICollection<Core.Entities.PlayData>> GetByPlayIdAsync(string playId)
+    public async Task<ICollection<Core.Entities.PlayItem>> GetByPlayIdAsync(string playId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var playDataEntities = await GetDbSet(dbContext)
+            var playItemEntities = await GetDbSet(dbContext)
                 .Where(pd => pd.PlayId == playId)
                 .ToListAsync();
-            return Mapper.Map<List<Core.Entities.PlayData>>(playDataEntities);
+            return Mapper.Map<List<Core.Entities.PlayItem>>(playItemEntities);
         }
     }
 
@@ -35,7 +35,7 @@ public class PlayDataRepository : Repository<Core.Entities.PlayData, PlayData, G
                 .Where(pd => pd.PlayId == playId)
                 .ToListAsync();
 
-            dbContext.PlayData.RemoveRange(entities);
+            dbContext.PlayItem.RemoveRange(entities);
             await dbContext.SaveChangesAsync();
         }
     }

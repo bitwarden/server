@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[PlayData_Create]
+CREATE PROCEDURE [dbo].[PlayItem_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @PlayId NVARCHAR(256),
     @UserId UNIQUEIDENTIFIER,
@@ -8,7 +8,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    INSERT INTO [dbo].[PlayData]
+    INSERT INTO [dbo].[PlayItem]
     (
         [Id],
         [PlayId],

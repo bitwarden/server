@@ -1627,7 +1627,7 @@ namespace Bit.MySqlMigrations.Migrations
                     b.ToTable("OrganizationUser", (string)null);
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.PlayData", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.PlayItem", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
@@ -1657,9 +1657,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.HasIndex("UserId")
                         .HasAnnotation("SqlServer:Clustered", false);
 
-                    b.ToTable("PlayData", null, t =>
+                    b.ToTable("PlayItem", null, t =>
                         {
-                            t.HasCheckConstraint("CK_PlayData_UserOrOrganization", "(\"UserId\" IS NOT NULL AND \"OrganizationId\" IS NULL) OR (\"UserId\" IS NULL AND \"OrganizationId\" IS NOT NULL)");
+                            t.HasCheckConstraint("CK_PlayItem_UserOrOrganization", "(\"UserId\" IS NOT NULL AND \"OrganizationId\" IS NULL) OR (\"UserId\" IS NULL AND \"OrganizationId\" IS NOT NULL)");
                         });
                 });
 
@@ -3039,7 +3039,7 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.PlayData", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.PlayItem", b =>
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
                         .WithMany()

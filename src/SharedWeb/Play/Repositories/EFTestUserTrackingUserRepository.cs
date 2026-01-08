@@ -11,21 +11,21 @@ namespace Bit.SharedWeb.Play.Repositories;
 /// </summary>
 public class EFTestUserTrackingUserRepository : UserRepository
 {
-    private readonly IPlayDataService _playDataService;
+    private readonly IPlayItemService _playItemService;
 
     public EFTestUserTrackingUserRepository(
-        IPlayDataService playDataService,
+        IPlayItemService playItemService,
         IServiceScopeFactory serviceScopeFactory,
         IMapper mapper)
         : base(serviceScopeFactory, mapper)
     {
-        _playDataService = playDataService;
+        _playItemService = playItemService;
     }
 
     public override async Task<Core.Entities.User> CreateAsync(Core.Entities.User user)
     {
         var createdUser = await base.CreateAsync(user);
-        await _playDataService.Record(createdUser);
+        await _playItemService.Record(createdUser);
         return createdUser;
     }
 }

@@ -4,9 +4,9 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Bit.Infrastructure.EntityFramework.Configurations;
 
-public class PlayDataEntityTypeConfiguration : IEntityTypeConfiguration<PlayData>
+public class PlayItemEntityTypeConfiguration : IEntityTypeConfiguration<PlayItem>
 {
-    public void Configure(EntityTypeBuilder<PlayData> builder)
+    public void Configure(EntityTypeBuilder<PlayItem> builder)
     {
         builder
             .Property(pd => pd.Id)
@@ -37,9 +37,9 @@ public class PlayDataEntityTypeConfiguration : IEntityTypeConfiguration<PlayData
             .OnDelete(DeleteBehavior.Cascade);
 
         builder
-            .ToTable(nameof(PlayData))
+            .ToTable(nameof(PlayItem))
             .HasCheckConstraint(
-                "CK_PlayData_UserOrOrganization",
+                "CK_PlayItem_UserOrOrganization",
                 "(\"UserId\" IS NOT NULL AND \"OrganizationId\" IS NULL) OR (\"UserId\" IS NULL AND \"OrganizationId\" IS NOT NULL)"
             );
     }

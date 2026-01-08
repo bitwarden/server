@@ -132,7 +132,7 @@ public static class ServiceCollectionExtensions
             // We need the http context accessor to use the Singleton version, which pulls from the scoped version
             services.AddHttpContextAccessor();
 
-            services.AddSingleton<IPlayDataService, PlayDataService>();
+            services.AddSingleton<IPlayItemService, PlayItemService>();
             services.AddSingleton<IPlayIdService, PlayIdSingletonService>();
             services.AddScoped<PlayIdService>();
 

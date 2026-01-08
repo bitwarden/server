@@ -4,16 +4,16 @@ using AutoMapper;
 
 namespace Bit.Infrastructure.EntityFramework.Models;
 
-public class PlayData : Core.Entities.PlayData
+public class PlayItem : Core.Entities.PlayItem
 {
     public virtual User? User { get; set; }
     public virtual AdminConsole.Models.Organization? Organization { get; set; }
 }
 
-public class PlayDataMapperProfile : Profile
+public class PlayItemMapperProfile : Profile
 {
-    public PlayDataMapperProfile()
+    public PlayItemMapperProfile()
     {
-        CreateMap<Core.Entities.PlayData, PlayData>().ReverseMap();
+        CreateMap<Core.Entities.PlayItem, PlayItem>().ReverseMap();
     }
 }

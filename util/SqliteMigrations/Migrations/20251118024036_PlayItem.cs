@@ -5,13 +5,13 @@
 namespace Bit.SqliteMigrations.Migrations;
 
 /// <inheritdoc />
-public partial class PlayData : Migration
+public partial class PlayItem : Migration
 {
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.CreateTable(
-            name: "PlayData",
+            name: "PlayItem",
             columns: table => new
             {
                 Id = table.Column<Guid>(type: "TEXT", nullable: false),
@@ -22,16 +22,16 @@ public partial class PlayData : Migration
             },
             constraints: table =>
             {
-                table.PrimaryKey("PK_PlayData", x => x.Id);
-                table.CheckConstraint("CK_PlayData_UserOrOrganization", "(\"UserId\" IS NOT NULL AND \"OrganizationId\" IS NULL) OR (\"UserId\" IS NULL AND \"OrganizationId\" IS NOT NULL)");
+                table.PrimaryKey("PK_PlayItem", x => x.Id);
+                table.CheckConstraint("CK_PlayItem_UserOrOrganization", "(\"UserId\" IS NOT NULL AND \"OrganizationId\" IS NULL) OR (\"UserId\" IS NULL AND \"OrganizationId\" IS NOT NULL)");
                 table.ForeignKey(
-                    name: "FK_PlayData_Organization_OrganizationId",
+                    name: "FK_PlayItem_Organization_OrganizationId",
                     column: x => x.OrganizationId,
                     principalTable: "Organization",
                     principalColumn: "Id",
                     onDelete: ReferentialAction.Cascade);
                 table.ForeignKey(
-                    name: "FK_PlayData_User_UserId",
+                    name: "FK_PlayItem_User_UserId",
                     column: x => x.UserId,
                     principalTable: "User",
                     principalColumn: "Id",
@@ -39,18 +39,18 @@ public partial class PlayData : Migration
             });
 
         migrationBuilder.CreateIndex(
-            name: "IX_PlayData_OrganizationId",
-            table: "PlayData",
+            name: "IX_PlayItem_OrganizationId",
+            table: "PlayItem",
             column: "OrganizationId");
 
         migrationBuilder.CreateIndex(
-            name: "IX_PlayData_PlayId",
-            table: "PlayData",
+            name: "IX_PlayItem_PlayId",
+            table: "PlayItem",
             column: "PlayId");
 
         migrationBuilder.CreateIndex(
-            name: "IX_PlayData_UserId",
-            table: "PlayData",
+            name: "IX_PlayItem_UserId",
+            table: "PlayItem",
             column: "UserId");
     }
 
@@ -58,6 +58,6 @@ public partial class PlayData : Migration
     protected override void Down(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.DropTable(
-            name: "PlayData");
+            name: "PlayItem");
     }
 }

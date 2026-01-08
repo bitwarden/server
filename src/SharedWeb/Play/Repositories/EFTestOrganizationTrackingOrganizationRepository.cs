@@ -12,22 +12,22 @@ namespace Bit.SharedWeb.Play.Repositories;
 /// </summary>
 public class EFTestOrganizationTrackingOrganizationRepository : OrganizationRepository
 {
-    private readonly IPlayDataService _playDataService;
+    private readonly IPlayItemService _playItemService;
 
     public EFTestOrganizationTrackingOrganizationRepository(
-        IPlayDataService playDataService,
+        IPlayItemService playItemService,
         IServiceScopeFactory serviceScopeFactory,
         IMapper mapper,
         ILogger<OrganizationRepository> logger)
         : base(serviceScopeFactory, mapper, logger)
     {
-        _playDataService = playDataService;
+        _playItemService = playItemService;
     }
 
     public override async Task<Core.AdminConsole.Entities.Organization> CreateAsync(Core.AdminConsole.Entities.Organization organization)
     {
         var createdOrganization = await base.CreateAsync(organization);
-        await _playDataService.Record(createdOrganization);
+        await _playItemService.Record(createdOrganization);
         return createdOrganization;
     }
 }

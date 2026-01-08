@@ -85,9 +85,7 @@ curl -X POST http://localhost:5000/query \
 **Response:**
 
 ```json
-[
-  "/accept-emergency?..."
-]
+["/accept-emergency?..."]
 ```
 
 ### Destroying Seeded Data
@@ -148,7 +146,7 @@ The SeederApi requires the following configuration:
 ## Play ID Tracking
 
 Certain entities such as Users and Organizations are tracked when created by a request including a PlayId. This enables
-entities to be deleted after using the  PlayId.
+entities to be deleted after using the PlayId.
 
 ### The X-Play-Id Header
 
@@ -168,7 +166,7 @@ When `TestPlayIdTrackingEnabled` is enabled in GlobalSettings, the `PlayIdMiddle
 1. **Extracts** the `X-Play-Id` header from incoming requests
 2. **Sets** the play ID in the `PlayIdService` for the request scope
 3. **Tracks** all entities (users, organizations, etc.) created during the request
-4. **Associates** them with the play ID in the `PlayData` table
+4. **Associates** them with the play ID in the `PlayItem` table
 5. **Enables** complete cleanup via the delete endpoints
 
 This tracking works for **any API request** that includes the `X-Play-Id` header, not just SeederApi endpoints. This means

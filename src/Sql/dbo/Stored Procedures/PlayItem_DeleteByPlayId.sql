@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[PlayData_DeleteByPlayId]
+CREATE PROCEDURE [dbo].[PlayItem_DeleteByPlayId]
     @PlayId NVARCHAR(256)
 AS
 BEGIN
@@ -6,7 +6,7 @@ BEGIN
 
     DELETE
     FROM
-        [dbo].[PlayData]
+        [dbo].[PlayItem]
     WHERE
         [PlayId] = @PlayId
 END
