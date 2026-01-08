@@ -115,8 +115,19 @@ public static class ServiceCollectionExtensions
             services.AddKeyedSingleton<IGrantRepository, Core.Auth.Repositories.Cosmos.GrantRepository>("cosmos");
         }
 
+        return provider;
+    }
+
+    /// <summary>
+    /// Registers test PlayId tracking services for test data management and cleanup.
+    /// This infrastructure is isolated to test environments and enables tracking of test-generated entities.
+    /// </summary>
+    public static void AddTestPlayIdTracking(this IServiceCollection services, GlobalSettings globalSettings)
+    {
         if (globalSettings.TestPlayIdTrackingEnabled)
         {
+            var (provider, _) = GetDatabaseProvider(globalSettings);
+
             // Include PlayIdService for tracking Play Ids in repositories
             // We need the http context accessor to use the Singleton version, which pulls from the scoped version
             services.AddHttpContextAccessor();
@@ -139,8 +150,6 @@ public static class ServiceCollectionExtensions
         {
             services.AddSingleton<IPlayIdService, NeverPlayIdServices>();
         }
-
-        return provider;
     }
 
     public static void AddBaseServices(this IServiceCollection services, IGlobalSettings globalSettings)

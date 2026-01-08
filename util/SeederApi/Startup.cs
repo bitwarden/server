@@ -31,6 +31,7 @@ public class Startup
 
         services.AddTokenizers();
         services.AddDatabaseRepositories(globalSettings);
+        services.AddTestPlayIdTracking(globalSettings);
 
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
