@@ -8,7 +8,7 @@ namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories;
 
 public class OrganizationRepositoryTests
 {
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task GetByClaimedUserDomainAsync_WithVerifiedDomain_Success(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
@@ -107,7 +107,7 @@ public class OrganizationRepositoryTests
         Assert.Empty(user3Response);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task GetByVerifiedUserEmailDomainAsync_WithUnverifiedDomains_ReturnsEmpty(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
@@ -160,7 +160,7 @@ public class OrganizationRepositoryTests
         Assert.Empty(result);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task GetByVerifiedUserEmailDomainAsync_WithMultipleVerifiedDomains_ReturnsAllMatchingOrganizations(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
@@ -243,7 +243,7 @@ public class OrganizationRepositoryTests
         Assert.Contains(result, org => org.Id == organization2.Id);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task GetByVerifiedUserEmailDomainAsync_WithNonExistentUser_ReturnsEmpty(
         IOrganizationRepository organizationRepository)
     {
@@ -254,8 +254,174 @@ public class OrganizationRepositoryTests
         Assert.Empty(result);
     }
 
+    /// <summary>
+    /// Tests an edge case where some invited users are created linked to a UserId.
+    /// This is defective behavior, but will take longer to fix - for now, we are defensive and expressly
+    /// exclude such users from the results without relying on the inner join only.
+    /// Invited-revoked users linked to a UserId remain intentionally unhandled for now as they have not caused
+    /// any issues to date and we want to minimize edge cases.
+    /// We will fix the underlying issue going forward: https://bitwarden.atlassian.net/browse/PM-22405
+    /// </summary>
+    [Theory, DatabaseData]
+    public async Task GetByVerifiedUserEmailDomainAsync_WithInvitedUserWithUserId_ReturnsEmpty(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationDomainRepository organizationDomainRepository)
+    {
+        var id = Guid.NewGuid();
+        var domainName = $"{id}.example.com";
 
-    [DatabaseTheory, DatabaseData]
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{id}@{domainName}",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = 1,
+            KdfMemory = 2,
+            KdfParallelism = 3
+        });
+
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = $"Test Org {id}",
+            BillingEmail = user.Email,
+            Plan = "Test",
+            PrivateKey = "privatekey",
+        });
+
+        var organizationDomain = new OrganizationDomain
+        {
+            OrganizationId = organization.Id,
+            DomainName = domainName,
+            Txt = "btw+12345",
+        };
+        organizationDomain.SetVerifiedDate();
+        organizationDomain.SetNextRunDate(12);
+        organizationDomain.SetJobRunCount();
+        await organizationDomainRepository.CreateAsync(organizationDomain);
+
+        // Create invited user with matching email domain but UserId set (edge case)
+        await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = user.Id,
+            Email = user.Email,
+            Status = OrganizationUserStatusType.Invited,
+        });
+
+        var result = await organizationRepository.GetByVerifiedUserEmailDomainAsync(user.Id);
+
+        // Invited users should be excluded even if they have UserId set
+        Assert.Empty(result);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetByVerifiedUserEmailDomainAsync_WithAcceptedUser_ReturnsOrganization(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationDomainRepository organizationDomainRepository)
+    {
+        var id = Guid.NewGuid();
+        var domainName = $"{id}.example.com";
+
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{id}@{domainName}",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = 1,
+            KdfMemory = 2,
+            KdfParallelism = 3
+        });
+
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = $"Test Org {id}",
+            BillingEmail = user.Email,
+            Plan = "Test",
+            PrivateKey = "privatekey",
+        });
+
+        var organizationDomain = new OrganizationDomain
+        {
+            OrganizationId = organization.Id,
+            DomainName = domainName,
+            Txt = "btw+12345",
+        };
+        organizationDomain.SetVerifiedDate();
+        organizationDomain.SetNextRunDate(12);
+        organizationDomain.SetJobRunCount();
+        await organizationDomainRepository.CreateAsync(organizationDomain);
+
+        // Create accepted user
+        await organizationUserRepository.CreateAcceptedTestOrganizationUserAsync(organization, user);
+
+        var result = await organizationRepository.GetByVerifiedUserEmailDomainAsync(user.Id);
+
+        // Accepted users should be included
+        Assert.NotEmpty(result);
+        Assert.Equal(organization.Id, result.First().Id);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetByVerifiedUserEmailDomainAsync_WithRevokedUser_ReturnsOrganization(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationDomainRepository organizationDomainRepository)
+    {
+        var id = Guid.NewGuid();
+        var domainName = $"{id}.example.com";
+
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{id}@{domainName}",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = 1,
+            KdfMemory = 2,
+            KdfParallelism = 3
+        });
+
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = $"Test Org {id}",
+            BillingEmail = user.Email,
+            Plan = "Test",
+            PrivateKey = "privatekey",
+        });
+
+        var organizationDomain = new OrganizationDomain
+        {
+            OrganizationId = organization.Id,
+            DomainName = domainName,
+            Txt = "btw+12345",
+        };
+        organizationDomain.SetVerifiedDate();
+        organizationDomain.SetNextRunDate(12);
+        organizationDomain.SetJobRunCount();
+        await organizationDomainRepository.CreateAsync(organizationDomain);
+
+        // Create revoked user
+        await organizationUserRepository.CreateRevokedTestOrganizationUserAsync(organization, user);
+
+        var result = await organizationRepository.GetByVerifiedUserEmailDomainAsync(user.Id);
+
+        // Revoked users should still be included (not excluded)
+        Assert.NotEmpty(result);
+        Assert.Equal(organization.Id, result.First().Id);
+    }
+
+
+    [Theory, DatabaseData]
     public async Task GetManyByIdsAsync_ExistingOrganizations_ReturnsOrganizations(IOrganizationRepository organizationRepository)
     {
         var email = "test@email.com";
@@ -287,7 +453,7 @@ public class OrganizationRepositoryTests
         await organizationRepository.DeleteAsync(organization2);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task GetOccupiedSeatCountByOrganizationIdAsync_WithUsersAndSponsorships_ReturnsCorrectCounts(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
@@ -356,7 +522,7 @@ public class OrganizationRepositoryTests
         Assert.Equal(4, result.Total); // Total occupied seats
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task GetOccupiedSeatCountByOrganizationIdAsync_WithNoUsersOrSponsorships_ReturnsZero(
         IOrganizationRepository organizationRepository)
     {
@@ -372,7 +538,7 @@ public class OrganizationRepositoryTests
         Assert.Equal(0, result.Total);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task GetOccupiedSeatCountByOrganizationIdAsync_WithOnlyRevokedUsers_ReturnsZero(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
@@ -399,7 +565,7 @@ public class OrganizationRepositoryTests
         Assert.Equal(0, result.Total);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task GetOccupiedSeatCountByOrganizationIdAsync_WithOnlyExpiredSponsorships_ReturnsZero(
         IOrganizationRepository organizationRepository,
         IOrganizationSponsorshipRepository organizationSponsorshipRepository)
@@ -424,7 +590,7 @@ public class OrganizationRepositoryTests
         Assert.Equal(0, result.Total);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task IncrementSeatCountAsync_IncrementsSeatCount(IOrganizationRepository organizationRepository)
     {
         var organization = await organizationRepository.CreateTestOrganizationAsync();
@@ -438,7 +604,7 @@ public class OrganizationRepositoryTests
         Assert.Equal(8, result.Seats);
     }
 
-    [DatabaseData, DatabaseTheory]
+    [DatabaseData, Theory]
     public async Task IncrementSeatCountAsync_GivenOrganizationHasNotChangedSeatCountBefore_WhenUpdatingOrgSeats_ThenSubscriptionUpdateIsSaved(
         IOrganizationRepository sutRepository)
     {
@@ -462,7 +628,7 @@ public class OrganizationRepositoryTests
         await sutRepository.DeleteAsync(organization);
     }
 
-    [DatabaseData, DatabaseTheory]
+    [DatabaseData, Theory]
     public async Task IncrementSeatCountAsync_GivenOrganizationHasChangedSeatCountBeforeAndRecordExists_WhenUpdatingOrgSeats_ThenSubscriptionUpdateIsSaved(
         IOrganizationRepository sutRepository)
     {
@@ -487,7 +653,7 @@ public class OrganizationRepositoryTests
         await sutRepository.DeleteAsync(organization);
     }
 
-    [DatabaseData, DatabaseTheory]
+    [DatabaseData, Theory]
     public async Task GetOrganizationsForSubscriptionSyncAsync_GivenOrganizationHasChangedSeatCount_WhenGettingOrgsToUpdate_ThenReturnsOrgSubscriptionUpdate(
         IOrganizationRepository sutRepository)
     {
@@ -510,7 +676,7 @@ public class OrganizationRepositoryTests
         await sutRepository.DeleteAsync(organization);
     }
 
-    [DatabaseData, DatabaseTheory]
+    [DatabaseData, Theory]
     public async Task UpdateSuccessfulOrganizationSyncStatusAsync_GivenOrganizationHasChangedSeatCount_WhenUpdatingStatus_ThenSuccessfullyUpdatesOrgSoItDoesntSync(
         IOrganizationRepository sutRepository)
     {
