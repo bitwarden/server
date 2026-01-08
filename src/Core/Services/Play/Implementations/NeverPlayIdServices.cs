@@ -1,4 +1,4 @@
-namespace Bit.Core.Services;
+﻿namespace Bit.Core.Services;
 
 public class NeverPlayIdServices : IPlayIdService
 {
