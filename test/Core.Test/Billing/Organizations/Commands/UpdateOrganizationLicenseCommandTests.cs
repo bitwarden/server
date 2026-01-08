@@ -6,6 +6,7 @@ using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -232,6 +233,100 @@ public class UpdateOrganizationLicenseCommandTests
                 Directory.Delete(OrganizationLicenseDirectory.Value, true);
             }
         }
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateLicenseAsync_WrongInstallationIdInClaims_ThrowsBadRequestException(
+        SelfHostedOrganizationDetails selfHostedOrg,
+        OrganizationLicense license,
+        SutProvider<UpdateOrganizationLicenseCommand> sutProvider)
+    {
+        var globalSettings = sutProvider.GetDependency<IGlobalSettings>();
+        globalSettings.LicenseDirectory = LicenseDirectory;
+        globalSettings.SelfHosted = true;
+
+        // Setup license for CanUse validation
+        license.Enabled = true;
+        license.Issued = DateTime.Now.AddDays(-1);
+        license.Expires = DateTime.Now.AddDays(1);
+        license.Version = OrganizationLicense.CurrentLicenseFileVersion;
+        license.LicenseType = LicenseType.Organization;
+        license.Token = "test-token"; // Indicates this is a claims-based license
+        sutProvider.GetDependency<ILicensingService>().VerifyLicense(license).Returns(true);
+
+        // Create a ClaimsPrincipal with WRONG installation ID
+        var wrongInstallationId = Guid.NewGuid(); // Different from globalSettings.Installation.Id
+        var claims = new List<Claim>
+        {
+            new(OrganizationLicenseConstants.LicenseType, ((int)LicenseType.Organization).ToString()),
+            new(OrganizationLicenseConstants.InstallationId, wrongInstallationId.ToString()),
+            new(OrganizationLicenseConstants.Enabled, "true"),
+            new(OrganizationLicenseConstants.SelfHost, "true")
+        };
+        var claimsPrincipal = new ClaimsPrincipal(new ClaimsIdentity(claims));
+
+        sutProvider.GetDependency<ILicensingService>()
+            .GetClaimsPrincipalFromLicense(license)
+            .Returns(claimsPrincipal);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.UpdateLicenseAsync(selfHostedOrg, license, null));
+
+        Assert.Contains("The installation ID does not match the current installation.", exception.Message);
+
+        // Verify organization was NOT saved
+        await sutProvider.GetDependency<IOrganizationService>()
+            .DidNotReceive()
+            .ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateLicenseAsync_ExpiredLicenseWithoutClaims_ThrowsBadRequestException(
+        SelfHostedOrganizationDetails selfHostedOrg,
+        OrganizationLicense license,
+        SutProvider<UpdateOrganizationLicenseCommand> sutProvider)
+    {
+        var globalSettings = sutProvider.GetDependency<IGlobalSettings>();
+        globalSettings.LicenseDirectory = LicenseDirectory;
+        globalSettings.SelfHosted = true;
+
+        // Setup legacy license (no Token, no claims)
+        license.Token = null; // Legacy license
+        license.Enabled = true;
+        license.Issued = DateTime.Now.AddDays(-2);
+        license.Expires = DateTime.Now.AddDays(-1); // Expired yesterday
+        license.Version = OrganizationLicense.CurrentLicenseFileVersion;
+        license.InstallationId = globalSettings.Installation.Id;
+        license.LicenseType = LicenseType.Organization;
+        license.SelfHost = true;
+
+        sutProvider.GetDependency<ILicensingService>().VerifyLicense(license).Returns(true);
+        sutProvider.GetDependency<ILicensingService>()
+            .GetClaimsPrincipalFromLicense(license)
+            .Returns((ClaimsPrincipal)null); // No claims for legacy license
+
+        // Passing values for SelfHostedOrganizationDetails.CanUseLicense
+        license.Seats = null;
+        license.MaxCollections = null;
+        license.UseGroups = true;
+        license.UsePolicies = true;
+        license.UseSso = true;
+        license.UseKeyConnector = true;
+        license.UseScim = true;
+        license.UseCustomPermissions = true;
+        license.UseResetPassword = true;
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.UpdateLicenseAsync(selfHostedOrg, license, null));
+
+        Assert.Contains("The license has expired.", exception.Message);
+
+        // Verify organization was NOT saved
+        await sutProvider.GetDependency<IOrganizationService>()
+            .DidNotReceive()
+            .ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
     }
 
     // Wrapper to compare 2 objects that are different types
