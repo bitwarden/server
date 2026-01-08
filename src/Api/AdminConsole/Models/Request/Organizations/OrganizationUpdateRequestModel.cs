@@ -22,7 +22,6 @@ public class OrganizationUpdateRequestModel
         OrganizationId = organizationId,
         Name = Name,
         BillingEmail = BillingEmail,
-        PublicKey = Keys?.PublicKey,
-        EncryptedPrivateKey = Keys?.EncryptedPrivateKey
+        Keys = Keys?.ToPublicKeyEncryptionKeyPairData()
     };
 }

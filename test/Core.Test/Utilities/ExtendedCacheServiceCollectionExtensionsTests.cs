@@ -7,6 +7,7 @@ using NSubstitute;
 using StackExchange.Redis;
 using Xunit;
 using ZiggyCreatures.Caching.Fusion;
+using ZiggyCreatures.Caching.Fusion.Backplane;
 
 namespace Bit.Core.Test.Utilities;
 
@@ -167,7 +168,7 @@ public class ExtendedCacheServiceCollectionExtensionsTests
         var settings = CreateGlobalSettings(new()
         {
             { "GlobalSettings:DistributedCache:Redis:ConnectionString", "localhost:6379" },
-            { "GlobalSettings:DistributedCache:DefaultExtendedCache:UseSharedRedisCache", "true" }
+            { "GlobalSettings:DistributedCache:DefaultExtendedCache:UseSharedDistributedCache", "true" }
         });
 
         // Provide a multiplexer (shared)
@@ -187,7 +188,7 @@ public class ExtendedCacheServiceCollectionExtensionsTests
     {
         var settings = new GlobalSettings.ExtendedCacheSettings
         {
-            UseSharedRedisCache = false,
+            UseSharedDistributedCache = false,
             Redis = new GlobalSettings.ConnectionStringSettings { ConnectionString = "invalid:9999" }
         };
 
@@ -242,7 +243,7 @@ public class ExtendedCacheServiceCollectionExtensionsTests
     {
         var settings = new GlobalSettings.ExtendedCacheSettings
         {
-            UseSharedRedisCache = false,
+            UseSharedDistributedCache = false,
             // No Redis connection string
         };
 
@@ -261,13 +262,13 @@ public class ExtendedCacheServiceCollectionExtensionsTests
         var settingsA = new GlobalSettings.ExtendedCacheSettings
         {
             EnableDistributedCache = true,
-            UseSharedRedisCache = false,
+            UseSharedDistributedCache = false,
             Redis = new GlobalSettings.ConnectionStringSettings { ConnectionString = "localhost:6379" }
         };
         var settingsB = new GlobalSettings.ExtendedCacheSettings
         {
             EnableDistributedCache = true,
-            UseSharedRedisCache = false,
+            UseSharedDistributedCache = false,
             Redis = new GlobalSettings.ConnectionStringSettings { ConnectionString = "localhost:6380" }
         };
 
@@ -294,7 +295,7 @@ public class ExtendedCacheServiceCollectionExtensionsTests
 
         var settings = new GlobalSettings.ExtendedCacheSettings
         {
-            UseSharedRedisCache = false,
+            UseSharedDistributedCache = false,
             Redis = new GlobalSettings.ConnectionStringSettings { ConnectionString = "localhost:6379" }
         };
 
@@ -304,6 +305,180 @@ public class ExtendedCacheServiceCollectionExtensionsTests
         var resolved = provider.GetRequiredKeyedService<IDistributedCache>(_cacheName);
 
         Assert.Same(existingCache, resolved);
+    }
+
+    [Fact]
+    public void AddExtendedCache_SharedNonRedisCache_UsesDistributedCacheWithoutBackplane()
+    {
+        var settings = new GlobalSettings.ExtendedCacheSettings
+        {
+            UseSharedDistributedCache = true,
+            EnableDistributedCache = true,
+            // No Redis.ConnectionString
+        };
+
+        // Register non-Redis distributed cache
+        _services.AddSingleton(Substitute.For<IDistributedCache>());
+
+        _services.AddExtendedCache(_cacheName, _globalSettings, settings);
+
+        using var provider = _services.BuildServiceProvider();
+        var cache = provider.GetRequiredKeyedService<IFusionCache>(_cacheName);
+
+        Assert.True(cache.HasDistributedCache);
+        Assert.False(cache.HasBackplane); // No backplane for non-Redis
+    }
+
+    [Fact]
+    public void AddExtendedCache_SharedRedisWithMockedMultiplexer_ReusesExistingMultiplexer()
+    {
+        // Override GlobalSettings to include Redis connection string
+        var globalSettings = CreateGlobalSettings(new()
+        {
+            { "GlobalSettings:DistributedCache:Redis:ConnectionString", "localhost:6379" }
+        });
+
+        // Custom settings for this cache
+        var settings = new GlobalSettings.ExtendedCacheSettings
+        {
+            UseSharedDistributedCache = true,
+            EnableDistributedCache = true,
+        };
+
+        // Pre-register mocked multiplexer (simulates AddDistributedCache already called)
+        var mockMultiplexer = Substitute.For<IConnectionMultiplexer>();
+        _services.AddSingleton(mockMultiplexer);
+
+        _services.AddExtendedCache(_cacheName, globalSettings, settings);
+
+        using var provider = _services.BuildServiceProvider();
+        var cache = provider.GetRequiredKeyedService<IFusionCache>(_cacheName);
+
+        Assert.True(cache.HasDistributedCache);
+        Assert.True(cache.HasBackplane);
+
+        // Verify same multiplexer was reused (TryAdd didn't replace it)
+        var resolvedMux = provider.GetRequiredService<IConnectionMultiplexer>();
+        Assert.Same(mockMultiplexer, resolvedMux);
+    }
+
+    [Fact]
+    public void AddExtendedCache_KeyedNonRedisCache_UsesKeyedDistributedCacheWithoutBackplane()
+    {
+        var settings = new GlobalSettings.ExtendedCacheSettings
+        {
+            UseSharedDistributedCache = false,
+            EnableDistributedCache = true,
+            // No Redis.ConnectionString
+        };
+
+        // Register keyed non-Redis distributed cache
+        _services.AddKeyedSingleton(_cacheName, Substitute.For<IDistributedCache>());
+
+        _services.AddExtendedCache(_cacheName, _globalSettings, settings);
+
+        using var provider = _services.BuildServiceProvider();
+        var cache = provider.GetRequiredKeyedService<IFusionCache>(_cacheName);
+
+        Assert.True(cache.HasDistributedCache);
+        Assert.False(cache.HasBackplane);
+    }
+
+    [Fact]
+    public void AddExtendedCache_KeyedRedisWithConnectionString_CreatesIsolatedInfrastructure()
+    {
+        var settings = new GlobalSettings.ExtendedCacheSettings
+        {
+            UseSharedDistributedCache = false,
+            EnableDistributedCache = true,
+            Redis = new GlobalSettings.ConnectionStringSettings
+            {
+                ConnectionString = "localhost:6379"
+            }
+        };
+
+        // Pre-register mocked keyed multiplexer to avoid connection attempt
+        _services.AddKeyedSingleton(_cacheName, Substitute.For<IConnectionMultiplexer>());
+
+        _services.AddExtendedCache(_cacheName, _globalSettings, settings);
+
+        using var provider = _services.BuildServiceProvider();
+        var cache = provider.GetRequiredKeyedService<IFusionCache>(_cacheName);
+
+        Assert.True(cache.HasDistributedCache);
+        Assert.True(cache.HasBackplane);
+
+        // Verify keyed services exist
+        var keyedMux = provider.GetRequiredKeyedService<IConnectionMultiplexer>(_cacheName);
+        Assert.NotNull(keyedMux);
+        var keyedRedis = provider.GetRequiredKeyedService<IDistributedCache>(_cacheName);
+        Assert.NotNull(keyedRedis);
+        var keyedBackplane = provider.GetRequiredKeyedService<IFusionCacheBackplane>(_cacheName);
+        Assert.NotNull(keyedBackplane);
+    }
+
+    [Fact]
+    public void AddExtendedCache_NoDistributedCacheRegistered_WorksWithMemoryOnly()
+    {
+        var settings = new GlobalSettings.ExtendedCacheSettings
+        {
+            UseSharedDistributedCache = true,
+            EnableDistributedCache = true,
+            // No Redis connection string, no IDistributedCache registered
+            // This is technically a misconfiguration, but we handle it without failing
+        };
+
+        _services.AddExtendedCache(_cacheName, _globalSettings, settings);
+
+        using var provider = _services.BuildServiceProvider();
+        var cache = provider.GetRequiredKeyedService<IFusionCache>(_cacheName);
+
+        Assert.False(cache.HasDistributedCache);
+        Assert.False(cache.HasBackplane);
+
+        // Verify L1 memory cache still works
+        cache.Set("key", "value");
+        var result = cache.GetOrDefault<string>("key");
+        Assert.Equal("value", result);
+    }
+
+    [Fact]
+    public void AddExtendedCache_MultipleKeyedCachesWithDifferentTypes_EachHasCorrectConfig()
+    {
+        var redisSettings = new GlobalSettings.ExtendedCacheSettings
+        {
+            UseSharedDistributedCache = false,
+            EnableDistributedCache = true,
+            Redis = new GlobalSettings.ConnectionStringSettings { ConnectionString = "localhost:6379" }
+        };
+
+        var nonRedisSettings = new GlobalSettings.ExtendedCacheSettings
+        {
+            UseSharedDistributedCache = false,
+            EnableDistributedCache = true,
+            // No Redis connection string
+        };
+
+        // Setup Cache1 (Redis)
+        _services.AddKeyedSingleton("Cache1", Substitute.For<IConnectionMultiplexer>());
+        _services.AddExtendedCache("Cache1", _globalSettings, redisSettings);
+
+        // Setup Cache2 (non-Redis)
+        _services.AddKeyedSingleton("Cache2", Substitute.For<IDistributedCache>());
+        _services.AddExtendedCache("Cache2", _globalSettings, nonRedisSettings);
+
+        using var provider = _services.BuildServiceProvider();
+
+        var cache1 = provider.GetRequiredKeyedService<IFusionCache>("Cache1");
+        var cache2 = provider.GetRequiredKeyedService<IFusionCache>("Cache2");
+
+        Assert.True(cache1.HasDistributedCache);
+        Assert.True(cache1.HasBackplane);
+
+        Assert.True(cache2.HasDistributedCache);
+        Assert.False(cache2.HasBackplane);
+
+        Assert.NotSame(cache1, cache2);
     }
 
     private static GlobalSettings CreateGlobalSettings(Dictionary<string, string?> data)

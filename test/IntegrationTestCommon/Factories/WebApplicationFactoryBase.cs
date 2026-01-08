@@ -154,6 +154,7 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
 
             // Web push notifications
             { "globalSettings:webPush:vapidPublicKey", "BGBtAM0bU3b5jsB14IjBYarvJZ6rWHilASLudTTYDDBi7a-3kebo24Yus_xYeOMZ863flAXhFAbkL6GVSrxgErg" },
+            { "globalSettings:launchDarkly:flagValues:web-push", "true" },
         };
 
         // Some database drivers modify the connection string
@@ -227,7 +228,7 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
             services.AddSingleton<ILoggerFactory, NullLoggerFactory>();
 
             // Noop StripePaymentService - this could be changed to integrate with our Stripe test account
-            Replace(services, Substitute.For<IPaymentService>());
+            Replace(services, Substitute.For<IStripePaymentService>());
 
             Replace(services, Substitute.For<IOrganizationBillingService>());
         });

@@ -109,14 +109,27 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                         break;
                     }
 
-                    if (subscription.Status is StripeSubscriptionStatus.Unpaid &&
-                        subscription.Items.Any(i => i.Price.Id is IStripeEventUtilityService.PremiumPlanId or IStripeEventUtilityService.PremiumPlanIdAppStore))
+                    if (await IsPremiumSubscriptionAsync(subscription))
                     {
                         await CancelSubscription(subscription.Id);
                         await VoidOpenInvoices(subscription.Id);
                     }
 
                     await _userService.DisablePremiumAsync(userId.Value, currentPeriodEnd);
+
+                    break;
+                }
+            case StripeSubscriptionStatus.Incomplete when userId.HasValue:
+                {
+                    // Handle Incomplete subscriptions for Premium users that have open invoices from failed payments
+                    // This prevents duplicate subscriptions when users retry the subscription flow
+                    if (await IsPremiumSubscriptionAsync(subscription) &&
+                        subscription.LatestInvoice is { Status: StripeInvoiceStatus.Open })
+                    {
+                        await CancelSubscription(subscription.Id);
+                        await VoidOpenInvoices(subscription.Id);
+                        await _userService.DisablePremiumAsync(userId.Value, currentPeriodEnd);
+                    }
 
                     break;
                 }
@@ -188,6 +201,13 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         {
             await _stripeFacade.VoidInvoice(invoice.Id);
         }
+    }
+
+    private async Task<bool> IsPremiumSubscriptionAsync(Subscription subscription)
+    {
+        var premiumPlans = await _pricingClient.ListPremiumPlans();
+        var premiumPriceIds = premiumPlans.SelectMany(p => new[] { p.Seat.StripePriceId, p.Storage.StripePriceId }).ToHashSet();
+        return subscription.Items.Any(i => premiumPriceIds.Contains(i.Price.Id));
     }
 
     /// <summary>
