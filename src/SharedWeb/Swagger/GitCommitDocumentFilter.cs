@@ -1,7 +1,7 @@
 ﻿#nullable enable
 
 using System.Diagnostics;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace Bit.SharedWeb.Swagger;
@@ -16,7 +16,7 @@ public class GitCommitDocumentFilter : IDocumentFilter
     {
         if (!string.IsNullOrEmpty(GitCommit))
         {
-            swaggerDoc.Extensions.Add("x-git-commit", new Microsoft.OpenApi.Any.OpenApiString(GitCommit));
+            swaggerDoc.Extensions?.Add("x-git-commit", new JsonNodeExtension(GitCommit));
         }
     }
 

@@ -1,6 +1,5 @@
 ﻿using System.Text.Json;
-using Microsoft.OpenApi.Any;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace Bit.SharedWeb.Swagger;
@@ -18,8 +17,8 @@ public class ActionNameOperationFilter : IOperationFilter
         if (!context.ApiDescription.ActionDescriptor.RouteValues.TryGetValue("action", out var action)) return;
         if (string.IsNullOrEmpty(action)) return;
 
-        operation.Extensions.Add("x-action-name", new OpenApiString(action));
+        operation.Extensions?.Add("x-action-name", new JsonNodeExtension(action));
         // We can't do case changes in the codegen templates, so we also add the snake_case version of the action name
-        operation.Extensions.Add("x-action-name-snake-case", new OpenApiString(JsonNamingPolicy.SnakeCaseLower.ConvertName(action)));
+        operation.Extensions?.Add("x-action-name-snake-case", new JsonNodeExtension(JsonNamingPolicy.SnakeCaseLower.ConvertName(action)));
     }
 }
