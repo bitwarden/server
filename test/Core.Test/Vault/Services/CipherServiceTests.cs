@@ -1190,6 +1190,7 @@ public class CipherServiceTests
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId)
             .Returns(new Organization
             {
+                UsePolicies = true,
                 PlanType = PlanType.EnterpriseAnnually,
                 MaxStorageGb = 100
             });
@@ -1203,6 +1204,140 @@ public class CipherServiceTests
 
         await sutProvider.Sut.ShareManyAsync(cipherInfos, organizationId, collectionIds, sharingUserId);
         await sutProvider.GetDependency<ICipherRepository>().Received(1).UpdateCiphersAsync(sharingUserId,
+            Arg.Is<IEnumerable<Cipher>>(arg => !arg.Except(ciphers).Any()));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ShareManyAsync_StorageLimitBypass_Passes(SutProvider<CipherService> sutProvider,
+        IEnumerable<CipherDetails> ciphers, Guid organizationId, List<Guid> collectionIds)
+    {
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId)
+            .Returns(new Organization
+            {
+                Id = organizationId,
+                PlanType = PlanType.EnterpriseAnnually,
+                UsePolicies = true,
+                MaxStorageGb = 3,
+                Storage = 3221225472 // 3 GB used, so 0 remaining
+            });
+        ciphers.FirstOrDefault().Attachments =
+            "{\"attachment1\":{\"Size\":\"250\",\"FileName\":\"superCoolFile\","
+            + "\"Key\":\"superCoolFile\",\"ContainerName\":\"testContainer\",\"Validated\":false}}";
+
+        var cipherInfos = ciphers.Select(c => (c,
+            (DateTime?)c.RevisionDate));
+        var sharingUserId = ciphers.First().UserId.Value;
+
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.MigrateMyVaultToMyItems).Returns(true);
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(sharingUserId)
+            .Returns(new OrganizationDataOwnershipPolicyRequirement(
+                OrganizationDataOwnershipState.Enabled,
+                [new PolicyDetails
+                {
+                    OrganizationId = organizationId,
+                    PolicyType = PolicyType.OrganizationDataOwnership,
+                    OrganizationUserStatus = OrganizationUserStatusType.Confirmed,
+                }]));
+
+        await sutProvider.Sut.ShareManyAsync(cipherInfos, organizationId, collectionIds, sharingUserId);
+        await sutProvider.GetDependency<ICipherRepository>().Received(1).UpdateCiphersAsync(sharingUserId,
+            Arg.Is<IEnumerable<Cipher>>(arg => !arg.Except(ciphers).Any()));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ShareManyAsync_StorageLimit_Enforced(SutProvider<CipherService> sutProvider,
+        IEnumerable<CipherDetails> ciphers, Guid organizationId, List<Guid> collectionIds)
+    {
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId)
+            .Returns(new Organization
+            {
+                Id = organizationId,
+                PlanType = PlanType.EnterpriseAnnually,
+                UsePolicies = true,
+                MaxStorageGb = 3,
+                Storage = 3221225472 // 3 GB used, so 0 remaining
+            });
+        ciphers.FirstOrDefault().Attachments =
+            "{\"attachment1\":{\"Size\":\"250\",\"FileName\":\"superCoolFile\","
+            + "\"Key\":\"superCoolFile\",\"ContainerName\":\"testContainer\",\"Validated\":false}}";
+
+        var cipherInfos = ciphers.Select(c => (c,
+            (DateTime?)c.RevisionDate));
+        var sharingUserId = ciphers.First().UserId.Value;
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(sharingUserId)
+            .Returns(new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Disabled, []));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.ShareManyAsync(cipherInfos, organizationId, collectionIds, sharingUserId)
+        );
+        Assert.Contains("Not enough storage available for this organization.", exception.Message);
+        await sutProvider.GetDependency<ICipherRepository>().DidNotReceive().UpdateCiphersAsync(sharingUserId,
+            Arg.Is<IEnumerable<Cipher>>(arg => !arg.Except(ciphers).Any()));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ShareManyAsync_StorageLimit_Enforced_WhenFeatureFlagDisabled(SutProvider<CipherService> sutProvider,
+        IEnumerable<CipherDetails> ciphers, Guid organizationId, List<Guid> collectionIds)
+    {
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId)
+            .Returns(new Organization
+            {
+                Id = organizationId,
+                PlanType = PlanType.EnterpriseAnnually,
+                UsePolicies = true,
+                MaxStorageGb = 3,
+                Storage = 3221225472 // 3 GB used, so 0 remaining
+            });
+        ciphers.FirstOrDefault().Attachments =
+            "{\"attachment1\":{\"Size\":\"250\",\"FileName\":\"superCoolFile\","
+            + "\"Key\":\"superCoolFile\",\"ContainerName\":\"testContainer\",\"Validated\":false}}";
+
+        var cipherInfos = ciphers.Select(c => (c,
+            (DateTime?)c.RevisionDate));
+        var sharingUserId = ciphers.First().UserId.Value;
+
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.MigrateMyVaultToMyItems).Returns(false);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.ShareManyAsync(cipherInfos, organizationId, collectionIds, sharingUserId)
+        );
+        Assert.Contains("Not enough storage available for this organization.", exception.Message);
+        await sutProvider.GetDependency<ICipherRepository>().DidNotReceive().UpdateCiphersAsync(sharingUserId,
+            Arg.Is<IEnumerable<Cipher>>(arg => !arg.Except(ciphers).Any()));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ShareManyAsync_StorageLimit_Enforced_WhenUsePoliciesDisabled(SutProvider<CipherService> sutProvider,
+        IEnumerable<CipherDetails> ciphers, Guid organizationId, List<Guid> collectionIds)
+    {
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId)
+            .Returns(new Organization
+            {
+                Id = organizationId,
+                PlanType = PlanType.EnterpriseAnnually,
+                UsePolicies = false,
+                MaxStorageGb = 3,
+                Storage = 3221225472 // 3 GB used, so 0 remaining
+            });
+        ciphers.FirstOrDefault().Attachments =
+            "{\"attachment1\":{\"Size\":\"250\",\"FileName\":\"superCoolFile\","
+            + "\"Key\":\"superCoolFile\",\"ContainerName\":\"testContainer\",\"Validated\":false}}";
+
+        var cipherInfos = ciphers.Select(c => (c,
+            (DateTime?)c.RevisionDate));
+        var sharingUserId = ciphers.First().UserId.Value;
+
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.MigrateMyVaultToMyItems).Returns(true);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.ShareManyAsync(cipherInfos, organizationId, collectionIds, sharingUserId)
+        );
+        Assert.Contains("Not enough storage available for this organization.", exception.Message);
+        await sutProvider.GetDependency<ICipherRepository>().DidNotReceive().UpdateCiphersAsync(sharingUserId,
             Arg.Is<IEnumerable<Cipher>>(arg => !arg.Except(ciphers).Any()));
     }
 
