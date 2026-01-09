@@ -129,6 +129,11 @@ public class EmergencyAccessMailTests
         Assert.NotEmpty(mail.View.RemovedGranteeNames);
     }
 
+    /// <summary>
+    /// Ensure consistency with help pages link and email subject.
+    /// </summary>
+    /// <param name="grantorEmail"></param>
+    /// <param name="granteeName"></param>
     [Theory, BitAutoData]
     public void EmergencyAccessRemoveGranteesMailView_SubjectAndHelpLink_MatchesExpectedValues(string grantorEmail, string granteeName)
     {
