@@ -1,4 +1,4 @@
-using Bit.Core.Billing.Constants;
+﻿using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
@@ -547,11 +547,15 @@ public class GetBitwardenSubscriptionQueryTests
                 Available = true,
                 Seat = new Bit.Core.Billing.Pricing.Premium.Purchasable
                 {
-                    StripePriceId = "price_premium_seat", Price = 10.0m, Provided = 1
+                    StripePriceId = "price_premium_seat",
+                    Price = 10.0m,
+                    Provided = 1
                 },
                 Storage = new Bit.Core.Billing.Pricing.Premium.Purchasable
                 {
-                    StripePriceId = "price_storage", Price = 4.0m, Provided = 1
+                    StripePriceId = "price_storage",
+                    Price = 4.0m,
+                    Provided = 1
                 }
             }
         ];

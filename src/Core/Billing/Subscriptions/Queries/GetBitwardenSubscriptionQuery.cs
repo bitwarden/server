@@ -1,4 +1,4 @@
-using Bit.Core.Billing.Constants;
+﻿using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
@@ -65,7 +65,8 @@ public class GetBitwardenSubscriptionQuery(
             case SubscriptionStatus.Active:
                 return baseSubscription with
                 {
-                    NextCharge = subscription.GetCurrentPeriodEnd(), CancelAt = subscription.CancelAt
+                    NextCharge = subscription.GetCurrentPeriodEnd(),
+                    CancelAt = subscription.CancelAt
                 };
 
             case SubscriptionStatus.PastDue:
@@ -81,10 +82,10 @@ public class GetBitwardenSubscriptionQuery(
                 return baseSubscription with { Canceled = subscription.CanceledAt };
 
             default:
-            {
-                logger.LogError("Subscription ({SubscriptionID}) has an unmanaged status ({Status})", subscription.Id, subscription.Status);
-                throw new ConflictException("Subscription is in an invalid state. Please contact support for assistance.");
-            }
+                {
+                    logger.LogError("Subscription ({SubscriptionID}) has an unmanaged status ({Status})", subscription.Id, subscription.Status);
+                    throw new ConflictException("Subscription is in an invalid state. Please contact support for assistance.");
+                }
         }
     }
 
@@ -147,7 +148,8 @@ public class GetBitwardenSubscriptionQuery(
         {
             var invoice = await stripeAdapter.CreateInvoicePreviewAsync(new InvoiceCreatePreviewOptions
             {
-                Customer = subscription.Customer.Id, Subscription = subscription.Id
+                Customer = subscription.Customer.Id,
+                Subscription = subscription.Id
             });
 
             return GetCost(invoice.TotalTaxes);

@@ -1,4 +1,4 @@
-namespace Bit.Core.Billing.Subscriptions.Models;
+﻿namespace Bit.Core.Billing.Subscriptions.Models;
 
 public record BitwardenSubscription
 {

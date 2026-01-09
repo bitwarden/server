@@ -1,4 +1,4 @@
-using System.Runtime.Serialization;
+﻿using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
 using Bit.Core.Utilities;
 using Stripe;
@@ -47,11 +47,13 @@ public record BitwardenDiscount
         {
             { AmountOff: > 0 } => new BitwardenDiscount
             {
-                Type = BitwardenDiscountType.AmountOff, Value = discount.Coupon.AmountOff.Value
+                Type = BitwardenDiscountType.AmountOff,
+                Value = discount.Coupon.AmountOff.Value
             },
             { PercentOff: > 0 } => new BitwardenDiscount
             {
-                Type = BitwardenDiscountType.PercentOff, Value = discount.Coupon.PercentOff.Value
+                Type = BitwardenDiscountType.PercentOff,
+                Value = discount.Coupon.PercentOff.Value
             },
             _ => null!
         };

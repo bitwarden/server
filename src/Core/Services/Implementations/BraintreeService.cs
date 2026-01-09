@@ -1,4 +1,4 @@
-using Bit.Core.Billing.Constants;
+﻿using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Subscriptions.Models;
 using Bit.Core.Exceptions;
@@ -76,7 +76,8 @@ public class BraintreeService(
             },
             CustomFields = new Dictionary<string, string>
             {
-                [idKey] = idValue.ToString(), ["region"] = globalSettings.BaseServiceUri.CloudRegion
+                [idKey] = idValue.ToString(),
+                ["region"] = globalSettings.BaseServiceUri.CloudRegion
             }
         };
 

@@ -1,4 +1,4 @@
-using Bit.Core.Billing.Constants;
+﻿using Bit.Core.Billing.Constants;
 using Bit.Core.Exceptions;
 using OneOf;
 using Stripe;
@@ -15,11 +15,11 @@ public record ProviderId(Guid Value);
 
 public class SubscriberId : OneOfBase<UserId, OrganizationId, ProviderId>
 {
-    private SubscriberId(OneOf<UserId, OrganizationId, ProviderId> input) : base(input) {}
+    private SubscriberId(OneOf<UserId, OrganizationId, ProviderId> input) : base(input) { }
 
-    public static implicit operator SubscriberId(UserId value) => new (value);
-    public static implicit operator SubscriberId(OrganizationId value) => new (value);
-    public static implicit operator SubscriberId(ProviderId value) => new (value);
+    public static implicit operator SubscriberId(UserId value) => new(value);
+    public static implicit operator SubscriberId(OrganizationId value) => new(value);
+    public static implicit operator SubscriberId(ProviderId value) => new(value);
 
     public static implicit operator SubscriberId(Subscription subscription)
     {
