@@ -5,6 +5,7 @@ using Bit.Core.Billing.Licenses;
 using Bit.Core.Billing.Licenses.Extensions;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Services;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Services;
@@ -87,6 +88,15 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
             license.UseAutomaticUserConfirmation = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UseAutomaticUserConfirmation);
             license.UseDisableSmAdsForUsers = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UseDisableSmAdsForUsers);
             license.UsePhishingBlocker = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UsePhishingBlocker);
+            license.MaxStorageGb = claimsPrincipal.GetValue<short?>(OrganizationLicenseConstants.MaxStorageGb);
+            license.InstallationId = claimsPrincipal.GetValue<Guid>(OrganizationLicenseConstants.InstallationId);
+            license.LicenseType = claimsPrincipal.GetValue<LicenseType>(OrganizationLicenseConstants.LicenseType);
+            license.Issued = claimsPrincipal.GetValue<DateTime>(OrganizationLicenseConstants.Issued);
+            license.Refresh = claimsPrincipal.GetValue<DateTime?>(OrganizationLicenseConstants.Refresh);
+            license.ExpirationWithoutGracePeriod = claimsPrincipal.GetValue<DateTime?>(OrganizationLicenseConstants.ExpirationWithoutGracePeriod);
+            license.Trial = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.Trial);
+            license.LimitCollectionCreationDeletion = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.LimitCollectionCreationDeletion);
+            license.AllowAdminAccessToAllCollectionItems = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.AllowAdminAccessToAllCollectionItems);
         }
 
         var canUse = license.CanUse(_globalSettings, _licensingService, claimsPrincipal, out var exception) &&

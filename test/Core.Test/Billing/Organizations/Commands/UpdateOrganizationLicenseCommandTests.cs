@@ -1,4 +1,6 @@
-﻿using System.Security.Claims;
+﻿using System.Reflection;
+using System.Security.Claims;
+using System.Text.RegularExpressions;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Licenses;
@@ -160,7 +162,14 @@ public class UpdateOrganizationLicenseCommandTests
             new(OrganizationLicenseConstants.UseAdminSponsoredFamilies, "true"),
             new(OrganizationLicenseConstants.UseAutomaticUserConfirmation, "true"),
             new(OrganizationLicenseConstants.UseDisableSmAdsForUsers, "true"),
-            new(OrganizationLicenseConstants.UsePhishingBlocker, "true")
+            new(OrganizationLicenseConstants.UsePhishingBlocker, "true"),
+            new(OrganizationLicenseConstants.MaxStorageGb, "5"),
+            new(OrganizationLicenseConstants.Issued, DateTime.Now.AddDays(-1).ToString("O")),
+            new(OrganizationLicenseConstants.Refresh, DateTime.Now.AddMonths(1).ToString("O")),
+            new(OrganizationLicenseConstants.ExpirationWithoutGracePeriod, DateTime.Now.AddMonths(12).ToString("O")),
+            new(OrganizationLicenseConstants.Trial, "false"),
+            new(OrganizationLicenseConstants.LimitCollectionCreationDeletion, "true"),
+            new(OrganizationLicenseConstants.AllowAdminAccessToAllCollectionItems, "true")
         };
         var claimsPrincipal = new ClaimsPrincipal(new ClaimsIdentity(claims));
 
@@ -331,6 +340,82 @@ public class UpdateOrganizationLicenseCommandTests
         await sutProvider.GetDependency<IOrganizationService>()
             .DidNotReceive()
             .ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
+    }
+
+    [Fact]
+    public async Task UpdateLicenseAsync_ExtractsAllClaimsBasedProperties_WhenClaimsPrincipalProvided()
+    {
+        // This test ensures that when new properties are added to OrganizationLicense,
+        // they are automatically extracted from JWT claims in UpdateOrganizationLicenseCommand.
+        // If a new constant is added to OrganizationLicenseConstants but not extracted,
+        // this test will fail with a clear message showing which properties are missing.
+
+        // 1. Get all OrganizationLicenseConstants
+        var constantFields = typeof(OrganizationLicenseConstants)
+            .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.GetField)
+            .Where(f => f.IsLiteral && !f.IsInitOnly)
+            .Select(f => f.GetValue(null) as string)
+            .ToList();
+
+        // 2. Define properties that should be excluded (not claims-based or intentionally not extracted)
+        var excludedProperties = new HashSet<string>
+        {
+            "Version",        // Not in claims system (only in deprecated property-based licenses)
+            "Hash",           // Signature-related, not extracted from claims
+            "Signature",      // Signature-related, not extracted from claims
+            "SignatureBytes", // Computed from Signature, not a claim
+            "Token",          // The JWT itself, not extracted from claims
+            "Id"              // Cloud org ID from license, not used - self-hosted org has its own separate ID
+        };
+
+        // 3. Get properties that should be extracted from claims
+        var propertiesThatShouldBeExtracted = constantFields
+            .Where(c => !excludedProperties.Contains(c))
+            .ToHashSet();
+
+        // 4. Read UpdateOrganizationLicenseCommand source code
+        var commandSourcePath = Path.Combine(
+            Directory.GetCurrentDirectory(),
+            "..", "..", "..", "..", "..",
+            "src", "Core", "Billing", "Organizations", "Commands", "UpdateOrganizationLicenseCommand.cs");
+        var sourceCode = await File.ReadAllTextAsync(commandSourcePath);
+
+        // 5. Find all GetValue calls that extract properties from claims
+        // Pattern matches: license.PropertyName = claimsPrincipal.GetValue<Type>(OrganizationLicenseConstants.PropertyName)
+        var extractedProperties = new HashSet<string>();
+        var getValuePattern = @"claimsPrincipal\.GetValue<[^>]+>\(OrganizationLicenseConstants\.(\w+)\)";
+        var matches = Regex.Matches(sourceCode, getValuePattern);
+
+        foreach (Match match in matches)
+        {
+            extractedProperties.Add(match.Groups[1].Value);
+        }
+
+        // 6. Find missing extractions
+        var missingExtractions = propertiesThatShouldBeExtracted
+            .Except(extractedProperties)
+            .OrderBy(p => p)
+            .ToList();
+
+        // 7. Build error message with guidance if there are missing extractions
+        var errorMessage = "";
+        if (missingExtractions.Any())
+        {
+            errorMessage = $"The following constants in OrganizationLicenseConstants are NOT extracted from claims in UpdateOrganizationLicenseCommand:\n";
+            errorMessage += string.Join("\n", missingExtractions.Select(p => $"  - {p}"));
+            errorMessage += "\n\nPlease add the following lines to UpdateOrganizationLicenseCommand.cs in the 'if (claimsPrincipal != null)' block:\n";
+            foreach (var prop in missingExtractions)
+            {
+                errorMessage += $"  license.{prop} = claimsPrincipal.GetValue<TYPE>(OrganizationLicenseConstants.{prop});\n";
+            }
+        }
+
+        // 8. Assert - if this fails, the error message guides the developer to add the extraction
+        // Note: We don't check for "extra extractions" because that would be a compile error
+        // (can't reference OrganizationLicenseConstants.Foo if Foo doesn't exist)
+        Assert.True(
+            !missingExtractions.Any(),
+            $"\n{errorMessage}");
     }
 
     // Wrapper to compare 2 objects that are different types
