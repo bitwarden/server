@@ -395,6 +395,8 @@ public class UpgradePremiumToOrganizationCommandTests
                 opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.PreviousPremiumPriceId) &&
                 opts.Metadata[StripeConstants.MetadataKeys.PreviousPremiumPriceId] == "premium-annually" &&
                 opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.PreviousPeriodEndDate) &&
+                opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.PreviousAdditionalStorage) &&
+                opts.Metadata[StripeConstants.MetadataKeys.PreviousAdditionalStorage] == "0" &&
                 opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.UserId) &&
                 opts.Metadata[StripeConstants.MetadataKeys.UserId] == string.Empty)); // Removes userId to unlink from User
     }
@@ -532,6 +534,74 @@ public class UpgradePremiumToOrganizationCommandTests
                 opts.Items.Count(i => i.Deleted == true && i.Id == "si_premium") == 1 && // Premium item deleted by ID
                 opts.Items.Count(i => i.Id == "si_other_product") == 0 && // Other product NOT in update (untouched)
                 opts.Items.Any(i => i.Price == "teams-seat-annually" && i.Quantity == 1)));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_UserHasAdditionalStorage_CapturesStorageInMetadata(User user)
+    {
+        // Arrange
+        user.Premium = true;
+        user.GatewaySubscriptionId = "sub_123";
+        user.GatewayCustomerId = "cus_123";
+
+        var currentPeriodEnd = DateTime.UtcNow.AddMonths(1);
+        var mockSubscription = new Subscription
+        {
+            Id = "sub_123",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = new List<SubscriptionItem>
+                {
+                    new SubscriptionItem
+                    {
+                        Id = "si_premium",
+                        Price = new Price { Id = "premium-annually" },
+                        CurrentPeriodEnd = currentPeriodEnd
+                    },
+                    new SubscriptionItem
+                    {
+                        Id = "si_storage",
+                        Price = new Price { Id = "personal-storage-gb-annually" },
+                        Quantity = 5, // User has 5GB additional storage
+                        CurrentPeriodEnd = currentPeriodEnd
+                    }
+                }
+            },
+            Metadata = new Dictionary<string, string>()
+        };
+
+        var mockPremiumPlans = CreateTestPremiumPlansList();
+        var mockPlan = CreateTestPlan(
+            PlanType.TeamsAnnually,
+            stripeSeatPlanId: "teams-seat-annually"
+        );
+
+        _stripeAdapter.GetSubscriptionAsync("sub_123")
+            .Returns(mockSubscription);
+        _pricingClient.ListPremiumPlans().Returns(mockPremiumPlans);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
+        _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
+            .Returns(Task.FromResult(mockSubscription));
+        _organizationRepository.CreateAsync(Arg.Any<Organization>()).Returns(callInfo => Task.FromResult(callInfo.Arg<Organization>()));
+        _organizationApiKeyRepository.CreateAsync(Arg.Any<OrganizationApiKey>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationApiKey>()));
+        _organizationUserRepository.CreateAsync(Arg.Any<OrganizationUser>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationUser>()));
+        _applicationCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
+        _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _command.Run(user, "My Organization", "encrypted-key", PlanType.TeamsAnnually);
+
+        // Assert
+        Assert.True(result.IsT0);
+
+        // Verify that the additional storage quantity (5) is captured in metadata
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            "sub_123",
+            Arg.Is<SubscriptionUpdateOptions>(opts =>
+                opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.PreviousAdditionalStorage) &&
+                opts.Metadata[StripeConstants.MetadataKeys.PreviousAdditionalStorage] == "5" &&
+                opts.Items.Count == 3 && // 2 deleted (premium + storage) + 1 new seat
+                opts.Items.Count(i => i.Deleted == true) == 2));
     }
 
     [Theory, BitAutoData]
