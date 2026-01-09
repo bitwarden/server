@@ -13,7 +13,7 @@ public class SendOrganizationConfirmationCommand(IMailer mailer, GlobalSettings 
     private const string _titleThird = "!";
 
     private static string GetConfirmationSubject(string organizationName) =>
-        $"You Have Been Confirmed To {organizationName}";
+        $"You can now access items from {organizationName}";
     private string GetWebVaultUrl(bool accessSecretsManager) => accessSecretsManager
         ? globalSettings.BaseServiceUri.VaultWithHashAndSecretManagerProduct
         : globalSettings.BaseServiceUri.VaultWithHash;
