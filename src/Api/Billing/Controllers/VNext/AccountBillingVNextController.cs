@@ -25,7 +25,8 @@ public class AccountBillingVNextController(
     IGetPaymentMethodQuery getPaymentMethodQuery,
     IGetUserLicenseQuery getUserLicenseQuery,
     IUpdatePaymentMethodCommand updatePaymentMethodCommand,
-    IUpdatePremiumStorageCommand updatePremiumStorageCommand) : BaseBillingController
+    IUpdatePremiumStorageCommand updatePremiumStorageCommand,
+    IUpgradePremiumToOrganizationCommand upgradePremiumToOrganizationCommand) : BaseBillingController
 {
     [HttpGet("credit")]
     [InjectUser]
@@ -98,6 +99,17 @@ public class AccountBillingVNextController(
         [FromBody] StorageUpdateRequest request)
     {
         var result = await updatePremiumStorageCommand.Run(user, request.AdditionalStorageGb);
+        return Handle(result);
+    }
+
+    [HttpPost("upgrade")]
+    [InjectUser]
+    public async Task<IResult> UpgradePremiumToOrganizationAsync(
+        [BindNever] User user,
+        [FromBody] UpgradePremiumToOrganizationRequest request)
+    {
+        var (organizationName, key, planType) = request.ToDomain();
+        var result = await upgradePremiumToOrganizationCommand.Run(user, organizationName, key, planType);
         return Handle(result);
     }
 }
