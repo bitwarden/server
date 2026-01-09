@@ -8,7 +8,6 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.IntegrationTestCommon.Factories;
 using Bit.Sso.IntegrationTest.Utilities;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bitwarden.License.Test.Sso.IntegrationTest.Utilities;

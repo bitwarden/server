@@ -6,7 +6,6 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
-using Bit.IntegrationTestCommon.Factories;
 using Bitwarden.License.Test.Sso.IntegrationTest.Utilities;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Services;
