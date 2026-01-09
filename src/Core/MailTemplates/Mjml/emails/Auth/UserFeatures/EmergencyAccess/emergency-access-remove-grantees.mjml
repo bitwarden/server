@@ -19,7 +19,7 @@
                             <li>{{this}}</li>
                             {{/each}}
                         </ul>
-                        You can manage your emergency contacts in the <a href="{{WebVaultUrl}}">web app</a>.
+                        Learn more about <a href="{{EmergencyAccessHelpPageUrl}}">emergency access</a>.
                     </mj-text>
                 </mj-column>
             </mj-section>
