@@ -157,13 +157,28 @@ public class DuoUniversalTokenService(
         return false;
     }
 
+    private static bool IsBitwardenCloudHost(string host)
+    {
+        if (string.IsNullOrWhiteSpace(host))
+        {
+            return false;
+        }
+
+        var normalizedHost = host.ToLowerInvariant();
+        return normalizedHost.EndsWith("bitwarden.com") ||
+               normalizedHost.EndsWith("bitwarden.eu") ||
+               normalizedHost.EndsWith("bitwarden.pw");
+    }
+
     public async Task<Duo.Client> BuildDuoTwoFactorClientAsync(TwoFactorProvider provider)
     {
         // Fetch Client name from header value since duo auth can be initiated from multiple clients and we want
         // to redirect back to the initiating client
         _currentContext.HttpContext.Request.Headers.TryGetValue("Bitwarden-Client-Name", out var bitwardenClientName);
-        var redirectUri = string.Format("{0}/duo-redirect-connector.html?client={1}",
-            _globalSettings.BaseServiceUri.Vault, bitwardenClientName.FirstOrDefault() ?? "web");
+        var requestHost = _currentContext.HttpContext?.Request?.Host.Host;
+        var deeplinkScheme = IsBitwardenCloudHost(requestHost) ? "https" : "bitwarden";
+        var redirectUri = string.Format("{0}/duo-redirect-connector.html?client={1}&deeplinkScheme={2}",
+            _globalSettings.BaseServiceUri.Vault, bitwardenClientName.FirstOrDefault() ?? "web", deeplinkScheme);
 
         var client = new Duo.ClientBuilder(
             (string)provider.MetaData["ClientId"],
