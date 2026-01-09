@@ -70,6 +70,7 @@ public static class StripeConstants
         public const string PreviousAdditionalStorage = "previous_additional_storage";
         public const string PreviousPeriodEndDate = "previous_period_end_date";
         public const string PreviousPremiumPriceId = "previous_premium_price_id";
+        public const string PreviousPremiumUserId = "previous_premium_user_id";
         public const string ProviderId = "providerId";
         public const string Region = "region";
         public const string RetiredBraintreeCustomerId = "btCustomerId_old";

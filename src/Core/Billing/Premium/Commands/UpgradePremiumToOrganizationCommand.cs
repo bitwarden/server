@@ -140,6 +140,7 @@ public class UpgradePremiumToOrganizationCommand(
                 [StripeConstants.MetadataKeys.PreviousPremiumPriceId] = usersPremiumPlan.Seat.StripePriceId,
                 [StripeConstants.MetadataKeys.PreviousPeriodEndDate] = currentSubscription.GetCurrentPeriodEnd()?.ToString("O") ?? string.Empty,
                 [StripeConstants.MetadataKeys.PreviousAdditionalStorage] = previousAdditionalStorage.ToString(),
+                [StripeConstants.MetadataKeys.PreviousPremiumUserId] = user.Id.ToString(),
                 [StripeConstants.MetadataKeys.UserId] = string.Empty // Remove userId to unlink subscription from User
             }
         };
