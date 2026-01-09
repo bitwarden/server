@@ -155,7 +155,6 @@ public class OrganizationLicense : ILicense
     public bool UseOrganizationDomains { get; set; }
     public bool UseAdminSponsoredFamilies { get; set; }
     public bool UseAutomaticUserConfirmation { get; set; }
-    public bool UseDisableSmAdsForUsers { get; set; }
     public string Hash { get; set; }
     public string Signature { get; set; }
     public string Token { get; set; }
@@ -231,7 +230,6 @@ public class OrganizationLicense : ILicense
                     !p.Name.Equals(nameof(UseAdminSponsoredFamilies)) &&
                     !p.Name.Equals(nameof(UseOrganizationDomains)) &&
                     !p.Name.Equals(nameof(UseAutomaticUserConfirmation)) &&
-                    !p.Name.Equals(nameof(UseDisableSmAdsForUsers)) &&
                     !p.Name.Equals(nameof(UsePhishingBlocker)))
                 .OrderBy(p => p.Name)
                 .Select(p => $"{p.Name}:{Core.Utilities.CoreHelpers.FormatLicenseSignatureValue(p.GetValue(this, null))}")
@@ -427,7 +425,6 @@ public class OrganizationLicense : ILicense
         var useAdminSponsoredFamilies = claimsPrincipal.GetValue<bool>(nameof(UseAdminSponsoredFamilies));
         var useOrganizationDomains = claimsPrincipal.GetValue<bool>(nameof(UseOrganizationDomains));
         var useAutomaticUserConfirmation = claimsPrincipal.GetValue<bool>(nameof(UseAutomaticUserConfirmation));
-        var useDisableSmAdsForUsers = claimsPrincipal.GetValue<bool>(nameof(UseDisableSmAdsForUsers));
 
         var claimedPlanType = claimsPrincipal.GetValue<PlanType>(nameof(PlanType));
 
@@ -464,8 +461,7 @@ public class OrganizationLicense : ILicense
                smServiceAccounts == organization.SmServiceAccounts &&
                useAdminSponsoredFamilies == organization.UseAdminSponsoredFamilies &&
                useOrganizationDomains == organization.UseOrganizationDomains &&
-               useAutomaticUserConfirmation == organization.UseAutomaticUserConfirmation &&
-               useDisableSmAdsForUsers == organization.UseDisableSmAdsForUsers;
+               useAutomaticUserConfirmation == organization.UseAutomaticUserConfirmation;
 
     }
 
