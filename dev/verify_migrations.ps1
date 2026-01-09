@@ -41,7 +41,7 @@ $migrationPath = "util/Migrator/DbScripts"
 
 # Get list of migrations from base reference
 try {
-    $baseMigrations = git ls-tree -r --name-only $BaseRef -- "$migrationPath/*.sql" 2>$null | Sort-Object
+    $baseMigrations = git ls-tree -r --name-only $BaseRef -- "$migrationPath/" 2>$null | Where-Object { $_ -like "*.sql" } | Sort-Object
     if ($LASTEXITCODE -ne 0) {
         Write-Host "Warning: Could not retrieve migrations from base reference '$BaseRef'"
         $baseMigrations = @()
@@ -53,7 +53,7 @@ catch {
 }
 
 # Get list of migrations from current reference
-$currentMigrations = git ls-tree -r --name-only $CurrentRef -- "$migrationPath/*.sql" | Sort-Object
+$currentMigrations = git ls-tree -r --name-only $CurrentRef -- "$migrationPath/" | Where-Object { $_ -like "*.sql" } | Sort-Object
 
 # Find added migrations
 $addedMigrations = $currentMigrations | Where-Object { $_ -notin $baseMigrations }

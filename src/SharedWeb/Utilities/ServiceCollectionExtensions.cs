@@ -662,8 +662,9 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    ///     Adds an implementation of <see cref="IDistributedCache"/> to the service collection. Uses a memory
-    /// cache if self hosted or no Redis connection string is available in GlobalSettings.
+    ///     Adds an implementation of <see cref="IDistributedCache"/> to the service collection. Uses Redis
+    /// if a connection string is available in GlobalSettings, a database-backed distributed cache if
+    /// self-hosted or a distributed memory cache as a final fallback.
     /// </summary>
     public static void AddDistributedCache(
         this IServiceCollection services,
@@ -678,19 +679,26 @@ public static class ServiceCollectionExtensions
         }
         else
         {
-            var (databaseProvider, databaseConnectionString) = GetDatabaseProvider(globalSettings);
-            if (databaseProvider == SupportedDatabaseProviders.SqlServer)
+            if (globalSettings.SelfHosted)
             {
-                services.AddDistributedSqlServerCache(o =>
+                var (databaseProvider, databaseConnectionString) = GetDatabaseProvider(globalSettings);
+                if (databaseProvider == SupportedDatabaseProviders.SqlServer)
                 {
-                    o.ConnectionString = databaseConnectionString;
-                    o.SchemaName = "dbo";
-                    o.TableName = "Cache";
-                });
+                    services.AddDistributedSqlServerCache(o =>
+                    {
+                        o.ConnectionString = databaseConnectionString;
+                        o.SchemaName = "dbo";
+                        o.TableName = "Cache";
+                    });
+                }
+                else
+                {
+                    services.AddSingleton<IDistributedCache, EntityFrameworkCache>();
+                }
             }
             else
             {
-                services.AddSingleton<IDistributedCache, EntityFrameworkCache>();
+                services.AddDistributedMemoryCache();
             }
         }
 
