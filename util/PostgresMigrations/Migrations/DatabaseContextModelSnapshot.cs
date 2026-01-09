@@ -231,6 +231,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("UseDirectory")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("UseDisableSmAdsForUsers")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("UseEvents")
                         .HasColumnType("boolean");
 
@@ -2320,8 +2323,8 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
-                    b.Property<DateTime?>("ArchivedDate")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<string>("Archives")
+                        .HasColumnType("text");
 
                     b.Property<string>("Attachments")
                         .HasColumnType("text");
