@@ -17,12 +17,14 @@ public class AccountBillingVNextControllerTests
 {
     private readonly IUpdatePremiumStorageCommand _updatePremiumStorageCommand;
     private readonly IGetUserLicenseQuery _getUserLicenseQuery;
+    private readonly IUpgradePremiumToOrganizationCommand _upgradePremiumToOrganizationCommand;
     private readonly AccountBillingVNextController _sut;
 
     public AccountBillingVNextControllerTests()
     {
         _updatePremiumStorageCommand = Substitute.For<IUpdatePremiumStorageCommand>();
         _getUserLicenseQuery = Substitute.For<IGetUserLicenseQuery>();
+        _upgradePremiumToOrganizationCommand = Substitute.For<IUpgradePremiumToOrganizationCommand>();
 
         _sut = new AccountBillingVNextController(
             Substitute.For<Core.Billing.Payment.Commands.ICreateBitPayInvoiceForCreditCommand>(),
@@ -31,7 +33,8 @@ public class AccountBillingVNextControllerTests
             Substitute.For<Core.Billing.Payment.Queries.IGetPaymentMethodQuery>(),
             _getUserLicenseQuery,
             Substitute.For<Core.Billing.Payment.Commands.IUpdatePaymentMethodCommand>(),
-            _updatePremiumStorageCommand);
+            _updatePremiumStorageCommand,
+            _upgradePremiumToOrganizationCommand);
     }
 
     [Theory, BitAutoData]
