@@ -13,18 +13,20 @@ namespace Bit.Core.Test.Auth.UserFeatures.EmergencyAccess;
 [SutProviderCustomize]
 public class EmergencyAccessMailTests
 {
+    // Constant values for all Emergency Access emails
+    private const string _emergencyAccessHelpUrl = "https://bitwarden.com/help/emergency-access/";
+    private const string _emergencyAccessMailSubject = "Emergency contacts removed";
+
     /// <summary>
     /// Documents how to construct and send the emergency access removal email.
     /// 1. Inject IMailer into their command/service
-    /// 2. Get WebVaultUrl from GlobalSettings.BaseServiceUri.VaultWithHash
-    /// 3. Construct EmergencyAccessRemoveGranteesMail as shown below
-    /// 4. Call mailer.SendEmail(mail)
+    /// 2. Construct EmergencyAccessRemoveGranteesMail as shown below
+    /// 3. Call mailer.SendEmail(mail)
     /// </summary>
     [Theory, BitAutoData]
     public async Task SendEmergencyAccessRemoveGranteesEmail_SingleGrantee_Success(
         string grantorEmail,
-        string granteeName,
-        string webVaultUrl)
+        string granteeName)
     {
         // Arrange
         var logger = Substitute.For<ILogger<HandlebarMailRenderer>>();
@@ -39,8 +41,7 @@ public class EmergencyAccessMailTests
             ToEmails = [grantorEmail],
             View = new EmergencyAccessRemoveGranteesMailView
             {
-                RemovedGranteeNames = [granteeName],
-                WebVaultUrl = webVaultUrl
+                RemovedGranteeNames = [granteeName]
             }
         };
 
@@ -55,15 +56,10 @@ public class EmergencyAccessMailTests
         // Assert
         Assert.NotNull(sentMessage);
         Assert.Contains(grantorEmail, sentMessage.ToEmails);
-        Assert.Equal("Emergency contacts removed", sentMessage.Subject);
 
         // Verify the content contains the grantee name
         Assert.Contains(granteeName, sentMessage.TextContent);
         Assert.Contains(granteeName, sentMessage.HtmlContent);
-
-        // Verify the vault link is present
-        Assert.Contains(webVaultUrl, sentMessage.HtmlContent);
-        Assert.Contains("web app", sentMessage.HtmlContent);
     }
 
     /// <summary>
@@ -71,8 +67,7 @@ public class EmergencyAccessMailTests
     /// </summary>
     [Theory, BitAutoData]
     public async Task SendEmergencyAccessRemoveGranteesEmail_MultipleGrantees_RendersAllNames(
-        string grantorEmail,
-        string webVaultUrl)
+        string grantorEmail)
     {
         // Arrange
         var logger = Substitute.For<ILogger<HandlebarMailRenderer>>();
@@ -89,8 +84,7 @@ public class EmergencyAccessMailTests
             ToEmails = [grantorEmail],
             View = new EmergencyAccessRemoveGranteesMailView
             {
-                RemovedGranteeNames = granteeNames,
-                WebVaultUrl = webVaultUrl
+                RemovedGranteeNames = granteeNames
             }
         };
 
@@ -112,13 +106,11 @@ public class EmergencyAccessMailTests
     }
 
     /// <summary>
-    /// Validates the minimal required fields for the email view model.
-    /// Both RemovedGranteeNames and WebVaultUrl are marked as 'required' in the view model.
+    /// Validates the required GranteeNames for the email view model.
     /// </summary>
     [Theory, BitAutoData]
-    public void EmergencyAccessRemoveGranteesMailView_RequiredFields_MustBeProvided(
-        string grantorEmail,
-        string webVaultUrl)
+    public void EmergencyAccessRemoveGranteesMailView_GranteeNames_AreRequired(
+        string grantorEmail)
     {
         // Arrange - Shows the minimum required to construct the email
         var mail = new EmergencyAccessRemoveGranteesMail
@@ -127,18 +119,30 @@ public class EmergencyAccessMailTests
             View = new EmergencyAccessRemoveGranteesMailView
             {
                 // Required: at least one removed grantee name
-                RemovedGranteeNames = ["Example Grantee"],
-                // Required: link to vault for managing emergency contacts
-                // In production: use GlobalSettings.BaseServiceUri.VaultWithHash
-                WebVaultUrl = webVaultUrl
+                RemovedGranteeNames = ["Example Grantee"]
             }
         };
 
-        // Assert - If this compiles and constructs, required fields are satisfied
+        // Assert
         Assert.NotNull(mail);
         Assert.NotNull(mail.View);
         Assert.NotEmpty(mail.View.RemovedGranteeNames);
-        Assert.NotNull(mail.View.WebVaultUrl);
-        Assert.Equal("Emergency contacts removed", mail.Subject);
+    }
+
+    [Theory, BitAutoData]
+    public void EmergencyAccessRemoveGranteesMailView_SubjectAndHelpLink_MatchesExpectedValues(string grantorEmail, string granteeName)
+    {
+        // Arrange
+        var mail = new EmergencyAccessRemoveGranteesMail
+        {
+            ToEmails = [grantorEmail],
+            View = new EmergencyAccessRemoveGranteesMailView { RemovedGranteeNames = [granteeName] }
+        };
+
+        // Assert
+        Assert.NotNull(mail);
+        Assert.NotNull(mail.View);
+        Assert.Equal(_emergencyAccessMailSubject, mail.Subject);
+        Assert.Equal(_emergencyAccessHelpUrl, mail.View.EmergencyAccessHelpPageUrl);
     }
 }
