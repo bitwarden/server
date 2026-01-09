@@ -85,6 +85,8 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
             license.UseOrganizationDomains = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UseOrganizationDomains);
             license.UseAdminSponsoredFamilies = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UseAdminSponsoredFamilies);
             license.UseAutomaticUserConfirmation = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UseAutomaticUserConfirmation);
+            license.UseDisableSmAdsForUsers = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UseDisableSmAdsForUsers);
+            license.UsePhishingBlocker = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UsePhishingBlocker);
         }
 
         var canUse = license.CanUse(_globalSettings, _licensingService, claimsPrincipal, out var exception) &&

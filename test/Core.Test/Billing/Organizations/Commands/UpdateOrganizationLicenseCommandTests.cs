@@ -158,7 +158,9 @@ public class UpdateOrganizationLicenseCommandTests
             new(OrganizationLicenseConstants.UseRiskInsights, "true"),
             new(OrganizationLicenseConstants.UseOrganizationDomains, "true"),
             new(OrganizationLicenseConstants.UseAdminSponsoredFamilies, "true"),
-            new(OrganizationLicenseConstants.UseAutomaticUserConfirmation, "true")
+            new(OrganizationLicenseConstants.UseAutomaticUserConfirmation, "true"),
+            new(OrganizationLicenseConstants.UseDisableSmAdsForUsers, "true"),
+            new(OrganizationLicenseConstants.UsePhishingBlocker, "true")
         };
         var claimsPrincipal = new ClaimsPrincipal(new ClaimsIdentity(claims));
 
@@ -223,7 +225,9 @@ public class UpdateOrganizationLicenseCommandTests
                     org.UseRiskInsights == true &&
                     org.UseOrganizationDomains == true &&
                     org.UseAdminSponsoredFamilies == true &&
-                    org.UseAutomaticUserConfirmation == true));
+                    org.UseAutomaticUserConfirmation == true &&
+                    org.UseDisableSmAdsForUsers == true &&
+                    org.UsePhishingBlocker == true));
         }
         finally
         {
