@@ -48,7 +48,7 @@ public class SsoTestDataBuilder
     private bool _includeSsoConfig = false;
     private bool _successfulAuth = true;
     private bool _withNullEmail = false;
-    private bool _IsSelfHosted = false;
+    private bool _isSelfHosted = false;
     private bool _includeProviderUserId = true;
     private bool _useNonExistentOrgInAuth = false;
     private bool _isNativeClient = false;
@@ -119,7 +119,7 @@ public class SsoTestDataBuilder
 
     public SsoTestDataBuilder AsSelfHosted()
     {
-        _IsSelfHosted = true;
+        _isSelfHosted = true;
         return this;
     }
 
@@ -185,7 +185,7 @@ public class SsoTestDataBuilder
         // 1.a Configure GlobalSettings for Self-Hosted and seat limit
         factory.SubstituteService<IGlobalSettings>(globalSettings =>
         {
-            globalSettings.SelfHosted.Returns(_IsSelfHosted);
+            globalSettings.SelfHosted.Returns(_isSelfHosted);
         });
 
         // 1.b configure setting feature flags
