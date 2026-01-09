@@ -1,6 +1,5 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.Utilities;
 
@@ -68,16 +67,14 @@ public class RegisterFinishRequestModel : IValidatableObject
         {
             Email = Email,
             MasterPasswordHint = MasterPasswordHint,
-            Kdf = MasterPasswordUnlock?.Kdf.KdfType ?? Kdf
-                ?? throw new BadRequestException("KdfType couldn't be found on either the MasterPasswordUnlock or the Kdf property passed in."),
-            KdfIterations = MasterPasswordUnlock?.Kdf.Iterations ?? KdfIterations
-                ?? throw new BadRequestException("KdfIterations couldn't be found on either the MasterPasswordUnlock or the KdfIterations property passed in."),
+            Kdf = (KdfType)(MasterPasswordUnlock?.Kdf.KdfType ?? Kdf)!,
+            KdfIterations = (int)(MasterPasswordUnlock?.Kdf.Iterations ?? KdfIterations)!,
             // KdfMemory and KdfParallelism are optional (only used for Argon2id)
             KdfMemory = MasterPasswordUnlock?.Kdf.Memory ?? KdfMemory,
             KdfParallelism = MasterPasswordUnlock?.Kdf.Parallelism ?? KdfParallelism,
             // PM-28827 To be added when MasterPasswordSalt is added to the user column
             // MasterPasswordSalt = MasterPasswordUnlock?.Salt ?? Email.ToLower().Trim(),
-            Key = MasterPasswordUnlock?.MasterKeyWrappedUserKey ?? UserSymmetricKey ?? throw new BadRequestException("MasterKeyWrappedUserKey couldn't be found on either the MasterPasswordUnlockData or the UserSymmetricKey property passed in."),
+            Key = MasterPasswordUnlock?.MasterKeyWrappedUserKey ?? UserSymmetricKey
         };
 
         UserAsymmetricKeys.ToUser(user);
