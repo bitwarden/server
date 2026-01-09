@@ -236,16 +236,6 @@ public static class FeatureFlagKeys
     public const string SendUIRefresh = "pm-28175-send-ui-refresh";
     public const string SendEmailOTP = "pm-19051-send-email-verification";
 
-    /// <summary>
-    /// Enable this flag to output email/OTP authenticated sends from the `GET sends` endpoint. When
-    /// this flag is disabled, the `GET sends` endpoint omits email/OTP authenticated sends.
-    /// </summary>
-    /// <remarks>
-    /// This flag is server-side only, and only inhibits the endpoint returning all sends.
-    /// Email/OTP sends can still be created and downloaded through other endpoints.
-    /// </remarks>
-    public const string PM19051_ListEmailOtpSends = "tools-send-email-otp-listing";
-
     /* Vault Team */
     public const string CipherKeyEncryption = "cipher-key-encryption";
     public const string PM19941MigrateCipherDomainToSdk = "pm-19941-migrate-cipher-domain-to-sdk";
