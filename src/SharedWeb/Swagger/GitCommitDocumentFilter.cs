@@ -16,7 +16,8 @@ public class GitCommitDocumentFilter : IDocumentFilter
     {
         if (!string.IsNullOrEmpty(GitCommit))
         {
-            swaggerDoc.Extensions?.Add("x-git-commit", new JsonNodeExtension(GitCommit));
+            swaggerDoc.Extensions ??= new Dictionary<string, IOpenApiExtension>();
+            swaggerDoc.Extensions.Add("x-git-commit", new JsonNodeExtension(GitCommit));
         }
     }
 

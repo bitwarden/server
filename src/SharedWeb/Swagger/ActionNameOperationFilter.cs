@@ -17,8 +17,9 @@ public class ActionNameOperationFilter : IOperationFilter
         if (!context.ApiDescription.ActionDescriptor.RouteValues.TryGetValue("action", out var action)) return;
         if (string.IsNullOrEmpty(action)) return;
 
-        operation.Extensions?.Add("x-action-name", new JsonNodeExtension(action));
+        operation.Extensions ??= new Dictionary<string, IOpenApiExtension>();
+        operation.Extensions.Add("x-action-name", new JsonNodeExtension(action));
         // We can't do case changes in the codegen templates, so we also add the snake_case version of the action name
-        operation.Extensions?.Add("x-action-name-snake-case", new JsonNodeExtension(JsonNamingPolicy.SnakeCaseLower.ConvertName(action)));
+        operation.Extensions.Add("x-action-name-snake-case", new JsonNodeExtension(JsonNamingPolicy.SnakeCaseLower.ConvertName(action)));
     }
 }

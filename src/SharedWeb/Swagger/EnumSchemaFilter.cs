@@ -16,12 +16,13 @@ public class EnumSchemaFilter : ISchemaFilter
 {
     public void Apply(IOpenApiSchema schema, SchemaFilterContext context)
     {
-        if (context.Type.IsEnum)
+        if (context.Type.IsEnum && schema is OpenApiSchema openApiSchema)
         {
             var array = new JsonArray();
             foreach (var name in Enum.GetNames(context.Type)) array.Add(name);
 
-            schema.Extensions?.Add("x-enum-varnames", new JsonNodeExtension(array));
+            openApiSchema.Extensions ??= new Dictionary<string, IOpenApiExtension>();
+            openApiSchema.Extensions.Add("x-enum-varnames", new JsonNodeExtension(array));
         }
     }
 }
