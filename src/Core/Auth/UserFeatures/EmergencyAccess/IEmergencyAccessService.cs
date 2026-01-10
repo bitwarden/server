@@ -1,5 +1,4 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Entities;
@@ -7,7 +6,7 @@ using Bit.Core.Enums;
 using Bit.Core.Services;
 using Bit.Core.Vault.Models.Data;
 
-namespace Bit.Core.Auth.Services;
+namespace Bit.Core.Auth.UserFeatures.EmergencyAccess;
 
 public interface IEmergencyAccessService
 {
@@ -20,7 +19,7 @@ public interface IEmergencyAccessService
     /// <param name="accessType">Type of emergency access allowed to the emergency contact</param>
     /// <param name="waitTime">The amount of time to pass before the invite is auto confirmed</param>
     /// <returns>a new Emergency Access object</returns>
-    Task<EmergencyAccess> InviteAsync(User grantorUser, string emergencyContactEmail, EmergencyAccessType accessType, int waitTime);
+    Task<Entities.EmergencyAccess> InviteAsync(User grantorUser, string emergencyContactEmail, EmergencyAccessType accessType, int waitTime);
     /// <summary>
     /// Sends an invite to the emergency contact associated with the emergency access id.
     /// </summary>
@@ -37,7 +36,7 @@ public interface IEmergencyAccessService
     /// <param name="token">the tokenable that was sent via email</param>
     /// <param name="userService">service dependency</param>
     /// <returns>void</returns>
-    Task<EmergencyAccess> AcceptUserAsync(Guid emergencyAccessId, User granteeUser, string token, IUserService userService);
+    Task<Entities.EmergencyAccess> AcceptUserAsync(Guid emergencyAccessId, User granteeUser, string token, IUserService userService);
     /// <summary>
     /// The creator of the emergency access request can delete the request.
     /// </summary>
@@ -53,7 +52,7 @@ public interface IEmergencyAccessService
     /// <param name="key">The grantor user key encrypted by the grantee public key; grantee.PubicKey(grantor.User.Key)</param>
     /// <param name="grantorId">Id of grantor user</param>
     /// <returns>emergency access object associated with the Id passed in</returns>
-    Task<EmergencyAccess> ConfirmUserAsync(Guid emergencyAccessId, string key, Guid grantorId);
+    Task<Entities.EmergencyAccess> ConfirmUserAsync(Guid emergencyAccessId, string key, Guid grantorId);
     /// <summary>
     /// Fetches an emergency access object. The grantor user must own the object being fetched.
     /// </summary>
@@ -67,7 +66,7 @@ public interface IEmergencyAccessService
     /// <param name="emergencyAccess">emergency access entity being updated</param>
     /// <param name="grantorUser">grantor user</param>
     /// <returns>void</returns>
-    Task SaveAsync(EmergencyAccess emergencyAccess, User grantorUser);
+    Task SaveAsync(Entities.EmergencyAccess emergencyAccess, User grantorUser);
     /// <summary>
     /// Initiates the recovery process. For either Takeover or view. Will send an email to the Grantor User notifying of the initiation.
     /// </summary>
@@ -107,7 +106,7 @@ public interface IEmergencyAccessService
     /// <param name="emergencyAccessId">Id of entity being accessed</param>
     /// <param name="granteeUser">grantee user of the emergency access entity</param>
     /// <returns>emergency access entity and the grantorUser</returns>
-    Task<(EmergencyAccess, User)> TakeoverAsync(Guid emergencyAccessId, User granteeUser);
+    Task<(Entities.EmergencyAccess, User)> TakeoverAsync(Guid emergencyAccessId, User granteeUser);
     /// <summary>
     /// Updates the grantor's password hash and updates the key for the EmergencyAccess entity.
     /// </summary>
