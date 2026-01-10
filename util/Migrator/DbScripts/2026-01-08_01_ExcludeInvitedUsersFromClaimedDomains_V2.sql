@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[OrganizationUser_ReadByOrganizationIdWithClaimedDomains_V2]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_ReadByOrganizationIdWithClaimedDomains_V2]
     @OrganizationId UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -8,7 +8,7 @@ BEGIN
         SELECT *
         FROM [dbo].[OrganizationUserView]
         WHERE [OrganizationId] = @OrganizationId
-            AND [Status] != 0   -- Exclude invited users
+          AND [Status] != 0 -- Exclude invited users
     ),
     UserDomains AS (
         SELECT U.[Id], U.[EmailDomain]
@@ -26,3 +26,4 @@ BEGIN
     JOIN UserDomains UD ON OU.[UserId] = UD.[Id]
     OPTION (RECOMPILE);
 END
+GO

@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Organization_ReadByClaimedUserEmailDomain]
+CREATE OR ALTER PROCEDURE [dbo].[Organization_ReadByClaimedUserEmailDomain]
     @UserId UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -21,3 +21,4 @@ BEGIN
       AND O.[Enabled] = 1
       AND OU.[Status] != 0
 END
+GO
