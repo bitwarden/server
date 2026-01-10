@@ -7,6 +7,7 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
+using Microsoft.AspNetCore.Http;
 using Duo = DuoUniversal;
 
 namespace Bit.Core.Auth.Identity.TokenProviders;
@@ -157,13 +158,66 @@ public class DuoUniversalTokenService(
         return false;
     }
 
+    private static bool IsBitwardenCloudHost(string host)
+    {
+        if (string.IsNullOrWhiteSpace(host))
+        {
+            return false;
+        }
+
+        var normalizedHost = host.ToLowerInvariant();
+        return normalizedHost.EndsWith("bitwarden.com") ||
+               normalizedHost.EndsWith("bitwarden.eu") ||
+               normalizedHost.EndsWith("bitwarden.pw");
+    }
+
+    private static bool IsLocalRequestHost(string host)
+    {
+        if (string.IsNullOrWhiteSpace(host))
+        {
+            return false;
+        }
+
+        var normalizedHost = host.ToLowerInvariant();
+        return normalizedHost == "localhost" ||
+               normalizedHost == "127.0.0.1" ||
+               normalizedHost == "::1" ||
+               normalizedHost.EndsWith(".localhost");
+    }
+
+    private static string GetDeeplinkSchemeOverride(HttpContext httpContext)
+    {
+        if (httpContext == null)
+        {
+            return null;
+        }
+
+        var host = httpContext.Request?.Host.Host;
+        // Only allow overrides when developing/testing locally to avoid abuse in production
+        if (!IsLocalRequestHost(host))
+        {
+            return null;
+        }
+
+        // Querystring has precedence over header for manual local testing
+        var overrideFromQuery = httpContext.Request?.Query["deeplinkScheme"].FirstOrDefault();
+        var overrideFromHeader = httpContext.Request?.Headers["Bitwarden-Deeplink-Scheme"].FirstOrDefault();
+        var candidate = (overrideFromQuery ?? overrideFromHeader)?.Trim().ToLowerInvariant();
+
+        // Allow only the two supported values
+        return candidate is "https" or "bitwarden" ? candidate : null;
+    }
+
     public async Task<Duo.Client> BuildDuoTwoFactorClientAsync(TwoFactorProvider provider)
     {
         // Fetch Client name from header value since duo auth can be initiated from multiple clients and we want
         // to redirect back to the initiating client
         _currentContext.HttpContext.Request.Headers.TryGetValue("Bitwarden-Client-Name", out var bitwardenClientName);
-        var redirectUri = string.Format("{0}/duo-redirect-connector.html?client={1}",
-            _globalSettings.BaseServiceUri.Vault, bitwardenClientName.FirstOrDefault() ?? "web");
+        var requestHost = _currentContext.HttpContext?.Request?.Host.Host;
+        var deeplinkScheme = GetDeeplinkSchemeOverride(_currentContext.HttpContext) ??
+            (IsBitwardenCloudHost(requestHost) ? "https" : "bitwarden");
+        var redirectUri = string.Format("{0}/duo-redirect-connector.html?client={1}&deeplinkScheme={2}",
+            _globalSettings.BaseServiceUri.Vault, bitwardenClientName.FirstOrDefault() ?? "web", deeplinkScheme);
 
         var client = new Duo.ClientBuilder(
             (string)provider.MetaData["ClientId"],
