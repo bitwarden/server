@@ -76,6 +76,12 @@ public class ImportCiphersCommand : IImportCiphersCommand
             {
                 cipher.Favorites = $"{{\"{cipher.UserId.ToString().ToUpperInvariant()}\":\"true\"}}";
             }
+
+            if (cipher.ArchivedDate.HasValue)
+            {
+                cipher.Archives = $"{{\"{cipher.UserId.ToString().ToUpperInvariant()}\":\"" +
+                                  $"{cipher.ArchivedDate.Value:yyyy-MM-ddTHH:mm:ss.fffffffZ}\"}}";
+            }
         }
 
         var userfoldersIds = (await _folderRepository.GetManyByUserIdAsync(importingUserId)).Select(f => f.Id).ToList();
