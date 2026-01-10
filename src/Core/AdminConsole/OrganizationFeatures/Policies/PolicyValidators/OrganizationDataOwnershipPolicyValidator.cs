@@ -57,14 +57,15 @@ public class OrganizationDataOwnershipPolicyValidator(
         var userOrgIds = requirements
             .Select(requirement => requirement.GetDefaultCollectionRequestOnPolicyEnable(policyUpdate.OrganizationId))
             .Where(request => request.ShouldCreateDefaultCollection)
-            .Select(request => request.OrganizationUserId);
+            .Select(request => request.OrganizationUserId)
+            .ToList();
 
         if (!userOrgIds.Any())
         {
             return;
         }
 
-        await collectionRepository.UpsertDefaultCollectionsAsync(
+        await collectionRepository.CreateDefaultCollectionsBulkAsync(
             policyUpdate.OrganizationId,
             userOrgIds,
             defaultCollectionName);

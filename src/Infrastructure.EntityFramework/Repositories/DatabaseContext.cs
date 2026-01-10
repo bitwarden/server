@@ -17,8 +17,6 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using DP = Microsoft.AspNetCore.DataProtection;
 
 
-#nullable enable
-
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public class DatabaseContext : DbContext
