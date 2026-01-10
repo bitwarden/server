@@ -77,9 +77,9 @@ public class ImportCiphersCommand : IImportCiphersCommand
                 cipher.Favorites = $"{{\"{cipher.UserId.ToString().ToUpperInvariant()}\":\"true\"}}";
             }
 
-            if (cipher.ArchivedDate.HasValue)
+            if (cipher.UserId.HasValue && cipher.ArchivedDate.HasValue)
             {
-                cipher.Archives = $"{{\"{cipher.UserId.ToString().ToUpperInvariant()}\":\"" +
+                cipher.Archives = $"{{\"{cipher.UserId.Value.ToString().ToUpperInvariant()}\":\"" +
                                   $"{cipher.ArchivedDate.Value:yyyy-MM-ddTHH:mm:ss.fffffffZ}\"}}";
             }
         }

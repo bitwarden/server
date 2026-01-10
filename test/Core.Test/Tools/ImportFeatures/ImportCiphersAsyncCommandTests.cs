@@ -289,4 +289,37 @@ public class ImportCiphersAsyncCommandTests
 
         await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncVaultAsync(importingUserId);
     }
+
+    [Theory, BitAutoData]
+    public async Task ImportIntoIndividualVaultAsync_WithArchivedCiphers_PreservesArchiveStatus(
+        Guid importingUserId,
+        List<CipherDetails> ciphers,
+        SutProvider<ImportCiphersCommand> sutProvider)
+    {
+        var archivedDate = DateTime.UtcNow.AddDays(-1);
+        ciphers[0].UserId = importingUserId;
+        ciphers[0].ArchivedDate = archivedDate;
+
+        sutProvider.GetDependency<IPolicyService>()
+            .AnyPoliciesApplicableToUserAsync(importingUserId, PolicyType.OrganizationDataOwnership)
+            .Returns(false);
+
+        sutProvider.GetDependency<IFolderRepository>()
+            .GetManyByUserIdAsync(importingUserId)
+            .Returns(new List<Folder>());
+
+        var folders = new List<Folder>();
+        var folderRelationships = new List<KeyValuePair<int, int>>();
+
+        await sutProvider.Sut.ImportIntoIndividualVaultAsync(folders, ciphers, folderRelationships, importingUserId);
+
+        await sutProvider.GetDependency<ICipherRepository>()
+            .Received(1)
+            .CreateAsync(importingUserId,
+                Arg.Is<List<CipherDetails>>(c =>
+                    c[0].Archives != null &&
+                    c[0].Archives.Contains(importingUserId.ToString().ToUpperInvariant()) &&
+                    c[0].Archives.Contains(archivedDate.ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ"))),
+                Arg.Any<List<Folder>>());
+    }
 }
