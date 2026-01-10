@@ -7,6 +7,7 @@ using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Subscriptions.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Platform.Push;
@@ -49,6 +50,7 @@ public interface ICreatePremiumCloudHostedSubscriptionCommand
 
 public class CreatePremiumCloudHostedSubscriptionCommand(
     IBraintreeGateway braintreeGateway,
+    IBraintreeService braintreeService,
     IGlobalSettings globalSettings,
     ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
@@ -300,6 +302,7 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
                 ValidateLocation = ValidateTaxLocationTiming.Immediately
             }
         };
+
         return await stripeAdapter.UpdateCustomerAsync(customer.Id, options);
     }
 
@@ -351,13 +354,17 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
 
         var subscription = await stripeAdapter.CreateSubscriptionAsync(subscriptionCreateOptions);
 
-        if (usingPayPal)
+        if (!usingPayPal)
         {
-            await stripeAdapter.UpdateInvoiceAsync(subscription.LatestInvoiceId, new InvoiceUpdateOptions
-            {
-                AutoAdvance = false
-            });
+            return subscription;
         }
+
+        var invoice = await stripeAdapter.UpdateInvoiceAsync(subscription.LatestInvoiceId, new InvoiceUpdateOptions
+        {
+            AutoAdvance = false
+        });
+
+        await braintreeService.PayInvoice(new UserId(userId), invoice);
 
         return subscription;
     }

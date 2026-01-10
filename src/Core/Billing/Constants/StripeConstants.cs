@@ -42,6 +42,7 @@ public static class StripeConstants
     public static class ErrorCodes
     {
         public const string CustomerTaxLocationInvalid = "customer_tax_location_invalid";
+        public const string InvoiceUpcomingNone = "invoice_upcoming_none";
         public const string PaymentMethodMicroDepositVerificationAttemptsExceeded = "payment_method_microdeposit_verification_attempts_exceeded";
         public const string PaymentMethodMicroDepositVerificationDescriptorCodeMismatch = "payment_method_microdeposit_verification_descriptor_code_mismatch";
         public const string PaymentMethodMicroDepositVerificationTimeout = "payment_method_microdeposit_verification_timeout";
@@ -65,8 +66,10 @@ public static class StripeConstants
     public static class MetadataKeys
     {
         public const string BraintreeCustomerId = "btCustomerId";
+        public const string BraintreeTransactionId = "btTransactionId";
         public const string InvoiceApproved = "invoice_approved";
         public const string OrganizationId = "organizationId";
+        public const string PayPalTransactionId = "btPayPalTransactionId";
         public const string PreviousAdditionalStorage = "previous_additional_storage";
         public const string PreviousPeriodEndDate = "previous_period_end_date";
         public const string PreviousPremiumPriceId = "previous_premium_price_id";

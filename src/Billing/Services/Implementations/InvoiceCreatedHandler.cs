@@ -1,12 +1,13 @@
 ﻿using Bit.Core.Billing.Constants;
+using Bit.Core.Services;
 using Event = Stripe.Event;
 
 namespace Bit.Billing.Services.Implementations;
 
 public class InvoiceCreatedHandler(
+    IBraintreeService braintreeService,
     ILogger<InvoiceCreatedHandler> logger,
     IStripeEventService stripeEventService,
-    IStripeEventUtilityService stripeEventUtilityService,
     IProviderEventService providerEventService)
     : IInvoiceCreatedHandler
 {
@@ -29,9 +30,9 @@ public class InvoiceCreatedHandler(
     {
         try
         {
-            var invoice = await stripeEventService.GetInvoice(parsedEvent, true, ["customer"]);
+            var invoice = await stripeEventService.GetInvoice(parsedEvent, true, ["customer", "parent.subscription_details.subscription"]);
 
-            var usingPayPal = invoice.Customer?.Metadata.ContainsKey("btCustomerId") ?? false;
+            var usingPayPal = invoice.Customer.Metadata.ContainsKey("btCustomerId");
 
             if (usingPayPal && invoice is
                 {
@@ -39,13 +40,12 @@ public class InvoiceCreatedHandler(
                     Status: not StripeConstants.InvoiceStatus.Paid,
                     CollectionMethod: "charge_automatically",
                     BillingReason:
-                    "subscription_create" or
                     "subscription_cycle" or
                     "automatic_pending_invoice_item_invoice",
-                    Parent.SubscriptionDetails: not null
+                    Parent.SubscriptionDetails.Subscription: not null
                 })
             {
-                await stripeEventUtilityService.AttemptToPayInvoiceAsync(invoice);
+                await braintreeService.PayInvoice(invoice.Parent.SubscriptionDetails.Subscription, invoice);
             }
         }
         catch (Exception exception)

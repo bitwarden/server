@@ -7,6 +7,8 @@ using Bit.Core.Billing.Licenses.Queries;
 using Bit.Core.Billing.Payment.Commands;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Premium.Commands;
+using Bit.Core.Billing.Subscriptions.Commands;
+using Bit.Core.Billing.Subscriptions.Queries;
 using Bit.Core.Entities;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
@@ -21,9 +23,11 @@ namespace Bit.Api.Billing.Controllers.VNext;
 public class AccountBillingVNextController(
     ICreateBitPayInvoiceForCreditCommand createBitPayInvoiceForCreditCommand,
     ICreatePremiumCloudHostedSubscriptionCommand createPremiumCloudHostedSubscriptionCommand,
+    IGetBitwardenSubscriptionQuery getBitwardenSubscriptionQuery,
     IGetCreditQuery getCreditQuery,
     IGetPaymentMethodQuery getPaymentMethodQuery,
     IGetUserLicenseQuery getUserLicenseQuery,
+    IReinstateSubscriptionCommand reinstateSubscriptionCommand,
     IUpdatePaymentMethodCommand updatePaymentMethodCommand,
     IUpdatePremiumStorageCommand updatePremiumStorageCommand,
     IUpgradePremiumToOrganizationCommand upgradePremiumToOrganizationCommand) : BaseBillingController
@@ -91,10 +95,30 @@ public class AccountBillingVNextController(
         return TypedResults.Ok(response);
     }
 
-    [HttpPut("storage")]
+    [HttpGet("subscription")]
     [RequireFeature(FeatureFlagKeys.PM29594_UpdateIndividualSubscriptionPage)]
     [InjectUser]
-    public async Task<IResult> UpdateStorageAsync(
+    public async Task<IResult> GetSubscriptionAsync(
+        [BindNever] User user)
+    {
+        var subscription = await getBitwardenSubscriptionQuery.Run(user);
+        return TypedResults.Ok(subscription);
+    }
+
+    [HttpPost("subscription/reinstate")]
+    [RequireFeature(FeatureFlagKeys.PM29594_UpdateIndividualSubscriptionPage)]
+    [InjectUser]
+    public async Task<IResult> ReinstateSubscriptionAsync(
+        [BindNever] User user)
+    {
+        var result = await reinstateSubscriptionCommand.Run(user);
+        return Handle(result);
+    }
+
+    [HttpPut("subscription/storage")]
+    [RequireFeature(FeatureFlagKeys.PM29594_UpdateIndividualSubscriptionPage)]
+    [InjectUser]
+    public async Task<IResult> UpdateSubscriptionStorageAsync(
         [BindNever] User user,
         [FromBody] StorageUpdateRequest request)
     {

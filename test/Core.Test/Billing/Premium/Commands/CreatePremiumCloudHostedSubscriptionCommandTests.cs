@@ -8,6 +8,7 @@ using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Premium.Commands;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Subscriptions.Models;
 using Bit.Core.Entities;
 using Bit.Core.Platform.Push;
 using Bit.Core.Services;
@@ -29,6 +30,7 @@ namespace Bit.Core.Test.Billing.Premium.Commands;
 public class CreatePremiumCloudHostedSubscriptionCommandTests
 {
     private readonly IBraintreeGateway _braintreeGateway = Substitute.For<IBraintreeGateway>();
+    private readonly IBraintreeService _braintreeService = Substitute.For<IBraintreeService>();
     private readonly IGlobalSettings _globalSettings = Substitute.For<IGlobalSettings>();
     private readonly ISetupIntentCache _setupIntentCache = Substitute.For<ISetupIntentCache>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
@@ -59,6 +61,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
 
         _command = new CreatePremiumCloudHostedSubscriptionCommand(
             _braintreeGateway,
+            _braintreeService,
             _globalSettings,
             _setupIntentCache,
             _stripeAdapter,
@@ -235,11 +238,15 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         var mockCustomer = Substitute.For<StripeCustomer>();
         mockCustomer.Id = "cust_123";
         mockCustomer.Address = new Address { Country = "US", PostalCode = "12345" };
-        mockCustomer.Metadata = new Dictionary<string, string>();
+        mockCustomer.Metadata = new Dictionary<string, string>
+        {
+            [Core.Billing.Utilities.BraintreeCustomerIdKey] = "bt_customer_123"
+        };
 
         var mockSubscription = Substitute.For<StripeSubscription>();
         mockSubscription.Id = "sub_123";
         mockSubscription.Status = "active";
+        mockSubscription.LatestInvoiceId = "in_123";
 
         var mockInvoice = Substitute.For<Invoice>();
 
@@ -258,6 +265,9 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         await _stripeAdapter.Received(1).CreateCustomerAsync(Arg.Any<CustomerCreateOptions>());
         await _stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>());
         await _subscriberService.Received(1).CreateBraintreeCustomer(user, paymentMethod.Token);
+        await _stripeAdapter.Received(1).UpdateInvoiceAsync(mockSubscription.LatestInvoiceId,
+            Arg.Is<InvoiceUpdateOptions>(opts => opts.AutoAdvance == false));
+        await _braintreeService.Received(1).PayInvoice(Arg.Any<SubscriberId>(), mockInvoice);
         await _userService.Received(1).SaveUserAsync(user);
         await _pushNotificationService.Received(1).PushSyncVaultAsync(user.Id);
     }
@@ -456,11 +466,15 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         var mockCustomer = Substitute.For<StripeCustomer>();
         mockCustomer.Id = "cust_123";
         mockCustomer.Address = new Address { Country = "US", PostalCode = "12345" };
-        mockCustomer.Metadata = new Dictionary<string, string>();
+        mockCustomer.Metadata = new Dictionary<string, string>
+        {
+            [Core.Billing.Utilities.BraintreeCustomerIdKey] = "bt_customer_123"
+        };
 
         var mockSubscription = Substitute.For<StripeSubscription>();
         mockSubscription.Id = "sub_123";
         mockSubscription.Status = "incomplete";
+        mockSubscription.LatestInvoiceId = "in_123";
         mockSubscription.Items = new StripeList<SubscriptionItem>
         {
             Data =
@@ -487,6 +501,9 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         Assert.True(result.IsT0);
         Assert.True(user.Premium);
         Assert.Equal(mockSubscription.GetCurrentPeriodEnd(), user.PremiumExpirationDate);
+        await _stripeAdapter.Received(1).UpdateInvoiceAsync(mockSubscription.LatestInvoiceId,
+            Arg.Is<InvoiceUpdateOptions>(opts => opts.AutoAdvance == false));
+        await _braintreeService.Received(1).PayInvoice(Arg.Any<SubscriberId>(), mockInvoice);
     }
 
     [Theory, BitAutoData]
@@ -559,11 +576,15 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         var mockCustomer = Substitute.For<StripeCustomer>();
         mockCustomer.Id = "cust_123";
         mockCustomer.Address = new Address { Country = "US", PostalCode = "12345" };
-        mockCustomer.Metadata = new Dictionary<string, string>();
+        mockCustomer.Metadata = new Dictionary<string, string>
+        {
+            [Core.Billing.Utilities.BraintreeCustomerIdKey] = "bt_customer_123"
+        };
 
         var mockSubscription = Substitute.For<StripeSubscription>();
         mockSubscription.Id = "sub_123";
         mockSubscription.Status = "active"; // PayPal + active doesn't match pattern
+        mockSubscription.LatestInvoiceId = "in_123";
         mockSubscription.Items = new StripeList<SubscriptionItem>
         {
             Data =
@@ -590,6 +611,9 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         Assert.True(result.IsT0);
         Assert.False(user.Premium);
         Assert.Null(user.PremiumExpirationDate);
+        await _stripeAdapter.Received(1).UpdateInvoiceAsync(mockSubscription.LatestInvoiceId,
+            Arg.Is<InvoiceUpdateOptions>(opts => opts.AutoAdvance == false));
+        await _braintreeService.Received(1).PayInvoice(Arg.Any<SubscriberId>(), mockInvoice);
     }
 
     [Theory, BitAutoData]

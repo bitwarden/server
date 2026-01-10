@@ -10,6 +10,7 @@ using Bit.Core.Utilities;
 
 namespace Bit.Api.Models.Response;
 
+// TODO: Remove with deletion of pm-29594-update-individual-subscription-page
 public class SubscriptionResponseModel : ResponseModel
 {
 

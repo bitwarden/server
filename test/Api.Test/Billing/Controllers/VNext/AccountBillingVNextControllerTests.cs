@@ -3,6 +3,8 @@ using Bit.Api.Billing.Models.Requests.Storage;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Licenses.Queries;
 using Bit.Core.Billing.Premium.Commands;
+using Bit.Core.Billing.Subscriptions.Commands;
+using Bit.Core.Billing.Subscriptions.Queries;
 using Bit.Core.Entities;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Http;
@@ -29,9 +31,11 @@ public class AccountBillingVNextControllerTests
         _sut = new AccountBillingVNextController(
             Substitute.For<Core.Billing.Payment.Commands.ICreateBitPayInvoiceForCreditCommand>(),
             Substitute.For<Core.Billing.Premium.Commands.ICreatePremiumCloudHostedSubscriptionCommand>(),
+            Substitute.For<IGetBitwardenSubscriptionQuery>(),
             Substitute.For<Core.Billing.Payment.Queries.IGetCreditQuery>(),
             Substitute.For<Core.Billing.Payment.Queries.IGetPaymentMethodQuery>(),
             _getUserLicenseQuery,
+            Substitute.For<IReinstateSubscriptionCommand>(),
             Substitute.For<Core.Billing.Payment.Commands.IUpdatePaymentMethodCommand>(),
             _updatePremiumStorageCommand,
             _upgradePremiumToOrganizationCommand);
@@ -63,7 +67,7 @@ public class AccountBillingVNextControllerTests
             .Returns(new BillingCommandResult<None>(new None()));
 
         // Act
-        var result = await _sut.UpdateStorageAsync(user, request);
+        var result = await _sut.UpdateSubscriptionStorageAsync(user, request);
 
         // Assert
         var okResult = Assert.IsAssignableFrom<IResult>(result);
@@ -83,7 +87,7 @@ public class AccountBillingVNextControllerTests
             .Returns(new BadRequest(errorMessage));
 
         // Act
-        var result = await _sut.UpdateStorageAsync(user, request);
+        var result = await _sut.UpdateSubscriptionStorageAsync(user, request);
 
         // Assert
         var badRequestResult = Assert.IsAssignableFrom<IResult>(result);
@@ -103,7 +107,7 @@ public class AccountBillingVNextControllerTests
             .Returns(new BadRequest(errorMessage));
 
         // Act
-        var result = await _sut.UpdateStorageAsync(user, request);
+        var result = await _sut.UpdateSubscriptionStorageAsync(user, request);
 
         // Assert
         var badRequestResult = Assert.IsAssignableFrom<IResult>(result);
@@ -123,7 +127,7 @@ public class AccountBillingVNextControllerTests
             .Returns(new BadRequest(errorMessage));
 
         // Act
-        var result = await _sut.UpdateStorageAsync(user, request);
+        var result = await _sut.UpdateSubscriptionStorageAsync(user, request);
 
         // Assert
         var badRequestResult = Assert.IsAssignableFrom<IResult>(result);
@@ -143,7 +147,7 @@ public class AccountBillingVNextControllerTests
             .Returns(new BadRequest(errorMessage));
 
         // Act
-        var result = await _sut.UpdateStorageAsync(user, request);
+        var result = await _sut.UpdateSubscriptionStorageAsync(user, request);
 
         // Assert
         var badRequestResult = Assert.IsAssignableFrom<IResult>(result);
@@ -163,7 +167,7 @@ public class AccountBillingVNextControllerTests
             .Returns(new BadRequest(errorMessage));
 
         // Act
-        var result = await _sut.UpdateStorageAsync(user, request);
+        var result = await _sut.UpdateSubscriptionStorageAsync(user, request);
 
         // Assert
         var badRequestResult = Assert.IsAssignableFrom<IResult>(result);
@@ -182,7 +186,7 @@ public class AccountBillingVNextControllerTests
             .Returns(new BillingCommandResult<None>(new None()));
 
         // Act
-        var result = await _sut.UpdateStorageAsync(user, request);
+        var result = await _sut.UpdateSubscriptionStorageAsync(user, request);
 
         // Assert
         var okResult = Assert.IsAssignableFrom<IResult>(result);
@@ -201,7 +205,7 @@ public class AccountBillingVNextControllerTests
             .Returns(new BillingCommandResult<None>(new None()));
 
         // Act
-        var result = await _sut.UpdateStorageAsync(user, request);
+        var result = await _sut.UpdateSubscriptionStorageAsync(user, request);
 
         // Assert
         var okResult = Assert.IsAssignableFrom<IResult>(result);
@@ -220,7 +224,7 @@ public class AccountBillingVNextControllerTests
             .Returns(new BillingCommandResult<None>(new None()));
 
         // Act
-        var result = await _sut.UpdateStorageAsync(user, request);
+        var result = await _sut.UpdateSubscriptionStorageAsync(user, request);
 
         // Assert
         var okResult = Assert.IsAssignableFrom<IResult>(result);
@@ -239,7 +243,7 @@ public class AccountBillingVNextControllerTests
             .Returns(new BillingCommandResult<None>(new None()));
 
         // Act
-        var result = await _sut.UpdateStorageAsync(user, request);
+        var result = await _sut.UpdateSubscriptionStorageAsync(user, request);
 
         // Assert
         var okResult = Assert.IsAssignableFrom<IResult>(result);
