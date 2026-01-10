@@ -8,7 +8,6 @@
   <PropertyGroup Label="Server SDK settings">
     <!-- These features will be gradually turned on -->
     <BitIncludeFeatures>false</BitIncludeFeatures>
-    <BitIncludeTelemetry>false</BitIncludeTelemetry>
     <BitIncludeAuthentication>false</BitIncludeAuthentication>
   </PropertyGroup>
 
