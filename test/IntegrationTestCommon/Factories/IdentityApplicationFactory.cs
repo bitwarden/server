@@ -239,7 +239,6 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
         if (requestModel.MasterPasswordUnlock != null)
         {
             var unlock = requestModel.MasterPasswordUnlock;
-            // PM-28143 - Once UserSymmetricKey is removed and UnlockData is required, delete the fallback to UserSymmetricKey below.
             // Always force a valid encrypted string for tests to avoid model validation failures.
             var masterKeyWrappedUserKey = DefaultEncryptedString;
             requestModel.MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel

@@ -275,22 +275,28 @@ public class RegisterFinishRequestModelTests
     }
 
     [Fact]
-    public void Validate_WhenNeitherAuthNorUnlock_AndValidRootKdf_IsValid()
+    public void Validate_WhenAuthAndRootHashBothMissing_ReturnsMissingHashErrorOnly()
     {
         var model = new RegisterFinishRequestModel
         {
             Email = "user@example.com",
             UserAsymmetricKeys = new KeysRequestModel { PublicKey = "pk", EncryptedPrivateKey = "sk" },
+            // Both MasterPasswordAuthentication and MasterPasswordHash are missing
+            MasterPasswordAuthentication = null,
+            MasterPasswordHash = null,
+            // Provide valid root KDF to avoid root KDF errors
             Kdf = KdfType.PBKDF2_SHA256,
             KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
-            // Memory and Parallelism irrelevant for PBKDF2
-            EmailVerificationToken = "token"
+            EmailVerificationToken = "token" // avoid token error
         };
 
         var results = Validate(model);
 
-        Assert.DoesNotContain(results, r => r.ErrorMessage?.Contains("Kdf") == true);
-        Assert.Empty(results.Where(r => r.ErrorMessage == "No valid registration token provided"));
+        // Only the new missing hash error should be present
+        Assert.Single(results);
+        Assert.Equal($"{nameof(MasterPasswordAuthenticationDataRequestModel.MasterPasswordAuthenticationHash)} and {nameof(RegisterFinishRequestModel.MasterPasswordHash)} not found on request, one needs to be defined.", results[0].ErrorMessage);
+        Assert.Contains(nameof(MasterPasswordAuthenticationDataRequestModel.MasterPasswordAuthenticationHash), results[0].MemberNames);
+        Assert.Contains(nameof(RegisterFinishRequestModel.MasterPasswordHash), results[0].MemberNames);
     }
 
     [Fact]

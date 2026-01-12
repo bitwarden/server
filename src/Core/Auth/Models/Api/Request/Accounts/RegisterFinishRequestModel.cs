@@ -125,6 +125,12 @@ public class RegisterFinishRequestModel : IValidatableObject
                     $"{nameof(MasterPasswordAuthentication.MasterPasswordAuthenticationHash)} and root level {nameof(MasterPasswordHash)} provided and are not equal. Only provide one.",
                     [nameof(MasterPasswordAuthentication.MasterPasswordAuthenticationHash), nameof(MasterPasswordHash)]);
             }
+        } // 1.5 if there is no master password hash that is unacceptable even though they are both optional in the model
+        else if (MasterPasswordAuthentication == null && MasterPasswordHash == null)
+        {
+            yield return new ValidationResult(
+                $"{nameof(MasterPasswordAuthentication.MasterPasswordAuthenticationHash)} and {nameof(MasterPasswordHash)} not found on request, one needs to be defined.",
+                [nameof(MasterPasswordAuthentication.MasterPasswordAuthenticationHash), nameof(MasterPasswordHash)]);
         }
 
         // 2. Validate kdf settings.

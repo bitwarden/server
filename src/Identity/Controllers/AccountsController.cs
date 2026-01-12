@@ -147,22 +147,22 @@ public class AccountsController : Controller
         IdentityResult? identityResult = null;
 
         // PM-28143 - Just use the MasterPasswordAuthenticationData.MasterPasswordAuthenticationHash
-        string masterPasswordHash = model.MasterPasswordAuthentication?.MasterPasswordAuthenticationHash
-                                 ?? model.MasterPasswordHash ?? throw new BadRequestException("MasterPasswordHash couldn't be found on either the MasterPasswordAuthenticationData or the MasterPasswordHash property passed in.");
+        string masterPasswordAuthenticationHash = model.MasterPasswordAuthentication?.MasterPasswordAuthenticationHash
+                                                  ?? model.MasterPasswordHash!;
 
         switch (model.GetTokenType())
         {
             case RegisterFinishTokenType.EmailVerification:
                 identityResult = await _registerUserCommand.RegisterUserViaEmailVerificationToken(
                     user,
-                    masterPasswordHash,
+                    masterPasswordAuthenticationHash,
                     model.EmailVerificationToken!);
                 return ProcessRegistrationResult(identityResult, user);
 
             case RegisterFinishTokenType.OrganizationInvite:
                 identityResult = await _registerUserCommand.RegisterUserViaOrganizationInviteToken(
                     user,
-                    masterPasswordHash,
+                    masterPasswordAuthenticationHash,
                     model.OrgInviteToken!,
                     model.OrganizationUserId);
                 return ProcessRegistrationResult(identityResult, user);
@@ -170,14 +170,14 @@ public class AccountsController : Controller
             case RegisterFinishTokenType.OrgSponsoredFreeFamilyPlan:
                 identityResult = await _registerUserCommand.RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(
                     user,
-                    masterPasswordHash,
+                    masterPasswordAuthenticationHash,
                     model.OrgSponsoredFreeFamilyPlanToken!);
                 return ProcessRegistrationResult(identityResult, user);
 
             case RegisterFinishTokenType.EmergencyAccessInvite:
                 identityResult = await _registerUserCommand.RegisterUserViaAcceptEmergencyAccessInviteToken(
                     user,
-                    masterPasswordHash,
+                    masterPasswordAuthenticationHash,
                     model.AcceptEmergencyAccessInviteToken!,
                     (Guid)model.AcceptEmergencyAccessId!);
                 return ProcessRegistrationResult(identityResult, user);
@@ -185,7 +185,7 @@ public class AccountsController : Controller
             case RegisterFinishTokenType.ProviderInvite:
                 identityResult = await _registerUserCommand.RegisterUserViaProviderInviteToken(
                     user,
-                    masterPasswordHash,
+                    masterPasswordAuthenticationHash,
                     model.ProviderInviteToken!,
                     (Guid)model.ProviderUserId!);
                 return ProcessRegistrationResult(identityResult, user);
