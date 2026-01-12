@@ -144,6 +144,7 @@ public static class FeatureFlagKeys
     public const string IncreaseBulkReinviteLimitForCloud = "pm-28251-increase-bulk-reinvite-limit-for-cloud";
     public const string BulkRevokeUsersV2 = "pm-28456-bulk-revoke-users-v2";
     public const string PremiumAccessQuery = "pm-21411-premium-access-query";
+    public const string RefactorOrgAcceptInit = "pm-28795-refactor-org-accept-init";
 
     /* Architecture */
     public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";
