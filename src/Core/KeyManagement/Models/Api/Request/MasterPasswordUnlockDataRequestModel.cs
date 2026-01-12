@@ -11,8 +11,12 @@ namespace Bit.Core.KeyManagement.Models.Api.Request;
 public class MasterPasswordUnlockDataRequestModel
 {
     public required KdfRequestModel Kdf { get; init; }
-    [EncryptedString] public required string MasterKeyWrappedUserKey { get; init; }
-    [StringLength(256)] public required string Salt { get; init; }
+    [Required]
+    [EncryptedString]
+    public required string MasterKeyWrappedUserKey { get; init; }
+    [Required]
+    [StringLength(256)]
+    public required string Salt { get; init; }
 
     public MasterPasswordUnlockData ToData()
     {
