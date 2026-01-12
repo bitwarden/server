@@ -240,11 +240,10 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
         {
             var unlock = requestModel.MasterPasswordUnlock;
             // Always force a valid encrypted string for tests to avoid model validation failures.
-            var masterKeyWrappedUserKey = DefaultEncryptedString;
             requestModel.MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
             {
                 Kdf = alignedKdf,
-                MasterKeyWrappedUserKey = masterKeyWrappedUserKey,
+                MasterKeyWrappedUserKey = unlock.MasterKeyWrappedUserKey,
                 Salt = string.IsNullOrWhiteSpace(unlock.Salt) ? requestModel.Email : unlock.Salt
             };
         }
