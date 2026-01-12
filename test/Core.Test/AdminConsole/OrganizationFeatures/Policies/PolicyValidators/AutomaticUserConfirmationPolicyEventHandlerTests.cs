@@ -283,7 +283,7 @@ public class AutomaticUserConfirmationPolicyEventHandlerTests
             OrganizationId = policyUpdate.OrganizationId,
             Type = OrganizationUserType.User,
             Status = OrganizationUserStatusType.Invited,
-            UserId = Guid.NewGuid(),
+            UserId = null, // Invited users have null UserId
             Email = "invited@example.com"
         };
 
@@ -300,6 +300,57 @@ public class AutomaticUserConfirmationPolicyEventHandlerTests
 
         // Assert
         Assert.True(string.IsNullOrEmpty(result));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_EnablingPolicy_MixedUsersWithNullUserId_HandlesCorrectly(
+        [PolicyUpdate(PolicyType.AutomaticUserConfirmation)] PolicyUpdate policyUpdate,
+        Guid confirmedUserId,
+        SutProvider<AutomaticUserConfirmationPolicyEventHandler> sutProvider)
+    {
+        // Arrange - Mix of invited users (null UserId) and confirmed users
+        var invitedUser = new OrganizationUserUserDetails
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = policyUpdate.OrganizationId,
+            Type = OrganizationUserType.User,
+            Status = OrganizationUserStatusType.Invited,
+            UserId = null, // Invited users have null UserId
+            Email = "invited@example.com"
+        };
+
+        var confirmedUser = new OrganizationUserUserDetails
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = policyUpdate.OrganizationId,
+            Type = OrganizationUserType.User,
+            Status = OrganizationUserStatusType.Confirmed,
+            UserId = confirmedUserId,
+            Email = "confirmed@example.com"
+        };
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyDetailsByOrganizationAsync(policyUpdate.OrganizationId)
+            .Returns([invitedUser, confirmedUser]);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByManyUsersAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns([]);
+
+        sutProvider.GetDependency<IProviderUserRepository>()
+            .GetManyByManyUsersAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns([]);
+
+        // Act
+        var result = await sutProvider.Sut.ValidateAsync(policyUpdate, null);
+
+        // Assert
+        Assert.True(string.IsNullOrEmpty(result));
+
+        // Verify that GetManyByManyUsersAsync was called only with non-null UserIds
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .GetManyByManyUsersAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Count() == 1 && ids.First() == confirmedUserId));
     }
 
     [Theory, BitAutoData]

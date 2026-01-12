@@ -74,8 +74,10 @@ public class AutomaticUserConfirmationPolicyEventHandler(
     private async Task<string> ValidateUserComplianceWithSingleOrgAsync(Guid organizationId,
         ICollection<OrganizationUserUserDetails> organizationUsers)
     {
-        var hasNonCompliantUser = (await organizationUserRepository.GetManyByManyUsersAsync(
-                organizationUsers.Select(ou => ou.UserId!.Value)))
+        var userIds = organizationUsers.Where(x => x.UserId is not null)
+            .Select(x => x.UserId!.Value);
+
+        var hasNonCompliantUser = (await organizationUserRepository.GetManyByManyUsersAsync(userIds))
             .Any(uo => uo.OrganizationId != organizationId
                        && uo.Status != OrganizationUserStatusType.Invited);
 
