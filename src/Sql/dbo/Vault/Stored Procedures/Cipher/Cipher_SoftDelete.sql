@@ -6,7 +6,7 @@ BEGIN
     SET NOCOUNT ON
 
     CREATE TABLE #Temp
-    ( 
+    (
         [Id] UNIQUEIDENTIFIER NOT NULL,
         [UserId] UNIQUEIDENTIFIER NULL,
         [OrganizationId] UNIQUEIDENTIFIER NULL
