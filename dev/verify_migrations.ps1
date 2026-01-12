@@ -212,6 +212,8 @@ foreach ($migrationPathInfo in $efMigrationPaths) {
 
     # Group migrations by base name (without .Designer.cs suffix)
     $migrationGroups = @{}
+    $unmatchedFiles = @()
+
     foreach ($migration in $addedMigrations) {
         $migrationName = Split-Path -Leaf $migration
 
@@ -223,6 +225,25 @@ foreach ($migrationPathInfo in $efMigrationPaths) {
             }
             $migrationGroups[$baseName] += $migrationName
         }
+        else {
+            # Track files that don't match the expected pattern
+            $unmatchedFiles += $migrationName
+        }
+    }
+
+    # Flag any files that don't match the expected pattern
+    if ($unmatchedFiles.Count -gt 0) {
+        Write-Host "ERROR: The following migration files do not match the required format:"
+        foreach ($unmatchedFile in $unmatchedFiles) {
+            Write-Host "  - $unmatchedFile"
+        }
+        Write-Host ""
+        Write-Host "Required format: YYYYMMDDHHMMSS_Description.cs or YYYYMMDDHHMMSS_Description.Designer.cs"
+        Write-Host "  - YYYYMMDDHHMMSS: 14-digit timestamp (Year, Month, Day, Hour, Minute, Second)"
+        Write-Host "  - Description: Descriptive name using PascalCase"
+        Write-Host "Example: 20250115120000_AddNewFeature.cs and 20250115120000_AddNewFeature.Designer.cs"
+        Write-Host ""
+        $efValidationFailed = $true
     }
 
     foreach ($baseName in $migrationGroups.Keys | Sort-Object) {
