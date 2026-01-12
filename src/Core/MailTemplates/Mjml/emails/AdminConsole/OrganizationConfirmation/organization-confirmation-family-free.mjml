@@ -8,7 +8,7 @@
     <mj-wrapper css-class="border-fix" padding="20px 20px 10px 20px">
       <mj-bw-hero
         img-src="https://assets.bitwarden.com/email/v1/spot-family-homes.png"
-        title="You can now share passwords with members of {{OrganizationName}}!"
+        title="You can now share passwords with members of <b>{{OrganizationName}}!</b>"
         button-text="<b>Log in</b>"
         button-url="{{WebVaultUrl}}"
       />
