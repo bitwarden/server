@@ -37,7 +37,7 @@ public class UnarchiveCiphersCommand : IUnarchiveCiphersCommand
         }
 
         var unarchivingCiphers = ciphers
-            .Where(c => cipherIdsSet.Contains(c.Id) && c is { Edit: true, ArchivedDate: not null })
+            .Where(c => cipherIdsSet.Contains(c.Id) && c is { ArchivedDate: not null })
             .ToList();
 
         var revisionDate =

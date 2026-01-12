@@ -49,6 +49,7 @@ public class ProfileOrganizationResponseModelTests
             UseCustomPermissions = organization.UseCustomPermissions,
             UseRiskInsights = organization.UseRiskInsights,
             UsePhishingBlocker = organization.UsePhishingBlocker,
+            UseDisableSMAdsForUsers = organization.UseDisableSmAdsForUsers,
             UseOrganizationDomains = organization.UseOrganizationDomains,
             UseAdminSponsoredFamilies = organization.UseAdminSponsoredFamilies,
             UseAutomaticUserConfirmation = organization.UseAutomaticUserConfirmation,

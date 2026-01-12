@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Billing.Commands;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
@@ -9,6 +10,8 @@ using OneOf.Types;
 using Stripe;
 
 namespace Bit.Core.Billing.Premium.Commands;
+
+using static StripeConstants;
 
 /// <summary>
 /// Updates the storage allocation for a premium user's subscription.
@@ -34,14 +37,14 @@ public class UpdatePremiumStorageCommand(
 {
     public Task<BillingCommandResult<None>> Run(User user, short additionalStorageGb) => HandleAsync<None>(async () =>
     {
-        if (!user.Premium)
+        if (user is not { Premium: true, GatewaySubscriptionId: not null and not "" })
         {
             return new BadRequest("User does not have a premium subscription.");
         }
 
         if (!user.MaxStorageGb.HasValue)
         {
-            return new BadRequest("No access to storage.");
+            return new BadRequest("User has no access to storage.");
         }
 
         // Fetch all premium plans and the user's subscription to find which plan they're on
@@ -54,7 +57,7 @@ public class UpdatePremiumStorageCommand(
 
         if (passwordManagerItem == null)
         {
-            return new BadRequest("Premium subscription item not found.");
+            return new Conflict("Premium subscription does not have a Password Manager line item.");
         }
 
         var premiumPlan = premiumPlans.First(p => p.Seat.StripePriceId == passwordManagerItem.Price.Id);
@@ -66,20 +69,20 @@ public class UpdatePremiumStorageCommand(
             return new BadRequest("Additional storage cannot be negative.");
         }
 
-        var newTotalStorageGb = (short)(baseStorageGb + additionalStorageGb);
+        var maxStorageGb = (short)(baseStorageGb + additionalStorageGb);
 
-        if (newTotalStorageGb > 100)
+        if (maxStorageGb > 100)
         {
             return new BadRequest("Maximum storage is 100 GB.");
         }
 
         // Idempotency check: if user already has the requested storage, return success
-        if (user.MaxStorageGb == newTotalStorageGb)
+        if (user.MaxStorageGb == maxStorageGb)
         {
             return new None();
         }
 
-        var remainingStorage = user.StorageBytesRemaining(newTotalStorageGb);
+        var remainingStorage = user.StorageBytesRemaining(maxStorageGb);
         if (remainingStorage < 0)
         {
             return new BadRequest(
@@ -124,21 +127,18 @@ public class UpdatePremiumStorageCommand(
             });
         }
 
-        // Update subscription with prorations
-        // Storage is billed annually, so we create prorations and invoice immediately
         var subscriptionUpdateOptions = new SubscriptionUpdateOptions
         {
             Items = subscriptionItemOptions,
-            ProrationBehavior = Core.Constants.CreateProrations
+            ProrationBehavior = ProrationBehavior.AlwaysInvoice
         };
 
         await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, subscriptionUpdateOptions);
 
         // Update the user's max storage
-        user.MaxStorageGb = newTotalStorageGb;
+        user.MaxStorageGb = maxStorageGb;
         await userService.SaveUserAsync(user);
 
-        // No payment intent needed - the subscription update will automatically create and finalize the invoice
         return new None();
     });
 }
