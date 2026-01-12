@@ -268,8 +268,19 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
 
     private async Task<Error> ValidatePoliciesAsync(User user, Guid organizationId, Organization org, OrganizationUser orgUser)
     {
-        var autoConfirmReq = await _policyRequirementQuery.GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id);
-        if (autoConfirmReq.CannotCreateNewOrganization() || autoConfirmReq.IsEnabledForOrganizationsOtherThan(organizationId))
+        // Enforce Automatic User Confirmation Policy (when feature flag is enabled)
+        if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
+        {
+            var autoConfirmReq = await _policyRequirementQuery.GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id);
+            if (autoConfirmReq.CannotCreateNewOrganization())
+            {
+                return new SingleOrgPolicyViolationError();
+            }
+        }
+
+        // Enforce Single Organization Policy
+        var anySingleOrgPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg);
+        if (anySingleOrgPolicies)
         {
             return new SingleOrgPolicyViolationError();
         }
