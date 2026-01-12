@@ -19,6 +19,6 @@ BEGIN
     WHERE OD.[VerifiedDate] IS NOT NULL
       AND CU.EmailDomain = OD.[DomainName]
       AND O.[Enabled] = 1
-      AND OU.[Status] != 0
+      AND OU.[Status] != 0 -- Exclude invited users
 END
 GO
