@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Globalization;
+using System.Text;
 using Bit.Billing.Controllers;
 using Bit.Billing.Test.Utilities;
 using Bit.Core.AdminConsole.Entities;
@@ -565,4 +566,53 @@ public class PayPalControllerTests(ITestOutputHelper testOutputHelper)
 
     private static void LoggedWarning(ICacheLogger<PayPalController> logger, string message)
         => Logged(logger, LogLevel.Warning, message);
+
+    [Fact]
+    public async Task PostIpn_Completed_CreatesTransaction_WithSwedishCulture_Ok()
+    {
+        // Save current culture
+        var originalCulture = CultureInfo.CurrentCulture;
+        var originalUICulture = CultureInfo.CurrentUICulture;
+
+        try
+        {
+            // Set Swedish culture (uses comma as decimal separator)
+            var swedishCulture = new CultureInfo("sv-SE");
+            CultureInfo.CurrentCulture = swedishCulture;
+            CultureInfo.CurrentUICulture = swedishCulture;
+
+            var logger = testOutputHelper.BuildLoggerFor<PayPalController>();
+
+            _billingSettings.Value.Returns(new BillingSettings
+            {
+                PayPal =
+                {
+                    WebhookKey = _defaultWebhookKey,
+                    BusinessId = "NHDYKLQ3L4LWL"
+                }
+            });
+
+            var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.SuccessfulPayment);
+
+            _transactionRepository.GetByGatewayIdAsync(
+                GatewayType.PayPal,
+                "2PK15573S8089712Y").ReturnsNull();
+
+            var controller = ConfigureControllerContextWith(logger, _defaultWebhookKey, ipnBody);
+
+            var result = await controller.PostIpn();
+
+            HasStatusCode(result, 200);
+
+            await _transactionRepository.Received().CreateAsync(Arg.Is<Transaction>(transaction =>
+                transaction.Amount == 48M &&
+                transaction.GatewayId == "2PK15573S8089712Y"));
+        }
+        finally
+        {
+            // Restore original culture
+            CultureInfo.CurrentCulture = originalCulture;
+            CultureInfo.CurrentUICulture = originalUICulture;
+        }
+    }
 }
