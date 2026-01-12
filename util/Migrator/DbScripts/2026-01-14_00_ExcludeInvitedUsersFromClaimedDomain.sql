@@ -6,7 +6,7 @@ BEGIN
 
     WITH CTE_User AS (
         SELECT
-            U.*,
+            U.[Id],
             SUBSTRING(U.Email, CHARINDEX('@', U.Email) + 1, LEN(U.Email)) AS EmailDomain
         FROM dbo.[UserView] U
         WHERE U.[Id] = @UserId
