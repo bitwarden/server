@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Utilities.v2.Results;
+using Bit.Core.Entities;
 namespace Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 
 public interface IInitPendingOrganizationCommand
@@ -9,5 +10,14 @@ public interface IInitPendingOrganizationCommand
     /// <remarks>
     /// This method must target a disabled Organization that has null keys and status as 'Pending'.
     /// </remarks>
+    [Obsolete("Use InitPendingOrganizationVNextAsync for consolidated flow with upfront validation. This method will be removed.")]
     Task InitPendingOrganizationAsync(User user, Guid organizationId, Guid organizationUserId, string publicKey, string privateKey, string collectionName, string emailToken);
+
+    /// <summary>
+    /// Initializes a pending organization and confirms the first owner with upfront validation.
+    /// </summary>
+    /// <returns>A CommandResult indicating success or specific validation errors.</returns>
+    Task<CommandResult> InitPendingOrganizationVNextAsync(
+        User user, Guid organizationId, Guid organizationUserId, string publicKey,
+        string privateKey, string collectionName, string emailToken, string userKey);
 }
