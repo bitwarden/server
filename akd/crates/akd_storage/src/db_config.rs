@@ -1,5 +1,7 @@
 use akd::errors::StorageError;
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
+use tracing::error;
 
 use crate::{ms_sql::MsSql, vrf_key_database::VrfKeyStorageError};
 
@@ -19,7 +21,24 @@ pub enum DatabaseType {
     MsSql(MsSql),
 }
 
+#[derive(Debug, Error)]
+#[error("Database configuration error")]
+pub struct DbConfigError;
+
 impl DbConfig {
+    pub fn validate(&self) -> Result<(), DbConfigError> {
+        match self {
+            DbConfig::MsSql {
+                connection_string, ..
+            } => {
+                if connection_string.is_empty() {
+                    error!("Connection string cannot be empty");
+                    return Err(DbConfigError);
+                }
+            }
+        }
+        Ok(())
+    }
     pub async fn connect(&self) -> Result<DatabaseType, StorageError> {
         let db = match self {
             DbConfig::MsSql {

@@ -1,21 +1,47 @@
-use akd::{directory::Directory, storage::StorageManager};
-use akd_storage::DatabaseType;
+use anyhow::Result;
 use bitwarden_akd_configuration::BitwardenV1Configuration;
-use tracing::instrument;
+use tokio::sync::broadcast::Receiver;
+use tracing::{info, instrument};
 
-struct AppState {
-    _directory: Directory<BitwardenV1Configuration, DatabaseType, VrfStorageType>,
+mod config;
+mod routes;
+
+pub use crate::config::ApplicationConfig;
+
+pub struct AppHandles {
+    pub write_handle: tokio::task::JoinHandle<()>,
+    pub web_handle: tokio::task::JoinHandle<()>,
 }
 
 #[instrument(skip_all, name = "publisher_start")]
-pub async fn start_write_job(_db: DatabaseType, vrf: VrfStorageType) {
-    let storage_manager = StorageManager::new_no_cache(_db);
-    let _app_state = AppState {
-        _directory: Directory::new(storage_manager, vrf).await.unwrap(),
-    };
-    println!("Publisher started");
-}
+pub async fn start(config: ApplicationConfig, shutdown_rx: &Receiver<()>) -> Result<AppHandles> {
+    let (directory, db) = config
+        .storage
+        .initialize_directory::<BitwardenV1Configuration>()
+        .await?;
 
-pub async fn start_web_server(_db: DatabaseType) {
-    println!("Web server started");
+    // Initialize write job
+    let write_handle = {
+        let mut shutdown_rx = shutdown_rx.resubscribe();
+        tokio::spawn(async move {
+            // wait until shutdown signal is received
+            shutdown_rx.recv().await.ok();
+            info!("Shutting down publisher write job");
+        })
+    };
+
+    // Initialize web server
+    let web_handle = {
+        let mut shutdown_rx = shutdown_rx.resubscribe();
+        tokio::spawn(async move {
+            // wait forever until shutdown signal is received
+            shutdown_rx.recv().await.ok();
+            info!("Shutting down publisher web server");
+        })
+    };
+
+    Ok(AppHandles {
+        write_handle,
+        web_handle,
+    })
 }

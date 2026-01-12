@@ -170,33 +170,28 @@ async fn main() -> Result<()> {
             key: "4AD95tg8tfveioyS/E2jAQw06FDTUCu+VSEZxa41wuM=".to_string(),
         },
     };
-    let (storage_manager, state) = config
-        .initialize_storage()
+    let (mut directory, db) = config
+        .initialize_directory::<TC>()
         .await
-        .context("Failed to initialize storage")?;
+        .context("Failed to initialize AKD directory")?;
 
     // Handle pre-processing modes
-    if let Some(()) = pre_process_mode(&args, &state.db()).await? {
+    if let Some(()) = pre_process_mode(&args, &db).await? {
         return Ok(());
     }
-
-    let vrf_key_database = state.vrf_key_database().await?;
-
-    let mut directory = Directory::<TC, _, _>::new(storage_manager, vrf_key_database)
-        .await
-        .context("Failed to create AKD directory")?;
 
     let (tx, mut rx) = channel(2);
 
     tokio::spawn(async move { directory_host::init_host(&mut rx, &mut directory).await });
 
-    process_mode(&args, &tx, &state).await?;
+    process_mode(&args, &tx, &db).await?;
 
     Ok(())
 }
 
 // Process modes that run before creating the directory
-async fn pre_process_mode(args: &CliArgs, db: &DatabaseType) -> Result<Option<()>> {
+async fn pre_process_mode(args: &CliArgs, db: &AkdDatabase) -> Result<Option<()>> {
+    let db = db.db();
     match (db, &args.mode) {
         (DatabaseType::MsSql(db), Some(Mode::Drop)) => {
             info!("Dropping database tables");

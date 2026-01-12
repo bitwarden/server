@@ -2,47 +2,47 @@
 //! Write permissions are needed to the underlying data stores.
 //! There should only be one instance of this running at a time for a given AKD.
 
-use akd_storage::db_config::DbConfig;
-use publisher::{start_web_server, start_write_job};
+use publisher::start;
 use tracing::info;
 
+use publisher::ApplicationConfig;
+
 #[tokio::main]
-async fn main() {
+async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::TRACE)
         .init();
 
-    // Read connection string from env var
-    let connection_string = std::env::var("AKD_MSSQL_CONNECTION_STRING")
-        .expect("AKD_MSSQL_CONNECTION_STRING must be set.");
-    let db_config = DbConfig::MsSql {
-        connection_string,
-        pool_size: 10,
-    };
+    // Load configuration
+    let config = ApplicationConfig::load()
+        .map_err(|e| anyhow::anyhow!("Failed to load configuration: {e}"))?;
 
-    let db = db_config
-        .connect()
+    // Initialize Bitwarden AKD configuration
+    bitwarden_akd_configuration::BitwardenV1Configuration::init(config.installation_id);
+
+    let (shutdown_tx, shutdown_rx) = tokio::sync::broadcast::channel(1);
+
+    let mut handles = start(config, &shutdown_rx)
         .await
-        .expect("Failed to connect to database");
-    let vrf = common::VrfStorageType::HardCodedAkdVRF;
+        .map_err(|e| anyhow::anyhow!("Failed to start publisher: {e}"))?;
 
-    let write_job_handle = {
-        let db = db.clone();
-        tokio::spawn(async move {
-            start_write_job(db, vrf).await;
-        })
-    };
-    let web_server_handle = tokio::spawn(async move {
-        start_web_server(db).await;
-    });
-
-    // Wait for both services to complete
+    // Wait for shutdown signal
     tokio::select! {
-        _ = write_job_handle => {
-            info!("Write job completed");
+        _ = tokio::signal::ctrl_c() => {
+            info!("Received Ctrl+C, shutting down");
+            shutdown_tx.send(()).ok();
         }
-        _ = web_server_handle => {
-            info!("Web service completed");
+        _ = &mut handles.write_handle => {
+            info!("Publisher service completed unexpectedly");
+        }
+        _ = &mut handles.web_handle => {
+            info!("Web service completed unexpectedly");
         }
     }
+
+    // Wait for both services to complete
+    handles.write_handle.await.ok();
+    handles.web_handle.await.ok();
+
+    Ok(())
 }

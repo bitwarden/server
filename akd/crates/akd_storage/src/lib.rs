@@ -6,3 +6,4 @@ pub mod vrf_key_config;
 pub mod vrf_key_database;
 
 pub use akd_database::*;
+pub use vrf_key_database::*;

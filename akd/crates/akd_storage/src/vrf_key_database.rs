@@ -135,7 +135,7 @@ impl VRFKeyStorage for VrfKeyDatabase {
     }
 }
 
-pub struct VrfKeyTableData {
+pub(crate) struct VrfKeyTableData {
     pub root_key_hash: Vec<u8>,
     pub root_key_type: VrfRootKeyType,
     pub enc_sym_key: Option<Vec<u8>>,
@@ -144,7 +144,7 @@ pub struct VrfKeyTableData {
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
-pub enum VrfRootKeyType {
+pub(crate) enum VrfRootKeyType {
     #[cfg(test)]
     None = 0,
     SymmetricKey = 1,
@@ -175,7 +175,7 @@ impl From<VrfRootKeyType> for i16 {
 }
 
 #[derive(Clone)]
-pub struct VrfKey(pub Vec<u8>);
+pub(crate) struct VrfKey(pub Vec<u8>);
 
 impl VrfKeyTableData {
     pub async fn new(config: &VrfKeyConfig) -> Result<(Self, VrfKey), VrfKeyCreationError> {

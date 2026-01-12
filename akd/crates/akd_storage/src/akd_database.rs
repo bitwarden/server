@@ -31,7 +31,7 @@ impl AkdDatabase {
         AkdDatabase { db, vrf_key_config }
     }
 
-    pub async fn vrf_key_database(&self) -> Result<VrfKeyDatabase, VrfKeyConfigError> {
+    pub(crate) async fn vrf_key_database(&self) -> Result<VrfKeyDatabase, VrfKeyConfigError> {
         VrfKeyDatabase::new(self.db.clone(), self.vrf_key_config.clone()).await
     }
 }

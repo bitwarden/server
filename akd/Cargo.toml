@@ -14,11 +14,15 @@ unused_async = "deny"
 unwrap_used = "deny"
 
 [workspace.dependencies]
+anyhow = "1.0.100"
 akd = "0.11.0"
 async-trait = "0.1.89"
 akd_storage = { path = "crates/akd_storage" }
+axum = { version = "0.8.8", features = ["macros"] }
 bitwarden-akd-configuration = { path = "crates/bitwarden-akd-configuration" }
+bitwarden-encoding = { path = "crates/bitwarden-encoding" }
 blake3 = "1.8.2"
+chrono = "0.4.42"
 common = { path = "crates/common" }
 config = "0.15.18"
 hex = "0.4.3"
@@ -27,3 +31,4 @@ tokio = { version = "1.47.1", features = ["full"] }
 tracing = { version = "0.1.41" }
 tracing-subscriber = { version = "0.3.19" }
 thiserror = "2.0.17"
+uuid = { version = "1.18.1", features = ["serde"] }

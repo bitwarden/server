@@ -1,11 +1,11 @@
 use std::time::Duration;
 
-use akd::storage::StorageManager;
+use akd::{storage::StorageManager, Directory};
 use serde::Deserialize;
 use thiserror::Error;
 use tracing::error;
 
-use crate::{db_config::DbConfig, vrf_key_config::VrfKeyConfig, AkdDatabase};
+use crate::{db_config::DbConfig, vrf_key_config::VrfKeyConfig, AkdDatabase, VrfKeyDatabase};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct AkdStorageConfig {
@@ -23,11 +23,48 @@ pub struct AkdStorageConfig {
 }
 
 #[derive(Debug, Error)]
+#[error("Invalid AkdStorageConfig")]
+pub struct AkdStorageConfigError;
+
+#[derive(Debug, Error)]
 #[error("Failed to initialize storage")]
 pub struct AkdStorageInitializationError;
 
 impl AkdStorageConfig {
-    pub async fn initialize_storage(
+    pub fn validate(&self) -> Result<(), AkdStorageConfigError> {
+        self.db_config
+            .validate()
+            .map_err(|_| AkdStorageConfigError)?;
+        Ok(())
+    }
+
+    pub async fn initialize_directory<TDirectoryConfig: akd::Configuration>(
+        &self,
+    ) -> Result<
+        (
+            Directory<TDirectoryConfig, AkdDatabase, VrfKeyDatabase>,
+            AkdDatabase,
+        ),
+        AkdStorageInitializationError,
+    > {
+        let (storage_manager, db) = self.initialize_storage().await?;
+
+        let vrf_storage = db.vrf_key_database().await.map_err(|err| {
+            error!(%err, "Failed to initialize VRF key database");
+            AkdStorageInitializationError
+        })?;
+
+        let directory = Directory::new(storage_manager, vrf_storage)
+            .await
+            .map_err(|err| {
+                error!(%err, "Failed to initialize Directory");
+                AkdStorageInitializationError
+            })?;
+
+        Ok((directory, db))
+    }
+
+    async fn initialize_storage(
         &self,
     ) -> Result<(StorageManager<AkdDatabase>, AkdDatabase), AkdStorageInitializationError> {
         let db = self.db_config.connect().await.map_err(|err| {
@@ -35,7 +72,7 @@ impl AkdStorageConfig {
             AkdStorageInitializationError
         })?;
 
-        let state = AkdDatabase::new(db, self.vrf_key_config.clone());
+        let db = AkdDatabase::new(db, self.vrf_key_config.clone());
 
         let cache_item_lifetime = Some(Duration::from_millis(
             self.cache_item_lifetime_ms.try_into().map_err(|err| {
@@ -52,12 +89,12 @@ impl AkdStorageConfig {
 
         Ok((
             StorageManager::new(
-                state.clone(),
+                db.clone(),
                 cache_item_lifetime,
                 self.cache_limit_bytes,
                 cache_clean_frequency,
             ),
-            state,
+            db,
         ))
     }
 }
