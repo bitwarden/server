@@ -116,12 +116,14 @@ public class OrganizationUserResetPasswordEnrollmentRequestModel
     public string ResetPasswordKey { get; set; }
     public string MasterPasswordHash { get; set; }
 }
-
+#nullable enable
 public class OrganizationUserBulkRequestModel
 {
     [Required, MinLength(1)]
-    public IEnumerable<Guid> Ids { get; set; }
+    public IEnumerable<Guid> Ids { get; set; } = new List<Guid>();
+    public string? DefaultUserCollectionName { get; set; }
 }
+#nullable disable
 
 public class ResetPasswordWithOrgIdRequestModel : OrganizationUserResetPasswordEnrollmentRequestModel
 {
