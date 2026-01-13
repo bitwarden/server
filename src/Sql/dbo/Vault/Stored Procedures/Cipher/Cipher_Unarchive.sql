@@ -18,9 +18,8 @@ BEGIN
     FROM
         [dbo].[UserCipherDetails](@UserId)
     WHERE
-        [Edit] = 1
-      AND [ArchivedDate] IS NOT NULL
-      AND [Id] IN (SELECT * FROM @Ids)
+        [ArchivedDate] IS NOT NULL
+        AND [Id] IN (SELECT * FROM @Ids)
 
     DECLARE @UtcNow DATETIME2(7) = SYSUTCDATETIME();
     UPDATE
