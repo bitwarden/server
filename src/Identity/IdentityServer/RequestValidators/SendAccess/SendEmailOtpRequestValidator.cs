@@ -60,7 +60,7 @@ public class SendEmailOtpRequestValidator(
             {
                 return BuildErrorResult(SendAccessConstants.EmailOtpValidatorResults.OtpGenerationFailed);
             }
-            await mailService.SendSendEmailOtpEmailv2Async(
+            await mailService.SendSendEmailOtpEmailAsync(
                 email,
                 token,
                 string.Format(SendAccessConstants.OtpEmail.Subject, token));
