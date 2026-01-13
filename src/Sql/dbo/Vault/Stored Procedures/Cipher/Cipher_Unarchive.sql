@@ -3,40 +3,31 @@
     @UserId AS UNIQUEIDENTIFIER
 AS
 BEGIN
-    SET NOCOUNT ON
-
-    CREATE TABLE #Temp
-    (
-        [Id] UNIQUEIDENTIFIER NOT NULL,
-        [UserId] UNIQUEIDENTIFIER NULL
-    )
-
-    INSERT INTO #Temp
-    SELECT
-        [Id],
-        [UserId]
-    FROM
-        [dbo].[UserCipherDetails](@UserId)
-    WHERE
-        [ArchivedDate] IS NOT NULL
-        AND [Id] IN (SELECT * FROM @Ids)
+    SET NOCOUNT ON;
 
     DECLARE @UtcNow DATETIME2(7) = SYSUTCDATETIME();
-    UPDATE
-        [dbo].[Cipher]
+
+    ;WITH Target AS
+    (
+        SELECT ucd.[Id]
+        FROM [dbo].[UserCipherDetails](@UserId) AS ucd
+        INNER JOIN @Ids AS ids
+            ON ids.[Id] = ucd.[Id]
+        WHERE ucd.[ArchivedDate] IS NOT NULL
+    )
+    UPDATE c
     SET
         [Archives] = JSON_MODIFY(
-            COALESCE([Archives], N'{}'),
+            COALESCE(c.[Archives], N'{}'),
             CONCAT('$."', @UserId, '"'),
             NULL
         ),
         [RevisionDate] = @UtcNow
-    WHERE
-        [Id] IN (SELECT [Id] FROM #Temp)
+    FROM [dbo].[Cipher] AS c
+    INNER JOIN Target AS t
+        ON t.[Id] = c.[Id];
 
-    EXEC [dbo].[User_BumpAccountRevisionDate] @UserId
+    EXEC [dbo].[User_BumpAccountRevisionDate] @UserId;
 
-    DROP TABLE #Temp
-
-    SELECT @UtcNow
+    SELECT @UtcNow;
 END
