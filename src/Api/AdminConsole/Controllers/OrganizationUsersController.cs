@@ -57,7 +57,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly ICollectionRepository _collectionRepository;
     private readonly IGroupRepository _groupRepository;
     private readonly IUserService _userService;
-    private readonly IPolicyRepository _policyRepository;
+    private readonly IPolicyQuery _policyQuery;
     private readonly ICurrentContext _currentContext;
     private readonly ICountNewSmSeatsRequiredQuery _countNewSmSeatsRequiredQuery;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
@@ -90,7 +90,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         ICollectionRepository collectionRepository,
         IGroupRepository groupRepository,
         IUserService userService,
-        IPolicyRepository policyRepository,
+        IPolicyQuery policyQuery,
         ICurrentContext currentContext,
         ICountNewSmSeatsRequiredQuery countNewSmSeatsRequiredQuery,
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
@@ -123,7 +123,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _collectionRepository = collectionRepository;
         _groupRepository = groupRepository;
         _userService = userService;
-        _policyRepository = policyRepository;
+        _policyQuery = policyQuery;
         _currentContext = currentContext;
         _countNewSmSeatsRequiredQuery = countNewSmSeatsRequiredQuery;
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
@@ -357,10 +357,9 @@ public class OrganizationUsersController : BaseAdminConsoleController
             return false;
         }
 
-        var masterPasswordPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(orgId, PolicyType.ResetPassword);
-        var useMasterPasswordPolicy = masterPasswordPolicy != null &&
-                                          masterPasswordPolicy.Enabled &&
-                                          masterPasswordPolicy.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled;
+        var masterPasswordPolicy = await _policyQuery.GetByOrganizationIdTypeAsync(orgId, PolicyType.ResetPassword);
+        var useMasterPasswordPolicy = masterPasswordPolicy.Enabled &&
+                                      masterPasswordPolicy.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled;
 
         return useMasterPasswordPolicy;
     }
